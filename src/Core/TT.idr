@@ -974,12 +974,12 @@ export
 addVars : {later, bound : _} ->
           {idx : Nat} ->
           Bounds bound -> (0 p : IsVar name idx (later ++ vars)) ->
-          Var (later ++ (bound ++ vars))
-addVars {later = []} {bound} bs p = weakenVar bound p
-addVars {later = (x :: xs)} bs First = MkVar First
+          NVar name (later ++ (bound ++ vars))
+addVars {later = []} {bound} bs p = weakenNVar bound p
+addVars {later = (x :: xs)} bs First = MkNVar First
 addVars {later = (x :: xs)} bs (Later p)
-  = let MkVar p' = addVars {later = xs} bs p in
-        MkVar (Later p')
+  = let MkNVar p' = addVars {later = xs} bs p in
+        MkNVar (Later p')
 
 resolveRef : {later : _} ->
              (done : List Name) -> Bounds bound -> FC -> Name ->
@@ -998,7 +998,7 @@ mkLocals : {later, bound : _} ->
            Bounds bound ->
            Term (later ++ vars) -> Term (later ++ (bound ++ vars))
 mkLocals bs (Local fc r idx p)
-    = let MkVar p' = addVars bs p in Local fc r _ p'
+    = let MkNVar p' = addVars bs p in Local fc r _ p'
 mkLocals bs (Ref fc Bound name)
     = maybe (Ref fc Bound name) id (resolveRef [] bs fc name)
 mkLocals bs (Ref fc nt name)
