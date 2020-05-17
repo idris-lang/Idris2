@@ -199,6 +199,12 @@ readHeader path
                Symbol ":" => True
                _ => False
 
+%foreign "scheme:collect"
+prim__gc : Int -> PrimIO ()
+
+gc : IO ()
+gc = primIO $ prim__gc 4
+
 -- Process everything in the module; return the syntax information which
 -- needs to be written to the TTC (e.g. exported infix operators)
 -- Returns 'Nothing' if it didn't reload anything
@@ -272,6 +278,7 @@ processMod srcf ttcf msg sourcecode
                 setNS ns
                 errs <- logTime "Processing decls" $
                             processDecls (decls mod)
+--                 coreLift $ gc
 
                 logTime "Compile defs" $ compileAndInlineAll
 

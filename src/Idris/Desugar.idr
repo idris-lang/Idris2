@@ -51,7 +51,7 @@ data Side = LHS | AnyExpr
 
 ifThenElse : Bool -> Lazy a -> Lazy a -> a
 ifThenElse True t e = t
-ifThenElse False t e = t
+ifThenElse False t e = e
 
 export
 extendAs : {auto s : Ref Syn SyntaxInfo} ->

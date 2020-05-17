@@ -34,8 +34,8 @@ record Binary where
   size : Int -- Capacity
   used : Int -- Amount used
 
-newBinary : Buffer -> Binary
-newBinary b = MkBin b 0 (size b) 0
+newBinary : Buffer -> Int -> Binary
+newBinary b s = MkBin b 0 s 0
 
 blockSize : Int
 blockSize = 655360
@@ -71,7 +71,7 @@ fromBuffer buf
 export
 writeToFile : (fname : String) -> Binary -> IO (Either FileError ())
 writeToFile fname c
-    = writeBufferToFile fname (resetBuffer (buf c)) (used c)
+    = writeBufferToFile fname (buf c) (used c)
 
 export
 readFromFile : (fname : String) -> IO (Either FileError Binary)
@@ -96,14 +96,20 @@ initBinary : Core (Ref Bin Binary)
 initBinary
     = do Just buf <- coreLift $ newBuffer blockSize
              | Nothing => throw (InternalError "Buffer creation failed")
-         newRef Bin (newBinary buf)
+         newRef Bin (newBinary buf blockSize)
 
 export
 initBinaryS : Int -> Core (Ref Bin Binary)
 initBinaryS s
     = do Just buf <- coreLift $ newBuffer s
              | Nothing => throw (InternalError "Buffer creation failed")
-         newRef Bin (newBinary buf)
+         newRef Bin (newBinary buf s)
+
+export
+freeBinary : Ref Bin Binary -> Core ()
+freeBinary b
+    = do b <- get Bin
+         coreLift $ freeBuffer (buf b)
 
 extendBinary : Int -> Binary -> Core Binary
 extendBinary need (MkBin buf l s u)
@@ -155,7 +161,7 @@ TTC Int where
     = do chunk <- get Bin
          if avail chunk >= 4
             then
-              do coreLift $ setInt (buf chunk) (loc chunk) val
+              do coreLift $ setInt (buf chunk) (loc chunk) (val `mod` 2147483648)
                  put Bin (appended 4 chunk)
             else do chunk' <- extendBinary 4 chunk
                     coreLift $ setInt (buf chunk') (loc chunk') val

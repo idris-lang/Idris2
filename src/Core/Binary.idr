@@ -244,6 +244,10 @@ getSaveDefs (n :: ns) acc defs
                       b <- get Bin
                       getSaveDefs ns ((fullname gdef, b) :: acc) defs
 
+freeDefBuffer : (Name, Binary) -> Core ()
+freeDefBuffer (n, b)
+    = coreLift $ freeBuffer (buf b)
+
 -- Write out the things in the context which have been defined in the
 -- current source file
 export
@@ -252,12 +256,12 @@ writeToTTC : (HasNames extra, TTC extra) =>
              {auto u : Ref UST UState} ->
              extra -> (fname : String) -> Core ()
 writeToTTC extradata fname
-    = do buf <- initBinary
+    = do bin <- initBinary
          defs <- get Ctxt
          ust <- get UST
          gdefs <- getSaveDefs (keys (toSave defs)) [] defs
          log 5 $ "Writing " ++ fname ++ " with hash " ++ show (ifaceHash defs)
-         writeTTCFile buf
+         writeTTCFile bin
                    (MkTTCFile ttcVersion (ifaceHash defs) (importHashes defs)
                               gdefs
                               (keys (userHoles defs))
@@ -274,8 +278,11 @@ writeToTTC extradata fname
                               (cgdirectives defs)
                               (saveTransforms defs)
                               extradata)
+
          Right ok <- coreLift $ writeToFile fname !(get Bin)
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
+         traverse_ freeDefBuffer gdefs
+         freeBinary bin
          pure ()
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
@@ -408,9 +415,9 @@ readFromTTC loc reexp fname modNS importAs
               | True => pure Nothing
          put Ctxt (record { allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
 
-         Right buf <- coreLift $ readFromFile fname
+         Right buffer <- coreLift $ readFromFile fname
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
-         bin <- newRef Bin buf -- for reading the file into
+         bin <- newRef Bin buffer -- for reading the file into
          let as = if importAs == modNS
                      then Nothing
                      else Just importAs
@@ -421,7 +428,8 @@ readFromTTC loc reexp fname modNS importAs
          -- Otherwise, add the data
          let ex = extraData ttc
          if ((modNS, importAs) `elem` map getNSas (allImported defs))
-            then pure (Just (ex, ifaceHash ttc, imported ttc))
+            then do coreLift $ freeBuffer (buf buffer)
+                    pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
                traverse (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
@@ -445,6 +453,7 @@ readFromTTC loc reexp fname modNS importAs
                -- ttc
                ust <- get UST
                put UST (record { nextName = nextVar ttc } ust)
+               coreLift $ freeBuffer (buf buffer)
                pure (Just (ex, ifaceHash ttc, imported ttc))
 
 getImportHashes : String -> Ref Bin Binary ->
@@ -469,18 +478,24 @@ export
 readIFaceHash : (fname : String) -> -- file containing the module
                 Core Int
 readIFaceHash fname
-    = do Right buf <- coreLift $ readFromFile fname
+    = do Right buffer <- coreLift $ readFromFile fname
             | Left err => pure 0
-         b <- newRef Bin buf
-         catch (getHash fname b)
-               (\err => pure 0)
+         b <- newRef Bin buffer
+         catch (do res <- getHash fname b
+                   coreLift $ freeBuffer (buf buffer)
+                   pure res)
+               (\err => do coreLift $ freeBuffer (buf buffer)
+                           pure 0)
 
 export
 readImportHashes : (fname : String) -> -- file containing the module
                    Core (List (List String, Int))
 readImportHashes fname
-    = do Right buf <- coreLift $ readFromFile fname
+    = do Right buffer <- coreLift $ readFromFile fname
             | Left err => pure []
-         b <- newRef Bin buf
-         catch (getImportHashes fname b)
-               (\err => pure [])
+         b <- newRef Bin buffer
+         catch (do res <- getImportHashes fname b
+                   coreLift $ freeBuffer (buf buffer)
+                   pure res)
+               (\err => do coreLift $ freeBuffer (buf buffer)
+                           pure [])

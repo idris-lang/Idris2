@@ -314,8 +314,8 @@ mutual
           = PPair (MkFC fname estart end) exp (mergePairs end rest)
 
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
-  simpleExpr fname indents =
-        do
+  simpleExpr fname indents
+      = do
           start <- location
           recFields <- some recField
           end <- location

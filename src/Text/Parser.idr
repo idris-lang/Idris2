@@ -59,6 +59,8 @@ choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
                                                f x <|> acc)
                            (fail "No more options") xs
 
+%hide Prelude.(>>=)
+
 ||| Try each grammar in a container until the first one succeeds.
 ||| Fails if the container is empty.
 export
@@ -66,7 +68,7 @@ choice : Foldable t =>
          {c : Bool} ->
          t (Grammar tok c a) ->
          Grammar tok c a
-choice {c} = choiceMap {c=c} id
+choice = choiceMap id
 
 mutual
   ||| Parse one or more things

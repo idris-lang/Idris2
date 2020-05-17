@@ -539,7 +539,7 @@ nameListEq _ _ = Nothing
 
 ifThenElse : Bool -> Lazy a -> Lazy a -> a
 ifThenElse True t e = t
-ifThenElse False t e = t
+ifThenElse False t e = e
 
 -- Calculate references for the given name, and recursively if they haven't
 -- been calculated already
