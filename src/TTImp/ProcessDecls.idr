@@ -47,8 +47,8 @@ process eopts nest env (INamespace fc ns decls)
          put Ctxt (record { currentNS = cns } defs)
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
-process {c} eopts nest env (IPragma act)
-    = act c nest env
+process eopts nest env (IPragma act)
+    = act nest env
 process eopts nest env (ILog n)
     = setLogLevel n
 

@@ -652,6 +652,7 @@ directive fname indents
          lvl <- intLit
          atEnd indents
          pure (ILog (integerToNat lvl))
+         {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit
          start <- location
@@ -660,7 +661,7 @@ directive fname indents
          s <- name
          end <- location
          pure (let fc = MkFC fname start end in
-                   IPragma (\c, nest, env => setPair {c} fc p f s))
+                   IPragma (\nest, env => setPair {c} fc p f s))
   <|> do pragma "rewrite"
          commit
          start <- location
@@ -669,7 +670,7 @@ directive fname indents
          end <- location
          pure (let fc = MkFC fname start end in
                    IPragma (\c, nest, env => setRewrite {c} fc eq rw))
-
+    -}
 -- Declared at the top
 -- topDecl : FileName -> IndentInfo -> Rule ImpDecl
 topDecl fname indents

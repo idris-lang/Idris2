@@ -314,7 +314,7 @@ mutual
                  Visibility -> ImpRecord -> ImpDecl
        INamespace : FC -> List String -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
-       IPragma : ({vars : _} -> Ref Ctxt Defs ->
+       IPragma : ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Nat -> ImpDecl
