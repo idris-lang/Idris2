@@ -47,7 +47,7 @@ Then, go to the Self-hosting step below, but you'll also need to add
 script knows where to look.  That is:
 
 * `rm -rf build` -- clean the build artefacts
-* `make all IDRIS2_BOOT=idris2sh SCHEME=chez
+* `make all IDRIS2_BOOT=idris2sh SCHEME=chez`
 * `make install`
 
 1b: Installing with an existing Idris 2
