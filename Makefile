@@ -23,14 +23,15 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
     endif
 endif
 
-export IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
+IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
 
+export SCHEME
 export IDRIS2_CURDIR = $(CURDIR)
 export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
 
-.PHONY: all support clean support-clean init-bootstrap ${TARGET}
+.PHONY: all support clean support-clean bootstrap init-bootstrap ${TARGET}
 
 all: support ${TARGET} libs
 
@@ -95,5 +96,12 @@ install-libs: libs
 	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-init-bootstrap:
-	./bootstrap.sh ${SCHEME} ${PREFIX}
+init-bootstrap: support
+	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
+	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2sh_app/idris2sh.ss > bootstrap/idris2sh_app/idris2-boot.ss
+ifeq ($(OS), darwin)
+	sed -i '' 's|__PREFIX__|${PREFIX}|g' bootstrap/idris2sh_app/idris2-boot.ss
+else
+	sed -i 's|__PREFIX__|${PREFIX}|g' bootstrap/idris2sh_app/idris2-boot.ss
+endif
+	./bootstrap.sh
