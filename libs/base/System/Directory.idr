@@ -41,6 +41,9 @@ prim_openDir : String -> PrimIO DirPtr
 %foreign support "idris2_dirClose"
 prim_closeDir : DirPtr -> PrimIO ()
 
+%foreign support "idris2_rmDir"
+prim_rmDir : String -> PrimIO ()
+
 %foreign support "idris2_nextDirEntry"
 prim_dirEntry : DirPtr -> PrimIO (Ptr String)
 
@@ -81,6 +84,10 @@ dirOpen d
 export
 dirClose : Directory -> IO ()
 dirClose (MkDir d) = primIO (prim_closeDir d)
+
+export
+rmDir : String -> IO ()
+rmDir dirName = primIO (prim_rmDir dirName)
 
 export
 dirEntry : Directory -> IO (Either FileError String)
