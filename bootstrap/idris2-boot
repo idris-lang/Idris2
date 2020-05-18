@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:`dirname $0`/"idris2-boot_app""
+`dirname $0`/"idris2-boot_app/idris2sh.so" "$@"

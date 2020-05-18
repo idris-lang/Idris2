@@ -1,0 +1,6 @@
+#!/bin/sh
+
+make support
+cp support/c/libidris2_support.so bootstrap/idris2-boot_app
+cd bootstrap
+$1 --script compile.ss
