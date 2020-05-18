@@ -38,11 +38,13 @@ Then, to build the libraries using this generated compiler, again using your
 local variant for `chez`.
 
 * `make libs SCHEME=chez`
-* `make install`SCHEME=chez
+* `make install SCHEME=chez`
 
-Make sure `$PREFIX/bin` is in your `PATH`. Then, go to the Self-hosting step
-below, but you'll also need to add `SCHEME=chez` (with the appropriate name
-for `chez`) so that the bootstrapping script knows where to look.  That is:
+At this point, check that `$PREFIX/bin` is in your `PATH`.
+
+Then, go to the Self-hosting step below, but you'll also need to add
+`SCHEME=chez` (with the appropriate name for `chez`) so that the bootstrapping
+script knows where to look.  That is:
 
 * `rm -rf build` -- clean the build artefacts
 * `make all IDRIS2_BOOT=idris2sh SCHEME=chez
