@@ -303,10 +303,10 @@ installFrom pname builddir destdir ns@(m :: dns)
          let destPath = destdir ++ dirSep ++ showSep dirSep (reverse dns)
          let destFile = destdir ++ dirSep ++ ttcfile ++ ".ttc"
          Right _ <- coreLift $ mkdirs (reverse dns)
-             | Left err => throw (FileErr pname err)
+             | Left err => throw (InternalError ("Can't make directories " ++ show (reverse dns)))
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
          Right _ <- coreLift $ copyFile ttcPath destFile
-             | Left err => throw (FileErr pname err)
+             | Left err => throw (InternalError ("Can't copy file " ++ ttcPath ++ " to " ++ destPath))
          pure ()
 
 -- Install all the built modules in prefix/package/
