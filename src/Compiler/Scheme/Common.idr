@@ -402,7 +402,7 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
   schExtCommon i VoidElim [_, _]
       = pure "(display \"Error: Executed 'void'\")"
   schExtCommon i SysOS []
-      = pure $ show os
+      = pure $ "(blodwen-os)"
   schExtCommon i (Unknown n) args
       = throw (InternalError ("Can't compile unknown external primitive " ++ show n))
   schExtCommon i prim args

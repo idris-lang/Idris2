@@ -34,8 +34,13 @@ export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDI
 
 all: support ${TARGET} libs
 
-${TARGET}:
+${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build idris2.ipkg
+
+src/IdrisPaths.idr:
+	echo 'module IdrisPaths' > src/IdrisPaths.idr
+	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' >> src/IdrisPaths.idr
+	echo 'export yprefix : String; yprefix="${PREFIX}"' >> src/IdrisPaths.idr
 
 prelude:
 	${MAKE} -C libs/prelude IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}

@@ -1,3 +1,10 @@
+(define (blodwen-os)
+  (case (machine-type)
+    [(i3le ti3le a6le ta6le) "unix"]
+    [(i3osx ti3osx a6osx ta6osx) "darwin"]
+    [(i3nt ti3nt a6nt ta6nt) "windows"]
+    [else "unknown"]))
+
 (define blodwen-read-args (lambda (desc)
   (case (vector-ref desc 0)
     ((0) '())
