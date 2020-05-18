@@ -1,8 +1,8 @@
 #!/bin/sh
 
-echo $IDRIS2_SUPPORT
 make support
-cp support/c/libidris2_support.so bootstrap/idris2-boot_app
+cp support/c/$IDRIS2_SUPPORT bootstrap/idris2-boot_app
+
 cd bootstrap
 
 sed s/libidris2_support.so/$IDRIS2_SUPPORT/g idris2-boot_app/idris2sh.ss > idris2-boot_app/idris2-boot.ss

@@ -2,7 +2,8 @@ Installing
 ==========
 
 Requirements: Chez Scheme (with threading support) and bash. On a Mac, you
-will need to install `coreutils` to have access to `realpath`.
+will need to install `coreutils` to have access to `realpath` - you can
+do this with `brew install coreutils`.
 
 0: Fix hard coded prefix (sorry)
 --------------------------------
