@@ -1,0 +1,44 @@
+package base
+
+modules = Control.App,
+          Control.App.Console,
+          Control.App.FileIO,
+
+          Control.Monad.Identity,
+          Control.Monad.State,
+          Control.Monad.Trans,
+          Control.WellFounded,
+
+          Data.Buffer,
+          Data.Either,
+          Data.Fin,
+          Data.IOArray,
+          Data.IORef,
+          Data.List,
+          Data.List.Elem,
+          Data.List.Views,
+          Data.Maybe,
+          Data.Morphisms,
+          Data.Nat,
+          Data.Nat.Views,
+          Data.Primitives.Views,
+          Data.So,
+          Data.Stream,
+          Data.Strings,
+          Data.Vect,
+
+          Debug.Trace,
+
+          Decidable.Equality,
+
+          Language.Reflection,
+          Language.Reflection.TT,
+          Language.Reflection.TTImp,
+
+          System,
+          System.Concurrency.Raw,
+          System.Directory,
+          System.File,
+          System.FFI,
+          System.Info,
+          System.REPL

@@ -1,0 +1,31 @@
+package contrib
+
+modules = Control.Delayed,
+
+          Data.List.TailRec,
+          Data.Bool.Extra,
+          Data.SortedMap,
+          Data.SortedSet,
+          Data.String.Extra,
+
+          Language.JSON,
+          Language.JSON.Data,
+          Language.JSON.Lexer,
+          Language.JSON.Parser,
+          Language.JSON.String,
+          Language.JSON.String.Lexer,
+          Language.JSON.String.Parser,
+          Language.JSON.String.Tokens,
+          Language.JSON.Tokens,
+
+          Text.Token,
+          Text.Quantity,
+          Text.Parser,
+          Text.Lexer,
+          Text.Parser.Core,
+          Text.Lexer.Core,
+
+          System.Clock,
+          System.Random,
+          Syntax.WithProof,
+          Syntax.PreorderReasoning

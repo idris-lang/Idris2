@@ -175,7 +175,7 @@ writeTTCFile : (HasNames extra, TTC extra) =>
                Ref Bin Binary -> TTCFile extra -> Core ()
 writeTTCFile b file_in
       = do file <- toFullNames file_in
-           toBuf b "TTC"
+           toBuf b "TT2"
            toBuf b (version file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
@@ -202,7 +202,7 @@ readTTCFile : TTC extra =>
 readTTCFile modns as b
       = do hdr <- fromBuf b
            chunk <- get Bin
-           when (hdr /= "TTC") $ corrupt ("TTC header in " ++ show modns ++ " " ++ show hdr)
+           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ show modns ++ " " ++ show hdr)
            ver <- fromBuf b
            checkTTCVersion (show modns) ver ttcVersion
            ifaceHash <- fromBuf b
@@ -460,7 +460,7 @@ getImportHashes : String -> Ref Bin Binary ->
                   Core (List (List String, Int))
 getImportHashes file b
     = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TTC") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf {a = Int} b
          checkTTCVersion file ver ttcVersion
          ifaceHash <- fromBuf {a = Int} b
@@ -469,7 +469,7 @@ getImportHashes file b
 getHash : String -> Ref Bin Binary -> Core Int
 getHash file b
     = do hdr <- fromBuf {a = String} b
-         when (hdr /= "TTC") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
+         when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf {a = Int} b
          checkTTCVersion file ver ttcVersion
          fromBuf b

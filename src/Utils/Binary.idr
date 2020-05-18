@@ -161,7 +161,7 @@ TTC Int where
     = do chunk <- get Bin
          if avail chunk >= 4
             then
-              do coreLift $ setInt (buf chunk) (loc chunk) (val `mod` 2147483648)
+              do coreLift $ setInt (buf chunk) (loc chunk) val
                  put Bin (appended 4 chunk)
             else do chunk' <- extendBinary 4 chunk
                     coreLift $ setInt (buf chunk') (loc chunk') val

@@ -1,0 +1,5 @@
+package network
+
+modules = Network.Socket,
+          Network.Socket.Data,
+          Network.Socket.Raw

@@ -33,7 +33,7 @@ import IdrisPaths
 %default covering
 
 yprefix : String
-yprefix = "/home/edwin/.idris2" -- TODO! unsafePerformIO (foreign FFI_C "getIdris2_prefix" (IO String))
+yprefix = "/home/edwin/.idris2sh" -- TODO! unsafePerformIO (foreign FFI_C "getIdris2_prefix" (IO String))
 
 findInput : List CLOpt -> Maybe String
 findInput [] = Nothing
