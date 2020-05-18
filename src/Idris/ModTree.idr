@@ -116,18 +116,24 @@ mkBuildMods mod
 
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
+-- Return an empty list if it turns out it's in the 'done' list
 getBuildMods : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
-               FC -> (mainFile : String) ->
+               FC -> (done : List BuildMod) ->
+               (mainFile : String) ->
                Core (List BuildMod)
-getBuildMods loc fname
+getBuildMods loc done fname
     = do a <- newRef AllMods []
          d <- getDirs
-         t <- mkModTree {a} loc [] (pathToNS (working_dir d) (source_dir d) fname)
-         dm <- newRef DoneMod empty
-         o <- newRef BuildOrder []
-         mkBuildMods {d=dm} {o} t
-         pure (reverse !(get BuildOrder))
+         let fname_ns = pathToNS (working_dir d) (source_dir d) fname
+         if fname_ns `elem` map buildNS done
+            then pure []
+            else
+              do t <- mkModTree {a} loc [] fname_ns
+                 dm <- newRef DoneMod empty
+                 o <- newRef BuildOrder []
+                 mkBuildMods {d=dm} {o} t
+                 pure (reverse !(get BuildOrder))
 
 fnameModified : String -> Core Integer
 fnameModified fname
@@ -214,7 +220,7 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             (mainFile : String) ->
             Core (List Error)
 buildDeps fname
-    = do mods <- getBuildMods toplevelFC fname
+    = do mods <- getBuildMods toplevelFC [] fname
          ok <- buildMods toplevelFC 1 (length mods) mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
@@ -231,6 +237,17 @@ buildDeps fname
                        pure []
               errs => pure errs -- Error happened, give up
 
+getAllBuildMods : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  {auto o : Ref ROpts REPLOpts} ->
+                  FC -> (done : List BuildMod) ->
+                  (allFiles : List String) ->
+                  Core (List BuildMod)
+getAllBuildMods fc done [] = pure done
+getAllBuildMods fc done (f :: fs)
+    = do ms <- getBuildMods fc done f
+         getAllBuildMods fc (ms ++ done) fs
+
 export
 buildAll : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
@@ -238,13 +255,12 @@ buildAll : {auto c : Ref Ctxt Defs} ->
            (allFiles : List String) ->
            Core (List Error)
 buildAll allFiles
-    = do mods <- traverse (getBuildMods toplevelFC) allFiles
+    = do mods <- getAllBuildMods toplevelFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
-         let mods' = dropLater (concat mods)
+         let mods' = dropLater mods
          buildMods toplevelFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod
     dropLater [] = []
     dropLater (b :: bs)
         = b :: dropLater (filter (\x => buildFile x /= buildFile b) bs)
-
