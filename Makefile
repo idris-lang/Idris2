@@ -85,10 +85,10 @@ install-support: support
 	@${MAKE} -C support/c install
 
 install-libs: libs
-	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET}
-	${MAKE} -C libs/base install IDRIS2=../../${TARGET}
-	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_VERSION=${IDRIS2_VERSION}
-	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET}
+	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
+	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 init-bootstrap:
 	./init-bootstrap

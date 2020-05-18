@@ -31,9 +31,9 @@ modules = Control.App,
 
           Decidable.Equality,
 
-          Language.Reflection,
-          Language.Reflection.TT,
-          Language.Reflection.TTImp,
+--           Language.Reflection,
+--           Language.Reflection.TT,
+--           Language.Reflection.TTImp,
 
           System,
           System.Concurrency.Raw,
