@@ -34,10 +34,10 @@ This builds an Idris 2 compiler from scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to
 build the current repository).
 
-Then, to build Idris 2 (again using your local variant for `scheme`)
+Then, to build the libraries using this generated compiler, again using your
+local variant for `scheme`.
 
-* `make libs IDRIS2_BOOT=bootstrap/idris2-boot SCHEME=scheme`
-* `make all IDRIS2_BOOT=bootstrap/idris2-boot SCHEME=scheme`
+* `make libs SCHEME=scheme`
 * `make install`
 
 1b: Installing with an existing Idris 2
