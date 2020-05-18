@@ -1,6 +1,9 @@
 Installing
 ==========
 
+Requirements: Chez Scheme (with threading support) and bash. On a Mac, you
+will need to install `coreutils` to have access to `realpath`.
+
 0: Fix hard coded prefix (sorry)
 --------------------------------
 
@@ -12,23 +15,28 @@ you start:
 1a: Installing without an existing Idris 2
 ------------------------------------------
 
-If you *don't* have  Idris-2-in-Idris-1 installed, you can build a bootstrapping
-compiler from the files in `bootstrap/` as follows:
+If you *don't* have  Idris-2-in-Idris-1 installed, you can still build a
+bootstrapping compiler, as long as you have Chez Scheme installed. This is a
+bit more fiddly than if you have Idris 2 installed (for the moment) but you
+only have to do it once.
 
-* `sh ./init-bootstrap scheme`
+To begin, enter:
+
+* `make init-bootstrap SCHEME=scheme`
 
 (`scheme` is the executable name of the Chez Scheme compiler.  You may need to
 replace this with the executable for Chez Scheme on your system. This could be
-`chezscheme` or `chezscheme9.5` or something else, depending on your system and
-the Chez Scheme version).
+`chez`, `chezscheme` or `chezscheme9.5` or something else, depending on your
+system and the Chez Scheme version).
 
 This builds an Idris 2 compiler from scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to
 build the current repository).
 
-Then, to build Idris 2
+Then, to build Idris 2 (again using your local variant for `scheme`)
 
-* `make all IDRIS2_BOOT=bootstrap/idris2-boot`
+* `make libs IDRIS2_BOOT=bootstrap/idris2-boot SCHEME=scheme`
+* `make all IDRIS2_BOOT=bootstrap/idris2-boot SCHEME=scheme`
 * `make install`
 
 1b: Installing with an existing Idris 2

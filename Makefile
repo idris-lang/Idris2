@@ -23,13 +23,14 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
     endif
 endif
 
+export IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
 
 export IDRIS2_CURDIR = $(CURDIR)
 export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
 
-.PHONY: all support clean support-clean ${TARGET}
+.PHONY: all support clean support-clean init-bootstrap ${TARGET}
 
 all: support ${TARGET} libs
 
@@ -88,3 +89,6 @@ install-libs: libs
 	${MAKE} -C libs/base install IDRIS2=../../${TARGET}
 	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_VERSION=${IDRIS2_VERSION}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET}
+
+init-bootstrap:
+	./init-bootstrap
