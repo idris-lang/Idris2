@@ -1,4 +1,7 @@
-0. Fix hard coded prefix (sorry)
+Installing
+==========
+
+0: Fix hard coded prefix (sorry)
 --------------------------------
 
 This isn't easily configurable yet - I will deal with it soon. So, before
@@ -6,7 +9,7 @@ you start:
 
 * Change the `prefix` which is currently hard coded in `Idris.Main`.
 
-1a. Installing without an existing Idris 2
+1a: Installing without an existing Idris 2
 ------------------------------------------
 
 If you *don't* have  Idris-2-in-Idris-1 installed, you can build a bootstrapping
@@ -28,14 +31,14 @@ Then, to build Idris 2
 * `make all IDRIS2_BOOT=bootstrap/idris2-boot`
 * `make install`
 
-1b. Installing with an existing Idris 2
+1b: Installing with an existing Idris 2
 ---------------------------------------
 
 If you have Idris-2-in-Idris-1 installed: 
 
 * `make all && make install`
 
-2. Self-hosting step
+2: Self-hosting step
 --------------------
 
 Then, to build from the newly installed `idris2sh`
