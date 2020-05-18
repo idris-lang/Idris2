@@ -40,6 +40,13 @@ local variant for `scheme`.
 * `make libs SCHEME=scheme`
 * `make install`
 
+Finally, go to the Self-hosting step below, but you'll also need to add
+`SCHEME=scheme` so that the bootstrapping script knows where to look.
+That is:
+
+* `make clean` -- to make sure you're building everything with the new version
+* `make all IDRIS2_BOOT=idris2sh SCHEME=scheme && make install`
+
 1b: Installing with an existing Idris 2
 ---------------------------------------
 
@@ -50,10 +57,11 @@ If you have Idris-2-in-Idris-1 installed:
 2: Self-hosting step
 --------------------
 
-Then, to build from the newly installed `idris2sh`
+Then, to build from the newly installed `idris2sh`, assuming that `idris2sh`
+is in your `PATH`.
 
 * `make clean` -- to make sure you're building everything with the new version
-* `make all IDRIS_BOOT=idris2sh && make install`
+* `make all IDRIS2_BOOT=idris2sh && make install`
 
 For amusement, try using `time` on the above. I get about 3m for installing
 from `idris2`, and about 1m45 for installing from `idris2sh`.

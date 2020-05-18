@@ -91,4 +91,4 @@ install-libs: libs
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 init-bootstrap:
-	./init-bootstrap
+	./init-bootstrap ${PREFIX}
