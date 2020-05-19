@@ -125,9 +125,10 @@ endif
 
 bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
+	cp bootstrap/idris2sh.rkt bootstrap/idris2boot.rkt
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh.rkt
+	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 else
-	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh.rkt
+	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 endif
 	sh ./bootstrap-rkt.sh

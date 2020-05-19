@@ -2,13 +2,13 @@
 
 # Compile the bootstrap scheme
 cd bootstrap
-echo "Building idris2sh from idris2sh.rkt"
+echo "Building idris2boot from idris2boot.rkt"
 
-raco exe idris2sh.rkt
+raco exe idris2boot.rkt
 
 # Put the result in the usual place where the target goes
 mkdir -p ../build/exec
-install idris2sh ../build/exec/idris2sh
+install idris2boot ../build/exec/idris2sh
 
 cd ..
 
