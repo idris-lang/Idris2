@@ -38,6 +38,8 @@ schHeader libs
   = "#lang racket/base\n" ++
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system
+    "(require rnrs/bytevectors-6)\n" ++ -- for buffers
+    "(require rnrs/io/ports-6)\n" ++ -- for files
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
     libs ++
