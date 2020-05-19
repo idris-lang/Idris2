@@ -75,3 +75,9 @@ is in your `PATH`.
 
 For amusement, try using `time` on the above. I get about 3m for installing
 from `idris2`, and about 1m45 for installing from `idris2sh`.
+
+3: Testing
+----------
+
+After `make all`, type `make test` to check everything works. This uses the
+executable in `./build/exec`.

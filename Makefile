@@ -29,6 +29,7 @@ IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
 
 export SCHEME
 export IDRIS2_BOOT_PATH = ${CURDIR}/libs/prelude/build/ttc:${CURDIR}/libs/base/build/ttc:${CURDIR}/libs/network/build/ttc
+export IDRIS2_CURDIR = ${CURDIR}
 
 .PHONY: all support clean support-clean bootstrap init-bootstrap idris2-exec ${TARGET}
 
