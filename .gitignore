@@ -2,6 +2,10 @@
 *.ibc
 *.ttc
 *.ttm
+*.o
+*.d
+*.a
+*.dll
 
 *.dSYM
 
@@ -12,6 +16,9 @@
 /docs/build/
 
 /libs/**/build
+
+/src/IdrisPaths.idr
+
 /tests/**/output
 /tests/**/*.so
 /tests/**/*.dylib
