@@ -159,20 +159,20 @@ export
 TTC Int where
   toBuf b val
     = do chunk <- get Bin
-         if avail chunk >= 4
+         if avail chunk >= 8
             then
               do coreLift $ setInt (buf chunk) (loc chunk) val
-                 put Bin (appended 4 chunk)
-            else do chunk' <- extendBinary 4 chunk
+                 put Bin (appended 8 chunk)
+            else do chunk' <- extendBinary 8 chunk
                     coreLift $ setInt (buf chunk') (loc chunk') val
-                    put Bin (appended 4 chunk')
+                    put Bin (appended 8 chunk')
 
   fromBuf b
     = do chunk <- get Bin
-         if toRead chunk >= 4
+         if toRead chunk >= 8
             then
               do val <- coreLift $ getInt (buf chunk) (loc chunk)
-                 put Bin (incLoc 4 chunk)
+                 put Bin (incLoc 8 chunk)
                  pure val
               else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, size chunk))))
 

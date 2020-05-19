@@ -13,6 +13,13 @@ do this with `brew install coreutils`.
 
 If you have an existing Idris 2, go to step 1b. Otherwise, read on...
 
+Make sure that:
+
+* `$PREFIX/bin` is in your `PATH`
+* `$PREFIX/lib` is in your `LD_LIBRARY_PATH` (so that the system knows where
+  to look for library support code)
+
+
 1a: Installing without an existing Idris 2
 ------------------------------------------
 
