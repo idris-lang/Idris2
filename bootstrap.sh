@@ -16,14 +16,18 @@ mkdir -p ../build/exec/idris2sh_app
 install idris2-boot ../build/exec/idris2sh
 install idris2sh_app/* ../build/exec/idris2sh_app
 
-# Install with the bootstrap directory as the PREFIX
-DIR="`realpath $0`"
-PREFIX="`dirname $0`"/bootstrap
-
 cd ..
 
-# Now rebuuld everything properly
+# Install with the bootstrap directory as the PREFIX
+DIR="`realpath $0`"
+PREFIX="`dirname $DIR`"/bootstrap
+
+# Now rebuild everything properly
+echo ${PREFIX}
+
+IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${PREFIX}/idris2-0.2.0/contrib:${PREFIX}/idris2-0.2.0/network"
+
 make libs SCHEME=${SCHEME} PREFIX=${PREFIX}
 make install SCHEME=${SCHEME} PREFIX=${PREFIX}
 make clean
-make all IDRIS2_BOOT=${PREFIX}/bin/idris2sh SCHEME=${SCHEME}
+make all IDRIS2_BOOT=${PREFIX}/bin/idris2sh SCHEME=${SCHEME} IDRIS2_PATH=${IDRIS2_BOOT_PATH}

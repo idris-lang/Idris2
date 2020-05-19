@@ -107,8 +107,8 @@ bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
 	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2sh_app/idris2sh.ss > bootstrap/idris2sh_app/idris2-boot.ss
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${PREFIX}|g' bootstrap/idris2sh_app/idris2-boot.ss
+	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh_app/idris2-boot.ss
 else
-	sed -i 's|__PREFIX__|${PREFIX}|g' bootstrap/idris2sh_app/idris2-boot.ss
+	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh_app/idris2-boot.ss
 endif
 	./bootstrap.sh

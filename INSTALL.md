@@ -23,7 +23,7 @@ Make sure that:
 1a: Installing without an existing Idris 2
 ------------------------------------------
 
-If you *don't* have Idris-2-in-Idris-1 installed, you can buld from pre-built
+If you *don't* have Idris-2-in-Idris-1 installed, you can build from pre-built
 Chez Scheme source, as long as you have Chez Scheme installed. To do this,
 enter:
 
@@ -41,6 +41,13 @@ build the current repository). It then rebuilds using the result.
 Then to install, type:
 
 * `make install`
+
+If you want to check everything is working, type:
+
+* `make test IDRIS2_BOOT=idris2sh`
+
+(You have to install first, because the test script relies on an existing
+Idris 2 installation.)
 
 1b: Installing with an existing Idris 2
 ---------------------------------------
