@@ -6,7 +6,12 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef _WIN32
+extern char **_environ;
+#define environ _environ
+#else
 extern char** environ;
+#endif
 
 int idris2_isNull(void* ptr) {
     return (ptr == NULL);
