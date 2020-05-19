@@ -10,7 +10,7 @@ CC := clang
 RANLIB ?= ranlib
 AR ?= ar
 
-CFLAGS := -Wall $(CFLAGS) $(OPT)
+CFLAGS := -Wall $(CFLAGS)
 LDFLAGS := $(LDFLAGS)
 
 MACHINE := $(shell $(CC) -dumpmachine)

@@ -1,4 +1,4 @@
-include $(IDRIS2_CURDIR)/config.mk
+include ../../config.mk
 
 INSTALLDIR = `${IDRIS2} --libdir`/network/lib
 
@@ -36,11 +36,11 @@ $(TARGET)$(SHLIB_SUFFIX): $(OBJS)
 .PHONY: clean
 
 clean :
-	rm -f $(OBJS) $(TARGET)$(SHLIB_SUFFIX)
-	rm -rf build
+	$(RM) $(OBJS) $(TARGET)$(SHLIB_SUFFIX)
+	$(RM) -r build
 
 cleandep: clean
-	rm -f $(DEPS)
+	$(RM) $(DEPS)
 
 
 .PHONY: install
@@ -55,4 +55,4 @@ install:
 test: build test.c
 	$(CC) -o network-tests -L. -I. test.c $(TARGET)$(SHLIB_SUFFIX)
 	LD_LIBRARY_PATH=. ./network-tests
-	@rm -f ./network-tests test.o
+	@$(RM) ./network-tests test.o
