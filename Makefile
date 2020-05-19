@@ -103,7 +103,7 @@ install-libs: libs
 	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-init-bootstrap: support
+bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
 	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2sh_app/idris2sh.ss > bootstrap/idris2sh_app/idris2-boot.ss
 ifeq ($(OS), darwin)

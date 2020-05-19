@@ -23,38 +23,23 @@ Make sure that:
 1a: Installing without an existing Idris 2
 ------------------------------------------
 
-If you *don't* have  Idris-2-in-Idris-1 installed, you can still build a
-bootstrapping compiler, as long as you have Chez Scheme installed. This is a
-bit more fiddly than if you have Idris 2 installed (for the moment - it should
-be scriptable) but you only have to do it once.
+If you *don't* have Idris-2-in-Idris-1 installed, you can buld from pre-built
+Chez Scheme source, as long as you have Chez Scheme installed. To do this,
+enter:
 
-To begin, enter:
+* `make bootstrap SCHEME=chez`
 
-* `make init-bootstrap SCHEME=chez`
-
-(`chez` is the executable name of the Chez Scheme compiler.  You may need to
+`chez` is the executable name of the Chez Scheme compiler.  You may need to
 replace this with the executable for Chez Scheme on your system. This could be
-`chez`, `chezscheme` or `chezscheme9.5` or something else, depending on your
-system and the Chez Scheme version).
+`scheme`, `chezscheme` or `chezscheme9.5` or something else, depending on your
+system and the Chez Scheme version.
 
 This builds an Idris 2 compiler from scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to
-build the current repository).
+build the current repository). It then rebuilds using the result.
 
-Then, to build the libraries using this generated compiler, again using your
-local variant for `chez`.
+Then to install, type:
 
-* `make libs SCHEME=chez`
-* `make install SCHEME=chez`
-
-At this point, check that `$PREFIX/bin` is in your `PATH`.
-
-Then, go to the Self-hosting step below, but you'll also need to add
-`SCHEME=chez` (with the appropriate name for `chez`) so that the bootstrapping
-script knows where to look.  That is:
-
-* `make clean` -- clean the build artefacts
-* `make all IDRIS2_BOOT=idris2sh SCHEME=chez`
 * `make install`
 
 1b: Installing with an existing Idris 2
