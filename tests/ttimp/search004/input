@@ -1,3 +1,0 @@
-tryMap (S Z) (S (S Z))
-tryVMap (S Z) (S (S Z))
-:q

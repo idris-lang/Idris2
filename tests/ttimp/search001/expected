@@ -1,6 +1,0 @@
-Processing as TTImp
-Written TTC
-Yaffle> (((((Main.There [Just {a:19} = Main.Nat]) [Just y = (Main.S Main.Z)]) [Just xs = (((Main.Cons [Just a = Main.Nat]) Main.Z) (Main.Nil [Just a = Main.Nat]))]) [Just x = Main.Z]) (((Main.Here [Just {a:11} = Main.Nat]) [Just xs = (Main.Nil [Just a = Main.Nat])]) [Just x = Main.Z]))
-Yaffle> (((Main.Here [Just {a:11} = Main.Nat]) [Just xs = (((Main.Cons [Just a = Main.Nat]) Main.Z) (Main.Nil [Just a = Main.Nat]))]) [Just x = (Main.S Main.Z)])
-Yaffle> ((((Main.MkPair [Just b = Integer]) [Just a = String]) "b") 94)
-Yaffle> Bye for now!

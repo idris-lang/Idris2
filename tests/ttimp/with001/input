@@ -1,5 +1,0 @@
-parity (S (S (S Z)))
-parity (S (S Z))
-eqPair (MkPair Z (S Z)) (MkPair (S Z) (S (S Z)))
-eqPair (MkPair Z (S Z)) (MkPair Z (S Z))
-:q

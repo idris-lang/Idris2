@@ -24,11 +24,8 @@ ttimpTests
        "nest001", "nest002",
        "perf001", "perf002", "perf003",
        "record001", "record002", "record003",
-       "rewrite001",
        "qtt001", "qtt002", "qtt003",
-       "search001", "search002", "search003", "search004", "search005",
-       "total001", "total002", "total003",
-       "with001"]
+       "total001", "total002", "total003"]
 
 idrisTests : List String
 idrisTests

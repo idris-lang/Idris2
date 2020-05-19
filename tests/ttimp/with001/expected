@@ -1,7 +1,0 @@
-Processing as TTImp
-Written TTC
-Yaffle> (Main.Odd (Main.S Main.Z))
-Yaffle> (Main.Even (Main.S Main.Z))
-Yaffle> (Main.Nothing [Just a = ((((Main.Eq [Just b = ((Main.Pair Main.Nat) Main.Nat)]) [Just a = ((Main.Pair Main.Nat) Main.Nat)]) ((((Main.MkPair [Just b = Main.Nat]) [Just a = Main.Nat]) Main.Z) (Main.S Main.Z))) ((((Main.MkPair [Just b = Main.Nat]) [Just a = Main.Nat]) (Main.S Main.Z)) (Main.S (Main.S Main.Z))))])
-Yaffle> ((Main.Just [Just a = ((((Main.Eq [Just b = ((Main.Pair Main.Nat) Main.Nat)]) [Just a = ((Main.Pair Main.Nat) Main.Nat)]) ((((Main.MkPair [Just b = Main.Nat]) [Just a = Main.Nat]) Main.Z) (Main.S Main.Z))) ((((Main.MkPair [Just b = Main.Nat]) [Just a = Main.Nat]) Main.Z) (Main.S Main.Z)))]) ((Main.Refl [Just {b:10} = ((Main.Pair Main.Nat) Main.Nat)]) [Just x = ((((Main.MkPair [Just b = Main.Nat]) [Just a = Main.Nat]) Main.Z) (Main.S Main.Z))]))
-Yaffle> Bye for now!
