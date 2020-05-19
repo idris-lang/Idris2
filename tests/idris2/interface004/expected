@@ -1,0 +1,4 @@
+1/1: Building Do (Do.idr)
+Main> Just 9
+Main> Nothing
+Main> Bye for now!

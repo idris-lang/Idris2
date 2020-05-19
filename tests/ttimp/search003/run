@@ -1,0 +1,4 @@
+$1 --yaffle FakeTC.yaff < input
+$1 --yaffle build/ttc/FakeTC.ttc < input
+
+rm -rf build

@@ -1,0 +1,11 @@
+$1 AppendVec.idr --check
+$1 CheckEqDec.idr --check
+$1 CheckEqMaybe.idr --check
+$1 EqNat.idr --check
+$1 ExactLength.idr --check
+$1 ExactLengthDec.idr --check
+$1 ReverseVec.idr --check
+$1 TCVects.idr --check
+$1 Void.idr --check
+
+rm -rf build

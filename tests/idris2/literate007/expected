@@ -1,0 +1,8 @@
+1/1: Building IEdit (IEdit.lidr)
+Main> >     zipHere [] ys = []
+>     zipHere (x :: xs) (y :: ys) = (x, y) :: zipHere xs ys
+Main> Bye for now!
+1/1: Building IEditOrg (IEditOrg.org)
+Main> #+IDRIS:     zipHere [] ys = []
+#+IDRIS:     zipHere (x :: xs) (y :: ys) = (x, y) :: zipHere xs ys
+Main> Bye for now!

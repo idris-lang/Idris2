@@ -1,0 +1,35 @@
+data Nat : Type where
+  Z : Nat
+  S : Nat -> Nat
+
+data NotZero : Nat -> Type where
+  Is : {n : Nat} -> NotZero (S n)
+
+record Positive (n : Nat) {auto 0 pos : NotZero n} where
+  constructor Check
+
+a : Positive (S Z)
+a = Check
+
+b : Positive (S (S Z))
+b = Check
+
+
+data KindOfString : Type where
+ ASCII : KindOfString
+ UTF   : KindOfString
+
+UTForASCII : KindOfString -> Type
+UTForASCII UTF = String
+UTForASCII ASCII = Nat   -- Just as demonstration
+
+record FlexiString { default UTF k : KindOfString} where
+  constructor MkFlexiString
+  val : UTForASCII k
+  
+c : FlexiString
+c = MkFlexiString "hello"
+
+d : FlexiString {k = ASCII}
+d = MkFlexiString Z
+

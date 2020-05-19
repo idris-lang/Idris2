@@ -1,0 +1,4 @@
+$1 --check Eta.idr
+$1 --check Eta2.idr
+
+rm -rf build

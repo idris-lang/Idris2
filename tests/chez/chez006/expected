@@ -1,0 +1,21 @@
+"Nat"
+"List of Nat"
+"List of Something else"
+"List of Something else"
+"List of Bool"
+"Int"
+"Something else"
+"List of Type"
+"List of Int"
+43
+42
+1/1: Building TypeCase (TypeCase.idr)
+Main> Main> Main.strangeId is total
+Main> Main.strangeId':
+strangeId' _
+Main> Bye for now!
+1/1: Building TypeCase2 (TypeCase2.idr)
+TypeCase2.idr:5:14--5:17:While processing left hand side of strangeId at TypeCase2.idr:5:1--6:1:
+Can't match on Nat (Erased argument)
+TypeCase2.idr:9:5--9:9:While processing left hand side of foo at TypeCase2.idr:9:1--10:1:
+Can't match on Nat (Erased argument)

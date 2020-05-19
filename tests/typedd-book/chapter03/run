@@ -1,0 +1,9 @@
+$1 IsEven.idr --check
+$1 Matrix.idr --check
+$1 VecSort.idr --check
+$1 Vectors.idr --check
+$1 WordLength.idr --check
+$1 WordLength_vec.idr --check
+$1 XOR.idr --check
+
+rm -rf build

@@ -1,0 +1,4 @@
+1/3: Building Control.App (Control/App.idr)
+2/3: Building Control.App.Console (Control/App/Console.idr)
+3/3: Building Store (Store.idr)
+3/3: Building StoreL (StoreL.idr)

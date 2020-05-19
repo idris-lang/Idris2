@@ -1,0 +1,6 @@
+1/1: Building CongErr (CongErr.idr)
+CongErr.idr:4:11--5:1:While processing right hand side of fsprf at CongErr.idr:4:1--5:1:
+Can't solve constraint between:
+	?_ x
+and
+	FS x

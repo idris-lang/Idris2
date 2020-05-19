@@ -1,0 +1,57 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Eq : a -> b -> Type where
+     Refl : Eq x x
+
+rewrite__impl : {0 x, y : a} -> (0 p : _) -> 
+                (0 rule : Eq x y) -> (1 val : p y) -> p x
+rewrite__impl p Refl prf = prf
+
+%rewrite Eq rewrite__impl
+
+data Parity : Nat -> Type where
+     Even : (k : _) -> Parity (plus k k)
+     Odd : (k : _) -> Parity (S (plus k k))
+
+plusnSm : (n : Nat) -> (m : Nat) ->
+          Eq (S (plus n m)) (plus n (S m))
+plusnSm Z m = Refl
+plusnSm (S k) m 
+    = let ih = plusnSm k m in
+          rewrite ih in Refl
+
+parity : (n : Nat) -> Parity n
+parity Z = Even Z
+parity (S k) with (parity k)
+  parity (S (plus l l)) | Even l = Odd l
+  parity (S (S (plus k k))) | Odd k
+      = rewrite plusnSm k k in Even (S k)
+
+data Maybe : Type -> Type where
+     Nothing : Maybe a
+     Just : a -> Maybe a
+
+eqNat : (x : Nat) -> (y : Nat) -> Maybe (Eq x y)
+eqNat Z Z = Just Refl
+eqNat Z (S k) = Nothing
+eqNat (S k) Z = Nothing
+eqNat (S k) (S j) with (eqNat k j)
+  eqNat (S k) (S k) | Just Refl = Just Refl
+  eqNat (S k) (S j) | Nothing = Nothing
+
+data Pair : Type -> Type -> Type where
+     MkPair : a -> b -> Pair a b
+
+eqPair : (x : Pair Nat Nat) -> (y : Pair Nat Nat) -> Maybe (Eq x y)
+eqPair (MkPair x y) (MkPair w z) with (eqNat x w)
+  eqPair (MkPair x y) (MkPair x z) | Just Refl with (eqNat y z)
+    eqPair (MkPair x y) (MkPair x y) | Just Refl | Just Refl = Just Refl
+    eqPair (MkPair x y) (MkPair x z) | Just Refl | Nothing = Nothing
+  eqPair (MkPair x y) (MkPair w z) | Nothing = Nothing
+

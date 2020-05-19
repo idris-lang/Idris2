@@ -1,0 +1,4 @@
+:t dvec
+dvec 3
+dvec _ {xs = [1,2,3]}
+:q

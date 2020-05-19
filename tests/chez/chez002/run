@@ -1,0 +1,2 @@
+$1 --no-banner Pythag.idr < input
+rm -rf build

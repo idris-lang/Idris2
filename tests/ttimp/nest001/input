@@ -1,0 +1,6 @@
+testlet 2
+fn (S Z) (S Z)
+fn2 (S Z) (S Z)
+localdata Z
+localdata (S (S Z))
+:q

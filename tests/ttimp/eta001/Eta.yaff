@@ -1,0 +1,31 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data Eq : $a -> $b -> Type where
+     Refl : Eq $x $x
+
+data Test : Type where
+     MkTest : Integer -> Integer -> Test
+
+eqTest : Eq (plus (S (S Z)) (S (S Z))) (S (S (S (S Z))))
+eqTest = Refl
+
+etaGood1 : Eq MkTest (\x => \y => MkTest ? ?)
+etaGood1 = Refl
+
+etaGood1b : Eq (\x => \y => MkTest ? ?) MkTest
+etaGood1b = Refl
+
+etaGood2: Eq (MkTest 1) (\x => MkTest ? x)
+etaGood2 = Refl
+
+etaGood3: (f : $a -> $b) -> Eq f (\x => f x)
+etaGood3 $f = Refl
+
+-- etaBad : Eq MkTest (\x : Char => \y => MkTest ? ?)
+-- etaBad = Refl

@@ -1,0 +1,47 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+data List : Type -> Type where
+     Nil : List $a
+     Cons : $a -> List $a -> List $a
+
+data Elem : $a -> List $a -> Type where
+     Here : Elem $x (Cons $x $xs)
+     There : Elem $x $xs -> Elem $x (Cons $y $xs)
+
+data Pair : Type -> Type -> Type where
+     MkPair : $a -> $b -> Pair $a $b
+
+fst : {0 a, b : _} -> Pair a b -> a
+fst (MkPair $x _) = x
+
+snd : {0 a, b : _} -> Pair a b -> b
+snd (MkPair _ $y) = y
+
+%pair Pair fst snd
+
+isThere : Elem Z (Cons (S Z) (Cons Z Nil))
+isThere = %search
+
+isThere2 : Elem (S Z) (Cons (S Z) (Cons Z Nil))
+isThere2 = %search
+
+isThere3 : Elem (S (S Z)) (Cons (S Z) (Cons Z Nil))
+-- isThere3 = %search
+
+fn : $a -> $b -> $a
+fn = %search
+
+app : ($a -> $b) -> $a -> $b
+app = %search
+
+test : $a -> Pair (Integer -> $a) Integer
+test $y = MkPair (\x => y) 42
+
+foo : Pair (Integer -> $a) (Pair $c $b) -> Integer -> Pair $b $a
+foo = %search
+
+bar : Pair (Int -> $a) (Pair $c $b) -> Int -> Pair $b Char
+
+

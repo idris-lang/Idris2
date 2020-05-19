@@ -1,0 +1,20 @@
+1/1: Building Eta (Eta.idr)
+Eta.idr:14:10--15:1:While processing right hand side of etaBad at Eta.idr:14:1--15:1:
+When unifying \x => (\y => (MkTest ?_ ?_)) = \x => (\y => (MkTest ?_ ?_)) and MkTest = \x => (\y => (MkTest ?_ ?_))
+Mismatch between:
+	Nat
+and
+	Integer
+1/1: Building Eta2 (Eta2.idr)
+Eta2.idr:2:8--4:1:While processing right hand side of test at Eta2.idr:2:1--4:1:
+When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_)
+Mismatch between:
+	a
+and
+	Nat
+Eta2.idr:5:44--6:1:While processing right hand side of test2 at Eta2.idr:5:1--6:1:
+When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_)
+Mismatch between:
+	a
+and
+	Nat

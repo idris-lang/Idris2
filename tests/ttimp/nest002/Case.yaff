@@ -1,0 +1,40 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+cplus : Nat -> Nat -> Nat
+cplus $x $y
+    = case x of
+           Z => y
+           S $k => S (cplus k y)
+
+data Vect : Nat -> Type -> Type where
+     Nil : Vect Z $a
+     Cons : $a -> Vect $k $a -> Vect (S $k) $a
+
+append : Vect $n $a -> Vect $m $a -> Vect (cplus $n $m) $a
+append Nil $ys = ys
+append (Cons $x $xs) $ys = Cons x (append xs ys)
+
+cappend : Vect $n $a -> Vect $m $a -> Vect (cplus $n $m) $a
+cappend $xs $ys
+    = case xs of
+           Nil => ys
+           Cons $x $zs => Cons x (cappend zs ys)
+
+cvec : {n : _} -> Vect n $a -> Nat
+cvec {n = $n} $xs
+    = case xs of
+           Nil => n
+           Cons $x $xs => n
+
+cvec2 : {n : _} -> Vect n $a -> Nat
+cvec2 {n = n@(_)} $xs
+    = case xs of
+           Nil => n
+           Cons $x $xs => n
+

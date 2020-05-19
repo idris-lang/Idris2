@@ -1,0 +1,26 @@
+IdType : Type
+IdType = {0 a : Type} -> a -> a
+
+id : IdType
+id = \ x : _ => x
+
+idid : {0 a : Type} -> a -> a
+idid = id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+       id id id id id id id id id id
+
+idInt : Integer
+idInt = idid 94

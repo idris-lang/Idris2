@@ -1,0 +1,8 @@
+1/2: Building Stuff (Stuff.idr)
+2/2: Building DoLocal (DoLocal.idr)
+Main> Just 1
+Main> Just 0
+Main> Just 94
+Main> Nothing
+Main> Nothing
+Main> Bye for now!

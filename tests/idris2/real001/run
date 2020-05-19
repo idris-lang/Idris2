@@ -1,0 +1,4 @@
+$1 --check TestProto.idr
+$1 --check MakeChans.idr
+
+rm -rf build

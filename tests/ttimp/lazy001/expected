@@ -1,0 +1,18 @@
+Processing as TTImp
+Written TTC
+Yaffle> (((Main.Stream.Cons [Just a = Integer]) 1) (%delay Main.ones))
+Yaffle> (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (Main.Nil [Just a = Integer]))))
+Yaffle> (((Main.Cons [Just a = Integer]) 2) (((Main.Cons [Just a = Integer]) 4) (((Main.Cons [Just a = Integer]) 6) (Main.Nil [Just a = Integer]))))
+Yaffle> Bye for now!
+Processing as TTImp
+Written TTC
+Yaffle> (((Main.Stream.Cons [Just a = Integer]) 1) (%delay Main.ones))
+Yaffle> (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (Main.Nil [Just a = Integer]))))
+Yaffle> (((Main.Cons [Just a = Integer]) 2) (((Main.Cons [Just a = Integer]) 4) (((Main.Cons [Just a = Integer]) 6) (Main.Nil [Just a = Integer]))))
+Yaffle> Bye for now!
+Processing as TTC
+Read TTC
+Yaffle> (((Main.Stream.Cons [Just a = Integer]) 1) (%delay Main.ones))
+Yaffle> (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (((Main.Cons [Just a = Integer]) 1) (Main.Nil [Just a = Integer]))))
+Yaffle> (((Main.Cons [Just a = Integer]) 2) (((Main.Cons [Just a = Integer]) 4) (((Main.Cons [Just a = Integer]) 6) (Main.Nil [Just a = Integer]))))
+Yaffle> Bye for now!

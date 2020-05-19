@@ -1,0 +1,50 @@
+data Bool : Type where
+     False : Bool
+     True : Bool
+
+not : Bool -> Bool
+not False = True
+not True = False
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+ack : Nat -> Nat -> Nat
+ack Z n = S n
+ack (S k) Z = ack k (S Z)
+ack (S j) (S k) = ack j (ack (S j) k)
+
+foo : Nat -> Nat
+foo Z = Z
+foo (S Z) = (S Z)
+foo (S (S k)) = foo (S k)
+
+foo' : Nat -> Nat
+foo' Z = Z
+foo' (S Z) = (S Z)
+foo' (S p@(S k)) = foo' p
+
+data Bin : Type where
+     EPS : Bin
+     C0 : Bin -> Bin
+     C1 : Bin -> Bin
+
+foom : Bin -> Nat
+foom EPS = Z
+foom (C0 EPS) = Z
+foom (C0 (C1 x)) = S (foom (C1 x))
+foom (C0 (C0 x)) = foom (C0 x)
+foom (C1 x) = S (foom x)
+
+pfoom : Bin -> Nat
+pfoom EPS = Z
+pfoom (C0 EPS) = Z
+pfoom (C0 (C1 x)) = S (pfoom (C0 x))
+pfoom (C0 (C0 x)) = pfoom (C0 x)
+pfoom (C1 x) = S (foom x)
+

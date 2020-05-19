@@ -1,0 +1,4 @@
+1/1: Building Lazy (Lazy.idr)
+Main> 1 :: Delay ones
+Main> [1, 1, 1, 1]
+Main> Bye for now!

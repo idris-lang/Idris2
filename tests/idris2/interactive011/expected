@@ -1,0 +1,7 @@
+1/1: Building IEdit (IEdit.idr)
+Main> natElim p x f 0 = x
+natElim p x f (S k) = f k (natElim p x f k)
+Main> f k (natElim2 p x f k)
+Main> listElim p mnil mcons [] = mnil
+listElim p mnil mcons (x :: xs) = mcons x xs (listElim p mnil mcons xs)
+Main> Bye for now!

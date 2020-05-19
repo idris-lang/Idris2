@@ -1,0 +1,12 @@
+#+begin_src idris
+data Vect : Nat -> Type -> Type where
+     Nil : Vect Z a
+     (::) : a -> Vect k a -> Vect (S k) a
+#+end_src
+
+#+IDRIS: %name Vect xs, ys, zs
+
+#+IDRIS: dupAll : Vect n a -> Vect n (a, a)
+#+IDRIS: dupAll xs = zipHere xs xs
+#+IDRIS:   where
+#+IDRIS:     zipHere : forall n . Vect n a -> Vect n b -> Vect n (a, b)

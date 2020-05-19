@@ -1,0 +1,15 @@
+1/2: Building Stuff (Stuff.idr)
+2/2: Building IFace (IFace.idr)
+IFace> True
+IFace> False
+IFace> Bye for now!
+2/2: Building IFace1 (IFace1.idr)
+IFace1>  0 a : Type
+ 0 p : a -> Type
+   l : a
+   r' : p l
+   r : p l
+   l' : a
+-------------------------------------
+foo : Bool
+IFace1> Bye for now!

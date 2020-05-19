@@ -1,0 +1,4 @@
+$1 --no-banner --check param.idr
+$1 --no-banner --check parambad.idr
+
+rm -rf build

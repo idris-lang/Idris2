@@ -1,0 +1,4 @@
+dsnd testPair
+vec testDVect
+:t some_fn testPerson
+:q

@@ -1,0 +1,14 @@
+1/1: Building Holes (Holes.idr)
+Holes.idr:4:64--4:85:While processing type of Vect_ext at Holes.idr:4:1--7:1:
+Name Builtin.~=~ is inaccessible since Builtin is not explicitly imported
+Holes.idr:7:26--8:1:While processing type of Weird at Holes.idr:7:1--8:1:
+Name Builtin.~=~ is inaccessible since Builtin is not explicitly imported
+Holes.idr:8:1--10:1:No type declaration for Main.Weird
+Holes.idr:10:5--10:10:While processing type of f at Holes.idr:10:1--11:1:
+Name Prelude.Bool is inaccessible since Prelude is not explicitly imported
+Holes.idr:11:1--12:1:No type declaration for Main.f
+Main> (interactive):1:4--1:8:Undefined name help
+Main> (interactive):1:4--1:9:Undefined name hole0
+Main> (interactive):1:4--1:9:Undefined name hole1
+Main> Unknown name hole1
+Main> Bye for now!

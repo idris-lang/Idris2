@@ -1,0 +1,10 @@
+1/1: Building IEdit (IEdit.lidr)
+Main> >            [] => ?bar_1
+>            (x :: zs) => ?bar_2
+Main> >   map f (MkFoo x) = ?baz_1
+>   map f (MkBar g) = ?baz_2
+Main> Bye for now!
+1/1: Building IEdit2 (IEdit2.lidr)
+Main> >            (x :: []) => ?bar_5
+>            (x :: (y :: zs)) => ?bar_6
+Main> Bye for now!

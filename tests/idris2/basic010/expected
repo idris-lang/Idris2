@@ -1,0 +1,4 @@
+1/1: Building Comp (Comp.idr)
+Main> Main> Main.comp : {0 a : Type} -> {0 c : Type} -> {0 b : Type} -> (b -> c) -> (a -> b) -> a -> c
+Main> Main.comp2 : {0 c : Type} -> {0 b : Type} -> (b -> c) -> {a : Type} -> (a -> b) -> a -> c
+Main> Bye for now!

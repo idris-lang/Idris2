@@ -1,0 +1,13 @@
+$1 Arith.idr --check
+$1 ArithCmd.idr --check
+$1 ArithCmdDo.idr --check
+$1 ArithTotal.idr --check
+$1 Greet.idr --check
+$1 InfIO.idr --check
+$1 InfList.idr --check
+$1 Label.idr --check
+$1 RunIO.idr --check
+$1 Streams.idr --check
+$1 StreamFail.idr --check
+
+rm -rf build

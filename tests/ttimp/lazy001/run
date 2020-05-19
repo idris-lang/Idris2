@@ -1,0 +1,5 @@
+$1 --yaffle Lazy.yaff < input
+$1 --yaffle LazyInf.yaff < input
+$1 --yaffle build/ttc/LazyInf.ttc < input
+
+rm -rf build

@@ -1,0 +1,22 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+simpleAs : Nat -> Nat
+simpleAs z@(_) = z
+
+as : Nat -> Nat
+as Z = Z
+as p@(S $k) = p
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data PairNat : Type where
+     MkPair : Nat -> Nat -> PairNat
+
+pairPred : Nat -> PairNat
+pairPred Z = MkPair Z Z
+pairPred (S Z) = MkPair Z Z
+pairPred (S p@(S $k)) = MkPair p k

@@ -1,0 +1,3 @@
+1/1: Building TypeInt (TypeInt.idr)
+TypeInt.idr:14:25--14:50:While processing constructor MkRecord at TypeInt.idr:14:3--15:1:
+Can't find an implementation for Interface ?s

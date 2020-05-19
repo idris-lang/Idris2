@@ -1,0 +1,5 @@
+$1 --check Dots1.idr
+$1 --check Dots2.idr
+$1 --check Dots3.idr
+
+rm -rf build

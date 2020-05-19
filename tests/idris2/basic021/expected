@@ -1,0 +1,4 @@
+1/1: Building CaseDep (CaseDep.idr)
+Main> Main.foo : Nat -> (x : Bool) -> IntOrChar x -> String
+foo num x i = if x then show num else show i
+Main> Bye for now!

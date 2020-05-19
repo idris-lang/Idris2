@@ -1,0 +1,3 @@
+1/1: Building Deps (Deps.idr)
+Deps.idr:18:13--19:3:While processing right hand side of badcard at Deps.idr:18:3--19:3:
+k is not accessible in this context

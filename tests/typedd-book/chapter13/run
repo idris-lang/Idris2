@@ -1,0 +1,6 @@
+$1 Door.idr --check
+$1 Stack.idr --check
+$1 StackIO.idr --check
+$1 Vending.idr --check
+
+rm -rf build

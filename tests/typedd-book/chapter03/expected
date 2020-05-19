@@ -1,0 +1,7 @@
+1/1: Building IsEven (IsEven.idr)
+1/1: Building Matrix (Matrix.idr)
+1/1: Building VecSort (VecSort.idr)
+1/1: Building Vectors (Vectors.idr)
+1/1: Building WordLength (WordLength.idr)
+1/1: Building WordLength_vec (WordLength_vec.idr)
+1/1: Building XOR (XOR.idr)

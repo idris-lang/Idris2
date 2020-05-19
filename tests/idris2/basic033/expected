@@ -1,0 +1,5 @@
+1/1: Building unboundimps (unboundimps.idr)
+unboundimps.idr:18:11--18:14:While processing type of len' at unboundimps.idr:18:1--19:1:
+Undefined name xs
+unboundimps.idr:19:16--19:18:While processing type of append' at unboundimps.idr:19:1--21:1:
+Undefined name n

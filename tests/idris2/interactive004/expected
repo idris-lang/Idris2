@@ -1,0 +1,8 @@
+1/1: Building IEdit (IEdit.idr)
+Main> f (x, y)
+Main> f (fst x) (snd x)
+Main> ys
+Main> x :: append xs ys
+Main> []
+Main> f x y :: zipWith f xs ys
+Main> Bye for now!

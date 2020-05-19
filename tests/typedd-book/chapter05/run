@@ -1,0 +1,9 @@
+$1 DepPairs.idr --check
+$1 Do.idr --check
+$1 Hello.idr --check
+$1 Loops.idr --check
+$1 PrintLength.idr --check
+$1 ReadNum.idr --check
+$1 ReadVect.idr --check
+
+rm -rf build

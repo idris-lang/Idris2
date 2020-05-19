@@ -1,0 +1,7 @@
+$1 Elem.idr --check
+$1 ElemBool.idr --check
+$1 ElemType.idr --check
+$1 Hangman.idr --check
+$1 RemoveElem.idr --check
+
+rm -rf build

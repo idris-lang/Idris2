@@ -1,0 +1,15 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data Parity : Nat -> Type where
+     Even : (n : Nat) -> Parity (plus n n)
+     Odd : (n : Nat) -> Parity (S (plus n n))
+
+half : (n : Nat) -> Parity n -> Nat
+half (plus $n $n) (Even $n) = n
+half (S (plus $n $m)) (Odd $n) = n

@@ -1,0 +1,3 @@
+$1 --check Bimonad.idr
+
+rm -rf build

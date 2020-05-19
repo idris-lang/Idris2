@@ -1,0 +1,3 @@
+$1 --no-banner WithLift.lidr < input
+
+rm -rf build

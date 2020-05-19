@@ -1,0 +1,8 @@
+1/1: Building Mut (Mut.idr)
+Main> MyTrue
+Main> MyFalse
+Main> (True, False)
+Main> (False, True)
+Main> MkBox 40
+Main> MkBox 20
+Main> Bye for now!

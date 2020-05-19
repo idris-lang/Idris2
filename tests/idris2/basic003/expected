@@ -1,0 +1,8 @@
+1/1: Building Ambig1 (Ambig1.idr)
+Main> Bye for now!
+1/1: Building Ambig2 (Ambig2.idr)
+Ambig2.idr:22:21--22:28:While processing right hand side of keepUnique at Ambig2.idr:22:1--24:1:
+Ambiguous elaboration. Possible correct results:
+	Main.Set.toList ?arg
+	Main.Vect.toList ?arg
+Main> Bye for now!

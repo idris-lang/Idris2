@@ -1,0 +1,7 @@
+Main> 1/1: Building Do (Do.idr)
+Loaded file Do.idr
+Main> Just (S (S (S Z)))
+Main> Just Z
+Main> Just (S (S (S Z)))
+Main> Just Z
+Main> Bye for now!

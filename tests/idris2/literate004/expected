@@ -1,0 +1,6 @@
+1/1: Building IEdit (IEdit.lidr)
+Main> > empties : (m : Nat) -> Vect m (Vect 0 a)
+empties m
+Main> > transposeHelper : Vect m a -> Vect k (Vect m a) -> Vect m (Vect k a) -> Vect m (Vect (S k) a)
+transposeHelper x xs xs_trans
+Main> Bye for now!

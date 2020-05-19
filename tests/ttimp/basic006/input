@@ -1,0 +1,4 @@
+testMaybe
+MkInfer (List.Cons 1 Nil)
+MkInfer Nil
+:q

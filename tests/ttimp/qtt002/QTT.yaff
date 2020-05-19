@@ -1,0 +1,26 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data Vect : Nat -> Type -> Type where
+     Nil : Vect Z $a
+     Cons : $a -> (1 xs : Vect $k $a) -> Vect (S $k) $a
+
+append : (1 xs : Vect $n $a) -> Vect $m $a -> Vect (plus $n $m) $a
+append (Cons $x zs@(Cons $y $ws)) $ys = ?foo -- zs usable, y+ws not
+
+cappend : (1 xs : Vect $n $a) -> Vect $m $a -> Vect (plus $n $m) $a
+cappend $xs $ys
+    = case xs of
+           Nil => ys
+           Cons $x $zs => ?bar -- zs usable, xs not
+
+cappend2 : (1 xs : Vect $n $a) -> Vect $m $a -> Vect (plus $n $m) $a
+cappend2 $xs $ys
+    = case xs of
+           Nil => ys
+           Cons $x $zs => let ts = zs in ?baz -- ts usable, xs+zs not

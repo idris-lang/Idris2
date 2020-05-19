@@ -1,0 +1,3 @@
+$1 --yaffle With.yaff < input
+
+rm -rf build

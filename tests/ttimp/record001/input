@@ -1,0 +1,4 @@
+dfst testPair
+vec testDVect
+some_fn testPerson (S (S Z))
+:q

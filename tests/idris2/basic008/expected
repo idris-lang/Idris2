@@ -1,0 +1,5 @@
+1/1: Building If (If.idr)
+Main> "Zero"
+Main> "Odd"
+Main> "Even"
+Main> Bye for now!

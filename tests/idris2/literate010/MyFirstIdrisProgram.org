@@ -1,0 +1,44 @@
+#+TITLE: My First Idris2 Program
+
+This is a literate Idris2 Org-Mode file that the Idris2 understands.
+
+We can have visibile code blocks using source blocks in idris.
+
+#+BEGIN_SRC idris
+data Natural = Zero | Succ Natural
+#+END_SRC
+
+#+BEGIN_SRC idris
+data Vect : Natural -> Type -> Type where
+  Empty : Vect Zero a
+  Cons  : a -> Vect k a -> Vect (Succ k) a
+#+END_SRC
+
+We can have hidden literate lines that Idris will understand.
+
+#+IDRIS: %name Vect xs, ys
+
+However, we Idris2' literate support is greedy and does not understand all of the supported literate modes comments and verbatim blocks.
+
+Thus:
+
+#+begin_example
+
+#+IDRIS: plus : Natural -> Natural -> Natural
+
+#+end_example
+
+is also an active code line.
+
+We can also abuse org-mode comments to hide code not required for publication.
+
+#+begin_comment idris
+
+cannotSeeThis : Natural -> Natural
+
+#+end_comment
+
+#+BEGIN_SRC idris
+main : IO ()
+main = putStrLn "Hello!"
+#+END_SRC

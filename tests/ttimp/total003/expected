@@ -1,0 +1,8 @@
+Processing as TTImp
+Written TTC
+Yaffle> Main.Bad is not strictly positive
+Yaffle> Main.MkBad is not strictly positive
+Yaffle> Main.MkBad' is not strictly positive
+Yaffle> Main.foo is possibly not terminating due to call to Main.MkBad'
+Yaffle> Main.T is not strictly positive
+Yaffle> Bye for now!

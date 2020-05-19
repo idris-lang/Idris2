@@ -1,0 +1,7 @@
+:ps 8 curry_rhs
+:ps 11 uncurry_rhs
+:ps 14 append_rhs_1
+:ps 15 append_rhs_2
+:ps 18 zipWith_rhs_1
+:ps 19 zipWith_rhs_2
+:q

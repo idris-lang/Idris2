@@ -1,0 +1,4 @@
+$1 --check Error1.idr
+$1 --check Error2.idr
+
+rm -rf build

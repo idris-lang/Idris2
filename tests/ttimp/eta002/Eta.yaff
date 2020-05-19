@@ -1,0 +1,16 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data Eq : $a -> $b -> Type where
+     Refl : Eq $x $x
+
+data Test : Type where
+     MkTest : Integer -> Integer -> Test
+
+etaBad : Eq MkTest (\x : Char => \y => MkTest ? ?)
+etaBad = Refl

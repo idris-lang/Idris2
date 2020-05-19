@@ -1,0 +1,15 @@
+data Bad : Type where
+     MkBad : (Bad -> Int) -> Int -> Bad
+     MkBad' : Int -> Bad
+
+foo : Bad -> Int
+foo (MkBad f i) = f (MkBad' i)
+foo (MkBad' x) = x
+
+foo2 : Bad -> Int
+foo2 b = case b of
+              MkBad f i => f (MkBad' i)
+              MkBad' x => x
+
+data T : Type -> Type where
+     MkT : T (T a) -> T a

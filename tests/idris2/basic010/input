@@ -1,0 +1,4 @@
+:set showimplicits
+:t comp
+:t comp2
+:q

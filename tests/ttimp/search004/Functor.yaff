@@ -1,0 +1,76 @@
+data Bool : Type where
+     False : Bool
+     True : Bool
+
+not : Bool -> Bool
+not False = True
+not True = False
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data List : Type -> Type where
+     Nil : List $a
+     Cons : $a -> List $a -> List $a
+
+data Maybe : Type -> Type where
+     Nothing : Maybe $a
+     Just : $a -> Maybe $a
+
+data Pair : Type -> Type -> Type where
+     MkPair : $a -> $b -> Pair $a $b
+
+fst : {0 a, b : _} -> Pair a b -> a
+fst (MkPair $x _) = x
+
+snd : {0 a, b : _} -> Pair a b -> b
+snd (MkPair _ $y) = y
+
+%pair Pair fst snd
+
+data Functor : (f : ?) -> Type where
+     [noHints, search f]
+     MkFunctor : (map : {0 a, b: Type} -> (a -> b) -> $f a -> $f b) -> 
+                 Functor $f
+
+map : {auto c : Functor $f} -> ($a -> $b) -> $f $a -> $f $b
+map {c = MkFunctor $map_meth} = map_meth
+
+%hint
+ListFunctor : Functor List
+
+mapList : ($a -> $b) -> List $a -> List $b
+mapList $f Nil = Nil
+mapList $f (Cons $x $xs) = Cons (f x) (map f xs)
+
+ListFunctor = MkFunctor mapList
+
+namespace Vect
+    public export
+    data Vect : ? -> Type -> Type where
+         Nil : Vect Z $a
+         Cons : $a -> Vect $k $a -> Vect (S $k) $a
+
+    %hint
+    public export
+    VectFunctor : Functor (Vect $n)
+
+    public export
+    mapVect : ($a -> $b) -> Vect $n $a -> Vect $n $b
+    mapVect $f Nil = Nil
+    mapVect $f (Cons $x $xs) = Cons (f x) (map f xs)
+
+    VectFunctor = MkFunctor mapVect
+
+tryMap : Nat -> Nat -> List Nat
+tryMap $x $y = map (plus x) (Cons y (Cons (S y) Nil))
+
+tryVMap : Nat -> Nat -> Vect (S (S Z)) Nat
+tryVMap $x $y = map (plus x) (Cons y (Cons (S y) Nil))
+
+

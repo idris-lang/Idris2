@@ -1,0 +1,4 @@
+1/1: Building IEdit (IEdit.lidr)
+Main> > transposeHelper [] [] = []
+> transposeHelper (x :: xs) (y :: ys) = (x :: y) :: transposeHelper xs ys
+Main> Bye for now!

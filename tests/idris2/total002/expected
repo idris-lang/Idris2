@@ -1,0 +1,5 @@
+1/1: Building Total (Total.idr)
+Main> Main.noFinZ: All cases covered
+Main> Main.noFinZ': All cases covered
+Main> Main.noEmpty: All cases covered
+Main> Bye for now!

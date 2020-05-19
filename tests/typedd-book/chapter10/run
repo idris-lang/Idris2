@@ -1,0 +1,15 @@
+$1 DataStore.idr --check
+$1 DescribeList.idr --check
+$1 DescribeList2.idr --check
+$1 DLFail.idr --check
+$1 IsSuffix.idr --check
+$1 MergeSort.idr --check
+$1 MergeSortView.idr --check
+$1 Reverse.idr --check
+$1 ReverseSnoc.idr --check
+$1 Shape.idr --check
+$1 Shape_abs.idr --check
+$1 SnocList.idr --check
+$1 TestStore.idr --check
+
+rm -rf build

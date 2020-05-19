@@ -1,0 +1,9 @@
+$1 Double.idr --check
+$1 Generic.idr --check
+$1 HOF.idr --check
+$1 Partial.idr --check
+$1 Reverse.idr --check
+$1 AveMain.idr --check
+$1 Let_Where.idr --check
+
+rm -rf build

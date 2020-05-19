@@ -1,0 +1,17 @@
+1/1: Building Door (Door.lidr)
+Main> >               (y @@ res) => ?now_4
+Main> >               (True @@ d) => ?now_4
+>               (False @@ d) => ?now_5
+Main>  0 m : Type -> Type
+ 1 d : Door Open
+   x : Integer
+ 0 r : Res Bool (\r => (Door (if r then Open else Closed)))
+-------------------------------------
+now_2 : Use Many m ()
+Main>  0 m : Type -> Type
+ 1 d : Door Closed
+   x : Integer
+ 0 r : Res Bool (\r => (Door (if r then Open else Closed)))
+-------------------------------------
+now_3 : Use Many m ()
+Main> Bye for now!

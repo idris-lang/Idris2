@@ -1,0 +1,6 @@
+echo ':q' | $1 --yaffle Dot.yaff
+echo ':q' | $1 --yaffle Dot2.yaff
+echo ':q' | $1 --yaffle Dot3.yaff
+echo ':q' | $1 --yaffle Dot4.yaff
+
+rm -rf build

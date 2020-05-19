@@ -1,0 +1,5 @@
+$1 DoorJam.idr --check
+$1 ATM.idr --check
+$1 Hangman.idr --check
+
+rm -rf build

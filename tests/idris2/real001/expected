@@ -1,0 +1,4 @@
+1/3: Building Linear (Linear.idr)
+2/3: Building Channel (Channel.idr)
+3/3: Building TestProto (TestProto.idr)
+3/3: Building MakeChans (MakeChans.idr)

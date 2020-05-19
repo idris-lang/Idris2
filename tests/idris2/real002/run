@@ -1,0 +1,4 @@
+$1 --check Store.idr
+$1 --check StoreL.idr
+
+rm -rf build

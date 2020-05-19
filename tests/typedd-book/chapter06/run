@@ -1,0 +1,9 @@
+$1 Adder.idr --check
+$1 DataStore.idr --check
+$1 DataStoreHoles.idr --check
+$1 Maybe.idr --check
+$1 Printf.idr --check
+$1 TypeFuns.idr --check
+$1 TypeSynonyms.idr --check
+
+rm -rf build

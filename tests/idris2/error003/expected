@@ -1,0 +1,21 @@
+1/1: Building Error (Error.idr)
+Error.idr:12:18--13:1:While processing right hand side of wrong at Error.idr:12:1--13:1:
+Sorry, I can't find any elaboration which works. All errors:
+If Main.length: When unifying Nat and Vect ?n ?a
+Mismatch between:
+	Nat
+and
+	Vect ?n ?a
+
+If Data.List.length: When unifying Nat and List ?a
+Mismatch between:
+	Nat
+and
+	List ?a
+
+If Prelude.length: When unifying Nat and String
+Mismatch between:
+	Nat
+and
+	String
+

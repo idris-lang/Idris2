@@ -1,0 +1,7 @@
+even 4
+odd 4
+eodd 4
+eodd 5
+boxy
+map (*2) (MkBox 10)
+:q

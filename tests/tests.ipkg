@@ -1,0 +1,4 @@
+package runtests
+
+main = Main
+executable = runtests

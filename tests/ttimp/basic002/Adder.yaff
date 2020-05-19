@@ -1,0 +1,15 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+AdderTy : Nat -> Type
+AdderTy Z = Nat
+AdderTy (S $k) = Nat -> AdderTy k
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+adder : (i : Nat) -> (acc : Nat) -> AdderTy i
+adder Z $acc = acc
+adder (S $k) $acc = \x => adder k (plus x acc)

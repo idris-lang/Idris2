@@ -1,0 +1,7 @@
+addm1 (Just 3) (Just 4)
+addm2 (Just 3) (Just 4)
+:exec printThing1
+:exec printThing2
+:exec printBool True
+:exec printBool False
+:q

@@ -1,0 +1,7 @@
+1/1: Building Record (Record.idr)
+Main> MkPerson "Fred" 1337 10 (MkStats 11 10)
+Main> MkPerson "Fred" 1337 10 (MkStats 12 10)
+Main> MkMyDPair 6 [10, 1, 2, 3, 4, 5]
+Main> MkMyDPair 6 [10, 1, 2, 3, 4, 5]
+Main> MkPerson "Fred" 1337 10 (MkStats 10 94)
+Main> Bye for now!

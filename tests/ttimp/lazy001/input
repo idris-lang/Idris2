@@ -1,0 +1,4 @@
+ones
+take (S (S (S Z))) ones
+every2nd (S (S (S Z))) (countFrom 1)
+:q

@@ -1,0 +1,6 @@
+$1 FCTypes.idr --check
+$1 HelloHole.idr --check
+$1 Hello.idr --check
+$1 --no-banner HoleFix.idr < input
+
+rm -rf build

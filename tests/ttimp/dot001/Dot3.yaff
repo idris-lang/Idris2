@@ -1,0 +1,19 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z $y = y
+plus (S $k) $y = S (plus k y)
+
+data Baz : Nat -> Type where
+     AddThings : (x : Nat) -> (y : Nat) -> Baz (plus x y)
+
+addBaz : (x : Nat) -> Baz x -> Nat
+addBaz (plus x y) (AddThings x y) = plus x y
+
+-- Can't unify because holes are solved as part of the dot pattern (plus x x)
+-- which would accidentally lead to a non-linear pattern
+addBaz3 : (x : Nat) -> Baz x -> Nat
+addBaz3 (plus x x) (AddThings _ _) = plus x x
+

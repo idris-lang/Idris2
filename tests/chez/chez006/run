@@ -1,0 +1,4 @@
+$1 --no-banner TypeCase.idr < input
+$1 --no-banner TypeCase2.idr --check
+
+rm -rf build

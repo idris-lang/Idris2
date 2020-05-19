@@ -1,0 +1,11 @@
+efn (\x, y => y)        -- Good
+efn (\x, y => plus y y) -- Good
+efn ignore              -- Good
+efn (\x, y => x)        -- Bad
+efn plus                -- Bad
+efn lin                 -- Bad
+efn (\x, y => plus x y) -- Bad
+okfn plus               -- Good
+okfn lin                -- Good
+okfn ignore             -- Bad
+:q

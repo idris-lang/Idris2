@@ -1,0 +1,45 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Vect : ? -> Type -> Type where
+     Nil : Vect Z a
+     Cons : a -> Vect k a -> Vect (S k) a
+
+record Foo where
+  constructor MkFoo
+  fnum : Integer
+  fstr : String
+
+testRec : Foo
+testRec = MkFoo 99 "Red balloons"
+
+record MyDPair a (p : a -> Type) where
+  constructor MkMyDPair
+  dfst : a
+  dsnd : p dfst
+
+record DVect a where
+  constructor MkDVect
+  test : Integer
+  {n : Nat}
+  vec : Vect n a
+
+record Person where
+  constructor MkPerson
+  name : String
+  age, shoesize : Integer
+  some_fn : b -> b -- 'b' bound as an argument to MkPerson
+
+testPair : MyDPair Nat (\n => Vect n Integer)
+testPair = MkMyDPair _ (Cons 1 (Cons 2 (Cons 3 Nil)))
+
+testDVect : DVect Integer
+testDVect = MkDVect 94 (Cons 1 (Cons 2 (Cons 3 Nil))) 
+
+testPerson : Person
+testPerson = MkPerson "Wowbagger" 1337 10 (\x => S x)

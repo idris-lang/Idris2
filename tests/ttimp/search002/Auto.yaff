@@ -1,0 +1,32 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+data List : Type -> Type where
+     Nil : List $a
+     Cons : $a -> List $a -> List $a
+
+data Pair : Type -> Type -> Type where
+     MkPair : $a -> $b -> Pair $a $b
+
+data Elem : $a -> List (Pair $a $b) -> Type where
+     Here : Elem $x (Cons (MkPair $x $y) $xs)
+     There : Elem $x $xs -> Elem $x (Cons $y $xs)
+
+fst : {0 a, b : _} -> Pair a b -> a
+fst (MkPair $x _) = x
+
+snd : {0 a, b : _} -> Pair a b -> b
+snd (MkPair _ $y) = y
+
+%pair Pair fst snd
+
+getNth : (x : $a) -> (xs : List (Pair $a $b)) -> Elem x xs -> $b
+getNth $x (Cons (MkPair $x $y) $xs) Here = y
+getNth $x (Cons _ $xs) (There $p) = getNth x xs p
+
+getNth' : (x : $a) -> (xs : List (Pair $a $b)) -> 
+          {auto prf : Elem x xs} -> $b
+getNth' $x $xs {prf = $prf} = getNth x xs prf
+
+

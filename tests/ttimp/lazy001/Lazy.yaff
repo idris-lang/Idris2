@@ -1,0 +1,27 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+namespace Stream
+    public export
+    data Stream : Type -> Type where
+         Cons : $a -> Inf (Stream $a) -> Stream $a
+
+ones : Stream Integer
+ones = Cons 1 (Delay ones)
+
+countFrom : Integer -> Stream Integer
+countFrom $x = Cons x (Delay (countFrom (prim__add_Integer 1 x)))
+
+data List : Type -> Type where
+     Nil : List $a
+     Cons : $a -> List $a -> List $ a
+
+take : Nat -> Stream $a -> List $a
+take Z $xs = Nil
+take (S $k) (Cons $x $xs) = Cons x (take k (Force xs))
+
+every2nd : Nat -> Stream $a -> List $a
+every2nd Z $xs = Nil
+every2nd (S $k) (Cons _ (Delay (Cons $x $xs))) = Cons x (every2nd k (Force xs))
+

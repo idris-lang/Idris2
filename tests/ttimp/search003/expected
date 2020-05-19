@@ -1,0 +1,12 @@
+Processing as TTImp
+Written TTC
+Yaffle> Main.True
+Yaffle> "True"
+Yaffle> ((((Main.MkPair [Just b = Main.Bool]) [Just a = String]) "Z") Main.False)
+Yaffle> Bye for now!
+Processing as TTC
+Read TTC
+Yaffle> Main.True
+Yaffle> "True"
+Yaffle> ((((Main.MkPair [Just b = Main.Bool]) [Just a = String]) "Z") Main.False)
+Yaffle> Bye for now!

@@ -1,0 +1,4 @@
+$1 --yaffle Functor.yaff < input
+$1 --yaffle build/ttc/Functor.ttc < input
+
+rm -rf build

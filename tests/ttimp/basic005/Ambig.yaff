@@ -1,0 +1,69 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+the : (a : Type) -> a -> a
+the _ $x = x
+
+namespace List
+  public export
+  data List : Type -> Type where
+       Nil : List $a
+       Cons : $a -> List $a -> List $a
+
+  public export
+  length : List $a -> Nat
+  length Nil = Z
+  length (Cons $x $xs) = S (length xs)
+
+namespace Vect
+  public export
+  data Vect : ? -> Type -> Type where
+       Nil : Vect Z $a
+       Cons : $a -> Vect $k $a -> Vect (S $k) $a
+
+  public export
+  length : Vect $n $a -> Nat
+  length Nil = Z
+  length (Cons $x $xs) = S (length xs)
+
+testList : List Integer
+testList = Cons 1 (Cons 2 (Cons 3 Nil))
+
+testVect : Vect ? Integer
+testVect = Cons 1 (Cons 2 (Cons 3 (Cons 4 Nil)))
+
+data IsType : $a -> Type -> Type where
+     ItIs : {x : $a} -> IsType x $a
+
+foo : IsType 5 Integer
+foo = ItIs
+
+revapply : $arg -> ($arg -> $b) -> $b
+revapply $x $f = f x
+
+-- Testing delayed elaboration; we can't check the list until we know
+-- whether it's List or Vect, which we work out from the second argument
+test : Integer -> Nat
+test $x = revapply (Cons x (Cons x Nil)) Vect.length
+
+data Infer : Type where
+     MkInfer : $a -> Infer
+
+long : Infer
+long 
+  = MkInfer (Vect.Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
+       Nil)))))))))))))))))))))))))))))))))))
+       )))))))))))))))))))))))))))))))

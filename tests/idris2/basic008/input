@@ -1,0 +1,4 @@
+testZ Z
+testZ (S (S (S Z)))
+testZ (S (S (S (S Z))))
+:q

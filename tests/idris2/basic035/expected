@@ -1,0 +1,10 @@
+1/1: Building using (using.idr)
+Main> Main.foo : Show a => Eq a => a -> String
+Main> "9494"
+Main> Main.bar : Int -> Int
+Main> 20
+Main> Main.needle : Test a b => a -> b -> ()
+Main> Main.nardle : Test a b => a -> ()
+Main> Main.noo : Test a b => b -> ()
+Main> Main> Main.baz : {0 a : Type} -> {0 n : Nat} -> {0 xs : Vect n a} -> === {a = Vect n a} xs xs
+Main> Bye for now!

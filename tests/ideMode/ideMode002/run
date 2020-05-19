@@ -1,0 +1,4 @@
+$1 --version | awk '{print $4}' | ./gen_expected.sh
+$1 --ide-mode < input
+
+rm -rf build

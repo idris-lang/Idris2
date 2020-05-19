@@ -1,0 +1,4 @@
+eq (S (S Z)) (S (S Z))
+show True
+testThings Z (S (S (S Z)))
+:q

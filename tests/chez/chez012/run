@@ -1,0 +1,2 @@
+$1 --no-banner array.idr < input
+rm -rf build

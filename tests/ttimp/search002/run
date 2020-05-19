@@ -1,0 +1,4 @@
+$1 --yaffle Auto.yaff < input
+$1 --yaffle build/ttc/Auto.ttc < input
+
+rm -rf build

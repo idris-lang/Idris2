@@ -1,0 +1,33 @@
+data Bool : Type where
+     False : Bool
+     True : Bool
+
+not : Bool -> Bool
+not False = True
+not True = False
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Vect : ? -> Type -> Type where
+     Nil : Vect Z a
+     Cons : a -> Vect k a -> Vect (S k) a
+
+data Fin : Nat -> Type where
+     FZ : Fin (S k)
+     FS : Fin k -> Fin (S k)
+
+lookup : Fin n -> Vect n a -> a
+lookup FZ (Cons x xs) = x
+lookup (FS k) (Cons x xs) = lookup k xs
+
+append : Vect n a -> Vect m a -> Vect (plus n m) a
+append xs ys
+    = case xs of
+           Nil => ys
+           Cons z zs => Cons z (append zs ys)

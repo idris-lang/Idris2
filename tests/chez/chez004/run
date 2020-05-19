@@ -1,0 +1,2 @@
+$1 --no-banner Buffer.idr < input
+rm -rf build test.buf

@@ -1,0 +1,5 @@
+1/1: Building defimp (defimp.idr)
+Main> Main.dvec : (n : Nat) -> {default (replicate n 1) xs : Vect n Nat} -> Nat
+Main> 3
+Main> 6
+Main> Bye for now!

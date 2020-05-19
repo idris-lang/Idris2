@@ -1,0 +1,4 @@
+$1 --yaffle Hole.yaff < input
+$1 --yaffle build/ttc/Hole.ttc < input
+
+rm -rf build

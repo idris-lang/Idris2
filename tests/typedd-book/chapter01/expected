@@ -1,0 +1,7 @@
+1/1: Building FCTypes (FCTypes.idr)
+1/1: Building HelloHole (HelloHole.idr)
+1/1: Building Hello (Hello.idr)
+1/1: Building HoleFix (HoleFix.idr)
+Main> -------------------------------------
+convert : Char -> String
+Main> Bye for now!

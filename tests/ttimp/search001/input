@@ -1,0 +1,4 @@
+isThere
+isThere2
+foo (MkPair (\x => x) (MkPair 'a' "b")) 94
+:q

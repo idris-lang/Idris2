@@ -1,0 +1,5 @@
+cplus (S (S Z)) (S (S (S Z)))
+cappend (Cons 1 Nil) (Cons 2 Nil)
+cvec (Cons 1 (Cons 2 (Cons 3 Nil)))
+cvec2 (Cons 1 (Cons 2 (Cons 3 Nil)))
+:q

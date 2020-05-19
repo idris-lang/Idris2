@@ -1,0 +1,7 @@
+Processing as TTImp
+Written TTC
+Yaffle> (%pi RigW Explicit Nothing Main.Nat (Main.AdderTy Main.Z))
+Yaffle> (%pi RigW Explicit Nothing Main.Nat (Main.AdderTy (Main.S Main.Z)))
+Yaffle> (Main.S (Main.S (Main.S Main.Z)))
+Yaffle> (Main.S (Main.S (Main.S (Main.S (Main.S (Main.S Main.Z))))))
+Yaffle> Bye for now!

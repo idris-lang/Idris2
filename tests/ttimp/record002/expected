@@ -1,0 +1,7 @@
+Processing as TTImp
+Written TTC
+Yaffle> ((((Main.MkPerson "Fred") 1337) 10) ((Main.MkStats 11) 10))
+Yaffle> ((((Main.MkMyDPair [Just a = Main.Nat]) [Just p = (%lam RigW Explicit Just n Main.Nat ((Main.Vect n) Integer))]) (Main.S (Main.S (Main.S (Main.S Main.Z))))) ((((Main.Cons [Just k = (Main.S (Main.S (Main.S Main.Z)))]) [Just a = Integer]) 10) ((((Main.Cons [Just k = (Main.S (Main.S Main.Z))]) [Just a = Integer]) 1) ((((Main.Cons [Just k = (Main.S Main.Z)]) [Just a = Integer]) 2) ((((Main.Cons [Just k = Main.Z]) [Just a = Integer]) 3) (Main.Nil [Just a = Integer]))))))
+Yaffle> ((((Main.MkMyDPair [Just a = Main.Nat]) [Just p = (%lam RigW Explicit Just n Main.Nat ((Main.Vect n) Integer))]) (Main.S (Main.S (Main.S (Main.S Main.Z))))) ((((Main.Cons [Just k = (Main.S (Main.S (Main.S Main.Z)))]) [Just a = Integer]) 10) ((((Main.Cons [Just k = (Main.S (Main.S Main.Z))]) [Just a = Integer]) 1) ((((Main.Cons [Just k = (Main.S Main.Z)]) [Just a = Integer]) 2) ((((Main.Cons [Just k = Main.Z]) [Just a = Integer]) 3) (Main.Nil [Just a = Integer]))))))
+Yaffle> ((((Main.MkPerson "Fred") 1337) 10) ((Main.MkStats 10) 94))
+Yaffle> Bye for now!

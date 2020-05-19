@@ -1,0 +1,5 @@
+mPatBind (Just (S Z)) (Just (S (S Z)))
+mPatBind (Just (S Z)) Nothing
+mLetBind (Just (S Z)) (Just (S (S Z)))
+mLetBind (Just (S Z)) Nothing
+:q

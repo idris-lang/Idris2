@@ -1,0 +1,5 @@
+1/1: Building ZFun (ZFun.idr)
+ZFun.idr:13:7--15:1:While processing right hand side of bar at ZFun.idr:13:1--15:1:
+Main.test is not accessible in this context
+Main> [tc] Main> 10
+[tc] Main> Bye for now!

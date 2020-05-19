@@ -1,0 +1,13 @@
+$1 BSTree.idr --check
+$1 DataStore.idr --check
+$1 Direction.idr --check
+$1 Generic.idr --check
+$1 Picture.idr --check
+$1 Shape.idr --check
+$1 SumInputs.idr --check
+$1 Tree.idr --check
+$1 TryIndex.idr --check
+$1 Vect.idr --check
+$1 Vehicle.idr --check
+
+rm -rf build

@@ -1,0 +1,3 @@
+1/1: Building foobar (foobar.idr)
+Main> Main.foo is total
+Main> Bye for now!

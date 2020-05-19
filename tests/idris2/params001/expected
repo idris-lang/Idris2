@@ -1,0 +1,4 @@
+1/1: Building param (param.idr)
+1/1: Building parambad (parambad.idr)
+parambad.idr:7:7--8:1:While processing right hand side of U at parambad.idr:7:3--8:1:
+Name Main.X.foo is private

@@ -1,0 +1,9 @@
+1/1: Building Total (Total.idr)
+Main> Main.Bad is not strictly positive
+Main> Main.Bad1 is not strictly positive
+Main> Main.Bad2 is possibly not terminating due to call to Main.Bad1
+Main> Main.foo is possibly not terminating due to call to Main.MkBad'
+Main> Main.foo2 is possibly not terminating due to call to Main.MkBad'
+Main> Main.T is not strictly positive
+Main> Main.T2 is possibly not terminating due to call to Main.T
+Main> Bye for now!

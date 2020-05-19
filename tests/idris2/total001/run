@@ -1,0 +1,3 @@
+$1 --no-banner Total.idr < input
+
+rm -rf build

@@ -1,7 +1,7 @@
 include config.mk
 
 # Idris 2 executable used to bootstrap
-IDRIS2_BOOT ?= idris2
+export IDRIS2_BOOT ?= idris2
 
 # Idris 2 executable we're building
 NAME = idris2sh
@@ -58,6 +58,9 @@ contrib: prelude
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 libs : prelude base network contrib
+
+test:
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
 
 support:
 	@${MAKE} -C support/c

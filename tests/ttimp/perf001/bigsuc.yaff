@@ -1,0 +1,37 @@
+-- The main purpose of this test is to ensure it runs instantly!
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z     y = y
+plus (S k) y = S (plus k y)
+
+mult : Nat -> Nat -> Nat
+mult Z y = Z
+mult (S k) y = plus y (mult k y)
+
+five : Nat
+five = S (S (S (S (S Z))))
+
+ten : Nat
+ten = plus five five
+
+thousand : Nat
+thousand = mult ten (mult ten ten)
+
+tenthousand : Nat
+tenthousand = mult ten thousand
+
+fiftythousand : Nat
+fiftythousand = mult five tenthousand
+
+hundredthousand : Nat
+hundredthousand = mult ten tenthousand
+
+data IsSuc : Nat -> Type where 
+     Yes : IsSuc (S $k)
+
+nonZero : IsSuc Main.hundredthousand
+nonZero = Yes

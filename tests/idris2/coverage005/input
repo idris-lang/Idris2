@@ -1,0 +1,5 @@
+:total zsym
+:missing zsym'
+:total foo
+:total bar
+:q

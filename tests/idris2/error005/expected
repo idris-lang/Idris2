@@ -1,0 +1,5 @@
+1/1: Building IfErr (IfErr.idr)
+IfErr.idr:4:11--6:1:While processing right hand side of foo at IfErr.idr:4:1--6:1:
+Can't find an implementation for Eq a
+IfErr.idr:7:11--8:1:While processing right hand side of bar at IfErr.idr:7:1--8:1:
+Can't find an implementation for Eq Wibble

@@ -1,0 +1,5 @@
+1/1: Building IfErr (IfErr.idr)
+IfErr.idr:15:10--17:1:While processing right hand side of test at IfErr.idr:15:1--17:1:
+Can't find an implementation for Eq Foo
+IfErr.idr:23:9--25:1:While processing right hand side of test2 at IfErr.idr:23:1--25:1:
+Can't find an implementation for Show Foo

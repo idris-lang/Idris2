@@ -1,0 +1,3 @@
+1/1: Building Loop (Loop.idr)
+Loop.idr:2:11--3:1:While processing right hand side of example at Loop.idr:2:1--3:1:
+Main.example is already defined

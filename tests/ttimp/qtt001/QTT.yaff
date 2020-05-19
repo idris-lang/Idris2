@@ -1,0 +1,15 @@
+data Pair : Type -> Type -> Type where
+     MkPair : (1 xa : $a) -> (1 ya : $b) -> Pair $a $b
+
+dup : (1 x : $a) -> Pair $a $a
+dup $x = MkPair ?foo ?bar
+
+dup1 : (1 x : $a) -> Pair $a $a
+dup1 $x = MkPair x ?baz1
+
+dup2 : (1 x : $a) -> Pair $a $a
+dup2 $x = MkPair ?baz2 x
+
+dupbad : (1 x : $a) -> Pair $a $a
+dupbad $x = MkPair x x
+

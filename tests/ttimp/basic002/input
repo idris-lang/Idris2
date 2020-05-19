@@ -1,0 +1,5 @@
+:t adder Z
+:t adder (S Z)
+adder (S Z) (S (S Z)) (S Z)
+adder (S (S Z)) (S (S Z)) (S Z) (S (S (S Z)))
+:q

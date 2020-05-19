@@ -1,0 +1,7 @@
+1/1: Building arity (arity.idr)
+arity.idr:4:16--4:22:While processing right hand side of foo at arity.idr:4:1--7:1:
+When unifying (1 {arg:241} : Nat) -> MyN and MyN
+Mismatch between:
+	(1 {arg:241} : Nat) -> MyN
+and
+	MyN

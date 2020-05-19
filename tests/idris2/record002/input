@@ -1,0 +1,6 @@
+grow testPerson
+grow (grow testPerson)
+cons 10 testPair
+cons' 10 testPair
+record { more.weight = 94 } testPerson
+:q

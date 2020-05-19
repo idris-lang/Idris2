@@ -1,0 +1,8 @@
+data Eq : $a -> $b -> Type where
+     Refl : Eq $x $x
+
+okay : {p : $a -> Type} -> (1 x : $a) -> (1 y : $a) -> (1 prf : Eq x y) -> 
+       p x -> p y
+-- Should fail on the LHS, before even getting to the RHS, because
+-- after elaboration 'x' appears twice even though it is linearly bound.
+okay $x $x Refl $q = q

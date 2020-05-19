@@ -1,0 +1,4 @@
+1/4: Building Bifunctor (Bifunctor.idr)
+2/4: Building Apply (Apply.idr)
+3/4: Building Biapplicative (Biapplicative.idr)
+4/4: Building Bimonad (Bimonad.idr)

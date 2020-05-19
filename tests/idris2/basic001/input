@@ -1,0 +1,4 @@
+:set showtypes
+zipWith plus (Cons Z (Cons (S Z) Nil)) (Cons (S Z) (Cons (S Z) Nil))
+zipWith plus (Cons Z Nil) (Cons (S Z) (Cons Z Nil))
+:q

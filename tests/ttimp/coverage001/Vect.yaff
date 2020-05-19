@@ -1,0 +1,28 @@
+data Bool : Type where
+     False : Bool
+     True : Bool
+
+not : Bool -> Bool
+not False = True
+not True = False
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Vect : ? -> Type -> Type where
+     Nil : Vect Z a
+     Cons : a -> Vect k a -> Vect (S k) a
+
+data Pair : Type -> Type -> Type where
+     MkPair : a -> b -> Pair a b
+
+zip : Vect n a -> Vect n b -> Vect n (Pair a b)
+zip Nil (Cons _ _) impossible
+zip Nil Nil = Nil
+zip (Cons x xs) (Cons y ys) = Cons (MkPair x y) (zip xs ys)
+

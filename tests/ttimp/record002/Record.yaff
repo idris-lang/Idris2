@@ -1,0 +1,47 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Vect : ? -> Type -> Type where
+     Nil : Vect Z a
+     Cons : a -> Vect k a -> Vect (S k) a
+
+record MyDPair a (p : a -> Type) where
+  constructor MkMyDPair
+  dfst : a
+  dsnd : p dfst
+
+testPair : MyDPair Nat (\n => Vect n Integer)
+testPair = MkMyDPair _ (Cons 1 (Cons 2 (Cons 3 Nil)))
+
+cons : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
+cons val xs
+    = record { dfst = S (dfst xs),
+               dsnd = Cons val (dsnd xs) } xs
+
+cons' : t -> MyDPair Nat (\n => Vect n t) -> MyDPair Nat (\n => Vect n t)
+cons' val xs
+    = record { dfst $= S,
+               dsnd $= Cons val } xs
+
+record Stats where
+  constructor MkStats
+  height : Integer
+  weight : Integer
+
+record Person where
+  constructor MkPerson
+  name : String
+  age, shoesize : Integer
+  more : Stats
+
+testPerson : Person
+testPerson = MkPerson "Fred" 1337 10 (MkStats 10 10)
+
+grow : Person -> Person
+grow p = record { more->height $= prim__add_Integer 1 } p
+

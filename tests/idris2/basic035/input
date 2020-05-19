@@ -1,0 +1,10 @@
+:t foo
+foo 94
+:t bar
+bar 10
+:t needle
+:t nardle
+:t noo
+:set showimplicits
+:t baz
+:q

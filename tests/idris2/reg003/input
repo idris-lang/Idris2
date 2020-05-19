@@ -1,0 +1,5 @@
+:t help
+:t hole0
+:t hole1
+:ps 8 hole1
+:q

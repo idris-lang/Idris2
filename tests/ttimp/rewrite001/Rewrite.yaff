@@ -1,0 +1,37 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Eq : a -> b -> Type where
+     Refl : Eq x x
+
+rewrite__impl : {0 x, y : a} -> (0 p : _) -> 
+                (0 rule : Eq x y) -> (1 val : p y) -> p x
+rewrite__impl p Refl prf = prf
+
+%rewrite Eq rewrite__impl
+
+plusnZ : (n : Nat) -> Eq (plus n Z) n
+plusnZ Z = Refl
+plusnZ (S k) = rewrite plusnZ k in Refl
+
+plusnSm : (n : Nat) -> (m : Nat) ->
+          Eq (S (plus n m)) (plus n (S m))
+plusnSm Z m = Refl
+plusnSm (S k) m 
+    = let ih = plusnSm k m in
+          rewrite ih in Refl
+
+plusComm : (n : Nat) -> (m : Nat) -> Eq (plus n m) (plus m n)
+plusComm Z m = rewrite plusnZ m in Refl
+plusComm (S k) m =
+  let ih = plusComm k m in
+    rewrite ih in
+      rewrite plusnSm m k in Refl
+
+
+

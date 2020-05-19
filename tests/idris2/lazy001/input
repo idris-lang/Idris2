@@ -1,0 +1,3 @@
+ones
+take (S (S (S (S Z)))) ones
+:q

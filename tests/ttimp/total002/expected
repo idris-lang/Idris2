@@ -1,0 +1,9 @@
+Processing as TTImp
+Written TTC
+Yaffle> Main.Nat is total
+Yaffle> Main.ack is total
+Yaffle> Main.foo is total
+Yaffle> Main.foo' is total
+Yaffle> Main.foom is total
+Yaffle> Main.pfoom is possibly not terminating due to recursive path Main.pfoom -> Main.pfoom -> Main.pfoom
+Yaffle> Bye for now!

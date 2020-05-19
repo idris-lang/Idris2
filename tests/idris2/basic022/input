@@ -1,0 +1,2 @@
+\m => minus (S (S (S m))) (S m) prf
+:q

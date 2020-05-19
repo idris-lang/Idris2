@@ -1,0 +1,5 @@
+1/1: Building Rewrite (Rewrite.idr)
+Rewrite.idr:15:25--17:1:While processing right hand side of wrongCommutes at Rewrite.idr:15:1--17:1:
+Rewriting by m + k = k + m did not change type S k + m = m + S k
+Rewrite.idr:19:26--20:1:While processing right hand side of wrongCommutes2 at Rewrite.idr:19:1--20:1:
+Nat is not a rewrite rule type

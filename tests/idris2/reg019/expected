@@ -1,0 +1,16 @@
+1/1: Building lazybug (lazybug.idr)
+lazybug.idr:5:22--5:34:While processing right hand side of main at lazybug.idr:5:1--7:1:
+Can't solve constraint between:
+	Bool
+and
+	Lazy Bool
+lazybug.idr:8:23--8:42:While processing right hand side of main2 at lazybug.idr:8:1--10:1:
+Can't solve constraint between:
+	Bool
+and
+	Lazy Bool
+lazybug.idr:14:22--15:1:While processing right hand side of main4 at lazybug.idr:14:1--15:1:
+Can't solve constraint between:
+	Bool
+and
+	Lazy Bool

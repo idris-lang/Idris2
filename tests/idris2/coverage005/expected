@@ -1,0 +1,7 @@
+1/1: Building Cover (Cover.idr)
+Main> Main.zsym is total
+Main> Main.zsym':
+zsym' (NS _) _
+Main> Main.foo is total
+Main> Main.bar is total
+Main> Bye for now!

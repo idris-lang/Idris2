@@ -1,0 +1,7 @@
+$1 Album.idr --check
+$1 Eq.idr --check
+$1 Expr.idr --check
+$1 Fold.idr --check
+$1 Tree.idr --check
+
+rm -rf build

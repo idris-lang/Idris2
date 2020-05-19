@@ -1,0 +1,8 @@
+1/1: Building UnboundImplicits (UnboundImplicits.idr)
+UnboundImplicits.idr:6:22--6:24:While processing constructor Foo at UnboundImplicits.idr:6:1--9:1:
+Undefined name n
+UnboundImplicits.idr:9:24--9:26:Undefined name n
+UnboundImplicits.idr:14:25--14:27:While processing constructor Foo at UnboundImplicits.idr:14:1--17:1:
+Undefined name n
+UnboundImplicits.idr:17:30--17:31:While processing type of Functor implementation at UnboundImplicits.idr:17:1--18:1 at UnboundImplicits.idr:17:1--18:1:
+Undefined name n

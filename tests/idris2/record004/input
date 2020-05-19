@@ -1,0 +1,23 @@
+pt.x
+pt .x
+pt.x + pt.y
+(Main.pt).x
+(MkPoint pt.y pt.x).y
+pt.x.squared
+map (.x) [MkPoint 1.1 2.5, MkPoint 4.2 6.3]
+map .x [MkPoint 1 2, MkPoint 3 4]
+map (.topLeft.y) [rect, rect]
+rect.topLeft.x + rect.bottomRight.y
+Main.Point.(.x) pt
+Point.(.x) pt
+(.x) pt
+.x pt
+Main.Point.x pt
+Point.x pt
+(x) pt
+x pt
+(record { topLeft.x = 3 } rect).topLeft.x
+(record { topLeft.x $= (+1) } rect).topLeft.x
+(record { topLeft->x = 3 } rect).topLeft.x
+(record { topLeft->x $= (+1) } rect).topLeft.x
+:q

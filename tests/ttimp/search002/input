@@ -1,0 +1,3 @@
+getNth "x" (Cons (MkPair "y" 42) (Cons (MkPair "x" 94) Nil)) %search
+getNth' "x" (Cons (MkPair "y" 42) (Cons (MkPair "x" 94) Nil))
+:q

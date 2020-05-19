@@ -1,0 +1,4 @@
+1/1: Building IEdit (IEdit.md)
+Main>     zipHere [] ys = []
+    zipHere (x :: xs) (y :: ys) = (x, y) :: zipHere xs ys
+Main> Bye for now!

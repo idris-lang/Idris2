@@ -1,0 +1,4 @@
+$1 --no-banner --no-prelude IFace.idr < input
+$1 --no-banner --no-prelude IFace1.idr < input1
+
+rm -rf build

@@ -1,0 +1,133 @@
+data Bool : Type where
+     False : Bool
+     True : Bool
+
+not : Bool -> Bool
+not False = True
+not True = False
+
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+data List : Type -> Type where
+     Nil : List $a
+     Cons : $a -> List $a -> List $a
+
+data Maybe : Type -> Type where
+     Nothing : Maybe $a
+     Just : $a -> Maybe $a
+
+data Pair : Type -> Type -> Type where
+     MkPair : $a -> $b -> Pair $a $b
+
+fst : {0 a, b : _} -> Pair a b -> a
+fst (MkPair $x _) = x
+
+snd : {0 a, b : _} -> Pair a b -> b
+snd (MkPair _ $y) = y
+
+%pair Pair fst snd
+
+data Show : (a : Type) -> Type where
+     [noHints, search a]
+     MkShow : (showFn : $a -> String) -> Show $a
+
+show : {auto c : Show $a} -> $a -> String
+show {c = MkShow $show'} $x = show' x
+
+showNat : Nat -> String
+showNat Z = "Z"
+showNat (S $k) = "s" -- (showNat k)
+
+%hint
+ShowNat : Show Nat
+ShowNat = MkShow showNat
+
+%hint
+ShowBool : Show Bool
+ShowBool = MkShow (\b : Bool => case b of
+                                     True => "True"
+                                     False => "False")
+
+data Eq : (a : Type) -> Type where
+     [noHints, search a]
+     MkEq : (eq : $a -> $a -> Bool) -> (neq : $a -> $a -> Bool) -> Eq $a
+
+-- Signatures
+eq : {auto c : Eq $a} -> $a -> $a -> Bool
+neq : {auto c : Eq $a} -> $a -> $a -> Bool
+
+-- Top level method bodies
+eq {c = MkEq $eq' $neq'} $x $y = eq' x y
+neq {c = MkEq $eq' $neq'} $x $y = neq' x y
+
+-- Default definitions
+defaultEq : {auto c : Eq $a} -> $a -> $a -> Bool
+defaultEq $x $y = not (neq x y)
+
+defaultNotEq : {auto c : Eq $a} -> $a -> $a -> Bool
+defaultNotEq $x $y = not (eq x y)
+
+-- e.g. Nat
+
+-- Instance type
+%hint
+EqNat : Eq Nat
+
+-- Method bodies
+
+eqNat : Nat -> Nat -> Bool
+eqNat Z Z = True
+eqNat (S $j) (S $k) = eq j k
+eqNat _ _ = False
+
+-- Rest of instance
+EqNat = MkEq eqNat (\x, y => not (eqNat x y))
+
+%hint
+EqMaybe : {auto c : Eq $a} -> Eq (Maybe $a)
+
+eqMaybe : {auto c : Eq $a} -> Maybe $a -> Maybe $a -> Bool
+eqMaybe Nothing Nothing = True
+eqMaybe (Just $x) (Just $y) = eq x y
+eqMaybe _ _ = False
+
+EqMaybe = MkEq eqMaybe (\x, y => not (eqMaybe x y))
+
+public export
+data Compare : Type where
+     LT : Compare
+     EQ : Compare
+     GT : Compare
+
+public export
+data Ord : (a : Type) -> Type where
+     MkOrd : {auto eqc : Eq $a} ->
+             (cmp : $a -> $a -> Compare) -> Ord $a
+
+%chaser
+findEq :  Ord $a -> Eq $a
+findEq (MkOrd _) = %search
+
+cmp : {auto c : Ord $a} -> $a -> $a -> Compare
+cmp {c = MkOrd $cmp'} $x $y = cmp' x y
+
+cmpNat : Nat -> Nat -> Compare
+cmpNat Z Z = EQ
+cmpNat Z (S $k) = LT
+cmpNat (S $k) Z = GT
+cmpNat (S $x) (S $y) = cmpNat x y
+
+%hint
+ordNat : Ord Nat
+ordNat = MkOrd cmpNat
+
+testEq : {auto c : Ord $a} -> $a -> $a -> Bool
+testEq $x $y = eq x y
+
+testThings : {auto c : Pair (Show $a) (Ord $a)} -> $a -> $a -> 
+             Pair String Bool
+testThings $x $y = MkPair (show x) (eq x y)
+
+

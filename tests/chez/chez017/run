@@ -1,0 +1,4 @@
+./gen_expected.sh
+$1 --no-banner dir.idr < input
+cat testdir/test.txt
+rm -rf build testdir
