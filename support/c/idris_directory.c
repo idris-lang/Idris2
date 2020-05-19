@@ -49,6 +49,10 @@ void idris2_dirClose(void* d) {
     free(di);
 }
 
+int idris2_rmDir(char* path) {
+    return rmdir(path);
+}
+
 char* idris2_nextDirEntry(void* d) {
     DirInfo* di = (DirInfo*)d;
     struct dirent* de = readdir(di->dirptr);
