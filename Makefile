@@ -31,9 +31,11 @@ export SCHEME
 export IDRIS2_CURDIR = $(CURDIR)
 export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
 
-.PHONY: all support clean support-clean bootstrap init-bootstrap ${TARGET}
+.PHONY: all support clean support-clean bootstrap init-bootstrap idris2-exec ${TARGET}
 
 all: support ${TARGET} libs
+
+idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build idris2.ipkg
