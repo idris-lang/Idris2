@@ -23,7 +23,6 @@ prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
 prim_error : FilePtr -> PrimIO Int
-
 %foreign support "idris2_fileErrno"
 prim_fileErrno : PrimIO Int
 
@@ -31,6 +30,8 @@ prim_fileErrno : PrimIO Int
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 %foreign support "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
+%foreign support "fgetc"
+prim__readChar : FilePtr -> PrimIO Char
 %foreign support "idris2_writeLine"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 %foreign support "idris2_eof"
@@ -130,6 +131,12 @@ closeFile : File -> IO ()
 closeFile (FHandle f) = primIO (prim__close f)
 
 export
+fileError : File -> IO Bool
+fileError (FHandle f)
+    = do x <- primIO $ prim_error f
+         pure (x /= 0)
+
+export
 fGetLine : (h : File) -> IO (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)
@@ -144,6 +151,15 @@ fGetChars (FHandle f) max
          if prim__nullPtr res /= 0
             then returnError
             else ok (prim__getString res)
+
+export
+fGetChar : (h : File) -> IO (Either FileError Char)
+fGetChar (FHandle h)
+    = do c <- primIO (prim__readChar h)
+         ferr <- primIO (prim_error h)
+         if (ferr /= 0)
+            then returnError
+            else ok c
 
 export
 fPutStr : (h : File) -> String -> IO (Either FileError ())

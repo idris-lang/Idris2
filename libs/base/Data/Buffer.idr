@@ -46,6 +46,22 @@ getByte : Buffer -> (loc : Int) -> IO Int
 getByte buf loc
     = primIO (prim__getByte buf loc)
 
+%foreign "scheme:blodwen-buffer-setint32"
+prim__setInt32 : Buffer -> Int -> Int -> PrimIO ()
+
+export
+setInt32 : Buffer -> (loc : Int) -> (val : Int) -> IO ()
+setInt32 buf loc val
+    = primIO (prim__setInt32 buf loc val)
+
+%foreign "scheme:blodwen-buffer-getint32"
+prim__getInt32 : Buffer -> Int -> PrimIO Int
+
+export
+getInt32 : Buffer -> (loc : Int) -> IO Int
+getInt32 buf loc
+    = primIO (prim__getInt32 buf loc)
+
 %foreign "scheme:blodwen-buffer-setint"
 prim__setInt : Buffer -> Int -> Int -> PrimIO ()
 
