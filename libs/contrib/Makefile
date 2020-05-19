@@ -5,4 +5,4 @@ install:
 	${IDRIS2} --install contrib.ipkg
 
 clean:
-	rm -rf build
+	$(RM) -r build

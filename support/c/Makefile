@@ -1,4 +1,4 @@
-include $(IDRIS2_CURDIR)/config.mk
+include ../../config.mk
 
 TARGET = libidris2_support
 
@@ -38,10 +38,10 @@ $(DYLIBTARGET): $(OBJS)
 .PHONY: clean
 
 clean:
-	rm -f $(OBJS) $(DYLIBTARGET) $(LIBTARGET)
+	$(RM) $(OBJS) $(DYLIBTARGET) $(LIBTARGET)
 
 cleandep: clean
-	rm -f $(DEPS)
+	$(RM) $(DEPS)
 
 
 .PHONY: install

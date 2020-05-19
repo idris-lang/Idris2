@@ -7,19 +7,13 @@
 *.a
 *.dll
 
-*.dSYM
-
 /build
 
-/dist/idris2.c
-
-/docs/build/
-
 /libs/**/build
-
-/src/IdrisPaths.idr
 
 /tests/**/output
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
+
+/src/IdrisPaths.idr

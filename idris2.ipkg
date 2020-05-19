@@ -79,9 +79,6 @@ modules =
     Idris.REPLOpts,
     Idris.Resugar,
     Idris.SetOptions,
---     Idris.Socket,
---     Idris.Socket.Data,
---     Idris.Socket.Raw,
     Idris.Syntax,
     Idris.Version,
 
@@ -146,7 +143,7 @@ modules =
     Yaffle.Main,
     Yaffle.REPL
 
-depends = contrib
+depends = contrib, network
 
 sourcedir = "src"
 

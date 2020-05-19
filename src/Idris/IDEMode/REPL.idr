@@ -35,19 +35,22 @@ import TTImp.ProcessDecls
 
 import Utils.Hex
 
+import Data.List
 import System
 
--- import Idris.Socket
--- import Idris.Socket.Data
+import Network.Socket
+import Network.Socket.Data
 
-{-
+%foreign "C:fdopen,libc 6"
+prim__fdopen : Int -> String -> PrimIO AnyPtr
+
 export
 socketToFile : Socket -> IO (Either String File)
 socketToFile (MkSocket f _ _ _) = do
-  file <- map FHandle $ foreign FFI_C "fdopen" (Int -> String -> IO Ptr) f "r+"
-  if !(ferror file) then do
-    pure (Left "Failed to fdopen socket file descriptor")
-  else pure (Right file)
+  file <- FHandle <$> primIO (prim__fdopen f "r+")
+  if !(fileError file)
+    then pure (Left "Failed to fdopen socket file descriptor")
+    else pure (Right file)
 
 export
 initIDESocketFile : String -> Int -> IO (Either String File)
@@ -57,45 +60,44 @@ initIDESocketFile h p = do
     Left fail => do
       putStrLn (show fail)
       putStrLn "Failed to open socket"
-      exit 1
+      exitWith (ExitFailure 1)
     Right sock => do
       res <- bind sock (Just (Hostname h)) p
       if res /= 0
-      then
-        pure (Left ("Failed to bind socket with error: " ++ show res))
-      else do
-        res <- listen sock
-        if res /= 0
-        then
-          pure (Left ("Failed to listen on socket with error: " ++ show res))
-        else do
-          putStrLn (show p)
-          res <- accept sock
-          case res of
-            Left err =>
-               pure (Left ("Failed to accept on socket with error: " ++ show err))
-            Right (s, _) =>
-               socketToFile s
+        then pure (Left ("Failed to bind socket with error: " ++ show res))
+        else 
+          do res <- listen sock
+             if res /= 0
+                then
+                  pure (Left ("Failed to listen on socket with error: " ++ show res))
+               else 
+                 do putStrLn (show p)
+                    res <- accept sock
+                    case res of
+                      Left err =>
+                         pure (Left ("Failed to accept on socket with error: " ++ show err))
+                      Right (s, _) =>
+                         socketToFile s
 
 getChar : File -> IO Char
-getChar (FHandle h) = do
-  if !(fEOF (FHandle h)) then do
-    putStrLn "Alas the file is done, aborting"
-    exit 1
-  else do
-    chr <- map cast $ foreign FFI_C "fgetc" (Ptr -> IO Int) h
-    if !(ferror (FHandle h)) then do
-      putStrLn "Failed to read a character"
-      exit 1
-    else pure chr
+getChar h = do
+  if !(fEOF h)
+     then do
+       putStrLn "Alas the file is done, aborting"
+       exitWith (ExitFailure 1)
+     else do
+       Right chr <- fGetChar h
+           | Left err => do putStrLn "Failed to read a character"
+                            exitWith (ExitFailure 1)
+       pure chr
 
 getFLine : File -> IO String
-getFLine (FHandle h) = do
-  str <- prim_fread h
-  if !(ferror (FHandle h)) then do
-    putStrLn "Failed to read a line"
-    exit 1
-  else pure str
+getFLine h
+    = do Right str <- fGetLine h
+               | Left err =>
+                   do putStrLn "Failed to read a line"
+                      exitWith (ExitFailure 1)
+         pure str
 
 getNChars : File -> Nat -> IO (List Char)
 getNChars i Z = pure []
@@ -114,7 +116,7 @@ getInput f
                 do rest <- getFLine f
                    pure (pack x ++ rest)
               Just num =>
-                do inp <- getNChars f (cast num)
+                do inp <- getNChars f (integerToNat (cast num))
                    pure (pack inp)
 
 
@@ -286,28 +288,28 @@ loop
               IDEMode idx inf outf => do
                 inp <- coreLift $ getInput inf
                 end <- coreLift $ fEOF inf
-                if end then pure ()
-                else case parseSExp inp of
-                  Left err =>
-                    do printIDEError outf idx ("Parse error: " ++ show err)
-                       loop
-                  Right sexp =>
-                    case getMsg sexp of
-                      Just (cmd, i) =>
-                        do updateOutput i
-                           res <- processCatch cmd
-                           handleIDEResult outf i res
+                if end 
+                   then pure ()
+                   else case parseSExp inp of
+                      Left err =>
+                        do printIDEError outf idx ("Parse error: " ++ show err)
                            loop
-                      Nothing =>
-                        do printIDEError outf idx ("Unrecognised command: " ++ show sexp)
-                           loop
+                      Right sexp =>
+                        case getMsg sexp of
+                          Just (cmd, i) =>
+                            do updateOutput i
+                               res <- processCatch cmd
+                               handleIDEResult outf i res
+                               loop
+                          Nothing =>
+                            do printIDEError outf idx ("Unrecognised command: " ++ show sexp)
+                               loop
   where
     updateOutput : Integer -> Core ()
     updateOutput idx
         = do IDEMode _ i o <- getOutput
                  | _ => pure ()
              setOutput (IDEMode idx i o)
-                -}
 
 export
 replIDE : {auto c : Ref Ctxt Defs} ->
@@ -316,10 +318,10 @@ replIDE : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
           Core ()
-replIDE = throw (InternalError "Not implemented yet")
---     = do res <- getOutput
---          case res of
---               REPL _ => printError "Running idemode but output isn't"
---               IDEMode _ inf outf => do
---                 send outf (version 2 0)
---                 loop
+replIDE
+    = do res <- getOutput
+         case res of
+              REPL _ => printError "Running idemode but output isn't"
+              IDEMode _ inf outf => do
+                send outf (version 2 0)
+                loop
