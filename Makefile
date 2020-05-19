@@ -79,8 +79,10 @@ install: install-idris2 install-support install-libs
 
 install-idris2:
 	mkdir -p ${PREFIX}/bin/${NAME}_app
+	mkdir -p ${PREFIX}/lib/${NAME}_app
 	install ${TARGET} ${PREFIX}/bin
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 
 install-support: support
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
