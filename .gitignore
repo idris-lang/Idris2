@@ -2,6 +2,10 @@
 *.ibc
 *.ttc
 *.ttm
+*.o
+*.d
+*.a
+*.dll
 
 /build
 
