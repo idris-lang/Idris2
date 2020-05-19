@@ -28,8 +28,7 @@ export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
 
 export SCHEME
-export IDRIS2_CURDIR = $(CURDIR)
-export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
+export IDRIS2_BOOT_PATH = ${CURDIR}/libs/prelude/build/ttc:${CURDIR}/libs/base/build/ttc:${CURDIR}/libs/network/build/ttc
 
 .PHONY: all support clean support-clean bootstrap init-bootstrap idris2-exec ${TARGET}
 
@@ -73,8 +72,8 @@ clean-libs:
 	${MAKE} -C libs/contrib clean
 
 clean: clean-libs support-clean
-	${IDRIS2_BOOT} --clean idris2.ipkg
-	rm -rf ${TARGETDIR}
+	-${IDRIS2_BOOT} --clean idris2.ipkg
+	$(RM) -r build
 
 install: install-idris2 install-support install-libs
 
