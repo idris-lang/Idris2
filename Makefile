@@ -26,6 +26,13 @@ endif
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
+CG ?= ${IDRIS2_CG}
+
+ifneq (${CG},racket)
+    IDRIS2_IPKG := idris2.ipkg
+else
+    IDRIS2_IPKG := idris2rkt.ipkg
+endif
 
 export SCHEME
 export IDRIS2_BOOT_PATH = ${CURDIR}/libs/prelude/build/ttc:${CURDIR}/libs/base/build/ttc:${CURDIR}/libs/network/build/ttc
@@ -38,7 +45,7 @@ all: support ${TARGET} libs
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --build idris2.ipkg
+	${IDRIS2_BOOT} --build ${IDRIS2_IPKG}
 
 src/IdrisPaths.idr:
 	echo 'module IdrisPaths' > src/IdrisPaths.idr
@@ -76,17 +83,20 @@ clean-libs:
 	${MAKE} -C libs/contrib clean
 
 clean: clean-libs support-clean
-	-${IDRIS2_BOOT} --clean idris2.ipkg
+	-${IDRIS2_BOOT} --clean ${IDRIS2_IPKG}
 	$(RM) -r build
 
 install: install-idris2 install-support install-libs
 
 install-idris2:
-	mkdir -p ${PREFIX}/bin/${NAME}_app
-	mkdir -p ${PREFIX}/lib/${NAME}_app
+	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
-	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+	mkdir -p ${PREFIX}/lib/
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
+ifneq ($(CG),racket)
+	mkdir -p ${PREFIX}/bin/${NAME}_app
+	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+endif
 
 install-support: support
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
@@ -111,4 +121,13 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh_app/idris2-boot.ss
 endif
-	./bootstrap.sh
+	sh ./bootstrap.sh
+
+bootstrap-racket: support
+	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
+ifeq ($(OS), darwin)
+	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh.rkt
+else
+	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh.rkt
+endif
+	sh ./bootstrap-rkt.sh

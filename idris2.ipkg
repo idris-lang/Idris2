@@ -143,7 +143,6 @@ modules =
     Yaffle.Main,
     Yaffle.REPL
 
--- opts = "--codegen racket"
 depends = contrib, network
 
 sourcedir = "src"

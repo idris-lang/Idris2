@@ -1,3 +1,10 @@
+(define (blodwen-os)
+  (cond
+    [(eq? (system-type 'os) 'unix) "unix"]
+    [(eq? (system-type 'os) 'osx) "darwin"]
+    [(eq? (system-type 'os) 'windows) "windows"]
+    [else "unknown"]))
+
 (define blodwen-read-args (lambda (desc)
   (case (vector-ref desc 0)
     ((0) '())

@@ -1,9 +1,20 @@
 Installing
 ==========
 
-Requirements: Chez Scheme (with threading support) and bash. On a Mac, you
-will need to install `coreutils` to have access to `realpath` - you can
-do this with `brew install coreutils`.
+Requirements:
+
+* A Scheme compiler; either Chez Scheme (default), or Racket
+* `bash`, with `realpath`. On Linux, you probably already have this. On
+  a `Mac`, you can install this with `brew install coreutils`.
+
+On Windows, it has been reported that installing via `MSYS2` works
+(https://www.msys2.org/)
+
+By default, code generation is via Chez Scheme. You can use Racket instead,
+by passing `CG=racket` to `make` for the commands below.
+
+[Note: a couple of tests are currently known to fail when installing via
+Racket. This will be addressed soon!]
 
 0: Set the PREFIX
 -----------------
@@ -19,15 +30,15 @@ Make sure that:
 * `$PREFIX/lib` is in your `LD_LIBRARY_PATH` (so that the system knows where
   to look for library support code)
 
-
 1a: Installing without an existing Idris 2
 ------------------------------------------
 
 If you *don't* have Idris-2-in-Idris-1 installed, you can build from pre-built
-Chez Scheme source, as long as you have Chez Scheme installed. To do this,
-enter:
+Chez Scheme source, as long as you have Chez Scheme installed (or,
+alternatively, Racket). To do this, enter one of the following:
 
 * `make bootstrap SCHEME=chez`
+* `make bootstrap-racket`
 
 `chez` is the executable name of the Chez Scheme compiler.  You may need to
 replace this with the executable for Chez Scheme on your system. This could be
