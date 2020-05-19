@@ -18,10 +18,10 @@ PREFIX="`dirname $DIR`"/bootstrap
 
 # Now rebuild everything properly
 echo ${PREFIX}
-
 IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${PREFIX}/idris2-0.2.0/contrib:${PREFIX}/idris2-0.2.0/network"
+DYLIB_PATH="${PREFIX}/lib"
 
-make libs CG=racket PREFIX=${PREFIX}
-make install CG=racket PREFIX=${PREFIX}
-make clean
-make all IDRIS2_BOOT=${PREFIX}/bin/idris2sh CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+make libs CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
+make install CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
+make clean IDRIS2_BOOT=${PREFIX}/bin/idris2sh LD_LIBRARY_PATH=${DYLIB_PATH}
+make all IDRIS2_BOOT=${PREFIX}/bin/idris2sh CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} LD_LIBRARY_PATH=${DYLIB_PATH}

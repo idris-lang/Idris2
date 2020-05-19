@@ -1,6 +1,6 @@
 include ../../config.mk
 
-INSTALLDIR = `${IDRIS2} --libdir`/network/lib
+INSTALLDIR = ${PREFIX}/idris2-${IDRIS2_VERSION}/network/lib
 
 IDRIS_SRCS = Network/Socket.idr Network/Socket/Data.idr Network/Socket/Raw.idr
 

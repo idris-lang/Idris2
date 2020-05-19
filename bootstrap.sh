@@ -29,5 +29,5 @@ IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${P
 
 make libs SCHEME=${SCHEME} PREFIX=${PREFIX}
 make install SCHEME=${SCHEME} PREFIX=${PREFIX}
-make clean
+make clean IDRIS2_BOOT=${PREFIX}/bin/idris2sh
 make all IDRIS2_BOOT=${PREFIX}/bin/idris2sh SCHEME=${SCHEME} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
