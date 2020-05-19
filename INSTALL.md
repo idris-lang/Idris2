@@ -53,7 +53,7 @@ Then, go to the Self-hosting step below, but you'll also need to add
 `SCHEME=chez` (with the appropriate name for `chez`) so that the bootstrapping
 script knows where to look.  That is:
 
-* `rm -rf build` -- clean the build artefacts
+* `make clean` -- clean the build artefacts
 * `make all IDRIS2_BOOT=idris2sh SCHEME=chez`
 * `make install`
 
