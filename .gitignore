@@ -3,16 +3,13 @@
 *.ttc
 *.ttm
 
-*.dSYM
-
 /build
 
-/dist/idris2.c
-
-/docs/build/
-
 /libs/**/build
+
 /tests/**/output
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
+
+/src/IdrisPaths.idr
