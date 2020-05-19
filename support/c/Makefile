@@ -8,6 +8,9 @@ DYLIBTARGET = $(TARGET)$(SHLIB_SUFFIX)
 CFLAGS += -O2
 
 SRCS = $(wildcard *.c)
+ifeq ($(OS), windows)
+	SRCS += windows/win_utils.c
+endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 

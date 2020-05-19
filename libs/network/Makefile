@@ -6,9 +6,13 @@ IDRIS_SRCS = Network/Socket.idr Network/Socket/Data.idr Network/Socket/Raw.idr
 
 TARGET = idris_net
 
-SRCS = $(wildcard *.c)
+SRCS = idris_net.c
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
+
+ifeq ($(OS), windows)
+	LDFLAGS += -lws2_32
+endif
 
 
 all: $(TARGET)$(SHLIB_SUFFIX)
@@ -20,7 +24,7 @@ build: $(TARGET)$(SHLIB_SUFFIX) $(IDRIS_SRCS)
 	${IDRIS2} --build network.ipkg
 
 $(TARGET)$(SHLIB_SUFFIX): $(OBJS)
-	$(CC) -shared $(LDFLAGS) -o $@ $^
+	$(CC) -shared  -o $@ $^ $(LDFLAGS)
 
 
 -include $(DEPS)
