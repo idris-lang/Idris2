@@ -82,6 +82,7 @@ modules =
     Idris.Syntax,
     Idris.Version,
 
+    Parser.Lexer.Common,
     Parser.Lexer.Source,
     Parser.Rule.Common,
     Parser.Rule.Source,
