@@ -25,9 +25,16 @@ import System.File
 
 %default covering
 
+||| A series of updates is a mapping from `RawName` to `String`
+||| `RawName` is currently just an alias for `String`
+||| `String` is a rendered `List SourcePart`
+Updates : Type
+Updates = List (RawName, String)
+
+||| Convert a RawImp update to a SourcePart one
 toStrUpdate : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              (Name, RawImp) -> Core (List (String, String))
+              (Name, RawImp) -> Core Updates
 toStrUpdate (UN n, term)
     = do clause <- pterm term
          pure [(n, show (bracket clause))]
@@ -42,19 +49,10 @@ toStrUpdate (UN n, term)
     bracket tm = PBracketed emptyFC tm
 toStrUpdate _ = pure [] -- can't replace non user names
 
-dump : SourcePart -> String
-dump (Whitespace str) = str
-dump (Name n) = n
-dump (HoleName n) = "?" ++ n
-dump LBrace = "{"
-dump RBrace = "}"
-dump Equal = "="
-dump (Other str) = str
-
 data UPD : Type where
 
 doUpdates : {auto u : Ref UPD (List String)} ->
-            Defs -> List (String, String) -> List SourcePart ->
+            Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []
 doUpdates defs ups (LBrace :: xs)
@@ -90,20 +88,20 @@ doUpdates defs ups (x :: xs)
 -- Update the token list with the string replacements for each match, and return
 -- the newly generated strings.
 updateAll : {auto u : Ref UPD (List String)} ->
-            Defs -> List SourcePart -> List (List (String, String)) ->
+            Defs -> List SourcePart -> List Updates ->
             Core (List String)
 updateAll defs l [] = pure []
 updateAll defs l (rs :: rss)
     = do l' <- doUpdates defs rs l
          rss' <- updateAll defs l rss
-         pure (concat (map dump l') :: rss')
+         pure (concatMap toString l' :: rss')
 
 -- Turn the replacements we got from 'getSplits' into a list of actual string
 -- replacements
 getReplaces : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
-              List (Name, RawImp) -> Core (List (String, String))
+              List (Name, RawImp) -> Core Updates
 getReplaces updates
     = do strups <- traverse toStrUpdate updates
          pure (concat strups)
