@@ -19,15 +19,11 @@ import Idris.Resugar
 import Idris.Syntax
 
 import Data.List
+import Data.List.Extra
 import Data.Strings
 import System.File
 
 %default covering
-
-getLine : Nat -> List String -> Maybe String
-getLine Z (l :: ls) = Just l
-getLine (S k) (l :: ls) = getLine k ls
-getLine _ [] = Nothing
 
 toStrUpdate : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -135,7 +131,7 @@ updateCase splits line col
               Just f =>
                 do Right file <- coreLift $ readFile f
                        | Left err => throw (FileErr f err)
-                   let thisline = getLine (integerToNat (cast line)) (lines file)
+                   let thisline = elemAt (lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")
                         Just l =>
