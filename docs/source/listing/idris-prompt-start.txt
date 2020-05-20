@@ -1,0 +1,9 @@
+$ idris2
+     ____    __     _         ___
+    /  _/___/ /____(_)____   |__ \
+    / // __  / ___/ / ___/   __/ /     Version 0.1.0
+  _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
+ /___/\__,_/_/  /_/____/   /____/      Type :? for help
+
+Welcome to Idris 2.  Enjoy yourself!
+Main>
