@@ -1,7 +1,7 @@
 module Parser.Source
 
 import public Parser.Lexer.Source
-import public Parser.Rule
+import public Parser.Rule.Source
 import public Parser.Unlit
 import public Text.Lexer
 import public Text.Parser

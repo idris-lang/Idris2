@@ -1,4 +1,4 @@
-module Parser.Rule
+module Parser.Rule.Source
 
 import public Parser.Lexer.Source
 import public Parser.Support
@@ -208,7 +208,7 @@ continueF : EmptyRule () -> (indent : IndentInfo) -> EmptyRule ()
 continueF err indent
     = do eoi; err
   <|> do keyword "where"; err
-  <|> do col <- Rule.column
+  <|> do col <- Source.column
          if col <= indent
             then err
             else pure ()
@@ -277,7 +277,7 @@ atEnd indent
     = eoi
   <|> do nextIs "Expected end of block" (isTerminator . tok)
          pure ()
-  <|> do col <- Rule.column
+  <|> do col <- Source.column
          if (col <= indent)
             then pure ()
             else fail "Not the end of a block entry"
@@ -287,7 +287,7 @@ export
 atEndIndent : (indent : IndentInfo) -> EmptyRule ()
 atEndIndent indent
     = eoi
-  <|> do col <- Rule.column
+  <|> do col <- Source.column
          if col <= indent
             then pure ()
             else fail "Not the end of a block entry"
@@ -375,7 +375,7 @@ blockAfter mincol item
          ps <- blockEntries AnyIndent item
          symbol "}"
          pure ps
-  <|> do col <- Rule.column
+  <|> do col <- Source.column
          if col <= mincol
             then pure []
             else blockEntries (AtPos col) item
@@ -387,7 +387,7 @@ blockWithOptHeaderAfter {ty} mincol header item
          commit
          hidt <- optional $ blockEntry AnyIndent header
          restOfBlock hidt
-  <|> do col <- Rule.column
+  <|> do col <- Source.column
          if col <= mincol
             then pure (Nothing, [])
             else do hidt <- optional $ blockEntry (AtPos col) header
