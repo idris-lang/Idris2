@@ -78,8 +78,8 @@ Eq Body where
 
 export
 Eq Path where
-  (==) (MkPath l1 l2 l3 _) (MkPath r1 r2 r3 _) = l1 == r1 
-                                              && l2 == r2 
+  (==) (MkPath l1 l2 l3 _) (MkPath r1 r2 r3 _) = l1 == r1
+                                              && l2 == r2
                                               && l3 == r3
 
 ||| An empty path that represents "".
@@ -89,7 +89,7 @@ emptyPath = MkPath Nothing False [] False
 
 ||| Returns true if the path is absolute.
 |||
-||| - On Unix, a path is absolute if it starts with the root, 
+||| - On Unix, a path is absolute if it starts with the root,
 |||   so isAbsolute and hasRoot are equivalent.
 |||
 ||| - On Windows, a path is absolute if it has a volumn and starts
@@ -142,7 +142,7 @@ parent p = case p.body of
                                            hasTrailSep = False } p
 
 ||| Returns a list of all parents of the path, longest first,
-||| self excluded. 
+||| self excluded.
 |||
 ||| For example, the parent of the path, and the parent of the
 ||| parent of the path, and so on. The list terminates in a
@@ -164,7 +164,7 @@ startWith base full = base `elem` (iterate parent full)
 ||| If base is not a prefix of full (i.e., startWith returns false),
 ||| returns Nothing.
 stripPrefix : (base : Path) -> (full : Path) -> Maybe Path
-stripPrefix base full 
+stripPrefix base full
     = do let MkPath vol1 root1 body1 _ = base
          let MkPath vol2 root2 body2 trialSep = full
          if vol1 == vol2 && root1 == root2 then Just () else Nothing
@@ -190,21 +190,21 @@ fileName p = case last' p.body of
 
 private
 splitFileName : String -> (String, String)
-splitFileName name 
+splitFileName name
     = case break (== '.') $ reverse $ unpack name of
            (_, []) => (name, "")
            (_, ['.']) => (name, "")
-           (revExt, (dot :: revStem)) 
+           (revExt, (dot :: revStem))
               => ((pack $ reverse revStem), (pack $ reverse revExt))
 
 
 ||| Extracts the stem (non-extension) portion of the file name of path.
-||| 
+|||
 ||| The stem is:
-||| 
+|||
 ||| - Nothing, if there is no file name;
 ||| - The entire file name if there is no embedded ".";
-||| - The entire file name if the file name begins with "." and has 
+||| - The entire file name if the file name begins with "." and has
 |||   no other "."s within;
 ||| - Otherwise, the portion of the file name before the final "."
 export
@@ -212,9 +212,9 @@ fileStem : Path -> Maybe String
 fileStem p = pure $ fst $ splitFileName !(fileName p)
 
 ||| Extracts the extension of the file name of path.
-||| 
+|||
 ||| The extension is:
-||| 
+|||
 ||| - Nothing, if there is no file name;
 ||| - Nothing, if there is no embedded ".";
 ||| - Nothing, if the file name begins with "." and has no other "."s within;
@@ -224,7 +224,7 @@ extension : Path -> Maybe String
 extension p = pure $ snd $ splitFileName !(fileName p)
 
 ||| Updates the file name of the path.
-||| 
+|||
 ||| If no file name, this is equivalent to appending the name;
 ||| Otherwise it is equivalent to appending the name to the parent.
 export
@@ -232,9 +232,9 @@ setFileName : (name : String) -> Path -> Path
 setFileName name p = record { body $= updateLastBody name } p
   where
     updateLastBody : String -> List Body -> List Body
-    updateLastBody s [] = [Normal s] 
+    updateLastBody s [] = [Normal s]
     updateLastBody s [Normal _] = [Normal s]
-    updateLastBody s [x] = x :: [Normal s]  
+    updateLastBody s [x] = x :: [Normal s] 
     updateLastBody s (x::xs) = x :: (updateLastBody s xs)
 
 ||| Updates the extension of the path.
@@ -308,7 +308,7 @@ TokenKind PathTokenKind where
 
 private
 pathTokenMap : TokenMap PathToken
-pathTokenMap = toTokenMap $ 
+pathTokenMap = toTokenMap $
   [ (is '/', PTPunct '/')
   , (is '\\', PTPunct '\\')
   , (is ':', PTPunct ':')
@@ -333,7 +333,7 @@ bodySeperator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 
 -- Example: \\?\
 -- Windows can automatically translate '/' to '\\'. The verbatim prefix,
--- i.e., `\\?\`, disables the translation. 
+-- i.e., `\\?\`, disables the translation.
 -- Here, we simply parse and then ignore it.
 private
 verbatim : Grammar PathToken True ()
@@ -364,8 +364,8 @@ verbatimUnc = do verbatim
 private
 disk : Grammar PathToken True Volumn
 disk = do text <- match PTText
-          disk <- case unpack text of 
-                       (disk :: xs) => pure disk 
+          disk <- case unpack text of
+                       (disk :: xs) => pure disk
                        [] => fail "Expect Disk"
           match $ PTPunct ':'
           pure $ Disk (toUpper disk)
@@ -387,7 +387,7 @@ parseVolumn = verbatimUnc
 private
 parseBody : Grammar PathToken True Body
 parseBody = do text <- match PTText
-               the (Grammar _ False _) $ 
+               the (Grammar _ False _) $
                    case text of
                         " " => fail "Empty body"
                         ".." => pure ParentDir
@@ -424,7 +424,7 @@ export
 parse : String -> Either String Path
 parse str = case parse parsePath !(lexPath str) of
                  Right (p, []) => Right p
-                 Right (p, ts) => Left ("Unrecognised tokens remaining : " 
+                 Right (p, ts) => Left ("Unrecognised tokens remaining : "
                                      ++ show (map text ts))
                  Left (Error msg ts) => Left (msg ++ " : " ++ show (map text ts))
 
