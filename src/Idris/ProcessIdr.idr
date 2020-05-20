@@ -193,7 +193,7 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData Token -> Bool
+    isColon : TokenData SourceToken -> Bool
     isColon t
         = case tok t of
                Symbol ":" => True

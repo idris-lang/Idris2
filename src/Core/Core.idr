@@ -4,7 +4,7 @@ import Core.Env
 import Core.TT
 import Data.List
 import Data.Vect
-import Parser.Support
+import Parser.Source
 
 import public Data.IORef
 import System

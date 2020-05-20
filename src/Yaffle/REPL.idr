@@ -21,7 +21,7 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Parser.Support
+import Parser.Source
 
 %default covering
 

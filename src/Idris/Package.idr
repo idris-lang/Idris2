@@ -24,7 +24,7 @@ import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
 import Parser.Lexer
-import Parser.Support
+import Parser.Source
 import Utils.Binary
 
 import System

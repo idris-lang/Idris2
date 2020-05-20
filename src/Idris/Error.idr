@@ -9,7 +9,7 @@ import Core.Options
 import Idris.Resugar
 import Idris.Syntax
 
-import Parser.Support
+import Parser.Source
 
 import Data.List
 

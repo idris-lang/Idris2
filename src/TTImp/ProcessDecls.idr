@@ -6,7 +6,7 @@ import Core.Env
 import Core.Metadata
 import Core.UnifyState
 
-import Parser.Support
+import Parser.Source
 
 import TTImp.BindImplicits
 import TTImp.Elab.Check
