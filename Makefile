@@ -13,32 +13,30 @@ MINOR=2
 PATCH=0
 
 GIT_SHA1=
-VER_TAG=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
     # inside a git repo
     ifneq ($(shell git describe --exact-match --tags >/dev/null 2>&1; echo $$?), 0)
         # not tagged as a released version, so add sha1 of this build in between releases
         GIT_SHA1 := $(shell git rev-parse --short=9 HEAD)
-        VER_TAG := -${GIT_SHA1}
     endif
 endif
 
-IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
-IDRIS2_VERSION_TAG := ${IDRIS2_VERSION}${VER_TAG}
-CG ?= ${IDRIS2_CG}
+IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 
+CG ?= ${IDRIS2_CG}
 ifneq (${CG},racket)
     IDRIS2_IPKG := idris2.ipkg
 else
     IDRIS2_IPKG := idris2rkt.ipkg
 endif
 
-export SCHEME
 export IDRIS2_BOOT_PATH = ${CURDIR}/libs/prelude/build/ttc:${CURDIR}/libs/base/build/ttc:${CURDIR}/libs/network/build/ttc
-export IDRIS2_CURDIR = ${CURDIR}
 
-.PHONY: all support clean support-clean bootstrap init-bootstrap idris2-exec ${TARGET}
+export SCHEME
+
+
+.PHONY: all idris2-exec ${TARGET} support support-clean clean distclean
 
 all: support ${TARGET} libs
 
@@ -83,6 +81,7 @@ clean-libs:
 
 clean: clean-libs support-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_IPKG}
+	${MAKE} -C tests clean
 	$(RM) -r build
 
 install: install-idris2 install-support install-libs
@@ -112,6 +111,9 @@ install-libs: libs
 	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
+
+.PHONY: bootstrap bootstrap-racket bootstrap-clean
+
 bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
 	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2sh_app/idris2sh.ss > bootstrap/idris2sh_app/idris2-boot.ss
@@ -131,3 +133,15 @@ else
 	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 endif
 	sh ./bootstrap-rkt.sh
+
+bootstrap-clean:
+	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}
+	$(RM) bootstrap/idris2boot* bootstrap/idris2sh_app/idris2-boot.* bootstrap/idris2sh_app/${IDRIS2_SUPPORT}
+
+
+.PHONY: distclean
+
+distclean: clean bootstrap-clean
+	@find . -type f -name '*.ttc' -exec rm -f {} \;
+	@find . -type f -name '*.ttm' -exec rm -f {} \;
+	@find . -type f -name '*.ibc' -exec rm -f {} \;

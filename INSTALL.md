@@ -20,7 +20,7 @@ Racket. This will be addressed soon!]
 1: Set the PREFIX
 -----------------
 
-* Change the `prefix` in `config.mk`. The default is to install in
+* Change the `PREFIX` in `config.mk`. The default is to install in
   `$HOME/.idris2sh`
 
 If you have an existing Idris 2, go to step 1b. Otherwise, read on...
@@ -28,8 +28,8 @@ If you have an existing Idris 2, go to step 1b. Otherwise, read on...
 Make sure that:
 
 * `$PREFIX/bin` is in your `PATH`
-* `$PREFIX/lib` is in your `LD_LIBRARY_PATH` (so that the system knows where
-  to look for library support code)
+* `$PREFIX/lib` is in your `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH` if on
+  `macOS` (so that the system knows where to look for library support code)
 
 2: Installing without an existing Idris 2
 ------------------------------------------
