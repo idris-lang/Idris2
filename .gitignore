@@ -9,6 +9,8 @@
 
 /build
 
+/docs/build
+
 /libs/**/build
 
 /tests/**/build
