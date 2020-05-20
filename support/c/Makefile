@@ -9,7 +9,7 @@ CFLAGS += -O2
 
 SRCS = $(wildcard *.c)
 ifeq ($(OS), windows)
-	SRCS += windows/win_utils.c
+	SRCS += windows/win_utils.c windows/win_hack.c
 endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)

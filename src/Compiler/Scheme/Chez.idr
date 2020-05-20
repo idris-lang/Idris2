@@ -26,9 +26,9 @@ import System.Info
 pathLookup : IO String
 pathLookup
     = do path <- getEnv "PATH"
-         let pathList = split (== ':') $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let pathList = split (== pathSep) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
-                                           x <- ["chez", "chezscheme9.5", "scheme"]]
+                                           x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
          e <- firstExists candidates
          pure $ fromMaybe "/usr/bin/env scheme" e
 
@@ -316,6 +316,23 @@ startChez appdir target = unlines
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
 
+startChezCmd : String -> String -> String -> String
+startChezCmd chez appdir target = unlines
+    [ "@echo off"
+    , "set APPDIR=%~dp0"
+    , "set PATH=%APPDIR%;%PATH%"
+    , chez ++ " --script %APPDIR%/" ++ target ++ " %*"
+    ]
+
+startChezWinSh : String -> String -> String -> String
+startChezWinSh chez appdir target = unlines
+    [ "#!/bin/sh"
+    , "DIR=\"`realpath $0`\""
+    , "CHEZ=$(cygpath \"" ++ chez ++"\")"
+    , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
+    , "$CHEZ --script \"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
+    ]
+
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
               String -> ClosedTerm -> (outfile : String) -> Core ()
@@ -347,22 +364,30 @@ compileToSS c appdir tm outfile
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
-              (appDirRel : String) -> (outSsAbs : String) -> Core ()
-compileToSO appDirRel outSsAbs
+              String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
+compileToSO chez appDirRel outSsAbs
     = do let tmpFileAbs = appDirRel ++ dirSep ++ "compileChez"
-         chez <- coreLift $ findChez
-         let build= "#!" ++ chez ++ " --script\n" ++
-                    "(parameterize ([optimize-level 3]) (compile-program \"" ++
-                    outSsAbs ++ "\"))"
+         let build= "(parameterize ([optimize-level 3]) (compile-program " ++
+                    show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift $ chmodRaw tmpFileAbs 0o755
-         coreLift $ system tmpFileAbs
+         coreLift $ system (chez ++ " --script " ++ tmpFileAbs)
          pure ()
 
 makeSh : String -> String -> String -> Core ()
 makeSh outShRel appdir outAbs
     = do Right () <- coreLift $ writeFile outShRel (startChez appdir outAbs)
+            | Left err => throw (FileErr outShRel err)
+         pure ()
+
+||| Make Windows start scripts, one for bash environments and one batch file
+makeShWindows : String -> String -> String -> String -> Core ()
+makeShWindows chez outShRel appdir outAbs
+    = do let cmdFile = outShRel ++ ".cmd"
+         Right () <- coreLift $ writeFile cmdFile (startChezCmd chez appdir outAbs)
+            | Left err => throw (FileErr cmdFile err)
+         Right () <- coreLift $ writeFile outShRel (startChezWinSh chez appdir outAbs)
             | Left err => throw (FileErr outShRel err)
          pure ()
 
@@ -372,7 +397,6 @@ compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
 compileExpr makeitso c execDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
-
          coreLift $ mkdirs (splitDir appDirGen)
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
@@ -380,11 +404,13 @@ compileExpr makeitso c execDir tm outfile
          let outSoFile = appDirRel ++ dirSep ++ outfile ++ ".so"
          let outSsAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSsFile
          let outSoAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSoFile
-
+         chez <- coreLift $ findChez
          compileToSS c appDirGen tm outSsAbs
-         logTime "Make SO" $ when makeitso $ compileToSO appDirGen outSsAbs
+         logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
          let outShRel = execDir ++ dirSep ++ outfile
-         makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
+         if isWindows
+            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) 
+            else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          coreLift $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 

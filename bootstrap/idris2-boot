@@ -1,5 +1,5 @@
 #!/bin/sh
-
 DIR="`realpath $0`"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:`dirname "$DIR"`/"idris2_app""
+export PATH="`dirname "$DIR"`/"idris2_app":$PATH"
 ${SCHEME} --script "`dirname $DIR`"/"idris2_app/idris2-boot.so" "$@"
