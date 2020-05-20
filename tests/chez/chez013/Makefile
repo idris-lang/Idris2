@@ -1,4 +1,4 @@
-include $(IDRIS2_CURDIR)/config.mk
+include ../../../config.mk
 
 TARGET = libstruct
 
@@ -22,7 +22,7 @@ $(TARGET)$(SHLIB_SUFFIX): $(OBJS)
 .PHONY: clean
 
 clean :
-	rm -f $(OBJS) $(TARGET)$(SHLIB_SUFFIX)
+	$(RM) $(OBJS) $(TARGET)$(SHLIB_SUFFIX)
 
 cleandep: clean
-	rm -f $(DEPS)
+	$(RM) $(DEPS)
