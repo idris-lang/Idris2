@@ -384,7 +384,7 @@ clean pkg
          let build = build_dir (dirs (options defs))
          let exec = exec_dir (dirs (options defs))
          runScript (preclean pkg)
-         let pkgmods = maybe 
+         let pkgmods = maybe
                          (map fst (modules pkg))
                          (\m => fst m :: map fst (modules pkg))
                          (mainmod pkg)
@@ -413,7 +413,7 @@ clean pkg
   where
     delete : String -> Core ()
     delete path = do Right () <- coreLift $ fileRemove path
-                       | Left err => throw (FileErr (name pkg) err) 
+                       | Left err => pure ()
                      coreLift $ putStrLn $ "Removed: " ++ path
 
     deleteFolder : String -> List String -> Core ()
