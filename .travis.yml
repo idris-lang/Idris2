@@ -3,4 +3,3 @@ language: minimal
 install: sudo apt-get install chezscheme9.5
 script:
     - make bootstrap SCHEME=chezscheme9.5
-    - make test IDRIS2_BOOT=../build/exec/idris2sh
