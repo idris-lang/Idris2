@@ -9,6 +9,7 @@ import Text.Parser
 import Parser.Lexer
 import Parser.Support
 import Text.Lexer
+import Utils.Either
 import Utils.String
 
 import Data.List
@@ -62,16 +63,10 @@ sexp
 ideParser : {e : _} ->
             String -> Grammar (TokenData Token) e ty -> Either ParseError ty
 ideParser str p
-    = case idelex str of
-           Left err => Left $ LexFail err
-           Right toks =>
-              case parse p toks of
-                   Left (Error err []) =>
-                          Left $ ParseFail err Nothing []
-                   Left (Error err (t :: ts)) =>
-                          Left $ ParseFail err (Just (line t, col t))
-                                               (map tok (t :: ts))
-                   Right (val, _) => Right val
+    = do toks   <- mapError LexFail $ idelex str
+         parsed <- mapError mapParseError $ parse p toks
+         Right (fst parsed)
+
 
 export
 parseSExp : String -> Either ParseError SExp
