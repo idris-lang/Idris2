@@ -23,7 +23,7 @@ Racket. This will be addressed soon!]
 * Change the `PREFIX` in `config.mk`. The default is to install in
   `$HOME/.idris2`
 
-If you have an existing Idris 2, go to step 1b. Otherwise, read on...
+If you have an existing Idris 2, go to the alternative Step 2. Otherwise, read on...
 
 Make sure that:
 
@@ -34,7 +34,7 @@ Make sure that:
 2: Installing without an existing Idris 2
 ------------------------------------------
 
-If you *don't* have Idris-2-in-Idris-1 installed, you can build from pre-built
+If you *don't* have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot) installed, you can build from pre-built
 Chez Scheme source, as long as you have Chez Scheme installed (or,
 alternatively, Racket). To do this, enter one of the following:
 
