@@ -4,7 +4,7 @@ import Core.Context
 import Core.Core
 import Core.Env
 import Core.TT
-import Parser.Support
+import Parser.Source
 import TTImp.TTImp
 
 import public Text.Parser
