@@ -423,14 +423,13 @@ foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
 public export
 foldl1' : (a -> a -> a) -> List a -> Maybe a
 foldl1' f [] = Nothing
-foldl1' f (x::xs) = Just (foldl f x xs)
+foldl1' f xs@(_::_) = Just (foldl1 f xs)
 
 ||| Foldr without seeding the accumulator. If the list is empty, return `Nothing`.
 public export
 foldr1' : (a -> a -> a) -> List a -> Maybe a
 foldr1' f [] = Nothing
-foldr1' f [x] = Just x
-foldr1' f (x::y::ys) = Just (f x !(foldr1' f (y::ys)))
+foldr1' f xs@(_::_) = Just (foldr1 f xs)
 
 --------------------------------------------------------------------------------
 -- Sorting
