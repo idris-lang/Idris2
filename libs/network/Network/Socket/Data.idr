@@ -48,22 +48,36 @@ export
 BACKLOG : Int
 BACKLOG = 20
 
+-- Repeat to avoid a dependency cycle
+%foreign "C:idrnet_geteagain,idris_net"
+idrnet_geteagain : PrimIO Int
+
 export
 EAGAIN : Int
 EAGAIN =
   -- I'm sorry
   -- maybe
-  unsafePerformIO $ cCall Int "idrnet_geteagain" []
+  unsafePerformIO $ primIO $ idrnet_geteagain
 
 -- ---------------------------------------------------------------- [ Error Code ]
 
+-- repeat without export to avoid dependency cycles
+%foreign "C:idrnet_errno,idris_net"
+idrnet_errno : PrimIO Int
+
+%foreign "C:isNull,idris_net"
+idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
+
+
 export
 getErrno : IO SocketError
-getErrno = cCall Int "idrnet_errno" []
+getErrno = primIO $ idrnet_errno
 
 export
 nullPtr : AnyPtr -> IO Bool
-nullPtr p = cCall Bool "isNull" [p]
+nullPtr p = do 0 <- primIO  $ idrnet_isNull p
+               | _ => pure True
+               pure False
 
 -- -------------------------------------------------------------- [ Interfaces ]
 

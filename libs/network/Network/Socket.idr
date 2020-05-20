@@ -7,6 +7,7 @@ module Network.Socket
 import public Network.Socket.Data
 import Network.Socket.Raw
 import Data.List
+import Network.FFI
 
 -- ----------------------------------------------------- [ Network Socket API. ]
 
@@ -18,7 +19,7 @@ socket : (fam  : SocketFamily)
       -> (pnum : ProtocolNumber)
       -> IO (Either SocketError Socket)
 socket sf st pn = do
-  socket_res <- cCall Int "idrnet_socket" [toCode sf, toCode st, pn]
+  socket_res <- primIO $ idrnet_socket (toCode sf) (toCode st) pn
 
   if socket_res == -1
     then map Left getErrno
@@ -27,7 +28,8 @@ socket sf st pn = do
 ||| Close a socket
 export
 close : Socket -> IO ()
-close sock = cCall () "close" [descriptor sock]
+close sock = do _ <- primIO $ socket_close $ descriptor sock
+                pure ()
 
 ||| Binds a socket to the given socket address and port.
 ||| Returns 0 on success, an error code otherwise.
@@ -37,10 +39,13 @@ bind : (sock : Socket)
     -> (port : Port)
     -> IO Int
 bind sock addr port = do
-    bind_res <- cCall Int "idrnet_bind"
-                [ descriptor sock, toCode $ family sock
-                , toCode $ socketType sock, saString addr,  port
-                ]
+    bind_res <- primIO $ idrnet_bind
+                  (descriptor sock)
+                  (toCode $ family sock)
+                  (toCode $ socketType sock)
+                  (saString addr)
+                  port
+                
     if bind_res == (-1)
       then getErrno
       else pure 0
@@ -57,8 +62,8 @@ connect : (sock : Socket)
        -> (port : Port)
        -> IO ResultCode
 connect sock addr port = do
-  conn_res <- cCall Int "idrnet_connect"
-              [ descriptor sock, toCode $ family sock, toCode $ socketType sock, show addr, port]
+  conn_res <- primIO $ idrnet_connect
+              (descriptor sock) (toCode $ family sock) (toCode $ socketType sock) (show addr) port
 
   if conn_res == (-1)
     then getErrno
@@ -70,7 +75,7 @@ connect sock addr port = do
 export
 listen : (sock : Socket) -> IO Int
 listen sock = do
-  listen_res <- cCall Int "listen" [ descriptor sock, BACKLOG ]
+  listen_res <- primIO $ socket_listen (descriptor sock) BACKLOG 
   if listen_res == (-1)
     then getErrno
     else pure 0
@@ -91,9 +96,9 @@ accept sock = do
   -- We need a pointer to a sockaddr structure. This is then passed into
   -- idrnet_accept and populated. We can then query it for the SocketAddr and free it.
 
-  sockaddr_ptr <- cCall AnyPtr "idrnet_create_sockaddr" []
+  sockaddr_ptr <- primIO idrnet_create_sockaddr
 
-  accept_res <- cCall Int "idrnet_accept" [ descriptor sock, sockaddr_ptr ]
+  accept_res <- primIO $ idrnet_accept (descriptor sock) sockaddr_ptr 
   if accept_res == (-1)
     then map Left getErrno
     else do
@@ -114,7 +119,7 @@ send : (sock : Socket)
     -> (msg  : String)
     -> IO (Either SocketError ResultCode)
 send sock dat = do
-  send_res <- cCall Int "idrnet_send" [ descriptor sock, dat ]
+  send_res <- primIO $ idrnet_send (descriptor sock) dat 
 
   if send_res == (-1)
     then map Left getErrno
@@ -136,8 +141,8 @@ recv : (sock : Socket)
 recv sock len = do
   -- Firstly make the request, get some kind of recv structure which
   -- contains the result of the recv and possibly the retrieved payload
-  recv_struct_ptr <- cCall AnyPtr "idrnet_recv" [ descriptor sock, len]
-  recv_res <- cCall Int "idrnet_get_recv_res"  [ recv_struct_ptr ]
+  recv_struct_ptr <- primIO $ idrnet_recv (descriptor sock) len
+  recv_res <- primIO $ idrnet_get_recv_res recv_struct_ptr
 
   if recv_res == (-1)
     then do
@@ -150,7 +155,7 @@ recv sock len = do
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Left 0
         else do
-           payload <- cCall String "idrnet_get_recv_payload" [ recv_struct_ptr ]
+           payload <- primIO $ idrnet_get_recv_payload recv_struct_ptr
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Right (payload, recv_res)
 
@@ -189,8 +194,8 @@ sendTo : (sock : Socket)
       -> (msg  : String)
       -> IO (Either SocketError ByteLength)
 sendTo sock addr p dat = do
-  sendto_res <- cCall Int "idrnet_sendto"
-                [ descriptor sock, dat, show addr, p ,toCode $ family sock ]
+  sendto_res <- primIO $ idrnet_sendto
+                (descriptor sock) dat (show addr) p (toCode $ family sock)
 
   if sendto_res == (-1)
     then map Left getErrno
@@ -212,15 +217,15 @@ recvFrom : (sock : Socket)
         -> (len  : ByteLength)
         -> IO (Either SocketError (UDPAddrInfo, String, ResultCode))
 recvFrom sock bl = do
-  recv_ptr <- cCall AnyPtr "idrnet_recvfrom"
-              [ descriptor sock, bl ]
+  recv_ptr <- primIO $ idrnet_recvfrom
+                       (descriptor sock) bl 
 
   let recv_ptr' = RFPtr recv_ptr
   isNull <- (nullPtr recv_ptr)
   if isNull
     then map Left getErrno
     else do
-      result <- cCall Int "idrnet_get_recvfrom_res" [ recv_ptr ]
+      result <- primIO $ idrnet_get_recvfrom_res recv_ptr 
       if result == -1
         then do
           freeRecvfromStruct recv_ptr'
