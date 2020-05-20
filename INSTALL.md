@@ -1,14 +1,15 @@
 Installing
 ==========
 
-Requirements:
+The easiest way to install is via the existing generated Scheme code. The
+requirements are:
 
 * A Scheme compiler; either Chez Scheme (default), or Racket
 * `bash`, with `realpath`. On Linux, you probably already have this. On
-  a `Mac`, you can install this with `brew install coreutils`.
+  a Mac, you can install this with `brew install coreutils`.
 
 On Windows, it has been reported that installing via `MSYS2` works
-(https://www.msys2.org/)
+(https://www.msys2.org/). On Raspberry Pi, you can bootstrap via Racket.
 
 By default, code generation is via Chez Scheme. You can use Racket instead,
 by passing `CG=racket` to `make` for the commands below.
@@ -16,7 +17,7 @@ by passing `CG=racket` to `make` for the commands below.
 [Note: a couple of tests are currently known to fail when installing via
 Racket. This will be addressed soon!]
 
-0: Set the PREFIX
+1: Set the PREFIX
 -----------------
 
 * Change the `PREFIX` in `config.mk`. The default is to install in
@@ -30,7 +31,7 @@ Make sure that:
 * `$PREFIX/lib` is in your `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH` if on
   `macOS` (so that the system knows where to look for library support code)
 
-1a: Installing without an existing Idris 2
+2: Installing without an existing Idris 2
 ------------------------------------------
 
 If you *don't* have Idris-2-in-Idris-1 installed, you can build from pre-built
@@ -54,27 +55,26 @@ If all is well, to install, type:
 
 * `make install`
 
-1b: Installing with an existing Idris 2
----------------------------------------
+(Alternative 2: Installing with an existing Idris 2)
+----------------------------------------------------
 
-If you have Idris-2-in-Idris-1 installed:
+If you have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot)
+installed: 
 
 * `make all && make install`
 
-2: Self-hosting step
---------------------
+3: (Optional) Self-hosting step
+-------------------------------
 
-Then, to build from the newly installed `idris2sh`, assuming that `idris2sh`
-is in your `PATH`.
+As a final step, you can rebuild from the newly installed Idris 2 to verify
+that everything has worked correctly.  Assuming that `idris2sh` is in your
+`PATH`.
 
 * `make clean` -- to make sure you're building everything with the new version
 * `make all IDRIS2_BOOT=idris2sh && make install`
 
-For amusement, try using `time` on the above. I get about 3m for installing
-from `idris2`, and about 1m45 for installing from `idris2sh`.
-
-3: Testing
-----------
+4: Running tests
+----------------
 
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
