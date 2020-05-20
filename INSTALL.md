@@ -47,18 +47,12 @@ system and the Chez Scheme version.
 
 This builds an Idris 2 compiler from scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to
-build the current repository). It then rebuilds using the result.
+build the current repository). It then rebuilds using the result, and runs
+the tests.
 
-Then to install, type:
+If all is well, to install, type:
 
 * `make install`
-
-If you want to check everything is working, type:
-
-* `make test IDRIS2_BOOT=idris2sh`
-
-(You have to install first, because the test script relies on an existing
-Idris 2 installation.)
 
 1b: Installing with an existing Idris 2
 ---------------------------------------
