@@ -27,7 +27,7 @@ runParser : {e : _} ->
 runParser lit = runParserTo lit (const False)
 
 export
-parseFile : (fn : String) -> Rule ty -> IO (Either ParseError ty)
+parseFile : (fn : String) -> SourceRule ty -> IO (Either ParseError ty)
 parseFile fn p
     = do Right str <- readFile fn
              | Left err => pure (Left (FileFail err))

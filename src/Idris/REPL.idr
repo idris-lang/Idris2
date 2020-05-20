@@ -741,10 +741,10 @@ processCatch cmd
                            pure $ REPLError !(display err)
                            )
 
-parseEmptyCmd : EmptyRule (Maybe REPLCmd)
+parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
 parseEmptyCmd = eoi *> (pure Nothing)
 
-parseCmd : EmptyRule (Maybe REPLCmd)
+parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export

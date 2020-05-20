@@ -43,7 +43,7 @@ idelex str
                           Comment _ => False
                           _ => True
 
-sexp : Rule SExp
+sexp : SourceRule SExp
 sexp
     = do symbol ":"; exactIdent "True"
          pure (BoolAtom True)
