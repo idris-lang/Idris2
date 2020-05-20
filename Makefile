@@ -86,6 +86,9 @@ clean: clean-libs support-clean
 
 install: install-idris2 install-support install-libs
 
+install-api:
+	${IDRIS2_BOOT} --install idris2api.ipkg
+
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
