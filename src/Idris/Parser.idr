@@ -3,7 +3,7 @@ module Idris.Parser
 import        Core.Options
 import        Idris.Syntax
 import public Parser.Source
-import        Parser.Lexer
+import        Parser.Lexer.Source
 import        TTImp.TTImp
 
 import public Text.Parser

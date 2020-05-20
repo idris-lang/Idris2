@@ -1,6 +1,6 @@
 module Parser.Source
 
-import public Parser.Lexer
+import public Parser.Lexer.Source
 import public Parser.Rule
 import public Parser.Unlit
 import public Text.Lexer

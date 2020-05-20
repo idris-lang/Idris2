@@ -6,7 +6,7 @@ import Core.Metadata
 import Core.TT
 import Core.Value
 
-import Parser.Lexer
+import Parser.Lexer.Source
 import Parser.Unlit
 
 import TTImp.Interactive.CaseSplit

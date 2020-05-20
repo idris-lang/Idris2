@@ -6,7 +6,7 @@ module Idris.IDEMode.Parser
 import Idris.IDEMode.Commands
 
 import Text.Parser
-import Parser.Lexer
+import Parser.Lexer.Source
 import Parser.Source
 import Text.Lexer
 import Utils.Either
@@ -16,7 +16,7 @@ import Data.List
 import Data.Strings
 
 %hide Text.Lexer.symbols
-%hide Parser.Lexer.symbols
+%hide Parser.Lexer.Source.symbols
 
 symbols : List String
 symbols = ["(", ":", ")"]

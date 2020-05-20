@@ -1,4 +1,4 @@
-module Parser.Lexer
+module Parser.Lexer.Source
 
 import Data.List
 import Data.Strings

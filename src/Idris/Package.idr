@@ -23,7 +23,7 @@ import Idris.REPLOpts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import Parser.Lexer
+import Parser.Lexer.Source
 import Parser.Source
 import Utils.Binary
 
