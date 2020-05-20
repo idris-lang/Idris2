@@ -1,0 +1,5 @@
+dist: bionic
+language: minimal
+install: sudo apt-get install chezscheme9.5
+script:
+    - make bootstrap SCHEME=chezscheme9.5

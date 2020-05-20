@@ -328,7 +328,7 @@ install pkg
          let installPrefix = dir_prefix (dirs (options defs)) ++
                              dirSep ++ "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
-             | False => throw (InternalError ("Can't change director to " ++ installPrefix))
+             | False => throw (InternalError ("Can't change directory to " ++ installPrefix))
          Right _ <- coreLift $ mkdirs [name pkg]
              | Left err => throw (InternalError ("Can't make directory " ++ name pkg))
          True <- coreLift $ changeDir (name pkg)
