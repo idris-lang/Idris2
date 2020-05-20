@@ -401,6 +401,38 @@ mapMaybe f (x::xs) =
     Just j  => j :: mapMaybe f xs
 
 --------------------------------------------------------------------------------
+-- Special folds
+--------------------------------------------------------------------------------
+
+||| Foldl a non-empty list without seeding the accumulator.
+||| @ ok proof that the list is non-empty
+public export
+foldl1 : (a -> a -> a) -> (l : List a)  -> {auto ok : NonEmpty l} -> a
+foldl1 f [] impossible
+foldl1 f (x::xs) = foldl f x xs
+
+||| Foldr a non-empty list without seeding the accumulator.
+||| @ ok proof that the list is non-empty
+public export
+foldr1 : (a -> a -> a) -> (l : List a)  -> {auto ok : NonEmpty l} -> a
+foldr1 f [] impossible
+foldr1 f [x] = x
+foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
+
+||| Foldl without seeding the accumulator. If the list is empty, return `Nothing`.
+public export
+foldl1' : (a -> a -> a) -> List a -> Maybe a
+foldl1' f [] = Nothing
+foldl1' f (x::xs) = Just (foldl f x xs)
+
+||| Foldr without seeding the accumulator. If the list is empty, return `Nothing`.
+public export
+foldr1' : (a -> a -> a) -> List a -> Maybe a
+foldr1' f [] = Nothing
+foldr1' f [x] = Just x
+foldr1' f (x::y::ys) = Just (f x !(foldr1' f (y::ys)))
+
+--------------------------------------------------------------------------------
 -- Sorting
 --------------------------------------------------------------------------------
 
