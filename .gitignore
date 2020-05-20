@@ -18,5 +18,12 @@
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
+/tests/build/exec
 
 /src/IdrisPaths.idr
+
+/bootstrap/bin/
+/bootstrap/idris2-0*/
+/bootstrap/idris2sh_app/*.so
+/bootstrap/idris2sh_app/idris2-boot.ss
+/bootstrap/lib/
