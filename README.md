@@ -1,7 +1,7 @@
 Idris 2
 =======
 
-[![Build Status](https://travis-ci.org/edwinb/Idris2-SH.svg?branch=master)](https://travis-ci.org/edwinb/Idris2)
+[![Build Status](https://travis-ci.org/edwinb/Idris2-SH.svg?branch=master)](https://travis-ci.org/edwinb/Idris2-SH)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
