@@ -3,6 +3,8 @@ module Utils.String
 %default total
 
 export
-stripQuotes : String -> String
--- ASSUMPTION! Only total because we know we're getting quoted strings.
-stripQuotes = assert_total (prim__strTail . reverse . prim__strTail . reverse)
+stripQuotes : (str : String) -> String
+stripQuotes str = prim__strSubstr 1 (lengthInt - 2) str
+  where
+    lengthInt : Int
+    lengthInt = fromInteger. natToInteger . length $ str
