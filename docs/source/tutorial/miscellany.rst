@@ -93,15 +93,12 @@ only. Usually, ``default`` is used to provide things like a custom proof search 
 Literate programming
 ====================
 
-[NOT YET IN IDRIS 2]
-
 Like Haskell, Idris supports *literate* programming. If a file has
 an extension of ``.lidr`` then it is assumed to be a literate file. In
 literate programs, everything is assumed to be a comment unless the line
 begins with a greater than sign ``>``, for example:
 
-.. code-block:: literate-idris
-   :force:
+::
 
     > module literate
 
