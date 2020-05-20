@@ -14,15 +14,15 @@ private
 isWindows : Bool
 isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
 
-||| The character that seperates directories in the path.
+||| The character that separates directories in the path.
 export
-dirSeperator : Char
-dirSeperator = if isWindows then '\\' else '/'
+dirSeparator : Char
+dirSeparator = if isWindows then '\\' else '/'
 
-||| The character that seperates multiple paths.
+||| The character that separates multiple paths.
 export
-pathSeperator : Char
-pathSeperator = if isWindows then ';' else ':'
+pathSeparator : Char
+pathSeparator = if isWindows then ';' else ':'
 
 ||| Windows' path prefixes.
 |||
@@ -154,7 +154,7 @@ parents p = drop 1 $ iterate parent p
 ||| Determines whether base is either one of the parents of full or
 ||| is identical to full.
 |||
-||| Trailing seperator is ignored.
+||| Trailing separator is ignored.
 export
 startWith : (base : Path) -> (full : Path) -> Bool
 startWith base full = base `elem` (iterate parent full)
@@ -234,7 +234,7 @@ setFileName name p = record { body $= updateLastBody name } p
     updateLastBody : String -> List Body -> List Body
     updateLastBody s [] = [Normal s]
     updateLastBody s [Normal _] = [Normal s]
-    updateLastBody s [x] = x :: [Normal s] 
+    updateLastBody s [x] = x :: [Normal s]
     updateLastBody s (x::xs) = x :: (updateLastBody s xs)
 
 ||| Updates the extension of the path.
@@ -274,7 +274,7 @@ Show Volumn where
 ||| Display the path in the format on the platform.
 export
 Show Path where
-  show p = let sep = singleton dirSeperator
+  show p = let sep = singleton dirSeparator
                volStr = fromMaybe "" (map show p.volumn)
                rootStr = if p.hasRoot then sep else ""
                bodyStr = join sep $ map show p.body
@@ -328,8 +328,8 @@ lexPath str
 
 -- match both '/' and '\\' regardless of the platform.
 private
-bodySeperator : Grammar PathToken True ()
-bodySeperator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
+bodySeparator : Grammar PathToken True ()
+bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 
 -- Example: \\?\
 -- Windows can automatically translate '/' to '\\'. The verbatim prefix,
@@ -347,7 +347,7 @@ private
 unc : Grammar PathToken True Volumn
 unc = do count (exactly 2) $ match $ PTPunct '\\'
          server <- match PTText
-         bodySeperator
+         bodySeparator
          share <- match PTText
          pure $ UNC server share
 
@@ -356,7 +356,7 @@ private
 verbatimUnc : Grammar PathToken True Volumn
 verbatimUnc = do verbatim
                  server <- match PTText
-                 bodySeperator
+                 bodySeparator
                  share <- match PTText
                  pure $ UNC server share
 
@@ -397,9 +397,9 @@ parseBody = do text <- match PTText
 private
 parsePath : Grammar PathToken False Path
 parsePath = do vol <- optional parseVolumn
-               root <- optional bodySeperator
-               body <- sepBy bodySeperator parseBody
-               trailSep <- optional bodySeperator
+               root <- optional bodySeparator
+               body <- sepBy bodySeparator parseBody
+               trailSep <- optional bodySeparator
                pure $ MkPath vol (isJust root) body (isJust trailSep)
 
 ||| Attempt to parse a String into Path.
@@ -408,7 +408,7 @@ parsePath = do vol <- optional parseVolumn
 |||
 ||| The parser is relaxed to accept invalid inputs. Relaxing rules:
 |||
-||| - Both slash('/') and backslash('\\') are parsed as directory seperator,
+||| - Both slash('/') and backslash('\\') are parsed as directory separator,
 |||   regardless of the platform;
 ||| - Invalid characters in path body in allowed, e.g., glob like "/root/*";
 ||| - Ignoring the verbatim prefix(`\\?\`) that disables the forward
