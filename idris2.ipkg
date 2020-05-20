@@ -148,4 +148,4 @@ depends = contrib, network
 sourcedir = "src"
 
 main = Idris.Main
-executable = idris2sh
+executable = idris2

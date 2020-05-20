@@ -61,7 +61,13 @@ If all is well, to install, type:
 If you have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot)
 installed: 
 
-* `make all && make install`
+* `make all IDRIS2_BOOT=idris2boot`
+* `make install IDRIS2_BOOT=idris2boot`
+
+If you have an earlier version of this Idris 2 installer
+
+* `make all`
+* `make install`
 
 3: (Optional) Self-hosting step
 -------------------------------
@@ -71,7 +77,7 @@ that everything has worked correctly.  Assuming that `idris2sh` is in your
 `PATH`.
 
 * `make clean` -- to make sure you're building everything with the new version
-* `make all IDRIS2_BOOT=idris2sh && make install`
+* `make all && make install`
 
 4: Running tests
 ----------------

@@ -1,6 +1,6 @@
 ##### Options which a user might set before building go here #####
 
-PREFIX ?= $(HOME)/.idris2sh
+PREFIX ?= $(HOME)/.idris2
 
 # clang compiles the output much faster than gcc!
 CC := clang
