@@ -2,6 +2,8 @@ Idris 2
 =======
 
 [![Build Status](https://travis-ci.org/idris-lang/Idris2.svg?branch=master)](https://travis-ci.org/idris-lang/Idris2)
+[![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
+      
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
