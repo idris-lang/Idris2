@@ -56,22 +56,23 @@ doUpdates : {auto u : Ref UPD (List String)} ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []
 doUpdates defs ups (LBrace :: xs)
-    = case dropSpace xs of
+    = let (ws, nws) = spanSpace xs in map (LBrace :: ws ++) $
+         case nws of
            Name n :: RBrace :: rest =>
-                pure (LBrace :: Name n ::
+                pure (Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups (Name n :: RBrace :: rest)))
            Name n :: Equal :: rest =>
-                pure (LBrace :: Name n ::
+                pure (Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups rest))
-           _ => pure (LBrace :: !(doUpdates defs ups xs))
+           _ => doUpdates defs ups xs
   where
-    dropSpace : List SourcePart -> List SourcePart
-    dropSpace [] = []
-    dropSpace (RBrace :: xs) = RBrace :: xs
-    dropSpace (Whitespace _ :: xs) = dropSpace xs
-    dropSpace (x :: xs) = x :: dropSpace xs
+    spanSpace : List SourcePart -> (List SourcePart, List SourcePart)
+    spanSpace []                   = ([], [])
+    spanSpace (RBrace           :: xs) = ([], RBrace :: xs)
+    spanSpace (w@(Whitespace _) :: xs) = mapFst (w ::) (spanSpace xs)
+    spanSpace (x                :: xs) = map    (x ::) (spanSpace xs)
 doUpdates defs ups (Name n :: xs)
     = case lookup n ups of
            Nothing => pure (Name n :: !(doUpdates defs ups xs))
