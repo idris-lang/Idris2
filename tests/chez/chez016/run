@@ -8,7 +8,7 @@ case "$1" in
     ;;
   *)
     # Relative path
-    IDRIS2_DIR="$(dirname "$1")/.."
+    IDRIS2_DIR="../$(dirname "$1")"
     ;;
 esac
 
