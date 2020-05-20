@@ -81,6 +81,7 @@ clean-libs:
 
 clean: clean-libs support-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_IPKG}
+	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
 	$(RM) -r build
 
