@@ -29,6 +29,15 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (x::xs) = drop n xs
 
+||| Generate a list by repeatedly applying a partial function until exhausted.
+||| @ f the function to iterate
+||| @ x the initial value that will be the head of the list
+public export
+iterate : (f : a -> Maybe a) -> (x : a) -> List a
+iterate f x  = x :: case f x of
+  Nothing => []
+  Just y => iterate f y
+
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
 takeWhile p []      = []
@@ -296,6 +305,22 @@ tail : (l : List a) -> {auto ok : NonEmpty l} -> List a
 tail [] impossible
 tail (x :: xs) = xs
 
+||| Retrieve the last element of a non-empty list.
+||| @ ok proof that the list is non-empty
+public export
+last : (l : List a) -> {auto ok : NonEmpty l} -> a
+last [] impossible
+last [x] = x
+last (x::y::ys) = last (y::ys)
+
+||| Return all but the last element of a non-empty list.
+||| @ ok proof the list is non-empty
+public export
+init : (l : List a) -> {auto ok : NonEmpty l} -> List a
+init [] impossible
+init [x] = []
+init (x::y::ys) = x :: init (y::ys)
+
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
 export
 head' : List a -> Maybe a
@@ -307,6 +332,22 @@ export
 tail' : List a -> Maybe (List a)
 tail' []      = Nothing
 tail' (x::xs) = Just xs
+
+||| Attempt to retrieve the last element of a non-empty list.
+|||
+||| If the list is empty, return `Nothing`.
+export
+last' : List a -> Maybe a
+last' [] = Nothing
+last' xs@(_::_) = Just (last xs)
+
+||| Attempt to return all but the last element of a non-empty list.
+|||
+||| If the list is empty, return `Nothing`.
+export
+init' : List a -> Maybe (List a)
+init' [] = Nothing
+init' xs@(_::_) = Just (init xs)
 
 ||| Convert any Foldable structure to a list.
 export

@@ -27,5 +27,6 @@ modules = Control.Delayed,
 
           System.Clock,
           System.Random,
+          System.Path,
           Syntax.WithProof,
           Syntax.PreorderReasoning

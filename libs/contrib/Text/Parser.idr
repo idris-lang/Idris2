@@ -106,7 +106,7 @@ mutual
   count (Qty Z (Just (S max))) p = option [] $ count1 (atMost max) p
   count (Qty (S min) Nothing) p = count1 (atLeast min) p
   count (Qty (S min) (Just Z)) _ = fail "Quantity out of order"
-  count (Qty (S min) (Just (S max))) p = count1 (between (S min) max) p
+  count (Qty (S min) (Just (S max))) p = count1 (between min max) p
 
 mutual
   ||| Parse one or more instances of `p` until `end` succeeds, returning the
