@@ -26,13 +26,13 @@ import System.Info
 findGSI : IO String
 findGSI =
   do env <- getEnv "GAMBIT_GSI"
-     pure $ fromMaybe "/usr/bin/env -S gsi-script" env
+     pure $ fromMaybe "/usr/bin/env gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
   do env <- getEnv "GAMBIT_GSC"
-     pure $ fromMaybe "/usr/bin/env -S gsc-script" env
+     pure $ fromMaybe "/usr/bin/env gsc" env
 
 schHeader : String
 schHeader = "(declare (block)
@@ -143,7 +143,7 @@ cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t +
 cCall : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> (cfn : String) -> (clib : String) ->
-        List (Name, CFType) -> CFType -> Core (String, String)
+        List (Name, CFType) -> CFType -> Core String
 cCall fc cfn clib args ret
     = do -- loaded <- get Loaded
          -- lib <- if clib `elem` loaded
@@ -158,9 +158,9 @@ cCall fc cfn clib args ret
                       ++ retType ++ " " ++ show cfn ++ ") "
                       ++ showSep " " !(traverse buildArg args) ++ ")"
 
-         pure ("", case ret of -- XXX
-                        CFIORes _ => handleRet retType call
-                        _ => call)
+         pure $ case ret of -- XXX
+                     CFIORes _ => handleRet retType call
+                     _ => call
   where
     mkNs : Int -> List CFType -> List (Maybe String)
     mkNs i [] = []
@@ -203,21 +203,19 @@ schemeCall fc sfn argns ret
                _ => pure call
 
 -- Use a calling convention to compile a foreign def.
--- Returns any preamble needed for loading libraries, and the body of the
--- function call.
+-- Returns the name of the static library to link and the body
+-- of the function call.
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
+        FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, String)
 useCC fc [] args ret
     = throw (GenericMsg fc "No recognised foreign calling convention")
 useCC fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC fc ccs args ret
-           Just ("scheme", [sfn]) =>
-               do body <- schemeCall fc sfn (map fst args) ret
-                  pure ("", body)
-           Just ("C", [cfn, clib]) => cCall fc cfn clib args ret
-           Just ("C", [cfn, clib, chdr]) => cCall fc cfn clib args ret
+           Just ("scheme", [sfn]) => pure (Nothing, !(schemeCall fc sfn (map fst args) ret))
+           Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn clib args ret))
+           Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn clib args ret))
            _ => useCC fc ccs args ret
 
 -- For every foreign arg type, return a name, and whether to pass it to the
@@ -247,31 +245,30 @@ mkStruct _ = pure ""
 schFgnDef : {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
-            FC -> Name -> NamedDef -> Core (String, String)
+            FC -> Name -> NamedDef -> Core (Maybe String, String)
 schFgnDef fc n (MkNmForeign cs args ret)
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
          let useargns = map fst (filter snd argns)
          argStrs <- traverse mkStruct args
          retStr <- mkStruct ret
-         (load, body) <- useCC fc cs (zip useargns args) ret
+         (lib, body) <- useCC fc cs (zip useargns args) ret
          defs <- get Ctxt
-         pure (load,
+         pure (lib,
                 concat argStrs ++ retStr ++
                 "(define " ++ schName !(full (gamma defs) n) ++
                 " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
-schFgnDef _ _ _ = pure ("", "")
+schFgnDef _ _ _ = pure (Nothing, "")
 
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
-             (Name, FC, NamedDef) -> Core (String, String)
+             (Name, FC, NamedDef) -> Core (Maybe String, String)
 getFgnCall (n, fc, d) = schFgnDef fc n d
 
--- TODO Include libraries from the directives
 compileToSCM : Ref Ctxt Defs ->
-               ClosedTerm -> (outfile : String) -> Core ()
+               ClosedTerm -> (outfile : String) -> Core (List String)
 compileToSCM c tm outfile
     = do cdata <- getCompileData Cases tm
          let ndefs = namedDefs cdata
@@ -283,36 +280,37 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          compdefs <- traverse (getScheme gambitPrim gambitString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs) ++
-                    concat (map fst fgndefs)
+         let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
          foreign <- readDataFile "gambit/foreign.scm"
          let scm = showSep "\n" [schHeader, support, foreign, code, main]
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
-         pure ()
+         pure $ mapMaybe fst fgndefs
 
--- TODO Include external libraries on compilation
 compileExpr : Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c execDir tm outfile
     = do let outn = execDir ++ dirSep ++ outfile ++ ".scm"
-         compileToSCM c tm outn
+         libsname <- compileToSCM c tm outn
+         libsfile <- traverse findLibraryFile $ nub $ map (++ ".a") libsname
          gsc <- coreLift findGSC
-         ok <- coreLift $ system (gsc ++ " -exe " ++ outn)
+         let cmd = gsc ++ 
+                   " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
+                   (showSep " " libsfile)  ++ "\" " ++ outn
+         ok <- coreLift $ system cmd
          if ok == 0
-            then pure (Just outfile)
+            then pure (Just (execDir ++ dirSep ++ outfile))
             else pure Nothing
 
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c execDir tm
-    = do let tmp = execDir ++ dirSep ++ "_tmpgambit"
-         let outn = tmp ++ ".scm"
-         compileToSCM c tm outn
-         gsi <- coreLift findGSI
-         coreLift $ system (gsi ++ " " ++ outn)
-         pure ()
+    = do outn <- compileExpr c execDir tm "_tmpgambit"
+         case outn of
+              -- TODO: on windows, should add exe extension
+              Just outn => map (const ()) $ coreLift $ system outn
+              Nothing => pure ()
 
 export
 codegenGambit : Codegen
