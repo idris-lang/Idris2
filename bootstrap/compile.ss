@@ -1,1 +1,1 @@
-(parameterize ([optimize-level 3]) (compile-program "idris2sh_app/idris2-boot.ss"))
+(parameterize ([optimize-level 3]) (compile-program "idris2_app/idris2-boot.ss"))
