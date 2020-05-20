@@ -21,7 +21,7 @@ Racket. This will be addressed soon!]
 -----------------
 
 * Change the `PREFIX` in `config.mk`. The default is to install in
-  `$HOME/.idris2sh`
+  `$HOME/.idris2`
 
 If you have an existing Idris 2, go to step 1b. Otherwise, read on...
 
@@ -73,7 +73,7 @@ If you have an earlier version of this Idris 2 installer
 -------------------------------
 
 As a final step, you can rebuild from the newly installed Idris 2 to verify
-that everything has worked correctly.  Assuming that `idris2sh` is in your
+that everything has worked correctly.  Assuming that `idris2` is in your
 `PATH`.
 
 * `make clean` -- to make sure you're building everything with the new version

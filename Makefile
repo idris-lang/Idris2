@@ -115,18 +115,18 @@ install-libs: libs
 .PHONY: bootstrap bootstrap-racket bootstrap-clean
 
 bootstrap: support
-	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
-	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2sh_app/idris2sh.ss > bootstrap/idris2sh_app/idris2-boot.ss
+	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
+	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2_app/idris2.ss > bootstrap/idris2_app/idris2-boot.ss
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh_app/idris2-boot.ss
+	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 else
-	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2sh_app/idris2-boot.ss
+	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
 	sh ./bootstrap.sh
 
 bootstrap-racket: support
-	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2sh_app
-	cp bootstrap/idris2sh.rkt bootstrap/idris2boot.rkt
+	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
+	cp bootstrap/idris2.rkt bootstrap/idris2boot.rkt
 ifeq ($(OS), darwin)
 	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 else
@@ -136,7 +136,7 @@ endif
 
 bootstrap-clean:
 	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}
-	$(RM) bootstrap/idris2boot* bootstrap/idris2sh_app/idris2-boot.* bootstrap/idris2sh_app/${IDRIS2_SUPPORT}
+	$(RM) bootstrap/idris2boot* bootstrap/idris2_app/idris2-boot.* bootstrap/idris2_app/${IDRIS2_SUPPORT}
 
 
 .PHONY: distclean
