@@ -17,8 +17,6 @@ modules =
     Compiler.Scheme.Common,
     Compiler.VMCode,
 
-    Control.Delayed,
-
     Core.AutoSearch,
     Core.Binary,
     Core.CaseBuilder,
