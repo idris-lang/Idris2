@@ -142,16 +142,16 @@ field fname
                       (do start <- location
                           ns <- nsIdent
                           end <- location
-                          pure (MkFC fname start end, ns))
-           pure (PModules ms)
+                          Parser.Core.pure (MkFC fname start end, ns))
+           Parser.Core.pure (PModules ms)
     <|> do exactIdent "main"; symbol "="
            start <- location
            m <- nsIdent
            end <- location
-           pure (PMainMod (MkFC fname start end) m)
+           Parser.Core.pure (PMainMod (MkFC fname start end) m)
     <|> do exactIdent "executable"; symbol "="
            e <- unqualifiedName
-           pure (PExec e)
+           Parser.Core.pure (PExec e)
   where
     getStr : (FC -> String -> DescField) -> FC ->
              String -> Constant -> SourceEmptyRule DescField
