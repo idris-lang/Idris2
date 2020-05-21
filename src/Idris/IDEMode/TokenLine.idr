@@ -1,7 +1,7 @@
 ||| Tokenise a source line for easier processing
 module Idris.IDEMode.TokenLine
 
-import Parser.Lexer
+import Parser.Lexer.Source
 import Text.Lexer
 
 public export

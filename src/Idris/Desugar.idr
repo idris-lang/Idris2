@@ -17,7 +17,7 @@ import Idris.Syntax
 import Idris.Elab.Implementation
 import Idris.Elab.Interface
 
-import Parser.Lexer
+import Parser.Lexer.Source
 
 import TTImp.BindImplicits
 import TTImp.Parser

@@ -23,7 +23,7 @@ import Idris.REPLOpts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import Parser.Lexer
+import Parser.Lexer.Source
 import Parser.Source
 import Utils.Binary
 
@@ -114,7 +114,7 @@ data DescField : Type where
   PPreclean    : FC -> String -> DescField
   PPostclean   : FC -> String -> DescField
 
-field : String -> Rule DescField
+field : String -> SourceRule DescField
 field fname
       = strField PVersion "version"
     <|> strField PAuthors "authors"
@@ -154,11 +154,11 @@ field fname
            pure (PExec e)
   where
     getStr : (FC -> String -> DescField) -> FC ->
-             String -> Constant -> EmptyRule DescField
+             String -> Constant -> SourceEmptyRule DescField
     getStr p fc fld (Str s) = pure (p fc s)
     getStr p fc fld _ = fail $ fld ++ " field must be a string"
 
-    strField : (FC -> String -> DescField) -> String -> Rule DescField
+    strField : (FC -> String -> DescField) -> String -> SourceRule DescField
     strField p f
         = do start <- location
              exactIdent f
@@ -167,7 +167,7 @@ field fname
              end <- location
              getStr p (MkFC fname start end) f c
 
-parsePkgDesc : String -> Rule (String, List DescField)
+parsePkgDesc : String -> SourceRule (String, List DescField)
 parsePkgDesc fname
     = do exactIdent "package"
          name <- unqualifiedName

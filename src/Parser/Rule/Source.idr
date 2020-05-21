@@ -1,38 +1,23 @@
-module Parser.Rule
+module Parser.Rule.Source
 
-import public Parser.Lexer
+import public Parser.Lexer.Source
+import public Parser.Rule.Common
 import public Parser.Support
-import public Text.Lexer
-import public Text.Parser
 
 import Core.TT
 
 %default total
 
 public export
-Rule : Type -> Type
-Rule ty = Grammar (TokenData SourceToken) True ty
+SourceRule : Type -> Type
+SourceRule = Rule SourceToken
 
 public export
-EmptyRule : Type -> Type
-EmptyRule ty = Grammar (TokenData SourceToken) False ty
-
--- Some basic parsers used by all the intermediate forms
+SourceEmptyRule : Type -> Type
+SourceEmptyRule = EmptyRule SourceToken
 
 export
-location : EmptyRule (Int, Int)
-location
-    = do tok <- peek
-         pure (line tok, col tok)
-
-export
-column : EmptyRule Int
-column
-    = do (line, col) <- location
-         pure col
-
-export
-eoi : EmptyRule ()
+eoi : SourceEmptyRule ()
 eoi
     = do nextIs "Expected end of input" (isEOI . tok)
          pure ()
@@ -42,7 +27,7 @@ eoi
     isEOI _ = False
 
 export
-constant : Rule Constant
+constant : SourceRule Constant
 constant
     = terminal "Expected constant"
                (\x => case tok x of
@@ -62,7 +47,7 @@ constant
                            _ => Nothing)
 
 export
-intLit : Rule Integer
+intLit : SourceRule Integer
 intLit
     = terminal "Expected integer literal"
                (\x => case tok x of
@@ -70,7 +55,7 @@ intLit
                            _ => Nothing)
 
 export
-strLit : Rule String
+strLit : SourceRule String
 strLit
     = terminal "Expected string literal"
                (\x => case tok x of
@@ -78,7 +63,7 @@ strLit
                            _ => Nothing)
 
 export
-recField : Rule Name
+recField : SourceRule Name
 recField
     = terminal "Expected record field"
                (\x => case tok x of
@@ -86,7 +71,7 @@ recField
                            _ => Nothing)
 
 export
-symbol : String -> Rule ()
+symbol : String -> SourceRule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
                (\x => case tok x of
@@ -95,7 +80,7 @@ symbol req
                            _ => Nothing)
 
 export
-keyword : String -> Rule ()
+keyword : String -> SourceRule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
                (\x => case tok x of
@@ -104,7 +89,7 @@ keyword req
                            _ => Nothing)
 
 export
-exactIdent : String -> Rule ()
+exactIdent : String -> SourceRule ()
 exactIdent req
     = terminal ("Expected " ++ req)
                (\x => case tok x of
@@ -113,7 +98,7 @@ exactIdent req
                            _ => Nothing)
 
 export
-pragma : String -> Rule ()
+pragma : String -> SourceRule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
     (\x => case tok x of
@@ -124,7 +109,7 @@ pragma n =
       _ => Nothing)
 
 export
-operator : Rule Name
+operator : SourceRule Name
 operator
     = terminal "Expected operator"
                (\x => case tok x of
@@ -134,7 +119,7 @@ operator
                                    else Just (UN s)
                            _ => Nothing)
 
-identPart : Rule String
+identPart : SourceRule String
 identPart
     = terminal "Expected name"
                (\x => case tok x of
@@ -142,7 +127,7 @@ identPart
                            _ => Nothing)
 
 export
-nsIdent : Rule (List String)
+nsIdent : SourceRule (List String)
 nsIdent
     = terminal "Expected namespaced name"
         (\x => case tok x of
@@ -150,11 +135,11 @@ nsIdent
             _ => Nothing)
 
 export
-unqualifiedName : Rule String
+unqualifiedName : SourceRule String
 unqualifiedName = identPart
 
 export
-holeName : Rule String
+holeName : SourceRule String
 holeName
     = terminal "Expected hole name"
                (\x => case tok x of
@@ -167,7 +152,7 @@ reservedNames
        "Lazy", "Inf", "Force", "Delay"]
 
 export
-name : Rule Name
+name : SourceRule Name
 name = opNonNS <|> do
   ns <- nsIdent
   opNS ns <|> nameNS ns
@@ -186,10 +171,10 @@ name = opNonNS <|> do
       then fail $ "can't use reserved name " ++ x
       else pure $ NS xs (UN x)
 
-  opNonNS : Rule Name
+  opNonNS : SourceRule Name
   opNonNS = symbol "(" *> (operator <|> recField) <* symbol ")"
 
-  opNS : List String -> Rule Name
+  opNS : List String -> SourceRule Name
   opNS ns = do
     symbol ".("
     n <- (operator <|> recField)
@@ -204,23 +189,23 @@ export
 init : IndentInfo
 init = 0
 
-continueF : EmptyRule () -> (indent : IndentInfo) -> EmptyRule ()
+continueF : SourceEmptyRule () -> (indent : IndentInfo) -> SourceEmptyRule ()
 continueF err indent
     = do eoi; err
   <|> do keyword "where"; err
-  <|> do col <- Rule.column
+  <|> do col <- Common.column
          if col <= indent
             then err
             else pure ()
 
 ||| Fail if this is the end of a block entry or end of file
 export
-continue : (indent : IndentInfo) -> EmptyRule ()
+continue : (indent : IndentInfo) -> SourceEmptyRule ()
 continue = continueF (fail "Unexpected end of expression")
 
 ||| As 'continue' but failing is fatal (i.e. entire parse fails)
 export
-mustContinue : (indent : IndentInfo) -> Maybe String -> EmptyRule ()
+mustContinue : (indent : IndentInfo) -> Maybe String -> SourceEmptyRule ()
 mustContinue indent Nothing
    = continueF (fatalError "Unexpected end of expression") indent
 mustContinue indent (Just req)
@@ -242,7 +227,7 @@ Show ValidIndent where
   show (AfterPos i) = "[after " ++ show i ++ "]"
   show EndOfBlock = "[EOB]"
 
-checkValid : ValidIndent -> Int -> EmptyRule ()
+checkValid : ValidIndent -> Int -> SourceEmptyRule ()
 checkValid AnyIndent c = pure ()
 checkValid (AtPos x) c = if c == x
                             then pure ()
@@ -272,22 +257,22 @@ isTerminator _ = False
 ||| It's the end if we have a terminating token, or the next token starts
 ||| in or before indent. Works by looking ahead but not consuming.
 export
-atEnd : (indent : IndentInfo) -> EmptyRule ()
+atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
 atEnd indent
     = eoi
   <|> do nextIs "Expected end of block" (isTerminator . tok)
          pure ()
-  <|> do col <- Rule.column
+  <|> do col <- Common.column
          if (col <= indent)
             then pure ()
             else fail "Not the end of a block entry"
 
 -- Check we're at the end, but only by looking at indentation
 export
-atEndIndent : (indent : IndentInfo) -> EmptyRule ()
+atEndIndent : (indent : IndentInfo) -> SourceEmptyRule ()
 atEndIndent indent
     = eoi
-  <|> do col <- Rule.column
+  <|> do col <- Common.column
          if col <= indent
             then pure ()
             else fail "Not the end of a block entry"
@@ -295,7 +280,7 @@ atEndIndent indent
 
 -- Parse a terminator, return where the next block entry
 -- must start, given where the current block entry started
-terminator : ValidIndent -> Int -> EmptyRule ValidIndent
+terminator : ValidIndent -> Int -> SourceEmptyRule ValidIndent
 terminator valid laststart
     = do eoi
          pure EndOfBlock
@@ -317,7 +302,7 @@ terminator valid laststart
    -- Expected indentation for the next token can either be anything (if
    -- we're inside a brace delimited block) or in exactly the initial column
    -- (if we're inside an indentation delimited block)
-   afterDedent : ValidIndent -> Int -> EmptyRule ValidIndent
+   afterDedent : ValidIndent -> Int -> SourceEmptyRule ValidIndent
    afterDedent AnyIndent col
        = if col <= laststart
             then pure AnyIndent
@@ -333,8 +318,8 @@ terminator valid laststart
    afterDedent EndOfBlock col = pure EndOfBlock
 
 -- Parse an entry in a block
-blockEntry : ValidIndent -> (IndentInfo -> Rule ty) ->
-             Rule (ty, ValidIndent)
+blockEntry : ValidIndent -> (IndentInfo -> SourceRule ty) ->
+             SourceRule (ty, ValidIndent)
 blockEntry valid rule
     = do col <- column
          checkValid valid col
@@ -342,8 +327,8 @@ blockEntry valid rule
          valid' <- terminator valid col
          pure (p, valid')
 
-blockEntries : ValidIndent -> (IndentInfo -> Rule ty) ->
-               EmptyRule (List ty)
+blockEntries : ValidIndent -> (IndentInfo -> SourceRule ty) ->
+               SourceEmptyRule (List ty)
 blockEntries valid rule
      = do eoi; pure []
    <|> do res <- blockEntry valid rule
@@ -352,7 +337,7 @@ blockEntries valid rule
    <|> pure []
 
 export
-block : (IndentInfo -> Rule ty) -> EmptyRule (List ty)
+block : (IndentInfo -> SourceRule ty) -> SourceEmptyRule (List ty)
 block item
     = do symbol "{"
          commit
@@ -368,33 +353,33 @@ block item
 ||| by curly braces). `rule` is a function of the actual indentation
 ||| level.
 export
-blockAfter : Int -> (IndentInfo -> Rule ty) -> EmptyRule (List ty)
+blockAfter : Int -> (IndentInfo -> SourceRule ty) -> SourceEmptyRule (List ty)
 blockAfter mincol item
     = do symbol "{"
          commit
          ps <- blockEntries AnyIndent item
          symbol "}"
          pure ps
-  <|> do col <- Rule.column
+  <|> do col <- Common.column
          if col <= mincol
             then pure []
             else blockEntries (AtPos col) item
 
 export
-blockWithOptHeaderAfter : Int -> (IndentInfo -> Rule hd) -> (IndentInfo -> Rule ty) -> EmptyRule (Maybe hd, List ty)
+blockWithOptHeaderAfter : Int -> (IndentInfo -> SourceRule hd) -> (IndentInfo -> SourceRule ty) -> SourceEmptyRule (Maybe hd, List ty)
 blockWithOptHeaderAfter {ty} mincol header item
     = do symbol "{"
          commit
          hidt <- optional $ blockEntry AnyIndent header
          restOfBlock hidt
-  <|> do col <- Rule.column
+  <|> do col <- Common.column
          if col <= mincol
             then pure (Nothing, [])
             else do hidt <- optional $ blockEntry (AtPos col) header
                     ps <- blockEntries (AtPos col) item
                     pure (map fst hidt, ps)
   where
-  restOfBlock : Maybe (hd, ValidIndent) -> Rule (Maybe hd, List ty)
+  restOfBlock : Maybe (hd, ValidIndent) -> SourceRule (Maybe hd, List ty)
   restOfBlock (Just (h, idt)) = do ps <- blockEntries idt item
                                    symbol "}"
                                    pure (Just h, ps)
@@ -403,7 +388,7 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List ty)
+nonEmptyBlock : (IndentInfo -> SourceRule ty) -> SourceRule (List ty)
 nonEmptyBlock item
     = do symbol "{"
          commit
