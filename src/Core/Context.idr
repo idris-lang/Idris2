@@ -1185,7 +1185,7 @@ prettyName (NS ns n) = prettyName n
 prettyName n = pure (show n)
 
 -- Add a hash of a thing that contains names,
--- but convert the internal numbers to full numbers first.
+-- but convert the internal numbers to full names first.
 -- This makes the hash not depend on the internal numbering,
 -- which is unstable.
 export
