@@ -12,6 +12,7 @@ MAJOR=0
 MINOR=2
 PATCH=0
 
+
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
     # inside a git repo
@@ -31,7 +32,17 @@ else
     IDRIS2_IPKG := idris2rkt.ipkg
 endif
 
-export IDRIS2_BOOT_PATH = ${CURDIR}/libs/prelude/build/ttc:${CURDIR}/libs/base/build/ttc:${CURDIR}/libs/network/build/ttc
+ifeq ($(OS), windows)
+	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
+	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
+	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc;${IDRIS2_CURDIR}/libs/network/build/ttc"
+else
+	IDRIS2_PREFIX := ${PREFIX}
+	IDRIS2_CURDIR := ${CURDIR}
+	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
+endif
+
+
 
 export SCHEME
 
@@ -48,7 +59,7 @@ ${TARGET}: src/IdrisPaths.idr
 src/IdrisPaths.idr:
 	echo 'module IdrisPaths' > src/IdrisPaths.idr
 	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' >> src/IdrisPaths.idr
-	echo 'export yprefix : String; yprefix="${PREFIX}"' >> src/IdrisPaths.idr
+	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
 
 prelude:
 	${MAKE} -C libs/prelude IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
@@ -125,19 +136,23 @@ bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2_app/idris2.ss > bootstrap/idris2_app/idris2-boot.ss
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
+	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 else
-	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
+	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
+ifeq ($(OS), windows)
+	sh ./bootstrap-win.sh
+else
 	sh ./bootstrap.sh
+endif
 
 bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	cp bootstrap/idris2.rkt bootstrap/idris2boot.rkt
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 else
-	sed -i 's|__PREFIX__|${CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
 endif
 	sh ./bootstrap-rkt.sh
 

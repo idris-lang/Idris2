@@ -7,6 +7,7 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
+import System.Path
 
 %default covering
 
@@ -228,9 +229,9 @@ firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 pathLookup : IO (Maybe String)
 pathLookup = do
   path <- getEnv "PATH"
-  let pathList = split (== ':') $ fromMaybe "/usr/bin:/usr/local/bin" path
+  let pathList = split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
   let candidates = [p ++ "/" ++ x | p <- pathList,
-                                    x <- ["chez", "chezscheme9.5", "scheme"]]
+                                    x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
   firstExists candidates
 
 findChez : IO (Maybe String)
