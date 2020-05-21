@@ -38,7 +38,7 @@ export SCHEME
 
 .PHONY: all idris2-exec ${TARGET} support support-clean clean distclean
 
-all: support ${TARGET} libs
+all: support ${TARGET} testbin libs
 
 idris2-exec: ${TARGET}
 
@@ -63,6 +63,9 @@ contrib: prelude
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 libs : prelude base network contrib
+
+testbin:
+	@${MAKE} -C tests testbin
 
 test:
 	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}

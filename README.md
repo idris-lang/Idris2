@@ -16,8 +16,8 @@ you have Chez Scheme installed, with the executable name `chez`, type:
 
 You may need to change `chez` to be the local name of your Chez Scheme. This
 is often one of `scheme`, `chezscheme` or `chezscheme9.5` (depending on the
-version). On a modern desktop machine, this process should take no more than
-2 or 3 minutes.
+version). On a modern desktop machine, this process (including tests)
+should take less than 5 minutes.
 
 Idris 2 is mostly backwards compatible with Idris 1, with some minor
 exceptions. The most notable user visible differences, which might cause Idris
