@@ -4,7 +4,8 @@ import Data.String.Extra
 import Data.Strings
 import Data.List
 
-%default total
+-- TODO: totality checking for codata
+-- %default total
 
 public export
 data JSON

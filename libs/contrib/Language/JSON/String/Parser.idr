@@ -4,7 +4,8 @@ import Language.JSON.String.Tokens
 import Text.Lexer
 import Text.Parser
 
-%default total
+-- TODO: totality checking for codata
+-- %default total
 
 private
 stringChar : Grammar JSONStringToken True Char

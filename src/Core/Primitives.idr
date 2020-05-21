@@ -403,12 +403,12 @@ allPrimitives =
     map (\t => MkPrim (Div t) (arithTy t) notCovering) [IntType, IntegerType, DoubleType] ++
     map (\t => MkPrim (Mod t) (arithTy t) notCovering) [IntType, IntegerType] ++
     map (\t => MkPrim (Neg t) (predTy t t) isTotal) [IntType, IntegerType, DoubleType] ++
-    map (\t => MkPrim (ShiftL t) (arithTy t) notCovering) [IntType, IntegerType] ++
-    map (\t => MkPrim (ShiftR t) (arithTy t) notCovering) [IntType, IntegerType] ++
+    map (\t => MkPrim (ShiftL t) (arithTy t) isTotal) [IntType, IntegerType] ++
+    map (\t => MkPrim (ShiftR t) (arithTy t) isTotal) [IntType, IntegerType] ++
 
-    map (\t => MkPrim (BAnd t) (arithTy t) notCovering) [IntType, IntegerType] ++
-    map (\t => MkPrim (BOr t) (arithTy t) notCovering) [IntType, IntegerType] ++
-    map (\t => MkPrim (BXOr t) (arithTy t) notCovering) [IntType] ++
+    map (\t => MkPrim (BAnd t) (arithTy t) isTotal) [IntType, IntegerType] ++
+    map (\t => MkPrim (BOr t) (arithTy t) isTotal) [IntType, IntegerType] ++
+    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType] ++
 
     map (\t => MkPrim (LT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
     map (\t => MkPrim (LTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++

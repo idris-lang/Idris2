@@ -2,7 +2,7 @@ import Data.Vect
 import Data.List
 import Data.Strings
 
-%default total
+-- %default total
 
 data GameState : Type where
   NotRunning : GameState

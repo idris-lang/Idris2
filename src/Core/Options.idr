@@ -156,6 +156,7 @@ defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez 0 False False
                                Nothing Nothing Nothing Nothing
 
+export
 defaultElab : ElabDirectives
 defaultElab = MkElabDirectives True True PartialOK 3 True
 

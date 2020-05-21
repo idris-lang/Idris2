@@ -729,8 +729,7 @@ processDef opts nest env fc n_in cs_in
          -- If we're not in a case tree, compile all the outstanding case
          -- trees.
          when (not (elem InCase opts)) $
-           compileRunTime fc cov atotal
-
+              compileRunTime fc cov atotal
   where
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True

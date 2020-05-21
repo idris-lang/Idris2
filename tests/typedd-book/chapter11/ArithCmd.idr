@@ -2,7 +2,7 @@ import Data.Primitives.Views
 import Data.Strings
 import System
 
-%default total
+-- %default total -- put this back when codata works!
 
 data Command : Type -> Type where
      PutStr : String -> Command ()

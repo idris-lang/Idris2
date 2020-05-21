@@ -868,8 +868,11 @@ clearCtxt : {auto c : Ref Ctxt Defs} ->
             Core ()
 clearCtxt
     = do defs <- get Ctxt
-         put Ctxt (record { options = options defs,
+         put Ctxt (record { options = resetElab (options defs),
                             timings = timings defs } !initDefs)
+  where
+    resetElab : Options -> Options
+    resetElab = record { elabDirectives = defaultElab }
 
 export
 addHash : {auto c : Ref Ctxt Defs} ->
