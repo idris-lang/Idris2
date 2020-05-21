@@ -127,7 +127,7 @@ record EState (vars : List Name) where
   allPatVars : List Name
                   -- Holes standing for pattern variables, which we'll delete
                   -- once we're done elaborating
-  allowDelay : Bool -- Delaying elaborators is okay. We can't nest delays.
+  delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
@@ -137,7 +137,7 @@ data EST : Type where
 export
 initEStateSub : {outer : _} ->
                 Int -> Env Term outer -> SubVars outer vars -> EState vars
-initEStateSub n env sub = MkEState n env sub [] [] [] [] [] True [] empty
+initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty
 
 export
 initEState : {vars : _} ->
@@ -165,7 +165,7 @@ weakenedEState {e}
                               (bindIfUnsolved est)
                               (lhsPatVars est)
                               (allPatVars est)
-                              (allowDelay est)
+                              (delayDepth est)
                               (map weaken (linearUsed est))
                               (saveHoles est))
          pure eref
@@ -197,7 +197,7 @@ strengthenedEState {n} {vars} c e fc env
                         (bindIfUnsolved est)
                         (lhsPatVars est)
                         (allPatVars est)
-                        (allowDelay est)
+                        (delayDepth est)
                         (mapMaybe dropTop (linearUsed est))
                         (saveHoles est))
   where
@@ -290,7 +290,7 @@ updateEnv env sub bif st
                (boundNames st) (toBind st) bif
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
 
@@ -306,7 +306,7 @@ addBindIfUnsolved hn r p env tm ty st
                ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) :: bindIfUnsolved st)
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
 
@@ -317,7 +317,7 @@ clearBindIfUnsolved st
                (boundNames st) (toBind st) []
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
 
