@@ -37,6 +37,7 @@ modules = Control.App,
 
           System,
           System.Concurrency.Raw,
+          System.Clock,
           System.Directory,
           System.File,
           System.FFI,
