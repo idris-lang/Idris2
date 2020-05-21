@@ -61,10 +61,13 @@ export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
 checkTotalityOK n
+-- checkTotalityOK (NS _ n@(UN _)) -- top level user defined names only
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (InternalError ("Can't find " ++ show n))
-         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
+              | Nothing => pure Nothing
+--          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
+-- TODO: Put the above back when totality checker is properly working
+         let treq = fromMaybe PartialOK (findSetTotal (flags gdef))
          let tot = totality gdef
          let fc = location gdef
          log 3 $ show n ++ " must be: " ++ show treq

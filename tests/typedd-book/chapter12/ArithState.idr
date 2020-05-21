@@ -2,7 +2,7 @@ import Data.Primitives.Views
 import Data.Strings
 import System
 
--- %default total
+%default total
 
 record Score where
        constructor MkScore

@@ -1,7 +1,7 @@
 import Data.Primitives.Views
 import System
 
--- %default total
+%default total
 
 data InfIO : Type where
      Do : IO a -> (a -> Inf InfIO) -> InfIO

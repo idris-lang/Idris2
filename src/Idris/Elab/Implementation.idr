@@ -270,8 +270,8 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     -- inserted in the right place
     mkMethField : List (Name, RigCount, RawImp) ->
                   List (Name, List (Name, RigCount, PiInfo RawImp)) ->
-                  (Name, Name, List (String, String), RigCount, RawImp) -> RawImp
-    mkMethField methImps fldTys (topn, n, upds, c, ty)
+                  (Name, Name, List (String, String), RigCount, TotalReq, RawImp) -> RawImp
+    mkMethField methImps fldTys (topn, n, upds, c, treq, ty)
         = let argns = map applyUpdate (maybe [] id (lookup (dropNS topn) fldTys))
               imps = map fst methImps in
               -- Pass through implicit arguments to the function which are also
@@ -311,10 +311,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     topMethType : List (Name, RawImp) ->
                   Name -> List (Name, RigCount, RawImp) ->
                   List String -> List Name -> List Name ->
-                  (Name, RigCount, (Bool, RawImp)) ->
-                  Core ((Name, Name, List (String, String), RigCount, RawImp),
+                  (Name, RigCount, TotalReq, (Bool, RawImp)) ->
+                  Core ((Name, Name, List (String, String), RigCount, TotalReq, RawImp),
                            List (Name, RawImp))
-    topMethType methupds impName methImps impsp pnames allmeths (mn, c, (d, mty_in))
+    topMethType methupds impName methImps impsp pnames allmeths (mn, c, treq, (d, mty_in))
         = do -- Get the specialised type by applying the method to the
              -- parameters
              n <- inCurrentNS (methName mn)
@@ -348,22 +348,22 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
              let methupds' = if isNil ibinds then []
                              else [(n, impsApply (IVar fc n)
                                      (map (\x => (x, IBindVar fc (show x))) ibinds))]
-             pure ((mn, n, upds, c, mty), methupds')
+             pure ((mn, n, upds, c, treq, mty), methupds')
 
     topMethTypes : List (Name, RawImp) ->
                    Name -> List (Name, RigCount, RawImp) ->
                    List String -> List Name -> List Name ->
-                   List (Name, RigCount, (Bool, RawImp)) ->
-                   Core (List (Name, Name, List (String, String), RigCount, RawImp))
+                   List (Name, RigCount, TotalReq, (Bool, RawImp)) ->
+                   Core (List (Name, Name, List (String, String), RigCount, TotalReq, RawImp))
     topMethTypes upds impName methImps impsp pnames allmeths [] = pure []
     topMethTypes upds impName methImps impsp pnames allmeths (m :: ms)
         = do (m', newupds) <- topMethType upds impName methImps impsp pnames allmeths m
              ms' <- topMethTypes (newupds ++ upds) impName methImps impsp pnames allmeths ms
              pure (m' :: ms')
 
-    mkTopMethDecl : (Name, Name, List (String, String), RigCount, RawImp) -> ImpDecl
-    mkTopMethDecl (mn, n, upds, c, mty)
-        = IClaim fc c vis opts_in (MkImpTy fc n mty)
+    mkTopMethDecl : (Name, Name, List (String, String), RigCount, TotalReq, RawImp) -> ImpDecl
+    mkTopMethDecl (mn, n, upds, c, treq, mty)
+        = IClaim fc c vis (Totality treq :: opts_in) (MkImpTy fc n mty)
 
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name
@@ -414,9 +414,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                    "Implementation body can only contain definitions")
 
     addTransform : Name -> List (Name, Name) ->
-                   (Name, RigCount, Bool, RawImp) ->
+                   (Name, RigCount, TotalReq, Bool, RawImp) ->
                    Core ()
-    addTransform iname ns (top, _, _, ty)
+    addTransform iname ns (top, _, _, _, ty)
         = do log 3 $ "Adding transform for " ++ show top ++ " : " ++ show ty ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
              let lhs = IImplicitApp fc (IVar fc top)

@@ -7,8 +7,7 @@ import Data.List
 
 import public Language.JSON.Tokens
 
--- TODO: totality checking for codata
--- %default total
+%default total
 
 private
 punct : Punctuation -> Grammar JSONToken True ()

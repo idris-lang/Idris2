@@ -87,7 +87,7 @@ idrisTests
        "reg015", "reg016", "reg017", "reg018", "reg019",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007",
+       "total006", "total007", "total008",
        -- The 'with' rule
        "with001", "with002"]
 
