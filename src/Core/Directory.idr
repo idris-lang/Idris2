@@ -200,10 +200,10 @@ getEntries d
 
 dirEntries : String -> IO (Either FileError (List String))
 dirEntries dir
-    = do Right d <- dirOpen dir
+    = do Right d <- openDir dir
              | Left err => pure (Left err)
          ds <- getEntries d
-         dirClose d
+         closeDir d
          pure (Right ds)
 
 findIpkg : List String -> Maybe String

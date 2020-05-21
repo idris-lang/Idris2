@@ -44,7 +44,7 @@ int idris2_fileErrno() {
     }
 }
 
-int idris2_fileRemove(const char *filename) {
+int idris2_removeFile(const char *filename) {
     return remove(filename);
 }
 
@@ -160,5 +160,3 @@ FILE* idris2_stdout() {
 FILE* idris2_stderr() {
     return stderr;
 }
-
-

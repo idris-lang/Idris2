@@ -412,7 +412,7 @@ clean pkg
          runScript (postclean pkg)
   where
     delete : String -> Core ()
-    delete path = do Right () <- coreLift $ fileRemove path
+    delete path = do Right () <- coreLift $ removeFile path
                        | Left err => pure ()
                      coreLift $ putStrLn $ "Removed: " ++ path
 

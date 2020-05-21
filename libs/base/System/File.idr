@@ -39,8 +39,8 @@ prim__eof : FilePtr -> PrimIO Int
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 
-%foreign support "idris2_fileRemove"
-prim__fileRemove : String -> PrimIO Int
+%foreign support "idris2_removeFile"
+prim__removeFile : String -> PrimIO Int
 %foreign support "idris2_fileSize"
 prim__fileSize : FilePtr -> PrimIO Int
 %foreign support "idris2_fileSize"
@@ -210,9 +210,9 @@ fileStatusTime (FHandle f)
             else returnError
 
 export
-fileRemove : String -> IO (Either FileError ())
-fileRemove fname
-    = do res <- primIO (prim__fileRemove fname)
+removeFile : String -> IO (Either FileError ())
+removeFile fname
+    = do res <- primIO (prim__removeFile fname)
          if res == 0
             then ok ()
             else returnError
@@ -265,7 +265,7 @@ writeFile fn contents = do
      closeFile h
      pure (Right ())
 
-namespace FileMode 
+namespace FileMode
   public export
   data FileMode = Read | Write | Execute
 
