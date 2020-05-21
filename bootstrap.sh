@@ -35,4 +35,4 @@ make clean IDRIS2_BOOT=${PREFIX}/bin/idris2
 make all IDRIS2_BOOT=${PREFIX}/bin/idris2 SCHEME=${SCHEME} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 echo "Testing using libraries in ${IDRIS2_NEW_PATH}"
-make test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_NEW_PATH} SCHEME=${SCHEME} IDRIS2_LIBS=${PREFIX}/idris2-0.2.0/lib IDRIS2_DATA=${PREFIX}/idris2-0.2.0/support
+make test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_NEW_PATH} SCHEME=${SCHEME} IDRIS2_LIBS=${PREFIX}/idris2-0.2.0/lib:${PREFIX}/idris2-0.2.0/network/lib IDRIS2_DATA=${PREFIX}/idris2-0.2.0/support
