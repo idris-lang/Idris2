@@ -107,8 +107,8 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
          log 10 $ "Saving from " ++ show cn ++ ": " ++ show (keys (getMetas ty))
 
          case vis of
-              Public => do addHash cn
-                           addHash fullty
+              Public => do addHashWithNames cn
+                           addHashWithNames fullty
               _ => pure ()
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
 
@@ -278,8 +278,8 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
 
          case vis of
               Private => pure ()
-              _ => do addHash n
-                      addHash fullty
+              _ => do addHashWithNames n
+                      addHashWithNames fullty
          pure ()
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
@@ -323,8 +323,8 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                           (TCon 0 arity [] [] defaultFlags [] [] Nothing))
          case vis of
               Private => pure ()
-              _ => do addHash n
-                      addHash fullty
+              _ => do addHashWithNames n
+                      addHashWithNames fullty
 
          -- Constructors are private if the data type as a whole is
          -- export
