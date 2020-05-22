@@ -1,0 +1,53 @@
+1/1: Building Main (Main.idr)
+Main> (interactive):1:60--1:73:Sorry, I can't find any elaboration which works. All errors:
+If Prelude.>>=: Sorry, I can't find any elaboration which works. All errors:
+If Prelude.>>=: When unifying ?_ -> IO () and IO ?b
+Mismatch between:
+	?_ -> IO ()
+and
+	IO ?b
+
+If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b
+Mismatch between:
+	?_ -> IO ()
+and
+	IO ?b
+
+
+If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
+If Prelude.>>=: When unifying ?_ -> IO () and IO ?b
+Mismatch between:
+	?_ -> IO ()
+and
+	IO ?b
+
+If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
+If Prelude.>>=: When unifying ?_ -> IO () and IO ?b
+Mismatch between:
+	?_ -> IO ()
+and
+	IO ?b
+
+If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b
+Mismatch between:
+	?_ -> IO ()
+and
+	IO ?b
+
+
+
+Main> (interactive):1:57--1:62:Can't find an implementation for Num ()
+Main> (interactive):1:4--1:6:Ambiguous elaboration. Possible correct results:
+	[]
+	[]
+	[]
+Main> [] : Vect 0 ?elem
+Main> [] : List ?a
+Main> (interactive):1:34--1:41:When unifying Vect 0 ?elem and List ?a
+Mismatch between:
+	Vect 0 ?elem
+and
+	List ?a
+Main> the (Maybe Integer) (pure 4) : Maybe Integer
+Main> Parse error: Unrecognised command (next tokens: [identifier t, with, symbol [, symbol ], literal 4, end of input])
+Main> Bye for now!

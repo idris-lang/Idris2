@@ -21,6 +21,9 @@ Language changes:
 * A %spec flag on functions which allows arguments to be marked for partial
   evaluation, following the rules from "Scrapping Your Inefficient Engine"
   (ICFP 2010, Brady & Hammond)
+* To improve error messages, one can use `with NS.name <term>`
+  or `with [NS.name1, NS.name2, ...] <term>` to disable disambiguation
+  for the given names in `<term>`. Example: `with MyNS.(>>=) do ...`.
 
 Library additions:
 

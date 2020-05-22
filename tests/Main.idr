@@ -90,7 +90,9 @@ idrisTests
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
        -- The 'with' rule
-       "with001", "with002"]
+       "with001", "with002",
+       -- with-disambiguation
+       "with003"]
 
 typeddTests : List String
 typeddTests

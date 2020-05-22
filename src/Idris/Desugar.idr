@@ -353,6 +353,8 @@ mutual
       = desugarB side ps $
           PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc) $
             foldl (\r, f => PApp fc (PRef fc f) r) (PRef fc (MN "rec" 0)) fields
+  desugarB side ps (PWithUnambigNames fc ns rhs)
+      = IWithUnambigNames fc ns <$> desugarB side ps rhs
 
   desugarUpdate : {auto s : Ref Syn SyntaxInfo} ->
                   {auto b : Ref Bang BangData} ->
