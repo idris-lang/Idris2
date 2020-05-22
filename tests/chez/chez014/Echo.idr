@@ -1,6 +1,7 @@
 module Main
 
 import System
+import System.Info
 import Network.Socket
 import Network.Socket.Data
 import Network.Socket.Raw
@@ -53,6 +54,7 @@ runClient serverPort = do
 
 main : IO ()
 main = do
+  when (os == "windows") (schemeCall () "load-shared-object" ["ws2_32"])
   Right (serverPort, tid) <- runServer
     | Left err => putStrLn $ "[server] " ++ err
   runClient serverPort
