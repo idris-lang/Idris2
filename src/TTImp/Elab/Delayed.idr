@@ -129,19 +129,62 @@ ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
+mutual
+  mismatchNF : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+  mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
+      = if xn /= yn
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+      = if xt /= yt
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
+  mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
+  mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+  mismatchNF _ _ _ = pure False
+
+  mismatch : {vars : _} ->
+             Defs -> (Closure vars, Closure vars) -> Core Bool
+  mismatch defs (x, y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+contra : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+-- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
+contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+    = if xt /= yt
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
+contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+contra defs x y = pure False
+
 -- Errors that might be recoverable later if we try again. Generally -
 -- ambiguity errors, type inference errors
 export
-recoverable : Error -> Bool
-recoverable (CantConvert _ _ _ _) = False
-recoverable (CantSolveEq _ _ _ _) = False
-recoverable (UndefinedName _ _) = False
+recoverable : {auto c : Ref Ctxt Defs} ->
+              Error -> Core Bool
+recoverable (CantConvert _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (CantSolveEq _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (UndefinedName _ _) = pure False
 recoverable (InType _ _ err) = recoverable err
 recoverable (InCon _ _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
 recoverable (InRHS _ _ err) = recoverable err
 recoverable (WhenUnifying _ _ _ _ err) = recoverable err
-recoverable _ = True
+recoverable _ = pure True
 
 data RetryError
      = RecoverableErrors
@@ -188,7 +231,7 @@ retryDelayed' errmode acc (d@(_, i, elab) :: ds)
                                 ++ "\n" ++ show err
                        case errmode of
                          RecoverableErrors =>
-                            if not (recoverable err)
+                            if not !(recoverable err)
                                then throw err
                                else retryDelayed' errmode (d :: acc) ds
                          AllErrors => throw err)
