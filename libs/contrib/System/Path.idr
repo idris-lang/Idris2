@@ -358,7 +358,7 @@ verbatimUnc = do verbatim
                  server <- match PTText
                  bodySeparator
                  share <- match PTText
-                 Text.Parser.Core pure $ UNC server share
+                 Text.Parser.Core.pure $ UNC server share
 
 -- Example: C:
 private
