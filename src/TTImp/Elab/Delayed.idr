@@ -129,14 +129,26 @@ ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
+-- Errors that might be recoverable later if we try again. Generally -
+-- ambiguity errors, type inference errors
+export
+recoverable : Error -> Bool
+recoverable (CantConvert _ _ _ _) = False
+recoverable (CantSolveEq _ _ _ _) = False
+recoverable (UndefinedName _ _) = False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ err) = recoverable err
+recoverable _ = True
+
 data RetryError
-     = NoError
-     | AmbigError
+     = RecoverableErrors
      | AllErrors
 
 Show RetryError where
-  show NoError = "NoError"
-  show AmbigError = "AmbigError"
+  show RecoverableErrors = "RecoverableErrors"
   show AllErrors = "AllErrors"
 
 -- Try all the delayed elaborators. If there's a failure, we want to
@@ -175,9 +187,8 @@ retryDelayed' errmode acc (d@(_, i, elab) :: ds)
            (\err => do log 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
                                 ++ "\n" ++ show err
                        case errmode of
-                         NoError => retryDelayed' errmode (d :: acc) ds
-                         AmbigError =>
-                            if ambiguous err -- give up on ambiguity
+                         RecoverableErrors =>
+                            if not (recoverable err)
                                then throw err
                                else retryDelayed' errmode (d :: acc) ds
                          AllErrors => throw err)
@@ -192,7 +203,7 @@ retryDelayed : {vars : _} ->
                Core ()
 retryDelayed ds
     = do est <- get EST
-         ds <- retryDelayed' NoError [] ds -- try everything again
+         ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
          retryDelayed' AllErrors [] ds -- fail on all errors
          pure ()
 
