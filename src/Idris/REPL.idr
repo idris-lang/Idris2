@@ -69,6 +69,7 @@ showInfo (n, idx, d)
                                show !(traverse getFullName (keys (refersTo d))))
          coreLift $ putStrLn ("Refers to (runtime): " ++
                                show !(traverse getFullName (keys (refersToRuntime d))))
+         coreLift $ putStrLn ("Flags: " ++ show (flags d))
          when (not (isNil (sizeChange d))) $
             let scinfo = map (\s => show (fnCall s) ++ ": " ++
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in

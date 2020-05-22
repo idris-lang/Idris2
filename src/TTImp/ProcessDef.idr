@@ -721,6 +721,7 @@ processDef opts nest env fc n_in cs_in
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
+                checkIfGuarded fc n
 
          md <- get MD -- don't need the metadata collected on the coverage check
          cov <- checkCoverage nidx ty mult cs
