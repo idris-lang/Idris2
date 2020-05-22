@@ -322,7 +322,7 @@ startChezCmd : String -> String -> String -> String
 startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%;%PATH%"
+    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
     , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
     ]
 
