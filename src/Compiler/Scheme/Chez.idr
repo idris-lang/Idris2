@@ -55,11 +55,13 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-escapeQuotes : String -> String
-escapeQuotes s = pack $ foldr escape [] $ unpack s
+
+escapeString : String -> String
+escapeString s = pack $ foldr escape [] $ unpack s
   where
     escape : Char -> List Char -> List Char
     escape '"' cs = '\\' :: '\"' :: cs
+    escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
 schHeader : String -> List String -> String
@@ -71,7 +73,7 @@ schHeader chez libs
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeQuotes x ++ "\")") libs) ++ "\n\n" ++
+    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
 schFooter : String
@@ -181,7 +183,7 @@ cCall appdir fc cfn clib args ret
                            copyLib (appdir ++ dirSep ++ fname, fullname)
                            put Loaded (clib :: loaded)
                            pure $ "(load-shared-object \""
-                                    ++ escapeQuotes fname
+                                    ++ escapeString fname
                                     ++ "\")\n"
          argTypes <- traverse (\a => cftySpec fc (snd a)) args
          retType <- cftySpec fc ret
