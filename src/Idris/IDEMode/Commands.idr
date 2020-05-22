@@ -16,18 +16,34 @@ data SExp = SExpList (List SExp)
           | SymbolAtom String
 
 public export
+data DocMode = Overview | Full
+
+public export
 data IDECommand
      = Interpret String
      | LoadFile String (Maybe Integer)
      | TypeOf String (Maybe (Integer, Integer))
      | CaseSplit Integer Integer String
      | AddClause Integer String
+     -- deprecated: | AddProofClause
+     | AddMissing Integer String
      | ExprSearch Integer String (List String) Bool
      | GenerateDef Integer String
      | MakeLemma Integer String
      | MakeCase Integer String
      | MakeWith Integer String
+     | DocsFor String (Maybe DocMode)
+     | Apropos String
      | Metavariables Integer
+     | WhoCalls String
+     | CallsWho String
+     | BrowseNamespace String
+     | NormaliseTerm     String -- TODO: implement a Binary lib
+     | ShowTermImplicits String -- and implement Binary (Term)
+     | HideTermImplicits String -- for these four defintions,
+     | ElaborateTerm     String -- then change String to Term, as in idris1
+     | PrintDefinition String
+     | ReplCompletions String
      | Version
      | GetOptions
 
@@ -58,6 +74,8 @@ getIDECommand (SExpList [SymbolAtom "case-split", IntegerAtom l, StringAtom n])
     = Just $ CaseSplit l 0 n
 getIDECommand (SExpList [SymbolAtom "add-clause", IntegerAtom l, StringAtom n])
     = Just $ AddClause l n
+getIDECommand (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom n]) 
+    = Just $ AddMissing line n
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n])
     = Just $ ExprSearch l n [] False
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs])
@@ -79,8 +97,36 @@ getIDECommand (SExpList [SymbolAtom "make-case", IntegerAtom l, StringAtom n])
     = Just $ MakeCase l n
 getIDECommand (SExpList [SymbolAtom "make-with", IntegerAtom l, StringAtom n])
     = Just $ MakeWith l n
+getIDECommand (SExpList (SymbolAtom "docs-for" ::  StringAtom n :: modeTail))
+    = do -- Maybe monad
+         modeOpt <- case modeTail of
+                      []                      => Just Nothing
+                      [SymbolAtom "overview"] => Just $ Just Overview
+                      [SymbolAtom "full"    ] => Just $ Just Full
+                      _ => Nothing
+         Just $ DocsFor n modeOpt 
+getIDECommand (SExpList [SymbolAtom "apropos", StringAtom n])
+    = Just $ Apropos n
 getIDECommand (SExpList [SymbolAtom "metavariables", IntegerAtom n])
     = Just $ Metavariables n
+getIDECommand (SExpList [SymbolAtom "who-calls", StringAtom n])
+    = Just $ WhoCalls n
+getIDECommand (SExpList [SymbolAtom "calls-who", StringAtom n])
+    = Just $ CallsWho n
+getIDECommand (SExpList [SymbolAtom "browse-namespace", StringAtom ns])
+    = Just $ BrowseNamespace ns
+getIDECommand (SExpList [SymbolAtom "normalise-term", StringAtom tm])     
+    = Just $ NormaliseTerm     tm
+getIDECommand (SExpList [SymbolAtom "show-term-implicits", StringAtom tm])
+    = Just $ ShowTermImplicits tm
+getIDECommand (SExpList [SymbolAtom "hide-term-implicits", StringAtom tm])
+    = Just $ HideTermImplicits tm
+getIDECommand (SExpList [SymbolAtom "elaborate-term", StringAtom tm])     
+    = Just $ ElaborateTerm     tm
+getIDECommand (SExpList [SymbolAtom "print-definition", StringAtom n])
+    = Just $ PrintDefinition n
+getIDECommand (SExpList [SymbolAtom "repl-completions", StringAtom n])
+    = Just $ ReplCompletions n
 getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
 getIDECommand _ = Nothing
@@ -94,6 +140,7 @@ putIDECommand (TypeOf cmd Nothing)            = (SExpList [SymbolAtom "type-of",
 putIDECommand (TypeOf cmd (Just (line, col))) = (SExpList [SymbolAtom "type-of", StringAtom cmd, IntegerAtom line, IntegerAtom col])
 putIDECommand (CaseSplit line col n)          = (SExpList [SymbolAtom "case-split", IntegerAtom line, IntegerAtom col, StringAtom n])
 putIDECommand (AddClause line n)              = (SExpList [SymbolAtom "add-clause", IntegerAtom line, StringAtom n])
+putIDECommand (AddMissing line n)             = (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom n])
 putIDECommand (ExprSearch line n exprs mode)  = (SExpList [SymbolAtom "proof-search", IntegerAtom line, StringAtom n, SExpList $ map StringAtom exprs, getMode mode])
   where
   getMode : Bool -> SExp
@@ -103,7 +150,22 @@ putIDECommand (GenerateDef line n)            = (SExpList [SymbolAtom "generate-
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
 putIDECommand (MakeCase line n)               = (SExpList [SymbolAtom "make-case", IntegerAtom line, StringAtom n])
 putIDECommand (MakeWith line n)               = (SExpList [SymbolAtom "make-with", IntegerAtom line, StringAtom n])
+putIDECommand (DocsFor n modeOpt)             = let modeTail = case modeOpt of 
+                                                                 Nothing       => []
+                                                                 Just Overview => [SymbolAtom "overview"]
+                                                                 Just Full     => [SymbolAtom "full"] in
+                                                (SExpList (SymbolAtom "docs-for" ::  StringAtom n :: modeTail))
+putIDECommand (Apropos n)                     = (SExpList [SymbolAtom "apropos", StringAtom n])
 putIDECommand (Metavariables n)               = (SExpList [SymbolAtom "metavariables", IntegerAtom n])
+putIDECommand (WhoCalls n)                    = (SExpList [SymbolAtom "who-calls", StringAtom n])
+putIDECommand (CallsWho n)                    = (SExpList [SymbolAtom "calls-who", StringAtom n])
+putIDECommand (BrowseNamespace ns)            = (SExpList [SymbolAtom "browse-namespace", StringAtom ns])
+putIDECommand (NormaliseTerm     tm)          = (SExpList [SymbolAtom "normalise-term", StringAtom tm]) 
+putIDECommand (ShowTermImplicits tm)          = (SExpList [SymbolAtom "show-term-implicits", StringAtom tm]) 
+putIDECommand (HideTermImplicits tm)          = (SExpList [SymbolAtom "hide-term-implicits", StringAtom tm]) 
+putIDECommand (ElaborateTerm     tm)          = (SExpList [SymbolAtom "elaborate-term", StringAtom tm])     
+putIDECommand (PrintDefinition n)             = (SExpList [SymbolAtom "print-definition", StringAtom n])
+putIDECommand (ReplCompletions n)             = (SExpList [SymbolAtom "repl-completions", StringAtom n])
 putIDECommand GetOptions                      = (SExpList [SymbolAtom "get-options"])
 putIDECommand Version                         = SymbolAtom "version"
 

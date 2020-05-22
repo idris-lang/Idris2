@@ -819,6 +819,7 @@ mutual
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
 
+  export
   handleMissing : MissedResult -> String
   handleMissing (CasesMissing x xs) = show x ++ ":\n" ++ showSep "\n" xs
   handleMissing (CallsNonCovering fn ns) = (show fn ++ ": Calls non covering function"
@@ -871,6 +872,7 @@ mutual
   displayResult  (OptionsSet opts) = printResult $ showSep "\n" $ map show opts
   displayResult  _ = pure ()
 
+  export
   displayHelp : String
   displayHelp =
     showSep "\n" $ map cmdInfo help
