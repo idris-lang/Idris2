@@ -185,7 +185,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                fns <- topMethTypes [] impName methImps impsp (params cdata)
                                       (map fst (methods cdata))
                                       (methods cdata)
-               traverse (processDecl [] nest env) (map mkTopMethDecl fns)
+               traverse_ (processDecl [] nest env) (map mkTopMethDecl fns)
 
                -- 3. Build the record for the implementation
                let mtops = map (Builtin.fst . snd) fns

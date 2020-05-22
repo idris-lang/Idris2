@@ -37,7 +37,15 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls scope expty
                                            -- fixes bug #115
          let nest' = record { names $= (names' ++) } nest
          let env' = dropLinear env
+         -- We don't want to keep rechecking delayed elaborators in the
+         -- locals  block, because they're not going to make progress until
+         -- we come out again, so save them
+         ust <- get UST
+         let olddelayed = delayedElab ust
+         put UST (record { delayedElab = [] } ust)
          traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
+         ust <- get UST
+         put UST (record { delayedElab = olddelayed } ust)
          check rig elabinfo nest' env scope expty
   where
     -- For the local definitions, don't allow access to linear things

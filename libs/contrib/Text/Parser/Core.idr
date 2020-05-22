@@ -29,7 +29,7 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
 ||| guaranteed to consume some input. If the first one consumes input, the
 ||| second is allowed to be recursive (because it means some input has been
 ||| consumed and therefore the input is smaller)
-public export %inline
+public export %inline %tcinline
 (>>=) : {c1, c2 : Bool} ->
         Grammar tok c1 a ->
         inf c1 (a -> Grammar tok c2 b) ->

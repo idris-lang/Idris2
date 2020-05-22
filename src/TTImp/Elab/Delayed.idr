@@ -71,7 +71,7 @@ delayOnFailure fc rig env expected pred pri elab
          handle (elab False)
           (\err =>
               do est <- get EST
-                 if pred err && delayDepth est < !getAmbigLimit
+                 if pred err
                     then
                       do nm <- genName "delayed"
                          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
@@ -99,19 +99,16 @@ delayElab : {vars : _} ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
     = do est <- get EST
-         if delayDepth est >= !getAmbigLimit
-            then elab
-            else do
-             nm <- genName "delayed"
-             expected <- mkExpected exp
-             (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-             logGlueNF 5 ("Postponing elaborator " ++ show nm ++
-                          " for") env expected
-             ust <- get UST
-             put UST (record { delayedElab $=
-                     ((pri, ci, mkClosedElab fc env (deeper elab)) :: ) }
-                             ust)
-             pure (dtm, expected)
+         nm <- genName "delayed"
+         expected <- mkExpected exp
+         (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
+         logGlueNF 5 ("Postponing elaborator " ++ show nm ++
+                      " for") env expected
+         ust <- get UST
+         put UST (record { delayedElab $=
+                 ((pri, ci, mkClosedElab fc env elab) :: ) }
+                         ust)
+         pure (dtm, expected)
   where
     mkExpected : Maybe (Glued vars) -> Core (Glued vars)
     mkExpected (Just ty) = pure ty
@@ -132,14 +129,69 @@ ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
+mutual
+  mismatchNF : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+  mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
+      = if xn /= yn
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+      = if xt /= yt
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
+  mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
+  mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+  mismatchNF _ _ _ = pure False
+
+  mismatch : {vars : _} ->
+             Defs -> (Closure vars, Closure vars) -> Core Bool
+  mismatch defs (x, y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+contra : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+-- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
+contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+    = if xt /= yt
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
+contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+contra defs x y = pure False
+
+-- Errors that might be recoverable later if we try again. Generally -
+-- ambiguity errors, type inference errors
+export
+recoverable : {auto c : Ref Ctxt Defs} ->
+              Error -> Core Bool
+recoverable (CantConvert _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (CantSolveEq _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (UndefinedName _ _) = pure False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ err) = recoverable err
+recoverable _ = pure True
+
 data RetryError
-     = NoError
-     | AmbigError
+     = RecoverableErrors
      | AllErrors
 
 Show RetryError where
-  show NoError = "NoError"
-  show AmbigError = "AmbigError"
+  show RecoverableErrors = "RecoverableErrors"
   show AllErrors = "AllErrors"
 
 -- Try all the delayed elaborators. If there's a failure, we want to
@@ -178,9 +230,8 @@ retryDelayed' errmode acc (d@(_, i, elab) :: ds)
            (\err => do log 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
                                 ++ "\n" ++ show err
                        case errmode of
-                         NoError => retryDelayed' errmode (d :: acc) ds
-                         AmbigError =>
-                            if ambiguous err -- give up on ambiguity
+                         RecoverableErrors =>
+                            if not !(recoverable err)
                                then throw err
                                else retryDelayed' errmode (d :: acc) ds
                          AllErrors => throw err)
@@ -195,8 +246,7 @@ retryDelayed : {vars : _} ->
                Core ()
 retryDelayed ds
     = do est <- get EST
-         ds <- retryDelayed' NoError [] ds -- try everything again
-         ds <- retryDelayed' AmbigError [] ds -- fail on ambiguity error
+         ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
          retryDelayed' AllErrors [] ds -- fail on all errors
          pure ()
 

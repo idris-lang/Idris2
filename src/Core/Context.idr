@@ -170,6 +170,9 @@ data DefFlag
          -- should evaluate the RHS, with reduction limits on the given names,
          -- and ensure the name has made progress in doing so (i.e. has reduced
          -- at least once)
+    | AllGuarded -- safe to treat as a constructor for the purposes of
+         -- productivity checking. All clauses are guarded by constructors,
+         -- and there are no other function applications
 
 export
 Eq DefFlag where
@@ -181,6 +184,7 @@ Eq DefFlag where
     (==) BlockedHint BlockedHint = True
     (==) Macro Macro = True
     (==) (PartialEval x) (PartialEval y) = x == y
+    (==) AllGuarded AllGuarded = True
     (==) _ _ = False
 
 export
@@ -193,6 +197,7 @@ Show DefFlag where
   show BlockedHint = "blockedhint"
   show Macro = "macro"
   show (PartialEval _) = "partialeval"
+  show AllGuarded = "allguarded"
 
 public export
 data SizeChange = Smaller | Same | Unknown

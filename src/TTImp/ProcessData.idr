@@ -92,7 +92,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
          Nothing <- lookupCtxtExact cn (gamma defs)
              | Just gdef => throw (AlreadyDefined fc cn)
          ty <-
-             wrapError (InCon fc cn) $
+             wrapErrorC opts (InCon fc cn) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (gType fc)
@@ -255,7 +255,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
              | Just gdef => throw (AlreadyDefined fc n)
 
          (ty, _) <-
-             wrapError (InCon fc n) $
+             wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc))
@@ -289,7 +289,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          log 1 $ "Processing " ++ show n
          defs <- get Ctxt
          (ty, _) <-
-             wrapError (InCon fc n) $
+             wrapErrorC eopts (InCon fc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc))

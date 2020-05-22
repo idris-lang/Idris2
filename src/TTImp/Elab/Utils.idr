@@ -7,6 +7,7 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
+import TTImp.Elab.Check
 import TTImp.TTImp
 
 detagSafe : Defs -> NF [] -> Core Bool
@@ -64,3 +65,9 @@ updateErasable n
          addDef n (record { eraseArgs = es,
                             safeErase = dtes } gdef)
          pure ()
+export
+wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a
+wrapErrorC opts err
+    = if InCase `elem` opts
+         then id
+         else wrapError err

@@ -34,6 +34,55 @@ totRefsIn : {auto c : Ref Ctxt Defs} ->
             Defs -> Term vars -> Core Terminating
 totRefsIn defs ty = totRefs defs (keys (getRefs (Resolved (-1)) ty))
 
+-- Check if all branches end up as constructor arguments, with no other
+-- function application, and set 'AllGuarded' if so.
+-- This is to check whether a function can be considered a constructor form
+-- for the sake of termination checking (and might have other uses...)
+export
+checkIfGuarded : {auto c : Ref Ctxt Defs} ->
+                 FC -> Name -> Core ()
+checkIfGuarded fc n
+    = do defs <- get Ctxt
+         Just (PMDef _ _ _ _ pats) <- lookupDefExact n (gamma defs)
+              | _ => pure ()
+         t <- allGuarded pats
+         when t $ setFlag fc n AllGuarded
+  where
+    guardedNF : {vars : _} -> Defs -> Env Term vars -> NF vars -> Core Bool
+    guardedNF defs env (NDCon _ _ _ _ args) = pure True
+    guardedNF defs env (NApp _ (NRef _ n) args)
+        = do Just gdef <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure False
+             pure (AllGuarded `elem` flags gdef)
+    guardedNF defs env _ = pure False
+
+    checkNotFn : Defs -> Name -> Core Bool
+    checkNotFn defs n
+        = do Just gdef <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure False
+             case definition gdef of
+                  DCon _ _ _ => pure True
+                  _ => pure (multiplicity gdef == erased
+                              || (AllGuarded `elem` flags gdef))
+
+    guarded : {vars : _} -> Env Term vars -> Term vars -> Core Bool
+    guarded env tm
+        = do defs <- get Ctxt
+             empty <- clearDefs defs
+             tmnf <- nf empty env tm
+             if !(guardedNF defs env tmnf)
+                then do Just gdef <- lookupCtxtExact n (gamma defs)
+                             | Nothing => pure False
+                        allM (checkNotFn defs) (keys (refersTo gdef))
+                else pure False
+
+    allGuarded : List (vs ** (Env Term vs, Term vs, Term vs)) -> Core Bool
+    allGuarded [] = pure True
+    allGuarded ((_ ** (env, lhs, rhs)) :: ps)
+        = if !(guarded env rhs)
+             then allGuarded ps
+             else pure False
+
 -- Equal for the purposes of size change means, ignoring as patterns, all
 -- non-metavariable positions are equal
 scEq : Term vars -> Term vars -> Bool
@@ -79,8 +128,13 @@ mutual
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
   findSC defs env Guarded pats (TDelay _ _ _ tm)
       = findSC defs env InDelay pats tm
+  findSC defs env g pats (TDelay _ _ _ tm)
+      = findSC defs env g pats tm
   findSC defs env g pats tm
-      = case (g, getFnArgs tm) of
+      = do let (fn, args) = getFnArgs tm
+           fn' <- conIfGuarded fn -- pretend it's a data constructor if
+                                  -- it has the AllGuarded flag
+           case (g, fn', args) of
     -- If we're InDelay and find a constructor (or a function call which is
     -- guaranteed to return a constructor; AllGuarded set), continue as InDelay
              (InDelay, Ref fc (DataCon _ _) cn, args) =>
@@ -90,6 +144,9 @@ mutual
              -- function call is okay
              (InDelay, _, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
+                    pure (concat scs)
+             (Guarded, Ref fc (DataCon _ _) cn, args) =>
+                 do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
                  do scs <- traverse (findSC defs env Guarded pats) args
@@ -103,6 +160,16 @@ mutual
              (_, f, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
+      where
+        conIfGuarded : Term vars -> Core (Term vars)
+        conIfGuarded (Ref fc Func n)
+            = do defs <- get Ctxt
+                 Just gdef <- lookupCtxtExact n (gamma defs)
+                      | Nothing => pure $ Ref fc Func n
+                 if AllGuarded `elem` flags gdef
+                    then pure $ Ref fc (DataCon 0 0) n
+                    else pure $ Ref fc Func n
+        conIfGuarded tm = pure tm
 
   -- Expand the size change argument list with 'Nothing' to match the given
   -- arity (i.e. the arity of the function we're calling) to ensure that
