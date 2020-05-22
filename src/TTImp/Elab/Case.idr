@@ -226,7 +226,15 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- Start with empty nested names, since we've extended the rhs with
          -- ICaseLocal so they'll get rebuilt with the right environment
          let nest' = MkNested []
+         ust <- get UST
+         -- We don't want to keep rechecking delayed elaborators in the
+         -- case block, because they're not going to make progress until
+         -- we come out again, so save them
+         let olddelayed = delayedElab ust
+         put UST (record { delayedElab = [] } ust)
          processDecl [InCase] nest' [] (IDef fc casen alts')
+         ust <- get UST
+         put UST (record { delayedElab = olddelayed } ust)
 
          pure (appTm, gnf env caseretty)
   where

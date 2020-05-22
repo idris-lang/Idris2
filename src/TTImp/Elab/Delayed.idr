@@ -71,7 +71,7 @@ delayOnFailure fc rig env expected pred pri elab
          handle (elab False)
           (\err =>
               do est <- get EST
-                 if pred err && delayDepth est < !getAmbigLimit
+                 if pred err
                     then
                       do nm <- genName "delayed"
                          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
@@ -99,19 +99,16 @@ delayElab : {vars : _} ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
     = do est <- get EST
-         if delayDepth est >= !getAmbigLimit
-            then elab
-            else do
-             nm <- genName "delayed"
-             expected <- mkExpected exp
-             (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-             logGlueNF 5 ("Postponing elaborator " ++ show nm ++
-                          " for") env expected
-             ust <- get UST
-             put UST (record { delayedElab $=
-                     ((pri, ci, mkClosedElab fc env (deeper elab)) :: ) }
-                             ust)
-             pure (dtm, expected)
+         nm <- genName "delayed"
+         expected <- mkExpected exp
+         (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
+         logGlueNF 5 ("Postponing elaborator " ++ show nm ++
+                      " for") env expected
+         ust <- get UST
+         put UST (record { delayedElab $=
+                 ((pri, ci, mkClosedElab fc env elab) :: ) }
+                         ust)
+         pure (dtm, expected)
   where
     mkExpected : Maybe (Glued vars) -> Core (Glued vars)
     mkExpected (Just ty) = pure ty
@@ -196,7 +193,6 @@ retryDelayed : {vars : _} ->
 retryDelayed ds
     = do est <- get EST
          ds <- retryDelayed' NoError [] ds -- try everything again
-         ds <- retryDelayed' AmbigError [] ds -- fail on ambiguity error
          retryDelayed' AllErrors [] ds -- fail on all errors
          pure ()
 
