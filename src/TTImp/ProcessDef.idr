@@ -18,6 +18,7 @@ import Core.UnifyState
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
+import TTImp.Elab.Utils
 import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
@@ -252,7 +253,7 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
                           then InTransform
                           else InLHS mult
          (lhstm, lhstyg) <-
-             wrapError (InLHS fc !(getFullName (Resolved n))) $
+             wrapErrorC opts (InLHS fc !(getFullName (Resolved n))) $
                      elabTerm n lhsMode opts nest env
                                 (IBindHere fc PATTERN lhs) Nothing
          logTerm 5 "Checked LHS term" lhstm
@@ -387,7 +388,7 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
          log 5 $ "Checking RHS " ++ show rhs
          logEnv 5 "In env" env'
 
-         rhstm <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         rhstm <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
 
@@ -411,7 +412,7 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
          let wmode
                = if isErased mult then InType else InExpr
 
-         (wval, gwvalTy) <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         (wval, gwvalTy) <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
@@ -471,7 +472,7 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
                          map (maybe wval_raw (\pn => IVar fc (snd pn))) wargNames)
 
          log 3 $ "Applying to with argument " ++ show rhs_in
-         rhs <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         rhs <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
              checkTermSub n wmode opts nest' env' env sub' rhs_in
                           (gnf env' reqty)
 

@@ -3,7 +3,7 @@ Changes since Idris 2 v0.1.0
 
 The implementation is now self-hosted. To initialise the build, either use
 the [bootstrapping version of Idris2](https://github.com/edwinb/Idris2-boot)
-or build fromt the generated Scheme, using `make bootstrap`.
+or build from the generated Scheme, using `make bootstrap`.
 
 Compiler updates:
 

@@ -264,7 +264,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
               | Just _ => throw (AlreadyDefined fc n)
 
          ty <-
-             wrapError (InType fc n) $
+             wrapErrorC eopts (InType fc n) $
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
                              (gType fc)
