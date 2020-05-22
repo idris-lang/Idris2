@@ -321,7 +321,7 @@ startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
     , "set PATH=%APPDIR%;%PATH%"
-    , chez ++ " --script %APPDIR%/" ++ target ++ " %*"
+    , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
