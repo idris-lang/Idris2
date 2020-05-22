@@ -581,8 +581,8 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            Name -> Core ()
-mkRunTime n
+            FC -> Covering -> Name -> Core ()
+mkRunTime fc cov n
     = do log 5 $ "Making run time definition for " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
@@ -597,15 +597,40 @@ mkRunTime n
            pats' <- traverse (toErased (location gdef) (getSpec (flags gdef)))
                              pats
 
-           (rargs ** tree_rt) <- getPMDef (location gdef) RunTime n ty
-                                          (map (toClause (location gdef)) pats')
+           let clauses_init = map (toClause (location gdef)) pats'
+           let clauses = case cov of
+                              MissingCases _ => addErrorCase clauses_init
+                              _ => clauses_init
+
+           (rargs ** tree_rt) <- getPMDef (location gdef) RunTime n ty clauses
            log 5 $ "Runtime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
+
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
            addDef n (record { definition = PMDef r rargs tree_ct tree_rt pats
                             } gdef)
            pure ()
   where
+    mkCrash : {vars : _} -> String -> Term vars
+    mkCrash msg
+       = apply fc (Ref fc Func (NS ["Builtin"] (UN "idris_crash")))
+               [Erased fc False, PrimVal fc (Str msg)]
+
+    matchAny : Term vars -> Term vars
+    matchAny (App fc f a) = App fc (matchAny f) (Erased fc False)
+    matchAny tm = tm
+
+    makeErrorClause : {vars : _} -> Env Term vars -> Term vars -> Clause
+    makeErrorClause env lhs
+        = MkClause env (matchAny lhs)
+             (mkCrash ("Unhandled input for " ++ show n ++ " at " ++ show fc))
+
+    addErrorCase : List Clause -> List Clause
+    addErrorCase [] = []
+    addErrorCase [MkClause env lhs rhs]
+        = MkClause env lhs rhs :: makeErrorClause env lhs :: []
+    addErrorCase (x :: xs) = x :: addErrorCase xs
+
     getSpec : List DefFlag -> Maybe (List (Name, Nat))
     getSpec [] = Nothing
     getSpec (PartialEval n :: _) = Just n
@@ -629,10 +654,10 @@ mkRunTime n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 Name -> Core ()
-compileRunTime atotal
+                 FC -> Covering -> Name -> Core ()
+compileRunTime fc cov atotal
     = do defs <- get Ctxt
-         traverse_ mkRunTime (toCompileCase defs)
+         traverse_ (mkRunTime fc cov) (toCompileCase defs)
          traverse (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
@@ -702,11 +727,9 @@ processDef opts nest env fc n_in cs_in
          put MD md
 
          -- If we're not in a case tree, compile all the outstanding case
-         -- trees. TODO: Take into account coverage, and add error cases
-         -- if we're not covering.
+         -- trees.
          when (not (elem InCase opts)) $
-           compileRunTime atotal
-
+              compileRunTime fc cov atotal
   where
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True

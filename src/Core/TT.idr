@@ -526,6 +526,12 @@ Eq TotalReq where
     (==) PartialOK PartialOK = True
     (==) _ _ = False
 
+export
+Show TotalReq where
+    show Total = "total"
+    show CoveringOnly = "covering"
+    show PartialOK = "partial"
+
 public export
 data PartialReason
        = NotStrictlyPositive

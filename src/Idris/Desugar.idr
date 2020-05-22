@@ -17,7 +17,7 @@ import Idris.Syntax
 import Idris.Elab.Implementation
 import Idris.Elab.Interface
 
-import Parser.Lexer
+import Parser.Lexer.Source
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -600,12 +600,6 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc rig vis fnopts ty)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           opts <- if (isTotalityOption `any` opts)
-                   then pure opts
-                   else do PartialOK <- getDefaultTotalityOption
-                           | tot => pure (Totality tot :: opts)
-                           -- We assume PartialOK by default internally
-                           pure opts
            pure [IClaim fc rig vis opts !(desugarType ps ty)]
         where
           isTotalityOption : FnOpt -> Bool

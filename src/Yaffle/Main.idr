@@ -1,6 +1,6 @@
 module Yaffle.Main
 
-import Parser.Support
+import Parser.Source
 
 import Core.Binary
 import Core.Context

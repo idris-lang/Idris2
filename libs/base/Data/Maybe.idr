@@ -32,6 +32,12 @@ fromMaybe : (Lazy a) -> Maybe a -> a
 fromMaybe def Nothing  = def
 fromMaybe def (Just j) = j
 
+||| Returns the `a` value of a `Maybe a` which is proved `Just`.
+public export
+fromJust : (v : Maybe a) -> IsJust v => a
+fromJust (Just x) = x
+fromJust Nothing impossible
+
 ||| Returns `Just` the given value if the conditional is `True`
 ||| and `Nothing` if the conditional is `False`.
 public export

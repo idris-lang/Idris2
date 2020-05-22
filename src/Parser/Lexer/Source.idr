@@ -1,9 +1,10 @@
-module Parser.Lexer
+module Parser.Lexer.Source
+
+import public Parser.Lexer.Common
 
 import Data.List
 import Data.Strings
 
-import public Text.Lexer
 import Utils.Hex
 import Utils.Octal
 import Utils.String
@@ -11,24 +12,25 @@ import Utils.String
 %default total
 
 public export
-data Token = NSIdent (List String)
-           | HoleIdent String
-           | Literal Integer
-           | StrLit String
-           | CharLit String
-           | DoubleLit Double
-           | Symbol String
-           | Keyword String
-           | Unrecognised String
-           | Comment String
-           | DocComment String
-           | CGDirective String
-           | RecordField String
-           | Pragma String
-           | EndInput
+data SourceToken
+  = NSIdent (List String)
+  | HoleIdent String
+  | Literal Integer
+  | StrLit String
+  | CharLit String
+  | DoubleLit Double
+  | Symbol String
+  | Keyword String
+  | Unrecognised String
+  | Comment String
+  | DocComment String
+  | CGDirective String
+  | RecordField String
+  | Pragma String
+  | EndInput
 
 export
-Show Token where
+Show SourceToken where
   show (HoleIdent x) = "hole identifier " ++ x
   show (Literal x) = "literal " ++ show x
   show (StrLit x) = "string " ++ show x
@@ -51,17 +53,7 @@ Show Token where
       dotSep [x] = x
       dotSep (x :: xs) = x ++ concat ["." ++ y | y <- xs]
 
-||| In `comment` we are careful not to parse closing delimiters as
-||| valid comments. i.e. you may not write many dashes followed by
-||| a closing brace and call it a valid comment.
-comment : Lexer
-comment
-   =  is '-' <+> is '-'                  -- comment opener
-  <+> many (is '-') <+> reject (is '}')  -- not a closing delimiter
-  <+> many (isNot '\n')                  -- till the end of line
-
 mutual
-
   ||| The mutually defined functions represent different states in a
   ||| small automaton.
   ||| `toEndComment` is the default state and it will munch through
@@ -110,35 +102,6 @@ blockComment = is '{' <+> is '-' <+> toEndComment 1
 docComment : Lexer
 docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')
 
--- Identifier Lexer
--- There are multiple variants.
-
-data Flavour = Capitalised | AllowDashes | Normal
-
-isIdentStart : Flavour -> Char -> Bool
-isIdentStart _           '_' = True
-isIdentStart Capitalised  x  = isUpper x || x > chr 160
-isIdentStart _            x  = isAlpha x || x > chr 160
-
-isIdentTrailing : Flavour -> Char -> Bool
-isIdentTrailing AllowDashes '-'  = True
-isIdentTrailing _           '\'' = True
-isIdentTrailing _           '_'  = True
-isIdentTrailing _            x   = isAlphaNum x || x > chr 160
-
-%inline
-isIdent : Flavour -> String -> Bool
-isIdent flavour string =
-  case unpack string of
-    []      => False
-    (x::xs) => isIdentStart flavour x && all (isIdentTrailing flavour) xs
-
-%inline
-ident : Flavour -> Lexer
-ident flavour =
-  (pred $ isIdentStart flavour) <+>
-    (many . pred $ isIdentTrailing flavour)
-
 export
 isIdentNormal : String -> Bool
 isIdentNormal = isIdent Normal
@@ -179,7 +142,7 @@ cgDirective
            is '}')
          <|> many (isNot '\n'))
 
-mkDirective : String -> Token
+mkDirective : String -> SourceToken
 mkDirective str = CGDirective (trim (substr 3 (length str) str))
 
 -- Reserved words
@@ -242,7 +205,7 @@ fromOctLit str
                   Nothing => 0 -- can't happen if the literal lexed correctly
                   Just n => cast n
 
-rawTokens : TokenMap Token
+rawTokens : TokenMap SourceToken
 rawTokens =
     [(comment, Comment),
      (blockComment, Comment),
@@ -264,18 +227,18 @@ rawTokens =
      (validSymbol, Symbol),
      (symbol, Unrecognised)]
   where
-    parseNSIdent : String -> Token
+    parseNSIdent : String -> SourceToken
     parseNSIdent = NSIdent . reverse . split (== '.')
 
-    parseIdent : String -> Token
+    parseIdent : String -> SourceToken
     parseIdent x =
       if x `elem` keywords
         then Keyword x
         else NSIdent [x]
 
 export
-lexTo : (TokenData Token -> Bool) ->
-        String -> Either (Int, Int, String) (List (TokenData Token))
+lexTo : (TokenData SourceToken -> Bool) ->
+        String -> Either (Int, Int, String) (List (TokenData SourceToken))
 lexTo pred str
     = case lexTo pred rawTokens str of
            -- Add the EndInput token so that we'll have a line and column
@@ -284,12 +247,12 @@ lexTo pred str
                                       [MkToken l c EndInput])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
+      notComment : TokenData SourceToken -> Bool
       notComment t = case tok t of
                           Comment _ => False
                           DocComment _ => False -- TODO!
                           _ => True
 
 export
-lex : String -> Either (Int, Int, String) (List (TokenData Token))
+lex : String -> Either (Int, Int, String) (List (TokenData SourceToken))
 lex = lexTo (const False)

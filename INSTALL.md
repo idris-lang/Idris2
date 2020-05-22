@@ -84,3 +84,14 @@ that everything has worked correctly.  Assuming that `idris2` is in your
 
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
+
+5: (Optional) Installing the Idris 2 API
+----------------------------------------
+
+You'll only need this if you're developing support tools, such as an external
+code generator. To do so, once everything is successfully installed, type:
+
+* `make install-api`
+
+The API will only work if you've completed the self-hosting step, step 3, since
+the intermediate code versions need to be consistent throughout.

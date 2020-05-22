@@ -29,8 +29,9 @@ Language extensions:
 Library additions:
 
 * Additional file management operations in `base`
-* New modules in `contrib` for time (`System.Clock`); JSON (`Language.JSON.*`);
-  random numbers (`System.Random`)
+* New module in `base` for time (`System.Clock`)
+* New modules in `contrib` for JSON (`Language.JSON.*`); random numbers
+  (`System.Random`)
 
 Other improvements:
 

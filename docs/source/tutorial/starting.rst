@@ -7,33 +7,38 @@ Getting Started
 Prerequisites
 =============
 
-You need a C compiler (default is clang), and optionally Idris 1.3.2 to build
-from source. You will also need:
+Idris 2 is implemented in Idris 2 itself, so to bootstrap it you can build from
+generated Scheme sources. To do this, you need either Chez Scheme (default, and
+currently preferred since it is the fastest) or Racket. You can get one of
+these from:
 
 - `Chez Scheme <https://cisco.github.io/ChezScheme/>`_
-- The `GNU Multiple Precision Arithmetic Library <https://gmplib.org/>`_ (GMP) 
+- `Racket <https://download.racket-lang.org/>`_
 
-Both are available from MacPorts/Homebrew and all major Linux distributions.
+Both are also available from MacPorts/Homebrew and all major Linux
+distributions.
 
-**Note**: If you install ChezScheme from source files, building it locally, make sure
+**Note**: If you install Chez Scheme from source files, building it locally, make sure
 you run ``./configure --threads`` to build multithreading support in.
 
 Downloading and Installing
 ==========================
 
 You can download the Idris 2 source from the `Idris web site
-<https://www.idris-lang.org/pages/download.html>`_. 
-This includes the Idris 2 source code (written in Idris 1) and the C
-code generated from that.  Once you have unpacked the source, you can
-install it as follows:
+<https://www.idris-lang.org/pages/download.html>`_ or get the latest
+development version from `idris-lang/Idris2
+<https://github.com/idris-lang/Idris2>`_ on Github.  This includes the Idris 2
+source code and the Scheme code code generated from that.  Once you have
+unpacked the source, you can install it as follows::
 
-* If you have Idris 1.3.2 installed::
+    make bootstrap SCHEME=chez
 
-    make install
+Where `chez` is the executable name of the Chez Scheme compiler. This will
+vary from system to system, but is often one of `scheme`, `chezscheme`, or
+`chezscheme9.5`. If you are building via Racket, you can install it as
+follows::
 
-* If not, you can install directly from the generated C::
-
-    make install-fromc
+    make bootstrap-racket
 
 This will, by default, install into ``${HOME}/.idris2``. You can change this
 by editing the options in ``config.mk``. For example,

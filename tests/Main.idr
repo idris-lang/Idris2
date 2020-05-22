@@ -7,6 +7,7 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
+import System.Path
 
 %default covering
 
@@ -87,7 +88,7 @@ idrisTests
        "reg015", "reg016", "reg017", "reg018", "reg019",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006",
+       "total006", "total007", "total008",
        -- The 'with' rule
        "with001", "with002"]
 
@@ -102,6 +103,7 @@ chezTests
    = ["chez001", "chez002", "chez003", "chez004", "chez005", "chez006",
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
+      "chez019",
       "reg001"]
 
 ideModeTests : List String
@@ -227,9 +229,9 @@ firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 pathLookup : IO (Maybe String)
 pathLookup = do
   path <- getEnv "PATH"
-  let pathList = split (== ':') $ fromMaybe "/usr/bin:/usr/local/bin" path
+  let pathList = split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
   let candidates = [p ++ "/" ++ x | p <- pathList,
-                                    x <- ["chez", "chezscheme9.5", "scheme"]]
+                                    x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
   firstExists candidates
 
 findChez : IO (Maybe String)

@@ -10,7 +10,7 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
-import Parser.Lexer
+import Parser.Lexer.Source
 
 import TTImp.Elab
 import TTImp.Elab.Check

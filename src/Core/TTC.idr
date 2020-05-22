@@ -843,6 +843,7 @@ TTC Def where
              10 => pure Context.Delayed
              _ => corrupt "Def"
 
+export
 TTC TotalReq where
   toBuf b Total = tag 0
   toBuf b CoveringOnly = tag 1

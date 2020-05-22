@@ -14,6 +14,7 @@ import Core.Unify
 import Parser.Unlit
 
 import TTImp.Elab.Check
+import TTImp.ProcessDecls
 import TTImp.TTImp
 
 import Idris.Desugar
@@ -50,7 +51,8 @@ processDecls decls
              | Just err => pure (case mapMaybe id xs of
                                       [] => [err]
                                       errs => errs)
-         pure (mapMaybe id xs)
+         errs <- getTotalityErrors
+         pure (mapMaybe id xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -193,7 +195,7 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData Token -> Bool
+    isColon : TokenData SourceToken -> Bool
     isColon t
         = case tok t of
                Symbol ":" => True

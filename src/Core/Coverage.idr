@@ -116,8 +116,12 @@ altMatch _ _ = False
 getMissingAlts : {vars : _} ->
                  FC -> Defs -> NF vars -> List (CaseAlt vars) ->
                  Core (List (CaseAlt vars))
--- If it's a primitive, there's too many to reasonably check, so require a
--- catch all
+-- If it's a primitive other than WorldVal, there's too many to reasonably
+-- check, so require a catch all
+getMissingAlts fc defs (NPrimVal _ WorldType) alts
+    = if isNil alts
+         then pure [DefaultCase (Unmatched "Coverage check")]
+         else pure []
 getMissingAlts fc defs (NPrimVal _ c) alts
     = if any isDefault alts
          then pure []
