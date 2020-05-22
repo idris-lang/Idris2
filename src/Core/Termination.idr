@@ -79,6 +79,8 @@ mutual
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
   findSC defs env Guarded pats (TDelay _ _ _ tm)
       = findSC defs env InDelay pats tm
+  findSC defs env g pats (TDelay _ _ _ tm)
+      = findSC defs env g pats tm
   findSC defs env g pats tm
       = case (g, getFnArgs tm) of
     -- If we're InDelay and find a constructor (or a function call which is
@@ -90,6 +92,9 @@ mutual
              -- function call is okay
              (InDelay, _, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
+                    pure (concat scs)
+             (Guarded, Ref fc (DataCon _ _) cn, args) =>
+                 do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
                  do scs <- traverse (findSC defs env Guarded pats) args
