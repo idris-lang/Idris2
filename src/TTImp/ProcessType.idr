@@ -33,6 +33,8 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> FnOpt -> Core ()
 processFnOpt fc ndef Inline
     = setFlag fc ndef Inline
+processFnOpt fc ndef TCInline
+    = setFlag fc ndef TCInline
 processFnOpt fc ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)

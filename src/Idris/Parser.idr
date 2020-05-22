@@ -1174,6 +1174,9 @@ fnDirectOpt fname
   <|> do pragma "inline"
          commit
          pure $ IFnOpt Inline
+  <|> do pragma "tcinline"
+         commit
+         pure $ IFnOpt TCInline
   <|> do pragma "extern"
          pure $ IFnOpt ExternFn
   <|> do pragma "macro"

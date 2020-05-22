@@ -11,6 +11,10 @@ Language changes:
 * Fields of records can be accessed (and updated) using the dot syntax,
   such as `r.field1.field2` or `record { field1.field2 = 42 }`.
   For details, see https://idris2.readthedocs.io/en/latest/reference/records.html
+* New function flag `%tcinline` which means that the function should be
+  inlined for the purposes of totality checking (but otherwise not inlined).
+  This can be used as a hint for totality checking, to make the checker look
+  inside functions that it otherwise might not.
 * %transform directive, for declaring transformation rules on runtime
   expressions. Transformation rules are automatically added for top level
   implementations of interfaces.
