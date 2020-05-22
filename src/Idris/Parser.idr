@@ -189,7 +189,7 @@ mutual
            symbol "}"
            pure (Nothing, tm)
 
-  with_ : FileName -> IndentInfo -> Rule PTerm
+  with_ : FileName -> IndentInfo -> SourceRule PTerm
   with_ fname indents
       = do start <- location
            keyword "with"
@@ -199,12 +199,12 @@ mutual
            rhs <- expr pdef fname indents
            pure (PWithUnambigNames (MkFC fname start end) ns rhs)
     where
-      singleName : Rule (List Name)
+      singleName : SourceRule (List Name)
       singleName = do
         n <- name
         pure [n]
 
-      nameList : Rule (List Name)
+      nameList : SourceRule (List Name)
       nameList = do
         symbol "["
         commit

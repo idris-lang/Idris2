@@ -218,8 +218,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
                put EST (addBindIfUnsolved nm rig Explicit env metaval ty est)
          pure (metaval, gnf env ty)
 checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
-    = with Core do
-         -- enter the scope -> add unambiguous names
+    = do -- enter the scope -> add unambiguous names
          est <- get EST
          rns <- resolveNames fc ns
          put EST $ record { unambiguousNames = mergeLeft rns (unambiguousNames est) } est
