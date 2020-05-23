@@ -443,21 +443,25 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  PkgCommand -> String -> Core ()
 processPackage cmd file
-    = do Right (pname, fs) <- coreLift $ parseFile file
-                                  (do desc <- parsePkgDesc file
-                                      eoi
-                                      pure desc)
-             | Left err => throw (ParseFail (getParseErrorLoc file err) err)
-         pkg <- addFields fs (initPkgDesc pname)
-         case cmd of
-              Build => do [] <- build pkg
-                             | errs => coreLift (exitWith (ExitFailure 1))
-                          pure ()
-              Install => do [] <- build pkg
-                               | errs => coreLift (exitWith (ExitFailure 1))
-                            install pkg
-              Clean => clean pkg
-              REPL => runRepl pkg
+    =  if not (isSuffixOf ".ipkg" file)
+         then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
+                 coreLift (exitWith (ExitFailure 1))
+         else do Right (pname, fs) <- coreLift $ parseFile file
+                                          (do desc <- parsePkgDesc file
+                                              eoi
+                                              pure desc)
+                     | Left (FileFail err) => throw (FileErr file err)
+                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+                 pkg <- addFields fs (initPkgDesc pname)
+                 case cmd of
+                      Build => do [] <- build pkg
+                                     | errs => coreLift (exitWith (ExitFailure 1))
+                                  pure ()
+                      Install => do [] <- build pkg
+                                       | errs => coreLift (exitWith (ExitFailure 1))
+                                    install pkg
+                      Clean => clean pkg
+                      REPL => runRepl pkg
 
 rejectPackageOpts : List CLOpt -> Core Bool
 rejectPackageOpts (Package cmd f :: _)
@@ -493,6 +497,7 @@ findIpkg fname
                                  (do desc <- parsePkgDesc ipkgn
                                      eoi
                                      pure desc)
+              | Left (FileFail err) => throw (FileErr file err)
               | Left err => throw (ParseFail (getParseErrorLoc ipkgn err) err)
         pkg <- addFields fs (initPkgDesc pname)
         setSourceDir (sourcedir pkg)
