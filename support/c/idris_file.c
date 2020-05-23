@@ -78,7 +78,14 @@ int idris2_fpoll(FILE* f)
 #endif
 }
 
-
+void *idris2_popen(const char *cmd, const char *mode) {
+#ifdef _WIN32
+    FILE *f = win32_u8popen(cmd, mode);
+#else
+    FILE *f = popen(cmd, mode);
+#endif
+    return f;
+}
 
 char* idris2_readLine(FILE* f) {
     char *buffer = NULL;
