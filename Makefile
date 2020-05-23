@@ -143,11 +143,7 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
-ifeq ($(OS), windows)
-	sh ./bootstrap-win.sh
-else
 	sh ./bootstrap.sh
-endif
 
 bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
