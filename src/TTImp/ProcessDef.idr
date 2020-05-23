@@ -395,8 +395,8 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
 
          logTerm 3 "RHS term" rhstm
          when hashit $
-           do addHash lhstm'
-              addHash rhstm
+           do addHashWithNames lhstm'
+              addHashWithNames rhstm
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
