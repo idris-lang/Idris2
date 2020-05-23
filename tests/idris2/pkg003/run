@@ -1,0 +1,11 @@
+$1 --build testpkg.ipkg
+rm -f  build/
+$1 --build testpkg.ipkg --quiet
+$1 --build testpkg.ipkg --verbose
+$1 --build testpkg.ipkg --timing
+$1 --build testpkg.ipkg --codegen gambit
+$1 --build testpkg.ipkg --ide-mode
+$1 --build malformed-package-name
+$1 --build non-existent-package.ipkg
+$1 --build non-existent-package-with-malformed-name
+rm -f  build/
