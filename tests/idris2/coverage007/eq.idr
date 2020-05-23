@@ -27,4 +27,4 @@ badeq : (x : Nat) -> (y : Nat) -> (S (S x) = S y) -> Nat
 badeq x y p impossible
 
 badeqL : (xs : List a) -> (ys : List a) -> (x :: xs = x :: y :: ys) -> Nat
-badeql xs ys p impossible
+badeqL xs ys p impossible
