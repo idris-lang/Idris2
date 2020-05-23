@@ -38,6 +38,10 @@ prim__writeLine : FilePtr -> String -> PrimIO Int
 prim__eof : FilePtr -> PrimIO Int
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
+%foreign support "idris2_popen"
+prim__popen : String -> String -> PrimIO FilePtr
+%foreign "C:pclose,libc 6"
+prim__pclose : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileRemove"
 prim__fileRemove : String -> PrimIO Int
@@ -186,6 +190,18 @@ fflush (FHandle f)
          pure ()
 
 export
+popen : String -> Mode -> IO (Either FileError File)
+popen f m = do
+    ptr <- primIO (prim__popen f (modeStr m))
+    if prim__nullAnyPtr ptr /= 0
+        then returnError
+        else pure (Right (FHandle ptr))
+
+export
+pclose : File -> IO ()
+pclose (FHandle h) = primIO (prim__pclose h)
+
+export
 fileAccessTime : (h : File) -> IO (Either FileError Int)
 fileAccessTime (FHandle f)
     = do res <- primIO (prim__fileAccessTime f)
@@ -265,7 +281,7 @@ writeFile fn contents = do
      closeFile h
      pure (Right ())
 
-namespace FileMode 
+namespace FileMode
   public export
   data FileMode = Read | Write | Execute
 

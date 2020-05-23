@@ -106,7 +106,7 @@ chezTests
    = ["chez001", "chez002", "chez003", "chez004", "chez005", "chez006",
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
-      "chez019",
+      "chez019", "chez020",
       "reg001"]
 
 ideModeTests : List String
@@ -203,7 +203,7 @@ runTest opts testPath
           b <- getAnswer
           when b $ do Right _ <- writeFile "expected" out
                           | Left err => print err
-                      pure () 
+                      pure ()
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
@@ -218,9 +218,9 @@ runTest opts testPath
                            else print FileNotFound
                          pure False
                      | Left err => do print err
-                                      pure False 
+                                      pure False
                  let result = normalize out == normalize exp
-                 if normalize out == normalize exp 
+                 if normalize out == normalize exp
                     then putStrLn "success"
                     else do
                       putStrLn "FAILURE"
