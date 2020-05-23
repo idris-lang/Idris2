@@ -37,6 +37,17 @@ You can also execute expressions directly:
 
 Again, ``expr`` must have type ``IO ()``.
 
+Finally, you can compile to an exectuable from the command line by adding
+the ``-o <output file>`` option:
+
+::
+
+    $ idris2 hello.idr -o hello
+
+This will compile the expression ``Main.main``, generating an executable
+``hello`` (with an extension depending on the code generator) in the
+``build/exec`` directory.
+
 There are three code generators provided in Idris 2, and (later) there will be
 a system for plugging in new code generators for a variety of targets. The
 default is to compile via Chez Scheme, with an alternative via Racket or Gambit.
