@@ -40,6 +40,8 @@ Again, ``expr`` must have type ``IO ()``.
 There are three code generators provided in Idris 2, and (later) there will be
 a system for plugging in new code generators for a variety of targets. The
 default is to compile via Chez Scheme, with an alternative via Racket or Gambit.
+You can set the code generator at the REPL with the `:set codegen` command,
+or via the `IDRIS2_CG` environment variable.
 
 .. toctree::
    :maxdepth: 1

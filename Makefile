@@ -24,13 +24,7 @@ endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
-
-CG ?= ${IDRIS2_CG}
-ifneq (${CG},racket)
-    IDRIS2_IPKG := idris2.ipkg
-else
-    IDRIS2_IPKG := idris2rkt.ipkg
-endif
+IDRIS2_IPKG := idris2.ipkg
 
 ifeq ($(OS), windows)
 	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
