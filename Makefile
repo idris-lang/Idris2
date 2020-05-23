@@ -35,11 +35,11 @@ endif
 ifeq ($(OS), windows)
 	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
 	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
-	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc"
+	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc;${IDRIS2_CURDIR}/libs/network/build/ttc"
 else
 	IDRIS2_PREFIX := ${PREFIX}
 	IDRIS2_CURDIR := ${CURDIR}
-	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc
+	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
 endif
 
 
