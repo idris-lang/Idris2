@@ -107,6 +107,9 @@ install-api:
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
+ifeq ($(OS), windows)
+	-install ${TARGET}.cmd ${PREFIX}/bin
+endif
 	mkdir -p ${PREFIX}/lib/
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 ifneq ($(CG),racket)

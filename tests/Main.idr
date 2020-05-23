@@ -7,6 +7,7 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
+import System.Info
 import System.Path
 
 %default covering
@@ -148,6 +149,19 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
+
+isWindows : Bool
+isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
+
+-- on Windows, we just ignore backslashes and slashes when comparing,
+-- similarity up to that is good enough. Leave errors that depend
+-- on the confusion of slashes and backslashes to unix machines.
+normalize : String -> String
+normalize str =
+    if isWindows
+      then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
+      else str
+
 runTest : Options -> String -> IO Bool
 runTest opts testPath
     = do changeDir testPath
@@ -187,8 +201,7 @@ runTest opts testPath
           b <- getAnswer
           when b $ do Right _ <- writeFile "expected" out
                           | Left err => print err
-                      pure ()
-
+                      pure () 
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
@@ -203,9 +216,9 @@ runTest opts testPath
                            else print FileNotFound
                          pure False
                      | Left err => do print err
-                                      pure False
-
-                 if (out == exp)
+                                      pure False 
+                 let result = normalize out == normalize exp
+                 if normalize out == normalize exp 
                     then putStrLn "success"
                     else do
                       putStrLn "FAILURE"
@@ -213,7 +226,7 @@ runTest opts testPath
                          then mayOverwrite (Just exp) out
                          else printExpectedVsOutput exp out
 
-                 pure (out == exp)
+                 pure result
 
 exists : String -> IO Bool
 exists f
