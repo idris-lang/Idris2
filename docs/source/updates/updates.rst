@@ -428,8 +428,11 @@ used with care. Too many hints can lead to a large search space!
 Totality and Coverage
 ---------------------
 
-``%default covering`` is now the default status [Actually still TODO, but
-planned soon!]
+``%default covering`` is now the default statusk
+
+.. note::
+
+   Actually still TODO, but planned soon!
 
 Build artefacts
 ---------------

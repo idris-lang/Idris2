@@ -126,7 +126,7 @@ To see more detail on what's going on, we can replace the recursive call to
 ``plusReducesZ`` with a hole:
 
 .. code-block:: idris
-    
+
     plusReducesZ (S k) = cong S ?help
 
 Then inspecting the type of the hole at the REPL shows us:
@@ -361,7 +361,9 @@ total, a function ``f`` must:
 Directives and Compiler Flags for Totality
 ------------------------------------------
 
-[NOTE: Not all of this is implemented yet for Idris 2]
+.. warning::
+
+   Not all of this is implemented yet for Idris 2
 
 By default, Idris allows all well-typed definitions, whether total or not.
 However, it is desirable for functions to be total as far as possible, as this
