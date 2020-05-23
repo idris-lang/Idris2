@@ -1,10 +1,10 @@
 Idris 2
 =======
 
-[![Build Status](https://travis-ci.org/idris-lang/Idris2.svg?branch=master)](https://travis-ci.org/idris-lang/Idris2)
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
 ![Windows CI](https://github.com/idris-lang/Idris2/workflows/Windows%20CI/badge.svg)
-![Ubuntu CI](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20CI/badge.svg)
+![Ubuntu CI bootstrap scheme](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20CI%20bootstrap%20scheme/badge.svg)
+![Ubuntu CI boostrap racket](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20CI%20boostrap%20racket/badge.svg)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
