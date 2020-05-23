@@ -12,5 +12,4 @@ Overridable options are:
 
 
 Packages must have an '.ipkg' extension: "malformed-package-name".
-The presented iPKG file does not exist: "non-existent-package.ipkg".
-The presented iPKG file does not exist: "non-existent-package".
+Uncaught error: File error (non-existent-package.ipkg): File Not Found.
