@@ -16,8 +16,15 @@ You may be surprised at how fast Chez Scheme is :). `Racket <https://download.ra
 as an alternative target, also performs well. Both perform better than the
 Idris 1 back end, which is written in C but has not had the decades of
 engineering effort by run time system specialists that Chez and Racket have.
-
 Chez Scheme also allows us to turn off run time checks, which we do.
+
+As anecdotal evidence of the performance improvement, as of 23rd May 2020, on a
+Dell XPS 13 running Ubuntu, the performance is:
+
+* Idris 2 (with the Chez Scheme runtime) checks its own source in 93 seconds.
+* The bootstrapping Idris 2 (compiled with Idris 1) checks the same source in 125s.
+* Idris 1 checks the bootstrapping Idris 2's source (the same as the above,
+  but with minor variations due to the syntax changes) in 768 seconds.
 
 This is, nevertheless, not intended to be a long term solution, even if it
 is a very convenient way to bootstrap.
