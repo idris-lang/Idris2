@@ -52,7 +52,6 @@ runClient serverPort = do
 
 main : IO ()
 main = do
-  when (os == "windows") (schemeCall () "load-shared-object" ["ws2_32"])
   Right (serverPort, tid) <- runServer
     | Left err => putStrLn $ "[server] " ++ err
   runClient serverPort

@@ -333,7 +333,7 @@ startChezWinSh chez appdir target = unlines
     , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
@@ -375,7 +375,7 @@ compileToSO chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift $ chmodRaw tmpFileAbs 0o755
-         coreLift $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFileAbs ++ "\"")
+         coreLift $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
 
 makeSh : String -> String -> String -> Core ()
