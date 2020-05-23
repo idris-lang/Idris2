@@ -130,12 +130,16 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
               (Just "Show paths"),
+
            MkOpt ["--build"] ["package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] ["package file"] (\f => [Package Install f])
               (Just "Install the given package"),
            MkOpt ["--clean"] ["package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
+
+           MkOpt ["--repl"] ["package file"] (\f => [Package REPL f])
+              (Just "Build the given package and launch a REPL instance."),
 
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
