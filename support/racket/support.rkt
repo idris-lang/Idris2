@@ -127,7 +127,7 @@
 
 (define (blodwen-read-bytevec fname)
   (with-handlers
-    ([(lambda (x) #t) (lambda (exn) (make-bytevector 0))])
+    ([(lambda (x) #t) (lambda (exn) #f)])
     (let* [(h (open-file-input-port fname
                                     (file-options)
                                     (buffer-mode line) #f))
