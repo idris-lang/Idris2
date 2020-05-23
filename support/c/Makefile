@@ -27,7 +27,7 @@ $(LIBTARGET): $(OBJS)
 	$(RANLIB) $@
 
 $(DYLIBTARGET): $(OBJS)
-	$(CC) -shared $(LDFLAGS) -o $@ $^
+	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
 
 -include $(DEPS)
