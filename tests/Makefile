@@ -5,9 +5,7 @@ INTERACTIVE ?= --interactive
 test:
 	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --only $(only)
 
-testbin: build/exec/runtests
-
-build/exec/runtests:
+testbin:
 	${IDRIS2_BOOT} --build tests.ipkg
 
 clean:

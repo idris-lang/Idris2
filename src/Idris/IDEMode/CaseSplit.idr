@@ -164,7 +164,7 @@ fnName lhs (UN n)
       else "op"
 fnName lhs (NS _ n) = fnName lhs n
 fnName lhs (DN s _) = s
-fnName lhs n = show n
+fnName lhs n = nameRoot n
 
 
 export

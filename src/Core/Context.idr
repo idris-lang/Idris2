@@ -890,6 +890,9 @@ clearCtxt
     resetElab : Options -> Options
     resetElab = record { elabDirectives = defaultElab }
 
+-- Beware: if your hashable thing contains (potentially resolved) names,
+-- it'll be better to use addHashWithNames to make the hash independent
+-- of the internal numbering of names.
 export
 addHash : {auto c : Ref Ctxt Defs} ->
           Hashable a => a -> Core ()
@@ -1185,6 +1188,15 @@ prettyName (WithBlock outer idx)
          pure ("with block in " ++ !(prettyName outer'))
 prettyName (NS ns n) = prettyName n
 prettyName n = pure (show n)
+
+-- Add a hash of a thing that contains names,
+-- but convert the internal numbers to full names first.
+-- This makes the hash not depend on the internal numbering,
+-- which is unstable.
+export
+addHashWithNames : {auto c : Ref Ctxt Defs} ->
+  Hashable a => HasNames a => a -> Core ()
+addHashWithNames x = toFullNames x >>= addHash
 
 export
 setFlag : {auto c : Ref Ctxt Defs} ->

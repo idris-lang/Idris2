@@ -47,7 +47,7 @@ endif
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} support support-clean clean distclean
+.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean
 
 all: support ${TARGET} testbin libs
 
@@ -107,6 +107,9 @@ install-api:
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
+ifeq ($(OS), windows)
+	-install ${TARGET}.cmd ${PREFIX}/bin
+endif
 	mkdir -p ${PREFIX}/lib/
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 ifneq ($(CG),racket)
