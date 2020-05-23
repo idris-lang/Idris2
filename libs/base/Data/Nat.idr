@@ -415,3 +415,83 @@ multOneRightNeutral (S left) =
   let inductiveHypothesis = multOneRightNeutral left in
     rewrite inductiveHypothesis in
             Refl
+
+
+-- Proofs on -
+
+export
+minusSuccSucc : (left : Nat) -> (right : Nat) -> minus (S left) (S right) = minus left right
+minusSuccSucc left right = Refl
+
+export
+minusZeroLeft : (right : Nat) -> minus 0 right = Z
+minusZeroLeft right = Refl
+
+export
+minusZeroRight : (left : Nat) -> minus left 0 = left
+minusZeroRight Z        = Refl
+minusZeroRight (S left) = Refl
+
+export
+minusZeroN : (n : Nat) -> Z = minus n n
+minusZeroN Z     = Refl
+minusZeroN (S n) = minusZeroN n
+
+export
+minusOneSuccN : (n : Nat) -> S Z = minus (S n) n
+minusOneSuccN Z     = Refl
+minusOneSuccN (S n) = minusOneSuccN n
+
+export
+minusSuccOne : (n : Nat) -> minus (S n) 1 = n
+minusSuccOne Z     = Refl
+minusSuccOne (S n) = Refl
+
+export
+minusPlusZero : (n : Nat) -> (m : Nat) -> minus n (n + m) = Z
+minusPlusZero Z     m = Refl
+minusPlusZero (S n) m = minusPlusZero n m
+
+export
+minusMinusMinusPlus : (left : Nat) -> (centre : Nat) -> (right : Nat) ->
+  minus (minus left centre) right = minus left (centre + right)
+minusMinusMinusPlus Z        Z          right = Refl
+minusMinusMinusPlus (S left) Z          right = Refl
+minusMinusMinusPlus Z        (S centre) right = Refl
+minusMinusMinusPlus (S left) (S centre) right =
+  let inductiveHypothesis = minusMinusMinusPlus left centre right in
+      rewrite inductiveHypothesis in
+              Refl
+
+export
+plusMinusLeftCancel : (left : Nat) -> (right : Nat) -> (right' : Nat) ->
+  minus (left + right) (left + right') = minus right right'
+plusMinusLeftCancel Z right right'        = Refl
+plusMinusLeftCancel (S left) right right' =
+  let inductiveHypothesis = plusMinusLeftCancel left right right' in
+      rewrite inductiveHypothesis in
+              Refl
+
+export
+multDistributesOverMinusLeft : (left : Nat) -> (centre : Nat) -> (right : Nat) ->
+                               (minus left centre) * right = minus (left * right) (centre * right)
+multDistributesOverMinusLeft Z        Z          right = Refl
+multDistributesOverMinusLeft (S left) Z          right =
+  rewrite (minusZeroRight (plus right (mult left right))) in Refl
+multDistributesOverMinusLeft Z        (S centre) right = Refl
+multDistributesOverMinusLeft (S left) (S centre) right =
+  let inductiveHypothesis = multDistributesOverMinusLeft left centre right in
+      rewrite inductiveHypothesis in
+      rewrite plusMinusLeftCancel right (mult left right) (mult centre right) in
+              Refl
+
+export
+multDistributesOverMinusRight : (left : Nat) -> (centre : Nat) -> (right : Nat) ->
+                                left * (minus centre right) = minus (left * centre) (left * right)
+multDistributesOverMinusRight left centre right =
+  rewrite multCommutative left (minus centre right) in
+  rewrite multDistributesOverMinusLeft centre right left in
+  rewrite multCommutative centre left in
+  rewrite multCommutative right left in
+          Refl
+
