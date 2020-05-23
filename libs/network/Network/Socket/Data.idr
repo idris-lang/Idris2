@@ -47,7 +47,7 @@ BACKLOG : Int
 BACKLOG = 20
 
 -- Repeat to avoid a dependency cycle
-%foreign "C:idrnet_geteagain,idris_net"
+%foreign "C:idrnet_geteagain,libidris2_support"
 idrnet_geteagain : PrimIO Int
 
 export
@@ -60,10 +60,10 @@ EAGAIN =
 -- ---------------------------------------------------------------- [ Error Code ]
 
 -- repeat without export to avoid dependency cycles
-%foreign "C:idrnet_errno,idris_net"
+%foreign "C:idrnet_errno,libidris2_support"
 idrnet_errno : PrimIO Int
 
-%foreign "C:isNull,idris_net"
+%foreign "C:isNull,libidris2_support"
 idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 

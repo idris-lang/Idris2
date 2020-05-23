@@ -4,11 +4,13 @@
 cd bootstrap
 echo "Building idris2boot from idris2boot.rkt"
 
-raco exe idris2boot.rkt
+raco exe idris2_app/idris2-boot.rkt
 
 # Put the result in the usual place where the target goes
 mkdir -p ../build/exec
-install idris2boot ../build/exec/idris2
+mkdir -p ../build/exec/idris2_app
+install idris2-rktboot ../build/exec/idris2
+install idris2_app/* ../build/exec/idris2_app
 
 cd ..
 

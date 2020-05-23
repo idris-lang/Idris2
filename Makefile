@@ -35,11 +35,11 @@ endif
 ifeq ($(OS), windows)
 	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
 	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
-	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc;${IDRIS2_CURDIR}/libs/network/build/ttc"
+	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc"
 else
 	IDRIS2_PREFIX := ${PREFIX}
 	IDRIS2_CURDIR := ${CURDIR}
-	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
+	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc
 endif
 
 
@@ -127,7 +127,7 @@ install-support: support
 install-libs: libs
 	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
+	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
@@ -145,11 +145,11 @@ endif
 
 bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	cp bootstrap/idris2.rkt bootstrap/idris2boot.rkt
+	cp bootstrap/idris2_app/idris2.rkt bootstrap/idris2_app/idris2-boot.rkt
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 endif
 	sh ./bootstrap-rkt.sh
 
