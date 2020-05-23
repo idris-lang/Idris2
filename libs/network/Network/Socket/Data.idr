@@ -10,8 +10,6 @@ import Data.Strings
 
 -- ------------------------------------------------------------ [ Type Aliases ]
 
-%cg chez "libidris_net"
-
 public export
 ByteLength : Type
 ByteLength = Int
