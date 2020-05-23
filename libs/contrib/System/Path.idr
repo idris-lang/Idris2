@@ -25,43 +25,44 @@ export
 pathSeparator : Char
 pathSeparator = if isWindows then ';' else ':'
 
-||| Windows' path prefixes.
-|||
-||| @ UNC Windows' Uniform Naming Convention, e.g., a network sharing
-|||   directory: `\\host\c$\Windows\System32`
-||| @ Disk the drive, e.g., "C:". The disk character is in upper case
+||| Windows' path prefixes of path component.
 public export
-data Volumn = UNC String String
-            | Disk Char
+data Volumn
+  = 
+  ||| Windows' Uniform Naming Convention, e.g., a network sharing
+  ||| directory: `\\host\c$\Windows\System32`
+  UNC String String |
+  ||| The drive, e.g., "C:". The disk character is in upper case
+  Disk Char
 
-||| A single body of path.
-|||
-||| @ CurDir "."
-||| @ ParentDir ".."
-||| @ Normal common directory or file
+||| A single body of path component.
 public export
-data Body = CurDir
-          | ParentDir
-          | Normal String
+data Body
+  = 
+  ||| Represents "."
+  CurDir |
+  ||| Represents ".."
+  ParentDir |
+  ||| Common directory or file
+  Normal String
 
-||| A cross-platform file system path.
+||| A parsed cross-platform file system path.
 |||
-||| The function `parse` is the most common way to construct a Path
-||| from String, and the function `show` converts in reverse.
+||| The function `parse` constructs a Path component from String,
+||| and the function `show` converts in reverse.
 |||
 ||| Trailing separator is only used for display and is ignored while
 ||| comparing paths.
-|||
-||| @ volumn Windows' path prefix (only on Windows)
-||| @ hasRoot whether the path contains a root
-||| @ body path bodies
-||| @ hasTrailSep whether the path terminates with a separator
 public export
 record Path where
     constructor MkPath
+    ||| Windows' path prefix (only on Windows)
     volumn : Maybe Volumn
+    ||| Whether the path contains a root
     hasRoot : Bool
+    ||| Path bodies
     body : List Body
+    ||| Whether the path terminates with a separator
     hasTrailSep : Bool
 
 export
@@ -215,17 +216,18 @@ parsePath = do vol <- optional parseVolumn
                trailSep <- optional bodySeparator
                pure $ MkPath vol (isJust root) body (isJust trailSep)
 
-||| Attempt to parse a String into Path.
+||| Parse a String into Path component.
 |||
-||| Returns a error message if the parser fails.
+||| Returns the path parsed as much as possible from left to right, the 
+||| invalid parts on the right end is ignored.
 |||
-||| The parser is relaxed to accept invalid inputs. Relaxing rules:
+||| Some kind of invalid path is accepted. Relaxing rules:
 |||
-||| - Both slash('/') and backslash('\\') are parsed as directory separator,
-|||   regardless of the platform;
-||| - Invalid characters in path body in allowed, e.g., glob like "/root/*";
-||| - Ignoring the verbatim prefix(`\\?\`) that disables the forward
-|||   slash (Windows only).
+||| - Both slash('/') and backslash('\\') are parsed as valid directory
+|||   separator, regardless of the platform;
+||| - Any characters in path body in allowed, e.g., glob like "/root/*";
+||| - Verbatim prefix(`\\?\`) that disables the forward
+|||   slash (Windows only) is ignored.
 |||
 ||| ```idris example
 ||| parse "C:\\Windows/System32"
@@ -279,7 +281,7 @@ isRelative = not . isAbsolute
 ||| - If the right path has a volumn but no root, it replaces left.
 |||
 ||| ```idris example
-||| pure $ !(parse "/usr") </> !(parse "local/etc")
+||| "/usr" </> "local/etc"
 ||| ```
 export
 (</>) : (left : String) -> (right : String) -> String
