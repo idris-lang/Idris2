@@ -71,7 +71,8 @@ schHeader chez libs
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++ 
+    "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
@@ -332,7 +333,7 @@ startChezWinSh chez appdir target = unlines
     , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
@@ -374,7 +375,7 @@ compileToSO chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift $ chmodRaw tmpFileAbs 0o755
-         coreLift $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFileAbs ++ "\"")
+         coreLift $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
 
 makeSh : String -> String -> String -> Core ()
