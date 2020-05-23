@@ -329,9 +329,10 @@ bindReq fc (b :: env) (DropCons p) ns tm
 --  * Every constructor of the family has a return type which conflicts with
 --    the given constructor's type
 hasEmptyPat : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
 hasEmptyPat defs env (Bind fc x (PVar c p ty) sc)
-   = pure $ !(isEmpty defs !(nf defs env ty))
+   = pure $ !(isEmpty defs env !(nf defs env ty))
             || !(hasEmptyPat defs (PVar c p ty :: env) sc)
 hasEmptyPat defs env _ = pure False
 
