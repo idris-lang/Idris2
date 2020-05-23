@@ -79,7 +79,7 @@ idrisTests
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006",
        -- Packages and ipkg files
-       "pkg001", "pkg002",
+       "pkg001", "pkg002", "pkg003",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -205,7 +205,7 @@ runTest opts testPath
           b <- getAnswer
           when b $ do Right _ <- writeFile "expected" out
                           | Left err => print err
-                      pure () 
+                      pure ()
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
@@ -220,9 +220,9 @@ runTest opts testPath
                            else print FileNotFound
                          pure False
                      | Left err => do print err
-                                      pure False 
+                                      pure False
                  let result = normalize out == normalize exp
-                 if normalize out == normalize exp 
+                 if normalize out == normalize exp
                     then putStrLn "success"
                     else do
                       putStrLn "FAILURE"

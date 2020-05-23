@@ -1,0 +1,16 @@
+1/1: Building Main (Main.idr)
+Not all command line options can be used to override package options.
+
+Overridable options are:
+        --quiet
+        --verbose
+        --timing
+        --dumpcases <file>
+        --dumplifted <file>
+        --dumpvmcode <file>
+        --debug-elab-check
+
+
+Packages must have an '.ipkg' extension: "malformed-package-name".
+The presented iPKG file does not exist: "non-existent-package.ipkg".
+The presented iPKG file does not exist: "non-existent-package".
