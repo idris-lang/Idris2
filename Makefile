@@ -47,7 +47,7 @@ endif
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} support support-clean clean distclean
+.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean
 
 all: support ${TARGET} testbin libs
 

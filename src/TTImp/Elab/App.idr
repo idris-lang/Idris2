@@ -649,11 +649,12 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
     isPrimName (p :: ps) fn
         = dropNS fn == p || isPrimName ps fn
 
-    boundSafe : Constant -> Bool
-    boundSafe (BI x) = abs x < 100 -- only do this for relatively small bounds.
+    boundSafe : Constant -> ElabMode -> Bool
+    boundSafe _ (InLHS _) = True -- always need to expand on LHS
+    boundSafe (BI x) _ = abs x < 100 -- only do this for relatively small bounds.
                            -- Once it gets too big, we might be making the term
                            -- bigger than it would have been without evaluating!
-    boundSafe _ = True
+    boundSafe _ _ = True
 
     -- If the term is an application of a primitive conversion (fromInteger etc)
     -- and it's applied to a constant, fully normalise the term.
@@ -665,7 +666,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
         = if isPrimName prims !(getFullName n)
              then case reverse expargs of
                        (IPrimVal _ c :: _) =>
-                          if boundSafe c
+                          if boundSafe c (elabMode elabinfo)
                              then do defs <- get Ctxt
                                      tm <- normalise defs env (fst res)
                                      pure (tm, snd res)

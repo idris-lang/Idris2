@@ -85,7 +85,7 @@ idrisTests
        -- Miscellaneous regressions
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
-       "reg015", "reg016", "reg017", "reg018", "reg019",
+       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
