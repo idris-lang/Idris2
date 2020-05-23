@@ -17,7 +17,7 @@ import Idris.Syntax
 import Idris.Elab.Implementation
 import Idris.Elab.Interface
 
-import Parser.Lexer
+import Parser.Lexer.Source
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -353,6 +353,8 @@ mutual
       = desugarB side ps $
           PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc) $
             foldl (\r, f => PApp fc (PRef fc f) r) (PRef fc (MN "rec" 0)) fields
+  desugarB side ps (PWithUnambigNames fc ns rhs)
+      = IWithUnambigNames fc ns <$> desugarB side ps rhs
 
   desugarUpdate : {auto s : Ref Syn SyntaxInfo} ->
                   {auto b : Ref Bang BangData} ->
@@ -600,12 +602,6 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc rig vis fnopts ty)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           opts <- if (isTotalityOption `any` opts)
-                   then pure opts
-                   else do PartialOK <- getDefaultTotalityOption
-                           | tot => pure (Totality tot :: opts)
-                           -- We assume PartialOK by default internally
-                           pure opts
            pure [IClaim fc rig vis opts !(desugarType ps ty)]
         where
           isTotalityOption : FnOpt -> Bool

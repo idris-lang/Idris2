@@ -10,7 +10,7 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
-import Parser.Lexer
+import Parser.Lexer.Source
 
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -33,7 +33,7 @@ fnName lhs (UN n)
       else "op"
 fnName lhs (NS _ n) = fnName lhs n
 fnName lhs (DN s _) = s
-fnName lhs n = show n
+fnName lhs n = nameRoot n
 
 -- Make the hole on the RHS have a unique name
 uniqueRHS : {auto c : Ref Ctxt Defs} ->

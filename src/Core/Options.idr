@@ -129,12 +129,13 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
 
+export
 isWindows : Bool
 isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
 
 export
 sep : Char
-sep = '/'
+sep = if isWindows then '\\' else '/'
 
 export
 dirSep : String
@@ -156,6 +157,7 @@ defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez 0 False False
                                Nothing Nothing Nothing Nothing
 
+export
 defaultElab : ElabDirectives
 defaultElab = MkElabDirectives True True PartialOK 3 True
 

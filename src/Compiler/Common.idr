@@ -391,7 +391,7 @@ copyLib (lib, fullname)
     = if lib == fullname
          then pure ()
          else do Right bin <- coreLift $ readFromFile fullname
-                    | Left err => throw (FileErr fullname err)
+                    | Left err => pure () -- assume a system library installed globally
                  Right _ <- coreLift $ writeToFile lib bin
                     | Left err => throw (FileErr lib err)
                  pure ()

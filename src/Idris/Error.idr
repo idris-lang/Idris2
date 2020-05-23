@@ -83,7 +83,7 @@ perror (NotCovering fc n (NonCoveringCall ns))
                            [fn] => " " ++ show fn
                            _ => "s: " ++ showSep ", " (map show ns)
 perror (NotTotal fc n r)
-    = pure $ !(prettyName n) ++ " is not total"
+    = pure $ !(prettyName n) ++ " is not total:\n\t" ++ show r
 perror (LinearUsed fc count n)
     = pure $ "There are " ++ show count ++ " uses of linear name " ++ sugarName n
 perror (LinearMisuse fc n exp ctx)

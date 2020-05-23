@@ -843,6 +843,7 @@ TTC Def where
              10 => pure Context.Delayed
              _ => corrupt "Def"
 
+export
 TTC TotalReq where
   toBuf b Total = tag 0
   toBuf b CoveringOnly = tag 1
@@ -864,6 +865,7 @@ TTC DefFlag where
   toBuf b BlockedHint = tag 7
   toBuf b Macro = tag 8
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
+  toBuf b AllGuarded = tag 10
 
   fromBuf b
       = case !getTag of
@@ -875,6 +877,7 @@ TTC DefFlag where
              7 => pure BlockedHint
              8 => pure Macro
              9 => pure (PartialEval [])
+             10 => pure AllGuarded
              _ => corrupt "DefFlag"
 
 export

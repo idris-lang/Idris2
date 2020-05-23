@@ -215,10 +215,13 @@ findIpkg (f :: fs)
 
 allDirs : String -> List String -> List (String, List String)
 allDirs path [] = []
-allDirs path ("" :: ds) = ("/", ds) :: allDirs path ds
+allDirs path ("" :: ds) = (dirSep, ds) ::allDirs path ds
+allDirs "" (d :: ds)
+    = let d' = if isWindows then d ++ dirSep else strCons sep d in 
+                (d', ds) :: allDirs d' ds
 allDirs path (d :: ds)
     = let d' = path ++ strCons sep d in
-          (d', ds) :: allDirs d' ds
+                (d', ds) :: allDirs d' ds
 
 -- Find an ipkg file in any of the directories above this one
 -- returns the directory, the ipkg file name, and the directories we've

@@ -69,6 +69,7 @@ showInfo (n, idx, d)
                                show !(traverse getFullName (keys (refersTo d))))
          coreLift $ putStrLn ("Refers to (runtime): " ++
                                show !(traverse getFullName (keys (refersToRuntime d))))
+         coreLift $ putStrLn ("Flags: " ++ show (flags d))
          when (not (isNil (sizeChange d))) $
             let scinfo = map (\s => show (fnCall s) ++ ": " ++
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
@@ -741,10 +742,10 @@ processCatch cmd
                            pure $ REPLError !(display err)
                            )
 
-parseEmptyCmd : EmptyRule (Maybe REPLCmd)
+parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
 parseEmptyCmd = eoi *> (pure Nothing)
 
-parseCmd : EmptyRule (Maybe REPLCmd)
+parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
@@ -819,6 +820,7 @@ mutual
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
 
+  export
   handleMissing : MissedResult -> String
   handleMissing (CasesMissing x xs) = show x ++ ":\n" ++ showSep "\n" xs
   handleMissing (CallsNonCovering fn ns) = (show fn ++ ": Calls non covering function"
@@ -871,6 +873,7 @@ mutual
   displayResult  (OptionsSet opts) = printResult $ showSep "\n" $ map show opts
   displayResult  _ = pure ()
 
+  export
   displayHelp : String
   displayHelp =
     showSep "\n" $ map cmdInfo help

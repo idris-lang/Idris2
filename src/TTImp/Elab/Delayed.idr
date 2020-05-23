@@ -40,6 +40,17 @@ mkClosedElab {vars = x :: vars} fc (b :: env) elab
     newBinder (Let c val ty) = Let c val ty
     newBinder b = Lam (multiplicity b) Explicit (binderType b)
 
+deeper : {auto e : Ref EST (EState vars)} ->
+         Core a -> Core a
+deeper elab
+    = do est <- get EST
+         let d = delayDepth est
+         put EST (record { delayDepth = 1 + d } est)
+         res <- elab
+         est <- get EST
+         put EST (record { delayDepth = d } est)
+         pure res
+
 -- Try the given elaborator; if it fails, and the error matches the
 -- predicate, make a hole and try it again later when more holes might
 -- have been resolved
@@ -57,10 +68,10 @@ delayOnFailure : {vars : _} ->
                  Core (Term vars, Glued vars)
 delayOnFailure fc rig env expected pred pri elab
     = do est <- get EST
-         handle (elab (not (allowDelay est)))
+         handle (elab False)
           (\err =>
               do est <- get EST
-                 if pred err && allowDelay est
+                 if pred err
                     then
                       do nm <- genName "delayed"
                          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
@@ -70,7 +81,7 @@ delayOnFailure fc rig env expected pred pri elab
                          log 10 ("Due to error " ++ show err)
                          ust <- get UST
                          put UST (record { delayedElab $=
-                                 ((pri, ci, mkClosedElab fc env (elab True)) :: ) }
+                                 ((pri, ci, mkClosedElab fc env (deeper (elab True))) :: ) }
                                          ust)
                          pure (dtm, expected)
                     else throw err)
@@ -88,19 +99,16 @@ delayElab : {vars : _} ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
     = do est <- get EST
-         if not (allowDelay est)
-            then elab
-            else do
-             nm <- genName "delayed"
-             expected <- mkExpected exp
-             (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-             logGlueNF 5 ("Postponing elaborator " ++ show nm ++
-                          " for") env expected
-             ust <- get UST
-             put UST (record { delayedElab $=
-                     ((pri, ci, mkClosedElab fc env elab) :: ) }
-                             ust)
-             pure (dtm, expected)
+         nm <- genName "delayed"
+         expected <- mkExpected exp
+         (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
+         logGlueNF 5 ("Postponing elaborator " ++ show nm ++
+                      " for") env expected
+         ust <- get UST
+         put UST (record { delayedElab $=
+                 ((pri, ci, mkClosedElab fc env elab) :: ) }
+                         ust)
+         pure (dtm, expected)
   where
     mkExpected : Maybe (Glued vars) -> Core (Glued vars)
     mkExpected (Just ty) = pure ty
@@ -121,18 +129,74 @@ ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
+mutual
+  mismatchNF : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+  mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
+      = if xn /= yn
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+      = if xt /= yt
+           then pure True
+           else anyM (mismatch defs) (zip xargs yargs)
+  mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
+  mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
+  mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+  mismatchNF _ _ _ = pure False
+
+  mismatch : {vars : _} ->
+             Defs -> (Closure vars, Closure vars) -> Core Bool
+  mismatch defs (x, y)
+      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+
+contra : {vars : _} ->
+               Defs -> NF vars -> NF vars -> Core Bool
+-- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
+contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+    = if xn /= yn
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+    = if xt /= yt
+         then pure True
+         else anyM (mismatch defs) (zip xargs yargs)
+contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
+contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
+contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+contra defs x y = pure False
+
+-- Errors that might be recoverable later if we try again. Generally -
+-- ambiguity errors, type inference errors
+export
+recoverable : {auto c : Ref Ctxt Defs} ->
+              Error -> Core Bool
+recoverable (CantConvert _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (CantSolveEq _ env l r)
+   = do defs <- get Ctxt
+        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+recoverable (UndefinedName _ _) = pure False
+recoverable (InType _ _ err) = recoverable err
+recoverable (InCon _ _ err) = recoverable err
+recoverable (InLHS _ _ err) = recoverable err
+recoverable (InRHS _ _ err) = recoverable err
+recoverable (WhenUnifying _ _ _ _ err) = recoverable err
+recoverable _ = pure True
+
 data RetryError
-     = NoError
-     | AmbigError
+     = RecoverableErrors
      | AllErrors
 
 Show RetryError where
-  show NoError = "NoError"
-  show AmbigError = "AmbigError"
+  show RecoverableErrors = "RecoverableErrors"
   show AllErrors = "AllErrors"
 
 -- Try all the delayed elaborators. If there's a failure, we want to
 -- show the ambiguity errors first (since that's the likely cause)
+-- Return all the ones that need trying again
 retryDelayed' : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
@@ -140,14 +204,16 @@ retryDelayed' : {vars : _} ->
                 {auto e : Ref EST (EState vars)} ->
                 RetryError ->
                 List (Nat, Int, Core ClosedTerm) ->
-                Core ()
-retryDelayed' errmode [] = pure ()
-retryDelayed' errmode ((_, i, elab) :: ds)
+                List (Nat, Int, Core ClosedTerm) ->
+                Core (List (Nat, Int, Core ClosedTerm))
+retryDelayed' errmode acc [] = pure (reverse acc)
+retryDelayed' errmode acc (d@(_, i, elab) :: ds)
     = do defs <- get Ctxt
          Just Delayed <- lookupDefExact (Resolved i) (gamma defs)
-              | _ => retryDelayed' errmode ds
+              | _ => retryDelayed' errmode acc ds
          handle
-           (do log 5 ("Retrying delayed hole " ++ show !(getFullName (Resolved i)))
+           (do est <- get EST
+               log 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
                -- elab itself might have delays internally, so keep track of them
                ust <- get UST
                put UST (record { delayedElab = [] } ust)
@@ -160,15 +226,14 @@ retryDelayed' errmode ((_, i, elab) :: ds)
                logTerm 5 ("Resolved delayed hole " ++ show i) tm
                logTermNF 5 ("Resolved delayed hole NF " ++ show i) [] tm
                removeHole i
-               retryDelayed' errmode ds')
+               retryDelayed' errmode acc ds')
            (\err => do log 5 $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))
                                 ++ "\n" ++ show err
                        case errmode of
-                         NoError => retryDelayed' errmode ds
-                         AmbigError =>
-                            if ambiguous err -- give up on ambiguity
+                         RecoverableErrors =>
+                            if not !(recoverable err)
                                then throw err
-                               else retryDelayed' errmode ds
+                               else retryDelayed' errmode (d :: acc) ds
                          AllErrors => throw err)
 
 export
@@ -180,9 +245,10 @@ retryDelayed : {vars : _} ->
                List (Nat, Int, Core ClosedTerm) ->
                Core ()
 retryDelayed ds
-    = do retryDelayed' NoError ds -- try everything again
-         retryDelayed' AmbigError ds -- fail on ambiguity error
-         retryDelayed' AllErrors ds -- fail on all errors
+    = do est <- get EST
+         ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
+         retryDelayed' AllErrors [] ds -- fail on all errors
+         pure ()
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
@@ -199,8 +265,9 @@ runDelays pri elab
          tm <- elab
          ust <- get UST
          log 2 $ "Rerunning delayed in elaborator"
-         handle (retryDelayed' AllErrors
-                     (reverse (filter hasPri (delayedElab ust))))
+         handle (do retryDelayed' AllErrors []
+                       (reverse (filter hasPri (delayedElab ust)))
+                    pure ())
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)
          ust <- get UST

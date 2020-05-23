@@ -33,6 +33,8 @@ processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> FnOpt -> Core ()
 processFnOpt fc ndef Inline
     = setFlag fc ndef Inline
+processFnOpt fc ndef TCInline
+    = setFlag fc ndef TCInline
 processFnOpt fc ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
@@ -264,7 +266,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
               | Just _ => throw (AlreadyDefined fc n)
 
          ty <-
-             wrapError (InType fc n) $
+             wrapErrorC eopts (InType fc n) $
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
                              (gType fc)
@@ -301,5 +303,5 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          log 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          when (vis /= Private) $
-              do addHash n
-                 addHash ty
+              do addHashWithNames n
+                 addHashWithNames ty

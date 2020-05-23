@@ -349,7 +349,7 @@ unc = do count (exactly 2) $ match $ PTPunct '\\'
          server <- match PTText
          bodySeparator
          share <- match PTText
-         pure $ UNC server share
+         Core.pure $ UNC server share
 
 -- Example: \\?\server\share
 private
@@ -358,7 +358,7 @@ verbatimUnc = do verbatim
                  server <- match PTText
                  bodySeparator
                  share <- match PTText
-                 pure $ UNC server share
+                 Core.pure $ UNC server share
 
 -- Example: C:
 private

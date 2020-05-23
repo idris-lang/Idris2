@@ -18,6 +18,7 @@ import Core.UnifyState
 import TTImp.BindImplicits
 import TTImp.Elab
 import TTImp.Elab.Check
+import TTImp.Elab.Utils
 import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
@@ -252,7 +253,7 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
                           then InTransform
                           else InLHS mult
          (lhstm, lhstyg) <-
-             wrapError (InLHS fc !(getFullName (Resolved n))) $
+             wrapErrorC opts (InLHS fc !(getFullName (Resolved n))) $
                      elabTerm n lhsMode opts nest env
                                 (IBindHere fc PATTERN lhs) Nothing
          logTerm 5 "Checked LHS term" lhstm
@@ -328,9 +329,10 @@ bindReq fc (b :: env) (DropCons p) ns tm
 --  * Every constructor of the family has a return type which conflicts with
 --    the given constructor's type
 hasEmptyPat : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
 hasEmptyPat defs env (Bind fc x (PVar c p ty) sc)
-   = pure $ !(isEmpty defs !(nf defs env ty))
+   = pure $ !(isEmpty defs env !(nf defs env ty))
             || !(hasEmptyPat defs (PVar c p ty :: env) sc)
 hasEmptyPat defs env _ = pure False
 
@@ -387,14 +389,14 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
          log 5 $ "Checking RHS " ++ show rhs
          logEnv 5 "In env" env'
 
-         rhstm <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         rhstm <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
 
          logTerm 3 "RHS term" rhstm
          when hashit $
-           do addHash lhstm'
-              addHash rhstm
+           do addHashWithNames lhstm'
+              addHashWithNames rhstm
 
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
@@ -411,7 +413,7 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
          let wmode
                = if isErased mult then InType else InExpr
 
-         (wval, gwvalTy) <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         (wval, gwvalTy) <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
@@ -471,7 +473,7 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
                          map (maybe wval_raw (\pn => IVar fc (snd pn))) wargNames)
 
          log 3 $ "Applying to with argument " ++ show rhs_in
-         rhs <- wrapError (InRHS fc !(getFullName (Resolved n))) $
+         rhs <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
              checkTermSub n wmode opts nest' env' env sub' rhs_in
                           (gnf env' reqty)
 
@@ -720,6 +722,7 @@ processDef opts nest env fc n_in cs_in
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
+                checkIfGuarded fc n
 
          md <- get MD -- don't need the metadata collected on the coverage check
          cov <- checkCoverage nidx ty mult cs
@@ -729,8 +732,7 @@ processDef opts nest env fc n_in cs_in
          -- If we're not in a case tree, compile all the outstanding case
          -- trees.
          when (not (elem InCase opts)) $
-           compileRunTime fc cov atotal
-
+              compileRunTime fc cov atotal
   where
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True

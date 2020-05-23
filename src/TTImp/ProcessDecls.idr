@@ -4,6 +4,7 @@ import Core.Context
 import Core.Core
 import Core.Env
 import Core.Metadata
+import Core.Termination
 import Core.UnifyState
 
 import Parser.Source
@@ -20,6 +21,8 @@ import TTImp.ProcessType
 import TTImp.TTImp
 
 import Data.List
+import Data.Maybe
+import Data.NameMap
 
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
@@ -53,6 +56,58 @@ process eopts nest env (ILog n)
     = setLogLevel n
 
 TTImp.Elab.Check.processDecl = process
+
+export
+checkTotalityOK : {auto c : Ref Ctxt Defs} ->
+                  Name -> Core (Maybe Error)
+checkTotalityOK n
+-- checkTotalityOK (NS _ n@(UN _)) -- top level user defined names only
+    = do defs <- get Ctxt
+         Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure Nothing
+--          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
+-- TODO: Put the above back when totality checker is properly working
+         let treq = fromMaybe PartialOK (findSetTotal (flags gdef))
+         let tot = totality gdef
+         let fc = location gdef
+         log 3 $ show n ++ " must be: " ++ show treq
+         case treq of
+              PartialOK => pure Nothing
+              CoveringOnly => checkCovering fc (isCovering tot)
+              Total => checkTotality fc
+  where
+    checkCovering : FC -> Covering -> Core (Maybe Error)
+    checkCovering fc IsCovering = pure Nothing
+    checkCovering fc cov
+        = pure (Just (NotCovering fc n cov))
+
+    checkTotality : FC -> Core (Maybe Error)
+    checkTotality fc
+        = do checkTotal fc n -- checked lazily, so better calculate here
+             t <- getTotality fc n
+             err <- checkCovering fc (isCovering t)
+             maybe (case isTerminating t of
+                         NotTerminating p => pure (Just (NotTotal fc n p))
+                         _ => pure Nothing)
+                   (pure . Just) err
+
+    findSetTotal : List DefFlag -> Maybe TotalReq
+    findSetTotal [] = Nothing
+    findSetTotal (SetTotal t :: _) = Just t
+    findSetTotal (_ :: xs) = findSetTotal xs
+
+-- Check totality of all the names added in the file, and return a list of
+-- totality errors.
+-- Do this at the end of processing a file (or a batch of definitions) since
+-- they might be mutually dependent so we need all the definitions to be able
+-- to check accurately.
+export
+getTotalityErrors : {auto c : Ref Ctxt Defs} ->
+                    Core (List Error)
+getTotalityErrors
+    = do defs <- get Ctxt
+         errs <- traverse checkTotalityOK (keys (toSave defs))
+         pure (mapMaybe id errs)
 
 export
 processDecls : {vars : _} ->
