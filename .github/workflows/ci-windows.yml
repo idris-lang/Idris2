@@ -1,4 +1,4 @@
-name: Idris 2 CI
+name: Windows CI
 on:
   push:
     branches:
