@@ -112,10 +112,8 @@ ifeq ($(OS), windows)
 endif
 	mkdir -p ${PREFIX}/lib/
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
-ifneq ($(CG),racket)
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
-endif
 
 install-support: support
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
