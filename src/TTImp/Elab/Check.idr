@@ -131,13 +131,18 @@ record EState (vars : List Name) where
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
+  unambiguousNames : StringMap (Name, Int, GlobalDef)
+                  -- Mapping from userNameRoot to fully resolved names.
+                  -- For names in this mapping, we don't run disambiguation.
+                  -- Used in with-expressions.
+
 export
 data EST : Type where
 
 export
 initEStateSub : {outer : _} ->
                 Int -> Env Term outer -> SubVars outer vars -> EState vars
-initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty
+initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty empty
 
 export
 initEState : {vars : _} ->
@@ -167,7 +172,8 @@ weakenedEState {e}
                               (allPatVars est)
                               (delayDepth est)
                               (map weaken (linearUsed est))
-                              (saveHoles est))
+                              (saveHoles est)
+                              (unambiguousNames est))
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
@@ -199,7 +205,8 @@ strengthenedEState {n} {vars} c e fc env
                         (allPatVars est)
                         (delayDepth est)
                         (mapMaybe dropTop (linearUsed est))
-                        (saveHoles est))
+                        (saveHoles est)
+                        (unambiguousNames est))
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
     dropSub (DropCons sub) = pure sub
@@ -293,6 +300,7 @@ updateEnv env sub bif st
                (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 export
 addBindIfUnsolved : {vars : _} ->
@@ -309,6 +317,7 @@ addBindIfUnsolved hn r p env tm ty st
                (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 clearBindIfUnsolved : EState vars -> EState vars
 clearBindIfUnsolved st
@@ -320,6 +329,7 @@ clearBindIfUnsolved st
                (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 -- Clear the 'toBind' list, except for the names given
 export

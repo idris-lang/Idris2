@@ -105,6 +105,9 @@ mutual
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> RawImp
 
+       -- with-disambiguation
+       IWithUnambigNames : FC -> List Name -> RawImp -> RawImp
+
   public export
   data IFieldUpdate : Type where
        ISetField : (path : List String) -> RawImp -> IFieldUpdate
@@ -170,6 +173,7 @@ mutual
       show (IType fc) = "%type"
       show (Implicit fc True) = "_"
       show (Implicit fc False) = "?"
+      show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
   Show IFieldUpdate where
@@ -590,6 +594,7 @@ getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
 getFC (IAs x _ _ _) = x
 getFC (Implicit x _) = x
+getFC (IWithUnambigNames x _ _) = x
 
 export
 apply : RawImp -> List RawImp -> RawImp
@@ -679,6 +684,8 @@ mutual
 
     toBuf b (Implicit fc i)
         = do tag 28; toBuf b fc; toBuf b i
+    toBuf b (IWithUnambigNames fc ns rhs)
+        = do tag 29; toBuf b ns; toBuf b rhs
 
     fromBuf b
         = case !getTag of
@@ -763,6 +770,10 @@ mutual
                28 => do fc <- fromBuf b
                         i <- fromBuf b
                         pure (Implicit fc i)
+               29 => do fc <- fromBuf b
+                        ns <- fromBuf b
+                        rhs <- fromBuf b
+                        pure (IWithUnambigNames fc ns rhs)
                _ => corrupt "RawImp"
 
   export
