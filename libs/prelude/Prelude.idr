@@ -630,12 +630,12 @@ all p = foldl (\x,y => x && p y)  True
 ||| Add together all the elements of a structure.
 public export
 sum : (Foldable t, Num a) => t a -> a
-sum = foldr (+) 0
+sum = foldl (+) 0
 
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
-product = foldr (*) 1
+product = foldl (*) 1
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
