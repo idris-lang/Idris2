@@ -1,3 +1,4 @@
+%default partial
 
 data Foo : Int -> Type where
      FZero : Foo 0

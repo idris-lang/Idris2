@@ -2,6 +2,8 @@ module IFace
 
 import Stuff
 
+%default partial
+
 infixl 5 ==, /=
 
 interface Eq b where

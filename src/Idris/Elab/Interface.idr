@@ -393,6 +393,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         changeName : Name -> ImpClause -> ImpClause
         changeName dn (PatClause fc lhs rhs)
             = PatClause fc (changeNameTerm dn lhs) rhs
+        changeName dn (WithClause fc lhs wval cs)
+            = WithClause fc (changeNameTerm dn lhs) wval
+                         (map (changeName dn) cs)
         changeName dn (ImpossibleClause fc lhs)
             = ImpossibleClause fc (changeNameTerm dn lhs)
 
