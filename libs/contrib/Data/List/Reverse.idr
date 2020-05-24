@@ -40,15 +40,15 @@ reverseAppend (x :: xs) ys =
       rewrite reverseCons x xs in
         sym $ appendAssociative (reverse ys) (reverse xs) [x]
 
-||| A recursive definition of reverse.
-export
-reverseRec : List a -> List a
-reverseRec [] = []
-reverseRec (x :: xs) = reverseRec xs `snoc` x
+||| A slow recursive definition of reverse.
+public export
+0 slowReverse : List a -> List a
+slowReverse [] = []
+slowReverse (x :: xs) = slowReverse xs `snoc` x
 
 ||| The iterative and recursive defintions of reverse are the same.
 export
-reverseEquiv : (xs : List a) -> reverseRec xs = reverse xs
+reverseEquiv : (xs : List a) -> slowReverse xs = reverse xs
 reverseEquiv [] = Refl
 reverseEquiv (x :: xs) =
   rewrite reverseEquiv xs in
