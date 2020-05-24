@@ -37,7 +37,7 @@ reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter (flipHeadX prf)
     cancelOuter prf = snd (consInjective (flipLastX' prf))
     equateInnerAndOuter : reverse (xs ++ [x']) ++ [x] = (x :: xs) ++ [x'] -> (reverse xs = xs, x = x')
     equateInnerAndOuter prf =
-      let (prf', xEqualsX') = unfoldEqualSnoc x x' (reverse (xs ++ [x'])) (x :: xs) prf
+      let (prf', xEqualsX') = snocCong2 prf
        in (cancelOuter prf', xEqualsX')
 
 ||| Only Palindromes are equal to their own reverse.
