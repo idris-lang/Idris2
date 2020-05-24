@@ -8,6 +8,7 @@
 
 #ifdef _WIN32
 extern char **_environ;
+#include "windows/win_utils.h"
 #define environ _environ
 #else
 extern char** environ;
@@ -42,19 +43,27 @@ void idris2_putStr(char* f) {
 }
 
 void idris2_sleep(int sec) {
+#ifdef _WIN32
+    win32_sleep(sec*1000);
+#else
     struct timespec t;
     t.tv_sec = sec;
     t.tv_nsec = 0;
 
     nanosleep(&t, NULL);
+#endif
 }
 
 void idris2_usleep(int usec) {
+#ifdef _WIN32
+    win32_sleep(usec/1000);
+#else
     struct timespec t;
     t.tv_sec = usec / 1000000;
     t.tv_nsec = (usec % 1000000) * 1000;
 
     nanosleep(&t, NULL);
+#endif
 }
 
 int idris2_time() {
