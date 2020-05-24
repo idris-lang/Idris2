@@ -26,7 +26,7 @@ runParser : {e : _} ->
             Maybe LiterateStyle -> String -> Grammar (TokenData SourceToken) e ty -> Either ParseError ty
 runParser lit = runParserTo lit (const False)
 
-export
+export covering -- readFile might not terminate
 parseFile : (fn : String) -> SourceRule ty -> IO (Either ParseError ty)
 parseFile fn p
     = do Right str <- readFile fn

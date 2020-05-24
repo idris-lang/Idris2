@@ -203,6 +203,9 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty Private None)
+         -- don't worry about totality of the case block; it'll be handled
+         -- by the totality of the parent function
+         setFlag fc (Resolved cidx) (SetTotal PartialOK)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
 
          -- If there's no duplication of the scrutinee in the block,

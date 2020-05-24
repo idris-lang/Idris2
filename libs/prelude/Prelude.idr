@@ -353,14 +353,18 @@ interface Num ty => Abs ty where
 
 public export
 interface Num ty => Fractional ty where
+  partial
   (/) : ty -> ty -> ty
+  partial
   recip : ty -> ty
 
   recip x = 1 / x
 
 public export
 interface Num ty => Integral ty where
+  partial
   div : ty -> ty -> ty
+  partial
   mod : ty -> ty -> ty
 
 ----- Instances for primitives
@@ -1117,13 +1121,13 @@ fastPack xs
 ||| ```
 public export
 unpack : String -> List Char
-unpack str = assert_total $ unpack' 0 (prim__cast_IntegerInt (natToInteger (length str))) str
+unpack str = unpack' 0 (prim__cast_IntegerInt (natToInteger (length str))) str
   where
     unpack' : Int -> Int -> String -> List Char
     unpack' pos len str
         = if pos >= len
              then []
-             else (prim__strIndex str pos) :: unpack' (pos + 1) len str
+             else assert_total (prim__strIndex str pos) :: assert_total (unpack' (pos + 1) len str)
 
 public export
 Semigroup String where

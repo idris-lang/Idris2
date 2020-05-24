@@ -65,9 +65,7 @@ checkTotalityOK n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
---          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
--- TODO: Put the above back when totality checker is properly working
-         let treq = fromMaybe PartialOK (findSetTotal (flags gdef))
+         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
          let fc = location gdef
          log 3 $ show n ++ " must be: " ++ show treq

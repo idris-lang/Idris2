@@ -2,6 +2,8 @@ module Main
 
 import Data.List
 
+%default partial
+
 large : (a: Type) -> a
 -- integer larger than 64 bits
 large Integer = 3518437212345678901234567890123

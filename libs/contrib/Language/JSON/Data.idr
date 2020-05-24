@@ -38,7 +38,8 @@ intToHexString n =
     13 => "D"
     14 => "E"
     15 => "F"
-    other => intToHexString (shiftR n 4) ++ intToHexString (mod n 16)
+    other => assert_total $
+               intToHexString (shiftR n 4) ++ intToHexString (mod n 16)
 
 private
 showChar : Char -> String
