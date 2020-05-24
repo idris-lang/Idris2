@@ -1,5 +1,6 @@
 module Data.Buffer
 
+import System.Directory
 import System.File
 
 export
@@ -149,7 +150,7 @@ copyData src start len dest loc
 --             else pure (Left FileReadError)
 
 %foreign "scheme:blodwen-read-bytevec"
-prim__readBufferFromFile : String -> PrimIO Buffer
+prim__readBufferFromFile : String -> String -> PrimIO Buffer
 
 %foreign "scheme:blodwen-isbytevec"
 prim__isBuffer : Buffer -> Int
@@ -159,20 +160,24 @@ prim__isBuffer : Buffer -> Int
 export
 createBufferFromFile : String -> IO (Either FileError Buffer)
 createBufferFromFile fn
-    = do buf <- primIO (prim__readBufferFromFile fn)
+    = do Just cwd <- currentDir
+              | Nothing => pure (Left FileReadError)
+         buf <- primIO (prim__readBufferFromFile cwd fn)
          if prim__isBuffer buf /= 0
             then pure (Left FileReadError)
             else do let sz = prim__bufferSize buf
                     pure (Right buf)
 
 %foreign "scheme:blodwen-write-bytevec"
-prim__writeBuffer : String -> Buffer -> Int -> PrimIO Int
+prim__writeBuffer : String -> String -> Buffer -> Int -> PrimIO Int
 
 export
 writeBufferToFile : String -> Buffer -> (maxbytes : Int) ->
                     IO (Either FileError ())
 writeBufferToFile fn buf max
-    = do res <- primIO (prim__writeBuffer fn buf max)
+    = do Just cwd <- currentDir
+              | Nothing => pure (Left FileReadError)
+         res <- primIO (prim__writeBuffer cwd fn buf max)
          if res /= 0
             then pure (Left FileWriteError)
             else pure (Right ())

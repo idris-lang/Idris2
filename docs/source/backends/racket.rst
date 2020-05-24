@@ -8,7 +8,7 @@ The Racket code generator is accessed via a REPL command:
 
     Main> :set cg racket
 
-Alternatively, you can set it via the `IDRIS2_CG` environment variable:
+Alternatively, you can set it via the ``IDRIS2_CG`` environment variable:
 
 ::
 

@@ -20,6 +20,7 @@ import Idris.Syntax
 import Data.List
 import Data.StringMap
 
+import System.Directory
 import System.File
 
 %default covering

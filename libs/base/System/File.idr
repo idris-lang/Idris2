@@ -31,7 +31,7 @@ prim__readLine : FilePtr -> PrimIO (Ptr String)
 %foreign support "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign support "fgetc"
-prim__readChar : FilePtr -> PrimIO Char
+prim__readChar : FilePtr -> PrimIO Int
 %foreign support "idris2_writeLine"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 %foreign support "idris2_eof"
@@ -159,7 +159,7 @@ fGetChar (FHandle h)
          ferr <- primIO (prim_error h)
          if (ferr /= 0)
             then returnError
-            else ok c
+            else ok (cast c)
 
 export
 fPutStr : (h : File) -> String -> IO (Either FileError ())
