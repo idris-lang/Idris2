@@ -117,7 +117,7 @@ public export
 
 ||| Equality is a congruence.
 public export
-cong : (f : t -> u) -> (1 p : a = b) -> f a = f b
+cong : (0 f : t -> u) -> (1 p : a = b) -> f a = f b
 cong f Refl = Refl
 
 ||| A canonical proof that some type is empty.
