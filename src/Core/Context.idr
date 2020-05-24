@@ -617,14 +617,14 @@ mutual
   HasNames (CaseTree vars) where
     full gam (Case i v ty alts)
         = pure $ Case i v !(full gam ty) !(traverse (full gam) alts)
-    full gam (STerm tm)
-        = pure $ STerm !(full gam tm)
+    full gam (STerm i tm)
+        = pure $ STerm i !(full gam tm)
     full gam t = pure t
 
     resolved gam (Case i v ty alts)
         = pure $ Case i v !(resolved gam ty) !(traverse (resolved gam) alts)
-    resolved gam (STerm tm)
-        = pure $ STerm !(resolved gam tm)
+    resolved gam (STerm i tm)
+        = pure $ STerm i !(resolved gam tm)
     resolved gam t = pure t
 
   export
@@ -859,6 +859,8 @@ record Defs where
      -- again
   timings : StringMap (Bool, Integer)
      -- ^ record of timings from logTimeRecord
+  warnings : List Warning
+     -- ^ as yet unreported warnings
 
 -- Label for context references
 export
@@ -876,7 +878,7 @@ initDefs
     = do gam <- initCtxt
          pure (MkDefs gam [] ["Main"] [] defaults empty 100
                       empty empty empty [] [] empty []
-                      empty 5381 [] [] [] [] [] empty empty empty empty)
+                      empty 5381 [] [] [] [] [] empty empty empty empty [])
 
 -- Reset the context, except for the options
 export
@@ -2177,6 +2179,13 @@ setSession : {auto c : Ref Ctxt Defs} ->
 setSession sopts
     = do defs <- get Ctxt
          put Ctxt (record { options->session = sopts } defs)
+
+export
+recordWarning : {auto c : Ref Ctxt Defs} ->
+                Warning -> Core ()
+recordWarning w
+    = do defs <- get Ctxt
+         put Ctxt (record { warnings $= (w ::) } defs)
 
 -- Log message with a term, translating back to human readable names first
 export

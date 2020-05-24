@@ -343,7 +343,7 @@ mutual
   {vars : _} -> TTC (CaseTree vars) where
     toBuf b (Case {name} idx x scTy xs)
         = do tag 0; toBuf b name; toBuf b idx; toBuf b xs
-    toBuf b (STerm x)
+    toBuf b (STerm _ x)
         = do tag 1; toBuf b x
     toBuf b (Unmatched msg)
         = do tag 2; toBuf b msg
@@ -355,7 +355,7 @@ mutual
                        xs <- fromBuf b
                        pure (Case {name} idx (mkPrf idx) (Erased emptyFC False) xs)
                1 => do x <- fromBuf b
-                       pure (STerm x)
+                       pure (STerm 0 x)
                2 => do msg <- fromBuf b
                        pure (Unmatched msg)
                3 => pure Impossible

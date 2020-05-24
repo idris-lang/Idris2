@@ -131,6 +131,11 @@ data Error : Type where
      InLHS : FC -> Name -> Error -> Error
      InRHS : FC -> Name -> Error -> Error
 
+public export
+data Warning : Type where
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
+
 export
 Show TTCErrorMsg where
   show (Format file ver exp) =
@@ -361,6 +366,10 @@ getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (UnreachableClause fc _ _) = Just fc
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
