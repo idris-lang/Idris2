@@ -122,10 +122,11 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
          (_, mlhs) <- bindNames False mlhs_raw
          setUnboundImplicits autoimp
 
-         let (warg :: rest) = reverse wrest
+         let wargs          = reverse wrest
+         let (warg :: rest) = wargs
              | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
          log 5 $ show lhs ++ " against " ++ show mlhs ++
-                 " dropping " ++ show (warg :: rest)
+                 " dropping " ++ show wargs
          ms <- getMatch True lhs mlhs
          log 5 $ "Matches: " ++ show ms
          let newlhs = apply (IVar ploc wname)

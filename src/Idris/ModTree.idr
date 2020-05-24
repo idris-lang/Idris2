@@ -36,7 +36,7 @@ Show ModTree where
 
 -- A module file to build, and its list of dependencies
 -- From this we can work out if the source file needs rebuilding, assuming
--- things are build in dependency order. A source file needs rebuilding
+-- things are built in dependency order. A source file needs rebuilding
 -- if:
 --  + Its corresponding ttc is older than the source file
 --  + Any of the import ttcs are *newer* than the corresponding ttc
@@ -172,7 +172,7 @@ buildMod loc num len mod
         let needsBuilding =
                case ttcTime of
                     Nothing => True
-                    Just t => any (\x => x > t) (srcTime :: map snd depTimes)
+                    Just t  => any {t = List} (> t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
         m <- newRef MD initMetadata
         put Syn initSyntax

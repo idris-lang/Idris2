@@ -45,7 +45,7 @@ length_ext xs = Calculate [
   ]
   where
     lemma : (n : Nat) -> (xs : List a) -> 
-            Data.List.length xs + n  = length_aux xs n
+            Data.List.length xs + n = length_aux xs n
     lemma n [] = Refl
     lemma n (_ :: xs) = 
       let length_xs : Nat

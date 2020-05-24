@@ -176,7 +176,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                -- Add the 'using' hints
                defs <- get Ctxt
                let hs = openHints defs -- snapshot open hint state
-               log 10 $ "Open hints: " ++ (show (impName :: nusing))
+               log 10 $ "Open hints: " ++ (show $ the (List Name) (impName :: nusing))
                traverse_ (\n => do n' <- checkUnambig fc n
                                    addOpenHint n') nusing
 

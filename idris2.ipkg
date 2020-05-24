@@ -50,8 +50,10 @@ modules =
 
     Data.ANameMap,
     Data.Bool.Extra,
+    Data.Either.Extra,
     Data.IntMap,
     Data.LengthMatch,
+    Data.List.NonEmpty,
     Data.NameMap,
     Data.StringMap,
     Data.These,

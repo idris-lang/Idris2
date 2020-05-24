@@ -5,6 +5,7 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
+import Data.List.NonEmpty
 
 %default total
 
@@ -388,7 +389,7 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> SourceRule ty) -> SourceRule (List ty)
+nonEmptyBlock : (IndentInfo -> SourceRule ty) -> SourceRule (List1 ty)
 nonEmptyBlock item
     = do symbol "{"
          commit

@@ -1,5 +1,10 @@
 module Data.Bool.Extra
 
+||| A non-dependent alternative to if-then-else
+public export
+boolCase : Bool -> Lazy a -> Lazy a -> a
+boolCase b l r = if b then l else r
+
 public export
 andSameNeutral : (x : Bool) -> x && x = x
 andSameNeutral False = Refl

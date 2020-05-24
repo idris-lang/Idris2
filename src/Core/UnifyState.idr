@@ -11,6 +11,7 @@ import Core.TT
 import Core.TTC
 import Utils.Binary
 
+import Data.Bool.Extra
 import Data.IntMap
 import Data.List
 import Data.NameMap
@@ -678,11 +679,11 @@ dumpConstraints loglevel all
     = do ust <- get UST
          defs <- get Ctxt
          if logLevel (session (options defs)) >= loglevel then
-            do let hs = toList (guesses ust) ++
-                        toList (if all then holes ust else currentHoles ust)
+            do let hs = keys (guesses ust) ++
+                        keys (boolCase all (holes ust) (currentHoles ust))
                case hs of
                     [] => pure ()
                     _ => do log loglevel "--- CONSTRAINTS AND HOLES ---"
-                            traverse (dumpHole loglevel) (map fst hs)
+                            traverse (dumpHole loglevel) hs
                             pure ()
             else pure ()

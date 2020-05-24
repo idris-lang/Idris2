@@ -34,6 +34,23 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
            Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
            Grammar tok (c1 && c2) ty
 
+||| Allows the result of a grammar to be mapped to a different value.
+export
+{c : _} ->
+Functor (Grammar tok c) where
+  map f (Empty val)  = Empty (f val)
+  map f (Fail fatal msg) = Fail fatal msg
+  map f (MustWork g) = MustWork (map f g)
+  map f (Terminal msg g) = Terminal msg (\t => map f (g t))
+  map f (Alt x y)    = Alt (map f x) (map f y)
+  map f (SeqEat act next)
+      = SeqEat act (\val => map f (next val))
+  map f (SeqEmpty act next)
+      = SeqEmpty act (\val => map f (next val))
+  -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
+  -- so a sequence must be used.
+  map {c = False} f p = SeqEmpty p (Empty . f)
+
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume some input. If the first one consumes input, the
 ||| second is allowed to be recursive (because it means some input has been
@@ -73,22 +90,15 @@ export
         Grammar tok (c1 && c2) ty
 (<|>) = Alt
 
-||| Allows the result of a grammar to be mapped to a different value.
+||| Take the tagged disjunction of two grammars.
+||| If both consume, the combination is guaranteed to consume.
+infixr 2 <||>
 export
-{c : _} ->
-Functor (Grammar tok c) where
-  map f (Empty val)  = Empty (f val)
-  map f (Fail fatal msg) = Fail fatal msg
-  map f (MustWork g) = MustWork (map f g)
-  map f (Terminal msg g) = Terminal msg (\t => map f (g t))
-  map f (Alt x y)    = Alt (map f x) (map f y)
-  map f (SeqEat act next)
-      = SeqEat act (\val => map f (next val))
-  map f (SeqEmpty act next)
-      = SeqEmpty act (\val => map f (next val))
-  -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
-  -- so a sequence must be used.
-  map {c = False} f p = SeqEmpty p (Empty . f)
+(<||>) : {c1,c2 : Bool} ->
+        Grammar tok c1 a ->
+        Lazy (Grammar tok c2 b) ->
+        Grammar tok (c1 && c2) (Either a b)
+(<||>) p q = (Left <$> p) <|> (Right <$> q)
 
 ||| Sequence a grammar with value type `a -> b` and a grammar
 ||| with value type `a`. If both succeed, apply the function

@@ -9,6 +9,7 @@ import TTImp.TTImp
 
 import public Text.Parser
 import        Data.List
+import        Data.List.NonEmpty
 import        Data.List.Views
 import        Data.Strings
 
@@ -500,7 +501,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval (map snd (NonEmpty.toList ws)))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -683,7 +684,7 @@ topDecl fname indents
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
          end <- location
-         pure (INamespace (MkFC fname start end) ns ds)
+         pure (INamespace (MkFC fname start end) ns (NonEmpty.toList ds))
   <|> do start <- location
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
@@ -723,7 +724,7 @@ export
 prog : FileName -> SourceRule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
-         pure (collectDefs ds)
+         pure (collectDefs (NonEmpty.toList ds))
 
 -- TTImp REPL commands
 export
