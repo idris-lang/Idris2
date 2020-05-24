@@ -353,14 +353,18 @@ interface Num ty => Abs ty where
 
 public export
 interface Num ty => Fractional ty where
+  partial
   (/) : ty -> ty -> ty
+  partial
   recip : ty -> ty
 
   recip x = 1 / x
 
 public export
 interface Num ty => Integral ty where
+  partial
   div : ty -> ty -> ty
+  partial
   mod : ty -> ty -> ty
 
 ----- Instances for primitives

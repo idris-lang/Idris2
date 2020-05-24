@@ -117,6 +117,7 @@ checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
                    Explicit => genVarName "arg"
                    Implicit => genVarName "impArg"
                    AutoImplicit => genVarName "conArg"
+                   (DefImplicit _) => genVarName "defArg"
          checkPi rig elabinfo nest env fc r p n argTy retTy exp
 checkTerm rig elabinfo nest env (ILam fc r p (Just n) argTy scope) exp
     = checkLambda rig elabinfo nest env fc r p n argTy scope exp

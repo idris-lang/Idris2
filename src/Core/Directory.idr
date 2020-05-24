@@ -13,7 +13,7 @@ import System.Directory
 import System.File
 import System.Info
 
-%default total
+%default covering
 
 fullPath : String -> List String
 fullPath fp = filter (/="") $ split (==sep) fp

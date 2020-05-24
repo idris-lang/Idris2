@@ -1,3 +1,3 @@
 1/1: Building partial (partial.idr)
 partial.idr:13:1--15:1:foo is not covering. Missing cases:
-	foo (Just m)
+	foo (Just _)
