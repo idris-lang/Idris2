@@ -13,6 +13,10 @@ isCons []      = False
 isCons (x::xs) = True
 
 public export
+snoc : List a -> a -> List a
+snoc xs x = xs ++ [x]
+
+public export
 length : List a -> Nat
 length []      = Z
 length (x::xs) = S (length xs)
