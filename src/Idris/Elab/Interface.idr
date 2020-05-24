@@ -245,9 +245,7 @@ updateIfaceSyn iname cn ps cs ms ds
     totMeth : (Name, RigCount, List FnOpt, (Bool, RawImp)) ->
               Core (Name, RigCount, TotalReq, (Bool, RawImp))
     totMeth (n, c, opts, t)
-        = do let treq = fromMaybe PartialOK (findSetTotal opts)
---         = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
--- TODO: Put the above back when totality checker is properly working
+        = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
              pure (n, c, treq, t)
 
 export
