@@ -583,12 +583,13 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            FC -> Covering -> Name -> Core ()
-mkRunTime fc cov n
+            FC -> Name -> Core ()
+mkRunTime fc n
     = do log 5 $ "Making run time definition for " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | _ => pure ()
+         let cov = gdef.totality.isCovering
          -- If it's erased at run time, don't build the tree
          when (not (isErased $ multiplicity gdef)) $ do
            let PMDef r cargs tree_ct _ pats = definition gdef
@@ -605,7 +606,7 @@ mkRunTime fc cov n
                               _ => clauses_init
 
            (rargs ** tree_rt) <- getPMDef (location gdef) RunTime n ty clauses
-           log 5 $ "Runtime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
+           log 5 $ show cov ++ ":\nRuntime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
@@ -656,10 +657,10 @@ mkRunTime fc cov n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Covering -> Name -> Core ()
-compileRunTime fc cov atotal
+                 FC -> Name -> Core ()
+compileRunTime fc atotal
     = do defs <- get Ctxt
-         traverse_ (mkRunTime fc cov) (toCompileCase defs)
+         traverse_ (mkRunTime fc) (toCompileCase defs)
          traverse (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
@@ -732,7 +733,7 @@ processDef opts nest env fc n_in cs_in
          -- If we're not in a case tree, compile all the outstanding case
          -- trees.
          when (not (elem InCase opts)) $
-              compileRunTime fc cov atotal
+              compileRunTime fc atotal
   where
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True
