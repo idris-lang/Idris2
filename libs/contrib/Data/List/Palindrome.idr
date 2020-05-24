@@ -27,10 +27,10 @@ reversePalindromeEqualsLemma
   -> (xs : List a)
   -> reverse (x :: (xs ++ [x'])) = (x :: (xs ++ [x']))
   -> (reverse xs = xs, x = x')
-reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter (flipHeadX prf)
+reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter flipHeadX
   where
-    flipHeadX : reverse (x :: (xs ++ [x'])) = x :: (xs ++ [x']) -> reverse (xs ++ [x']) ++ [x] = x :: (xs ++ [x'])
-    flipHeadX prf = rewrite (sym (reverseCons x (xs ++ [x']))) in prf
+    flipHeadX : reverse (xs ++ [x']) ++ [x] = x :: (xs ++ [x'])
+    flipHeadX = rewrite (sym (reverseCons x (xs ++ [x']))) in prf
     flipLastX' : reverse (xs ++ [x']) = x :: xs -> (x' :: reverse xs) = (x :: xs)
     flipLastX' prf = rewrite (sym $ reverseAppend xs [x']) in prf
     cancelOuter : (reverse (xs ++ [x'])) = x :: xs -> reverse xs = xs
