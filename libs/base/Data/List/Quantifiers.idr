@@ -5,12 +5,12 @@ import Data.List.Elem
 
 ||| A proof that some element of a list satisfies some property
 |||
-||| @ p the property to be satsified
+||| @ p the property to be satisfied
 public export
 data Any : (0 p : a -> Type) -> List a -> Type where
   ||| A proof that the satisfying element is the first one in the `List`
   Here  : {0 xs : List a} -> p x -> Any p (x :: xs)
-  ||| A proof that the satsifying element is in the tail of the `List`
+  ||| A proof that the satisfying element is in the tail of the `List`
   There : {0 xs : List a} -> Any p xs -> Any p (x :: xs)
 
 export
