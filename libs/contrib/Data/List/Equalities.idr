@@ -18,15 +18,14 @@ consCong2 Refl Refl = Refl
 ||| Equal non-empty lists should result in equal componens after destructuring 'snoc'.
 export
 snocCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-            (snoc xs x) = (snoc ys y) -> (xs = ys, x = y)
+            (xs `snoc` x) = (ys `snoc` y) -> (xs = ys, x = y)
 
 snocCong2 {xs = []} {ys = []} Refl = (Refl, Refl)
 snocCong2 {xs = []} {ys = z :: ys} prf = snocCong2 prf
 snocCong2 {xs = w :: xs} {ys = []} prf = snocCong2 prf
 snocCong2 {xs = w :: xs} {ys = z :: ys} prf =
-  let
-    (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
-    (xsEqualsYS, xEqualsY) = snocCong2 xsSnocXEqualsYsSnocY
+  let (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
+      (xsEqualsYS, xEqualsY) = snocCong2 xsSnocXEqualsYsSnocY
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
  ||| Appending pairwise equal lists gives equal lists
