@@ -614,13 +614,10 @@ sameType {ns} fc phase fn env (p :: xs)
     sameTypeAs : Phase -> NF ns -> List (ArgType ns) -> Core ()
     sameTypeAs _ ty [] = pure ()
     sameTypeAs ph ty (Known r t :: xs) =
-      if ph == RunTime && isErased r
-         -- Can't match on erased thing
-         then throw (CaseCompile fc fn (MatchErased (_ ** (env, mkTerm _ (firstPat p)))))
-         else do defs <- get Ctxt
-                 if headEq ty !(nf defs env t) phase
-                    then sameTypeAs ph ty xs
-                    else throw (CaseCompile fc fn DifferingTypes)
+         do defs <- get Ctxt
+            if headEq ty !(nf defs env t) phase
+               then sameTypeAs ph ty xs
+               else throw (CaseCompile fc fn DifferingTypes)
     sameTypeAs p ty _ = throw (CaseCompile fc fn DifferingTypes)
 
 -- Check whether all the initial patterns are the same, or are all a variable.
