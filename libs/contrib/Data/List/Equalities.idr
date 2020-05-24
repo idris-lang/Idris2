@@ -18,7 +18,7 @@ consCong2 Refl Refl = Refl
 ||| Equal non-empty lists should result in equal componens after destructuring 'snoc'.
 export
 snocCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-            (xs ++ [x]) = (ys ++ [y]) -> (xs = ys, x = y)
+            (snoc xs x) = (snoc ys y) -> (xs = ys, x = y)
 
 snocCong2 {xs = []} {ys = []} Refl = (Refl, Refl)
 snocCong2 {xs = []} {ys = z :: ys} prf = snocCong2 prf
@@ -54,6 +54,6 @@ lengthDistributive [] ys = Refl
 lengthDistributive (x :: xs) ys = cong S $ lengthDistributive xs ys
 
 export
-lengthSnoc : (x : _) -> (xs : List a) -> length (xs ++ [x]) = S (length xs)
+lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S (length xs)
 lengthSnoc x [] = Refl
 lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)

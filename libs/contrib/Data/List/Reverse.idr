@@ -26,7 +26,7 @@ reverseNil = Refl
 ||| The reverse of a cons is the reverse of the tail followed by the head.
 ||| Together with reverseNil serves as a specification for reverse.
 export
-reverseCons : (x : a) -> (xs : List a) -> reverse (x::xs) = reverse xs ++ [x]
+reverseCons : (x : a) -> (xs : List a) -> reverse (x::xs) = reverse xs `snoc` x
 reverseCons x xs = reverseOntoSpec [x] xs
 
 ||| Reversing an append is appending reversals backwards.
@@ -44,7 +44,7 @@ reverseAppend (x :: xs) ys =
 export
 reverseRec : List a -> List a
 reverseRec [] = []
-reverseRec (x :: xs) = reverseRec xs ++ [x]
+reverseRec (x :: xs) = reverseRec xs `snoc` x
 
 ||| The iterative and recursive defintions of reverse are the same.
 export
