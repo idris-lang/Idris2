@@ -25,7 +25,7 @@
 /bootstrap/bin/
 /bootstrap/lib/
 /bootstrap/idris2-0*/
-/bootstrap/idris2_app/idris2-boot.*
+/bootstrap/idris2_app/idris2-boot*
 /bootstrap/idris2_app/libidris2_support.*
 /bootstrap/idris2boot
 /bootstrap/idris2boot.rkt
