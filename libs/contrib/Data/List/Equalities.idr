@@ -11,11 +11,12 @@ consInjective : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
 consInjective Refl = (Refl, Refl)
 
 ||| Two lists are equal, if their heads are equal and their tails are equal.
+export
 consCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
             x = y -> xs = ys -> x :: xs = y :: ys
 consCong2 Refl Refl = Refl
 
-||| Equal non-empty lists should result in equal componens after destructuring 'snoc'.
+||| Equal non-empty lists should result in equal components after destructuring 'snoc'.
 export
 snocCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
             (xs `snoc` x) = (ys `snoc` y) -> (xs = ys, x = y)
@@ -29,6 +30,7 @@ snocCong2 {xs = w :: xs} {ys = z :: ys} prf =
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
  ||| Appending pairwise equal lists gives equal lists
+export
 appendCong2 : {x1 : List a} -> {x2 : List a} ->
               {y1 : List b} -> {y2 : List b} ->
               x1 = y1 -> x2 = y2 -> x1 ++ x2 = y1 ++ y2
@@ -40,6 +42,7 @@ appendCong2 {x1=(_ :: _)} {y1=(_ :: _)} eq1 eq2 =
    in consCong2 hdEqual (appendCong2 tlEqual eq2)
 
 ||| List.map is distributive over appending.
+export
 mapAppendDistributive : (f : a -> b) -> (xs : List a) -> (ys : List a) ->
                         map f (xs ++ ys) = map f xs ++ map f ys
 mapAppendDistributive _ [] _ = Refl
