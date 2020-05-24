@@ -186,7 +186,7 @@ mutual
            defs <- get Ctxt
            pure (IForce fc tm', gErased fc)
   unelabTy' umode env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
-  unelabTy' umode env (Erased fc _) = pure (Implicit fc False, gErased fc)
+  unelabTy' umode env (Erased fc _) = pure (Implicit fc True, gErased fc)
   unelabTy' umode env (TType fc) = pure (IType fc, gType fc)
   unelabTy' umode _ tm
       = let fc = getLoc tm in

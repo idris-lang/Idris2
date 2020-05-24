@@ -13,7 +13,7 @@ import System.Directory
 import System.File
 import System.Info
 
-%default total
+%default covering
 
 fullPath : String -> List String
 fullPath fp = filter (/="") $ split (==sep) fp
@@ -200,10 +200,10 @@ getEntries d
 
 dirEntries : String -> IO (Either FileError (List String))
 dirEntries dir
-    = do Right d <- dirOpen dir
+    = do Right d <- openDir dir
              | Left err => pure (Left err)
          ds <- getEntries d
-         dirClose d
+         closeDir d
          pure (Right ds)
 
 findIpkg : List String -> Maybe String

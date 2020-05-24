@@ -24,21 +24,21 @@ PREFIX="`dirname $DIR`"/bootstrap
 
 if [ ${OS} = "windows" ]; then
     IDRIS_PREFIX=$(cygpath -m $PREFIX)
-    IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-0.2.0/prelude;${IDRIS_PREFIX}/idris2-0.2.0/base;${IDRIS_PREFIX}/idris2-0.2.0/contrib;${IDRIS_PREFIX}/idris2-0.2.0/network"
+    SEP=";"
     NEW_PREFIX=$(cygpath -m $(dirname "$DIR"))
-    IDRIS2_NEW_PATH="${NEW_PREFIX}/libs/prelude/build/ttc;${NEW_PREFIX}/libs/base/build/ttc;${NEW_PREFIX}/libs/network/build/ttc"
-    IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-0.2.0/lib"
-    IDRIS2_TEST_DATA=${IDRIS_PREFIX}/idris2-0.2.0/support
 else
-    IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${PREFIX}/idris2-0.2.0/contrib:${PREFIX}/idris2-0.2.0/network"
-    NEWPREFIX="`dirname $DIR`"
-    IDRIS2_NEW_PATH="${NEWPREFIX}/libs/prelude/build/ttc:${NEWPREFIX}/libs/base/build/ttc:${NEWPREFIX}/libs/network/build/ttc"
-    IDRIS2_TEST_LIBS="${PREFIX}/idris2-0.2.0/lib" IDRIS2_TEST_DATA=${PREFIX}/idris2-0.2.0/support
+    IDRIS_PREFIX=${PREFIX}
+    SEP=":"
+    NEW_PREFIX="`dirname $DIR`"
 fi
+
+IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-0.2.0/prelude${SEP}${IDRIS_PREFIX}/idris2-0.2.0/base${SEP}${IDRIS_PREFIX}/idris2-0.2.0/contrib${SEP}${IDRIS_PREFIX}/idris2-0.2.0/network"
+IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-0.2.0/lib"
+IDRIS2_TEST_DATA="${IDRIS_PREFIX}/idris2-0.2.0/support"
+IDRIS2_NEW_PATH="${NEW_PREFIX}/libs/prelude/build/ttc${SEP}${NEW_PREFIX}/libs/base/build/ttc${SEP}${NEW_PREFIX}/libs/network/build/ttc"
 
 # Now rebuild everything properly
 echo ${PREFIX}
-
 
 make libs SCHEME=${SCHEME} PREFIX=${PREFIX}
 make install SCHEME=${SCHEME} PREFIX=${PREFIX}

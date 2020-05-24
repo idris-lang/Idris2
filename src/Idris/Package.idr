@@ -15,6 +15,12 @@ import Data.Strings
 import Data.StringTrie
 import Data.These
 
+import Parser.Package
+import System
+import Text.Parser
+import Utils.Binary
+import Utils.String
+
 import Idris.CommandLine
 import Idris.ModTree
 import Idris.ProcessIdr
@@ -23,13 +29,6 @@ import Idris.REPLOpts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
-import Parser.Lexer.Source
-import Parser.Source
-import Utils.Binary
-
-import System
-import Text.Parser
-
 import IdrisPaths
 
 %default covering
@@ -114,7 +113,7 @@ data DescField : Type where
   PPreclean    : FC -> String -> DescField
   PPostclean   : FC -> String -> DescField
 
-field : String -> SourceRule DescField
+field : String -> Rule DescField
 field fname
       = strField PVersion "version"
     <|> strField PAuthors "authors"
@@ -134,43 +133,41 @@ field fname
     <|> strField PPostinstall "postinstall"
     <|> strField PPreclean "preclean"
     <|> strField PPostclean "postclean"
-    <|> do exactIdent "depends"; symbol "="
-           ds <- sepBy1 (symbol ",") unqualifiedName
+    <|> do exactProperty "depends"
+           equals
+           ds <- sep packageName
            pure (PDepends ds)
-    <|> do exactIdent "modules"; symbol "="
-           ms <- sepBy1 (symbol ",")
-                      (do start <- location
-                          ns <- nsIdent
-                          end <- location
-                          Parser.Core.pure (MkFC fname start end, ns))
-           Parser.Core.pure (PModules ms)
-    <|> do exactIdent "main"; symbol "="
+    <|> do exactProperty "modules"
+           equals
+           ms <- sep (do start <- location
+                         m <- moduleIdent
+                         end <- location
+                         pure (MkFC fname start end, m))
+           pure (PModules ms)
+    <|> do exactProperty "main"
+           equals
            start <- location
-           m <- nsIdent
+           m <- namespacedIdent
            end <- location
-           Parser.Core.pure (PMainMod (MkFC fname start end) m)
-    <|> do exactIdent "executable"; symbol "="
-           e <- unqualifiedName
-           Parser.Core.pure (PExec e)
+           pure (PMainMod (MkFC fname start end) m)
+    <|> do exactProperty "executable"
+           equals
+           e <- (stringLit <|> packageName)
+           pure (PExec e)
   where
-    getStr : (FC -> String -> DescField) -> FC ->
-             String -> Constant -> SourceEmptyRule DescField
-    getStr p fc fld (Str s) = pure (p fc s)
-    getStr p fc fld _ = fail $ fld ++ " field must be a string"
-
-    strField : (FC -> String -> DescField) -> String -> SourceRule DescField
-    strField p f
+    strField : (FC -> String -> DescField) -> String -> Rule DescField
+    strField fieldConstructor fieldName
         = do start <- location
-             exactIdent f
-             symbol "="
-             c <- constant
+             exactProperty fieldName
+             equals
+             str <- stringLit
              end <- location
-             getStr p (MkFC fname start end) f c
+             pure $ fieldConstructor (MkFC fname start end) str
 
-parsePkgDesc : String -> SourceRule (String, List DescField)
+parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
-    = do exactIdent "package"
-         name <- unqualifiedName
+    = do exactProperty "package"
+         name <- packageName
          fields <- many (field fname)
          pure (name, fields)
 
@@ -412,7 +409,7 @@ clean pkg
          runScript (postclean pkg)
   where
     delete : String -> Core ()
-    delete path = do Right () <- coreLift $ fileRemove path
+    delete path = do Right () <- coreLift $ removeFile path
                        | Left err => pure ()
                      coreLift $ putStrLn $ "Removed: " ++ path
 
@@ -424,6 +421,12 @@ clean pkg
         = do let ttFile = builddir ++ dirSep ++ showSep dirSep ns ++ dirSep ++ mod
              delete $ ttFile ++ ".ttc"
              delete $ ttFile ++ ".ttm"
+
+getParseErrorLoc : String -> ParseError Token -> FC
+getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
+getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
+getParseErrorLoc fname (LitFail _) = MkFC fname (0, 0) (0, 0) -- TODO: Remove this unused case
+getParseErrorLoc fname _ = replFC
 
 -- Just load the 'Main' module, if it exists, which will involve building
 -- it if necessary

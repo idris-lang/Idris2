@@ -1,0 +1,24 @@
+name: macOS
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install build dependencies
+        run: |
+          brew install chezscheme
+          brew install coreutils
+      - name: Build and test Idris 2 from bootstrap
+        run: make bootstrap SCHEME=chez
+        shell: bash

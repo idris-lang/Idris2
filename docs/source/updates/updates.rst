@@ -428,11 +428,11 @@ used with care. Too many hints can lead to a large search space!
 Totality and Coverage
 ---------------------
 
-``%default covering`` is now the default statusk
-
-.. note::
-
-   Actually still TODO, but planned soon!
+``%default covering`` is now the default status, so all functions must cover
+all their inputs unless stated otherwise with a ``partial`` annotation, or
+switching to ``%default partial`` (which is not recommended - use a ``partial``
+annotation instead to have the smallest possible place where functions are
+partial).
 
 Build artefacts
 ---------------

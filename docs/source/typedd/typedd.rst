@@ -77,6 +77,9 @@ confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
 In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.Strings`` and change ``cast`` to
 ``stringToNatOrZ``
 
+In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
+a ``partial`` annotation to ``readNumber_v2``.
+
 Chapter 6
 ---------
 
@@ -136,6 +139,9 @@ A similar change is necessary in ``ExactLengthDec.idr``. Also, ``DecEq`` is no
 longer part of the prelude, so add ``import Decidable.Equality``.
 
 In ``ReverseVec.idr``, add ``import Data.Nat`` for the ``Nat`` proofs.
+
+In ``Void.idr``, since functions must now be ``covering`` by default, add
+a ``partial`` annotation to ``nohead`` and its helper function ``getHead``.
 
 Chapter 9
 ---------
@@ -305,6 +311,8 @@ In ``ArithCmd.idr``, update ``DivBy`` as above. Also add ``import Data.Strings``
 In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also,
 since export rules are per-namespace now, rather than per-file, you need to
 export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
+
+In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
 ----------

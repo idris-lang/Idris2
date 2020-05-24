@@ -8,7 +8,7 @@ The Gambit Scheme code generator can be accessed via the REPL command:
 
     Main> :set cg gambit
 
-Alternatively, you can set it via the `IDRIS2_CG` environment variable:
+Alternatively, you can set it via the ``IDRIS2_CG`` environment variable:
 
 ::
 

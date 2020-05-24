@@ -59,6 +59,7 @@ mutual
                 NDelayed fc _ fty =>
                     do defs <- get Ctxt
                        pure $ glueBack defs env fty
+                _ => throw (GenericMsg fc "Not a delayed type")
   chk env (PrimVal fc x) = pure $ gnf env (chkConstant fc x)
   chk env (TType fc) = pure (gType fc)
   chk env (Erased fc _) = pure (gErased fc)
