@@ -18,15 +18,13 @@ comment
 -- There are multiple variants.
 
 public export
-data Flavour = Capitalised | AllowDashes | Normal
+data Flavour = AllowDashes | Capitalised | Normal
 
-export
 isIdentStart : Flavour -> Char -> Bool
 isIdentStart _           '_' = True
 isIdentStart Capitalised  x  = isUpper x || x > chr 160
 isIdentStart _            x  = isAlpha x || x > chr 160
 
-export
 isIdentTrailing : Flavour -> Char -> Bool
 isIdentTrailing AllowDashes '-'  = True
 isIdentTrailing _           '\'' = True
@@ -45,3 +43,26 @@ ident : Flavour -> Lexer
 ident flavour =
   (pred $ isIdentStart flavour) <+>
     (many . pred $ isIdentTrailing flavour)
+
+export
+isIdentNormal : String -> Bool
+isIdentNormal = isIdent Normal
+
+export
+identNormal : Lexer
+identNormal = ident Normal
+
+export
+identAllowDashes : Lexer
+identAllowDashes = ident AllowDashes
+
+namespaceIdent : Lexer
+namespaceIdent = ident Capitalised <+> many (is '.' <+> ident Capitalised <+> expect (is '.'))
+
+export
+namespacedIdent : Lexer
+namespacedIdent = namespaceIdent <+> opt (is '.' <+> identNormal)
+
+export
+spacesOrNewlines : Lexer
+spacesOrNewlines = some (space <|> newline)
