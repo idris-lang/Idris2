@@ -399,7 +399,7 @@ processEdit (ExprSearch upd line name hints all)
                                        if upd
                                           then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
                                           else pure $ DisplayEdit [res]
-              [(n, nidx, PMDef pi [] (STerm tm) _ _)] =>
+              [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>

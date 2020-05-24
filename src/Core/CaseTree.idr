@@ -20,7 +20,9 @@ mutual
               (scTy : Term vars) -> List (CaseAlt vars) ->
               CaseTree vars
        ||| RHS: no need for further inspection
-       STerm : Term vars -> CaseTree vars
+       ||| The Int is a clause id that allows us to see which of the
+       ||| initial clauses are reached in the tree
+       STerm : Int -> Term vars -> CaseTree vars
        ||| error from a partial match
        Unmatched : (msg : String) -> CaseTree vars
        ||| Absurd context
@@ -60,7 +62,7 @@ mutual
     show (Case {name} idx prf ty alts)
         = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of { " ++
                 showSep " | " (assert_total (map show alts)) ++ " }"
-    show (STerm tm) = show tm
+    show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
     show (Unmatched msg) = "Error: " ++ show msg
     show Impossible = "Impossible"
 
@@ -83,7 +85,7 @@ mutual
       = i == i
        && length alts == length alts
        && allTrue (zipWith eqAlt alts alts')
-  eqTree (STerm t) (STerm t') = eqTerm t t'
+  eqTree (STerm _ t) (STerm _ t') = eqTerm t t'
   eqTree (Unmatched _) (Unmatched _) = True
   eqTree Impossible Impossible = True
   eqTree _ _ = False
@@ -118,7 +120,7 @@ mutual
       = let MkNVar prf' = insertNVarNames {outer} {inner} {ns} _ prf in
             Case _ prf' (insertNames {outer} ns scTy)
                 (map (insertCaseAltNames {outer} {inner} ns) alts)
-  insertCaseNames {outer} ns (STerm x) = STerm (insertNames {outer} ns x)
+  insertCaseNames {outer} ns (STerm i x) = STerm i (insertNames {outer} ns x)
   insertCaseNames ns (Unmatched msg) = Unmatched msg
   insertCaseNames ns Impossible = Impossible
 
@@ -146,7 +148,7 @@ thinTree : {outer, inner : _} ->
 thinTree n (Case idx prf scTy alts)
     = let MkNVar prf' = insertNVar {n} _ prf in
           Case _ prf' (thin n scTy) (map (insertCaseAltNames [n]) alts)
-thinTree n (STerm tm) = STerm (thin n tm)
+thinTree n (STerm i tm) = STerm i (thin n tm)
 thinTree n (Unmatched msg) = Unmatched msg
 thinTree n Impossible = Impossible
 
@@ -172,7 +174,7 @@ getNames add ns sc = getSet ns sc
 
       getSet : NameMap Bool -> CaseTree vs -> NameMap Bool
       getSet ns (Case _ x ty xs) = getAltSets ns xs
-      getSet ns (STerm tm) = add ns tm
+      getSet ns (STerm i tm) = add ns tm
       getSet ns (Unmatched msg) = ns
       getSet ns Impossible = ns
 
