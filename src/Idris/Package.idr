@@ -10,6 +10,7 @@ import Core.Options
 import Core.Unify
 
 import Data.List
+import Data.Maybe
 import Data.StringMap
 import Data.Strings
 import Data.StringTrie
@@ -263,11 +264,14 @@ compileMain mainn mmod exec
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
-        PkgDesc -> Core (List Error)
-build pkg
+        PkgDesc ->
+        List CLOpt ->
+        Core (List Error)
+build pkg opts
     = do defs <- get Ctxt
          addDeps pkg
          processOptions (options pkg)
+         preOptions opts
          runScript (prebuild pkg)
          let toBuild = maybe (map snd (modules pkg))
                              (\m => snd m :: map snd (modules pkg))
@@ -311,8 +315,10 @@ installFrom pname builddir destdir ns@(m :: dns)
 -- an internal error.
 install : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
-          PkgDesc -> Core ()
-install pkg
+          PkgDesc ->
+          List CLOpt ->
+          Core ()
+install pkg opts -- not used but might be in the future
     = do defs <- get Ctxt
          let build = build_dir (dirs (options defs))
          runScript (preinstall pkg)
@@ -375,8 +381,10 @@ Monoid () where
 
 clean : {auto c : Ref Ctxt Defs} ->
         {auto o : Ref ROpts REPLOpts} ->
-        PkgDesc -> Core ()
-clean pkg
+        PkgDesc ->
+        List CLOpt ->
+        Core ()
+clean pkg opts -- `opts` is not used but might be in the future
     = do defs <- get Ctxt
          let build = build_dir (dirs (options defs))
          let exec = exec_dir (dirs (options defs))
@@ -432,17 +440,23 @@ getParseErrorLoc fname _ = replFC
 -- it if necessary
 runRepl : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
-          PkgDesc -> Core ()
-runRepl pkg
+          PkgDesc ->
+          List CLOpt ->
+          Core ()
+runRepl pkg opts
     = do addDeps pkg
          processOptions (options pkg)
+         preOptions opts
          throw (InternalError "Not implemented")
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 PkgCommand -> String -> Core ()
-processPackage cmd file
+                 PkgCommand ->
+                 String ->
+                 List CLOpt ->
+                 Core ()
+processPackage cmd file opts
     =  if not (isSuffixOf ".ipkg" file)
          then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                  coreLift (exitWith (ExitFailure 1))
@@ -454,21 +468,50 @@ processPackage cmd file
                      | Left err => throw (ParseFail (getParseErrorLoc file err) err)
                  pkg <- addFields fs (initPkgDesc pname)
                  case cmd of
-                      Build => do [] <- build pkg
+                      Build => do [] <- build pkg opts
                                      | errs => coreLift (exitWith (ExitFailure 1))
                                   pure ()
-                      Install => do [] <- build pkg
+                      Install => do [] <- build pkg opts
                                        | errs => coreLift (exitWith (ExitFailure 1))
-                                    install pkg
-                      Clean => clean pkg
-                      REPL => runRepl pkg
+                                    install pkg opts
+                      Clean => clean pkg opts
+                      REPL => runRepl pkg opts
 
-rejectPackageOpts : List CLOpt -> Core Bool
-rejectPackageOpts (Package cmd f :: _)
-    = do coreLift $ putStrLn ("Package commands (--build, --install, --clean, --repl) must be the only option given")
-         pure True -- Done, quit here
-rejectPackageOpts (_ :: xs) = rejectPackageOpts xs
-rejectPackageOpts [] = pure False
+record POptsFilterResult where
+  constructor MkPFR
+  pkgDetails : Maybe (PkgCommand, String)
+  oopts : List CLOpt
+  hasError : Bool
+
+errorMsg : String
+errorMsg = unlines
+  [ "Not all command line options can be used to override package options.\n"
+  , "Overridable options are:"
+  , "    --quiet"
+  , "    --verbose"
+  , "    --timing"
+  , "    --dumpcases <file>"
+  , "    --dumplifted <file>"
+  , "    --dumpvmcode <file>"
+  , "    --debug-elab-check"
+  , "    --codegen <cg>"
+  ]
+
+
+filterPackageOpts : POptsFilterResult -> List CLOpt -> Core (POptsFilterResult)
+filterPackageOpts acc Nil                  = pure acc
+filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetails = Just (cmd, f)}  acc) xs
+
+filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
+filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
+filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
+filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
+filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
+filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
+filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
+filterPackageOpts acc (DebugElabCheck::xs) = filterPackageOpts (record {oopts $= (DebugElabCheck::)} acc) xs
+
+filterPackageOpts acc (x::xs) = pure (record {hasError = True} acc)
 
 -- If there's a package option, it must be the only option, so reject if
 -- it's not
@@ -476,11 +519,22 @@ export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt -> Core Bool
-processPackageOpts [Package cmd f]
-    = do processPackage cmd f
-         pure True
-processPackageOpts opts = rejectPackageOpts opts
+                     List CLOpt ->
+                     Core Bool
+processPackageOpts Nil = pure False
+processPackageOpts [Package cmd f] = do processPackage cmd f Nil
+                                        pure True
+
+processPackageOpts opts
+    = do (MkPFR (Just (cmd, f)) opts' err) <- filterPackageOpts (MkPFR Nothing Nil False) opts
+             | (MkPFR Nothing opts _) => pure False
+
+         if err
+           then do coreLift (putStrLn errorMsg)
+                   pure True
+           else do processPackage cmd f opts'
+                   pure True
+
 
 -- find an ipkg file in one of the parent directories
 -- If it exists, read it, set the current directory to the root of the source
@@ -497,7 +551,7 @@ findIpkg fname
                                  (do desc <- parsePkgDesc ipkgn
                                      eoi
                                      pure desc)
-              | Left (FileFail err) => throw (FileErr file err)
+              | Left (FileFail err) => throw (FileErr ipkgn err)
               | Left err => throw (ParseFail (getParseErrorLoc ipkgn err) err)
         pkg <- addFields fs (initPkgDesc pname)
         setSourceDir (sourcedir pkg)
