@@ -37,9 +37,8 @@ appendCong2 {x1=[]} {y1=(_ :: _)} Refl _ impossible
 appendCong2 {x1=(_ :: _)} {y1=[]} Refl _ impossible
 appendCong2 {x1=[]} {y1=[]} _ eq2 = eq2
 appendCong2 {x1=(_ :: _)} {y1=(_ :: _)} eq1 eq2 =
-  consCong2
-    (fst $ consInjective eq1)
-    (appendCong2 (snd $ consInjective eq1) eq2)
+  let (hdEqual, tlEqual) = consInjective eq1
+   in consCong2 hdEqual (appendCong2 tlEqual eq2)
 
 ||| List.map is distributive over appending.
 mapAppendDistributive : (f : a -> b) -> (xs : List a) -> (ys : List a) ->
