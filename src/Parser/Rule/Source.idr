@@ -9,12 +9,12 @@ import Core.TT
 %default total
 
 public export
-SourceRule : Type -> Type
-SourceRule = Rule SourceToken
+Rule : Type -> Type
+Rule = Rule Token
 
 public export
 SourceEmptyRule : Type -> Type
-SourceEmptyRule = EmptyRule SourceToken
+SourceEmptyRule = EmptyRule Token
 
 export
 eoi : SourceEmptyRule ()
@@ -22,48 +22,48 @@ eoi
     = do nextIs "Expected end of input" (isEOI . tok)
          pure ()
   where
-    isEOI : SourceToken -> Bool
+    isEOI : Token -> Bool
     isEOI EndInput = True
     isEOI _ = False
 
 export
-constant : SourceRule Constant
+constant : Rule Constant
 constant
     = terminal "Expected constant"
                (\x => case tok x of
-                           Literal i => Just (BI i)
-                           StrLit s => case escape s of
-                                            Nothing => Nothing
-                                            Just s' => Just (Str s')
                            CharLit c => case getCharLit c of
                                              Nothing => Nothing
                                              Just c' => Just (Ch c')
-                           DoubleLit d => Just (Db d)
-                           NSIdent ["Int"] => Just IntType
-                           NSIdent ["Integer"] => Just IntegerType
-                           NSIdent ["String"] => Just StringType
-                           NSIdent ["Char"] => Just CharType
-                           NSIdent ["Double"] => Just DoubleType
+                           DoubleLit d  => Just (Db d)
+                           IntegerLit i => Just (BI i)
+                           StringLit s => case escape s of
+                                               Nothing => Nothing
+                                               Just s' => Just (Str s')
+                           Ident "Char"    => Just CharType
+                           Ident "Double"  => Just DoubleType
+                           Ident "Int"     => Just IntType
+                           Ident "Integer" => Just IntegerType
+                           Ident "String"  => Just StringType
                            _ => Nothing)
 
 export
-intLit : SourceRule Integer
+intLit : Rule Integer
 intLit
     = terminal "Expected integer literal"
                (\x => case tok x of
-                           Literal i => Just i
+                           IntegerLit i => Just i
                            _ => Nothing)
 
 export
-strLit : SourceRule String
+strLit : Rule String
 strLit
     = terminal "Expected string literal"
                (\x => case tok x of
-                           StrLit s => Just s
+                           StringLit s => Just s
                            _ => Nothing)
 
 export
-recField : SourceRule Name
+recField : Rule Name
 recField
     = terminal "Expected record field"
                (\x => case tok x of
@@ -71,7 +71,7 @@ recField
                            _ => Nothing)
 
 export
-symbol : String -> SourceRule ()
+symbol : String -> Rule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
                (\x => case tok x of
@@ -80,7 +80,7 @@ symbol req
                            _ => Nothing)
 
 export
-keyword : String -> SourceRule ()
+keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
                (\x => case tok x of
@@ -89,16 +89,16 @@ keyword req
                            _ => Nothing)
 
 export
-exactIdent : String -> SourceRule ()
+exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req)
                (\x => case tok x of
-                           NSIdent [s] => if s == req then Just ()
-                                                      else Nothing
+                           Ident s => if s == req then Just ()
+                                      else Nothing
                            _ => Nothing)
 
 export
-pragma : String -> SourceRule ()
+pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
     (\x => case tok x of
@@ -109,7 +109,7 @@ pragma n =
       _ => Nothing)
 
 export
-operator : SourceRule Name
+operator : Rule Name
 operator
     = terminal "Expected operator"
                (\x => case tok x of
@@ -119,27 +119,28 @@ operator
                                    else Just (UN s)
                            _ => Nothing)
 
-identPart : SourceRule String
+identPart : Rule String
 identPart
     = terminal "Expected name"
                (\x => case tok x of
-                           NSIdent [str] => Just str
+                           Ident str => Just str
                            _ => Nothing)
 
 export
-nsIdent : SourceRule (List String)
-nsIdent
+namespacedIdent : Rule (List String)
+namespacedIdent
     = terminal "Expected namespaced name"
         (\x => case tok x of
-            NSIdent ns => Just ns
+            DotSepIdent ns => Just ns
+            Ident i => Just $ [i]
             _ => Nothing)
 
 export
-unqualifiedName : SourceRule String
+unqualifiedName : Rule String
 unqualifiedName = identPart
 
 export
-holeName : SourceRule String
+holeName : Rule String
 holeName
     = terminal "Expected hole name"
                (\x => case tok x of
@@ -152,17 +153,17 @@ reservedNames
        "Lazy", "Inf", "Force", "Delay"]
 
 export
-name : SourceRule Name
+name : Rule Name
 name = opNonNS <|> do
-  ns <- nsIdent
+  ns <- namespacedIdent
   opNS ns <|> nameNS ns
  where
   reserved : String -> Bool
   reserved n = n `elem` reservedNames
 
-  nameNS : List String -> Grammar (TokenData SourceToken) False Name
+  nameNS : List String -> SourceEmptyRule Name
   nameNS [] = pure $ UN "IMPOSSIBLE"
-  nameNS [x] = 
+  nameNS [x] =
     if reserved x
       then fail $ "can't use reserved name " ++ x
       else pure $ UN x
@@ -171,10 +172,10 @@ name = opNonNS <|> do
       then fail $ "can't use reserved name " ++ x
       else pure $ NS xs (UN x)
 
-  opNonNS : SourceRule Name
+  opNonNS : Rule Name
   opNonNS = symbol "(" *> (operator <|> recField) <* symbol ")"
 
-  opNS : List String -> SourceRule Name
+  opNS : List String -> Rule Name
   opNS ns = do
     symbol ".("
     n <- (operator <|> recField)
@@ -238,7 +239,7 @@ checkValid (AfterPos x) c = if c >= x
 checkValid EndOfBlock c = fail "End of block"
 
 ||| Any token which indicates the end of a statement/block
-isTerminator : SourceToken -> Bool
+isTerminator : Token -> Bool
 isTerminator (Symbol ",") = True
 isTerminator (Symbol "]") = True
 isTerminator (Symbol ";") = True
@@ -318,8 +319,8 @@ terminator valid laststart
    afterDedent EndOfBlock col = pure EndOfBlock
 
 -- Parse an entry in a block
-blockEntry : ValidIndent -> (IndentInfo -> SourceRule ty) ->
-             SourceRule (ty, ValidIndent)
+blockEntry : ValidIndent -> (IndentInfo -> Rule ty) ->
+             Rule (ty, ValidIndent)
 blockEntry valid rule
     = do col <- column
          checkValid valid col
@@ -327,7 +328,7 @@ blockEntry valid rule
          valid' <- terminator valid col
          pure (p, valid')
 
-blockEntries : ValidIndent -> (IndentInfo -> SourceRule ty) ->
+blockEntries : ValidIndent -> (IndentInfo -> Rule ty) ->
                SourceEmptyRule (List ty)
 blockEntries valid rule
      = do eoi; pure []
@@ -337,7 +338,7 @@ blockEntries valid rule
    <|> pure []
 
 export
-block : (IndentInfo -> SourceRule ty) -> SourceEmptyRule (List ty)
+block : (IndentInfo -> Rule ty) -> SourceEmptyRule (List ty)
 block item
     = do symbol "{"
          commit
@@ -353,7 +354,7 @@ block item
 ||| by curly braces). `rule` is a function of the actual indentation
 ||| level.
 export
-blockAfter : Int -> (IndentInfo -> SourceRule ty) -> SourceEmptyRule (List ty)
+blockAfter : Int -> (IndentInfo -> Rule ty) -> SourceEmptyRule (List ty)
 blockAfter mincol item
     = do symbol "{"
          commit
@@ -366,7 +367,7 @@ blockAfter mincol item
             else blockEntries (AtPos col) item
 
 export
-blockWithOptHeaderAfter : Int -> (IndentInfo -> SourceRule hd) -> (IndentInfo -> SourceRule ty) -> SourceEmptyRule (Maybe hd, List ty)
+blockWithOptHeaderAfter : Int -> (IndentInfo -> Rule hd) -> (IndentInfo -> Rule ty) -> SourceEmptyRule (Maybe hd, List ty)
 blockWithOptHeaderAfter {ty} mincol header item
     = do symbol "{"
          commit
@@ -379,7 +380,7 @@ blockWithOptHeaderAfter {ty} mincol header item
                     ps <- blockEntries (AtPos col) item
                     pure (map fst hidt, ps)
   where
-  restOfBlock : Maybe (hd, ValidIndent) -> SourceRule (Maybe hd, List ty)
+  restOfBlock : Maybe (hd, ValidIndent) -> Rule (Maybe hd, List ty)
   restOfBlock (Just (h, idt)) = do ps <- blockEntries idt item
                                    symbol "}"
                                    pure (Just h, ps)
@@ -388,7 +389,7 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> SourceRule ty) -> SourceRule (List ty)
+nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List ty)
 nonEmptyBlock item
     = do symbol "{"
          commit

@@ -119,7 +119,8 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
-     ParseFail : FC -> ParseError -> Error
+     ParseFail : Show token =>
+               FC -> ParseError token -> Error
      ModuleNotFound : FC -> List String -> Error
      CyclicImports : List (List String) -> Error
      ForceNeeded : Error

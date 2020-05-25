@@ -749,7 +749,7 @@ parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
-parseRepl : String -> Either ParseError (Maybe REPLCmd)
+parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
 parseRepl inp
     = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD)] inp of
            Nothing => runParser Nothing inp (parseEmptyCmd <|> parseCmd)

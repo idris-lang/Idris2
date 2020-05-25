@@ -272,14 +272,14 @@ mutual
   -- doParse _ _ _ = Failure True True "Help the coverage checker!" []
 
 public export
-data ParseError tok = Error String (List tok)
+data ParsingError tok = Error String (List tok)
 
 ||| Parse a list of tokens according to the given grammar. If successful,
 ||| returns a pair of the parse result and the unparsed tokens (the remaining
 ||| input).
 export
 parse : {c : Bool} -> (act : Grammar tok c ty) -> (xs : List tok) ->
-        Either (ParseError tok) (ty, List tok)
+        Either (ParsingError tok) (ty, List tok)
 parse act xs
     = case doParse False act xs of
            Failure _ _ msg ts => Left (Error msg ts)

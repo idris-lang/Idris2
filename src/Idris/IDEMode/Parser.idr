@@ -5,15 +5,14 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 
-import Text.Parser
+import Data.List
+import Data.Strings
 import Parser.Lexer.Source
 import Parser.Source
 import Text.Lexer
+import Text.Parser
 import Utils.Either
 import Utils.String
-
-import Data.List
-import Data.Strings
 
 %hide Text.Lexer.symbols
 %hide Parser.Lexer.Source.symbols
@@ -21,15 +20,15 @@ import Data.Strings
 symbols : List String
 symbols = ["(", ":", ")"]
 
-ideTokens : TokenMap SourceToken
+ideTokens : TokenMap Token
 ideTokens =
     map (\x => (exact x, Symbol)) symbols ++
-    [(digits, \x => Literal (cast x)),
-     (stringLit, \x => StrLit (stripQuotes x)),
-     (identAllowDashes, \x => NSIdent [x]),
+    [(digits, \x => IntegerLit (cast x)),
+     (stringLit, \x => StringLit (stripQuotes x)),
+     (identAllowDashes, \x => Ident x),
      (space, Comment)]
 
-idelex : String -> Either (Int, Int, String) (List (TokenData SourceToken))
+idelex : String -> Either (Int, Int, String) (List (TokenData Token))
 idelex str
     = case lex ideTokens str of
            -- Add the EndInput token so that we'll have a line and column
@@ -38,12 +37,12 @@ idelex str
                                       [MkToken l c EndInput])
            (_, fail) => Left fail
     where
-      notComment : TokenData SourceToken -> Bool
+      notComment : TokenData Token -> Bool
       notComment t = case tok t of
                           Comment _ => False
                           _ => True
 
-sexp : SourceRule SExp
+sexp : Rule SExp
 sexp
     = do symbol ":"; exactIdent "True"
          pure (BoolAtom True)
@@ -60,15 +59,14 @@ sexp
          symbol ")"
          pure (SExpList xs)
 
-ideParser : {e : _} ->
-            String -> Grammar (TokenData SourceToken) e ty -> Either ParseError ty
+ideParser : {e : _} -> String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
 ideParser str p
     = do toks   <- mapError LexFail $ idelex str
-         parsed <- mapError mapParseError $ parse p toks
+         parsed <- mapError toGenericParsingError $ parse p toks
          Right (fst parsed)
 
 
 export
-parseSExp : String -> Either ParseError SExp
+parseSExp : String -> Either (ParseError Token) SExp
 parseSExp inp
     = ideParser inp (do c <- sexp; eoi; pure c)
