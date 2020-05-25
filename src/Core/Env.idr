@@ -3,6 +3,8 @@ module Core.Env
 import Core.TT
 import Data.List
 
+%default total
+
 -- Environment containing types and values of local variables
 public export
 data Env : (tm : List Name -> Type) -> List Name -> Type where

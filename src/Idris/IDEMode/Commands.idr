@@ -6,7 +6,7 @@ import public Idris.REPLOpts
 
 import System.File
 
-%default covering
+%default total
 
 public export
 data SExp = SExpList (List SExp)
@@ -186,7 +186,7 @@ escape = pack . concatMap escapeChar . unpack
 
 export
 Show SExp where
-  show (SExpList xs) = "(" ++ showSep " " (map show xs) ++ ")"
+  show (SExpList xs) = assert_total $ "(" ++ showSep " " (map show xs) ++ ")"
   show (StringAtom str) = "\"" ++ escape str ++ "\""
   show (BoolAtom b) = ":" ++ show b
   show (IntegerAtom i) = show i

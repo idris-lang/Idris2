@@ -2,6 +2,8 @@ module Utils.Octal
 
 import Data.Primitives.Views
 
+%default total
+
 octDigit : Int -> Char
 octDigit 0 = '0'
 octDigit 1 = '1'
@@ -21,7 +23,8 @@ asOct n = pack $ asOct' n []
     asOct' : Int -> List Char -> List Char
     asOct' 0 oct = oct
     asOct' n oct with (n `divides` 8)
-      asOct' (8 * div + rem) oct | DivBy div rem _ = asOct' div (octDigit rem :: oct)
+      asOct' (8 * div + rem) oct | DivBy div rem _ =
+        assert_total $ asOct' div (octDigit rem :: oct)
 
 export
 fromOctDigit : Char -> Maybe Int

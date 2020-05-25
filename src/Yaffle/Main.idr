@@ -25,6 +25,8 @@ import Data.So
 import Data.Strings
 import System
 
+%default covering
+
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
 

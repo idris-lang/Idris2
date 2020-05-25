@@ -1,5 +1,7 @@
 module Data.LengthMatch
 
+%default total
+
 public export
 data LengthMatch : List a -> List b -> Type where
      NilMatch : LengthMatch [] []

@@ -24,6 +24,8 @@ import Data.List
 import Data.Maybe
 import Data.NameMap
 
+%default covering
+
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
