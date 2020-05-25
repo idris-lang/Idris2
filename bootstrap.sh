@@ -6,6 +6,10 @@ echo "bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 if [ -z "$SCHEME" ] || [ -z "$IDRIS2_VERSION" ]
 then
     echo "Required ENV not set."
+    if [ -z "$SCHEME" ]
+    then
+        echo "Invoke with SCHEME=[name of chez scheme executable]"
+    fi
     exit 1
 fi
 
