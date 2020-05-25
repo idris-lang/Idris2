@@ -18,12 +18,6 @@ Uninhabited (Any p Nil) where
   uninhabited (Here _) impossible
   uninhabited (There _) impossible
 
-||| Eliminator for `Any`
-export
-anyElim : (Any p xs -> b) -> (p x -> b) -> Any p (x :: xs) -> b
-anyElim _ f (Here p)  = f p
-anyElim f _ (There p) = f p
-
 ||| Given a decision procedure for a property, determine if an element of a
 ||| list satisfies it.
 |||
