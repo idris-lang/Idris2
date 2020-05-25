@@ -9,7 +9,10 @@ on:
     branches:
       - master
 env:
+  MSYSTEM: MINGW64
   MSYS2_PATH_TYPE: inherit
+  SCHEME: scheme
+  CC: gcc
 
 jobs:
   build:
@@ -17,24 +20,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Install MSYS2
-        uses: eine/setup-msys2@v0
-        with:
-          update: true
-          install: make mingw-w64-x86_64-clang tar
       - name: Get Chez Scheme
         run: | 
           git clone --depth 1 https://github.com/cisco/ChezScheme
+          c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
+          echo "::set-env name=PWD::$(c:\msys64\usr\bin\cygpath -u $(pwd))"
       - name: Configure and Build Chez Scheme
-        run: msys2do cd ChezScheme; ./configure --threads; make; cd ..
-        shell: cmd
+        run: |
+          c:\msys64\usr\bin\bash -l -c "cd $env:PWD && cd ChezScheme && ./configure --threads && make"
       - name: Set Path
         run: |
           $chez="$(pwd)\ChezScheme\ta6nt\bin\ta6nt"
+          $idris="$(pwd)\.idris2"
           echo "::add-path::$chez"
-          echo "::set-env name=SCHEME::scheme"
+          echo "::add-path::$idris\bin"
+          echo "::set-env name=IDRIS_PREFIX::$idris"
+          echo "::set-env name=PREFIX::$(c:\msys64\usr\bin\cygpath -u $idris)"
       - name: Test Scheme
-        run: scheme.exe --version
-      - name: Bootstrap
-        run: msys2do make bootstrap
-        shell: cmd
+        run: |
+          scheme --version
+      - name: Bootstrap and install
+        run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make bootstrap && make install"
