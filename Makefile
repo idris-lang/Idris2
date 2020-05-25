@@ -24,13 +24,7 @@ endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
-
-CG ?= ${IDRIS2_CG}
-ifneq (${CG},racket)
-    IDRIS2_IPKG := idris2.ipkg
-else
-    IDRIS2_IPKG := idris2rkt.ipkg
-endif
+IDRIS2_IPKG := idris2.ipkg
 
 ifeq ($(OS), windows)
 	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
@@ -47,7 +41,7 @@ endif
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} support support-clean clean distclean
+.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean
 
 all: support ${TARGET} testbin libs
 
@@ -107,12 +101,13 @@ install-api:
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
+ifeq ($(OS), windows)
+	-install ${TARGET}.cmd ${PREFIX}/bin
+endif
 	mkdir -p ${PREFIX}/lib/
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
-ifneq ($(CG),racket)
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
-endif
 
 install-support: support
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
@@ -126,7 +121,7 @@ install-support: support
 install-libs: libs
 	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_VERSION=${IDRIS2_VERSION}
+	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
@@ -140,19 +135,15 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
-ifeq ($(OS), windows)
-	sh ./bootstrap-win.sh
-else
 	sh ./bootstrap.sh
-endif
 
 bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	cp bootstrap/idris2.rkt bootstrap/idris2boot.rkt
+	cp bootstrap/idris2_app/idris2.rkt bootstrap/idris2_app/idris2-boot.rkt
 ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2boot.rkt
+	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 endif
 	sh ./bootstrap-rkt.sh
 

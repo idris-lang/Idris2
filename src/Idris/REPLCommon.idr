@@ -11,6 +11,7 @@ import Idris.IDEMode.Commands
 import public Idris.REPLOpts
 import Idris.Syntax
 
+import Data.List
 
 -- Output informational messages, unless quiet flag is set
 export
@@ -73,6 +74,44 @@ emitError err
   where
     addOne : (Int, Int) -> (Int, Int)
     addOne (l, c) = (l + 1, c + 1)
+
+export
+emitWarning : {auto c : Ref Ctxt Defs} ->
+              {auto o : Ref ROpts REPLOpts} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              Warning -> Core ()
+emitWarning w
+    = do opts <- get ROpts
+         case idemode opts of
+              REPL _ =>
+                  do msg <- displayWarning w
+                     coreLift $ putStrLn msg
+              IDEMode i _ f =>
+                  do msg <- pwarning w
+                     case getWarningLoc w of
+                          Nothing => iputStrLn msg
+                          Just fc =>
+                            send f (SExpList [SymbolAtom "warning",
+                                   SExpList [toSExp (file fc),
+                                            toSExp (addOne (startPos fc)),
+                                              toSExp (addOne (endPos fc)),
+                                              toSExp msg,
+                                              -- highlighting; currently blank
+                                              SExpList []],
+                                    toSExp i])
+  where
+    addOne : (Int, Int) -> (Int, Int)
+    addOne (l, c) = (l + 1, c + 1)
+
+export
+emitWarnings : {auto c : Ref Ctxt Defs} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               Core ()
+emitWarnings
+    = do defs <- get Ctxt
+         traverse_ emitWarning (reverse (warnings defs))
+         put Ctxt (record { warnings = [] } defs)
 
 getFCLine : FC -> Int
 getFCLine fc = fst (startPos fc)

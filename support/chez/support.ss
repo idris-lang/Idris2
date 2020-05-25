@@ -33,6 +33,12 @@
 (define cast-string-int
   (lambda (x)
     (floor (cast-num (string->number (destroy-prefix x))))))
+(define cast-int-char
+  (lambda (x)
+    (if (and (>= x 0)
+             (<= x #x10ffff))
+        (integer->char x)
+        0)))
 (define exact-floor
   (lambda (x)
     (inexact->exact (floor x))))
@@ -130,7 +136,8 @@
 (define (blodwen-buffer-copydata buf start len dest loc)
   (bytevector-copy! buf start dest loc len))
 
-(define (blodwen-read-bytevec fname)
+; 'dir' is only needed in Racket
+(define (blodwen-read-bytevec curdir fname)
   (guard
     (x (#t #f))
     (let* [(h (open-file-input-port fname
@@ -145,7 +152,8 @@
     0
     -1))
 
-(define (blodwen-write-bytevec fname vec max)
+; 'dir' is only needed in Racket
+(define (blodwen-write-bytevec curdir fname vec max)
   (guard
     (x (#t -1))
     (let* [(h (open-file-output-port fname (file-options no-fail)

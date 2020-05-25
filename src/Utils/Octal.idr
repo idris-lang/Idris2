@@ -11,6 +11,7 @@ octDigit 4 = '4'
 octDigit 5 = '5'
 octDigit 6 = '6'
 octDigit 7 = '7'
+octDigit _ = 'X' -- TMP HACK: Ideally we'd have a bounds proof, generated below
 
 ||| Convert a positive integer into a list of octal characters
 export

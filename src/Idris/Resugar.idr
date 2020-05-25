@@ -252,6 +252,9 @@ mutual
   toPTerm p (Implicit fc True) = pure (PImplicit fc)
   toPTerm p (Implicit fc False) = pure (PInfer fc)
 
+  toPTerm p (IWithUnambigNames fc ns rhs) =
+    PWithUnambigNames fc ns <$> toPTerm startPrec rhs
+
   mkApp : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           PTerm -> List (FC, Maybe (Maybe Name), PTerm) -> Core PTerm

@@ -55,11 +55,13 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-escapeQuotes : String -> String
-escapeQuotes s = pack $ foldr escape [] $ unpack s
+
+escapeString : String -> String
+escapeString s = pack $ foldr escape [] $ unpack s
   where
     escape : Char -> List Char -> List Char
     escape '"' cs = '\\' :: '\"' :: cs
+    escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
 schHeader : String -> List String -> String
@@ -69,9 +71,10 @@ schHeader chez libs
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++ 
+    "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeQuotes x ++ "\")") libs) ++ "\n\n" ++
+    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
 schFooter : String
@@ -181,7 +184,7 @@ cCall appdir fc cfn clib args ret
                            copyLib (appdir ++ dirSep ++ fname, fullname)
                            put Loaded (clib :: loaded)
                            pure $ "(load-shared-object \""
-                                    ++ escapeQuotes fname
+                                    ++ escapeString fname
                                     ++ "\")\n"
          argTypes <- traverse (\a => cftySpec fc (snd a)) args
          retType <- cftySpec fc ret
@@ -320,17 +323,17 @@ startChezCmd : String -> String -> String -> String
 startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%;%PATH%"
-    , chez ++ " --script %APPDIR%/" ++ target ++ " %*"
+    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
+    , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target = unlines
     [ "#!/bin/sh"
-    , "DIR=\"`realpath $0`\""
+    , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "$CHEZ --script \"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
+    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
@@ -372,7 +375,7 @@ compileToSO chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift $ chmodRaw tmpFileAbs 0o755
-         coreLift $ system (chez ++ " --script " ++ tmpFileAbs)
+         coreLift $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
 
 makeSh : String -> String -> String -> Core ()

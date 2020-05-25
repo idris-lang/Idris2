@@ -58,6 +58,7 @@ SExpable Highlight where
 
 inFile : String -> (FC, (Name, Nat, ClosedTerm)) -> Bool
 inFile fname (MkFC file _ _, _) = file == fname
+inFile _     (EmptyFC, _)       = False
 
 ||| Output some data using current dialog index
 export

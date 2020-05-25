@@ -37,6 +37,8 @@ else
         CFLAGS += -fPIC
 endif
 
+export OS
+
 ifeq ($(OS),bsd)
 	MAKE := gmake
 else

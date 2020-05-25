@@ -1,6 +1,5 @@
 module Parser.Support
 
-import public Parser.Lexer.Source
 import public Text.Lexer
 import public Text.Parser
 
@@ -13,13 +12,14 @@ import System.File
 %default total
 
 public export
-data ParseError = ParseFail String (Maybe (Int, Int)) (List SourceToken)
-                | LexFail (Int, Int, String)
-                | FileFail FileError
-                | LitFail LiterateError
+data ParseError tok
+  = ParseFail String (Maybe (Int, Int)) (List tok)
+  | LexFail   (Int, Int, String)
+  | FileFail  FileError
+  | LitFail   LiterateError
 
 export
-Show ParseError where
+Show tok => Show (ParseError tok) where
   show (ParseFail err loc toks)
       = "Parse error: " ++ err ++ " (next tokens: "
             ++ show (take 10 toks) ++ ")"
@@ -31,9 +31,9 @@ Show ParseError where
       = "Lit error(s) at " ++ show (c, l) ++ " input: " ++ str
 
 export
-mapParseError : ParseError (TokenData SourceToken) -> ParseError
-mapParseError (Error err [])      = ParseFail err Nothing []
-mapParseError (Error err (t::ts)) = ParseFail err (Just (line t, col t)) (map tok (t::ts))
+toGenericParsingError : ParsingError (TokenData token) -> ParseError token
+toGenericParsingError (Error err [])      = ParseFail err Nothing []
+toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (line t, col t)) (map tok (t::ts))
 
 export
 hex : Char -> Maybe Int

@@ -1,3 +1,3 @@
 1/1: Building Fin (Fin.idr)
-Fin.idr:33:7--35:1:While processing right hand side of bar at Fin.idr:33:1--35:1:
+Fin.idr:34:7--36:1:While processing right hand side of bar at Fin.idr:34:1--36:1:
 Can't find an implementation for IsJust (integerToFin 8 5)

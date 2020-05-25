@@ -1,3 +1,12 @@
+;; Inspired by:
+;; https://github.com/gambit/gambit/blob/master/gsc/_t-x86.scm#L1106 #L1160
+(define (blodwen-os)
+  (cond
+    [(memq (cadr (system-type)) '(apple)) "darwin"]
+    [(memq (caddr (system-type)) '(linux-gnu)) "unix"]
+    [(memq (caddr (system-type)) '(mingw32 mingw64)) "windows"]
+    [else "unknown"]))
+
 ;; TODO Convert to macro
 (define (blodwen-read-args desc)
   (if (fx= (vector-ref desc 0) 0)

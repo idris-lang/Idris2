@@ -152,9 +152,9 @@ handleRet ret op = mkWorld (cToRkt ret op)
 cCall : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        FC -> (cfn : String) -> (clib : String) ->
+        String -> FC -> (cfn : String) -> (clib : String) ->
         List (Name, CFType) -> CFType -> Core (String, String)
-cCall fc cfn libspec args ret
+cCall appdir fc cfn libspec args ret
     = do loaded <- get Loaded
          bound <- get Done
 
@@ -162,8 +162,8 @@ cCall fc cfn libspec args ret
          lib <- if libn `elem` loaded
                    then pure ""
                    else do put Loaded (libn :: loaded)
-                           ldata <- locate libspec
-                           copyLib ldata
+                           (fname, fullname) <- locate libspec
+                           copyLib (appdir ++ dirSep ++ fname, fullname)
                            pure (loadlib libn vers)
 
          argTypes <- traverse (\a => do s <- cftySpec fc (snd a)
@@ -230,18 +230,18 @@ schemeCall fc sfn argns ret
 useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC fc [] args ret
+        String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
+useCC appdir fc [] args ret
     = throw (GenericMsg fc "No recognised foreign calling convention")
-useCC fc (cc :: ccs) args ret
+useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
-           Nothing => useCC fc ccs args ret
+           Nothing => useCC appdir fc ccs args ret
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
-           Just ("C", [cfn, clib]) => cCall fc cfn clib args ret
-           Just ("C", [cfn, clib, chdr]) => cCall fc cfn clib args ret
-           _ => useCC fc ccs args ret
+           Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
+           Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
+           _ => useCC appdir fc ccs args ret
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -271,31 +271,56 @@ schFgnDef : {auto f : Ref Done (List String) } ->
             {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
-            FC -> Name -> NamedDef -> Core (String, String)
-schFgnDef fc n (MkNmForeign cs args ret)
+            String -> FC -> Name -> NamedDef -> Core (String, String)
+schFgnDef appdir fc n (MkNmForeign cs args ret)
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
          let useargns = map fst (filter snd argns)
          argStrs <- traverse mkStruct args
          retStr <- mkStruct ret
-         (load, body) <- useCC fc cs (zip useargns args) ret
+         (load, body) <- useCC appdir fc cs (zip useargns args) ret
          defs <- get Ctxt
          pure (concat argStrs ++ retStr ++ load,
                 "(define " ++ schName !(full (gamma defs) n) ++
                 " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
-schFgnDef _ _ _ = pure ("", "")
+schFgnDef _ _ _ _ = pure ("", "")
 
 getFgnCall : {auto f : Ref Done (List String) } ->
              {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
-             (Name, FC, NamedDef) -> Core (String, String)
-getFgnCall (n, fc, d) = schFgnDef fc n d
+             String -> (Name, FC, NamedDef) -> Core (String, String)
+getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
+
+startRacket : String -> String -> String -> String
+startRacket racket appdir target = unlines
+    [ "#!/bin/sh"
+    , ""
+    , "DIR=\"`realpath $0`\""
+    , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
+    , racket ++ "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
+    ]
+
+startRacketCmd : String -> String -> String -> String
+startRacketCmd racket appdir target = unlines
+    [ "@echo off"
+    , "set APPDIR=%~dp0"
+    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
+    , racket ++ "\"" ++ target ++ "\" %*"
+    ]
+
+startRacketWinSh : String -> String -> String -> String
+startRacketWinSh racket appdir target = unlines
+    [ "#!/bin/sh"
+    , "DIR=\"`realpath \"$0\"`\""
+    , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
+    , racket ++ "\"" ++ target ++ "\" \"$@\""
+    ]
 
 compileToRKT : Ref Ctxt Defs ->
-               ClosedTerm -> (outfile : String) -> Core ()
-compileToRKT c tm outfile
+               String -> ClosedTerm -> (outfile : String) -> Core ()
+compileToRKT c appdir tm outfile
     = do cdata <- getCompileData Cases tm
          let ndefs = namedDefs cdata
          let ctm = forget (mainExpr cdata)
@@ -304,7 +329,7 @@ compileToRKT c tm outfile
          f <- newRef {t = List String} Done empty
          l <- newRef {t = List String} Loaded []
          s <- newRef {t = List String} Structs []
-         fgndefs <- traverse getFgnCall ndefs
+         fgndefs <- traverse (getFgnCall appdir) ndefs
          compdefs <- traverse (getScheme racketPrim racketString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp racketPrim racketString 0 ctm
@@ -318,28 +343,68 @@ compileToRKT c tm outfile
          coreLift $ chmodRaw outfile 0o755
          pure ()
 
-compileExpr : Ref Ctxt Defs -> (execDir : String) ->
+makeSh : String -> String -> String -> String -> Core ()
+makeSh racket outShRel appdir outAbs
+    = do Right () <- coreLift $ writeFile outShRel (startRacket racket appdir outAbs)
+            | Left err => throw (FileErr outShRel err)
+         pure ()
+
+||| Make Windows start scripts, one for bash environments and one batch file
+makeShWindows : String -> String -> String -> String -> Core ()
+makeShWindows racket outShRel appdir outAbs
+    = do let cmdFile = outShRel ++ ".cmd"
+         Right () <- coreLift $ writeFile cmdFile (startRacketCmd racket appdir outAbs)
+            | Left err => throw (FileErr cmdFile err)
+         Right () <- coreLift $ writeFile outShRel (startRacketWinSh racket appdir outAbs)
+            | Left err => throw (FileErr outShRel err)
+         pure ()
+
+compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c execDir tm outfile
-    = do let outSs = execDir ++ dirSep ++ outfile ++ ".rkt"
-         let outBin = execDir ++ dirSep ++ outfile
-         compileToRKT c tm outSs
+compileExpr mkexec c execDir tm outfile
+    = do let appDirRel = outfile ++ "_app" -- relative to build dir
+         let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
+         coreLift $ mkdirs (splitDir appDirGen)
+         Just cwd <- coreLift currentDir
+              | Nothing => throw (InternalError "Can't get current directory")
+          
+         let ext = if isWindows then ".exe" else ""
+         let outRktFile = appDirRel ++ dirSep ++ outfile ++ ".rkt"
+         let outBinFile = appDirRel ++ dirSep ++ outfile ++ ext
+         let outRktAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outRktFile
+         let outBinAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outBinFile
+
+         compileToRKT c appDirGen tm outRktAbs
          raco <- coreLift findRacoExe
-         ok <- coreLift $ system (raco ++ " -o " ++ outBin ++ " " ++ outSs)
+         racket <- coreLift findRacket
+
+         ok <- the (Core Int) $ if mkexec
+                  then logTime "Build racket" $
+                         coreLift $
+                           system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
+                  else pure 0
          if ok == 0
-            then pure (Just outfile)
+            then do -- TODO: add launcher script
+                    let outShRel = execDir ++ dirSep ++ outfile
+                    the (Core ()) $ if isWindows
+                       then if mkexec
+                               then makeShWindows "" outShRel appDirRel outBinFile
+                               else makeShWindows (racket ++ " ") outShRel appDirRel outRktFile
+                       else if mkexec
+                               then makeSh "" outShRel appDirRel outBinFile
+                               else makeSh (racket ++ " ") outShRel appDirRel outRktFile
+                    coreLift $ chmodRaw outShRel 0o755
+                    pure (Just outShRel)
             else pure Nothing
 
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c execDir tm
-    = do let tmp = execDir ++ dirSep ++ "_tmpracket"
-         let outn = tmp ++ ".rkt"
-         compileToRKT c tm outn
-         racket <- coreLift findRacket
-         coreLift $ system (racket ++ " " ++ outn)
+    = do Just sh <- compileExpr False c execDir tm "_tmpracket"
+            | Nothing => throw (InternalError "compileExpr returned Nothing")
+         coreLift $ system sh
          pure ()
 
 export
 codegenRacket : Codegen
-codegenRacket = MkCG compileExpr executeExpr
+codegenRacket = MkCG (compileExpr True) executeExpr
 

@@ -12,10 +12,7 @@ On Windows, it has been reported that installing via `MSYS2` works
 (https://www.msys2.org/). On Raspberry Pi, you can bootstrap via Racket.
 
 By default, code generation is via Chez Scheme. You can use Racket instead,
-by passing `CG=racket` to `make` for the commands below.
-
-[Note: a couple of tests are currently known to fail when installing via
-Racket. This will be addressed soon!]
+by setting the environment variable `IDRIS2_CG=racket` before running `make`.
 
 1: Set the PREFIX
 -----------------

@@ -1,3 +1,4 @@
+partial
 bar : (n : Nat) -> (m : Nat) -> n = m -> Nat
 bar (S m) (S m) (Refl {x = S m}) = m
 

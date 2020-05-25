@@ -167,11 +167,11 @@ export
 toLower : String -> String
 toLower str = pack (map toLower (unpack str))
 
-export
+export partial
 strIndex : String -> Int -> Char
 strIndex = prim__strIndex
 
-export
+export partial
 strTail : String -> String
 strTail = prim__strTail
 

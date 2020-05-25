@@ -7,6 +7,7 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
+import System.Info
 import System.Path
 
 %default covering
@@ -41,7 +42,8 @@ idrisTests
        "basic036", "basic037", "basic038", "basic039", "basic040",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
-       "coverage005", "coverage006",
+       "coverage005", "coverage006", "coverage007", "coverage008",
+       "coverage009",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
@@ -85,12 +87,14 @@ idrisTests
        -- Miscellaneous regressions
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
-       "reg015", "reg016", "reg017", "reg018", "reg019",
+       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
        -- The 'with' rule
-       "with001", "with002"]
+       "with001", "with002",
+       -- with-disambiguation
+       "with003"]
 
 typeddTests : List String
 typeddTests
@@ -148,6 +152,19 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
+
+isWindows : Bool
+isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
+
+-- on Windows, we just ignore backslashes and slashes when comparing,
+-- similarity up to that is good enough. Leave errors that depend
+-- on the confusion of slashes and backslashes to unix machines.
+normalize : String -> String
+normalize str =
+    if isWindows
+      then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
+      else str
+
 runTest : Options -> String -> IO Bool
 runTest opts testPath
     = do changeDir testPath
@@ -187,8 +204,7 @@ runTest opts testPath
           b <- getAnswer
           when b $ do Right _ <- writeFile "expected" out
                           | Left err => print err
-                      pure ()
-
+                      pure () 
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
@@ -203,9 +219,9 @@ runTest opts testPath
                            else print FileNotFound
                          pure False
                      | Left err => do print err
-                                      pure False
-
-                 if (out == exp)
+                                      pure False 
+                 let result = normalize out == normalize exp
+                 if normalize out == normalize exp 
                     then putStrLn "success"
                     else do
                       putStrLn "FAILURE"
@@ -213,7 +229,7 @@ runTest opts testPath
                          then mayOverwrite (Just exp) out
                          else printExpectedVsOutput exp out
 
-                 pure (out == exp)
+                 pure result
 
 exists : String -> IO Bool
 exists f

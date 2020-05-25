@@ -13,7 +13,7 @@ import System.Directory
 import System.File
 import System.Info
 
-%default total
+%default covering
 
 fullPath : String -> List String
 fullPath fp = filter (/="") $ split (==sep) fp
@@ -200,10 +200,10 @@ getEntries d
 
 dirEntries : String -> IO (Either FileError (List String))
 dirEntries dir
-    = do Right d <- dirOpen dir
+    = do Right d <- openDir dir
              | Left err => pure (Left err)
          ds <- getEntries d
-         dirClose d
+         closeDir d
          pure (Right ds)
 
 findIpkg : List String -> Maybe String
@@ -215,10 +215,13 @@ findIpkg (f :: fs)
 
 allDirs : String -> List String -> List (String, List String)
 allDirs path [] = []
-allDirs path ("" :: ds) = ("/", ds) :: allDirs path ds
+allDirs path ("" :: ds) = (dirSep, ds) ::allDirs path ds
+allDirs "" (d :: ds)
+    = let d' = if isWindows then d ++ dirSep else strCons sep d in 
+                (d', ds) :: allDirs d' ds
 allDirs path (d :: ds)
     = let d' = path ++ strCons sep d in
-          (d', ds) :: allDirs d' ds
+                (d', ds) :: allDirs d' ds
 
 -- Find an ipkg file in any of the directories above this one
 -- returns the directory, the ipkg file name, and the directories we've

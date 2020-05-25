@@ -203,6 +203,9 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
                                       [] casefnty Private None)
+         -- don't worry about totality of the case block; it'll be handled
+         -- by the totality of the parent function
+         setFlag fc (Resolved cidx) (SetTotal PartialOK)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
 
          -- If there's no duplication of the scrutinee in the block,
@@ -226,7 +229,15 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- Start with empty nested names, since we've extended the rhs with
          -- ICaseLocal so they'll get rebuilt with the right environment
          let nest' = MkNested []
+         ust <- get UST
+         -- We don't want to keep rechecking delayed elaborators in the
+         -- case block, because they're not going to make progress until
+         -- we come out again, so save them
+         let olddelayed = delayedElab ust
+         put UST (record { delayedElab = [] } ust)
          processDecl [InCase] nest' [] (IDef fc casen alts')
+         ust <- get UST
+         put UST (record { delayedElab = olddelayed } ust)
 
          pure (appTm, gnf env caseretty)
   where

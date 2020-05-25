@@ -131,7 +131,7 @@ schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast StringType DoubleType) [x] = op "cast-string-double" [x]
 
-schOp (Cast IntType CharType) [x] = op "integer->char" [x]
+schOp (Cast IntType CharType) [x] = op "cast-int-char" [x]
 
 schOp (Cast from to) [x] = "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
 

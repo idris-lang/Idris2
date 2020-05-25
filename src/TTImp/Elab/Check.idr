@@ -127,9 +127,14 @@ record EState (vars : List Name) where
   allPatVars : List Name
                   -- Holes standing for pattern variables, which we'll delete
                   -- once we're done elaborating
-  allowDelay : Bool -- Delaying elaborators is okay. We can't nest delays.
+  delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
+
+  unambiguousNames : StringMap (Name, Int, GlobalDef)
+                  -- Mapping from userNameRoot to fully resolved names.
+                  -- For names in this mapping, we don't run disambiguation.
+                  -- Used in with-expressions.
 
 export
 data EST : Type where
@@ -137,7 +142,7 @@ data EST : Type where
 export
 initEStateSub : {outer : _} ->
                 Int -> Env Term outer -> SubVars outer vars -> EState vars
-initEStateSub n env sub = MkEState n env sub [] [] [] [] [] True [] empty
+initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty empty
 
 export
 initEState : {vars : _} ->
@@ -165,9 +170,10 @@ weakenedEState {e}
                               (bindIfUnsolved est)
                               (lhsPatVars est)
                               (allPatVars est)
-                              (allowDelay est)
+                              (delayDepth est)
                               (map weaken (linearUsed est))
-                              (saveHoles est))
+                              (saveHoles est)
+                              (unambiguousNames est))
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
@@ -197,9 +203,10 @@ strengthenedEState {n} {vars} c e fc env
                         (bindIfUnsolved est)
                         (lhsPatVars est)
                         (allPatVars est)
-                        (allowDelay est)
+                        (delayDepth est)
                         (mapMaybe dropTop (linearUsed est))
-                        (saveHoles est))
+                        (saveHoles est)
+                        (unambiguousNames est))
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
     dropSub (DropCons sub) = pure sub
@@ -290,9 +297,10 @@ updateEnv env sub bif st
                (boundNames st) (toBind st) bif
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 export
 addBindIfUnsolved : {vars : _} ->
@@ -306,9 +314,10 @@ addBindIfUnsolved hn r p env tm ty st
                ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) :: bindIfUnsolved st)
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 clearBindIfUnsolved : EState vars -> EState vars
 clearBindIfUnsolved st
@@ -317,9 +326,10 @@ clearBindIfUnsolved st
                (boundNames st) (toBind st) []
                (lhsPatVars st)
                (allPatVars st)
-               (allowDelay st)
+               (delayDepth st)
                (linearUsed st)
                (saveHoles st)
+               (unambiguousNames st)
 
 -- Clear the 'toBind' list, except for the names given
 export

@@ -8,9 +8,15 @@ The Gambit Scheme code generator can be accessed via the REPL command:
 
     Main> :set cg gambit
 
-Ergo, to run Idris programs with this generator, you will need to install
+Alternatively, you can set it via the ``IDRIS2_CG`` environment variable:
+
+::
+
+    $ export IDRIS2_CG=gambit
+
+To run Idris programs with this generator, you will need to install
 `Gambit Scheme <https://gambitscheme.org>`_. Gambit Scheme is free software,
-and available via most pacakge managers.
+and available via most package managers.
 
 You can compile an expression ``expr`` of type ``IO ()`` to an executable as
 follows, at the REPL:

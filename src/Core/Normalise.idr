@@ -107,7 +107,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Bind fc x (Lam r _ ty) scope) (thunk :: stk)
         = eval env (thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let r val ty) scope) stk
-        = if holesOnly topopts || argHolesOnly topopts
+        = if holesOnly topopts || argHolesOnly topopts && not (tcInline topopts)
              then do b' <- traverse (\tm => eval env locs tm []) b
                      pure $ NBind fc x b'
                         (\defs', arg => evalWithOpts defs' topopts
@@ -326,7 +326,7 @@ parameters (defs : Defs, topopts : EvalOpts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            let loc' = updateLocal idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts def
-    evalTree env loc opts fc stk (STerm tm) def
+    evalTree env loc opts fc stk (STerm _ tm) def
           = case fuel opts of
                  Nothing => evalWithOpts defs opts env loc (embed tm) stk
                  Just Z => def
@@ -595,8 +595,10 @@ mutual
            pure (TDelay fc r tyQ argQ)
     where
       toHolesOnly : Closure vs -> Closure vs
-      toHolesOnly (MkClosure _ locs env tm)
-          = MkClosure withHoles locs env tm
+      toHolesOnly (MkClosure opts locs env tm)
+          = MkClosure (record { holesOnly = True,
+                                argHolesOnly = True } opts)
+                      locs env tm
       toHolesOnly c = c
   quoteGenNF q defs bound env (NForce fc r arg args)
       = do args' <- quoteArgs q defs bound env args

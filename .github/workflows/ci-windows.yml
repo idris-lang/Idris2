@@ -1,0 +1,40 @@
+name: Windows
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+env:
+  MSYS2_PATH_TYPE: inherit
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install MSYS2
+        uses: eine/setup-msys2@v0
+        with:
+          update: true
+          install: make mingw-w64-x86_64-clang tar
+      - name: Get Chez Scheme
+        run: | 
+          git clone --depth 1 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: msys2do cd ChezScheme; ./configure --threads; make; cd ..
+        shell: cmd
+      - name: Set Path
+        run: |
+          $chez="$(pwd)\ChezScheme\ta6nt\bin\ta6nt"
+          echo "::add-path::$chez"
+          echo "::set-env name=SCHEME::scheme"
+      - name: Test Scheme
+        run: scheme.exe --version
+      - name: Bootstrap
+        run: msys2do make bootstrap
+        shell: cmd

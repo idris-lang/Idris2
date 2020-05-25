@@ -1,11 +1,10 @@
 module Main
 
 import System
+import System.Info
 import Network.Socket
 import Network.Socket.Data
 import Network.Socket.Raw
-
-%cg chez libidris_net
 
 runServer : IO (Either String (Port, ThreadID))
 runServer = do

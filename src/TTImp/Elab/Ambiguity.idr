@@ -15,6 +15,7 @@ import TTImp.TTImp
 
 import Data.Bool.Extra
 import Data.List
+import Data.StringMap
 
 %default covering
 
@@ -49,17 +50,26 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                         ci <- fromCharName
                         let prims = mapMaybe id [fi, si, ci]
                         let primApp = isPrimName prims x
-                        ns <- lookupCtxtName x (gamma defs)
-                        ns' <- filterM visible ns
-                        case ns' of
-                             [] => do log 10 $ "Failed to find " ++ show orig
-                                      pure orig
-                             [nalt] =>
-                                   do log 10 $ "Only one " ++ show (fst nalt)
-                                      pure $ mkAlt primApp est nalt
-                             nalts => pure $ IAlternative fc (uniqType fi si ci x args)
-                                                    (map (mkAlt primApp est) nalts)
+                        case lookupUN (userNameRoot x) (unambiguousNames est) of
+                          Just xr => do
+                            log 10 $ "unambiguous: " ++ show (fst xr)
+                            pure $ mkAlt primApp est xr
+                          Nothing => do
+                            ns <- lookupCtxtName x (gamma defs)
+                            ns' <- filterM visible ns
+                            case ns' of
+                               [] => do log 10 $ "Failed to find " ++ show orig
+                                        pure orig
+                               [nalt] =>
+                                     do log 10 $ "Only one " ++ show (fst nalt)
+                                        pure $ mkAlt primApp est nalt
+                               nalts => pure $ IAlternative fc (uniqType fi si ci x args)
+                                                      (map (mkAlt primApp est) nalts)
   where
+    lookupUN : Maybe String -> StringMap a -> Maybe a
+    lookupUN Nothing _ = Nothing
+    lookupUN (Just n) sm = lookup n sm
+
     visible : (Name, Int, GlobalDef) -> Core Bool
     visible (n, i, def)
         = do let NS ns x = fullname def

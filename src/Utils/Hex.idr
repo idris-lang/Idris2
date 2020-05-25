@@ -19,6 +19,7 @@ hexDigit 12 = 'c'
 hexDigit 13 = 'd'
 hexDigit 14 = 'e'
 hexDigit 15 = 'f'
+hexDigit _ = 'X' -- TMP HACK: Ideally we'd have a bounds proof, generated below
 
 ||| Convert a positive integer into a list of (lower case) hexadecimal characters
 export

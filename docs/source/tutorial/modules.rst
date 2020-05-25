@@ -64,7 +64,15 @@ the name of the module. The names defined in the ``BTree`` module are, in full:
 
 If names are otherwise unambiguous, there is no need to give the fully
 qualified name. Names can be disambiguated either by giving an explicit
-qualification, or according to their type.
+qualification, using the ``with`` keyword, or according to their type.
+
+The ``with`` keyword in expressions comes in two variants:
+
+* ``with BTree.insert (insert x empty)`` for one name
+* ``with [BTree.insert, BTree.empty] (insert x empty)`` for multiple names
+
+This is particularly useful with ``do`` notation, where it can often improve
+error messages: ``with MyModule.(>>=) do ...``
 
 There is no formal link between the module name and its filename,
 although it is generally advisable to use the same name for each. An

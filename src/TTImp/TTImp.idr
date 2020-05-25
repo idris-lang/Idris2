@@ -105,6 +105,9 @@ mutual
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> RawImp
 
+       -- with-disambiguation
+       IWithUnambigNames : FC -> List Name -> RawImp -> RawImp
+
   public export
   data IFieldUpdate : Type where
        ISetField : (path : List String) -> RawImp -> IFieldUpdate
@@ -170,6 +173,7 @@ mutual
       show (IType fc) = "%type"
       show (Implicit fc True) = "_"
       show (Implicit fc False) = "?"
+      show (IWithUnambigNames fc ns rhs) = "(%with " ++ show ns ++ " " ++ show rhs ++ ")"
 
   export
   Show IFieldUpdate where
@@ -179,6 +183,7 @@ mutual
   public export
   data FnOpt : Type where
        Inline : FnOpt
+       TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
        Hint : Bool -> FnOpt
@@ -196,6 +201,7 @@ mutual
   export
   Show FnOpt where
     show Inline = "%inline"
+    show TCInline = "%tcinline"
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
     show ExternFn = "%extern"
@@ -210,6 +216,7 @@ mutual
   export
   Eq FnOpt where
     Inline == Inline = True
+    TCInline == TCInline = True
     (Hint x) == (Hint y) = x == y
     (GlobalHint x) == (GlobalHint y) = x == y
     ExternFn == ExternFn = True
@@ -587,6 +594,7 @@ getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
 getFC (IAs x _ _ _) = x
 getFC (Implicit x _) = x
+getFC (IWithUnambigNames x _ _) = x
 
 export
 apply : RawImp -> List RawImp -> RawImp
@@ -676,6 +684,8 @@ mutual
 
     toBuf b (Implicit fc i)
         = do tag 28; toBuf b fc; toBuf b i
+    toBuf b (IWithUnambigNames fc ns rhs)
+        = do tag 29; toBuf b ns; toBuf b rhs
 
     fromBuf b
         = case !getTag of
@@ -760,6 +770,10 @@ mutual
                28 => do fc <- fromBuf b
                         i <- fromBuf b
                         pure (Implicit fc i)
+               29 => do fc <- fromBuf b
+                        ns <- fromBuf b
+                        rhs <- fromBuf b
+                        pure (IWithUnambigNames fc ns rhs)
                _ => corrupt "RawImp"
 
   export
@@ -895,6 +909,7 @@ mutual
   export
   TTC FnOpt where
     toBuf b Inline = tag 0
+    toBuf b TCInline = tag 11
     toBuf b (Hint t) = do tag 1; toBuf b t
     toBuf b (GlobalHint t) = do tag 2; toBuf b t
     toBuf b ExternFn = tag 3
@@ -919,6 +934,7 @@ mutual
                8 => pure (Totality PartialOK)
                9 => pure Macro
                10 => do ns <- fromBuf b; pure (SpecArgs ns)
+               11 => pure TCInline
                _ => corrupt "FnOpt"
 
   export

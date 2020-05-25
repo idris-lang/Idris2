@@ -7,59 +7,132 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
+import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
 %default covering
 
+-- Return whether any of the name matches conflict
+conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
+conflictMatch [] = False
+conflictMatch ((x, tm) :: ms)
+    = if conflictArgs x tm ms
+         then True
+         else conflictMatch ms
+  where
+    clash : Term vars -> Term vars -> Bool
+    clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
+        = t /= t'
+    clash _ _ = False
+
+    findN : Nat -> Term vars -> Bool
+    findN i (Local _ _ i' _) = i == i'
+    findN i tm
+        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+                   | _ => False in
+              anyTrue (map (findN i) args)
+
+    -- Assuming in normal form. Look for: mismatched constructors, or
+    -- a name appearing strong rigid in the other term
+    conflictTm : Term vars -> Term vars -> Bool
+    conflictTm (Local _ _ i _) tm
+        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+                   | _ => False in
+              anyTrue (map (findN i) args)
+    conflictTm tm (Local _ _ i _)
+        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+                   | _ => False in
+              anyTrue (map (findN i) args)
+    conflictTm tm tm'
+        = let (f, args) = getFnArgs tm
+              (f', args') = getFnArgs tm' in
+              if clash f f'
+                 then True
+                 else anyTrue (zipWith conflictTm args args') 
+
+    conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
+    conflictArgs n tm [] = False
+    conflictArgs n tm ((x, tm') :: ms)
+        = if n == x && conflictTm tm tm'
+             then True
+             else conflictArgs n tm ms
+
 -- Return whether any part of the type conflicts in such a way that they
 -- can't possibly be equal (i.e. mismatched constructor)
 conflict : {vars : _} ->
-           Defs -> NF vars -> Name -> Core Bool
-conflict defs nfty n
+           {auto c : Ref Ctxt Defs} ->
+           Defs -> Env Term vars -> NF vars -> Name -> Core Bool
+conflict defs env nfty n
     = do Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => conflictNF nfty !(nf defs [] dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
+                            | Just ms => pure $ conflictMatch ms
+                        pure True
               _ => pure False
   where
     mutual
-      conflictArgs : List (Closure vars) -> List (Closure []) -> Core Bool
-      conflictArgs [] [] = pure False
-      conflictArgs (c :: cs) (c' :: cs')
+      conflictArgs : Int -> List (Closure vars) -> List (Closure []) ->
+                     Core (Maybe (List (Name, Term vars)))
+      conflictArgs _ [] [] = pure (Just [])
+      conflictArgs i (c :: cs) (c' :: cs')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
-               pure $ !(conflictNF cnf cnf') || !(conflictArgs cs cs')
-      conflictArgs _ _ = pure False
+               Just ms <- conflictNF i cnf cnf'
+                    | Nothing => pure Nothing
+               Just ms' <- conflictArgs i cs cs'
+                    | Nothing => pure Nothing
+               pure (Just (ms ++ ms'))
+      conflictArgs _ _ _ = pure (Just [])
 
-      conflictNF : NF vars -> NF [] -> Core Bool
-      conflictNF t (NBind fc x b sc)
-          = conflictNF t !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-      conflictNF (NDCon _ n t a args) (NDCon _ n' t' a' args')
+      -- If the constructor type (the NF []) matches the variable type,
+      -- then there may be a way to construct it, so return the matches in
+      -- the indices.
+      -- If any of those matches clash, the constructor is not valid
+      -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
+      -- conflictNF returns the list of matches, for checking
+      conflictNF : Int -> NF vars -> NF [] -> 
+                   Core (Maybe (List (Name, Term vars)))
+      conflictNF i t (NBind fc x b sc)
+          -- invent a fresh name, in case a user has bound the same name
+          -- twice somehow both references appear in the result  it's unlikely
+          -- put posslbe
+          = let x' = MN (show x) i in
+                conflictNF (i + 1) t 
+                       !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
+      conflictNF i nf (NApp _ (NRef Bound n) [])
+          = do empty <- clearDefs defs
+               pure (Just [(n, !(quote empty env nf))])
+      conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs args args'
-               else pure True
-      conflictNF (NTCon _ n t a args) (NTCon _ n' t' a' args')
+               then conflictArgs i args args'
+               else pure Nothing
+      conflictNF i (NTCon _ n t a args) (NTCon _ n' t' a' args')
           = if n == n'
-               then conflictArgs args args'
-               else pure True
-      conflictNF (NPrimVal _ c) (NPrimVal _ c') = pure (c /= c')
-      conflictNF _ _ = pure False
+               then conflictArgs i args args'
+               else pure Nothing
+      conflictNF i (NPrimVal _ c) (NPrimVal _ c')
+          = if c == c'
+               then pure (Just [])
+               else pure Nothing
+      conflictNF _ _ _ = pure (Just [])
 
 -- Return whether the given type is definitely empty (due to there being
 -- no constructors which can possibly match it.)
 export
 isEmpty : {vars : _} ->
-          Defs -> NF vars -> Core Bool
-isEmpty defs (NTCon fc n t a args)
+          {auto c : Ref Ctxt Defs} ->
+          Defs -> Env Term vars -> NF vars -> Core Bool
+isEmpty defs env (NTCon fc n t a args)
      = case !(lookupDefExact n (gamma defs)) of
             Just (TCon _ _ _ _ flags _ cons _)
                  => if not (external flags)
-                       then allM (conflict defs (NTCon fc n t a args)) cons
+                       then allM (conflict defs env (NTCon fc n t a args)) cons
                        else pure False
             _ => pure False
-isEmpty defs _ = pure False
+isEmpty defs env _ = pure False
 
 -- Need this to get a NF from a Term; the names are free in any case
 freeEnv : FC -> (vs : List Name) -> Env Term vs
@@ -95,7 +168,7 @@ emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
     emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
     emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
     emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
-emptyRHS fc (STerm s) = STerm (Erased fc False)
+emptyRHS fc (STerm i s) = STerm i (Erased fc False)
 emptyRHS fc sc = sc
 
 mkAlt : {vars : _} ->
@@ -284,7 +357,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgsAlt not' (c :: cs)
         = pure $ !(buildArgAlt not' c) ++ !(buildArgsAlt not' cs)
 
-buildArgs fc defs known not ps (STerm vs)
+buildArgs fc defs known not ps (STerm _ vs)
     = pure [] -- matched, so return nothing
 buildArgs fc defs known not ps (Unmatched msg)
     = pure [ps] -- unmatched, so return it

@@ -145,6 +145,11 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
 getAllDesc (n :: rest) arr defs
   = getAllDesc rest arr defs
 
+warnIfHole : Name -> NamedDef -> Core ()
+warnIfHole n (MkNmError _)
+    = coreLift $ putStrLn $ "Warning: compiling hole " ++ show n
+warnIfHole n _ = pure ()
+
 getNamedDef : {auto c : Ref Ctxt Defs} ->
               Name -> Core (Maybe (Name, FC, NamedDef))
 getNamedDef n
@@ -153,7 +158,8 @@ getNamedDef n
               Nothing => pure Nothing
               Just def => case namedcompexpr def of
                                Nothing => pure Nothing
-                               Just d => pure (Just (n, location def, d))
+                               Just d => do warnIfHole n d
+                                            pure (Just (n, location def, d))
 
 replaceEntry : {auto c : Ref Ctxt Defs} ->
                (Int, Maybe Binary) -> Core ()
@@ -391,7 +397,7 @@ copyLib (lib, fullname)
     = if lib == fullname
          then pure ()
          else do Right bin <- coreLift $ readFromFile fullname
-                    | Left err => throw (FileErr fullname err)
+                    | Left err => pure () -- assume a system library installed globally
                  Right _ <- coreLift $ writeToFile lib bin
                     | Left err => throw (FileErr lib err)
                  pure ()

@@ -10,6 +10,7 @@ CFLAGS += -O2
 SRCS = $(wildcard *.c)
 ifeq ($(OS), windows)
 	SRCS += windows/win_utils.c windows/win_hack.c
+	LDFLAGS += -lws2_32
 endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
@@ -26,7 +27,7 @@ $(LIBTARGET): $(OBJS)
 	$(RANLIB) $@
 
 $(DYLIBTARGET): $(OBJS)
-	$(CC) -shared $(LDFLAGS) -o $@ $^
+	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
 
 -include $(DEPS)

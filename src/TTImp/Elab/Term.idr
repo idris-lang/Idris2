@@ -1,5 +1,7 @@
 module TTImp.Elab.Term
 
+import Data.StringMap
+
 import Core.Context
 import Core.Core
 import Core.Env
@@ -115,6 +117,7 @@ checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
                    Explicit => genVarName "arg"
                    Implicit => genVarName "impArg"
                    AutoImplicit => genVarName "conArg"
+                   (DefImplicit _) => genVarName "defArg"
          checkPi rig elabinfo nest env fc r p n argTy retTy exp
 checkTerm rig elabinfo nest env (ILam fc r p (Just n) argTy scope) exp
     = checkLambda rig elabinfo nest env fc r p n argTy scope exp
@@ -215,6 +218,36 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
             do est <- get EST
                put EST (addBindIfUnsolved nm rig Explicit env metaval ty est)
          pure (metaval, gnf env ty)
+checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
+    = do -- enter the scope -> add unambiguous names
+         est <- get EST
+         rns <- resolveNames fc ns
+         put EST $ record { unambiguousNames = mergeLeft rns (unambiguousNames est) } est
+
+         -- inside the scope -> check the RHS
+         result <- check rig elabinfo nest env rhs exp
+
+         -- exit the scope -> restore unambiguous names
+         newEST <- get EST
+         put EST $ record { unambiguousNames = unambiguousNames est } newEST
+
+         pure result
+  where
+    resolveNames : FC -> List Name -> Core (StringMap (Name, Int, GlobalDef))
+    resolveNames fc [] = pure empty
+    resolveNames fc (n :: ns) =
+      case userNameRoot n of
+        -- should never happen
+        Nothing => throw $ InternalError $ "non-UN in \"with\" LHS: " ++ show n
+        Just nRoot => do
+          -- this will always be a global name
+          -- so we lookup only among the globals
+          ctxt <- get Ctxt
+          rns <- lookupCtxtName n (gamma ctxt)
+          case rns of
+            []   => throw $ UndefinedName fc n
+            [rn] => insert nRoot rn <$> resolveNames fc ns
+            _    => throw $ AmbiguousName fc (map fst rns)
 
 -- Declared in TTImp.Elab.Check
 -- check : {vars : _} ->
