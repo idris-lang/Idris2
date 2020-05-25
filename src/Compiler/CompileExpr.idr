@@ -438,7 +438,7 @@ mutual
       = toCExpTree n sc
   toCExpTree' n (Case _ x scTy [])
       = pure $ CCrash (getLoc scTy) $ "Missing case tree in " ++ show n
-  toCExpTree' n (STerm tm) = toCExp n tm
+  toCExpTree' n (STerm _ tm) = toCExp n tm
   toCExpTree' n (Unmatched msg)
       = pure $ CCrash emptyFC msg
   toCExpTree' n Impossible

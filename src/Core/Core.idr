@@ -119,7 +119,8 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
-     ParseFail : FC -> ParseError -> Error
+     ParseFail : Show token =>
+               FC -> ParseError token -> Error
      ModuleNotFound : FC -> List String -> Error
      CyclicImports : List (List String) -> Error
      ForceNeeded : Error
@@ -129,6 +130,11 @@ data Error : Type where
      InCon : FC -> Name -> Error -> Error
      InLHS : FC -> Name -> Error -> Error
      InRHS : FC -> Name -> Error -> Error
+
+public export
+data Warning : Type where
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
 
 export
 Show TTCErrorMsg where
@@ -360,6 +366,10 @@ getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (UnreachableClause fc _ _) = Just fc
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export

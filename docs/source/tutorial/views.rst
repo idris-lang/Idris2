@@ -4,7 +4,9 @@
 Views and the “``with``” rule
 *****************************
 
-[NOT UPDATED FOR IDRIS 2 YET]
+.. warning::
+
+   NOT UPDATED FOR IDRIS 2 YET
 
 Dependent pattern matching
 ==========================

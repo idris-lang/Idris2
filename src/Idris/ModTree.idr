@@ -184,11 +184,14 @@ buildMod loc num len mod
                                    ": Building " ++ showMod ++
                                    " (" ++ src ++ ")"
                    [] <- process {u} {m} msg src
-                      | errs => do traverse emitError errs
+                      | errs => do emitWarnings
+                                   traverse emitError errs
                                    pure (ferrs ++ errs)
+                   emitWarnings
                    traverse_ emitError ferrs
                    pure ferrs
-           else do traverse_ emitError ferrs
+           else do emitWarnings
+                   traverse_ emitError ferrs
                    pure ferrs
   where
     getEithers : List (Either a b) -> (List a, List b)

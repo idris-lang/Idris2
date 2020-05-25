@@ -650,7 +650,7 @@ mkRunTime fc n
                               MissingCases _ => addErrorCase clauses_init
                               _ => clauses_init
 
-           (rargs ** tree_rt) <- getPMDef (location gdef) RunTime n ty clauses
+           (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
            log 5 $ show cov ++ ":\nRuntime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
 
            let Just Refl = nameListEq cargs rargs
@@ -715,6 +715,11 @@ toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
     = (_ ** (env, lhs, rhs))
 
+warnUnreachable : {auto c : Ref Ctxt Defs} ->
+                  Clause -> Core ()
+warnUnreachable (MkClause env lhs rhs)
+    = recordWarning (UnreachableClause (getLoc lhs) env lhs)
+
 export
 processDef : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -738,7 +743,10 @@ processDef opts nest env fc n_in cs_in
          cs <- traverse (checkClause mult hashit nidx opts nest env) cs_in
          let pats = map toPats (rights cs)
 
-         (cargs ** tree_ct) <- getPMDef fc CompileTime n ty (rights cs)
+         (cargs ** (tree_ct, unreachable)) <-
+             getPMDef fc CompileTime n ty (rights cs)
+
+         traverse_ warnUnreachable unreachable
 
          logC 2 (do t <- toFullNames tree_ct
                     pure ("Case tree for " ++ show n ++ ": " ++ show t))
@@ -842,7 +850,8 @@ processDef opts nest env fc n_in cs_in
     checkCoverage n ty mult cs
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
              let covcs = mapMaybe id covcs'
-             (_ ** ctree) <- getPMDef fc CompileTime (Resolved n) ty covcs
+             (_ ** (ctree, _)) <-
+                 getPMDef fc CompileTime (Resolved n) ty covcs
              log 3 $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log 3 $ "Catch all case in " ++ show n
