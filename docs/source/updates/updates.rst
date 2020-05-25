@@ -425,6 +425,21 @@ can see if we try evaluating ``myShow True`` at the REPL:
 In fact, this is how interfaces are elaborated. However, ``%hint`` should be
 used with care. Too many hints can lead to a large search space!
 
+Record fields
+-------------
+
+Record fields can now be accessed via a ``.``. For example, if you have:
+
+.. code-block:: idris
+
+    record Person where
+        constructor MkPerson
+        firstName, middleName, lastName : String
+        age : Int
+
+and you have a record ``fred : Person``, then you can use ``fred.firstName``
+to access the ``firstName`` field.
+
 Totality and Coverage
 ---------------------
 
