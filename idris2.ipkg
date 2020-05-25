@@ -71,6 +71,7 @@ modules =
     Idris.IDEMode.Parser,
     Idris.IDEMode.REPL,
     Idris.IDEMode.TokenLine,
+    Idris.IDEMode.Holes,
     Idris.ModTree,
     Idris.Package,
     Idris.Parser,

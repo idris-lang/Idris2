@@ -3,6 +3,5 @@
 3/5: Building HelloHole (HelloHole.idr)
 4/5: Building HoleFix (HoleFix.idr)
 5/5: Building All (All.idr)
-Main> -------------------------------------
-convert : Char -> String
+Main> Main.convert : Char -> String
 Main> Bye for now!
