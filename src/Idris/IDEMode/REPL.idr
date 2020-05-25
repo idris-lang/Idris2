@@ -320,10 +320,10 @@ displayIDEResult outf i  (REPL $ FoundHoles xs)
   = printIDEResult outf i $ !holesSexp
   where
     sexpName : 
-      Name -> Core SExp
+      HoleData -> Core SExp
     sexpName n = do
       pure $ SExpList 
-        [ StringAtom (show  n)
+        [ StringAtom (show  n.name)
         , SExpList []  -- Premises
         , SExpList [ StringAtom "?"   -- Conclusion
                    , SExpList[]]    -- TODO: Highlighting information

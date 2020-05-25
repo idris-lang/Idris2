@@ -5,6 +5,7 @@ import Core.Env
 import Idris.Resugar
 import Idris.Syntax
 
+public export
 record HolePremise where
   constructor MkHolePremise
   name         : Name
@@ -13,6 +14,7 @@ record HolePremise where
   isImplicit   : Bool
   
 
+public export
 record HoleData where
   constructor MkHoleData
   name : Name
@@ -30,6 +32,7 @@ isHole def
                  case holeInfo pi of
                       NotHole => Nothing
                       SolvedHole n => Just n
+           None => Just 0
            _ => Nothing
 
 
@@ -78,7 +81,7 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
     implicitBind _ = False
    
 extractHoleData defs env fn args ty
-  = do ity <- resugar env !(normalise defs env ty)
+  = do ity <- resugar env !(normaliseHoles defs env ty)
        pure $ MkHoleData fn ity []
 
 
@@ -112,7 +115,9 @@ showHole : {vars : _} ->
           Core String
 showHole defs env fn args ty
     = do hdata <- holeData defs env fn args ty
-         pure $ concat 
+         case hdata.context of
+           [] => pure $ show (hdata.name) ++ " : " ++ show hdata.type
+           _  => pure $ concat 
               (map (\hole => showCount hole.multiplicity
                              ++ (impBracket hole.isImplicit $
                                  tidy hole.name ++ " : " ++ (show hole.type) ++ "\n" )

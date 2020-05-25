@@ -422,7 +422,7 @@ data REPLResult : Type where
   ProofFound : PTerm -> REPLResult
   Missed : List MissedResult -> REPLResult
   CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List Name -> REPLResult
+  FoundHoles : List HoleData -> REPLResult
   OptionsSet : List REPLOpt -> REPLResult
   LogLevelSet : Nat -> REPLResult
   VersionIs : Version -> REPLResult
@@ -630,8 +630,21 @@ process (SetLog lvl)
     = do setLogLevel lvl
          pure $ LogLevelSet lvl
 process Metavars
-    = do ms <- getUserHoles
-         pure $ FoundHoles ms
+    = do defs <- get Ctxt
+         let ctxt = gamma defs
+         ms  <- getUserHoles
+         let globs = concat !(traverse (\n => lookupCtxtName n ctxt) ms)
+         let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
+                                                           pure (n, gdef, args))
+                                      globs
+         hData <- the (Core $ List HoleData) $
+             traverse (\n_gdef_args => 
+                        -- Inference can't deal with this for now :/
+                        let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
+                        holeData defs [] n args (type gdef))
+                      holesWithArgs 
+         pure $ FoundHoles hData
+
 process (Editing cmd)
     = do ppopts <- getPPrint
          -- Since we're working in a local environment, don't do the usual
@@ -788,9 +801,9 @@ mutual
   displayResult  (Missed cases) = printResult $ showSep "\n" $ map handleMissing cases
   displayResult  (CheckedTotal xs) = printResult $ showSep "\n" $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
   displayResult  (FoundHoles []) = printResult $ "No holes"
-  displayResult  (FoundHoles [x]) = printResult $ "1 hole: " ++ show x
+  displayResult  (FoundHoles [x]) = printResult $ "1 hole: " ++ show x.name
   displayResult  (FoundHoles xs) = printResult $ show (length xs) ++ " holes: " ++
-                                   showSep ", " (map show xs)
+                                   showSep ", " (map (show . name) xs)
   displayResult  (LogLevelSet k) = printResult $ "Set loglevel to " ++ show k
   displayResult  (VersionIs x) = printResult $ showVersion True x
   displayResult  (RequestedHelp) = printResult displayHelp
