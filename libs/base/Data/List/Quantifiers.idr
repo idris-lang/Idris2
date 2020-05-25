@@ -32,7 +32,9 @@ any p (x::xs) with (p x)
   any p (x::xs) | No ctra =
     case any p xs of
       Yes prf' => Yes (There prf')
-      No ctra' => No (anyElim ctra' ctra)
+      No ctra' => No $ \case
+        Here px => ctra px
+        There pxs => ctra' pxs
 
 ||| A proof that all elements of a list satisfy a property. It is a list of
 ||| proofs, corresponding element-wise to the `List`.
@@ -40,20 +42,6 @@ public export
 data All : (0 p : a -> Type) -> List a -> Type where
   Nil  : All p Nil
   (::) : {0 xs : List a} -> p x -> All p xs -> All p (x :: xs)
-
-||| If there does not exist an element that satifies the property, then it is
-||| the case that all elements do not satisfy it.
-export
-negAnyAll : {xs : List a} -> Not (Any p xs) -> All (Not . p) xs
-negAnyAll {xs=Nil}   _ = Nil
-negAnyAll {xs=x::xs} f = (f . Here) :: negAnyAll (f . There)
-
-||| If there exists an element that doesn't satify the property, then it is
-||| the case that not all elements satisfy it.
-export
-negAllAny : Any (Not . p) xs -> Not (All p xs)
-negAllAny (Here ctra) (p::_)  = ctra p
-negAllAny (There np)  (_::ps) = negAllAny np ps
 
 ||| Given a decision procedure for a property, decide whether all elements of
 ||| a list satisfy it.
@@ -70,6 +58,20 @@ all d (x::xs) with (d x)
     case all d xs of
       Yes prf' => Yes (prf :: prf')
       No ctra' => No $ \(_::ps) => ctra' ps
+
+||| If there does not exist an element that satifies the property, then it is
+||| the case that all elements do not satisfy it.
+export
+negAnyAll : {xs : List a} -> Not (Any p xs) -> All (Not . p) xs
+negAnyAll {xs=Nil}   _ = Nil
+negAnyAll {xs=x::xs} f = (f . Here) :: negAnyAll (f . There)
+
+||| If there exists an element that doesn't satify the property, then it is
+||| not the case that all elements satisfy it.
+export
+anyNegAll : Any (Not . p) xs -> Not (All p xs)
+anyNegAll (Here ctra) (p::_)  = ctra p
+anyNegAll (There np)  (_::ps) = anyNegAll np ps
 
 ||| Given a proof of membership for some element, extract the property proof for it
 export
