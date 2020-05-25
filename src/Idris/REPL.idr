@@ -26,6 +26,7 @@ import Idris.Error
 import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands
 import Idris.IDEMode.MakeClause
+import Idris.IDEMode.Holes
 import Idris.ModTree
 import Idris.Parser
 import Idris.Resugar
@@ -76,81 +77,8 @@ showInfo (n, idx, d)
                 coreLift $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-isHole : GlobalDef -> Maybe Nat
-isHole def
-    = case definition def of
-           Hole locs _ => Just locs
-           PMDef pi _ _ _ _ =>
-                 case holeInfo pi of
-                      NotHole => Nothing
-                      SolvedHole n => Just n
-           _ => Nothing
 
-showCount : RigCount -> String
-showCount = elimSemi
-                 " 0 "
-                 " 1 "
-                 (const "   ")
-
-impBracket : Bool -> String -> String
-impBracket False str = str
-impBracket True str = "{" ++ str ++ "}"
-
-showName : Name -> Bool
-showName (UN "_") = False
-showName (MN _ _) = False
-showName _ = True
-
-tidy : Name -> String
-tidy (MN n _) = n
-tidy n = show n
-
-showEnv : {vars : _} ->
-          {auto c : Ref Ctxt Defs} ->
-          {auto s : Ref Syn SyntaxInfo} ->
-          Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-          Core (List (Name, String), String)
-showEnv defs env fn (S args) (Bind fc x (Let c val ty) sc)
-    = showEnv defs env fn args (subst val sc)
-showEnv defs env fn (S args) (Bind fc x b sc)
-    = do ity <- resugar env !(normalise defs env (binderType b))
-         let pre = if showName x
-                      then REPL.showCount (multiplicity b) ++
-                           impBracket (implicitBind b) (tidy x ++ " : " ++ show ity) ++ "\n"
-                      else ""
-         (envstr, ret) <- showEnv defs (b :: env) fn args sc
-         pure ((x, pre) :: envstr, ret)
-  where
-    implicitBind : Binder (Term vars) -> Bool
-    implicitBind (Pi _ Explicit _) = False
-    implicitBind (Pi _ _ _) = True
-    implicitBind (Lam _ Explicit _) = False
-    implicitBind (Lam _ _ _) = True
-    implicitBind _ = False
-showEnv defs env fn args ty
-    = do ity <- resugar env !(normalise defs env ty)
-         pure ([], "-------------------------------------\n" ++
-                    nameRoot fn ++ " : " ++ show ity)
-
-showHole : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-           Core String
-showHole gam env fn args ty
-    = do (envs, ret) <- showEnv gam env fn args ty
-         pp <- getPPrint
-         let envs' = if showImplicits pp
-                        then envs
-                        else dropShadows envs
-         pure (concat (map snd envs') ++ ret)
-  where
-    dropShadows : List (Name, a) -> List (Name, a)
-    dropShadows [] = []
-    dropShadows ((n, ty) :: ns)
-        = if n `elem` map fst ns
-             then dropShadows ns
-             else (n, ty) :: dropShadows ns
+-- Put the printing of holes back here
 
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->

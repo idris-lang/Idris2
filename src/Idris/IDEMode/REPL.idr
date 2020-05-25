@@ -261,9 +261,6 @@ SExpable REPLOpt where
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
 
 
-sexpName :  Name -> SExp
-sexpName n = SExpList [ StringAtom (show  n), SExpList [], SExpList [StringAtom "?", SExpList[]]]
-
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
        {auto u : Ref UST UState} ->
        {auto s : Ref Syn SyntaxInfo} ->
@@ -320,10 +317,21 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
 displayIDEResult outf i  (REPL $ FoundHoles []) 
   = printIDEResult outf i $ SExpList []
 displayIDEResult outf i  (REPL $ FoundHoles xs) 
-  = printIDEResult outf i $ holesSexp
+  = printIDEResult outf i $ !holesSexp
   where
-    holesSexp : SExp
-    holesSexp = SExpList $ map sexpName xs
+    sexpName : 
+      Name -> Core SExp
+    sexpName n = do
+      pure $ SExpList 
+        [ StringAtom (show  n)
+        , SExpList []  -- Premises
+        , SExpList [ StringAtom "?"   -- Conclusion
+                   , SExpList[]]    -- TODO: Highlighting information
+        ]
+  
+    holesSexp : Core SExp
+    holesSexp = pure $ SExpList !( traverse sexpName xs )
+
 
 displayIDEResult outf i  (REPL $ LogLevelSet k) 
   = printIDEResult outf i 
