@@ -26,7 +26,7 @@ ttimpTests
        "nest001", "nest002",
        "perf001", "perf002", "perf003",
        "record001", "record002", "record003",
-       "qtt001", "qtt002", "qtt003",
+       "qtt001", "qtt003",
        "total001", "total002", "total003"]
 
 idrisTests : List String
@@ -69,7 +69,7 @@ idrisTests
        "lazy001",
        -- QTT and linearity related
        "linear001", "linear002", "linear003", "linear004", "linear005",
-       "linear006", "linear007", "linear008",
+       "linear006", "linear007", "linear008", "linear009",
        -- Parameters blocks
        "params001",
        -- Performance: things which have been slow in the past, or which
