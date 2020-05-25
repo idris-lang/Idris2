@@ -26,6 +26,7 @@ import Idris.Error
 import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands
 import Idris.IDEMode.MakeClause
+import Idris.IDEMode.Holes
 import Idris.ModTree
 import Idris.Parser
 import Idris.Resugar
@@ -75,82 +76,6 @@ showInfo (n, idx, d)
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
                 coreLift $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
-
-isHole : GlobalDef -> Maybe Nat
-isHole def
-    = case definition def of
-           Hole locs _ => Just locs
-           PMDef pi _ _ _ _ =>
-                 case holeInfo pi of
-                      NotHole => Nothing
-                      SolvedHole n => Just n
-           _ => Nothing
-
-showCount : RigCount -> String
-showCount = elimSemi
-                 " 0 "
-                 " 1 "
-                 (const "   ")
-
-impBracket : Bool -> String -> String
-impBracket False str = str
-impBracket True str = "{" ++ str ++ "}"
-
-showName : Name -> Bool
-showName (UN "_") = False
-showName (MN _ _) = False
-showName _ = True
-
-tidy : Name -> String
-tidy (MN n _) = n
-tidy n = show n
-
-showEnv : {vars : _} ->
-          {auto c : Ref Ctxt Defs} ->
-          {auto s : Ref Syn SyntaxInfo} ->
-          Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-          Core (List (Name, String), String)
-showEnv defs env fn (S args) (Bind fc x (Let c val ty) sc)
-    = showEnv defs env fn args (subst val sc)
-showEnv defs env fn (S args) (Bind fc x b sc)
-    = do ity <- resugar env !(normalise defs env (binderType b))
-         let pre = if showName x
-                      then REPL.showCount (multiplicity b) ++
-                           impBracket (implicitBind b) (tidy x ++ " : " ++ show ity) ++ "\n"
-                      else ""
-         (envstr, ret) <- showEnv defs (b :: env) fn args sc
-         pure ((x, pre) :: envstr, ret)
-  where
-    implicitBind : Binder (Term vars) -> Bool
-    implicitBind (Pi _ Explicit _) = False
-    implicitBind (Pi _ _ _) = True
-    implicitBind (Lam _ Explicit _) = False
-    implicitBind (Lam _ _ _) = True
-    implicitBind _ = False
-showEnv defs env fn args ty
-    = do ity <- resugar env !(normalise defs env ty)
-         pure ([], "-------------------------------------\n" ++
-                    nameRoot fn ++ " : " ++ show ity)
-
-showHole : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-           Core String
-showHole gam env fn args ty
-    = do (envs, ret) <- showEnv gam env fn args ty
-         pp <- getPPrint
-         let envs' = if showImplicits pp
-                        then envs
-                        else dropShadows envs
-         pure (concat (map snd envs') ++ ret)
-  where
-    dropShadows : List (Name, a) -> List (Name, a)
-    dropShadows [] = []
-    dropShadows ((n, ty) :: ns)
-        = if n `elem` map fst ns
-             then dropShadows ns
-             else (n, ty) :: dropShadows ns
 
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -399,7 +324,7 @@ processEdit (ExprSearch upd line name hints all)
                                        if upd
                                           then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
                                           else pure $ DisplayEdit [res]
-              [(n, nidx, PMDef pi [] (STerm tm) _ _)] =>
+              [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
@@ -494,7 +419,7 @@ data REPLResult : Type where
   ProofFound : PTerm -> REPLResult
   Missed : List MissedResult -> REPLResult
   CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List Name -> REPLResult
+  FoundHoles : List HoleData -> REPLResult
   OptionsSet : List REPLOpt -> REPLResult
   LogLevelSet : Nat -> REPLResult
   VersionIs : Version -> REPLResult
@@ -702,8 +627,21 @@ process (SetLog lvl)
     = do setLogLevel lvl
          pure $ LogLevelSet lvl
 process Metavars
-    = do ms <- getUserHoles
-         pure $ FoundHoles ms
+    = do defs <- get Ctxt
+         let ctxt = gamma defs
+         ms  <- getUserHoles
+         let globs = concat !(traverse (\n => lookupCtxtName n ctxt) ms)
+         let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
+                                                           pure (n, gdef, args))
+                                      globs
+         hData <- the (Core $ List HoleData) $
+             traverse (\n_gdef_args => 
+                        -- Inference can't deal with this for now :/
+                        let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
+                        holeData defs [] n args (type gdef))
+                      holesWithArgs 
+         pure $ FoundHoles hData
+
 process (Editing cmd)
     = do ppopts <- getPPrint
          -- Since we're working in a local environment, don't do the usual
@@ -749,7 +687,7 @@ parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
-parseRepl : String -> Either ParseError (Maybe REPLCmd)
+parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
 parseRepl inp
     = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD)] inp of
            Nothing => runParser Nothing inp (parseEmptyCmd <|> parseCmd)
@@ -860,9 +798,9 @@ mutual
   displayResult  (Missed cases) = printResult $ showSep "\n" $ map handleMissing cases
   displayResult  (CheckedTotal xs) = printResult $ showSep "\n" $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
   displayResult  (FoundHoles []) = printResult $ "No holes"
-  displayResult  (FoundHoles [x]) = printResult $ "1 hole: " ++ show x
+  displayResult  (FoundHoles [x]) = printResult $ "1 hole: " ++ show x.name
   displayResult  (FoundHoles xs) = printResult $ show (length xs) ++ " holes: " ++
-                                   showSep ", " (map show xs)
+                                   showSep ", " (map (show . name) xs)
   displayResult  (LogLevelSet k) = printResult $ "Set loglevel to " ++ show k
   displayResult  (VersionIs x) = printResult $ showVersion True x
   displayResult  (RequestedHelp) = printResult displayHelp

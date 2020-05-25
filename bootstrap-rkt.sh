@@ -1,9 +1,17 @@
 #!/bin/sh
 
+set -e  # Exit on any error
+
+echo "bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
+if [ -z "$IDRIS2_VERSION" ]
+then
+    echo "Required ENV not set."
+    exit 1
+fi
+
 # Compile the bootstrap scheme
 cd bootstrap
-echo "Building idris2boot from idris2boot.rkt"
-
+echo "Building idris2-boot from idris2-boot.rkt"
 raco exe idris2_app/idris2-boot.rkt
 
 # Put the result in the usual place where the target goes
@@ -14,17 +22,27 @@ install idris2_app/* ../build/exec/idris2_app
 
 cd ..
 
-# Install with the bootstrap directory as the PREFIX
-DIR="`realpath $0`"
-PREFIX="`dirname $DIR`"/bootstrap
+PREFIX=${PWD}/bootstrap
+
+if [ ${OS} = "windows" ]; then
+    # IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH
+    IDRIS_PREFIX=$(cygpath -m $PREFIX)
+    SEP=";"
+else
+    IDRIS_PREFIX=${PREFIX}
+    SEP=":"
+fi
+
+BOOT_PATH_BASE=${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}
+IDRIS2_BOOT_PATH="${BOOT_PATH_BASE}/prelude${SEP}${BOOT_PATH_BASE}/base${SEP}${BOOT_PATH_BASE}/contrib${SEP}${BOOT_PATH_BASE}/network"
 
 # Now rebuild everything properly
+# PREFIX must be the "clean" build root, without cygpath -m
+# Otherwise, we get 'git: Bad address'
 echo ${PREFIX}
-IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${PREFIX}/idris2-0.2.0/contrib:${PREFIX}/idris2-0.2.0/network"
-DYLIB_PATH="${PREFIX}/lib"
 
+DYLIB_PATH="${PREFIX}/lib"
 make libs IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 make install IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 make clean IDRIS2_BOOT=${PREFIX}/bin/idris2 LD_LIBRARY_PATH=${DYLIB_PATH}
 make all IDRIS2_BOOT=${PREFIX}/bin/idris2 IDRIS2_CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} LD_LIBRARY_PATH=${DYLIB_PATH}
-make test INTERACTIVE='' IDRIS2_BOOT=${PREFIX}/bin/idris2 CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_LIBS=${PREFIX}/idris2-0.2.0/lib LD_LIBRARY_PATH=${DYLIB_PATH}

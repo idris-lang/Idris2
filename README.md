@@ -2,9 +2,10 @@ Idris 2
 =======
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
-![Windows CI](https://github.com/idris-lang/Idris2/workflows/Windows%20CI/badge.svg)
-![Ubuntu CI bootstrap scheme](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20CI%20bootstrap%20scheme/badge.svg)
-![Ubuntu CI boostrap racket](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20CI%20boostrap%20racket/badge.svg)
+[![](https://github.com/idris-lang/Idris2/workflows/Windows/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Windows")
+[![](https://github.com/idris-lang/Idris2/workflows/Ubuntu/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu")
+[![](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20Racket/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu+Racket")
+[![](https://github.com/idris-lang/Idris2/workflows/macOS/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"macOS")
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.

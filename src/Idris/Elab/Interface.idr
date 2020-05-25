@@ -245,9 +245,7 @@ updateIfaceSyn iname cn ps cs ms ds
     totMeth : (Name, RigCount, List FnOpt, (Bool, RawImp)) ->
               Core (Name, RigCount, TotalReq, (Bool, RawImp))
     totMeth (n, c, opts, t)
-        = do let treq = fromMaybe PartialOK (findSetTotal opts)
---         = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
--- TODO: Put the above back when totality checker is properly working
+        = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
              pure (n, c, treq, t)
 
 export
@@ -395,6 +393,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         changeName : Name -> ImpClause -> ImpClause
         changeName dn (PatClause fc lhs rhs)
             = PatClause fc (changeNameTerm dn lhs) rhs
+        changeName dn (WithClause fc lhs wval cs)
+            = WithClause fc (changeNameTerm dn lhs) wval
+                         (map (changeName dn) cs)
         changeName dn (ImpossibleClause fc lhs)
             = ImpossibleClause fc (changeNameTerm dn lhs)
 

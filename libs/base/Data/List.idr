@@ -159,7 +159,7 @@ split : (a -> Bool) -> List a -> List (List a)
 split p xs =
   case break p xs of
     (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: split p rest
+    (chunk, (c :: rest)) => chunk :: split p (assert_smaller xs rest)
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)

@@ -93,6 +93,50 @@ impossibleErrOK defs (WhenUnifying _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs _ = pure False
 
+-- If it's a clause we've generated, see if the error is recoverable. That
+-- is, if we have a concrete thing, and we're expecting the same concrete
+-- thing, or a function of something, then we might have a match.
+export
+recoverable : {vars : _} ->
+              Defs -> NF vars -> NF vars -> Core Bool
+-- Unlike the above, any mismatch will do
+recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+    = if xn /= yn
+         then pure False
+         else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+    = if xt /= yt
+         then pure False
+         else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs) 
+    = pure True -- both functions; recoverable
+recoverable defs (NTCon _ _ _ _ _) _ = pure True 
+recoverable defs (NDCon _ _ _ _ _) _ = pure True 
+recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
+recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+recoverable defs x y = pure False
+
+export
+recoverableErr : {auto c : Ref Ctxt Defs} ->
+                 Defs -> Error -> Core Bool
+recoverableErr defs (CantConvert fc env l r)
+    = do logTerm 10 "Impossible" !(normalise defs env l)
+         logTerm 10 "    ...and" !(normalise defs env r)
+         recoverable defs !(nf defs env l)
+                          !(nf defs env r)
+recoverableErr defs (CantSolveEq fc env l r)
+    = do logTerm 10 "Impossible" !(normalise defs env l)
+         logTerm 10 "    ...and" !(normalise defs env r)
+         recoverable defs !(nf defs env l)
+                          !(nf defs env r)
+recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
+recoverableErr defs (CyclicMeta _ _ _ _) = pure True
+recoverableErr defs (AllFailed errs)
+    = anyM (recoverableErr defs) (map snd errs)
+recoverableErr defs (WhenUnifying _ _ _ _ err)
+    = recoverableErr defs err
+recoverableErr defs _ = pure False
+
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
 -- and a function which turns a checked RHS into a
@@ -583,12 +627,13 @@ calcRefs rt at fn
 mkRunTime : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            FC -> Covering -> Name -> Core ()
-mkRunTime fc cov n
+            FC -> Name -> Core ()
+mkRunTime fc n
     = do log 5 $ "Making run time definition for " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | _ => pure ()
+         let cov = gdef.totality.isCovering
          -- If it's erased at run time, don't build the tree
          when (not (isErased $ multiplicity gdef)) $ do
            let PMDef r cargs tree_ct _ pats = definition gdef
@@ -604,8 +649,8 @@ mkRunTime fc cov n
                               MissingCases _ => addErrorCase clauses_init
                               _ => clauses_init
 
-           (rargs ** tree_rt) <- getPMDef (location gdef) RunTime n ty clauses
-           log 5 $ "Runtime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
+           (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
+           log 5 $ show cov ++ ":\nRuntime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
@@ -656,10 +701,10 @@ mkRunTime fc cov n
 compileRunTime : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Covering -> Name -> Core ()
-compileRunTime fc cov atotal
+                 FC -> Name -> Core ()
+compileRunTime fc atotal
     = do defs <- get Ctxt
-         traverse_ (mkRunTime fc cov) (toCompileCase defs)
+         traverse_ (mkRunTime fc) (toCompileCase defs)
          traverse (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
@@ -668,6 +713,11 @@ compileRunTime fc cov atotal
 toPats : Clause -> (vs ** (Env Term vs, Term vs, Term vs))
 toPats (MkClause {vars} env lhs rhs)
     = (_ ** (env, lhs, rhs))
+
+warnUnreachable : {auto c : Ref Ctxt Defs} ->
+                  Clause -> Core ()
+warnUnreachable (MkClause env lhs rhs)
+    = recordWarning (UnreachableClause (getLoc lhs) env lhs)
 
 export
 processDef : {vars : _} ->
@@ -692,7 +742,10 @@ processDef opts nest env fc n_in cs_in
          cs <- traverse (checkClause mult hashit nidx opts nest env) cs_in
          let pats = map toPats (rights cs)
 
-         (cargs ** tree_ct) <- getPMDef fc CompileTime n ty (rights cs)
+         (cargs ** (tree_ct, unreachable)) <-
+             getPMDef fc CompileTime n ty (rights cs)
+
+         traverse_ warnUnreachable unreachable
 
          logC 2 (do t <- toFullNames tree_ct
                     pure ("Case tree for " ++ show n ++ ": " ++ show t))
@@ -732,7 +785,7 @@ processDef opts nest env fc n_in cs_in
          -- If we're not in a case tree, compile all the outstanding case
          -- trees.
          when (not (elem InCase opts)) $
-              compileRunTime fc cov atotal
+              compileRunTime fc atotal
   where
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True
@@ -748,7 +801,8 @@ processDef opts nest env fc n_in cs_in
        = all simplePat (getArgs lhs)
 
     -- Return 'Nothing' if the clause is impossible, otherwise return the
-    -- original
+    -- checked clause (with implicits filled in, so that we can see if they
+    -- match any of the given clauses)
     checkImpossible : Int -> RigCount -> ClosedTerm ->
                       Core (Maybe ClosedTerm)
     checkImpossible n mult tm
@@ -756,19 +810,30 @@ processDef opts nest env fc n_in cs_in
              handleUnify
                (do ctxt <- get Ctxt
                    log 3 $ "Checking for impossibility: " ++ show itm
-                   ok <- checkClause mult False n [] (MkNested []) []
-                                     (ImpossibleClause fc itm)
-                   put Ctxt ctxt
-                   either (\e => pure Nothing)
-                          (\chktm => pure (Just tm)) ok)
-               (\err => case err of
-                             WhenUnifying _ env l r err
-                               => do defs <- get Ctxt
-                                     if !(impossibleOK defs !(nf defs env l)
-                                                            !(nf defs env r))
-                                        then pure Nothing
-                                        else pure (Just tm)
-                             _ => pure (Just tm))
+                   autoimp <- isUnboundImplicits
+                   setUnboundImplicits True
+                   (_, lhstm) <- bindNames False itm
+                   setUnboundImplicits autoimp
+                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
+                                    (IBindHere fc PATTERN lhstm) Nothing
+                   defs <- get Ctxt
+                   lhs <- normaliseHoles defs [] lhstm
+                   if !(hasEmptyPat defs [] lhs)
+                      then do put Ctxt ctxt
+                              pure Nothing
+                      else do empty <- clearDefs ctxt
+                              rtm <- closeEnv empty !(nf empty [] lhs)
+                              put Ctxt ctxt
+                              pure (Just rtm))
+               (\err => do defs <- get Ctxt
+                           if not !(recoverableErr defs err)
+                              then pure Nothing
+                              else pure (Just tm))
+      where
+        closeEnv : Defs -> NF [] -> Core ClosedTerm
+        closeEnv defs (NBind _ x (PVar _ _ _) sc)
+            = closeEnv defs !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
+        closeEnv defs nf = quote defs [] nf
 
     getClause : Either RawImp Clause -> Core (Maybe Clause)
     getClause (Left rawlhs)
@@ -784,7 +849,9 @@ processDef opts nest env fc n_in cs_in
     checkCoverage n ty mult cs
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
              let covcs = mapMaybe id covcs'
-             (_ ** ctree) <- getPMDef fc CompileTime (Resolved n) ty covcs
+             (_ ** (ctree, _)) <-
+                 getPMDef fc CompileTime (Resolved n) ty covcs
+             log 3 $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log 3 $ "Catch all case in " ++ show n
                                     pure []

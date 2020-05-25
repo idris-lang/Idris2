@@ -326,7 +326,7 @@ parameters (defs : Defs, topopts : EvalOpts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            let loc' = updateLocal idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts def
-    evalTree env loc opts fc stk (STerm tm) def
+    evalTree env loc opts fc stk (STerm _ tm) def
           = case fuel opts of
                  Nothing => evalWithOpts defs opts env loc (embed tm) stk
                  Just Z => def

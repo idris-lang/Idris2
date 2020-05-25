@@ -222,8 +222,9 @@ mutual
                           rig
            logC 10 $ do
              def <- the (Core String) $ case definition gdef of
-                         PMDef _ _ (STerm tm) _ _ => do tm' <- toFullNames tm
-                                                        pure (show tm')
+                         PMDef _ _ (STerm _ tm) _ _ =>
+                              do tm' <- toFullNames tm
+                                 pure (show tm')
                          _ => pure ""
              pure (show rig ++ ": " ++ show n ++ " " ++ show fc ++ "\n"
                      ++ show def)
@@ -614,7 +615,7 @@ mutual
                RigCount -> (erase : Bool) -> Env Term vars ->
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
-  expandMeta rig erase env n idx (PMDef _ [] (STerm fn) _ _) args
+  expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
       = do tm <- substMeta (embed fn) args []
            lcheck rig erase env tm
     where

@@ -152,7 +152,7 @@ mutual
   Hashable (CaseTree vars) where
     hashWithSalt h (Case idx x scTy xs)
         = h `hashWithSalt` 0 `hashWithSalt` idx `hashWithSalt` xs
-    hashWithSalt h (STerm x)
+    hashWithSalt h (STerm _ x)
         = h `hashWithSalt` 1 `hashWithSalt` x
     hashWithSalt h (Unmatched msg)
         = h `hashWithSalt` 2

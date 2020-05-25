@@ -23,6 +23,7 @@ readPair = do str1 <- getLine
               str2 <- getLine
               pure (str1, str2)
 
+partial
 readNumbers_v2 : IO (Maybe (Nat, Nat))
 readNumbers_v2 =
   do Just num1_ok <- readNumber

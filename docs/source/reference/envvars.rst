@@ -4,4 +4,6 @@
 Environment Variables
 *********************
 
-[TODO: Fill in the environment variables recognised by Idris 2]
+.. todo::
+
+   Fill in the environment variables recognised by Idris 2

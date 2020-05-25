@@ -186,7 +186,7 @@ mutual
            defs <- get Ctxt
            pure (IForce fc tm', gErased fc)
   unelabTy' umode env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
-  unelabTy' umode env (Erased fc _) = pure (Implicit fc False, gErased fc)
+  unelabTy' umode env (Erased fc _) = pure (Implicit fc True, gErased fc)
   unelabTy' umode env (TType fc) = pure (IType fc, gType fc)
   unelabTy' umode _ tm
       = let fc = getLoc tm in
@@ -224,8 +224,11 @@ mutual
   unelabBinder umode fc env x (Pi rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode env ty
            p' <- unelabPi umode env p
-           let nm = if used 0 sctm || rig /= top || isDefImp p
-                       then Just x else Nothing
+           let nm = if used 0 sctm
+                       then Just x
+                       else if rig /= top || isDefImp p
+                               then Just (UN "_")
+                               else Nothing
            pure (IPi fc rig p' nm ty' sc, gType fc)
     where
       isDefImp : PiInfo t -> Bool

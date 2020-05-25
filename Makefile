@@ -27,16 +27,22 @@ IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 IDRIS2_IPKG := idris2.ipkg
 
 ifeq ($(OS), windows)
+	# This produces D:/../.. style paths
 	IDRIS2_PREFIX := $(shell cygpath -m ${PREFIX})
 	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
-	export IDRIS2_BOOT_PATH = "${IDRIS2_CURDIR}/libs/prelude/build/ttc;${IDRIS2_CURDIR}/libs/base/build/ttc;${IDRIS2_CURDIR}/libs/network/build/ttc"
+	SEP := ;
 else
 	IDRIS2_PREFIX := ${PREFIX}
 	IDRIS2_CURDIR := ${CURDIR}
-	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
+	SEP := :
 endif
 
+# Library and data paths for bootstrap-test
+IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/lib
+IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
 
+# These are the library path in the build dir to be used during build
+export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc"
 
 export SCHEME
 
@@ -125,9 +131,12 @@ install-libs: libs
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
-.PHONY: bootstrap bootstrap-racket bootstrap-clean
+.PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
-bootstrap: support
+# Bootstrapping using SCHEME
+bootstrap: bootstrap-build bootstrap-test
+
+bootstrap-build: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2_app/idris2.ss > bootstrap/idris2_app/idris2-boot.ss
 ifeq ($(OS), darwin)
@@ -135,9 +144,14 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's!__PREFIX__!${IDRIS2_CURDIR}/bootstrap!g' bootstrap/idris2_app/idris2-boot.ss
 endif
+	SCHEME=${SCHEME} \
+	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap.sh
 
-bootstrap-racket: support
+# Bootstrapping using racket
+bootstrap-racket: bootstrap-racket-build bootstrap-test
+
+bootstrap-racket-build: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	cp bootstrap/idris2_app/idris2.rkt bootstrap/idris2_app/idris2-boot.rkt
 ifeq ($(OS), darwin)
@@ -145,7 +159,11 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's!__PREFIX__!${IDRIS2_CURDIR}/bootstrap!g' bootstrap/idris2_app/idris2-boot.rkt
 endif
+	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap-rkt.sh
+
+bootstrap-test:
+	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_LIBS=${IDRIS2_BOOT_TEST_LIBS}
 
 bootstrap-clean:
 	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}

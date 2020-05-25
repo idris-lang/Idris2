@@ -46,4 +46,11 @@ We begin by introducing ``App``, with some small example
 programs, then show how to extend it with exceptions, state, and other
 interfaces.
 
-[To be continued...]
+.. toctree::
+   :maxdepth: 1
+
+   introapp
+   exceptionsstate
+   interfaces
+   linear
+

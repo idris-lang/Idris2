@@ -202,7 +202,7 @@ chaseMetas (n :: ns) all
     = case lookup n all of
            Just _ => chaseMetas ns all
            _ => do defs <- get Ctxt
-                   Just (PMDef _ _ (STerm soln) _ _) <-
+                   Just (PMDef _ _ (STerm _ soln) _ _) <-
                                   lookupDefExact n (gamma defs)
                         | _ => chaseMetas ns (insert n () all)
                    let sns = keys (getMetas soln)
@@ -472,7 +472,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          logTerm 5 "Definition" rhs
          let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs)
          let newdef = record { definition =
-                                 PMDef simpleDef [] (STerm rhs) (STerm rhs) []
+                                 PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
                              } mdef
          addDef (Resolved mref) newdef
          removeHole mref
@@ -1359,7 +1359,7 @@ retryGuess mode smode (hid, (loc, hname))
                   handleUnify
                      (do tm <- search loc rig (smode == Defaults) depth defining
                                       (type def) []
-                         let gdef = record { definition = PMDef defaultPI [] (STerm tm) (STerm tm) [] } def
+                         let gdef = record { definition = PMDef defaultPI [] (STerm 0 tm) (STerm 0 tm) [] } def
                          logTermNF 5 ("Solved " ++ show hname) [] tm
                          addDef (Resolved hid) gdef
                          removeGuess hid
@@ -1390,7 +1390,7 @@ retryGuess mode smode (hid, (loc, hname))
                                                  logTerm 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                   let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
-                                                                         [] (STerm tm') (STerm tm') [] } def
+                                                                         [] (STerm 0 tm') (STerm 0 tm') [] } def
                                   logTerm 5 ("Resolved " ++ show hname) tm'
                                   addDef (Resolved hid) gdef
                                   removeGuess hid
@@ -1416,7 +1416,7 @@ retryGuess mode smode (hid, (loc, hname))
                          -- proper definition and remove it from the
                          -- hole list
                          [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
-                                                                         [] (STerm tm) (STerm tm) [] } def
+                                                                         [] (STerm 0 tm) (STerm 0 tm) [] } def
                                   logTerm 5 ("Resolved " ++ show hname) tm
                                   addDef (Resolved hid) gdef
                                   removeGuess hid
@@ -1479,7 +1479,7 @@ checkArgsSame : {auto u : Ref UST UState} ->
 checkArgsSame [] = pure False
 checkArgsSame (x :: xs)
     = do defs <- get Ctxt
-         Just (PMDef _ [] (STerm def) _ _) <-
+         Just (PMDef _ [] (STerm 0 def) _ _) <-
                     lookupDefExact (Resolved x) (gamma defs)
               | _ => checkArgsSame xs
          s <- anySame def xs
@@ -1491,7 +1491,7 @@ checkArgsSame (x :: xs)
     anySame tm [] = pure False
     anySame tm (t :: ts)
         = do defs <- get Ctxt
-             Just (PMDef _ [] (STerm def) _ _) <-
+             Just (PMDef _ [] (STerm 0 def) _ _) <-
                         lookupDefExact (Resolved t) (gamma defs)
                  | _ => anySame tm ts
              if !(convert defs [] tm def)

@@ -177,7 +177,7 @@ modTime fname
          pure (cast t)
 
 export
-getParseErrorLoc : String -> ParseError -> FC
+getParseErrorLoc : String -> ParseError Token -> FC
 getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
 getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
 getParseErrorLoc fname (LitFail (MkLitErr l c _)) = MkFC fname (l, 0) (l, 0)
@@ -195,7 +195,7 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData SourceToken -> Bool
+    isColon : TokenData Token -> Bool
     isColon t
         = case tok t of
                Symbol ":" => True

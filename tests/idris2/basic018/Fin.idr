@@ -18,6 +18,7 @@ data IsJust : Maybe a -> Type where
      ItIsJust : IsJust (Just x)
 
 -- Testing that %allow_overloads lets this one through!
+partial
 fromInteger : {k : Nat} ->
               (n : Integer) ->
               {auto prf : IsJust (integerToFin n k)} ->

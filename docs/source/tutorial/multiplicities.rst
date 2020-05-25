@@ -109,7 +109,17 @@ If we use ``x`` for one part of the pair...
   -------------------------------------
   help : a
 
-The same happens if we try defining ``duplicate x = (?help, x)`` (try it!)
+The same happens if we try defining ``duplicate x = (?help, x)`` (try it!).
+
+In order to avoid parsing ambiguities, if you give an explicit multiplicity
+for a variable as with the argument to ``duplicate``, you need to give it
+a name too. But, if the name isn't used in the scope of the type, you
+can use ``_`` instead of a name, as follows:
+
+.. code-block:: idris
+
+    duplicate : (1 _ : a) -> (a, a)
+
 The intution behind multiplicity ``1`` is that if we have a function with
 a type of the following form...
 
@@ -135,10 +145,10 @@ wraps an argument with unrestricted use
 .. code-block:: idris
 
     data Lin : Type -> Type where
-         MkLin : (1 x : a) -> Lin a
+         MkLin : (1 _ : a) -> Lin a
   
     data Unr : Type -> Type where
-         MkUnr : (x : a) -> Unr a
+         MkUnr : a -> Unr a
   
 If ``MkLin x`` is used once, then ``x`` is used once. But if ``MkUnr x`` is
 used once, there is no guarantee on how often ``x`` is used. We can see this a
@@ -147,10 +157,10 @@ bit more clearly by starting to write projection functions for ``Lin`` and
 
 .. code-block:: idris
 
-    getLin : (1 val : Lin a) -> a
+    getLin : (1 _ : Lin a) -> a
     getLin (MkLin x) = ?howmanyLin
   
-    getUnr : (1 val : Unr a) -> a
+    getUnr : (1 _ : Unr a) -> a
     getUnr (MkUnr x) = ?howmanyUnr
   
 Checking the types of the holes shows us that, for ``getLin``, we must use
@@ -178,7 +188,7 @@ If ``getLin`` has an unrestricted argument...
 
 .. code-block:: idris
 
-    getLin : (val : Lin a) -> a
+    getLin : Lin a -> a
     getLin (MkLin x) = ?howmanyLin
 
 ...then ``x`` is unrestricted in ``howmanyLin``::

@@ -1,3 +1,5 @@
+%default partial
+
 onlyOne : Int -> Int
 onlyOne 1 = 2
 
