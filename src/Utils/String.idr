@@ -10,7 +10,4 @@ dotSep (x :: xs) = x ++ concat ["." ++ y | y <- xs]
 
 export
 stripQuotes : (str : String) -> String
-stripQuotes str = prim__strSubstr 1 (lengthInt - 2) str
-  where
-    lengthInt : Int
-    lengthInt = fromInteger. natToInteger . length $ str
+stripQuotes str = substr 1 (length str `minus` 2) str
