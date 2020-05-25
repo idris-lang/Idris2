@@ -52,6 +52,7 @@ modules =
     Data.Bool.Extra,
     Data.IntMap,
     Data.LengthMatch,
+    Data.List.Extra,
     Data.NameMap,
     Data.StringMap,
     Data.These,

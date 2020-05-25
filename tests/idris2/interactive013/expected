@@ -1,0 +1,5 @@
+1/1: Building Spacing (Spacing.idr)
+Spacing> id {  n = 0} = ?a_1
+id {  n = (S k)} = ?a_2
+Spacing> 
+Bye for now!
