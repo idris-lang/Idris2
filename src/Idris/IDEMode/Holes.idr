@@ -83,7 +83,7 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
     implicitBind _ = False
    
 extractHoleData defs env fn args ty
-  = do ity <- resugar env !(normaliseHoles defs env ty)
+  = do ity <- resugar env !(normalise defs env ty)
        pure $ MkHoleData fn ity []
 
 
