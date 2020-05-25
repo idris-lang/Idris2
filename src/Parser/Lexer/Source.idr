@@ -4,6 +4,7 @@ import public Parser.Lexer.Common
 
 import Data.List
 import Data.Strings
+import Data.String.Extra
 
 import Utils.Hex
 import Utils.Octal
@@ -49,7 +50,7 @@ Show Token where
   show (Symbol x) = "symbol " ++ x
   -- Comments
   show (Comment _) = "comment"
-  show (DocComment _) = "doc comment"
+  show (DocComment c) = "doc comment: \"" ++ c ++ "\""
   -- Special
   show (CGDirective x) = "CGDirective " ++ x
   show EndInput = "end of input"
@@ -197,7 +198,7 @@ rawTokens : TokenMap Token
 rawTokens =
     [(comment, Comment),
      (blockComment, Comment),
-     (docComment, DocComment),
+     (docComment, DocComment . drop 3),
      (cgDirective, mkDirective),
      (holeIdent, \x => HoleIdent (assert_total (strTail x)))] ++
     map (\x => (exact x, Symbol)) symbols ++
@@ -237,7 +238,6 @@ lexTo pred str
       notComment : TokenData Token -> Bool
       notComment t = case tok t of
                           Comment _ => False
-                          DocComment _ => False -- TODO!
                           _ => True
 
 export
