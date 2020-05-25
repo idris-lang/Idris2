@@ -445,7 +445,7 @@ mutual
                    Rule (List (RigCount, Name, PTerm))
   pibindListName fname start indents
        = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") unqualifiedName
+            ns <- sepBy1 (symbol ",") binderName
             symbol ":"
             ty <- expr pdef fname indents
             atEnd indents
@@ -453,11 +453,15 @@ mutual
             pure (map (\n => (rig, UN n, ty)) ns)
      <|> sepBy1 (symbol ",")
                 (do rigc <- multiplicity
-                    n <- name
+                    n <- binderName
                     symbol ":"
                     ty <- expr pdef fname indents
                     rig <- getMult rigc
-                    pure (rig, n, ty))
+                    pure (rig, UN n, ty))
+    where
+      -- _ gets treated specially here, it means "I don't care about the name"
+      binderName : Rule String
+      binderName = unqualifiedName <|> do symbol "_"; pure "_"
 
   pibindList : FileName -> FilePos -> IndentInfo ->
                Rule (List (RigCount, Maybe Name, PTerm))
