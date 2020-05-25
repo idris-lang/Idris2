@@ -4,7 +4,6 @@ Contributing to Idris 2
 Contributions are welcome! The most important things needed at this stage,
 beyond work on the language core, are (in no particular order):
 
-* CI integration.
 * Documentation string support (at the REPL and IDE mode).
 * Generating HTML documentation from documentation strings (and possibly other
   formations)
@@ -22,8 +21,6 @@ beyond work on the language core, are (in no particular order):
   - (Not really part of Idris 2, but an editing mode for vim would be lovely!)
 * Some parts of the Idris 1 Prelude are not yet implemented and should be
   added to base/
-* Partial evaluation, especially for specialisation of interface 
-  implementations.
 * The lexer and parser are quite slow, new and faster versions with better
   errors would be good.
   - In particular, large sections commented out with {- -} can take a while
@@ -47,8 +44,6 @@ notably:
   - This will necessarily be slightly different from Idris 1 since the
     elaborator works differently. It would also be nice to extend it with
     libraries and perhaps syntax for deriving implementations of interfaces.
-* `%default` directives, since coverage and totality checking have not been well
-  tested yet.
 
 Other contributions are also welcome, but I (@edwinb) will need to be
 confident that I'll be able to maintain them!
@@ -73,11 +68,6 @@ behaviour might be useful in a proof (so very small definitions) are
 
 Syntax
 ------
-
-Some syntax that hasn't yet been implemented but will be:
-
-* Idiom brackets
-* !-notation [needs some thought about the exact rules]
 
 Some things from Idris 1 definitely won't be implemented:
 
