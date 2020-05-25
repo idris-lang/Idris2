@@ -632,10 +632,22 @@ public export
 sum : (Foldable t, Num a) => t a -> a
 sum = foldr (+) 0
 
+||| Add together all the elements of a structure.
+||| Same as `sum` but tail recursive.
+export
+sum' : (Foldable t, Num a) => t a -> a
+sum' = foldl (+) 0
+
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
 product = foldr (*) 1
+
+||| Multiply together all elements of a structure.
+||| Same as `product` but tail recursive.
+export
+product' : (Foldable t, Num a) => t a -> a
+product' = foldl (*) 1
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
