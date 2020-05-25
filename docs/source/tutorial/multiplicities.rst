@@ -112,7 +112,7 @@ If we use ``x`` for one part of the pair...
 The same happens if we try defining ``duplicate x = (?help, x)`` (try it!).
 
 In order to avoid parsing ambiguities, if you give an explicit multiplicity
-for a variable as with he argument to ``duplicate``, you need to give the
+for a variable as with the argument to ``duplicate``, you need to give the
 name too. But, if the name isn't used in the scope of the type, you
 can use ``_`` instead of a name, as follows:
 
