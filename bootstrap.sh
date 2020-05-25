@@ -6,6 +6,12 @@ then
     exit 1
 fi
 
+if [ -z "$IDRIS2_VERSION" ]
+  then
+    echo "No version number supplied.  Invoke with IDRIS2_VERSION=[version string]"
+    exit 1
+fi
+
 # Compile the bootstrap scheme
 cd bootstrap
 ${SCHEME} --script compile.ss
@@ -31,8 +37,6 @@ else
     SEP=":"
     NEW_PREFIX="`dirname $DIR`"
 fi
-
-IDRIS2_VERSION=`cat VERSION`
 
 IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/prelude${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/base${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/contrib${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/network"
 IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/lib"

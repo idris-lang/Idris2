@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ -z "$IDRIS2_VERSION" ]
+  then
+    echo "No version number supplied.  Invoke with IDRIS2_VERSION=[version string]"
+    exit 1
+fi
+
 # Compile the bootstrap scheme
 cd bootstrap
 echo "Building idris2boot from idris2boot.rkt"
@@ -19,8 +25,6 @@ DIR="`realpath $0`"
 PREFIX="`dirname $DIR`"/bootstrap
 
 # Now rebuild everything properly
-IDRIS2_VERSION=`cat VERSION`
-
 IDRIS2_BOOT_PATH="${PREFIX}/idris2-${IDRIS2_VERSION}/prelude:${PREFIX}/idris2-${IDRIS2_VERSION}/base:${PREFIX}/idris2-${IDRIS2_VERSION}/contrib:${PREFIX}/idris2-${IDRIS2_VERSION}/network"
 DYLIB_PATH="${PREFIX}/lib"
 
