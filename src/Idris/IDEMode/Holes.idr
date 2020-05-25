@@ -5,6 +5,8 @@ import Core.Env
 import Idris.Resugar
 import Idris.Syntax
 
+import Idris.IDEMode.Commands
+
 public export
 record HolePremise where
   constructor MkHolePremise
@@ -118,11 +120,27 @@ showHole defs env fn args ty
          case hdata.context of
            [] => pure $ show (hdata.name) ++ " : " ++ show hdata.type
            _  => pure $ concat 
-              (map (\hole => showCount hole.multiplicity
-                             ++ (impBracket hole.isImplicit $
-                                 tidy hole.name ++ " : " ++ (show hole.type) ++ "\n" )
+              (map (\premise => showCount premise.multiplicity
+                             ++ (impBracket premise.isImplicit $
+                                 tidy premise.name ++ " : " ++ (show premise.type) ++ "\n" )
                    ) hdata.context)
               ++ "-------------------------------------\n"
               ++ nameRoot (hdata.name) ++ " : " ++ show hdata.type
 
+sexpPremise : HolePremise -> SExp
+sexpPremise premise = 
+  SExpList [StringAtom $ showCount premise.multiplicity 
+                       ++ (impBracket premise.isImplicit $
+                           tidy premise.name)
+           ,StringAtom $ show premise.type
+           ,SExpList [] -- TODO: metadata
+           ]
 
+export
+sexpHole : HoleData -> SExp
+sexpHole hole = SExpList 
+  [ StringAtom (show  hole.name)
+  , SExpList $ map sexpPremise hole.context  -- Premises
+  , SExpList [ StringAtom $ show hole.type   -- Conclusion
+             , SExpList[]]    -- TODO: Highlighting information
+  ]

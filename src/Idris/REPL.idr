@@ -77,9 +77,6 @@ showInfo (n, idx, d)
                 coreLift $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
-
--- Put the printing of holes back here
-
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->

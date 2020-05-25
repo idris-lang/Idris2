@@ -314,25 +314,8 @@ displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i 
   $ StringAtom $ showSep "\n" 
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles []) 
-  = printIDEResult outf i $ SExpList []
-displayIDEResult outf i  (REPL $ FoundHoles xs) 
-  = printIDEResult outf i $ !holesSexp
-  where
-    sexpName : 
-      HoleData -> Core SExp
-    sexpName n = do
-      pure $ SExpList 
-        [ StringAtom (show  n.name)
-        , SExpList []  -- Premises
-        , SExpList [ StringAtom "?"   -- Conclusion
-                   , SExpList[]]    -- TODO: Highlighting information
-        ]
-  
-    holesSexp : Core SExp
-    holesSexp = pure $ SExpList !( traverse sexpName xs )
-
-
+displayIDEResult outf i  (REPL $ FoundHoles holes) 
+  = printIDEResult outf i $ SExpList $ map sexpHole holes
 displayIDEResult outf i  (REPL $ LogLevelSet k) 
   = printIDEResult outf i 
   $ StringAtom $ "Set loglevel to " ++ show k
