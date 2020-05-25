@@ -28,6 +28,8 @@ import Data.NameMap
 
 import System.File
 
+%default covering
+
 processDecl : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->

@@ -45,6 +45,8 @@ import System.File
 import Network.Socket
 import Network.Socket.Data
 
+%default covering
+
 %foreign "C:fdopen,libc 6"
 prim__fdopen : Int -> String -> PrimIO AnyPtr
 

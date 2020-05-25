@@ -1,5 +1,7 @@
 module Algebra.Preorder
 
+%default total
+
 ||| Preorder defines a binary relation using the `<=` operator
 public export
 interface Preorder a where

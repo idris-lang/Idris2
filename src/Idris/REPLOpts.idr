@@ -5,6 +5,8 @@ import Idris.Syntax
 import Data.Strings
 import System.File
 
+%default total
+
 public export
 data OutputMode
   = IDEMode Integer File File

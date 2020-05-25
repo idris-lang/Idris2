@@ -11,6 +11,8 @@ import Data.Strings
 
 import System.Info
 
+%default total
+
 public export
 record Dirs where
   constructor MkDirs

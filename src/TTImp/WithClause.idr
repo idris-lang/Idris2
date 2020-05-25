@@ -7,6 +7,8 @@ import TTImp.TTImp
 
 import Data.List
 
+%default covering
+
 matchFail : FC -> Core a
 matchFail loc = throw (GenericMsg loc "With clause does not match parent")
 

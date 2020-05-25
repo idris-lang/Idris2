@@ -12,6 +12,8 @@ import TTImp.Elab.Check
 import TTImp.ProcessDef -- for checking LHS
 import TTImp.TTImp
 
+%default covering
+
 export
 processTransform : {vars : _} ->
                    {auto c : Ref Ctxt Defs} ->

@@ -17,6 +17,8 @@ import TTImp.Utils
 
 import Data.List
 
+%default covering
+
 mkDataTy : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp
 mkDataTy fc [] = IType fc
 mkDataTy fc ((n, c, p, ty) :: ps)
