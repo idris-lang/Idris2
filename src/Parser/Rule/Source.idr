@@ -5,6 +5,7 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
+import Data.Strings
 
 %default total
 
@@ -45,6 +46,16 @@ constant
                            Ident "Integer" => Just IntegerType
                            Ident "String"  => Just StringType
                            _ => Nothing)
+
+documentation' : Rule String
+documentation' = terminal "Expected documentation comment"
+                          (\x => case tok x of
+                                      DocComment d => Just d
+                                      _ => Nothing)
+
+export
+documentation : Rule String
+documentation = unlines <$> some documentation'
 
 export
 intLit : Rule Integer

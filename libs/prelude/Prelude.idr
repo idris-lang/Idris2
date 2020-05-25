@@ -721,8 +721,8 @@ public export
 data Nat =
   ||| Zero.
     Z
-  ||| Successor.
-  | S Nat
+  | ||| Successor.
+  S Nat
 
 %name Nat k, j, i
 
@@ -942,8 +942,8 @@ data List a =
   ||| Empty list
   Nil
 
-  ||| A non-empty list, consisting of a head element and the rest of the list.
-  | (::) a (List a)
+  | ||| A non-empty list, consisting of a head element and the rest of the list.
+  (::) a (List a)
 
 %name List xs, ys, zs
 

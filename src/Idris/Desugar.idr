@@ -481,7 +481,7 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 List Name -> PTypeDecl -> Core ImpTy
-  desugarType ps (MkPTy fc n ty)
+  desugarType ps (MkPTy fc n d ty)
       = do syn <- get Syn
            pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
@@ -555,7 +555,7 @@ mutual
   getDecl AsType d@(PClaim _ _ _ _ _) = Just d
   getDecl AsType (PData fc vis (MkPData dfc tyn tyc _ _))
       = Just (PData fc vis (MkPLater dfc tyn tyc))
-  getDecl AsType d@(PInterface _ _ _ _ _ _ _ _) = Just d
+  getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
   getDecl AsType d@(PRecord fc vis n ps _ _)
       = Just (PData fc vis (MkPLater fc n (mkRecType ps)))
     where
@@ -568,7 +568,7 @@ mutual
 
   getDecl AsDef (PClaim _ _ _ _ _) = Nothing
   getDecl AsDef d@(PData _ _ (MkPLater _ _ _)) = Just d
-  getDecl AsDef (PInterface _ _ _ _ _ _ _ _) = Nothing
+  getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
   getDecl AsDef d@(PRecord _ _ _ _ _ _) = Just d
   getDecl AsDef (PFixity _ _ _ _) = Nothing
   getDecl AsDef (PDirective _ _) = Nothing
@@ -658,7 +658,7 @@ mutual
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
-  desugarDecl ps (PInterface fc vis cons_in tn params det conname body)
+  desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
       = do let cons = concatMap expandConstraint cons_in
            cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ map fst params)
                                                          (snd ntm)

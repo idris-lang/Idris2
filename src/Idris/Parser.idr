@@ -850,13 +850,14 @@ visibility
 tyDecl : FileName -> IndentInfo -> Rule PTypeDecl
 tyDecl fname indents
     = do start <- location
-         n <- name
+         doc   <- option "" documentation
+         n     <- name
          symbol ":"
          mustWork $
-            do ty <- expr pdef fname indents
+            do ty  <- expr pdef fname indents
                end <- location
                atEnd indents
-               pure (MkPTy (MkFC fname start end) n ty)
+               pure (MkPTy (MkFC fname start end) n doc ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->
@@ -933,13 +934,14 @@ mkDataConType fc ret (WithArg a :: xs)
 
 simpleCon : FileName -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
-    = do start <- location
-         cname <- name
+    = do start  <- location
+         cdoc   <- option "" documentation
+         cname  <- name
          params <- many (argExpr plhs fname indents)
          atEnd indents
          end <- location
-         pure (let cfc = MkFC fname start end in 
-                   MkPTy cfc cname (mkDataConType cfc ret params))
+         pure (let cfc = MkFC fname start end in
+                   MkPTy cfc cname cdoc (mkDataConType cfc ret params))
 
 simpleData : FileName -> FilePos -> Name -> IndentInfo -> Rule PDataDecl
 simpleData fname start n indents
@@ -1003,9 +1005,10 @@ dataDeclBody fname indents
 dataDecl : FileName -> IndentInfo -> Rule PDecl
 dataDecl fname indents
     = do start <- location
-         vis <- visibility
-         dat <- dataDeclBody fname indents
-         end <- location
+         doc   <- option "" documentation
+         vis   <- visibility
+         dat   <- dataDeclBody fname indents
+         end   <- location
          pure (PData (MkFC fname start end) vis dat)
 
 stripBraces : String -> String
@@ -1128,9 +1131,10 @@ namespaceHead
 namespaceDecl : FileName -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
     = do start <- location
-         ns <- namespaceHead
-         end <- location
-         ds <- assert_total (nonEmptyBlock (topDecl fname))
+         doc   <- option "" documentation
+         ns    <- namespaceHead
+         end   <- location
+         ds    <- assert_total (nonEmptyBlock (topDecl fname))
          pure (PNamespace (MkFC fname start end) ns (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl
@@ -1284,29 +1288,33 @@ ifaceParam fname indents
 ifaceDecl : FileName -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
     = do start <- location
-         vis <- visibility
-         col <- column
+         doc   <- option "" documentation
+         vis   <- visibility
+         col   <- column
          keyword "interface"
          commit
-         cons <- constraints fname indents
-         n <- name
+         cons   <- constraints fname indents
+         n      <- name
          params <- many (ifaceParam fname indents)
-         det <- option [] (do symbol "|"
-                              sepBy (symbol ",") name)
+         det    <- option []
+                     (do symbol "|"
+                         sepBy (symbol ",") name)
          keyword "where"
-         dc <- option Nothing (do exactIdent "constructor"
-                                  n <- name
-                                  pure (Just n))
+         dc <- option Nothing
+                 (do exactIdent "constructor"
+                     n <- name
+                     pure (Just n))
          body <- assert_total (blockAfter col (topDecl fname))
-         end <- location
+         end  <- location
          pure (PInterface (MkFC fname start end)
-                      vis cons n params det dc (collectDefs (concat body)))
+                      vis cons n doc params det dc (collectDefs (concat body)))
 
 implDecl : FileName -> IndentInfo -> Rule PDecl
 implDecl fname indents
-    = do start <- location
+    = do start   <- location
+         doc     <- option "" documentation
          visOpts <- many (visOpt fname)
-         vis <- getVisibility Nothing visOpts
+         vis     <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
          col <- column
          option () (keyword "implementation")
@@ -1314,9 +1322,9 @@ implDecl fname indents
                                      iname <- name
                                      symbol "]"
                                      pure (Just iname))
-         impls <- implBinds fname indents
-         cons <- constraints fname indents
-         n <- name
+         impls  <- implBinds fname indents
+         cons   <- constraints fname indents
+         n      <- name
          params <- many (simpleExpr fname indents)
          nusing <- option [] (do keyword "using"
                                  names <- some name
@@ -1331,13 +1339,15 @@ implDecl fname indents
 
 fieldDecl : FileName -> IndentInfo -> Rule (List PField)
 fieldDecl fname indents
-      = do symbol "{"
+      = do doc <- option "" documentation
+           symbol "{"
            commit
            fs <- fieldBody Implicit
            symbol "}"
            atEnd indents
            pure fs
-    <|> do fs <- fieldBody Explicit
+    <|> do doc <- option "" documentation
+           fs <- fieldBody Explicit
            atEnd indents
            pure fs
   where
@@ -1381,15 +1391,16 @@ recordParam fname indents
 recordDecl : FileName -> IndentInfo -> Rule PDecl
 recordDecl fname indents
     = do start <- location
-         vis <- visibility
-         col <- column
+         doc   <- option "" documentation
+         vis   <- visibility
+         col   <- column
          keyword "record"
-         n <- name
+         n       <- name
          paramss <- many (recordParam fname indents)
          let params = concat paramss
          keyword "where"
          dcflds <- blockWithOptHeaderAfter col ctor (fieldDecl fname)
-         end <- location
+         end    <- location
          pure (PRecord (MkFC fname start end)
                        vis n params (fst dcflds) (concat (snd dcflds)))
   where
@@ -1401,21 +1412,23 @@ recordDecl fname indents
 
 claim : FileName -> IndentInfo -> Rule PDecl
 claim fname indents
-    = do start <- location
+    = do start   <- location
+         doc     <- option "" documentation
          visOpts <- many (visOpt fname)
-         vis <- getVisibility Nothing visOpts
+         vis     <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
-         m <- multiplicity
+         m   <- multiplicity
          rig <- getMult m
-         cl <- tyDecl fname indents
+         cl  <- tyDecl fname indents
          end <- location
          pure (PClaim (MkFC fname start end) rig vis opts cl)
 
 definition : FileName -> IndentInfo -> Rule PDecl
 definition fname indents
     = do start <- location
-         nd <- clause 0 fname indents
-         end <- location
+         doc   <- option "" documentation
+         nd    <- clause 0 fname indents
+         end   <- location
          pure (PDef (MkFC fname start end) [nd])
 
 fixDecl : FileName -> IndentInfo -> Rule (List PDecl)
@@ -1527,27 +1540,29 @@ import_ fname indents
 export
 prog : FileName -> SourceEmptyRule Module
 prog fname
-    = do start <- location
+    = do start  <- location
+         doc    <- option "" documentation
          nspace <- option ["Main"]
-                      (do keyword "module"
-                          namespacedIdent)
-         end <- location
+                     (do keyword "module"
+                         namespacedIdent)
+         end     <- location
          imports <- block (import_ fname)
-         ds <- block (topDecl fname)
+         ds      <- block (topDecl fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports (collectDefs (concat ds)))
+                        nspace imports doc (collectDefs (concat ds)))
 
 export
 progHdr : FileName -> SourceEmptyRule Module
 progHdr fname
-    = do start <- location
+    = do start  <- location
+         doc    <- option "" documentation
          nspace <- option ["Main"]
-                      (do keyword "module"
-                          namespacedIdent)
-         end <- location
+                     (do keyword "module"
+                         namespacedIdent)
+         end     <- location
          imports <- block (import_ fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports [])
+                        nspace imports doc [])
 
 parseMode : Rule REPLEval
 parseMode

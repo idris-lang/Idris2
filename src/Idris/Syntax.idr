@@ -131,7 +131,7 @@ mutual
 
   public export
   data PTypeDecl : Type where
-       MkPTy : FC -> (n : Name) -> (type : PTerm) -> PTypeDecl
+       MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
   public export
   data PDataDecl : Type where
@@ -209,6 +209,7 @@ mutual
                     Visibility ->
                     (constraints : List (Maybe Name, PTerm)) ->
                     Name ->
+                    (doc : String) ->
                     (params : List (Name, PTerm)) ->
                     (det : List Name) ->
                     (conName : Maybe Name) ->
@@ -244,13 +245,13 @@ definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where
     getName : PTypeDecl -> Name
-    getName (MkPTy _ n _) = n
+    getName (MkPTy _ n _ _) = n
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ n _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ _ _ _ (MkPTy _ n _ _) :: ds) = n :: definedIn ds
 definedIn (PData _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -339,6 +340,7 @@ record Module where
   headerloc : FC
   moduleNS : List String
   imports : List Import
+  documentation : String
   decls : List PDecl
 
 showCount : RigCount -> String
@@ -829,9 +831,10 @@ mapPTermM f = goPTerm where
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
     goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
-    goPDecl (PInterface fc v mnts n nts ns mn ps) =
+    goPDecl (PInterface fc v mnts n doc nts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
+                      <*> pure doc
                       <*> goPairedPTerms nts
                       <*> pure ns
                       <*> pure mn
@@ -856,7 +859,7 @@ mapPTermM f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
-    goPTypeDecl (MkPTy fc n t) = MkPTy fc n <$> goPTerm t
+    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
 
     goPDataDecl : PDataDecl -> Core PDataDecl
     goPDataDecl (MkPData fc n t opts tdecls) =
