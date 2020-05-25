@@ -8,10 +8,6 @@ NAME = idris2
 TARGETDIR = build/exec
 TARGET = ${TARGETDIR}/${NAME}
 
-MAJOR=0
-MINOR=2
-PATCH=0
-
 
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
@@ -22,7 +18,12 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
     endif
 endif
 
+MAJOR=$(shell cat VERSION | cut -d. -f1)
+MINOR=$(shell cat VERSION | cut -d. -f2)
+PATCH=$(shell cat VERSION | cut -d. -f3)
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
+
+
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 IDRIS2_IPKG := idris2.ipkg
 
@@ -35,7 +36,6 @@ else
 	IDRIS2_CURDIR := ${CURDIR}
 	export IDRIS2_BOOT_PATH = ${IDRIS2_CURDIR}/libs/prelude/build/ttc:${IDRIS2_CURDIR}/libs/base/build/ttc:${IDRIS2_CURDIR}/libs/network/build/ttc
 endif
-
 
 
 export SCHEME

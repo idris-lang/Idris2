@@ -19,12 +19,13 @@ DIR="`realpath $0`"
 PREFIX="`dirname $DIR`"/bootstrap
 
 # Now rebuild everything properly
-echo ${PREFIX}
-IDRIS2_BOOT_PATH="${PREFIX}/idris2-0.2.0/prelude:${PREFIX}/idris2-0.2.0/base:${PREFIX}/idris2-0.2.0/contrib:${PREFIX}/idris2-0.2.0/network"
+IDRIS2_VERSION=`cat VERSION`
+
+IDRIS2_BOOT_PATH="${PREFIX}/idris2-${IDRIS2_VERSION}/prelude:${PREFIX}/idris2-${IDRIS2_VERSION}/base:${PREFIX}/idris2-${IDRIS2_VERSION}/contrib:${PREFIX}/idris2-${IDRIS2_VERSION}/network"
 DYLIB_PATH="${PREFIX}/lib"
 
 make libs IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 make install IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 make clean IDRIS2_BOOT=${PREFIX}/bin/idris2 LD_LIBRARY_PATH=${DYLIB_PATH}
 make all IDRIS2_BOOT=${PREFIX}/bin/idris2 IDRIS2_CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} LD_LIBRARY_PATH=${DYLIB_PATH}
-make test INTERACTIVE='' IDRIS2_BOOT=${PREFIX}/bin/idris2 CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_LIBS=${PREFIX}/idris2-0.2.0/lib LD_LIBRARY_PATH=${DYLIB_PATH}
+make test INTERACTIVE='' IDRIS2_BOOT=${PREFIX}/bin/idris2 CG=racket IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_LIBS=${PREFIX}/idris2-${IDRIS2_VERSION}/lib LD_LIBRARY_PATH=${DYLIB_PATH}

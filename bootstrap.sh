@@ -32,9 +32,11 @@ else
     NEW_PREFIX="`dirname $DIR`"
 fi
 
-IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-0.2.0/prelude${SEP}${IDRIS_PREFIX}/idris2-0.2.0/base${SEP}${IDRIS_PREFIX}/idris2-0.2.0/contrib${SEP}${IDRIS_PREFIX}/idris2-0.2.0/network"
-IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-0.2.0/lib"
-IDRIS2_TEST_DATA="${IDRIS_PREFIX}/idris2-0.2.0/support"
+IDRIS2_VERSION=`cat VERSION`
+
+IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/prelude${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/base${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/contrib${SEP}${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/network"
+IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/lib"
+IDRIS2_TEST_DATA="${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}/support"
 IDRIS2_NEW_PATH="${NEW_PREFIX}/libs/prelude/build/ttc${SEP}${NEW_PREFIX}/libs/base/build/ttc${SEP}${NEW_PREFIX}/libs/network/build/ttc"
 
 # Now rebuild everything properly
