@@ -93,8 +93,8 @@ holeData gam env fn args ty
   = do hdata <- extractHoleData gam env fn args ty
        pp <- getPPrint
        pure $ if showImplicits pp
-              then record { context $= dropShadows } hdata
-              else hdata
+              then hdata
+              else record { context $= dropShadows } hdata
   where
     dropShadows : List HolePremise -> List HolePremise
     dropShadows [] = []
