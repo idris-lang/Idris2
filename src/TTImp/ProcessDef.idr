@@ -113,7 +113,6 @@ recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
 recoverable defs (NTCon _ _ _ _ _) _ = pure True 
 recoverable defs (NDCon _ _ _ _ _) _ = pure True 
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
-recoverable defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
 recoverable defs x y = pure False
 
