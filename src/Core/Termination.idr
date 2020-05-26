@@ -61,7 +61,7 @@ checkIfGuarded fc n
         = do Just gdef <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure False
              case definition gdef of
-                  DCon _ _ _ => pure True
+                  DCon _ _ _ _ => pure True
                   _ => pure (multiplicity gdef == erased
                               || (AllGuarded `elem` flags gdef))
 
@@ -162,7 +162,7 @@ mutual
            case (g, fn', args) of
     -- If we're InDelay and find a constructor (or a function call which is
     -- guaranteed to return a constructor; AllGuarded set), continue as InDelay
-             (InDelay, Ref fc (DataCon _ _) cn, args) =>
+             (InDelay, Ref fc (DataCon _ _ _) cn, args) =>
                  do scs <- traverse (findSC defs env InDelay pats) args
                     pure (concat scs)
              -- If we're InDelay otherwise, just check the arguments, the
@@ -170,10 +170,10 @@ mutual
              (InDelay, _, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
-             (Guarded, Ref fc (DataCon _ _) cn, args) =>
+             (Guarded, Ref fc (DataCon _ _ _) cn, args) =>
                  do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
-             (Toplevel, Ref fc (DataCon _ _) cn, args) =>
+             (Toplevel, Ref fc (DataCon _ _ _) cn, args) =>
                  do scs <- traverse (findSC defs env Guarded pats) args
                     pure (concat scs)
              (_, Ref fc Func fn, args) =>
@@ -192,7 +192,7 @@ mutual
                  Just gdef <- lookupCtxtExact n (gamma defs)
                       | Nothing => pure $ Ref fc Func n
                  if AllGuarded `elem` flags gdef
-                    then pure $ Ref fc (DataCon 0 0) n
+                    then pure $ Ref fc (DataCon top 0 0) n
                     else pure $ Ref fc Func n
         conIfGuarded tm = pure tm
 
@@ -235,7 +235,7 @@ mutual
       = if assertedSmaller big tm
            then True
            else case getFnArgs tm of
-                     (Ref _ (DataCon t a) cn, args)
+                     (Ref _ (DataCon r t a) cn, args)
                          => any (smaller True defs big s) args
                      _ => case s of
                                App _ f _ => smaller inc defs big f tm

@@ -175,6 +175,11 @@ weakenExp env (Just gtm)
     = do tm <- getTerm gtm
          pure (Just (gnf env (weaken tm)))
 
+-- Branch on LinearMisuse when the expected rigCount is One, othewise take the other branch
+matchLinearMisuse : (thenBr : a) -> (elseBr : a) -> Error -> a
+matchLinearMisuse thenBr elseBr (LinearMisuse _ _ rig _) = branchOne thenBr elseBr rig
+matchLinearMisuse thenBr elseBr _ = elseBr
+
 export
 checkLet : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -201,27 +206,22 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
                              (record { preciseInf = True } elabinfo)
                              nest env nVal (Just (gnf env tyv))
                   pure (fst c, snd c, rigl |*| rigc))
-              (\err => case err of
-                            (LinearMisuse _ _ r _)
-                              => branchOne
-                                   (do c <- runDelays 0 $ check linear elabinfo
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, linear))
-                                   (do c <- check (rigl |*| rigc)
-                                                elabinfo -- without preciseInf
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, rigMult rigl rigc))
-                                   r
-                            _ => do c <- check (rigl |*| rigc)
-                                               elabinfo -- without preciseInf
-                                               nest env nVal (Just (gnf env tyv))
-                                    pure (fst c, snd c, rigl |*| rigc))
+              (matchLinearMisuse (do c <- runDelays 0 $ check linear elabinfo
+                                              nest env nVal (Just (gnf env tyv))
+                                     pure (fst c, snd c, linear))
+                                 (do c <- check (rigl |*| rigc)
+                                              elabinfo -- without preciseInf
+                                              nest env nVal (Just (gnf env tyv))
+                                     pure (fst c, snd c, rigl |*| rigc)))
          let env' : Env Term (n :: _) = Lam rigb Explicit tyv :: env
          let nest' = weaken (dropName n nest)
          expScope <- weakenExp env' expty
          (scopev, gscopet) <-
             inScope fc env' (\e' =>
               check {e=e'} rigc elabinfo nest' env' scope expScope)
+         coreLift $ printLn valv
+         coreLift $ printLn ("nVal " ++ show nVal)
+         coreLift $ printLn ("nTy " ++ show nTy)
          scopet <- getTerm gscopet
 
          -- No need to 'checkExp' here - we've already checked scopet

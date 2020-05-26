@@ -22,14 +22,14 @@ conflictMatch ((x, tm) :: ms)
          else conflictMatch ms
   where
     clash : Term vars -> Term vars -> Bool
-    clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
+    clash (Ref _ (DataCon _ t _) _) (Ref _ (DataCon _ t' _) _)
         = t /= t'
     clash _ _ = False
 
     findN : Nat -> Term vars -> Bool
     findN i (Local _ _ i' _) = i == i'
     findN i tm
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon _ _ _) _, args) = getFnArgs tm
                    | _ => False in
               anyTrue (map (findN i) args)
 
@@ -37,11 +37,11 @@ conflictMatch ((x, tm) :: ms)
     -- a name appearing strong rigid in the other term
     conflictTm : Term vars -> Term vars -> Bool
     conflictTm (Local _ _ i _) tm
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon _ _ _) _, args) = getFnArgs tm
                    | _ => False in
               anyTrue (map (findN i) args)
     conflictTm tm (Local _ _ i _)
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon _ _ _) _, args) = getFnArgs tm
                    | _ => False in
               anyTrue (map (findN i) args)
     conflictTm tm tm'
@@ -49,7 +49,7 @@ conflictMatch ((x, tm) :: ms)
               (f', args') = getFnArgs tm' in
               if clash f f'
                  then True
-                 else anyTrue (zipWith conflictTm args args') 
+                 else anyTrue (zipWith conflictTm args args')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
@@ -67,7 +67,7 @@ conflict defs env nfty n
     = do Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure False
          case (definition gdef, type gdef) of
-              (DCon t arity _, dty)
+              (DCon r t arity _, dty)
                   => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
@@ -93,14 +93,14 @@ conflict defs env nfty n
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF [] -> 
+      conflictNF : Int -> NF vars -> NF [] ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
           -- twice somehow both references appear in the result  it's unlikely
           -- put posslbe
           = let x' = MN (show x) i in
-                conflictNF (i + 1) t 
+                conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
           = do empty <- clearDefs defs
@@ -155,7 +155,7 @@ getCons defs (NTCon _ tn _ _ _)
         = do Just gdef <- lookupCtxtExact cn (gamma defs)
                   | _ => pure Nothing
              case (definition gdef, type gdef) of
-                  (DCon t arity _, ty) =>
+                  (DCon r t arity _, ty) =>
                         pure (Just (!(nf defs [] ty), cn, t, arity))
                   _ => pure Nothing
 getCons defs _ = pure []
@@ -330,7 +330,8 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt : KnownVars vars (List Int) ->
                   CaseAlt vars -> Core (List (List ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
-        = do let con = Ref fc (DataCon t (length args)) n
+        -- DataCon from matched case are unrestricted
+        = do let con = Ref fc (DataCon top t (length args)) n
              let ps' = map (substName var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
@@ -426,7 +427,7 @@ eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
     = case getFnArgs tm of
-           (Ref fc Bound n, args) => 
+           (Ref fc Bound n, args) =>
                 do args' <- traverse eraseApps args
                    pure (apply fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
@@ -452,7 +453,7 @@ clauseMatches : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
-clauseMatches env tm trylhs 
+clauseMatches env tm trylhs
     = let lhs = !(eraseApps (close (getLoc tm) env tm)) in
           pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
   where

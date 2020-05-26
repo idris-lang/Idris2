@@ -212,7 +212,7 @@ parameters (defs : Defs, topopts : EvalOpts)
               (isMeta : Bool) ->
               FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
-    evalRef env meta fc (DataCon tag arity) fn stk def
+    evalRef env meta fc (DataCon rig tag arity) fn stk def
         = pure $ NDCon fc fn tag arity stk
     evalRef env meta fc (TyCon tag arity) fn stk def
         = pure $ NTCon fc fn tag arity stk
@@ -576,7 +576,9 @@ mutual
            pure $ apply fc f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgs q defs bound env args
-           pure $ apply fc (Ref fc (DataCon t ar) n) args'
+           -- DataCon from DCon has unrestricted multiplicity
+           --                                v
+           pure $ apply fc (Ref fc (DataCon top t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgs q defs bound env args
            pure $ apply fc (Ref fc (TyCon t ar) n) args'

@@ -95,11 +95,11 @@ outputNameSyntax (fc, (name, _, term)) =
                  -- data NameType : Type where
                  -- Bound   : NameType
                  -- Func    : NameType
-                 -- DataCon : (tag : Int) -> (arity : Nat) -> NameType
+                 -- DataCon : (rig : RigCount) -> (tag : Int) -> (arity : Nat) -> NameType
                  -- TyCon   : (tag : Int) -> (arity : Nat) -> NameType
                  (Ref fc Bound name) => Just Bound
                  (Ref fc Func name) => Just Function
-                 (Ref fc (DataCon tag arity) name) => Just Data
+                 (Ref fc (DataCon rig tag arity) name) => Just Data
                  (Ref fc (TyCon tag arity) name) => Just Typ
                  (Meta fc x y xs) => Just Bound
                  (Bind fc x b scope) => Just Bound

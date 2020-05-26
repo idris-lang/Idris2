@@ -127,7 +127,7 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
               | Nothing => check rig elabinfo nest env sc expty
          let name = case definition def of
                          PMDef _ _ _ _ _ => Ref fc Func iname
-                         DCon t a _ => Ref fc (DataCon t a) iname
+                         DCon r t a _ => Ref fc (DataCon r t a) iname
                          TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
                          _ => Ref fc Func iname
          app <- getLocalTerm fc env name args

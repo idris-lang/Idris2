@@ -69,7 +69,7 @@ data Def : Type where
                                 -- e.g "C:printf,libc,stdlib.h", "scheme:display", ...
                  Def
     Builtin : {arity : Nat} -> PrimFn arity -> Def
-    DCon : (tag : Int) -> (arity : Nat) ->
+    DCon : (rig : RigCount) -> (tag : Int) -> (arity : Nat) ->
            (newtypeArg : Maybe (Bool, Nat)) ->
                -- if only constructor, and only one argument is non-Rig0,
                -- flag it here. The Nat is the unerased argument position.
@@ -112,8 +112,8 @@ Show Def where
   show (PMDef _ args ct rt pats)
       = show args ++ ";\nCompile time tree: " ++ show ct ++
         "\nRun time tree: " ++ show rt
-  show (DCon t a nt)
-      = "DataCon " ++ show t ++ " " ++ show a
+  show (DCon r t a nt)
+      = "DataCon " ++ show r ++ " " ++ show t ++ " " ++ show a
            ++ maybe "" (\n => " (newtype by " ++ show n ++ ")") nt
   show (TCon t a ps ds u ms cons det)
       = "TyCon " ++ show t ++ " " ++ show a ++ " params: " ++ show ps ++
@@ -1729,7 +1729,9 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
                           Context -> Core Context
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)
+        -- Data constructors are unrestricted by default --------------------|
+        --                                                                   v
+        = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon top tag a Nothing)
              (idx, gam') <- addCtxt n condef gam
              addDataConstructors (tag + 1) cs gam'
 

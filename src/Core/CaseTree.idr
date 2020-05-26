@@ -193,7 +193,7 @@ getMetas = getNames addMetas empty
 export
 mkPat' : List Pat -> ClosedTerm -> ClosedTerm -> Pat
 mkPat' args orig (Ref fc Bound n) = PLoc fc n
-mkPat' args orig (Ref fc (DataCon t a) n) = PCon fc n t a args
+mkPat' args orig (Ref fc (DataCon r t a) n) = PCon fc n t a args
 mkPat' args orig (Ref fc (TyCon t a) n) = PTyCon fc n a args
 mkPat' args orig (Bind fc x (Pi _ _ s) t)
     = let t' = subst (Erased fc False) t in
@@ -223,7 +223,9 @@ export
 mkTerm : (vars : List Name) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
-    = apply fc (Ref fc (DataCon tag arity) x)
+    -- By default Data constructors are unrestricted
+    --                           v
+    = apply fc (Ref fc (DataCon top tag arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
     = apply fc (Ref fc (TyCon 0 arity) x)

@@ -29,8 +29,8 @@ numArgs defs (Ref _ _ n)
     = do Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure (Arity 0)
          case definition gdef of
-           DCon _ arity Nothing => pure (EraseArgs arity (eraseArgs gdef))
-           DCon _ arity (Just (_, pos)) => pure (NewTypeBy arity pos)
+           DCon _ _ arity Nothing => pure (EraseArgs arity (eraseArgs gdef))
+           DCon _ _ arity (Just (_, pos)) => pure (NewTypeBy arity pos)
            PMDef _ args _ _ _ => pure (Arity (length args))
            ExternDef arity => pure (Arity arity)
            ForeignDef arity _ => pure (Arity arity)
@@ -219,17 +219,17 @@ mutual
       = pure $ CLocal fc prf
   -- TMP HACK: extend this to all types which look like enumerations
   -- after erasure
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "True")))
+  toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "True")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "False")))
+  toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "False")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "LT")))
+  toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "LT")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "EQ")))
+  toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "EQ")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "GT")))
+  toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "GT")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag arity) fn)
+  toCExpTm n (Ref fc (DataCon rig tag arity) fn)
       = -- get full name for readability, and the Nat hack
         pure $ CCon fc !(getFullName fn) (Just tag) []
   toCExpTm n (Ref fc (TyCon tag arity) fn)
@@ -303,7 +303,7 @@ mutual
                         pure $ MkConAlt xn Nothing args !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
-                DCon _ arity (Just pos) => conCases n ns -- skip it
+                DCon _ _ arity (Just pos) => conCases n ns -- skip it
                 _ => do xn <- getFullName x
                         let (args' ** sub)
                             = mkDropSubst 0 (eraseArgs gdef) vars args
@@ -314,7 +314,7 @@ mutual
                            else pure $ MkConAlt xn Nothing args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
-      dcon (DCon _ _ _) = True
+      dcon (DCon _ _ _ _) = True
       dcon _ = False
   conCases n (_ :: ns) = conCases n ns
 
@@ -352,7 +352,7 @@ mutual
                 -- that we've erased, it means it has interacted with the
                 -- outside world, so we need to evaluate to keep the
                 -- side effect.
-                Just (DCon _ arity (Just (noworld, pos))) =>
+                Just (DCon _ _ arity (Just (noworld, pos))) =>
 -- FIXME: We don't need the commented out bit *for now* because io_bind
 -- isn't being inlined, but it does need to be a little bit cleverer to
 -- get the best performance.
@@ -361,7 +361,7 @@ mutual
 -- works in a nice principled way.
 --                      if noworld -- just substitute the scrutinee into
 --                                 -- the RHS
---                         then 
+--                         then
                              let env : SubstCEnv args vars
                                      = mkSubst 0 scr pos args in
                                  pure $ Just (substs env !(toCExpTree n sc))
@@ -589,7 +589,7 @@ toCDef n ty (Builtin {arity} op)
     getVars : ArgList k ns -> Vect k (Var ns)
     getVars NoArgs = []
     getVars (ConsArg a rest) = MkVar First :: map weakenVar (getVars rest)
-toCDef n _ (DCon tag arity pos)
+toCDef n _ (DCon rig tag arity pos)
     = let nt = maybe Nothing (Just . snd) pos in
           pure $ MkCon (Just tag) arity nt
 toCDef n _ (TCon tag arity _ _ _ _ _ _)
