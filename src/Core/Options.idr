@@ -4,6 +4,7 @@ import Core.Core
 import Core.Name
 import Core.TT
 import Utils.Binary
+import Utils.Path
 
 import Data.List
 import Data.Strings
@@ -147,7 +148,7 @@ pathSep = if isWindows then ';' else ':'
 
 defaultDirs : Dirs
 defaultDirs = MkDirs "." Nothing "build" 
-                     ("build" ++ dirSep ++ "exec") 
+                     ("build" </> "exec") 
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter

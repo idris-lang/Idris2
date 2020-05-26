@@ -20,6 +20,7 @@ import System
 import Text.Parser
 import Utils.Binary
 import Utils.String
+import Utils.Path
 
 import Idris.CommandLine
 import Idris.ModTree
@@ -295,10 +296,10 @@ installFrom : {auto c : Ref Ctxt Defs} ->
               String -> String -> String -> List String -> Core ()
 installFrom _ _ _ [] = pure ()
 installFrom pname builddir destdir ns@(m :: dns)
-    = do let ttcfile = showSep dirSep (reverse ns)
-         let ttcPath = builddir ++ dirSep ++ "ttc" ++ dirSep ++ ttcfile ++ ".ttc"
-         let destPath = destdir ++ dirSep ++ showSep dirSep (reverse dns)
-         let destFile = destdir ++ dirSep ++ ttcfile ++ ".ttc"
+    = do let ttcfile = joinPath (reverse ns)
+         let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
+         let destPath = destdir </> joinPath (reverse dns)
+         let destFile = destdir </> ttcfile <.> "ttc"
          Right _ <- coreLift $ mkdirs (reverse dns)
              | Left err => throw (InternalError ("Can't make directories " ++ show (reverse dns)))
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
@@ -322,8 +323,8 @@ install pkg
          Just srcdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
          -- Make the package installation directory
-         let installPrefix = dir_prefix (dirs (options defs)) ++
-                             dirSep ++ "idris2-" ++ showVersion False version
+         let installPrefix = dir_prefix (dirs (options defs)) </>
+                             "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
              | False => throw (InternalError ("Can't change directory to " ++ installPrefix))
          Right _ <- coreLift $ mkdirs [name pkg]
@@ -334,8 +335,8 @@ install pkg
          -- We're in that directory now, so copy the files from
          -- srcdir/build into it
          traverse (installFrom (name pkg)
-                               (srcdir ++ dirSep ++ build)
-                               (installPrefix ++ dirSep ++ name pkg)) toInstall
+                               (srcdir </> build)
+                               (installPrefix </> name pkg)) toInstall
          coreLift $ changeDir srcdir
          runScript (postinstall pkg)
 
@@ -391,8 +392,8 @@ clean pkg
                                        (x :: xs) => Just (xs, x)) pkgmods
          Just srcdir <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         let builddir = srcdir ++ dirSep ++ build ++ dirSep ++ "ttc"
-         let execdir = srcdir ++ dirSep ++ exec
+         let builddir = srcdir </> build </> "ttc"
+         let execdir = srcdir </> exec
          -- the usual pair syntax breaks with `No such variable a` here for some reason
          let pkgTrie = the (StringTrie (List String)) $
                        foldl (\trie, ksv =>
@@ -404,7 +405,7 @@ clean pkg
                        (\ks => map concat . traverse (deleteBin builddir ks))
                        pkgTrie
          deleteFolder builddir []
-         maybe (pure ()) (\e => delete (execdir ++ dirSep ++ e))
+         maybe (pure ()) (\e => delete (execdir </> e))
                (executable pkg)
          runScript (postclean pkg)
   where
@@ -414,13 +415,13 @@ clean pkg
                      coreLift $ putStrLn $ "Removed: " ++ path
 
     deleteFolder : String -> List String -> Core ()
-    deleteFolder builddir ns = delete $ builddir ++ dirSep ++ showSep dirSep ns
+    deleteFolder builddir ns = delete $ builddir </> joinPath ns
 
     deleteBin : String -> List String -> String -> Core ()
     deleteBin builddir ns mod
-        = do let ttFile = builddir ++ dirSep ++ showSep dirSep ns ++ dirSep ++ mod
-             delete $ ttFile ++ ".ttc"
-             delete $ ttFile ++ ".ttm"
+        = do let ttFile = builddir </> joinPath ns </> mod
+             delete $ ttFile <.> "ttc"
+             delete $ ttFile <.> "ttm"
 
 getParseErrorLoc : String -> ParseError Token -> FC
 getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
@@ -501,7 +502,7 @@ findIpkg fname
         case fname of
              Nothing => pure Nothing
              Just src =>
-                do let src' = showSep dirSep (up ++ [src])
+                do let src' = joinPath (up ++ [src])
                    setSource src'
                    opts <- get ROpts
                    put ROpts (record { mainfile = Just src' } opts)

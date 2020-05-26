@@ -8,6 +8,7 @@ import Core.InitPrimitives
 import Core.Metadata
 import Core.Options
 import Core.Unify
+import Utils.Path
 
 import Idris.CommandLine
 import Idris.Desugar
@@ -25,6 +26,7 @@ import Data.List
 import Data.Strings
 import Data.Vect
 import System
+
 
 import Yaffle.Main
 
@@ -71,10 +73,10 @@ updateEnv
          defs <- get Ctxt
          addPkgDir "prelude"
          addPkgDir "base"
-         addDataDir (dir_prefix (dirs (options defs)) ++ dirSep ++
-                        "idris2-" ++ showVersion False version ++ dirSep ++ "support")
-         addLibDir (dir_prefix (dirs (options defs)) ++ dirSep ++
-                        "idris2-" ++ showVersion False version ++ dirSep ++ "lib")
+         addDataDir (dir_prefix (dirs (options defs)) </>
+                        ("idris2-" ++ showVersion False version) </> "support")
+         addLibDir (dir_prefix (dirs (options defs)) </>
+                        ("idris2-" ++ showVersion False version) </> "lib")
          Just cwd <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          addLibDir cwd

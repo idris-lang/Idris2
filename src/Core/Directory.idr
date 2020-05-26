@@ -5,6 +5,7 @@ import Core.Core
 import Core.FC
 import Core.Name
 import Core.Options
+import Utils.Path
 
 import Data.List
 import Data.Strings
@@ -41,7 +42,7 @@ readDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
 readDataFile fname
     = do d <- getDirs
-         let fs = map (\p => p ++ dirSep ++ fname) (data_dirs d)
+         let fs = map (\p => p </> fname) (data_dirs d)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find data file " ++ fname ++
                                                " in any of " ++ show fs))
@@ -57,8 +58,8 @@ findLibraryFile : {auto c : Ref Ctxt Defs} ->
                   String -> Core String
 findLibraryFile fname
     = do d <- getDirs
-         let fs = map (\p => p ++ dirSep ++ fname)
-                      (lib_dirs d ++ map (\x => x ++ dirSep ++ "lib")
+         let fs = map (\p => p </> fname)
+                      (lib_dirs d ++ map (\x => x </> "lib")
                                          (extra_dirs d))
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find library " ++ fname))
@@ -71,9 +72,9 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> List String -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = showSep dirSep (reverse ns)
-         let fs = map (\p => p ++ dirSep ++ fnameBase ++ ".ttc")
-                      ((build_dir d ++ dirSep ++ "ttc") :: extra_dirs d)
+         let fnameBase = joinPath (reverse ns)
+         let fs = map (\p => p </> fnameBase ++ ".ttc")
+                      ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
@@ -85,8 +86,8 @@ nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> List String -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = showSep dirSep (reverse ns)
-         let fnameBase = maybe fnameOrig (\srcdir => srcdir ++ dirSep ++ fnameOrig) (source_dir d)
+         let fnameOrig = joinPath (reverse ns)
+         let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
          let fs = map (\ext => fnameBase ++ ext)
                       [".idr", ".lidr", ".yaff", ".org", ".md"]
          Just f <- firstAvailable fs
@@ -155,9 +156,9 @@ makeBuildDirectory ns
          let ndirs = case ns of
                           [] => []
                           (n :: ns) => ns -- first item is file name
-         let fname = showSep dirSep (reverse ndirs)
+         let fname = joinPath (reverse ndirs)
          Right _ <- coreLift $ mkdirs (bdir ++ "ttc" :: reverse ndirs)
-            | Left err => throw (FileErr (build_dir d ++ dirSep ++ fname) err)
+            | Left err => throw (FileErr (build_dir d </> fname) err)
          pure ()
 
 export
@@ -180,16 +181,16 @@ getTTCFileName inp ext
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
          let ns = pathToNS (working_dir d) (source_dir d) inp
-         let fname = showSep dirSep (reverse ns) ++ ext
+         let fname = joinPath (reverse ns) ++ ext
          let bdir = build_dir d
-         pure $ bdir ++ dirSep ++ "ttc" ++ dirSep ++ fname
+         pure $ bdir </> "ttc" </> fname
 
 -- Given a root executable name, return the name in the build directory
 export
 getExecFileName : {auto c : Ref Ctxt Defs} -> String -> Core String
 getExecFileName efile
     = do d <- getDirs
-         pure $ build_dir d ++ dirSep ++ efile
+         pure $ build_dir d </> efile
 
 getEntries : Directory -> IO (List String)
 getEntries d

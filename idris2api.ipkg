@@ -146,6 +146,7 @@ modules =
     Utils.Octal,
     Utils.Shunting,
     Utils.String,
+    Utils.Path,
 
     Yaffle.Main,
     Yaffle.REPL
