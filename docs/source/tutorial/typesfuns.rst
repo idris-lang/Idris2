@@ -20,7 +20,7 @@ into the Idris interactive environment by typing ``idris2 Prims.idr``:
     module Prims
 
     x : Int
-    x = 42
+    x = 94
 
     foo : String
     foo = "Sausage machine"
