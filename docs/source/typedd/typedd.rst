@@ -39,6 +39,14 @@ In ``AveMain.idr`` and ``Reverse.idr`` add:
 .. code-block:: idris
 
     import System.REPL -- for 'repl'
+ 
+To resolve disambiguation, use ``Prelude.Strings.(++)`` while concatenating strings in ``showAverage``. 
+(Atleast since Idris 1.3.3)
+
+.. code-block:: idris
+   
+   (Prelude.String.(++) "The average word length is " (show (average str))
+    
 
 Chapter 3
 ---------
