@@ -10,10 +10,6 @@ import Text.Lexer
 import Text.Parser
 import Text.Quantity
 
-private
-isWindows : Bool
-isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
-
 ||| The character that separates directories in the path.
 export
 dirSeparator : Char

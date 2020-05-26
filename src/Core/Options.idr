@@ -131,10 +131,6 @@ record Options where
   extensions : List LangExt
 
 export
-isWindows : Bool
-isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
-
-export
 sep : Char
 sep = if isWindows then '\\' else '/'
 
