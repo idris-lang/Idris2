@@ -211,7 +211,7 @@ rawTokens =
      (namespacedIdent, parseNamespace),
      (identNormal, parseIdent),
      (pragma, \x => Pragma (assert_total $ strTail x)),
-     (space, Comment),
+     (some space, Comment),
      (validSymbol, Symbol),
      (symbol, Unrecognised)]
   where
