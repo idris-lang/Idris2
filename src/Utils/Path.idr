@@ -28,7 +28,7 @@ pathSeparator = if isWindows then ';' else ':'
 
 ||| Windows' path prefixes of path component.
 public export
-data Volumn
+data Volume
   = 
   ||| Windows' Uniform Naming Convention, e.g., a network sharing
   ||| directory: `\\host\c$\Windows\System32`
@@ -58,7 +58,7 @@ public export
 record Path where
     constructor MkPath
     ||| Windows' path prefix (only on Windows)
-    volumn : Maybe Volumn
+    volume : Maybe Volume
     ||| Whether the path contains a root
     hasRoot : Bool
     ||| Path bodies
@@ -67,7 +67,7 @@ record Path where
     hasTrailSep : Bool
 
 export
-Eq Volumn where
+Eq Volume where
   (==) (UNC l1 l2) (UNC r1 r2) = l1 == r1 && r1 == r2
   (==) (Disk l) (Disk r) = l == r
   (==) _ _ = False
@@ -101,7 +101,7 @@ Show Body where
   show (Normal s) = s
 
 export
-Show Volumn where
+Show Volume where
   show (UNC server share) = "\\\\" ++ server ++ "\\" ++ share
   show (Disk disk) = singleton disk ++ ":"
 
@@ -109,7 +109,7 @@ Show Volumn where
 export
 Show Path where
   show p = let sep = singleton dirSeparator
-               volStr = fromMaybe "" (map show p.volumn)
+               volStr = fromMaybe "" (map show p.volume)
                rootStr = if p.hasRoot then sep else ""
                bodyStr = join sep $ map show p.body
                trailStr = if p.hasTrailSep then sep else "" in
@@ -165,7 +165,7 @@ verbatim = do count (exactly 2) $ match $ PTPunct '\\'
               pure ()
 
 -- Example: \\server\share
-unc : Grammar PathToken True Volumn
+unc : Grammar PathToken True Volume
 unc = do count (exactly 2) $ match $ PTPunct '\\'
          server <- match PTText
          bodySeparator
@@ -173,7 +173,7 @@ unc = do count (exactly 2) $ match $ PTPunct '\\'
          Core.pure $ UNC server share
 
 -- Example: \\?\server\share
-verbatimUnc : Grammar PathToken True Volumn
+verbatimUnc : Grammar PathToken True Volume
 verbatimUnc = do verbatim
                  server <- match PTText
                  bodySeparator
@@ -181,7 +181,7 @@ verbatimUnc = do verbatim
                  Core.pure $ UNC server share
 
 -- Example: C:
-disk : Grammar PathToken True Volumn
+disk : Grammar PathToken True Volume
 disk = do text <- match PTText
           disk <- case unpack text of
                        (disk :: xs) => pure disk
@@ -190,13 +190,13 @@ disk = do text <- match PTText
           pure $ Disk (toUpper disk)
 
 -- Example: \\?\C:
-verbatimDisk : Grammar PathToken True Volumn
+verbatimDisk : Grammar PathToken True Volume
 verbatimDisk = do verbatim
                   d <- disk
                   pure d
 
-parseVolumn : Grammar PathToken True Volumn
-parseVolumn = verbatimUnc
+parseVolume : Grammar PathToken True Volume
+parseVolume = verbatimUnc
           <|> verbatimDisk
           <|> unc
           <|> disk
@@ -210,7 +210,7 @@ parseBody = do text <- match PTText
                         s => pure (Normal s)
 
 parsePath : Grammar PathToken False Path
-parsePath = do vol <- optional parseVolumn
+parsePath = do vol <- optional parseVolume
                root <- optional bodySeparator
                body <- sepBy bodySeparator parseBody
                trailSep <- optional bodySeparator
@@ -230,6 +230,8 @@ parsePath = do vol <- optional parseVolumn
 ||| - Any characters in path body in allowed, e.g., glob like "/root/*";
 ||| - Verbatim prefix(`\\?\`) that disables the forward
 |||   slash (Windows only) is ignored.
+||| - Repeated separators are ignored, so "a/b" and "a//b" both have a 
+|||   and b as bodies.
 |||
 ||| ```idris example
 ||| parse "C:\\Windows/System32"
@@ -249,17 +251,31 @@ parse str = case parse parsePath (lexPath str) of
 
 isAbsolute' : Path -> Bool
 isAbsolute' p = if isWindows
-                  then case p.volumn of
+                  then case p.volume of
                             Just (UNC _ _) => True
                             Just (Disk _) => p.hasRoot
                             Nothing => False
                   else p.hasRoot
 
+append' : (left : Path) -> (right : Path) -> Path
+append' l r = if isAbsolute' r || isJust r.volume
+                 then r
+                 else if hasRoot r
+                         then record { volume = l.volume } r
+                         else record { body = l.body ++ r.body,
+                                       hasTrailSep = r.hasTrailSep } l
+
+splitParent' : Path -> Maybe (Path, Path)
+splitParent' p 
+  = case p.body of
+         [] => Nothing
+         (x::xs) => let parentPath = record { body = init (x::xs),
+                                          hasTrailSep = False } p
+                        lastPath = MkPath Nothing False [last (x::xs)] p.hasTrailSep in
+                      Just (parentPath, lastPath)
+
 parent' : Path -> Maybe Path
-parent' p = case p.body of
-                [] => Nothing
-                (x::xs) => Just $ record { body = init (x::xs),
-                                           hasTrailSep = False } p
+parent' p = map fst (splitParent' p) 
 
 fileName' : Path -> Maybe String
 fileName' p = findNormal (reverse p.body)
@@ -270,13 +286,9 @@ fileName' p = findNormal (reverse p.body)
     findNormal _ = Nothing
     
 setFileName' : (name : String) -> Path -> Path
-setFileName' name p = record { body $= updateLastBody name } p
-  where
-    updateLastBody : String -> List Body -> List Body
-    updateLastBody s [] = [Normal s]
-    updateLastBody s [Normal _] = [Normal s]
-    updateLastBody s [x] = x :: [Normal s]
-    updateLastBody s (x::xs) = x :: (updateLastBody s xs)
+setFileName' name p = if isJust (fileName' p)
+                         then append' (fromMaybe emptyPath $ parent' p) (parse name)
+                         else append' p (parse name)
     
 splitFileName : String -> (String, String)
 splitFileName name
@@ -295,9 +307,9 @@ splitFileName name
 ||| - On Unix, a path is absolute if it starts with the root,
 |||   so isAbsolute and hasRoot are equivalent.
 |||
-||| - On Windows, a path is absolute if it has a volumn and starts
+||| - On Windows, a path is absolute if it has a volume and starts
 |||   with the root. e.g., `c:\\windows` is absolute, while `c:temp`
-|||   and `\temp` are not. In addition, a path with UNC volumn is absolute.
+|||   and `\temp` are not. In addition, a path with UNC volume is absolute.
 export
 isAbsolute : String -> Bool
 isAbsolute p = isAbsolute' (parse p)
@@ -313,47 +325,54 @@ isRelative = not . isAbsolute
 |||
 ||| On Windows:
 |||
-||| - If the right path has a root but no volumn (e.g., `\windows`), it
-|||   replaces everything except for the volumn (if any) of left.
-||| - If the right path has a volumn but no root, it replaces left.
+||| - If the right path has a root but no volume (e.g., `\windows`), it
+|||   replaces everything except for the volume (if any) of left.
+||| - If the right path has a volume but no root, it replaces left.
 |||
 ||| ```idris example
 ||| "/usr" </> "local/etc"
 ||| ```
 export
 (</>) : (left : String) -> (right : String) -> String
-(</>) l r = let l = parse l
-                r = parse r in
-              show $ if isAbsolute' r || isJust r.volumn
-                        then r
-                        else if hasRoot r
-                                then record { volumn = l.volumn } r
-                                else record { body = l.body ++ r.body,
-                                              hasTrailSep = r.hasTrailSep } l
+(</>) l r = show $ append' (parse l) (parse r)
 
+||| Join path elements together.
+|||
+||| ```idris example
+||| joinPath ["/usr", "local/etc"] == "/usr/local/etc"
+||| ```
 export
 joinPath : List String -> String
 joinPath xs = foldl (</>) "" xs
 
+||| Returns the parent and child.
+|||
+||| ```idris example
+||| splitParent "/usr/local/etc" == Just ("/usr/local", "etc")
+||| ```
+export
+splitParent : String -> Maybe (String, String)
+splitParent p = do (a, b) <- splitParent' (parse p)
+                   pure $ (show a, show b)
+
 ||| Returns the path without its final component, if there is one.
 |||
-||| Returns Nothing if the path terminates in a root or volumn.
+||| Returns Nothing if the path terminates in a root or volume.
 export
 parent : String -> Maybe String
 parent p = map show $ parent' (parse p)
 
-||| Returns a list of all parents of the path, longest first,
-||| self excluded.
+||| Returns a list of all the parents of the path, longest first,
+||| self included.
 |||
-||| For example, the parent of the path, and the parent of the
-||| parent of the path, and so on. The list terminates in a
-||| root or volumn (if any).
+||| ```idris example
+||| parents "/etc/kernel" == ["/etc/kernel", "/etc", "/"]
+||| ```
 export
 parents : String -> List String
-parents p = map show $ drop 1 $ iterate parent' (parse p)
+parents p = map show $ iterate parent' (parse p)
 
-||| Determines whether base is either one of the parents of full or
-||| is identical to full.
+||| Determines whether base is either one of the parents of full.
 |||
 ||| Trailing separator is ignored.
 export
@@ -422,15 +441,18 @@ setFileName name p = show $ setFileName' name (parse p)
 
 ||| Append a extension to the path.
 |||
-||| Returns the path with no change if no file name.
+||| Returns the path as it is if no file name.
 |||
 ||| If `extension` of the path is Nothing, the extension is added; otherwise
 ||| it is replaced.
+||| 
+||| If the ext is empty, the extension is dropped.
 export
 (<.>) : String -> (ext : String) -> String
 (<.>) p ext = let p' = parse p 
-                  ext = pack $ dropWhile (== '.') (unpack ext) in
-                       case fileName' p' of
-                            Just name => let (stem, _) = splitFileName name in
-                                           show $ setFileName' (stem ++ "." ++ ext) p'
-                            Nothing => p
+                  ext = pack $ dropWhile (== '.') (unpack ext)
+                  ext = if ltrim ext == "" then "" else "." ++ ext in
+                case fileName' p' of
+                     Just name => let (stem, _) = splitFileName name in
+                                    show $ setFileName' (stem ++ ext) p'
+                     Nothing => p

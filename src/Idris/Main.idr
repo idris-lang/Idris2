@@ -49,15 +49,15 @@ updateEnv
               Nothing => setPrefix yprefix
          bpath <- coreLift $ getEnv "IDRIS2_PATH"
          the (Core ()) $ case bpath of
-              Just path => do traverse_ addExtraDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addExtraDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          bdata <- coreLift $ getEnv "IDRIS2_DATA"
          the (Core ()) $ case bdata of
-              Just path => do traverse_ addDataDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addDataDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          blibs <- coreLift $ getEnv "IDRIS2_LIBS"
          the (Core ()) $ case blibs of
-              Just path => do traverse_ addLibDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          cg <- coreLift $ getEnv "IDRIS2_CG"
          the (Core ()) $ case cg of

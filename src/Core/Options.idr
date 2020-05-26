@@ -130,18 +130,6 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
 
-export
-sep : Char
-sep = if isWindows then '\\' else '/'
-
-export
-dirSep : String
-dirSep = cast sep
-
-export
-pathSep : Char
-pathSep = if isWindows then ';' else ':'
-
 defaultDirs : Dirs
 defaultDirs = MkDirs "." Nothing "build" 
                      ("build" </> "exec") 
