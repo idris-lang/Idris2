@@ -11,6 +11,7 @@ import Core.Directory
 import Core.Name
 import Core.TT
 import Utils.Hex
+import Utils.Path
 
 import Data.List
 import Data.Maybe
@@ -166,7 +167,7 @@ cCall appdir fc cfn libspec args ret
                    then pure ""
                    else do put Loaded (libn :: loaded)
                            (fname, fullname) <- locate libspec
-                           copyLib (appdir ++ dirSep ++ fname, fullname)
+                           copyLib (appdir </> fname, fullname)
                            pure (loadlib libn vers)
 
          argTypes <- traverse (\a => do s <- cftySpec fc (snd a)
@@ -366,16 +367,16 @@ compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr mkexec c execDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
-         coreLift $ mkdirs (splitDir appDirGen)
+         let appDirGen = execDir </> appDirRel -- relative to here
+         coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
           
          let ext = if isWindows then ".exe" else ""
-         let outRktFile = appDirRel ++ dirSep ++ outfile ++ ".rkt"
-         let outBinFile = appDirRel ++ dirSep ++ outfile ++ ext
-         let outRktAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outRktFile
-         let outBinAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outBinFile
+         let outRktFile = appDirRel </> outfile <.> "rkt"
+         let outBinFile = appDirRel </> outfile <.> ext
+         let outRktAbs = cwd </> execDir </> outRktFile
+         let outBinAbs = cwd </> execDir </> outBinFile
 
          compileToRKT c appDirGen tm outRktAbs
          raco <- coreLift findRacoExe
@@ -388,7 +389,7 @@ compileExpr mkexec c execDir tm outfile
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
-                    let outShRel = execDir ++ dirSep ++ outfile
+                    let outShRel = execDir </> outfile
                     the (Core ()) $ if isWindows
                        then if mkexec
                                then makeShWindows "" outShRel appDirRel outBinFile

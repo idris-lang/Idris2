@@ -11,6 +11,7 @@ import Core.Name
 import Core.Options
 import Core.TT
 import Utils.Hex
+import Utils.Path
 
 import Data.List
 import Data.Maybe
@@ -29,7 +30,7 @@ import System.Info
 pathLookup : IO String
 pathLookup
     = do path <- getEnv "PATH"
-         let pathList = split (== pathSep) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let pathList = split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
          e <- firstExists candidates
@@ -184,7 +185,7 @@ cCall appdir fc cfn clib args ret
          lib <- if clib `elem` loaded
                    then pure ""
                    else do (fname, fullname) <- locate clib
-                           copyLib (appdir ++ dirSep ++ fname, fullname)
+                           copyLib (appdir </> fname, fullname)
                            put Loaded (clib :: loaded)
                            pure $ "(load-shared-object \""
                                     ++ escapeString fname
@@ -372,7 +373,7 @@ compileToSS c appdir tm outfile
 compileToSO : {auto c : Ref Ctxt Defs} ->
               String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
 compileToSO chez appDirRel outSsAbs
-    = do let tmpFileAbs = appDirRel ++ dirSep ++ "compileChez"
+    = do let tmpFileAbs = appDirRel </> "compileChez"
          let build= "(parameterize ([optimize-level 3]) (compile-program " ++
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
@@ -402,18 +403,18 @@ compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr makeitso c execDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
-         coreLift $ mkdirs (splitDir appDirGen)
+         let appDirGen = execDir </> appDirRel -- relative to here
+         coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         let outSsFile = appDirRel ++ dirSep ++ outfile ++ ".ss"
-         let outSoFile = appDirRel ++ dirSep ++ outfile ++ ".so"
-         let outSsAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSsFile
-         let outSoAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSoFile
+         let outSsFile = appDirRel </> outfile <.> "ss"
+         let outSoFile = appDirRel </> outfile <.> "so"
+         let outSsAbs = cwd </> execDir </> outSsFile
+         let outSoAbs = cwd </> execDir </> outSoFile
          chez <- coreLift $ findChez
          compileToSS c appDirGen tm outSsAbs
          logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
-         let outShRel = execDir ++ dirSep ++ outfile
+         let outShRel = execDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) 
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)

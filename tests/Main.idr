@@ -153,10 +153,6 @@ fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
 
-
-isWindows : Bool
-isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
-
 -- on Windows, we just ignore backslashes and slashes when comparing,
 -- similarity up to that is good enough. Leave errors that depend
 -- on the confusion of slashes and backslashes to unix machines.
