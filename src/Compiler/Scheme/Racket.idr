@@ -365,7 +365,7 @@ compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
 compileExpr mkexec c execDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = execDir </> appDirRel -- relative to here
-         coreLift $ mkdirs (splitDir appDirGen)
+         coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
           

@@ -300,7 +300,7 @@ installFrom pname builddir destdir ns@(m :: dns)
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
          let destPath = destdir </> joinPath (reverse dns)
          let destFile = destdir </> ttcfile <.> "ttc"
-         Right _ <- coreLift $ mkdirs (reverse dns)
+         Right _ <- coreLift $ mkdirAll $ joinPath (reverse dns)
              | Left err => throw (InternalError ("Can't make directories " ++ show (reverse dns)))
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
          Right _ <- coreLift $ copyFile ttcPath destFile
@@ -327,7 +327,7 @@ install pkg
                              "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
              | False => throw (InternalError ("Can't change directory to " ++ installPrefix))
-         Right _ <- coreLift $ mkdirs [name pkg]
+         Right _ <- coreLift $ mkdirAll (name pkg)
              | Left err => throw (InternalError ("Can't make directory " ++ name pkg))
          True <- coreLift $ changeDir (name pkg)
              | False => throw (InternalError ("Can't change directory to " ++ name pkg))
@@ -502,7 +502,7 @@ findIpkg fname
         case fname of
              Nothing => pure Nothing
              Just src =>
-                do let src' = joinPath (up ++ [src])
+                do let src' = up </> src
                    setSource src'
                    opts <- get ROpts
                    put ROpts (record { mainfile = Just src' } opts)

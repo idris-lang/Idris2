@@ -56,6 +56,12 @@ filter p (x :: xs)
         then x :: filter p xs
         else filter p xs
 
+||| Find the first element of the list that satisfies the predicate.
+public export
+find : (p : a -> Bool) -> (xs : List a) -> Maybe a
+find p [] = Nothing
+find p (x::xs) = if p x then Just x else find p xs
+
 ||| Find associated information in a list using a custom comparison.
 public export
 lookupBy : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b

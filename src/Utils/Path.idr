@@ -383,6 +383,7 @@ startWith base full = (parse base) `elem` (iterate parent' (parse full))
 |||
 ||| If base is not a prefix of full (i.e., startWith returns false),
 ||| returns Nothing.
+export
 stripPrefix : (base : String) -> (full : String) -> Maybe String
 stripPrefix base full
     = do let MkPath vol1 root1 body1 _ = parse base
