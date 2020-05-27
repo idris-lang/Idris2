@@ -49,13 +49,17 @@ plhs = MkParseOpts False False
 atom : FileName -> Rule PTerm
 atom fname
     = do start <- location
-         x <- constant
-         end <- location
-         pure (PPrimVal (MkFC fname start end) x)
-  <|> do start <- location
          exactIdent "Type"
          end <- location
          pure (PType (MkFC fname start end))
+  <|> do start <- location
+         x <- name
+         end <- location
+         pure (PRef (MkFC fname start end) x)
+  <|> do start <- location
+         x <- constant
+         end <- location
+         pure (PPrimVal (MkFC fname start end) x)
   <|> do start <- location
          symbol "_"
          end <- location
@@ -80,10 +84,6 @@ atom fname
          pragma "search"
          end <- location
          pure (PSearch (MkFC fname start end) 50)
-  <|> do start <- location
-         x <- name
-         end <- location
-         pure (PRef (MkFC fname start end) x)
 
 whereBlock : FileName -> Int -> Rule (List PDecl)
 whereBlock fname col
