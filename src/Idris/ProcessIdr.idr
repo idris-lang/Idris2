@@ -95,17 +95,12 @@ readImport full imp
 
 readHash : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
-           Import -> Core (List String, Int)
+           Import -> Core (Bool, (List String, Int))
 readHash imp
     = do Right fname <- nsToPath (loc imp) (path imp)
                | Left err => throw err
          h <- readIFaceHash fname
-         -- If the import is a 'public' import, then it forms part of
-         -- our own interface so add its hash to our hash
-         when (reexport imp) $
-            do log 5 $ "Reexporting " ++ show (path imp) ++ " hash " ++ show h
-               addHash h
-         pure (nameAs imp, h)
+         pure (reexport imp, (nameAs imp, h))
 
 prelude : Import
 prelude = MkImport (MkFC "(implicit)" (0, 0) (0, 0)) False
@@ -208,6 +203,12 @@ prim__gc : Int -> PrimIO ()
 gc : IO ()
 gc = primIO $ prim__gc 4
 
+export
+addPublicHash : {auto c : Ref Ctxt Defs} ->
+                (Bool, (List String, Int)) -> Core ()
+addPublicHash (True, (mod, h)) = do addHash mod; addHash h
+addPublicHash _ = pure ()
+
 -- Process everything in the module; return the syntax information which
 -- needs to be written to the TTC (e.g. exported infix operators)
 -- Returns 'Nothing' if it didn't reload anything
@@ -234,7 +235,7 @@ processMod srcf ttcf msg sourcecode
         defs <- get Ctxt
         log 5 $ "Current hash " ++ show (ifaceHash defs)
         log 5 $ show (moduleNS modh) ++ " hashes:\n" ++
-                show (sort hs)
+                show (sort (map snd hs))
         imphs <- readImportHashes ttcf
         log 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
 
@@ -246,7 +247,7 @@ processMod srcf ttcf msg sourcecode
 
         let ns = moduleNS modh
 
-        if (sort hs == sort imphs && srctime <= ttctime)
+        if (sort (map snd hs) == sort imphs && srctime <= ttctime)
            then -- Hashes the same, source up to date, just set the namespace
                 -- for the REPL
                 do setNS ns
@@ -257,6 +258,7 @@ processMod srcf ttcf msg sourcecode
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
                 initHash
+                traverse addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= ["Main"]) $
                    do let MkFC fname _ _ = headerloc mod
@@ -289,7 +291,7 @@ processMod srcf ttcf msg sourcecode
                 -- If they haven't changed next time, and the source
                 -- file hasn't changed, no need to rebuild.
                 defs <- get Ctxt
-                put Ctxt (record { importHashes = hs } defs)
+                put Ctxt (record { importHashes = map snd hs } defs)
                 pure (Just errs))
           (\err => pure (Just [err]))
 
