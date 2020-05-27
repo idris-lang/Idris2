@@ -5,14 +5,36 @@ import Parser.Lexer.Source
 import Text.Lexer
 
 public export
+RawName : Type
+RawName = String
+
+public export
 data SourcePart
   = Whitespace String
-  | Name String
+  | Name RawName
   | HoleName String
   | LBrace
   | RBrace
   | Equal
   | Other String
+
+------------------------------------------------------------------------
+-- Printer
+------------------------------------------------------------------------
+
+export
+toString : SourcePart -> String
+toString (Whitespace str) = str
+toString (Name n) = n
+toString (HoleName n) = "?" ++ n
+toString LBrace = "{"
+toString RBrace = "}"
+toString Equal = "="
+toString (Other str) = str
+
+------------------------------------------------------------------------
+-- Parser
+------------------------------------------------------------------------
 
 holeIdent : Lexer
 holeIdent = is '?' <+> identNormal

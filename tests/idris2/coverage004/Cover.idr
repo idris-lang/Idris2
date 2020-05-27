@@ -1,3 +1,5 @@
+%default partial
+
 data Foo : Type -> Type where
      IsNat : Foo Nat
      IsBool : Foo Bool

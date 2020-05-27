@@ -1,4 +1,5 @@
 import Data.Fin
+import Data.Maybe
 
 data NNat = NZ | NS NNat
 

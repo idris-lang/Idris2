@@ -110,6 +110,31 @@ Show Guardedness where
   show Guarded = "Guarded"
   show InDelay = "InDelay"
 
+-- Remove all force and delay annotations which are nothing to do with
+-- coinduction meaning that all Delays left guard coinductive calls.
+delazy : Defs -> Term vars -> Term vars
+delazy defs (TDelayed fc r tm)
+    = let tm' = delazy defs tm in
+          case r of
+               LInf => TDelayed fc r tm'
+               _ => tm'
+delazy defs (TDelay fc r ty tm)
+    = let ty' = delazy defs ty
+          tm' = delazy defs tm in
+          case r of
+               LInf => TDelay fc r ty' tm'
+               _ => tm'
+delazy defs (TForce fc r t)
+    = case r of
+           LInf => TForce fc r (delazy defs t)
+           _ => delazy defs t
+delazy defs (Meta fc n i args) = Meta fc n i (map (delazy defs) args)
+delazy defs (Bind fc x b sc)
+    = Bind fc x (map (delazy defs) b) (delazy defs sc)
+delazy defs (App fc f a) = App fc (delazy defs f) (delazy defs a)
+delazy defs (As fc s a p) = As fc s (delazy defs a) (delazy defs p)
+delazy defs tm = tm
+
 mutual
   findSC : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -346,32 +371,7 @@ mutual
                       pure ("Looking in case args " ++ show ps))
           logTermNF 10 "        =" env tm
           rhs <- normaliseOpts tcOnly defs env tm
-          findSC defs env g pats rhs
-
--- Remove all force and delay annotations which are nothing to do with
--- coinduction meaning that all Delays left guard coinductive calls.
-delazy : Defs -> Term vars -> Term vars
-delazy defs (TDelayed fc r tm)
-    = let tm' = delazy defs tm in
-          case r of
-               LInf => TDelayed fc r tm'
-               _ => tm'
-delazy defs (TDelay fc r ty tm)
-    = let ty' = delazy defs ty
-          tm' = delazy defs tm in
-          case r of
-               LInf => TDelay fc r ty' tm'
-               _ => tm'
-delazy defs (TForce fc r t)
-    = case r of
-           LInf => TForce fc r (delazy defs t)
-           _ => delazy defs t
-delazy defs (Meta fc n i args) = Meta fc n i (map (delazy defs) args)
-delazy defs (Bind fc x b sc)
-    = Bind fc x (map (delazy defs) b) (delazy defs sc)
-delazy defs (App fc f a) = App fc (delazy defs f) (delazy defs a)
-delazy defs (As fc s a p) = As fc s (delazy defs a) (delazy defs p)
-delazy defs tm = tm
+          findSC defs env g pats (delazy defs rhs)
 
 findCalls : {auto c : Ref Ctxt Defs} ->
             Defs -> (vars ** (Env Term vars, Term vars, Term vars)) ->

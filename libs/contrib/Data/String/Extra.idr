@@ -1,5 +1,7 @@
 module Data.String.Extra
 
+import Data.List
+import Data.Nat
 import Data.Strings
 
 %default total

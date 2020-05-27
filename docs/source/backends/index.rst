@@ -37,7 +37,7 @@ You can also execute expressions directly:
 
 Again, ``expr`` must have type ``IO ()``.
 
-Finally, you can compile to an exectuable from the command line by adding
+Finally, you can compile to an executable from the command line by adding
 the ``-o <output file>`` option:
 
 ::
@@ -60,4 +60,3 @@ or via the `IDRIS2_CG` environment variable.
    chez
    racket
    gambit
-

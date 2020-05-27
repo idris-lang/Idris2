@@ -28,14 +28,14 @@ You can download the Idris 2 source from the `Idris web site
 <https://www.idris-lang.org/pages/download.html>`_ or get the latest
 development version from `idris-lang/Idris2
 <https://github.com/idris-lang/Idris2>`_ on Github.  This includes the Idris 2
-source code and the Scheme code code generated from that.  Once you have
+source code and the Scheme code generated from that.  Once you have
 unpacked the source, you can install it as follows::
 
     make bootstrap SCHEME=chez
 
 Where `chez` is the executable name of the Chez Scheme compiler. This will
-vary from system to system, but is often one of `scheme`, `chezscheme`, or
-`chezscheme9.5`. If you are building via Racket, you can install it as
+vary from system to system, but is often one of ``scheme``, ``chezscheme``, or
+``chezscheme9.5``. If you are building via Racket, you can install it as
 follows::
 
     make bootstrap-racket

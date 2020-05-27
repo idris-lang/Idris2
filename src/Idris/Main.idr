@@ -22,9 +22,12 @@ import Idris.Syntax
 import Idris.Version
 
 import Data.List
+import Data.So
 import Data.Strings
 import Data.Vect
 import System
+import System.Directory
+import System.File
 
 import Yaffle.Main
 
@@ -171,7 +174,7 @@ stMain opts
                  the (Core ()) $ case fname of
                       Nothing => logTime "Loading prelude" $
                                    when (not $ noprelude session) $
-                                     readPrelude
+                                     readPrelude True
                       Just f => logTime "Loading main file" $
                                    (loadMainFile f >>= displayErrors)
 

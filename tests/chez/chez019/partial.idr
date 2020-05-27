@@ -1,3 +1,5 @@
+%default partial
+
 foo : Maybe a -> a
 foo (Just x) = x
 

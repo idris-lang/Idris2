@@ -1,6 +1,0 @@
-Processing as TTImp
-Written TTC
-Yaffle> Main.foo : (%pi Rig0 Explicit Just m Main.Nat (%pi Rig0 Explicit Just a %type (%pi Rig0 Explicit Just {k:21} Main.Nat (%pi RigW Explicit Nothing a (%pi Rig0 Explicit Just y a (%pi Rig0 Explicit Just ws ((Main.Vect {k:21}) a) (%pi Rig1 Explicit Just zs ((Main.Vect (Main.S {k:21})) a) (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit Just n Main.Nat ((Main.Vect ((Main.plus (Main.S (Main.S {k:21}))) m)) a))))))))))
-Yaffle> Main.bar : (%pi Rig0 Explicit Just m Main.Nat (%pi Rig0 Explicit Just a %type (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit Just {k:52} Main.Nat (%pi RigW Explicit Nothing a (%pi Rig1 Explicit Just zs ((Main.Vect {k:52}) a) (%pi Rig0 Explicit Just xs ((Main.Vect (Main.S {k:52})) a) (%pi Rig0 Explicit Just n Main.Nat ((Main.Vect ((Main.plus (Main.S {k:52})) m)) a)))))))))
-Yaffle> Main.baz : (%pi Rig0 Explicit Just m Main.Nat (%pi Rig0 Explicit Just a %type (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit Just {k:84} Main.Nat (%pi RigW Explicit Nothing a (%pi Rig0 Explicit Just zs ((Main.Vect {k:84}) a) (%pi Rig0 Explicit Just xs ((Main.Vect (Main.S {k:84})) a) (%pi Rig0 Explicit Just n Main.Nat (%pi Rig1 Explicit Just ts ((Main.Vect {k:84}) a) ((Main.Vect ((Main.plus (Main.S {k:84})) m)) a))))))))))
-Yaffle> Bye for now!

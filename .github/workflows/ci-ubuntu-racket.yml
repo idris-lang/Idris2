@@ -1,4 +1,4 @@
-name: Ubuntu CI boostrap racket
+name: Ubuntu Racket
 on:
   push:
     branches:

@@ -20,7 +20,7 @@ into the Idris interactive environment by typing ``idris2 Prims.idr``:
     module Prims
 
     x : Int
-    x = 42
+    x = 94
 
     foo : String
     foo = "Sausage machine"
@@ -233,6 +233,37 @@ of how this works in practice:
                         z w = y + w
 
 .. _sect-holes:
+
+Totality and Covering
+---------------------
+
+By default, functions in Idris must be ``covering``. That is, there must be
+patterns which cover all possible values of the inputs types. For example,
+the following definition will give an error:
+
+.. code-block:: idris
+
+    fromMaybe : Maybe a -> a
+    fromMaybe (Just x) = x
+
+This gives an error because ``fromMaybe Nothing`` is not defined. Idris
+reports:
+
+::
+
+    frommaybe.idr:1:1--2:1:fromMaybe is not covering. Missing cases:
+            fromMaybe Nothing
+
+You can override this with a ``partial`` annotation:
+
+.. code-block:: idris
+
+    partial fromMaybe : Maybe a -> a
+    fromMaybe (Just x) = x
+
+However, this is not advisable, and in general you should only do this during
+the initial development of a function, or during debugging.  If you try to
+evaluate ``fromMaybe Nothing`` at run time you will get a run time error.
 
 Holes
 -----

@@ -170,7 +170,7 @@ export
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
-export
+export partial
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 modNatNZ left Z         p = void (p Refl)
 modNatNZ left (S right) _ = mod' left left right
@@ -183,11 +183,11 @@ modNatNZ left (S right) _ = mod' left left right
       else
         mod' left (minus centre (S right)) right
 
-export
+export partial
 modNat : Nat -> Nat -> Nat
 modNat left (S right) = modNatNZ left (S right) SIsNotZ
 
-export
+export partial
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
@@ -200,17 +200,17 @@ divNatNZ left (S right) _ = div' left left right
       else
         S (div' left (minus centre (S right)) right)
 
-export
+export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNotZ
 
-export
+export partial
 divCeilNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
   S _ => S (divNatNZ x y p)
 
-export
+export partial
 divCeil : Nat -> Nat -> Nat
 divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
 
@@ -225,7 +225,7 @@ gcd a Z     = a
 gcd Z b     = b
 gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNotZ)
 
-export
+export partial
 lcm : Nat -> Nat -> Nat
 lcm _ Z     = Z
 lcm Z _     = Z

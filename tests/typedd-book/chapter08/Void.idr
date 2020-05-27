@@ -7,8 +7,10 @@ valueNotSuc _ Refl impossible
 loop : Void
 loop = loop
 
+partial
 nohead : Void
 nohead = getHead []
   where
+    partial
     getHead : List Void -> Void
     getHead (x :: xs) = x

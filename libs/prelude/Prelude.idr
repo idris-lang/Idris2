@@ -117,7 +117,7 @@ public export
 
 ||| Equality is a congruence.
 public export
-cong : (f : t -> u) -> (1 p : a = b) -> f a = f b
+cong : (0 f : t -> u) -> (1 p : a = b) -> f a = f b
 cong f Refl = Refl
 
 ||| A canonical proof that some type is empty.
@@ -353,14 +353,18 @@ interface Num ty => Abs ty where
 
 public export
 interface Num ty => Fractional ty where
+  partial
   (/) : ty -> ty -> ty
+  partial
   recip : ty -> ty
 
   recip x = 1 / x
 
 public export
 interface Num ty => Integral ty where
+  partial
   div : ty -> ty -> ty
+  partial
   mod : ty -> ty -> ty
 
 ----- Instances for primitives
@@ -628,10 +632,22 @@ public export
 sum : (Foldable t, Num a) => t a -> a
 sum = foldr (+) 0
 
+||| Add together all the elements of a structure.
+||| Same as `sum` but tail recursive.
+export
+sum' : (Foldable t, Num a) => t a -> a
+sum' = foldl (+) 0
+
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
 product = foldr (*) 1
+
+||| Multiply together all elements of a structure.
+||| Same as `product` but tail recursive.
+export
+product' : (Foldable t, Num a) => t a -> a
+product' = foldl (*) 1
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
@@ -1117,13 +1133,13 @@ fastPack xs
 ||| ```
 public export
 unpack : String -> List Char
-unpack str = assert_total $ unpack' 0 (prim__cast_IntegerInt (natToInteger (length str))) str
+unpack str = unpack' 0 (prim__cast_IntegerInt (natToInteger (length str))) str
   where
     unpack' : Int -> Int -> String -> List Char
     unpack' pos len str
         = if pos >= len
              then []
-             else (prim__strIndex str pos) :: unpack' (pos + 1) len str
+             else assert_total (prim__strIndex str pos) :: assert_total (unpack' (pos + 1) len str)
 
 public export
 Semigroup String where

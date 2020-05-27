@@ -168,7 +168,7 @@ emptyRHS fc (Case idx el sc alts) = Case idx el sc (map emptyRHSalt alts)
     emptyRHSalt (DelayCase c arg sc) = DelayCase c arg (emptyRHS fc sc)
     emptyRHSalt (ConstCase c sc) = ConstCase c (emptyRHS fc sc)
     emptyRHSalt (DefaultCase sc) = DefaultCase (emptyRHS fc sc)
-emptyRHS fc (STerm s) = STerm (Erased fc False)
+emptyRHS fc (STerm i s) = STerm i (Erased fc False)
 emptyRHS fc sc = sc
 
 mkAlt : {vars : _} ->
@@ -357,7 +357,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgsAlt not' (c :: cs)
         = pure $ !(buildArgAlt not' c) ++ !(buildArgsAlt not' cs)
 
-buildArgs fc defs known not ps (STerm vs)
+buildArgs fc defs known not ps (STerm _ vs)
     = pure [] -- matched, so return nothing
 buildArgs fc defs known not ps (Unmatched msg)
     = pure [ps] -- unmatched, so return it

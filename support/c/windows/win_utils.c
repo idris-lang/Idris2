@@ -64,3 +64,7 @@ void win32_gettime(int64_t* sec, int64_t* nsec)
     *sec = t.QuadPart / 10000000;
     *sec -= 11644473600; // LDAP epoch to Unix epoch 
 }
+
+void win32_sleep(int ms) {
+    Sleep(ms);
+}

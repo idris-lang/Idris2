@@ -14,7 +14,7 @@ Lexical structure
   constructor ``RF "foo"``)
 
 * ``Foo.bar.baz`` starting with uppercase ``F`` is one lexeme, a namespaced
-  identifier: ``NSIdent ["baz", "bar", "Foo"]``
+  identifier: ``DotSepIdent ["baz", "bar", "Foo"]``
 
 * ``foo.bar.baz`` starting with lowercase ``f`` is three lexemes: ``foo``,
   ``.bar``, ``.baz``

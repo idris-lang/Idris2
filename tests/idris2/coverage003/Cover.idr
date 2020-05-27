@@ -1,3 +1,5 @@
+%default partial
+
 foo : (Nat, Nat) -> Nat
 foo (Z, Z) = Z
 

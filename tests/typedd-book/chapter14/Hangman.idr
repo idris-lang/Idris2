@@ -2,6 +2,8 @@ import Data.Vect
 import Data.List
 import Data.Strings
 
+import Decidable.Equality
+
 %default total
 
 data GameState : Type where

@@ -222,8 +222,9 @@ mutual
                           rig
            logC 10 $ do
              def <- the (Core String) $ case definition gdef of
-                         PMDef _ _ (STerm tm) _ _ => do tm' <- toFullNames tm
-                                                        pure (show tm')
+                         PMDef _ _ (STerm _ tm) _ _ =>
+                              do tm' <- toFullNames tm
+                                 pure (show tm')
                          _ => pure ""
              pure (show rig ++ ": " ++ show n ++ " " ++ show fc ++ "\n"
                      ++ show def)
@@ -329,6 +330,13 @@ mutual
                       pure (App fc f' aerased,
                             glueBack defs env sc',
                             fused ++ aused)
+                NApp _ (NRef _ n) _ =>
+                      do Just _ <- lookupCtxtExact n (gamma defs)
+                              | _ => throw (UndefinedName fc n)
+                         tfty <- getTerm gfty
+                         throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
+                              " (" ++ show tfty ++ " not a function type)"))
+
                 _ => do tfty <- getTerm gfty
                         throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
                               " (" ++ show tfty ++ " not a function type)"))
@@ -566,14 +574,14 @@ mutual
   lcheckDef fc rig True env n
       = do defs <- get Ctxt
            Just def <- lookupCtxtExact n (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            pure (type def)
   lcheckDef fc rig False env n
       = do defs <- get Ctxt
            let Just idx = getNameID n (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            Just def <- lookupCtxtExact (Resolved idx) (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            rigSafe (multiplicity def) rig
            if linearChecked def
               then pure (type def)
@@ -614,7 +622,7 @@ mutual
                RigCount -> (erase : Bool) -> Env Term vars ->
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
-  expandMeta rig erase env n idx (PMDef _ [] (STerm fn) _ _) args
+  expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
       = do tm <- substMeta (embed fn) args []
            lcheck rig erase env tm
     where

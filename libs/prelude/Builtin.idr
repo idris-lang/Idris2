@@ -6,6 +6,9 @@ module Builtin
 
 ||| Assert to the totality checker that the given expression will always
 ||| terminate.
+||| Note: assert_total can reduce at compile time, if required for unification,
+||| which might mean that it's no longer guarded a subexpression. Therefore,
+||| it is best to use it around the smallest possible subexpression.
 %inline
 public export
 assert_total : {0 a : _} -> a -> a
