@@ -50,6 +50,7 @@ import Data.Stream
 import Data.Strings
 
 import System
+import System.File
 
 %default covering
 

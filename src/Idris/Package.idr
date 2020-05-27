@@ -11,6 +11,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
+import Data.So
 import Data.StringMap
 import Data.Strings
 import Data.StringTrie
@@ -18,6 +19,9 @@ import Data.These
 
 import Parser.Package
 import System
+import System.Directory
+import System.File
+
 import Text.Parser
 import Utils.Binary
 import Utils.String

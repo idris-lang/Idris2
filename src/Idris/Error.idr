@@ -12,6 +12,7 @@ import Idris.Syntax
 import Parser.Source
 
 import Data.List
+import System.File
 
 %default covering
 

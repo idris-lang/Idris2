@@ -18,7 +18,10 @@ import Data.NameMap
 import Data.Nat
 import Data.Strings
 import Data.Vect
+
 import System
+import System.Directory
+import System.File
 import System.Info
 
 %default covering

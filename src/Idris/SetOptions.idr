@@ -13,6 +13,7 @@ import Idris.Version
 
 import IdrisPaths
 
+import Data.So
 import System
 
 -- TODO: Version numbers on dependencies

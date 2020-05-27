@@ -13,6 +13,8 @@ import Data.List
 
 import Utils.Binary
 
+import System.File
+
 -- Additional data we keep about the context to support interactive editing
 
 public export

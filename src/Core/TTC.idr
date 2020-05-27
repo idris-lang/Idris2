@@ -788,7 +788,7 @@ export
 TTC Def where
   toBuf b None = tag 0
   toBuf b (PMDef pi args ct rt pats)
-      = do tag 1; toBuf b pi; toBuf b args; toBuf b ct; toBuf b rt; toBuf b pats
+      = do tag 1; toBuf b pi; toBuf b args; toBuf b ct; toBuf b pats
   toBuf b (ExternDef a)
       = do tag 2; toBuf b a
   toBuf b (ForeignDef a cs)
@@ -815,9 +815,8 @@ TTC Def where
              1 => do pi <- fromBuf b
                      args <- fromBuf b
                      ct <- fromBuf b
-                     rt <- fromBuf b
                      pats <- fromBuf b
-                     pure (PMDef pi args ct rt pats)
+                     pure (PMDef pi args ct (Unmatched "") pats)
              2 => do a <- fromBuf b
                      pure (ExternDef a)
              3 => do a <- fromBuf b
