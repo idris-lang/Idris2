@@ -102,13 +102,15 @@ dirExists dir = do Right d <- openDir dir
 -- Create subdirectories, if they don't exist
 export
 mkdirAll : String -> IO (Either FileError ())
-mkdirAll dir = do exist <- dirExists dir
-                  if exist 
-                     then pure (Right ())
-                     else do case parent dir of
-                                  Just parent => mkdirAll parent
-                                  Nothing => pure (Right ()) 
-                             createDir dir
+mkdirAll dir = if parse dir == emptyPath 
+                  then pure (Right ())
+                  else do exist <- dirExists dir
+                          if exist 
+                             then pure (Right ())
+                             else do case parent dir of
+                                          Just parent => mkdirAll parent
+                                          Nothing => pure (Right ()) 
+                                     createDir dir
 
 -- Given a namespace (i.e. a module name), make the build directory for the
 -- corresponding ttc file
