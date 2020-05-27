@@ -230,8 +230,12 @@ parsePath = do vol <- optional parseVolume
 ||| - Any characters in path body in allowed, e.g., glob like "/root/*";
 ||| - Verbatim prefix(`\\?\`) that disables the forward
 |||   slash (Windows only) is ignored.
-||| - Repeated separators are ignored, so "a/b" and "a//b" both have a 
-|||   and b as bodies.
+||| - Repeated separators are ignored, so "a/b" and "a//b" both have "a" 
+|||   and "b" as bodies.
+||| - Occurrences of "." are normalized away, except if they are at the
+|||   beginning of the path. For example, "a/./b", "a/b/", "a/b/". and 
+|||   "a/b" all have "a" and "b" as bodies, but "./a/b" starts with an 
+|||   additional `CurDir` body.
 |||
 ||| ```idris example
 ||| parse "C:\\Windows/System32"
@@ -241,9 +245,14 @@ parsePath = do vol <- optional parseVolume
 ||| ```
 export
 parse : String -> Path
-parse str = case parse parsePath (lexPath str) of
-                 Right (p, _) => p
-                 _ => emptyPath
+parse str = let p = case parse parsePath (lexPath str) of
+                         Right (p, _) => p
+                         _ => emptyPath
+                body' = case p.body of
+                             [] => []
+                             (x::xs) => x :: delete CurDir xs
+              in
+                record { body = body' } p
 
 --------------------------------------------------------------------------------
 -- Utils
