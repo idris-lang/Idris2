@@ -57,5 +57,5 @@ You can find more details in Section :ref:`updates-index`.
 Where can I find more answers?
 ==============================
 
-The `Idris 1 FAQ <http://docs.idris-lang.org/en/latest/faq/faq.html>`_ is
+The `Idris 1 FAQ <https://docs.idris-lang.org/en/latest/faq/faq.html>`_ is
 mostly still relevant.

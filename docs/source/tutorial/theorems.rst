@@ -456,4 +456,4 @@ argument.
        control. In Proceedings of the 17th ACM SIGPLAN-SIGACT
        symposium on Principles of programming languages (POPL
        '90). ACM, New York, NY, USA, 47-58. DOI=10.1145/96709.96714
-       http://doi.acm.org/10.1145/96709.96714
+       https://doi.acm.org/10.1145/96709.96714
