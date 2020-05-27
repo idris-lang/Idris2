@@ -1439,6 +1439,7 @@ public export
 Functor IO where
   map f io = io_bind io (\b => io_pure (f b))
 
+%inline
 public export
 Applicative IO where
   pure x = io_pure x
