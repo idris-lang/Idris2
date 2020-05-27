@@ -2,6 +2,6 @@
 2/3: Building Mult (Mult.idr)
 3/3: Building Test (Test.idr)
 Test.idr:5:9--5:13:While processing type of thing at Test.idr:5:1--6:1:
-Name Nat.Nat is inaccessible since Nat is not explicitly imported
+Undefined name Nat
 Test.idr:6:1--8:1:No type declaration for Test.thing
 Test> Bye for now!

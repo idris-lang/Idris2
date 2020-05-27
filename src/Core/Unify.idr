@@ -230,6 +230,11 @@ postpone blockedMetas loc mode logstr env x y
                  yq <- quote defs env y
                  pure (logstr ++ ": " ++ show !(toFullNames xq) ++
                                     " =?= " ++ show !(toFullNames yq))
+
+         -- If we're blocked because a name is undefined, give up
+         checkDefined defs x
+         checkDefined defs y
+
          xtm <- quote empty env x
          ytm <- quote empty env y
          -- Need to find all the metas in the constraint since solving any one
@@ -249,6 +254,13 @@ postpone blockedMetas loc mode logstr env x y
          logTerm 10 "Y" ytm
          pure (constrain c)
   where
+    checkDefined : Defs -> NF vars -> Core ()
+    checkDefined defs (NApp _ (NRef _ n) _)
+        = do Just _ <- lookupCtxtExact n (gamma defs)
+                  | _ => throw (UndefinedName loc n)
+             pure ()
+    checkDefined _ _ = pure ()
+
     undefinedN : Name -> Core Bool
     undefinedN n
         = do defs <- get Ctxt
@@ -567,11 +579,11 @@ solveIfUndefined env metavar soln
     = pure False
 
 isDefInvertible : {auto c : Ref Ctxt Defs} ->
-                  Int -> Core Bool
-isDefInvertible i
+                  FC -> Int -> Core Bool
+isDefInvertible fc i
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
-              | Nothing => pure False
+              | Nothing => throw (UndefinedName fc (Resolved i))
          pure (invertible gdef)
 
 mutual
@@ -906,7 +918,7 @@ mutual
                                        (NApp yfc (NLocal yr y yp) yargs)
   -- If they're both holes, solve the one with the bigger context
   unifyBothApps mode loc env xfc (NMeta xn xi xargs) xargs' yfc (NMeta yn yi yargs) yargs'
-      = do invx <- isDefInvertible xi
+      = do invx <- isDefInvertible loc xi
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.

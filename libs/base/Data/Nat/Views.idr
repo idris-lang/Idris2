@@ -1,6 +1,7 @@
 module Data.Nat.Views
 
 import Control.WellFounded
+import Data.Nat
 
 ||| View for dividing a Nat in half
 public export

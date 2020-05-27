@@ -1,6 +1,6 @@
 module Data.Fin
 
-import Data.Maybe
+import public Data.Maybe
 import Data.Nat
 import Decidable.Equality
 

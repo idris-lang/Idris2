@@ -330,6 +330,13 @@ mutual
                       pure (App fc f' aerased,
                             glueBack defs env sc',
                             fused ++ aused)
+                NApp _ (NRef _ n) _ =>
+                      do Just _ <- lookupCtxtExact n (gamma defs)
+                              | _ => throw (UndefinedName fc n)
+                         tfty <- getTerm gfty
+                         throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
+                              " (" ++ show tfty ++ " not a function type)"))
+
                 _ => do tfty <- getTerm gfty
                         throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
                               " (" ++ show tfty ++ " not a function type)"))
@@ -567,14 +574,14 @@ mutual
   lcheckDef fc rig True env n
       = do defs <- get Ctxt
            Just def <- lookupCtxtExact n (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            pure (type def)
   lcheckDef fc rig False env n
       = do defs <- get Ctxt
            let Just idx = getNameID n (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            Just def <- lookupCtxtExact (Resolved idx) (gamma defs)
-                | Nothing => throw (InternalError ("Linearity checking failed on " ++ show n))
+                | Nothing => throw (UndefinedName fc n)
            rigSafe (multiplicity def) rig
            if linearChecked def
               then pure (type def)

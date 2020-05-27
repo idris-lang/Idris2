@@ -1,5 +1,6 @@
 module Language.JSON.String.Lexer
 
+import Data.Nat
 import Language.JSON.String.Tokens
 import Text.Lexer
 

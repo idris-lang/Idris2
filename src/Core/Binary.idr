@@ -13,6 +13,8 @@ import Data.IntMap
 import Data.List
 import Data.NameMap
 
+import System.File
+
 -- Reading and writing 'Defs' from/to  a binary file
 -- In order to be saved, a name must have been flagged using 'toSave'.
 -- (Otherwise we'd save out everything, not just the things in the current
@@ -322,7 +324,11 @@ addTypeHint fc (tyn, hintn, d)
 
 addAutoHint : {auto c : Ref Ctxt Defs} ->
               (Name, Bool) -> Core ()
-addAutoHint (hintn, d) = addGlobalHint hintn d
+addAutoHint (hintn_in, d)
+    = do defs <- get Ctxt
+         hintn <- toResolvedNames hintn_in
+
+         put Ctxt (record { autoHints $= insert hintn d } defs)
 
 export
 updatePair : {auto c : Ref Ctxt Defs} ->
@@ -400,13 +406,15 @@ export
 readFromTTC : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-              FC -> Bool ->
+              Bool -> -- set nested namespaces (for records, to use at the REPL)
+              FC ->
+              Bool -> -- importing as public
               (fname : String) -> -- file containing the module
               (modNS : List String) -> -- module namespace
               (importAs : List String) -> -- namespace to import as
               Core (Maybe (extra, Int,
                            List (List String, Bool, List String)))
-readFromTTC loc reexp fname modNS importAs
+readFromTTC nestedns loc reexp fname modNS importAs
     = do defs <- get Ctxt
          -- If it's already in the context, with the same visibility flag,
          -- don't load it again (we do need to load it again if it's visible
@@ -434,7 +442,7 @@ readFromTTC loc reexp fname modNS importAs
                traverse (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)
-               setNestedNS (nestedNS ttc)
+               when nestedns $ setNestedNS (nestedNS ttc)
                -- Set up typeHints and autoHints based on the loaded data
                traverse_ (addTypeHint loc) (typeHints ttc)
                traverse_ addAutoHint (autoHints ttc)

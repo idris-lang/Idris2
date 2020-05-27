@@ -298,6 +298,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          addTyDecl fc (Resolved idx) env ty -- for definition generation
          addNameType fc (Resolved idx) env ty -- for looking up types
 
+
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
          log 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))

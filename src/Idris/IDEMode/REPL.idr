@@ -15,6 +15,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Data.So
+
 import Idris.Desugar
 import Idris.Error
 import Idris.ModTree
@@ -24,8 +26,9 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 
-import Idris.IDEMode.Parser
 import Idris.IDEMode.Commands
+import Idris.IDEMode.Holes
+import Idris.IDEMode.Parser
 import Idris.IDEMode.SyntaxHighlight
 
 import TTImp.Interactive.CaseSplit
@@ -37,6 +40,7 @@ import Utils.Hex
 
 import Data.List
 import System
+import System.File
 
 import Network.Socket
 import Network.Socket.Data
