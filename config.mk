@@ -2,8 +2,6 @@
 
 PREFIX ?= $(HOME)/.idris2
 
-CC ?= clang
-
 ##################################################################
 
 RANLIB ?= ranlib
@@ -31,9 +29,9 @@ else ifneq (, $(findstring bsd, $(MACHINE)))
 	SHLIB_SUFFIX := .so
 	CFLAGS += -fPIC
 else
-        OS := linux
-        SHLIB_SUFFIX := .so
-        CFLAGS += -fPIC
+	OS := linux
+	SHLIB_SUFFIX := .so
+	CFLAGS += -fPIC
 endif
 
 export OS
