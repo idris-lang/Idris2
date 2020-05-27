@@ -38,7 +38,7 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
 ||| guaranteed to consume some input. If the first one consumes input, the
 ||| second is allowed to be recursive (because it means some input has been
 ||| consumed and therefore the input is smaller)
-export -- %inline
+export %inline
 (>>=) : {c1, c2 : Bool} ->
         Grammar tok c1 a ->
         inf c1 (a -> Grammar tok c2 b) ->
@@ -49,7 +49,7 @@ export -- %inline
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume input. This is an explicitly non-infinite version
 ||| of `>>=`.
-export
+export %inline
 seq : {c1,c2 : Bool} ->
       Grammar tok c1 a ->
       (a -> Grammar tok c2 b) ->
@@ -57,7 +57,7 @@ seq : {c1,c2 : Bool} ->
 seq = SeqEmpty
 
 ||| Sequence a grammar followed by the grammar it returns.
-export
+export %inline
 join : {c1,c2 : Bool} ->
        Grammar tok c1 (Grammar tok c2 a) ->
        Grammar tok (c1 || c2) a
@@ -66,7 +66,7 @@ join {c1 = True} p = SeqEat p id
 
 ||| Give two alternative grammars. If both consume, the combination is
 ||| guaranteed to consume.
-export
+export %inline
 (<|>) : {c1,c2 : Bool} -> 
         Grammar tok c1 ty ->
         Lazy (Grammar tok c2 ty) ->
@@ -94,7 +94,7 @@ Functor (Grammar tok c) where
 ||| with value type `a`. If both succeed, apply the function
 ||| from the first grammar to the value from the second grammar.
 ||| Guaranteed to consume if either grammar consumes.
-export
+export %inline
 (<*>) : {c1, c2 : Bool} ->
         Grammar tok c1 (a -> b) ->
         Grammar tok c2 a ->
@@ -103,7 +103,7 @@ export
 
 ||| Sequence two grammars. If both succeed, use the value of the first one.
 ||| Guaranteed to consume if either grammar consumes.
-export
+export %inline
 (<*) : {c1,c2 : Bool} ->
        Grammar tok c1 a ->
        Grammar tok c2 b ->
@@ -112,7 +112,7 @@ export
 
 ||| Sequence two grammars. If both succeed, use the value of the second one.
 ||| Guaranteed to consume if either grammar consumes.
-export
+export %inline
 (*>) : {c1,c2 : Bool} ->
        Grammar tok c1 a ->
        Grammar tok c2 b ->
@@ -135,48 +135,48 @@ mapToken f (SeqEmpty act next) = SeqEmpty (mapToken f act) (\x => mapToken f (ne
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
 
 ||| Always succeed with the given value.
-export
+export %inline
 pure : (val : ty) -> Grammar tok False ty
 pure = Empty
 
 ||| Check whether the next token satisfies a predicate
-export
+export %inline
 nextIs : String -> (tok -> Bool) -> Grammar tok False tok
 nextIs = NextIs
 
 ||| Look at the next token in the input
-export
+export %inline
 peek : Grammar tok False tok
 peek = nextIs "Unrecognised token" (const True)
 
 ||| Succeeds if running the predicate on the next token returns Just x,
 ||| returning x. Otherwise fails.
-export
+export %inline
 terminal : String -> (tok -> Maybe a) -> Grammar tok True a
 terminal = Terminal
 
 ||| Always fail with a message
-export
+export %inline
 fail : String -> Grammar tok c ty
 fail = Fail False
 
-export
+export %inline
 fatalError : String -> Grammar tok c ty
 fatalError = Fail True
 
 ||| Succeed if the input is empty
-export
+export %inline
 eof : Grammar tok False ()
 eof = EOF
 
 ||| Commit to an alternative; if the current branch of an alternative
 ||| fails to parse, no more branches will be tried
-export
+export %inline
 commit : Grammar tok False ()
 commit = Commit
 
 ||| If the parser fails, treat it as a fatal error
-export
+export %inline
 mustWork : {c : Bool} -> Grammar tok c ty -> Grammar tok c ty
 mustWork = MustWork
 
