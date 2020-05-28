@@ -245,9 +245,9 @@ updateIfaceSyn iname cn ps cs ms ds
     findSetTotal (_ :: xs) = findSetTotal xs
 
     totMeth : (Name, RigCount, List FnOpt, (Bool, RawImp)) ->
-              Core (Name, RigCount, TotalReq, (Bool, RawImp))
+              Core (Name, RigCount, Maybe TotalReq, (Bool, RawImp))
     totMeth (n, c, opts, t)
-        = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
+        = do let treq = findSetTotal opts
              pure (n, c, treq, t)
 
 export
