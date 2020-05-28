@@ -815,9 +815,9 @@ mutual
       = do start <- location
            arg <- opExpr q fname indents
            (do continue indents
-               rest <- some (do exp <- bindSymbol
+               rest <- some (do symbol "=>"
                                 op <- opExpr pdef fname indents
-                                pure (exp, op))
+                                pure (AutoImplicit, op))
                end <- location
                pure (mkPi start end arg rest))
              <|> pure arg
