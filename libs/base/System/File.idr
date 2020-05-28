@@ -40,7 +40,7 @@ prim__eof : FilePtr -> PrimIO Int
 prim__flush : FilePtr -> PrimIO Int
 %foreign support "idris2_popen"
 prim__popen : String -> String -> PrimIO FilePtr
-%foreign "C:pclose,libc 6"
+%foreign support "idris2_pclose"
 prim__pclose : FilePtr -> PrimIO ()
 
 %foreign support "idris2_removeFile"

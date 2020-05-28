@@ -87,6 +87,14 @@ void *idris2_popen(const char *cmd, const char *mode) {
     return f;
 }
 
+void idris2_pclose(void *stream) {
+#ifdef _WIN32
+    _pclose(stream);
+#else
+    pclose(stream);
+#endif
+}
+
 char* idris2_readLine(FILE* f) {
     char *buffer = NULL;
     size_t n = 0;
