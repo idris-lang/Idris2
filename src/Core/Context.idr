@@ -149,6 +149,11 @@ data Clause : Type where
                 (env : Env Term vars) ->
                 (lhs : Term vars) -> (rhs : Term vars) -> Clause
 
+export
+Show Clause where
+  show (MkClause {vars} env lhs rhs)
+      = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
+
 public export
 data DefFlag
     = Inline

@@ -392,6 +392,8 @@ findIBinds (IImplicitApp fc fn n av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
+findIBinds (IAs fc _ (UN n) pat)
+    = n :: findIBinds pat
 findIBinds (IAs fc _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)

@@ -270,11 +270,11 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
                              (gType fc)
-         logTermNF 3 ("Type of " ++ show n) [] (abstractEnvType tfc env ty)
+         logTermNF 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
          -- TODO: Check name visibility
 
          def <- initDef n env ty opts
-         let fullty = abstractEnvType tfc env ty
+         let fullty = abstractFullEnvType tfc env ty
          (erased, dterased) <- findErased fullty
          defs <- get Ctxt
          empty <- clearDefs defs
