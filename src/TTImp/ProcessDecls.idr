@@ -61,8 +61,9 @@ export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
 checkTotalityOK n
--- checkTotalityOK (NS _ n@(UN _)) -- top level user defined names only
     = do defs <- get Ctxt
+         let NS _ (UN _) = n -- only interested in user defined names
+             | _ => pure Nothing
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))

@@ -225,7 +225,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                log 10 $ "Implementation body: " ++ show body'
                traverse (processDecl [] nest env) body'
 
-               -- 6. Add transnformation rules for top level methods
+               -- 6. Add transformation rules for top level methods
                traverse (addTransform impName upds) (methods cdata)
 
                -- inline flag has done its job, and outside the interface

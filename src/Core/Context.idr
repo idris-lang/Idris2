@@ -208,6 +208,13 @@ Show SizeChange where
   show Same = "Same"
   show Unknown = "Unknown"
 
+export
+Eq SizeChange where
+  Smaller == Smaller = True
+  Same == Same = True
+  Unknown == Unknown = True
+  _ == _ = False
+
 public export
 record SCCall where
      constructor MkSCCall
@@ -221,6 +228,10 @@ record SCCall where
 export
 Show SCCall where
   show c = show (fnCall c) ++ ": " ++ show (fnArgs c)
+
+export
+Eq SCCall where
+  x == y = fnCall x == fnCall y && fnArgs x == fnArgs y
 
 public export
 record GlobalDef where
