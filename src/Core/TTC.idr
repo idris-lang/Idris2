@@ -944,7 +944,8 @@ TTC GlobalDef where
            let refs = map fromList refsList
            def <- fromBuf b
            if isUserName name
-              then do ty <- fromBuf b; eargs <- fromBuf b;
+              then do ty <- fromBuf b
+                      eargs <- fromBuf b;
                       seargs <- fromBuf b; specargs <- fromBuf b
                       iargs <- fromBuf b;
                       vars <- fromBuf b
