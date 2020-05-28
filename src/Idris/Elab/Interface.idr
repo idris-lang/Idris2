@@ -23,6 +23,8 @@ import Data.ANameMap
 import Data.List
 import Data.Maybe
 
+%default covering
+
 -- TODO: Check all the parts of the body are legal
 -- TODO: Deal with default superclass implementations
 

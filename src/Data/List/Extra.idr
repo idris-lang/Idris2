@@ -1,6 +1,6 @@
 module Data.List.Extra
 
-%default covering
+%default total
 
 ||| Fetches the element at a given position.
 ||| Returns `Nothing` if the position beyond the list's end.

@@ -30,6 +30,8 @@ import Data.Either
 import Data.List
 import Data.NameMap
 
+%default covering
+
 mutual
   mismatchNF : {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool

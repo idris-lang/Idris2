@@ -10,10 +10,10 @@ import Core.TT
 import Core.TTC
 
 import Data.List
-
+import System.File
 import Utils.Binary
 
-import System.File
+%default covering
 
 -- Additional data we keep about the context to support interactive editing
 
