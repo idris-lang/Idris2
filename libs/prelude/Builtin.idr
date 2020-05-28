@@ -2,6 +2,12 @@ module Builtin
 
 -- The most primitive data types; things which are used by desugaring
 
+infix 1 =
+infixr 0 ->
+public export
+(->) : (a : Type) -> (b : Type) -> Type
+a -> b = (_ : a) -> b
+
 -- Totality assertions
 
 ||| Assert to the totality checker that the given expression will always

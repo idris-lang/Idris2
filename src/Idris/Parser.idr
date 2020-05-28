@@ -1424,7 +1424,7 @@ fixDecl fname indents
          fixity <- fix
          commit
          prec <- intLit
-         ops <- sepBy1 (symbol ",") iOperator
+         ops <- sepBy1 (symbol ",") (iOperator <|> (symbol "=" *> pure (UN "=")))
          end <- location
          pure (map (PFixity (MkFC fname start end) fixity (fromInteger prec)) ops)
 
