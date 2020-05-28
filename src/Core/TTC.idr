@@ -915,9 +915,9 @@ TTC GlobalDef where
            toBuf b (fullname gdef)
            toBuf b (map toList (refersToM gdef))
            toBuf b (definition gdef)
-           toBuf b (type gdef)
            when (isUserName (fullname gdef) || cwName (fullname gdef)) $
-              do toBuf b (eraseArgs gdef)
+              do toBuf b (type gdef)
+                 toBuf b (eraseArgs gdef)
                  toBuf b (safeErase gdef)
                  toBuf b (specArgs gdef)
                  toBuf b (inferrable gdef)
@@ -943,9 +943,9 @@ TTC GlobalDef where
            refsList <- fromBuf b
            let refs = map fromList refsList
            def <- fromBuf b
-           ty <- fromBuf b
            if isUserName name
-              then do eargs <- fromBuf b;
+              then do ty <- fromBuf b
+                      eargs <- fromBuf b;
                       seargs <- fromBuf b; specargs <- fromBuf b
                       iargs <- fromBuf b;
                       vars <- fromBuf b
