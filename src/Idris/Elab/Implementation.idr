@@ -228,6 +228,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                -- 6. Add transnformation rules for top level methods
                traverse (addTransform impName upds) (methods cdata)
 
+               -- inline flag has done its job, and outside the interface
+               -- it can hurt, so unset it now
+               unsetFlag fc impName TCInline
+
                -- Reset the open hints (remove the named implementation)
                setOpenHints hs
                pure ()) mbody
