@@ -42,6 +42,7 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          pty <- checkTerm (-1) InType []
                           nest env pty_imp (gType fc)
          let (vs ** (prf, env', nest')) = extend env SubRefl nest pty
+         logEnv 5 "Param env" env'
 
          -- Treat the names in the block as 'nested names' so that we expand
          -- the applications as we need to
@@ -60,8 +61,8 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
     applyEnv : {vs : _} ->
                Env Term vs -> Name ->
                Core (Name, (Maybe Name, List Name, FC -> NameType -> Term vs))
-    applyEnv env n
+    applyEnv {vs} env n
           = do n' <- resolveName n -- it'll be Resolved by expandAmbigName
-               pure (Resolved n', (Nothing, namesNoLet env,
-                        \fc, nt => applyTo fc
+               pure (Resolved n', (Nothing, vs,
+                        \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))
