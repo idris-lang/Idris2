@@ -3,6 +3,8 @@ module Prelude
 import public Builtin
 import public PrimIO
 
+%default total
+
 {-
 The Prelude is minimal (since it is effectively part of the language
 specification, this seems to be desirable - we should, nevertheless, aim to
