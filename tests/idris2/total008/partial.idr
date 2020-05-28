@@ -1,7 +1,5 @@
 import Data.List
 
--- %default total
-
 interface Foo a where
   covering
   foo : a -> ()

@@ -60,10 +60,10 @@ TTImp.Elab.Check.processDecl = process
 export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
+checkTotalityOK (NS _ (MN _ _)) = pure Nothing -- not interested in generated names
+checkTotalityOK (NS _ (CaseBlock _ _)) = pure Nothing -- case blocks checked elsewhere
 checkTotalityOK n
     = do defs <- get Ctxt
-         let NS _ (UN _) = n -- only interested in user defined names
-             | _ => pure Nothing
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
