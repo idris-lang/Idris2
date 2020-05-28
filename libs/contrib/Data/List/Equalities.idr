@@ -20,7 +20,6 @@ consCong2 Refl Refl = Refl
 export
 snocCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
             (xs `snoc` x) = (ys `snoc` y) -> (xs = ys, x = y)
-
 snocCong2 {xs = []} {ys = []} Refl = (Refl, Refl)
 snocCong2 {xs = []} {ys = z :: ys} prf = snocCong2 prf
 snocCong2 {xs = w :: xs} {ys = []} prf = snocCong2 prf
@@ -43,18 +42,25 @@ appendCong2 {x1=(_ :: _)} {y1=(_ :: _)} eq1 eq2 =
 
 ||| List.map is distributive over appending.
 export
-mapAppendDistributive : (f : a -> b) -> (xs : List a) -> (ys : List a) ->
-                        map f (xs ++ ys) = map f xs ++ map f ys
-mapAppendDistributive _ [] _ = Refl
-mapAppendDistributive f (x :: xs) ys =
-  cong (f x ::) $ mapAppendDistributive f xs ys
+mapDistributesOverAppend
+  : (f : a -> b)
+  -> (xs : List a)
+  -> (ys : List a)
+  -> map f (xs ++ ys) = map f xs ++ map f ys
+mapDistributesOverAppend _ [] _ = Refl
+mapDistributesOverAppend f (x :: xs) ys =
+  cong (f x ::) $ mapDistributesOverAppend f xs ys
 
 ||| List.length is distributive over appending.
 export
-lengthDistributive : (xs, ys : List a) -> length (xs ++ ys) = length xs + length ys
-lengthDistributive [] ys = Refl
-lengthDistributive (x :: xs) ys = cong S $ lengthDistributive xs ys
+lengthDistributesOverAppend
+  : (xs, ys : List a)
+  -> length (xs ++ ys) = length xs + length ys
+lengthDistributesOverAppend [] ys = Refl
+lengthDistributesOverAppend (x :: xs) ys =
+  cong S $ lengthDistributesOverAppend xs ys
 
+||| Length of a snoc'd list is the same as Succ of length list.
 export
 lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S (length xs)
 lengthSnoc x [] = Refl
