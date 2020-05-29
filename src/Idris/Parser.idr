@@ -858,6 +858,13 @@ tyDecl fname indents
                atEnd indents
                pure (MkPTy (MkFC fname start end) n ty)
 
+withFlags : SourceEmptyRule (List WithFlag)
+withFlags
+    = do pragma "syntactic"
+         fs <- withFlags
+         pure $ Syntactic :: fs
+  <|> pure []
+
 mutual
   parseRHS : (withArgs : Nat) ->
              FileName -> FilePos -> Int ->
@@ -872,11 +879,12 @@ mutual
                  pure (MkPatClause (MkFC fname start end) lhs rhs ws)
      <|> do keyword "with"
             wstart <- location
+            flags <- withFlags
             symbol "("
             wval <- bracketedExpr fname wstart indents
             ws <- nonEmptyBlock (clause (S withArgs) fname)
             end <- location
-            pure (MkWithClause (MkFC fname start end) lhs wval ws)
+            pure (MkWithClause (MkFC fname start end) lhs wval flags ws)
      <|> do keyword "impossible"
             atEnd indents
             end <- location

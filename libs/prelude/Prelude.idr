@@ -373,6 +373,7 @@ interface Num ty => Integral ty where
 
 -- Integer
 
+%inline
 public export
 Num Integer where
   (+) = prim__add_Integer
@@ -408,6 +409,7 @@ defaultInteger = %search
 
 -- Int
 
+%inline
 public export
 Num Int where
   (+) = prim__add_Int
@@ -914,11 +916,13 @@ public export
   Right x == Right x' = x == x'
   _ == _ = False
 
+%inline
 public export
 Functor (Either e) where
   map f (Left x) = Left x
   map f (Right x) = Right (f x)
 
+%inline
 public export
 Applicative (Either e) where
     pure = Right

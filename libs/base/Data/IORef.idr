@@ -18,10 +18,12 @@ newIORef val
     = do m <- primIO (prim__newIORef val)
          pure (MkRef m)
 
+%inline
 export
 readIORef : IORef a -> IO a
 readIORef (MkRef m) = primIO (prim__readIORef m)
 
+%inline
 export
 writeIORef : IORef a -> (1 val : a) -> IO ()
 writeIORef (MkRef m) val = primIO (prim__writeIORef m val)

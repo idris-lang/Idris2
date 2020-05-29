@@ -328,11 +328,11 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                         (bindCaseLocals loc' (map getNestData (names nest))
                                         (reverse ns) rhs)
     -- With isn't allowed in a case block but include for completeness
-    updateClause casen splitOn nest env (WithClause loc' lhs wval cs)
+    updateClause casen splitOn nest env (WithClause loc' lhs wval flags cs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
               lhs' = apply (IVar loc' casen) args' in
-              WithClause loc' (applyNested nest lhs') wval cs
+              WithClause loc' (applyNested nest lhs') wval flags cs
     updateClause casen splitOn nest env (ImpossibleClause loc' lhs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
