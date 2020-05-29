@@ -23,9 +23,9 @@ mutual
   public export
   data TTImp : Type where
        IVar : FC -> Name -> TTImp
-       IPi : FC -> Count -> PiInfo -> Maybe Name ->
+       IPi : FC -> Count -> PiInfo TTImp -> Maybe Name ->
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
-       ILam : FC -> Count -> PiInfo -> Maybe Name ->
+       ILam : FC -> Count -> PiInfo TTImp -> Maybe Name ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
        ILet : FC -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
@@ -72,6 +72,7 @@ mutual
        -- bound (either as a pattern variable or a type variable) if unsolved
        -- at the end of elaborator
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
+       IWithUnambigNames : FC -> List Name -> TTImp -> TTImp
 
   public export
   data IFieldUpdate : Type where
@@ -87,6 +88,7 @@ mutual
   public export
   data FnOpt : Type where
        Inline : FnOpt
+       TCInline : FnOpt
        -- Flag means the hint is a direct hint, not a function which might
        -- find the result (e.g. chasing parent interface dictionaries)
        Hint : Bool -> FnOpt
@@ -97,10 +99,9 @@ mutual
        ForeignFn : List String -> FnOpt
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt
-       Total : FnOpt
-       Covering : FnOpt
-       PartialOK : FnOpt
+       Totalty : TotalReq -> FnOpt
        Macro : FnOpt
+       SpecArgs : List Name -> FnOpt
 
   public export
   data ITy : Type where
@@ -111,6 +112,8 @@ mutual
        SearchBy : List Name -> DataOpt -- determining arguments
        NoHints : DataOpt -- Don't generate search hints for constructors
        UniqueSearch : DataOpt
+       External : DataOpt
+       NoNewtype : DataOpt
 
   public export
   data Data : Type where
@@ -121,7 +124,7 @@ mutual
 
   public export
   data IField : Type where
-       MkIField : FC -> Count -> PiInfo -> Name -> TTImp ->
+       MkIField : FC -> Count -> PiInfo TTImp -> Name -> TTImp ->
                   IField
 
   public export
@@ -148,10 +151,6 @@ mutual
        IParameters : FC -> List (Name, TTImp) ->
                      List Decl -> Decl
        IRecord : FC -> Visibility -> Record -> Decl
-       INamespace : FC ->
-                    (nested : Bool) ->
-                      -- ^ if True, parent namespaces in the same file can also
-                      -- look inside and see private/export names in full
-                    List String -> List Decl -> Decl
-       ITransform : FC -> TTImp -> TTImp -> Decl
+       INamespace : FC -> List String -> List Decl -> Decl
+       ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        ILog : Nat -> Decl
