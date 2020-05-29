@@ -1,6 +1,7 @@
 ||| Properties of the reverse function.
 module Data.List.Reverse
 
+import Data.Nat
 import Data.List
 import Data.List.Equalities
 
