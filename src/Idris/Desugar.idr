@@ -499,11 +499,11 @@ mutual
                      (case ws of
                            [] => rhs'
                            _ => ILocal fc (concat ws) rhs')
-  desugarClause ps arg (MkWithClause fc lhs wval cs)
+  desugarClause ps arg (MkWithClause fc lhs wval flags cs)
       = do cs' <- traverse (desugarClause ps arg) cs
            (bound, blhs) <- bindNames arg !(desugar LHS ps lhs)
            wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure $ WithClause fc blhs wval' cs'
+           pure $ WithClause fc blhs wval' flags cs'
   desugarClause ps arg (MkImpossible fc lhs)
       = do dlhs <- desugar LHS ps lhs
            pure $ ImpossibleClause fc (snd !(bindNames arg dlhs))
@@ -624,8 +624,8 @@ mutual
       toIDef : ImpClause -> Core ImpDecl
       toIDef (PatClause fc lhs rhs)
           = pure $ IDef fc !(getFn lhs) [PatClause fc lhs rhs]
-      toIDef (WithClause fc lhs rhs cs)
-          = pure $ IDef fc !(getFn lhs) [WithClause fc lhs rhs cs]
+      toIDef (WithClause fc lhs rhs flags cs)
+          = pure $ IDef fc !(getFn lhs) [WithClause fc lhs rhs flags cs]
       toIDef (ImpossibleClause fc lhs)
           = pure $ IDef fc !(getFn lhs) [ImpossibleClause fc lhs]
 

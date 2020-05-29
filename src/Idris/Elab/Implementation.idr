@@ -403,10 +403,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     updateClause ns (PatClause fc lhs rhs)
         = do lhs' <- updateApp ns lhs
              pure (PatClause fc lhs' rhs)
-    updateClause ns (WithClause fc lhs wval cs)
+    updateClause ns (WithClause fc lhs wval flags cs)
         = do lhs' <- updateApp ns lhs
              cs' <- traverse (updateClause ns) cs
-             pure (WithClause fc lhs' wval cs')
+             pure (WithClause fc lhs' wval flags cs')
     updateClause ns (ImpossibleClause fc lhs)
         = do lhs' <- updateApp ns lhs
              pure (ImpossibleClause fc lhs')

@@ -78,15 +78,11 @@ export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
 impossibleErrOK defs (CantConvert fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+    = impossibleOK defs !(nf defs env l)
+                        !(nf defs env r)
 impossibleErrOK defs (CantSolveEq fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+    = impossibleOK defs !(nf defs env l)
+                        !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK defs (AllFailed errs)
@@ -122,15 +118,11 @@ export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
 recoverableErr defs (CantConvert fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
+    = recoverable defs !(nf defs env l)
+                       !(nf defs env r)
 recoverableErr defs (CantSolveEq fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
+    = recoverable defs !(nf defs env l)
+                       !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
@@ -453,7 +445,7 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
 
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
-checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs)
+checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let wmode
@@ -492,9 +484,12 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
          let notreqns = fst bnr
          let notreqty = snd bnr
 
-         wtyScope <- replace defs scenv !(nf defs scenv (weaken wval))
+         rdefs <- if Syntactic `elem` flags
+                     then clearDefs defs
+                     else pure defs
+         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weaken wval))
                             (Local fc (Just False) _ First)
-                            !(nf defs scenv
+                            !(nf rdefs scenv
                                  (weaken {n=wargn} notreqty))
          let bNotReq = Bind fc wargn (Pi top Explicit wvalTy) wtyScope
 
@@ -567,11 +562,11 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs ws')
+             pure (WithClause ploc newlhs newrhs flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)

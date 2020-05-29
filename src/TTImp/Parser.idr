@@ -502,7 +502,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents

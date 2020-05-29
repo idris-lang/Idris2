@@ -82,7 +82,7 @@ expandClause loc n c
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval cs) rhs = WithClause fc lhs wval cs
+    updateRHS (WithClause fc lhs wval flags cs) rhs = WithClause fc lhs wval flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
     dropLams : {vars : _} ->
@@ -143,7 +143,7 @@ generateSplits : {auto m : Ref MD Metadata} ->
                  FC -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
 generateSplits loc fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc fn (WithClause fc lhs wval cs) = pure []
+generateSplits loc fn (WithClause fc lhs wval flags cs) = pure []
 generateSplits {c} {m} {u} loc fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
