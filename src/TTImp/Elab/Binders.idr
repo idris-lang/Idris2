@@ -1,5 +1,7 @@
 module TTImp.Elab.Binders
 
+import Data.Maybe
+
 import Core.Context
 import Core.Core
 import Core.Env
@@ -180,6 +182,25 @@ matchLinearMisuse : (thenBr : a) -> (elseBr : a) -> Error -> a
 matchLinearMisuse thenBr elseBr (LinearMisuse _ _ rig _) = branchOne thenBr elseBr rig
 matchLinearMisuse thenBr elseBr _ = elseBr
 
+printNameType : NameType -> String
+printNameType (DataCon r _ _) = "Data constructor with rig " ++ show r
+printNameType _ = ""
+
+printTerm : {vars : List Name} -> Term vars -> String
+printTerm (Local _ _ _ _) = "Local var"
+printTerm (Ref _ tpe n) = "ref to something : " ++ show n ++ " " ++ printNameType tpe
+printTerm (Bind _ n _ _) = "binder : " ++ show n
+printTerm (Meta _ n _ _) = "meta : " ++ show n
+printTerm (App _ (Ref _ nametype name) _) = "applying ref : " ++ printNameType nametype ++ ", " ++ show name
+printTerm (As _ _ _ _) = "As"
+printTerm _ = ""
+
+||| If rigcount is different from rig of DataCon, replace it, otherwise nothing
+lineariseDataCon : RigCount -> Term vars -> Maybe (Term vars)
+lineariseDataCon rig (App fc (Ref fc' (DataCon r tag ary) name) arg) =
+  toMaybe (rig /= r) (App fc (Ref fc' (DataCon rig tag ary) name) arg)
+lineariseDataCon _ _ = Nothing
+
 export
 checkLet : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -195,6 +216,7 @@ checkLet : {vars : _} ->
            Core (Term vars, Glued vars)
 checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
     = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
+         coreLift $ putStrLn ("checking let with name " ++ show n)
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable
@@ -217,11 +239,13 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          let nest' = weaken (dropName n nest)
          expScope <- weakenExp env' expty
          (scopev, gscopet) <-
-            inScope fc env' (\e' =>
+            inScope fc env' (\e' => do
               check {e=e'} rigc elabinfo nest' env' scope expScope)
-         coreLift $ printLn valv
          coreLift $ printLn ("nVal " ++ show nVal)
-         coreLift $ printLn ("nTy " ++ show nTy)
+         coreLift $ putStrLn $ case lineariseDataCon rigb valv of
+           Nothing => "No replacement for : " ++ show n
+           Just _ => "Replaced rig for: " ++ show n ++ " with " ++ show rigb
+         coreLift $ putStrLn ("done checking " ++ show n)
          scopet <- getTerm gscopet
 
          -- No need to 'checkExp' here - we've already checked scopet

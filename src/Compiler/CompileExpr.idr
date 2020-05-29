@@ -309,9 +309,8 @@ mutual
                             = mkDropSubst 0 (eraseArgs gdef) vars args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
-                        if dcon (definition gdef)
-                           then pure $ MkConAlt xn (Just tag) args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn Nothing args' (shrinkCExp sub sc') :: ns'
+                        let dconTag = toMaybe (dcon (definition gdef)) tag
+                        pure $ MkConAlt xn dconTag args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon _ _ _ _) = True

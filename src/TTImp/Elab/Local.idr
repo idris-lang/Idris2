@@ -122,7 +122,8 @@ checkCaseLocal : {vars : _} ->
                  (expTy : Maybe (Glued vars)) ->
                  Core (Term vars, Glued vars)
 checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
-    = do defs <- get Ctxt
+    = do coreLift $ putStrLn ("checking case local " ++ show uname)
+         defs <- get Ctxt
          Just def <- lookupCtxtExact iname (gamma defs)
               | Nothing => check rig elabinfo nest env sc expty
          let name = case definition def of

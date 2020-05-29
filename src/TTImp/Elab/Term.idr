@@ -268,7 +268,8 @@ TTImp.Elab.Check.check rigc elabinfo nest env (ICoerced fc tm) exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet fc c n nty nval sc) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal fc ds sc) exp
-    = checkImp rigc elabinfo nest env tm exp
+    = do coreLift $ putStrLn "checking ILocal"
+         checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate fc fs rec) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
