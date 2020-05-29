@@ -1,14 +1,20 @@
 module Data.List.Palindrome
 
+import Data.List
 import Data.List.Views
+import Data.List.Views.Extra
 import Data.List.Reverse
+import Data.List.Equalities
+
+%hide Prelude.reverse
+%default total
 
 ||| Do geese see God?
 public export
 data Palindrome : (xs : List a) -> Type where
   Empty  : Palindrome []
   Single : Palindrome [_]
-  Multi  : Palindrome xs -> Palindrome $ x :: (xs ++ [x])
+  Multi  : Palindrome xs -> Palindrome (x :: (xs `snoc` x))
 
 ||| A Palindrome reversed is itself.
 export
@@ -35,16 +41,20 @@ reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter flipHeadX
     flipLastX' prf = rewrite (sym $ reverseAppend xs [x']) in prf
     cancelOuter : (reverse (xs ++ [x'])) = x :: xs -> reverse xs = xs
     cancelOuter prf = snd (consInjective (flipLastX' prf))
-    equateInnerAndOuter : reverse (xs ++ [x']) ++ [x] = (x :: xs) ++ [x'] -> (reverse xs = xs, x = x')
+    equateInnerAndOuter
+      : reverse (xs ++ [x']) ++ [x] = (x :: xs) ++ [x']
+      -> (reverse xs = xs, x = x')
     equateInnerAndOuter prf =
       let (prf', xEqualsX') = snocCong2 prf
        in (cancelOuter prf', xEqualsX')
 
 ||| Only Palindromes are equal to their own reverse.
+export
 reversePalindrome : (xs : List a) -> reverse xs = xs -> Palindrome xs
-reversePalindrome [] _ = Empty
-reversePalindrome (x :: []) _ = Single
-reversePalindrome (x :: xs) prf with (snocList xs)
-  reversePalindrome (x :: (xs ++ [x'])) prf | Snoc x' xs _ with (reversePalindromeEqualsLemma x x' xs prf)
-    reversePalindrome (x :: (xs ++ [x])) prf | Snoc x xs _ | (revXsIsIdentical, Refl) =
-      Multi (reversePalindrome xs revXsIsIdentical)
+reversePalindrome input prf with (vList input)
+  reversePalindrome [] _ | VNil = Empty
+  reversePalindrome [x] _ | VOne = Single
+  reversePalindrome (x :: (inner `snoc` y)) prf | VCons rec with (reversePalindromeEqualsLemma x y inner prf)
+    reversePalindrome (x :: (inner `snoc` y)) prf | VCons rec | (revInnerIsIdentical, xIsY) =
+      rewrite xIsY in
+        Multi $ reversePalindrome inner revInnerIsIdentical | Force rec

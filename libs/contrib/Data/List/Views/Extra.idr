@@ -4,6 +4,7 @@ import Data.List
 import Data.List.Reverse
 import Data.List.Views
 import Data.Nat
+import Data.List.Equalities
 
 %default total
 
@@ -106,7 +107,7 @@ public export
 data VList : List a -> Type where
   VNil : VList []
   VOne : VList [x]
-  VCons : (rec : Lazy (VList xs)) -> VList (x :: xs ++ [y])
+  VCons : {x, y : a} -> {xs : List a} -> (rec : Lazy (VList xs)) -> VList (x :: xs ++ [y])
 
 private
 toVList
