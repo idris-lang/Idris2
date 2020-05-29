@@ -168,22 +168,10 @@ tokenise pred line col acc tmap str
     getFirstToken [] str = Nothing
     getFirstToken ((lex, fn) :: ts) str
         = case scan lex [] str of
-               Just (tok, rest) => Just (MkToken line col (fn (pack (reverse tok))),
+               Just (tok, rest) => Just (MkToken line col (fn (fastPack (reverse tok))),
                                          line + cast (countNLs tok),
                                          getCols tok col, rest)
                Nothing => getFirstToken ts str
-
--- faster than the prelude version since there's no intermediate StrM
-funpack' : String -> List Char -> List Char
-funpack' "" acc = reverse acc
-funpack' str acc
-    = assert_total $
-        let x = prim__strHead str
-            xs = prim__strTail str in
-            funpack' xs (x :: acc)
-
-funpack : String -> List Char
-funpack str = funpack' str []
 
 ||| Given a mapping from lexers to token generating functions (the
 ||| TokenMap a) and an input string, return a list of recognised tokens,
@@ -193,11 +181,11 @@ export
 lex : TokenMap a -> String -> (List (TokenData a), (Int, Int, String))
 lex tmap str
     = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (unpack str) in
-          (ts, (l, c, pack str'))
+          (ts, (l, c, fastPack str'))
 
 export
 lexTo : (TokenData a -> Bool) ->
         TokenMap a -> String -> (List (TokenData a), (Int, Int, String))
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
-          (ts, (l, c, pack str'))
+          (ts, (l, c, fastPack str'))

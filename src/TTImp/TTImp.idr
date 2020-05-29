@@ -328,7 +328,7 @@ mutual
 
   export
   Show ImpDecl where
-    show (IClaim _ _ _ _ ty) = show ty
+    show (IClaim _ _ _ opts ty) = show opts ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -392,6 +392,8 @@ findIBinds (IImplicitApp fc fn n av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
+findIBinds (IAs fc _ (UN n) pat)
+    = n :: findIBinds pat
 findIBinds (IAs fc _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)

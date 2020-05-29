@@ -21,8 +21,11 @@ import TTImp.TTImp
 import Yaffle.REPL
 
 import Data.List
+import Data.So
 import Data.Strings
 import System
+
+%default covering
 
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
@@ -51,7 +54,7 @@ yaffleMain fname args
          addPrimitives
          case span (/= '.') fname of
               (_, ".ttc") => do coreLift $ putStrLn "Processing as TTC"
-                                readFromTTC {extra = ()} emptyFC True fname [] []
+                                readFromTTC {extra = ()} True emptyFC True fname [] []
                                 coreLift $ putStrLn "Read TTC"
               _ => do coreLift $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile fname

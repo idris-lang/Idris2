@@ -8,6 +8,7 @@ import Parser.Source
 
 import public Data.IORef
 import System
+import System.File
 
 %default covering
 

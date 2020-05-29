@@ -1,6 +1,6 @@
 module System
 
-import Data.So
+import public Data.So
 import Data.List
 import Data.Strings
 

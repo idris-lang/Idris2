@@ -257,6 +257,15 @@ multiplicity (PLet c val ty) = c
 multiplicity (PVTy c ty) = c
 
 export
+piInfo : Binder tm -> PiInfo tm
+piInfo (Lam c x ty) = x
+piInfo (Let c val ty) = Explicit
+piInfo (Pi c x ty) = x
+piInfo (PVar c p ty) = p
+piInfo (PLet c val ty) = Explicit
+piInfo (PVTy c ty) = Explicit
+
+export
 setMultiplicity : Binder tm -> RigCount -> Binder tm
 setMultiplicity (Lam c x ty) c' = Lam c' x ty
 setMultiplicity (Let c val ty) c' = Let c' val ty

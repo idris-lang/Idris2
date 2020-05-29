@@ -1,7 +1,9 @@
 module System.Path
 
+import Control.Delayed
 import Data.List
 import Data.Maybe
+import Data.Nat
 import Data.Strings
 import Data.String.Extra
 import System.Info
@@ -9,10 +11,6 @@ import Text.Token
 import Text.Lexer
 import Text.Parser
 import Text.Quantity
-
-private
-isWindows : Bool
-isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
 
 ||| The character that separates directories in the path.
 export

@@ -2,8 +2,12 @@
 module Data.ANameMap
 
 import Core.Name
+
+import Data.List
 import Data.NameMap
 import Data.StringMap
+
+%default total
 
 export
 record ANameMap a where

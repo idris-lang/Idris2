@@ -1,0 +1,31 @@
+1/1: Building qtt (qtt.idr)
+Main>  0 m : Nat
+ 0 a : Type
+   x : a
+ 0 y : a
+ 0 ws : Vect k a
+ 1 zs : Vect (S k) a
+   ys : Vect m a
+ 0 n : Nat
+-------------------------------------
+foo : Vect (S (S (plus k m))) a
+Main>  0 m : Nat
+ 0 a : Type
+   ys : Vect m a
+   x : a
+ 1 zs : Vect k a
+ 0 xs : Vect (S k) a
+ 0 n : Nat
+-------------------------------------
+bar : Vect (S (plus k m)) a
+Main>  0 m : Nat
+ 0 a : Type
+   ys : Vect m a
+   x : a
+ 0 zs : Vect k a
+ 0 xs : Vect (S k) a
+ 0 n : Nat
+ 1 ts : Vect k a
+-------------------------------------
+baz : Vect (S (plus k m)) a
+Main> Bye for now!

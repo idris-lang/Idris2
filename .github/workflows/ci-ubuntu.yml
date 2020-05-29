@@ -9,6 +9,8 @@ on:
     branches:
       - master
 
+env:
+  SCHEME: scheme
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,7 +20,11 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
+          echo "::add-path::$HOME/.idris2/bin"
       - name: Build from bootstrap
-        run: make bootstrap SCHEME=scheme
+        run: make bootstrap && make install
+        shell: bash
+      - name: Build and test self-hosted
+        run: make clean && make all && make test INTERACTIVE=''
         shell: bash
 

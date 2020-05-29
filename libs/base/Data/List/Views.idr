@@ -2,6 +2,7 @@ module Data.List.Views
 
 import Control.WellFounded
 import Data.List
+import Data.Nat
 import Data.Nat.Views
 
 lengthSuc : (xs : List a) -> (y : a) -> (ys : List a) ->

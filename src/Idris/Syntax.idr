@@ -503,7 +503,7 @@ record IFaceInfo where
   iconstructor : Name
   params : List Name
   parents : List RawImp
-  methods : List (Name, RigCount, TotalReq, Bool, RawImp)
+  methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
      -- ^ name, whether a data method, and desugared type (without constraint)
   defaults : List (Name, List ImpClause)
 

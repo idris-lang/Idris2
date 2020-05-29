@@ -1,34 +1,30 @@
 module Main
 
-import Core.Binary
-import Core.Context
 import Core.Core
-import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Options
 import Core.Unify
 
 import Idris.CommandLine
-import Idris.Desugar
 import Idris.IDEMode.REPL
 import Idris.ModTree
 import Idris.Package
-import Idris.Parser
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
 
-import Data.List
+import IdrisPaths
+
+import Data.So
 import Data.Strings
-import Data.Vect
 import System
+import System.Directory
+import System.File
+import Utils.Path
 
 import Yaffle.Main
-
-import IdrisPaths
 
 %default covering
 
@@ -47,15 +43,15 @@ updateEnv
               Nothing => setPrefix yprefix
          bpath <- coreLift $ getEnv "IDRIS2_PATH"
          the (Core ()) $ case bpath of
-              Just path => do traverse_ addExtraDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addExtraDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          bdata <- coreLift $ getEnv "IDRIS2_DATA"
          the (Core ()) $ case bdata of
-              Just path => do traverse_ addDataDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addDataDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          blibs <- coreLift $ getEnv "IDRIS2_LIBS"
          the (Core ()) $ case blibs of
-              Just path => do traverse_ addLibDir (map trim (split (==pathSep) path))
+              Just path => do traverse_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
          cg <- coreLift $ getEnv "IDRIS2_CG"
          the (Core ()) $ case cg of
@@ -71,10 +67,10 @@ updateEnv
          defs <- get Ctxt
          addPkgDir "prelude"
          addPkgDir "base"
-         addDataDir (dir_prefix (dirs (options defs)) ++ dirSep ++
-                        "idris2-" ++ showVersion False version ++ dirSep ++ "support")
-         addLibDir (dir_prefix (dirs (options defs)) ++ dirSep ++
-                        "idris2-" ++ showVersion False version ++ dirSep ++ "lib")
+         addDataDir (dir_prefix (dirs (options defs)) </>
+                        ("idris2-" ++ showVersion False version) </> "support")
+         addLibDir (dir_prefix (dirs (options defs)) </>
+                        ("idris2-" ++ showVersion False version) </> "lib")
          Just cwd <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          addLibDir cwd
@@ -171,7 +167,7 @@ stMain opts
                  the (Core ()) $ case fname of
                       Nothing => logTime "Loading prelude" $
                                    when (not $ noprelude session) $
-                                     readPrelude
+                                     readPrelude True
                       Just f => logTime "Loading main file" $
                                    (loadMainFile f >>= displayErrors)
 

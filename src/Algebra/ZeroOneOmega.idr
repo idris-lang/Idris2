@@ -3,6 +3,8 @@ module Algebra.ZeroOneOmega
 import Algebra.Semiring
 import Algebra.Preorder
 
+%default total
+
 export
 data ZeroOneOmega = Rig0 | Rig1 | RigW
 

@@ -110,8 +110,6 @@ checkTerm rig elabinfo nest env (IVar fc n) exp
       -- type is expecting an implicit argument, so check it as an
       -- application with no arguments
       checkApp rig elabinfo nest env fc (IVar fc n) [] [] exp
-checkTerm rig elabinfo nest env (IPi fc r p (Just n) argTy retTy) exp
-    = checkPi rig elabinfo nest env fc r p n argTy retTy exp
 checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
     = do n <- case p of
                    Explicit => genVarName "arg"
@@ -119,6 +117,10 @@ checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
                    AutoImplicit => genVarName "conArg"
                    (DefImplicit _) => genVarName "defArg"
          checkPi rig elabinfo nest env fc r p n argTy retTy exp
+checkTerm rig elabinfo nest env (IPi fc r p (Just (UN "_")) argTy retTy) exp
+    = checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
+checkTerm rig elabinfo nest env (IPi fc r p (Just n) argTy retTy) exp
+    = checkPi rig elabinfo nest env fc r p n argTy retTy exp
 checkTerm rig elabinfo nest env (ILam fc r p (Just n) argTy scope) exp
     = checkLambda rig elabinfo nest env fc r p n argTy scope exp
 checkTerm rig elabinfo nest env (ILam fc r p Nothing argTy scope) exp

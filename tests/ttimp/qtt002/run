@@ -1,3 +1,0 @@
-$1 --yaffle QTT.yaff < input
-
-rm -rf build

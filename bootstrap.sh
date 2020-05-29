@@ -1,13 +1,22 @@
 #!/bin/sh
 
-if [ -z "$SCHEME" ]
+set -e  # Exit on any error
+
+echo "bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
+if [ -z "$SCHEME" ] || [ -z "$IDRIS2_VERSION" ]
 then
-    echo "SCHEME not set. Invoke with SCHEME=[name of chez executable]"
+    echo "Required ENV not set."
+    if [ -z "$SCHEME" ]
+    then
+        echo "Invoke with SCHEME=[name of chez scheme executable]"
+    fi
     exit 1
 fi
 
 # Compile the bootstrap scheme
+# TODO: Move boot-build to Makefile in bootstrap/Makefile
 cd bootstrap
+echo "Building idris2-boot from idris2-boot.ss"
 ${SCHEME} --script compile.ss
 
 # Put the result in the usual place where the target goes
@@ -18,32 +27,27 @@ install idris2_app/* ../build/exec/idris2_app
 
 cd ..
 
-# Install with the bootstrap directory as the PREFIX
-DIR="`realpath $0`"
-PREFIX="`dirname $DIR`"/bootstrap
+# TODO: Unify with bootstrap-rkt
+PREFIX=${PWD}/bootstrap
 
 if [ ${OS} = "windows" ]; then
+    # IDRIS_PREFIX is only used to build IDRIS2_BOOT_PATH
     IDRIS_PREFIX=$(cygpath -m $PREFIX)
     SEP=";"
-    NEW_PREFIX=$(cygpath -m $(dirname "$DIR"))
 else
     IDRIS_PREFIX=${PREFIX}
     SEP=":"
-    NEW_PREFIX="`dirname $DIR`"
 fi
 
-IDRIS2_BOOT_PATH="${IDRIS_PREFIX}/idris2-0.2.0/prelude${SEP}${IDRIS_PREFIX}/idris2-0.2.0/base${SEP}${IDRIS_PREFIX}/idris2-0.2.0/contrib${SEP}${IDRIS_PREFIX}/idris2-0.2.0/network"
-IDRIS2_TEST_LIBS="${IDRIS_PREFIX}/idris2-0.2.0/lib"
-IDRIS2_TEST_DATA="${IDRIS_PREFIX}/idris2-0.2.0/support"
-IDRIS2_NEW_PATH="${NEW_PREFIX}/libs/prelude/build/ttc${SEP}${NEW_PREFIX}/libs/base/build/ttc${SEP}${NEW_PREFIX}/libs/network/build/ttc"
+BOOT_PATH_BASE=${IDRIS_PREFIX}/idris2-${IDRIS2_VERSION}
+IDRIS2_BOOT_PATH="${BOOT_PATH_BASE}/prelude${SEP}${BOOT_PATH_BASE}/base${SEP}${BOOT_PATH_BASE}/contrib${SEP}${BOOT_PATH_BASE}/network"
 
 # Now rebuild everything properly
+# PREFIX must be the "clean" build root, without cygpath -m
+# Otherwise, we get 'git: Bad address'
 echo ${PREFIX}
-
 make libs SCHEME=${SCHEME} PREFIX=${PREFIX}
 make install SCHEME=${SCHEME} PREFIX=${PREFIX}
 make clean IDRIS2_BOOT=${PREFIX}/bin/idris2
 make all IDRIS2_BOOT=${PREFIX}/bin/idris2 SCHEME=${SCHEME} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-echo "Testing using libraries in ${IDRIS2_NEW_PATH}"
-make test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_NEW_PATH} SCHEME=${SCHEME} IDRIS2_LIBS=${IDRIS2_TEST_LIBS} IDRIS2_DATA=${IDRIS2_TEST_DATA}

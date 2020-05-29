@@ -969,6 +969,7 @@ logEnv lvl msg env
              dumpEnv bs
     dumpEnv {vs = x :: _} (b :: bs)
         = do logTermNF lvl (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                            show (piInfo b) ++ " " ++
                             show x) bs (binderType b)
              dumpEnv bs
 

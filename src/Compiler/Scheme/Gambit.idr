@@ -11,13 +11,17 @@ import Core.Name
 import Core.Options
 import Core.TT
 import Utils.Hex
+import Utils.Path
 
 import Data.List
 import Data.Maybe
 import Data.NameMap
 import Data.Strings
 import Data.Vect
+
 import System
+import System.Directory
+import System.File
 import System.Info
 
 %default covering
@@ -292,16 +296,16 @@ compileToSCM c tm outfile
 compileExpr : Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c execDir tm outfile
-    = do let outn = execDir ++ dirSep ++ outfile ++ ".scm"
+    = do let outn = execDir </> outfile <.> "scm"
          libsname <- compileToSCM c tm outn
-         libsfile <- traverse findLibraryFile $ nub $ map (++ ".a") libsname
+         libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
          let cmd = gsc ++ 
                    " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
                    (showSep " " libsfile)  ++ "\" " ++ outn
          ok <- coreLift $ system cmd
          if ok == 0
-            then pure (Just (execDir ++ dirSep ++ outfile))
+            then pure (Just (execDir </> outfile))
             else pure Nothing
 
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()

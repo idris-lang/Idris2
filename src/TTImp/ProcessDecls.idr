@@ -24,6 +24,8 @@ import Data.List
 import Data.Maybe
 import Data.NameMap
 
+%default covering
+
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
@@ -60,8 +62,9 @@ TTImp.Elab.Check.processDecl = process
 export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
+checkTotalityOK (NS _ (MN _ _)) = pure Nothing -- not interested in generated names
+checkTotalityOK (NS _ (CaseBlock _ _)) = pure Nothing -- case blocks checked elsewhere
 checkTotalityOK n
--- checkTotalityOK (NS _ n@(UN _)) -- top level user defined names only
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing

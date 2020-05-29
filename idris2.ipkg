@@ -69,6 +69,7 @@ modules =
     Idris.IDEMode.Parser,
     Idris.IDEMode.REPL,
     Idris.IDEMode.TokenLine,
+    Idris.IDEMode.Holes,
     Idris.ModTree,
     Idris.Package,
     Idris.Parser,
@@ -145,6 +146,7 @@ modules =
     Utils.Octal,
     Utils.Shunting,
     Utils.String,
+    Utils.Path,
 
     Yaffle.Main,
     Yaffle.REPL

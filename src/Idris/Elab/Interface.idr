@@ -23,6 +23,8 @@ import Data.ANameMap
 import Data.List
 import Data.Maybe
 
+%default covering
+
 -- TODO: Check all the parts of the body are legal
 -- TODO: Deal with default superclass implementations
 
@@ -243,9 +245,9 @@ updateIfaceSyn iname cn ps cs ms ds
     findSetTotal (_ :: xs) = findSetTotal xs
 
     totMeth : (Name, RigCount, List FnOpt, (Bool, RawImp)) ->
-              Core (Name, RigCount, TotalReq, (Bool, RawImp))
+              Core (Name, RigCount, Maybe TotalReq, (Bool, RawImp))
     totMeth (n, c, opts, t)
-        = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
+        = do let treq = findSetTotal opts
              pure (n, c, treq, t)
 
 export
