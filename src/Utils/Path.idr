@@ -217,6 +217,9 @@ parsePath = do vol <- optional parseVolume
                trailSep <- optional (some bodySeparator)
                let body = filter (\case Normal s => ltrim s /= ""
                                         _ => True) body
+               let body = case body of
+                               [] => []
+                               (x::xs) => x :: delete CurDir xs
                pure $ MkPath vol (isJust root) body (isJust trailSep)
 
 ||| Parse a String into Path component.
@@ -246,14 +249,9 @@ parsePath = do vol <- optional parseVolume
 ||| ```
 export
 parse : String -> Path
-parse str = let p = case parse parsePath (lexPath str) of
-                         Right (p, _) => p
-                         _ => emptyPath
-                body' = case p.body of
-                             [] => []
-                             (x::xs) => x :: delete CurDir xs
-              in
-                record { body = body' } p
+parse str = case parse parsePath (lexPath str) of
+                 Right (p, _) => p
+                 _ => emptyPath
 
 --------------------------------------------------------------------------------
 -- Utils

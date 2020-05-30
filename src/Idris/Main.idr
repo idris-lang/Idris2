@@ -122,13 +122,6 @@ checkVerbose [] = False
 checkVerbose (Verbose :: _) = True
 checkVerbose (_ :: xs) = checkVerbose xs
 
-checkRelative : Maybe String -> Core (Maybe String)
-checkRelative Nothing = pure Nothing
-checkRelative (Just str)
-    = if isAbsolute str
-         then throw (InternalError "Absolute paths only allowed with --find-ipkg")
-         else pure (Just str)
-
 stMain : List CLOpt -> Core ()
 stMain opts
     = do False <- tryYaffle opts
@@ -170,7 +163,7 @@ stMain opts
                    iputStrLn banner
                  fname <- if findipkg session
                              then findIpkg fname
-                             else checkRelative fname
+                             else pure fname
                  setMainFile fname
                  the (Core ()) $ case fname of
                       Nothing => logTime "Loading prelude" $
