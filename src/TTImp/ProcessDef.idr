@@ -768,9 +768,9 @@ processDef opts nest env fc n_in cs_in
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS ["Builtin"] (UN "assert_total"))
+         calcRefs False atotal (Resolved nidx)
          when (not (InCase `elem` opts)) $
-             do calcRefs False atotal (Resolved nidx)
-                sc <- calculateSizeChange fc n
+             do sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
                 checkIfGuarded fc n
 
