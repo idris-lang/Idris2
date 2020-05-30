@@ -395,9 +395,9 @@ parseBody = do text <- match PTText
 private
 parsePath : Grammar PathToken False Path
 parsePath = do vol <- optional parseVolumn
-               root <- optional bodySeparator
-               body <- sepBy bodySeparator parseBody
-               trailSep <- optional bodySeparator
+               root <- optional (some bodySeparator)
+               body <- sepBy (some bodySeparator) parseBody
+               trailSep <- optional (some bodySeparator)
                pure $ MkPath vol (isJust root) body (isJust trailSep)
 
 ||| Attempt to parse a String into Path.

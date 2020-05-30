@@ -212,9 +212,9 @@ parseBody = do text <- match PTText
 
 parsePath : Grammar PathToken False Path
 parsePath = do vol <- optional parseVolume
-               root <- optional bodySeparator
-               body <- sepBy bodySeparator parseBody
-               trailSep <- optional bodySeparator
+               root <- optional (some bodySeparator)
+               body <- sepBy (some bodySeparator) parseBody
+               trailSep <- optional (some bodySeparator)
                let body = filter (\case Normal s => ltrim s /= ""
                                         _ => True) body
                pure $ MkPath vol (isJust root) body (isJust trailSep)
