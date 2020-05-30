@@ -231,7 +231,7 @@ buildDeps fname
                        clearCtxt; addPrimitives
                        put MD initMetadata
                        mainttc <- getTTCFileName fname ".ttc"
-                       log 10 $ "Reloading " ++ show mainttc
+                       log 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc
 
                        -- Load the associated metadata for interactive editing
