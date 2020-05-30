@@ -195,8 +195,8 @@ perror (SolvedNamedHole _ env h tm)
     = pure $ "Named hole " ++ show h ++ " has been solved by unification\n"
               ++ "Result: " ++ !(pshow env tm)
 perror (VisibilityError fc vx x vy y)
-    = pure $ show vx ++ " " ++ sugarName x ++
-             " cannot refer to " ++ show vy ++ " " ++ sugarName y
+    = pure $ show vx ++ " " ++ sugarName !(toFullNames x) ++
+             " cannot refer to " ++ show vy ++ " " ++ sugarName !(toFullNames y)
 perror (NonLinearPattern _ n) = pure $ "Non linear pattern " ++ sugarName n
 perror (BadPattern _ n) = pure $ "Pattern not allowed here: " ++ show n
 perror (NoDeclaration _ n) = pure $ "No type declaration for " ++ show n

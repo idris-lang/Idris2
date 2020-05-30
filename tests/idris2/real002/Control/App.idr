@@ -81,11 +81,9 @@ data App1Res : Usage -> Type -> Type where
 PrimApp : Type -> Type
 PrimApp a = (1 x : %World) -> AppRes a
 
-export
 prim_app_pure : a -> PrimApp a
 prim_app_pure x = \w => MkAppRes x w
 
-export
 prim_app_bind : (1 act : PrimApp a) -> (1 k : a -> PrimApp b) -> PrimApp b
 prim_app_bind fn k w
     = let MkAppRes x' w' = fn w in k x' w'

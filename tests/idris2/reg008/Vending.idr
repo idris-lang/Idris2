@@ -16,6 +16,7 @@ strToInput x = if all isDigit (unpack x)
                   then Just (REFILL (stringToNatOrZ x))
                   else Nothing
 
+export
 data MachineCmd : Type ->
                   VendState -> VendState ->
                   Type where
@@ -35,6 +36,7 @@ data MachineCmd : Type ->
           (a -> MachineCmd b state2 state3) ->
           MachineCmd b state1 state3
 
+export
 data MachineIO : VendState -> Type where
   Do : {state1 : _} ->
        MachineCmd a state1 state2 ->

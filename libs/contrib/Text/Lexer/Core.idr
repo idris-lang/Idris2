@@ -101,7 +101,6 @@ strIndex (MkStrLen str len) i
 mkStr : String -> StrLen
 mkStr str = MkStrLen str (length str)
 
-export
 strTail : Nat -> StrLen -> StrLen
 strTail start (MkStrLen str len)
     = MkStrLen (substr start len str) (minus len start)
