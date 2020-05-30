@@ -93,7 +93,7 @@ pathToNS wdir sdir fname
           base = if isAbsolute fname then wdir </> sdir else sdir
         in
           case stripPrefix base fname of
-               Nothing => throw (UserError ("Source file " ++ show fname 
+               Nothing => throw (UserError ("Source file " ++ show fname
                                             ++ " is not in the source directory " 
                                             ++ show (wdir </> sdir)))
                Just p => pure $ map show $ reverse $ (parse (p <.> "")).body

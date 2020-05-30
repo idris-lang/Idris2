@@ -552,6 +552,7 @@ findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
              | Nothing => pure fname
         coreLift $ changeDir dir
+        setWorkingDir dir
         Right (pname, fs) <- coreLift $ parseFile ipkgn
                                  (do desc <- parsePkgDesc ipkgn
                                      eoi
