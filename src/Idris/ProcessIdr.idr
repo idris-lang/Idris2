@@ -265,7 +265,8 @@ processMod srcf ttcf msg sourcecode
                 when (ns /= ["Main"]) $
                    do let MkFC fname _ _ = headerloc mod
                       d <- getDirs
-                      when (pathToNS (working_dir d) (source_dir d) fname /= ns) $
+                      ns' <- pathToNS (working_dir d) (source_dir d) fname
+                      when (ns /= ns') $
                           throw (GenericMsg (headerloc mod)
                                    ("Module name " ++ showSep "." (reverse ns) ++
                                     " does not match file name " ++ fname))
@@ -310,7 +311,7 @@ process : {auto c : Ref Ctxt Defs} ->
 process buildmsg file
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
-         catch (do ttcf <- getTTCFileName file ".ttc"
+         catch (do ttcf <- getTTCFileName file "ttc"
                    Just errs <- logTime ("Elaborating " ++ file) $
                                    processMod file ttcf buildmsg res
                         | Nothing => pure [] -- skipped it
@@ -318,9 +319,10 @@ process buildmsg file
                       then
                         do defs <- get Ctxt
                            d <- getDirs
-                           makeBuildDirectory (pathToNS (working_dir d) (source_dir d) file)
+                           ns <- pathToNS (working_dir d) (source_dir d) file
+                           makeBuildDirectory ns
                            writeToTTC !(get Syn) ttcf
-                           ttmf <- getTTCFileName file ".ttm"
+                           ttmf <- getTTCFileName file "ttm"
                            writeToTTM ttmf
                            pure []
                       else do pure errs)

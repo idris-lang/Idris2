@@ -87,12 +87,16 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> List String
+pathToNS : String -> Maybe String -> String -> Core (List String)
 pathToNS wdir sdir fname
-    = let sdir = fromMaybe "" sdir in
-        case stripPrefix sdir fname of
-             Nothing => []
-             Just p => map show $ reverse $ (parse (p <.> "")).body
+    = let sdir = fromMaybe "" sdir
+          base = if isAbsolute fname then wdir </> sdir else sdir
+        in
+          case stripPrefix base fname of
+               Nothing => throw (UserError ("Source file " ++ show fname 
+                                            ++ " is not in the source directory " 
+                                            ++ show (wdir </> sdir)))
+               Just p => pure $ map show $ reverse $ (parse (p <.> "")).body
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
@@ -148,7 +152,7 @@ getTTCFileName inp ext
          d <- getDirs
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
-         let ns = pathToNS (working_dir d) (source_dir d) inp
+         ns <- pathToNS (working_dir d) (source_dir d) inp
          let fname = joinPath (reverse ns) <.> ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
