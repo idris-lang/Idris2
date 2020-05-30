@@ -245,6 +245,7 @@ perror (CyclicImports ns)
     showMod ns = showSep "." (reverse ns)
 perror ForceNeeded = pure "Internal error when resolving implicit laziness"
 perror (InternalError str) = pure $ "INTERNAL ERROR: " ++ str
+perror (UserError str) = pure $ "Error: " ++ str
 
 perror (InType fc n err)
     = pure $ "While processing type of " ++ !(prettyName n) ++
