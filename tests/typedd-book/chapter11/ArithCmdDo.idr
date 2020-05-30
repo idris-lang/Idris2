@@ -4,6 +4,7 @@ import System
 
 -- %default total
 
+export
 data Command : Type -> Type where
      PutStr : String -> Command ()
      GetLine : Command String
@@ -11,6 +12,7 @@ data Command : Type -> Type where
      Pure : ty -> Command ty
      Bind : Command a -> (a -> Command b) -> Command b
 
+export
 data ConsoleIO : Type -> Type where
      Quit : a -> ConsoleIO a
      Do : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b

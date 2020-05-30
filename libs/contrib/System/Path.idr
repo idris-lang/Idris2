@@ -146,7 +146,6 @@ pathTokenMap = toTokenMap $
   , (some $ non $ oneOf "/\\:?", PTText)
   ]
 
-export
 lexPath : String -> List PathToken
 lexPath str = let (tokens, _, _, _) = lex pathTokenMap str in 
                 map TokenData.tok tokens

@@ -208,7 +208,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty Private None)
+                                      [] casefnty Public None)
          -- don't worry about totality of the case block; it'll be handled
          -- by the totality of the parent function
          setFlag fc (Resolved cidx) (SetTotal PartialOK)
