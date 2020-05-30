@@ -550,7 +550,9 @@ findIpkg : {auto c : Ref Ctxt Defs} ->
            Maybe String -> Core (Maybe String)
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
-             | Nothing => pure fname
+             | Nothing => case fname of
+                               Nothing => pure Nothing
+                               Just srcpath => pure (fileName srcpath)
         coreLift $ changeDir dir
         Right (pname, fs) <- coreLift $ parseFile ipkgn
                                  (do desc <- parsePkgDesc ipkgn
@@ -564,8 +566,10 @@ findIpkg fname
         loadDependencies (depends pkg)
         case fname of
              Nothing => pure Nothing
-             Just src =>
-                do let src' = up </> src
+             Just srcpath =>
+                do let Just src = fileName srcpath
+                       | _ => pure (Just srcpath)
+                   let src' = up </> src
                    setSource src'
                    opts <- get ROpts
                    put ROpts (record { mainfile = Just src' } opts)

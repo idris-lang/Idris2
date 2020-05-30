@@ -48,6 +48,13 @@ getOutput = do opts <- get ROpts
                pure (idemode opts)
 
 export
+setMainFile : {auto o : Ref ROpts REPLOpts} ->
+              Maybe String -> Core ()
+setMainFile src
+    = do opts <- get ROpts
+         put ROpts (record { mainfile = src } opts)
+
+export
 setSource : {auto o : Ref ROpts REPLOpts} ->
             String -> Core ()
 setSource src
