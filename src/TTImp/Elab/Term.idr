@@ -28,6 +28,7 @@ import TTImp.Elab.Prim
 import TTImp.Elab.Quote
 import TTImp.Elab.Record
 import TTImp.Elab.Rewrite
+import TTImp.Elab.RunElab
 import TTImp.Reflect
 import TTImp.TTImp
 
@@ -182,7 +183,7 @@ checkTerm rig elabinfo nest env (IQuoteDecl fc tm) exp
 checkTerm rig elabinfo nest env (IUnquote fc tm) exp
     = throw (GenericMsg fc "Can't escape outside a quoted term")
 checkTerm rig elabinfo nest env (IRunElab fc tm) exp
-    = throw (GenericMsg fc "RunElab not implemented yet")
+    = checkRunElab rig elabinfo nest env fc tm exp
 checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp

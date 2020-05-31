@@ -7,8 +7,10 @@ public export
 data Elab : Type -> Type where
      Pure : a -> Elab a
      Bind : Elab a -> (a -> Elab b) -> Elab b
+     Log : Nat -> String -> Elab ()
 
-     Check : TTImp -> Elab a
+     -- Check a TTImp term against the current goal type
+     Check : TTImp -> Elab TT
 
 mutual
   export

@@ -82,11 +82,15 @@ record PrimNames where
   fromCharName : Maybe Name
 
 public export
-data LangExt = Borrowing -- not yet implemented
+data LangExt
+     = ElabReflection
+     | Borrowing -- not yet implemented
 
 export
 Eq LangExt where
+  ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
+  _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export

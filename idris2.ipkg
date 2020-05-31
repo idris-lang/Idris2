@@ -121,6 +121,7 @@ modules =
     TTImp.Elab.Quote,
     TTImp.Elab.Record,
     TTImp.Elab.Rewrite,
+    TTImp.Elab.RunElab,
     TTImp.Elab.Term,
     TTImp.Elab.Utils,
     TTImp.Impossible,
