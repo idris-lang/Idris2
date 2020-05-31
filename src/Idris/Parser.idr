@@ -402,6 +402,11 @@ mutual
            end <- location
            pure (PIdiom (MkFC fname start end) e)
     <|> do start <- location
+           pragma "runElab"
+           e <- expr pdef fname indents
+           end <- location
+           pure (PRunElab (MkFC fname start end) e)
+    <|> do start <- location
            pragma "logging"
            lvl <- intLit
            e <- expr pdef fname indents
@@ -1035,7 +1040,9 @@ onoff
 
 extension : Rule LangExt
 extension
-    = do exactIdent "Borrowing"
+    = do exactIdent "ElabReflection"
+         pure ElabReflection
+  <|> do exactIdent "Borrowing"
          pure Borrowing
 
 totalityOpt : Rule TotalReq

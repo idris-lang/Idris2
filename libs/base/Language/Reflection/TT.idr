@@ -55,6 +55,10 @@ data IsVar : Name -> Nat -> List Name -> Type where
 public export
 data LazyReason = LInf | LLazy | LUnknown
 
+export
+data TT : Type where [external]
+
+{-
 -- Type checked terms in the core TT
 public export
 data TT : List Name -> Type where
@@ -73,6 +77,7 @@ data TT : List Name -> Type where
      PrimVal : FC -> Constant -> TT vars
      Erased : FC -> TT vars
      TType : FC -> TT vars
+     -}
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK

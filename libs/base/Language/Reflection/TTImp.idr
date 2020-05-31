@@ -1,6 +1,6 @@
 module Language.Reflection.TTImp
 
-import Language.Reflection.TT
+import public Language.Reflection.TT
 
 -- Unchecked terms and declarations in the intermediate language
 mutual

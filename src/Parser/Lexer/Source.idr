@@ -174,7 +174,7 @@ reservedSymbols : List String
 reservedSymbols
     = symbols ++
       ["%", "\\", ":", "=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", ".."]
+       "&", "**", "..", "~"]
 
 fromHexLit : String -> Integer
 fromHexLit str
