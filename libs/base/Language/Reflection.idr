@@ -13,18 +13,18 @@ data Elab : Type -> Type where
      Check : TTImp -> Elab TT
 
 mutual
-  export
+  public export
   Functor Elab where
     map f e = do e' <- e
                  pure (f e')
 
-  export
+  public export
   Applicative Elab where
     pure = Pure
     f <*> a = do f' <- f
                  a' <- a
                  pure (f' a')
 
-  export
+  public export
   Monad Elab where
     (>>=) = Bind

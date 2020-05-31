@@ -22,11 +22,10 @@ elabScript : {vars : _} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
-             FC -> RigCount -> ElabInfo -> NestedNames vars ->
-             Env Term vars -> NF vars -> Maybe (Glued vars) ->
-             Core (Term vars, Glued vars)
-elabScript fc rig elabinfo nest env
-           tm@(NDCon _ nm _ _ args) exp
+             FC -> ElabInfo -> NestedNames vars ->
+             Env Term vars -> NF vars ->
+             Core (NF vars)
+elabScript fc elabinfo nest env tm@(NDCon _ nm _ _ args)
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
@@ -40,13 +39,26 @@ elabScript fc rig elabinfo nest env
            empty <- clearDefs defs
            throw (BadRunElab fc env !(quote empty env tm))
 
-    elabCon : Defs -> String -> List (Closure vars) -> Core (Term vars, Glued vars)
-    elabCon defs "Check" [ttimp]
-        = do tt <- evalClosure defs ttimp
-             raw <- reify defs tt
-             check rig elabinfo nest env raw exp
+    elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
+    elabCon defs "Pure" [_,val] = evalClosure defs val
+    elabCon defs "Bind" [_,_,act,k]
+        = do act' <- elabScript fc elabinfo nest env
+                                !(evalClosure defs act)
+             case !(evalClosure defs k) of
+                  NBind _ x (Lam _ _ _) sc =>
+                      elabScript fc elabinfo nest env
+                                 !(sc defs (toClosure withAll env
+                                                 !(quote defs env act')))
+                  _ => failWith defs
+    elabCon defs "Log" [lvl, str]
+        = do lvl' <- evalClosure defs lvl
+             logC !(reify defs lvl') $
+                  do str' <- evalClosure defs str
+                     reify defs str'
+             nfOpts withAll defs env !(reflect fc defs env ())
+    elabCon defs "Check" [ttimp] = evalClosure defs ttimp -- to be reified
     elabCon defs n args = failWith defs
-elabScript fc rig elabinfo nest env script exp
+elabScript fc elabinfo nest env script
     = do defs <- get Ctxt
          empty <- clearDefs defs
          throw (BadRunElab fc env !(quote empty env script))
@@ -66,4 +78,7 @@ checkRunElab rig elabinfo nest env fc script exp
          when (not (isExtension ElabReflection defs)) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          (stm, sty) <- check rig elabinfo nest env script Nothing
-         elabScript fc rig elabinfo nest env !(nf defs env stm) exp
+         defs <- get Ctxt -- checking might have resolved some holes
+         ntm <- elabScript fc elabinfo nest env !(nfOpts withAll defs env stm)
+         defs <- get Ctxt -- might have updated as part of the script
+         check rig elabinfo nest env !(reify defs ntm) exp
