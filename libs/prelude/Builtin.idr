@@ -11,7 +11,7 @@ module Builtin
 ||| it is best to use it around the smallest possible subexpression.
 %inline
 public export
-assert_total : {0 a : _} -> a -> a
+assert_total : {0 a : _} -> (1 _ : a) -> a
 assert_total x = x
 
 ||| Assert to the totality checker that y is always structurally smaller than x
@@ -21,7 +21,7 @@ assert_total x = x
 ||| @ y the smaller value (typically an argument to a recursive call)
 %inline
 public export
-assert_smaller : {0 a, b : _} -> (x : a) -> (y : b) -> b
+assert_smaller : {0 a, b : _} -> (0 x : a) -> (1 y : b) -> b
 assert_smaller x y = y
 
 -- Unit type and pairs
