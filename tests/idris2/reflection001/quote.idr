@@ -24,3 +24,5 @@ bad val
             xfn var = var * 2 in
             xfn ~(val))
 
+names : List Name
+names = [ `{{ names }}, `{{ Prelude.(+) }} ]

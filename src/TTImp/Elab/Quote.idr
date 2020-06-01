@@ -199,3 +199,19 @@ checkQuote rig elabinfo nest env fc tm exp
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qtm)
                   (gnf env qty) exp
+
+export
+checkQuoteName : {vars : _} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 {auto m : Ref MD Metadata} ->
+                 {auto u : Ref UST UState} ->
+                 {auto e : Ref EST (EState vars)} ->
+                 RigCount -> ElabInfo ->
+                 NestedNames vars -> Env Term vars ->
+                 FC -> Name -> Maybe (Glued vars) ->
+                 Core (Term vars, Glued vars)
+checkQuoteName rig elabinfo nest env fc n exp
+    = do defs <- get Ctxt
+         qnm <- reflect fc defs env n
+         qty <- getCon fc defs (reflectiontt "Name")
+         checkExp rig elabinfo env fc qnm (gnf env qty) exp

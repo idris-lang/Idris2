@@ -91,6 +91,7 @@ mutual
 
        -- Quasiquoting
        IQuote : FC -> RawImp -> RawImp
+       IQuoteName : FC -> Name -> RawImp
        IQuoteDecl : FC -> ImpDecl -> RawImp
        IUnquote : FC -> RawImp -> RawImp
        IRunElab : FC -> RawImp -> RawImp
@@ -164,6 +165,7 @@ mutual
       show (IDelay fc tm) = "(%delay " ++ show tm ++ ")"
       show (IForce fc tm) = "(%force " ++ show tm ++ ")"
       show (IQuote fc tm) = "(%quote " ++ show tm ++ ")"
+      show (IQuoteName fc tm) = "(%quotename " ++ show tm ++ ")"
       show (IQuoteDecl fc tm) = "(%quotedecl " ++ show tm ++ ")"
       show (IUnquote fc tm) = "(%unquote " ++ show tm ++ ")"
       show (IRunElab fc tm) = "(%runelab " ++ show tm ++ ")"
@@ -600,6 +602,7 @@ getFC (IDelayed x _ _) = x
 getFC (IDelay x _) = x
 getFC (IForce x _) = x
 getFC (IQuote x _) = x
+getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
@@ -678,25 +681,27 @@ mutual
 
     toBuf b (IQuote fc t)
         = do tag 21; toBuf b fc; toBuf b t
-    toBuf b (IQuoteDecl fc t)
+    toBuf b (IQuoteName fc t)
         = do tag 22; toBuf b fc; toBuf b t
-    toBuf b (IUnquote fc t)
+    toBuf b (IQuoteDecl fc t)
         = do tag 23; toBuf b fc; toBuf b t
-    toBuf b (IRunElab fc t)
+    toBuf b (IUnquote fc t)
         = do tag 24; toBuf b fc; toBuf b t
+    toBuf b (IRunElab fc t)
+        = do tag 25; toBuf b fc; toBuf b t
 
     toBuf b (IPrimVal fc y)
-        = do tag 25; toBuf b fc; toBuf b y
+        = do tag 26; toBuf b fc; toBuf b y
     toBuf b (IType fc)
-        = do tag 26; toBuf b fc
+        = do tag 27; toBuf b fc
     toBuf b (IHole fc y)
-        = do tag 27; toBuf b fc; toBuf b y
+        = do tag 28; toBuf b fc; toBuf b y
     toBuf b (IUnifyLog fc lvl x) = toBuf b x
 
     toBuf b (Implicit fc i)
-        = do tag 28; toBuf b fc; toBuf b i
+        = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
-        = do tag 29; toBuf b ns; toBuf b rhs
+        = do tag 30; toBuf b ns; toBuf b rhs
 
     fromBuf b
         = case !getTag of
@@ -766,22 +771,24 @@ mutual
                21 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IQuote fc y)
                22 => do fc <- fromBuf b; y <- fromBuf b
-                        pure (IQuoteDecl fc y)
+                        pure (IQuoteName fc y)
                23 => do fc <- fromBuf b; y <- fromBuf b
-                        pure (IUnquote fc y)
+                        pure (IQuoteDecl fc y)
                24 => do fc <- fromBuf b; y <- fromBuf b
+                        pure (IUnquote fc y)
+               25 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IRunElab fc y)
 
-               25 => do fc <- fromBuf b; y <- fromBuf b
+               26 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IPrimVal fc y)
-               26 => do fc <- fromBuf b
+               27 => do fc <- fromBuf b
                         pure (IType fc)
-               27 => do fc <- fromBuf b; y <- fromBuf b
+               28 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IHole fc y)
-               28 => do fc <- fromBuf b
+               29 => do fc <- fromBuf b
                         i <- fromBuf b
                         pure (Implicit fc i)
-               29 => do fc <- fromBuf b
+               30 => do fc <- fromBuf b
                         ns <- fromBuf b
                         rhs <- fromBuf b
                         pure (IWithUnambigNames fc ns rhs)

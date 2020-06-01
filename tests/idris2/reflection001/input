@@ -2,4 +2,5 @@ test
 add `(True) `(False)
 bigger `(the Int 99994)
 bigger' 99994
+names
 :q

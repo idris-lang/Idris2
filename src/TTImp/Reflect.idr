@@ -193,6 +193,10 @@ mutual
                     => do fc' <- reify defs !(evalClosure defs fc)
                           t' <- reify defs !(evalClosure defs t)
                           pure (IQuote fc' t')
+               (NS _ (UN "IQuoteName"), [fc, t])
+                    => do fc' <- reify defs !(evalClosure defs fc)
+                          t' <- reify defs !(evalClosure defs t)
+                          pure (IQuoteName fc' t')
                (NS _ (UN "IQuoteDecl"), [fc, t])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           t' <- reify defs !(evalClosure defs t)
@@ -540,6 +544,10 @@ mutual
         = do fc' <- reflect fc defs env tfc
              t' <- reflect fc defs env t
              appCon fc defs (reflectionttimp "IQuote") [fc', t']
+    reflect fc defs env (IQuoteName tfc t)
+        = do fc' <- reflect fc defs env tfc
+             t' <- reflect fc defs env t
+             appCon fc defs (reflectionttimp "IQuoteName") [fc', t']
     reflect fc defs env (IQuoteDecl tfc t)
         = do fc' <- reflect fc defs env tfc
              t' <- reflect fc defs env t

@@ -61,6 +61,7 @@ mutual
 
        -- Quasiquotation
        IQuote : FC -> TTImp -> TTImp
+       IQuoteName : FC -> Name -> TTImp
        IQuoteDecl : FC -> TTImp -> TTImp
        IUnquote : FC -> TTImp -> TTImp
 

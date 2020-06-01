@@ -53,6 +53,7 @@ mutual
        PSearch : FC -> (depth : Nat) -> PTerm
        PPrimVal : FC -> Constant -> PTerm
        PQuote : FC -> PTerm -> PTerm
+       PQuoteName : FC -> Name -> PTerm
        PQuoteDecl : FC -> PDecl -> PTerm
        PUnquote : FC -> PTerm -> PTerm
        PRunElab : FC -> PTerm -> PTerm
@@ -439,6 +440,7 @@ mutual
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
+    showPrec d (PQuoteName _ n) = "`{{" ++ showPrec d n ++ "}}"
     showPrec d (PQuoteDecl _ tm) = "`( <<declaration>> )"
     showPrec d (PUnquote _ tm) = "~(" ++ showPrec d tm ++ ")"
     showPrec d (PRunElab _ tm) = "%runElab " ++ showPrec d tm
@@ -689,6 +691,7 @@ mapPTermM f = goPTerm where
     goPTerm (PQuote fc x) =
       PQuote fc <$> goPTerm x
       >>= f
+    goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x) =
       PQuoteDecl fc <$> goPDecl x
       >>= f
