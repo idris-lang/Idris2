@@ -1175,6 +1175,14 @@ transformDecl fname indents
          end <- location
          pure (PTransform (MkFC fname start end) n lhs rhs)
 
+runElabDecl : FileName -> IndentInfo -> Rule PDecl
+runElabDecl fname indents
+    = do start <- location
+         pragma "runElab"
+         tm <- expr pnowith fname indents
+         end <- location
+         pure (PRunElabDecl (MkFC fname start end) tm)
+
 mutualDecls : FileName -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
     = do start <- location
@@ -1504,6 +1512,8 @@ topDecl fname indents
   <|> do d <- paramDecls fname indents
          pure [d]
   <|> do d <- usingDecls fname indents
+         pure [d]
+  <|> do d <- runElabDecl fname indents
          pure [d]
   <|> do d <- transformDecl fname indents
          pure [d]

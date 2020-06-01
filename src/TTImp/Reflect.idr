@@ -734,6 +734,8 @@ mutual
              y' <- reflect fc defs env y
              z' <- reflect fc defs env z
              appCon fc defs (reflectionttimp "ITransform") [w', x', y', z']
+    reflect fc defs env (IRunElabDecl w x)
+        = throw (GenericMsg fc "Can't reflect a %runElab")
     reflect fc defs env (IPragma x)
         = throw (GenericMsg fc "Can't reflect a pragma")
     reflect fc defs env (ILog x)

@@ -135,6 +135,7 @@ modules =
     TTImp.ProcessDef,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,
+    TTImp.ProcessRunElab,
     TTImp.ProcessTransform,
     TTImp.ProcessType,
     TTImp.Reflect,

@@ -240,6 +240,7 @@ mutual
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl
        PNamespace : FC -> List String -> List PDecl -> PDecl
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
+       PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
 
 definedInData : PDataDecl -> List Name
@@ -859,6 +860,7 @@ mapPTermM f = goPTerm where
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
+    goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
 
 
