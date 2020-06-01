@@ -380,6 +380,18 @@ mutual
            end <- location
            pure (PQuote (MkFC fname start end) e)
     <|> do start <- location
+           symbol "`{{"
+           n <- name
+           symbol "}}"
+           end <- location
+           pure (PQuoteName (MkFC fname start end) n)
+    <|> do start <- location
+           symbol "`["
+           ns <- nonEmptyBlock (topDecl fname)
+           symbol "]"
+           end <- location
+           pure (PQuoteDecl (MkFC fname start end) (collectDefs (concat ns)))
+    <|> do start <- location
            symbol "~"
            e <- simpleExpr fname indents
            end <- location

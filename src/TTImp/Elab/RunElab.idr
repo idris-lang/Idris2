@@ -17,6 +17,7 @@ import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
 import TTImp.Unelab
+import TTImp.Utils
 
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -56,6 +57,10 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                                  !(sc defs (toClosure withAll env
                                                  !(quote defs env act'))) exp
                   _ => failWith defs
+    elabCon defs "Fail" [_,msg]
+        = do msg' <- evalClosure defs msg
+             throw (GenericMsg fc ("Error during reflection: " ++
+                                      !(reify defs msg')))
     elabCon defs "LogMsg" [lvl, str]
         = do lvl' <- evalClosure defs lvl
              logC !(reify defs lvl') $
@@ -77,6 +82,34 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                                      !(reflect fc defs env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
              scriptRet (Just !(unelabNoSugar env ty))
+    elabCon defs "GenSym" [str]
+        = do str' <- evalClosure defs str
+             n <- uniqueName defs [] !(reify defs str')
+             scriptRet (UN n)
+    elabCon defs "InCurrentNS" [n]
+        = do n' <- evalClosure defs n
+             nsn <- inCurrentNS !(reify defs n')
+             scriptRet nsn
+    elabCon defs "GetType" [n]
+        = do n' <- evalClosure defs n
+             res <- lookupTyName !(reify defs n') (gamma defs)
+             scriptRet !(traverse unelabType res)
+      where
+        unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
+        unelabType (n, _, ty)
+            = pure (n, !(unelabNoSugar [] ty))
+    elabCon defs "GetCons" [n]
+        = do n' <- evalClosure defs n
+             cn <- reify defs n'
+             Just (TCon _ _ _ _ _ _ cons _) <-
+                     lookupDefExact cn (gamma defs)
+                 | _ => throw (GenericMsg fc (show cn ++ " is not a type"))
+             scriptRet cons
+    elabCon defs "Declare" [d]
+        = do d' <- evalClosure defs d
+             decls <- reify defs d'
+             traverse_ (processDecl [] (MkNested []) []) decls
+             scriptRet ()
     elabCon defs n args = failWith defs
 elabScript fc elabinfo nest env script exp
     = do defs <- get Ctxt

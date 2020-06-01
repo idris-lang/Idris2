@@ -178,8 +178,10 @@ checkTerm rig elabinfo nest env (IForce fc tm) exp
     = checkForce rig elabinfo nest env fc tm exp
 checkTerm rig elabinfo nest env (IQuote fc tm) exp
     = checkQuote rig elabinfo nest env fc tm exp
-checkTerm rig elabinfo nest env (IQuoteDecl fc tm) exp
-    = throw (GenericMsg fc "Declaration reflection not implemented yet")
+checkTerm rig elabinfo nest env (IQuoteName fc n) exp
+    = checkQuoteName rig elabinfo nest env fc n exp
+checkTerm rig elabinfo nest env (IQuoteDecl fc ds) exp
+    = checkQuoteDecl rig elabinfo nest env fc ds exp
 checkTerm rig elabinfo nest env (IUnquote fc tm) exp
     = throw (GenericMsg fc "Can't escape outside a quoted term")
 checkTerm rig elabinfo nest env (IRunElab fc tm) exp

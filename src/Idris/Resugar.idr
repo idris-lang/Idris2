@@ -240,11 +240,10 @@ mutual
   toPTerm p (IDelay fc tm) = pure (PDelay fc !(toPTerm argPrec tm))
   toPTerm p (IForce fc tm) = pure (PForce fc !(toPTerm argPrec tm))
   toPTerm p (IQuote fc tm) = pure (PQuote fc !(toPTerm argPrec tm))
-  toPTerm p (IQuoteDecl fc d)
-      = do md <- toPDecl d
-           case md of
-                Nothing => throw (InternalError "Can't resugar log or pragma")
-                Just d' => pure (PQuoteDecl fc d')
+  toPTerm p (IQuoteName fc n) = pure (PQuoteName fc n)
+  toPTerm p (IQuoteDecl fc ds)
+      = do ds' <- traverse toPDecl ds
+           pure $ PQuoteDecl fc (mapMaybe id ds')
   toPTerm p (IUnquote fc tm) = pure (PUnquote fc !(toPTerm argPrec tm))
   toPTerm p (IRunElab fc tm) = pure (PRunElab fc !(toPTerm argPrec tm))
 

@@ -9,6 +9,11 @@ Language changes:
    + Casts to `Int` (except `Bits64` which might not fit), `Integer` and `String`
    + Passed to C FFI as `unsigned`
    + Primitives added in `Data.Buffer`
+* Elaborator reflection and quoting terms
+   + Requires extension `%language ElabReflection`
+   + API defined in `Language.Reflection`, including functions for getting types
+     of global names, constructors of data types, and adding new top level
+     declarations
 
 Changes since Idris 2 v0.1.0
 ----------------------------

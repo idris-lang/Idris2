@@ -248,10 +248,11 @@ mutual
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
       = pure $ IQuote fc !(desugarB side ps tm)
+  desugarB side ps (PQuoteName fc n)
+      = pure $ IQuoteName fc n
   desugarB side ps (PQuoteDecl fc x)
-      = do [x'] <- desugarDecl ps x
-              | _ => throw (GenericMsg fc "Can't quote this declaration")
-           pure $ IQuoteDecl fc x'
+      = do xs <- traverse (desugarDecl ps) x
+           pure $ IQuoteDecl fc (concat xs)
   desugarB side ps (PUnquote fc tm)
       = pure $ IUnquote fc !(desugarB side ps tm)
   desugarB side ps (PRunElab fc tm)

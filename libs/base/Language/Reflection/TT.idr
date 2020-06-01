@@ -1,5 +1,7 @@
 module Language.Reflection.TT
 
+import public Data.List
+
 public export
 FilePos : Type
 FilePos = (Int, Int)
@@ -24,6 +26,10 @@ public export
 data Constant
     = I Int
     | BI Integer
+    | B8 Int
+    | B16 Int
+    | B32 Int
+    | B64 Integer
     | Str String
     | Ch Char
     | Db Double
@@ -31,6 +37,10 @@ data Constant
 
     | IntType
     | IntegerType
+    | Bits8Type
+    | Bits16Type
+    | Bits32Type
+    | Bits64Type
     | StringType
     | CharType
     | DoubleType
@@ -40,6 +50,17 @@ public export
 data Name = UN String
           | MN String Int
           | NS (List String) Name
+
+export
+Show Name where
+  show (NS ns n) = showSep "." (reverse ns) ++ "." ++ show n
+    where
+      showSep : String -> List String -> String
+      showSep sep [] = ""
+      showSep sep [x] = x
+      showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+  show (UN x) = x
+  show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
 
 public export
 data Count = M0 | M1 | MW
