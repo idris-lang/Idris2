@@ -1,0 +1,9 @@
+1/1: Building refdecl (refdecl.idr)
+refdecl.idr:13:16--14:1:While processing right hand side of bad at refdecl.idr:13:1--14:1:
+When unifying Elab () and Elab TT
+Mismatch between:
+	()
+and
+	TT
+Main> 9400
+Main> Bye for now!
