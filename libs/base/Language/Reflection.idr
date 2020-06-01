@@ -3,6 +3,8 @@ module Language.Reflection
 import public Language.Reflection.TT
 import public Language.Reflection.TTImp
 
+-- Elaboration scripts. Where types/terms are returned, binders will have
+-- unique, if not necessarily human readabe, names
 export
 data Elab : Type -> Type where
      Pure : a -> Elab a
@@ -17,19 +19,20 @@ data Elab : Type -> Type where
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
+     -- Get the names of local variables in scope
+     LocalVars : Elab (List Name)
      -- Generate a new unique name, based on the given string
      GenSym : String -> Elab Name
      -- Put a name in the current namespace
      InCurrentNS : Name -> Elab Name
-
      -- Get the types of every name which matches.
      -- There may be ambiguities - returns a list of fully explicit names
      -- and their types. If there's no results, the name is undefined.
      GetType : Name -> Elab (List (Name, TTImp))
-
+     -- Get the type of a local variable
+     GetLocalType : Name -> Elab TTImp
      -- Get the constructors of a data type. The name must be fully resolved.
      GetCons : Name -> Elab (List Name)
-
      -- Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
@@ -80,6 +83,10 @@ goal : Elab (Maybe TTImp)
 goal = Goal
 
 export
+localVars : Elab (List Name)
+localVars = LocalVars
+
+export
 genSym : String -> Elab Name
 genSym = GenSym
 
@@ -90,6 +97,10 @@ inCurrentNS = InCurrentNS
 export
 getType : Name -> Elab (List (Name, TTImp))
 getType = GetType
+
+export
+getLocalType : Name -> Elab TTImp
+getLocalType = GetLocalType
 
 export
 getCons : Name -> Elab (List Name)
