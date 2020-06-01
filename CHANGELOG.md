@@ -14,6 +14,9 @@ Language changes:
    + API defined in `Language.Reflection`, including functions for getting types
      of global names, constructors of data types, and adding new top level
      declarations
+   + Implemented `%macro` function flag, to remove the syntactic noise of
+     invoking elaborator scripts. This means the function must always
+     be fully applied, and is run under `%runElab`
 
 Changes since Idris 2 v0.1.0
 ----------------------------
