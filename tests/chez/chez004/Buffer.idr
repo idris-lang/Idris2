@@ -24,6 +24,10 @@ main
          val <- getString buf 26 6
          printLn val
 
+         setBits16 buf 32 65535
+         val <- getBits16 buf 32
+         printLn val
+
          ds <- bufferData buf
          printLn ds
 

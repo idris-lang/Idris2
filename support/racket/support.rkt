@@ -10,11 +10,17 @@
     ((0) '())
     ((1) (cons (vector-ref desc 2)
                (blodwen-read-args (vector-ref desc 3)))))))
-(define b+ (lambda (x y bits) (remainder (+ x y) (expt 2 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (expt 2 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (expt 2 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (expt 2 bits))))
+(define b+ (lambda (x y bits) (remainder (+ x y) (arithmetic-shift 1 bits))))
+(define b- (lambda (x y bits) (remainder (- x y) (arithmetic-shift 1 bits))))
+(define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
+(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
 
+(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+
+(define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))
 (define blodwen-and (lambda (x y) (bitwise-and x y)))
@@ -97,17 +103,35 @@
 (define (blodwen-buffer-getbyte buf loc)
   (bytevector-u8-ref buf loc))
 
-(define (blodwen-buffer-setint buf loc val)
-  (bytevector-s64-set! buf loc val (native-endianness)))
+(define (blodwen-buffer-setbits16 buf loc val)
+  (bytevector-u16-set! buf loc val (native-endianness)))
 
-(define (blodwen-buffer-getint buf loc)
-  (bytevector-s64-ref buf loc (native-endianness)))
+(define (blodwen-buffer-getbits16 buf loc)
+  (bytevector-u16-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setbits32 buf loc val)
+  (bytevector-u32-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getbits32 buf loc)
+  (bytevector-u32-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setbits64 buf loc val)
+  (bytevector-u64-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getbits64 buf loc)
+  (bytevector-u64-ref buf loc (native-endianness)))
 
 (define (blodwen-buffer-setint32 buf loc val)
   (bytevector-s32-set! buf loc val (native-endianness)))
 
 (define (blodwen-buffer-getint32 buf loc)
   (bytevector-s32-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setint buf loc val)
+  (bytevector-s64-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getint buf loc)
+  (bytevector-s64-ref buf loc (native-endianness)))
 
 (define (blodwen-buffer-setdouble buf loc val)
   (bytevector-ieee-double-set! buf loc val (native-endianness)))

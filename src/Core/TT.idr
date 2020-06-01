@@ -24,6 +24,11 @@ public export
 data Constant
     = I Int
     | BI Integer
+    | B8 Int -- For now, since we don't have Bits types. We need to
+                -- make sure the Integer remains in range
+    | B16 Int
+    | B32 Int
+    | B64 Integer
     | Str String
     | Ch Char
     | Db Double
@@ -31,6 +36,10 @@ data Constant
 
     | IntType
     | IntegerType
+    | Bits8Type
+    | Bits16Type
+    | Bits32Type
+    | Bits64Type
     | StringType
     | CharType
     | DoubleType
@@ -64,12 +73,20 @@ export
 Show Constant where
   show (I x) = show x
   show (BI x) = show x
+  show (B8 x) = show x
+  show (B16 x) = show x
+  show (B32 x) = show x
+  show (B64 x) = show x
   show (Str x) = show x
   show (Ch x) = show x
   show (Db x) = show x
   show WorldVal = "%MkWorld"
   show IntType = "Int"
   show IntegerType = "Integer"
+  show Bits8Type = "Bits8"
+  show Bits16Type = "Bits16"
+  show Bits32Type = "Bits32"
+  show Bits64Type = "Bits64"
   show StringType = "String"
   show CharType = "Char"
   show DoubleType = "Double"
@@ -79,12 +96,20 @@ export
 Eq Constant where
   (I x) == (I y) = x == y
   (BI x) == (BI y) = x == y
+  (B8 x) == (B8 y) = x == y
+  (B16 x) == (B16 y) = x == y
+  (B32 x) == (B32 y) = x == y
+  (B64 x) == (B64 y) = x == y
   (Str x) == (Str y) = x == y
   (Ch x) == (Ch y) = x == y
   (Db x) == (Db y) = x == y
   WorldVal == WorldVal = True
   IntType == IntType = True
   IntegerType == IntegerType = True
+  Bits8Type == Bits8Type = True
+  Bits16Type == Bits16Type = True
+  Bits32Type == Bits32Type = True
+  Bits64Type == Bits64Type = True
   StringType == StringType = True
   CharType == CharType = True
   DoubleType == DoubleType = True
@@ -97,10 +122,14 @@ constTag : Constant -> Int
 -- 1 = ->, 2 = Type
 constTag IntType = 3
 constTag IntegerType = 4
-constTag StringType = 5
-constTag CharType = 6
-constTag DoubleType = 7
-constTag WorldType = 8
+constTag Bits8Type = 5
+constTag Bits16Type = 6
+constTag Bits32Type = 7
+constTag Bits64Type = 8
+constTag StringType = 9
+constTag CharType = 10
+constTag DoubleType = 11
+constTag WorldType = 12
 constTag _ = 0
 
 -- All the internal operators, parameterised by their arity

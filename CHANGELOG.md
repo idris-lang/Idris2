@@ -1,3 +1,15 @@
+Changes since Idris 2 v0.2.0
+----------------------------
+
+Language changes:
+
+* `Bits8`, `Bits16`, `Bits32` and `Bits64` primitive types added, with:
+   + `Num`, `Eq`, `Ord` and `Show` implementations.
+   + Casts from `Integer`, for literals
+   + Casts to `Int` (except `Bits64` which might not fit), `Integer` and `String`
+   + Passed to C FFI as `unsigned`
+   + Primitives added in `Data.Buffer`
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 

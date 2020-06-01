@@ -1,0 +1,5 @@
+tests8
+testsCmp
+testsMax
+:exec main
+:q
