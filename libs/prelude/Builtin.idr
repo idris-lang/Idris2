@@ -6,6 +6,11 @@ module Builtin
 
 ||| Assert to the totality checker that the given expression will always
 ||| terminate.
+|||
+||| The multiplicity of its argument is 1, so `assert_total` won't affect how
+||| many times variables are used. If you're not writing a linear function,
+||| this doesn't make a difference.
+|||
 ||| Note: assert_total can reduce at compile time, if required for unification,
 ||| which might mean that it's no longer guarded a subexpression. Therefore,
 ||| it is best to use it around the smallest possible subexpression.
@@ -17,8 +22,14 @@ assert_total x = x
 ||| Assert to the totality checker that y is always structurally smaller than x
 ||| (which is typically a pattern argument, and *must* be in normal form for
 ||| this to work).
-||| The multiplicity of x is 0, so passing a value as the first argument won't
-||| affect how many times it is consumed in a linear function.
+|||
+||| The multiplicity of x is 0, so in a linear function, you can pass values to
+||| x even if they have already been used.
+||| The multiplicity of y is 1, so `assert_smaller` won't affect how many times
+||| its y argument is used.
+||| If you're not writing a linear function, the multiplicities don't make a
+||| difference.
+|||
 ||| @ x the larger value (typically a pattern argument)
 ||| @ y the smaller value (typically an argument to a recursive call)
 %inline
