@@ -123,6 +123,10 @@ data Loaded : Type where
 -- Label for noting which struct types are declared
 data Structs : Type where
 
+notWorld : CFType -> Bool
+notWorld CFWorld = False
+notWorld _ = True
+
 cType : FC -> CFType -> Core String
 cType fc CFUnit = pure "void"
 cType fc CFInt = pure "int"
@@ -139,7 +143,7 @@ cType fc (CFFun s t) = funTySpec [s] t
     funTySpec args (CFFun s t) = funTySpec (s :: args) t
     funTySpec args retty
         = do rtyspec <- cType fc retty
-             argspecs <- traverse (cType fc) (reverse args)
+             argspecs <- traverse (cType fc) (reverse . filter notWorld $ args)
              pure $ rtyspec ++ " (*)(" ++ showSep ", " argspecs ++ ")"
 cType fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                        " to foreign function"))
@@ -161,7 +165,7 @@ cftySpec fc (CFFun s t) = funTySpec [s] t
     funTySpec args (CFFun s t) = funTySpec (s :: args) t
     funTySpec args retty
         = do rtyspec <- cftySpec fc retty
-             argspecs <- traverse (cftySpec fc) (reverse args)
+             argspecs <- traverse (cftySpec fc) (reverse . filter notWorld $ args)
              pure $ "(function (" ++ showSep " " argspecs ++ ") " ++ rtyspec ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
@@ -236,15 +240,18 @@ cCall fc cfn fnWrapName clib args ret
           cWrapName = replaceChar '-' '_' schemeWrap
           boxDef = "\n(define " ++ box ++ " (box #f))\n"
 
-          args = showSep " " $ map (\i => "farg-" ++ show i) [0 .. (natToInteger $ length argTypes) - 1]
+          args =
+            if length argTypes > 0
+              then " " ++ (showSep " " $ map (\i => "farg-" ++ show i) [0 .. (natToInteger $ length argTypes) - 1])
+              else ""
 
           cWrapDef =
             "\n(c-define " ++
-            "(" ++ schemeWrap ++ " " ++ args ++ ")" ++
+            "(" ++ schemeWrap ++ args ++ ")" ++
             " (" ++ showSep " " argTypes ++ ")" ++
             " " ++ retType ++
             " \"" ++ cWrapName ++ "\"" ++ " \"\"" ++
-            "\n ((unbox " ++ box ++ ") " ++ args ++ ")" ++
+            "\n ((unbox " ++ box ++ ")" ++ args ++ ")" ++
             "\n)\n"
       in MkCWrapperDefs setBox boxDef cWrapDef
 
@@ -259,10 +266,6 @@ cCall fc cfn fnWrapName clib args ret
         = let argns = mkNs 0 args in
               "(lambda (" ++ showSep " " (mapMaybe id argns) ++ ") "
               ++ (applyLams n argns ++ ")")
-
-    notWorld : CFType -> Bool
-    notWorld CFWorld = False
-    notWorld _ = True
 
     callback : String -> List CFType -> CFType -> Core (String, List String, String)
     callback n args (CFFun s t) = callback n (s :: args) t
