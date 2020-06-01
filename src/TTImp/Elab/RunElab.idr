@@ -96,6 +96,11 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                      lookupDefExact cn (gamma defs)
                  | _ => throw (GenericMsg fc (show cn ++ " is not a type"))
              scriptRet cons
+    elabCon defs "Declare" [d]
+        = do d' <- evalClosure defs d
+             decls <- reify defs d'
+             traverse_ (processDecl [] (MkNested []) []) decls
+             scriptRet ()
     elabCon defs n args = failWith defs
 elabScript fc elabinfo nest env script exp
     = do defs <- get Ctxt

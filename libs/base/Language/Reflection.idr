@@ -23,8 +23,11 @@ data Elab : Type -> Type where
      -- and their types. If there's no results, the name is undefined.
      GetType : Name -> Elab (List (Name, TTImp))
 
-     -- Get the constructors of a data type
+     -- Get the constructors of a data type. The name must be fully resolved.
      GetCons : Name -> Elab (List Name)
+
+     -- Check a group of top level declarations
+     Declare : List Decl -> Elab ()
 
 mutual
   export
@@ -79,3 +82,7 @@ getType = GetType
 export
 getCons : Name -> Elab (List Name)
 getCons = GetCons
+
+export
+declare : List Decl -> Elab ()
+declare = Declare

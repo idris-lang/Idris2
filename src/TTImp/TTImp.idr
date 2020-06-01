@@ -92,7 +92,7 @@ mutual
        -- Quasiquoting
        IQuote : FC -> RawImp -> RawImp
        IQuoteName : FC -> Name -> RawImp
-       IQuoteDecl : FC -> ImpDecl -> RawImp
+       IQuoteDecl : FC -> List ImpDecl -> RawImp
        IUnquote : FC -> RawImp -> RawImp
        IRunElab : FC -> RawImp -> RawImp
 

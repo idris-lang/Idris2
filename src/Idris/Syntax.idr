@@ -54,7 +54,7 @@ mutual
        PPrimVal : FC -> Constant -> PTerm
        PQuote : FC -> PTerm -> PTerm
        PQuoteName : FC -> Name -> PTerm
-       PQuoteDecl : FC -> PDecl -> PTerm
+       PQuoteDecl : FC -> List PDecl -> PTerm
        PUnquote : FC -> PTerm -> PTerm
        PRunElab : FC -> PTerm -> PTerm
        PHole : FC -> (bracket : Bool) -> (holename : String) -> PTerm
@@ -441,7 +441,7 @@ mutual
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
     showPrec d (PQuoteName _ n) = "`{{" ++ showPrec d n ++ "}}"
-    showPrec d (PQuoteDecl _ tm) = "`( <<declaration>> )"
+    showPrec d (PQuoteDecl _ tm) = "`[ <<declaration>> ]"
     showPrec d (PUnquote _ tm) = "~(" ++ showPrec d tm ++ ")"
     showPrec d (PRunElab _ tm) = "%runElab " ++ showPrec d tm
     showPrec d (PPrimVal _ c) = showPrec d c
@@ -693,7 +693,7 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x) =
-      PQuoteDecl fc <$> goPDecl x
+      PQuoteDecl fc <$> traverse goPDecl x
       >>= f
     goPTerm (PUnquote fc x) =
       PUnquote fc <$> goPTerm x
