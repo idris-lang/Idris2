@@ -44,6 +44,10 @@ constant
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
                            Ident "Integer" => Just IntegerType
+                           Ident "Bits8"   => Just Bits8Type
+                           Ident "Bits16"  => Just Bits16Type
+                           Ident "Bits32"  => Just Bits32Type
+                           Ident "Bits64"  => Just Bits64Type
                            Ident "String"  => Just StringType
                            _ => Nothing)
 
@@ -160,8 +164,8 @@ holeName
 
 reservedNames : List String
 reservedNames
-    = ["Type", "Int", "Integer", "String", "Char", "Double",
-       "Lazy", "Inf", "Force", "Delay"]
+    = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
+       "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
 export
 name : Rule Name

@@ -107,32 +107,48 @@ export
 TTC Constant where
   toBuf b (I x) = do tag 0; toBuf b x
   toBuf b (BI x) = do tag 1; toBuf b x
-  toBuf b (Str x) = do tag 2; toBuf b x
-  toBuf b (Ch x) = do tag 3; toBuf b x
-  toBuf b (Db x) = do tag 4; toBuf b x
+  toBuf b (B8 x) = do tag 2; toBuf b x
+  toBuf b (B16 x) = do tag 3; toBuf b x
+  toBuf b (B32 x) = do tag 4; toBuf b x
+  toBuf b (B64 x) = do tag 5; toBuf b x
+  toBuf b (Str x) = do tag 6; toBuf b x
+  toBuf b (Ch x) = do tag 7; toBuf b x
+  toBuf b (Db x) = do tag 8; toBuf b x
 
-  toBuf b WorldVal = tag 5
-  toBuf b IntType = tag 6
-  toBuf b IntegerType = tag 7
-  toBuf b StringType = tag 8
-  toBuf b CharType = tag 9
-  toBuf b DoubleType = tag 10
-  toBuf b WorldType = tag 11
+  toBuf b WorldVal = tag 9
+  toBuf b IntType = tag 10
+  toBuf b IntegerType = tag 11
+  toBuf b Bits8Type = tag 12
+  toBuf b Bits16Type = tag 13
+  toBuf b Bits32Type = tag 14
+  toBuf b Bits64Type = tag 15
+  toBuf b StringType = tag 16
+  toBuf b CharType = tag 17
+  toBuf b DoubleType = tag 18
+  toBuf b WorldType = tag 19
 
   fromBuf b
       = case !getTag of
              0 => do x <- fromBuf b; pure (I x)
              1 => do x <- fromBuf b; pure (BI x)
-             2 => do x <- fromBuf b; pure (Str x)
-             3 => do x <- fromBuf b; pure (Ch x)
-             4 => do x <- fromBuf b; pure (Db x)
-             5 => pure WorldVal
-             6 => pure IntType
-             7 => pure IntegerType
-             8 => pure StringType
-             9 => pure CharType
-             10 => pure DoubleType
-             11 => pure WorldType
+             2 => do x <- fromBuf b; pure (B8 x)
+             3 => do x <- fromBuf b; pure (B16 x)
+             4 => do x <- fromBuf b; pure (B32 x)
+             5 => do x <- fromBuf b; pure (B64 x)
+             6 => do x <- fromBuf b; pure (Str x)
+             7 => do x <- fromBuf b; pure (Ch x)
+             8 => do x <- fromBuf b; pure (Db x)
+             9 => pure WorldVal
+             10 => pure IntType
+             11 => pure IntegerType
+             12 => pure Bits8Type
+             13 => pure Bits16Type
+             14 => pure Bits32Type
+             15 => pure Bits64Type
+             16 => pure StringType
+             17 => pure CharType
+             18 => pure DoubleType
+             19 => pure WorldType
              _ => corrupt "Constant"
 
 export
@@ -662,29 +678,31 @@ export
 TTC CFType where
   toBuf b CFUnit = tag 0
   toBuf b CFInt = tag 1
-  toBuf b CFString = tag 2
-  toBuf b CFDouble = tag 3
-  toBuf b CFChar = tag 4
-  toBuf b CFPtr = tag 5
-  toBuf b CFWorld = tag 6
-  toBuf b (CFFun s t) = do tag 7; toBuf b s; toBuf b t
-  toBuf b (CFIORes t) = do tag 8; toBuf b t
-  toBuf b (CFStruct n a) = do tag 9; toBuf b n; toBuf b a
-  toBuf b (CFUser n a) = do tag 10; toBuf b n; toBuf b a
+  toBuf b CFUnsigned = tag 2
+  toBuf b CFString = tag 3
+  toBuf b CFDouble = tag 4
+  toBuf b CFChar = tag 5
+  toBuf b CFPtr = tag 6
+  toBuf b CFWorld = tag 7
+  toBuf b (CFFun s t) = do tag 8; toBuf b s; toBuf b t
+  toBuf b (CFIORes t) = do tag 9; toBuf b t
+  toBuf b (CFStruct n a) = do tag 10; toBuf b n; toBuf b a
+  toBuf b (CFUser n a) = do tag 11; toBuf b n; toBuf b a
 
   fromBuf b
       = case !getTag of
              0 => pure CFUnit
              1 => pure CFInt
-             2 => pure CFString
-             3 => pure CFDouble
-             4 => pure CFChar
-             5 => pure CFPtr
-             6 => pure CFWorld
-             7 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
-             8 => do t <- fromBuf b; pure (CFIORes t)
-             9 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
-             10 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
+             2 => pure CFUnsigned
+             3 => pure CFString
+             4 => pure CFDouble
+             5 => pure CFChar
+             6 => pure CFPtr
+             7 => pure CFWorld
+             8 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
+             9 => do t <- fromBuf b; pure (CFIORes t)
+             10 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
+             11 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
              _ => corrupt "CFType"
 
 export

@@ -285,6 +285,18 @@ Reify Constant where
              (NS _ (UN "BI"), [x])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (BI x')
+             (NS _ (UN "B8"), [x])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (B8 x')
+             (NS _ (UN "B16"), [x])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (B16 x')
+             (NS _ (UN "B32"), [x])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (B32 x')
+             (NS _ (UN "B64"), [x])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (B64 x')
              (NS _ (UN "Str"), [x])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Str x')
@@ -300,6 +312,14 @@ Reify Constant where
                   => pure IntType
              (NS _ (UN "IntegerType"), [])
                   => pure IntegerType
+             (NS _ (UN "Bits8Type"), [])
+                  => pure Bits8Type
+             (NS _ (UN "Bits16Type"), [])
+                  => pure Bits16Type
+             (NS _ (UN "Bits32Type"), [])
+                  => pure Bits32Type
+             (NS _ (UN "Bits64Type"), [])
+                  => pure Bits64Type
              (NS _ (UN "StringType"), [])
                   => pure StringType
              (NS _ (UN "CharType"), [])
@@ -319,6 +339,18 @@ Reflect Constant where
   reflect fc defs env (BI x)
       = do x' <- reflect fc defs env x
            appCon fc defs (reflectiontt "BI") [x']
+  reflect fc defs env (B8 x)
+      = do x' <- reflect fc defs env x
+           appCon fc defs (reflectiontt "B8") [x']
+  reflect fc defs env (B16 x)
+      = do x' <- reflect fc defs env x
+           appCon fc defs (reflectiontt "B16") [x']
+  reflect fc defs env (B32 x)
+      = do x' <- reflect fc defs env x
+           appCon fc defs (reflectiontt "B32") [x']
+  reflect fc defs env (B64 x)
+      = do x' <- reflect fc defs env x
+           appCon fc defs (reflectiontt "B64") [x']
   reflect fc defs env (Str x)
       = do x' <- reflect fc defs env x
            appCon fc defs (reflectiontt "Str") [x']
@@ -334,6 +366,14 @@ Reflect Constant where
       = getCon fc defs (reflectiontt "IntType")
   reflect fc defs env IntegerType
       = getCon fc defs (reflectiontt "IntegerType")
+  reflect fc defs env Bits8Type
+      = getCon fc defs (reflectiontt "Bits8Type")
+  reflect fc defs env Bits16Type
+      = getCon fc defs (reflectiontt "Bits16Type")
+  reflect fc defs env Bits32Type
+      = getCon fc defs (reflectiontt "Bits32Type")
+  reflect fc defs env Bits64Type
+      = getCon fc defs (reflectiontt "Bits64Type")
   reflect fc defs env StringType
       = getCon fc defs (reflectiontt "StringType")
   reflect fc defs env CharType

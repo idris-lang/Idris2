@@ -108,6 +108,7 @@ data Done : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
+cftySpec fc CFUnsigned = pure "_uint"
 cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
