@@ -27,6 +27,12 @@ logBad
          logMsg 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
+tryGenSym : Elab TT
+tryGenSym
+   = do n <- genSym "plus"
+        ns <- inCurrentNS n
+        fail $ "failed after generating " ++ show ns
+
 dummy1 : a
 dummy1 = %runElab logPrims
 
@@ -35,4 +41,7 @@ dummy2 = %runElab logDataCons
 
 dummy3 : a
 dummy3 = %runElab logBad
+
+dummy4 : a
+dummy4 = %runElab tryGenSym
 

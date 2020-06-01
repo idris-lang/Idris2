@@ -17,6 +17,7 @@ import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
 import TTImp.Unelab
+import TTImp.Utils
 
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -81,6 +82,14 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                                      !(reflect fc defs env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
              scriptRet (Just !(unelabNoSugar env ty))
+    elabCon defs "GenSym" [str]
+        = do str' <- evalClosure defs str
+             n <- uniqueName defs [] !(reify defs str')
+             scriptRet (UN n)
+    elabCon defs "InCurrentNS" [n]
+        = do n' <- evalClosure defs n
+             nsn <- inCurrentNS !(reify defs n')
+             scriptRet nsn
     elabCon defs "GetType" [n]
         = do n' <- evalClosure defs n
              res <- lookupTyName !(reify defs n') (gamma defs)

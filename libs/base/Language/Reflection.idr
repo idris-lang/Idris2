@@ -17,6 +17,10 @@ data Elab : Type -> Type where
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
+     -- Generate a new unique name, based on the given string
+     GenSym : String -> Elab Name
+     -- Put a name in the current namespace
+     InCurrentNS : Name -> Elab Name
 
      -- Get the types of every name which matches.
      -- There may be ambiguities - returns a list of fully explicit names
@@ -74,6 +78,14 @@ check = Check
 export
 goal : Elab (Maybe TTImp)
 goal = Goal
+
+export
+genSym : String -> Elab Name
+genSym = GenSym
+
+export
+inCurrentNS : Name -> Elab Name
+inCurrentNS = InCurrentNS
 
 export
 getType : Name -> Elab (List (Name, TTImp))
