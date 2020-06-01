@@ -796,6 +796,9 @@ mutual
       = do (bound, blhs) <- bindNames False !(desugar LHS ps lhs)
            rhs' <- desugar AnyExpr (bound ++ ps) rhs
            pure [ITransform fc (UN n) blhs rhs']
+  desugarDecl ps (PRunElabDecl fc tm)
+      = do tm' <- desugar AnyExpr ps tm
+           pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma (\nest, env => hide fc n)]

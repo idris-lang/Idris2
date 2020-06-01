@@ -394,6 +394,8 @@ mutual
       = pure (Just (PTransform fc (show n)
                                   !(toPTerm startPrec lhs)
                                   !(toPTerm startPrec rhs)))
+  toPDecl (IRunElabDecl fc tm)
+      = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
 

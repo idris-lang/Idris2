@@ -19,15 +19,15 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+export
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             {auto e : Ref EST (EState vars)} ->
-             FC -> ElabInfo -> NestedNames vars ->
+             FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
-elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
+elabScript fc nest env (NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
@@ -49,11 +49,11 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" [_,val] = evalClosure defs val
     elabCon defs "Bind" [_,_,act,k]
-        = do act' <- elabScript fc elabinfo nest env
+        = do act' <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
                   NBind _ x (Lam _ _ _) sc =>
-                      elabScript fc elabinfo nest env
+                      elabScript fc nest env
                                  !(sc defs (toClosure withAll env
                                                  !(quote defs env act'))) exp
                   _ => failWith defs
@@ -111,7 +111,7 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
              traverse_ (processDecl [] (MkNested []) []) decls
              scriptRet ()
     elabCon defs n args = failWith defs
-elabScript fc elabinfo nest env script exp
+elabScript fc nest env script exp
     = do defs <- get Ctxt
          empty <- clearDefs defs
          throw (BadRunElab fc env !(quote empty env script))
@@ -130,10 +130,14 @@ checkRunElab rig elabinfo nest env fc script exp
     = do defs <- get Ctxt
          when (not (isExtension ElabReflection defs)) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
+         let n = NS ["Reflection", "Language"] (UN "Elab")
+         let ttn = reflectiontt "TT"
+         tt <- getCon fc defs ttn
+         elabtt <- appCon fc defs n [tt]
          (stm, sty) <- runDelays 0 $
-                           check rig elabinfo nest env script Nothing
+                           check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript fc elabinfo nest env
+         ntm <- elabScript fc nest env
                            !(nfOpts withAll defs env stm) exp
          defs <- get Ctxt -- might have updated as part of the script
          check rig elabinfo nest env !(reify defs ntm) exp

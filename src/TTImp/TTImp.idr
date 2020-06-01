@@ -332,6 +332,7 @@ mutual
                  Visibility -> ImpRecord -> ImpDecl
        INamespace : FC -> List String -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
+       IRunElabDecl : FC -> RawImp -> ImpDecl
        IPragma : ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
@@ -351,6 +352,8 @@ mutual
           showSep "\n" (assert_total $ map show decls)
     show (ITransform _ n lhs rhs)
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
+    show (IRunElabDecl _ tm)
+        = "%runElab " ++ show tm
     show (IPragma _) = "[externally defined pragma]"
     show (ILog lvl) = "%logging " ++ show lvl
 
@@ -971,9 +974,11 @@ mutual
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b ds
     toBuf b (ITransform fc n lhs rhs)
         = do tag 6; toBuf b fc; toBuf b n; toBuf b lhs; toBuf b rhs
+    toBuf b (IRunElabDecl fc tm)
+        = do tag 7; toBuf b fc; toBuf b tm
     toBuf b (IPragma f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
-        = do tag 7; toBuf b n
+        = do tag 8; toBuf b n
 
     fromBuf b
         = case !getTag of
@@ -999,7 +1004,9 @@ mutual
                6 => do fc <- fromBuf b; n <- fromBuf b
                        lhs <- fromBuf b; rhs <- fromBuf b
                        pure (ITransform fc n lhs rhs)
-               7 => do n <- fromBuf b
+               7 => do fc <- fromBuf b; tm <- fromBuf b
+                       pure (IRunElabDecl fc tm)
+               8 => do n <- fromBuf b
                        pure (ILog n)
                _ => corrupt "ImpDecl"
 

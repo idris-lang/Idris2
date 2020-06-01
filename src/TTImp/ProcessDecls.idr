@@ -16,6 +16,7 @@ import TTImp.ProcessData
 import TTImp.ProcessDef
 import TTImp.ProcessParams
 import TTImp.ProcessRecord
+import TTImp.ProcessRunElab
 import TTImp.ProcessTransform
 import TTImp.ProcessType
 import TTImp.TTImp
@@ -52,6 +53,8 @@ process eopts nest env (INamespace fc ns decls)
          put Ctxt (record { currentNS = cns } defs)
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
+process eopts nest env (IRunElabDecl fc tm)
+    = processRunElab eopts nest env fc tm
 process eopts nest env (IPragma act)
     = act nest env
 process eopts nest env (ILog n)
