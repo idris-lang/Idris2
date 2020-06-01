@@ -243,6 +243,10 @@ Reflect Name where
       = do ns' <- reflect fc defs env ns
            n' <- reflect fc defs env n
            appCon fc defs (reflectiontt "NS") [ns', n']
+  reflect fc defs env (Resolved i)
+      = case !(full (gamma defs) (Resolved i)) of
+             Resolved _ => cantReflect fc "Name"
+             n => reflect fc defs env n
   reflect fc defs env val = cantReflect fc "Name"
 
 export

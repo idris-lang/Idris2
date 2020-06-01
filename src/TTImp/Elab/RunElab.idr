@@ -56,6 +56,10 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                                  !(sc defs (toClosure withAll env
                                                  !(quote defs env act'))) exp
                   _ => failWith defs
+    elabCon defs "Fail" [_,msg]
+        = do msg' <- evalClosure defs msg
+             throw (GenericMsg fc ("Error during reflection: " ++
+                                      !(reify defs msg')))
     elabCon defs "LogMsg" [lvl, str]
         = do lvl' <- evalClosure defs lvl
              logC !(reify defs lvl') $
@@ -77,6 +81,21 @@ elabScript fc elabinfo nest env (NDCon nfc nm t ar args) exp
                                      !(reflect fc defs env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
              scriptRet (Just !(unelabNoSugar env ty))
+    elabCon defs "GetType" [n]
+        = do n' <- evalClosure defs n
+             res <- lookupTyName !(reify defs n') (gamma defs)
+             scriptRet !(traverse unelabType res)
+      where
+        unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
+        unelabType (n, _, ty)
+            = pure (n, !(unelabNoSugar [] ty))
+    elabCon defs "GetCons" [n]
+        = do n' <- evalClosure defs n
+             cn <- reify defs n'
+             Just (TCon _ _ _ _ _ _ cons _) <-
+                     lookupDefExact cn (gamma defs)
+                 | _ => throw (GenericMsg fc (show cn ++ " is not a type"))
+             scriptRet cons
     elabCon defs n args = failWith defs
 elabScript fc elabinfo nest env script exp
     = do defs <- get Ctxt
