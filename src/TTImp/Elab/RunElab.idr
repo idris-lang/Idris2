@@ -85,6 +85,11 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
              nf empty env checktm
+    elabCon defs "Quote" [exp, tm]
+        = do tm' <- evalClosure defs tm
+             defs <- get Ctxt
+             empty <- clearDefs defs
+             scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Goal" []
         = do let Just gty = exp
                  | Nothing => nfOpts withAll defs env

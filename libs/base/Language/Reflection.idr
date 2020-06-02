@@ -16,6 +16,8 @@ data Elab : Type -> Type where
 
      -- Elaborate a TTImp term to a concrete value
      Check : {expected : Type} -> TTImp -> Elab expected
+     -- Quote a concrete expression back to a TTImp
+     Quote : val -> Elab TTImp
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
@@ -76,6 +78,10 @@ logGoal n msg
 export
 check : {expected : Type} -> TTImp -> Elab expected
 check = Check
+
+export
+quote : val -> Elab TTImp
+quote = Quote
 
 export
 goal : Elab (Maybe TTImp)
