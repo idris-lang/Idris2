@@ -444,7 +444,7 @@ Reify t => Reify (PiInfo t) where
              (NS _ (UN "ImplicitArg"), _) => pure Implicit
              (NS _ (UN "ExplicitArg"), _) => pure Explicit
              (NS _ (UN "AutoImplicit"), _) => pure AutoImplicit
-             (NS _ (UN "DefImplicit"), [t])
+             (NS _ (UN "DefImplicit"), [_, t])
                  => do t' <- reify defs !(evalClosure defs t)
                        pure (DefImplicit t')
              _ => cantReify val "PiInfo"
@@ -452,12 +452,15 @@ Reify t => Reify (PiInfo t) where
 
 export
 Reflect t => Reflect (PiInfo t) where
-  reflect fc defs env Implicit = getCon fc defs (reflectiontt "ImplicitArg")
-  reflect fc defs env Explicit = getCon fc defs (reflectiontt "ExplicitArg")
-  reflect fc defs env AutoImplicit = getCon fc defs (reflectiontt "AutoImplicit")
+  reflect fc defs env Implicit
+      = appCon fc defs (reflectiontt "ImplicitArg") [Erased fc False]
+  reflect fc defs env Explicit
+      = appCon fc defs (reflectiontt "ExplicitArg") [Erased fc False]
+  reflect fc defs env AutoImplicit
+      = appCon fc defs (reflectiontt "AutoImplicit") [Erased fc False]
   reflect fc defs env (DefImplicit t)
       = do t' <- reflect fc defs env t
-           appCon fc defs (reflectiontt "DefImplicit") [t']
+           appCon fc defs (reflectiontt "DefImplicit") [Erased fc False, t']
 
 export
 Reify LazyReason where
