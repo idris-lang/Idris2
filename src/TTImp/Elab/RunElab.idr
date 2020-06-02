@@ -81,7 +81,9 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
                  | Nothing => nfOpts withAll defs env
                                      !(reflect fc defs env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
-             scriptRet (Just !(unelabNoSugar env ty))
+             scriptRet (Just !(unelabUniqueBinders env ty))
+    elabCon defs "LocalVars" []
+        = scriptRet vars
     elabCon defs "GenSym" [str]
         = do str' <- evalClosure defs str
              n <- genVarName !(reify defs str')
@@ -97,7 +99,16 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, !(unelabNoSugar [] ty))
+            = pure (n, !(unelabUniqueBinders [] ty))
+    elabCon defs "GetLocalType" [n]
+        = do n' <- evalClosure defs n
+             n <- reify defs n'
+             case defined n env of
+                  Just (MkIsDefined rigb lv) =>
+                       do let binder = getBinder lv env
+                          let bty = binderType binder
+                          scriptRet !(unelabUniqueBinders env bty)
+                  _ => throw (GenericMsg fc (show n ++ " is not a local variable"))
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n
              cn <- reify defs n'

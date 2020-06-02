@@ -865,26 +865,28 @@ renameVarList prf (MkVar p) = renameLocalRef prf p
 
 export
 renameVars : CompatibleVars xs ys -> Term xs -> Term ys
-renameVars CompatPre tm = tm
-renameVars prf (Local fc r idx vprf)
-    = let MkVar vprf' = renameLocalRef prf vprf in
-          Local fc r _ vprf'
-renameVars prf (Ref fc x name) = Ref fc x name
-renameVars prf (Meta fc n i args)
-    = Meta fc n i (map (renameVars prf) args)
-renameVars prf (Bind fc x b scope)
-    = Bind fc x (map (renameVars prf) b) (renameVars (CompatExt prf) scope)
-renameVars prf (App fc fn arg)
-    = App fc (renameVars prf fn) (renameVars prf arg)
-renameVars prf (As fc s as tm)
-    = As fc s (renameVars prf as) (renameVars prf tm)
-renameVars prf (TDelayed fc r ty) = TDelayed fc r (renameVars prf ty)
-renameVars prf (TDelay fc r ty tm)
-    = TDelay fc r (renameVars prf ty) (renameVars prf tm)
-renameVars prf (TForce fc r x) = TForce fc r (renameVars prf x)
-renameVars prf (PrimVal fc c) = PrimVal fc c
-renameVars prf (Erased fc i) = Erased fc i
-renameVars prf (TType fc) = TType fc
+renameVars compat tm = believe_me tm -- no names in term, so it's identity
+-- This is how we would define it:
+-- renameVars CompatPre tm = tm
+-- renameVars prf (Local fc r idx vprf)
+--     = let MkVar vprf' = renameLocalRef prf vprf in
+--           Local fc r _ vprf'
+-- renameVars prf (Ref fc x name) = Ref fc x name
+-- renameVars prf (Meta fc n i args)
+--     = Meta fc n i (map (renameVars prf) args)
+-- renameVars prf (Bind fc x b scope)
+--     = Bind fc x (map (renameVars prf) b) (renameVars (CompatExt prf) scope)
+-- renameVars prf (App fc fn arg)
+--     = App fc (renameVars prf fn) (renameVars prf arg)
+-- renameVars prf (As fc s as tm)
+--     = As fc s (renameVars prf as) (renameVars prf tm)
+-- renameVars prf (TDelayed fc r ty) = TDelayed fc r (renameVars prf ty)
+-- renameVars prf (TDelay fc r ty tm)
+--     = TDelay fc r (renameVars prf ty) (renameVars prf tm)
+-- renameVars prf (TForce fc r x) = TForce fc r (renameVars prf x)
+-- renameVars prf (PrimVal fc c) = PrimVal fc c
+-- renameVars prf (Erased fc i) = Erased fc i
+-- renameVars prf (TType fc) = TType fc
 
 export
 renameTop : (m : Name) -> Term (n :: vars) -> Term (m :: vars)
