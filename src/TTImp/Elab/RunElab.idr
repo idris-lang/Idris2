@@ -84,8 +84,8 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              scriptRet (Just !(unelabNoSugar env ty))
     elabCon defs "GenSym" [str]
         = do str' <- evalClosure defs str
-             n <- uniqueName defs [] !(reify defs str')
-             scriptRet (UN n)
+             n <- genVarName !(reify defs str')
+             scriptRet n
     elabCon defs "InCurrentNS" [n]
         = do n' <- evalClosure defs n
              nsn <- inCurrentNS !(reify defs n')
