@@ -1096,6 +1096,10 @@ directive fname indents
          lvl <- intLit
          atEnd indents
          pure (AmbigDepth (fromInteger lvl))
+  <|> do pragma "auto_implicit_depth"
+         dpt <- intLit
+         atEnd indents
+         pure (AutoImplicitDepth (fromInteger dpt))
   <|> do pragma "pair"
          ty <- name
          f <- name
