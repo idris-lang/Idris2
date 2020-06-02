@@ -87,7 +87,7 @@ idrisTests
        "record001", "record002", "record003", "record004",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
-       "reflection005",
+       "reflection005", "reflection006",
        -- Miscellaneous regressions
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
