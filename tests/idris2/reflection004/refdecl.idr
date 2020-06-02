@@ -2,7 +2,7 @@ import Language.Reflection
 
 %language ElabReflection
 
-logDecls : TTImp -> Elab TT
+logDecls : TTImp -> Elab (Int -> Int)
 logDecls v
     = do declare [IClaim EmptyFC MW Public []
                  (MkTy EmptyFC `{{ Main.foo }}

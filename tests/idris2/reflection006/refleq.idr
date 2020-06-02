@@ -2,7 +2,7 @@ import Language.Reflection
 
 %language ElabReflection
 
-solveReflected : TTImp -> Elab TT
+solveReflected : TTImp -> Elab any
 solveReflected `(Builtin.Equal {a=_} {b=_} ~(left) ~(right))
     = do logTerm 0 "Left" left
          logTerm 0 "Right" right
@@ -12,7 +12,7 @@ solveReflected g
          fail "I don't know how to prove this"
 
 %macro
-prove : Elab TT
+prove : Elab any
 prove
     = do env <- localVars
          Just g <- goal

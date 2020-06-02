@@ -14,8 +14,8 @@ data Elab : Type -> Type where
      LogMsg : Nat -> String -> Elab ()
      LogTerm : Nat -> String -> TTImp -> Elab ()
 
-     -- Check a TTImp term against the current goal type
-     Check : TTImp -> Elab TT
+     -- Elaborate a TTImp term to a concrete value
+     Check : {expected : Type} -> TTImp -> Elab expected
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
@@ -73,9 +73,8 @@ logGoal n msg
               Nothing => pure ()
               Just t => logTerm n msg t
 
--- Check a TTImp term against the current goal type
 export
-check : TTImp -> Elab TT
+check : {expected : Type} -> TTImp -> Elab expected
 check = Check
 
 export
