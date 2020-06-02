@@ -4,6 +4,9 @@ PREFIX ?= $(HOME)/.idris2
 
 CC ?= clang
 
+# For Windows targets. Set to 1 to support Windows 7.
+OLD_WIN ?= 0
+
 ##################################################################
 
 RANLIB ?= ranlib
