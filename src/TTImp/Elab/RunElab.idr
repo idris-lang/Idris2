@@ -47,15 +47,18 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              nfOpts withAll defs env !(reflect fc defs False env tm)
 
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
-    elabCon defs "Pure" [_,val] = evalClosure defs val
+    elabCon defs "Pure" [_,val]
+        = do empty <- clearDefs defs
+             evalClosure empty val
     elabCon defs "Bind" [_,_,act,k]
         = do act' <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
                   NBind _ x (Lam _ _ _) sc =>
-                      elabScript fc nest env
+                      do empty <- clearDefs defs
+                         elabScript fc nest env
                                  !(sc defs (toClosure withAll env
-                                                 !(quote defs env act'))) exp
+                                                 !(quote empty env act'))) exp
                   _ => failWith defs
     elabCon defs "Fail" [_,msg]
         = do msg' <- evalClosure defs msg
@@ -165,7 +168,8 @@ checkRunElab rig elabinfo nest env fc script exp
          ntm <- elabScript fc nest env
                            !(nfOpts withAll defs env stm) (Just (gnf env expected))
          defs <- get Ctxt -- might have updated as part of the script
-         pure (!(quote defs env ntm), gnf env expected)
+         empty <- clearDefs defs
+         pure (!(quote empty env ntm), gnf env expected)
   where
     mkExpected : Maybe (Glued vars) -> Core (Term vars)
     mkExpected (Just ty) = pure !(getTerm ty)
