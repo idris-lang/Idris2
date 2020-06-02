@@ -179,6 +179,10 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
          pure (Bind fc qvar (Let (rigMult top rig) escv !(getTerm escty))
                     (refToLocal qvar qvar sc))
 
+onLHS : ElabMode -> Bool
+onLHS (InLHS _) = True
+onLHS _ = False
+
 export
 checkQuote : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -193,12 +197,12 @@ checkQuote rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
          q <- newRef Unq (the (List (Name, FC, RawImp)) [])
          tm' <- getUnquote tm
-         qtm <- reflect fc defs env tm'
+         qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
          qty <- getCon fc defs (reflectionttimp "TTImp")
-         checkExp rig elabinfo env fc
-                  !(bindUnqs unqs rig elabinfo nest env qtm)
-                  (gnf env qty) exp
+         qtm <- bindUnqs unqs rig elabinfo nest env qtm
+         fullqtm <- normalise defs env qtm
+         checkExp rig elabinfo env fc fullqtm (gnf env qty) exp
 
 export
 checkQuoteName : {vars : _} ->
@@ -212,7 +216,7 @@ checkQuoteName : {vars : _} ->
                  Core (Term vars, Glued vars)
 checkQuoteName rig elabinfo nest env fc n exp
     = do defs <- get Ctxt
-         qnm <- reflect fc defs env n
+         qnm <- reflect fc defs (onLHS (elabMode elabinfo)) env n
          qty <- getCon fc defs (reflectiontt "Name")
          checkExp rig elabinfo env fc qnm (gnf env qty) exp
 
@@ -230,7 +234,7 @@ checkQuoteDecl rig elabinfo nest env fc ds exp
     = do defs <- get Ctxt
          q <- newRef Unq (the (List (Name, FC, RawImp)) [])
          ds' <- traverse getUnquoteDecl ds
-         qds <- reflect fc defs env ds'
+         qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
          qd <- getCon fc defs (reflectionttimp "Decl")
          qty <- appCon fc defs (prelude "List") [qd]

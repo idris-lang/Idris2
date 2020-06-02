@@ -44,7 +44,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
     scriptRet : Reflect a => a -> Core (NF vars)
     scriptRet tm
         = do defs <- get Ctxt
-             nfOpts withAll defs env !(reflect fc defs env tm)
+             nfOpts withAll defs env !(reflect fc defs False env tm)
 
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" [_,val] = evalClosure defs val
@@ -79,7 +79,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
     elabCon defs "Goal" []
         = do let Just gty = exp
                  | Nothing => nfOpts withAll defs env
-                                     !(reflect fc defs env (the (Maybe RawImp) Nothing))
+                                     !(reflect fc defs False env (the (Maybe RawImp) Nothing))
              ty <- getTerm gty
              scriptRet (Just !(unelabUniqueBinders env ty))
     elabCon defs "LocalVars" []

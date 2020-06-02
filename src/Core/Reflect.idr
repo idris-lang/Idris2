@@ -18,7 +18,8 @@ interface Reify a where
 public export
 interface Reflect a where
   reflect : {vars : _} ->
-            FC -> Defs -> Env Term vars -> a -> Core (Term vars)
+            FC -> Defs -> (onLHS : Bool) ->
+            Env Term vars -> a -> Core (Term vars)
 
 export
 getCon : {vars : _} ->
@@ -77,7 +78,7 @@ Reify () where
 
 export
 Reflect () where
-  reflect fc defs env _ = getCon fc defs (builtin "MkUnit")
+  reflect fc defs lhs env _ = getCon fc defs (builtin "MkUnit")
 
 export
 Reify String where
@@ -86,7 +87,7 @@ Reify String where
 
 export
 Reflect String where
-  reflect fc defs env x = pure (PrimVal fc (Str x))
+  reflect fc defs lhs env x = pure (PrimVal fc (Str x))
 
 export
 Reify Int where
@@ -95,7 +96,7 @@ Reify Int where
 
 export
 Reflect Int where
-  reflect fc defs env x = pure (PrimVal fc (I x))
+  reflect fc defs lhs env x = pure (PrimVal fc (I x))
 
 export
 Reify Integer where
@@ -104,7 +105,7 @@ Reify Integer where
 
 export
 Reflect Integer where
-  reflect fc defs env x = pure (PrimVal fc (BI x))
+  reflect fc defs lhs env x = pure (PrimVal fc (BI x))
 
 export
 Reify Char where
@@ -113,7 +114,7 @@ Reify Char where
 
 export
 Reflect Char where
-  reflect fc defs env x = pure (PrimVal fc (Ch x))
+  reflect fc defs lhs env x = pure (PrimVal fc (Ch x))
 
 export
 Reify Double where
@@ -122,7 +123,7 @@ Reify Double where
 
 export
 Reflect Double where
-  reflect fc defs env x = pure (PrimVal fc (Db x))
+  reflect fc defs lhs env x = pure (PrimVal fc (Db x))
 
 export
 Reify Bool where
@@ -135,8 +136,8 @@ Reify Bool where
 
 export
 Reflect Bool where
-  reflect fc defs env True = getCon fc defs (prelude "True")
-  reflect fc defs env False = getCon fc defs (prelude "False")
+  reflect fc defs lhs env True = getCon fc defs (prelude "True")
+  reflect fc defs lhs env False = getCon fc defs (prelude "False")
 
 export
 Reify Nat where
@@ -151,9 +152,9 @@ Reify Nat where
 
 export
 Reflect Nat where
-  reflect fc defs env Z = getCon fc defs (prelude "Z")
-  reflect fc defs env (S k)
-      = do k' <- reflect fc defs env k
+  reflect fc defs lhs env Z = getCon fc defs (prelude "Z")
+  reflect fc defs lhs env (S k)
+      = do k' <- reflect fc defs lhs env k
            appCon fc defs (prelude "S") [k']
 
 export
@@ -170,10 +171,10 @@ Reify a => Reify (List a) where
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs env [] = appCon fc defs (prelude "Nil") [Erased fc False]
-  reflect fc defs env (x :: xs)
-      = do x' <- reflect fc defs env x
-           xs' <- reflect fc defs env xs
+  reflect fc defs lhs env [] = appCon fc defs (prelude "Nil") [Erased fc False]
+  reflect fc defs lhs env (x :: xs)
+      = do x' <- reflect fc defs lhs env x
+           xs' <- reflect fc defs lhs env xs
            appCon fc defs (prelude "::") [Erased fc False, x', xs']
 
 export
@@ -189,9 +190,9 @@ Reify a => Reify (Maybe a) where
 
 export
 Reflect a => Reflect (Maybe a) where
-  reflect fc defs env Nothing = appCon fc defs (prelude "Nothing") [Erased fc False]
-  reflect fc defs env (Just x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env Nothing = appCon fc defs (prelude "Nothing") [Erased fc False]
+  reflect fc defs lhs env (Just x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (prelude "Just") [Erased fc False, x']
 
 export
@@ -207,9 +208,9 @@ export
 
 export
 (Reflect a, Reflect b) => Reflect (a, b) where
-  reflect fc defs env (x, y)
-      = do x' <- reflect fc defs env x
-           y' <- reflect fc defs env y
+  reflect fc defs lhs env (x, y)
+      = do x' <- reflect fc defs lhs env x
+           y' <- reflect fc defs lhs env y
            appCon fc defs (builtin "MkPair") [Erased fc False, Erased fc False, x', y']
 
 export
@@ -232,22 +233,22 @@ Reify Name where
 
 export
 Reflect Name where
-  reflect fc defs env (UN x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (UN x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "UN") [x']
-  reflect fc defs env (MN x i)
-      = do x' <- reflect fc defs env x
-           i' <- reflect fc defs env i
+  reflect fc defs lhs env (MN x i)
+      = do x' <- reflect fc defs lhs env x
+           i' <- reflect fc defs lhs env i
            appCon fc defs (reflectiontt "MN") [x', i']
-  reflect fc defs env (NS ns n)
-      = do ns' <- reflect fc defs env ns
-           n' <- reflect fc defs env n
+  reflect fc defs lhs env (NS ns n)
+      = do ns' <- reflect fc defs lhs env ns
+           n' <- reflect fc defs lhs env n
            appCon fc defs (reflectiontt "NS") [ns', n']
-  reflect fc defs env (Resolved i)
+  reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
              Resolved _ => cantReflect fc "Name"
-             n => reflect fc defs env n
-  reflect fc defs env val = cantReflect fc "Name"
+             n => reflect fc defs lhs env n
+  reflect fc defs lhs env val = cantReflect fc "Name"
 
 export
 Reify NameType where
@@ -268,15 +269,15 @@ Reify NameType where
 
 export
 Reflect NameType where
-  reflect fc defs env Bound = getCon fc defs (reflectiontt "Bound")
-  reflect fc defs env Func = getCon fc defs (reflectiontt "Func")
-  reflect fc defs env (DataCon t i)
-      = do t' <- reflect fc defs env t
-           i' <- reflect fc defs env i
+  reflect fc defs lhs env Bound = getCon fc defs (reflectiontt "Bound")
+  reflect fc defs lhs env Func = getCon fc defs (reflectiontt "Func")
+  reflect fc defs lhs env (DataCon t i)
+      = do t' <- reflect fc defs lhs env t
+           i' <- reflect fc defs lhs env i
            appCon fc defs (reflectiontt "DataCon") [t', i']
-  reflect fc defs env (TyCon t i)
-      = do t' <- reflect fc defs env t
-           i' <- reflect fc defs env i
+  reflect fc defs lhs env (TyCon t i)
+      = do t' <- reflect fc defs lhs env t
+           i' <- reflect fc defs lhs env i
            appCon fc defs (reflectiontt "TyCon") [t', i']
 
 export
@@ -337,54 +338,54 @@ Reify Constant where
 
 export
 Reflect Constant where
-  reflect fc defs env (I x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (I x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "I") [x']
-  reflect fc defs env (BI x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (BI x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "BI") [x']
-  reflect fc defs env (B8 x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (B8 x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "B8") [x']
-  reflect fc defs env (B16 x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (B16 x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "B16") [x']
-  reflect fc defs env (B32 x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (B32 x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "B32") [x']
-  reflect fc defs env (B64 x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (B64 x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "B64") [x']
-  reflect fc defs env (Str x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (Str x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Str") [x']
-  reflect fc defs env (Ch x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (Ch x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Ch") [x']
-  reflect fc defs env (Db x)
-      = do x' <- reflect fc defs env x
+  reflect fc defs lhs env (Db x)
+      = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "Db") [x']
-  reflect fc defs env WorldVal
+  reflect fc defs lhs env WorldVal
       = getCon fc defs (reflectiontt "WorldVal")
-  reflect fc defs env IntType
+  reflect fc defs lhs env IntType
       = getCon fc defs (reflectiontt "IntType")
-  reflect fc defs env IntegerType
+  reflect fc defs lhs env IntegerType
       = getCon fc defs (reflectiontt "IntegerType")
-  reflect fc defs env Bits8Type
+  reflect fc defs lhs env Bits8Type
       = getCon fc defs (reflectiontt "Bits8Type")
-  reflect fc defs env Bits16Type
+  reflect fc defs lhs env Bits16Type
       = getCon fc defs (reflectiontt "Bits16Type")
-  reflect fc defs env Bits32Type
+  reflect fc defs lhs env Bits32Type
       = getCon fc defs (reflectiontt "Bits32Type")
-  reflect fc defs env Bits64Type
+  reflect fc defs lhs env Bits64Type
       = getCon fc defs (reflectiontt "Bits64Type")
-  reflect fc defs env StringType
+  reflect fc defs lhs env StringType
       = getCon fc defs (reflectiontt "StringType")
-  reflect fc defs env CharType
+  reflect fc defs lhs env CharType
       = getCon fc defs (reflectiontt "CharType")
-  reflect fc defs env DoubleType
+  reflect fc defs lhs env DoubleType
       = getCon fc defs (reflectiontt "DoubleType")
-  reflect fc defs env WorldType
+  reflect fc defs lhs env WorldType
       = getCon fc defs (reflectiontt "WorldType")
 
 export
@@ -399,9 +400,9 @@ Reify Visibility where
 
 export
 Reflect Visibility where
-  reflect fc defs env Private = getCon fc defs (reflectiontt "Private")
-  reflect fc defs env Export = getCon fc defs (reflectiontt "Export")
-  reflect fc defs env Public = getCon fc defs (reflectiontt "Public")
+  reflect fc defs lhs env Private = getCon fc defs (reflectiontt "Private")
+  reflect fc defs lhs env Export = getCon fc defs (reflectiontt "Export")
+  reflect fc defs lhs env Public = getCon fc defs (reflectiontt "Public")
 
 export
 Reify TotalReq where
@@ -415,9 +416,9 @@ Reify TotalReq where
 
 export
 Reflect TotalReq where
-  reflect fc defs env Total = getCon fc defs (reflectiontt "Total")
-  reflect fc defs env CoveringOnly = getCon fc defs (reflectiontt "CoveringOnly")
-  reflect fc defs env PartialOK = getCon fc defs (reflectiontt "PartialOK")
+  reflect fc defs lhs env Total = getCon fc defs (reflectiontt "Total")
+  reflect fc defs lhs env CoveringOnly = getCon fc defs (reflectiontt "CoveringOnly")
+  reflect fc defs lhs env PartialOK = getCon fc defs (reflectiontt "PartialOK")
 
 export
 Reify RigCount where
@@ -431,7 +432,7 @@ Reify RigCount where
 
 export
 Reflect RigCount where
-  reflect fc defs env r
+  reflect fc defs lhs env r
       = elimSemi (getCon fc defs (reflectiontt "M0"))
                  (getCon fc defs (reflectiontt "M1"))
                  (const (getCon fc defs (reflectiontt "MW")))
@@ -452,14 +453,14 @@ Reify t => Reify (PiInfo t) where
 
 export
 Reflect t => Reflect (PiInfo t) where
-  reflect fc defs env Implicit
+  reflect fc defs lhs env Implicit
       = appCon fc defs (reflectiontt "ImplicitArg") [Erased fc False]
-  reflect fc defs env Explicit
+  reflect fc defs lhs env Explicit
       = appCon fc defs (reflectiontt "ExplicitArg") [Erased fc False]
-  reflect fc defs env AutoImplicit
+  reflect fc defs lhs env AutoImplicit
       = appCon fc defs (reflectiontt "AutoImplicit") [Erased fc False]
-  reflect fc defs env (DefImplicit t)
-      = do t' <- reflect fc defs env t
+  reflect fc defs lhs env (DefImplicit t)
+      = do t' <- reflect fc defs lhs env t
            appCon fc defs (reflectiontt "DefImplicit") [Erased fc False, t']
 
 export
@@ -474,9 +475,9 @@ Reify LazyReason where
 
 export
 Reflect LazyReason where
-  reflect fc defs env LInf = getCon fc defs (reflectiontt "LInf")
-  reflect fc defs env LLazy = getCon fc defs (reflectiontt "LLazy")
-  reflect fc defs env LUnknown = getCon fc defs (reflectiontt "LUnknown")
+  reflect fc defs lhs env LInf = getCon fc defs (reflectiontt "LInf")
+  reflect fc defs lhs env LLazy = getCon fc defs (reflectiontt "LLazy")
+  reflect fc defs lhs env LUnknown = getCon fc defs (reflectiontt "LUnknown")
 
 export
 Reify FC where
@@ -493,12 +494,13 @@ Reify FC where
 
 export
 Reflect FC where
-  reflect fc defs env (MkFC fn start end)
-      = do fn' <- reflect fc defs env fn
-           start' <- reflect fc defs env start
-           end' <- reflect fc defs env end
+  reflect fc defs True env _ = pure $ Erased fc False
+  reflect fc defs lhs env (MkFC fn start end)
+      = do fn' <- reflect fc defs lhs env fn
+           start' <- reflect fc defs lhs env start
+           end' <- reflect fc defs lhs env end
            appCon fc defs (reflectiontt "MkFC") [fn', start', end']
-  reflect fc defs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
+  reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves
@@ -508,10 +510,10 @@ Reflect FC where
 
 export
 Reflect (IsVar name idx vs) where
-  reflect fc defs env First
+  reflect fc defs lhs env First
       = appCon fc defs (reflectiontt "First") [Erased fc False, Erased fc False]
-  reflect fc defs env (Later p)
-      = do p' <- reflect fc defs env p
+  reflect fc defs lhs env (Later p)
+      = do p' <- reflect fc defs lhs env p
            appCon fc defs (reflectiontt "Later")
                   [Erased fc False, Erased fc False,
                    Erased fc False, Erased fc False, p']
@@ -519,72 +521,72 @@ Reflect (IsVar name idx vs) where
 -- Assume terms are normalised so there's not Let bindings in particular
 export
 Reflect (Term vs) where
-  reflect fc defs env (Local {name} lfc _ idx prf)
-      = do lfc' <- reflect fc defs env lfc
-           idx' <- reflect fc defs env idx
+  reflect fc defs lhs env (Local {name} lfc _ idx prf)
+      = do lfc' <- reflect fc defs lhs env lfc
+           idx' <- reflect fc defs lhs env idx
            appCon fc defs (reflectiontt "Local")
                   [Erased fc False, Erased fc False, lfc', idx', Erased fc False]
-  reflect fc defs env (Ref rfc nt n)
-      = do rfc' <- reflect fc defs env rfc
-           nt' <- reflect fc defs env nt
-           n' <- reflect fc defs env n
+  reflect fc defs lhs env (Ref rfc nt n)
+      = do rfc' <- reflect fc defs lhs env rfc
+           nt' <- reflect fc defs lhs env nt
+           n' <- reflect fc defs lhs env n
            appCon fc defs (reflectiontt "Ref")
                   [Erased fc False, rfc', nt', n']
-  reflect fc defs env (Bind bfc x (Pi c p ty) sc)
-      = do bfc' <- reflect fc defs env bfc
-           x' <- reflect fc defs env x
-           c' <- reflect fc defs env c
-           p' <- reflect fc defs env p
-           ty' <- reflect fc defs env ty
-           sc' <- reflect fc defs env sc
+  reflect fc defs lhs env (Bind bfc x (Pi c p ty) sc)
+      = do bfc' <- reflect fc defs lhs env bfc
+           x' <- reflect fc defs lhs env x
+           c' <- reflect fc defs lhs env c
+           p' <- reflect fc defs lhs env p
+           ty' <- reflect fc defs lhs env ty
+           sc' <- reflect fc defs lhs env sc
            appCon fc defs (reflectiontt "Pi")
                   [Erased fc False, bfc', c', p', x', ty', sc']
-  reflect fc defs env (Bind bfc x (Lam c p ty) sc)
-      = do bfc' <- reflect fc defs env bfc
-           x' <- reflect fc defs env x
-           c' <- reflect fc defs env c
-           p' <- reflect fc defs env p
-           ty' <- reflect fc defs env ty
-           sc' <- reflect fc defs env sc
+  reflect fc defs lhs env (Bind bfc x (Lam c p ty) sc)
+      = do bfc' <- reflect fc defs lhs env bfc
+           x' <- reflect fc defs lhs env x
+           c' <- reflect fc defs lhs env c
+           p' <- reflect fc defs lhs env p
+           ty' <- reflect fc defs lhs env ty
+           sc' <- reflect fc defs lhs env sc
            appCon fc defs (reflectiontt "Lam")
                   [Erased fc False, bfc', c', p', x', ty', sc']
-  reflect fc defs env (App afc fn arg)
-      = do afc' <- reflect fc defs env afc
-           fn' <- reflect fc defs env fn
-           arg' <- reflect fc defs env arg
+  reflect fc defs lhs env (App afc fn arg)
+      = do afc' <- reflect fc defs lhs env afc
+           fn' <- reflect fc defs lhs env fn
+           arg' <- reflect fc defs lhs env arg
            appCon fc defs (reflectiontt "App")
                   [Erased fc False, afc', fn', arg']
-  reflect fc defs env (TDelayed dfc r tm)
-      = do dfc' <- reflect fc defs env dfc
-           r' <- reflect fc defs env r
-           tm' <- reflect fc defs env tm
+  reflect fc defs lhs env (TDelayed dfc r tm)
+      = do dfc' <- reflect fc defs lhs env dfc
+           r' <- reflect fc defs lhs env r
+           tm' <- reflect fc defs lhs env tm
            appCon fc defs (reflectiontt "TDelayed")
                   [Erased fc False, dfc', r', tm']
-  reflect fc defs env (TDelay dfc r ty tm)
-      = do dfc' <- reflect fc defs env dfc
-           r' <- reflect fc defs env r
-           ty' <- reflect fc defs env ty
-           tm' <- reflect fc defs env tm
+  reflect fc defs lhs env (TDelay dfc r ty tm)
+      = do dfc' <- reflect fc defs lhs env dfc
+           r' <- reflect fc defs lhs env r
+           ty' <- reflect fc defs lhs env ty
+           tm' <- reflect fc defs lhs env tm
            appCon fc defs (reflectiontt "TDelay")
                   [Erased fc False, dfc', r', ty', tm']
-  reflect fc defs env (TForce dfc r tm)
-      = do dfc' <- reflect fc defs env dfc
-           r' <- reflect fc defs env r
-           tm' <- reflect fc defs env tm
+  reflect fc defs lhs env (TForce dfc r tm)
+      = do dfc' <- reflect fc defs lhs env dfc
+           r' <- reflect fc defs lhs env r
+           tm' <- reflect fc defs lhs env tm
            appCon fc defs (reflectiontt "TForce")
                   [Erased fc False, r', dfc', tm']
-  reflect fc defs env (PrimVal pfc c)
-      = do pfc' <- reflect fc defs env pfc
-           c' <- reflect fc defs env c
+  reflect fc defs lhs env (PrimVal pfc c)
+      = do pfc' <- reflect fc defs lhs env pfc
+           c' <- reflect fc defs lhs env c
            appCon fc defs (reflectiontt "PrimVal")
                   [Erased fc False, pfc', c']
-  reflect fc defs env (Erased efc _)
-      = do efc' <- reflect fc defs env efc
+  reflect fc defs lhs env (Erased efc _)
+      = do efc' <- reflect fc defs lhs env efc
            appCon fc defs (reflectiontt "Erased")
                   [Erased fc False, efc']
-  reflect fc defs env (TType tfc)
-      = do tfc' <- reflect fc defs env tfc
+  reflect fc defs lhs env (TType tfc)
+      = do tfc' <- reflect fc defs lhs env tfc
            appCon fc defs (reflectiontt "TType")
                   [Erased fc False, tfc']
-  reflect fc defs env val = cantReflect fc "Term"
+  reflect fc defs lhs env val = cantReflect fc "Term"
   -}
