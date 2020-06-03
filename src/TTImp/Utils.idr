@@ -56,6 +56,10 @@ findBindableNames arg env used (IDelay fc t)
     = findBindableNames arg env used t
 findBindableNames arg env used (IForce fc t)
     = findBindableNames arg env used t
+findBindableNames arg env used (IQuote fc t)
+    = findBindableNames arg env used t
+findBindableNames arg env used (IUnquote fc t)
+    = findBindableNames arg env used t
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
 -- We've skipped case, let and local - rather than guess where the
