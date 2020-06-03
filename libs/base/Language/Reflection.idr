@@ -18,6 +18,12 @@ data Elab : Type -> Type where
      Check : {expected : Type} -> TTImp -> Elab expected
      -- Quote a concrete expression back to a TTImp
      Quote : val -> Elab TTImp
+
+     -- Elaborate under a lambda
+     Lambda : (0 x : Type) ->
+              {0 ty : x -> Type} ->
+              ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
+
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
@@ -82,6 +88,12 @@ check = Check
 export
 quote : val -> Elab TTImp
 quote = Quote
+
+export
+lambda : (0 x : Type) ->
+         {0 ty : x -> Type} ->
+         ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
+lambda = Lambda
 
 export
 goal : Elab (Maybe TTImp)
