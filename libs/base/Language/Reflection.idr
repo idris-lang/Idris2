@@ -20,9 +20,9 @@ data Elab : Type -> Type where
      Quote : val -> Elab TTImp
 
      -- Elaborate under a lambda
-     Lambda : (0 x : Type) -> (x -> Elab ty) -> Elab (x -> ty)
-     -- Elaborate under a forall
-     ForAll : (0 x : Type) -> (x -> Elab ty) -> Elab (x -> ty)
+     Lambda : (0 x : Type) ->
+              {0 ty : x -> Type} ->
+              ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 
      -- Get the current goal type, if known 
      -- (it might need to be inferred from the solution)
@@ -90,12 +90,10 @@ quote : val -> Elab TTImp
 quote = Quote
 
 export
-lambda : (0 x : Type) -> (x -> Elab ty) -> Elab (x -> ty)
+lambda : (0 x : Type) ->
+         {0 ty : x -> Type} ->
+         ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 lambda = Lambda
-
-export
-forAll : (0 x : Type) -> (x -> Elab ty) -> Elab (x -> ty)
-forAll = ForAll
 
 export
 goal : Elab (Maybe TTImp)
