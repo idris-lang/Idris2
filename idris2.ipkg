@@ -14,6 +14,7 @@ modules =
     Compiler.Scheme.Chez,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
+    Compiler.ES.Node,
     Compiler.Scheme.Common,
     Compiler.VMCode,
 

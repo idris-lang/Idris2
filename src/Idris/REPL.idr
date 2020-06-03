@@ -3,6 +3,7 @@ module Idris.REPL
 import Compiler.Scheme.Chez
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
+import Compiler.ES.Node
 import Compiler.Common
 
 import Core.AutoSearch
@@ -176,6 +177,7 @@ findCG
               Chez => pure codegenChez
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
+              Node => pure codegenNode
 
 anyAt : (FC -> Bool) -> FC -> a -> Bool
 anyAt p loc y = p loc
@@ -636,11 +638,11 @@ process Metavars
                                                            pure (n, gdef, args))
                                       globs
          hData <- the (Core $ List HoleData) $
-             traverse (\n_gdef_args => 
+             traverse (\n_gdef_args =>
                         -- Inference can't deal with this for now :/
                         let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
                         holeData defs [] n args (type gdef))
-                      holesWithArgs 
+                      holesWithArgs
          pure $ FoundHoles hData
 
 process (Editing cmd)
