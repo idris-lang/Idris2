@@ -370,9 +370,9 @@ mutual
 --                              let env : SubstCEnv args (MN "eff" 0 :: vars)
 --                                      = mkSubst 0 (CLocal fc First) pos args in
 --                              do sc' <- toCExpTree n sc
---                                 let scope = thin {outer=args}
---                                                  {inner=vars}
---                                                  (MN "eff" 0) sc'
+--                                 let scope = insertNames {outer=args}
+--                                                         {inner=vars}
+--                                                         [MN "eff" 0] sc'
 --                                 pure $ Just (CLet fc (MN "eff" 0) False scr
 --                                                   (substs env scope))
                 _ => pure Nothing -- there's a normal match to do
