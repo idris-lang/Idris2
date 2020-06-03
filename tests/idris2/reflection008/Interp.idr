@@ -43,8 +43,8 @@ interp env (Val x) = pure x
 interp env (Lam scope)
     = lambda _ (\val => interp (val :: env) scope)
 interp env (App f a)
-    = pure $ !(interp env f) !(interp env a)
-interp env (Op f x y) = pure $ f !(interp env x) !(interp env y)
+    = interp env f <*> interp env a
+interp env (Op f x y) = f <$> interp env x <*> interp env y
 
 %macro
 eval : Env gam -> Lang gam t -> Elab (interpTy t)
