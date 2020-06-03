@@ -47,15 +47,18 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              nfOpts withAll defs env !(reflect fc defs False env tm)
 
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
-    elabCon defs "Pure" [_,val] = evalClosure defs val
+    elabCon defs "Pure" [_,val]
+        = do empty <- clearDefs defs
+             evalClosure empty val
     elabCon defs "Bind" [_,_,act,k]
         = do act' <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
                   NBind _ x (Lam _ _ _) sc =>
-                      elabScript fc nest env
+                      do empty <- clearDefs defs
+                         elabScript fc nest env
                                  !(sc defs (toClosure withAll env
-                                                 !(quote defs env act'))) exp
+                                                 !(quote empty env act'))) exp
                   _ => failWith defs
     elabCon defs "Fail" [_,msg]
         = do msg' <- evalClosure defs msg
@@ -75,7 +78,21 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
                      pure $ !(reify defs str') ++ ": " ++
                              show (the RawImp !(reify defs tm'))
              scriptRet ()
-    elabCon defs "Check" [ttimp] = evalClosure defs ttimp -- to be reified
+    elabCon defs "Check" [exp, ttimp]
+        = do exp' <- evalClosure defs exp
+             ttimp' <- evalClosure defs ttimp
+             tidx <- resolveName (UN "[elaborator script]")
+             e <- newRef EST (initEState tidx env)
+             (checktm, _) <- runDelays 0 $
+                     check top (initElabInfo InExpr) nest env !(reify defs ttimp')
+                           (Just (glueBack defs env exp'))
+             empty <- clearDefs defs
+             nf empty env checktm
+    elabCon defs "Quote" [exp, tm]
+        = do tm' <- evalClosure defs tm
+             defs <- get Ctxt
+             empty <- clearDefs defs
+             scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Goal" []
         = do let Just gty = exp
                  | Nothing => nfOpts withAll defs env
@@ -138,17 +155,24 @@ checkRunElab : {vars : _} ->
                FC -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkRunElab rig elabinfo nest env fc script exp
-    = do defs <- get Ctxt
+    = do expected <- mkExpected exp
+         defs <- get Ctxt
          when (not (isExtension ElabReflection defs)) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS ["Reflection", "Language"] (UN "Elab")
          let ttn = reflectiontt "TT"
-         tt <- getCon fc defs ttn
-         elabtt <- appCon fc defs n [tt]
+         elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays 0 $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          defs <- get Ctxt -- checking might have resolved some holes
          ntm <- elabScript fc nest env
-                           !(nfOpts withAll defs env stm) exp
+                           !(nfOpts withAll defs env stm) (Just (gnf env expected))
          defs <- get Ctxt -- might have updated as part of the script
-         check rig elabinfo nest env !(reify defs ntm) exp
+         empty <- clearDefs defs
+         pure (!(quote empty env ntm), gnf env expected)
+  where
+    mkExpected : Maybe (Glued vars) -> Core (Term vars)
+    mkExpected (Just ty) = pure !(getTerm ty)
+    mkExpected Nothing
+        = do nm <- genName "scriptTy"
+             metaVar fc erased env nm (TType fc)

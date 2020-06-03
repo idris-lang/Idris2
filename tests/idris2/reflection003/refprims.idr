@@ -2,7 +2,7 @@ import Language.Reflection
 
 %language ElabReflection
 
-logPrims : Elab TT
+logPrims : Elab a
 logPrims
     = do ns <- getType `{{ (++) }} 
          traverse (\ (n, ty) =>
@@ -10,7 +10,7 @@ logPrims
                            logTerm 0 "Type" ty) ns
          fail "Not really trying"
 
-logDataCons : Elab TT
+logDataCons : Elab a
 logDataCons
     = do [(n, _)] <- getType `{{ Nat }}
              | _ => fail "Ambiguous name"
@@ -18,7 +18,7 @@ logDataCons
          logMsg 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
-logBad : Elab TT
+logBad : Elab a
 logBad
     = do [(n, _)] <- getType `{{ DoesntExist }}
              | [] => fail "Undefined name"
@@ -27,7 +27,7 @@ logBad
          logMsg 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
-tryGenSym : Elab TT
+tryGenSym : Elab a
 tryGenSym
    = do n <- genSym "plus"
         ns <- inCurrentNS n
