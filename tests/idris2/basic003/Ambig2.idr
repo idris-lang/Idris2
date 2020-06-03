@@ -1,9 +1,13 @@
 infixr 5 ::
 
+export
 data List a = Nil | (::) a (List a)
+export
 data Nat = Z | S Nat
 
+export
 data Vect : Type -> Type where
+export
 data Set : Type -> Type where
 
 namespace Vect

@@ -16,6 +16,7 @@ import TTImp.ProcessData
 import TTImp.ProcessDef
 import TTImp.ProcessParams
 import TTImp.ProcessRecord
+import TTImp.ProcessRunElab
 import TTImp.ProcessTransform
 import TTImp.ProcessType
 import TTImp.TTImp
@@ -23,6 +24,8 @@ import TTImp.TTImp
 import Data.List
 import Data.Maybe
 import Data.NameMap
+
+%default covering
 
 -- Implements processDecl, declared in TTImp.Elab.Check
 process : {vars : _} ->
@@ -50,6 +53,8 @@ process eopts nest env (INamespace fc ns decls)
          put Ctxt (record { currentNS = cns } defs)
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
+process eopts nest env (IRunElabDecl fc tm)
+    = processRunElab eopts nest env fc tm
 process eopts nest env (IPragma act)
     = act nest env
 process eopts nest env (ILog n)
@@ -60,8 +65,9 @@ TTImp.Elab.Check.processDecl = process
 export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
+checkTotalityOK (NS _ (MN _ _)) = pure Nothing -- not interested in generated names
+checkTotalityOK (NS _ (CaseBlock _ _)) = pure Nothing -- case blocks checked elsewhere
 checkTotalityOK n
--- checkTotalityOK (NS _ n@(UN _)) -- top level user defined names only
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing

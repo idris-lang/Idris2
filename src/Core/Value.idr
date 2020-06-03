@@ -7,6 +7,8 @@ import Core.TT
 
 import Data.IntMap
 
+%default covering
+
 public export
 record EvalOpts where
   constructor MkEvalOpts

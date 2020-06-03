@@ -10,6 +10,8 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+%default covering
+
 detagSafe : Defs -> NF [] -> Core Bool
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)

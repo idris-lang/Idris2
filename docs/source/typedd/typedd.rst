@@ -312,6 +312,9 @@ In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also
 since export rules are per-namespace now, rather than per-file, you need to
 export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
 
+In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
+also have to be ``export``.
+
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
@@ -321,6 +324,9 @@ For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``.
 Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
 own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
 arguments ``div`` and ``rem``.
+
+In ``ArithState.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
+also have to be ``export``.
 
 Chapter 13
 ----------

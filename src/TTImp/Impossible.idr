@@ -10,6 +10,8 @@ import TTImp.TTImp
 
 import Data.List
 
+%default covering
+
 -- This file contains support for building a guess at the term on the LHS of an 
 -- 'impossible' case, in order to help build a tree of covered cases for
 -- coverage checking. Since the LHS by definition won't be well typed, we are

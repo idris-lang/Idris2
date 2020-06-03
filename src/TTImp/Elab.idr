@@ -19,6 +19,8 @@ import Data.IntMap
 import Data.List
 import Data.NameMap
 
+%default covering
+
 findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
 findPLetRenames (Bind fc n (PLet c (Local _ _ idx p) ty) sc)

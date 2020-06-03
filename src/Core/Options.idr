@@ -4,11 +4,14 @@ import Core.Core
 import Core.Name
 import Core.TT
 import Utils.Binary
+import Utils.Path
 
 import Data.List
 import Data.Strings
 
 import System.Info
+
+%default total
 
 public export
 record Dirs where
@@ -79,11 +82,15 @@ record PrimNames where
   fromCharName : Maybe Name
 
 public export
-data LangExt = Borrowing -- not yet implemented
+data LangExt
+     = ElabReflection
+     | Borrowing -- not yet implemented
 
 export
 Eq LangExt where
+  ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
+  _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
 public export
@@ -129,25 +136,9 @@ record Options where
   primnames : PrimNames
   extensions : List LangExt
 
-export
-isWindows : Bool
-isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
-
-export
-sep : Char
-sep = if isWindows then '\\' else '/'
-
-export
-dirSep : String
-dirSep = cast sep
-
-export
-pathSep : Char
-pathSep = if isWindows then ';' else ':'
-
 defaultDirs : Dirs
 defaultDirs = MkDirs "." Nothing "build" 
-                     ("build" ++ dirSep ++ "exec") 
+                     ("build" </> "exec") 
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter

@@ -11,6 +11,7 @@ bigEx (S k) = ((2 ** [0,0]), bigEx k)
 data VWrap : Type -> Type where
      MkVWrap : (0 n : Nat) -> Vect n a -> VWrap a
 
+export
 MkBig' : Nat -> Type
 MkBig' Z = Int
 MkBig' (S k) = (VWrap Int, MkBig' k)

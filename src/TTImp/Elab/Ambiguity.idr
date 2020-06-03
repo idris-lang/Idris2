@@ -126,8 +126,13 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 
     mkTerm : Bool -> EState vars -> Name -> GlobalDef -> RawImp
     mkTerm prim est n def
-        = wrapDot prim est mode n (map (snd . snd) args)
-                  (definition def) (buildAlt (IVar fc n) args)
+        = let tm = wrapDot prim est mode n (map (snd . snd) args)
+                       (definition def) (buildAlt (IVar fc n) args) in
+              if Macro `elem` flags def
+                 then case mode of
+                           InLHS _ => tm
+                           _ => IRunElab fc (ICoerced fc tm)
+                 else tm
 
     mkAlt : Bool -> EState vars -> (Name, Int, GlobalDef) -> RawImp
     mkAlt prim est (fullname, i, gdef)

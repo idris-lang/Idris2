@@ -1335,7 +1335,7 @@ retry mode c
                              _ => pure cs
   where
     definedN : Name -> Core Bool
-    definedN n
+    definedN n@(NS _ (MN _ _)) -- a metavar will only ever be a MN
         = do defs <- get Ctxt
              Just gdef <- lookupCtxtExact n (gamma defs)
                   | _ => pure False
@@ -1344,6 +1344,7 @@ retry mode c
                   BySearch _ _ _ => pure False
                   Guess _ _ _ => pure False
                   _ => pure True
+    definedN _ = pure True
 
 delayMeta : {vars : _} ->
             LazyReason -> Nat -> Term vars -> Term vars -> Term vars

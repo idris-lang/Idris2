@@ -334,6 +334,9 @@ There are several ``%language`` pragmas in Idris 1, which define various
 experimental extensions. None of these are available in Idris 2, although
 extensions may be defined in the future.
 
+Also removed was the ``%access`` pragma for default visibility, use visibility
+modifiers on each declaration instead.
+
 ``let`` bindings
 ----------------
 

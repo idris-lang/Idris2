@@ -67,8 +67,8 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls scope expty
                let nestedName_in = Nested (outer, nextName ust) inner
                nestedName <- inCurrentNS nestedName_in
                n' <- addName nestedName
-               pure (inner, (Just nestedName, namesNoLet env,
-                        \fc, nt => applyTo fc
+               pure (inner, (Just nestedName, vars,
+                        \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))
 
     -- Update the names in the declarations to the new 'nested' names.

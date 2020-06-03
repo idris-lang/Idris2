@@ -167,16 +167,17 @@ perror (BadUnboundImplicit _ env n ty)
     = pure $ "Can't bind name " ++ nameRoot n ++ " with type " ++ !(pshow env ty)
                ++ " here. Try binding explicitly."
 perror (CantSolveGoal _ env g)
-    = let (_ ** (env', g')) = dropPis env g in
+    = let (_ ** (env', g')) = dropEnv env g in
           pure $ "Can't find an implementation for " ++ !(pshow env' g')
   where
     -- For display, we don't want to see the full top level type; just the
     -- return type
-    dropPis : {vars : _} ->
+    dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropPis env (Bind _ n b@(Pi _ _ _) sc) = dropPis (b :: env) sc
-    dropPis env tm = (_ ** (env, tm))
+    dropEnv env (Bind _ n b@(Pi _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Let _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env tm = (_ ** (env, tm))
 
 perror (DeterminingArg _ n i env g)
     = pure $ "Can't find an implementation for " ++ !(pshow env g) ++ "\n" ++
@@ -195,8 +196,8 @@ perror (SolvedNamedHole _ env h tm)
     = pure $ "Named hole " ++ show h ++ " has been solved by unification\n"
               ++ "Result: " ++ !(pshow env tm)
 perror (VisibilityError fc vx x vy y)
-    = pure $ show vx ++ " " ++ sugarName x ++
-             " cannot refer to " ++ show vy ++ " " ++ sugarName y
+    = pure $ show vx ++ " " ++ sugarName !(toFullNames x) ++
+             " cannot refer to " ++ show vy ++ " " ++ sugarName !(toFullNames y)
 perror (NonLinearPattern _ n) = pure $ "Non linear pattern " ++ sugarName n
 perror (BadPattern _ n) = pure $ "Pattern not allowed here: " ++ show n
 perror (NoDeclaration _ n) = pure $ "No type declaration for " ++ show n
@@ -245,6 +246,7 @@ perror (CyclicImports ns)
     showMod ns = showSep "." (reverse ns)
 perror ForceNeeded = pure "Internal error when resolving implicit laziness"
 perror (InternalError str) = pure $ "INTERNAL ERROR: " ++ str
+perror (UserError str) = pure $ "Error: " ++ str
 
 perror (InType fc n err)
     = pure $ "While processing type of " ++ !(prettyName n) ++

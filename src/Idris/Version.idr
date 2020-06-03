@@ -4,6 +4,8 @@ module Idris.Version
 import IdrisPaths
 import Data.List
 
+%default total
+
 ||| Semantic versioning with optional tag
 ||| See [semver](https://semver.org/) for proper definition of semantic versioning
 public export

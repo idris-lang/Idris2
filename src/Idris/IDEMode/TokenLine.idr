@@ -4,6 +4,8 @@ module Idris.IDEMode.TokenLine
 import Parser.Lexer.Source
 import Text.Lexer
 
+%default total
+
 public export
 RawName : Type
 RawName = String

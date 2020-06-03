@@ -53,7 +53,8 @@ mutual
        PSearch : FC -> (depth : Nat) -> PTerm
        PPrimVal : FC -> Constant -> PTerm
        PQuote : FC -> PTerm -> PTerm
-       PQuoteDecl : FC -> PDecl -> PTerm
+       PQuoteName : FC -> Name -> PTerm
+       PQuoteDecl : FC -> List PDecl -> PTerm
        PUnquote : FC -> PTerm -> PTerm
        PRunElab : FC -> PTerm -> PTerm
        PHole : FC -> (bracket : Bool) -> (holename : String) -> PTerm
@@ -131,7 +132,7 @@ mutual
 
   public export
   data PTypeDecl : Type where
-       MkPTy : FC -> (n : Name) -> (type : PTerm) -> PTypeDecl
+       MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
   public export
   data PDataDecl : Type where
@@ -145,7 +146,7 @@ mutual
        MkPatClause : FC -> (lhs : PTerm) -> (rhs : PTerm) ->
                      (whereblock : List PDecl) -> PClause
        MkWithClause : FC -> (lhs : PTerm) -> (wval : PTerm) ->
-                        List PClause -> PClause
+                      List WithFlag -> List PClause -> PClause
        MkImpossible : FC -> (lhs : PTerm) -> PClause
 
   public export
@@ -209,6 +210,7 @@ mutual
                     Visibility ->
                     (constraints : List (Maybe Name, PTerm)) ->
                     Name ->
+                    (doc : String) ->
                     (params : List (Name, PTerm)) ->
                     (det : List Name) ->
                     (conName : Maybe Name) ->
@@ -238,19 +240,20 @@ mutual
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl
        PNamespace : FC -> List String -> List PDecl -> PDecl
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
+       PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
 
 definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where
     getName : PTypeDecl -> Name
-    getName (MkPTy _ n _) = n
+    getName (MkPTy _ n _ _) = n
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ n _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ _ _ _ (MkPTy _ n _ _) :: ds) = n :: definedIn ds
 definedIn (PData _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -339,6 +342,7 @@ record Module where
   headerloc : FC
   moduleNS : List String
   imports : List Import
+  documentation : String
   decls : List PDecl
 
 showCount : RigCount -> String
@@ -350,7 +354,7 @@ showCount = elimSemi
 mutual
   showAlt : PClause -> String
   showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-  showAlt (MkWithClause _ lhs wval cs) = " | <<with alts not possible>>;"
+  showAlt (MkWithClause _ lhs wval flags cs) = " | <<with alts not possible>>;"
   showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
 
   showDo : PDo -> String
@@ -403,7 +407,7 @@ mutual
       where
         showAlt : PClause -> String
         showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-        showAlt (MkWithClause _ lhs rhs _) = " | <<with alts not possible>>"
+        showAlt (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
         showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
     showPrec _ (PCase _ tm cs)
         = "case " ++ show tm ++ " of { " ++
@@ -411,7 +415,7 @@ mutual
       where
         showCase : PClause -> String
         showCase (MkPatClause _ lhs rhs _) = show lhs ++ " => " ++ show rhs
-        showCase (MkWithClause _ lhs rhs _) = " | <<with alts not possible>>"
+        showCase (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
         showCase (MkImpossible _ lhs) = show lhs ++ " impossible"
     showPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPrec d sc
@@ -437,7 +441,8 @@ mutual
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
-    showPrec d (PQuoteDecl _ tm) = "`( <<declaration>> )"
+    showPrec d (PQuoteName _ n) = "`{{" ++ showPrec d n ++ "}}"
+    showPrec d (PQuoteDecl _ tm) = "`[ <<declaration>> ]"
     showPrec d (PUnquote _ tm) = "~(" ++ showPrec d tm ++ ")"
     showPrec d (PRunElab _ tm) = "%runElab " ++ showPrec d tm
     showPrec d (PPrimVal _ c) = showPrec d c
@@ -503,7 +508,7 @@ record IFaceInfo where
   iconstructor : Name
   params : List Name
   parents : List RawImp
-  methods : List (Name, RigCount, TotalReq, Bool, RawImp)
+  methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
      -- ^ name, whether a data method, and desugared type (without constraint)
   defaults : List (Name, List ImpClause)
 
@@ -687,8 +692,9 @@ mapPTermM f = goPTerm where
     goPTerm (PQuote fc x) =
       PQuote fc <$> goPTerm x
       >>= f
+    goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x) =
-      PQuoteDecl fc <$> goPDecl x
+      PQuoteDecl fc <$> traverse goPDecl x
       >>= f
     goPTerm (PUnquote fc x) =
       PUnquote fc <$> goPTerm x
@@ -810,9 +816,10 @@ mapPTermM f = goPTerm where
       MkPatClause fc <$> goPTerm lhs
                      <*> goPTerm rhs
                      <*> goPDecls wh
-    goPClause (MkWithClause fc lhs wVal cls) =
+    goPClause (MkWithClause fc lhs wVal flags cls) =
       MkWithClause fc <$> goPTerm lhs
                       <*> goPTerm wVal
+                      <*> pure flags
                       <*> goPClauses cls
     goPClause (MkImpossible fc lhs) = MkImpossible fc <$> goPTerm lhs
 
@@ -829,9 +836,10 @@ mapPTermM f = goPTerm where
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
     goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
-    goPDecl (PInterface fc v mnts n nts ns mn ps) =
+    goPDecl (PInterface fc v mnts n doc nts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
+                      <*> pure doc
                       <*> goPairedPTerms nts
                       <*> pure ns
                       <*> pure mn
@@ -852,11 +860,12 @@ mapPTermM f = goPTerm where
     goPDecl p@(PFixity _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
+    goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
-    goPTypeDecl (MkPTy fc n t) = MkPTy fc n <$> goPTerm t
+    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
 
     goPDataDecl : PDataDecl -> Core PDataDecl
     goPDataDecl (MkPData fc n t opts tdecls) =

@@ -1,0 +1,5 @@
+:printdef cube
+cube 3
+:printdef cube'
+cube' 3
+:q

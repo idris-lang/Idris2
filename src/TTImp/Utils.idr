@@ -56,6 +56,10 @@ findBindableNames arg env used (IDelay fc t)
     = findBindableNames arg env used t
 findBindableNames arg env used (IForce fc t)
     = findBindableNames arg env used t
+findBindableNames arg env used (IQuote fc t)
+    = findBindableNames arg env used t
+findBindableNames arg env used (IUnquote fc t)
+    = findBindableNames arg env used t
 findBindableNames arg env used (IAlternative fc u alts)
     = concatMap (findBindableNames arg env used) alts
 -- We've skipped case, let and local - rather than guess where the
@@ -150,11 +154,11 @@ mutual
                         ++ bound in
             PatClause fc (substNames [] [] lhs)
                          (substNames bound' ps rhs)
-  substNamesClause bound ps (WithClause fc lhs wval cs)
+  substNamesClause bound ps (WithClause fc lhs wval flags cs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
                         ++ bound in
             WithClause fc (substNames [] [] lhs)
-                          (substNames bound' ps wval) cs
+                          (substNames bound' ps wval) flags cs
   substNamesClause bound ps (ImpossibleClause fc lhs)
       = ImpossibleClause fc (substNames bound [] lhs)
 
@@ -230,9 +234,10 @@ mutual
   substLocClause fc' (PatClause fc lhs rhs)
       = PatClause fc' (substLoc fc' lhs)
                       (substLoc fc' rhs)
-  substLocClause fc' (WithClause fc lhs wval cs)
+  substLocClause fc' (WithClause fc lhs wval flags cs)
       = WithClause fc' (substLoc fc' lhs)
                        (substLoc fc' wval)
+                       flags
                        (map (substLocClause fc') cs)
   substLocClause fc' (ImpossibleClause fc lhs)
       = ImpossibleClause fc' (substLoc fc' lhs)
@@ -285,3 +290,16 @@ uniqueName defs used n
     next str
         = let (n, i) = nameNum str in
               n ++ "_" ++ show (i + 1)
+
+export
+checkRefVisibility : {auto c : Ref Ctxt Defs} ->
+                     FC -> Name ->
+                     Visibility -> -- Visibility of the name
+                     Visibility -> -- Minimum visibility of references
+                     Name -> Core ()
+checkRefVisibility fc fn vis min ref
+    = do defs <- get Ctxt
+         Just gdef <- lookupCtxtExact ref (gamma defs)
+              | Nothing => pure ()
+         when (visibility gdef <= min) $
+              throw (VisibilityError fc vis fn (visibility gdef) ref)

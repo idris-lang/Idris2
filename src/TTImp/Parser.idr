@@ -18,6 +18,8 @@ topDecl : FileName -> IndentInfo -> Rule ImpDecl
 export
 collectDefs : List ImpDecl -> List ImpDecl
 
+%default covering
+
 %hide Prelude.(>>=)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
@@ -500,7 +502,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
