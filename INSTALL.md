@@ -9,7 +9,10 @@ requirements are:
   a Mac, you can install this with `brew install coreutils`.
 
 On Windows, it has been reported that installing via `MSYS2` works
-(https://www.msys2.org/). On Raspberry Pi, you can bootstrap via Racket.
+(https://www.msys2.org/). On Windows older than Windows 8, you may need to
+set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
+
+On Raspberry Pi, you can bootstrap via Racket.
 
 By default, code generation is via Chez Scheme. You can use Racket instead,
 by setting the environment variable `IDRIS2_CG=racket` before running `make`.

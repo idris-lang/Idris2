@@ -3,6 +3,11 @@ package contrib
 modules = Control.Delayed,
 
           Data.List.TailRec,
+          Data.List.Equalities,
+          Data.List.Reverse,
+          Data.List.Views.Extra,
+          Data.List.Palindrome,
+
           Data.Bool.Extra,
           Data.SortedMap,
           Data.SortedSet,

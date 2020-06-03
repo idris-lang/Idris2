@@ -1,0 +1,4 @@
+:printdef evalAdd
+:printdef evalBlock
+evalAdd 2 3
+:q

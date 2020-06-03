@@ -1,6 +1,5 @@
 module TTImp.Unelab
 
-import TTImp.TTImp
 import Core.CaseTree
 import Core.Context
 import Core.Env
@@ -8,6 +7,9 @@ import Core.Normalise
 import Core.Options
 import Core.Value
 import Core.TT
+
+import TTImp.TTImp
+import TTImp.Utils
 
 import Data.List
 
@@ -32,11 +34,14 @@ data IArg
    = Exp FC RawImp
    | Imp FC (Maybe Name) RawImp
 
-data UnelabMode = Full | NoSugar | ImplicitHoles
+data UnelabMode
+     = Full
+     | NoSugar Bool -- uniqify names
+     | ImplicitHoles
 
 Eq UnelabMode where
    Full == Full = True
-   NoSugar == NoSugar = True
+   NoSugar t == NoSugar u = t == u
    ImplicitHoles == ImplicitHoles = True
    _ == _ = False
 
@@ -97,7 +102,7 @@ mutual
                 (umode : UnelabMode) ->
                 (RawImp, Glued vars) ->
                 Core (RawImp, Glued vars)
-  unelabSugar NoSugar res = pure res
+  unelabSugar (NoSugar _) res = pure res
   unelabSugar ImplicitHoles res = pure res
   unelabSugar _ (tm, ty)
       = let (f, args) = getFnArgs tm [] in
@@ -148,7 +153,25 @@ mutual
            pure (IHole fc mkn, gnf env (embed ty))
   unelabTy' umode env (Bind fc x b sc)
       = do (sc', scty) <- unelabTy umode (b :: env) sc
-           unelabBinder umode fc env x b sc sc' !(getTerm scty)
+           case umode of
+                NoSugar True =>
+                   let x' = uniqueLocal vars x in
+                       unelabBinder umode fc env x' b
+                                    (renameVars (CompatExt CompatPre) sc) sc'
+                                    (renameVars (CompatExt CompatPre) !(getTerm scty))
+                _ => unelabBinder umode fc env x b sc sc' !(getTerm scty)
+    where
+      next : Name -> Name
+      next (MN n i) = MN n (i + 1)
+      next (UN n) = MN (show n) 0
+      next (NS ns n) = NS ns (next n)
+      next n = MN (show n) 0
+
+      uniqueLocal : List Name -> Name -> Name
+      uniqueLocal vs n
+         = if n `elem` vs
+              then uniqueLocal vs (next n)
+              else n
   unelabTy' umode env (App fc fn arg)
       = do (fn', gfnty) <- unelabTy umode env fn
            (arg', gargty) <- unelabTy umode env arg
@@ -170,7 +193,7 @@ mutual
            case p' of
                 IVar _ n =>
                     case umode of
-                         NoSugar => pure (IAs fc s n tm', ty)
+                         NoSugar _ => pure (IAs fc s n tm', ty)
                          _ => pure (tm', ty)
                 _ => pure (tm', ty) -- Should never happen!
   unelabTy' umode env (TDelayed fc r tm)
@@ -251,7 +274,15 @@ unelabNoSugar : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 Env Term vars -> Term vars -> Core RawImp
 unelabNoSugar env tm
-    = do tm' <- unelabTy NoSugar env tm
+    = do tm' <- unelabTy (NoSugar False) env tm
+         pure $ fst tm'
+
+export
+unelabUniqueBinders : {vars : _} ->
+                {auto c : Ref Ctxt Defs} ->
+                Env Term vars -> Term vars -> Core RawImp
+unelabUniqueBinders env tm
+    = do tm' <- unelabTy (NoSugar True) env tm
          pure $ fst tm'
 
 export

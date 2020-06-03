@@ -1,5 +1,7 @@
 module Data.Bool.Extra
 
+%default total
+
 public export
 andSameNeutral : (x : Bool) -> x && x = x
 andSameNeutral False = Refl

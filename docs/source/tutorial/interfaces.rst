@@ -658,4 +658,4 @@ parameter used to find an implementation.
 .. [#ConorRoss] Conor McBride and Ross Paterson. 2008. Applicative programming
        with effects. J. Funct. Program. 18, 1 (January 2008),
        1-13. DOI=10.1017/S0956796807006326
-       http://dx.doi.org/10.1017/S0956796807006326
+       https://dx.doi.org/10.1017/S0956796807006326

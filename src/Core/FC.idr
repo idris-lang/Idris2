@@ -1,5 +1,7 @@
 module Core.FC
 
+%default total
+
 public export
 FilePos : Type
 FilePos = (Int, Int)

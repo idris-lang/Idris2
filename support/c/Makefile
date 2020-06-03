@@ -11,6 +11,9 @@ SRCS = $(wildcard *.c)
 ifeq ($(OS), windows)
 	SRCS += windows/win_utils.c windows/win_hack.c
 	LDFLAGS += -lws2_32
+ifeq ($(OLD_WIN), 1)
+	CFLAGS += -D_OLD_WIN
+endif
 endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)

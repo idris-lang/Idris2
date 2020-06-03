@@ -190,7 +190,7 @@ printClause l i (PatClause _ lhsraw rhsraw)
     = do lhs <- pterm lhsraw
          rhs <- pterm rhsraw
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
-printClause l i (WithClause _ lhsraw wvraw csraw)
+printClause l i (WithClause _ lhsraw wvraw flags csraw)
     = do lhs <- pterm lhsraw
          wval <- pterm wvraw
          cs <- traverse (printClause l (i + 2)) csraw

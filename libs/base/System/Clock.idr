@@ -69,6 +69,7 @@ data OSClock : Type where [external]
 
 ||| Note: Back-ends are required to implement UTC, monotonic time, CPU time
 ||| in current process/thread, and time duration; the rest are optional.
+export
 data ClockTypeMandatory
   = Mandatory
   | Optional

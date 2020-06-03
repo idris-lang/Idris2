@@ -5,6 +5,7 @@ import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
+import Utils.Path
 
 import Idris.CommandLine
 import Idris.REPL
@@ -16,19 +17,21 @@ import IdrisPaths
 import Data.So
 import System
 
+%default covering
+
 -- TODO: Version numbers on dependencies
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> Core ()
 addPkgDir p
     = do defs <- get Ctxt
-         addExtraDir (dir_prefix (dirs (options defs)) ++ dirSep ++
-                             "idris2-" ++ showVersion False version ++ dirSep ++ p)
+         addExtraDir (dir_prefix (dirs (options defs)) </>
+                             "idris2-" ++ showVersion False version </> p)
 
 dirOption : Dirs -> DirCommand -> Core ()
 dirOption dirs LibDir
     = coreLift $ putStrLn
-         (dir_prefix dirs ++ dirSep ++ "idris2-" ++ showVersion False version ++ dirSep)
+         (dir_prefix dirs </> "idris2-" ++ showVersion False version)
 
 -- Options to be processed before type checking. Return whether to continue.
 export

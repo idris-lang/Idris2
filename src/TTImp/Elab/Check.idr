@@ -21,6 +21,8 @@ import Data.List
 import Data.NameMap
 import Data.StringMap
 
+%default covering
+
 public export
 data ElabMode = InType | InLHS RigCount | InExpr | InTransform
 
