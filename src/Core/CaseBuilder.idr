@@ -95,10 +95,6 @@ updatePats env nf (p :: ps)
                pure (record { argType = Stuck !(quote empty env nf) } p :: ps)
          _ => pure (p :: ps)
 
-mkEnv : FC -> (vs : List Name) -> Env Term vs
-mkEnv fc [] = []
-mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns
-
 substInPatInfo : {pvar, vars, todo : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Term vars -> PatInfo pvar vars ->

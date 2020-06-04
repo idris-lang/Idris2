@@ -235,3 +235,11 @@ shrinkEnv (b :: env) (KeepCons p)
     = do env' <- shrinkEnv env p
          b' <- shrinkBinder b p
          pure (b' :: env')
+
+-- Make a dummy environment, if we genuinely don't care about the values
+-- and types of the contents.
+-- We use this when building and comparing case trees.
+export
+mkEnv : FC -> (vs : List Name) -> Env Term vs
+mkEnv fc [] = []
+mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns

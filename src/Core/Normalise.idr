@@ -694,6 +694,47 @@ interface Convert (tm : List Name -> Type) where
       = do q <- newRef QVar 0
            convGen q defs env tm tm'
 
+tryUpdate : {vars, vars' : _} ->
+            List (Var vars, Var vars') ->
+            Term vars -> Maybe (Term vars')
+tryUpdate ms (Local fc l idx p)
+    = do MkVar p' <- findIdx ms idx
+         pure $ Local fc l _ p'
+  where
+    findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+    findIdx [] _ = Nothing
+    findIdx ((MkVar {i} _, v) :: ps) n
+        = if i == n then Just v else findIdx ps n
+tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
+tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
+tryUpdate ms (Bind fc x b sc)
+    = do b' <- tryUpdateB b
+         pure $ Bind fc x b' !(tryUpdate (map weakenP ms) sc)
+  where
+    tryUpdatePi : PiInfo (Term vars) -> Maybe (PiInfo (Term vars'))
+    tryUpdatePi Explicit = pure Explicit
+    tryUpdatePi Implicit = pure Implicit
+    tryUpdatePi AutoImplicit = pure AutoImplicit
+    tryUpdatePi (DefImplicit t) = pure $ DefImplicit !(tryUpdate ms t)
+
+    tryUpdateB : Binder (Term vars) -> Maybe (Binder (Term vars'))
+    tryUpdateB (Lam r p t) = pure $ Lam r !(tryUpdatePi p) !(tryUpdate ms t)
+    tryUpdateB (Let r v t) = pure $ Let r !(tryUpdate ms v) !(tryUpdate ms t)
+    tryUpdateB (Pi r p t) = pure $ Pi r !(tryUpdatePi p) !(tryUpdate ms t)
+    tryUpdateB _ = Nothing
+
+    weakenP : {n : _} -> (Var vars, Var vars') ->
+              (Var (n :: vars), Var (n :: vars'))
+    weakenP (v, vs) = (weaken v, weaken vs)
+tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
+tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
+tryUpdate ms (TDelayed fc r tm) = pure $ TDelayed fc r !(tryUpdate ms tm)
+tryUpdate ms (TDelay fc r ty tm) = pure $ TDelay fc r !(tryUpdate ms ty) !(tryUpdate ms tm)
+tryUpdate ms (TForce fc r tm) = pure $ TForce fc r !(tryUpdate ms tm)
+tryUpdate ms (PrimVal fc c) = pure $ PrimVal fc c
+tryUpdate ms (Erased fc i) = pure $ Erased fc i
+tryUpdate ms (TType fc) = pure $ TType fc
+
 mutual
   allConv : {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
@@ -702,6 +743,87 @@ mutual
   allConv q defs env (x :: xs) (y :: ys)
       = pure $ !(convGen q defs env x y) && !(allConv q defs env xs ys)
   allConv q defs env _ _ = pure False
+
+  -- If the case trees match in structure, get the list of variables which
+  -- have to match in the call
+  getMatchingVarAlt : {args, args' : _} ->
+                      Defs ->
+                      List (Var args, Var args') ->
+                      CaseAlt args -> CaseAlt args' ->
+                      Core (Maybe (List (Var args, Var args')))
+  getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
+      = if n == n'
+           then do let Just ms' = extend cargs cargs' ms
+                        | Nothing => pure Nothing
+                   Just ms <- getMatchingVars defs ms' t t'
+                        | Nothing => pure Nothing
+                   -- drop the prefix from cargs/cargs' since they won't
+                   -- be in the caller
+                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+           else pure Nothing
+    where
+      weakenP : {c, c', args, args' : _} ->
+                (Var args, Var args') ->
+                (Var (c :: args), Var (c' :: args'))
+      weakenP (v, vs) = (weaken v, weaken vs)
+
+      extend : (cs : List Name) -> (cs' : List Name) ->
+               (List (Var args, Var args')) ->
+               Maybe (List (Var (cs ++ args), Var (cs' ++ args')))
+      extend [] [] ms = pure ms
+      extend (c :: cs) (c' :: cs') ms
+          = do rest <- extend cs cs' ms
+               pure ((MkVar First, MkVar First) :: map weakenP rest)
+      extend _ _ _ = Nothing
+
+      dropV : forall args .
+              (cs : List Name) -> Var (cs ++ args) -> Maybe (Var args)
+      dropV [] v = Just v
+      dropV (c :: cs) (MkVar First) = Nothing
+      dropV (c :: cs) (MkVar (Later x))
+          = dropV cs (MkVar x)
+
+      dropP : (cs : List Name) -> (cs' : List Name) ->
+              (Var (cs ++ args), Var (cs' ++ args')) ->
+              Maybe (Var args, Var args')
+      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
+
+  getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
+      = if c == c'
+           then getMatchingVars defs ms t t'
+           else pure Nothing
+  getMatchingVarAlt defs ms (DefaultCase t) (DefaultCase t')
+      = getMatchingVars defs ms t t'
+  getMatchingVarAlt defs _ _ _ = pure Nothing
+
+  getMatchingVarAlts : {args, args' : _} ->
+                       Defs ->
+                       List (Var args, Var args') ->
+                       List (CaseAlt args) -> List (CaseAlt args') ->
+                       Core (Maybe (List (Var args, Var args')))
+  getMatchingVarAlts defs ms [] [] = pure (Just ms)
+  getMatchingVarAlts defs ms (a :: as) (a' :: as')
+      = do Just ms <- getMatchingVarAlt defs ms a a'
+                | Nothing => pure Nothing
+           getMatchingVarAlts defs ms as as'
+  getMatchingVarAlts defs _ _ _ = pure Nothing
+
+  getMatchingVars : {args, args' : _} ->
+                    Defs ->
+                    List (Var args, Var args') ->
+                    CaseTree args -> CaseTree args' ->
+                    Core (Maybe (List (Var args, Var args')))
+  getMatchingVars defs ms (Case _ p _ alts) (Case _ p' _ alts')
+      = getMatchingVarAlts defs ((MkVar p, MkVar p') :: ms) alts alts'
+  getMatchingVars defs ms (STerm i tm) (STerm i' tm')
+      = do let Just tm'' = tryUpdate ms tm
+               | Nothing => pure Nothing
+           if !(convert defs (mkEnv (getLoc tm) args') tm'' tm')
+              then pure (Just ms)
+              else pure Nothing
+  getMatchingVars defs ms (Unmatched _) (Unmatched _) = pure (Just ms)
+  getMatchingVars defs ms Impossible Impossible = pure (Just ms)
+  getMatchingVars _ _ _ _ = pure Nothing
 
   chkSameDefs : {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
@@ -712,9 +834,32 @@ mutual
                | _ => pure False
           Just (PMDef _ args' ct' rt' _) <- lookupDefExact n' (gamma defs)
                | _ => pure False
-          if (length args == length args' && eqTree rt rt')
-             then allConv q defs env nargs nargs'
-             else pure False
+
+          -- If the two case blocks match in structure, get which variables
+          -- correspond. If corresponding variables convert, the two case
+          -- blocks convert.
+          Just ms <- getMatchingVars defs [] ct ct'
+               | Nothing => pure False
+          convertMatches ms
+     where
+       -- We've only got the index into the argument list, and the indices
+       -- don't match up, which is annoying. But it'll always be there!
+       getArgPos : Nat -> List (Closure vars) -> Maybe (Closure vars)
+       getArgPos _ [] = Nothing
+       getArgPos Z (c :: cs) = pure c
+       getArgPos (S k) (c :: cs) = getArgPos k cs
+
+       convertMatches : {vs, vs' : _} ->
+                        List (Var vs, Var vs') ->
+                        Core Bool
+       convertMatches [] = pure True
+       convertMatches ((MkVar {i} p, MkVar {i=i'} p') :: vs)
+          = do let Just varg = getArgPos i nargs
+                   | Nothing => pure False
+               let Just varg' = getArgPos i' nargs'
+                   | Nothing => pure False
+               pure $ !(convGen q defs env varg varg') &&
+                      !(convertMatches vs)
 
   -- If two names are standing for case blocks, check the blocks originate
   -- from the same place, and have the same scrutinee
