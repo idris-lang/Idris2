@@ -380,13 +380,13 @@ patternEnv {vars} env args
                Nothing => updateVars ps svs
                Just p' => p' :: updateVars ps svs
 
-getVarsBelowTm : Nat -> List (Term vars) -> Maybe (List (Var vars))
-getVarsBelowTm max [] = Just []
-getVarsBelowTm max (Local fc r idx v :: xs)
-    = if idx >= max then Nothing
-         else do xs' <- getVarsBelowTm idx xs
+getVarsTm : List Nat -> List (Term vars) -> Maybe (List (Var vars))
+getVarsTm got [] = Just []
+getVarsTm got (Local fc r idx v :: xs)
+    = if idx `elem` got then Nothing
+         else do xs' <- getVarsTm (idx :: got) xs
                  pure (MkVar v :: xs')
-getVarsBelowTm _ (_ :: xs) = Nothing
+getVarsTm _ (_ :: xs) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
@@ -398,7 +398,7 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         case getVarsBelowTm 1000000 args of
+         case getVarsTm [] args of
               Nothing => pure Nothing
               Just vs =>
                  let (newvars ** svs) = toSubVars _ vs in
