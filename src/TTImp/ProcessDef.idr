@@ -700,7 +700,7 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc CompileTime n ty (rights cs)
+             getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -807,7 +807,7 @@ processDef opts nest env fc n_in cs_in
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
-                 getPMDef fc CompileTime (Resolved n) ty covcs
+                 getPMDef fc (CompileTime mult) (Resolved n) ty covcs
              log 3 $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log 3 $ "Catch all case in " ++ show n
