@@ -12,6 +12,8 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.List
+
 %default covering
 
 extend : {extvs : _} ->
@@ -60,9 +62,9 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
 
     applyEnv : {vs : _} ->
                Env Term vs -> Name ->
-               Core (Name, (Maybe Name, List Name, FC -> NameType -> Term vs))
+               Core (Name, (Maybe Name, List (Var vs), FC -> NameType -> Term vs))
     applyEnv {vs} env n
           = do n' <- resolveName n -- it'll be Resolved by expandAmbigName
-               pure (Resolved n', (Nothing, vs,
+               pure (Resolved n', (Nothing, reverse (allVars env),
                         \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))
