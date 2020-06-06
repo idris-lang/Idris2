@@ -3,8 +3,24 @@ module Compiler.ES.ES
 import Compiler.ES.Imperative
 import Utils.Hex
 import Data.Strings
+import Data.SortedSet
 
-%default partial
+data ESs : Type where
+
+record ESSt where
+  constructor MkESSt
+  preamble : SortedSet String
+
+
+addToPreamble : {auto c : Ref ESs ESSt} -> String -> Core ()
+addToPreamble new =
+  do
+    s <- get ESs
+    put ESs (record { preamble = insert new (preamble s) } s)
+    pure ()
+
+esName : String -> String
+esName x = "es_" ++ x
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -66,13 +82,18 @@ boundedIntOp bits o lhs rhs = boundedInt 63 (binOp o lhs rhs)
 boolOp : String -> String -> String -> String
 boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? 1 : 0)"
 
-jsConstant : Constant -> String
-jsConstant (I i) = toBigInt $ show i
-jsConstant (BI i) = toBigInt $ show i
-jsConstant (Str s) = jsString s
-jsConstant (Ch c) = jsString $ Data.Strings.singleton c
-jsConstant (Db f) = show f
-jsConstant WorldVal = "__jsPrim_IdrisWorld"
+jsConstant : {auto c : Ref ESs ESSt} -> Constant -> Core String
+jsConstant (I i) = pure $ toBigInt $ show i
+jsConstant (BI i) = pure $ toBigInt $ show i
+jsConstant (Str s) = pure $ jsString s
+jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
+jsConstant (Db f) = pure $ show f
+jsConstant WorldVal =
+  do
+    let name = esName "idrisworld"
+    addToPreamble $ "const " ++ name ++ " = Symbol(\"" ++ name ++ "\")";
+    pure name
+jsConstant ty = throw (InternalError $ "Unsuported constant " ++ show ty)
 
 jsOp : PrimFn arity -> Vect arity String -> String
 jsOp (Add IntType) [x, y] = boundedIntOp 63 "+" x y
@@ -134,8 +155,19 @@ jsOp (Crash) [_, msg] = "__jsPrim_idris_crash(" ++ jsString msg ++ ")"
 jsPrim : Name -> List String -> Core String
 jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
 
+makeForeignFromExp : Name -> Nat -> String -> String
+makeForeignFromExp n nargs pattern =
+  let lastArg = nargs `minus` 1
+  in "const " ++ jsName n ++ " = (" ++ showSep ", " [ "_" ++ show x | x<-[0..lastArg]] ++ ") => " ++ pattern
+
+
+foreignDecl : Name -> List String -> Core String
+foreignDecl n ["C:idris2_putStr,libidris2_support"] =
+  pure $ makeForeignFromExp n 2 "process.stdout.write(_0)"
+foreignDecl x path = throw (InternalError $ "foreign not supported: " ++ (show path))
+
 mutual
-  impExp2es : ImperativeExp -> Core String
+  impExp2es : {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
   impExp2es (IEVar n) =
     pure $ jsName n
   impExp2es (IELambda args body) =
@@ -143,7 +175,7 @@ mutual
   impExp2es (IEApp f args) =
     pure $ !(impExp2es f) ++ "(" ++ showSep ", " !(traverse impExp2es args) ++ ")"
   impExp2es (IEConstant c) =
-    pure $ jsConstant c
+    jsConstant c
   impExp2es (IEPrimFn f args) =
     pure $ jsOp f !(traverseVect impExp2es args)
   impExp2es (IEPrimFnExt n args) =
@@ -164,7 +196,7 @@ mutual
   impExp2es IENull =
     pure "undefined"
 
-  imperative2es : Nat -> ImperativeStatement -> Core String
+  imperative2es : {auto c : Ref ESs ESSt} -> Nat -> ImperativeStatement -> Core String
   imperative2es indent DoNothing =
     pure ""
   imperative2es indent (SeqStatement x y) =
@@ -172,30 +204,32 @@ mutual
   imperative2es indent (FunDecl n args body) =
     pure $ nSpaces indent ++ "function " ++ jsName n ++ "(" ++ showSep ", " (map jsName args) ++ "){\n" ++
            !(imperative2es (indent+1) body) ++ "\n" ++ nSpaces indent ++ "}\n"
+  imperative2es indent (ForeignDecl n path) =
+    pure $ !(foreignDecl n path) ++ "\n"
   imperative2es indent (ReturnStatement x) =
     pure $ nSpaces indent ++ "return " ++ !(impExp2es x) ++ ";"
   imperative2es indent (SwitchStatement e alts def) =
     do
       def <- case def of
                 Nothing => pure ""
-                Just x => pure $ nSpaces (indent+1) ++ "case default:\n" ++ !(imperative2es (indent+2) x)
+                Just x => pure $ nSpaces (indent+1) ++ "default:\n" ++ !(imperative2es (indent+2) x)
       let sw = nSpaces indent ++ "switch(" ++ !(impExp2es e) ++ "){\n"
       let alts = concat !(traverse (alt2es (indent+1)) alts)
       pure $ sw ++ alts ++ def ++ "\n" ++ nSpaces indent ++ "}"
   imperative2es indent (LetDecl x v) =
     case v of
-      Nothing => pure $ "let " ++ jsName x ++ ";"
-      Just v_ => pure $ "let " ++ jsName x ++ " = " ++ !(impExp2es v_) ++ ";"
+      Nothing => pure $ nSpaces indent ++ "let " ++ jsName x ++ ";"
+      Just v_ => pure $ nSpaces indent ++ "let " ++ jsName x ++ " = " ++ !(impExp2es v_) ++ ";"
   imperative2es indent (ConstDecl x v) =
-    pure $ "const " ++ jsName x ++ " = " ++ !(impExp2es v) ++ ";"
+    pure $ nSpaces indent ++ "const " ++ jsName x ++ " = " ++ !(impExp2es v) ++ ";"
   imperative2es indent (MutateStatement x v) =
-    pure $ jsName x ++ " = " ++ !(impExp2es v) ++ ";"
+    pure $ nSpaces indent ++ jsName x ++ " = " ++ !(impExp2es v) ++ ";"
   imperative2es indent (ErrorStatement msg) =
-    pure $ "throw new Error("++ jsString msg ++");"
+    pure $ nSpaces indent ++ "throw new Error("++ jsString msg ++");"
   imperative2es indent (EvalExpStatement e) =
-    pure $ !(impExp2es e) ++ ";"
+    pure $ nSpaces indent ++ !(impExp2es e) ++ ";"
 
-  alt2es : Nat -> (ImperativeExp, ImperativeStatement) -> Core String
+  alt2es : {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
                                 !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break;\n"
 export
@@ -203,4 +237,8 @@ compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String
 compileToES c tm =
   do
     statements <- compileToImperative c tm
-    imperative2es 0 statements
+    s <- newRef ESs (MkESSt empty)
+    es_statements <- imperative2es 0 statements
+    st <- get ESs
+    let pre = showSep "\n" $ SortedSet.toList $ preamble st
+    pure $ pre ++ "\n\n" ++ es_statements

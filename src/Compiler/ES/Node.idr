@@ -11,8 +11,6 @@ import Core.TT
 import System
 import System.File
 
-%default partial
-
 ||| Compile a TT expression to Node
 compileToNode : Ref Ctxt Defs ->
               ClosedTerm -> (outfile : String) -> Core ()

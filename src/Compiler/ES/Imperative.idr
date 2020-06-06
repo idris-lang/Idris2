@@ -9,8 +9,6 @@ import Compiler.CompileExpr
 import public Core.Context
 import public Core.TT
 
-%default partial
-
 mutual
   public export
   data ImperativeExp = IEVar Name
@@ -31,6 +29,7 @@ mutual
   data ImperativeStatement = DoNothing
                            | SeqStatement ImperativeStatement ImperativeStatement
                            | FunDecl Name (List Name) ImperativeStatement
+                           | ForeignDecl Name (List String)
                            | ReturnStatement ImperativeExp
                            | SwitchStatement ImperativeExp (List (ImperativeExp, ImperativeStatement)) (Maybe ImperativeStatement)
                            | LetDecl Name (Maybe ImperativeExp)
@@ -52,7 +51,7 @@ mutual
   Show ImperativeExp where
     show (IEVar n) =  "(IEVar " ++ show n ++ ")"
     show (IELambda args b) = "(IELambda " ++ show args ++ " " ++ show b ++ ")"
-    show (IEApp f args) = "(IELambda " ++ show f ++ " " ++ show args ++ ")"
+    show (IEApp f args) = "(IEApp " ++ show f ++ " " ++ show args ++ ")"
     show (IEConstant c) =  "(IEConstant " ++ show c ++ ")"
     show (IEPrimFn f args) = "(IEPrimFn " ++ show f ++ " " ++ show args ++ ")"
     show (IEPrimFnExt f args) = "(IEPrimFnExt " ++ show f ++ " " ++ show args ++ ")"
@@ -67,8 +66,9 @@ mutual
   export
   Show ImperativeStatement where
     show DoNothing = "DoNothing"
-    show (SeqStatement x y) = "(SeqStatement " ++ show x ++ " " ++ show y ++ ")"
+    show (SeqStatement x y) = show x ++ ";" ++ show y
     show (FunDecl n args b) = "(FunDecl " ++ show n ++ " " ++ show args ++ " " ++ show b ++ ")"
+    show (ForeignDecl n path) = "(ForeignDecl " ++ show n ++ " " ++ show path ++")"
     show (ReturnStatement x) = "(ReturnStatement " ++ show x ++ ")"
     show (SwitchStatement e alts d) = "(SwitchStatement " ++ show e ++ " " ++ show alts ++ " " ++ show d ++ ")"
     show (LetDecl n v) = "(LetDecl " ++ show n ++ " " ++ show v ++ ")"
@@ -116,6 +116,8 @@ mutual
     SeqStatement (replaceNamesExpS reps x) (replaceNamesExpS reps y)
   replaceNamesExpS reps (FunDecl n args body) =
     FunDecl n args $ replaceNamesExpS reps body
+  replaceNamesExpS reps (ForeignDecl n path) =
+    ForeignDecl n path
   replaceNamesExpS reps (ReturnStatement e) =
     ReturnStatement $ replaceNamesExp reps e
   replaceNamesExpS reps (SwitchStatement s alts def) =
@@ -212,6 +214,8 @@ mutual
     do
       (s, a) <- impListExp args
       pure (s, IEPrimFnExt p a)
+  impExp (NmCon fc x Nothing args) =
+    throw (InternalError "MknConAlt without tag")
   impExp (NmCon fc x (Just tag) args) =
     do
       (s, a) <- impListExp args
@@ -241,6 +245,8 @@ mutual
       let nargs = length args
       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
       pure (IEConstructorTag tag, replaceNamesExpS reps $ s <+> MutateStatement res r)
+  impConAlt res target (MkNConAlt n Nothing args exp) =
+    throw (InternalError "MknConAlt without tag")
 
   impConstAlt : {auto c : Ref Imps ImpSt} -> Name -> NamedConstAlt -> Core (ImperativeExp, ImperativeStatement)
   impConstAlt res (MkNConstAlt c exp) =
@@ -254,12 +260,12 @@ impDef : {auto c : Ref Imps ImpSt} -> Name -> NamedDef -> Core ImperativeStateme
 impDef n (MkNmFun args exp) =
   pure $ FunDecl n args !(expToFnBody exp)
 impDef n (MkNmError exp) =
-  pure DoNothing
-impDef n (MkNmForeign _ _ _) =
-  pure DoNothing
+  throw $ (InternalError $ show exp)
+impDef n (MkNmForeign cs args ret) =
+  pure $ ForeignDecl n cs
 impDef n (MkNmCon _ _ _) =
   pure DoNothing
-  
+
 getImp : {auto c : Ref Imps ImpSt} -> (Name, FC, NamedDef) -> Core ImperativeStatement
 getImp (n, fc, d) = impDef n d
 
