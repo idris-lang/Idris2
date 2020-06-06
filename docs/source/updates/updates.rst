@@ -461,6 +461,34 @@ directory ``build/ttc``, in the root of the source tree, with the directory
 structure following the directory structure of the source.  Executables are
 placed in ``build/exec``.
 
+Packages
+--------
+
+Dependencies on other packages are now indicated with the ``depends`` field,
+the ``pkgs`` field is no longer recognized. Also, fields with URLS or other
+string data (other than module or package names), must be enclosed in double
+quotes.
+For example:
+
+::
+
+        package lightyear
+
+        sourceloc  = "git://git@github.com:ziman/lightyear.git"
+        bugtracker = "http://www.github.com/ziman/lightyear/issues"
+
+        depends = effects
+
+        modules = Lightyear
+                , Lightyear.Position
+                , Lightyear.Core
+                , Lightyear.Combinators
+                , Lightyear.StringFile
+                , Lightyear.Strings
+                , Lightyear.Char
+                , Lightyear.Testing
+
+
 .. _sect-new-features:
 
 New features
