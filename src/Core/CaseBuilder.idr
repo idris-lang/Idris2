@@ -16,10 +16,10 @@ import Decidable.Equality
 %default covering
 
 public export
-data Phase = CompileTime | RunTime
+data Phase = CompileTime RigCount | RunTime
 
 Eq Phase where
-  CompileTime == CompileTime = True
+  CompileTime r == CompileTime r' = r == r'
   RunTime == RunTime = True
   _ == _ = False
 
@@ -253,8 +253,9 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
     clauseType' _                 = VarClause
 
     getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
-    getClauseType CompileTime (PCon _ _ _ _ xs) (Known r t)
-        = if isErased r && all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
+    getClauseType (CompileTime cr) (PCon _ _ _ _ xs) (Known r t)
+        = if isErased r && not (isErased cr) &&
+             all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
              then VarClause
              else ConClause
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t

@@ -321,46 +321,6 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
          ext <- extendEnv env SubRefl nest lhstm_lin lhsty_lin
          pure (lhs, ext)
 
-plicit : Binder (Term vars) -> PiInfo RawImp
-plicit (Pi _ p _) = forgetDef p
-plicit (PVar _ p _) = forgetDef p
-plicit _ = Explicit
-
-bindNotReq : {vs : _} ->
-             FC -> Int -> Env Term vs -> (sub : SubVars pre vs) ->
-             List (PiInfo RawImp, Name) ->
-             Term vs -> (List (PiInfo RawImp, Name), Term pre)
-bindNotReq fc i [] SubRefl ns tm = (ns, embed tm)
-bindNotReq fc i (b :: env) SubRefl ns tm
-   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
-         (ns', btm) = bindNotReq fc (1 + i) env SubRefl ns tmptm in
-         (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq fc i (b :: env) (KeepCons p) ns tm
-   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
-         (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
-         (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq {vs = n :: _} fc i (b :: env) (DropCons p) ns tm
-   = bindNotReq fc i env p ((plicit b, n) :: ns)
-       (Bind fc _ (Pi (multiplicity b) Explicit (binderType b)) tm)
-
-bindReq : {vs : _} ->
-          FC -> Env Term vs -> (sub : SubVars pre vs) ->
-          List (PiInfo RawImp, Name) ->
-          Term pre -> Maybe (List (PiInfo RawImp, Name), List Name, ClosedTerm)
-bindReq {vs} fc env SubRefl ns tm
-    = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
-  where
-    notLets : List Name -> (vars : List Name) -> Env Term vars -> List Name
-    notLets acc [] _ = acc
-    notLets acc (v :: vs) (Let _ _ _ :: env) = notLets acc vs env
-    notLets acc (v :: vs) (_ :: env) = notLets (v :: acc) vs env
-bindReq {vs = n :: _} fc (b :: env) (KeepCons p) ns tm
-    = do b' <- shrinkBinder b p
-         bindReq fc env p ((plicit b, n) :: ns)
-            (Bind fc _ (Pi (multiplicity b) Explicit (binderType b')) tm)
-bindReq fc (b :: env) (DropCons p) ns tm
-    = bindReq fc env p ns tm
-
 -- Return whether any of the pattern variables are in a trivially empty
 -- type, where trivally empty means one of:
 --  * No constructors
@@ -378,10 +338,10 @@ hasEmptyPat defs env _ = pure False
 applyEnv : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            Env Term vars -> Name ->
-           Core (Name, (Maybe Name, List Name, FC -> NameType -> Term vars))
+           Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
 applyEnv env withname
     = do n' <- resolveName withname
-         pure (withname, (Just withname, namesNoLet env,
+         pure (withname, (Just withname, reverse (allVarsNoLet env),
                   \fc, nt => applyTo fc
                          (Ref fc nt (Resolved n')) env))
 
@@ -740,7 +700,7 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc CompileTime n ty (rights cs)
+             getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -847,7 +807,7 @@ processDef opts nest env fc n_in cs_in
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
-                 getPMDef fc CompileTime (Resolved n) ty covcs
+                 getPMDef fc (CompileTime mult) (Resolved n) ty covcs
              log 3 $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log 3 $ "Catch all case in " ++ show n

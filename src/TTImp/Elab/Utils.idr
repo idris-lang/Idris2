@@ -73,3 +73,45 @@ wrapErrorC opts err
     = if InCase `elem` opts
          then id
          else wrapError err
+
+plicit : Binder (Term vars) -> PiInfo RawImp
+plicit (Pi _ p _) = forgetDef p
+plicit (PVar _ p _) = forgetDef p
+plicit _ = Explicit
+
+export
+bindNotReq : {vs : _} ->
+             FC -> Int -> Env Term vs -> (sub : SubVars pre vs) ->
+             List (PiInfo RawImp, Name) ->
+             Term vs -> (List (PiInfo RawImp, Name), Term pre)
+bindNotReq fc i [] SubRefl ns tm = (ns, embed tm)
+bindNotReq fc i (b :: env) SubRefl ns tm
+   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
+         (ns', btm) = bindNotReq fc (1 + i) env SubRefl ns tmptm in
+         (ns', refToLocal (MN "arg" i) _ btm)
+bindNotReq fc i (b :: env) (KeepCons p) ns tm
+   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
+         (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
+         (ns', refToLocal (MN "arg" i) _ btm)
+bindNotReq {vs = n :: _} fc i (b :: env) (DropCons p) ns tm
+   = bindNotReq fc i env p ((plicit b, n) :: ns)
+       (Bind fc _ (Pi (multiplicity b) Explicit (binderType b)) tm)
+
+export
+bindReq : {vs : _} ->
+          FC -> Env Term vs -> (sub : SubVars pre vs) ->
+          List (PiInfo RawImp, Name) ->
+          Term pre -> Maybe (List (PiInfo RawImp, Name), List Name, ClosedTerm)
+bindReq {vs} fc env SubRefl ns tm
+    = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
+  where
+    notLets : List Name -> (vars : List Name) -> Env Term vars -> List Name
+    notLets acc [] _ = acc
+    notLets acc (v :: vs) (Let _ _ _ :: env) = notLets acc vs env
+    notLets acc (v :: vs) (_ :: env) = notLets (v :: acc) vs env
+bindReq {vs = n :: _} fc (b :: env) (KeepCons p) ns tm
+    = do b' <- shrinkBinder b p
+         bindReq fc env p ((plicit b, n) :: ns)
+            (Bind fc _ (Pi (multiplicity b) Explicit (binderType b')) tm)
+bindReq fc (b :: env) (DropCons p) ns tm
+    = bindReq fc env p ns tm
