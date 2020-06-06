@@ -1,0 +1,6 @@
+1/1: Building boom (boom.idr)
+boom.idr:23:42--24:3:While processing right hand side of with block in eraseVar at boom.idr:23:3--24:3:
+Can't solve constraint between:
+	S (countGreater thr xs)
+and
+	countGreater thr xs
