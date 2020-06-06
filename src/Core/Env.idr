@@ -233,7 +233,7 @@ shrinkEnv env SubRefl = Just env
 shrinkEnv (b :: env) (DropCons p) = shrinkEnv env p
 shrinkEnv (b :: env) (KeepCons p)
     = do env' <- shrinkEnv env p
-         b' <- shrinkBinder b p
+         b' <- assert_total (shrinkBinder b p)
          pure (b' :: env')
 
 -- Make a dummy environment, if we genuinely don't care about the values
