@@ -1,0 +1,3 @@
+:let i : String
+:let i = "Privet, mir!"
+i
