@@ -74,12 +74,18 @@ contrib: prelude
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 libs : prelude base network contrib
+	mkdir -p ${IDRIS2_CURDIR}/libs/${IDRIS2_VERSION}
+	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
+	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
+	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
+	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
 
 testbin:
 	@${MAKE} -C tests testbin
 
 test:
-	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
+
 
 support:
 	@${MAKE} -C support/c
@@ -88,6 +94,7 @@ support-clean:
 	@${MAKE} -C support/c clean
 
 clean-libs:
+	rm -rf ${IDRIS2_CURDIR}/libs/idris2-${IDRIS2_VERSION}
 	${MAKE} -C libs/prelude clean
 	${MAKE} -C libs/base clean
 	${MAKE} -C libs/network clean
