@@ -131,7 +131,6 @@ stMain opts
          defs <- initDefs
          c <- newRef Ctxt defs
          s <- newRef Syn initSyntax
-         m <- newRef MD initMetadata
          addPrimitives
 
          setWorkingDir "."
@@ -157,6 +156,7 @@ stMain opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
+                 m <- newRef MD initMetadata
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $
