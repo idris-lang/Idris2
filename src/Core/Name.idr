@@ -199,4 +199,3 @@ namesEq (x :: xs) (y :: ys)
          rewrite ps
          Just Refl
 namesEq _ _ = Nothing
-

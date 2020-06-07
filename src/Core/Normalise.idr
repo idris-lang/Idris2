@@ -86,6 +86,11 @@ updateLimit Func n opts
              else (x, l) :: set n v xs
 updateLimit t n opts = pure (Just opts)
 
+data CaseResult a
+     = Result a
+     | NoMatch -- case alternative didn't match anything
+     | GotStuck -- alternative matched, but got stuck later
+
 parameters (defs : Defs, topopts : EvalOpts)
   mutual
     eval : {free, vars : _} ->
@@ -251,54 +256,54 @@ parameters (defs : Defs, topopts : EvalOpts)
                  (args : List Name) ->
                  List (Closure free) ->
                  CaseTree (args ++ more) ->
-                 (defval : Core (NF free)) ->
-                 Core (NF free)
-    evalConAlt env loc opts fc stk args args' sc def
-         = maybe def (\bound => evalTree env bound opts fc stk sc def)
-                     (getCaseBound args' args loc)
+                 Core (CaseResult (NF free))
+    evalConAlt env loc opts fc stk args args' sc
+         = do let Just bound = getCaseBound args' args loc
+                   | Nothing => pure GotStuck
+              evalTree env bound opts fc stk sc
 
     tryAlt : {free, more : _} ->
              Env Term free ->
              LocalEnv free more -> EvalOpts -> FC ->
              Stack free -> NF free -> CaseAlt more ->
-             (defval : Core (NF free)) -> Core (NF free)
+             Core (CaseResult (NF free))
     -- Ordinary constructor matching
-    tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc) def
+    tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
-              then evalConAlt env loc opts fc stk args args' sc def
-              else def
+              then evalConAlt env loc opts fc stk args args' sc
+              else pure NoMatch
     -- Type constructor matching, in typecase
-    tryAlt {more} env loc opts fc stk (NTCon _ nm tag' arity args') (ConCase nm' tag args sc) def
+    tryAlt {more} env loc opts fc stk (NTCon _ nm tag' arity args') (ConCase nm' tag args sc)
          = if nm == nm'
-              then evalConAlt env loc opts fc stk args args' sc def
-              else def
+              then evalConAlt env loc opts fc stk args args' sc
+              else pure NoMatch
     -- Primitive type matching, in typecase
-    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc) def
+    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc)
          = if show c == x
-              then evalTree env loc opts fc stk sc def
-              else def
+              then evalTree env loc opts fc stk sc
+              else pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _) (ConCase (UN "Type") tag [] sc) def
-         = evalTree env loc opts fc stk sc def
+    tryAlt env loc opts fc stk (NType _) (ConCase (UN "Type") tag [] sc)
+         = evalTree env loc opts fc stk sc
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi r e aty) scty) (ConCase (UN "->") tag [s,t] sc) def
+           env loc opts fc stk (NBind pfc x (Pi r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
                   [MkNFClosure aty,
                    MkNFClosure (NBind pfc x (Lam r e aty) scty)]
-                  sc def
+                  sc
     -- Delay matching
-    tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc) def
-         = evalTree env (ty :: arg :: loc) opts fc stk sc def
+    tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
+         = evalTree env (ty :: arg :: loc) opts fc stk sc
     -- Constant matching
-    tryAlt env loc opts fc stk (NPrimVal _ c') (ConstCase c sc) def
-         = if c == c' then evalTree env loc opts fc stk sc def
-                      else def
+    tryAlt env loc opts fc stk (NPrimVal _ c') (ConstCase c sc)
+         = if c == c' then evalTree env loc opts fc stk sc
+                      else pure NoMatch
     -- Default case matches against any *concrete* value
-    tryAlt env loc opts fc stk val (DefaultCase sc) def
+    tryAlt env loc opts fc stk val (DefaultCase sc)
          = if concrete val
-              then evalTree env loc opts fc stk sc def
-              else def
+              then evalTree env loc opts fc stk sc
+              else pure GotStuck
       where
         concrete : NF free -> Bool
         concrete (NDCon _ _ _ _ _) = True
@@ -307,33 +312,38 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete (NBind _ _ _ _) = True
         concrete (NType _) = True
         concrete _ = False
-    tryAlt _ _ _ _ _ _ _ def = def
+    tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
     findAlt : {args, free : _} ->
               Env Term free ->
               LocalEnv free args -> EvalOpts -> FC ->
               Stack free -> NF free -> List (CaseAlt args) ->
-              (defval : Core (NF free)) -> Core (NF free)
-    findAlt env loc opts fc stk val [] def = def
-    findAlt env loc opts fc stk val (x :: xs) def
-         = tryAlt env loc opts fc stk val x (findAlt env loc opts fc stk val xs def)
+              Core (CaseResult (NF free))
+    findAlt env loc opts fc stk val [] = pure GotStuck
+    findAlt env loc opts fc stk val (x :: xs)
+         = do Result val <- tryAlt env loc opts fc stk val x
+                   | NoMatch => findAlt env loc opts fc stk val xs
+                   | GotStuck => pure GotStuck
+              pure (Result val)
 
     evalTree : {args, free : _} -> Env Term free -> LocalEnv free args ->
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
-               (defval : Core (NF free)) -> Core (NF free)
-    evalTree env loc opts fc stk (Case idx x _ alts) def
+               Core (CaseResult (NF free))
+    evalTree env loc opts fc stk (Case idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
            let loc' = updateLocal idx (varExtend x) loc xval
-           findAlt env loc' opts fc stk xval alts def
-    evalTree env loc opts fc stk (STerm _ tm) def
+           findAlt env loc' opts fc stk xval alts
+    evalTree env loc opts fc stk (STerm _ tm)
           = case fuel opts of
-                 Nothing => evalWithOpts defs opts env loc (embed tm) stk
-                 Just Z => def
+                 Nothing => do res <- evalWithOpts defs opts env loc (embed tm) stk
+                               pure (Result res)
+                 Just Z => pure GotStuck
                  Just (S k) =>
                       do let opts' = record { fuel = Just k } opts
-                         evalWithOpts defs opts' env loc (embed tm) stk
-    evalTree env loc opts fc stk _ def = def
+                         res <- evalWithOpts defs opts' env loc (embed tm) stk
+                         pure (Result res)
+    evalTree env loc opts fc stk _ = pure GotStuck
 
     -- Take arguments from the stack, as long as there's enough.
     -- Returns the arguments, and the rest of the stack
@@ -403,7 +413,9 @@ parameters (defs : Defs, topopts : EvalOpts)
              then case argsFromStack args stk of
                        Nothing => pure def
                        Just (locs', stk') =>
-                            evalTree env locs' opts fc stk' tree (pure def)
+                            do Result res <- evalTree env locs' opts fc stk' tree
+                                    | _ => pure def
+                               pure res
              else pure def
     evalDef env opts meta fc rigd (Builtin op) flags stk def
         = evalOp (getOp op) stk def

@@ -380,13 +380,13 @@ patternEnv {vars} env args
                Nothing => updateVars ps svs
                Just p' => p' :: updateVars ps svs
 
-getVarsBelowTm : Nat -> List (Term vars) -> Maybe (List (Var vars))
-getVarsBelowTm max [] = Just []
-getVarsBelowTm max (Local fc r idx v :: xs)
-    = if idx >= max then Nothing
-         else do xs' <- getVarsBelowTm idx xs
+getVarsTm : List Nat -> List (Term vars) -> Maybe (List (Var vars))
+getVarsTm got [] = Just []
+getVarsTm got (Local fc r idx v :: xs)
+    = if idx `elem` got then Nothing
+         else do xs' <- getVarsTm (idx :: got) xs
                  pure (MkVar v :: xs')
-getVarsBelowTm _ (_ :: xs) = Nothing
+getVarsTm _ (_ :: xs) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
@@ -398,7 +398,7 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         case getVarsBelowTm 1000000 args of
+         case getVarsTm [] args of
               Nothing => pure Nothing
               Just vs =>
                  let (newvars ** svs) = toSubVars _ vs in
@@ -450,6 +450,22 @@ occursCheck fc env mode mname tm
                (Ref _ _ _, args) => traverse_ (failOnStrongRigid True err) args
                (f, args) => traverse_ (failOnStrongRigid bad err) args
 
+-- How the variables in a metavariable definition map to the variables in
+-- the solution term (the Var newvars)
+data IVars : List Name -> List Name -> Type where
+     INil : IVars [] newvars
+     ICons : Maybe (Var newvars) -> IVars vs newvars ->
+             IVars (v :: vs) newvars
+
+Weaken (IVars vs) where
+  weaken INil = INil
+  weaken (ICons Nothing ts) = ICons Nothing (weaken ts)
+  weaken (ICons (Just t) ts) = ICons (Just (weaken t)) (weaken ts)
+
+getIVars : IVars vs ns -> List (Maybe (Var ns))
+getIVars INil = []
+getIVars (ICons v vs) = v :: getIVars vs
+
 -- Instantiate a metavariable by binding the variables in 'newvars'
 -- and returning the term
 -- If the type of the metavariable doesn't have enough arguments, fail, because
@@ -474,13 +490,13 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          let ty = type mdef -- assume all pi binders we need are there since
                             -- it was built from an environment, so no need
                             -- to normalise
-         defs <- get Ctxt
-         rhs <- mkDef [] newvars (snocList newvars)
-                     (rewrite appendNilRightNeutral newvars in locs)
-                     (rewrite appendNilRightNeutral newvars in tm)
-                     ty
-         logTerm 5 ("Instantiated: " ++ show mname) ty
+         logTerm 5 ("Type: " ++ show mname) ty
+         log 5 ("With locs: " ++ show locs)
          log 5 ("From vars: " ++ show newvars)
+
+         defs <- get Ctxt
+         rhs <- mkDef locs INil tm ty
+
          logTerm 5 "Definition" rhs
          let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs)
          let newdef = record { definition =
@@ -498,63 +514,95 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple (TType _) = True
     isSimple _ = False
 
-    updateLoc : {v : Nat} -> List (Var vs) -> (0 p : IsVar name v vs') ->
-                Maybe (Var vs)
-    updateLoc [] el = Nothing
-    updateLoc (p :: ps) First = Just p
-    updateLoc (p :: ps) (Later prf) = updateLoc ps prf
+    updateIVar : {v : Nat} ->
+                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar name v newvars) ->
+                 Maybe (Var vs)
+    updateIVar {v} (ICons Nothing rest) prf
+        = do MkVar prf' <- updateIVar rest prf
+             Just (MkVar (Later prf'))
+    updateIVar {v} (ICons (Just (MkVar {i} p)) rest) prf
+        = if v == i
+             then Just (MkVar First)
+             else do MkVar prf' <- updateIVar rest prf
+                     Just (MkVar (Later prf'))
+    updateIVar _ _ = Nothing
 
-    -- Since the order of variables is not necessarily the same in the solution,
-    -- this is to make sure the variables point to the right argument, given
-    -- the argument list we got from the application of the hole.
-    updateLocs : List (Var vs) -> Term vs -> Maybe (Term vs)
-    updateLocs locs (Local fc r idx p)
-        = do MkVar p' <- updateLoc locs p
+    updateIVars : {vs, newvars : _} ->
+                  IVars vs newvars -> Term newvars -> Maybe (Term vs)
+    updateIVars ivs (Local fc r idx p)
+        = do MkVar p' <- updateIVar ivs p
              Just (Local fc r _ p')
-    updateLocs {vs} locs (Bind fc x b sc)
-        = do b' <- updateLocsB b
-             sc' <- updateLocs
-                       (MkVar First :: map (\ (MkVar p) => (MkVar (Later p))) locs)
-                       sc
+    updateIVars ivs (Ref fc nt n) = pure $ Ref fc nt n
+    updateIVars ivs (Meta fc n i args)
+        = pure $ Meta fc n i !(traverse (updateIVars ivs) args)
+    updateIVars {vs} ivs (Bind fc x b sc)
+        = do b' <- updateIVarsB ivs b
+             sc' <- updateIVars (ICons (Just (MkVar First)) (weaken ivs)) sc
              Just (Bind fc x b' sc')
       where
-        updateLocsB : Binder (Term vs) -> Maybe (Binder (Term vs))
-        updateLocsB (Lam c p t) = Just (Lam c p !(updateLocs locs t))
-        updateLocsB (Let c v t) = Just (Let c !(updateLocs locs v) !(updateLocs locs t))
+        updateIVarsPi : {vs, newvars : _} ->
+                        IVars vs newvars -> PiInfo (Term newvars) -> Maybe (PiInfo (Term vs))
+        updateIVarsPi ivs Explicit = Just Explicit
+        updateIVarsPi ivs Implicit = Just Implicit
+        updateIVarsPi ivs AutoImplicit = Just AutoImplicit
+        updateIVarsPi ivs (DefImplicit t)
+            = do t' <- updateIVars ivs t
+                 Just (DefImplicit t')
+
+        updateIVarsB : {vs, newvars : _} ->
+                       IVars vs newvars -> Binder (Term newvars) -> Maybe (Binder (Term vs))
+        updateIVarsB ivs (Lam c p t)
+            = do p' <- updateIVarsPi ivs p
+                 Just (Lam c p' !(updateIVars ivs t))
+        updateIVarsB ivs (Let c v t) = Just (Let c !(updateIVars ivs v) !(updateIVars ivs t))
         -- Make 'pi' binders have multiplicity W when we infer a Rig1 metavariable,
         -- since this is the most general thing to do if it's unknown.
-        updateLocsB (Pi rig p t) = if isLinear rig
-            then  do t' <- updateLocs locs t
-                     pure $ if inLam mode
-                        then (Pi linear p t')
-                        else (Pi top p t')
-            else Just (Pi rig p !(updateLocs locs t))
-        updateLocsB (PVar c p t) = Just (PVar c p !(updateLocs locs t))
-        updateLocsB (PLet c v t) = Just (PLet c !(updateLocs locs v) !(updateLocs locs t))
-        updateLocsB (PVTy c t) = Just (PVTy c !(updateLocs locs t))
+        updateIVarsB ivs (Pi rig p t)
+            = do p' <- updateIVarsPi ivs p
+                 if isLinear rig
+                    then do t' <- updateIVars ivs t
+                            pure $ if inLam mode
+                               then (Pi linear p' t')
+                               else (Pi top p' t')
+                    else Just (Pi rig p' !(updateIVars ivs t))
+        updateIVarsB ivs (PVar c p t)
+            = do p' <- updateIVarsPi ivs p
+                 Just (PVar c p' !(updateIVars ivs t))
+        updateIVarsB ivs (PLet c v t) = Just (PLet c !(updateIVars ivs v) !(updateIVars ivs t))
+        updateIVarsB ivs (PVTy c t) = Just (PVTy c !(updateIVars ivs t))
+    updateIVars ivs (App fc f a)
+        = Just (App fc !(updateIVars ivs f) !(updateIVars ivs a))
+    updateIVars ivs (As fc u a p)
+        = Just (As fc u !(updateIVars ivs a) !(updateIVars ivs p))
+    updateIVars ivs (TDelayed fc r arg)
+        = Just (TDelayed fc r !(updateIVars ivs arg))
+    updateIVars ivs (TDelay fc r ty arg)
+        = Just (TDelay fc r !(updateIVars ivs ty) !(updateIVars ivs arg))
+    updateIVars ivs (TForce fc r arg)
+        = Just (TForce fc r !(updateIVars ivs arg))
+    updateIVars ivs (PrimVal fc c) = Just (PrimVal fc c)
+    updateIVars ivs (Erased fc i) = Just (Erased fc i)
+    updateIVars ivs (TType fc) = Just (TType fc)
 
-    updateLocs locs (App fc f a)
-        = Just (App fc !(updateLocs locs f) !(updateLocs locs a))
-    updateLocs locs tm = Just tm
-
-    mkDef : (got : List Name) -> (vs : List Name) -> SnocList vs ->
-            List (Var (vs ++ got)) -> Term (vs ++ got) ->
-            Term ts -> Core (Term got)
-    mkDef got [] Empty locs tm ty
-        = do let Just tm' = updateLocs (reverse locs) tm
-                    | Nothing => ufail loc ("Can't make solution for " ++ show mname)
-             pure tm'
-    mkDef got vs rec locs tm (Bind _ _ (Let _ _ _) sc)
-        = mkDef got vs rec locs tm sc
-    mkDef got (vs ++ [v]) (Snoc v vs rec) locs tm (Bind bfc x (Pi c _ ty) sc)
-        = do defs <- get Ctxt
-             sc' <- mkDef (v :: got) vs rec
-                       (rewrite appendAssociative vs [v] got in locs)
-                       (rewrite appendAssociative vs [v] got in tm)
-                       sc
-             pure (Bind bfc v (Lam c Explicit (Erased bfc False)) sc')
-    mkDef got (vs ++ [v]) (Snoc v vs rec) locs tm ty
-        = ufail loc $ "Can't make solution for " ++ show mname
+    mkDef : {vs, newvars : _} ->
+            List (Var newvars) ->
+            IVars vs newvars -> Term newvars -> Term vs ->
+            Core (Term vs)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi c _ ty) sc)
+       = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
+            pure $ Bind bfc x (Lam c Explicit (Erased bfc False)) sc'
+    mkDef vs vars soln (Bind bfc x b@(Let c val ty) sc)
+       = do sc' <- mkDef vs (ICons Nothing vars) soln sc
+            let Just scs = shrinkTerm sc' (DropCons SubRefl)
+                | Nothing => pure $ Bind bfc x b sc'
+            pure scs
+    mkDef [] vars soln ty
+       = do let Just soln' = updateIVars vars soln
+                | Nothing => ufail loc ("Can't make solution for " ++ show mname
+                                           ++ " " ++ show (getIVars vars, soln))
+            pure soln'
+    mkDef _ _ _ ty = ufail loc $ "Can't make solution for " ++ show mname
+                             ++ " at " ++ show ty
 
 export
 solveIfUndefined : {vars : _} ->

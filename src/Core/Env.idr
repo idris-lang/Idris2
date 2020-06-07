@@ -233,7 +233,7 @@ shrinkEnv env SubRefl = Just env
 shrinkEnv (b :: env) (DropCons p) = shrinkEnv env p
 shrinkEnv (b :: env) (KeepCons p)
     = do env' <- shrinkEnv env p
-         b' <- shrinkBinder b p
+         b' <- assert_total (shrinkBinder b p)
          pure (b' :: env')
 
 -- Make a dummy environment, if we genuinely don't care about the values
@@ -243,3 +243,53 @@ export
 mkEnv : FC -> (vs : List Name) -> Env Term vs
 mkEnv fc [] = []
 mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns
+
+-- Update an environment so that all names are guaranteed unique. In the
+-- case of a clash, the most recently bound is left unchanged.
+export
+uniqifyEnv : {vars : _} ->
+             Env Term vars ->
+             (vars' ** (Env Term vars', CompatibleVars vars vars'))
+uniqifyEnv env = uenv [] env
+  where
+    next : Name -> Name
+    next (MN n i) = MN n (i + 1)
+    next (UN n) = MN n 0
+    next (NS ns n) = NS ns (next n)
+    next n = MN (show n) 0
+
+    uniqueLocal : List Name -> Name -> Name
+    uniqueLocal vs n
+       = if n `elem` vs
+                 -- we'll find a new name eventualy since the list of names
+                 -- is empty, and next generates something new. But next has
+                 -- to be correct... an exercise for someone: this could
+                 -- probebly be done without an assertion by making a stream of
+                 -- possible names...
+            then assert_total (uniqueLocal vs (next n))
+            else n
+
+    uenv : {vars : _} ->
+           List Name -> Env Term vars ->
+           (vars' ** (Env Term vars', CompatibleVars vars vars'))
+    uenv used [] = ([] ** ([], CompatPre))
+    uenv used {vars = v :: vs} (b :: bs)
+        = if v `elem` used
+             then let v' = uniqueLocal used v
+                      (vs' ** (env', compat)) = uenv (v' :: used) bs
+                      b' = map (renameVars compat) b in
+                  (v' :: vs' ** (b' :: env', CompatExt compat))
+             else let (vs' ** (env', compat)) = uenv (v :: used) bs
+                      b' = map (renameVars compat) b in
+                  (v :: vs' ** (b' :: env', CompatExt compat))
+
+export
+allVars : {vars : _} -> Env Term vars -> List (Var vars)
+allVars [] = []
+allVars (v :: vs) = MkVar First :: map weaken (allVars vs)
+
+export
+allVarsNoLet : {vars : _} -> Env Term vars -> List (Var vars)
+allVarsNoLet [] = []
+allVarsNoLet (Let _ _ _ :: vs) = map weaken (allVars vs)
+allVarsNoLet (v :: vs) = MkVar First :: map weaken (allVars vs)

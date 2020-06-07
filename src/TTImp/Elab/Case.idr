@@ -127,22 +127,27 @@ findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
     notLet _ = True
 findScrutinee _ _ = Nothing
 
-getNestData : (Name, (Maybe Name, List Name, a)) ->
-              (Name, Maybe Name, List Name)
+getNestData : (Name, (Maybe Name, List (Var vars), a)) ->
+              (Name, Maybe Name, List (Var vars))
 getNestData (n, (mn, enames, _)) = (n, mn, enames)
 
-bindCaseLocals : FC -> List (Name, Maybe Name, List Name) ->
+bindCaseLocals : FC -> List (Name, Maybe Name, List (Var vars)) ->
                  List (Name, Name)-> RawImp -> RawImp
 bindCaseLocals fc [] args rhs = rhs
 bindCaseLocals fc ((n, mn, envns) :: rest) argns rhs
-    = --trace ("Case local " ++ show (renvns ++ " from " ++ show argns) $
+    = -- trace ("Case local " ++ show (n,mn,envns) ++ " from " ++ show argns) $
         ICaseLocal fc n (fromMaybe n mn)
-                 (map getNameFrom (reverse envns))
+                 (map getNameFrom envns)
                  (bindCaseLocals fc rest argns rhs)
   where
-    getNameFrom : Name -> Name
-    getNameFrom n
-        = case lookup n argns of
+    getArg : List (Name, Name) -> Nat -> Maybe Name
+    getArg [] _ = Nothing
+    getArg ((_, x) :: xs) Z = Just x
+    getArg (x :: xs) (S k) = getArg xs k
+
+    getNameFrom : Var vars -> Name
+    getNameFrom (MkVar {i} _)
+        = case getArg argns i of
                Nothing => n
                Just n' => n'
 
@@ -307,7 +312,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
 
     -- Get a name update for the LHS (so that if there's a nested data declaration
     -- the constructors are applied to the environment in the case block)
-    nestLHS : FC -> (Name, (Maybe Name, List Name, a)) -> (Name, RawImp)
+    nestLHS : FC -> (Name, (Maybe Name, List (Var vars), a)) -> (Name, RawImp)
     nestLHS fc (n, (mn, ns, t))
         = (n, apply (IVar fc (fromMaybe n mn))
                     (map (const (Implicit fc False)) ns))
@@ -326,7 +331,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
               lhs' = apply (IVar loc' casen) args' in
               PatClause loc' (applyNested nest lhs')
                         (bindCaseLocals loc' (map getNestData (names nest))
-                                        (reverse ns) rhs)
+                                        ns rhs)
     -- With isn't allowed in a case block but include for completeness
     updateClause casen splitOn nest env (WithClause loc' lhs wval flags cs)
         = let (_, args) = addEnv 0 env (usedIn lhs)

@@ -47,9 +47,11 @@ data Constant
     | WorldType
 
 public export
-data Name = UN String
-          | MN String Int
-          | NS (List String) Name
+data Name = UN String -- user defined name
+          | MN String Int -- machine generated name
+          | NS (List String) Name -- name in a namespace
+          | DN String Name -- a name and how to display it
+          | RF String -- record field name
 
 export
 Show Name where
@@ -61,6 +63,8 @@ Show Name where
       showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
   show (UN x) = x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
+  show (DN str y) = str
+  show (RF n) = "." ++ n
 
 public export
 data Count = M0 | M1 | MW
