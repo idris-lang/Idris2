@@ -50,7 +50,7 @@ schHeader libs
     "(let ()\n"
 
 schFooter : String
-schFooter = ")"
+schFooter = ") (collect-garbage)"
 
 showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
@@ -93,6 +93,14 @@ mutual
       = pure "(error \"bad setField\")"
   racketPrim i SysCodegen []
       = pure $ "\"racket\""
+  racketPrim i OnCollect [_, p, c, world]
+      = do p' <- schExp racketPrim racketString 0 p
+           c' <- schExp racketPrim racketString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  racketPrim i OnCollectAny [p, c, world]
+      = do p' <- schExp racketPrim racketString 0 p
+           c' <- schExp racketPrim racketString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   racketPrim i prim args
       = schExtCommon racketPrim racketString i prim args
 
@@ -113,6 +121,7 @@ cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
 cftySpec fc CFPtr = pure "_pointer"
+cftySpec fc CFGCPtr = pure "_pointer"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "_" ++ n ++ "-pointer"
 cftySpec fc (CFFun s t) = funTySpec [s] t
@@ -159,6 +168,10 @@ cCall : {auto f : Ref Done (List String) } ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> (cfn : String) -> (clib : String) ->
         List (Name, CFType) -> CFType -> Core (String, String)
+cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args CFGCPtr
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall appdir fc cfn libspec args ret
     = do loaded <- get Loaded
          bound <- get Done
@@ -181,7 +194,7 @@ cCall appdir fc cfn libspec args ret
                                     " (_fun " ++ showSep " " (map snd argTypes) ++ " -> " ++
                                         retType ++ "))\n"
          let call = "(" ++ cfn ++ " " ++
-                    showSep " " !(traverse useArg argTypes) ++ ")"
+                    showSep " " !(traverse useArg (map fst argTypes)) ++ ")"
 
          pure (lib ++ cbind, case ret of
                                   CFIORes rt => handleRet rt call
@@ -216,9 +229,9 @@ cCall appdir fc cfn libspec args ret
              retType <- cftySpec fc retty
              pure $ mkFun args retty n
 
-    useArg : ((Name, CFType), String) -> Core String
-    useArg ((n, CFFun s t), _) = callback (schName n) [s] t
-    useArg ((n, ty), _)
+    useArg : (Name, CFType) -> Core String
+    useArg (n, CFFun s t) = callback (schName n) [s] t
+    useArg (n, ty)
         = pure $ rktToC ty (schName n)
 
 schemeCall : FC -> (sfn : String) ->

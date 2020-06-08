@@ -436,4 +436,4 @@ the pointer is no longer accessible, or at the end of execution.
 
 Note that finalisers might not be supported by all back ends, since they depend
 on the facilities offered by a specific back end's run time system. They are
-certainly supported in the Chez Scheme back end.
+certainly supported in the Chez Scheme and Racket back ends.

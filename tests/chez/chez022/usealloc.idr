@@ -1,4 +1,3 @@
-
 %foreign "C:mkThing, libmkalloc"
 prim__mkThing : PrimIO AnyPtr
 %foreign "C:getStr, libmkalloc"
@@ -31,4 +30,3 @@ doThings
 main : IO ()
 main = do doThings
           putStrLn "Done"
-
