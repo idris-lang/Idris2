@@ -1,12 +1,12 @@
 Installing
 ==========
 
-The easiest way to install is via the existing generated Scheme code. The
-requirements are:
+The easiest way to install is via the existing generated Scheme code.
+The requirements are:
 
-* A Scheme compiler; either Chez Scheme (default), or Racket
-* `bash`, with `realpath`. On Linux, you probably already have this. On
-  a Mac, you can install this with `brew install coreutils`.
+* A Scheme compiler; either Chez Scheme (default), or Racket.
+* `bash`, with `realpath`. On Linux, you probably already have this.
+  On a Mac, you can install this with `brew install coreutils`.
 
 On Windows, it has been reported that installing via `MSYS2` works
 (https://www.msys2.org/). On Windows older than Windows 8, you may need to
@@ -16,6 +16,8 @@ On Raspberry Pi, you can bootstrap via Racket.
 
 By default, code generation is via Chez Scheme. You can use Racket instead,
 by setting the environment variable `IDRIS2_CG=racket` before running `make`.
+If you install Chez Scheme from source files, building it locally,
+make sure you run `./configure --threads` to build multithreading support in.
 
 1: Set the PREFIX
 -----------------
@@ -59,7 +61,7 @@ If all is well, to install, type:
 ----------------------------------------------------
 
 If you have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot)
-installed: 
+installed:
 
 * `make all IDRIS2_BOOT=idris2boot`
 * `make install IDRIS2_BOOT=idris2boot`
