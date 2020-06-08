@@ -22,6 +22,8 @@ import System.Directory
 import System.Info
 import System.File
 
+%default covering
+
 ||| Generic interface to some code generator
 public export
 record Codegen where

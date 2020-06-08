@@ -8,6 +8,8 @@ import Data.List
 import Data.Nat
 import Data.Strings
 
+%default total
+
 -- Implement make-with and make-case from the IDE mode
 
 showRHSName : Name -> String

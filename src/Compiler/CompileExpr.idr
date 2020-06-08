@@ -370,9 +370,9 @@ mutual
 --                              let env : SubstCEnv args (MN "eff" 0 :: vars)
 --                                      = mkSubst 0 (CLocal fc First) pos args in
 --                              do sc' <- toCExpTree n sc
---                                 let scope = thin {outer=args}
---                                                  {inner=vars}
---                                                  (MN "eff" 0) sc'
+--                                 let scope = insertNames {outer=args}
+--                                                         {inner=vars}
+--                                                         [MN "eff" 0] sc'
 --                                 pure $ Just (CLet fc (MN "eff" 0) False scr
 --                                                   (substs env scope))
                 _ => pure Nothing -- there's a normal match to do
@@ -501,6 +501,10 @@ getNArgs defs n args = pure $ User n args
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> (inStruct : Bool) -> NF [] -> Core CFType
 nfToCFType _ _ (NPrimVal _ IntType) = pure CFInt
+nfToCFType _ _ (NPrimVal _ Bits8Type) = pure CFUnsigned
+nfToCFType _ _ (NPrimVal _ Bits16Type) = pure CFUnsigned
+nfToCFType _ _ (NPrimVal _ Bits32Type) = pure CFUnsigned
+nfToCFType _ _ (NPrimVal _ Bits64Type) = pure CFUnsigned
 nfToCFType _ False (NPrimVal _ StringType) = pure CFString
 nfToCFType fc True (NPrimVal _ StringType)
     = throw (GenericMsg fc "String not allowed in a foreign struct")

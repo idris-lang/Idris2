@@ -16,10 +16,10 @@ import Decidable.Equality
 %default covering
 
 public export
-data Phase = CompileTime | RunTime
+data Phase = CompileTime RigCount | RunTime
 
 Eq Phase where
-  CompileTime == CompileTime = True
+  CompileTime r == CompileTime r' = r == r'
   RunTime == RunTime = True
   _ == _ = False
 
@@ -94,10 +94,6 @@ updatePats env nf (p :: ps)
                empty <- clearDefs defs
                pure (record { argType = Stuck !(quote empty env nf) } p :: ps)
          _ => pure (p :: ps)
-
-mkEnv : FC -> (vs : List Name) -> Env Term vs
-mkEnv fc [] = []
-mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns
 
 substInPatInfo : {pvar, vars, todo : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -257,8 +253,9 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
     clauseType' _                 = VarClause
 
     getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
-    getClauseType CompileTime (PCon _ _ _ _ xs) (Known r t)
-        = if isErased r && all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
+    getClauseType (CompileTime cr) (PCon _ _ _ _ xs) (Known r t)
+        = if isErased r && not (isErased cr) &&
+             all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
              then VarClause
              else ConClause
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t

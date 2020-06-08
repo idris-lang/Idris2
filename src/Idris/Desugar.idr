@@ -248,10 +248,11 @@ mutual
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
       = pure $ IQuote fc !(desugarB side ps tm)
+  desugarB side ps (PQuoteName fc n)
+      = pure $ IQuoteName fc n
   desugarB side ps (PQuoteDecl fc x)
-      = do [x'] <- desugarDecl ps x
-              | _ => throw (GenericMsg fc "Can't quote this declaration")
-           pure $ IQuoteDecl fc x'
+      = do xs <- traverse (desugarDecl ps) x
+           pure $ IQuoteDecl fc (concat xs)
   desugarB side ps (PUnquote fc tm)
       = pure $ IUnquote fc !(desugarB side ps tm)
   desugarB side ps (PRunElab fc tm)
@@ -391,10 +392,14 @@ mutual
   expandDo side ps topfc (DoExp fc tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc rest
+           -- A free standing 'case' block must return ()
+           let ty = case tm' of
+                         ICase _ _ _ _ => IVar fc (UN "Unit")
+                         _ => Implicit fc False
            gam <- get Ctxt
            pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
                           (ILam fc top Explicit Nothing
-                                (Implicit fc False) rest')
+                                ty rest')
   expandDo side ps topfc (DoBind fc n tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc rest
@@ -481,7 +486,7 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 List Name -> PTypeDecl -> Core ImpTy
-  desugarType ps (MkPTy fc n ty)
+  desugarType ps (MkPTy fc n d ty)
       = do syn <- get Syn
            pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
@@ -499,11 +504,11 @@ mutual
                      (case ws of
                            [] => rhs'
                            _ => ILocal fc (concat ws) rhs')
-  desugarClause ps arg (MkWithClause fc lhs wval cs)
+  desugarClause ps arg (MkWithClause fc lhs wval flags cs)
       = do cs' <- traverse (desugarClause ps arg) cs
            (bound, blhs) <- bindNames arg !(desugar LHS ps lhs)
            wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure $ WithClause fc blhs wval' cs'
+           pure $ WithClause fc blhs wval' flags cs'
   desugarClause ps arg (MkImpossible fc lhs)
       = do dlhs <- desugar LHS ps lhs
            pure $ ImpossibleClause fc (snd !(bindNames arg dlhs))
@@ -555,7 +560,7 @@ mutual
   getDecl AsType d@(PClaim _ _ _ _ _) = Just d
   getDecl AsType (PData fc vis (MkPData dfc tyn tyc _ _))
       = Just (PData fc vis (MkPLater dfc tyn tyc))
-  getDecl AsType d@(PInterface _ _ _ _ _ _ _ _) = Just d
+  getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
   getDecl AsType d@(PRecord fc vis n ps _ _)
       = Just (PData fc vis (MkPLater fc n (mkRecType ps)))
     where
@@ -568,7 +573,7 @@ mutual
 
   getDecl AsDef (PClaim _ _ _ _ _) = Nothing
   getDecl AsDef d@(PData _ _ (MkPLater _ _ _)) = Just d
-  getDecl AsDef (PInterface _ _ _ _ _ _ _ _) = Nothing
+  getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
   getDecl AsDef d@(PRecord _ _ _ _ _ _) = Just d
   getDecl AsDef (PFixity _ _ _ _) = Nothing
   getDecl AsDef (PDirective _ _) = Nothing
@@ -624,8 +629,8 @@ mutual
       toIDef : ImpClause -> Core ImpDecl
       toIDef (PatClause fc lhs rhs)
           = pure $ IDef fc !(getFn lhs) [PatClause fc lhs rhs]
-      toIDef (WithClause fc lhs rhs cs)
-          = pure $ IDef fc !(getFn lhs) [WithClause fc lhs rhs cs]
+      toIDef (WithClause fc lhs rhs flags cs)
+          = pure $ IDef fc !(getFn lhs) [WithClause fc lhs rhs flags cs]
       toIDef (ImpossibleClause fc lhs)
           = pure $ IDef fc !(getFn lhs) [ImpossibleClause fc lhs]
 
@@ -658,7 +663,7 @@ mutual
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
-  desugarDecl ps (PInterface fc vis cons_in tn params det conname body)
+  desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
       = do let cons = concatMap expandConstraint cons_in
            cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ map fst params)
                                                          (snd ntm)
@@ -795,6 +800,9 @@ mutual
       = do (bound, blhs) <- bindNames False !(desugar LHS ps lhs)
            rhs' <- desugar AnyExpr (bound ++ ps) rhs
            pure [ITransform fc (UN n) blhs rhs']
+  desugarDecl ps (PRunElabDecl fc tm)
+      = do tm' <- desugar AnyExpr ps tm
+           pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma (\nest, env => hide fc n)]

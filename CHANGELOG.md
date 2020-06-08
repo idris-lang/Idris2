@@ -1,3 +1,23 @@
+Changes since Idris 2 v0.2.0
+----------------------------
+
+Language changes:
+
+* `Bits8`, `Bits16`, `Bits32` and `Bits64` primitive types added, with:
+   + `Num`, `Eq`, `Ord` and `Show` implementations.
+   + Casts from `Integer`, for literals
+   + Casts to `Int` (except `Bits64` which might not fit), `Integer` and `String`
+   + Passed to C FFI as `unsigned`
+   + Primitives added in `Data.Buffer`
+* Elaborator reflection and quoting terms
+   + Requires extension `%language ElabReflection`
+   + API defined in `Language.Reflection`, including functions for getting types
+     of global names, constructors of data types, and adding new top level
+     declarations
+   + Implemented `%macro` function flag, to remove the syntactic noise of
+     invoking elaborator scripts. This means the function must always
+     be fully applied, and is run under `%runElab`
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 

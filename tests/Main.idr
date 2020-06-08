@@ -43,7 +43,7 @@ idrisTests
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
-       "coverage009",
+       "coverage009", "coverage010",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
@@ -85,10 +85,14 @@ idrisTests
        "real001", "real002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004",
+       -- Quotation and reflection
+       "reflection001", "reflection002", "reflection003", "reflection004",
+       "reflection005", "reflection006", "reflection007", "reflection008",
        -- Miscellaneous regressions
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
-       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020",
+       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
+       "reg022", "reg023",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
@@ -108,7 +112,7 @@ chezTests
    = ["chez001", "chez002", "chez003", "chez004", "chez005", "chez006",
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
-      "chez019",
+      "chez019", "chez020", "chez021",
       "reg001"]
 
 ideModeTests : List String
@@ -218,6 +222,9 @@ runTest opts testPath
                      | Left err => do print err
                                       pure False
                  let result = normalize out == normalize exp
+                 -- The issue #116 that made this necessary is fixed, but
+                 -- please resist putting 'result' here until it's also
+                 -- fixed in Idris2-boot!
                  if normalize out == normalize exp
                     then putStrLn "success"
                     else do

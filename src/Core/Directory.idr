@@ -15,7 +15,7 @@ import System.Directory
 import System.File
 import System.Info
 
-%default covering
+%default total
 
 -- Return the name of the first file available in the list
 firstAvailable : List String -> Core (Maybe String)
@@ -27,6 +27,7 @@ firstAvailable (f :: fs)
          pure (Just f)
 
 export
+covering
 readDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
 readDataFile fname
@@ -86,12 +87,16 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> List String
+pathToNS : String -> Maybe String -> String -> Core (List String)
 pathToNS wdir sdir fname
-    = let sdir = fromMaybe "" sdir in
-        case stripPrefix sdir fname of
-             Nothing => []
-             Just p => map show $ reverse $ (parse (p <.> "")).body
+    = let sdir = fromMaybe "" sdir
+          base = if isAbsolute fname then wdir </> sdir else sdir
+        in
+          case stripPrefix base fname of
+               Nothing => throw (UserError ("Source file " ++ show fname
+                                            ++ " is not in the source directory " 
+                                            ++ show (wdir </> sdir)))
+               Just p => pure $ map show $ reverse $ (parse (p <.> "")).body
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
@@ -101,20 +106,23 @@ dirExists dir = do Right d <- openDir dir
 
 -- Create subdirectories, if they don't exist
 export
+covering
 mkdirAll : String -> IO (Either FileError ())
 mkdirAll dir = if parse dir == emptyPath 
                   then pure (Right ())
                   else do exist <- dirExists dir
                           if exist 
                              then pure (Right ())
-                             else do case parent dir of
+                             else do Right () <- case parent dir of
                                           Just parent => mkdirAll parent
                                           Nothing => pure (Right ()) 
+                                        | err => pure err
                                      createDir dir
 
 -- Given a namespace (i.e. a module name), make the build directory for the
 -- corresponding ttc file
 export
+covering
 makeBuildDirectory : {auto c : Ref Ctxt Defs} ->
                      List String -> Core ()
 makeBuildDirectory ns
@@ -127,6 +135,7 @@ makeBuildDirectory ns
          pure ()
 
 export
+covering
 makeExecDirectory : {auto c : Ref Ctxt Defs} ->
                     Core ()
 makeExecDirectory
@@ -144,7 +153,7 @@ getTTCFileName inp ext
          d <- getDirs
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
-         let ns = pathToNS (working_dir d) (source_dir d) inp
+         ns <- pathToNS (working_dir d) (source_dir d) inp
          let fname = joinPath (reverse ns) <.> ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
@@ -175,6 +184,7 @@ dirEntries dir
 -- returns the directory, the ipkg file name, and the directories we've
 -- gone up
 export
+covering
 findIpkgFile : IO (Maybe (String, String, String))
 findIpkgFile
     = do Just dir <- currentDir
@@ -182,6 +192,7 @@ findIpkgFile
          res <- findIpkgFile' dir ""
          pure res
   where
+    covering
     findIpkgFile' : String -> String -> IO (Maybe (String, String, String))
     findIpkgFile' dir up 
         = do Right files <- dirEntries dir

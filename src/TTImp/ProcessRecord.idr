@@ -17,10 +17,17 @@ import TTImp.Utils
 
 import Data.List
 
+%default covering
+
 mkDataTy : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) -> RawImp
 mkDataTy fc [] = IType fc
 mkDataTy fc ((n, c, p, ty) :: ps)
     = IPi fc c p (Just n) ty (mkDataTy fc ps)
+
+-- Projections are only visible if the record is public export
+projVis : Visibility -> Visibility
+projVis Public = Public
+projVis _ = Private
 
 elabRecord : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -146,7 +153,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    processDecl [] nest env
                        (IClaim fc (if isErased rc
                                       then erased
-                                      else top) vis [Inline] (MkImpTy fc projNameNS projTy))
+                                      else top) (projVis vis) [Inline] (MkImpTy fc projNameNS projTy))
 
                    -- Define the LHS and RHS
                    let lhs_exp

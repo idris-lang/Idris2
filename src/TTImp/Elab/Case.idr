@@ -61,6 +61,12 @@ toRig0 : {idx : Nat} -> (0 p : IsVar name idx vs) -> Env Term vs -> Env Term vs
 toRig0 First (b :: bs) = setMultiplicity b erased :: bs
 toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
 
+-- When we abstract over the evironment, pi needs to be explicit
+explicitPi : Env Term vs -> Env Term vs
+explicitPi (Pi c _ ty :: env) = Pi c Explicit ty :: explicitPi env
+explicitPi (b :: env) = b :: explicitPi env
+explicitPi [] = []
+
 allow : Maybe (Var vs) -> Env Term vs -> Env Term vs
 allow Nothing env = env
 allow (Just (MkVar p)) env = toRig1 p env
@@ -121,22 +127,27 @@ findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
     notLet _ = True
 findScrutinee _ _ = Nothing
 
-getNestData : (Name, (Maybe Name, List Name, a)) ->
-              (Name, Maybe Name, List Name)
+getNestData : (Name, (Maybe Name, List (Var vars), a)) ->
+              (Name, Maybe Name, List (Var vars))
 getNestData (n, (mn, enames, _)) = (n, mn, enames)
 
-bindCaseLocals : FC -> List (Name, Maybe Name, List Name) ->
+bindCaseLocals : FC -> List (Name, Maybe Name, List (Var vars)) ->
                  List (Name, Name)-> RawImp -> RawImp
 bindCaseLocals fc [] args rhs = rhs
 bindCaseLocals fc ((n, mn, envns) :: rest) argns rhs
-    = --trace ("Case local " ++ show (renvns ++ " from " ++ show argns) $
+    = -- trace ("Case local " ++ show (n,mn,envns) ++ " from " ++ show argns) $
         ICaseLocal fc n (fromMaybe n mn)
-                 (map getNameFrom (reverse envns))
+                 (map getNameFrom envns)
                  (bindCaseLocals fc rest argns rhs)
   where
-    getNameFrom : Name -> Name
-    getNameFrom n
-        = case lookup n argns of
+    getArg : List (Name, Name) -> Nat -> Maybe Name
+    getArg [] _ = Nothing
+    getArg ((_, x) :: xs) Z = Just x
+    getArg (x :: xs) (S k) = getArg xs k
+
+    getNameFrom : Var vars -> Name
+    getNameFrom (MkVar {i} _)
+        = case getArg argns i of
                Nothing => n
                Just n' => n'
 
@@ -187,7 +198,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc)
          let casefnty
-               = abstractFullEnvType fc (allow splitOn env)
+               = abstractFullEnvType fc (allow splitOn (explicitPi env))
                             (maybe (Bind fc scrn (Pi caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
@@ -202,7 +213,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty Private None)
+                                      [] casefnty Public None)
          -- don't worry about totality of the case block; it'll be handled
          -- by the totality of the parent function
          setFlag fc (Resolved cidx) (SetTotal PartialOK)
@@ -301,7 +312,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
 
     -- Get a name update for the LHS (so that if there's a nested data declaration
     -- the constructors are applied to the environment in the case block)
-    nestLHS : FC -> (Name, (Maybe Name, List Name, a)) -> (Name, RawImp)
+    nestLHS : FC -> (Name, (Maybe Name, List (Var vars), a)) -> (Name, RawImp)
     nestLHS fc (n, (mn, ns, t))
         = (n, apply (IVar fc (fromMaybe n mn))
                     (map (const (Implicit fc False)) ns))
@@ -320,13 +331,13 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
               lhs' = apply (IVar loc' casen) args' in
               PatClause loc' (applyNested nest lhs')
                         (bindCaseLocals loc' (map getNestData (names nest))
-                                        (reverse ns) rhs)
+                                        ns rhs)
     -- With isn't allowed in a case block but include for completeness
-    updateClause casen splitOn nest env (WithClause loc' lhs wval cs)
+    updateClause casen splitOn nest env (WithClause loc' lhs wval flags cs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
               lhs' = apply (IVar loc' casen) args' in
-              WithClause loc' (applyNested nest lhs') wval cs
+              WithClause loc' (applyNested nest lhs') wval flags cs
     updateClause casen splitOn nest env (ImpossibleClause loc' lhs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args

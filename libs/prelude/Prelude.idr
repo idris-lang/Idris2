@@ -3,6 +3,8 @@ module Prelude
 import public Builtin
 import public PrimIO
 
+%default total
+
 {-
 The Prelude is minimal (since it is effectively part of the language
 specification, this seems to be desirable - we should, nevertheless, aim to
@@ -212,6 +214,22 @@ Eq Integer where
   x == y = intToBool (prim__eq_Integer x y)
 
 public export
+Eq Bits8 where
+  x == y = intToBool (prim__eq_Bits8 x y)
+
+public export
+Eq Bits16 where
+  x == y = intToBool (prim__eq_Bits16 x y)
+
+public export
+Eq Bits32 where
+  x == y = intToBool (prim__eq_Bits32 x y)
+
+public export
+Eq Bits64 where
+  x == y = intToBool (prim__eq_Bits64 x y)
+
+public export
 Eq Double where
   x == y = intToBool (prim__eq_Double x y)
 
@@ -288,6 +306,42 @@ Ord Integer where
   (<=) x y = intToBool (prim__lte_Integer x y)
   (>) x y = intToBool (prim__gt_Integer x y)
   (>=) x y = intToBool (prim__gte_Integer x y)
+
+public export
+Ord Bits8 where
+  compare x y = if x < y then LT else if x == y then EQ else GT
+
+  (<) x y = intToBool (prim__lt_Bits8 x y)
+  (<=) x y = intToBool (prim__lte_Bits8 x y)
+  (>) x y = intToBool (prim__gt_Bits8 x y)
+  (>=) x y = intToBool (prim__gte_Bits8 x y)
+
+public export
+Ord Bits16 where
+  compare x y = if x < y then LT else if x == y then EQ else GT
+
+  (<) x y = intToBool (prim__lt_Bits16 x y)
+  (<=) x y = intToBool (prim__lte_Bits16 x y)
+  (>) x y = intToBool (prim__gt_Bits16 x y)
+  (>=) x y = intToBool (prim__gte_Bits16 x y)
+
+public export
+Ord Bits32 where
+  compare x y = if x < y then LT else if x == y then EQ else GT
+
+  (<) x y = intToBool (prim__lt_Bits32 x y)
+  (<=) x y = intToBool (prim__lte_Bits32 x y)
+  (>) x y = intToBool (prim__gt_Bits32 x y)
+  (>=) x y = intToBool (prim__gte_Bits32 x y)
+
+public export
+Ord Bits64 where
+  compare x y = if x < y then LT else if x == y then EQ else GT
+
+  (<) x y = intToBool (prim__lt_Bits64 x y)
+  (<=) x y = intToBool (prim__lte_Bits64 x y)
+  (>) x y = intToBool (prim__gt_Bits64 x y)
+  (>=) x y = intToBool (prim__gte_Bits64 x y)
 
 public export
 Ord Double where
@@ -371,6 +425,7 @@ interface Num ty => Integral ty where
 
 -- Integer
 
+%inline
 public export
 Num Integer where
   (+) = prim__add_Integer
@@ -406,6 +461,7 @@ defaultInteger = %search
 
 -- Int
 
+%inline
 public export
 Num Int where
   (+) = prim__add_Int
@@ -429,6 +485,42 @@ Integral Int where
   mod x y
       = case y == 0 of
              False => prim__mod_Int x y
+
+-- Bits8
+
+%inline
+public export
+Num Bits8 where
+  (+) = prim__add_Bits8
+  (*) = prim__mul_Bits8
+  fromInteger = prim__cast_IntegerBits8
+
+-- Bits16
+
+%inline
+public export
+Num Bits16 where
+  (+) = prim__add_Bits16
+  (*) = prim__mul_Bits16
+  fromInteger = prim__cast_IntegerBits16
+
+-- Bits32
+
+%inline
+public export
+Num Bits32 where
+  (+) = prim__add_Bits32
+  (*) = prim__mul_Bits32
+  fromInteger = prim__cast_IntegerBits32
+
+-- Bits64
+
+%inline
+public export
+Num Bits64 where
+  (+) = prim__add_Bits64
+  (*) = prim__mul_Bits64
+  fromInteger = prim__cast_IntegerBits64
 
 -- Double
 
@@ -719,8 +811,8 @@ public export
 data Nat =
   ||| Zero.
     Z
-  ||| Successor.
-  | S Nat
+  | ||| Successor.
+  S Nat
 
 %name Nat k, j, i
 
@@ -912,11 +1004,13 @@ public export
   Right x == Right x' = x == x'
   _ == _ = False
 
+%inline
 public export
 Functor (Either e) where
   map f (Left x) = Left x
   map f (Right x) = Right (f x)
 
+%inline
 public export
 Applicative (Either e) where
     pure = Right
@@ -940,8 +1034,8 @@ data List a =
   ||| Empty list
   Nil
 
-  ||| A non-empty list, consisting of a head element and the rest of the list.
-  | (::) a (List a)
+  | ||| A non-empty list, consisting of a head element and the rest of the list.
+  (::) a (List a)
 
 %name List xs, ys, zs
 
@@ -1339,6 +1433,22 @@ Show Int where
 export
 Show Integer where
   showPrec = primNumShow prim__cast_IntegerString
+
+export
+Show Bits8 where
+  showPrec = primNumShow prim__cast_Bits8String
+
+export
+Show Bits16 where
+  showPrec = primNumShow prim__cast_Bits16String
+
+export
+Show Bits32 where
+  showPrec = primNumShow prim__cast_Bits32String
+
+export
+Show Bits64 where
+  showPrec = primNumShow prim__cast_Bits64String
 
 export
 Show Double where

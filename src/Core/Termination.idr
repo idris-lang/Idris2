@@ -157,6 +157,9 @@ mutual
       = findSC defs env g pats tm
   findSC defs env g pats tm
       = do let (fn, args) = getFnArgs tm
+           -- if it's a 'case' or 'if' just go straight into the arguments
+           Nothing <- handleCase fn args
+               | Just res => pure res
            fn' <- conIfGuarded fn -- pretend it's a data constructor if
                                   -- it has the AllGuarded flag
            case (g, fn', args) of
@@ -186,6 +189,14 @@ mutual
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
       where
+        handleCase : Term vars -> List (Term vars) -> Core (Maybe (List SCCall))
+        handleCase (Ref fc nt n) args
+            = do n' <- toFullNames n
+                 if caseFn n'
+                    then Just <$> findSCcall defs env g pats fc n 4 args
+                    else pure Nothing
+        handleCase _ _ = pure Nothing
+
         conIfGuarded : Term vars -> Core (Term vars)
         conIfGuarded (Ref fc Func n)
             = do defs <- get Ctxt
@@ -386,7 +397,7 @@ getSC : {auto c : Ref Ctxt Defs} ->
         Defs -> Def -> Core (List SCCall)
 getSC defs (PMDef _ args _ _ pats)
    = do sc <- traverse (findCalls defs) pats
-        pure (concat sc)
+        pure $ nub (concat sc)
 getSC defs _ = pure []
 
 export
@@ -421,8 +432,6 @@ initArgs (S k)
 -- Traverse the size change graph. When we reach a point we've seen before,
 -- at least one of the arguments must have got smaller, otherwise it's
 -- potentially non-terminating
--- TODO: If we encounter a name where we already know its termination status,
--- use that rather than continuing to traverse the graph!
 checkSC : {auto a : Ref APos Arg} ->
           {auto c : Ref Ctxt Defs} ->
           Defs ->
@@ -467,6 +476,11 @@ checkSC defs f args path
     checkCall : List (Name, List (Maybe Arg)) -> SCCall -> Core Terminating
     checkCall path sc
         = do let inpath = fnCall sc `elem` map fst path
+             Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
+                  | Nothing => pure IsTerminating -- nothing to check
+             let Unchecked = isTerminating (totality gdef)
+                  | IsTerminating => pure IsTerminating
+                  | _ => pure (NotTerminating (BadCall [fnCall sc]))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
              if not inpath
                 then case term of

@@ -33,12 +33,20 @@ unaryOp _ _ = Nothing
 castString : Vect 1 (NF vars) -> Maybe (NF vars)
 castString [NPrimVal fc (I i)] = Just (NPrimVal fc (Str (show i)))
 castString [NPrimVal fc (BI i)] = Just (NPrimVal fc (Str (show i)))
+castString [NPrimVal fc (B8 i)] = Just (NPrimVal fc (Str (show i)))
+castString [NPrimVal fc (B16 i)] = Just (NPrimVal fc (Str (show i)))
+castString [NPrimVal fc (B32 i)] = Just (NPrimVal fc (Str (show i)))
+castString [NPrimVal fc (B64 i)] = Just (NPrimVal fc (Str (show i)))
 castString [NPrimVal fc (Ch i)] = Just (NPrimVal fc (Str (stripQuotes (show i))))
 castString [NPrimVal fc (Db i)] = Just (NPrimVal fc (Str (show i)))
 castString _ = Nothing
 
 castInteger : Vect 1 (NF vars) -> Maybe (NF vars)
 castInteger [NPrimVal fc (I i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (B8 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (B16 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (B32 i)] = Just (NPrimVal fc (BI (cast i)))
+castInteger [NPrimVal fc (B64 i)] = Just (NPrimVal fc (BI i))
 castInteger [NPrimVal fc (Ch i)] = Just (NPrimVal fc (BI (cast (cast {to=Int} i))))
 castInteger [NPrimVal fc (Db i)] = Just (NPrimVal fc (BI (cast i)))
 castInteger [NPrimVal fc (Str i)] = Just (NPrimVal fc (BI (cast i)))
@@ -46,10 +54,45 @@ castInteger _ = Nothing
 
 castInt : Vect 1 (NF vars) -> Maybe (NF vars)
 castInt [NPrimVal fc (BI i)] = Just (NPrimVal fc (I (fromInteger i)))
+castInt [NPrimVal fc (B8 i)] = Just (NPrimVal fc (I i))
+castInt [NPrimVal fc (B16 i)] = Just (NPrimVal fc (I i))
+castInt [NPrimVal fc (B32 i)] = Just (NPrimVal fc (I i))
 castInt [NPrimVal fc (Db i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Ch i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Str i)] = Just (NPrimVal fc (I (cast i)))
 castInt _ = Nothing
+
+castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
+castBits8 [NPrimVal fc (BI i)]
+    = let max = prim__shl_Int 1 8 in
+          if i > 0 -- oops, we don't have `rem` yet!
+             then Just (NPrimVal fc (B8 (fromInteger i `mod` max)))
+             else Just (NPrimVal fc (B8 (max + fromInteger i `mod` max)))
+castBits8 _ = Nothing
+
+castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
+castBits16 [NPrimVal fc (BI i)]
+    = let max = prim__shl_Int 1 16 in
+          if i > 0 -- oops, we don't have `rem` yet!
+             then Just (NPrimVal fc (B16 (fromInteger i `mod` max)))
+             else Just (NPrimVal fc (B16 (max + fromInteger i `mod` max)))
+castBits16 _ = Nothing
+
+castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
+castBits32 [NPrimVal fc (BI i)]
+    = let max = prim__shl_Int 1 32 in
+          if i > 0 -- oops, we don't have `rem` yet!
+             then Just (NPrimVal fc (B32 (fromInteger i `mod` max)))
+             else Just (NPrimVal fc (B32 (max + fromInteger i `mod` max)))
+castBits32 _ = Nothing
+
+castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
+castBits64 [NPrimVal fc (BI i)]
+    = let max = prim__shl_Integer 1 64 in
+          if i > 0 -- oops, we don't have `rem` yet!
+             then Just (NPrimVal fc (B64 (i `mod` max)))
+             else Just (NPrimVal fc (B64 (max + i `mod` max)))
+castBits64 _ = Nothing
 
 castDouble : Vect 1 (NF vars) -> Maybe (NF vars)
 castDouble [NPrimVal fc (I i)] = Just (NPrimVal fc (Db (cast i)))
@@ -107,6 +150,10 @@ strSubstr _ = Nothing
 add : Constant -> Constant -> Maybe Constant
 add (BI x) (BI y) = pure $ BI (x + y)
 add (I x) (I y) = pure $ I (x + y)
+add (B8 x) (B8 y) = pure $ B8 $ (x + y)
+add (B16 x) (B16 y) = pure $ B16 $ (x + y) `mod` (prim__shl_Int 1 16)
+add (B32 x) (B32 y) = pure $ B32 $ (x + y) `mod` (prim__shl_Int 1 32)
+add (B64 x) (B64 y) = pure $ B64 $ (x + y) `mod` (prim__shl_Integer 1 64)
 add (Ch x) (Ch y) = pure $ Ch (cast (cast {to=Int} x + cast y))
 add (Db x) (Db y) = pure $ Db (x + y)
 add _ _ = Nothing
@@ -120,6 +167,10 @@ sub _ _ = Nothing
 
 mul : Constant -> Constant -> Maybe Constant
 mul (BI x) (BI y) = pure $ BI (x * y)
+mul (B8 x) (B8 y) = pure $ B8 $ (x * y) `mod` (prim__shl_Int 1 8)
+mul (B16 x) (B16 y) = pure $ B16 $ (x * y) `mod` (prim__shl_Int 1 16)
+mul (B32 x) (B32 y) = pure $ B32 $ (x * y) `mod` (prim__shl_Int 1 32)
+mul (B64 x) (B64 y) = pure $ B64 $ (x * y) `mod` (prim__shl_Integer 1 64)
 mul (I x) (I y) = pure $ I (x * y)
 mul (Db x) (Db y) = pure $ Db (x * y)
 mul _ _ = Nothing
@@ -142,25 +193,44 @@ mod _ _ = Nothing
 shiftl : Constant -> Constant -> Maybe Constant
 shiftl (I x) (I y) = pure $ I (shiftL x y)
 shiftl (BI x) (BI y) = pure $ BI (prim__shl_Integer x y)
+shiftl (B8 x) (B8 y) = pure $ B8 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 8)
+shiftl (B16 x) (B16 y) = pure $ B16 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 16)
+shiftl (B32 x) (B32 y) = pure $ B32 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 32)
+shiftl (B64 x) (B64 y) = pure $ B64 $ (prim__shl_Integer x y) `mod` (prim__shl_Integer 1 64)
 shiftl _ _ = Nothing
 
 shiftr : Constant -> Constant -> Maybe Constant
 shiftr (I x) (I y) = pure $ I (shiftR x y)
 shiftr (BI x) (BI y) = pure $ BI (prim__shr_Integer x y)
+shiftr (B8 x) (B8 y) = pure $ B8 $ (prim__shr_Int x y)
+shiftr (B16 x) (B16 y) = pure $ B16 $ (prim__shr_Int x y)
+shiftr (B32 x) (B32 y) = pure $ B32 $ (prim__shr_Int x y)
+shiftr (B64 x) (B64 y) = pure $ B64 $ (prim__shr_Integer x y)
 shiftr _ _ = Nothing
 
 band : Constant -> Constant -> Maybe Constant
 band (I x) (I y) = pure $ I (prim__and_Int x y)
 band (BI x) (BI y) = pure $ BI (prim__and_Integer x y)
+band (B8 x) (B8 y) = pure $ B8 (prim__and_Int x y)
+band (B16 x) (B16 y) = pure $ B16 (prim__and_Int x y)
+band (B32 x) (B32 y) = pure $ B32 (prim__and_Int x y)
+band (B64 x) (B64 y) = pure $ B64 (prim__and_Integer x y)
 band _ _ = Nothing
 
 bor : Constant -> Constant -> Maybe Constant
 bor (I x) (I y) = pure $ I (prim__or_Int x y)
 bor (BI x) (BI y) = pure $ BI (prim__or_Integer x y)
+bor (B8 x) (B8 y) = pure $ B8 (prim__or_Int x y)
+bor (B16 x) (B16 y) = pure $ B16 (prim__or_Int x y)
+bor (B32 x) (B32 y) = pure $ B32 (prim__or_Int x y)
+bor (B64 x) (B64 y) = pure $ B64 (prim__or_Integer x y)
 bor _ _ = Nothing
 
 bxor : Constant -> Constant -> Maybe Constant
 bxor (I x) (I y) = pure $ I (prim__xor_Int x y)
+bxor (B8 x) (B8 y) = pure $ B8 (prim__xor_Int x y)
+bxor (B16 x) (B16 y) = pure $ B16 (prim__xor_Int x y)
+bxor (B32 x) (B32 y) = pure $ B32 (prim__xor_Int x y)
 bxor _ _ = Nothing
 
 neg : Constant -> Maybe Constant
@@ -176,6 +246,10 @@ toInt False = I 0
 lt : Constant -> Constant -> Maybe Constant
 lt (I x) (I y) = pure $ toInt (x < y)
 lt (BI x) (BI y) = pure $ toInt (x < y)
+lt (B8 x) (B8 y) = pure $ toInt (x < y)
+lt (B16 x) (B16 y) = pure $ toInt (x < y)
+lt (B32 x) (B32 y) = pure $ toInt (x < y)
+lt (B64 x) (B64 y) = pure $ toInt (x < y)
 lt (Str x) (Str y) = pure $ toInt (x < y)
 lt (Ch x) (Ch y) = pure $ toInt (x < y)
 lt (Db x) (Db y) = pure $ toInt (x < y)
@@ -184,6 +258,10 @@ lt _ _ = Nothing
 lte : Constant -> Constant -> Maybe Constant
 lte (I x) (I y) = pure $ toInt (x <= y)
 lte (BI x) (BI y) = pure $ toInt (x <= y)
+lte (B8 x) (B8 y) = pure $ toInt (x <= y)
+lte (B16 x) (B16 y) = pure $ toInt (x <= y)
+lte (B32 x) (B32 y) = pure $ toInt (x <= y)
+lte (B64 x) (B64 y) = pure $ toInt (x <= y)
 lte (Str x) (Str y) = pure $ toInt (x <= y)
 lte (Ch x) (Ch y) = pure $ toInt (x <= y)
 lte (Db x) (Db y) = pure $ toInt (x <= y)
@@ -192,6 +270,10 @@ lte _ _ = Nothing
 eq : Constant -> Constant -> Maybe Constant
 eq (I x) (I y) = pure $ toInt (x == y)
 eq (BI x) (BI y) = pure $ toInt (x == y)
+eq (B8 x) (B8 y) = pure $ toInt (x == y)
+eq (B16 x) (B16 y) = pure $ toInt (x == y)
+eq (B32 x) (B32 y) = pure $ toInt (x == y)
+eq (B64 x) (B64 y) = pure $ toInt (x == y)
 eq (Str x) (Str y) = pure $ toInt (x == y)
 eq (Ch x) (Ch y) = pure $ toInt (x == y)
 eq (Db x) (Db y) = pure $ toInt (x == y)
@@ -200,6 +282,10 @@ eq _ _ = Nothing
 gte : Constant -> Constant -> Maybe Constant
 gte (I x) (I y) = pure $ toInt (x >= y)
 gte (BI x) (BI y) = pure $ toInt (x >= y)
+gte (B8 x) (B8 y) = pure $ toInt (x >= y)
+gte (B16 x) (B16 y) = pure $ toInt (x >= y)
+gte (B32 x) (B32 y) = pure $ toInt (x >= y)
+gte (B64 x) (B64 y) = pure $ toInt (x >= y)
 gte (Str x) (Str y) = pure $ toInt (x >= y)
 gte (Ch x) (Ch y) = pure $ toInt (x >= y)
 gte (Db x) (Db y) = pure $ toInt (x >= y)
@@ -208,6 +294,10 @@ gte _ _ = Nothing
 gt : Constant -> Constant -> Maybe Constant
 gt (I x) (I y) = pure $ toInt (x > y)
 gt (BI x) (BI y) = pure $ toInt (x > y)
+gt (B8 x) (B8 y) = pure $ toInt (x > y)
+gt (B16 x) (B16 y) = pure $ toInt (x > y)
+gt (B32 x) (B32 y) = pure $ toInt (x > y)
+gt (B64 x) (B64 y) = pure $ toInt (x > y)
 gt (Str x) (Str y) = pure $ toInt (x > y)
 gt (Ch x) (Ch y) = pure $ toInt (x > y)
 gt (Db x) (Db y) = pure $ toInt (x > y)
@@ -297,6 +387,10 @@ crashTy
 castTo : Constant -> Vect 1 (NF vars) -> Maybe (NF vars)
 castTo IntType = castInt
 castTo IntegerType = castInteger
+castTo Bits8Type = castBits8
+castTo Bits16Type = castBits16
+castTo Bits32Type = castBits32
+castTo Bits64Type = castBits64
 castTo StringType = castString
 castTo CharType = castChar
 castTo DoubleType = castDouble
@@ -397,24 +491,24 @@ opName Crash = prim $ "crash"
 export
 allPrimitives : List Prim
 allPrimitives =
-    map (\t => MkPrim (Add t) (arithTy t) isTotal) [IntType, IntegerType, CharType, DoubleType] ++
+    map (\t => MkPrim (Add t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
     map (\t => MkPrim (Sub t) (arithTy t) isTotal) [IntType, IntegerType, CharType, DoubleType] ++
-    map (\t => MkPrim (Mul t) (arithTy t) isTotal) [IntType, IntegerType, DoubleType] ++
-    map (\t => MkPrim (Div t) (arithTy t) notCovering) [IntType, IntegerType, DoubleType] ++
-    map (\t => MkPrim (Mod t) (arithTy t) notCovering) [IntType, IntegerType] ++
+    map (\t => MkPrim (Mul t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
+    map (\t => MkPrim (Div t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
+    map (\t => MkPrim (Mod t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (Neg t) (predTy t t) isTotal) [IntType, IntegerType, DoubleType] ++
-    map (\t => MkPrim (ShiftL t) (arithTy t) isTotal) [IntType, IntegerType] ++
-    map (\t => MkPrim (ShiftR t) (arithTy t) isTotal) [IntType, IntegerType] ++
+    map (\t => MkPrim (ShiftL t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (ShiftR t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
 
-    map (\t => MkPrim (BAnd t) (arithTy t) isTotal) [IntType, IntegerType] ++
-    map (\t => MkPrim (BOr t) (arithTy t) isTotal) [IntType, IntegerType] ++
-    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType] ++
+    map (\t => MkPrim (BAnd t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (BOr t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType, Bits8Type, Bits16Type, Bits32Type] ++
 
-    map (\t => MkPrim (LT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
-    map (\t => MkPrim (LTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
-    map (\t => MkPrim (EQ t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
-    map (\t => MkPrim (GTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
-    map (\t => MkPrim (GT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType] ++
+    map (\t => MkPrim (LT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (LTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (EQ t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (GTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (GT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
 
     [MkPrim StrLength (predTy StringType IntType) isTotal,
      MkPrim StrHead (predTy StringType CharType) notCovering,
@@ -439,8 +533,13 @@ allPrimitives =
      MkPrim DoubleFloor doubleTy isTotal,
      MkPrim DoubleCeiling doubleTy isTotal] ++
 
-    map (\t => MkPrim (Cast t StringType) (predTy t StringType) isTotal) [IntType, IntegerType, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t IntegerType) (predTy t IntegerType) isTotal) [StringType, IntType, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t IntType) (predTy t IntType) isTotal) [StringType, IntegerType, CharType, DoubleType] ++
+    map (\t => MkPrim (Cast t StringType) (predTy t StringType) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
+    map (\t => MkPrim (Cast t IntegerType) (predTy t IntegerType) isTotal) [StringType, IntType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
+    map (\t => MkPrim (Cast t IntType) (predTy t IntType) isTotal) [StringType, IntegerType, Bits8Type, Bits16Type, Bits32Type, CharType, DoubleType] ++
     map (\t => MkPrim (Cast t DoubleType) (predTy t DoubleType) isTotal) [StringType, IntType, IntegerType] ++
-    map (\t => MkPrim (Cast t CharType) (predTy t CharType) isTotal) [StringType, IntType]
+    map (\t => MkPrim (Cast t CharType) (predTy t CharType) isTotal) [StringType, IntType] ++
+
+    map (\t => MkPrim (Cast t Bits8Type) (predTy t Bits8Type) isTotal) [IntegerType] ++
+    map (\t => MkPrim (Cast t Bits16Type) (predTy t Bits16Type) isTotal) [IntegerType] ++
+    map (\t => MkPrim (Cast t Bits32Type) (predTy t Bits32Type) isTotal) [IntegerType] ++
+    map (\t => MkPrim (Cast t Bits64Type) (predTy t Bits64Type) isTotal) [IntegerType]

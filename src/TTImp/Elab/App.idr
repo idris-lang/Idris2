@@ -99,9 +99,9 @@ getVarType rigc nest env fc x
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
                              do checkVisibleNS fc (fullname ndef) (visibility ndef)
-                                logTerm 10 ("Type of " ++ show n') tyenv
-                                logTerm 10 ("Expands to") tm
-                                log 10 $ "Arg length " ++ show arglen
+                                logTerm 5 ("Type of " ++ show n') tyenv
+                                logTerm 5 ("Expands to") tm
+                                log 5 $ "Arg length " ++ show arglen
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->

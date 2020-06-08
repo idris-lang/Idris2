@@ -111,6 +111,7 @@ public export
 data CFType : Type where
      CFUnit : CFType
      CFInt : CFType
+     CFUnsigned : CFType
      CFString : CFType
      CFDouble : CFType
      CFChar : CFType
@@ -290,6 +291,7 @@ export
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
+  show CFUnsigned = "Bits_n"
   show CFString = "String"
   show CFDouble = "Double"
   show CFChar = "Char"
@@ -321,53 +323,6 @@ Show NamedDef where
       = "Foreign call " ++ show ccs ++ " " ++
         show args ++ " -> " ++ show ret
   show (MkNmError exp) = "Error: " ++ show exp
-
-mutual
-  export
-  thin : {outer : _} ->
-         (n : Name) -> CExp (outer ++ inner) -> CExp (outer ++ n :: inner)
-  thin n (CLocal fc prf)
-      = let MkNVar var' = insertNVar {n} _ prf in
-            CLocal fc var'
-  thin _ (CRef fc x) = CRef fc x
-  thin {outer} {inner} n (CLam fc x sc)
-      = let sc' = thin {outer = x :: outer} {inner} n sc in
-            CLam fc x sc'
-  thin {outer} {inner} n (CLet fc x inl val sc)
-      = let sc' = thin {outer = x :: outer} {inner} n sc in
-            CLet fc x inl (thin n val) sc'
-  thin n (CApp fc x xs)
-      = CApp fc (thin n x) (assert_total (map (thin n) xs))
-  thin n (CCon fc x tag xs)
-      = CCon fc x tag (assert_total (map (thin n) xs))
-  thin n (COp fc x xs)
-      = COp fc x (assert_total (map (thin n) xs))
-  thin n (CExtPrim fc p xs)
-      = CExtPrim fc p (assert_total (map (thin n) xs))
-  thin n (CForce fc x) = CForce fc (thin n x)
-  thin n (CDelay fc x) = CDelay fc (thin n x)
-  thin n (CConCase fc sc xs def)
-      = CConCase fc (thin n sc) (assert_total (map (thinConAlt n) xs))
-                 (assert_total (map (thin n) def))
-  thin n (CConstCase fc sc xs def)
-      = CConstCase fc (thin n sc) (assert_total (map (thinConstAlt n) xs))
-                   (assert_total (map (thin n) def))
-  thin _ (CPrimVal fc x) = CPrimVal fc x
-  thin _ (CErased fc) = CErased fc
-  thin _ (CCrash fc x) = CCrash fc x
-
-  thinConAlt : {outer : _} ->
-               (n : Name) -> CConAlt (outer ++ inner) -> CConAlt (outer ++ n :: inner)
-  thinConAlt {outer} {inner} n (MkConAlt x tag args sc)
-        = let sc' : CExp ((args ++ outer) ++ inner)
-                  = rewrite sym (appendAssociative args outer inner) in sc in
-              MkConAlt x tag args
-               (rewrite appendAssociative args outer (n :: inner) in
-                        thin n sc')
-
-  thinConstAlt : {outer : _} ->
-                 (n : Name) -> CConstAlt (outer ++ inner) -> CConstAlt (outer ++ n :: inner)
-  thinConstAlt n (MkConstAlt x sc) = MkConstAlt x (thin n sc)
 
 mutual
   export
@@ -499,7 +454,6 @@ mutual
 
 export
 Weaken CExp where
-  weaken = thin {outer = []} _
   weakenNs ns tm = insertNames {outer = []} ns tm
 
 -- Substitute some explicit terms for names in a term, and remove those

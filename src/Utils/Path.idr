@@ -146,7 +146,6 @@ pathTokenMap = toTokenMap $
   , (some $ non $ oneOf "/\\:?", PTText)
   ]
 
-export
 lexPath : String -> List PathToken
 lexPath str = let (tokens, _, _, _) = lex pathTokenMap str in 
                 map TokenData.tok tokens
@@ -212,11 +211,14 @@ parseBody = do text <- match PTText
 
 parsePath : Grammar PathToken False Path
 parsePath = do vol <- optional parseVolume
-               root <- optional bodySeparator
-               body <- sepBy bodySeparator parseBody
-               trailSep <- optional bodySeparator
+               root <- optional (some bodySeparator)
+               body <- sepBy (some bodySeparator) parseBody
+               trailSep <- optional (some bodySeparator)
                let body = filter (\case Normal s => ltrim s /= ""
                                         _ => True) body
+               let body = case body of
+                               [] => []
+                               (x::xs) => x :: delete CurDir xs
                pure $ MkPath vol (isJust root) body (isJust trailSep)
 
 ||| Parse a String into Path component.
@@ -246,14 +248,9 @@ parsePath = do vol <- optional parseVolume
 ||| ```
 export
 parse : String -> Path
-parse str = let p = case parse parsePath (lexPath str) of
-                         Right (p, _) => p
-                         _ => emptyPath
-                body' = case p.body of
-                             [] => []
-                             (x::xs) => x :: delete CurDir xs
-              in
-                record { body = body' } p
+parse str = case parse parsePath (lexPath str) of
+                 Right (p, _) => p
+                 _ => emptyPath
 
 --------------------------------------------------------------------------------
 -- Utils

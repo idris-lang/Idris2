@@ -55,7 +55,12 @@ FILE *win32_u8popen(const char *path, const char *mode)
 void win32_gettime(int64_t* sec, int64_t* nsec)
 {
     FILETIME ft;
+#ifdef _OLD_WIN
+    GetSystemTimeAsFileTime(&ft);
+#else
+    // For Windows NT 6.2 or higher
     GetSystemTimePreciseAsFileTime(&ft);
+#endif
     ULARGE_INTEGER t;
     t.HighPart = ft.dwHighDateTime;
     t.LowPart = ft.dwLowDateTime;

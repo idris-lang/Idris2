@@ -1,39 +1,30 @@
 module Main
 
-import Core.Binary
-import Core.Context
 import Core.Core
-import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Options
 import Core.Unify
-import Utils.Path
 
 import Idris.CommandLine
-import Idris.Desugar
 import Idris.IDEMode.REPL
 import Idris.ModTree
 import Idris.Package
-import Idris.Parser
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
 
-import Data.List
+import IdrisPaths
+
 import Data.So
 import Data.Strings
-import Data.Vect
 import System
 import System.Directory
 import System.File
-
+import Utils.Path
 
 import Yaffle.Main
-
-import IdrisPaths
 
 %default covering
 
@@ -173,6 +164,7 @@ stMain opts
                  fname <- if findipkg session
                              then findIpkg fname
                              else pure fname
+                 setMainFile fname
                  the (Core ()) $ case fname of
                       Nothing => logTime "Loading prelude" $
                                    when (not $ noprelude session) $

@@ -5,6 +5,8 @@ import Idris.Syntax
 import Data.Strings
 import System.File
 
+%default total
+
 public export
 data OutputMode
   = IDEMode Integer File File
@@ -44,6 +46,13 @@ export
 getOutput : {auto o : Ref ROpts REPLOpts} -> Core OutputMode
 getOutput = do opts <- get ROpts
                pure (idemode opts)
+
+export
+setMainFile : {auto o : Ref ROpts REPLOpts} ->
+              Maybe String -> Core ()
+setMainFile src
+    = do opts <- get ROpts
+         put ROpts (record { mainfile = src } opts)
 
 export
 setSource : {auto o : Ref ROpts REPLOpts} ->

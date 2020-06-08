@@ -30,6 +30,8 @@ import Data.Either
 import Data.List
 import Data.NameMap
 
+%default covering
+
 mutual
   mismatchNF : {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
@@ -76,15 +78,11 @@ export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
 impossibleErrOK defs (CantConvert fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+    = impossibleOK defs !(nf defs env l)
+                        !(nf defs env r)
 impossibleErrOK defs (CantSolveEq fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+    = impossibleOK defs !(nf defs env l)
+                        !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK defs (AllFailed errs)
@@ -120,15 +118,11 @@ export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
 recoverableErr defs (CantConvert fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
+    = recoverable defs !(nf defs env l)
+                       !(nf defs env r)
 recoverableErr defs (CantSolveEq fc env l r)
-    = do logTerm 10 "Impossible" !(normalise defs env l)
-         logTerm 10 "    ...and" !(normalise defs env r)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
+    = recoverable defs !(nf defs env l)
+                       !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
@@ -327,46 +321,6 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
          ext <- extendEnv env SubRefl nest lhstm_lin lhsty_lin
          pure (lhs, ext)
 
-plicit : Binder (Term vars) -> PiInfo RawImp
-plicit (Pi _ p _) = forgetDef p
-plicit (PVar _ p _) = forgetDef p
-plicit _ = Explicit
-
-bindNotReq : {vs : _} ->
-             FC -> Int -> Env Term vs -> (sub : SubVars pre vs) ->
-             List (PiInfo RawImp, Name) ->
-             Term vs -> (List (PiInfo RawImp, Name), Term pre)
-bindNotReq fc i [] SubRefl ns tm = (ns, embed tm)
-bindNotReq fc i (b :: env) SubRefl ns tm
-   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
-         (ns', btm) = bindNotReq fc (1 + i) env SubRefl ns tmptm in
-         (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq fc i (b :: env) (KeepCons p) ns tm
-   = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
-         (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
-         (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq {vs = n :: _} fc i (b :: env) (DropCons p) ns tm
-   = bindNotReq fc i env p ((plicit b, n) :: ns)
-       (Bind fc _ (Pi (multiplicity b) Explicit (binderType b)) tm)
-
-bindReq : {vs : _} ->
-          FC -> Env Term vs -> (sub : SubVars pre vs) ->
-          List (PiInfo RawImp, Name) ->
-          Term pre -> Maybe (List (PiInfo RawImp, Name), List Name, ClosedTerm)
-bindReq {vs} fc env SubRefl ns tm
-    = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
-  where
-    notLets : List Name -> (vars : List Name) -> Env Term vars -> List Name
-    notLets acc [] _ = acc
-    notLets acc (v :: vs) (Let _ _ _ :: env) = notLets acc vs env
-    notLets acc (v :: vs) (_ :: env) = notLets (v :: acc) vs env
-bindReq {vs = n :: _} fc (b :: env) (KeepCons p) ns tm
-    = do b' <- shrinkBinder b p
-         bindReq fc env p ((plicit b, n) :: ns)
-            (Bind fc _ (Pi (multiplicity b) Explicit (binderType b')) tm)
-bindReq fc (b :: env) (DropCons p) ns tm
-    = bindReq fc env p ns tm
-
 -- Return whether any of the pattern variables are in a trivially empty
 -- type, where trivally empty means one of:
 --  * No constructors
@@ -384,10 +338,10 @@ hasEmptyPat defs env _ = pure False
 applyEnv : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            Env Term vars -> Name ->
-           Core (Name, (Maybe Name, List Name, FC -> NameType -> Term vars))
+           Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
 applyEnv env withname
     = do n' <- resolveName withname
-         pure (withname, (Just withname, namesNoLet env,
+         pure (withname, (Just withname, reverse (allVarsNoLet env),
                   \fc, nt => applyTo fc
                          (Ref fc nt (Resolved n')) env))
 
@@ -451,7 +405,7 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
 
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
-checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs)
+checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let wmode
@@ -490,9 +444,12 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
          let notreqns = fst bnr
          let notreqty = snd bnr
 
-         wtyScope <- replace defs scenv !(nf defs scenv (weaken wval))
+         rdefs <- if Syntactic `elem` flags
+                     then clearDefs defs
+                     else pure defs
+         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weaken wval))
                             (Local fc (Just False) _ First)
-                            !(nf defs scenv
+                            !(nf rdefs scenv
                                  (weaken {n=wargn} notreqty))
          let bNotReq = Bind fc wargn (Pi top Explicit wvalTy) wtyScope
 
@@ -565,11 +522,11 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw cs
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs ws')
+             pure (WithClause ploc newlhs newrhs flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
@@ -743,7 +700,7 @@ processDef opts nest env fc n_in cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
-             getPMDef fc CompileTime n ty (rights cs)
+             getPMDef fc (CompileTime mult) n ty (rights cs)
 
          traverse_ warnUnreachable unreachable
 
@@ -771,9 +728,9 @@ processDef opts nest env fc n_in cs_in
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS ["Builtin"] (UN "assert_total"))
+         calcRefs False atotal (Resolved nidx)
          when (not (InCase `elem` opts)) $
-             do calcRefs False atotal (Resolved nidx)
-                sc <- calculateSizeChange fc n
+             do sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
                 checkIfGuarded fc n
 
@@ -850,7 +807,7 @@ processDef opts nest env fc n_in cs_in
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
-                 getPMDef fc CompileTime (Resolved n) ty covcs
+                 getPMDef fc (CompileTime mult) (Resolved n) ty covcs
              log 3 $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
                             then do log 3 $ "Catch all case in " ++ show n

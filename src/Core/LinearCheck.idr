@@ -215,7 +215,9 @@ mutual
            Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                 | _ => throw (UndefinedName fc n)
            let expand = branchZero
-                          False
+                          (case type gdef of
+                                Erased _ _ => True -- defined elsewhere, need to expand
+                                _ => False)
                           (case definition gdef of
                                 (PMDef _ _ _ _ _) => True
                                 _ => False)

@@ -1,0 +1,8 @@
+1/1: Building NatExpr (NatExpr.idr)
+Main> Main.test1 : (x : Nat) -> (y : Nat) -> NatExpr (plus x (plus y x))
+test1 x y = Plus (Val x) (Plus (Val y) (Val x))
+Main> Main.test2 : (x : Nat) -> (y : Nat) -> NatExpr (plus x (mult y x))
+test2 x y = Plus (Val x) (Mult (Val y) (Val x))
+Main> Main.test3 : (x : Nat) -> Nat -> NatExpr (plus x (mult 2 x))
+test3 x y = Plus (Val x) (Dbl (Val x))
+Main> Bye for now!

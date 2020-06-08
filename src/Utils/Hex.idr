@@ -2,6 +2,8 @@ module Utils.Hex
 
 import Data.Primitives.Views
 
+%default total
+
 hexDigit : Int -> Char
 hexDigit 0 = '0'
 hexDigit 1 = '1'
@@ -29,7 +31,8 @@ asHex n = pack $ asHex' n []
     asHex' : Int -> List Char -> List Char
     asHex' 0 hex = hex
     asHex' n hex with (n `divides` 16)
-      asHex' (16 * div + rem) hex | DivBy div rem _ = asHex' div (hexDigit rem :: hex)
+      asHex' (16 * div + rem) hex | DivBy div rem _ =
+        assert_total $ asHex' div (hexDigit rem :: hex)
 
 export
 fromHexDigit : Char -> Maybe Int

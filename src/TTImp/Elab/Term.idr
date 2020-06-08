@@ -8,7 +8,7 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.Options
--- import Core.Reflect
+import Core.Reflect
 import Core.Unify
 import Core.TT
 import Core.Value
@@ -25,10 +25,11 @@ import TTImp.Elab.ImplicitBind
 import TTImp.Elab.Lazy
 import TTImp.Elab.Local
 import TTImp.Elab.Prim
--- import TTImp.Elab.Quote
+import TTImp.Elab.Quote
 import TTImp.Elab.Record
 import TTImp.Elab.Rewrite
--- import TTImp.Reflect
+import TTImp.Elab.RunElab
+import TTImp.Reflect
 import TTImp.TTImp
 
 %default covering
@@ -176,14 +177,15 @@ checkTerm rig elabinfo nest env (IDelay fc tm) exp
 checkTerm rig elabinfo nest env (IForce fc tm) exp
     = checkForce rig elabinfo nest env fc tm exp
 checkTerm rig elabinfo nest env (IQuote fc tm) exp
-    = throw (GenericMsg fc "Reflection not implemented yet")
---     = checkQuote rig elabinfo nest env fc tm exp
-checkTerm rig elabinfo nest env (IQuoteDecl fc tm) exp
-    = throw (GenericMsg fc "Declaration reflection not implemented yet")
+    = checkQuote rig elabinfo nest env fc tm exp
+checkTerm rig elabinfo nest env (IQuoteName fc n) exp
+    = checkQuoteName rig elabinfo nest env fc n exp
+checkTerm rig elabinfo nest env (IQuoteDecl fc ds) exp
+    = checkQuoteDecl rig elabinfo nest env fc ds exp
 checkTerm rig elabinfo nest env (IUnquote fc tm) exp
     = throw (GenericMsg fc "Can't escape outside a quoted term")
 checkTerm rig elabinfo nest env (IRunElab fc tm) exp
-    = throw (GenericMsg fc "RunElab not implemented yet")
+    = checkRunElab rig elabinfo nest env fc tm exp
 checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp

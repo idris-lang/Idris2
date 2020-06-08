@@ -13,6 +13,8 @@ import Idris.Syntax
 
 import Data.List
 
+%default covering
+
 -- Output informational messages, unless quiet flag is set
 export
 iputStrLn : {auto o : Ref ROpts REPLOpts} ->

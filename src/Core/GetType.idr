@@ -103,6 +103,10 @@ mutual
   chkConstant : FC -> Constant -> Term vars
   chkConstant fc (I x) = PrimVal fc IntType
   chkConstant fc (BI x) = PrimVal fc IntegerType
+  chkConstant fc (B8 x) = PrimVal fc Bits8Type
+  chkConstant fc (B16 x) = PrimVal fc Bits16Type
+  chkConstant fc (B32 x) = PrimVal fc Bits32Type
+  chkConstant fc (B64 x) = PrimVal fc Bits64Type
   chkConstant fc (Str x) = PrimVal fc StringType
   chkConstant fc (Ch x) = PrimVal fc CharType
   chkConstant fc (Db x) = PrimVal fc DoubleType
