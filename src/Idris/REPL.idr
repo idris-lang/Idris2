@@ -424,6 +424,7 @@ data REPLResult : Type where
   OptionsSet : List REPLOpt -> REPLResult
   LogLevelSet : Nat -> REPLResult
   VersionIs : Version -> REPLResult
+  DefDeclared : REPLResult
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
@@ -442,6 +443,20 @@ execExp ctm
          execute !findCG tm_erased
          pure $ Executed ctm
 
+
+execDecls : {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            {auto m : Ref MD Metadata} ->
+            List PDecl -> Core REPLResult
+execDecls decls = do
+  traverse_ execDecl decls
+  pure DefDeclared
+  where
+    execDecl : PDecl -> Core ()
+    execDecl decl = do
+      i <- desugarDecl [] decl
+      traverse_ (processDecl [] (MkNested []) []) i
 
 export
 compileExp : {auto c : Ref Ctxt Defs} ->
@@ -492,6 +507,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
           REPLCmd -> Core REPLResult
+process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
          case evalMode opts of
