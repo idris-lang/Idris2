@@ -216,6 +216,8 @@ divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
 
 public export
 Integral Nat where
+  quot = divNat
+  rem = modNat
   div = divNat
   mod = modNat
 
