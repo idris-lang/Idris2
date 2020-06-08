@@ -712,42 +712,6 @@ insertNVarNames {ns} {outer = (y :: xs)} (S i) (Later x)
           MkNVar (Later prf)
 
 export
-thin : {outer, inner : _} ->
-       (n : Name) -> Term (outer ++ inner) -> Term (outer ++ n :: inner)
-thin n (Local fc r idx prf)
-    = let MkNVar var' = insertNVar {n} idx prf in
-          Local fc r _ var'
-thin n (Ref fc nt name) = Ref fc nt name
-thin n (Meta fc name idx args) = Meta fc name idx (map (thin n) args)
-thin {outer} {inner} n (Bind fc x b scope)
-    = let sc' = thin {outer = x :: outer} {inner} n scope in
-          Bind fc x (thinBinder n b) sc'
-  where
-    thinPi : (n : Name) -> PiInfo (Term (outer ++ inner)) ->
-             PiInfo (Term (outer ++ n :: inner))
-    thinPi n Explicit = Explicit
-    thinPi n Implicit = Implicit
-    thinPi n AutoImplicit = AutoImplicit
-    thinPi n (DefImplicit t) = DefImplicit (thin n t)
-
-    thinBinder : (n : Name) -> Binder (Term (outer ++ inner)) ->
-                 Binder (Term (outer ++ n :: inner))
-    thinBinder n (Lam c p ty) = Lam c (thinPi n p) (thin n ty)
-    thinBinder n (Let c val ty) = Let c (thin n val) (thin n ty)
-    thinBinder n (Pi c p ty) = Pi c (thinPi n p) (thin n ty)
-    thinBinder n (PVar c p ty) = PVar c (thinPi n p) (thin n ty)
-    thinBinder n (PLet c val ty) = PLet c (thin n val) (thin n ty)
-    thinBinder n (PVTy c ty) = PVTy c (thin n ty)
-thin n (App fc fn arg) = App fc (thin n fn) (thin n arg)
-thin n (As fc s nm tm) = As fc s (thin n nm) (thin n tm)
-thin n (TDelayed fc r ty) = TDelayed fc r (thin n ty)
-thin n (TDelay fc r ty tm) = TDelay fc r (thin n ty) (thin n tm)
-thin n (TForce fc r tm) = TForce fc r (thin n tm)
-thin n (PrimVal fc c) = PrimVal fc c
-thin n (Erased fc i) = Erased fc i
-thin n (TType fc) = TType fc
-
-export
 insertNames : {outer, inner : _} ->
               (ns : List Name) -> Term (outer ++ inner) ->
               Term (outer ++ (ns ++ inner))
@@ -774,7 +738,6 @@ insertNames ns (TType fc) = TType fc
 
 export
 Weaken Term where
-  weaken tm = thin {outer = []} _ tm
   weakenNs ns tm = insertNames {outer = []} ns tm
 
 export
