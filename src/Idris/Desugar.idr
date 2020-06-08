@@ -392,10 +392,14 @@ mutual
   expandDo side ps topfc (DoExp fc tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc rest
+           -- A free standing 'case' block must return ()
+           let ty = case tm' of
+                         ICase _ _ _ _ => IVar fc (UN "Unit")
+                         _ => Implicit fc False
            gam <- get Ctxt
            pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
                           (ILam fc top Explicit Nothing
-                                (Implicit fc False) rest')
+                                ty rest')
   expandDo side ps topfc (DoBind fc n tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc rest

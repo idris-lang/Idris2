@@ -222,6 +222,9 @@ runTest opts testPath
                      | Left err => do print err
                                       pure False
                  let result = normalize out == normalize exp
+                 -- The issue #116 that made this necessary is fixed, but
+                 -- please resist putting 'result' here until it's also
+                 -- fixed in Idris2-boot!
                  if normalize out == normalize exp
                     then putStrLn "success"
                     else do
