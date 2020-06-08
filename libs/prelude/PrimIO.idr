@@ -56,6 +56,14 @@ data Ptr : Type -> Type where [external]
 public export
 data AnyPtr : Type where [external]
 
+-- As Ptr, but associated with a finaliser that is run on garbage collection
+public export
+data GCPtr : Type -> Type where [external]
+
+-- As AnyPtr, but associated with a finaliser that is run on garbage collection
+public export
+data GCAnyPtr : Type where [external]
+
 public export
 data ThreadID : Type where [external]
 
@@ -95,6 +103,19 @@ prim__forgetPtr = believe_me
 export %inline
 prim__nullPtr : Ptr t -> Int -- can't pass 'type' to a foreign function
 prim__nullPtr p = prim__nullAnyPtr (prim__forgetPtr p)
+
+%extern
+prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr
+%extern
+prim__onCollect : Ptr t -> (Ptr t -> PrimIO ()) -> PrimIO (GCPtr t)
+
+export
+onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
+onCollectAny ptr c = primIO (prim__onCollectAny ptr (\x => toPrim (c x)))
+
+export
+onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
+onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
 
 %foreign "C:idris2_getString, libidris2_support"
 export

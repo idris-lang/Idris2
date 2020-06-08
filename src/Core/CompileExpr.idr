@@ -116,6 +116,7 @@ data CFType : Type where
      CFDouble : CFType
      CFChar : CFType
      CFPtr : CFType
+     CFGCPtr : CFType
      CFWorld : CFType
      CFFun : CFType -> CFType -> CFType
      CFIORes : CFType -> CFType
@@ -296,6 +297,7 @@ Show CFType where
   show CFDouble = "Double"
   show CFChar = "Char"
   show CFPtr = "Ptr"
+  show CFGCPtr = "GCPtr"
   show CFWorld = "%World"
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t

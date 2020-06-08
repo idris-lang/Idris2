@@ -461,6 +461,7 @@ data NArgs : Type where
      Struct : String -> List (String, Closure []) -> NArgs
      NUnit : NArgs
      NPtr : NArgs
+     NGCPtr : NArgs
      NIORes : Closure [] -> NArgs
 
 getPArgs : Defs -> Closure [] -> Core (String, Closure [])
@@ -491,6 +492,8 @@ getNArgs : Defs -> Name -> List (Closure []) -> Core NArgs
 getNArgs defs (NS _ (UN "IORes")) [arg] = pure $ NIORes arg
 getNArgs defs (NS _ (UN "Ptr")) [arg] = pure NPtr
 getNArgs defs (NS _ (UN "AnyPtr")) [] = pure NPtr
+getNArgs defs (NS _ (UN "GCPtr")) [arg] = pure NGCPtr
+getNArgs defs (NS _ (UN "GCAnyPtr")) [] = pure NGCPtr
 getNArgs defs (NS _ (UN "Unit")) [] = pure NUnit
 getNArgs defs (NS _ (UN "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
@@ -536,6 +539,7 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
                    pure (CFStruct n fs')
               NUnit => pure CFUnit
               NPtr => pure CFPtr
+              NGCPtr => pure CFGCPtr
               NIORes uarg =>
                 do narg <- evalClosure defs uarg
                    carg <- nfToCFType fc s narg

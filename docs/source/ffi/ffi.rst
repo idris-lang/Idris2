@@ -409,3 +409,31 @@ can convert between a ``void*`` and a ``char*`` in C:
 
     %foreign (pfn "getString")
     getString : Ptr String -> String
+
+
+Finalisers
+----------
+
+In some libraries, a foreign function creates a pointer and the caller is
+responsible for freeing it. In this case, you can make an explicit foreign
+call to ``free``. However, this is not always convenient, or even possible.
+Instead, you can ask the Idris run-time to be responsible for freeing the
+pointer when it is no longer accessible, using ``onCollect`` (or its
+typeless variant ``onCollectAny``) defined in the Prelude:
+
+.. code-block:: idris
+
+    onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
+    onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
+
+A ``GCPtr t`` behaves exactly like ``Ptr t`` when passed to a foreign
+function (and, similarly, ``GCAnyPtr`` behaves like ``AnyPtr``). A foreign
+function cannot return a ``GCPtr`` however, because then we can no longer
+assume the pointer is completely managed by the Idris run-time.
+
+The finaliser is called either when the garbage collector determines that
+the pointer is no longer accessible, or at the end of execution.
+
+Note that finalisers might not be supported by all back ends, since they depend
+on the facilities offered by a specific back end's run time system. They are
+certainly supported in the Chez Scheme and Racket back ends.
