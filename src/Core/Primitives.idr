@@ -65,33 +65,25 @@ castInt _ = Nothing
 castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits8 [NPrimVal fc (BI i)]
     = let max = prim__shl_Int 1 8 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B8 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B8 (max + fromInteger i `mod` max)))
+          Just (NPrimVal fc (B8 (fromInteger i `rem` max)))
 castBits8 _ = Nothing
 
 castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits16 [NPrimVal fc (BI i)]
     = let max = prim__shl_Int 1 16 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B16 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B16 (max + fromInteger i `mod` max)))
+          Just (NPrimVal fc (B16 (fromInteger i `rem` max)))
 castBits16 _ = Nothing
 
 castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits32 [NPrimVal fc (BI i)]
     = let max = prim__shl_Int 1 32 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B32 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B32 (max + fromInteger i `mod` max)))
+          Just (NPrimVal fc (B32 (fromInteger i `rem` max)))
 castBits32 _ = Nothing
 
 castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits64 [NPrimVal fc (BI i)]
     = let max = prim__shl_Integer 1 64 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B64 (i `mod` max)))
-             else Just (NPrimVal fc (B64 (max + i `mod` max)))
+          Just (NPrimVal fc (B64 (i `rem` max)))
 castBits64 _ = Nothing
 
 castDouble : Vect 1 (NF vars) -> Maybe (NF vars)
@@ -174,6 +166,21 @@ mul (B64 x) (B64 y) = pure $ B64 $ (x * y) `mod` (prim__shl_Integer 1 64)
 mul (I x) (I y) = pure $ I (x * y)
 mul (Db x) (Db y) = pure $ Db (x * y)
 mul _ _ = Nothing
+
+quot : Constant -> Constant -> Maybe Constant
+quot (BI x) (BI 0) = Nothing
+quot (BI x) (BI y) = pure $ BI (assert_total (x `quot` y))
+quot (I x) (I 0) = Nothing
+quot (I x) (I y) = pure $ I (assert_total (x `quot` y))
+quot (Db x) (Db y) = pure $ Db (x / y)
+quot _ _ = Nothing
+
+rem : Constant -> Constant -> Maybe Constant
+rem (BI x) (BI 0) = Nothing
+rem (BI x) (BI y) = pure $ BI (assert_total (x `rem` y))
+rem (I x) (I 0) = Nothing
+rem (I x) (I y) = pure $ I (assert_total (x `rem` y))
+rem _ _ = Nothing
 
 div : Constant -> Constant -> Maybe Constant
 div (BI x) (BI 0) = Nothing
@@ -402,6 +409,8 @@ getOp : PrimFn arity ->
 getOp (Add ty) = binOp add
 getOp (Sub ty) = binOp sub
 getOp (Mul ty) = binOp mul
+getOp (Quot ty) = binOp quot
+getOp (Rem ty) = binOp rem
 getOp (Div ty) = binOp div
 getOp (Mod ty) = binOp mod
 getOp (Neg ty) = unaryOp neg
