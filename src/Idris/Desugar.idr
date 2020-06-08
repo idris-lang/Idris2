@@ -814,6 +814,7 @@ mutual
              UndottedRecordProjections b => do
                pure [IPragma (\nest, env => setUndottedRecordProjections b)]
              AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
+             AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
              PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]
              RewriteName eq rw => pure [IPragma (\nest, env => setRewrite fc eq rw)]
              PrimInteger n => pure [IPragma (\nest, env => setFromInteger n)]

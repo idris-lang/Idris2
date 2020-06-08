@@ -168,6 +168,7 @@ mutual
        Extension : LangExt -> Directive
        DefaultTotality : TotalReq -> Directive
        UndottedRecordProjections : Bool -> Directive
+       AutoImplicitDepth : Nat -> Directive
 
   public export
   data PField : Type where

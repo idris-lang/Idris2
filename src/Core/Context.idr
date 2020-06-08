@@ -2017,6 +2017,13 @@ setAmbigLimit max
          put Ctxt (record { options->elabDirectives->ambigLimit = max } defs)
 
 export
+setAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
+                       Nat -> Core ()
+setAutoImplicitLimit max
+    = do defs <- get Ctxt
+         put Ctxt (record { options->elabDirectives->autoImplicitLimit = max } defs)
+
+export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
                Core Bool
 isLazyActive
@@ -2048,6 +2055,13 @@ getAmbigLimit : {auto c : Ref Ctxt Defs} ->
 getAmbigLimit
     = do defs <- get Ctxt
          pure (ambigLimit (elabDirectives (options defs)))
+
+export
+getAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
+                       Core Nat
+getAutoImplicitLimit
+    = do defs <- get Ctxt
+         pure (autoImplicitLimit (elabDirectives (options defs)))
 
 export
 setPair : {auto c : Ref Ctxt Defs} ->
