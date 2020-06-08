@@ -1,0 +1,29 @@
+ 27 `quot`  3
+ 27 `rem`   3
+ 27 `div`   3
+ 27 `mod`   3
+-27 `quot`  3
+-27 `rem`   3
+-27 `div`   3
+-27 `mod`   3
+ 27 `quot` -3
+ 27 `rem`  -3
+ 27 `div`  -3
+ 27 `mod`  -3
+ 13 `quot`  4
+ 13 `rem`   4
+ 13 `div`   4
+ 13 `mod`   4
+-13 `quot`  4
+-13 `rem`   4
+-13 `div`   4
+-13 `mod`   4
+ 13 `quot` -4
+ 13 `rem`  -4
+ 13 `div`  -4
+ 13 `mod`  -4
+-13 `quot` -4
+-13 `rem`  -4
+-13 `div`  -4
+-13 `mod`  -4
+:q
