@@ -157,6 +157,9 @@ mutual
       = findSC defs env g pats tm
   findSC defs env g pats tm
       = do let (fn, args) = getFnArgs tm
+           -- if it's a 'case' or 'if' just go straight into the arguments
+           Nothing <- handleCase fn args
+               | Just res => pure res
            fn' <- conIfGuarded fn -- pretend it's a data constructor if
                                   -- it has the AllGuarded flag
            case (g, fn', args) of
@@ -186,6 +189,14 @@ mutual
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
       where
+        handleCase : Term vars -> List (Term vars) -> Core (Maybe (List SCCall))
+        handleCase (Ref fc nt n) args
+            = do n' <- toFullNames n
+                 if caseFn n'
+                    then Just <$> findSCcall defs env g pats fc n 4 args
+                    else pure Nothing
+        handleCase _ _ = pure Nothing
+
         conIfGuarded : Term vars -> Core (Term vars)
         conIfGuarded (Ref fc Func n)
             = do defs <- get Ctxt

@@ -125,11 +125,11 @@ mutual
     Show RawImp where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
-         = "(%pi " ++ show c ++ " " ++ show p ++
-           " " ++ show n ++ " " ++ show arg ++ " " ++ show ret ++ ")"
+         = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
+           showPrec App n ++ " " ++ show arg ++ " " ++ show ret ++ ")"
       show (ILam fc c p n arg sc)
-         = "(%lam " ++ show c ++ " " ++ show p ++
-           " " ++ show n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
+         = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
+           showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
       show (ILet fc c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"

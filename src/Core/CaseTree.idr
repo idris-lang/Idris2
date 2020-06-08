@@ -143,16 +143,6 @@ mutual
       = DefaultCase (insertCaseNames ns ct)
 
 export
-thinTree : {outer, inner : _} ->
-           (n : Name) -> CaseTree (outer ++ inner) -> CaseTree (outer ++ n :: inner)
-thinTree n (Case idx prf scTy alts)
-    = let MkNVar prf' = insertNVar {n} _ prf in
-          Case _ prf' (thin n scTy) (map (insertCaseAltNames [n]) alts)
-thinTree n (STerm i tm) = STerm i (thin n tm)
-thinTree n (Unmatched msg) = Unmatched msg
-thinTree n Impossible = Impossible
-
-export
 Weaken CaseTree where
   weakenNs ns t = insertCaseNames {outer = []} ns t
 

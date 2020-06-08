@@ -101,6 +101,7 @@ record ElabDirectives where
   totality : TotalReq
   ambigLimit : Nat
   undottedRecordProjections : Bool
+  autoImplicitLimit : Nat
 
 public export
 record Session where
@@ -150,7 +151,7 @@ defaultSession = MkSessionOpts False False False Chez 0 False False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 True
+defaultElab = MkElabDirectives True True CoveringOnly 3 True 50
 
 export
 defaults : Options

@@ -113,9 +113,10 @@ mkdirAll dir = if parse dir == emptyPath
                   else do exist <- dirExists dir
                           if exist 
                              then pure (Right ())
-                             else do case parent dir of
+                             else do Right () <- case parent dir of
                                           Just parent => mkdirAll parent
                                           Nothing => pure (Right ()) 
+                                        | err => pure err
                                      createDir dir
 
 -- Given a namespace (i.e. a module name), make the build directory for the

@@ -168,6 +168,7 @@ mutual
        Extension : LangExt -> Directive
        DefaultTotality : TotalReq -> Directive
        UndottedRecordProjections : Bool -> Directive
+       AutoImplicitDepth : Nat -> Directive
 
   public export
   data PField : Type where
@@ -304,6 +305,7 @@ data EditCmd : Type where
 
 public export
 data REPLCmd : Type where
+     NewDefn : List PDecl -> REPLCmd 
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      PrintDef : Name -> REPLCmd
