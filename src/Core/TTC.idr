@@ -489,6 +489,8 @@ export
   toBuf b (Add ty) = do tag 0; toBuf b ty
   toBuf b (Sub ty) = do tag 1; toBuf b ty
   toBuf b (Mul ty) = do tag 2; toBuf b ty
+  toBuf b (Quot ty) = do tag 40; toBuf b ty
+  toBuf b (Rem ty) = do tag 41; toBuf b ty
   toBuf b (Div ty) = do tag 3; toBuf b ty
   toBuf b (Mod ty) = do tag 4; toBuf b ty
   toBuf b (Neg ty) = do tag 5; toBuf b ty
@@ -563,6 +565,8 @@ export
                  0 => do ty <- fromBuf b; pure (Add ty)
                  1 => do ty <- fromBuf b; pure (Sub ty)
                  2 => do ty <- fromBuf b; pure (Mul ty)
+                 40 => do ty <- fromBuf b; pure (Quot ty)
+                 41 => do ty <- fromBuf b; pure (Rem ty)
                  3 => do ty <- fromBuf b; pure (Div ty)
                  4 => do ty <- fromBuf b; pure (Mod ty)
                  6 => do ty <- fromBuf b; pure (LT ty)

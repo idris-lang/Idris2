@@ -15,6 +15,13 @@
 (define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
 (define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
 
+(define (blodwen-div x y)
+  (let ((q (quotient x y))
+        (r (remainder x y)))
+    (if (or (zero? r) (and (> y 0) (> r 0)) (and (< y 0) (< r 0)))
+        q
+        (- q 1))))
+
 (define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
