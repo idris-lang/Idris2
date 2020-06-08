@@ -17,6 +17,12 @@ Language changes:
    + Implemented `%macro` function flag, to remove the syntactic noise of
      invoking elaborator scripts. This means the function must always
      be fully applied, and is run under `%runElab`
+* New `quot` and `rem` primitives
+  + These primitives, alongside the existing `div` and `mod`,
+    implement number-theoretic integer division
+  + The new `rem` primitive has the same behaviour as the old `mod`
+    one (same sign as the dividend), `mod` has now always the same
+    sign as the `divisor`
 
 Changes since Idris 2 v0.1.0
 ----------------------------
