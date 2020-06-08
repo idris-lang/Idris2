@@ -58,7 +58,7 @@ infixl 6 <+>
 infixr 9 .
 infixr 0 $
 
-infixl 9 `div`, `mod`
+infixl 9 `quot`, `rem`, `div`, `mod`
 
 -----------------------
 -- UTILITY FUNCTIONS --
@@ -414,10 +414,19 @@ interface Num ty => Fractional ty where
 
   recip x = 1 / x
 
+||| Integral numbers, supporting integer division.
 public export
 interface Num ty => Integral ty where
+  ||| Integer division rounded towards zero.
+  partial
+  quot : ty -> ty -> ty
+  ||| Integer remainder, satisfying (x `quot` y) * y + (x `rem` y) == x
+  partial
+  rem : ty -> ty -> ty
+  ||| Integer division rounded towards negative infinity.
   partial
   div : ty -> ty -> ty
+  ||| Integer modulus, satisfying (x `div` y) * y + (x `mod` y) == x
   partial
   mod : ty -> ty -> ty
 
@@ -443,12 +452,22 @@ Abs Integer where
 
 public export
 Integral Integer where
+  quot x y
+       = if y == 0
+         then idris_crash "cannot divide by zero"
+         else prim__quot_Integer x y
+  rem x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__rem_Integer x y
   div x y
-      = case y == 0 of
-             False => prim__div_Integer x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__div_Integer x y
   mod x y
-      = case y == 0 of
-             False => prim__mod_Integer x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__mod_Integer x y
 
 -- This allows us to pick integer as a default at the end of elaboration if
 -- all other possibilities fail. I don't plan to provide a nicer syntax for
@@ -479,12 +498,22 @@ Abs Int where
 
 public export
 Integral Int where
+  quot x y
+       = if y == 0
+         then idris_crash "cannot divide by zero"
+         else prim__quot_Int x y
+  rem x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__rem_Int x y
   div x y
-      = case y == 0 of
-             False => prim__div_Int x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__div_Int x y
   mod x y
-      = case y == 0 of
-             False => prim__mod_Int x y
+      = if y == 0
+        then idris_crash "cannot divide by zero"
+        else prim__mod_Int x y
 
 -- Bits8
 
