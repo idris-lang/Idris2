@@ -452,6 +452,8 @@ opName : PrimFn arity -> Name
 opName (Add ty) = prim $ "add_" ++ show ty
 opName (Sub ty) = prim $ "sub_" ++ show ty
 opName (Mul ty) = prim $ "mul_" ++ show ty
+opName (Quot ty) = prim $ "quot_" ++ show ty
+opName (Rem ty) = prim $ "rem_" ++ show ty
 opName (Div ty) = prim $ "div_" ++ show ty
 opName (Mod ty) = prim $ "mod_" ++ show ty
 opName (Neg ty) = prim $ "negate_" ++ show ty
@@ -494,6 +496,8 @@ allPrimitives =
     map (\t => MkPrim (Add t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
     map (\t => MkPrim (Sub t) (arithTy t) isTotal) [IntType, IntegerType, CharType, DoubleType] ++
     map (\t => MkPrim (Mul t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
+    map (\t => MkPrim (Quot t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (Rem t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (Div t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
     map (\t => MkPrim (Mod t) (arithTy t) notCovering) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (Neg t) (predTy t t) isTotal) [IntType, IntegerType, DoubleType] ++

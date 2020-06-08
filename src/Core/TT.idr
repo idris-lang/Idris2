@@ -138,6 +138,8 @@ data PrimFn : Nat -> Type where
      Add : (ty : Constant) -> PrimFn 2
      Sub : (ty : Constant) -> PrimFn 2
      Mul : (ty : Constant) -> PrimFn 2
+     Quot : (ty : Constant) -> PrimFn 2
+     Rem : (ty : Constant) -> PrimFn 2
      Div : (ty : Constant) -> PrimFn 2
      Mod : (ty : Constant) -> PrimFn 2
      Neg : (ty : Constant) -> PrimFn 1
@@ -184,6 +186,8 @@ Show (PrimFn arity) where
   show (Add ty) = "+" ++ show ty
   show (Sub ty) = "-" ++ show ty
   show (Mul ty) = "*" ++ show ty
+  show (Quot ty) = "quot" ++ show ty
+  show (Rem ty) = "rem" ++ show ty
   show (Div ty) = "/" ++ show ty
   show (Mod ty) = "%" ++ show ty
   show (Neg ty) = "neg " ++ show ty
