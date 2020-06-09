@@ -29,6 +29,7 @@ modules = Control.App,
           Control.Monad.Writer.CPS,
           Control.Monad.Writer.Interface,
           Control.WellFounded,
+          Control.Relation,
 
           Data.Bifoldable,
           Data.Bits,

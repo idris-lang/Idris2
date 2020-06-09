@@ -1,5 +1,6 @@
 module Data.Nat.Factor
 
+import Control.Relation
 import Control.WellFounded
 import Data.Fin
 import Data.Fin.Extra
@@ -84,20 +85,19 @@ oneSoleFactorOfOne (S (S k)) (CofactorExists (S j) prf) =
 
 ||| Every natural number is factor of itself.
 export
-factorReflexive : (n : Nat) -> Factor n n
-factorReflexive a = CofactorExists 1 (rewrite multOneRightNeutral a in Refl)
+Reflexive Nat Factor where
+  reflexive n = CofactorExists 1 $ rewrite multOneRightNeutral n in Refl
 
 ||| Factor relation is transitive. If b is factor of a and c is b factor of c
 ||| is also a factor of a.
 export
-factorTransitive : (a, b, c : Nat) -> Factor a b -> Factor b c -> Factor a c
-factorTransitive a b c (CofactorExists qb prfAB) (CofactorExists qc prfBC) =
-    CofactorExists (qb * qc) (
+Transitive Nat Factor where
+  transitive a b c (CofactorExists qb prfAB) (CofactorExists qc prfBC) =
+    CofactorExists (qb * qc) $
         rewrite prfBC in
         rewrite prfAB in
         rewrite multAssociative a qb qc in
         Refl
-    )
 
 multOneSoleNeutral : (a, b : Nat) -> S a = S a * b -> b = 1
 multOneSoleNeutral Z b prf =
@@ -264,7 +264,7 @@ minusFactor (CofactorExists qab prfAB) (CofactorExists qa prfA) =
 ||| A decision procedure for whether of not p is a factor of n.
 export
 decFactor : (n, d : Nat) -> DecFactor d n
-decFactor Z Z = ItIsFactor $ factorReflexive Z
+decFactor Z Z = ItIsFactor $ reflexive Z
 decFactor (S k) Z = ItIsNotFactor $ ZeroNotFactorS k
 decFactor n (S d) =
         let Fraction n (S d) q r prf = Data.Fin.Extra.divMod n (S d) in
@@ -334,7 +334,7 @@ oneCommonFactor a b = CommonFactorExists 1
 export
 selfIsCommonFactor : (a : Nat) -> {auto ok : LTE 1 a} -> CommonFactor a a a
 selfIsCommonFactor Z = absurd $ succNotLTEzero ok
-selfIsCommonFactor (S k) = CommonFactorExists (S k) (factorReflexive $ S k) (factorReflexive $ S k)
+selfIsCommonFactor (S k) = CommonFactorExists (S k) (reflexive $ S k) (reflexive $ S k)
 
 
 -- Some helpers for the gcd function.
@@ -358,7 +358,7 @@ notLteAndGt (S k) (S j) aLteB aGtB = notLteAndGt k j (fromLteSucc aLteB) (fromLt
 gcd_step : (x : Search) ->
     (rec : (y : Search) -> Smaller y x ->  (f : Nat ** GCD f (left y) (right y))) ->
     (f : Nat ** GCD f (left x) (right x))
-gcd_step (SearchArgs Z _ bLteA {bNonZero}) _ = absurd . succNotLTEzero $ lteTransitive bNonZero bLteA
+gcd_step (SearchArgs Z a bLteA {bNonZero}) _ = absurd . succNotLTEzero $ transitive (S Z) a Z bNonZero bLteA
 gcd_step (SearchArgs _ Z _ {bNonZero}) _ = absurd $ succNotLTEzero bNonZero
 gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b) of
     Fraction (S a) (S b) q FZ prf =>
@@ -367,7 +367,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                 rewrite sym $ multRightSuccPlus q b in
                 replace {p = \x => S a = x} (plusZeroRightNeutral (q * S b)) $ sym prf
             skDividesA = CofactorExists q sbIsFactor
-            skDividesB = factorReflexive (S b)
+            skDividesB = reflexive (S b)
             greatest = the
                 ((q' : Nat) -> CommonFactor q' (S a) (S b) -> Factor q' (S b))
                 (\q', (CommonFactorExists q' _ qfb) => qfb)
@@ -382,7 +382,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                     (S k) => LTESucc LTEZero
                 smaller = the (LTE (S (S (plus b (S (finToNat r))))) (S (plus a (S b)))) $
                     rewrite plusCommutative a (S b) in
-                    LTESucc . LTESucc . plusLteLeft b . fromLteSucc $ lteTransitive (elemSmallerThanBound $ FS r) bLteA
+                    LTESucc . LTESucc . plusLteLeft b . fromLteSucc $ transitive {rel=LTE} (S (finToNat (FS r))) (S b) (S a) (elemSmallerThanBound $ FS r) bLteA
                 (f ** MkGCD (CommonFactorExists f prfSb prfRem) greatestSbSr) =
                     rec (SearchArgs (S b) (S $ finToNat r) rLtSb) smaller
                 prfSa = the (Factor f (S a)) $
@@ -398,7 +398,7 @@ gcd_step (SearchArgs (S a) (S b) bLteA {bNonZero}) rec = case divMod (S a) (S b)
                                 multFactor (S b) q
                             rightPrf = minusFactor {a = q * S b} {b = S (finToNat r)}
                                 (rewrite prf in qfa)
-                                (factorTransitive q' (S b) (q * S b) qfb sbfqSb)
+                                (transitive q' (S b) (q * S b) qfb sbfqSb)
                         in
                         greatestSbSr q' (CommonFactorExists q' qfb rightPrf)
                     )
@@ -413,11 +413,11 @@ export
 gcd : (a, b : Nat) -> {auto ok : NotBothZero a b} -> (f : Nat ** GCD f a b)
 gcd Z Z impossible
 gcd Z b =
-    (b ** MkGCD (CommonFactorExists b (anythingFactorZero b) (factorReflexive b)) $
+    (b ** MkGCD (CommonFactorExists b (anythingFactorZero b) (reflexive b)) $
         \q, (CommonFactorExists q _ prf) => prf
     )
 gcd a Z =
-    (a ** MkGCD (CommonFactorExists a (factorReflexive a) (anythingFactorZero a)) $
+    (a ** MkGCD (CommonFactorExists a (reflexive a) (anythingFactorZero a)) $
         \q, (CommonFactorExists q prf _) => prf
     )
 gcd (S a) (S b) with (cmp (S a) (S b))
