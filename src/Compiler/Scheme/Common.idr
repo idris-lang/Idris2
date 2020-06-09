@@ -49,6 +49,22 @@ schConstructor _ _ (Just t) args
 schConstructor schString n Nothing args
     = "(vector " ++ schString (show n) ++ " " ++ showSep " " args ++ ")"
 
+||| Mutates the given vector at the given index
+mutateValue : (ref : String) -> (index : Nat) -> String -> String
+mutateValue ref idx newVal =
+  "(vector-set! " ++ ref ++  " " ++ show idx ++ " " ++ newVal ++ ")"
+
+||| Mutate all fiels of a given construtor
+||| We skip the first value in the vector because we do not change
+||| @vecRef : The vector to update
+||| @args : The list of new arguments
+schMutate : (ref : String) -> (args : List String) -> String
+schMutate ref args =
+  -- we start indexing at 1 since 0 is the tag and doesn't change
+  let indices = [1 .. (length args + 1)]
+      zipped : List (Nat, String) = zip indices args in
+      showSep " " (map (uncurry $ mutateValue ref) zipped)
+
 ||| Generate scheme for a plain function.
 op : String -> List String -> String
 op o args = "(" ++ o ++ " " ++ showSep " " args ++ ")"
@@ -224,6 +240,7 @@ mutual
   used n (NmLet _ _ v sc) = used n v || used n sc
   used n (NmApp _ f args) = used n f || anyTrue (map (used n) args)
   used n (NmCon _ _ _ args) = anyTrue (map (used n) args)
+  used n (NmMut _ _ args) = anyTrue (map (used n) args)
   used n (NmOp _ _ args) = anyTrue (toList (map (used n) args))
   used n (NmExtPrim _ _ args) = anyTrue (map (used n) args)
   used n (NmForce _ t) = used n t
@@ -300,6 +317,8 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         = pure $ "(" ++ !(schExp i x) ++ " " ++ showSep " " !(traverse (schExp i) args) ++ ")"
     schExp i (NmCon fc x tag args)
         = pure $ schConstructor schString x tag !(traverse (schExp i) args)
+    schExp i (NmMut fc n args)
+        = pure $ schMutate (schName n) !(traverse (schExp i) args)
     schExp i (NmOp fc op args)
         = pure $ schOp op !(schArgs i args)
     schExp i (NmExtPrim fc p args)

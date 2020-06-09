@@ -29,6 +29,7 @@ mutual
        LLet : FC -> (x : Name) -> Lifted vars ->
               Lifted (x :: vars) -> Lifted vars
        LCon : FC -> Name -> (tag : Maybe Int) -> List (Lifted vars) -> Lifted vars
+       LMut : FC -> Name -> List (Lifted vars) -> Lifted vars
        LOp : {arity : _} ->
              FC -> PrimFn arity -> Vect arity (Lifted vars) -> Lifted vars
        LExtPrim : FC -> (p : Name) -> List (Lifted vars) -> Lifted vars
@@ -77,7 +78,7 @@ mutual
     show (LAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (LApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -85,6 +86,8 @@ mutual
         = "%let " ++ show x ++ " = " ++ show val ++ " in " ++ show sc
     show (LCon fc n t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+    show (LMut fc n args)
+        = "%mut  " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LOp fc op args)
         = "%op " ++ show op ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
     show (LExtPrim fc p args)
@@ -102,7 +105,7 @@ mutual
   export
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export
@@ -188,6 +191,7 @@ mutual
   liftExp (CApp fc f args)
       = unload fc !(liftExp f) !(traverse liftExp args)
   liftExp (CCon fc n t args) = pure $ LCon fc n t !(traverse liftExp args)
+  liftExp (CMut fc n args) = pure $ LMut fc n !(traverse liftExp args)
   liftExp (COp fc op args)
       = pure $ LOp fc op !(traverseArgs args)
     where

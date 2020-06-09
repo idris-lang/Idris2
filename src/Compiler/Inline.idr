@@ -187,6 +187,8 @@ mutual
                       pure (CLet fc x True val' (refToLocal xn x sc'))
   eval rec env stk (CApp fc f args)
       = eval rec env (!(traverse (eval rec env []) args) ++ stk) f
+  eval rec env stk (CMut fc n args)
+      = pure $ unload stk $ CMut fc n !(traverse (eval rec env []) args)
   eval rec env stk (CCon fc n t args)
       = pure $ unload stk $ CCon fc n t !(traverse (eval rec env []) args)
   eval rec env stk (COp fc p args)

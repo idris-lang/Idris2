@@ -30,6 +30,7 @@ mutual
     AApp : FC -> (closure : AVar) -> (arg : AVar) -> ANF
     ALet : FC -> (var : Int) -> ANF -> ANF -> ANF
     ACon : FC -> Name -> (tag : Maybe Int) -> List AVar -> ANF
+    AMut : FC -> Name -> List AVar -> ANF
     AOp : FC -> PrimFn arity -> Vect arity AVar -> ANF
     AExtPrim : FC -> Name -> List AVar -> ANF
     AConCase : FC -> AVar -> List AConAlt -> Maybe ANF -> ANF
@@ -67,7 +68,7 @@ mutual
     show (AAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (AApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -75,6 +76,8 @@ mutual
         = "%let v" ++ show x ++ " = " ++ show val ++ " in " ++ show sc
     show (ACon fc n t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+    show (AMut fc n args)
+        = "%mut " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AOp fc op args)
         = "%op " ++ show op ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
     show (AExtPrim fc p args)
@@ -92,7 +95,7 @@ mutual
   export
   Show AConAlt where
     show (MkAConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String
@@ -168,7 +171,7 @@ mlet : {auto v : Ref Next Int} ->
 mlet fc (AV _ var) sc = pure $ sc var
 mlet fc val sc
     = do i <- nextVar
-         pure $ ALet fc i val (sc (ALocal i)) 
+         pure $ ALet fc i val (sc (ALocal i))
 
 mutual
   anfArgs : {vars : _} ->
@@ -198,6 +201,8 @@ mutual
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
   anf vs (LCon fc n t args)
       = anfArgs fc vs args (ACon fc n t)
+  anf vs (LMut fc n args)
+      = anfArgs fc vs args (AMut fc n)
   anf vs (LOp {arity} fc op args)
       = do args' <- traverse (anf vs) (toList args)
            letBind fc args'

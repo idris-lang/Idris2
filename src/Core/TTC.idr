@@ -590,6 +590,7 @@ mutual
     toBuf b (CPrimVal fc c) = do tag 12; toBuf b fc; toBuf b c
     toBuf b (CErased fc) = do tag 13; toBuf b fc
     toBuf b (CCrash fc msg) = do tag 14; toBuf b fc; toBuf b msg
+    toBuf b (CMut fc n as) = assert_total $ do tag 15; toBuf b fc; toBuf b n; toBuf b as
 
     fromBuf b
         = assert_total $ case !getTag of
@@ -639,6 +640,10 @@ mutual
                14 => do fc <- fromBuf b
                         msg <- fromBuf b
                         pure (CCrash fc msg)
+               15 => do fc <- fromBuf b
+                        n <- fromBuf b
+                        args <- fromBuf b
+                        pure (CMut fc n args)
                _ => corrupt "CExp"
 
   export
