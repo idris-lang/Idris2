@@ -204,6 +204,15 @@ views explicit:
            = merge (mergeSort lefts | lrec)
                    (mergeSort rights | rrec)
 
+In the problem 1 of exercise 10-1, the ``rest`` argument of the data
+constructor ``Exact`` of ``TakeN`` must be made explicit.
+
+.. code-block:: idris
+
+    data TakeN : List a -> Type where
+      Fewer : TakeN xs
+      Exact : (n_xs : List a) -> {rest : _} -> TakeN (n_xs ++ rest)
+
 In ``SnocList.idr``, in ``my_reverse``, the link between ``Snoc rec`` and ``xs ++ [x]``
 needs to be made explicit. Idris 1 would happily decide that ``xs`` and ``x`` were
 the relevant implicit arguments to ``Snoc`` but this was little more than a guess
