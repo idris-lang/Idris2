@@ -9,6 +9,7 @@ modules = Control.App,
           Control.Monad.State,
           Control.Monad.Trans,
           Control.WellFounded,
+          Control.Relation,
 
           Data.Bool,
           Data.Bool.Xor,

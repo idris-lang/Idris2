@@ -1,5 +1,7 @@
 module Data.Nat
 
+import Control.Relation
+
 %default total
 
 export
@@ -68,6 +70,17 @@ Uninhabited (LTE (S n) Z) where
   uninhabited LTEZero impossible
 
 public export
+Reflexive Nat LTE where
+  reflexive Z = LTEZero
+  reflexive (S k) = LTESucc $ reflexive k
+
+public export
+Transitive Nat LTE where
+  transitive Z _ _ LTEZero _ = LTEZero
+  transitive (S x) (S y) (S z) (LTESucc xy) (LTESucc yz) =
+    LTESucc $ transitive x y z xy yz
+
+public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
 
@@ -97,11 +110,6 @@ isLTE (S k) (S j)
            Yes prf => Yes (LTESucc prf)
 
 export
-lteRefl : {n : Nat} -> LTE n n
-lteRefl {n = Z}   = LTEZero
-lteRefl {n = S k} = LTESucc lteRefl
-
-export
 lteSuccRight : LTE n m -> LTE n (S m)
 lteSuccRight LTEZero     = LTEZero
 lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
@@ -109,11 +117,6 @@ lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
 export
 lteSuccLeft : LTE (S n) m -> LTE n m
 lteSuccLeft (LTESucc x) = lteSuccRight x
-
-export
-lteTransitive : LTE n m -> LTE m p -> LTE n p
-lteTransitive LTEZero y = LTEZero
-lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
 
 export
 lteAddRight : (n : Nat) -> LTE n (n + m)
