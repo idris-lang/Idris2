@@ -352,10 +352,10 @@ checkClause : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              (mult : RigCount) -> (hashit : Bool) ->
+              (mult : RigCount) -> (vis : Visibility) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
               ImpClause -> Core (Either RawImp Clause)
-checkClause mult hashit n opts nest env (ImpossibleClause fc lhs)
+checkClause mult vis hashit n opts nest env (ImpossibleClause fc lhs)
     = do lhs_raw <- lhsInCurrentNS nest lhs
          handleUnify
            (do autoimp <- isUnboundImplicits
@@ -380,7 +380,7 @@ checkClause mult hashit n opts nest env (ImpossibleClause fc lhs)
                            if !(impossibleErrOK defs err)
                               then pure (Left lhs_raw)
                               else throw (ValidCase fc env (Right err)))
-checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
+checkClause {vars} mult vis hashit n opts nest env (PatClause fc lhs_in rhs)
     = do (_, (vars'  ** (sub', env', nest', lhstm', lhsty'))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let rhsMode = if isErased mult then InType else InExpr
@@ -405,7 +405,7 @@ checkClause {vars} mult hashit n opts nest env (PatClause fc lhs_in rhs)
 
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
-checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
+checkClause {vars} mult vis hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let wmode
@@ -468,7 +468,7 @@ checkClause {vars} mult hashit n opts nest env (WithClause fc lhs_in wval_raw fl
 
          wname <- genWithName n
          widx <- addDef wname (newDef fc wname (if isErased mult then erased else top)
-                                      vars wtype Private None)
+                                      vars wtype vis None)
          let rhs_in = apply (IVar fc wname)
                         (map (IVar fc) envns ++
                          map (maybe wval_raw (\pn => IVar fc (snd pn))) wargNames)
@@ -696,7 +696,8 @@ processDef opts nest env fc n_in cs_in
                        then erased
                        else linear
          nidx <- resolveName n
-         cs <- traverse (checkClause mult hashit nidx opts nest env) cs_in
+         cs <- traverse (checkClause mult (visibility gdef)
+                                     hashit nidx opts nest env) cs_in
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
