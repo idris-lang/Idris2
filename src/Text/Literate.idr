@@ -35,8 +35,7 @@ untilEOL : Recognise False
 untilEOL = manyUntil newline any
 
 line : String -> Lexer
-line s = exact s <+> newline
-     <|> exact s <+> space <+> untilEOL
+line s = exact s <+> (newline <|> space <+> untilEOL)
 
 block : String -> String -> Lexer
 block s e = surround (exact s <+> untilEOL) (exact e <+> untilEOL) any
