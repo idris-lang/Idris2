@@ -32,13 +32,18 @@ import Data.Strings
 %default total
 
 untilEOL : Recognise False
-untilEOL = manyUntil (is '\n') any
+untilEOL = manyUntil newline any
 
 line : String -> Lexer
-line s = exact s <+> space <+> untilEOL
+line s = exact s <+> newline
+     <|> exact s <+> space <+> untilEOL
 
 block : String -> String -> Lexer
 block s e = surround (exact s <+> untilEOL) (exact e <+> untilEOL) any
+
+notCodeLine : Lexer
+notCodeLine = newline
+           <|> any <+> untilEOL
 
 data Token = CodeBlock String String String
            | Any String
@@ -55,7 +60,7 @@ rawTokens : (delims  : List (String, String))
 rawTokens delims ls =
           map (\(l,r) => (block l r, CodeBlock (trim l) (trim r))) delims
        ++ map (\m => (line m, CodeLine (trim m))) ls
-       ++ [(any, Any)]
+       ++ [(notCodeLine, Any)]
 
 ||| Merge the tokens into a single source file.
 reduce : List (TokenData Token) -> String -> String
@@ -68,10 +73,11 @@ reduce (MkToken _ _ (Any x) :: rest) acc = reduce rest (acc ++ blank_content)
       then concat $ replicate (length (lines x)) "\n"
       else ""
 reduce (MkToken _ _ (CodeLine m src) :: rest) acc =
-    reduce rest (acc ++ (substr
-                           (length m + 1) -- remove space to right of marker.
-                           (length src)
-                           src))
+    if m == trim src
+    then reduce rest (acc ++ "\n")
+    else reduce rest (acc ++ (substr (length m + 1) -- remove space to right of marker.
+                                     (length src)
+                                     src))
 
 reduce (MkToken _ _ (CodeBlock l r src) :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
   reduce (MkToken _ _ (CodeBlock l r src) :: rest) acc | [] = reduce rest acc -- 1
