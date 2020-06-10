@@ -183,6 +183,8 @@ data ExtPrim = CCall | SchemeCall
              | GetField | SetField
              | VoidElim
              | SysOS | SysCodegen
+             | OnCollect
+             | OnCollectAny
              | Unknown Name
 
 export
@@ -200,6 +202,8 @@ Show ExtPrim where
   show VoidElim = "VoidElim"
   show SysOS = "SysOS"
   show SysCodegen = "SysCodegen"
+  show OnCollect = "OnCollect"
+  show OnCollectAny = "OnCollectAny"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
@@ -217,7 +221,9 @@ toPrim pn@(NS _ n)
             (n == UN "prim__setField", SetField),
             (n == UN "void", VoidElim),
             (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen)
+            (n == UN "prim__codegen", SysCodegen),
+            (n == UN "prim__onCollect", OnCollect),
+            (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn

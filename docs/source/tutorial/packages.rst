@@ -82,6 +82,6 @@ a simple recipe for this trivial case:
 
     package myProject
 
-    pkgs = pruviloj, lightyear
+    depends = pruviloj, lightyear
 
 - In Atom, use the File menu to Open Folder myProject.

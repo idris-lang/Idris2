@@ -1,8 +1,8 @@
 1/1: Building refprims (refprims.idr)
 LOG 0: Name: Prelude.List.++
-LOG 0: Type: (%pi Rig0 Implicit Just a %type (%pi Rig1 Explicit Just _ (Prelude.List a) (%pi RigW Explicit Nothing (Prelude.List a) (Prelude.List a))))
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi Rig1 Explicit (Just _) (Prelude.List a) (%pi RigW Explicit Nothing (Prelude.List a) (Prelude.List a))))
 LOG 0: Name: Prelude.Strings.++
-LOG 0: Type: (%pi Rig1 Explicit Just _ String (%pi Rig1 Explicit Just _ String String))
+LOG 0: Type: (%pi Rig1 Explicit (Just _) String (%pi Rig1 Explicit (Just _) String String))
 LOG 0: Resolved name: Prelude.Nat
 LOG 0: Constructors: [Prelude.Z, Prelude.S]
 refprims.idr:37:10--39:1:While processing right hand side of dummy1 at refprims.idr:37:1--39:1:
@@ -12,4 +12,4 @@ Error during reflection: Still not trying
 refprims.idr:43:10--45:1:While processing right hand side of dummy3 at refprims.idr:43:1--45:1:
 Error during reflection: Undefined name
 refprims.idr:46:10--48:1:While processing right hand side of dummy4 at refprims.idr:46:1--48:1:
-Error during reflection: failed after generating Main.{plus:5841}
+Error during reflection: failed after generating Main.{plus:6078}

@@ -99,9 +99,9 @@ getVarType rigc nest env fc x
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
                              do checkVisibleNS fc (fullname ndef) (visibility ndef)
-                                logTerm 10 ("Type of " ++ show n') tyenv
-                                logTerm 10 ("Expands to") tm
-                                log 10 $ "Arg length " ++ show arglen
+                                logTerm 5 ("Type of " ++ show n') tyenv
+                                logTerm 5 ("Expands to") tm
+                                log 5 $ "Arg length " ++ show arglen
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
@@ -195,7 +195,8 @@ mutual
                    -- so we might as well calculate the whole thing now
                    metaty <- quote defs env aty
                    est <- get EST
-                   metaval <- searchVar fc argRig 50 (Resolved (defining est))
+                   lim <- getAutoImplicitLimit
+                   metaval <- searchVar fc argRig lim (Resolved (defining est))
                                         env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)

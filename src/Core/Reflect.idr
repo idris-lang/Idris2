@@ -228,6 +228,13 @@ Reify Name where
                  => do ns' <- reify defs !(evalClosure defs ns)
                        n' <- reify defs !(evalClosure defs n)
                        pure (NS ns' n')
+             (NS _ (UN "DN"), [str, n])
+                 => do str' <- reify defs !(evalClosure defs str)
+                       n' <- reify defs !(evalClosure defs n)
+                       pure (DN str' n')
+             (NS _ (UN "RF"), [str])
+                 => do str' <- reify defs !(evalClosure defs str)
+                       pure (RF str')
              _ => cantReify val "Name"
   reify defs val = cantReify val "Name"
 
@@ -244,6 +251,13 @@ Reflect Name where
       = do ns' <- reflect fc defs lhs env ns
            n' <- reflect fc defs lhs env n
            appCon fc defs (reflectiontt "NS") [ns', n']
+  reflect fc defs lhs env (DN str n)
+      = do str' <- reflect fc defs lhs env str
+           n' <- reflect fc defs lhs env n
+           appCon fc defs (reflectiontt "DN") [str', n']
+  reflect fc defs lhs env (RF x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "RF") [x']
   reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
              Resolved _ => cantReflect fc "Name"

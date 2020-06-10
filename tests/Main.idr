@@ -64,7 +64,7 @@ idrisTests
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015",
        -- Miscellaneous REPL
-       "interpreter001",
+       "interpreter001", "interpreter002",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
@@ -91,7 +91,8 @@ idrisTests
        -- Miscellaneous regressions
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
-       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020",
+       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
+       "reg022", "reg023",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
@@ -111,7 +112,7 @@ chezTests
    = ["chez001", "chez002", "chez003", "chez004", "chez005", "chez006",
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
-      "chez019", "chez020", "chez021",
+      "chez019", "chez020", "chez021", "chez022",
       "reg001"]
 
 ideModeTests : List String
@@ -198,8 +199,8 @@ runTest opts testPath
               ]
             Just exp => do
               putStrLn "Golden value differs from actual value."
-              code <- system "git diff expected output"
-              when (code /= 0) $ printExpectedVsOutput exp out
+              code <- system "git diff --exit-code expected output"
+              when (code < 0) $ printExpectedVsOutput exp out
               putStrLn "Accept actual value as new golden value? [yn]"
           b <- getAnswer
           when b $ do Right _ <- writeFile "expected" out
@@ -221,6 +222,9 @@ runTest opts testPath
                      | Left err => do print err
                                       pure False
                  let result = normalize out == normalize exp
+                 -- The issue #116 that made this necessary is fixed, but
+                 -- please resist putting 'result' here until it's also
+                 -- fixed in Idris2-boot!
                  if normalize out == normalize exp
                     then putStrLn "success"
                     else do

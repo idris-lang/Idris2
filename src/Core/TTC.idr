@@ -688,6 +688,7 @@ TTC CFType where
   toBuf b (CFIORes t) = do tag 9; toBuf b t
   toBuf b (CFStruct n a) = do tag 10; toBuf b n; toBuf b a
   toBuf b (CFUser n a) = do tag 11; toBuf b n; toBuf b a
+  toBuf b CFGCPtr = tag 12
 
   fromBuf b
       = case !getTag of
@@ -703,6 +704,7 @@ TTC CFType where
              9 => do t <- fromBuf b; pure (CFIORes t)
              10 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
              11 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
+             12 => pure CFGCPtr
              _ => corrupt "CFType"
 
 export

@@ -82,7 +82,7 @@ schHeader chez libs
     "(let ()\n"
 
 schFooter : String
-schFooter = ")"
+schFooter = "(collect 4)\n(blodwen-run-finalisers))\n"
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -108,11 +108,13 @@ mutual
   tySpec (NmCon fc (UN "Double") _ []) = pure "double"
   tySpec (NmCon fc (UN "Char") _ []) = pure "char"
   tySpec (NmCon fc (NS _ n) _ [_])
-     = cond [(n == UN "Ptr", pure "void*")]
+     = cond [(n == UN "Ptr", pure "void*"),
+             (n == UN "GCPtr", pure "void*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
   tySpec (NmCon fc (NS _ n) _ [])
      = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "void*")]
+             (n == UN "AnyPtr", pure "void*"),
+             (n == UN "GCAnyPtr", pure "void*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
   tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
 
@@ -154,6 +156,14 @@ mutual
       = pure "(error \"bad setField\")"
   chezExtPrim i SysCodegen []
       = pure $ "\"chez\""
+  chezExtPrim i OnCollect [_, p, c, world]
+      = do p' <- schExp chezExtPrim chezString 0 p
+           c' <- schExp chezExtPrim chezString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  chezExtPrim i OnCollectAny [p, c, world]
+      = do p' <- schExp chezExtPrim chezString 0 p
+           c' <- schExp chezExtPrim chezString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   chezExtPrim i prim args
       = schExtCommon chezExtPrim chezString i prim args
 
@@ -171,6 +181,7 @@ cftySpec fc CFString = pure "string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
 cftySpec fc CFPtr = pure "void*"
+cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
@@ -181,6 +192,10 @@ cCall : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> (cfn : String) -> (clib : String) ->
         List (Name, CFType) -> CFType -> Core (String, String)
+cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args CFGCPtr
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall appdir fc cfn clib args ret
     = do loaded <- get Loaded
          lib <- if clib `elem` loaded
@@ -238,6 +253,7 @@ cCall appdir fc cfn clib args ret
 
     buildArg : (Name, CFType) -> Core String
     buildArg (n, CFFun s t) = callback (schName n) [s] t
+    buildArg (n, CFGCPtr) = pure $ "(car " ++ schName n ++ ")"
     buildArg (n, _) = pure $ schName n
 
 schemeCall : FC -> (sfn : String) ->
@@ -364,6 +380,7 @@ compileToSS c appdir tm outfile
          let scm = schHeader chez (map snd libs) ++
                    support ++ code ++
                    concat (map fst fgndefs) ++
+                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)

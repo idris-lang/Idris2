@@ -263,3 +263,9 @@
     [(k) (if (> k 0)
            (random k)
            (raise 'blodwen-random-invalid-range-argument))]))
+
+;; For finalisers
+
+(define (blodwen-register-object obj proc)
+   (register-finalizer obj (lambda (ptr) ((proc ptr) 'erased)))
+   obj)

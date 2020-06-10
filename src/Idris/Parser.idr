@@ -1096,6 +1096,10 @@ directive fname indents
          lvl <- intLit
          atEnd indents
          pure (AmbigDepth (fromInteger lvl))
+  <|> do pragma "auto_implicit_depth"
+         dpt <- intLit
+         atEnd indents
+         pure (AutoImplicitDepth (fromInteger dpt))
   <|> do pragma "pair"
          ty <- name
          f <- name
@@ -1707,6 +1711,9 @@ data CmdArg : Type where
      ||| The command takes an expression.
      ExprArg : CmdArg
 
+     ||| The command takes a list of declarations
+     DeclsArg : CmdArg
+
      ||| The command takes a number.
      NumberArg : CmdArg
 
@@ -1721,6 +1728,7 @@ Show CmdArg where
   show NoArg = ""
   show NameArg = "<name>"
   show ExprArg = "<expr>"
+  show DeclsArg = "<decls>"
   show NumberArg = "<number>"
   show OptionArg = "<option>"
   show FileArg = "<filename>"
@@ -1785,6 +1793,18 @@ exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
       tm <- expr pdef "(interactive)" init
       pure (command tm)
 
+declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
+declsArgCmd parseCmd command doc = (names, DeclsArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      tm <- topDecl "(interactive)" init
+      pure (command tm)
+
 optArgCmd : ParseCmd -> (REPLOpt -> REPLCmd) -> Bool -> String -> CommandDefinition
 optArgCmd parseCmd command set doc = (names, OptionArg, doc, parse)
   where
@@ -1845,6 +1865,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
+  , declsArgCmd (ParseKeywordCmd "let") NewDefn "Define a new value"
   ]
 
 export

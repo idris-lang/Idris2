@@ -267,3 +267,18 @@
         (if (> k 0)
               (random k)
               (assertion-violationf 'blodwen-random "invalid range argument ~a" k)))]))
+
+;; For finalisers
+
+(define blodwen-finaliser (make-guardian))
+(define (blodwen-register-object obj proc)
+  (let [(x (cons obj proc))]
+       (blodwen-finaliser x)
+       x))
+(define blodwen-run-finalisers
+  (lambda ()
+    (let run ()
+      (let ([x (blodwen-finaliser)])
+        (when x
+          (((cdr x) (car x)) 'erased)
+          (run))))))
