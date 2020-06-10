@@ -367,7 +367,7 @@ init [x] = []
 init (x::y::ys) = x :: init (y::ys)
 
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
-export
+public export
 head' : List a -> Maybe a
 head' []      = Nothing
 head' (x::xs) = Just x
@@ -437,7 +437,7 @@ intercalate sep xss = concat $ intersperse sep xss
 
 ||| Apply a partial function to the elements of a list, keeping the ones at which
 ||| it is defined.
-export
+public export
 mapMaybe : (a -> Maybe b) -> List a -> List b
 mapMaybe f []      = []
 mapMaybe f (x::xs) =
