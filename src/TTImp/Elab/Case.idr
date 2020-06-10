@@ -184,6 +184,12 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- (esp. in the scrutinee!) are set to 0 in the case type
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
+         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
+                        Just gdef =>
+                             if visibility gdef == Public
+                                then Public
+                                else Private
+                        Nothing => Public
 
          -- if the scrutinee is ones of the arguments in 'env' we should
          -- split on that, rather than adding it as a new argument
@@ -213,7 +219,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- the alternative of fixing up the environment
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty Public None)
+                                      [] casefnty vis None)
          -- don't worry about totality of the case block; it'll be handled
          -- by the totality of the parent function
          setFlag fc (Resolved cidx) (SetTotal PartialOK)
