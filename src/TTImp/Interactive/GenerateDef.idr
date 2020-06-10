@@ -57,7 +57,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
 expandClause loc n c
     = do log 10 $ "Trying clause " ++ show c
          c <- uniqueRHS c
-         Right clause <- checkClause linear False n [] (MkNested []) [] c
+         Right clause <- checkClause linear Private False n [] (MkNested []) [] c
             | Left _ => pure [] -- TODO: impossible clause, do something
                                 -- appropriate
          let MkClause {vars} env lhs rhs = clause
