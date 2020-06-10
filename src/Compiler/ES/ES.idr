@@ -4,6 +4,7 @@ import Compiler.ES.Imperative
 import Utils.Hex
 import Data.Strings
 import Data.SortedSet
+import Data.String.Extra
 
 data ESs : Type where
 
@@ -155,16 +156,27 @@ jsOp (Crash) [_, msg] = "__jsPrim_idris_crash(" ++ jsString msg ++ ")"
 jsPrim : Name -> List String -> Core String
 jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
 
-makeForeignFromExp : Name -> Nat -> String -> String
-makeForeignFromExp n nargs pattern =
-  let lastArg = nargs `minus` 1
-  in "const " ++ jsName n ++ " = (" ++ showSep ", " [ "_" ++ show x | x<-[0..lastArg]] ++ ") => " ++ pattern
+searchForeign : List String -> List String -> Maybe String
+searchForeign prefixes [] = Nothing
+searchForeign prefixes (x::xs) =
+  let (cc, def) = break (== ':') x
+  in if cc `elem` prefixes then Just $ drop 1 def
+                           else searchForeign prefixes xs
 
+
+makeForeign : Name -> String -> Core String
+makeForeign n x =
+  do
+    let (ty, def) = break (== ',') x
+    case ty of
+      "lambdaExp" => pure $ "const " ++ jsName n ++ " = (" ++ drop 1 def ++ ")\n"
+      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supporte types are lambdaExp")
 
 foreignDecl : Name -> List String -> Core String
-foreignDecl n ["C:idris2_putStr,libidris2_support"] =
-  pure $ makeForeignFromExp n 2 "process.stdout.write(_0)"
-foreignDecl x path = throw (InternalError $ "foreign not supported: " ++ (show path))
+foreignDecl n ccs =
+  case searchForeign ["node", "javascript"] ccs of
+    Just x => makeForeign n x
+    Nothing => throw (InternalError $ "No node or javascript definition found for " ++ show n ++ " in " ++ show ccs)
 
 mutual
   impExp2es : {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
