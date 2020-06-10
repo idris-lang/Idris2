@@ -2,6 +2,9 @@ package contrib
 
 modules = Control.Delayed,
 
+          Control.Algebra,
+          Control.Algebra.Laws,
+
           Data.Linear.Array,
 
           Data.List.TailRec,
