@@ -12,4 +12,4 @@ Error during reflection: Still not trying
 refprims.idr:43:10--45:1:While processing right hand side of dummy3 at refprims.idr:43:1--45:1:
 Error during reflection: Undefined name
 refprims.idr:46:10--48:1:While processing right hand side of dummy4 at refprims.idr:46:1--48:1:
-Error during reflection: failed after generating Main.{plus:6078}
+Error during reflection: failed after generating Main.{plus:5841}
