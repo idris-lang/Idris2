@@ -44,6 +44,12 @@ readFile f
                 else do str <- fGetStr h
                         read (str :: acc) h
 
+fileOp : IO (Either FileError a) -> Has [PrimIO, Exception IOError] e => App e a
+fileOp fileRes
+      = do Right res <- primIO $ fileRes
+             | Left err => throw (FileErr (toFileEx err))
+           pure res
+
 export
 Has [PrimIO, Exception IOError] e => FileIO e where
   withFile fname m onError proc
@@ -53,30 +59,15 @@ Has [PrimIO, Exception IOError] e => FileIO e where
            primIO $ closeFile h
            pure res
 
-  fGetStr f
-      = do Right str <- primIO $ fGetLine f
-              | Left err => throw (FileErr (toFileEx err))
-           pure str
+  fGetStr f = fileOp (fGetLine f)
 
-  fGetChars f n
-       = do Right str <- primIO $ fGetChars f n
-              | Left err => throw (FileErr (toFileEx err))
-            pure str
+  fGetChars f n = fileOp (fGetChars f n)
 
-  fGetChar f
-       = do Right chr <- primIO $ fGetChar f
-              | Left err => throw (FileErr (toFileEx err))
-            pure chr
+  fGetChar f = fileOp (fGetChar f)
 
-  fPutStr f str
-      = do Right () <- primIO $ File.fPutStr f str
-               | Left err => throw (FileErr (toFileEx err))
-           pure ()
+  fPutStr f str = fileOp (fPutStr f str)
 
-  fPutStrLn f str
-      = do Right () <- primIO $ File.fPutStrLn f str
-               | Left err => throw (FileErr (toFileEx err))
-           pure ()
+  fPutStrLn f str = fileOp (File.fPutStrLn f str)
 
   fEOF f = primIO $ fEOF f
 
