@@ -519,9 +519,9 @@ maximumCommutative Z (S _) = Refl
 maximumCommutative (S _) Z = Refl
 maximumCommutative (S k) (S j) = rewrite maximumCommutative k j in Refl
 
--- maximumIdempotent : (n : Nat) -> maximum n n = n
--- maximumIdempotent Z = Refl
--- maximumIdempotent (S k) = cong $ maximumIdempotent k
+maximumIdempotent : (n : Nat) -> maximum n n = n
+maximumIdempotent Z = Refl
+maximumIdempotent (S k) = cong S $ maximumIdempotent k
 
 minimumAssociative : (l, c, r : Nat) ->
   minimum l (minimum c r) = minimum (minimum l c) r
@@ -536,9 +536,9 @@ minimumCommutative Z (S _) = Refl
 minimumCommutative (S _) Z = Refl
 minimumCommutative (S k) (S j) = rewrite minimumCommutative k j in Refl
 
--- minimumIdempotent : (n : Nat) -> minimum n n = n
--- minimumIdempotent Z = Refl
--- minimumIdempotent (S k) = cong (minimumIdempotent k)
+minimumIdempotent : (n : Nat) -> minimum n n = n
+minimumIdempotent Z = Refl
+minimumIdempotent (S k) = cong S $ minimumIdempotent k
 
 minimumZeroZeroLeft : (left : Nat) -> minimum left 0 = Z
 minimumZeroZeroLeft left = rewrite minimumCommutative left 0 in Refl
@@ -554,18 +554,18 @@ maximumSuccSucc : (left, right : Nat) ->
   S (maximum left right) = maximum (S left) (S right)
 maximumSuccSucc _ _ = Refl
 
--- sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
--- sucMaxL Z = Refl
--- sucMaxL (S l) = cong $ sucMaxL l
+sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
+sucMaxL Z = Refl
+sucMaxL (S l) = cong S $ sucMaxL l
 
--- sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
--- sucMaxR Z = Refl
--- sucMaxR (S l) = cong $ sucMaxR l
+sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
+sucMaxR Z = Refl
+sucMaxR (S l) = cong S $ sucMaxR l
 
--- sucMinL : (l : Nat) -> minimum (S l) l = l
--- sucMinL Z = Refl
--- sucMinL (S l) = cong $ sucMinL l
+sucMinL : (l : Nat) -> minimum (S l) l = l
+sucMinL Z = Refl
+sucMinL (S l) = cong S $ sucMinL l
 
--- sucMinR : (l : Nat) -> minimum l (S l) = l
--- sucMinR Z = Refl
--- sucMinR (S l) = cong $ sucMinR l
+sucMinR : (l : Nat) -> minimum l (S l) = l
+sucMinR Z = Refl
+sucMinR (S l) = cong S $ sucMinR l
