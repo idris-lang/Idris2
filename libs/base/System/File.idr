@@ -68,12 +68,12 @@ prim__stderr : FilePtr
 prim__chmod : String -> Int -> PrimIO Int
 
 modeStr : Mode -> String
-modeStr Read              = "r"
-modeStr WriteTruncate     = "w"
-modeStr Append            = "a"
-modeStr ReadWrite         = "r+"
-modeStr ReadWriteTruncate = "w+"
-modeStr ReadAppend        = "a+"
+modeStr Read              = "rb"
+modeStr WriteTruncate     = "wb"
+modeStr Append            = "ab"
+modeStr ReadWrite         = "rb+"
+modeStr ReadWriteTruncate = "wb+"
+modeStr ReadAppend        = "ab+"
 
 public export
 data FileError = GenericFileError Int -- errno
