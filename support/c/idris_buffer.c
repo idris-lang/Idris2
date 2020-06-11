@@ -124,44 +124,6 @@ char* idris2_getBufferString(void* buffer, int loc, int len) {
     return rs;
 }
 
-void* idris2_readBufferFromFile(char* fn) {
-    FILE* f = fopen(fn, "r");
-    if (f == NULL) { return NULL; }
-
-    int fd = fileno(f);
-    int len;
-
-    struct stat fbuf;
-    if (fstat(fd, &fbuf) == 0) {
-        len = (int)(fbuf.st_size);
-    } else {
-        return NULL;
-    }
-
-    size_t size = sizeof(Buffer) + len*sizeof(uint8_t);
-    Buffer* buf = malloc(size);
-    buf->size = len;
-
-    size_t read = fread((buf->data), sizeof(uint8_t), (size_t)len, f);
-    fclose(f);
-    if (read >= 0) {
-        return buf;
-    } else {
-        free(buf);
-        return 0;
-    }
-}
-
-int idris2_writeBufferToFile(char* fn, void* buffer, int max) {
-    Buffer* b = buffer;
-    FILE* f = fopen(fn, "w");
-    if (f == NULL) { return -1; }
-
-    fwrite((b->data), sizeof(uint8_t), max, f);
-    fclose(f);
-    return 0;
-}
-
 int idris2_readBufferData(FILE* h, char* buffer, int loc, int max) {
     return fread(buffer+loc, sizeof(uint8_t), (size_t)max, h);
 }
