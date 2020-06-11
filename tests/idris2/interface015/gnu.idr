@@ -9,7 +9,7 @@ Show Gnu where
   show (G _) = "G"
   show (N _) = "N"
   show (U _) = "U"
-  
+
 FooG : Gnu
 FooG = G True
 
@@ -24,7 +24,7 @@ CooG : Unit -> Gnu
 CooG _ = FooG
 
 CooN : Unit -> Gnu
-CooN _ = FooN 
+CooN _ = FooN
 
 CooU : Unit -> Gnu
 CooU _ = FooU

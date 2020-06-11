@@ -2,6 +2,7 @@ module Core.Core
 
 import Core.Env
 import Core.TT
+
 import Data.List
 import Data.Vect
 import Parser.Source
@@ -74,7 +75,7 @@ data Error : Type where
      AmbiguousElab : {vars : _} ->
                      FC -> Env Term vars -> List (Term vars) -> Error
      AmbiguousSearch : {vars : _} ->
-                       FC -> Env Term vars -> List (Term vars) -> Error
+                       FC -> Env Term vars -> Term vars -> List (Term vars) -> Error
      AmbiguityTooDeep : FC -> Name -> List Name -> Error
      AllFailed : List (Maybe Name, Error) -> Error
      RecordTypeNeeded : {vars : _} ->
@@ -214,7 +215,7 @@ Show Error where
 
   show (AmbiguousName fc ns) = show fc ++ ":Ambiguous name " ++ show ns
   show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show ts
-  show (AmbiguousSearch fc env ts) = show fc ++ ":Ambiguous search " ++ show ts
+  show (AmbiguousSearch fc env tgt ts) = show fc ++ ":Ambiguous search " ++ show ts
   show (AmbiguityTooDeep fc n ns)
       = show fc ++ ":Ambiguity too deep in " ++ show n ++ " " ++ show ns
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
@@ -327,7 +328,7 @@ getErrorLoc (BorrowPartial loc _ _ _) = Just loc
 getErrorLoc (BorrowPartialType loc _ _) = Just loc
 getErrorLoc (AmbiguousName loc _) = Just loc
 getErrorLoc (AmbiguousElab loc _ _) = Just loc
-getErrorLoc (AmbiguousSearch loc _ _) = Just loc
+getErrorLoc (AmbiguousSearch loc _ _ _) = Just loc
 getErrorLoc (AmbiguityTooDeep loc _ _) = Just loc
 getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
