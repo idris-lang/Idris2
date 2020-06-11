@@ -16,12 +16,15 @@ toFileEx FileExists = FileExists
 
 public export
 interface Has [Exception IOError] e => FileIO e where
-  withFile : String -> Mode -> 
+  withFile : String -> Mode ->
              (onError : IOError -> App e a) ->
-             (onOpen : File -> App e a) -> 
+             (onOpen : File -> App e a) ->
              App e a
   fGetStr : File -> App e String
+  fGetChars : File -> Int -> App e String
+  fGetChar : File -> App e Char
   fPutStr : File -> String -> App e ()
+  fPutStrLn : File -> String -> App e ()
   fEOF : File -> App e Bool
 
 -- TODO : Add Binary File IO with buffers
@@ -47,6 +50,7 @@ Has [PrimIO, Exception IOError] e => FileIO e where
       = do Right h <- primIO $ openFile fname m
               | Left err => onError (FileErr (toFileEx err))
            res <- catch (proc h) onError
+           primIO $ closeFile h
            pure res
 
   fGetStr f
@@ -54,8 +58,23 @@ Has [PrimIO, Exception IOError] e => FileIO e where
               | Left err => throw (FileErr (toFileEx err))
            pure str
 
+  fGetChars f n
+       = do Right str <- primIO $ fGetChars f n
+              | Left err => throw (FileErr (toFileEx err))
+            pure str
+
+  fGetChar f
+       = do Right chr <- primIO $ fGetChar f
+              | Left err => throw (FileErr (toFileEx err))
+            pure chr
+
   fPutStr f str
       = do Right () <- primIO $ File.fPutStr f str
+               | Left err => throw (FileErr (toFileEx err))
+           pure ()
+
+  fPutStrLn f str
+      = do Right () <- primIO $ File.fPutStrLn f str
                | Left err => throw (FileErr (toFileEx err))
            pure ()
 

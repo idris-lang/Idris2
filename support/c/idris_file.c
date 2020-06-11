@@ -107,7 +107,7 @@ char* idris2_readLine(FILE* f) {
     return buffer; // freed by RTS if not NULL
 }
 
-char* idris_readChars(int num, FILE* f) {
+char* idris2_readChars(int num, FILE* f) {
     char *buffer = malloc((num+1)*sizeof(char));
     size_t len;
     len = fread(buffer, sizeof(char), (size_t)num, f);
