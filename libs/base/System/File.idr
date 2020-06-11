@@ -2,6 +2,7 @@ module System.File
 
 import Data.List
 import Data.Strings
+import System.Info
 
 public export
 data Mode = Read | WriteTruncate | Append | ReadWrite | ReadWriteTruncate | ReadAppend
@@ -68,12 +69,12 @@ prim__stderr : FilePtr
 prim__chmod : String -> Int -> PrimIO Int
 
 modeStr : Mode -> String
-modeStr Read              = "rb"
-modeStr WriteTruncate     = "wb"
-modeStr Append            = "ab"
-modeStr ReadWrite         = "rb+"
-modeStr ReadWriteTruncate = "wb+"
-modeStr ReadAppend        = "ab+"
+modeStr Read              = if isWindows then "rb" else "r"
+modeStr WriteTruncate     = if isWindows then "wb" else "w"
+modeStr Append            = if isWindows then "ab" else "a"
+modeStr ReadWrite         = if isWindows then "rb+" else "r+"
+modeStr ReadWriteTruncate = if isWindows then "wb+" else "w+"
+modeStr ReadAppend        = if isWindows then "ab+" else "a+"
 
 public export
 data FileError = GenericFileError Int -- errno
