@@ -199,7 +199,7 @@ runTest opts testPath
               ]
             Just exp => do
               putStrLn "Golden value differs from actual value."
-              code <- system "git diff --exit-code expected output"
+              code <- system "git diff --no-index --exit-code --word-diff=color expected output"
               when (code < 0) $ printExpectedVsOutput exp out
               putStrLn "Accept actual value as new golden value? [yn]"
           b <- getAnswer
