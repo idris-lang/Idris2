@@ -9,6 +9,8 @@ modules = Control.App,
           Control.Monad.Trans,
           Control.WellFounded,
 
+          Data.Bool,
+          Data.Bool.Xor,
           Data.Buffer,
           Data.Either,
           Data.Fin,

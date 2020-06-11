@@ -8,7 +8,6 @@ modules = Control.Delayed,
           Data.List.Views.Extra,
           Data.List.Palindrome,
 
-          Data.Bool.Extra,
           Data.Fin.Extra,
           Data.Nat.Equational,
           Data.Nat.Factor,
