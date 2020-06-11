@@ -5,5 +5,8 @@ Mismatch between:
 	()
 and
 	a
+at:
+13	bad = %runElab mkDecls `(94)
+
 Main> 9400
 Main> Bye for now!

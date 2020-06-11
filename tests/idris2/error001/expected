@@ -5,3 +5,6 @@ Mismatch between:
 	a
 and
 	Vect ?k ?a
+at:
+6	wrong x xs = x :: x
+

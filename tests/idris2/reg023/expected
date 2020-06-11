@@ -4,3 +4,7 @@ Can't solve constraint between:
 	S (countGreater thr xs)
 and
 	countGreater thr xs
+at:
+23	  eraseVar thr (x :: xs) (FS i) | True = FS <$> eraseVar thr xs i
+24	  eraseVar thr (x :: xs) (FS i) | False = FS <$> eraseVar thr xs i
+

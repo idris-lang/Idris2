@@ -4,3 +4,6 @@ Can't solve constraint between:
 	if c then "Foo" else "Baz"
 and
 	if c then "Foo" else "Bar"
+at:
+15	isInListBad = Here
+

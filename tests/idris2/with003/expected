@@ -6,12 +6,20 @@ Mismatch between:
 	?_ -> IO ()
 and
 	IO ?b
+at:
+1	do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                                           ^^^^^^^^^^^^^
+
 
 If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b
 Mismatch between:
 	?_ -> IO ()
 and
 	IO ?b
+at:
+1	do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 
 If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
@@ -20,6 +28,10 @@ Mismatch between:
 	?_ -> IO ()
 and
 	IO ?b
+at:
+1	do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
 If Prelude.>>=: When unifying ?_ -> IO () and IO ?b
@@ -27,17 +39,31 @@ Mismatch between:
 	?_ -> IO ()
 and
 	IO ?b
+at:
+1	do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                                           ^^^^^^^^^^^^^
+
 
 If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b
 Mismatch between:
 	?_ -> IO ()
 and
 	IO ?b
+at:
+1	do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 
 
-Main> (interactive):1:57--1:62:Can't find an implementation for Num ()
-Main> (interactive):1:4--1:6:Ambiguous elaboration. Possible correct results:
+
+Main> (interactive):1:57--1:62:Can't find an implementation for Num () at:
+1	with Prelude.(>>=) do printLn "foo"; printLn "boo"; map (+1) (printLn "woo"); printLn "goo"; printLn "foo"
+	                                                        ^^^^^
+
+Main> (interactive):1:4--1:6:Ambiguous elaboration at:
+1	:t []
+	   ^^
+Possible correct results:
 	[]
 	[]
 	[]
@@ -48,6 +74,10 @@ Mismatch between:
 	Vect 0 ?elem
 and
 	List ?a
+at:
+1	:t with [Vect.Nil, Prelude.(::)] [1,2,3]
+	                                 ^^^^^^^
+
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
 Main> Parse error: Unrecognised command (next tokens: [identifier t, with, symbol [, symbol ], literal 4, end of input])
 Main> Bye for now!

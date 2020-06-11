@@ -5,3 +5,7 @@ Mismatch between:
 	Int
 and
 	String
+at:
+22	    = do let Just x' : Maybe String = x
+23	             | Nothing => Nothing
+

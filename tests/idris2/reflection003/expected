@@ -6,10 +6,25 @@ LOG 0: Type: (%pi Rig1 Explicit (Just _) String (%pi Rig1 Explicit (Just _) Stri
 LOG 0: Resolved name: Prelude.Nat
 LOG 0: Constructors: [Prelude.Z, Prelude.S]
 refprims.idr:37:10--39:1:While processing right hand side of dummy1 at refprims.idr:37:1--39:1:
-Error during reflection: Not really trying
+Error during reflection: Not really trying at:
+37	dummy1 = %runElab logPrims
+38	
+39	dummy2 : a
+
 refprims.idr:40:10--42:1:While processing right hand side of dummy2 at refprims.idr:40:1--42:1:
-Error during reflection: Still not trying
+Error during reflection: Still not trying at:
+40	dummy2 = %runElab logDataCons
+41	
+42	dummy3 : a
+
 refprims.idr:43:10--45:1:While processing right hand side of dummy3 at refprims.idr:43:1--45:1:
-Error during reflection: Undefined name
+Error during reflection: Undefined name at:
+43	dummy3 = %runElab logBad
+44	
+45	dummy4 : a
+
 refprims.idr:46:10--48:1:While processing right hand side of dummy4 at refprims.idr:46:1--48:1:
-Error during reflection: failed after generating Main.{plus:6078}
+Error during reflection: failed after generating Main.{plus:6078} at:
+46	dummy4 = %runElab tryGenSym
+47	
+

@@ -5,3 +5,7 @@ Mismatch between:
 	(1 _ : Nat) -> MyN
 and
 	MyN
+at:
+4	foo x y = case MkN x of
+	               ^^^^^^
+

@@ -6,16 +6,25 @@ Mismatch between:
 	Nat
 and
 	Vect ?n ?a
+at:
+12	wrong x = length x
+
 
 If Data.List.length: When unifying Nat and List ?a
 Mismatch between:
 	Nat
 and
 	List ?a
+at:
+12	wrong x = length x
+
 
 If Prelude.length: When unifying Nat and String
 Mismatch between:
 	Nat
 and
 	String
+at:
+12	wrong x = length x
+
 

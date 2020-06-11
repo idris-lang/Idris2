@@ -5,6 +5,9 @@ Mismatch between:
 	Nat
 and
 	Integer
+at:
+14	etaBad = Refl
+
 1/1: Building Eta2 (Eta2.idr)
 Eta2.idr:2:8--4:1:While processing right hand side of test at Eta2.idr:2:1--4:1:
 When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_)
@@ -12,9 +15,17 @@ Mismatch between:
 	a
 and
 	Nat
+at:
+2	test = Refl
+3	
+4	test2 : ?
+
 Eta2.idr:5:44--6:1:While processing right hand side of test2 at Eta2.idr:5:1--6:1:
 When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_)
 Mismatch between:
 	a
 and
 	Nat
+at:
+5	test2 = {a : _} -> the (S = \x : a => S _) Refl
+

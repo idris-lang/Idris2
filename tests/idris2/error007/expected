@@ -4,3 +4,6 @@ Can't solve constraint between:
 	?_ x
 and
 	FS x
+at:
+4	fsprf p = cong _ p
+
