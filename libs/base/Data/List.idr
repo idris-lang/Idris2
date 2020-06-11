@@ -373,6 +373,7 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 export
 Uninhabited (InBounds k []) where
     uninhabited InFirst impossible
+    uninhabited (InLater _) impossible
 
 ||| Decide whether `k` is a valid index into `xs`
 export
@@ -390,8 +391,11 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 ||| @ ok a proof that the index is within bounds
 export
 index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
-index Z     (x :: xs) {ok} = x
-index (S k) (x :: xs) {ok = InLater p} = index k xs
+index Z (x :: xs) {ok = InFirst} = x
+index (S k) (x :: xs) {ok = (InLater p)} = index k xs
+
+--index Z     (x :: xs) {ok} = x
+--index (S k) (x :: xs) {ok = InLater p} = index k xs
 
 ||| Convert any Foldable structure to a list.
 export
