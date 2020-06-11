@@ -160,34 +160,6 @@
 (define (blodwen-buffer-copydata buf start len dest loc)
   (bytevector-copy! buf start dest loc len))
 
-; 'dir' is only needed in Racket
-(define (blodwen-read-bytevec curdir fname)
-  (guard
-    (x (#t #f))
-    (let* [(h (open-file-input-port fname
-                                    (file-options)
-                                    (buffer-mode line) #f))
-           (vec (get-bytevector-all h))]
-      (begin (close-port h)
-             vec))))
-
-(define (blodwen-isbytevec v)
-(if (bytevector? v)
-    0
-    -1))
-
-; 'dir' is only needed in Racket
-(define (blodwen-write-bytevec curdir fname vec max)
-  (guard
-    (x (#t -1))
-    (let* [(h (open-file-output-port fname (file-options no-fail)
-                                     (buffer-mode line) #f))]
-      (begin (put-bytevector h vec 0 max)
-             (close-port h)
-             0))))
-
-
-
 ;; Threads
 
 (define blodwen-thread-data (make-thread-parameter #f))

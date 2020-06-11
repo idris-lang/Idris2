@@ -109,7 +109,8 @@ mutual
   tySpec (NmCon fc (UN "Char") _ []) = pure "char"
   tySpec (NmCon fc (NS _ n) _ [_])
      = cond [(n == UN "Ptr", pure "void*"),
-             (n == UN "GCPtr", pure "void*")]
+             (n == UN "GCPtr", pure "void*"),
+             (n == UN "Buffer", pure "u8*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
   tySpec (NmCon fc (NS _ n) _ [])
      = cond [(n == UN "Unit", pure "void"),
@@ -182,6 +183,7 @@ cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
 cftySpec fc CFPtr = pure "void*"
 cftySpec fc CFGCPtr = pure "void*"
+cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
@@ -196,6 +198,10 @@ cCall appdir fc cfn clib args (CFIORes CFGCPtr)
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall appdir fc cfn clib args CFGCPtr
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args (CFIORes CFBuffer)
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
+cCall appdir fc cfn clib args CFBuffer
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
 cCall appdir fc cfn clib args ret
     = do loaded <- get Loaded
          lib <- if clib `elem` loaded

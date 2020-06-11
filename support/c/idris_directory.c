@@ -8,8 +8,7 @@
 
 char* idris2_currentDirectory() {
    char* cwd = malloc(1024); // probably ought to deal with the unlikely event of this being too small
-   getcwd(cwd, 1024);
-   return cwd; // freed by RTS
+   return getcwd(cwd, 1024); // Freed by RTS
 }
 
 int idris2_changeDir(char* dir) {

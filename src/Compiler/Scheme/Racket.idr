@@ -122,6 +122,7 @@ cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
 cftySpec fc CFPtr = pure "_pointer"
 cftySpec fc CFGCPtr = pure "_pointer"
+cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "_" ++ n ++ "-pointer"
 cftySpec fc (CFFun s t) = funTySpec [s] t
@@ -172,6 +173,10 @@ cCall appdir fc cfn clib args (CFIORes CFGCPtr)
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
 cCall appdir fc cfn clib args CFGCPtr
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args (CFIORes CFBuffer)
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
+cCall appdir fc cfn clib args CFBuffer
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
 cCall appdir fc cfn libspec args ret
     = do loaded <- get Loaded
          bound <- get Done
