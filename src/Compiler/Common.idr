@@ -5,6 +5,7 @@ import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
 import Compiler.VMCode
+import Compiler.Mutate
 
 import Core.Context
 import Core.Directory
@@ -32,7 +33,7 @@ record Codegen where
   ||| Execute an Idris 2 expression directly.
   executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 
--- Say which phase of compilation is the last one to use - it saves time if 
+-- Say which phase of compilation is the last one to use - it saves time if
 -- you only ask for what you need.
 public export
 data UsePhase = Cases | Lifted | ANF | VMCode
@@ -134,7 +135,7 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
             Nothing => getAllDesc rest arr defs
             Just (_, entry) =>
               do (def, bin) <- getMinimalDef entry
-                 addDef n def 
+                 addDef n def
                  let refs = refersToRuntime def
                  if multiplicity def /= erased
                     then do coreLift $ writeArray arr i (i, bin)
@@ -270,7 +271,10 @@ getCompileData phase tm_in
          logTime "Fix arity" $ traverse_ fixArityDef rcns
          logTime "Forget names" $ traverse_ mkForgetDef rcns
 
-         compiledtm <- fixArityExp !(compileExp tm)
+         compiledtm <- fixArityExp !(compileExp tm) >>= mkMutating (UN "") Nothing
+
+
+
          let mainname = MN "__mainExpression" 0
          (liftedtm, ldefs) <- liftBody mainname compiledtm
 
