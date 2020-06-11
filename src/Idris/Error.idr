@@ -5,6 +5,7 @@ import Core.Core
 import Core.Context
 import Core.Env
 import Core.Options
+import Core.Value
 
 import Idris.Resugar
 import Idris.Syntax
@@ -117,8 +118,10 @@ perror (AmbiguousElab fc env ts)
                    showSep "\n\t" !(traverse (pshow env) ts)
          setPPrint pp
          pure res
-perror (AmbiguousSearch fc env ts)
-    = pure $ "Multiple solutions found in search. Possible correct results:\n\t" ++
+perror (AmbiguousSearch fc env tgt ts)
+    = pure $ "Multiple solutions found in search of:\n\t"
+           ++ !(pshowNoNorm env tgt)
+           ++ "\nPossible correct results:\n\t" ++
            showSep "\n\t" !(traverse (pshowNoNorm env) ts)
 perror (AmbiguityTooDeep fc n ns)
     = pure $ "Maximum ambiguity depth exceeded in "  ++ show !(getFullName n)
