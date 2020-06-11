@@ -733,7 +733,9 @@ interpret inp
     = case parseRepl inp of
            Left err => pure $ REPLError (show err)
            Right Nothing => pure Done
-           Right (Just cmd) => processCatch cmd
+           Right (Just cmd) => do
+             setCurrentElabSource inp
+             processCatch cmd
 
 mutual
   export

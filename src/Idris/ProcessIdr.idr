@@ -224,6 +224,7 @@ processMod : {auto c : Ref Ctxt Defs} ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
     = catch (do
+        setCurrentElabSource sourcecode
         -- Just read the header to start with (this is to get the imports and
         -- see if we can avoid rebuilding if none have changed)
         modh <- readHeader srcf
