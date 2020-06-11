@@ -3,6 +3,13 @@ module Data.Buffer
 import System.Directory
 import System.File
 
+-- Reading and writing binary buffers. Note that this primitives are unsafe,
+-- in that they don't check that buffer locations are within bounds.
+-- We really need a safe wrapper!
+-- They are used in the Idris compiler itself for reading/writing checked
+-- files.
+
+-- This is known to the compiler, so maybe ought to be moved to Builtin
 export
 data Buffer : Type where [external]
 
@@ -199,50 +206,58 @@ copyData : (src : Buffer) -> (start, len : Int) ->
 copyData src start len dest loc
     = primIO (prim__copyData src start len dest loc)
 
--- %foreign "scheme:blodwen-readbuffer-bytes"
--- prim__readBufferBytes : FilePtr -> AnyPtr -> Int -> Int -> PrimIO Int
---
--- export
--- readBufferFromFile : BinaryFile -> Buffer -> (maxbytes : Int) ->
---                      IO (Either FileError Buffer)
--- readBufferFromFile (FHandle h) (MkBuffer buf size loc) max
---     = do read <- primIO (prim__readBufferBytes h buf loc max)
---          if read >= 0
---             then pure (Right (MkBuffer buf size (loc + read)))
---             else pure (Left FileReadError)
+%foreign "C:idris2_readBufferData,libidris2_support"
+prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
+%foreign "C:idris2_writeBufferData,libidris2_support"
+prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
-%foreign "scheme:blodwen-read-bytevec"
-prim__readBufferFromFile : String -> String -> PrimIO Buffer
+export
+readBufferData : File -> Buffer ->
+                 (loc : Int) -> -- position in buffer to start adding
+                 (maxbytes : Int) -> -- maximums size to read, which must not
+                                     -- exceed buffer length
+                 IO (Either FileError ())
+readBufferData (FHandle h) buf loc max
+    = do read <- primIO (prim__readBufferData h buf loc max)
+         if read >= 0
+            then pure (Right ())
+            else pure (Left FileReadError)
 
-%foreign "scheme:blodwen-isbytevec"
-prim__isBuffer : Buffer -> Int
+export
+writeBufferData : File -> Buffer ->
+                  (loc : Int) -> -- position in buffer to write from
+                  (maxbytes : Int) -> -- maximums size to write, which must not
+                                      -- exceed buffer length
+                  IO (Either FileError ())
+writeBufferData (FHandle h) buf loc max
+    = do written <- primIO (prim__writeBufferData h buf loc max)
+         if written >= 0
+            then pure (Right ())
+            else pure (Left FileWriteError)
 
--- Create a new buffer by reading all the contents from the given file
--- Fails if no bytes can be read or buffer can't be created
+export
+writeBufferToFile : String -> Buffer -> Int -> IO (Either FileError ())
+writeBufferToFile fn buf max
+    = do Right f <- openFile fn WriteTruncate
+             | Left err => pure (Left err)
+         Right ok <- writeBufferData f buf 0 max
+             | Left err => pure (Left err)
+         closeFile f
+         pure (Right ok)
+
 export
 createBufferFromFile : String -> IO (Either FileError Buffer)
 createBufferFromFile fn
-    = do Just cwd <- currentDir
-              | Nothing => pure (Left FileReadError)
-         buf <- primIO (prim__readBufferFromFile cwd fn)
-         if prim__isBuffer buf /= 0
-            then pure (Left FileReadError)
-            else do let sz = prim__bufferSize buf
-                    pure (Right buf)
-
-%foreign "scheme:blodwen-write-bytevec"
-prim__writeBuffer : String -> String -> Buffer -> Int -> PrimIO Int
-
-export
-writeBufferToFile : String -> Buffer -> (maxbytes : Int) ->
-                    IO (Either FileError ())
-writeBufferToFile fn buf max
-    = do Just cwd <- currentDir
-              | Nothing => pure (Left FileReadError)
-         res <- primIO (prim__writeBuffer cwd fn buf max)
-         if res /= 0
-            then pure (Left FileWriteError)
-            else pure (Right ())
+    = do Right f <- openFile fn Read
+             | Left err => pure (Left err)
+         Right size <- fileSize f
+             | Left err => pure (Left err)
+         Just buf <- newBuffer size
+             | Nothing => pure (Left FileReadError)
+         Right ok <- readBufferData f buf 0 size
+             | Left err => pure (Left err)
+         closeFile f
+         pure (Right buf)
 
 export
 resizeBuffer : Buffer -> Int -> IO (Maybe Buffer)
