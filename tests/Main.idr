@@ -115,6 +115,10 @@ chezTests
       "chez019", "chez020", "chez021", "chez022",
       "reg001"]
 
+nodeTests : List String
+nodeTests
+  = ["node001"]
+
 ideModeTests : List String
 ideModeTests
   =  [ "ideMode001", "ideMode002", "ideMode003" ]
@@ -246,17 +250,22 @@ firstExists : List String -> IO (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 
-pathLookup : IO (Maybe String)
-pathLookup = do
+pathLookup : List String -> IO (Maybe String)
+pathLookup names = do
   path <- getEnv "PATH"
   let pathList = split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
   let candidates = [p ++ "/" ++ x | p <- pathList,
-                                    x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
+                                    x <- names]
   firstExists candidates
 
 findChez : IO (Maybe String)
 findChez
-    = do Just chez <- getEnv "CHEZ" | Nothing => pathLookup
+    = do Just chez <- getEnv "CHEZ" | Nothing => pathLookup ["chez", "chezscheme9.5", "scheme", "scheme.exe"]
+         pure $ Just chez
+
+findNode : IO (Maybe String)
+findNode
+    = do Just chez <- getEnv "NODE" | Nothing => pathLookup ["node"]
          pure $ Just chez
 
 runChezTests : Options -> List String -> IO (List Bool)
@@ -267,6 +276,16 @@ runChezTests opts tests
                (\c => do putStrLn $ "Found Chez Scheme at " ++ c
                          traverse (runTest opts) tests)
                chexec
+
+runNodeTests : Options -> List String -> IO (List Bool)
+runNodeTests opts tests
+    = do nodeexec <- findNode
+         maybe (do putStrLn "node not found"
+                   pure [])
+               (\c => do putStrLn $ "Found node at " ++ c
+                         traverse (runTest opts) tests)
+               nodeexec
+
 
 filterTests : Options -> List String -> List String
 filterTests opts = case onlyNames opts of
@@ -287,11 +306,15 @@ main
                  , testPaths "ideMode" ideModeTests
                  ]
          let filteredChezTests = filterTests opts (testPaths "chez" chezTests)
+         let filteredNodeTests = filterTests opts (testPaths "node" nodeTests)
          nonCGTestRes <- traverse (runTest opts) filteredNonCGTests
          chezTestRes <- if length filteredChezTests > 0
               then runChezTests opts filteredChezTests
               else pure []
-         let res = nonCGTestRes ++ chezTestRes
+         nodeTestRes <- if length filteredNodeTests > 0
+              then runNodeTests opts filteredNodeTests
+              else pure []
+         let res = nonCGTestRes ++ chezTestRes ++ nodeTestRes
          putStrLn (show (length (filter id res)) ++ "/" ++ show (length res)
                        ++ " tests successful")
          if (any not res)

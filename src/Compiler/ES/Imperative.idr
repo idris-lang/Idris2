@@ -28,7 +28,7 @@ mutual
   public export
   data ImperativeStatement = DoNothing
                            | SeqStatement ImperativeStatement ImperativeStatement
-                           | FunDecl Name (List Name) ImperativeStatement
+                           | FunDecl FC Name (List Name) ImperativeStatement
                            | ForeignDecl Name (List String)
                            | ReturnStatement ImperativeExp
                            | SwitchStatement ImperativeExp (List (ImperativeExp, ImperativeStatement)) (Maybe ImperativeStatement)
@@ -67,7 +67,7 @@ mutual
   Show ImperativeStatement where
     show DoNothing = "DoNothing"
     show (SeqStatement x y) = show x ++ ";" ++ show y
-    show (FunDecl n args b) = "(FunDecl " ++ show n ++ " " ++ show args ++ " " ++ show b ++ ")"
+    show (FunDecl fc n args b) = "\n\n" ++ "(FunDecl (" ++ show fc ++ ") " ++ show n ++ " " ++ show args ++ " " ++ show b ++ ")"
     show (ForeignDecl n path) = "(ForeignDecl " ++ show n ++ " " ++ show path ++")"
     show (ReturnStatement x) = "(ReturnStatement " ++ show x ++ ")"
     show (SwitchStatement e alts d) = "(SwitchStatement " ++ show e ++ " " ++ show alts ++ " " ++ show d ++ ")"
@@ -114,8 +114,8 @@ mutual
     DoNothing
   replaceNamesExpS reps (SeqStatement x y) =
     SeqStatement (replaceNamesExpS reps x) (replaceNamesExpS reps y)
-  replaceNamesExpS reps (FunDecl n args body) =
-    FunDecl n args $ replaceNamesExpS reps body
+  replaceNamesExpS reps (FunDecl fc n args body) =
+    FunDecl fc n args $ replaceNamesExpS reps body
   replaceNamesExpS reps (ForeignDecl n path) =
     ForeignDecl n path
   replaceNamesExpS reps (ReturnStatement e) =
@@ -252,22 +252,17 @@ mutual
   impConstAlt res (MkNConstAlt c exp) =
     do
       (s, r) <- impExp exp
-      pure (IEConstant c, MutateStatement res r)
-
-
-
-impDef : {auto c : Ref Imps ImpSt} -> Name -> NamedDef -> Core ImperativeStatement
-impDef n (MkNmFun args exp) =
-  pure $ FunDecl n args !(expToFnBody exp)
-impDef n (MkNmError exp) =
-  throw $ (InternalError $ show exp)
-impDef n (MkNmForeign cs args ret) =
-  pure $ ForeignDecl n cs
-impDef n (MkNmCon _ _ _) =
-  pure DoNothing
+      pure (IEConstant c, s <+> MutateStatement res r)
 
 getImp : {auto c : Ref Imps ImpSt} -> (Name, FC, NamedDef) -> Core ImperativeStatement
-getImp (n, fc, d) = impDef n d
+getImp (n, fc, MkNmFun args exp) =
+  pure $ FunDecl fc n args !(expToFnBody exp)
+getImp (n, fc, MkNmError exp) =
+  throw $ (InternalError $ show exp)
+getImp (n, fc, MkNmForeign cs args ret) =
+  pure $ ForeignDecl n cs
+getImp (n, fc, MkNmCon _ _ _) =
+  pure DoNothing
 
 export
 compileToImperative : Ref Ctxt Defs -> ClosedTerm -> Core ImperativeStatement

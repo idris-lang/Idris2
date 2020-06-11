@@ -7,6 +7,7 @@ import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
+import Utils.Path
 
 import System
 import System.File
@@ -35,7 +36,7 @@ compileExpr c execDir tm outfile
 ||| Node implementation of the `executeExpr` interface.
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c execDir tm
-= do let outn = "_tmp_node" ++ ".js"
+= do let outn = execDir </> "_tmp_node" ++ ".js"
      js <- compileToNode c tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)

@@ -3,25 +3,33 @@ module Compiler.ES.ES
 import Compiler.ES.Imperative
 import Utils.Hex
 import Data.Strings
-import Data.SortedSet
+import Data.SortedMap
 import Data.String.Extra
 
 data ESs : Type where
 
 record ESSt where
   constructor MkESSt
-  preamble : SortedSet String
+  preamble : SortedMap String String
 
-
-addToPreamble : {auto c : Ref ESs ESSt} -> String -> Core ()
-addToPreamble new =
-  do
-    s <- get ESs
-    put ESs (record { preamble = insert new (preamble s) } s)
-    pure ()
 
 esName : String -> String
-esName x = "es_" ++ x
+esName x = "__esPrim_" ++ x
+
+addConstToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
+addConstToPreamble name def =
+  do
+    s <- get ESs
+    case lookup name (preamble s) of
+      Nothing =>
+        do
+          let v = "const " ++ esName name ++ " = (" ++ def ++ ")"
+          put ESs (record { preamble = insert name v (preamble s) } s)
+          pure $ esName name
+      Just x =>
+        if x /= def then throw $ InternalError $ "two incompatible definitions for " ++ name
+                    else pure $ esName name
+
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -61,6 +69,18 @@ jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
                             '\n' => "\\n"
                             other => "\\u{" ++ asHex (cast {to=Int} c) ++ "}"
 
+jsCrashExp : {auto c : Ref ESs ESSt} -> String -> Core String
+jsCrashExp message  =
+  do
+    n <- addConstToPreamble "crashExp" "x=>{throw new Error(x)}"
+    pure $ n ++ "("++ jsString message ++ ")"
+
+jsIntegerOfString : {auto c : Ref ESs ESSt} -> String -> Core String
+jsIntegerOfString x =
+  do
+    n <- addConstToPreamble "integerOfString" "s=>{const idx = s.indexOf('.'); return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx));}"
+    pure $ n ++ "(" ++ x ++ ")"
+
 nSpaces : Nat -> String
 nSpaces n = pack $ List.replicate n ' '
 
@@ -73,10 +93,13 @@ toBigInt e = "BigInt(" ++ e ++ ")"
 fromBigInt : String -> String
 fromBigInt e = "Number(" ++ e ++ ")"
 
-boundedInt : Int -> String -> String
-boundedInt bits e = "(" ++ e ++ " % __jsPrim_int_bound_" ++ show bits ++ ")"
+boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
+boundedInt bits e =
+  do
+    n <- addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
+    pure $ "(" ++ e ++ " % " ++ n ++ ")"
 
-boundedIntOp : Int -> String -> String -> String -> String
+boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
 boundedIntOp bits o lhs rhs = boundedInt 63 (binOp o lhs rhs)
 
 
@@ -89,69 +112,69 @@ jsConstant (BI i) = pure $ toBigInt $ show i
 jsConstant (Str s) = pure $ jsString s
 jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
 jsConstant (Db f) = pure $ show f
-jsConstant WorldVal =
-  do
-    let name = esName "idrisworld"
-    addToPreamble $ "const " ++ name ++ " = Symbol(\"" ++ name ++ "\")";
-    pure name
+jsConstant WorldVal = addConstToPreamble "idrisworld" "Symbol('idrisworld')";
 jsConstant ty = throw (InternalError $ "Unsuported constant " ++ show ty)
 
-jsOp : PrimFn arity -> Vect arity String -> String
-jsOp (Add IntType) [x, y] = boundedIntOp 63 "+" x y
-jsOp (Sub IntType) [x, y] = boundedIntOp 63 "-" x y
-jsOp (Mul IntType) [x, y] = boundedIntOp 63 "*" x y
-jsOp (Div IntType) [x, y] = boundedIntOp 63 "/" x y
-jsOp (Mod IntType) [x, y] = boundedIntOp 63 "%" x y
-jsOp (Add ty) [x, y] = binOp "+" x y
-jsOp (Sub ty) [x, y] = binOp "-" x y
-jsOp (Mul ty) [x, y] = binOp "*" x y
-jsOp (Div ty) [x, y] = binOp "/" x y
-jsOp (Mod ty) [x, y] = binOp "%" x y
-jsOp (Neg ty) [x] = "(-(" ++ x ++ "))"
-jsOp (ShiftL ty) [x, y] = binOp "<<" x y
-jsOp (ShiftR ty) [x, y] = binOp ">>" x y
-jsOp (BAnd ty) [x, y] = binOp "&" x y
-jsOp (BOr ty) [x, y] = binOp "|" x y
-jsOp (BXOr ty) [x, y] = binOp "^" x y
-jsOp (LT ty) [x, y] = boolOp "<" x y
-jsOp (LTE ty) [x, y] = boolOp "<=" x y
-jsOp (EQ ty) [x, y] = boolOp "===" x y
-jsOp (GTE ty) [x, y] = boolOp ">=" x y
-jsOp (GT ty) [x, y] = boolOp ">" x y
-jsOp StrLength [x] = toBigInt $ x ++ ".length"
-jsOp StrHead [x] = "(" ++ x ++ ".charAt(0))"
-jsOp StrTail [x] = "(" ++ x ++ ".slice(1))"
-jsOp StrIndex [x, y] = "(" ++ x ++ ".charAt(" ++ fromBigInt y ++ "))"
-jsOp StrCons [x, y] = binOp "+" x y
-jsOp StrAppend [x, y] = binOp "+" x y
-jsOp StrReverse [x] = "__jsPrim_reverseStr(" ++ x ++ ")"
-jsOp StrSubstr [offset, length, str] = str ++ ".slice(" ++ fromBigInt offset ++ ", " ++ fromBigInt offset ++ " + " ++ fromBigInt length ++ ")"
-jsOp DoubleExp [x] = "Math.exp(" ++ x ++ ")"
-jsOp DoubleLog [x] = "Math.log(" ++ x ++ ")"
-jsOp DoubleSin [x] = "Math.sin(" ++ x ++ ")"
-jsOp DoubleCos [x] = "Math.cos(" ++ x ++ ")"
-jsOp DoubleTan [x] = "Math.tan(" ++ x ++ ")"
-jsOp DoubleASin [x] = "Math.asin(" ++ x ++ ")"
-jsOp DoubleACos [x] = "Math.acos(" ++ x ++ ")"
-jsOp DoubleATan [x] = "Math.atan(" ++ x ++ ")"
-jsOp DoubleSqrt [x] = "Math.sqrt(" ++ x ++ ")"
-jsOp DoubleFloor [x] = "Math.floor(" ++ x ++ ")"
-jsOp DoubleCeiling [x] = "Math.ceil(" ++ x ++ ")"
-jsOp (Cast IntType CharType) [x] = "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast IntegerType CharType) [x] = "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast CharType IntType) [x] = toBigInt $ x ++ ".codePointAt(0)"
-jsOp (Cast CharType IntegerType) [x] = toBigInt $ x ++ ".codePointAt(0)"
+jsOp : {auto c : Ref ESs ESSt} -> PrimFn arity -> Vect arity String -> Core String
+jsOp (Add IntType) [x, y] = pure $ !(boundedIntOp 63 "+" x y)
+jsOp (Sub IntType) [x, y] = pure $ !(boundedIntOp 63 "-" x y)
+jsOp (Mul IntType) [x, y] = pure $ !(boundedIntOp 63 "*" x y)
+jsOp (Div IntType) [x, y] = pure $ !(boundedIntOp 63 "/" x y)
+jsOp (Mod IntType) [x, y] = pure $ !(boundedIntOp 63 "%" x y)
+jsOp (Add ty) [x, y] = pure $ binOp "+" x y
+jsOp (Sub ty) [x, y] = pure $ binOp "-" x y
+jsOp (Mul ty) [x, y] = pure $ binOp "*" x y
+jsOp (Div ty) [x, y] = pure $ binOp "/" x y
+jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
+jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
+jsOp (ShiftL ty) [x, y] = pure $ binOp "<<" x y
+jsOp (ShiftR ty) [x, y] = pure $ binOp ">>" x y
+jsOp (BAnd ty) [x, y] = pure $ binOp "&" x y
+jsOp (BOr ty) [x, y] = pure $ binOp "|" x y
+jsOp (BXOr ty) [x, y] = pure $ binOp "^" x y
+jsOp (LT ty) [x, y] = pure $ boolOp "<" x y
+jsOp (LTE ty) [x, y] = pure $ boolOp "<=" x y
+jsOp (EQ ty) [x, y] = pure $ boolOp "===" x y
+jsOp (GTE ty) [x, y] = pure $ boolOp ">=" x y
+jsOp (GT ty) [x, y] = pure $ boolOp ">" x y
+jsOp StrLength [x] = pure $ toBigInt $ x ++ ".length"
+jsOp StrHead [x] = pure $ "(" ++ x ++ ".charAt(0))"
+jsOp StrTail [x] = pure $ "(" ++ x ++ ".slice(1))"
+jsOp StrIndex [x, y] = pure $ "(" ++ x ++ ".charAt(" ++ fromBigInt y ++ "))"
+jsOp StrCons [x, y] = pure $ binOp "+" x y
+jsOp StrAppend [x, y] = pure $ binOp "+" x y
+jsOp StrReverse [x] =
+  do
+    n <- addConstToPreamble "strReverse" "x => x.split('').reverse().join('')"
+    pure $ n ++ "(" ++ x ++ ")"
+jsOp StrSubstr [offset, length, str] =
+  pure $ str ++ ".slice(" ++ fromBigInt offset ++ ", " ++ fromBigInt offset ++ " + " ++ fromBigInt length ++ ")"
+jsOp DoubleExp [x] = pure $ "Math.exp(" ++ x ++ ")"
+jsOp DoubleLog [x] = pure $ "Math.log(" ++ x ++ ")"
+jsOp DoubleSin [x] = pure $ "Math.sin(" ++ x ++ ")"
+jsOp DoubleCos [x] = pure $ "Math.cos(" ++ x ++ ")"
+jsOp DoubleTan [x] = pure $ "Math.tan(" ++ x ++ ")"
+jsOp DoubleASin [x] = pure $ "Math.asin(" ++ x ++ ")"
+jsOp DoubleACos [x] = pure $ "Math.acos(" ++ x ++ ")"
+jsOp DoubleATan [x] = pure $ "Math.atan(" ++ x ++ ")"
+jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
+jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
+jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
+jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
+jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
+jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
+jsOp (Cast CharType IntegerType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
 jsOp (Cast DoubleType IntType) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType IntegerType) [x] = "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast StringType IntType) [x] = boundedInt 63 $ "__jsPrim_integer_of_string(" ++ x ++ ")"
-jsOp (Cast StringType IntegerType) [x] = "__jsPrim_integer_of_string(" ++ x ++ ")"
+jsOp (Cast DoubleType IntegerType) [x] = pure $ "BigInt(Math.floor(" ++ x ++ "))"
+jsOp (Cast StringType IntType) [x] = boundedInt 63 $ !(jsIntegerOfString x)
+jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
-jsOp (Cast IntType IntegerType) [x] = x
-jsOp (Cast ty DoubleType) [x] = "parseFloat(" ++ x ++ ")"
-jsOp (Cast ty StringType) [x] = "(''+" ++ x ++ ")" -- this is JavaScript after all
-jsOp (Cast ty ty2) [x] = "__jsPrim_idris_crash('invalid cast: ' + " ++ jsString (show ty) ++ " + ' -> ' + " ++ jsString (show ty2) ++ ")"
-jsOp BelieveMe [_,_,x] = x
-jsOp (Crash) [_, msg] = "__jsPrim_idris_crash(" ++ jsString msg ++ ")"
+jsOp (Cast IntType IntegerType) [x] = pure x
+jsOp (Cast ty DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
+jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
+jsOp BelieveMe [_,_,x] = pure x
+jsOp (Crash) [_, msg] = jsCrashExp msg
 
 jsPrim : Name -> List String -> Core String
 jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
@@ -189,7 +212,7 @@ mutual
   impExp2es (IEConstant c) =
     jsConstant c
   impExp2es (IEPrimFn f args) =
-    pure $ jsOp f !(traverseVect impExp2es args)
+    jsOp f !(traverseVect impExp2es args)
   impExp2es (IEPrimFnExt n args) =
     jsPrim n !(traverse impExp2es args)
   impExp2es (IEConstructorHead e) =
@@ -200,7 +223,7 @@ mutual
     pure $ !(impExp2es e) ++ ".a" ++ show i
   impExp2es (IEConstructor h args) =
     let argPairs = zipWith (\i,a => "a" ++ show i ++ ": " ++ a ) [1..length args] !(traverse impExp2es args)
-    in pure $ "{" ++ showSep ", " (("h:" ++ show h)::argPairs) ++ "}"
+    in pure $ "({" ++ showSep ", " (("h:" ++ show h)::argPairs) ++ "})"
   impExp2es (IEDelay e) =
     pure $ "(()=>" ++ !(impExp2es e) ++ ")"
   impExp2es (IEForce e) =
@@ -213,8 +236,8 @@ mutual
     pure ""
   imperative2es indent (SeqStatement x y) =
     pure $ !(imperative2es indent x) ++ "\n" ++ !(imperative2es indent y)
-  imperative2es indent (FunDecl n args body) =
-    pure $ nSpaces indent ++ "function " ++ jsName n ++ "(" ++ showSep ", " (map jsName args) ++ "){\n" ++
+  imperative2es indent (FunDecl fc n args body) =
+    pure $ nSpaces indent ++ "function " ++ jsName n ++ "(" ++ showSep ", " (map jsName args) ++ "){//"++ show fc ++"\n" ++
            !(imperative2es (indent+1) body) ++ "\n" ++ nSpaces indent ++ "}\n"
   imperative2es indent (ForeignDecl n path) =
     pure $ !(foreignDecl n path) ++ "\n"
@@ -252,5 +275,5 @@ compileToES c tm =
     s <- newRef ESs (MkESSt empty)
     es_statements <- imperative2es 0 statements
     st <- get ESs
-    let pre = showSep "\n" $ SortedSet.toList $ preamble st
-    pure $ pre ++ "\n\n" ++ es_statements
+    let pre = showSep "\n" $ SortedMap.values $ preamble st
+    pure $ pre ++ "\n\n" ++ es_statements -- ++ "\n\n\n/*" ++ show statements ++ "*/"
