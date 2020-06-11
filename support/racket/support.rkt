@@ -155,43 +155,6 @@
 (define (blodwen-buffer-copydata buf start len dest loc)
   (bytevector-copy! buf start dest loc len))
 
-; The 'dir' argument is an annoying hack. Racket appears to have a different
-; notion of current directory than the OS, so we pass what we think it is so
-; that racket can change to it
-(define (blodwen-read-bytevec dir fname)
-   (let ((origdir (current-directory)))
-     (begin
-          (current-directory dir)
-          (with-handlers
-            ([(lambda (x) #t) (lambda (exn) (current-directory origdir) #f)])
-            (let* [(h (open-file-input-port fname
-                                            (file-options)
-                                            (buffer-mode line) #f))
-                   (vec (get-bytevector-all h))]
-              (begin (close-port h)
-                     (current-directory origdir)
-                     vec))))))
-
-(define (blodwen-isbytevec v)
-(if (bytevector? v)
-    0
-    -1))
-
-; See blodwen-read-bytevec for what 'dir' is for
-(define (blodwen-write-bytevec dir fname vec max)
-   (let ((origdir (current-directory)))
-     (begin
-           (current-directory dir)
-           (with-handlers
-            ([(lambda (x) #t) (lambda (exn) (current-directory origdir) -1)])
-            (let* [(h (open-file-output-port fname (file-options no-fail)
-                                             (buffer-mode line) #f))]
-              (begin (put-bytevector h vec 0 max)
-                     (close-port h)
-                     (current-directory origdir)
-                     0))))))
-
-
 ;; Threads
 
 (define blodwen-thread-data (make-thread-cell #f))

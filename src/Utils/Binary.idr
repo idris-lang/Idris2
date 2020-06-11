@@ -105,12 +105,6 @@ initBinaryS s
              | Nothing => throw (InternalError "Buffer creation failed")
          newRef Bin (newBinary buf s)
 
-export
-freeBinary : Ref Bin Binary -> Core ()
-freeBinary b
-    = do b <- get Bin
-         coreLift $ freeBuffer (buf b)
-
 extendBinary : Int -> Binary -> Core Binary
 extendBinary need (MkBin buf l s u)
     = do let newsize = s * 2
