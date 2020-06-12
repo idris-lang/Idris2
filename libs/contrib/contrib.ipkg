@@ -2,6 +2,8 @@ package contrib
 
 modules = Control.Delayed,
 
+          Data.Linear.Array,
+
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,

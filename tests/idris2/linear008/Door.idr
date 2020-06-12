@@ -56,12 +56,6 @@ public export
 Any : (Type -> Type) -> Type -> Type
 Any m = Lin m Many
 
-infix 2 @@
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (val : a) -> (1 resource : r val) -> Res a r
-
 data DoorState = Closed | Open
 
 -- changes start here

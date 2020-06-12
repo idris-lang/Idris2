@@ -18,12 +18,12 @@ Utils
 
 utilServer : (1 chan : Server Utils) -> Any IO ()
 utilServer chan
-    = do cmd @@ chan <- recv chan
+    = do cmd # chan <- recv chan
          case cmd of
-              Add => do (x, y) @@ chan <- recv chan
+              Add => do (x, y) # chan <- recv chan
                         chan <- send chan (x + y)
                         close chan
-              Append => do (x, y) @@ chan <- recv chan
+              Append => do (x, y) # chan <- recv chan
                            chan <- send chan (x ++ y)
                            close chan
 
@@ -35,7 +35,7 @@ MakeUtils = do cmd <- Request Bool
 
 sendUtils : (1 chan : Server MakeUtils) -> Any IO ()
 sendUtils chan
-    = do cmd @@ chan <- recv chan
+    = do cmd # chan <- recv chan
          if cmd
             then do cchan <- Channel.fork utilServer
                     chan <- send chan cchan
@@ -46,7 +46,7 @@ getUtilsChan : (1 chan : Client MakeUtils) ->
                One IO (Client Utils, Client MakeUtils)
 getUtilsChan chan
     = do chan <- send chan True
-         cchan @@ chan <- recv chan
+         cchan # chan <- recv chan
          pure (cchan, chan)
 
 closeUtilsChan : (1 chan : Client MakeUtils) ->
@@ -69,12 +69,12 @@ doThings
          uchan1 <- send uchan1 Add
          uchan2 <- send uchan2 Append
          uchan2 <- send uchan2 ("aaa", "bbb")
-         res @@ uchan2 <- recv uchan2
+         res # uchan2 <- recv uchan2
          close uchan2
          lift $ printLn res
 
          uchan1 <- send uchan1 (40, 54)
-         res @@ uchan1 <- recv uchan1
+         res # uchan1 <- recv uchan1
          close uchan1
 
          lift $ printLn res
