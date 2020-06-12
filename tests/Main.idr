@@ -80,7 +80,7 @@ idrisTests
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003",
+       "pkg001", "pkg002", "pkg003", "pkg004",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
