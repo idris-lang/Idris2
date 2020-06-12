@@ -68,7 +68,7 @@ copyArray newsize a
         = if pos < 0
              then (a, a')
              else let val # a = mread a pos
-                      a' = case val of
+                      1 a' = case val of
                                   Nothing => a'
                                   Just v => write a' pos v in
                       copyContent (pos - 1) a a'
