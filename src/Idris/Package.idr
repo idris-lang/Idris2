@@ -444,15 +444,16 @@ getParseErrorLoc fname _ = replFC
 -- Just load the 'Main' module, if it exists, which will involve building
 -- it if necessary
 runRepl : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
           PkgDesc ->
           List CLOpt ->
           Core ()
-runRepl pkg opts
-    = do addDeps pkg
-         processOptions (options pkg)
-         preOptions opts
-         throw (InternalError "Not implemented")
+runRepl pkg opts = do
+  u <- newRef UST initUState
+  m <- newRef MD initMetadata
+  repl {u} {s}
+
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
@@ -480,7 +481,10 @@ processPackage cmd file opts
                                        | errs => coreLift (exitWith (ExitFailure 1))
                                     install pkg opts
                       Clean => clean pkg opts
-                      REPL => runRepl pkg opts
+                      REPL => do
+                        [] <- build pkg opts
+                           | errs => coreLift (exitWith (ExitFailure 1))
+                        runRepl pkg opts
 
 record POptsFilterResult where
   constructor MkPFR

@@ -18,6 +18,15 @@ Language changes:
      invoking elaborator scripts. This means the function must always
      be fully applied, and is run under `%runElab`
 
+Library changes:
+
+* Experimental `Data.Linear.Array` added to `contrib`, support mutable linear
+  arrays with constant time read/write, convertible to immutable arrays with
+  constant time read.
+   + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
+     should be considered experimental with the API able to change at any time!
+     Further experiments in `Data.Linear` are welcome :).
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 

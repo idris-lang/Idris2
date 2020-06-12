@@ -83,7 +83,7 @@ access the resource directly:
 .. code-block:: idris
 
     data Res : (a : Type) -> (a -> Type) -> Type where
-         (@@) : (val : a) -> (1 resource : r val) -> Res a r
+         (#) : (val : a) -> (1 resource : r val) -> Res a r
 
     login : (1 s : Store LoggedOut) -> (password : String) ->
             Res Bool (\ok => Store (if ok then LoggedIn else LoggedOut))
@@ -91,7 +91,7 @@ access the resource directly:
     readSecret : (1 s : Store LoggedIn) -> 
                  Res String (const (Store LoggedIn))
 
-``Res`` is defined in ``Control.App`` since it is commonly useful.  It is a
+``Res`` is defined in the Prelude, since it is commonly useful.  It is a
 dependent pair type, which associates a value with a linear resource.
 We'll leave the other definitions abstract, for the purposes of this
 introductory example.
@@ -108,10 +108,10 @@ secret data. It uses ``let (>>=) = bindL`` to redefine
           do putStr "Password: "
              password <- getStr
              connect $ \s =>
-               do let True @@ s = login s password
-                    | False @@ s => do putStrLn "Wrong password"
-                                       disconnect s
-                  let str @@ s = readSecret s
+               do let True # s = login s password
+                    | False # s => do putStrLn "Wrong password"
+                                      disconnect s
+                  let str # s = readSecret s
                   putStrLn $ "Secret: " ++ show str
                   let s = logout s
                   disconnect s
@@ -237,10 +237,10 @@ hard coded password and internal data:
 
       login (MkStore str) pwd
           = if pwd == "Mornington Crescent"
-               then pure1 (True @@ MkStore str)
-               else pure1 (False @@ MkStore str)
+               then pure1 (True # MkStore str)
+               else pure1 (False # MkStore str)
       logout (MkStore str) = pure1 (MkStore str)
-      readSecret (MkStore str) = pure1 (str @@ MkStore str)
+      readSecret (MkStore str) = pure1 (str # MkStore str)
 
       disconnect (MkStore _)
           = putStrLn "Door destroyed"

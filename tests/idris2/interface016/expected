@@ -1,0 +1,8 @@
+1/1: Building TwoNum (TwoNum.idr)
+TwoNum.idr:4:7--5:1:While processing right hand side of f at TwoNum.idr:2:1--5:1:
+While processing right hand side of f,g at TwoNum.idr:4:3--5:1:
+Multiple solutions found in search of:
+	Num a
+Possible correct results:
+	conArg
+	conArg

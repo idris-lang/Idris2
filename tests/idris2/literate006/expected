@@ -1,17 +1,12 @@
 1/1: Building Door (Door.lidr)
-Main> >               (y @@ res) => ?now_4
-Main> >               (True @@ d) => ?now_4
->               (False @@ d) => ?now_5
-Main>  0 m : Type -> Type
- 1 d : Door Open
-   x : Integer
- 0 r : Res Bool (\r => (Door (if r then Open else Closed)))
--------------------------------------
-now_2 : Use Many m ()
-Main>  0 m : Type -> Type
- 1 d : Door Closed
-   x : Integer
- 0 r : Res Bool (\r => (Door (if r then Open else Closed)))
--------------------------------------
-now_3 : Use Many m ()
+Door.lidr:35:19--35:69:While processing type of openDoor at Door.lidr:34:1--37:1:
+Undefined name Res
+Door.lidr:44:15--45:10:While processing right hand side of doorProg at Door.lidr:42:1--49:1:
+Undefined name openDoor
+Door.lidr:55:16--55:23:Unknown operator '#'
+Door.lidr:63:16--63:24:Unknown operator '#'
+Main> No clause to split here
+Main> No clause to split here
+Main> (interactive):1:4--1:9:Undefined name now_2
+Main> (interactive):1:4--1:9:Undefined name now_3
 Main> Bye for now!

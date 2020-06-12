@@ -147,15 +147,15 @@ anyOne fc env top (elab :: elabs)
 exactlyOne : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
-             FC -> Env Term vars -> (topTy : ClosedTerm) ->
+             FC -> Env Term vars -> (topTy : ClosedTerm) -> (target : NF vars) ->
              List (Core (Term vars)) ->
              Core (Term vars)
-exactlyOne fc env top [elab]
+exactlyOne fc env top target [elab]
     = catch elab
          (\err => case err of
                        CantSolveGoal _ _ _ => throw err
                        _ => throw (CantSolveGoal fc [] top))
-exactlyOne {vars} fc env top all
+exactlyOne {vars} fc env top target all
     = do elabs <- successful all
          case rights elabs of
               [(res, defs, ust)] =>
@@ -164,7 +164,7 @@ exactlyOne {vars} fc env top all
                        commit
                        pure res
               [] => throw (CantSolveGoal fc [] top)
-              rs => throw (AmbiguousSearch fc env
+              rs => throw (AmbiguousSearch fc env !(quote !(get Ctxt) env target)
                              !(traverse normRes rs))
   where
     normRes : (Term vars, Defs, UState) -> Core (Term vars)
@@ -247,7 +247,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
          findPos defs prf id nty target
   where
     ambig : Error -> Bool
-    ambig (AmbiguousSearch _ _ _) = True
+    ambig (AmbiguousSearch _ _ _ _) = True
     ambig _ = False
 
     clearEnvType : {idx : Nat} -> (0 p : IsVar name idx vs) ->
@@ -307,7 +307,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                    then do empty <- clearDefs defs
                            xtytm <- quote empty env xty
                            ytytm <- quote empty env yty
-                           exactlyOne fc env top
+                           exactlyOne fc env top target
                             [(do xtynf <- evalClosure defs xty
                                  findPos defs p
                                      (\arg => apply fc (Ref fc Func fname)
@@ -339,7 +339,7 @@ searchLocal fc rig defaults trying depth def top env target
     = let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                              top env t target)
                       (getAllEnv fc rig [] env) in
-          exactlyOne fc env top elabs
+          exactlyOne fc env top target elabs
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool
@@ -406,7 +406,7 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
          let elabs = map (searchName fc rigc defaults trying depth defining topty env target) visns
          if ambig
             then anyOne fc env topty elabs
-            else exactlyOne fc env topty elabs
+            else exactlyOne fc env topty target elabs
   where
     visible : Context ->
               List (List String) -> Name -> Core (Maybe (Name, GlobalDef))
@@ -528,7 +528,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                       searchLocal fc rigc defaults trying' depth def top env nty
   where
     ambig : Error -> Bool
-    ambig (AmbiguousSearch _ _ _) = True
+    ambig (AmbiguousSearch _ _ _ _) = True
     ambig _ = False
 
     -- Take the earliest error message (that's when we look inside pairs,

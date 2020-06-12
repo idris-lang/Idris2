@@ -246,10 +246,6 @@ getSaveDefs (n :: ns) acc defs
                       b <- get Bin
                       getSaveDefs ns ((fullname gdef, b) :: acc) defs
 
-freeDefBuffer : (Name, Binary) -> Core ()
-freeDefBuffer (n, b)
-    = coreLift $ freeBuffer (buf b)
-
 -- Write out the things in the context which have been defined in the
 -- current source file
 export
@@ -283,8 +279,6 @@ writeToTTC extradata fname
 
          Right ok <- coreLift $ writeToFile fname !(get Bin)
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
-         traverse_ freeDefBuffer gdefs
-         freeBinary bin
          pure ()
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
@@ -436,8 +430,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          -- Otherwise, add the data
          let ex = extraData ttc
          if ((modNS, importAs) `elem` map getNSas (allImported defs))
-            then do coreLift $ freeBuffer (buf buffer)
-                    pure (Just (ex, ifaceHash ttc, imported ttc))
+            then pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
                traverse (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
@@ -461,7 +454,6 @@ readFromTTC nestedns loc reexp fname modNS importAs
                -- ttc
                ust <- get UST
                put UST (record { nextName = nextVar ttc } ust)
-               coreLift $ freeBuffer (buf buffer)
                pure (Just (ex, ifaceHash ttc, imported ttc))
 
 getImportHashes : String -> Ref Bin Binary ->
@@ -490,10 +482,8 @@ readIFaceHash fname
             | Left err => pure 0
          b <- newRef Bin buffer
          catch (do res <- getHash fname b
-                   coreLift $ freeBuffer (buf buffer)
                    pure res)
-               (\err => do coreLift $ freeBuffer (buf buffer)
-                           pure 0)
+               (\err => pure 0)
 
 export
 readImportHashes : (fname : String) -> -- file containing the module
@@ -503,7 +493,5 @@ readImportHashes fname
             | Left err => pure []
          b <- newRef Bin buffer
          catch (do res <- getImportHashes fname b
-                   coreLift $ freeBuffer (buf buffer)
                    pure res)
-               (\err => do coreLift $ freeBuffer (buf buffer)
-                           pure [])
+               (\err => pure [])

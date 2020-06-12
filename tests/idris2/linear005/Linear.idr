@@ -30,9 +30,3 @@ One = Use Once
 public export
 Any : (Type -> Type) -> Type -> Type
 Any = Use Many
-
-infix 2 @@
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (x : a) -> (1 res : r x) -> Res a r

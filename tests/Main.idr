@@ -58,11 +58,12 @@ idrisTests
        "literate001", "literate002", "literate003", "literate004",
        "literate005", "literate006", "literate007", "literate008",
        "literate009", "literate010", "literate011", "literate012",
+       "literate013",
        -- Interfaces
        "interface001", "interface002", "interface003", "interface004",
        "interface005", "interface006", "interface007", "interface008",
        "interface009", "interface010", "interface011", "interface012",
-       "interface013", "interface014", "interface015",
+       "interface013", "interface014", "interface015", "interface016",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002",
        -- Implicit laziness, lazy evaluation
@@ -79,7 +80,7 @@ idrisTests
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003",
+       "pkg001", "pkg002", "pkg003", "pkg004",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -207,7 +208,7 @@ runTest opts testPath
               ]
             Just exp => do
               putStrLn "Golden value differs from actual value."
-              code <- system "git diff --exit-code expected output"
+              code <- system "git diff --no-index --exit-code --word-diff=color expected output"
               when (code < 0) $ printExpectedVsOutput exp out
               putStrLn "Accept actual value as new golden value? [yn]"
           b <- getAnswer

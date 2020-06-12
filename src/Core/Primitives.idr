@@ -62,36 +62,44 @@ castInt [NPrimVal fc (Ch i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Str i)] = Just (NPrimVal fc (I (cast i)))
 castInt _ = Nothing
 
+b8max : Int
+b8max = 0x100
+
+b16max : Int
+b16max = 0x10000
+
+b32max : Int
+b32max = 0x100000000
+
+b64max : Integer
+b64max = 18446744073709551616 -- 0x10000000000000000
+
 castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits8 [NPrimVal fc (BI i)]
-    = let max = prim__shl_Int 1 8 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B8 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B8 (max + fromInteger i `mod` max)))
+    = if i > 0 -- oops, we don't have `rem` yet!
+          then Just (NPrimVal fc (B8 (fromInteger i `mod` b8max)))
+          else Just (NPrimVal fc (B8 (b8max + fromInteger i `mod` b8max)))
 castBits8 _ = Nothing
 
 castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits16 [NPrimVal fc (BI i)]
-    = let max = prim__shl_Int 1 16 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B16 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B16 (max + fromInteger i `mod` max)))
+    = if i > 0 -- oops, we don't have `rem` yet!
+          then Just (NPrimVal fc (B8 (fromInteger i `mod` b16max)))
+          else Just (NPrimVal fc (B8 (b16max + fromInteger i `mod` b16max)))
 castBits16 _ = Nothing
 
 castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits32 [NPrimVal fc (BI i)]
-    = let max = prim__shl_Int 1 32 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B32 (fromInteger i `mod` max)))
-             else Just (NPrimVal fc (B32 (max + fromInteger i `mod` max)))
+    = if i > 0 -- oops, we don't have `rem` yet!
+          then Just (NPrimVal fc (B8 (fromInteger i `mod` b32max)))
+          else Just (NPrimVal fc (B8 (b32max + fromInteger i `mod` b32max)))
 castBits32 _ = Nothing
 
 castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits64 [NPrimVal fc (BI i)]
-    = let max = prim__shl_Integer 1 64 in
-          if i > 0 -- oops, we don't have `rem` yet!
-             then Just (NPrimVal fc (B64 (i `mod` max)))
-             else Just (NPrimVal fc (B64 (max + i `mod` max)))
+    = if i > 0 -- oops, we don't have `rem` yet!
+          then Just (NPrimVal fc (B64 (i `mod` b64max)))
+          else Just (NPrimVal fc (B64 (b64max + i `mod` b64max)))
 castBits64 _ = Nothing
 
 castDouble : Vect 1 (NF vars) -> Maybe (NF vars)
@@ -147,13 +155,14 @@ strSubstr [NPrimVal fc (I start), NPrimVal _ (I len), NPrimVal _ (Str str)]
     = Just (NPrimVal fc (Str (prim__strSubstr start len str)))
 strSubstr _ = Nothing
 
+
 add : Constant -> Constant -> Maybe Constant
 add (BI x) (BI y) = pure $ BI (x + y)
 add (I x) (I y) = pure $ I (x + y)
-add (B8 x) (B8 y) = pure $ B8 $ (x + y)
-add (B16 x) (B16 y) = pure $ B16 $ (x + y) `mod` (prim__shl_Int 1 16)
-add (B32 x) (B32 y) = pure $ B32 $ (x + y) `mod` (prim__shl_Int 1 32)
-add (B64 x) (B64 y) = pure $ B64 $ (x + y) `mod` (prim__shl_Integer 1 64)
+add (B8 x) (B8 y) = pure $ B8 $ (x + y) `mod` b8max
+add (B16 x) (B16 y) = pure $ B16 $ (x + y) `mod` b16max
+add (B32 x) (B32 y) = pure $ B32 $ (x + y) `mod` b32max
+add (B64 x) (B64 y) = pure $ B64 $ (x + y) `mod` b64max
 add (Ch x) (Ch y) = pure $ Ch (cast (cast {to=Int} x + cast y))
 add (Db x) (Db y) = pure $ Db (x + y)
 add _ _ = Nothing
@@ -167,10 +176,10 @@ sub _ _ = Nothing
 
 mul : Constant -> Constant -> Maybe Constant
 mul (BI x) (BI y) = pure $ BI (x * y)
-mul (B8 x) (B8 y) = pure $ B8 $ (x * y) `mod` (prim__shl_Int 1 8)
-mul (B16 x) (B16 y) = pure $ B16 $ (x * y) `mod` (prim__shl_Int 1 16)
-mul (B32 x) (B32 y) = pure $ B32 $ (x * y) `mod` (prim__shl_Int 1 32)
-mul (B64 x) (B64 y) = pure $ B64 $ (x * y) `mod` (prim__shl_Integer 1 64)
+mul (B8 x) (B8 y) = pure $ B8 $ (x * y) `mod` b8max
+mul (B16 x) (B16 y) = pure $ B16 $ (x * y) `mod` b16max
+mul (B32 x) (B32 y) = pure $ B32 $ (x * y) `mod` b32max
+mul (B64 x) (B64 y) = pure $ B64 $ (x * y) `mod` b64max
 mul (I x) (I y) = pure $ I (x * y)
 mul (Db x) (Db y) = pure $ Db (x * y)
 mul _ _ = Nothing
@@ -193,10 +202,10 @@ mod _ _ = Nothing
 shiftl : Constant -> Constant -> Maybe Constant
 shiftl (I x) (I y) = pure $ I (shiftL x y)
 shiftl (BI x) (BI y) = pure $ BI (prim__shl_Integer x y)
-shiftl (B8 x) (B8 y) = pure $ B8 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 8)
-shiftl (B16 x) (B16 y) = pure $ B16 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 16)
-shiftl (B32 x) (B32 y) = pure $ B32 $ (prim__shl_Int x y) `mod` (prim__shl_Int 1 32)
-shiftl (B64 x) (B64 y) = pure $ B64 $ (prim__shl_Integer x y) `mod` (prim__shl_Integer 1 64)
+shiftl (B8 x) (B8 y) = pure $ B8 $ (prim__shl_Int x y) `mod` b8max
+shiftl (B16 x) (B16 y) = pure $ B16 $ (prim__shl_Int x y) `mod` b16max
+shiftl (B32 x) (B32 y) = pure $ B32 $ (prim__shl_Int x y) `mod` b32max
+shiftl (B64 x) (B64 y) = pure $ B64 $ (prim__shl_Integer x y) `mod` b64max
 shiftl _ _ = Nothing
 
 shiftr : Constant -> Constant -> Maybe Constant

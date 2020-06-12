@@ -339,8 +339,6 @@ HasErr Void e => PrimIO e where
                     $ \_ =>
                MkAppRes (Right ())
 
-infix 5 @@
-
 export
 new1 :  t -> (1 p : State tag t e => App1 {u} e a) -> App1 {u} e a
 new1 val prog
@@ -348,10 +346,6 @@ new1 val prog
         let st = MkState ref
             MkApp1 res = prog @{st} in
             res
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (val : a) -> (1 r : t val) -> Res a t
 
 public export
 data FileEx = GenericFileEx Int -- errno

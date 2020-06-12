@@ -466,8 +466,8 @@ multDistributesOverMinusRight left centre right =
 
 -- power proofs
 
-multPowerPowerPlus : (base, exp, exp' : Nat) ->
-  power base (exp + exp') = (power base exp) * (power base exp')
+-- multPowerPowerPlus : (base, exp, exp' : Nat) ->
+--   power base (exp + exp') = (power base exp) * (power base exp')
 -- multPowerPowerPlus base Z       exp' =
 --     rewrite sym $ plusZeroRightNeutral (power base exp') in Refl
 -- multPowerPowerPlus base (S exp) exp' =
@@ -475,21 +475,21 @@ multPowerPowerPlus : (base, exp, exp' : Nat) ->
 --     rewrite sym $ multAssociative base (power base exp) (power base exp') in
 --       Refl
 
-powerOneNeutral : (base : Nat) -> power base 1 = base
-powerOneNeutral base = rewrite multCommutative base 1 in multOneLeftNeutral base
-
-powerOneSuccOne : (exp : Nat) -> power 1 exp = 1
-powerOneSuccOne Z       = Refl
-powerOneSuccOne (S exp) = rewrite powerOneSuccOne exp in Refl
-
-powerPowerMultPower : (base, exp, exp' : Nat) ->
-  power (power base exp) exp' = power base (exp * exp')
-powerPowerMultPower _ exp Z = rewrite multZeroRightZero exp in Refl
-powerPowerMultPower base exp (S exp') =
-  rewrite powerPowerMultPower base exp exp' in
-  rewrite multRightSuccPlus exp exp' in
-  rewrite sym $ multPowerPowerPlus base exp (exp * exp') in
-          Refl
+--powerOneNeutral : (base : Nat) -> power base 1 = base
+--powerOneNeutral base = rewrite multCommutative base 1 in multOneLeftNeutral base
+--
+--powerOneSuccOne : (exp : Nat) -> power 1 exp = 1
+--powerOneSuccOne Z       = Refl
+--powerOneSuccOne (S exp) = rewrite powerOneSuccOne exp in Refl
+--
+--powerPowerMultPower : (base, exp, exp' : Nat) ->
+--  power (power base exp) exp' = power base (exp * exp')
+--powerPowerMultPower _ exp Z = rewrite multZeroRightZero exp in Refl
+--powerPowerMultPower base exp (S exp') =
+--  rewrite powerPowerMultPower base exp exp' in
+--  rewrite multRightSuccPlus exp exp' in
+--  rewrite sym $ multPowerPowerPlus base exp (exp * exp') in
+--          Refl
 
 -- minimum / maximum proofs
 
@@ -506,7 +506,7 @@ maximumCommutative Z (S _) = Refl
 maximumCommutative (S _) Z = Refl
 maximumCommutative (S k) (S j) = rewrite maximumCommutative k j in Refl
 
-maximumIdempotent : (n : Nat) -> maximum n n = n
+-- maximumIdempotent : (n : Nat) -> maximum n n = n
 -- maximumIdempotent Z = Refl
 -- maximumIdempotent (S k) = cong $ maximumIdempotent k
 
@@ -523,7 +523,7 @@ minimumCommutative Z (S _) = Refl
 minimumCommutative (S _) Z = Refl
 minimumCommutative (S k) (S j) = rewrite minimumCommutative k j in Refl
 
-minimumIdempotent : (n : Nat) -> minimum n n = n
+-- minimumIdempotent : (n : Nat) -> minimum n n = n
 -- minimumIdempotent Z = Refl
 -- minimumIdempotent (S k) = cong (minimumIdempotent k)
 
@@ -541,18 +541,18 @@ maximumSuccSucc : (left, right : Nat) ->
   S (maximum left right) = maximum (S left) (S right)
 maximumSuccSucc _ _ = Refl
 
-sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
+-- sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
 -- sucMaxL Z = Refl
 -- sucMaxL (S l) = cong $ sucMaxL l
 
-sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
+-- sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
 -- sucMaxR Z = Refl
 -- sucMaxR (S l) = cong $ sucMaxR l
 
-sucMinL : (l : Nat) -> minimum (S l) l = l
+-- sucMinL : (l : Nat) -> minimum (S l) l = l
 -- sucMinL Z = Refl
 -- sucMinL (S l) = cong $ sucMinL l
 
-sucMinR : (l : Nat) -> minimum l (S l) = l
+-- sucMinR : (l : Nat) -> minimum l (S l) = l
 -- sucMinR Z = Refl
 -- sucMinR (S l) = cong $ sucMinR l

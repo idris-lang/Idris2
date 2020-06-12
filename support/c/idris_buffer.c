@@ -16,7 +16,7 @@ void* idris2_newBuffer(int bytes) {
     }
 
     buf->size = bytes;
-    memset(buf->data, 0, bytes);
+//    memset(buf->data, 0, bytes);
 
     return (void*)buf;
 }
@@ -124,64 +124,10 @@ char* idris2_getBufferString(void* buffer, int loc, int len) {
     return rs;
 }
 
-void* idris2_readBufferFromFile(char* fn) {
-    FILE* f = fopen(fn, "r");
-    if (f == NULL) { return NULL; }
-
-    int fd = fileno(f);
-    int len;
-
-    struct stat fbuf;
-    if (fstat(fd, &fbuf) == 0) {
-        len = (int)(fbuf.st_size);
-    } else {
-        return NULL;
-    }
-
-    size_t size = sizeof(Buffer) + len*sizeof(uint8_t);
-    Buffer* buf = malloc(size);
-    buf->size = len;
-
-    fread((buf->data), sizeof(uint8_t), (size_t)len, f);
-    fclose(f);
-    return buf;
+int idris2_readBufferData(FILE* h, char* buffer, int loc, int max) {
+    return fread(buffer+loc, sizeof(uint8_t), (size_t)max, h);
 }
 
-int idris2_writeBufferToFile(char* fn, void* buffer, int max) {
-    Buffer* b = buffer;
-    FILE* f = fopen(fn, "w");
-    if (f == NULL) { return 0; }
-
-    fwrite((b->data), sizeof(uint8_t), max, f);
-    fclose(f);
-    return -1;
+int idris2_writeBufferData(FILE* h, char* buffer, int loc, int len) {
+    return fwrite(buffer+loc, sizeof(uint8_t), len, h);
 }
-
-// To be added when the file API has moved to the C support libs
-/*
-int idris2_readBuffer(FILE* h, void* buffer, int loc, int max) {
-    Buffer* b = buffer;
-    size_t len;
-
-    if (loc >= 0 && loc < b->size) {
-        if (loc + max > b->size) {
-            max = b->size - loc;
-        }
-        len = fread((b->data)+loc, sizeof(uint8_t), (size_t)max, h);
-        return len;
-    } else {
-        return 0;
-    }
-}
-
-void idris2_writeBuffer(FILE* h, void* buffer, int loc, int len) {
-    Buffer* b = buffer;
-
-    if (loc >= 0 && loc < b->size) {
-        if (loc + len > b->size) {
-            len = b->size - loc;
-        }
-        fwrite((b->data)+loc, sizeof(uint8_t), len, h);
-    }
-}
-*/

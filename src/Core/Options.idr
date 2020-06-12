@@ -52,6 +52,12 @@ Eq CG where
   _ == _ = False
 
 export
+Show CG where
+  show Chez = "chez"
+  show Racket = "racket"
+  show Gambit = "gambit"
+
+export
 availableCGs : List (String, CG)
 availableCGs
     = [("chez", Chez),
@@ -141,13 +147,14 @@ record Options where
   extensions : List LangExt
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" 
+defaultDirs = MkDirs "." Nothing "build"
                      ("build" </> "exec")
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter
 defaultPPrint = MkPPOpts False True False
 
+export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez 0 False False
                                Nothing Nothing Nothing Nothing

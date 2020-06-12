@@ -29,10 +29,20 @@ checkLocal : {vars : _} ->
              FC -> List ImpDecl -> (scope : RawImp) ->
              (expTy : Maybe (Glued vars)) ->
              Core (Term vars, Glued vars)
-checkLocal {vars} rig elabinfo nest env fc nestdecls scope expty
-    = do let defNames = definedInBlock [] nestdecls
-         est <- get EST
+checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
+    = do est <- get EST
          let f = defining est
+         defs <- get Ctxt
+         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
+                        Just gdef => visibility gdef
+                        Nothing => Public
+         -- If the parent function is public, the nested definitions need
+         -- to be public too
+         let nestdecls =
+               if vis == Public
+                  then map setPublic nestdecls_in
+                  else nestdecls_in
+         let defNames = definedInBlock [] nestdecls
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
@@ -100,6 +110,16 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls scope expty
     updateName nest (IData loc' vis d)
          = IData loc' vis (updateDataName nest d)
     updateName nest i = i
+
+    setPublic : ImpDecl -> ImpDecl
+    setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
+    setPublic (IData fc _ d) = IData fc Public d
+    setPublic (IRecord fc c _ r) = IRecord fc c Public r
+    setPublic (IParameters fc ps decls)
+        = IParameters fc ps (map setPublic decls)
+    setPublic (INamespace fc ps decls)
+        = INamespace fc ps (map setPublic decls)
+    setPublic d = d
 
 getLocalTerm : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
