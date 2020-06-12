@@ -731,14 +731,14 @@ TTC CDef where
 export
 TTC CG where
   toBuf b Chez = tag 0
-  toBuf b Racket = tag 1
-  toBuf b Gambit = tag 2
+  toBuf b Racket = tag 2
+  toBuf b Gambit = tag 3
 
   fromBuf b
       = case !getTag of
              0 => pure Chez
-             1 => pure Racket
-             2 => pure Gambit
+             2 => pure Racket
+             3 => pure Gambit
              _ => corrupt "CG"
 
 export
