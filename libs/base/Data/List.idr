@@ -33,6 +33,41 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (x::xs) = drop n xs
 
+||| Satisfiable if `k` is a valid index into `xs`
+|||
+||| @ k the potential index
+||| @ xs the list into which k may be an index
+public export
+data InBounds : (k : Nat) -> (xs : List a) -> Type where
+    ||| Z is a valid index into any cons cell
+    InFirst : InBounds Z (x :: xs)
+    ||| Valid indices can be extended
+    InLater : InBounds k xs -> InBounds (S k) (x :: xs)
+
+export
+Uninhabited (InBounds k []) where
+    uninhabited InFirst impossible
+    uninhabited (InLater _) impossible
+
+||| Decide whether `k` is a valid index into `xs`
+export
+inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
+inBounds k [] = No uninhabited
+inBounds Z (x :: xs) = Yes InFirst
+inBounds (S k) (x :: xs) with (inBounds k xs)
+  inBounds (S k) (x :: xs) | (Yes prf) = Yes (InLater prf)
+  inBounds (S k) (x :: xs) | (No contra)
+      = No (\p => case p of
+                       InLater y => contra y)
+
+||| Find a particular element of a list.
+|||
+||| @ ok a proof that the index is within bounds
+export
+index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index Z (x :: xs) {ok = InFirst} = x
+index (S k) (x :: xs) {ok = (InLater p)} = index k xs
+
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
 ||| @ x the initial value that will be the head of the list
@@ -595,7 +630,7 @@ revOnto xs [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
         rewrite appendAssociative (reverse vs) [v] xs in
-				  rewrite revOnto [v] vs in Refl
+                                  rewrite revOnto [v] vs in Refl
 
 export
 revAppend : (vs, ns : List a) -> reverse ns ++ reverse vs = reverse (vs ++ ns)
