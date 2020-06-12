@@ -1,16 +1,7 @@
 module Data.IOArray
 
+import Data.IOArray.Prims
 import Data.List
-
--- Implemented externally
-data ArrayData : Type -> Type where
-
--- 'unsafe' primitive access, backend dependent
--- get and set assume that the bounds have been checked. Behavious is undefined
--- otherwise.
-%extern prim__newArray : forall a . Int -> a -> PrimIO (ArrayData a)
-%extern prim__arrayGet : forall a . ArrayData a -> Int -> PrimIO a
-%extern prim__arraySet : forall a . ArrayData a -> Int -> a -> PrimIO ()
 
 export
 record IOArray elem where

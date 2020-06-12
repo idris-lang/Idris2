@@ -201,17 +201,17 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
                              (record { preciseInf = True } elabinfo)
                              nest env nVal (Just (gnf env tyv))
                   pure (fst c, snd c, rigl |*| rigc))
-              (\err => case err of
-                            (LinearMisuse _ _ r _)
-                              => branchOne
-                                   (do c <- runDelays 0 $ check linear elabinfo
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, linear))
-                                   (do c <- check (rigl |*| rigc)
-                                                elabinfo -- without preciseInf
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, rigMult rigl rigc))
-                                   r
+              (\err => case linearErr err of
+                            Just r
+                              => do branchOne
+                                     (do c <- runDelays 0 $ check linear elabinfo
+                                                  nest env nVal (Just (gnf env tyv))
+                                         pure (fst c, snd c, linear))
+                                     (do c <- check (rigl |*| rigc)
+                                                  elabinfo -- without preciseInf
+                                                  nest env nVal (Just (gnf env tyv))
+                                         pure (fst c, snd c, rigMult rigl rigc))
+                                     r
                             _ => do c <- check (rigl |*| rigc)
                                                elabinfo -- without preciseInf
                                                nest env nVal (Just (gnf env tyv))
@@ -229,3 +229,11 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          -- build the term directly
          pure (Bind fc n (Let rigb valv tyv) scopev,
                gnf env (Bind fc n (Let rigb valv tyv) scopet))
+  where
+    linearErr : Error -> Maybe RigCount
+    linearErr (LinearMisuse _ _ r _) = Just r
+    linearErr (InType _ _ e) = linearErr e
+    linearErr (InCon _ _ e) = linearErr e
+    linearErr (InLHS _ _ e) = linearErr e
+    linearErr (InRHS _ _ e) = linearErr e
+    linearErr _ = Nothing
