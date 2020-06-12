@@ -1,0 +1,2 @@
+$1 --cg node --no-banner array.idr < input
+rm -rf build

@@ -20,14 +20,14 @@ addConstToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addConstToPreamble name def =
   do
     s <- get ESs
+    let v = "const " ++ esName name ++ " = (" ++ def ++ ")"
     case lookup name (preamble s) of
       Nothing =>
         do
-          let v = "const " ++ esName name ++ " = (" ++ def ++ ")"
           put ESs (record { preamble = insert name v (preamble s) } s)
           pure $ esName name
       Just x =>
-        if x /= def then throw $ InternalError $ "two incompatible definitions for " ++ name
+        if x /= v then throw $ InternalError $ "two incompatible definitions for " ++ name ++ "<|" ++ x ++"|> <|"++ v ++ "|>"
                     else pure $ esName name
 
 
@@ -104,7 +104,7 @@ boundedIntOp bits o lhs rhs = boundedInt 63 (binOp o lhs rhs)
 
 
 boolOp : String -> String -> String -> String
-boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? 1 : 0)"
+boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? BigInt(1) : BigInt(0))"
 
 jsConstant : {auto c : Ref ESs ESSt} -> Constant -> Core String
 jsConstant (I i) = pure $ toBigInt $ show i

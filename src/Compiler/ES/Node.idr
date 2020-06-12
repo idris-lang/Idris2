@@ -30,7 +30,8 @@ compileExpr : Ref Ctxt Defs -> (execDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c execDir tm outfile
     = do es <- compileToNode c tm
-         coreLift (writeFile outfile es)
+         Right () <- coreLift (writeFile outfile es)
+            | Left err => throw (FileErr outfile err)
          pure (Just outfile)
 
 ||| Node implementation of the `executeExpr` interface.

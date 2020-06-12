@@ -1,0 +1,3 @@
+POPEN_CMD="$1 --version" $1 --cg node --no-banner Popen.idr < input
+
+rm -rf build

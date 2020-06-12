@@ -9,6 +9,10 @@ import Compiler.CompileExpr
 import public Core.Context
 import public Core.TT
 
+import Compiler.ES.RemoveUnused
+
+import Debug.Trace
+
 mutual
   public export
   data ImperativeExp = IEVar Name
@@ -272,6 +276,6 @@ compileToImperative c tm =
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
     s <- newRef Imps (MkImpSt 0)
-    compdefs <- traverse getImp ndefs
+    compdefs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     (s, main) <- impExp ctm
     pure $ concat compdefs <+> s <+> EvalExpStatement main
