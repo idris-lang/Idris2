@@ -18,9 +18,6 @@ void idris2_setBufferString(void* buffer, int loc, char* str);
 void idris2_copyBuffer(void* from, int start, int len,
                        void* to, int loc);
 
-void* idris2_readBufferFromFile(char* fn);
-int idris2_writeBufferToFile(char* fn, void* buffer, int max);
-
 // Reading and writing the raw data, to the pointer in the buffer
 int idris2_readBufferData(FILE* h, char* buffer, int loc, int max);
 int idris2_writeBufferData(FILE* h, char* buffer, int loc, int len);
