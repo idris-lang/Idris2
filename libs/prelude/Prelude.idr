@@ -1139,13 +1139,13 @@ fastPack xs
 ||| ```
 public export
 unpack : String -> List Char
-unpack str = unpack' 0 (prim__cast_IntegerInt (natToInteger (length str))) str
+unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str []
   where
-    unpack' : Int -> Int -> String -> List Char
-    unpack' pos len str
-        = if pos >= len
-             then []
-             else assert_total (prim__strIndex str pos) :: assert_total (unpack' (pos + 1) len str)
+    unpack' : Int -> String -> List Char -> List Char
+    unpack' pos str acc
+        = if pos < 0
+             then acc
+             else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
 
 public export
 Semigroup String where
