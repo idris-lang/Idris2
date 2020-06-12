@@ -192,7 +192,7 @@ mutual
 
   mightMatch : {vars : _} ->
                Defs -> NF vars -> NF [] -> Core TypeMatch
-  mightMatch defs target (NBind fc n (Pi _ _ _) sc)
+  mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
@@ -420,4 +420,3 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   solveConstraints solvemode Normal
                                   log 10 $ show (getName t) ++ " success"
                                   pure res)) alts')
-

@@ -385,22 +385,22 @@ searchType : {vars : _} ->
              FC -> RigCount -> SearchOpts -> Env Term vars -> Maybe RecData ->
              ClosedTerm ->
              Nat -> Term vars -> Core (List (Term vars))
-searchType fc rig opts env defining topty (S k) (Bind bfc n (Pi c info ty) sc)
-    = do let env' : Env Term (n :: _) = Pi c info ty :: env
+searchType fc rig opts env defining topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
+    = do let env' : Env Term (n :: _) = b :: env
          log 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts env' defining topty k sc
-         pure (map (Bind bfc n (Lam c info ty)) scVal)
-searchType {vars} fc rig opts env defining topty Z (Bind bfc n (Pi c info ty) sc)
+         pure (map (Bind bfc n (Lam fc' c info ty)) scVal)
+searchType {vars} fc rig opts env defining topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
     = -- try a local before creating a lambda...
       getSuccessful fc rig opts False env ty topty defining
-           [searchLocal fc rig opts env (Bind bfc n (Pi c info ty) sc) topty defining,
+           [searchLocal fc rig opts env (Bind bfc n b sc) topty defining,
             (do defs <- get Ctxt
                 let n' = UN !(getArgName defs n vars !(nf defs env ty))
-                let env' : Env Term (n' :: _) = Pi c info ty :: env
+                let env' : Env Term (n' :: _) = b :: env
                 let sc' = renameTop n' sc
                 log 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts env' defining topty Z sc'
-                pure (map (Bind bfc n' (Lam c info ty)) scVal))]
+                pure (map (Bind bfc n' (Lam fc' c info ty)) scVal))]
 searchType fc rig opts env defining topty _ ty
     = case getFnArgs ty of
            (Ref rfc (TyCon t ar) n, args) =>
@@ -471,8 +471,8 @@ getLHSData defs Nothing = pure Nothing
 getLHSData defs (Just tm) = pure $ getLHS !(normaliseHoles defs [] tm)
   where
     getLHS : Term vars -> Maybe RecData
-    getLHS (Bind _ _ (PVar _ _ _) sc) = getLHS sc
-    getLHS (Bind _ _ (PLet _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PLet _ _ _ _) sc) = getLHS sc
     getLHS sc
         = case getFn sc of
                Ref _ _ n => Just (MkRecData n sc)
@@ -512,4 +512,3 @@ exprSearch fc n_in hints
                Nothing => case !(lookupCtxtName n (gamma defs)) of
                                [res] => pure $ Just res
                                _ => pure Nothing
-

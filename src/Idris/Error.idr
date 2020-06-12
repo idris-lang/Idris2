@@ -17,14 +17,23 @@ import System.File
 
 %default covering
 
+-- | Add binding site information if the term is simply a machine-inserted name
+pShowMN : {vars : _} -> Term vars -> Env t vars -> String -> String
+pShowMN t env acc = case t of
+  Local fc _ idx p => case dropAllNS (nameAt idx p) of
+      MN _ _ => acc ++ " (implicitly bound at " ++ show (getBinderLoc p env) ++ ")"
+      _ => acc
+  _ => acc
+
 pshow : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         Env Term vars -> Term vars -> Core String
 pshow env tm
     = do defs <- get Ctxt
-         itm <- resugar env !(normaliseHoles defs env tm)
-         pure (show itm)
+         ntm <- normaliseHoles defs env tm
+         itm <- resugar env ntm
+         pure (pShowMN ntm env $ show itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -33,7 +42,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (show itm)
+         pure (pShowMN tm env $ show itm)
 
 export
 perror : {auto c : Ref Ctxt Defs} ->
@@ -178,8 +187,8 @@ perror (CantSolveGoal _ env g)
     dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropEnv env (Bind _ n b@(Pi _ _ _) sc) = dropEnv (b :: env) sc
-    dropEnv env (Bind _ n b@(Let _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (b :: env) sc
     dropEnv env tm = (_ ** (env, tm))
 
 perror (DeterminingArg _ n i env g)

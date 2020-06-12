@@ -50,7 +50,7 @@ findFields defs con
            _ => pure Nothing
   where
     getExpNames : NF [] -> Core (List (String, Maybe Name))
-    getExpNames (NBind fc x (Pi _ p ty) sc)
+    getExpNames (NBind fc x (Pi _ _ p ty) sc)
         = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc False)))
              case p of
                   Explicit => pure $ (nameRoot x, getRecordType [] ty) :: rest

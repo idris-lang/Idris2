@@ -85,17 +85,17 @@ Hashable t => Hashable (PiInfo t) where
 
 export
 Hashable ty => Hashable (Binder ty) where
-  hashWithSalt h (Lam c p ty)
+  hashWithSalt h (Lam _ c p ty)
       = h `hashWithSalt` 0 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (Let c val ty)
+  hashWithSalt h (Let _ c val ty)
       = h `hashWithSalt` 1 `hashWithSalt` c `hashWithSalt` val `hashWithSalt` ty
-  hashWithSalt h (Pi c p ty)
+  hashWithSalt h (Pi _ c p ty)
       = h `hashWithSalt` 2 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (PVar c p ty)
+  hashWithSalt h (PVar _ c p ty)
       = h `hashWithSalt` 3 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (PLet c val ty)
+  hashWithSalt h (PLet _ c val ty)
       = h `hashWithSalt` 4 `hashWithSalt` c `hashWithSalt` val `hashWithSalt` ty
-  hashWithSalt h (PVTy c ty)
+  hashWithSalt h (PVTy _ c ty)
       = h `hashWithSalt` 5 `hashWithSalt` c `hashWithSalt` ty
 
 Hashable (Var vars) where
@@ -171,5 +171,3 @@ mutual
         = h `hashWithSalt` 3 `hashWithSalt` (show x) `hashWithSalt` y
     hashWithSalt h (DefaultCase x)
         = h `hashWithSalt` 4 `hashWithSalt` x
-
-

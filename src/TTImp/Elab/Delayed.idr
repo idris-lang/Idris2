@@ -37,8 +37,8 @@ mkClosedElab {vars = x :: vars} fc (b :: env) elab
     -- everything except 'Let', so make the appropriate corresponding binder
     -- here
     newBinder : Binder (Term vars) -> Binder (Term vars)
-    newBinder (Let c val ty) = Let c val ty
-    newBinder b = Lam (multiplicity b) Explicit (binderType b)
+    newBinder b@(Let _ _ _ _) = b
+    newBinder b = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
 
 deeper : {auto e : Ref EST (EState vars)} ->
          Core a -> Core a

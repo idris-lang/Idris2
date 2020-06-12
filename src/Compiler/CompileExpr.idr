@@ -240,14 +240,14 @@ mutual
            pure $ CApp fc (CRef fc full) []
   toCExpTm n (Meta fc mn i args)
       = pure $ CApp fc (CRef fc mn) !(traverse (toCExp n) args)
-  toCExpTm n (Bind fc x (Lam _ _ _) sc)
+  toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
       = pure $ CLam fc x !(toCExp n sc)
-  toCExpTm n (Bind fc x (Let rig val _) sc)
+  toCExpTm n (Bind fc x (Let _ rig val _) sc)
       = do sc' <- toCExp n sc
            pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
                           (CLet fc x True !(toCExp n val) sc')
                           rig
-  toCExpTm n (Bind fc x (Pi c e ty) sc)
+  toCExpTm n (Bind fc x (Pi _ c e ty) sc)
       = pure $ CCon fc (UN "->") Nothing [!(toCExp n ty),
                                     CLam fc x !(toCExp n sc)]
   toCExpTm n (Bind fc x b tm) = pure $ CErased fc
@@ -361,7 +361,7 @@ mutual
 -- works in a nice principled way.
 --                      if noworld -- just substitute the scrutinee into
 --                                 -- the RHS
---                         then 
+--                         then
                              let env : SubstCEnv args vars
                                      = mkSubst 0 scr pos args in
                                  pure $ Just (substs env !(toCExpTree n sc))
@@ -516,7 +516,7 @@ nfToCFType fc True (NPrimVal _ StringType)
 nfToCFType _ _ (NPrimVal _ DoubleType) = pure CFDouble
 nfToCFType _ _ (NPrimVal _ CharType) = pure CFChar
 nfToCFType _ _ (NPrimVal _ WorldType) = pure CFWorld
-nfToCFType _ False (NBind fc _ (Pi _ _ ty) sc)
+nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          sty <- nfToCFType fc False ty
          sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -561,7 +561,7 @@ nfToCFType fc s t
 getCFTypes : {auto c : Ref Ctxt Defs} ->
              List CFType -> NF [] ->
              Core (List CFType, CFType)
-getCFTypes args (NBind fc _ (Pi _ _ ty) sc)
+getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do aty <- nfToCFType fc False ty
          defs <- get Ctxt
          sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
