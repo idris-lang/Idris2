@@ -22,11 +22,6 @@
 > Any : (Type -> Type) -> Type -> Type
 > Any = Use Many
 
-> infix 2 @@
-
-> data Res : (a : Type) -> (a -> Type) -> Type where
->      (@@) : (x : a) -> (1 res : r x) -> Res a r
-
 > data DoorState = Closed | Open
 
 > data Door : DoorState -> Type where
@@ -57,7 +52,7 @@
 >          r <- openDoor d
 >          let x = 42
 >          case r of
->               (res @@ d) => ?now_1
+>               (res # d) => ?now_1
 
 > doorProg3 : Any m ()
 > doorProg3
@@ -65,5 +60,5 @@
 >          r <- openDoor d
 >          let x = 42
 >          case r of
->               (True @@ d) => ?now_2
->               (False @@ d) => ?now_3
+>               (True # d) => ?now_2
+>               (False # d) => ?now_3

@@ -23,10 +23,10 @@ Has [Console] e => StoreI e where
 
   login (MkStore str) pwd
       = if pwd == "Mornington Crescent"
-           then pure1 (True @@ MkStore str)
-           else pure1 (False @@ MkStore str)
+           then pure1 (True # MkStore str)
+           else pure1 (False # MkStore str)
   logout (MkStore str) = pure1 (MkStore str)
-  readSecret (MkStore str) = pure1 (str @@ MkStore str)
+  readSecret (MkStore str) = pure1 (str # MkStore str)
 
   disconnect (MkStore _)
       = putStrLn "Door destroyed"
@@ -38,11 +38,11 @@ storeProg
          s <- connect
          app $ putStr "Password: "
          pwd <- app $ getStr
-         True @@ s <- login s pwd
-              | False @@ s => do app $ putStrLn "Login failed"
-                                 app $ disconnect s
+         True # s <- login s pwd
+              | False # s => do app $ putStrLn "Login failed"
+                                app $ disconnect s
          app $ putStrLn "Logged in"
-         secret @@ s <- readSecret s
+         secret # s <- readSecret s
          app $ putStrLn ("Secret: " ++ secret)
          s <- logout s 
          app $ putStrLn "Logged out"

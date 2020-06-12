@@ -18,14 +18,14 @@ testClient chan
          lift $ putStrLn "Sending value"
          chan <- send chan False
          lift $ putStrLn "Sent"
-         c @@ chan <- recv chan
+         c # chan <- recv chan
          lift $ putStrLn ("Result: " ++ c)
          close chan
 
 testServer : (1 chan : Server TestProto) -> Any IO ()
 testServer chan
     = do lift $ putStrLn "Waiting"
-         cmd @@ chan <- recv chan
+         cmd # chan <- recv chan
          lift $ putStrLn ("Received " ++ show cmd)
          lift $ sleep 1
          lift $ putStrLn "Sending answer"
