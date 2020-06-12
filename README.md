@@ -34,6 +34,7 @@ exceptions. The most notable user visible differences, which might cause Idris
   (such as data constructors), or which have different concrete argument
   types (such as record projections). It may struggle to resolve ambiguities
   if one name requires an interface to be resolved.
++ The `cong` function now takes its congruence explicitly as its first argument.
 + Minor differences in the meaning of export modifiers `private`, `export`,
   and `public export`, which now refer to visibility of names from other
   *namespaces* rather than visibility from other *files*.
