@@ -25,6 +25,7 @@ interface Has [Exception IOError] e => FileIO e where
   fGetChar : File -> App e Char
   fPutStr : File -> String -> App e ()
   fPutStrLn : File -> String -> App e ()
+  fflush : File -> App e ()
   fEOF : File -> App e Bool
 
 -- TODO : Add Binary File IO with buffers
@@ -68,6 +69,8 @@ Has [PrimIO, Exception IOError] e => FileIO e where
   fPutStr f str = fileOp (fPutStr f str)
 
   fPutStrLn f str = fileOp (File.fPutStrLn f str)
+
+  fflush f = primIO $ fflush f
 
   fEOF f = primIO $ fEOF f
 
