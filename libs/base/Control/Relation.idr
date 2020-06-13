@@ -5,8 +5,8 @@ module Control.Relation
 
 public export
 interface Reflexive ty rel where
-  reflexive : (x : ty) -> rel x x
+  reflexive : {x : ty} -> rel x x
 
 public export
 interface Transitive ty rel where
-  transitive : (x, y, z : ty) -> rel x y -> rel y z -> rel x z
+  transitive : {x, y, z : ty} -> rel x y -> rel y z -> rel x z

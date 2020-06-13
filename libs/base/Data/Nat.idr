@@ -84,14 +84,13 @@ Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
 
 public export
 Reflexive Nat LTE where
-  reflexive Z = LTEZero
-  reflexive (S k) = LTESucc $ reflexive k
+  reflexive {x = Z} = LTEZero
+  reflexive {x = S k} = LTESucc $ reflexive {x = k}
 
 public export
 Transitive Nat LTE where
-  transitive Z _ _ LTEZero _ = LTEZero
-  transitive (S x) (S y) (S z) (LTESucc xy) (LTESucc yz) =
-    LTESucc $ transitive x y z xy yz
+  transitive LTEZero _ = LTEZero
+  transitive (LTESucc xy) (LTESucc yz) = LTESucc $ transitive {rel = LTE} xy yz
 
 public export
 GTE : Nat -> Nat -> Type
@@ -451,7 +450,7 @@ export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
 plusLteMonotone left right =
-  transitive (m + p) (m + q) (n + q)
+  transitive {rel=LTE}
     (plusLteMonotoneLeft m p q right)
     (plusLteMonotoneRight q m n left)
 

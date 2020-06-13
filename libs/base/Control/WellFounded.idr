@@ -59,7 +59,7 @@ sizeAccessible x = Access (acc $ size x)
   where
     acc : (sizeX : Nat) -> (y : a) -> (size y `LT` sizeX) -> SizeAccessible y
     acc (S x') y (LTESucc yLEx')
-        = Access (\z, zLTy => acc x' z (transitive (S (size z)) (size y) x' zLTy yLEx'))
+        = Access (\z, zLTy => acc x' z (transitive {x = (S (size z))} {y = (size y)} {z = x'} zLTy yLEx'))
 
 export
 sizeInd : Sized a => {0 P : a -> Type} ->
