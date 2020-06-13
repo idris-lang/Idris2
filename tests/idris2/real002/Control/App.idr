@@ -339,12 +339,6 @@ HasErr Void e => PrimIO e where
                     $ \_ =>
                MkAppRes (Right ())
 
-infix 5 @@
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (val : a) -> (1 r : t val) -> Res a t
-
 public export
 data FileEx = GenericFileEx Int -- errno
             | FileReadError

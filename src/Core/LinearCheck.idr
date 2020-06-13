@@ -247,7 +247,13 @@ mutual
       unusedHoleArgs _ ty = ty
 
   lcheck rig_in erase env (Bind fc nm b sc)
-      = do (b', bt, usedb) <- lcheckBinder rig erase env b
+      = do (b', bt, usedb) <- handleUnify (lcheckBinder rig erase env b)
+                                 (\err =>
+                                     case err of
+                                          LinearMisuse _ _ r _ =>
+                                             lcheckBinder rig erase env
+                                                (setMultiplicity b linear)
+                                          _ => throw err)
            -- Anything linear can't be used in the scope of a lambda, if we're
            -- checking in general context
            let env' = if rig_in == top

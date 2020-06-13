@@ -1,0 +1,6 @@
+:t undefined
+:t something
+something
+:t Proxy
+Proxy
+:t Proxy String
