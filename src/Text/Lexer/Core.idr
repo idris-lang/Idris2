@@ -142,7 +142,6 @@ record TokenData a where
 export
 Show a => Show (TokenData a) where
   show t = show (line t) ++ ":" ++ show (col t) ++ ":" ++ show (tok t)
-  -- TODO: Fix show
 
 tokenise : (TokenData a -> Bool) ->
            (line : Int) -> (col : Int) ->
