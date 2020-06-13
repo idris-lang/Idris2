@@ -56,6 +56,7 @@ Show CG where
   show Chez = "chez"
   show Racket = "racket"
   show Gambit = "gambit"
+  show Node = "node"
 
 export
 availableCGs : List (String, CG)

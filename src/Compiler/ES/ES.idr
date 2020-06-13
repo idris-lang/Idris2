@@ -176,9 +176,6 @@ jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> 
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 
-jsPrim : Name -> List String -> Core String
-jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
-
 searchForeign : List String -> List String -> Maybe String
 searchForeign prefixes [] = Nothing
 searchForeign prefixes (x::xs) =
@@ -200,6 +197,12 @@ foreignDecl n ccs =
   case searchForeign ["node", "javascript"] ccs of
     Just x => makeForeign n x
     Nothing => throw (InternalError $ "No node or javascript definition found for " ++ show n ++ " in " ++ show ccs)
+
+jsPrim : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
+jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ "({value: "++ v ++"})"
+jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ "(" ++ r ++ ".value)"
+jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ "(" ++ r ++ ".value=" ++ v ++ ")"
+jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
 
 mutual
   impExp2es : {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
@@ -267,6 +270,7 @@ mutual
   alt2es : {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
                                 !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break;\n"
+
 export
 compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String
 compileToES c tm =

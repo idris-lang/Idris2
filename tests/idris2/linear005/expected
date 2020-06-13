@@ -1,7 +1,5 @@
 1/2: Building Linear (Linear.idr)
 2/2: Building Door (Door.idr)
-Door.idr:12:44--12:94:While processing type of openDoor at Door.idr:12:1--13:1:
-Undefined name Res
 Door>  0 m : Type -> Type
  1 d : Door Closed
 -------------------------------------
