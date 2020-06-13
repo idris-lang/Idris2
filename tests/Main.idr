@@ -139,7 +139,7 @@ nodeTests
 
 ideModeTests : List String
 ideModeTests
-  =  [ "ideMode001", "ideMode002", "ideMode003" ]
+  =  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004" ]
 
 ------------------------------------------------------------------------
 -- Options

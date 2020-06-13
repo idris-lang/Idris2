@@ -69,13 +69,23 @@ intLit
                            IntegerLit i => Just i
                            _ => Nothing)
 
+||| Raw string literal without escape sequence support
 export
-strLit : Rule String
-strLit
-    = terminal "Expected string literal"
+rawStrLit : Rule String
+rawStrLit
+    = terminal "Expected string literal without escape sequences"
                (\x => case tok x of
                            StringLit s => Just s
                            _ => Nothing)
+
+||| String literal with escape sequence support
+export
+strLit : Rule String
+strLit
+   = terminal "Expected string literal"
+              (\x => case tok x of
+                          StringLit s => escape s
+                          _ => Nothing)
 
 export
 dotIdent : Rule Name

@@ -1,0 +1,3 @@
+000018(:protocol-version 2 0)
+000025(:return (:ok "\"Hey there\"" ()) 1)
+Alas the file is done, aborting

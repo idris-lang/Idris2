@@ -1206,7 +1206,7 @@ transformDecl : FileName -> IndentInfo -> Rule PDecl
 transformDecl fname indents
     = do start <- location
          pragma "transform"
-         n <- strLit
+         n <- rawStrLit
          lhs <- expr plhs fname indents
          symbol "="
          rhs <- expr pnowith fname indents
