@@ -2,6 +2,7 @@ module Debug.Buffer
 
 import Data.Buffer
 import Data.List
+import Data.String.Extra
 
 toHex : Int -> Int -> String
 toHex d n = pack $ reverse $ foldl toHexDigit [] (slice d n [])
@@ -12,14 +13,15 @@ toHex d n = pack $ reverse $ foldl toHexDigit [] (slice d n [])
         slice 0 _ acc = acc
         slice d n acc = slice (d-1) (n `div` 16) ((n `mod` 16)::acc)
 
-showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+showSep : String -> Nat -> List String -> String
+showSep sep _ [] = ""
+showSep sep n [x] = x ++ replicate (3*n) ' '
+showSep sep Z (x :: xs) = x ++ sep ++ showSep sep Z xs
+showSep sep (S n) (x :: xs) = x ++ sep ++ showSep sep n xs
 
 renderRow : List Int -> String
-renderRow dat = showSep " " (map (toHex 2) dat) ++ "      " ++
-             pack (map (\i => if i > 0x1f && i < 0x80 then chr i else '.') dat)
+renderRow dat =  showSep " " 16 (map (toHex 2) dat) ++
+                "      " ++ pack (map (\i => if i > 0x1f && i < 0x80 then chr i else '.') dat)
 
 group : Nat -> List a -> List (List a)
 group n xs = worker [] xs
@@ -34,7 +36,7 @@ dumpBuffer buf = do
     size <- rawSize buf
     dat <- bufferData buf
     let rows = group 16 dat
-    let hex = showSep "\n" (map renderRow rows)
+    let hex = showSep "\n" 0 (map renderRow rows)
     pure $ hex ++ "\n\ntotal size = " ++ show size
 
 export
