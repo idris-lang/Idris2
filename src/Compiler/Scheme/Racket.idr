@@ -75,14 +75,14 @@ mutual
       = throw (InternalError ("Can't compile C FFI calls to Racket yet"))
   racketPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp racketPrim racketString 0 struct
+      = do structsc <- schExp {mut=[]} racketPrim racketString 0 struct
            pure $ "(" ++ s ++ "-" ++ fld ++ " " ++ structsc ++ ")"
   racketPrim i GetField [_,_,_,_,_,_]
       = pure "(error \"bad getField\")"
   racketPrim i SetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp racketPrim racketString 0 struct
-           valsc <- schExp racketPrim racketString 0 val
+      = do structsc <- schExp {mut=[]} racketPrim racketString 0 struct
+           valsc <- schExp {mut=[]} racketPrim racketString 0 val
            pure $ mkWorld $
                 "(set-" ++ s ++ "-" ++ fld ++ "! " ++ structsc ++ " " ++ valsc ++ ")"
   racketPrim i SetField [_,_,_,_,_,_,_,_]
@@ -332,7 +332,7 @@ compileToRKT c appdir tm outfile
          fgndefs <- traverse (getFgnCall appdir) ndefs
          compdefs <- traverse (getScheme racketPrim racketString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
-         main <- schExp racketPrim racketString 0 ctm
+         main <- schExp {mut=[]} racketPrim racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
          let scm = schHeader (concat (map fst fgndefs)) ++
                    support ++ code ++
@@ -367,7 +367,7 @@ compileExpr mkexec c execDir tm outfile
          coreLift $ mkdirs (splitDir appDirGen)
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-          
+
          let ext = if isWindows then ".exe" else ""
          let outRktFile = appDirRel ++ dirSep ++ outfile ++ ".rkt"
          let outBinFile = appDirRel ++ dirSep ++ outfile ++ ext

@@ -1,6 +1,7 @@
 module Compiler.Inline
 
 import Compiler.CompileExpr
+import Compiler.Mutate
 
 import Core.CompileExpr
 import Core.Context
@@ -457,6 +458,7 @@ compileAndInlineAll
          traverse_ inlineDef cns
          traverse_ mergeLamDef cns
          traverse_ fixArityDef cns
+         traverse_ addMutatingCases cns
   where
     nonErased : Name -> Core Bool
     nonErased n

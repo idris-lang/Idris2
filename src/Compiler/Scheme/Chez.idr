@@ -71,7 +71,7 @@ schHeader chez libs
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++ 
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
     "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
@@ -126,7 +126,7 @@ mutual
       = do args <- getFArgs fargs
            argTypes <- traverse tySpec (map fst args)
            retType <- tySpec ret
-           argsc <- traverse (schExp chezExtPrim chezString 0) (map snd args)
+           argsc <- traverse (schExp {mut=[]} chezExtPrim chezString 0) (map snd args)
            pure $ handleRet retType ("((foreign-procedure #f " ++ show fn ++ " ("
                     ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
                     ++ showSep " " argsc ++ ")")
@@ -135,14 +135,14 @@ mutual
       -- throw (InternalError ("C FFI calls must be to statically known functions (" ++ show fn ++ ")"))
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp chezExtPrim chezString 0 struct
+      = do structsc <- schExp {mut=[]} chezExtPrim chezString 0 struct
            pure $ "(ftype-ref " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++ ")"
   chezExtPrim i GetField [_,_,_,_,_,_]
       = pure "(error \"bad getField\")"
   chezExtPrim i SetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp chezExtPrim chezString 0 struct
-           valsc <- schExp chezExtPrim chezString 0 val
+      = do structsc <- schExp {mut=[]} chezExtPrim chezString 0 struct
+           valsc <- schExp {mut=[]} chezExtPrim chezString 0 val
            pure $ mkWorld $
               "(ftype-set! " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++
               " " ++ valsc ++ ")"
@@ -353,7 +353,7 @@ compileToSS c appdir tm outfile
          fgndefs <- traverse (getFgnCall appdir) ndefs
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
-         main <- schExp chezExtPrim chezString 0 ctm
+         main <- schExp {mut=[]} chezExtPrim chezString 0 ctm
          chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
          let scm = schHeader chez (map snd libs) ++
@@ -412,7 +412,7 @@ compileExpr makeitso c execDir tm outfile
          logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
          let outShRel = execDir ++ dirSep ++ outfile
          if isWindows
-            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) 
+            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          coreLift $ chmodRaw outShRel 0o755
          pure (Just outShRel)

@@ -68,14 +68,7 @@ mutual
   mkMutating nm tag other@(CLocal _ _) =
     do coreLift $ putStrLn ("found local " ++ show other ++ ", ignoring"); pure other
   mkMutating nm tag other@(CRef fc n) = do
-    coreLift $ putStrLn ("found CRef: " ++ show n)
-    defs <- get Ctxt
-    Just gdef <- lookupCtxtExact n (gamma defs) | _ => pure other
-    let Just (MkFun fargs body) = compexpr gdef | _ => pure other
-    newBody <- mkMutating nm tag body
-    setCompiled n (MkFun fargs newBody)
     pure other
-
   mkMutating nm tag other@(CMut _ _ _) =
     do coreLift $ putStrLn ("found mut " ++ show other ++ ", ignoring"); pure other
 
@@ -83,6 +76,14 @@ mutual
   ||| on the rhs of a case alternatuve.
   mutateCaseAlt : {auto c : Ref Ctxt Defs} -> {vars : _} -> CConAlt vars -> Core (CConAlt vars)
   mutateCaseAlt (MkConAlt nm tag args rhs) = MkConAlt nm tag args <$> (mkMutating nm tag rhs)
+
+export
+addMutatingCases : {auto c : Ref Ctxt Defs} -> Name -> Core ()
+addMutatingCases n = do
+  defs <- get Ctxt
+  Just def <- lookupCtxtExact n (gamma defs)  | _ => pure ()
+  let Just (MkFun fargs body) = compexpr def | _ => pure ()
+  setCompiled n (MkFun fargs !(mkMutating (UN "") Nothing body))
 
 ||| Duplicate every clause and replace every constructor on the rhs by a mutating version
 ||| The transformation on takes place for patterns which are not wildcards
