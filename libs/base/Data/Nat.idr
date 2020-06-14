@@ -93,6 +93,11 @@ Transitive Nat LTE where
   transitive (LTESucc xy) (LTESucc yz) = LTESucc $ transitive {rel = LTE} xy yz
 
 public export
+Antisymmetric Nat LTE where
+  antisymmetric LTEZero LTEZero = Refl
+  antisymmetric (LTESucc xy) (LTESucc yx) = cong S $ antisymmetric xy yx
+
+public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
 

@@ -124,21 +124,21 @@ multOneSoleNeutral (S k) (S (S j)) prf =
         succInjective k (j + (S (S (j + (k * (S (S j))))))) $
         succInjective (S k) (S (j + (S (S (j + (k * (S (S j)))))))) prf
 
-||| If a is a factor of b and b is a factor of a, then we can conclude a = b.
-export
-factorAntisymmetric : {a, b : Nat} -> Factor a b -> Factor b a -> a = b
-factorAntisymmetric {a = 0} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = sym prfAB
-factorAntisymmetric {a = S a} {b = 0} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = prfBA
-factorAntisymmetric {a = S a} {b = S b} (CofactorExists qa prfAB) (CofactorExists qb prfBA) =
-    let qIs1 = multOneSoleNeutral a (qa * qb) $
-            rewrite multAssociative (S a) qa qb in
-            rewrite sym prfAB in
-            prfBA
-    in
-    rewrite prfAB in
-    rewrite oneSoleFactorOfOne qa . CofactorExists qb $ sym qIs1 in
-    rewrite multOneRightNeutral a in
-    Refl
+||| If a is a factor of b and b is a factor of a, then a = b.
+public export
+Antisymmetric Nat Factor where
+  antisymmetric {x = Z} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = sym prfAB
+  antisymmetric {x = S _} {y = Z} (CofactorExists qa prfAB) (CofactorExists qb prfBA) = prfBA
+  antisymmetric {x = S a} {y = S _} (CofactorExists qa prfAB) (CofactorExists qb prfBA) =
+      let qIs1 = multOneSoleNeutral a (qa * qb) $
+              rewrite multAssociative (S a) qa qb in
+              rewrite sym prfAB in
+              prfBA
+      in
+      rewrite prfAB in
+      rewrite oneSoleFactorOfOne qa . CofactorExists qb $ sym qIs1 in
+      rewrite multOneRightNeutral a in
+      Refl
 
 ||| No number can simultaneously be and not be a factor of another number.
 export
@@ -298,22 +298,24 @@ factNotSuccFact {p = S (S k)} pGt1 (CofactorExists q prf) =
             Refl
         )
 
-||| The relation of common factor is symmetric, that is if p is a common factor
-||| of n and m, then it is also a common factor if m and n.
-export
-commonFactorSym : CommonFactor p a b -> CommonFactor p b a
-commonFactorSym (CommonFactorExists p pfa pfb) = CommonFactorExists p pfb pfa
+using (p : Nat)
+  ||| The relation of common factor is symmetric, that is if p is a
+  ||| common factor of n and m, then it is also a common factor of m
+  ||| and n.
+  public export
+  Symmetric Nat (CommonFactor p) where
+    symmetric (CommonFactorExists p pfx pfy) = CommonFactorExists p pfy pfx
 
-||| The relation of greates common divisor is symmetric.
-export
-gcdSym : GCD p a b -> GCD p b a
-gcdSym {a = Z} {b = Z} (MkGCD {notBothZero} _ _) impossible
-gcdSym {a = S a} {b} (MkGCD {notBothZero = LeftIsNotZero} cf greatest) =
-        MkGCD {notBothZero = RightIsNotZero} (commonFactorSym cf) $
-        \q, cf => greatest q (commonFactorSym cf)
-gcdSym {a} {b = S b} (MkGCD {notBothZero = RightIsNotZero} cf greatest) =
-        MkGCD {notBothZero = LeftIsNotZero} (commonFactorSym cf) $
-        \q, cf => greatest q (commonFactorSym cf)
+  ||| The relation of greates common divisor is symmetric.
+  public export
+  Symmetric Nat (GCD p) where
+    symmetric {x = Z} {y = Z} (MkGCD {notBothZero} _ _) impossible
+    symmetric {x = S a} {y} (MkGCD {notBothZero = LeftIsNotZero} cf greatest) =
+            MkGCD {notBothZero = RightIsNotZero} (symmetric {ty = Nat} cf) $
+            \q, cf => greatest q (symmetric {ty = Nat} cf)
+    symmetric {x} {y = S b} (MkGCD {notBothZero = RightIsNotZero} cf greatest) =
+            MkGCD {notBothZero = LeftIsNotZero} (symmetric {ty = Nat} cf) $
+            \q, cf => greatest q (symmetric {ty = Nat} cf)
 
 ||| If p is a common factor of a and b, then it is also a factor of their GCD.
 ||| This actually follows directly from the definition of GCD.
@@ -440,13 +442,13 @@ gcd (S a) (S b) with (cmp (S a) (S b))
                 LTESucc . lteSuccRight $ lteAddRight a
             (f ** MkGCD prf greatest) = sizeInd gcd_step $ SearchArgs (S (a + S d)) (S a) aGtB
         in
-        (f ** MkGCD (commonFactorSym prf) (\q, cf => greatest q $ commonFactorSym cf))
+        (f ** MkGCD (symmetric {ty = Nat} prf) (\q, cf => greatest q $ symmetric {ty = Nat} cf))
 
 ||| For every two natural numbers there is a unique greatest common divisor.
 export
 gcdUnique : {a, b, p, q : Nat} -> GCD p a b -> GCD q a b -> p = q
 gcdUnique (MkGCD pCFab greatestP) (MkGCD qCFab greatestQ) =
-    factorAntisymmetric (greatestQ p pCFab) (greatestP q qCFab)
+    antisymmetric (greatestQ p pCFab) (greatestP q qCFab)
 
 
 divByGcdHelper : (a, b, c : Nat) -> GCD (S a) (S a * S b) (S a * c) -> GCD 1 (S b) c
@@ -489,7 +491,7 @@ divByGcdGcdOne {a = S a} {b = Z} {c = Z} (MkGCD {notBothZero} _ _) =
 divByGcdGcdOne {a = S a} {b = Z} {c = S c} gcdPrf@(MkGCD {notBothZero} _ _) =
         case replace {p = \x => NotBothZero x (S a * S c)} (multZeroRightZero (S a)) notBothZero of
             LeftIsNotZero impossible
-            RightIsNotZero => gcdSym $ divByGcdHelper a c Z $ gcdSym gcdPrf
+            RightIsNotZero => symmetric {ty = Nat} $ divByGcdHelper a c Z $ symmetric {ty = Nat} gcdPrf
 divByGcdGcdOne {a = S a} {b = S b} {c = Z} gcdPrf@(MkGCD {notBothZero} _ _) =
         case replace {p = \x => NotBothZero (S a * S b) x} (multZeroRightZero (S a)) notBothZero of
             RightIsNotZero impossible
