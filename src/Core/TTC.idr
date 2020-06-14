@@ -733,12 +733,15 @@ TTC CG where
   toBuf b Chez = tag 0
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
+  toBuf b (Other s) = do tag 4; toBuf b s
 
   fromBuf b
       = case !getTag of
              0 => pure Chez
              2 => pure Racket
              3 => pure Gambit
+             4 => do s <- fromBuf b
+                     pure (Other s)
              _ => corrupt "CG"
 
 export
