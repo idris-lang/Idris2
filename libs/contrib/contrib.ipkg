@@ -11,8 +11,15 @@ modules = Control.Delayed,
           Data.List.Palindrome,
 
           Data.Fin.Extra,
+
+          Data.Logic.Propositional,
+
+          Data.Nat.Ack,
           Data.Nat.Equational,
+          Data.Nat.Fact,
           Data.Nat.Factor,
+          Data.Nat.Fib,
+
           Data.SortedMap,
           Data.SortedSet,
           Data.String.Extra,
