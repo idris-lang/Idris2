@@ -16,12 +16,16 @@ toFileEx FileExists = FileExists
 
 public export
 interface Has [Exception IOError] e => FileIO e where
-  withFile : String -> Mode -> 
+  withFile : String -> Mode ->
              (onError : IOError -> App e a) ->
-             (onOpen : File -> App e a) -> 
+             (onOpen : File -> App e a) ->
              App e a
   fGetStr : File -> App e String
+  fGetChars : File -> Int -> App e String
+  fGetChar : File -> App e Char
   fPutStr : File -> String -> App e ()
+  fPutStrLn : File -> String -> App e ()
+  fflush : File -> App e ()
   fEOF : File -> App e Bool
 
 -- TODO : Add Binary File IO with buffers
@@ -41,23 +45,32 @@ readFile f
                 else do str <- fGetStr h
                         read (str :: acc) h
 
+fileOp : IO (Either FileError a) -> Has [PrimIO, Exception IOError] e => App e a
+fileOp fileRes
+      = do Right res <- primIO $ fileRes
+             | Left err => throw (FileErr (toFileEx err))
+           pure res
+
 export
 Has [PrimIO, Exception IOError] e => FileIO e where
   withFile fname m onError proc
       = do Right h <- primIO $ openFile fname m
               | Left err => onError (FileErr (toFileEx err))
            res <- catch (proc h) onError
+           primIO $ closeFile h
            pure res
 
-  fGetStr f
-      = do Right str <- primIO $ fGetLine f
-              | Left err => throw (FileErr (toFileEx err))
-           pure str
+  fGetStr f = fileOp (fGetLine f)
 
-  fPutStr f str
-      = do Right () <- primIO $ File.fPutStr f str
-               | Left err => throw (FileErr (toFileEx err))
-           pure ()
+  fGetChars f n = fileOp (fGetChars f n)
+
+  fGetChar f = fileOp (fGetChar f)
+
+  fPutStr f str = fileOp (fPutStr f str)
+
+  fPutStrLn f str = fileOp (File.fPutStrLn f str)
+
+  fflush f = primIO $ fflush f
 
   fEOF f = primIO $ fEOF f
 
