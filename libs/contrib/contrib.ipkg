@@ -17,6 +17,8 @@ modules = Control.Delayed,
           Data.SortedSet,
           Data.String.Extra,
 
+          Debug.Buffer,
+
           Language.JSON,
           Language.JSON.Data,
           Language.JSON.Lexer,

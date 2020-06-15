@@ -93,6 +93,24 @@ data CLOpt
   DebugElabCheck |
   BlodwenPaths
 
+||| Extract the host and port to bind the IDE socket to
+export
+ideSocketModeAddress : List CLOpt -> (String, Int)
+ideSocketModeAddress []  = ("localhost", 38398)
+ideSocketModeAddress (IdeModeSocket hp :: _) =
+  let (h, p) = Strings.break (== ':') hp
+      port = fromMaybe 38398 (portPart p >>= parsePositive)
+      host = if h == "" then "localhost" else h
+  in (host, port)
+  where
+    portPart : String -> Maybe String
+    portPart p = if p == ""
+                    then Nothing
+                    else Just $ assert_total $ prim__strTail p
+ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
+
+formatSocketAddress : (String, Int) -> String
+formatSocketAddress (host, port) = host ++ ":" ++ show port
 
 ActType : List String -> Type
 ActType [] = List CLOpt
@@ -122,9 +140,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--ide-mode"] [] [IdeMode]
               (Just "Run the REPL with machine-readable syntax"),
 
-           MkOpt ["--ide-mode-socket"] [] [IdeModeSocket "localhost:38398"]
-              (Just "Run the ide socket mode on default host and port (localhost:38398)"),
-
+           MkOpt ["--ide-mode-socket"] [] [IdeModeSocket $ formatSocketAddress (ideSocketModeAddress [])]
+              (Just $ "Run the ide socket mode on default host and port (" ++ formatSocketAddress (ideSocketModeAddress []) ++ ")"),
            MkOpt ["--ide-mode-socket-with"] ["host:port"] (\hp => [IdeModeSocket hp])
               (Just "Run the ide socket mode on given host and port"),
 
@@ -247,19 +264,3 @@ getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
-
-portPart : String -> Maybe String
-portPart p = if p == ""
-                then Nothing
-                else Just $ assert_total $ prim__strTail p
-
-||| Extract the host and port to bind the IDE socket to
-public export
-ideSocketModeHostPort : List CLOpt -> (String, Int)
-ideSocketModeHostPort []  = ("localhost", 38398)
-ideSocketModeHostPort (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
-      port = fromMaybe 38398 (portPart p >>= parsePositive)
-      host = if h == "" then "localhost" else h
-  in (host, port)
-ideSocketModeHostPort (_ :: rest) = ideSocketModeHostPort rest
