@@ -114,6 +114,10 @@ formatSocketAddress (host, port) = host ++ ":" ++ show port
 
 data OptType = Required String | Optional String
 
+Show OptType where
+  show (Required a) = "<" ++ a ++ ">"
+  show (Optional a) = "[" ++ a ++ "]"
+
 ActType : List OptType -> Type
 ActType [] = List CLOpt
 ActType (Required a :: as) = String -> ActType as
@@ -126,6 +130,12 @@ record OptDesc where
   action : ActType argdescs
   help : Maybe String
 
+optSeparator : OptDesc
+optSeparator = MkOpt [] [] [] Nothing
+
+showDefault : String -> String
+showDefault x = "(default \"" ++ x ++ "\")"
+
 options : List OptDesc
 options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Exit after checking source file"),
@@ -136,11 +146,11 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--no-prelude"] [] [NoPrelude]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
-              (Just $ "Set code generator (default \""++ show (codegen defaultSession) ++ "\")"),
+              (Just $ "Set code generator " ++ showDefault (show (codegen defaultSession))),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
@@ -148,7 +158,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
@@ -160,21 +170,21 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--ide-mode"] [] [IdeMode]
               (Just "Run the REPL with machine-readable syntax"),
            MkOpt ["--ide-mode-socket"] [Optional "host:port"]
                  (\hp => [IdeModeSocket $ fromMaybe (formatSocketAddress (ideSocketModeAddress [])) hp])
-              (Just $ "Run the ide socket mode on given host and port (default \"" ++
-                      formatSocketAddress (ideSocketModeAddress []) ++ "\")"),
+              (Just $ "Run the ide socket mode on given host and port " ++
+                      showDefault (formatSocketAddress (ideSocketModeAddress []))),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])
               (Just "Run a REPL command then quit immediately"),
            MkOpt ["--timing"] [] [Timing]
               (Just "Display timing logs"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--no-banner"] [] [NoBanner]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
@@ -182,7 +192,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
            MkOpt ["--help", "-h", "-?"] [] [Help]
@@ -215,14 +225,10 @@ optsUsage options = let optsShow = map optShow options
     showSep sep [x] = x
     showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
-    formatOpt : OptType -> String
-    formatOpt (Required opt) = "<" ++ opt ++ ">"
-    formatOpt (Optional opt) = "[" ++ opt ++ "]"
-
     optShow : OptDesc -> (String, Maybe String)
     optShow (MkOpt [] _ _ _) = ("", Just "")
     optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                                  showSep " " (map formatOpt argdescs),
+                                                  showSep " " (map show argdescs),
                                                   help)
 
     optUsage : Nat -> (String, Maybe String) -> String
@@ -247,8 +253,8 @@ usage = versionMsg ++ "\n" ++
 processArgs : String -> (args : List OptType) -> List String -> ActType args ->
               Either String (List CLOpt, List String)
 processArgs flag [] xs f = Right (f, xs)
-processArgs flag (Required a :: as) [] f =
-  Left $ "Missing required argument <" ++ a ++ "> for flag " ++ flag
+processArgs flag (opt@(Required _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (Optional a :: as) [] f =
   processArgs flag as [] (f Nothing)
 processArgs flag (Required a :: as) (x :: xs) f =
