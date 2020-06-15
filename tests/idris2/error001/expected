@@ -1,7 +1,11 @@
 1/1: Building Error (Error.idr)
-Error.idr:6:19--7:1:While processing right hand side of wrong at Error.idr:6:1--7:1:
+Error.idr:6:19--6:20:While processing right hand side of wrong at Error.idr:6:1--7:1:
 When unifying a and Vect ?k ?a
 Mismatch between:
 	a
 and
 	Vect ?k ?a
+at:
+6	wrong x xs = x :: x
+	                  ^
+

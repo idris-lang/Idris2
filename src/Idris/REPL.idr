@@ -348,12 +348,12 @@ processEdit (ExprSearch upd line name hints all)
     dropLams _ env tm = (_ ** (env, tm))
 processEdit (GenerateDef upd line name)
     = do defs <- get Ctxt
-         Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine line p)
+         Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do Just (fc, cs) <- makeDef (\p, n => onLine line p) n'
+                    (do Just (fc, cs) <- makeDef (\p, n => onLine (line - 1) p) n'
                            | Nothing => processEdit (AddClause upd line name)
                         Just srcLine <- getSourceLine line
                            | Nothing => pure (EditError "Source line not found")
@@ -733,7 +733,9 @@ interpret inp
     = case parseRepl inp of
            Left err => pure $ REPLError (show err)
            Right Nothing => pure Done
-           Right (Just cmd) => processCatch cmd
+           Right (Just cmd) => do
+             setCurrentElabSource inp
+             processCatch cmd
 
 mutual
   export

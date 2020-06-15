@@ -1,6 +1,10 @@
 1/1: Building iftype (iftype.idr)
-iftype.idr:15:15--16:1:While processing right hand side of isInListBad at iftype.idr:15:1--16:1:
+iftype.idr:15:15--15:19:While processing right hand side of isInListBad at iftype.idr:15:1--16:1:
 Can't solve constraint between:
 	if c then "Foo" else "Baz"
 and
 	if c then "Foo" else "Bar"
+at:
+15	isInListBad = Here
+	              ^^^^
+

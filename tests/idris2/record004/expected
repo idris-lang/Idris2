@@ -6,11 +6,15 @@ Main> 4.2
 Main> 4.2
 Main> 17.64
 Main> [1.1, 4.2]
-Main> (interactive):1:1--1:5:When unifying (?a -> ?b) -> ?f ?a -> ?f ?b and Point
+Main> (interactive):1:1--1:4:When unifying (?a -> ?b) -> ?f ?a -> ?f ?b and Point
 Mismatch between:
 	(?a -> ?b) -> ?f ?a -> ?f ?b
 and
 	Point
+at:
+1	map .x [MkPoint 1 2, MkPoint 3 4]
+	^^^
+
 Main> [2.5, 2.5]
 Main> 7.4
 Main> 4.2

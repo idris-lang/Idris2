@@ -100,6 +100,57 @@ mutual
        -- with-disambiguation
        PWithUnambigNames : FC -> List Name -> PTerm -> PTerm
 
+  export
+  getPTermLoc : PTerm -> FC
+  getPTermLoc (PRef fc _) = fc
+  getPTermLoc (PPi fc _ _ _ _ _) = fc
+  getPTermLoc (PLam fc _ _ _ _ _) = fc
+  getPTermLoc (PLet fc _ _ _ _ _ _) = fc
+  getPTermLoc (PCase fc _ _) = fc
+  getPTermLoc (PLocal fc _ _) = fc
+  getPTermLoc (PUpdate fc _) = fc
+  getPTermLoc (PApp fc _ _) = fc
+  getPTermLoc (PWithApp fc _ _) = fc
+  getPTermLoc (PImplicitApp fc _ _ _) = fc
+  getPTermLoc (PDelayed fc _ _) = fc
+  getPTermLoc (PDelay fc _) = fc
+  getPTermLoc (PForce fc _) = fc
+  getPTermLoc (PSearch fc _) = fc
+  getPTermLoc (PPrimVal fc _) = fc
+  getPTermLoc (PQuote fc _) = fc
+  getPTermLoc (PQuoteName fc _) = fc
+  getPTermLoc (PQuoteDecl fc _) = fc
+  getPTermLoc (PUnquote fc _) = fc
+  getPTermLoc (PRunElab fc _) = fc
+  getPTermLoc (PHole fc _ _) = fc
+  getPTermLoc (PType fc) = fc
+  getPTermLoc (PAs fc _ _) = fc
+  getPTermLoc (PDotted fc _) = fc
+  getPTermLoc (PImplicit fc) = fc
+  getPTermLoc (PInfer fc) = fc
+  getPTermLoc (POp fc _ _ _) = fc
+  getPTermLoc (PPrefixOp fc _ _) = fc
+  getPTermLoc (PSectionL fc _ _) = fc
+  getPTermLoc (PSectionR fc _ _) = fc
+  getPTermLoc (PEq fc _ _) = fc
+  getPTermLoc (PBracketed fc _) = fc
+  getPTermLoc (PDoBlock fc _) = fc
+  getPTermLoc (PBang fc _) = fc
+  getPTermLoc (PIdiom fc _) = fc
+  getPTermLoc (PList fc _) = fc
+  getPTermLoc (PPair fc _ _) = fc
+  getPTermLoc (PDPair fc _ _ _) = fc
+  getPTermLoc (PUnit fc) = fc
+  getPTermLoc (PIfThenElse fc _ _ _) = fc
+  getPTermLoc (PComprehension fc _ _) = fc
+  getPTermLoc (PRewrite fc _ _) = fc
+  getPTermLoc (PRange fc _ _ _) = fc
+  getPTermLoc (PRangeStream fc _ _) = fc
+  getPTermLoc (PRecordFieldAccess fc _ _) = fc
+  getPTermLoc (PRecordProjection fc _) = fc
+  getPTermLoc (PUnifyLog fc _ _) = fc
+  getPTermLoc (PWithUnambigNames fc _ _) = fc
+
   public export
   data PFieldUpdate : Type where
        PSetField : (path : List String) -> PTerm -> PFieldUpdate
@@ -134,12 +185,21 @@ mutual
   data PTypeDecl : Type where
        MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
+  export
+  getPTypeDeclLoc : PTypeDecl -> FC
+  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
+
   public export
   data PDataDecl : Type where
        MkPData : FC -> (tyname : Name) -> (tycon : PTerm) ->
                  (opts : List DataOpt) ->
                  (datacons : List PTypeDecl) -> PDataDecl
        MkPLater : FC -> (tyname : Name) -> (tycon : PTerm) -> PDataDecl
+
+  export
+  getPDataDeclLoc : PDataDecl -> FC
+  getPDataDeclLoc (MkPData fc _ _ _ _) = fc
+  getPDataDeclLoc (MkPLater fc _ _) = fc
 
   public export
   data PClause : Type where
@@ -148,6 +208,12 @@ mutual
        MkWithClause : FC -> (lhs : PTerm) -> (wval : PTerm) ->
                       List WithFlag -> List PClause -> PClause
        MkImpossible : FC -> (lhs : PTerm) -> PClause
+
+  export
+  getPClauseLoc : PClause -> FC
+  getPClauseLoc (MkPatClause fc _ _ _) = fc
+  getPClauseLoc (MkWithClause fc _ _ _ _) = fc
+  getPClauseLoc (MkImpossible fc _) = fc
 
   public export
   data Directive : Type where
@@ -243,6 +309,24 @@ mutual
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
+
+  export
+  getPDeclLoc : PDecl -> FC
+  getPDeclLoc (PClaim fc _ _ _ _) = fc
+  getPDeclLoc (PDef fc _) = fc
+  getPDeclLoc (PData fc _ _) = fc
+  getPDeclLoc (PParameters fc _ _) = fc
+  getPDeclLoc (PUsing fc _ _) = fc
+  getPDeclLoc (PReflect fc _) = fc
+  getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
+  getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
+  getPDeclLoc (PRecord fc _ _ _ _ _) = fc
+  getPDeclLoc (PMutual fc _) = fc
+  getPDeclLoc (PFixity fc _ _ _) = fc
+  getPDeclLoc (PNamespace fc _ _) = fc
+  getPDeclLoc (PTransform fc _ _ _) = fc
+  getPDeclLoc (PRunElabDecl fc _) = fc
+  getPDeclLoc (PDirective fc _) = fc
 
 definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons

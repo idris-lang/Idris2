@@ -5,3 +5,7 @@ Mismatch between:
 	[MN 0]
 and
 	[]
+at:
+27	dpairWithExtraInfoBad = [([MN 0] ** CLocal {x=MN 0} (First {ns=[MN 0]}))]
+	                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

@@ -56,7 +56,7 @@ lex : String -> Either (Int, Int, String) (List (TokenData Token))
 lex str =
   case lexTo (const False) rawTokens str of
        (tokenData, (l, c, "")) =>
-         Right $ (filter (useful . tok) tokenData) ++  [MkToken l c EndOfInput]
+         Right $ (filter (useful . tok) tokenData) ++  [MkToken l c l c EndOfInput]
        (_, fail) => Left fail
   where
     useful : Token -> Bool

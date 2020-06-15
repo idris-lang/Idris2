@@ -22,11 +22,12 @@ record REPLOpts where
   editor : String
   errorLine : Maybe Int
   idemode : OutputMode
+  currentElabSource : String
 
 export
 defaultOpts : Maybe String -> OutputMode -> REPLOpts
 defaultOpts fname outmode
-   = MkREPLOpts False NormaliseAll fname "" "vim" Nothing outmode
+   = MkREPLOpts False NormaliseAll fname "" "vim" Nothing outmode ""
 
 export
 data ROpts : Type where
@@ -79,3 +80,17 @@ getSourceLine l
     findLine Z (l :: ls) = Just l
     findLine (S k) (l :: ls) = findLine k ls
     findLine _ [] = Nothing
+
+export
+setCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
+                       String -> Core ()
+setCurrentElabSource src
+    = do opts <- get ROpts
+         put ROpts (record { currentElabSource = src } opts)
+
+export
+getCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
+                       Core String
+getCurrentElabSource
+     = do opts <- get ROpts
+          pure (currentElabSource opts)

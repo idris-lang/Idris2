@@ -17,7 +17,20 @@ export
 location : {token : _} -> EmptyRule token (Int, Int)
 location
     = do tok <- peek
-         pure (line tok, col tok)
+         pure (tok.line, tok.col)
+
+export
+endLocation : {token : _} -> EmptyRule token (Int, Int)
+endLocation
+    = do tok <- peek
+         pure (tok.endLine, tok.endCol)
+
+export
+position : {token : _} -> EmptyRule token ((Int, Int), (Int, Int))
+position
+    = do tok <- peek
+         pure ((tok.line, tok.col), (tok.endLine, tok.endCol))
+
 
 export
 column : {token : _ } -> EmptyRule token Int

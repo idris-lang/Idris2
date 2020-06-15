@@ -232,7 +232,7 @@ lexTo pred str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c EndInput])
+                                      [MkToken l c l c EndInput])
            (_, fail) => Left fail
     where
       notComment : TokenData Token -> Bool
