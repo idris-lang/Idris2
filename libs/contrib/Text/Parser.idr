@@ -1,6 +1,6 @@
 module Text.Parser
 
-import Data.Bool.Extra
+import Data.Bool
 import Data.List
 import Data.Nat
 

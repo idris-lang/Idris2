@@ -319,6 +319,11 @@ plusLeftLeftRightZero left right p =
     rewrite plusZeroRightNeutral left in
       p
 
+plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
+plusLteMonotoneRight p  Z     r     LTEZero    = rewrite plusCommutative r p in
+                                                 lteAddRight p
+plusLteMonotoneRight p (S q) (S r) (LTESucc l) = LTESucc $ plusLteMonotoneRight p q r l
+
 -- Proofs on *
 
 export
@@ -425,6 +430,14 @@ export
 minusPlusZero : (n, m : Nat) -> minus n (n + m) = Z
 minusPlusZero Z     _ = Refl
 minusPlusZero (S n) m = minusPlusZero n m
+
+export
+plusMinusLte : (n, m : Nat) -> LTE n m -> (minus m n) + n = m
+plusMinusLte  Z     m    _   = rewrite minusZeroRight m in
+                               plusZeroRightNeutral m
+plusMinusLte (S _)  Z    lte = absurd lte
+plusMinusLte (S n) (S m) lte = rewrite sym $ plusSuccRightSucc (minus m n) n in
+                               cong S $ plusMinusLte n m (fromLteSucc lte)
 
 export
 minusMinusMinusPlus : (left, centre, right : Nat) ->

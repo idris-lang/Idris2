@@ -79,6 +79,14 @@ weakenN : (n : Nat) -> Fin m -> Fin (m + n)
 weakenN n FZ = FZ
 weakenN n (FS f) = FS (weakenN n f)
 
+||| Weaken the bound on a Fin using a constructive comparison
+public export
+weakenLTE : Fin n -> LTE n m -> Fin m
+weakenLTE  FZ     LTEZero impossible
+weakenLTE (FS _)  LTEZero impossible
+weakenLTE  FZ    (LTESucc y) = FZ
+weakenLTE (FS x) (LTESucc y) = FS $ weakenLTE x y
+
 ||| Attempt to tighten the bound on a Fin.
 ||| Return `Left` if the bound could not be tightened, or `Right` if it could.
 export

@@ -10,13 +10,14 @@ modules = Control.Delayed,
           Data.List.Views.Extra,
           Data.List.Palindrome,
 
-          Data.Bool.Extra,
           Data.Fin.Extra,
           Data.Nat.Equational,
           Data.Nat.Factor,
           Data.SortedMap,
           Data.SortedSet,
           Data.String.Extra,
+
+          Debug.Buffer,
 
           Language.JSON,
           Language.JSON.Data,

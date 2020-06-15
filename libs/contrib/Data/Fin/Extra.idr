@@ -5,7 +5,6 @@ import Data.Nat
 
 %default total
 
-
 ||| Proof that an element **n** of Fin **m** , when converted to Nat is smaller than the bound **m**.
 export
 elemSmallerThanBound : (n : Fin m) -> LT (finToNat n) m
