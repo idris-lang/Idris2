@@ -133,8 +133,8 @@ record OptDesc where
 optSeparator : OptDesc
 optSeparator = MkOpt [] [] [] Nothing
 
-showDefault : String -> String
-showDefault x = "(default \"" ++ x ++ "\")"
+showDefault : Show a => a -> String
+showDefault x = "(default " ++ show x ++ ")"
 
 options : List OptDesc
 options = [MkOpt ["--check", "-c"] [] [CheckOnly]
@@ -146,7 +146,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--no-prelude"] [] [NoPrelude]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
-              (Just $ "Set code generator " ++ showDefault (show (codegen defaultSession))),
+              (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
 
