@@ -62,13 +62,14 @@ preOptions (NoPrelude :: opts)
     = do setSession (record { noprelude = True } !getSession)
          preOptions opts
 preOptions (SetCG e :: opts)
-    = case getCG e of
-           Just cg => do setCG cg
-                         preOptions opts
-           Nothing =>
+    = do defs <- get Ctxt
+         case getCG (options defs) e of
+            Just cg => do setCG cg
+                          preOptions opts
+            Nothing =>
               do coreLift $ putStrLn "No such code generator"
                  coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst availableCGs)
+                                 showSep ", " (map fst (availableCGs (options defs)))
                  coreLift $ exitWith (ExitFailure 1)
 preOptions (PkgPath p :: opts)
     = do addPkgDir p

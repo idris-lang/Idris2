@@ -153,9 +153,10 @@ setOpt (Editor e)
     = do opts <- get ROpts
          put ROpts (record { editor = e } opts)
 setOpt (CG e)
-    = case getCG e of
-           Just cg => setCG cg
-           Nothing => iputStrLn "No such code generator available"
+    = do defs <- get Ctxt
+         case getCG (options defs) e of
+            Just cg => setCG cg
+            Nothing => iputStrLn "No such code generator available"
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -169,13 +170,18 @@ getOptions = do
          ]
 
 export
-findCG : {auto c : Ref Ctxt Defs} -> Core Codegen
+findCG : {auto o : Ref ROpts REPLOpts} ->
+         {auto c : Ref Ctxt Defs} -> Core Codegen
 findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
               Chez => pure codegenChez
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
+              Other s => case !(getCodegen s) of
+                            Just cg => pure cg
+                            Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
+                                          coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (FC -> Bool) -> FC -> a -> Bool
 anyAt p loc y = p loc
@@ -433,6 +439,7 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
+          {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
     = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)

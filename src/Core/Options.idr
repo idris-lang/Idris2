@@ -41,12 +41,14 @@ public export
 data CG = Chez
         | Racket
         | Gambit
+        | Other String
 
 export
 Eq CG where
   Chez == Chez = True
   Racket == Racket = True
   Gambit == Gambit = True
+  Other s == Other t = s == t
   _ == _ = False
 
 export
@@ -54,19 +56,9 @@ Show CG where
   show Chez = "chez"
   show Racket = "racket"
   show Gambit = "gambit"
+  show (Other s) = s
 
-export
-availableCGs : List (String, CG)
-availableCGs
-    = [("chez", Chez),
-       ("racket", Racket),
-       ("gambit", Gambit)]
 
-export
-getCG : String -> Maybe CG
-getCG cg = lookup (toLower cg) availableCGs
-
--- Name options, to be saved in TTC
 public export
 record PairNames where
   constructor MkPairNs
@@ -142,6 +134,19 @@ record Options where
   rewritenames : Maybe RewriteNames
   primnames : PrimNames
   extensions : List LangExt
+  additionalCGs : List (String, CG)
+
+
+export
+availableCGs : Options -> List (String, CG)
+availableCGs o
+    = [("chez", Chez),
+       ("racket", Racket),
+       ("gambit", Gambit)] ++ additionalCGs o
+
+export
+getCG : Options -> String -> Maybe CG
+getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
 defaultDirs = MkDirs "." Nothing "build"
@@ -164,7 +169,7 @@ export
 defaults : Options
 defaults = MkOptions defaultDirs defaultPPrint defaultSession
                      defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing)
+                     (MkPrimNs Nothing Nothing Nothing) []
                      []
 
 -- Reset the options which are set by source files
@@ -204,3 +209,7 @@ setExtension e = record { extensions $= (e ::) }
 export
 isExtension : LangExt -> Options -> Bool
 isExtension e opts = e `elem` extensions opts
+
+export
+addCG : (String, CG) -> Options -> Options
+addCG cg = record { additionalCGs $= (cg::) }

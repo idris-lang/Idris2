@@ -60,3 +60,4 @@ or via the `IDRIS2_CG` environment variable.
    chez
    racket
    gambit
+   custom
