@@ -164,7 +164,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--ide-mode"] [] [IdeMode]
               (Just "Run the REPL with machine-readable syntax"),
            MkOpt ["--ide-mode-socket"] [Optional "host:port"]
-                 (\hp => [IdeModeSocket $ maybe (formatSocketAddress (ideSocketModeAddress [])) id hp])
+                 (\hp => [IdeModeSocket $ fromMaybe (formatSocketAddress (ideSocketModeAddress [])) hp])
               (Just $ "Run the ide socket mode on given host and port (default \"" ++
                       formatSocketAddress (ideSocketModeAddress []) ++ "\")"),
 
