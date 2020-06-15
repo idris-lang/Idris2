@@ -137,47 +137,54 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--package", "-p"] ["package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
 
-           MkOpt ["--ide-mode"] [] [IdeMode]
-              (Just "Run the REPL with machine-readable syntax"),
-
-           MkOpt ["--ide-mode-socket"] [] [IdeModeSocket $ formatSocketAddress (ideSocketModeAddress [])]
-              (Just $ "Run the ide socket mode on default host and port (" ++ formatSocketAddress (ideSocketModeAddress []) ++ ")"),
-           MkOpt ["--ide-mode-socket-with"] ["host:port"] (\hp => [IdeModeSocket hp])
-              (Just "Run the ide socket mode on given host and port"),
-
+           MkOpt [] [] [] Nothing,
            MkOpt ["--prefix"] [] [ShowPrefix]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
               (Just "Show paths"),
+           MkOpt ["--libdir"] [] [Directory LibDir]
+              (Just "Show library directory"),
 
+           MkOpt [] [] [] Nothing,
            MkOpt ["--build"] ["package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] ["package file"] (\f => [Package Install f])
               (Just "Install the given package"),
            MkOpt ["--clean"] ["package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-
            MkOpt ["--repl"] ["package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
+           MkOpt ["--find-ipkg"] [] [FindIPKG]
+              (Just "Find and use an .ipkg file in a parent directory"),
 
-           MkOpt ["--libdir"] [] [Directory LibDir]
-              (Just "Show library directory"),
+           MkOpt [] [] [] Nothing,
+           MkOpt ["--ide-mode"] [] [IdeMode]
+              (Just "Run the REPL with machine-readable syntax"),
+           MkOpt ["--ide-mode-socket"] [] [IdeModeSocket $ formatSocketAddress (ideSocketModeAddress [])]
+              (Just $ "Run the ide socket mode on default host and port (" ++ formatSocketAddress (ideSocketModeAddress []) ++ ")"),
+           MkOpt ["--ide-mode-socket-with"] ["host:port"] (\hp => [IdeModeSocket hp])
+              (Just "Run the ide socket mode on given host and port"),
+
+           MkOpt [] [] [] Nothing,
+           MkOpt ["--client"] ["REPL command"] (\f => [RunREPL f])
+              (Just "Run a REPL command then quit immediately"),
+           MkOpt ["--timing"] [] [Timing]
+              (Just "Display timing logs"),
+
+           MkOpt [] [] [] Nothing,
            MkOpt ["--no-banner"] [] [NoBanner]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
               (Just "Quiet mode; display fewer messages"),
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
+
+           MkOpt [] [] [] Nothing,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
            MkOpt ["--help", "-h", "-?"] [] [Help]
               (Just "Display help text"),
-           MkOpt ["--timing"] [] [Timing]
-              (Just "Display timing logs"),
-           MkOpt ["--find-ipkg"] [] [FindIPKG]
-              (Just "Find and use an .ipkg file in a parent directory"),
-           MkOpt ["--client"] ["REPL command"] (\f => [RunREPL f])
-              (Just "Run a REPL command then quit immediately"),
+
            -- Internal debugging options
            MkOpt ["--yaffle", "--ttimp"] ["ttimp file"] (\f => [Yaffle f])
               Nothing, -- run ttimp REPL rather than full Idris
@@ -206,9 +213,10 @@ optsUsage options = let optsShow = map optShow options
     showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
     optShow : OptDesc -> (String, Maybe String)
-    optShow option = (showSep ", " (flags option) ++ " " ++
-                      showSep " " (map (\x => "<" ++ x ++ ">") (argdescs option)),
-                      (help option))
+    optShow (MkOpt [] _ _ _) = ("", Just "")
+    optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
+                                                  showSep " " (map (\x => "<" ++ x ++ ">") argdescs),
+                                                  help)
 
     optUsage : Nat -> (String, Maybe String) -> String
     optUsage maxOpt (optshow, help) = maybe ""  -- Don't show anything if there's no help string (that means
