@@ -56,14 +56,8 @@ showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
 showRacketChar c
    = if c < chr 32 || c > chr 126
-        then (("\\u" ++ pad (asHex (cast c))) ++)
+        then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++)
         else strCons c
-  where
-    pad : String -> String
-    pad str
-        = case isLTE (length str) 4 of
-               Yes _ => pack (List.replicate (minus 4 (length str)) '0') ++ str
-               No _ => str
 
 showRacketString : List Char -> String -> String
 showRacketString [] = id
