@@ -67,9 +67,14 @@ void win32_gettime(int64_t* sec, int64_t* nsec)
 
     *nsec = (t.QuadPart % 10000000)*100;
     *sec = t.QuadPart / 10000000;
-    *sec -= 11644473600; // LDAP epoch to Unix epoch 
+    *sec -= 11644473600; // LDAP epoch to Unix epoch
 }
 
 void win32_sleep(int ms) {
     Sleep(ms);
+}
+
+int win32_modenv(const char* name, const char* value, int overwrite) {
+    if (!overwrite && getenv(name)) return 0;
+    return _putenv_s(name, value);
 }

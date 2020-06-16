@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdlib.h>
 
 #ifdef _WIN32
 extern char **_environ;
@@ -72,4 +73,20 @@ int idris2_time() {
 
 char* idris2_getEnvPair(int i) {
     return *(environ + i);
+}
+
+int idris2_setenv(const char *name, const char *value, int overwrite) {
+#ifdef _WIN32
+    return win32_modenv(name, value, overwrite);
+#else
+    return setenv(name, value, overwrite);
+#endif
+}
+
+int idris2_unsetenv(const char *name) {
+#ifdef _WIN32
+    return win32_modenv(name, "", 1);
+#else
+    return unsetenv(name);
+#endif
 }
