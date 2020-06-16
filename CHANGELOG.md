@@ -27,6 +27,10 @@ Library changes:
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
 
+REPL changes:
+
+* Implemented `:module` command, to load a module during a REPL session.
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 

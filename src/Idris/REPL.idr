@@ -29,6 +29,7 @@ import Idris.IDEMode.MakeClause
 import Idris.IDEMode.Holes
 import Idris.ModTree
 import Idris.Parser
+import Idris.ProcessIdr
 import Idris.Resugar
 import public Idris.REPLCommon
 import Idris.Syntax
@@ -417,6 +418,8 @@ data REPLResult : Type where
   Printed : List String -> REPLResult
   TermChecked : PTerm -> PTerm -> REPLResult
   FileLoaded : String -> REPLResult
+  ModuleLoaded : String -> REPLResult
+  ErrorLoadingModule : String -> Error -> REPLResult
   ErrorLoadingFile : String -> FileError -> REPLResult
   ErrorsBuildingFile : String -> List Error -> REPLResult
   NoFileLoaded : REPLResult
@@ -583,6 +586,10 @@ process (Load f)
          put ROpts (record { mainfile = Just f } opts)
          -- Clear the context and load again
          loadMainFile f
+process (ImportMod m)
+    = do catch (do addImport (MkImport emptyFC False m m)
+                   pure $ ModuleLoaded (showSep "." (reverse m)))
+               (\err => pure $ ErrorLoadingModule (showSep "." (reverse m)) err)
 process (CD dir)
     = do setWorkingDir dir
          workDir <- getWorkingDir
@@ -814,6 +821,8 @@ mutual
   displayResult  (Printed xs) = printResult (showSep "\n" xs)
   displayResult  (TermChecked x y) = printResult $ show x ++ " : " ++ show y
   displayResult  (FileLoaded x) = printResult $ "Loaded file " ++ x
+  displayResult  (ModuleLoaded x) = printResult $ "Imported module " ++ x
+  displayResult  (ErrorLoadingModule x err) = printError $ "Error loading module " ++ x ++ ": " ++ !(perror err)
   displayResult  (ErrorLoadingFile x err) = printError $ "Error loading file " ++ x ++ ": " ++ show err
   displayResult  (ErrorsBuildingFile x errs) = printError $ "Error(s) building file " ++ x -- messages already displayed while building
   displayResult  NoFileLoaded = printError "No file can be reloaded"

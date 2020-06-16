@@ -395,6 +395,7 @@ data REPLCmd : Type where
      PrintDef : Name -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
+     ImportMod : List String -> REPLCmd
      Edit : REPLCmd
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
