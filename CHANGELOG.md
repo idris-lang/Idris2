@@ -27,6 +27,11 @@ Library changes:
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
 
+Command-line options changes:
+
+* Removed `--ide-mode-socket-with` option.  `--ide-mode-socket` now accepts an
+  optional `host:port` argument.
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 
