@@ -74,6 +74,12 @@ preOptions (SetCG e :: opts)
 preOptions (PkgPath p :: opts)
     = do addPkgDir p
          preOptions opts
+preOptions (BuildDir d :: opts)
+    = do setBuildDir d
+         preOptions opts
+preOptions (OutputDir d :: opts)
+    = do setOutputDir (Just d)
+         preOptions opts
 preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d

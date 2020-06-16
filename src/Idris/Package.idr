@@ -57,6 +57,8 @@ record PkgDesc where
   executable : Maybe String -- name of executable
   options : Maybe (FC, String)
   sourcedir : Maybe String
+  builddir : Maybe String
+  outputdir : Maybe String
   prebuild : Maybe (FC, String) -- Script to run before building
   postbuild : Maybe (FC, String) -- Script to run after building
   preinstall : Maybe (FC, String) -- Script to run after building, before installing
@@ -81,6 +83,8 @@ Show PkgDesc where
              maybe "" (\m => "Exec: " ++ m ++ "\n") (executable pkg) ++
              maybe "" (\m => "Opts: " ++ snd m ++ "\n") (options pkg) ++
              maybe "" (\m => "SourceDir: " ++ m ++ "\n") (sourcedir pkg) ++
+             maybe "" (\m => "BuildDir: " ++ m ++ "\n") (builddir pkg) ++
+             maybe "" (\m => "OutputDir: " ++ m ++ "\n") (outputdir pkg) ++
              maybe "" (\m => "Prebuild: " ++ snd m ++ "\n") (prebuild pkg) ++
              maybe "" (\m => "Postbuild: " ++ snd m ++ "\n") (postbuild pkg) ++
              maybe "" (\m => "Preinstall: " ++ snd m ++ "\n") (preinstall pkg) ++
@@ -94,7 +98,7 @@ initPkgDesc pname
                 Nothing Nothing Nothing Nothing Nothing
                 [] []
                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing
+                Nothing Nothing Nothing Nothing
 
 data DescField : Type where
   PVersion     : FC -> String -> DescField
@@ -112,6 +116,8 @@ data DescField : Type where
   PExec        : String -> DescField
   POpts        : FC -> String -> DescField
   PSourceDir   : FC -> String -> DescField
+  PBuildDir    : FC -> String -> DescField
+  POutputDir   : FC -> String -> DescField
   PPrebuild    : FC -> String -> DescField
   PPostbuild   : FC -> String -> DescField
   PPreinstall  : FC -> String -> DescField
@@ -133,6 +139,8 @@ field fname
     <|> strField POpts "options"
     <|> strField POpts "opts"
     <|> strField PSourceDir "sourcedir"
+    <|> strField PBuildDir "builddir"
+    <|> strField POutputDir "outputdir"
     <|> strField PPrebuild "prebuild"
     <|> strField PPostbuild "postbuild"
     <|> strField PPreinstall "preinstall"
@@ -204,6 +212,8 @@ addField (PMainMod loc n)    pkg = do put MainMod (Just (loc, n))
 addField (PExec e)           pkg = pure $ record { executable = Just e } pkg
 addField (POpts fc e)        pkg = pure $ record { options = Just (fc, e) } pkg
 addField (PSourceDir fc a)   pkg = pure $ record { sourcedir = Just a } pkg
+addField (PBuildDir fc a)    pkg = pure $ record { builddir = Just a } pkg
+addField (POutputDir fc a)   pkg = pure $ record { outputdir = Just a } pkg
 addField (PPrebuild fc e)    pkg = pure $ record { prebuild = Just (fc, e) } pkg
 addField (PPostbuild fc e)   pkg = pure $ record { postbuild = Just (fc, e) } pkg
 addField (PPreinstall fc e)  pkg = pure $ record { preinstall = Just (fc, e) } pkg
@@ -391,8 +401,6 @@ clean : {auto c : Ref Ctxt Defs} ->
         Core ()
 clean pkg opts -- `opts` is not used but might be in the future
     = do defs <- get Ctxt
-         let build = build_dir (dirs (options defs))
-         let exec = exec_dir (dirs (options defs))
          runScript (preclean pkg)
          let pkgmods = maybe
                          (map fst (modules pkg))
@@ -404,8 +412,9 @@ clean pkg opts -- `opts` is not used but might be in the future
                                        (x :: xs) => Just (xs, x)) pkgmods
          Just srcdir <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         let builddir = srcdir </> build </> "ttc"
-         let execdir = srcdir </> exec
+         let d = dirs (options defs)
+         let builddir = srcdir </> build_dir d </> "ttc"
+         let outputdir = srcdir </> outputDirWithDefault d
          -- the usual pair syntax breaks with `No such variable a` here for some reason
          let pkgTrie = the (StringTrie (List String)) $
                        foldl (\trie, ksv =>
@@ -417,7 +426,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                        (\ks => map concat . traverse (deleteBin builddir ks))
                        pkgTrie
          deleteFolder builddir []
-         maybe (pure ()) (\e => delete (execdir </> e))
+         maybe (pure ()) (\e => delete (outputdir </> e))
                (executable pkg)
          runScript (postclean pkg)
   where
@@ -473,6 +482,8 @@ processPackage cmd file opts
                      | Left (FileFail err) => throw (FileErr file err)
                      | Left err => throw (ParseFail (getParseErrorLoc file err) err)
                  pkg <- addFields fs (initPkgDesc pname)
+                 maybe (pure ()) setBuildDir (builddir pkg)
+                 setOutputDir (outputdir pkg)
                  case cmd of
                       Build => do [] <- build pkg opts
                                      | errs => coreLift (exitWith (ExitFailure 1))
@@ -504,6 +515,8 @@ errorMsg = unlines
   , "    --dumpvmcode <file>"
   , "    --debug-elab-check"
   , "    --codegen <cg>"
+  , "    --build-dir <dir>"
+  , "    --output-dir <dir>"
   ]
 
 
@@ -511,7 +524,6 @@ filterPackageOpts : POptsFilterResult -> List CLOpt -> Core (POptsFilterResult)
 filterPackageOpts acc Nil                  = pure acc
 filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetails = Just (cmd, f)}  acc) xs
 
-filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
 filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
 filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
 filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
@@ -519,6 +531,9 @@ filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $=
 filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
 filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
 filterPackageOpts acc (DebugElabCheck::xs) = filterPackageOpts (record {oopts $= (DebugElabCheck::)} acc) xs
+filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
+filterPackageOpts acc (BuildDir f    ::xs) = filterPackageOpts (record {oopts $= (BuildDir f::)}     acc) xs
+filterPackageOpts acc (OutputDir f   ::xs) = filterPackageOpts (record {oopts $= (OutputDir f::)}    acc) xs
 
 filterPackageOpts acc (x::xs) = pure (record {hasError = True} acc)
 
@@ -564,7 +579,8 @@ findIpkg fname
               | Left (FileFail err) => throw (FileErr ipkgn err)
               | Left err => throw (ParseFail (getParseErrorLoc ipkgn err) err)
         pkg <- addFields fs (initPkgDesc pname)
-        setSourceDir (sourcedir pkg)
+        maybe (pure ()) setBuildDir (builddir pkg)
+        setOutputDir (outputdir pkg)
         processOptions (options pkg)
         loadDependencies (depends pkg)
         case fname of

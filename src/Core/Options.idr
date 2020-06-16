@@ -7,6 +7,7 @@ import Utils.Binary
 import Utils.Path
 
 import Data.List
+import Data.Maybe
 import Data.Strings
 
 import System.Info
@@ -19,23 +20,31 @@ record Dirs where
   working_dir : String
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
-  exec_dir : String -- executable directory, relative to working directory
+  output_dir : Maybe String -- output directory, relative to working directory
   dir_prefix : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file
 
+export
+execBuildDir : Dirs -> String
+execBuildDir d = build_dir d </> "exec"
+
+export
+outputDirWithDefault : Dirs -> String
+outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
+
 public export
 toString : Dirs -> String
-toString (MkDirs wdir sdir bdir edir dfix edirs ldirs ddirs) =
-  unlines [ "+ Working Directory   :: " ++ show wdir
-          , "+ Source Directory    :: " ++ show sdir
-          , "+ Build Directory     :: " ++ show bdir
-          , "+ Executable Directory     :: " ++ show edir
-          , "+ Installation Prefix :: " ++ show dfix
-          , "+ Extra Directories :: " ++ show edirs
+toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
+  unlines [ "+ Working Directory      :: " ++ show wdir
+          , "+ Source Directory       :: " ++ show sdir
+          , "+ Build Directory        :: " ++ show bdir
+          , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
+          , "+ Installation Prefix    :: " ++ show dfix
+          , "+ Extra Directories      :: " ++ show edirs
           , "+ CG Library Directories :: " ++ show ldirs
-          , "+ Data Directories :: " ++ show ddirs]
+          , "+ Data Directories       :: " ++ show ddirs]
 
 public export
 data CG = Chez
@@ -149,8 +158,7 @@ getCG : Options -> String -> Maybe CG
 getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build"
-                     ("build" </> "exec")
+defaultDirs = MkDirs "." Nothing "build" Nothing
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter
