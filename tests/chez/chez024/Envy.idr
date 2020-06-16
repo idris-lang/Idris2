@@ -11,8 +11,14 @@ main = do
     putStrLn str
     ok <- setEnv "HELLO" "HO" False
     printLn ok
+    Just str <- getEnv "HELLO"
+        | Nothing => pure ()
+    putStrLn str
     ok <- setEnv "HELLO" "EH" True
     printLn ok
+    Just str <- getEnv "HELLO"
+        | Nothing => pure ()
+    putStrLn str
     ok <- unsetEnv "HELLO"
     printLn ok
     Just str <- getEnv "HELLO"
