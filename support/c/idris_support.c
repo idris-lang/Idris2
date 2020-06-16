@@ -78,7 +78,7 @@ int idris2_setenv(const char *name, const char *value, int overwrite) {
 #ifdef _WIN32
     return win32_modenv(name, value);
 #else
-    return setenv(name);
+    return setenv(name, value, overwrite);
 #endif
 }
 
