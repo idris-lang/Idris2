@@ -260,7 +260,7 @@ processArgs flag (Optional a :: as) [] f =
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
 processArgs flag (Optional a :: as) (x :: xs) f =
-  processArgs flag as xs (f $ toMaybe (not (any (\p => isPrefixOf p x) ["-", "--"])) x)
+  processArgs flag as xs (f $ toMaybe (not (isPrefixOf "-" x)) x)
 
 matchFlag : (d : OptDesc) -> List String ->
             Either String (Maybe (List CLOpt, List String))
