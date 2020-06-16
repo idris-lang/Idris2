@@ -4,7 +4,7 @@ import System
 
 main : IO ()
 main = do
-    ok <- setEnv "HELLO" "HI" False
+    ok <- setEnv "HELLO" "HI" True
     printLn ok
     Just str <- getEnv "HELLO"
         | Nothing => pure ()
