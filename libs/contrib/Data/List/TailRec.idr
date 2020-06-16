@@ -19,9 +19,9 @@ module Data.List.TailRec
 import Syntax.PreorderReasoning
 import Syntax.WithProof
 
-import Data.List 
-import Data.Vect 
-import Data.Nat  
+import Data.List
+import Data.Vect
+import Data.Nat
 
 length_aux : List a -> Nat -> Nat
 length_aux [] len = len
@@ -35,9 +35,9 @@ export
 length_ext : (xs : List a) -> Data.List.length xs = Data.List.TailRec.length xs
 length_ext xs = Calc $
   |~ Data.List.length xs                
-  ~~ Data.List.length xs + 0             ...( sym $ plusZeroRightNeutral $ Data.List.length xs ) 
-  ~~ Data.List.TailRec.length_aux xs 0   ...( lemma 0 xs )                                       
-  ~~ Data.List.TailRec.length xs  ...( Refl )                                             
+  ~~ Data.List.length xs + 0             ...( sym $ plusZeroRightNeutral $ Data.List.length xs )
+  ~~ Data.List.TailRec.length_aux xs 0   ...( lemma 0 xs )
+  ~~ Data.List.TailRec.length xs         ...( Refl )
   where
     lemma : (n : Nat) -> (xs : List a) -> 
             Data.List.length xs + n  = length_aux xs n
