@@ -77,7 +77,7 @@ char* idris2_getEnvPair(int i) {
 
 int idris2_setenv(const char *name, const char *value, int overwrite) {
 #ifdef _WIN32
-    return win32_modenv(name, value);
+    return win32_modenv(name, value, overwrite);
 #else
     return setenv(name, value, overwrite);
 #endif
@@ -85,7 +85,7 @@ int idris2_setenv(const char *name, const char *value, int overwrite) {
 
 int idris2_unsetenv(const char *name) {
 #ifdef _WIN32
-    return win32_modenv(name, "");
+    return win32_modenv(name, "", 1);
 #else
     return unsetenv(name);
 #endif

@@ -74,8 +74,9 @@ void win32_sleep(int ms) {
     Sleep(ms);
 }
 
-int win32_modenv(const char* name, const char* value) {
+int win32_modenv(const char* name, const char* value, int overwrite) {
     char buffer[2000];
+    if (!overwrite && getenv(name)) return -1;
     if (strlen(name) + strlen(value) > 1998) return -1;
     sprintf(buffer, "%s=%s", name, value);
     return putenv(buffer);
