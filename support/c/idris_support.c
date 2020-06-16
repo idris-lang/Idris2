@@ -73,3 +73,19 @@ int idris2_time() {
 char* idris2_getEnvPair(int i) {
     return *(environ + i);
 }
+
+int idris2_setenv(const char *name, const char *value, int overwrite) {
+#ifdef _WIN32
+    return win32_modenv(name, value);
+#else
+    return setenv(name);
+#endif
+}
+
+int idris2_unsetenv(const char *name) {
+#ifdef _WIN32
+    return win32_modenv(name, "");
+#else
+    return unsetenv(name);
+#endif
+}
