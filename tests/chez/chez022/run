@@ -1,4 +1,14 @@
-make all > /dev/null
+case `uname -s` in
+    OpenBSD|FreeBSD|NetBSD)
+        MAKE=gmake
+        ;;
+
+    *)
+        MAKE=make
+        ;;
+esac
+
+${MAKE} all > /dev/null
 $1 --no-banner usealloc.idr < input
 rm -rf build
-make clean > /dev/null
+${MAKE} clean > /dev/null
