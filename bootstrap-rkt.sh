@@ -40,17 +40,6 @@ IDRIS2_BOOT_PATH="${BOOT_PATH_BASE}/prelude${SEP}${BOOT_PATH_BASE}/base${SEP}${B
 # PREFIX must be the "clean" build root, without cygpath -m
 # Otherwise, we get 'git: Bad address'
 echo ${PREFIX}
-
-case `uname -s` in
-    OpenBSD|FreeBSD|NetBSD)
-        MAKE=gmake
-        ;;
-
-    *)
-        MAKE=make
-        ;;
-esac
-
 DYLIB_PATH="${PREFIX}/lib"
 ${MAKE} libs IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
 ${MAKE} install IDRIS2_CG=racket PREFIX=${PREFIX} LD_LIBRARY_PATH=${DYLIB_PATH}
