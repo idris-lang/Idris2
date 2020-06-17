@@ -97,3 +97,15 @@ export
 notOrIsAnd : (x, y : Bool) -> not (x || y) = not x && not y
 notOrIsAnd False _ = Refl
 notOrIsAnd True  _ = Refl
+
+-- Interaction with typelevel `Not`
+
+export
+notTrueIsFalse : {1 x : Bool} -> Not (x = True) -> x = False
+notTrueIsFalse {x=False} _ = Refl
+notTrueIsFalse {x=True}  f = absurd $ f Refl
+
+export
+notFalseIsTrue : {1 x : Bool} -> Not (x = False) -> x = True
+notFalseIsTrue {x=True} _  = Refl
+notFalseIsTrue {x=False} f = absurd $ f Refl
