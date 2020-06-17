@@ -13,23 +13,50 @@ record ESSt where
   preamble : SortedMap String String
 
 
+jsString : String -> String
+jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
+  where
+    okchar : Char -> String
+    okchar c = if (c >= ' ') && (c /= '\\') && (c /= '"') && (c /= '\'') && (c <= '~')
+                  then cast c
+                  else case c of
+                            '\0' => "\\0"
+                            '\'' => "\\'"
+                            '"' => "\\\""
+                            '\r' => "\\r"
+                            '\n' => "\\n"
+                            other => "\\u{" ++ asHex (cast {to=Int} c) ++ "}"
+
 esName : String -> String
 esName x = "__esPrim_" ++ x
+
+
+addToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> String -> Core String
+addToPreamble name newName def =
+  do
+    s <- get ESs
+    case lookup name (preamble s) of
+      Nothing =>
+        do
+          put ESs (record { preamble = insert name def (preamble s) } s)
+          pure newName
+      Just x =>
+        if x /= def then throw $ InternalError $ "two incompatible definitions for " ++ name ++ "<|" ++ x ++"|> <|"++ def ++ "|>"
+                    else pure newName
 
 addConstToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addConstToPreamble name def =
   do
-    s <- get ESs
-    let v = "const " ++ esName name ++ " = (" ++ def ++ ")"
-    case lookup name (preamble s) of
-      Nothing =>
-        do
-          put ESs (record { preamble = insert name v (preamble s) } s)
-          pure $ esName name
-      Just x =>
-        if x /= v then throw $ InternalError $ "two incompatible definitions for " ++ name ++ "<|" ++ x ++"|> <|"++ v ++ "|>"
-                    else pure $ esName name
+    let newName = esName name
+    let v = "const " ++ newName ++ " = (" ++ def ++ ");"
+    addToPreamble name newName v
 
+addRequireToPreamble : {auto c : Ref ESs ESSt} -> String -> Core String
+addRequireToPreamble name =
+  do
+    let newName = "__require_" ++ name
+    let v = "const " ++ newName ++ " = require(" ++ jsString name ++ ");"
+    addToPreamble name newName v
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -54,20 +81,6 @@ jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
 jsName (CaseBlock x y) = "case__" ++ show x ++ "_" ++ show y
 jsName (WithBlock x y) = "with__" ++ show x ++ "_" ++ show y
 jsName (Resolved i) = "fn__" ++ show i
-
-jsString : String -> String
-jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
-  where
-    okchar : Char -> String
-    okchar c = if (c >= ' ') && (c /= '\\') && (c /= '"') && (c /= '\'') && (c <= '~')
-                  then cast c
-                  else case c of
-                            '\0' => "\\0"
-                            '\'' => "\\'"
-                            '"' => "\\\""
-                            '\r' => "\\r"
-                            '\n' => "\\n"
-                            other => "\\u{" ++ asHex (cast {to=Int} c) ++ "}"
 
 jsCrashExp : {auto c : Ref ESs ESSt} -> String -> Core String
 jsCrashExp message  =
@@ -170,29 +183,45 @@ jsOp (Cast StringType IntType) [x] = boundedInt 63 $ !(jsIntegerOfString x)
 jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
-jsOp (Cast ty DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+jsOp (Cast IntegerType Bits8Type) [x] = boundedInt 8 x
+jsOp (Cast IntegerType Bits16Type) [x] = boundedInt 16 x
+jsOp (Cast IntegerType Bits32Type) [x] = boundedInt 32 x
+jsOp (Cast IntegerType Bits64Type) [x] = boundedInt 64 x
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 
+
+readCCPart : String -> (String, String)
+readCCPart x =
+  let (cc, def) = break (== ':') x
+  in (cc, drop 1 def)
+
+
 searchForeign : List String -> List String -> Maybe String
 searchForeign prefixes [] = Nothing
 searchForeign prefixes (x::xs) =
-  let (cc, def) = break (== ':') x
-  in if cc `elem` prefixes then Just $ drop 1 def
+  let (cc, def) = readCCPart x
+  in if cc `elem` prefixes then Just def
                            else searchForeign prefixes xs
 
 
-makeForeign : Name -> String -> Core String
+makeForeign : {auto c : Ref ESs ESSt} -> Name -> String -> Core String
 makeForeign n x =
   do
-    let (ty, def) = break (== ',') x
+    let (ty, def) = readCCPart x
     case ty of
-      "lambdaExp" => pure $ "const " ++ jsName n ++ " = (" ++ drop 1 def ++ ")\n"
-      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supporte types are lambdaExp")
+      "lambda" => pure $ "const " ++ jsName n ++ " = (" ++ def ++ ")\n"
+      "lambdaRequire" =>
+        do
+          let (libs, def_) = readCCPart def
+          traverse addRequireToPreamble (split (==',') libs)
+          pure $ "const " ++ jsName n ++ " = (" ++ def_ ++ ")\n"
+      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supporte types are lambda")
 
-foreignDecl : Name -> List String -> Core String
+foreignDecl : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
   case searchForeign ["node", "javascript"] ccs of
     Just x => makeForeign n x
@@ -202,6 +231,12 @@ jsPrim : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ "({value: "++ v ++"})"
 jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ "(" ++ r ++ ".value)"
 jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ "(" ++ r ++ ".value=" ++ v ++ ")"
+jsPrim (NS _ (UN "prim__os")) [] =
+  do
+    os <- addRequireToPreamble "os"
+    let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
+    sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
+    pure sysos
 jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
 
 mutual
@@ -271,6 +306,10 @@ mutual
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
                                 !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break;\n"
 
+static_preamble : List String
+static_preamble =
+  ["function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"]
+
 export
 compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String
 compileToES c tm =
@@ -279,5 +318,5 @@ compileToES c tm =
     s <- newRef ESs (MkESSt empty)
     es_statements <- imperative2es 0 statements
     st <- get ESs
-    let pre = showSep "\n" $ SortedMap.values $ preamble st
+    let pre = showSep "\n" $ static_preamble ++ (SortedMap.values $ preamble st)
     pure $ pre ++ "\n\n" ++ es_statements -- ++ "\n\n\n/*" ++ show statements ++ "*/"

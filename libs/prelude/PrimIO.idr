@@ -94,6 +94,7 @@ cCall : (ret : Type) -> String -> FArgList -> IO ret
 cCall ret fn args = primIO (prim__cCall ret fn args)
 
 %foreign "C:idris2_isNull, libidris2_support"
+         "javascript:lambda:x=>x===undefined||x===null?1n:0n"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 
@@ -121,10 +122,33 @@ onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
 export
 prim__getString : Ptr String -> String
 
+
+read_line_js : String
+read_line_js =
+   "node:lambdaRequire:fs:(file_ptr =>{
+     const LF = 0x0a;
+     const readBuf = Buffer.alloc(1);
+     let lineEnd = file_ptr.buffer.indexOf(LF);
+     while (lineEnd === -1) {
+      const bytesRead = __require_fs.readSync(file_ptr.fd, readBuf);
+      if (bytesRead === 0) {
+       file_ptr.eof = true;
+       break;
+      }
+      file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
+      lineEnd = file_ptr.buffer.indexOf(LF);
+     }
+     const line = file_ptr.buffer.slice(0, lineEnd + 1);
+     file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1);
+     return line.toString('utf-8');
+   })({fd:0, buffer: Buffer.alloc(0), name:'<stdin>', eof: false})"
+
 %foreign "C:idris2_getStr,libidris2_support"
+         read_line_js
 prim__getStr : PrimIO String
+
 %foreign "C:idris2_putStr,libidris2_support"
-         "node:lambdaExp,x=>process.stdout.write(x)"
+         "node:lambda:x=>process.stdout.write(x)"
 prim__putStr : String -> PrimIO ()
 
 ||| Output a string to stdout without a trailing newline.

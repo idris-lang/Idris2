@@ -17,26 +17,69 @@ support fn = "C:" ++ fn ++ ", libidris2_support"
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
+js_try_catch_lasterr_Int : String -> String
+js_try_catch_lasterr_Int x = "{try{" ++ x ++ ";return 0n}catch(e){process.__lasterr = e; return 1n}}"
+
+js_try_catch_lasterr_Ptr : String -> String
+js_try_catch_lasterr_Ptr x = "{try{" ++ x ++ "}catch(e){process.__lasterr = e; return null}}"
+
+js_open_file : String
+js_open_file = "return {fd:__require_fs.openSync(n, m), buffer: Buffer.alloc(0), name:n, eof: false}"
+
 %foreign support "idris2_openFile"
+         ("node:lambdaRequire:fs:(n, m) =>" ++ js_try_catch_lasterr_Ptr js_open_file)
 prim__open : String -> String -> Int -> PrimIO FilePtr
+
 %foreign support "idris2_closeFile"
+         ("node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)")
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
+         "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
 prim_error : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileErrno"
+         "node:lambda:()=>-BigInt(process._lasterr.errno)"
 prim_fileErrno : PrimIO Int
 
+
+read_line_js : String
+read_line_js =
+   "(file_ptr =>{
+     const LF = 0x0a;
+     const readBuf = Buffer.alloc(1);
+     let lineEnd = file_ptr.buffer.indexOf(LF);
+     while (lineEnd === -1) {
+      const bytesRead = __require_fs.readSync(file_ptr.fd, readBuf);
+      if (bytesRead === 0) {
+       file_ptr.eof = true;
+       break;
+      }
+      file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
+      lineEnd = file_ptr.buffer.indexOf(LF);
+     }
+     const line = file_ptr.buffer.slice(0, lineEnd + 1);
+     file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1);
+     return line.toString('utf-8');
+   })"
+
 %foreign support "idris2_readLine"
+         ("node:lambda:" ++ read_line_js)
 prim__readLine : FilePtr -> PrimIO (Ptr String)
+
 %foreign support "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign support "fgetc"
 prim__readChar : FilePtr -> PrimIO Int
+
 %foreign support "idris2_writeLine"
+         "node:lambdaRequire:fs:(file_ptr, line) => __require_fs.writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
+
 %foreign support "idris2_eof"
+         "node:lambda:x=>(x.eof?BigInt(1):BigInt(0))"
 prim__eof : FilePtr -> PrimIO Int
+
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 %foreign support "idris2_popen"
@@ -46,26 +89,38 @@ prim__pclose : FilePtr -> PrimIO ()
 
 %foreign support "idris2_removeFile"
 prim__removeFile : String -> PrimIO Int
+
 %foreign support "idris2_fileSize"
+         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
 prim__fileSize : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileSize"
 prim__fPoll : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileAccessTime"
 prim__fileAccessTime : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileModifiedTime"
+         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileStatusTime"
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_stdin"
+         "node:lambda:x=>({fd:0, buffer: Buffer.alloc(0), name:'<stdin>', eof: false})"
 prim__stdin : FilePtr
+
 %foreign support "idris2_stdout"
+         "node:lambda:x=>({fd:1, buffer: Buffer.alloc(0), name:'<stdout>', eof: false})"
 prim__stdout : FilePtr
+
 %foreign support "idris2_stderr"
+         "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
 %foreign libc "chmod"
+         ("node:lambdaRequire:fs:(filename, mode) => " ++ js_try_catch_lasterr_Int "__require_fs.chmodSync(filename, Number(mode))")
 prim__chmod : String -> Int -> PrimIO Int
 
 modeStr : Mode -> String
