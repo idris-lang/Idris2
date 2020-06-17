@@ -144,8 +144,6 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
-	SCHEME=${SCHEME} \
-	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap.sh
 
 # Bootstrapping using racket
@@ -159,7 +157,6 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 endif
-	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap-rkt.sh
 
 bootstrap-test:
