@@ -44,3 +44,6 @@ ifeq ($(OS),bsd)
 else
 	MAKE := make
 endif
+
+# Add a custom.mk file to override any of the configurations
+-include custom.mk
