@@ -1963,7 +1963,7 @@ export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setPrefix dir
     = do defs <- get Ctxt
-         put Ctxt (record { options->dirs->dir_prefix = dir } defs)
+         put Ctxt (record { options->dirs->prefix_dir = dir } defs)
 
 export
 setExtension : {auto c : Ref Ctxt Defs} -> LangExt -> Core ()

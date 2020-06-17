@@ -21,7 +21,7 @@ record Dirs where
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
   output_dir : Maybe String -- output directory, relative to working directory
-  dir_prefix : String -- installation prefix, for finding data files (e.g. run time support)
+  prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file

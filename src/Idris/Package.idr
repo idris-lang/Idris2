@@ -343,7 +343,7 @@ install pkg opts -- not used but might be in the future
          Just srcdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
          -- Make the package installation directory
-         let installPrefix = dir_prefix (dirs (options defs)) </>
+         let installPrefix = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
              | False => throw (InternalError ("Can't change directory to " ++ installPrefix))
