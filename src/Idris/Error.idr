@@ -263,7 +263,7 @@ perror (BadImplicit fc str)
 perror (BadRunElab fc env script)
     = pure $ "Bad elaborator script " ++ !(pshow env script) ++ " at:\n" ++ !(ploc fc)
 perror (GenericMsg fc str) = pure $ str ++ " at:\n" ++ !(ploc fc)
-perror (TTCError msg) = pure $ "Error in TTC file: " ++ show msg
+perror (TTCError msg) = pure $ "Error in TTC file: " ++ show msg ++ " (the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files)"
 perror (FileErr fname err)
     = pure $ "File error in " ++ fname ++ ": " ++ show err
 perror (ParseFail _ err)
