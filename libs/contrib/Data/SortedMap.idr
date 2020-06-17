@@ -216,6 +216,10 @@ insert k v (M _ t) =
     Right t' => (M _ t')
 
 export
+singleton : Ord k => k -> v -> SortedMap k v
+singleton k v = insert k v empty
+
+export
 insertFrom : Foldable f => f (k, v) -> SortedMap k v -> SortedMap k v
 insertFrom = flip $ foldl $ flip $ uncurry insert
 

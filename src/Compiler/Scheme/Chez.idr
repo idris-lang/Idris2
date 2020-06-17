@@ -75,7 +75,7 @@ schHeader chez libs
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++ 
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
     "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
@@ -341,7 +341,16 @@ startChez : String -> String -> String
 startChez appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "DIR=\"`realpath $0`\""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
@@ -357,7 +366,17 @@ startChezCmd chez appdir target = unlines
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target = unlines
     [ "#!/bin/sh"
-    , "DIR=\"`realpath \"$0\"`\""
+    , ""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
     , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
@@ -440,7 +459,7 @@ compileExpr makeitso c execDir tm outfile
          logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
          let outShRel = execDir </> outfile
          if isWindows
-            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) 
+            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          coreLift $ chmodRaw outShRel 0o755
          pure (Just outShRel)

@@ -3,6 +3,7 @@ module Idris.IDEMode.Commands
 import Core.Core
 import Core.Name
 import public Idris.REPLOpts
+import Utils.Hex
 
 import System.File
 
@@ -253,21 +254,14 @@ export
 version : Int -> Int -> SExp
 version maj min = toSExp (SymbolAtom "protocol-version", maj, min)
 
-%foreign "C:fprintf,libc 6"
-prim__printfHex : AnyPtr -> String -> Int -> PrimIO ()
-
-hex : File -> Int -> IO ()
-hex (FHandle h) num
-    = primIO $ prim__printfHex h "%06x" num
-
-sendLine : File -> String -> IO ()
-sendLine f st =
+sendStr : File -> String -> IO ()
+sendStr f st =
   map (const ()) (fPutStr f st)
 
 export
 send : SExpable a => File -> a -> Core ()
 send f resp
     = do let r = show (toSExp resp) ++ "\n"
-         coreLift $ hex f (cast (length r))
-         coreLift $ sendLine f r
+         coreLift $ sendStr f $ leftPad '0' 6 (asHex (cast (length r)))
+         coreLift $ sendStr f r
          coreLift $ fflush f

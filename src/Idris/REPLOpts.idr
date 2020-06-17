@@ -1,7 +1,9 @@
 module Idris.REPLOpts
 
+import Compiler.Common
 import Idris.Syntax
 
+import Data.List
 import Data.Strings
 import System.File
 
@@ -22,11 +24,16 @@ record REPLOpts where
   editor : String
   errorLine : Maybe Int
   idemode : OutputMode
+  currentElabSource : String
+  -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
+  -- better to stick it now.
+  extraCodegens : List (String, Codegen)
+
 
 export
-defaultOpts : Maybe String -> OutputMode -> REPLOpts
-defaultOpts fname outmode
-   = MkREPLOpts False NormaliseAll fname "" "vim" Nothing outmode
+defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
+defaultOpts fname outmode cgs
+   = MkREPLOpts False NormaliseAll fname "" "vim" Nothing outmode "" cgs
 
 export
 data ROpts : Type where
@@ -79,3 +86,28 @@ getSourceLine l
     findLine Z (l :: ls) = Just l
     findLine (S k) (l :: ls) = findLine k ls
     findLine _ [] = Nothing
+
+export
+setCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
+                       String -> Core ()
+setCurrentElabSource src
+    = do opts <- get ROpts
+         put ROpts (record { currentElabSource = src } opts)
+
+export
+getCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
+                       Core String
+getCurrentElabSource
+     = do opts <- get ROpts
+          pure (currentElabSource opts)
+
+addCodegen : {auto o : Ref ROpts REPLOpts} ->
+             String -> Codegen -> Core ()
+addCodegen s cg = do opts <- get ROpts
+                     put ROpts (record { extraCodegens $= ((s,cg)::) } opts)
+
+export
+getCodegen : {auto o : Ref ROpts REPLOpts} ->
+             String -> Core (Maybe Codegen)
+getCodegen s = do opts <- get ROpts
+                  pure $ lookup s (extraCodegens opts)

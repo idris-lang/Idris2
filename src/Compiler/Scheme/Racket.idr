@@ -56,14 +56,8 @@ showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
 showRacketChar c
    = if c < chr 32 || c > chr 126
-        then (("\\u" ++ pad (asHex (cast c))) ++)
+        then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++)
         else strCons c
-  where
-    pad : String -> String
-    pad str
-        = case isLTE (length str) 4 of
-               Yes _ => pack (List.replicate (minus 4 (length str)) '0') ++ str
-               No _ => str
 
 showRacketString : List Char -> String -> String
 showRacketString [] = id
@@ -320,7 +314,16 @@ startRacket : String -> String -> String -> String
 startRacket racket appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "DIR=\"`realpath $0`\""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
     , racket ++ "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
@@ -336,7 +339,17 @@ startRacketCmd racket appdir target = unlines
 startRacketWinSh : String -> String -> String -> String
 startRacketWinSh racket appdir target = unlines
     [ "#!/bin/sh"
-    , "DIR=\"`realpath \"$0\"`\""
+    , ""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
@@ -390,7 +403,7 @@ compileExpr mkexec c execDir tm outfile
          coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-          
+
          let ext = if isWindows then ".exe" else ""
          let outRktFile = appDirRel </> outfile <.> "rkt"
          let outBinFile = appDirRel </> outfile <.> ext
@@ -430,4 +443,3 @@ executeExpr c execDir tm
 export
 codegenRacket : Codegen
 codegenRacket = MkCG (compileExpr True) executeExpr
-

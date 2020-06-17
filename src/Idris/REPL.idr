@@ -154,9 +154,10 @@ setOpt (Editor e)
     = do opts <- get ROpts
          put ROpts (record { editor = e } opts)
 setOpt (CG e)
-    = case getCG e of
-           Just cg => setCG cg
-           Nothing => iputStrLn "No such code generator available"
+    = do defs <- get Ctxt
+         case getCG (options defs) e of
+            Just cg => setCG cg
+            Nothing => iputStrLn "No such code generator available"
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -170,7 +171,8 @@ getOptions = do
          ]
 
 export
-findCG : {auto c : Ref Ctxt Defs} -> Core Codegen
+findCG : {auto o : Ref ROpts REPLOpts} ->
+         {auto c : Ref Ctxt Defs} -> Core Codegen
 findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
@@ -178,6 +180,10 @@ findCG
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
               Node => pure codegenNode
+              Other s => case !(getCodegen s) of
+                            Just cg => pure cg
+                            Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
+                                          coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (FC -> Bool) -> FC -> a -> Bool
 anyAt p loc y = p loc
@@ -350,12 +356,12 @@ processEdit (ExprSearch upd line name hints all)
     dropLams _ env tm = (_ ** (env, tm))
 processEdit (GenerateDef upd line name)
     = do defs <- get Ctxt
-         Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine line p)
+         Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do Just (fc, cs) <- makeDef (\p, n => onLine line p) n'
+                    (do Just (fc, cs) <- makeDef (\p, n => onLine (line - 1) p) n'
                            | Nothing => processEdit (AddClause upd line name)
                         Just srcLine <- getSourceLine line
                            | Nothing => pure (EditError "Source line not found")
@@ -435,6 +441,7 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
+          {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
     = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
@@ -735,7 +742,9 @@ interpret inp
     = case parseRepl inp of
            Left err => pure $ REPLError (show err)
            Right Nothing => pure Done
-           Right (Just cmd) => processCatch cmd
+           Right (Just cmd) => do
+             setCurrentElabSource inp
+             processCatch cmd
 
 mutual
   export

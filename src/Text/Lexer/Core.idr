@@ -135,6 +135,8 @@ record TokenData a where
   constructor MkToken
   line : Int
   col : Int
+  endLine : Int
+  endCol : Int
   tok : a
 
 export
@@ -168,9 +170,11 @@ tokenise pred line col acc tmap str
     getFirstToken [] str = Nothing
     getFirstToken ((lex, fn) :: ts) str
         = case scan lex [] str of
-               Just (tok, rest) => Just (MkToken line col (fn (fastPack (reverse tok))),
-                                         line + cast (countNLs tok),
-                                         getCols tok col, rest)
+               Just (tok, rest) =>
+                 let line' = line + cast (countNLs tok)
+                     col' = getCols tok col in
+                     Just (MkToken line col line' col' (fn (fastPack (reverse tok))),
+                           line', col', rest)
                Nothing => getFirstToken ts str
 
 ||| Given a mapping from lexers to token generating functions (the

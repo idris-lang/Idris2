@@ -1619,7 +1619,7 @@ addDirective : {auto c : Ref Ctxt Defs} ->
                String -> String -> Core ()
 addDirective c str
     = do defs <- get Ctxt
-         case getCG c of
+         case getCG (options defs) c of
               Nothing => -- warn, rather than fail, because the CG may exist
                          -- but be unknown to this particular instance
                          coreLift $ putStrLn $ "Unknown code generator " ++ c

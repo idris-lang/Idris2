@@ -61,6 +61,7 @@ modules =
 
     Idris.CommandLine,
     Idris.Desugar,
+    Idris.Driver,
     Idris.Elab.Implementation,
     Idris.Elab.Interface,
     Idris.Error,
@@ -69,6 +70,7 @@ modules =
     Idris.IDEMode.MakeClause,
     Idris.IDEMode.Parser,
     Idris.IDEMode.REPL,
+    Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
     Idris.IDEMode.Holes,
     Idris.ModTree,
@@ -145,6 +147,7 @@ modules =
     TTImp.WithClause,
 
     Utils.Binary,
+    Utils.Either,
     Utils.Hex,
     Utils.Octal,
     Utils.Shunting,
