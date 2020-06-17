@@ -407,7 +407,7 @@ compileToSO : {auto c : Ref Ctxt Defs} ->
               String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
 compileToSO chez appDirRel outSsAbs
     = do let tmpFileAbs = appDirRel </> "compileChez"
-         let build= "(parameterize ([optimize-level 3]) (compile-program " ++
+         let build = "(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
