@@ -146,6 +146,7 @@ else
 endif
 	SCHEME=${SCHEME} \
 	IDRIS2_VERSION=${IDRIS2_VERSION} \
+	MAKE=${MAKE} \
 	sh ./bootstrap.sh
 
 # Bootstrapping using racket
@@ -160,6 +161,7 @@ else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 endif
 	IDRIS2_VERSION=${IDRIS2_VERSION} \
+	MAKE=${MAKE} \
 	sh ./bootstrap-rkt.sh
 
 bootstrap-test:
