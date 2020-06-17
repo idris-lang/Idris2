@@ -297,10 +297,10 @@ build pkg opts
          case executable pkg of
               Nothing => pure ()
               Just exec =>
-                   do let Just (mainns, mmod) = mainmod pkg
+                   do let Just (mainNS, mainFile) = mainmod pkg
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainn = NS ["Main"] (UN "main")
-                      compileMain mainn mmod exec
+                      let mainName = NS mainNS (UN "main")
+                      compileMain mainName mainFile exec
          runScript (postbuild pkg)
          pure []
 
