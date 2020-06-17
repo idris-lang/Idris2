@@ -1,0 +1,5 @@
+$1 --build dummy.ipkg
+
+./custom_output/check_dir
+
+rm -rf custom_build custom_output
