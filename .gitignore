@@ -34,3 +34,5 @@ idris2docs_venv
 /bootstrap/idris2_app/libidris2_support.*
 /bootstrap/idris2boot
 /bootstrap/idris2boot.rkt
+
+/custom.mk

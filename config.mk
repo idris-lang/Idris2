@@ -44,3 +44,6 @@ else
 	MAKE := make
 endif
 export MAKE
+
+# Add a custom.mk file to override any of the configurations
+-include custom.mk
