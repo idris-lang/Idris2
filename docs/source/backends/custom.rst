@@ -10,13 +10,12 @@ starting idris with these codegens in addition to the built-in ones.
 Getting started
 ===============
 
-To use Idris 2 as a library you need to install it with (the ipkg file
-is at the top level of the Idris2 repo)
+To use Idris 2 as a library you need to install it with (at the top level of the
+Idris2 repo)
 
 ::
 
-    idris2 --build idris2api.ipkg
-    idris2 --install idris2api.ipkg
+    make install-api
 
 Now create a file containing
 
@@ -53,11 +52,11 @@ Now you have an idris2 with an added backend.
 ::
 
     $ ./build/exec/lazy-idris2
-        ____    __     _         ___
+         ____    __     _         ___
         /  _/___/ /____(_)____   |__ \
-        / // __  / ___/ / ___/   __/ /     Version 0.2.0-d8c7f08bd
-    _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
-    /___/\__,_/_/  /_/____/   /____/      Type :? for help
+        / // __  / ___/ / ___/   __/ /     Version 0.2.0-bd9498c00
+      _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
+     /___/\__,_/_/  /_/____/   /____/      Type :? for help
 
     Welcome to Idris 2.  Enjoy yourself!
     With codegen for: lazy
@@ -67,6 +66,6 @@ It will not be overly eager to actually compile any code with the new backend th
 
 ::
 
-    $ ./build/exec/lazy --cg lazy Hello.idr -o hello
+    $ ./build/exec/lazy-idris2 --cg lazy Hello.idr -o hello
     I'd rather not.
     $

@@ -101,7 +101,7 @@ clean: clean-libs support-clean
 
 install: install-idris2 install-support install-libs
 
-install-api:
+install-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install idris2api.ipkg
 
 install-idris2:
