@@ -56,74 +56,59 @@ groupInverseIsInverseL x =
 public export
 inverseSquaredIsIdentity : Group ty => (x : ty) ->
   inverse (inverse x) = x
--- inverseSquaredIsIdentity x =
---   let x' = inverse x in
---     uniqueInverse
---       x'
---       (inverse x')
---       x
---       (groupInverseIsInverseR x')
---       (groupInverseIsInverseR x)
+inverseSquaredIsIdentity {ty} x =
+  uniqueInverse
+    (inverse x)
+    (inverse $ inverse x)
+    x
+    (groupInverseIsInverseR $ inverse x)
+    (groupInverseIsInverseR x)
 
 ||| If every square in a group is identity, the group is commutative.
 public export
 squareIdCommutative : Group ty => (x, y : ty) ->
   ((a : ty) -> a <+> a = neutral {ty}) ->
   x <+> y = y <+> x
--- squareIdCommutative x y p =
---   let
---     xy = x <+> y
---     yx = y <+> x
---       in
---   uniqueInverse xy xy yx (p xy) prop where
---     prop : (x <+> y) <+> (y <+> x) = neutral {ty}
---     prop =
---       rewrite sym $ semigroupOpIsAssociative x y (y <+> x) in
---         rewrite semigroupOpIsAssociative y y x in
---       rewrite p y in
---         rewrite monoidNeutralIsNeutralR x in
---           p x
+squareIdCommutative x y p =
+  uniqueInverse (x <+> y) (x <+> y) (y <+> x) (p (x <+> y)) prop where
+    prop : (x <+> y) <+> (y <+> x) = neutral {ty}
+    prop =
+      rewrite sym $ semigroupOpIsAssociative x y (y <+> x) in
+        rewrite semigroupOpIsAssociative y y x in
+      rewrite p y in
+        rewrite monoidNeutralIsNeutralR x in
+          p x
 
 ||| -0 = 0
 public export
 inverseNeutralIsNeutral : Group ty =>
   inverse (neutral {ty}) = neutral {ty}
--- inverseNeutralIsNeutral {ty} =
---   let e = neutral {ty} in
---     rewrite sym $ cong inverse (groupInverseIsInverseL e) in
---       rewrite monoidNeutralIsNeutralR $ inverse e in
---         inverseSquaredIsIdentity e
+inverseNeutralIsNeutral {ty} =
+  rewrite sym $ cong inverse (groupInverseIsInverseL (neutral {ty})) in
+    rewrite monoidNeutralIsNeutralR $ inverse (neutral {ty}) in
+      inverseSquaredIsIdentity (neutral {ty})
 
-||| -(x + y) = -y + -x
-public export
-inverseOfSum : Group ty => (l, r : ty) ->
-  inverse (l <+> r) = inverse r <+> inverse l
+-- ||| -(x + y) = -y + -x
+-- public export
+-- inverseOfSum : Group ty => (l, r : ty) ->
+--   inverse (l <+> r) = inverse r <+> inverse l
 -- inverseOfSum {ty} l r =
---   let
---     e = neutral {ty}
---     il = inverse l
---     ir = inverse r
---     lr = l <+> r
---     ilr = inverse lr
---     iril = ir <+> il
---     ile = il <+> e
---       in
 --   -- expand
---   rewrite sym $ monoidNeutralIsNeutralR ilr in
+--   rewrite sym $ monoidNeutralIsNeutralR $ inverse $ l <+> r in
 --     rewrite sym $ groupInverseIsInverseR r in
---       rewrite sym $ monoidNeutralIsNeutralL ir in
+--       rewrite sym $ monoidNeutralIsNeutralL $ inverse r in
 --         rewrite sym $ groupInverseIsInverseR l in
 --   -- shuffle
---   rewrite semigroupOpIsAssociative ir il l in
---     rewrite sym $ semigroupOpIsAssociative iril l r in
---       rewrite sym $ semigroupOpIsAssociative iril lr ilr in
+--   rewrite semigroupOpIsAssociative (inverse r) (inverse l) l in
+--     rewrite sym $ semigroupOpIsAssociative (inverse r <+> inverse l) l r in
+--       rewrite sym $ semigroupOpIsAssociative (inverse r <+> inverse l) (l <+> r) (inverse $ l <+> r) in
 --   -- contract
---   rewrite sym $ monoidNeutralIsNeutralL il in
---     rewrite groupInverseIsInverseL lr in
---       rewrite sym $ semigroupOpIsAssociative (ir <+> ile) l ile in
---         rewrite semigroupOpIsAssociative l il e in
+--   rewrite sym $ monoidNeutralIsNeutralL $ inverse l in
+--     rewrite groupInverseIsInverseL $ l <+> r in
+--       rewrite sym $ semigroupOpIsAssociative (inverse r <+> (inverse l <+> neutral)) l (inverse l <+> neutral) in
+--         rewrite semigroupOpIsAssociative l (inverse l) neutral in
 --           rewrite groupInverseIsInverseL l in
---             rewrite monoidNeutralIsNeutralL e in
+--             rewrite monoidNeutralIsNeutralL $ the ty neutral in
 --               Refl
 
 ||| y = z if x + y = x + z
@@ -173,16 +158,15 @@ public export
 latinSquareProperty : Group ty => (a, b : ty) ->
   ((x : ty ** a <+> x = b),
     (y : ty ** y <+> a = b))
--- latinSquareProperty a b =
---   let a' = inverse a in
---     (((a' <+> b) **
---       rewrite semigroupOpIsAssociative a a' b in
---         rewrite groupInverseIsInverseL a in
---           monoidNeutralIsNeutralR b),
---     (b <+> a' **
---       rewrite sym $ semigroupOpIsAssociative b a' a in
---         rewrite groupInverseIsInverseR a in
---           monoidNeutralIsNeutralL b))
+latinSquareProperty a b =
+  ((((inverse a) <+> b) **
+    rewrite semigroupOpIsAssociative a (inverse a) b in
+      rewrite groupInverseIsInverseL a in
+        monoidNeutralIsNeutralR b),
+  (b <+> (inverse a) **
+    rewrite sym $ semigroupOpIsAssociative b (inverse a) a in
+      rewrite groupInverseIsInverseR a in
+        monoidNeutralIsNeutralL b))
 
 ||| For any a, b, x, the solution to ax = b is unique.
 public export
@@ -196,13 +180,13 @@ uniqueSolutionL : Group t => (a, b, x, y : t) ->
   x <+> a = b -> y <+> a = b -> x = y
 uniqueSolutionL a b x y p q = cancelRight a x y $ trans p (sym q)
 
-||| -(x + y) = -x + -y
-public export
-inverseDistributesOverGroupOp : AbelianGroup ty => (l, r : ty) ->
-  inverse (l <+> r) = inverse l <+> inverse r
-inverseDistributesOverGroupOp l r =
-  rewrite groupOpIsCommutative (inverse l) (inverse r) in
-    inverseOfSum l r
+-- ||| -(x + y) = -x + -y
+-- public export
+-- inverseDistributesOverGroupOp : AbelianGroup ty => (l, r : ty) ->
+--   inverse (l <+> r) = inverse l <+> inverse r
+-- inverseDistributesOverGroupOp l r =
+--   rewrite groupOpIsCommutative (inverse l) (inverse r) in
+--     inverseOfSum l r
 
 ||| Homomorphism preserves neutral.
 public export
@@ -230,77 +214,53 @@ homoInverse x =
 public export
 multNeutralAbsorbingL : Ring ty => (r : ty) ->
   neutral {ty} <.> r = neutral {ty}
--- multNeutralAbsorbingL {ty} r =
---   let
---     e = neutral {ty}
---     ir = inverse r
---     exr = e <.> r
---     iexr = inverse exr
---       in
---   rewrite sym $ monoidNeutralIsNeutralR exr in
---     rewrite sym $ groupInverseIsInverseR exr in
---   rewrite sym $ semigroupOpIsAssociative iexr exr ((iexr <+> exr) <.> r) in
---     rewrite groupInverseIsInverseR exr in
---   rewrite sym $ ringOpIsDistributiveR e e r in
---     rewrite monoidNeutralIsNeutralR e in
---   groupInverseIsInverseR exr
+multNeutralAbsorbingL {ty} r =
+  rewrite sym $ monoidNeutralIsNeutralR $ neutral <.> r in
+    rewrite sym $ groupInverseIsInverseR $ neutral <.> r in
+  rewrite sym $ semigroupOpIsAssociative (inverse $ neutral <.> r) (neutral <.> r) (((inverse $ neutral <.> r) <+> (neutral <.> r)) <.> r) in
+    rewrite groupInverseIsInverseR $ neutral <.> r in
+  rewrite sym $ ringOpIsDistributiveR neutral neutral r in
+    rewrite monoidNeutralIsNeutralR $ the ty neutral in
+  groupInverseIsInverseR $ neutral <.> r
 
 ||| x0 = 0
 public export
 multNeutralAbsorbingR : Ring ty => (l : ty) ->
   l <.> neutral {ty} = neutral {ty}
--- multNeutralAbsorbingR {ty} l =
---   let
---     e = neutral {ty}
---     il = inverse l
---     lxe = l <.> e
---     ilxe = inverse lxe
---       in
---   rewrite sym $ monoidNeutralIsNeutralL lxe in
---     rewrite sym $ groupInverseIsInverseL lxe in
---   rewrite semigroupOpIsAssociative (l <.> (lxe <+> ilxe)) lxe ilxe in
---     rewrite groupInverseIsInverseL lxe in
---   rewrite sym $ ringOpIsDistributiveL l e e in
---     rewrite monoidNeutralIsNeutralL e in
---   groupInverseIsInverseL lxe
+multNeutralAbsorbingR {ty} l =
+  rewrite sym $ monoidNeutralIsNeutralL $ l <.> neutral in
+    rewrite sym $ groupInverseIsInverseL $ l <.> neutral in
+  rewrite semigroupOpIsAssociative (l <.> ((l <.> neutral) <+> (inverse $ l <.> neutral))) (l <.> neutral) (inverse $ l <.> neutral) in
+    rewrite groupInverseIsInverseL $ l <.> neutral in
+  rewrite sym $ ringOpIsDistributiveL l neutral neutral in
+    rewrite monoidNeutralIsNeutralL $ the ty neutral in
+  groupInverseIsInverseL $ l <.> neutral
 
 ||| (-x)y = -(xy)
 public export
 multInverseInversesL : Ring ty => (l, r : ty) ->
   inverse l <.> r = inverse (l <.> r)
--- multInverseInversesL l r =
---   let
---     il = inverse l
---     lxr = l <.> r
---     ilxr = il <.> r
---     i_lxr = inverse lxr
---       in
---   rewrite sym $ monoidNeutralIsNeutralR ilxr in
---     rewrite sym $ groupInverseIsInverseR lxr in
---       rewrite sym $ semigroupOpIsAssociative i_lxr lxr ilxr in
---   rewrite sym $ ringOpIsDistributiveR l il r in
---     rewrite groupInverseIsInverseL l in
---   rewrite multNeutralAbsorbingL r in
---     monoidNeutralIsNeutralL i_lxr
+multInverseInversesL l r =
+  rewrite sym $ monoidNeutralIsNeutralR $ inverse l <.> r in
+    rewrite sym $ groupInverseIsInverseR $ l <.> r in
+      rewrite sym $ semigroupOpIsAssociative (inverse $ l <.> r) (l <.> r) (inverse l <.> r) in
+  rewrite sym $ ringOpIsDistributiveR l (inverse l) r in
+    rewrite groupInverseIsInverseL l in
+  rewrite multNeutralAbsorbingL r in
+    monoidNeutralIsNeutralL $ inverse $ l <.> r
 
 ||| x(-y) = -(xy)
 public export
 multInverseInversesR : Ring ty => (l, r : ty) ->
   l <.> inverse r = inverse (l <.> r)
--- multInverseInversesR l r =
---   let
---     ir = inverse r
---     lxr = l <.> r
---     lxir = l <.> ir
---     ilxr = inverse lxr
---       in
---   rewrite sym $ monoidNeutralIsNeutralL lxir in
---     rewrite sym $ groupInverseIsInverseL lxr in
---       rewrite semigroupOpIsAssociative lxir lxr ilxr in
---   rewrite sym $ ringOpIsDistributiveL l ir r in
---     rewrite groupInverseIsInverseR r in
---   rewrite multNeutralAbsorbingR l in
---     monoidNeutralIsNeutralR ilxr
+multInverseInversesR l r =
+  rewrite sym $ monoidNeutralIsNeutralL $ l <.> (inverse r) in
+    rewrite sym $ groupInverseIsInverseL (l <.> r) in
+      rewrite semigroupOpIsAssociative (l <.> (inverse r)) (l <.> r) (inverse $ l <.> r) in
+  rewrite sym $ ringOpIsDistributiveL l (inverse r) r in
+    rewrite groupInverseIsInverseR r in
+  rewrite multNeutralAbsorbingR l in
+    monoidNeutralIsNeutralR $ inverse $ l <.> r
 
 ||| (-x)(-y) = xy
 public export
