@@ -27,6 +27,11 @@ Library changes:
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
 
+Compiler changes:
+* It is now possible to create new backends with minimal overhead. `Idris.Driver`
+exposes the function `mainWithCodegens` that takes a list of codegens. The
+feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 
