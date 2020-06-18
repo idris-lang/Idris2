@@ -32,6 +32,12 @@ Command-line options changes:
 * Removed `--ide-mode-socket-with` option.  `--ide-mode-socket` now accepts an
   optional `host:port` argument.
 
+Compiler changes:
+
+* It is now possible to create new backends with minimal overhead. `Idris.Driver`
+exposes the function `mainWithCodegens` that takes a list of codegens. The
+feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 

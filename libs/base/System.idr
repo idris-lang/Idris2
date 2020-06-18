@@ -36,9 +36,9 @@ getArgs = primIO prim__getArgs
 prim_getEnv : String -> PrimIO (Ptr String)
 %foreign support "idris2_getEnvPair"
 prim_getEnvPair : Int -> PrimIO (Ptr String)
-%foreign libc "setenv"
+%foreign support "idris2_setenv"
 prim_setEnv : String -> String -> Int -> PrimIO Int
-%foreign libc "setenv"
+%foreign support "idris2_unsetenv"
 prim_unsetEnv : String -> PrimIO Int
 
 export

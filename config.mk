@@ -36,7 +36,6 @@ else
 	SHLIB_SUFFIX := .so
 	CFLAGS += -fPIC
 endif
-
 export OS
 
 ifeq ($(OS),bsd)
@@ -44,3 +43,7 @@ ifeq ($(OS),bsd)
 else
 	MAKE := make
 endif
+export MAKE
+
+# Add a custom.mk file to override any of the configurations
+-include custom.mk
