@@ -22,9 +22,9 @@ mutual
                      | IEPrimFn (PrimFn arity) (Vect arity ImperativeExp)
                      | IEPrimFnExt Name (List ImperativeExp)
                      | IEConstructorHead ImperativeExp
-                     | IEConstructorTag Int
+                     | IEConstructorTag (Either Int String)
                      | IEConstructorArg Int ImperativeExp
-                     | IEConstructor Int (List ImperativeExp)
+                     | IEConstructor (Either Int String) (List ImperativeExp)
                      | IEDelay ImperativeExp
                      | IEForce ImperativeExp
                      | IENull
@@ -218,12 +218,10 @@ mutual
     do
       (s, a) <- impListExp args
       pure (s, IEPrimFnExt p a)
-  impExp (NmCon fc x Nothing args) =
-    throw (InternalError "MknConAlt without tag")
-  impExp (NmCon fc x (Just tag) args) =
+  impExp (NmCon fc x tag args) =
     do
       (s, a) <- impListExp args
-      pure (s, IEConstructor tag a)
+      pure (s, IEConstructor (impTag x tag) a)
   impExp (NmDelay fc t) =
     do
       (s, x) <- impExp t
@@ -242,15 +240,17 @@ mutual
   impExp (NmCrash fc msg) =
     pure (ErrorStatement msg, IENull)
 
+  impTag : Name -> Maybe Int -> Either Int String
+  impTag n Nothing = Right $ show n
+  impTag n (Just i) = Left i
+
   impConAlt : {auto c : Ref Imps ImpSt} -> Name -> ImperativeExp -> NamedConAlt -> Core (ImperativeExp, ImperativeStatement)
-  impConAlt res target (MkNConAlt n (Just tag) args exp) =
+  impConAlt res target (MkNConAlt n tag args exp) =
     do
       (s, r) <- impExp exp
       let nargs = length args
       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
-      pure (IEConstructorTag tag, replaceNamesExpS reps $ s <+> MutateStatement res r)
-  impConAlt res target (MkNConAlt n Nothing args exp) =
-    throw (InternalError "MknConAlt without tag")
+      pure (IEConstructorTag (impTag n tag), replaceNamesExpS reps $ s <+> MutateStatement res r)
 
   impConstAlt : {auto c : Ref Imps ImpSt} -> Name -> NamedConstAlt -> Core (ImperativeExp, ImperativeStatement)
   impConstAlt res (MkNConstAlt c exp) =

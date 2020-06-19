@@ -239,6 +239,10 @@ jsPrim (NS _ (UN "prim__os")) [] =
     pure sysos
 jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
 
+tag2es : Either Int String -> String
+tag2es (Left x) = show x
+tag2es (Right x) = jsString x
+
 mutual
   impExp2es : {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
   impExp2es (IEVar n) =
@@ -255,13 +259,13 @@ mutual
     jsPrim n !(traverse impExp2es args)
   impExp2es (IEConstructorHead e) =
     pure $ !(impExp2es e) ++ ".h"
-  impExp2es (IEConstructorTag t) =
-    pure $ show t
+  impExp2es (IEConstructorTag x) =
+    pure $ tag2es x
   impExp2es (IEConstructorArg i e) =
     pure $ !(impExp2es e) ++ ".a" ++ show i
   impExp2es (IEConstructor h args) =
     let argPairs = zipWith (\i,a => "a" ++ show i ++ ": " ++ a ) [1..length args] !(traverse impExp2es args)
-    in pure $ "({" ++ showSep ", " (("h:" ++ show h)::argPairs) ++ "})"
+    in pure $ "({" ++ showSep ", " (("h:" ++ tag2es h)::argPairs) ++ "})"
   impExp2es (IEDelay e) =
     pure $ "(()=>" ++ !(impExp2es e) ++ ")"
   impExp2es (IEForce e) =
