@@ -31,6 +31,10 @@ public export
 interface Euclidean ty rel where
   euclidean : {x, y, z : ty} -> rel x y -> rel x z -> rel y z
 
+public export
+interface Connex ty rel where
+  connex : {x, y : ty} -> Not (x = y) -> Either (rel x y) (rel y x)
+
 ----------------------------------------
 
 Reflexive ty rel => Dense ty rel where

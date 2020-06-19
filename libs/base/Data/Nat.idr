@@ -98,6 +98,15 @@ Antisymmetric Nat LTE where
   antisymmetric (LTESucc xy) (LTESucc yx) = cong S $ antisymmetric xy yx
 
 public export
+Connex Nat LTE where
+  connex {x = Z} _ = Left LTEZero
+  connex {y = Z} _ = Right LTEZero
+  connex {x = S _} {y = S _} prf =
+    case connex {rel = LTE} $ prf . (cong S) of
+      Left jk => Left $ LTESucc jk
+      Right kj => Right $ LTESucc kj
+
+public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
 
