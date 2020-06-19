@@ -52,4 +52,4 @@ CommonMark
 
 Only code blocks denoted by standard code blocks labelled as idris are recognised.
 
-We treat files with an extension of ``.md`` and ``.markdown`` as org-mode style literate files.
+We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark style literate files.
