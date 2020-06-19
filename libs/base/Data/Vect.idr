@@ -12,7 +12,7 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
   Nil  : Vect Z elem
   ||| A non-empty vector of length `S len`, consisting of a head element and
   ||| the rest of the list, of length `len`.
-  (::) : (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
+  (::) : (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
 
 -- Hints for interactive editing
 %name Vect xs,ys,zs,ws
