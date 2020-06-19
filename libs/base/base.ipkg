@@ -31,6 +31,8 @@ modules = Control.App,
           Data.Stream,
           Data.Strings,
           Data.Vect,
+          Data.Vect.Elem,
+
 
           Debug.Trace,
 
