@@ -1,6 +1,7 @@
 module Data.Nat.Factor
 
 import Control.Relation
+import Control.Order
 import Control.WellFounded
 import Data.Fin
 import Data.Fin.Extra
@@ -99,6 +100,9 @@ Transitive Nat Factor where
         rewrite multAssociative x qb qc in
         Refl
 
+export
+Preorder Nat Factor where
+
 multOneSoleNeutral : (a, b : Nat) -> S a = S a * b -> b = 1
 multOneSoleNeutral Z b prf =
         rewrite sym $ plusZeroRightNeutral b in
@@ -139,6 +143,8 @@ Antisymmetric Nat Factor where
       rewrite oneSoleFactorOfOne qa . CofactorExists qb $ sym qIs1 in
       rewrite multOneRightNeutral a in
       Refl
+
+PartialOrder Nat Factor where
 
 ||| No number can simultaneously be and not be a factor of another number.
 export

@@ -1,6 +1,7 @@
 module Data.Nat
 
 import Control.Relation
+import Control.Order
 
 %default total
 
@@ -105,6 +106,15 @@ Connex Nat LTE where
     case connex {rel = LTE} $ prf . (cong S) of
       Left jk => Left $ LTESucc jk
       Right kj => Right $ LTESucc kj
+
+public export
+Preorder Nat LTE where
+
+public export
+PartialOrder Nat LTE where
+
+public export
+LinearOrder Nat LTE where
 
 public export
 GTE : Nat -> Nat -> Type
