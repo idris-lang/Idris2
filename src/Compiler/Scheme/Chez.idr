@@ -366,7 +366,7 @@ startChezCmd chez appdir target = unlines
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target = unlines
     [ "#!/bin/sh"
-    , ""
+    , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
     , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
