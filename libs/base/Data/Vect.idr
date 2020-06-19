@@ -182,7 +182,7 @@ merge = mergeBy compare
 public export
 reverse : (1 xs : Vect len elem) -> Vect len elem
 reverse xs = go [] xs
-  where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
+  where go : (1 _ : Vect n elem) -> (1 _ : Vect m elem) -> Vect (n+m) elem
         go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
         go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
                                        in go (x::acc) xs
@@ -284,8 +284,8 @@ zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 public export
 unzip : (1 xs : Vect n (a, b)) -> (Vect n a, Vect n b)
 unzip []           = ([], [])
-unzip ((l, r)::xs) with (unzip xs)
-  unzip ((l, r)::xs) | (lefts, rights) = (l::lefts, r::rights)
+unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
+                     in (l::lefts, r::rights)
 
 ||| Convert a vector of three-tuples to a triplet of vectors
 |||
@@ -295,9 +295,8 @@ unzip ((l, r)::xs) with (unzip xs)
 public export
 unzip3 : (1 xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
 unzip3 []            = ([], [], [])
-unzip3 ((l,c,r)::xs) with (unzip3 xs)
-  unzip3 ((l,c,r)::xs) | (lefts, centers, rights)
-      = (l::lefts, c::centers, r::rights)
+unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
+                       in (l::lefts, c::centers, r::rights)
 
 --------------------------------------------------------------------------------
 -- Equality
