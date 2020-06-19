@@ -86,10 +86,9 @@ index (FS k) (x::xs) = index k xs
 ||| insertAt 1 8 [1,2,3,4]
 ||| ```
 public export
-insertAt : Fin (S len) -> elem -> Vect len elem -> Vect (S len) elem
+insertAt : (1 idx : Fin (S len)) -> (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
 insertAt FZ     y xs      = y :: xs
 insertAt (FS k) y (x::xs) = x :: insertAt k y xs
-insertAt (FS k) y []      = absurd k
 
 ||| Construct a new vector consisting of all but the indicated element
 |||
@@ -133,7 +132,7 @@ updateAt (FS k) f (x::xs) = x :: updateAt k f xs
 ||| [1,2,3,4] ++ [5,6]
 ||| ```
 public export
-(++) : (xs : Vect m elem) -> (ys : Vect n elem) -> Vect (m + n) elem
+(++) : (1 xs : Vect m elem) -> (1 ys : Vect n elem) -> Vect (m + n) elem
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
@@ -181,7 +180,7 @@ merge = mergeBy compare
 ||| reverse [1,2,3,4]
 ||| ```
 public export
-reverse : Vect len elem -> Vect len elem
+reverse : (1 xs : Vect len elem) -> Vect len elem
 reverse xs = go [] xs
   where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
         go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
@@ -210,7 +209,7 @@ intersperse sep (x::xs) = x :: intersperse' sep xs
 --------------------------------------------------------------------------------
 
 public export
-fromList' : Vect len elem -> (l : List elem) -> Vect (length l + len) elem
+fromList' : (1 xs : Vect len elem) -> (1 l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
 fromList' {len} ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
@@ -224,7 +223,7 @@ fromList' {len} ys (x::xs) =
 ||| fromList [1,2,3,4]
 ||| ```
 public export
-fromList : (l : List elem) -> Vect (length l) elem
+fromList : (1 l : List elem) -> Vect (length l) elem
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
@@ -263,8 +262,9 @@ zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
 ||| zip (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip : (xs : Vect n a) -> (ys : Vect n b) -> Vect n (a, b)
-zip = zipWith (\x,y => (x,y))
+zip : (1 xs : Vect n a) -> (1 ys : Vect n b) -> Vect n (a, b)
+zip []      []      = []
+zip (x::xs) (y::ys) = (x, y) :: zip xs ys
 
 ||| Combine three equal-length vectors elementwise into a vector of tuples
 |||
@@ -272,8 +272,9 @@ zip = zipWith (\x,y => (x,y))
 ||| zip3 (fromList [1,2,3,4]) (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
-zip3 = zipWith3 (\x,y,z => (x,y,z))
+zip3 : (1 xs : Vect n a) -> (1 ys : Vect n b) -> (1 zs : Vect n c) -> Vect n (a, b, c)
+zip3 []      []      []      = []
+zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 
 ||| Convert a vector of pairs to a pair of vectors
 |||
@@ -281,7 +282,7 @@ zip3 = zipWith3 (\x,y,z => (x,y,z))
 ||| unzip (fromList [(1,2), (1,2)])
 ||| ```
 public export
-unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
+unzip : (1 xs : Vect n (a, b)) -> (Vect n a, Vect n b)
 unzip []           = ([], [])
 unzip ((l, r)::xs) with (unzip xs)
   unzip ((l, r)::xs) | (lefts, rights) = (l::lefts, r::rights)
@@ -292,7 +293,7 @@ unzip ((l, r)::xs) with (unzip xs)
 ||| unzip3 (fromList [(1,2,3), (1,2,3)])
 ||| ```
 public export
-unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
+unzip3 : (1 xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
 unzip3 []            = ([], [], [])
 unzip3 ((l,c,r)::xs) with (unzip3 xs)
   unzip3 ((l,c,r)::xs) | (lefts, centers, rights)
@@ -374,7 +375,7 @@ implementation Foldable (Vect n) where
 ||| concat [[1,2,3], [4,5,6]]
 ||| ```
 public export
-concat : (xss : Vect m (Vect n elem)) -> Vect (m * n) elem
+concat : (1 xss : Vect m (Vect n elem)) -> Vect (m * n) elem
 concat []      = []
 concat (v::vs) = v ++ Vect.concat vs
 
@@ -748,7 +749,7 @@ vectToMaybe (x::xs) = Just x
 ||| catMaybes [Just 1, Just 2, Nothing, Nothing, Just 5]
 ||| ```
 public export
-catMaybes : Vect n (Maybe elem) -> (p ** Vect p elem)
+catMaybes : (1 xs : Vect n (Maybe elem)) -> (p ** Vect p elem)
 catMaybes []             = (_ ** [])
 catMaybes (Nothing::xs)  = catMaybes xs
 catMaybes ((Just j)::xs) =
@@ -780,9 +781,15 @@ range {len=S _} = FZ :: map FS range
 ||| transpose [[1,2], [3,4], [5,6], [7,8]]
 ||| ```
 public export
-transpose : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
-transpose []        = replicate _ []                -- = [| [] |]
-transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
+transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
+transpose []        = replicate _ []          -- = [| [] |]
+transpose (x :: xs) = helper x (transpose xs) -- = [| x :: xs |]
+  where -- Can't use zipWith since it doesn't preserve linearity
+    helper : (1 _ : Vect a elem)
+          -> (1 _ : Vect a (Vect b elem))
+          -> Vect a (Vect (S b) elem)
+    helper [] [] = []
+    helper (x::xs) (tl::tls) = (x::tl) :: helper xs tls
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
