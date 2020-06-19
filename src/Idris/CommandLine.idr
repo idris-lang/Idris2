@@ -112,32 +112,45 @@ ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
 formatSocketAddress : (String, Int) -> String
 formatSocketAddress (host, port) = host ++ ":" ++ show port
 
-ActType : List String -> Type
+data OptType = Required String | Optional String
+
+Show OptType where
+  show (Required a) = "<" ++ a ++ ">"
+  show (Optional a) = "[" ++ a ++ "]"
+
+ActType : List OptType -> Type
 ActType [] = List CLOpt
-ActType (a :: as) = String -> ActType as
+ActType (Required a :: as) = String -> ActType as
+ActType (Optional a :: as) = Maybe String -> ActType as
 
 record OptDesc where
   constructor MkOpt
   flags : List String
-  argdescs : List String
+  argdescs : List OptType
   action : ActType argdescs
   help : Maybe String
+
+optSeparator : OptDesc
+optSeparator = MkOpt [] [] [] Nothing
+
+showDefault : Show a => a -> String
+showDefault x = "(default " ++ show x ++ ")"
 
 options : List OptDesc
 options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Exit after checking source file"),
-           MkOpt ["--output", "-o"] ["file"] (\f => [OutputFile f, Quiet])
+           MkOpt ["--output", "-o"] [Required "file"] (\f => [OutputFile f, Quiet])
               (Just "Specify output file"),
-           MkOpt ["--exec", "-x"] ["name"] (\f => [ExecFn f, Quiet])
+           MkOpt ["--exec", "-x"] [Required "name"] (\f => [ExecFn f, Quiet])
               (Just "Execute function after checking source file"),
            MkOpt ["--no-prelude"] [] [NoPrelude]
               (Just "Don't implicitly import Prelude"),
-           MkOpt ["--codegen", "--cg"] ["backend"] (\f => [SetCG f])
-              (Just $ "Set code generator (default \""++ show (codegen defaultSession) ++ "\")"),
-           MkOpt ["--package", "-p"] ["package"] (\f => [PkgPath f])
+           MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
+              (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
@@ -145,33 +158,33 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--libdir"] [] [Directory LibDir]
               (Just "Show library directory"),
 
-           MkOpt [] [] [] Nothing,
-           MkOpt ["--build"] ["package file"] (\f => [Package Build f])
+           optSeparator,
+           MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
-           MkOpt ["--install"] ["package file"] (\f => [Package Install f])
+           MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
               (Just "Install the given package"),
-           MkOpt ["--clean"] ["package file"] (\f => [Package Clean f])
+           MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
-           MkOpt ["--repl"] ["package file"] (\f => [Package REPL f])
+           MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
               (Just "Find and use an .ipkg file in a parent directory"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--ide-mode"] [] [IdeMode]
               (Just "Run the REPL with machine-readable syntax"),
-           MkOpt ["--ide-mode-socket"] [] [IdeModeSocket $ formatSocketAddress (ideSocketModeAddress [])]
-              (Just $ "Run the ide socket mode on default host and port (" ++ formatSocketAddress (ideSocketModeAddress []) ++ ")"),
-           MkOpt ["--ide-mode-socket-with"] ["host:port"] (\hp => [IdeModeSocket hp])
-              (Just "Run the ide socket mode on given host and port"),
+           MkOpt ["--ide-mode-socket"] [Optional "host:port"]
+                 (\hp => [IdeModeSocket $ fromMaybe (formatSocketAddress (ideSocketModeAddress [])) hp])
+              (Just $ "Run the ide socket mode on given host and port " ++
+                      showDefault (formatSocketAddress (ideSocketModeAddress []))),
 
-           MkOpt [] [] [] Nothing,
-           MkOpt ["--client"] ["REPL command"] (\f => [RunREPL f])
+           optSeparator,
+           MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])
               (Just "Run a REPL command then quit immediately"),
            MkOpt ["--timing"] [] [Timing]
               (Just "Display timing logs"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--no-banner"] [] [NoBanner]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
@@ -179,24 +192,24 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
 
-           MkOpt [] [] [] Nothing,
+           optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
            MkOpt ["--help", "-h", "-?"] [] [Help]
               (Just "Display help text"),
 
            -- Internal debugging options
-           MkOpt ["--yaffle", "--ttimp"] ["ttimp file"] (\f => [Yaffle f])
+           MkOpt ["--yaffle", "--ttimp"] [Required "ttimp file"] (\f => [Yaffle f])
               Nothing, -- run ttimp REPL rather than full Idris
-           MkOpt ["--ttm" ] ["ttimp file"] (\f => [Metadata f])
+           MkOpt ["--ttm" ] [Required "ttimp file"] (\f => [Metadata f])
               Nothing, -- dump metadata information from the given ttm file
-           MkOpt ["--dumpcases"] ["output file"] (\f => [DumpCases f])
+           MkOpt ["--dumpcases"] [Required "output file"] (\f => [DumpCases f])
               Nothing, -- dump case trees to the given file
-           MkOpt ["--dumplifted"] ["output file"] (\f => [DumpLifted f])
+           MkOpt ["--dumplifted"] [Required "output file"] (\f => [DumpLifted f])
               Nothing, -- dump lambda lifted trees to the given file
-           MkOpt ["--dumpanf"] ["output file"] (\f => [DumpANF f])
+           MkOpt ["--dumpanf"] [Required "output file"] (\f => [DumpANF f])
               Nothing, -- dump ANF to the given file
-           MkOpt ["--dumpvmcode"] ["output file"] (\f => [DumpVMCode f])
+           MkOpt ["--dumpvmcode"] [Required "output file"] (\f => [DumpVMCode f])
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
               Nothing -- do more elaborator checks (currently conversion in LinearCheck)
@@ -215,7 +228,7 @@ optsUsage options = let optsShow = map optShow options
     optShow : OptDesc -> (String, Maybe String)
     optShow (MkOpt [] _ _ _) = ("", Just "")
     optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                                  showSep " " (map (\x => "<" ++ x ++ ">") argdescs),
+                                                  showSep " " (map show argdescs),
                                                   help)
 
     optUsage : Nat -> (String, Maybe String) -> String
@@ -237,13 +250,17 @@ usage = versionMsg ++ "\n" ++
         "Available options:\n" ++
         optsUsage options
 
-processArgs : String -> (args : List String) -> List String -> ActType args ->
+processArgs : String -> (args : List OptType) -> List String -> ActType args ->
               Either String (List CLOpt, List String)
 processArgs flag [] xs f = Right (f, xs)
-processArgs flag (a :: as) [] f
-    = Left $ "Missing argument <" ++ a ++ "> for flag " ++ flag
-processArgs flag (a :: as) (x :: xs) f
-    = processArgs flag as xs (f x)
+processArgs flag (opt@(Required _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (Optional a :: as) [] f =
+  processArgs flag as [] (f Nothing)
+processArgs flag (Required a :: as) (x :: xs) f =
+  processArgs flag as xs (f x)
+processArgs flag (Optional a :: as) (x :: xs) f =
+  processArgs flag as xs (f $ toMaybe (not (isPrefixOf "-" x)) x)
 
 matchFlag : (d : OptDesc) -> List String ->
             Either String (Maybe (List CLOpt, List String))
