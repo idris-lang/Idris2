@@ -74,6 +74,9 @@ preOptions (SetCG e :: opts)
 preOptions (PkgPath p :: opts)
     = do addPkgDir p
          preOptions opts
+preOptions (SourceDir d :: opts)
+    = do setSourceDir (Just d)
+         preOptions opts
 preOptions (BuildDir d :: opts)
     = do setBuildDir d
          preOptions opts

@@ -50,6 +50,8 @@ data CLOpt
   SetCG String |
    ||| Don't implicitly import Prelude
   NoPrelude |
+   ||| Set source directory
+  SourceDir String |
    ||| Set build directory
   BuildDir String |
    ||| Set output directory
@@ -153,6 +155,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
+           MkOpt ["--source-dir"] [Required "dir"] (\d => [SourceDir d])
+              (Just $ "Set source directory"),
            MkOpt ["--build-dir"] [Required "dir"] (\d => [BuildDir d])
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
