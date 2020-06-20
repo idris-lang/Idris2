@@ -50,17 +50,13 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
          -- Go into new namespace, if there is one, for getters
          case newns of
               Nothing =>
-                   do elabGetters conName 0 [] RF [] conty -- make dotted projections
-                      when addUndotted $
-                        elabGetters conName 0 [] UN [] conty -- make undotted projections
+                      elabGetters conName 0 [] [] conty -- make undotted projections
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS [ns]
                       newns <- getNS
-                      elabGetters conName 0 [] RF [] conty -- make dotted projections
-                      when addUndotted $
-                        elabGetters conName 0 [] UN [] conty -- make undotted projections
+                      elabGetters conName 0 [] [] conty -- make undotted projections
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
@@ -126,18 +122,17 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                   List (Name, RawImp) -> -- names to update in types
                     -- (for dependent records, where a field's type may depend
                     -- on an earlier projection)
-                  (String -> Name) ->
                   Env Term vs -> Term vs ->
                   Core ()
-    elabGetters con done upds mkProjName tyenv (Bind bfc n b@(Pi rc imp ty_chk) sc)
+    elabGetters con done upds tyenv (Bind bfc n b@(Pi rc imp ty_chk) sc)
         = if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds mkProjName (b :: tyenv) sc
+                              upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
-                   projNameNS <- inCurrentNS (mkProjName fldNameStr)
+                   projNameNS <- inCurrentNS (UN fldNameStr)
 
                    ty <- unelab tyenv ty_chk
                    let ty' = substNames vars upds ty
@@ -178,9 +173,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    elabGetters con
                                (if imp == Explicit
                                    then S done else done)
-                               upds' mkProjName (b :: tyenv) sc
+                               upds' (b :: tyenv) sc
 
-    elabGetters con done upds _ _ _ = pure ()
+    elabGetters con done upds _ _ = pure ()
 
 export
 processRecord : {vars : _} ->

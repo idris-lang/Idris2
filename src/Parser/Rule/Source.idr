@@ -78,11 +78,11 @@ strLit
                            _ => Nothing)
 
 export
-recField : Rule Name
-recField
-    = terminal "Expected record field"
+dotIdent : Rule Name
+dotIdent
+    = terminal "Expected dot+identifier"
                (\x => case tok x of
-                           RecordField s => Just (RF s)
+                           DotIdent s => Just (UN s)
                            _ => Nothing)
 
 export
@@ -197,12 +197,12 @@ name = opNonNS <|> do
       else pure $ NS xs (UN x)
 
   opNonNS : Rule Name
-  opNonNS = symbol "(" *> (operator <|> recField) <* symbol ")"
+  opNonNS = symbol "(" *> operator <* symbol ")"
 
   opNS : List String -> Rule Name
   opNS ns = do
     symbol ".("
-    n <- (operator <|> recField)
+    n <- operator
     symbol ")"
     pure (NS ns n)
 
