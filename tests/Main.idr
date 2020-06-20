@@ -65,7 +65,7 @@ idrisTests
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        -- Miscellaneous REPL
-       "interpreter001", "interpreter002",
+       "interpreter001", "interpreter002", "interpreter003",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related

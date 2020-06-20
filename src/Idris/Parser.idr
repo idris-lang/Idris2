@@ -1737,6 +1737,9 @@ data CmdArg : Type where
      ||| The command takes a file.
      FileArg : CmdArg
 
+     ||| The command takes a module.
+     ModuleArg : CmdArg
+
 export
 Show CmdArg where
   show NoArg = ""
@@ -1746,6 +1749,7 @@ Show CmdArg where
   show NumberArg = "<number>"
   show OptionArg = "<option>"
   show FileArg = "<filename>"
+  show ModuleArg = "<module>"
 
 export
 data ParseCmd : Type where
@@ -1792,6 +1796,19 @@ nameArgCmd parseCmd command doc = (names, NameArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       n <- name
+      pure (command n)
+
+moduleArgCmd : ParseCmd -> (List String -> REPLCmd) -> String -> CommandDefinition
+moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      n <- moduleIdent
       pure (command n)
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
@@ -1865,6 +1882,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
   , nameArgCmd (ParseREPLCmd ["s", "search"]) ProofSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
+  , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
   , optArgCmd (ParseIdentCmd "set") SetOpt True "Set an option"

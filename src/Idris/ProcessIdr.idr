@@ -95,6 +95,17 @@ readImport full imp
     = do readModule full (loc imp) True (reexport imp) (path imp) (nameAs imp)
          addImported (path imp, reexport imp, nameAs imp)
 
+||| Adds new import to the namespace without changing the current top-level namespace
+export
+addImport : {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            Import -> Core ()
+addImport imp
+    = do topNS <- getNS
+         readImport True imp
+         setNS topNS
+
 readHash : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
            Import -> Core (Bool, (List String, Int))

@@ -41,6 +41,10 @@ Compiler changes:
 exposes the function `mainWithCodegens` that takes a list of codegens. The
 feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
 
+REPL changes:
+
+* Implemented `:module` command, to load a module during a REPL session.
+
 Changes since Idris 2 v0.1.0
 ----------------------------
 
