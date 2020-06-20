@@ -151,6 +151,15 @@ namespacedIdent
             _ => Nothing)
 
 export
+moduleIdent : Rule (List String)
+moduleIdent
+    = terminal "Expected module identifier"
+        (\x => case tok x of
+            DotSepIdent ns => Just ns
+            Ident i => Just $ [i]
+            _ => Nothing)
+
+export
 unqualifiedName : Rule String
 unqualifiedName = identPart
 

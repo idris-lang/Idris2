@@ -1,42 +1,37 @@
-|||  Until Idris2 starts supporting the 'syntax' keyword, here's a
-|||  poor-man's equational reasoning
+||| Until Idris2 starts supporting the 'syntax' keyword, here's a
+||| poor-man's equational reasoning
 module Syntax.PreorderReasoning
 
-||| Deep embedding of equation derivation sequences.
-||| Using the Nil, (::) constructors lets us use list syntax.
+infixl 0  ~~
+prefix 1  |~
+infix  1  ...
+
+|||Slightly nicer syntax for justifying equations:
+|||```
+||| |~ a
+||| ~~ b ...( justification )
+|||```
+|||and we can think of the `...( justification )` as ASCII art for a thought bubble.
 public export
-data Derivation : (x : a) -> (y : b) -> Type where
-  Nil : Derivation x x
-  (::) : (x = y) -> Derivation y z -> Derivation x z
+(...) : (x : a) -> (y ~=~ x) -> (z : a ** y ~=~ z)
+(...) x pf = (x ** pf)
+
+public export
+data FastDerivation : (x : a) -> (y : b) -> Type where
+  (|~) : (x : a) -> FastDerivation x x
+  (~~) : FastDerivation x y -> (step : (z : c ** y ~=~ z)) -> FastDerivation x z
   
-infix 1 ==|
+public export 
+Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
+Calc (|~ x) = Refl
+Calc {y} ((~~) {z=y} {y=y} der (y ** Refl)) = Calc der
 
-||| Explicate the term under consideration and the justification for
-||| the next step.
-export
-(==|) : (x : a) -> (x = y) -> x = y
-(==|) x pf = pf
-
-||| Finishg the derivation.
-||| A bit klunky, but this /is/ a poor-man's version.
-export
-QED : {x : a} -> x = x
-QED = Refl
-
-export
-Calculate : Derivation x y -> x = y
-Calculate [] = Refl
-Calculate (Refl :: der) = Calculate der
-
-{--
-||| Requires Data.Nata
+{- -- requires import Data.Nat
+0
 example : (x : Nat) -> (x + 1) + 0 = 1 + x
-example x = Calculate [
-  (x + 1) + 0 
-  ==| plusZeroRightNeutral (x + 1) ,
-  x + 1
-  ==| plusCommutative x 1 ,
-  1 + x  
-  ==| QED
-  ]
---}
+example x = 
+  Calc $ 
+   |~ (x + 1) + 0
+   ~~ x+1  ...( plusZeroRightNeutral $ x + 1 )
+   ~~ 1+x  ...( plusCommutative x 1          )
+-}

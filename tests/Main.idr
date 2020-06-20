@@ -65,7 +65,7 @@ idrisTests
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        -- Miscellaneous REPL
-       "interpreter001", "interpreter002",
+       "interpreter001", "interpreter002", "interpreter003",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
@@ -114,6 +114,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
+      "chez025", "chez026",
       "reg001"]
 
 ideModeTests : List String

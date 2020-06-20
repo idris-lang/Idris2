@@ -375,4 +375,3 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
          traverse_ updateErasable (Resolved tidx :: connames)
-

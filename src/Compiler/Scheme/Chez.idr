@@ -407,7 +407,7 @@ compileToSO : {auto c : Ref Ctxt Defs} ->
               String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
 compileToSO chez appDirRel outSsAbs
     = do let tmpFileAbs = appDirRel </> "compileChez"
-         let build= "(parameterize ([optimize-level 3]) (compile-program " ++
+         let build = "(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
@@ -432,22 +432,22 @@ makeShWindows chez outShRel appdir outAbs
          pure ()
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
+compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c execDir tm outfile
+compileExpr makeitso c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = execDir </> appDirRel -- relative to here
+         let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          let outSsFile = appDirRel </> outfile <.> "ss"
          let outSoFile = appDirRel </> outfile <.> "so"
-         let outSsAbs = cwd </> execDir </> outSsFile
-         let outSoAbs = cwd </> execDir </> outSoFile
+         let outSsAbs = cwd </> outputDir </> outSsFile
+         let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
          compileToSS c appDirGen tm outSsAbs
          logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
-         let outShRel = execDir </> outfile
+         let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
@@ -456,9 +456,9 @@ compileExpr makeitso c execDir tm outfile
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c execDir tm
-    = do Just sh <- compileExpr False c execDir tm "_tmpchez"
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm
+    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift $ system sh
          pure ()

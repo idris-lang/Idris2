@@ -136,12 +136,10 @@ makeBuildDirectory ns
 
 export
 covering
-makeExecDirectory : {auto c : Ref Ctxt Defs} ->
-                    Core ()
-makeExecDirectory
-    = do d <- getDirs
-         Right _ <- coreLift $ mkdirAll (exec_dir d)
-            | Left err => throw (FileErr (exec_dir d) err)
+ensureDirectoryExists : String -> Core ()
+ensureDirectoryExists dir
+    = do Right _ <- coreLift $ mkdirAll dir
+            | Left err => throw (FileErr dir err)
          pure ()
 
 -- Given a source file, return the name of the ttc file to generate

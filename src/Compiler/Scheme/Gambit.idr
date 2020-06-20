@@ -383,24 +383,25 @@ compileToSCM c tm outfile
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
 
-compileExpr : Ref Ctxt Defs -> (execDir : String) ->
+compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c execDir tm outfile
-    = do let outn = execDir </> outfile <.> "scm"
-         libsname <- compileToSCM c tm outn
+compileExpr c tmpDir outputDir tm outfile
+    = do let srcPath = tmpDir </> outfile <.> "scm"
+         let execPath = outputDir </> outfile
+         libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
          let cmd = gsc ++ 
                    " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile)  ++ "\" " ++ outn
+                   (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
-            then pure (Just (execDir </> outfile))
+            then pure (Just execPath)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c execDir tm
-    = do outn <- compileExpr c execDir tm "_tmpgambit"
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm
+    = do outn <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
          case outn of
               -- TODO: on windows, should add exe extension
               Just outn => map (const ()) $ coreLift $ system outn

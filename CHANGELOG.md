@@ -26,17 +26,28 @@ Library changes:
    + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
+* Added `Control.Monad.ST`, for update in-place via `STRef` (which is like
+  `IORef`, but can escape from `IO`). Also added `Data.Ref` which provides an
+  interface to both `IORef` and `STRef`.
 
 Command-line options changes:
 
 * Removed `--ide-mode-socket-with` option.  `--ide-mode-socket` now accepts an
   optional `host:port` argument.
+* Added options to override source directory, build directory and output
+  directory: `--source-dir`, `--build-dir`, `--output-dir`.
+  + These options are also available as fields in the package description:
+    `sourcedir`, `builddir`, `outputdir`.
 
 Compiler changes:
 
 * It is now possible to create new backends with minimal overhead. `Idris.Driver`
 exposes the function `mainWithCodegens` that takes a list of codegens. The
 feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
+
+REPL changes:
+
+* Implemented `:module` command, to load a module during a REPL session.
 
 Changes since Idris 2 v0.1.0
 ----------------------------

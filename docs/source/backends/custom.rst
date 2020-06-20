@@ -5,7 +5,8 @@ Building Idris 2 with new backends
 The way to extend Idris 2 with new backends is to use it as
 a library. The module ``Idris.Driver`` exports the function
 ``mainWithCodegens``, that takes a list of ``(String, Codegen)``,
-starting idris with these codegens in addition to the built-in ones.
+starting idris with these codegens in addition to the built-in ones. The first 
+codegen in the list will be set as the default codegen.
 
 Getting started
 ===============
@@ -27,13 +28,13 @@ Now create a file containing
     import Compiler.Common
     import Idris.Driver
 
-    compile : Ref Ctxt Defs -> (execDir : String) ->
+    compile : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
             ClosedTerm -> (outfile : String) -> Core (Maybe String)
-    compile defs dir term file = do coreLift $ putStrLn "I'd rather not."
+    compile defs tmpDir outputDir term file = do coreLift $ putStrLn "I'd rather not."
                                     pure $ Nothing
 
-    execute : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-    execute defs dir term = do coreLift $ putStrLn "Maybe in an hour."
+    execute : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+    execute defs tmpDir term = do coreLift $ putStrLn "Maybe in an hour."
 
     lazyCodegen : Codegen
     lazyCodegen = MkCG compile execute
