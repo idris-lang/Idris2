@@ -41,6 +41,7 @@ mutual
                            | MutateStatement Name ImperativeExp
                            | ErrorStatement String
                            | EvalExpStatement ImperativeExp
+                           | CommentStatement String
 
 Semigroup ImperativeStatement where
   DoNothing <+> y = y
@@ -80,6 +81,7 @@ mutual
     show (MutateStatement n v) = "(MutateStatement " ++ show n ++ " " ++ show v ++ ")"
     show (ErrorStatement s) = "(ErrorStatement " ++ s ++ ")"
     show (EvalExpStatement x) =  "(EvalExpStatement " ++ show x ++ ")"
+    show (CommentStatement x) = "(CommentStatement " ++ show x ++ ")"
 
 mutual
   replaceNamesExp : List (Name, ImperativeExp) -> ImperativeExp -> ImperativeExp
@@ -139,6 +141,8 @@ mutual
     ErrorStatement s
   replaceNamesExpS reps (EvalExpStatement x) =
     EvalExpStatement $ replaceNamesExp reps x
+  replaceNamesExpS reps (CommentStatement x) =
+    CommentStatement x
 
 data Imps : Type where
 
@@ -278,4 +282,4 @@ compileToImperative c tm =
     s <- newRef Imps (MkImpSt 0)
     compdefs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     (s, main) <- impExp ctm
-    pure $ concat compdefs <+> s <+> EvalExpStatement main
+    pure $ concat compdefs <+> s <+> EvalExpStatement main <+> CommentStatement (show ndefs)

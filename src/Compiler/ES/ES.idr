@@ -231,6 +231,9 @@ jsPrim : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ "({value: "++ v ++"})"
 jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ "(" ++ r ++ ".value)"
 jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ "(" ++ r ++ ".value=" ++ v ++ ")"
+jsPrim (NS _ (UN "prim__newArray")) [_,s,v,_] = pure $ "(Array(Number(" ++ s ++ ")).fill(" ++ v ++ "))"
+jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ "(" ++ x ++ "[" ++ p ++ "])"
+jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ "(" ++ x ++ "[" ++ p ++ "] = " ++ v ++ ")"
 jsPrim (NS _ (UN "prim__os")) [] =
   do
     os <- addRequireToPreamble "os"
@@ -305,6 +308,8 @@ mutual
     pure $ nSpaces indent ++ "throw new Error("++ jsString msg ++");"
   imperative2es indent (EvalExpStatement e) =
     pure $ nSpaces indent ++ !(impExp2es e) ++ ";"
+  imperative2es indent (CommentStatement x) =
+    pure $ "\n/*" ++ x ++ "*/\n"
 
   alt2es : {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
