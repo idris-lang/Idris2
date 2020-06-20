@@ -33,36 +33,25 @@ length xs = length_aux xs Z
 
 export
 length_ext : (xs : List a) -> Data.List.length xs = Data.List.TailRec.length xs
-length_ext xs = Calculate [
-  Data.List.length xs
-  ==| sym (plusZeroRightNeutral (Data.List.length xs)),
-  Data.List.length xs + 0
-  ==| lemma 0 xs,
-  Data.List.TailRec.length_aux xs 0
-  ==| Refl,
-  Data.List.TailRec.length xs
-  ==| QED
-  ]
+length_ext xs = Calc $
+  |~ Data.List.length xs                
+  ~~ Data.List.length xs + 0             ...( sym $ plusZeroRightNeutral $ Data.List.length xs )
+  ~~ Data.List.TailRec.length_aux xs 0   ...( lemma 0 xs )
+  ~~ Data.List.TailRec.length xs         ...( Refl )
   where
     lemma : (n : Nat) -> (xs : List a) -> 
             Data.List.length xs + n  = length_aux xs n
     lemma n [] = Refl
     lemma n (_ :: xs) = 
       let length_xs : Nat
-          length_xs = Data.List.length xs in
-      Calculate [
-      1 + (length_xs + n)
+          length_xs = Data.List.length xs in 
+      Calc $
+      |~ 1 + (length_xs + n) 
       -- Hopefully we could Frex these two steps one day
-      ==| plusAssociative 1 length_xs n ,
-      (1 + length_xs) + n
-      ==| cong (+n) (plusCommutative 1 length_xs) ,
-      (length_xs + 1) + n
-      ==| sym (plusAssociative length_xs 1 n),
-      (length_xs) + (1 + n)
-      ==| lemma (1 + n) xs,
-      length_aux xs (1 + n)
-      ==| QED
-    ]
+      ~~ (1 + length_xs) + n     ...( plusAssociative 1 length_xs n )      
+      ~~ (length_xs + 1) + n     ...( cong (+n) (plusCommutative 1 length_xs) )      
+      ~~ (length_xs) + (1 + n)   ...( sym (plusAssociative length_xs 1 n) )      
+      ~~ length_aux xs (1 + n)   ...( lemma (1 + n) xs )
 
 take_aux : Nat -> List a -> List a -> List a
 take_aux Z     xs        acc = reverseOnto [] acc
@@ -77,16 +66,11 @@ export
 take_ext : 
   (n : Nat) -> (xs : List a) ->
      Data.List.take n xs = Data.List.TailRec.take n xs
-take_ext n xs = Calculate [
-  Data.List.take n xs
-  ==| Refl ,
-  reverse [] ++ (Data.List.take n xs)
-  ==| sym (revOnto (Data.List.take n xs) []) ,
-  reverseOnto (Data.List.take n xs) []
-  ==| sym (lemma n xs []) ,
-  take_aux n xs []
-  ==| QED
-  ]
+take_ext n xs = Calc $
+  |~ Data.List.take n xs
+  ~~ reverse [] ++ (Data.List.take n xs)  ...( Refl )
+  ~~ reverseOnto (Data.List.take n xs) [] ...( sym (revOnto (Data.List.take n xs) []) )
+  ~~ take_aux n xs []                     ...( sym (lemma n xs []) )
   where
     lemma : (n : Nat) -> (xs, acc : List a) -> 
             take_aux n xs acc =  reverseOnto (Data.List.take n xs) acc
@@ -249,12 +233,10 @@ mergeReplicate_ext : (sep : a) -> (xs : List a) -> (acc : List a) ->
                    mergeReplicate_aux sep xs acc = 
                    reverseOnto (mergeReplicate sep xs) acc
 mergeReplicate_ext sep []      acc = Refl
-mergeReplicate_ext sep (x::xs) acc = Calculate [
-  mergeReplicate_aux sep xs (x :: sep :: acc)
-  ==| mergeReplicate_ext sep xs (x :: sep :: acc) ,
-  reverseOnto (sep :: x :: mergeReplicate sep xs) acc
-  ==| QED
-  ]
+mergeReplicate_ext sep (x::xs) acc = Calc $
+  |~ mergeReplicate_aux sep xs (x :: sep :: acc)
+  ~~ reverseOnto (sep :: x :: mergeReplicate sep xs) acc 
+                              ...( mergeReplicate_ext sep xs (x :: sep :: acc) )
 
 export
 intersperse : a -> List a -> List a
@@ -314,9 +296,10 @@ mergeByOnto : List a -> (a -> a -> Ordering) -> List a -> List a -> List a
 mergeByOnto acc order []           right         = reverseOnto right acc
 mergeByOnto acc order left         []            = reverseOnto left  acc
 mergeByOnto acc order left@(x::xs) right@(y::ys) = 
-  case order x y of
-    LT => mergeByOnto (x :: acc) order xs   right
-    _  => mergeByOnto (y :: acc) order left ys
+  -- We need the variant annotations (bug #300)
+  case order x y of 
+    LT => mergeByOnto (x :: acc) order (assert_smaller left xs)   right
+    _  => mergeByOnto (y :: acc) order left                       (assert_smaller right ys)
     
 mergeByOnto_ext : (acc : List a) 
                -> (order : a -> a -> Ordering) 
@@ -324,7 +307,9 @@ mergeByOnto_ext : (acc : List a)
                -> reverseOnto (mergeBy order left right) acc 
                   = mergeByOnto acc order left right
 mergeByOnto_ext acc order []           right         = Refl
-mergeByOnto_ext acc order left         []            = ?bug139
+mergeByOnto_ext  acc order left        []            with( left) 
+ mergeByOnto_ext acc order _           []            | []     = Refl
+ mergeByOnto_ext acc order _           []            | (_::_) = Refl
 mergeByOnto_ext acc order left@(x::xs) right@(y::ys) with (order x y)
  mergeByOnto_ext acc order left@(x::xs) right@(y::ys) | LT = 
                            mergeByOnto_ext (x :: acc) order xs (y::ys)
@@ -368,27 +353,31 @@ export
 sortBy : (cmp : a -> a -> Ordering) -> (xs : List a) -> List a
 sortBy cmp []  = []
 sortBy cmp [x] = [x]
-sortBy cmp xs = let (x, y) = sortBy_split xs in
+sortBy cmp zs = let (xs, ys) = sortBy_split zs in
     Data.List.TailRec.mergeBy cmp
-          (Data.List.TailRec.sortBy cmp (assert_smaller xs x))
-          (Data.List.TailRec.sortBy cmp (assert_smaller xs y))
+          (Data.List.TailRec.sortBy cmp (assert_smaller zs xs))
+          (Data.List.TailRec.sortBy cmp (assert_smaller zs ys))
 
 
-{-- -- This code seems to make Idris2 loop
+ {- Can't really finish this proof because Data.List doesn't export the definition of sortBy. -}
+ {-
 export
 sortBy_ext : (cmp : a -> a -> Ordering) -> (xs : List a) -> 
   Data.List.sortBy cmp xs = Data.List.TailRec.sortBy cmp xs
-sortBy_ext cmp []  = Refl
-sortBy_ext cmp [x] = Refl
-sortBy_ext cmp xs@(y::ys) = let (x, y) = split xs in
-  Calculate [
-  Data.List.mergeBy cmp
-    (Data.List.sortBy cmp (assert_smaller xs x))
-    (Data.List.sortBy cmp (assert_smaller xs y))
-  ==| ?help1 ,
+sortBy_ext  cmp []  = Refl
+sortBy_ext  cmp [x] = Refl
+sortBy_ext  cmp zs'@(z::zs) =
+  Calc $
+  |~ Data.List.sortBy cmp (z::zs)
+  ~~ (let (xs, ys) = sortBy_split zs' in
+     Data.List.mergeBy cmp
+     (Data.List.sortBy cmp xs)
+     (Data.List.sortBy cmp ys))
+      ...( ?help0 ) 
+  ~~
+  let (xs, ys) = sortBy_split (z::zs) in
   Data.List.TailRec.mergeBy cmp
-    (Data.List.TailRec.sortBy cmp (assert_smaller xs x))
-    (Data.List.TailRec.sortBy cmp (assert_smaller xs y))
-  ==| QED
-  ]
---}
+    (Data.List.TailRec.sortBy cmp xs)
+    (Data.List.TailRec.sortBy cmp ys)
+    ...( ?help1 )
+-}
