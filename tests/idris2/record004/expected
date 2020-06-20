@@ -16,6 +16,9 @@ at:
 
 Main> [2.5, 2.5]
 Main> 7.4
+Main> 7.4
+Main> 7.4
+Main> MkPoint 1.1 2.5
 Main> 4.2
 Main> 4.2
 Main> 4.2
