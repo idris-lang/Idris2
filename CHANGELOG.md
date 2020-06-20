@@ -34,6 +34,10 @@ Command-line options changes:
 
 * Removed `--ide-mode-socket-with` option.  `--ide-mode-socket` now accepts an
   optional `host:port` argument.
+* Added options to override source directory, build directory and output
+  directory: `--source-dir`, `--build-dir`, `--output-dir`.
+  + These options are also available as fields in the package description:
+    `sourcedir`, `builddir`, `outputdir`.
 
 Compiler changes:
 

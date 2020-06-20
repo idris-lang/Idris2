@@ -1932,10 +1932,10 @@ setBuildDir dir
          put Ctxt (record { options->dirs->build_dir = dir } defs)
 
 export
-setExecDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
-setExecDir dir
+setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
+setOutputDir dir
     = do defs <- get Ctxt
-         put Ctxt (record { options->dirs->exec_dir = dir } defs)
+         put Ctxt (record { options->dirs->output_dir = dir } defs)
 
 export
 setSourceDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
@@ -1963,7 +1963,7 @@ export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setPrefix dir
     = do defs <- get Ctxt
-         put Ctxt (record { options->dirs->dir_prefix = dir } defs)
+         put Ctxt (record { options->dirs->prefix_dir = dir } defs)
 
 export
 setExtension : {auto c : Ref Ctxt Defs} -> LangExt -> Core ()
