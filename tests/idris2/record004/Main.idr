@@ -28,3 +28,9 @@ rect =
 -- .foo.bar.baz is three lexemes: .foo, .bar, .baz
 --
 -- If you want Constructor.field, you have to write (Constructor).field.
+
+bad : Double
+bad = rect.(x . topLeft)  -- disallowed without %language PostfixProjections
+
+%language PostfixProjections
+-- from now on, we can use complex projections

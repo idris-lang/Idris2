@@ -349,9 +349,25 @@ mutual
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
   desugarB side ps (PPostfixProjs fc rec projs)
-      = desugarB side ps $ foldl (\x, proj => PApp fc proj x) rec projs
+      = do
+        let isPRef = \case
+              PRef _ _ => True
+              _ => False
+        defs <- get Ctxt
+        when (not (isExtension PostfixProjections defs) && not (all isPRef projs)) $
+          throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+        desugarB side ps $ foldl (\x, proj => PApp fc proj x) rec projs
   desugarB side ps (PPostfixProjsPartial fc projs)
-      = desugarB side ps $
+      = do
+        let isPRef = \case
+              PRef _ _ => True
+              _ => False
+        defs <- get Ctxt
+        when (not (isExtension PostfixProjections defs) && not (all isPRef projs)) $
+          throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+        desugarB side ps $
           PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
             foldl (\r, proj => PApp fc proj r) (PRef fc (MN "paRoot" 0)) projs
   desugarB side ps (PWithUnambigNames fc ns rhs)
@@ -816,8 +832,6 @@ mutual
              UnboundImplicits a => do
                setUnboundImplicits a
                pure [IPragma (\nest, env => setUnboundImplicits a)]
-             UndottedRecordProjections b => do
-               pure [IPragma (\nest, env => setUndottedRecordProjections b)]
              AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
              PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]
