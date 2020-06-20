@@ -1,4 +1,4 @@
-module Data.ST
+module Control.Monad.ST
 
 import Data.IORef
 

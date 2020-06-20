@@ -1,7 +1,7 @@
 module Data.Ref
 
 import public Data.IORef
-import public Data.ST
+import public Control.Monad.ST
 
 public export
 interface Ref m (r : Type -> Type) | m where
