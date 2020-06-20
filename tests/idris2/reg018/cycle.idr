@@ -1,4 +1,5 @@
 import Data.Vect
+import Data.Vect.Elem
 
 data Typ : Type where
     TLam : Typ -> Typ -> Typ
