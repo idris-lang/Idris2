@@ -272,8 +272,22 @@ Reify Name where
                  => do str' <- reify defs !(evalClosure defs str)
                        n' <- reify defs !(evalClosure defs n)
                        pure (DN str' n')
-             _ => cantReify val "Name"
-  reify defs val = cantReify val "Name"
+             (NS _ (UN "Nested"), [ix,str])
+                 => do ix' <- reify defs !(evalClosure defs ix)
+                       str' <- reify defs !(evalClosure defs str)
+                       pure (Nested ix' str')
+             (NS _ (UN "CaseBlock"), [outer,i])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (CaseBlock outer' i')
+             (NS _ (UN "WithBlock"), [outer,i])
+                 => do outer' <- reify defs !(evalClosure defs outer)
+                       i' <- reify defs !(evalClosure defs i)
+                       pure (WithBlock outer' i')
+             (NS _ (UN _), _)
+                 => cantReify val "Name, reifying it is unimplemented or intentionally internal"
+             _ => cantReify val "Name, the name was not found in context"
+  reify defs val = cantReify val "Name, value is not an NDCon interally"
 
 export
 Reflect Name where
@@ -292,11 +306,31 @@ Reflect Name where
       = do str' <- reflect fc defs lhs env str
            n' <- reflect fc defs lhs env n
            appCon fc defs (reflectiontt "DN") [str', n']
+  reflect fc defs lhs env (Nested ix n)
+      = do ix' <- reflect fc defs lhs env ix
+           n'  <- reflect fc defs lhs env n
+           appCon fc defs (reflectiontt "Nested") [ix',n']
+  reflect fc defs lhs env (CaseBlock outer i)
+      = do Resolved _ <- full (gamma defs) (Resolved i)
+             | _ => cantReflect fc
+                      "Name inside CaseBlock, it is not a Resolved name"
+           outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "CaseBlock") [outer',i']
+  reflect fc defs lhs env (WithBlock outer i)
+      = do Resolved _ <- full (gamma defs) (Resolved i)
+             | _ => cantReflect fc
+                      "Name inside WithBlock, it is not a Resolved name"
+           outer' <- reflect fc defs lhs env outer
+           i' <- reflect fc defs lhs env i
+           appCon fc defs (reflectiontt "WithBlock") [outer',i']
   reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
-             Resolved _ => cantReflect fc "Name"
+             Resolved _ => cantReflect fc
+                      "Name directly, Resolved is intentionally internal"
              n => reflect fc defs lhs env n
-  reflect fc defs lhs env val = cantReflect fc "Name"
+  reflect fc defs lhs env n = cantReflect fc
+    "Name, reflecting it is unimplemented or intentionally internal"
 
 export
 Reify NameType where
