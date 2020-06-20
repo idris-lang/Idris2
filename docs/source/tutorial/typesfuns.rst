@@ -988,8 +988,8 @@ type. The field names can be used to access the field values:
     "Fred" : String
     *Record> fred.age
     30 : Int
-    *Record> :t (.firstName)
-    Main.Person.(.firstName) : Person -> String
+    *Record> :t firstName
+    firstName : Person -> String
 
 We can use prefix field projections, like in Haskell:
 
@@ -999,8 +999,6 @@ We can use prefix field projections, like in Haskell:
     "Fred" : String
     *Record> age fred
     30 : Int
-    *Record> :t firstName
-    firstName : Person -> String
 
 We can also use the field names to update a record (or, more
 precisely, produce a copy of the record with the given fields
