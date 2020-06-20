@@ -10,8 +10,7 @@ tighter than function application.
 Lexical structure
 -----------------
 
-* ``.foo`` is a valid name, which stands for record fields (new ``Name``
-  constructor ``RF "foo"``)
+* ``.foo`` is a valid lexeme, which stands for postfix application of ``foo``
 
 * ``Foo.bar.baz`` starting with uppercase ``F`` is one lexeme, a namespaced
   identifier: ``DotSepIdent ["baz", "bar", "Foo"]``
@@ -32,14 +31,11 @@ Expressions binding tighter than application (``simpleExpr``), such as variables
 
 .. code-block:: idris
 
-    simpleExpr ::= (.field)+               -- parses as PRecordProjection
-                 | simplerExpr (.field)+   -- parses as PRecordFieldAccess
+    simpleExpr ::= (.field)+               -- parses as PPostfixAppPartial
+                 | simplerExpr (.field)+   -- parses as PPostfixApp
                  | simplerExpr             -- (parses as whatever it used to)
 
-* ``(.foo)`` is a name, so you can use it to e.g. define a function called
-  ``.foo`` (see ``.squared`` below)
-
-* ``(.foo.bar)`` is a parenthesised expression
+* ``(.foo.bar)`` is a valid parenthesised expression
 
 Desugaring rules
 ----------------
@@ -49,19 +45,6 @@ Desugaring rules
 
 * ``(simpleExpr .field1 .field2 .field3)`` desugars to ``((.field .field2
   .field3) simpleExpr)``
-
-Record elaboration
-------------------
-
-* there is a new pragma ``%undotted_record_projections``, which is ``on`` by
-  default
-
-* for every field ``f`` of a record ``R``, we get:
-
-  * projection ``f`` in namespace ``R`` (exactly like now), unless
-    ``%undotted_record_projections`` is ``off``
-
-  * projection ``.f`` in namespace ``R`` with the same definition
 
 Example code
 ------------
@@ -74,32 +57,17 @@ Example code
       y : Double
 
 This record creates two projections:
-* ``.x : Point -> Double``
-* ``.y : Point -> Double``
-
-Because ``%undotted_record_projections`` are ``on`` by default, we also get:
 * ``x : Point -> Double``
 * ``y : Point -> Double``
 
-To prevent cluttering the ordinary global name space with short identifiers, we can do this:
+We add another record:
 
 .. code-block:: idris
-
-    %undotted_record_projections off
 
     record Rect where
       constructor MkRect
       topLeft : Point
       bottomRight : Point
-
-For ``Rect``, we don't get the undotted projections:
-
-.. code-block:: idris
-
-    Main> :t topLeft
-    (interactive):1:4--1:11:Undefined name topLeft
-    Main> :t .topLeft
-    \{rec:0} => .topLeft rec : ?_ -> Point
 
 Let's define some constants:
 
@@ -114,20 +82,13 @@ Let's define some constants:
         (MkPoint 1.1 2.5)
         (MkPoint 4.3 6.3)
 
-User-defined projections work, too. (Should they?)
-
-.. code-block:: idris
-
-    (.squared) : Double -> Double
-    (.squared) x = x * x
-
 Finally, the examples:
 
 .. code-block:: idris
 
     main : IO ()
     main = do
-      -- desugars to (.x pt)
+      -- desugars to (x pt)
       -- prints 4.2
       printLn $ pt.x
 
@@ -153,7 +114,7 @@ Finally, the examples:
       -- prints [1.0, 3.0]
       printLn $ map (.x) [MkPoint 1 2, MkPoint 3 4]
 
-      -- .topLeft.y desugars to (\x => .y (.topLeft x))
+      -- .topLeft.y desugars to (\x => y (topLeft x))
       -- prints [2.5, 2.5]
       printLn $ map (.topLeft.y) [rect, rect]
 

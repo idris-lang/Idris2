@@ -1002,12 +1002,6 @@ We can use prefix field projections, like in Haskell:
     *Record> :t firstName
     firstName : Person -> String
 
-Prefix field projections can be disabled per record definition
-using pragma ``%undotted_record_projections off``, which makes
-all subsequently defined records generate only dotted projections.
-This pragma has effect until the end of the module
-or until the closest occurrence of ``%undotted_record_projections on``.
-
 We can also use the field names to update a record (or, more
 precisely, produce a copy of the record with the given fields
 updated):
