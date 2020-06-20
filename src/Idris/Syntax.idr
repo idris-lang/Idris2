@@ -90,10 +90,10 @@ mutual
        PRange : FC -> PTerm -> Maybe PTerm -> PTerm -> PTerm
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
-       -- record field access (r.x.y)
-       PRecordFieldAccess : FC -> PTerm -> List Name -> PTerm
-       -- record projection (.x.y)
-       PRecordProjection : FC -> List Name -> PTerm
+       -- r.x.y
+       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       -- .x.y
+       PPostfixAppPartial : FC -> List Name -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> Nat -> PTerm -> PTerm
@@ -147,8 +147,8 @@ mutual
   getPTermLoc (PRewrite fc _ _) = fc
   getPTermLoc (PRange fc _ _ _) = fc
   getPTermLoc (PRangeStream fc _ _) = fc
-  getPTermLoc (PRecordFieldAccess fc _ _) = fc
-  getPTermLoc (PRecordProjection fc _) = fc
+  getPTermLoc (PPostfixApp fc _ _) = fc
+  getPTermLoc (PPostfixAppPartial fc _) = fc
   getPTermLoc (PUnifyLog fc _ _) = fc
   getPTermLoc (PWithUnambigNames fc _ _) = fc
 
@@ -583,10 +583,10 @@ mutual
     showPrec d (PRangeStream _ start (Just next))
         = "[" ++ showPrec d start ++ ", " ++ showPrec d next ++ " .. ]"
     showPrec d (PUnifyLog _ lvl tm) = showPrec d tm
-    showPrec d (PRecordFieldAccess fc rec fields)
-        = showPrec d rec ++ concatMap show fields
-    showPrec d (PRecordProjection fc fields)
-        = concatMap show fields
+    showPrec d (PPostfixApp fc rec fields)
+        = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
+    showPrec d (PPostfixAppPartial fc fields)
+        = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
 
@@ -875,11 +875,11 @@ mapPTermM f = goPTerm where
     goPTerm (PUnifyLog fc k x) =
       PUnifyLog fc k <$> goPTerm x
       >>= f
-    goPTerm (PRecordFieldAccess fc rec fields) =
-      PRecordFieldAccess fc <$> goPTerm rec <*> pure fields
+    goPTerm (PPostfixApp fc rec fields) =
+      PPostfixApp fc <$> goPTerm rec <*> pure fields
       >>= f
-    goPTerm (PRecordProjection fc fields) =
-      f (PRecordProjection fc fields)
+    goPTerm (PPostfixAppPartial fc fields) =
+      f (PPostfixAppPartial fc fields)
     goPTerm (PWithUnambigNames fc ns rhs) =
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f

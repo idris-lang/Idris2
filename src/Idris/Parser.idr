@@ -337,19 +337,19 @@ mutual
 
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
-      = do
+      = do  -- .y.z
           start <- location
-          recFields <- some recField
+          projs <- some dotIdent
           end <- location
-          pure $ PRecordProjection (MkFC fname start end) recFields
-    <|> do
+          pure $ PPostfixAppPartial (MkFC fname start end) projs
+    <|> do  -- x.y.z
           start <- location
           root <- simplerExpr fname indents
-          recFields <- many recField
+          projs <- many dotIdent
           end <- location
-          pure $ case recFields of
+          pure $ case projs of
             [] => root
-            fs => PRecordFieldAccess (MkFC fname start end) root recFields
+            fs => PPostfixApp (MkFC fname start end) root projs
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
@@ -715,13 +715,12 @@ mutual
     where
       fieldName : Name -> String
       fieldName (UN s) = s
-      fieldName (RF s) = s
       fieldName _ = "_impossible"
 
       -- this allows the dotted syntax .field
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
-      recFieldCompat = recField <|> (symbol "->" *> name)
+      recFieldCompat = dotIdent <|> (symbol "->" *> name)
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents

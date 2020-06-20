@@ -538,7 +538,6 @@ definedInBlock ns decls =
     expandNS : List String -> Name -> Name
     expandNS [] n = n
     expandNS ns (UN n) = NS ns (UN n)
-    expandNS ns (RF n) = NS ns (RF n)
     expandNS ns n@(MN _ _) = NS ns n
     expandNS ns n@(DN _ _) = NS ns n
     expandNS ns n = n
@@ -556,25 +555,11 @@ definedInBlock ns decls =
         fldns' : List String
         fldns' = maybe ns (\f => f :: ns) fldns
 
-        toRF : Name -> Name
-        toRF (UN n) = RF n
-        toRF n = n
-
         fnsUN : List Name
         fnsUN = map getFieldName flds
 
-        fnsRF : List Name
-        fnsRF = map toRF fnsUN
-
-        -- Depending on %undotted_record_projections,
-        -- the record may or may not produce undotted projections (fnsUN).
-        --
-        -- However, since definedInBlock is pure, we can't check that flag
-        -- (and it would also be wrong if %undotted_record_projections appears
-        -- inside the parameter block)
-        -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
+        all = expandNS ns n :: map (expandNS fldns') fnsUN
 
     defName _ _ = []
 

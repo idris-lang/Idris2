@@ -22,8 +22,8 @@ data Token
   -- Identifiers
   | HoleIdent String
   | Ident String
-  | DotSepIdent (List String)
-  | RecordField String
+  | DotSepIdent (List String)  -- ident.ident
+  | DotIdent String            -- .ident
   | Symbol String
   -- Comments
   | Comment String
@@ -46,7 +46,7 @@ Show Token where
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
   show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (reverse xs)
-  show (RecordField x) = "record field " ++ x
+  show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
   show (Comment _) = "comment"
@@ -110,8 +110,8 @@ docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')
 holeIdent : Lexer
 holeIdent = is '?' <+> identNormal
 
-recField : Lexer
-recField = is '.' <+> identNormal
+dotIdent : Lexer
+dotIdent = is '.' <+> identNormal
 
 pragma : Lexer
 pragma = is '%' <+> identNormal
@@ -208,7 +208,7 @@ rawTokens =
      (digits, \x => IntegerLit (cast x)),
      (stringLit, \x => StringLit (stripQuotes x)),
      (charLit, \x => CharLit (stripQuotes x)),
-     (recField, \x => RecordField (assert_total $ strTail x)),
+     (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),
      (identNormal, parseIdent),
      (pragma, \x => Pragma (assert_total $ strTail x)),

@@ -348,12 +348,12 @@ mutual
                 desugarB side ps (PApp fc (PApp fc (PRef fc (UN "rangeFromThen")) start) n)
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
-  desugarB side ps (PRecordFieldAccess fc rec fields)
-      = desugarB side ps $ foldl (\r, f => PApp fc (PRef fc f) r) rec fields
-  desugarB side ps (PRecordProjection fc fields)
+  desugarB side ps (PPostfixApp fc rec projs)
+      = desugarB side ps $ foldl (\x, proj => PApp fc (PRef fc proj) x) rec projs
+  desugarB side ps (PPostfixAppPartial fc projs)
       = desugarB side ps $
-          PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc) $
-            foldl (\r, f => PApp fc (PRef fc f) r) (PRef fc (MN "rec" 0)) fields
+          PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
+            foldl (\r, proj => PApp fc (PRef fc proj) r) (PRef fc (MN "paRoot" 0)) projs
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
 
