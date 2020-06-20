@@ -4,7 +4,7 @@ Dot syntax for records
 .. role:: idris(code)
     :language: idris
 
-Long story short, ``.field`` is a postfix projection operator that binds
+Long story short, ``.proj`` is a postfix projection operator that binds
 tighter than function application.
 
 Lexical structure
@@ -20,7 +20,7 @@ Lexical structure
 
 * ``.foo.bar.baz`` is three lexemes: ``.foo``, ``.bar``, ``.baz``
 
-* If you want ``Constructor.field``, you have to write ``(Constructor).field``.
+* If you want ``Constructor.proj``, you have to write ``(Constructor).proj``.
 
 * All module names must start with an uppercase letter.
 
@@ -31,20 +31,22 @@ Expressions binding tighter than application (``simpleExpr``), such as variables
 
 .. code-block:: idris
 
-    simpleExpr ::= (.field)+               -- parses as PPostfixAppPartial
-                 | simplerExpr (.field)+   -- parses as PPostfixApp
-                 | simplerExpr             -- (parses as whatever it used to)
+    postfixProj ::= .identifier
+                  | .(expression)
 
-* ``(.foo.bar)`` is a valid parenthesised expression
+    simpleExpr ::= postfixProj+              -- parses as PPostfixAppPartial
+                 | simplerExpr postfixProj+  -- parses as PPostfixApp
+                 | simplerExpr               -- (parses as whatever it used to)
+
+* ``(.foo.bar)`` is a valid parenthesised expression (``PPostfixAppPartial``)
 
 Desugaring rules
 ----------------
 
-* ``(.field1 .field2 .field3)`` desugars to ``(\x => .field3 (.field2 (.field1
-  x)))``
+* ``.proj1 .proj2 .proj3`` desugars to ``(\x => .proj3 (.proj2 (.proj1 x)))``
 
-* ``(simpleExpr .field1 .field2 .field3)`` desugars to ``((.field .field2
-  .field3) simpleExpr)``
+* ``simpleExpr .proj1 .proj2 .proj3`` desugars to
+  ``((.proj1 .proj2 .proj3) simpleExpr)``
 
 Example code
 ------------
@@ -82,7 +84,7 @@ Let's define some constants:
         (MkPoint 1.1 2.5)
         (MkPoint 4.3 6.3)
 
-Finally, the examples:
+Finally, some examples:
 
 .. code-block:: idris
 
@@ -122,14 +124,11 @@ Finally, the examples:
       -- prints 7.4
       printLn $ rect.topLeft.x + rect.bottomRight.y
 
-      -- qualified names work, too
-      -- all these print 4.2
-      printLn $ Main.Point.(.x) pt
-      printLn $ Point.(.x) pt
-      printLn $ (.x) pt
-      printLn $ .x pt
+      -- complex projections
+      -- prints 7.4
+      printLn $ rect.(x . topLeft) + rect.(y . bottomRight)
 
-      -- haskell-style projections work, too
+      -- haskell-style projections
       printLn $ Main.Point.x pt
       printLn $ Point.x pt
       printLn $ (x) pt
