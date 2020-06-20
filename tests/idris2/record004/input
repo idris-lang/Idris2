@@ -7,6 +7,9 @@ map (.x) [MkPoint 1.1 2.5, MkPoint 4.2 6.3]
 map .x [MkPoint 1 2, MkPoint 3 4]
 map (.topLeft.y) [rect, rect]
 rect.topLeft.x + rect.bottomRight.y
+rect.(x . topLeft) + rect.(y . bottomRight)
+x rect.topLeft + y rect.bottomRight
+rect.(Rect.topLeft)
 Main.Point.x pt
 Point.x pt
 (x) pt
