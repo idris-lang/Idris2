@@ -26,6 +26,9 @@ Library changes:
    + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
+* Added `Control.Monad.ST`, for update in-place via `STRef` (which is like
+  `IORef`, but can escape from `IO`). Also added `Data.Ref` which provides an
+  interface to both `IORef` and `STRef`.
 
 Command-line options changes:
 
