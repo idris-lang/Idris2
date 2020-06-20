@@ -24,7 +24,7 @@ styleOrg = MkLitStyle
 
 export
 styleCMark : LiterateStyle
-styleCMark = MkLitStyle [("```idris", "```")] Nil [".md"]
+styleCMark = MkLitStyle [("```idris", "```")] Nil [".md", ".markdown"]
 
 export
 isLitFile : String -> Maybe LiterateStyle

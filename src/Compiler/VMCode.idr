@@ -30,7 +30,7 @@ data VMInst : Type where
      DECLARE : Reg -> VMInst
      START : VMInst -- start of the main body of the function
      ASSIGN : Reg -> Reg -> VMInst
-     MKCON : Reg -> (tag : Maybe Int) -> (args : List Reg) -> VMInst
+     MKCON : Reg -> (tag : Either Int Name) -> (args : List Reg) -> VMInst
      MKCLOSURE : Reg -> Name -> (missing : Nat) -> (args : List Reg) -> VMInst
      MKCONSTANT : Reg -> Constant -> VMInst
      
@@ -117,8 +117,10 @@ toVM t res (AApp fc f a)
     = [APPLY res (toReg f) (toReg a)]
 toVM t res (ALet fc var val body)
     = toVM False (Loc var) val ++ toVM t res body
-toVM t res (ACon fc n tag args)
-    = [MKCON res tag (map toReg args)]
+toVM t res (ACon fc n (Just tag) args)
+    = [MKCON res (Left tag) (map toReg args)]
+toVM t res (ACon fc n Nothing args)
+    = [MKCON res (Right n) (map toReg args)]
 toVM t res (AOp fc op args)
     = [OP res op (map toReg args)]
 toVM t res (AExtPrim fc p args)
