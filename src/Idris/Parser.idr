@@ -335,21 +335,35 @@ mutual
       mergePairs end ((estart, exp) :: rest)
           = PPair (MkFC fname estart end) exp (mergePairs end rest)
 
+  postfixApp : FileName -> IndentInfo -> Rule PTerm
+  postfixApp fname indents
+    = do
+        start <- location
+        di <- dotIdent
+        end <- location
+        pure $ PRef (MkFC fname start end) di
+    <|> do
+        symbol ".("
+        commit
+        e <- expr pdef fname indents
+        symbol ")"
+        pure e
+
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
       = do  -- .y.z
           start <- location
-          projs <- some dotIdent
+          projs <- some $ postfixApp fname indents
           end <- location
-          pure $ PPostfixAppPartial (MkFC fname start end) projs
+          pure $ PPostfixProjsPartial (MkFC fname start end) projs
     <|> do  -- x.y.z
           start <- location
           root <- simplerExpr fname indents
-          projs <- many dotIdent
+          projs <- many $ postfixApp fname indents
           end <- location
           pure $ case projs of
             [] => root
-            fs => PPostfixApp (MkFC fname start end) root projs
+            _  => PPostfixProjs (MkFC fname start end) root projs
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents

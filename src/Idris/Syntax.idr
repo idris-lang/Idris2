@@ -91,9 +91,9 @@ mutual
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
        -- r.x.y
-       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       PPostfixProjs : FC -> PTerm -> List PTerm -> PTerm
        -- .x.y
-       PPostfixAppPartial : FC -> List Name -> PTerm
+       PPostfixProjsPartial : FC -> List PTerm -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> Nat -> PTerm -> PTerm
@@ -147,8 +147,8 @@ mutual
   getPTermLoc (PRewrite fc _ _) = fc
   getPTermLoc (PRange fc _ _ _) = fc
   getPTermLoc (PRangeStream fc _ _) = fc
-  getPTermLoc (PPostfixApp fc _ _) = fc
-  getPTermLoc (PPostfixAppPartial fc _) = fc
+  getPTermLoc (PPostfixProjs fc _ _) = fc
+  getPTermLoc (PPostfixProjsPartial fc _) = fc
   getPTermLoc (PUnifyLog fc _ _) = fc
   getPTermLoc (PWithUnambigNames fc _ _) = fc
 
@@ -583,9 +583,9 @@ mutual
     showPrec d (PRangeStream _ start (Just next))
         = "[" ++ showPrec d start ++ ", " ++ showPrec d next ++ " .. ]"
     showPrec d (PUnifyLog _ lvl tm) = showPrec d tm
-    showPrec d (PPostfixApp fc rec fields)
+    showPrec d (PPostfixProjs fc rec fields)
         = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
-    showPrec d (PPostfixAppPartial fc fields)
+    showPrec d (PPostfixProjsPartial fc fields)
         = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
@@ -875,11 +875,11 @@ mapPTermM f = goPTerm where
     goPTerm (PUnifyLog fc k x) =
       PUnifyLog fc k <$> goPTerm x
       >>= f
-    goPTerm (PPostfixApp fc rec fields) =
-      PPostfixApp fc <$> goPTerm rec <*> pure fields
+    goPTerm (PPostfixProjs fc rec fields) =
+      PPostfixProjs fc <$> goPTerm rec <*> pure fields
       >>= f
-    goPTerm (PPostfixAppPartial fc fields) =
-      f (PPostfixAppPartial fc fields)
+    goPTerm (PPostfixProjsPartial fc fields) =
+      f (PPostfixProjsPartial fc fields)
     goPTerm (PWithUnambigNames fc ns rhs) =
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f
