@@ -14,6 +14,32 @@ import Compiler.ES.RemoveUnused
 import Debug.Trace
 
 mutual
+  isNameUsed : Name -> NamedCExp -> Bool
+  isNameUsed name (NmLocal fc n) = n == name
+  isNameUsed name (NmRef fc n) = n == name
+  isNameUsed name (NmLam fc n e) = isNameUsed name e
+  isNameUsed name (NmApp fc x args) = isNameUsed name x || any (isNameUsed name) args
+  isNameUsed name (NmPrimVal fc c) = False
+  isNameUsed name (NmOp fc op args) = any (isNameUsed name) args
+  isNameUsed name (NmConCase fc sc alts def) = isNameUsed name sc || any (isNameUsedConAlt name) alts  || maybe False (isNameUsed name) def
+  isNameUsed name (NmConstCase fc sc alts def) = isNameUsed name sc || any (isNameUsedConstAlt name) alts  || maybe False (isNameUsed name) def
+  isNameUsed name (NmExtPrim fc p args) = any (isNameUsed name) args
+  isNameUsed name (NmCon fc x t args) = any (isNameUsed name) args
+  isNameUsed name (NmDelay fc t) = isNameUsed name t
+  isNameUsed name (NmForce fc t) = isNameUsed name t
+  isNameUsed name (NmLet fc x val sc) =
+    if x == name then isNameUsed name val
+      else isNameUsed name val || isNameUsed name sc
+  isNameUsed name (NmErased fc) = False
+  isNameUsed name (NmCrash fc msg) = False
+
+  isNameUsedConAlt : Name -> NamedConAlt -> Bool
+  isNameUsedConAlt name (MkNConAlt n t args exp) = isNameUsed name exp
+
+  isNameUsedConstAlt : Name -> NamedConstAlt -> Bool
+  isNameUsedConstAlt name (MkNConstAlt c exp) = isNameUsed name exp
+
+mutual
   public export
   data ImperativeExp = IEVar Name
                      | IELambda (List Name) ImperativeStatement
@@ -238,7 +264,8 @@ mutual
     do
       (s1, v) <- impExp val
       (s2, sc_) <- impExp sc
-      pure (s1 <+> ConstDecl x v <+> s2, sc_)
+      let decl  = if isNameUsed x sc then ConstDecl x v else EvalExpStatement v
+      pure (s1 <+> decl <+> s2, sc_)
   impExp (NmErased fc) =
     pure (DoNothing, IENull)
   impExp (NmCrash fc msg) =
