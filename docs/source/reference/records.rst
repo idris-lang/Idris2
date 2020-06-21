@@ -1,52 +1,83 @@
-Dot syntax for records
-======================
+Postfix projections
+===================
 
 .. role:: idris(code)
     :language: idris
 
-Long story short, ``.proj`` is a postfix projection operator that binds
-tighter than function application.
+Postfix projections are syntactic forms that represent postfix application,
+such as ``person.name``. They were originally motivated by the need of dot syntax
+to access fields of records, and generalised also for non-record use cases later.
+
+The more advanced features require ``%language PostfixProjections``,
+at least until it's clear whether they should be present in the language.
 
 Lexical structure
 -----------------
 
-* ``.foo`` is a valid lexeme, which stands for postfix application of ``foo``
+* ``.foo`` starting with lowercase ``f``, single identifier, and no space after dot,
+  is a valid lexeme, which stands for postfix application of ``foo``
 
-* ``Foo.bar.baz`` starting with uppercase ``F`` is one lexeme, a namespaced
-  identifier: ``DotSepIdent ["baz", "bar", "Foo"]``
+* ``Foo.Bar.baz`` with uppercase ``F`` and ``B`` is one lexeme: a namespaced
+  identifier.
+
+* ``Foo.Bar.baz.boo`` is two lexemes: ``Foo.Bar.baz`` and ``.boo``.
 
 * ``foo.bar.baz`` starting with lowercase ``f`` is three lexemes: ``foo``,
   ``.bar``, ``.baz``
 
 * ``.foo.bar.baz`` is three lexemes: ``.foo``, ``.bar``, ``.baz``
 
-* If you want ``Constructor.proj``, you have to write ``(Constructor).proj``.
+* ``foo . bar``, as well as ``foo. bar`` is three lexemes: ``foo``, ``.``, ``bar``,
+  and represents function composition as usual
 
-* All module names must start with an uppercase letter.
+* Beware that ``True.not`` is lexed as "name ``not`` in module ``True``".
+  If you want the postfix application of ``not`` to constructor ``True``,
+  you have to write ``(True).not``.
+
+* Spaces *before* dots are optional; spaces *after* dots are forbidden.
+
+* All module names must therefore start with an uppercase letter.
 
 New syntax of ``simpleExpr``
 ----------------------------
 
-Expressions binding tighter than application (``simpleExpr``), such as variables or parenthesised expressions, have been renamed to ``simplerExpr``, and an extra layer of syntax has been inserted.
+Expressions binding tighter than application (``simpleExpr``),
+such as variables or parenthesised expressions, have been renamed to ``simplerExpr``,
+and an extra layer of postfix dot syntax has been inserted in ``simpleExpr``.
 
 .. code-block:: idris
 
-    postfixProj ::= .identifier
-                  | .(expression)
+    postfixProj ::= .ident        -- identifiers need not be bracketed
+                  | .(expr)       -- arbitrary expression in brackets
 
-    simpleExpr ::= (postfixProj+ simpleExpr+) -- parses as PPostfixProjPartial
-                 | simplerExpr postfixProj+   -- parses as PPostfixProj
+    simpleExpr ::= simplerExpr postfixProj+   -- postfix projection
+                 | (postfixProj+ simpleExpr+) -- section of postfix projection
                  | simplerExpr                -- (parses as whatever it used to)
-
-* ``(.foo.bar arg1 arg2)`` is a section of ``x.foo.bar arg1 arg2``
 
 Desugaring rules
 ----------------
 
-* ``(.proj1 .proj2 .proj3 arg1 arg2)`` desugars to ``(\x => x.proj1.proj2.proj3 arg1 arg2)``
+* Postfix projections:
+  ``simpleExpr .proj1 .proj2 .proj3`` desugars to ``(proj3 (proj2 (proj1 simpleExpr))``
 
-* ``simpleExpr .proj1 .proj2 .proj3`` desugars to
-  ``(proj3 (proj2 (proj1 simpleExpr))``
+* Sections of postfix projections:
+  ``(.proj1 .proj2 .proj3 arg1 arg2)`` desugars to ``(\x => x.proj1.proj2.proj3 arg1 arg2)``
+
+Examples of desugaring:
+
+* ``foo.bar`` desugars as ``bar foo``
+* ``True.not`` is a single lexeme: qualified name
+* ``(True).not`` desugars as ``not True``
+* ``(True).(not . not)`` desugars as ``(not . not) True``
+* ``(not True).(not . not)`` desugars as ``(not . not) (not True)``
+* ``(checkFile fileName).runState initialState`` desugars as ``runState (checkFile fileName) initialState``
+* ``(MkPoint 3 4).x`` desugars as ``x (MkPoint 3 4)``
+
+Examples of desugaring sections:
+
+* bare ``.foo`` is invalid syntax (e.g. in ``f $ .foo``)
+* ``(.foo)`` desugars as ``(\x => x.foo)``, i.e. ``(\x => foo x)``
+* ``(.foo.bar m n)`` desugars as ``(\x => bar (foo x) m n)``
 
 Example code
 ------------
@@ -84,6 +115,9 @@ Let's define some constants:
         (MkPoint 1.1 2.5)
         (MkPoint 4.3 6.3)
 
+    squared : Num a => a -> a
+    squared x = x * x
+
 Finally, some examples:
 
 .. code-block:: idris
@@ -102,14 +136,19 @@ Finally, some examples:
       printLn $ pt.x + pt.y
 
       -- works fine with namespacing
-      -- prints 4.2
+      -- both print 4.2
+      printLn $ Main.pt.x
       printLn $ (Main.pt).x
 
       -- the LHS can be an arbitrary expression
       -- prints 4.2
       printLn $ (MkPoint pt.y pt.x).y
 
-      -- user-defined projection
+      -- the RHS can be an arbitrary expression, too
+      -- prints 17.64
+      printLn $ (MkPoint pt.y pt.x).(squared . y)
+
+      -- user-defined function
       -- prints 17.64
       printLn $ pt.x.squared
 
