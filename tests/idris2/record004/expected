@@ -1,8 +1,12 @@
 1/1: Building Main (Main.idr)
-Main.idr:33:7--35:1:complex postfix projections require %language PostfixProjections at:
-33	bad = rect.(x . topLeft)  -- disallowed without %language PostfixProjections
-34	
-35	%language PostfixProjections
+Main.idr:41:5--43:1:complex postfix projections require %language PostfixProjections at:
+41	  + rect.(x . topLeft)  -- disallowed without %language PostfixProjections
+42	
+43	bad2 : Double
+
+Main.idr:44:9--44:24:postfix projection sections require %language PostfixProjections at:
+44	bad2 = (.oopFoldl 0 (+))  -- disallowed without %language PostfixProjections
+	        ^^^^^^^^^^^^^^^
 
 Main> 4.2
 Main> 4.2
@@ -20,6 +24,10 @@ at:
 	^^^
 
 Main> [2.5, 2.5]
+Main> 8.1
+Main> [8.1, 8.1]
+Main> 6
+Main> [6, 15]
 Main> 7.4
 Main> 7.4
 Main> 7.4

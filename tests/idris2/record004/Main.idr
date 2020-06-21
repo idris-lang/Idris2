@@ -29,8 +29,19 @@ rect =
 --
 -- If you want Constructor.field, you have to write (Constructor).field.
 
+add : Num a => a -> a -> a
+add x y = x + y
+
+oopFoldl : List a -> b -> (b -> a -> b) -> b
+oopFoldl xs z f = foldl f z xs
+
 bad : Double
-bad = rect.(x . topLeft)  -- disallowed without %language PostfixProjections
+bad = 
+  rect.x.topLeft        -- should not throw errors
+  + rect.(x . topLeft)  -- disallowed without %language PostfixProjections
+
+bad2 : Double
+bad2 = (.oopFoldl 0 (+))  -- disallowed without %language PostfixProjections
 
 %language PostfixProjections
 -- from now on, we can use complex projections
