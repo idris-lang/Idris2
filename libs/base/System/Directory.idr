@@ -12,7 +12,7 @@ support fn = "C:" ++ fn ++ ", libidris2_support"
 %foreign support "idris2_fileErrno"
 prim_fileErrno : PrimIO Int
 
-returnError : MonadIO io => io (Either FileError a)
+returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim_fileErrno
          case err of
@@ -23,7 +23,7 @@ returnError
               4 => pure $ Left FileExists
               _ => pure $ Left (GenericFileError (err-5))
 
-ok : MonadIO io => a -> io (Either FileError a)
+ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
 %foreign support "idris2_currentDirectory"
@@ -52,7 +52,7 @@ data Directory : Type where
      MkDir : DirPtr -> Directory
 
 export
-createDir : MonadIO io => String -> io (Either FileError ())
+createDir : HasIO io => String -> io (Either FileError ())
 createDir dir
     = do res <- primIO (prim_createDir dir)
          if res == 0
@@ -60,13 +60,13 @@ createDir dir
             else returnError
 
 export
-changeDir : MonadIO io => String -> io Bool
+changeDir : HasIO io => String -> io Bool
 changeDir dir
     = do ok <- primIO (prim_changeDir dir)
          pure (ok == 0)
 
 export
-currentDir : MonadIO io => io (Maybe String)
+currentDir : HasIO io => io (Maybe String)
 currentDir
     = do res <- primIO prim_currentDir
          if prim__nullPtr res /= 0
@@ -74,7 +74,7 @@ currentDir
             else pure (Just (prim__getString res))
 
 export
-openDir : MonadIO io => String -> io (Either FileError Directory)
+openDir : HasIO io => String -> io (Either FileError Directory)
 openDir d
     = do res <- primIO (prim_openDir d)
          if prim__nullAnyPtr res /= 0
@@ -90,7 +90,7 @@ removeDir : HasIO io => String -> io ()
 removeDir dirName = primIO (prim_removeDir dirName)
 
 export
-dirEntry : MonadIO io => Directory -> io (Either FileError String)
+dirEntry : HasIO io => Directory -> io (Either FileError String)
 dirEntry (MkDir d)
     = do res <- primIO (prim_dirEntry d)
          if prim__nullPtr res /= 0

@@ -432,20 +432,18 @@ Interfaces and IO
 =================
 
 In general, ``IO`` operations in the libraries aren't written using ``IO``
-directly, but rather via one of the following interfaces:
+directly, but rather via the ``HasIO`` interface:
 
 .. code-block:: idris
 
-    interface HasIO io where
+    interface Monad io => HasIO io where
       liftIO : (1 _ : IO a) -> io a
 
-    interface (Monad io, HasIO io) => MonadIO io where
-
 ``HasIO`` explains, via ``liftIO``, how to convert a primitive ``IO`` operation
-to an operation in some underlying type. ``MonadIO`` has no methods, but
-adds an additional ``Monad`` constraint. These interfaces allow a programmer
-to define some more expressive notion of interactive program, while still
-giving direct access to ``IO`` primitives.
+to an operation in some underlying type, as long as that type has a ``Monad``
+implementation.  These interface allows a programmer to define some more
+expressive notion of interactive program, while still giving direct access to
+``IO`` primitives.
 
 Idiom brackets
 ==============

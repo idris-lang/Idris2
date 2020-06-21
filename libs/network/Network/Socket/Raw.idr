@@ -48,7 +48,7 @@ sockaddr_free (SAPtr ptr) = primIO $ idrnet_free ptr
 |||
 ||| Used to allocate a mutable pointer to be given to the Recv functions.
 export
-sock_alloc : MonadIO io => ByteLength -> io BufPtr
+sock_alloc : HasIO io => ByteLength -> io BufPtr
 sock_alloc bl = map BPtr $ primIO $ idrnet_malloc bl
 
 ||| Retrieves the port the given socket is bound to
@@ -59,7 +59,7 @@ getSockPort sock = primIO $ idrnet_sockaddr_port $ descriptor sock
 
 ||| Retrieves a socket address from a sockaddr pointer
 export
-getSockAddr : MonadIO io => SockaddrPtr -> io SocketAddress
+getSockAddr : HasIO io => SockaddrPtr -> io SocketAddress
 getSockAddr (SAPtr ptr) = do
   addr_family_int <- primIO $ idrnet_sockaddr_family ptr
 
@@ -90,7 +90,7 @@ freeRecvfromStruct (RFPtr p) = primIO $ idrnet_free_recvfrom_struct p
 ||| @ptr  The location containing the data to send.
 ||| @len  How much of the data to send.
 export
-sendBuf : MonadIO io
+sendBuf : HasIO io
        => (sock : Socket)
        -> (ptr  : BufPtr)
        -> (len  : ByteLength)
@@ -111,7 +111,7 @@ sendBuf sock (BPtr ptr) len = do
 ||| @ptr  The location containing the data to receive.
 ||| @len  How much of the data to receive.
 export
-recvBuf : MonadIO io
+recvBuf : HasIO io
        => (sock : Socket)
        -> (ptr  : BufPtr)
        -> (len  : ByteLength)
@@ -134,7 +134,7 @@ recvBuf sock (BPtr ptr) len = do
 ||| @ptr  A Pointer to the buffer containing the message.
 ||| @len  The size of the message.
 export
-sendToBuf : MonadIO io
+sendToBuf : HasIO io
          => (sock : Socket)
          -> (addr : SocketAddress)
          -> (port : Port)
@@ -156,14 +156,14 @@ foreignGetRecvfromPayload (RFPtr p) = primIO $ idrnet_get_recvfrom_payload p
 
 ||| Utility function to return senders socket address.
 export
-foreignGetRecvfromAddr : MonadIO io => RecvfromStructPtr -> io SocketAddress
+foreignGetRecvfromAddr : HasIO io => RecvfromStructPtr -> io SocketAddress
 foreignGetRecvfromAddr (RFPtr p) = do
   sockaddr_ptr <- map SAPtr $ primIO $ idrnet_get_recvfrom_sockaddr p
   getSockAddr sockaddr_ptr
 
 ||| Utility function to return sender's IPV4 port.
 export
-foreignGetRecvfromPort : MonadIO io => RecvfromStructPtr -> io Port
+foreignGetRecvfromPort : HasIO io => RecvfromStructPtr -> io Port
 foreignGetRecvfromPort (RFPtr p) = do
   sockaddr_ptr <- primIO $ idrnet_get_recvfrom_sockaddr p
   port         <- primIO $ idrnet_sockaddr_ipv4_port sockaddr_ptr
@@ -181,7 +181,7 @@ foreignGetRecvfromPort (RFPtr p) = do
 ||| @len  Size of the expected message.
 |||
 export
-recvFromBuf : MonadIO io
+recvFromBuf : HasIO io
            => (sock : Socket)
            -> (ptr  : BufPtr)
            -> (len  : ByteLength)

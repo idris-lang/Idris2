@@ -14,19 +14,19 @@ max : IOArray elem -> Int
 max = maxSize
 
 export
-newArray : MonadIO io => Int -> io (IOArray elem)
+newArray : HasIO io => Int -> io (IOArray elem)
 newArray size
     = pure (MkIOArray size !(primIO (prim__newArray size Nothing)))
 
 export
-writeArray : MonadIO io => IOArray elem -> Int -> elem -> io ()
+writeArray : HasIO io => IOArray elem -> Int -> elem -> io ()
 writeArray arr pos el
     = if pos < 0 || pos >= max arr
          then pure ()
          else primIO (prim__arraySet (content arr) pos (Just el))
 
 export
-readArray : MonadIO io => IOArray elem -> Int -> io (Maybe elem)
+readArray : HasIO io => IOArray elem -> Int -> io (Maybe elem)
 readArray arr pos
     = if pos < 0 || pos >= max arr
          then pure Nothing
@@ -35,7 +35,7 @@ readArray arr pos
 -- Make a new array of the given size with the elements copied from the
 -- other array
 export
-newArrayCopy : MonadIO io =>
+newArrayCopy : HasIO io =>
                (newsize : Int) -> IOArray elem -> io (IOArray elem)
 newArrayCopy newsize arr
     = do let newsize' = if newsize < max arr then max arr else newsize
@@ -54,7 +54,7 @@ newArrayCopy newsize arr
                      assert_total (copyFrom old new (pos - 1))
 
 export
-toList : MonadIO io => IOArray elem -> io (List (Maybe elem))
+toList : HasIO io => IOArray elem -> io (List (Maybe elem))
 toList arr = iter 0 (max arr) []
   where
     iter : Int -> Int -> List (Maybe elem) -> io (List (Maybe elem))

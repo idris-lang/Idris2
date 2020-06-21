@@ -89,8 +89,8 @@ returns a primitive IO action:
 Internally, ``PrimIO Int`` is a function which takes the current (linear)
 state of the world, and returns an ``Int`` with an updated state of the world.
 In general, ``IO`` operations in an Idris program are defined as instances
-of the ``HasIO`` interface (or ``MonadIO``). We can convert a primitive
-operation to one usable in ``HasIO`` using ``primIO``:
+of the ``HasIO`` interface. We can convert a primitive operation to one usable
+in ``HasIO`` using ``primIO``:
 
 .. code-block:: idris
 

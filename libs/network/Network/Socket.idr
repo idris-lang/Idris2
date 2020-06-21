@@ -14,7 +14,7 @@ import Network.FFI
 ||| Creates a UNIX socket with the given family, socket type and protocol
 ||| number. Returns either a socket or an error.
 export
-socket : MonadIO io
+socket : HasIO io
       => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
@@ -28,14 +28,14 @@ socket sf st pn = do
 
 ||| Close a socket
 export
-close : MonadIO io => Socket -> io ()
+close : HasIO io => Socket -> io ()
 close sock = do _ <- primIO $ socket_close $ descriptor sock
                 pure ()
 
 ||| Binds a socket to the given socket address and port.
 ||| Returns 0 on success, an error code otherwise.
 export
-bind : MonadIO io
+bind : HasIO io
     => (sock : Socket)
     -> (addr : Maybe SocketAddress)
     -> (port : Port)
@@ -59,7 +59,7 @@ bind sock addr port = do
 ||| Connects to a given address and port.
 ||| Returns 0 on success, and an error number on error.
 export
-connect : MonadIO io
+connect : HasIO io
        => (sock : Socket)
        -> (addr : SocketAddress)
        -> (port : Port)
@@ -76,7 +76,7 @@ connect sock addr port = do
 |||
 ||| @sock The socket to listen on.
 export
-listen : MonadIO io => (sock : Socket) -> io Int
+listen : HasIO io => (sock : Socket) -> io Int
 listen sock = do
   listen_res <- primIO $ socket_listen (descriptor sock) BACKLOG 
   if listen_res == (-1)
@@ -92,7 +92,7 @@ listen sock = do
 |||
 ||| @sock The socket used to establish connection.
 export
-accept : MonadIO io
+accept : HasIO io
       => (sock : Socket)
       -> io (Either SocketError (Socket, SocketAddress))
 accept sock = do
@@ -119,7 +119,7 @@ accept sock = do
 ||| @sock The socket on which to send the message.
 ||| @msg  The data to send.
 export
-send : MonadIO io
+send : HasIO io
     => (sock : Socket)
     -> (msg  : String)
     -> io (Either SocketError ResultCode)
@@ -140,7 +140,7 @@ send sock dat = do
 ||| @sock The socket on which to receive the message.
 ||| @len  How much of the data to receive.
 export
-recv : MonadIO io
+recv : HasIO io
     => (sock : Socket)
     -> (len : ByteLength)
     -> io (Either SocketError (String, ResultCode))
@@ -172,7 +172,7 @@ recv sock len = do
 |||
 ||| @sock The socket on which to receive the message.
 export
-recvAll : MonadIO io => (sock : Socket) -> io (Either SocketError String)
+recvAll : HasIO io => (sock : Socket) -> io (Either SocketError String)
 recvAll sock = recvRec sock [] 64
   where
     partial
@@ -194,7 +194,7 @@ recvAll sock = recvRec sock [] 64
 ||| @port The port on which to send the message.
 ||| @msg  The message to send.
 export
-sendTo : MonadIO io
+sendTo : HasIO io
       => (sock : Socket)
       -> (addr : SocketAddress)
       -> (port : Port)
@@ -220,7 +220,7 @@ sendTo sock addr p dat = do
 ||| @len  Size of the expected message.
 |||
 export
-recvFrom : MonadIO io
+recvFrom : HasIO io
         => (sock : Socket)
         -> (len  : ByteLength)
         -> io (Either SocketError (UDPAddrInfo, String, ResultCode))

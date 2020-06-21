@@ -72,7 +72,7 @@ getErrno : HasIO io => io SocketError
 getErrno = primIO $ idrnet_errno
 
 export
-nullPtr : MonadIO io => AnyPtr -> io Bool
+nullPtr : HasIO io => AnyPtr -> io Bool
 nullPtr p = do 0 <- primIO  $ idrnet_isNull p
                | _ => pure True
                pure False
