@@ -84,7 +84,7 @@ data FileError = GenericFileError Int -- errno
                | PermissionDenied
                | FileExists
 
-returnError : IO (Either FileError a)
+returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim_fileErrno
          case err of
@@ -104,7 +104,7 @@ Show FileError where
   show PermissionDenied = "Permission Denied"
   show FileExists = "File Exists"
 
-ok : a -> IO (Either FileError a)
+ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
 public export
@@ -124,7 +124,7 @@ stderr : File
 stderr = FHandle prim__stderr
 
 export
-openFile : String -> Mode -> IO (Either FileError File)
+openFile : HasIO io => String -> Mode -> io (Either FileError File)
 openFile f m
     = do res <- primIO (prim__open f (modeStr m) 0)
          if prim__nullAnyPtr res /= 0
@@ -132,17 +132,17 @@ openFile f m
             else ok (FHandle res)
 
 export
-closeFile : File -> IO ()
+closeFile : HasIO io => File -> io ()
 closeFile (FHandle f) = primIO (prim__close f)
 
 export
-fileError : File -> IO Bool
+fileError : HasIO io => File -> io Bool
 fileError (FHandle f)
     = do x <- primIO $ prim_error f
          pure (x /= 0)
 
 export
-fGetLine : (h : File) -> IO (Either FileError String)
+fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)
          if prim__nullPtr res /= 0
@@ -150,7 +150,7 @@ fGetLine (FHandle f)
             else ok (prim__getString res)
 
 export
-fGetChars : (h : File) -> Int -> IO (Either FileError String)
+fGetChars : HasIO io => (h : File) -> Int -> io (Either FileError String)
 fGetChars (FHandle f) max
     = do res <- primIO (prim__readChars max f)
          if prim__nullPtr res /= 0
@@ -158,7 +158,7 @@ fGetChars (FHandle f) max
             else ok (prim__getString res)
 
 export
-fGetChar : (h : File) -> IO (Either FileError Char)
+fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
 fGetChar (FHandle h)
     = do c <- primIO (prim__readChar h)
          ferr <- primIO (prim_error h)
@@ -167,7 +167,7 @@ fGetChar (FHandle h)
             else ok (cast c)
 
 export
-fPutStr : (h : File) -> String -> IO (Either FileError ())
+fPutStr : HasIO io => (h : File) -> String -> io (Either FileError ())
 fPutStr (FHandle f) str
     = do res <- primIO (prim__writeLine f str)
          if res == 0
@@ -175,23 +175,23 @@ fPutStr (FHandle f) str
             else ok ()
 
 export
-fPutStrLn : (h : File) -> String -> IO (Either FileError ())
+fPutStrLn : HasIO io => (h : File) -> String -> io (Either FileError ())
 fPutStrLn f str = fPutStr f (str ++ "\n")
 
 export
-fEOF : (h : File) -> IO Bool
+fEOF : HasIO io => (h : File) -> io Bool
 fEOF (FHandle f)
     = do res <- primIO (prim__eof f)
          pure (res /= 0)
 
 export
-fflush : (h : File) -> IO ()
+fflush : HasIO io => (h : File) -> io ()
 fflush (FHandle f)
     = do primIO (prim__flush f)
          pure ()
 
 export
-popen : String -> Mode -> IO (Either FileError File)
+popen : HasIO io => String -> Mode -> io (Either FileError File)
 popen f m = do
     ptr <- primIO (prim__popen f (modeStr m))
     if prim__nullAnyPtr ptr /= 0
@@ -199,11 +199,11 @@ popen f m = do
         else pure (Right (FHandle ptr))
 
 export
-pclose : File -> IO ()
+pclose : HasIO io => File -> io ()
 pclose (FHandle h) = primIO (prim__pclose h)
 
 export
-fileAccessTime : (h : File) -> IO (Either FileError Int)
+fileAccessTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileAccessTime (FHandle f)
     = do res <- primIO (prim__fileAccessTime f)
          if res > 0
@@ -211,7 +211,7 @@ fileAccessTime (FHandle f)
             else returnError
 
 export
-fileModifiedTime : (h : File) -> IO (Either FileError Int)
+fileModifiedTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileModifiedTime (FHandle f)
     = do res <- primIO (prim__fileModifiedTime f)
          if res > 0
@@ -219,7 +219,7 @@ fileModifiedTime (FHandle f)
             else returnError
 
 export
-fileStatusTime : (h : File) -> IO (Either FileError Int)
+fileStatusTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileStatusTime (FHandle f)
     = do res <- primIO (prim__fileStatusTime f)
          if res > 0
@@ -227,7 +227,7 @@ fileStatusTime (FHandle f)
             else returnError
 
 export
-removeFile : String -> IO (Either FileError ())
+removeFile : HasIO io => String -> io (Either FileError ())
 removeFile fname
     = do res <- primIO (prim__removeFile fname)
          if res == 0
@@ -235,7 +235,7 @@ removeFile fname
             else returnError
 
 export
-fileSize : (h : File) -> IO (Either FileError Int)
+fileSize : HasIO io => (h : File) -> io (Either FileError Int)
 fileSize (FHandle f)
     = do res <- primIO (prim__fileSize f)
          if res >= 0
@@ -243,13 +243,13 @@ fileSize (FHandle f)
             else returnError
 
 export
-fPoll : File -> IO Bool
+fPoll : HasIO io => File -> io Bool
 fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
 export
-readFile : String -> IO (Either FileError String)
+readFile : HasIO io => String -> io (Either FileError String)
 readFile file
   = do Right h <- openFile file Read
           | Left err => returnError
@@ -259,7 +259,7 @@ readFile file
        closeFile h
        pure (Right (fastAppend content))
   where
-    read : List String -> File -> IO (Either FileError (List String))
+    read : List String -> File -> io (Either FileError (List String))
     read acc h
         = do eof <- fEOF h
              if eof
@@ -271,8 +271,9 @@ readFile file
 
 ||| Write a string to a file
 export
-writeFile : (filepath : String) -> (contents : String) ->
-            IO (Either FileError ())
+writeFile : HasIO io =>
+            (filepath : String) -> (contents : String) ->
+            io (Either FileError ())
 writeFile fn contents = do
      Right h  <- openFile fn WriteTruncate
         | Left err => pure (Left err)
@@ -306,7 +307,7 @@ mkMode p
     getMs = sum . map getM
 
 export
-chmodRaw : String -> Int -> IO (Either FileError ())
+chmodRaw : HasIO io => String -> Int -> io (Either FileError ())
 chmodRaw fname p
     = do ok <- primIO $ prim__chmod fname p
          if ok == 0
@@ -314,5 +315,5 @@ chmodRaw fname p
             else returnError
 
 export
-chmod : String -> Permissions -> IO (Either FileError ())
+chmod : HasIO io => String -> Permissions -> io (Either FileError ())
 chmod fname p = chmodRaw fname (mkMode p)

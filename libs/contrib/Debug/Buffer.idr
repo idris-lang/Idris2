@@ -31,14 +31,14 @@ group n xs = worker [] xs
         worker acc ys = worker ((take n ys)::acc) (drop n ys)
 
 export
-dumpBuffer : Buffer -> IO String
+dumpBuffer : HasIO io => Buffer -> io String
 dumpBuffer buf = do
-    size <- rawSize buf
-    dat <- bufferData buf
+    size <- liftIO $ rawSize buf
+    dat <- liftIO $ bufferData buf
     let rows = group 16 dat
     let hex = showSep "\n" 0 (map renderRow rows)
     pure $ hex ++ "\n\ntotal size = " ++ show size
 
 export
-printBuffer : Buffer -> IO ()
+printBuffer : HasIO io => Buffer -> io ()
 printBuffer buf = putStrLn $ !(dumpBuffer buf)

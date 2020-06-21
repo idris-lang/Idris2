@@ -13,11 +13,11 @@ prim_applyCharFn : Char -> Int -> (Char -> Int -> PrimIO Char) -> PrimIO Char
 %foreign libcb "applyIntFnPure"
 applyIntFnPure : Int -> Int -> (Int -> Int -> Int) -> Int
 
-applyIntFn : Int -> Int -> (Int -> Int -> IO Int) -> IO Int
+applyIntFn : HasIO io => Int -> Int -> (Int -> Int -> IO Int) -> io Int
 applyIntFn x y fn
     = primIO $ prim_applyIntFn x y (\a, b => toPrim (fn a b))
 
-applyCharFn : Char -> Int -> (Char -> Int -> IO Char) -> IO Char
+applyCharFn : HasIO io => Char -> Int -> (Char -> Int -> IO Char) -> io Char
 applyCharFn x y fn
     = primIO $ prim_applyCharFn x y (\a, b => toPrim (fn a b))
 
