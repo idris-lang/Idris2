@@ -11,6 +11,8 @@ idris2docs_venv
 # Editor/IDE Related
 .\#* # Emacs swap file
 *~   # Vim swap file
+# VS Code
+.vscode/*
 
 /build
 
