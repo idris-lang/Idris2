@@ -4,5 +4,6 @@ opts = "--no-prelude"
 
 modules = Builtin,
           PrimIO,
-          Prelude
-
+          Prelude,
+          Prelude.Basics,
+          Prelude.Uninhabited
