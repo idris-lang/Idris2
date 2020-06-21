@@ -34,9 +34,10 @@ Lexical structure
   If you want the postfix application of ``not`` to constructor ``True``,
   you have to write ``(True).not``.
 
-* Spaces *before* dots are optional; spaces *after* dots are forbidden.
+* Spaces *before* dots are optional; spaces *after* dots are forbidden
+  in postfix projections: ``foo. bar`` is parsed as function composition.
 
-* All module names must therefore start with an uppercase letter.
+* All module names must start with an uppercase letter.
 
 New syntax of ``simpleExpr``
 ----------------------------
@@ -90,6 +91,7 @@ Example code
       y : Double
 
 This record creates two projections:
+
 * ``x : Point -> Double``
 * ``y : Point -> Double``
 
