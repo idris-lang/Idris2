@@ -94,7 +94,7 @@ in ``HasIO`` using ``primIO``:
 
 .. code-block:: idris
 
-    primIO : HasIO a => PrimIO a -> io a
+    primIO : HasIO io => PrimIO a -> io a
 
 So, we can extend our program as follows:
 
