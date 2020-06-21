@@ -20,6 +20,9 @@ Language changes:
 
 Library changes:
 
+* `IO` operations in the `prelude` and `base` libraries now use the
+  `HasIO` interface, rather than using `IO` directly.
+   + Also, added a `MonadIO` interface for operations which require `(>>=)`.
 * Experimental `Data.Linear.Array` added to `contrib`, support mutable linear
   arrays with constant time read/write, convertible to immutable arrays with
   constant time read.

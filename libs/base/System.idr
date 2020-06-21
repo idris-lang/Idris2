@@ -42,7 +42,7 @@ prim_setEnv : String -> String -> Int -> PrimIO Int
 prim_unsetEnv : String -> PrimIO Int
 
 export
-getEnv : HasIO io => String -> io (Maybe String)
+getEnv : MonadIO io => String -> io (Maybe String)
 getEnv var
    = do env <- primIO $ prim_getEnv var
         if prim__nullPtr env /= 0
@@ -50,7 +50,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
-getEnvironment : HasIO io => io (List (String, String))
+getEnvironment : MonadIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where
     splitEq : String -> (String, String)
@@ -67,7 +67,7 @@ getEnvironment = getAllPairs 0 []
          else getAllPairs (n + 1) (prim__getString envPair :: acc)
 
 export
-setEnv : HasIO io => String -> String -> Bool -> io Bool
+setEnv : MonadIO io => String -> String -> Bool -> io Bool
 setEnv var val overwrite
    = do ok <- primIO $ prim_setEnv var val (if overwrite then 1 else 0)
         if ok == 0
@@ -75,7 +75,7 @@ setEnv var val overwrite
            else pure False
 
 export
-unsetEnv : HasIO io => String -> io Bool
+unsetEnv : MonadIO io => String -> io Bool
 unsetEnv var
    = do ok <- primIO $ prim_unsetEnv var
         if ok == 0
@@ -95,7 +95,7 @@ system cmd = primIO (prim_system cmd)
 prim_time : PrimIO Int
 
 export
-time : HasIO io => io Integer
+time : MonadIO io => io Integer
 time = pure $ cast !(primIO prim_time)
 
 %foreign libc "exit"

@@ -1564,8 +1564,14 @@ Monad IO where
   b >>= k = io_bind b k
 
 public export
-interface Monad io => HasIO io where
+interface HasIO io where
   liftIO : (1 _ : IO a) -> io a
+
+public export
+interface (Monad io, HasIO io) => MonadIO io where
+
+public export %inline
+(Monad io, HasIO io) => MonadIO io where
 
 public export %inline
 HasIO IO where
