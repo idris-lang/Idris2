@@ -348,6 +348,7 @@ mutual
                 desugarB side ps (PApp fc (PApp fc (PRef fc (UN "rangeFromThen")) start) n)
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
+
   desugarB side ps (PPostfixProjs fc rec projs)
       = do
         let isPRef = \case
@@ -358,18 +359,32 @@ mutual
           throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
 
         desugarB side ps $ foldl (\x, proj => PApp fc proj x) rec projs
-  desugarB side ps (PPostfixProjsPartial fc projs)
+
+  desugarB side ps (PPostfixProjsSection fc projs args)
       = do
         let isPRef = \case
               PRef _ _ => True
               _ => False
         defs <- get Ctxt
-        when (not (isExtension PostfixProjections defs) && not (all isPRef projs)) $
-          throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+        when (not (isExtension PostfixProjections defs)) $ do
+          when (not (all isPRef projs)) $
+            throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+          case args of
+            [] => pure ()
+            _  => throw $ GenericMsg fc "postfix projection sections require %language PostfixProjections"
 
         desugarB side ps $
           PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
-            foldl (\r, proj => PApp fc proj r) (PRef fc (MN "paRoot" 0)) projs
+            foldl
+              (\r, arg => PApp fc r arg)
+              (foldl
+                (\r, proj => PApp fc proj r)
+                (PRef fc (MN "paRoot" 0))
+                projs)
+              args
+
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
 

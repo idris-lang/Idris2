@@ -90,10 +90,10 @@ mutual
        PRange : FC -> PTerm -> Maybe PTerm -> PTerm -> PTerm
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
-       -- r.x.y
+       -- r.x.y, equivalent to (y (x r))
        PPostfixProjs : FC -> PTerm -> List PTerm -> PTerm
-       -- .x.y
-       PPostfixProjsPartial : FC -> List PTerm -> PTerm
+       -- (.x.y p q), equivalent to (\r => r.x.y p q)
+       PPostfixProjsSection : FC -> List PTerm -> List PTerm -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> Nat -> PTerm -> PTerm
@@ -148,7 +148,7 @@ mutual
   getPTermLoc (PRange fc _ _ _) = fc
   getPTermLoc (PRangeStream fc _ _) = fc
   getPTermLoc (PPostfixProjs fc _ _) = fc
-  getPTermLoc (PPostfixProjsPartial fc _) = fc
+  getPTermLoc (PPostfixProjsSection fc _ _) = fc
   getPTermLoc (PUnifyLog fc _ _) = fc
   getPTermLoc (PWithUnambigNames fc _ _) = fc
 
@@ -584,8 +584,11 @@ mutual
     showPrec d (PUnifyLog _ lvl tm) = showPrec d tm
     showPrec d (PPostfixProjs fc rec fields)
         = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
-    showPrec d (PPostfixProjsPartial fc fields)
-        = concatMap (\n => "." ++ show n) fields
+    showPrec d (PPostfixProjsSection fc fields args)
+        = "("
+            ++ concatMap (\n => "." ++ show n) fields
+            ++ concatMap (\x => " " ++ showPrec App x) args
+            ++ ")"
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
 
@@ -877,8 +880,9 @@ mapPTermM f = goPTerm where
     goPTerm (PPostfixProjs fc rec fields) =
       PPostfixProjs fc <$> goPTerm rec <*> pure fields
       >>= f
-    goPTerm (PPostfixProjsPartial fc fields) =
-      f (PPostfixProjsPartial fc fields)
+    goPTerm (PPostfixProjsSection fc fields args) =
+      PPostfixProjsSection fc fields <$> goPTerms args
+      >>= f
     goPTerm (PWithUnambigNames fc ns rhs) =
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f

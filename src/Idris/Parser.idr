@@ -262,6 +262,13 @@ mutual
            continueWith indents ")"
            end <- location
            pure (PSectionL (MkFC fname start end) op e)
+    <|> do  -- (.y.z)  -- section of projection (chain)
+          start <- location
+          projs <- some $ postfixApp fname indents
+          args <- many $ simpleExpr fname indents
+          end <- location
+          symbol ")"
+          pure $ PPostfixProjsSection (MkFC fname start end) projs args
       -- unit type/value
     <|> do continueWith indents ")"
            end <- location
@@ -351,12 +358,7 @@ mutual
 
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
-      = do  -- .y.z
-          start <- location
-          projs <- some $ postfixApp fname indents
-          end <- location
-          pure $ PPostfixProjsPartial (MkFC fname start end) projs
-    <|> do  -- x.y.z
+    = do  -- x.y.z
           start <- location
           root <- simplerExpr fname indents
           projs <- many $ postfixApp fname indents

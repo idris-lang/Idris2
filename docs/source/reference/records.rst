@@ -34,19 +34,19 @@ Expressions binding tighter than application (``simpleExpr``), such as variables
     postfixProj ::= .identifier
                   | .(expression)
 
-    simpleExpr ::= postfixProj+              -- parses as PPostfixAppPartial
-                 | simplerExpr postfixProj+  -- parses as PPostfixApp
-                 | simplerExpr               -- (parses as whatever it used to)
+    simpleExpr ::= (postfixProj+ simpleExpr+) -- parses as PPostfixProjPartial
+                 | simplerExpr postfixProj+   -- parses as PPostfixProj
+                 | simplerExpr                -- (parses as whatever it used to)
 
-* ``(.foo.bar)`` is a valid parenthesised expression (``PPostfixAppPartial``)
+* ``(.foo.bar arg1 arg2)`` is a section of ``x.foo.bar arg1 arg2``
 
 Desugaring rules
 ----------------
 
-* ``.proj1 .proj2 .proj3`` desugars to ``(\x => .proj3 (.proj2 (.proj1 x)))``
+* ``(.proj1 .proj2 .proj3 arg1 arg2)`` desugars to ``(\x => x.proj1.proj2.proj3 arg1 arg2)``
 
 * ``simpleExpr .proj1 .proj2 .proj3`` desugars to
-  ``((.proj1 .proj2 .proj3) simpleExpr)``
+  ``(proj3 (proj2 (proj1 simpleExpr))``
 
 Example code
 ------------
