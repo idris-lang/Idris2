@@ -199,14 +199,14 @@ writeTTCFile b file_in
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
-              List String -> Maybe (List String) ->
+              String -> Maybe (List String) ->
               Ref Bin Binary -> Core (TTCFile extra)
-readTTCFile modns as b
+readTTCFile file as b
       = do hdr <- fromBuf b
            chunk <- get Bin
-           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ show modns ++ " " ++ show hdr)
+           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf b
-           checkTTCVersion (show modns) ver ttcVersion
+           checkTTCVersion file ver ttcVersion
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
            defs <- fromBuf b
@@ -423,7 +423,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          let as = if importAs == modNS
                      then Nothing
                      else Just importAs
-         ttc <- readTTCFile modNS as bin
+         ttc <- readTTCFile fname as bin
 
          -- If it's already imported, but without reexporting, then all we're
          -- interested in is returning which other modules to load.
