@@ -134,10 +134,10 @@ functions unless you really mean to export the full definition.
     If the function needs to be accessed only at runtime, use ``export``.
     However, if it's also meant to be used at *compile* time (e.g. to prove 
     a theorem), use ``public export``.  
-    For example, consider the function ``plus: Nat -> Nat -> Nat`` discussed
-    previously, and the following theorem: ``thm: plus Z m = m``.  
+    For example, consider the function ``plus : Nat -> Nat -> Nat`` discussed
+    previously, and the following theorem: ``thm : plus Z m = m``.  
     In order to to prove it, the type checker needs to reduce ``plus Z m`` to ``m`` 
-    (and hence obtain ``thm: m = m``).
+    (and hence obtain ``thm : m = m``).
     To achieve this, it will need access to the *definition* of ``plus``, 
     which includes the equation ``plus Z m = m``.
     Therefore, in this case, ``plus`` has to be marked as ``public export``.
