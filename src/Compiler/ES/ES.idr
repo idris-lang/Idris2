@@ -120,8 +120,8 @@ boolOp : String -> String -> String -> String
 boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? BigInt(1) : BigInt(0))"
 
 jsConstant : {auto c : Ref ESs ESSt} -> Constant -> Core String
-jsConstant (I i) = pure $ toBigInt $ show i
-jsConstant (BI i) = pure $ toBigInt $ show i
+jsConstant (I i) = pure $ show i ++ "n"
+jsConstant (BI i) = pure $ show i ++ "n"
 jsConstant (Str s) = pure $ jsString s
 jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
 jsConstant (Db f) = pure $ show f
@@ -192,6 +192,7 @@ jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
+--jsOp o args = throw $ InternalError $ "Unimplemented operator " ++ show o ++ " " ++ show args
 
 
 readCCPart : String -> (String, String)
@@ -240,7 +241,11 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
-jsPrim x args = throw (InternalError $ "prim not implemented: " ++ (show x))
+jsPrim  (NS _ (UN "prim__schemeCall"))[_, fn, args, _] =
+  case fn of
+    "'string-append'" => pure $ "''.concat(...__prim_idris2js_FArgList("++ args ++"))"
+    o => throw (InternalError $ "schemeCall not implemented " ++ show o)
+jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
 tag2es (Left x) = show x
@@ -317,7 +322,9 @@ mutual
 
 static_preamble : List String
 static_preamble =
-  ["function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"]
+  [ "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
+  , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
+  ]
 
 export
 compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String

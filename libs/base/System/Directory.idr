@@ -13,7 +13,7 @@ js_try_catch_lasterr_Int : String -> String
 js_try_catch_lasterr_Int x = "{try{" ++ x ++ ";return 0n}catch(e){process.__lasterr = e; return 1n}}"
 
 %foreign support "idris2_fileErrno"
-         "node:lambda:()=>-BigInt(process._lasterr.errno)"
+         "node:lambda:()=>{const n = process.__lasterr.errno; switch(n){case -17: return 4n; default: return -BigInt(n)}}"
 prim_fileErrno : PrimIO Int
 
 returnError : IO (Either FileError a)

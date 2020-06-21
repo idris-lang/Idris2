@@ -119,6 +119,7 @@ onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
 onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
 
 %foreign "C:idris2_getString, libidris2_support"
+         "javascript:lambda:x=>x"
 export
 prim__getString : Ptr String -> String
 
@@ -130,7 +131,7 @@ read_line_js =
      const readBuf = Buffer.alloc(1);
      let lineEnd = file_ptr.buffer.indexOf(LF);
      while (lineEnd === -1) {
-      const bytesRead = __require_fs.readSync(file_ptr.fd, readBuf);
+      const bytesRead = __require_fs.readSync(file_ptr.fd, readBuf,0,1,null);
       if (bytesRead === 0) {
        file_ptr.eof = true;
        break;

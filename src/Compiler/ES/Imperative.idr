@@ -309,4 +309,4 @@ compileToImperative c tm =
     s <- newRef Imps (MkImpSt 0)
     compdefs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     (s, main) <- impExp ctm
-    pure $ concat compdefs <+> s <+> EvalExpStatement main <+> CommentStatement (show ndefs)
+    pure $ concat compdefs <+> s <+> EvalExpStatement main -- <+> CommentStatement (show ndefs)
