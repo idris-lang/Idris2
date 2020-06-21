@@ -71,6 +71,8 @@ idrisTests
        -- QTT and linearity related
        "linear001", "linear002", "linear003", "linear004", "linear005",
        "linear006", "linear007", "linear008", "linear009",
+       -- Namespace blocks
+       "namespace001",
        -- Parameters blocks
        "params001",
        -- Performance: things which have been slow in the past, or which
