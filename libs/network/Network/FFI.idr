@@ -11,7 +11,7 @@ import Network.Socket.Data
 export
 socket_close : (sockdes : SocketDescriptor) -> PrimIO Int
 
-%foreign "C:listen,libidris2_support"
+%foreign "C:listen,libc 6"
 export
 socket_listen : (sockfd : SocketDescriptor) -> (backlog : Int) -> PrimIO Int
 

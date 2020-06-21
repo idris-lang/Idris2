@@ -64,9 +64,9 @@ Main> (interactive):1:4--1:6:Ambiguous elaboration at:
 1	:t []
 	   ^^
 Possible correct results:
-	[]
-	[]
-	[]
+	PrimIO.Nil
+	Prelude.Nil
+	Data.Vect.Nil
 Main> [] : Vect 0 ?elem
 Main> [] : List ?a
 Main> (interactive):1:34--1:41:When unifying Vect 0 ?elem and List ?a
