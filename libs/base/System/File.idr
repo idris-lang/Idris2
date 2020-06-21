@@ -31,7 +31,7 @@ prim_fileErrno : PrimIO Int
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 %foreign support "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
-%foreign support "fgetc"
+%foreign "C:fgetc,libc 6"
 prim__readChar : FilePtr -> PrimIO Int
 %foreign support "idris2_writeLine"
 prim__writeLine : FilePtr -> String -> PrimIO Int
