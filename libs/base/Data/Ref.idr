@@ -10,7 +10,7 @@ interface Ref m (r : Type -> Type) | m where
   writeRef : r a -> a -> m ()
 
 export
-Ref IO IORef where
+HasIO io => Ref io IORef where
   newRef = newIORef
   readRef = readIORef
   writeRef = writeIORef

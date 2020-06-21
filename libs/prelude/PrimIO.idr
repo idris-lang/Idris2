@@ -41,11 +41,6 @@ io_bind (MkIO fn) k
                       MkIO res = k x' in
                       res w')
 
-%foreign "C:putchar,libc 6"
-prim__putChar : Char -> (1 x : %World) -> IORes ()
-%foreign "C:getchar,libc 6"
-%extern prim__getChar : (1 x : %World) -> IORes Char
-
 -- A pointer representing a given parameter type
 -- The parameter is a phantom type, to help differentiate between
 -- different pointer types
@@ -72,14 +67,16 @@ data FArgList : Type where
      Nil : FArgList
      (::) : {a : Type} -> (1 arg : a) -> (1 args : FArgList) -> FArgList
 
+export
 %extern prim__cCall : (ret : Type) -> String -> (1 args : FArgList) ->
                       (1 x : %World) -> IORes ret
+export
 %extern prim__schemeCall : (ret : Type) -> String -> (1 args : FArgList) ->
                            (1 x : %World) -> IORes ret
 
 export %inline
-primIO : (1 fn : (1 x : %World) -> IORes a) -> IO a
-primIO op = MkIO op
+fromPrim : (1 fn : (1 x : %World) -> IORes a) -> IO a
+fromPrim op = MkIO op
 
 export %inline
 toPrim : (1 act : IO a) -> PrimIO a
@@ -87,11 +84,11 @@ toPrim (MkIO fn) = fn
 
 export %inline
 schemeCall : (ret : Type) -> String -> (1 args : FArgList) -> IO ret
-schemeCall ret fn args = primIO (prim__schemeCall ret fn args)
+schemeCall ret fn args = fromPrim (prim__schemeCall ret fn args)
 
 export %inline
 cCall : (ret : Type) -> String -> FArgList -> IO ret
-cCall ret fn args = primIO (prim__cCall ret fn args)
+cCall ret fn args = fromPrim (prim__cCall ret fn args)
 
 %foreign "C:idris2_isNull, libidris2_support"
 export
@@ -103,70 +100,6 @@ prim__forgetPtr = believe_me
 export %inline
 prim__nullPtr : Ptr t -> Int -- can't pass 'type' to a foreign function
 prim__nullPtr p = prim__nullAnyPtr (prim__forgetPtr p)
-
-%extern
-prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr
-%extern
-prim__onCollect : Ptr t -> (Ptr t -> PrimIO ()) -> PrimIO (GCPtr t)
-
-export
-onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
-onCollectAny ptr c = primIO (prim__onCollectAny ptr (\x => toPrim (c x)))
-
-export
-onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
-onCollect ptr c = primIO (prim__onCollect ptr (\x => toPrim (c x)))
-
-%foreign "C:idris2_getString, libidris2_support"
-export
-prim__getString : Ptr String -> String
-
-%foreign "C:idris2_getStr,libidris2_support"
-prim__getStr : PrimIO String
-%foreign "C:idris2_putStr,libidris2_support"
-prim__putStr : String -> PrimIO ()
-
-||| Output a string to stdout without a trailing newline.
-export
-putStr : String -> IO ()
-putStr str = primIO (prim__putStr str)
-
-||| Output a string to stdout with a trailing newline.
-export
-putStrLn : String -> IO ()
-putStrLn str = putStr (prim__strAppend str "\n")
-
-||| Read one line of input from stdin, without the trailing newline.
-export
-getLine : IO String
-getLine = primIO prim__getStr
-
-||| Write a single character to stdout.
-export
-putChar : Char -> IO ()
-putChar c = primIO (prim__putChar c)
-
-||| Write a single character to stdout, with a trailing newline.
-export
-putCharLn : Char -> IO ()
-putCharLn c = putStrLn (prim__cast_CharString c)
-
-||| Read a single character from stdin.
-export
-getChar : IO Char
-getChar = primIO prim__getChar
-
-export
-fork : (1 prog : IO ()) -> IO ThreadID
-fork (MkIO act) = schemeCall ThreadID "blodwen-thread" [act]
-
-export
-prim_fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
-prim_fork act w = prim__schemeCall ThreadID "blodwen-thread" [act] w
-
-%foreign "C:idris2_readString, libidris2_support"
-export
-prim__getErrno : Int
 
 unsafeCreateWorld : (1 f : (1 x : %World) -> a) -> a
 unsafeCreateWorld f = f %MkWorld
