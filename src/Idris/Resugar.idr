@@ -155,7 +155,9 @@ mutual
   toPTerm : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             (prec : Nat) -> RawImp -> Core PTerm
-  toPTerm p (IVar fc nm) = toPRef fc nm
+  toPTerm p (IVar fc nm) = if fullNamespace !(getPPrint)
+                             then pure $ PRef fc nm
+                             else toPRef fc nm
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
            if imp
