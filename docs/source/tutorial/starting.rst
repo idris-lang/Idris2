@@ -58,7 +58,7 @@ Installing Using Homebrew
 ----------------------
 
 If you are Homebrew user you can install Idris 2 together with all the requirements
-by running following command:
+by running following command::
 
     brew install idris2
 
