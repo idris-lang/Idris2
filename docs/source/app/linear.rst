@@ -243,7 +243,7 @@ hard coded password and internal data:
       readSecret (MkStore str) = pure1 (str # MkStore str)
 
       disconnect (MkStore _)
-          = putStrLn "Door destroyed"
+          = putStrLn "Disconnect"
 
 Then we can run it in ``main``:
 
