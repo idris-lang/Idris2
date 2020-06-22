@@ -85,8 +85,8 @@ jsName (Resolved i) = "fn__" ++ show i
 jsCrashExp : {auto c : Ref ESs ESSt} -> String -> Core String
 jsCrashExp message  =
   do
-    n <- addConstToPreamble "crashExp" "x=>{throw new Error(x)}"
-    pure $ n ++ "("++ jsString message ++ ")"
+    n <- addConstToPreamble "crashExp" "x=>{throw new IdrisError(x)}"
+    pure $ n ++ "("++ message ++ ")"
 
 jsIntegerOfString : {auto c : Ref ESs ESSt} -> String -> Core String
 jsIntegerOfString x =
@@ -322,17 +322,20 @@ mutual
 
 static_preamble : List String
 static_preamble =
-  [ "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
+  [ "class IdrisError extends Error { }"
   , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
+  , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
   ]
 
 export
 compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String
 compileToES c tm =
   do
-    statements <- compileToImperative c tm
+    (impDefs, impMain) <- compileToImperative c tm
     s <- newRef ESs (MkESSt empty)
-    es_statements <- imperative2es 0 statements
+    defs <- imperative2es 0 impDefs
+    main_ <- imperative2es 0 impMain
+    let main = "try{" ++ main_ ++ "}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
     st <- get ESs
     let pre = showSep "\n" $ static_preamble ++ (SortedMap.values $ preamble st)
-    pure $ pre ++ "\n\n" ++ es_statements -- ++ "\n\n\n/*" ++ show statements ++ "*/"
+    pure $ pre ++ "\n\n" ++ defs ++ main

@@ -300,7 +300,7 @@ getImp (n, fc, MkNmCon _ _ _) =
   pure DoNothing
 
 export
-compileToImperative : Ref Ctxt Defs -> ClosedTerm -> Core ImperativeStatement
+compileToImperative : Ref Ctxt Defs -> ClosedTerm -> Core (ImperativeStatement, ImperativeStatement)
 compileToImperative c tm =
   do
     cdata <- getCompileData Cases tm
@@ -309,4 +309,4 @@ compileToImperative c tm =
     s <- newRef Imps (MkImpSt 0)
     compdefs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     (s, main) <- impExp ctm
-    pure $ concat compdefs <+> s <+> EvalExpStatement main -- <+> CommentStatement (show ndefs)
+    pure $ (concat compdefs, s <+> EvalExpStatement main)
