@@ -55,7 +55,7 @@ data Condition : Type where [external]
 prim__makeCondition : PrimIO Condition
 %foreign "scheme:blodwen-condition-wait"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
-%foreign "scheme:blodwen-condition-wait-timoue"
+%foreign "scheme:blodwen-condition-wait-timeout"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
 %foreign "scheme:blodwen-condition-signal"
 prim__conditionSignal : Condition -> PrimIO ()
@@ -70,6 +70,7 @@ export
 conditionWait : Condition -> Mutex -> IO ()
 conditionWait c m = primIO (prim__conditionWait c m)
 
+||| Timeout is in microseconds
 export
 conditionWaitTimeout : Condition -> Mutex -> Int -> IO ()
 conditionWaitTimeout c m t = primIO (prim__conditionWaitTimeout c m t)
