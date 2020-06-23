@@ -108,7 +108,7 @@ unsafeDestroyWorld : (1 x : %World) -> a -> a
 unsafeDestroyWorld %MkWorld x = x
 
 export
-unsafePerformIO : IO a -> a
+unsafePerformIO : (1 _ : IO a) -> a
 unsafePerformIO (MkIO f)
     = unsafeCreateWorld (\w => case f w of
                                MkIORes res w' => unsafeDestroyWorld w' res)
