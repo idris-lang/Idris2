@@ -516,7 +516,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                              when checkdets $
                                  checkConcreteDets fc defaults env top
                                                    (NTCon tfc tyn t a args)
-                             if defaults
+                             if defaults && checkdets
                                 then tryGroups Nothing nty (hintGroups sd)
                                 else handleUnify
                                        (searchLocal fc rigc defaults trying' depth def top env nty)
