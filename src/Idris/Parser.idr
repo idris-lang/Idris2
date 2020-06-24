@@ -1173,9 +1173,10 @@ namespaceDecl : FileName -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
     = do start <- location
          doc   <- option "" documentation
+         col   <- column
          ns    <- namespaceHead
          end   <- location
-         ds    <- assert_total (nonEmptyBlock (topDecl fname))
+         ds    <- blockAfter col (topDecl fname)
          pure (PNamespace (MkFC fname start end) ns (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl

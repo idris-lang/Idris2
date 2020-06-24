@@ -16,11 +16,11 @@ prim_sleep : Int -> PrimIO ()
 prim_usleep : Int -> PrimIO ()
 
 export
-sleep : Int -> IO ()
+sleep : HasIO io => Int -> io ()
 sleep sec = primIO (prim_sleep sec)
 
 export
-usleep : (x : Int) -> So (x >= 0) => IO ()
+usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
 usleep sec = primIO (prim_usleep sec)
 
 -- This one is going to vary for different back ends. Probably needs a
@@ -29,7 +29,7 @@ usleep sec = primIO (prim_usleep sec)
 prim__getArgs : PrimIO (List String)
 
 export
-getArgs : IO (List String)
+getArgs : HasIO io => io (List String)
 getArgs = primIO prim__getArgs
 
 %foreign libc "getenv"
@@ -42,7 +42,7 @@ prim_setEnv : String -> String -> Int -> PrimIO Int
 prim_unsetEnv : String -> PrimIO Int
 
 export
-getEnv : String -> IO (Maybe String)
+getEnv : HasIO io => String -> io (Maybe String)
 getEnv var
    = do env <- primIO $ prim_getEnv var
         if prim__nullPtr env /= 0
@@ -50,7 +50,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
-getEnvironment : IO (List (String, String))
+getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where
     splitEq : String -> (String, String)
@@ -59,7 +59,7 @@ getEnvironment = getAllPairs 0 []
               (_, v') = break (/= '=') v in
               (k, v')
 
-    getAllPairs : Int -> List String -> IO (List (String, String))
+    getAllPairs : Int -> List String -> io (List (String, String))
     getAllPairs n acc = do
       envPair <- primIO $ prim_getEnvPair n
       if prim__nullPtr envPair /= 0
@@ -67,7 +67,7 @@ getEnvironment = getAllPairs 0 []
          else getAllPairs (n + 1) (prim__getString envPair :: acc)
 
 export
-setEnv : String -> String -> Bool -> IO Bool
+setEnv : HasIO io => String -> String -> Bool -> io Bool
 setEnv var val overwrite
    = do ok <- primIO $ prim_setEnv var val (if overwrite then 1 else 0)
         if ok == 0
@@ -75,7 +75,7 @@ setEnv var val overwrite
            else pure False
 
 export
-unsetEnv : String -> IO Bool
+unsetEnv : HasIO io => String -> io Bool
 unsetEnv var
    = do ok <- primIO $ prim_unsetEnv var
         if ok == 0
@@ -87,7 +87,7 @@ unsetEnv var
 prim_system : String -> PrimIO Int
 
 export
-system : String -> IO Int
+system : HasIO io => String -> io Int
 system cmd = primIO (prim_system cmd)
 
 %foreign support "idris2_time"
@@ -95,7 +95,7 @@ system cmd = primIO (prim_system cmd)
 prim_time : PrimIO Int
 
 export
-time : IO Integer
+time : HasIO io => io Integer
 time = pure $ cast !(primIO prim_time)
 
 %foreign libc "exit"
@@ -114,16 +114,16 @@ data ExitCode : Type where
   ExitFailure : (errNo    : Int) -> (So (not $ errNo == 0)) => ExitCode
 
 export
-exitWith : ExitCode -> IO a
-exitWith ExitSuccess = believe_me $ primIO $ prim_exit 0
-exitWith (ExitFailure code) = believe_me $ primIO $ prim_exit code
+exitWith : HasIO io => ExitCode -> io a
+exitWith ExitSuccess = primIO $ believe_me $ prim_exit 0
+exitWith (ExitFailure code) = primIO $ believe_me $ prim_exit code
 
 ||| Exit the program indicating failure.
 export
-exitFailure : IO a
+exitFailure : HasIO io => io a
 exitFailure = exitWith (ExitFailure 1)
 
 ||| Exit the program after a successful run.
 export
-exitSuccess : IO a
+exitSuccess : HasIO io => io a
 exitSuccess = exitWith ExitSuccess

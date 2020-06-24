@@ -183,7 +183,10 @@
 
 (define (blodwen-condition) (make-condition))
 (define (blodwen-condition-wait c m) (condition-wait c m))
-(define (blodwen-condition-wait-timeout c m t) (condition-wait c m t))
+(define (blodwen-condition-wait-timeout c m t)
+  (let ((sec (div t 1000000))
+        (micro (mod t 1000000)))
+  (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
 (define (blodwen-condition-signal c) (condition-signal c))
 (define (blodwen-condition-broadcast c) (condition-broadcast c))
 

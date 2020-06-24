@@ -333,7 +333,7 @@ HasErr Void e => PrimIO e where
   fork thread
       = MkApp $
             prim_app_bind
-                (toPrimApp $ PrimIO.fork $
+                (toPrimApp $ Prelude.fork $
                       do run thread
                          pure ())
                     $ \_ =>

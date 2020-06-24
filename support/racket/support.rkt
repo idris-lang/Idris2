@@ -180,7 +180,7 @@
   (blodwen-lock m))
 (define (blodwen-condition-wait-timeout c m t)
   (blodwen-unlock m) ;; consistency with interface for posix condition variables
-  (sync/timeout t c)
+  (sync/timeout (/ t 1000000) c)
   (blodwen-lock m))
 (define (blodwen-condition-signal c)
   (channel-put c 'ready))

@@ -20,12 +20,17 @@ Language changes:
 
 Library changes:
 
-* Experimental `Data.Linear.Array` added to `contrib`, support mutable linear
-  arrays with constant time read/write, convertible to immutable arrays with
-  constant time read.
+* `IO` operations in the `prelude` and `base` libraries now use the
+  `HasIO` interface, rather than using `IO` directly.
+* Experimental `Data.Linear.Array` added to `contrib`, supporting mutable
+  linear arrays with constant time read/write, convertible to immutable arrays
+  with constant time read.
    + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
      should be considered experimental with the API able to change at any time!
      Further experiments in `Data.Linear` are welcome :).
+* Experimental `Control.Linear.LIO` added to `contrib`, supporting computations
+  which track the multiplicities of their return values, which allows linear
+  resources to be tracked.
 * Added `Control.Monad.ST`, for update in-place via `STRef` (which is like
   `IORef`, but can escape from `IO`). Also added `Data.Ref` which provides an
   interface to both `IORef` and `STRef`.
