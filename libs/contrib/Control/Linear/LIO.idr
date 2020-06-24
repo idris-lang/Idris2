@@ -1,7 +1,5 @@
 module Control.Linear.LIO
 
-import public Data.So
-
 ||| Like `Monad`, but the action and continuation must be run exactly once
 ||| to ensure that the computation is linear.
 public export
@@ -16,68 +14,86 @@ LinearBind IO where
 public export
 data Usage = None | Linear | Unrestricted
 
--- Not sure about this - it is a horrible hack, but it makes the notation
--- a bit nicer and consistent with the numbering on binders!
+-- Not sure about this, it is a horrible hack, but it makes the notation
+-- a bit nicer
 public export 
-fromInteger : (x : Integer) -> {auto _ : So (x == 0 || x == 1)} -> Usage
+fromInteger : (x : Integer) -> {auto _ : Either (x = 0) (x = 1)} -> Usage
 fromInteger 0 = None
 fromInteger 1 = Linear
 fromInteger x = Unrestricted
 
+public export
+0 ContType : (Type -> Type) -> Usage -> Usage -> Type -> Type -> Type
+
 ||| A wrapper which allows operations to state the multiplicity of the value
-||| they return. For example, `L IO {u=1} File` is an IO operation which returns
-||| a file that must be used exactly once.
+||| they return. For example, `L IO {use=1} File` is an IO operation which
+||| returns a file that must be used exactly once.
+-- This is uglier than I'd like. Perhaps multiplicity polymorphism would make
+-- it neater, but we don't have that (yet?), and fortunately none of this
+-- horror has to be exposed to the user!
 export
 data L : (Type -> Type) ->
          {default Unrestricted use : Usage} ->
          Type -> Type where
-     MkL : (1 _ : io a) -> L io {use} a
+     -- Three separate Pures, because we need to distinguish how they are
+     -- used, and this is neater than a continuation.
+     Pure0 : (0 _ : a) -> L io {use=0} a
+     Pure1 : (1 _ : a) -> L io {use=1} a
+     PureW : a -> L io a
+     -- The action is always run once, and the type makes an assertion about
+     -- how often it's safe to use the result.
+     Action : (1 _ : io a) -> L io {use} a
+     Bind : {u_act : _} ->
+            (1 _ : L io {use=u_act} a) ->
+            (1 _ : ContType io u_act u_k a b) ->
+            L io {use=u_k} b
 
-||| Run a linear program with unrestricted return value in the underlying
-||| context
-export
-run : L io a -> io a
-run (MkL p) = p
-
-public export
-0 ContType : (Type -> Type) -> Usage -> Usage -> Type -> Type -> Type
 ContType io None u_k a b = (0 _ : a) -> L io {use=u_k} b
 ContType io Linear u_k a b = (1 _ : a) -> L io {use=u_k} b
 ContType io Unrestricted u_k a b = a -> L io {use=u_k} b
 
-export %inline
-lio_bind : {u_act : _} ->
-           LinearBind io =>
-           (1 _ : L io {use=u_act} a) ->
-           (1 _ : ContType io u_act u_k a b) -> L io {use=u_k} b
-lio_bind {u_act = None} (MkL act) k
-    = let (>>=) = bindL in
-          MkL $ do a' <- act
-                   let MkL ka' = k a'
-                   ka'
-lio_bind {u_act = Linear} (MkL act) k
-    = let (>>=) = bindL in
-          MkL $ do a' <- act
-                   let MkL ka' = k a'
-                   ka'
-lio_bind {u_act = Unrestricted} (MkL act) k
-    = let (>>=) = bindL in
-          MkL $ do a' <- act
-                   let MkL ka' = k a'
-                   ka'
+RunCont : Usage -> Type -> Type -> Type
+RunCont None t b = (0 _ : t) -> b
+RunCont Linear t b = (1 _ : t) -> b
+RunCont Unrestricted t b = t -> b
+
+-- The repetition here is annoying, but necessary because we don't have
+-- multiplicity polymorphism. We need to look at the usage to know what the
+-- concrete type of the continuation is.
+runK : {use : _} ->
+       LinearBind io =>
+       (1 _ : L io {use} a) -> (1 _ : RunCont use a (io b)) -> io b
+runK (Pure0 x) k = k x
+runK (Pure1 x) k = k x
+runK (PureW x) k = k x
+runK {use = None} (Action x) k = bindL x $ \x' => k x'
+runK {use = Linear} (Action x) k = bindL x $ \x' => k x'
+runK {use = Unrestricted} (Action x) k = bindL x $ \x' => k x'
+runK (Bind {u_act = None} act next) k = runK act (\x => runK (next x) k)
+runK (Bind {u_act = Linear} act next) k = runK act (\x => runK (next x) k)
+runK (Bind {u_act = Unrestricted} act next) k = runK act (\x => runK (next x) k)
+
+||| Run a linear program exactly once, with unrestricted return value in the
+||| underlying context
+run : (Applicative io, LinearBind io) =>
+      (1 _ : L io a) -> io a
+run prog = runK prog pure
 
 export
-Functor io => Functor (L io {use}) where
-  map fn (MkL act) = MkL (map fn act)
+Functor io => Functor (L io) where
+  map fn act = Bind act \a' => PureW (fn a')
 
 export
-Applicative io => Applicative (L io {use}) where
-  pure = MkL . pure
-  (<*>) (MkL f) (MkL a) = MkL (f <*> a)
+Applicative io => Applicative (L io) where
+  pure = PureW
+  (<*>) f a
+      = f `Bind` \f' =>
+        a `Bind` \a' =>
+        PureW (f' a')
 
 export
 (Applicative m, LinearBind m) => Monad (L m) where
-  (>>=) = lio_bind
+  (>>=) = Bind
 
 -- prioritise this one for concrete LIO, so we get the most useful
 -- linearity annotations.
@@ -86,11 +102,19 @@ export %inline
         LinearBind io =>
         (1 _ : L io {use=u_act} a) ->
         (1 _ : ContType io u_act u_k a b) -> L io {use=u_k} b
-(>>=) = lio_bind
+(>>=) = Bind
+
+export %inline
+pure0 : (0 x : a) -> L io {use=0} a
+pure0 = Pure0
+
+export %inline
+pure1 : (1 x : a) -> L io {use=1} a
+pure1 = Pure1
 
 export
 (LinearBind io, HasIO io) => HasIO (L io) where
-  liftIO p = MkL (liftIO p)
+  liftIO p = Action (liftIO p)
 
 public export
 LinearIO : (Type -> Type) -> Type
