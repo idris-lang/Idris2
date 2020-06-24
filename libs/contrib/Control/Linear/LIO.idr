@@ -34,7 +34,8 @@ public export
 export
 data L : (Type -> Type) ->
          {default Unrestricted use : Usage} ->
-         Type -> Type where
+         (ty : Type) -> Type where
+     [search ty]
      -- Three separate Pures, because we need to distinguish how they are
      -- used, and this is neater than a continuation.
      Pure0 : (0 _ : a) -> L io {use=0} a
@@ -119,9 +120,3 @@ export
 public export
 LinearIO : (Type -> Type) -> Type
 LinearIO io = (LinearBind io, HasIO io)
-
--- Since the usage won't be known, we need this to be a %defaulthint to allow
--- using arbitrary IO operations at unrestricted multiplicity.
-export %defaulthint
-unrLIO : LinearBind io => HasIO io => HasIO (L io)
-unrLIO = %search
