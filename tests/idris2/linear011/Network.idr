@@ -15,8 +15,7 @@ newSocket : LinearIO io
       -> (fail : SocketError -> L io ())
       -> L io ()
 newSocket fam ty pnum success fail
-    = do Right rawsock <- liftIO {io=(L io {use=Unrestricted})} $ 
-                                 socket fam ty pnum
+    = do Right rawsock <- socket fam ty pnum
                | Left err => fail err
          success (MkSocket rawsock)
 
@@ -28,8 +27,7 @@ bind : LinearIO io =>
                                                     False => Closed
                                                     True => Bound)))
 bind (MkSocket sock) addr port
-    = do ok <- liftIO {io=(L io {use=Unrestricted})} $
-                   Socket.bind sock addr port
+    = do ok <- Socket.bind sock addr port
          if ok == 0
             then pure1 (True # ?foo1)
             else pure1 (False # ?foo2)

@@ -32,7 +32,7 @@ public export
 -- it neater, but we don't have that (yet?), and fortunately none of this
 -- horror has to be exposed to the user!
 export
-data L : (Type -> Type) ->
+data L : (io : Type -> Type) ->
          {default Unrestricted use : Usage} ->
          (ty : Type) -> Type where
      [search ty]
