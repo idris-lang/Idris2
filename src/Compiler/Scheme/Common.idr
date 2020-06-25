@@ -52,7 +52,7 @@ schConstructor schString n Nothing args
 ||| Mutates the given vector at the given index
 mutateValue : (ref : String) -> (index : Nat) -> String -> String
 mutateValue ref idx newVal =
-  "(begin (display \"mutating\" " ++ show ref ++ ") (newline) (vector-set! " ++ ref ++  " " ++ show idx ++ " " ++ newVal ++ "))"
+  "(begin (display \"mutating\") (newline) (vector-set! " ++ ref ++  " " ++ show idx ++ " " ++ newVal ++ "))"
 
 ||| Mutate all fiels of a given construtor
 ||| We skip the first value in the vector because we do not change

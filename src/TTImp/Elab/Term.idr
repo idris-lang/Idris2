@@ -266,10 +266,13 @@ TTImp.Elab.Check.check rigc elabinfo nest env (ICoerced fc tm) exp
     = checkImp rigc elabinfo nest env tm exp
 -- Don't add implicits/coercions on local blocks or record updates
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet fc c n nty nval sc) exp
-    = checkImp rigc elabinfo nest env tm exp
+    = do coreLift $ putStrLn ("checking ILet" ++ show n)
+         v <- checkImp rigc elabinfo nest env tm exp
+         coreLift $ putStrLn ("done checking ILet " ++ show n)
+         pure v
+
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal fc ds sc) exp
-    = do coreLift $ putStrLn "checking ILocal"
-         checkImp rigc elabinfo nest env tm exp
+    = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate fc fs rec) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp

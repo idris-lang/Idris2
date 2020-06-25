@@ -230,8 +230,11 @@ mutual
   toCExpTm n (Ref fc (DataCon rig tag Z) (NS ["Prelude"] (UN "GT")))
       = pure $ CPrimVal fc (I tag)
   toCExpTm n (Ref fc (DataCon rig tag arity) fn)
-      = -- get full name for readability, and the Nat hack
-        pure $ CCon fc !(getFullName fn) (Just tag) []
+      = do -- get full name for readability, and the Nat hack
+           fullName <- getFullName fn
+           coreLift $ putStrLn $ "foundDataCon " ++ show fullName ++ " rig count is : " ++ show rig
+           let tag' = branchOne (tag * 2 + 1) (tag * 2) rig
+           pure $ CCon fc fullName (Just tag') []
   toCExpTm n (Ref fc (TyCon tag arity) fn)
       = pure $ CCon fc fn Nothing []
   toCExpTm n (Ref fc _ fn)
@@ -244,9 +247,10 @@ mutual
       = pure $ CLam fc x !(toCExp n sc)
   toCExpTm n (Bind fc x (Let rig val _) sc)
       = do sc' <- toCExp n sc
+           coreLift $ putStrLn ("bind with rig : " ++ show rig)
            pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
-                          (CLet fc x True !(toCExp n val) sc')
-                          rig
+                             (CLet fc x True !(toCExp n val) sc')
+                             rig
   toCExpTm n (Bind fc x (Pi c e ty) sc)
       = pure $ CCon fc (UN "->") Nothing [!(toCExp n ty),
                                     CLam fc x !(toCExp n sc)]
@@ -278,6 +282,7 @@ mutual
              (f, args) =>
                 do args' <- traverse (toCExp n) args
                    defs <- get Ctxt
+                   coreLift $ putStrLn $ "compiling function " ++ show f
                    f' <- toCExpTm n f
                    Arity a <- numArgs defs f
                       | NewTypeBy arity pos =>

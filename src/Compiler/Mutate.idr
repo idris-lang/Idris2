@@ -10,8 +10,16 @@ import Data.List
 
 %hide Prelude.traverse
 
-updateTag : Int -> (CConAlt vars) -> (CConAlt vars)
-updateTag offset (MkConAlt nm tag args rhs) = MkConAlt nm ((+ offset) <$> tag) args rhs
+updateTag : (Int -> Int) -> (CConAlt vars) -> (CConAlt vars)
+updateTag update (MkConAlt nm tag args rhs) = MkConAlt nm (update <$> tag) args rhs
+
+interleave : List a -> List a -> List a
+interleave [] ys = ys
+interleave (x :: xs) ys = x :: (interleave2 xs ys)
+  where
+    interleave2 : List a -> List a -> List a
+    interleave2 xs (y :: ys) = y :: (interleave xs ys)
+    interleave2 xs [] = xs
 
 mutual
   export
@@ -44,8 +52,12 @@ mutual
         -- add the mutating clauses for the current
         coreLift $ putStrLn $ "found ConCase with name " ++ show nm ++ ":" ++ show tag
         newClauses <- traverse mutateCaseAlt clauses
-        let updatedClauses = map (updateTag (cast $ List.length clauses)) newClauses
-        let allClauses = (clauses ++ updatedClauses)
+        -- The new clauses need to have their tag updated. All non-mutating clauses
+        -- are Multiplied by 2 and all _mutating_ ones are * 2 + 1
+        -- this allows us to create new tags without requiring any type information
+        let clauses' = map (updateTag (*2)) clauses
+        let mutatingClauses = map (updateTag (\t => t * 2 + 1)) newClauses
+        let allClauses = interleave clauses' mutatingClauses
         pure $ CConCase fc sc !(traverse mutateClause allClauses) wc
     where
       -- mutate the clause but this time replace all `nm` and `tag` since nm' and tag'

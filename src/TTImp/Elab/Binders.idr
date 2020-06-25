@@ -196,10 +196,11 @@ printTerm (As _ _ _ _) = "As"
 printTerm _ = ""
 
 ||| If rigcount is different from rig of DataCon, replace it, otherwise nothing
-lineariseDataCon : RigCount -> Term vars -> Maybe (Term vars)
-lineariseDataCon rig (App fc (Ref fc' (DataCon r tag ary) name) arg) =
-  toMaybe (rig /= r) (App fc (Ref fc' (DataCon rig tag ary) name) arg)
-lineariseDataCon _ _ = Nothing
+lineariseDataCon : RigCount -> Term vars -> Core (Maybe (Term vars))
+lineariseDataCon rig (App fc (Ref fc' (DataCon r tag ary) name) arg) = do
+  coreLift $ putStrLn $ "replacing for " ++ show name
+  pure $ toMaybe (rig /= r) (App fc (Ref fc' (DataCon rig tag ary) name) arg)
+lineariseDataCon _ _ = pure Nothing
 
 export
 checkLet : {vars : _} ->
@@ -241,15 +242,16 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          (scopev, gscopet) <-
             inScope fc env' (\e' => do
               check {e=e'} rigc elabinfo nest' env' scope expScope)
-         coreLift $ printLn ("nVal " ++ show nVal)
-         coreLift $ putStrLn $ case lineariseDataCon rigb valv of
-           Nothing => "No replacement for : " ++ show n
-           Just _ => "Replaced rig for: " ++ show n ++ " with " ++ show rigb
-         coreLift $ putStrLn ("done checking " ++ show n)
+         newVal <- lineariseDataCon rigb valv
+         coreLift $ putStrLn $ case newVal of
+              Nothing => "no replacement"
+              Just v => "found replacement for " ++ show n
+                     ++ " " ++ show v
+         let newVal = fromMaybe valv newVal
          scopet <- getTerm gscopet
 
          -- No need to 'checkExp' here - we've already checked scopet
          -- against the expected type when checking the scope, so just
          -- build the term directly
-         pure (Bind fc n (Let rigb valv tyv) scopev,
-               gnf env (Bind fc n (Let rigb valv tyv) scopet))
+         pure (Bind fc n (Let rigb newVal tyv) scopev,
+               gnf env (Bind fc n (Let rigb newVal tyv) scopet))
