@@ -430,7 +430,7 @@ In ``ATM.idr``:
 
 + Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
 
-In ``Hangmain.idr``, add:
+In ``Hangman.idr``, add:
 
 .. code-block:: idris
 

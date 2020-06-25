@@ -35,7 +35,6 @@ modules = Control.App,
           Data.Vect,
           Data.Vect.Elem,
 
-
           Debug.Trace,
 
           Decidable.Equality,
