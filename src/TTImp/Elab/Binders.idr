@@ -141,6 +141,10 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
     = do let rig = the RigCount $ if isErased rig_in then erased else linear
+         let solvemode = case elabMode elabinfo of
+                              InLHS _ => inLHS
+                              _ => inTermP False
+         solveConstraints solvemode Normal
          expty <- getTerm expty_in
          exptynf <- getTyNF env expty
          defs <- get Ctxt
