@@ -106,15 +106,28 @@ toBigInt e = "BigInt(" ++ e ++ ")"
 fromBigInt : String -> String
 fromBigInt e = "Number(" ++ e ++ ")"
 
+
+makeIntBound : {auto c : Ref ESs ESSt} -> Int -> Core String
+makeIntBound bits = addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
+
 boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 boundedInt bits e =
   do
-    n <- addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
+    n <- makeIntBound bits
     pure $ "(" ++ e ++ " % " ++ n ++ ")"
 
-boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
-boundedIntOp bits o lhs rhs = boundedInt 63 (binOp o lhs rhs)
+boundedUInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
+boundedUInt bits e =
+  do
+    n <- makeIntBound bits
+    fn <- addConstToPreamble ("truncToUInt"++show bits) ("x=>{const m = x%" ++ n ++ ";return m>0?m:m+" ++ n ++ "}")
+    pure $ fn ++ "(" ++ e ++ ")"
 
+boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
+boundedIntOp bits o lhs rhs = boundedInt bits (binOp o lhs rhs)
+
+boundedUIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
+boundedUIntOp bits o lhs rhs = boundedUInt bits (binOp o lhs rhs)
 
 boolOp : String -> String -> String -> String
 boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? BigInt(1) : BigInt(0))"
@@ -126,6 +139,10 @@ jsConstant (Str s) = pure $ jsString s
 jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
 jsConstant (Db f) = pure $ show f
 jsConstant WorldVal = addConstToPreamble "idrisworld" "Symbol('idrisworld')";
+jsConstant (B8 i) = pure $ show i ++ "n"
+jsConstant (B16 i) = pure $ show i ++ "n"
+jsConstant (B32 i) = pure $ show i ++ "n"
+jsConstant (B64 i) = pure $ show i ++ "n"
 jsConstant ty = throw (InternalError $ "Unsuported constant " ++ show ty)
 
 jsOp : {auto c : Ref ESs ESSt} -> PrimFn arity -> Vect arity String -> Core String
@@ -134,13 +151,43 @@ jsOp (Sub IntType) [x, y] = pure $ !(boundedIntOp 63 "-" x y)
 jsOp (Mul IntType) [x, y] = pure $ !(boundedIntOp 63 "*" x y)
 jsOp (Div IntType) [x, y] = pure $ !(boundedIntOp 63 "/" x y)
 jsOp (Mod IntType) [x, y] = pure $ !(boundedIntOp 63 "%" x y)
+jsOp (Add Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "+" x y)
+jsOp (Sub Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "-" x y)
+jsOp (Mul Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "*" x y)
+jsOp (Div Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "/" x y)
+jsOp (Mod Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "%" x y)
+jsOp (Add Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "+" x y)
+jsOp (Sub Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "-" x y)
+jsOp (Mul Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "*" x y)
+jsOp (Div Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "/" x y)
+jsOp (Mod Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "%" x y)
+jsOp (Add Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "+" x y)
+jsOp (Sub Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "-" x y)
+jsOp (Mul Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "*" x y)
+jsOp (Div Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "/" x y)
+jsOp (Mod Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "%" x y)
+jsOp (Add Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "+" x y)
+jsOp (Sub Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "-" x y)
+jsOp (Mul Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "*" x y)
+jsOp (Div Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "/" x y)
+jsOp (Mod Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "%" x y)
 jsOp (Add ty) [x, y] = pure $ binOp "+" x y
 jsOp (Sub ty) [x, y] = pure $ binOp "-" x y
 jsOp (Mul ty) [x, y] = pure $ binOp "*" x y
 jsOp (Div ty) [x, y] = pure $ binOp "/" x y
 jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
+jsOp (ShiftL IntType) [x, y] = pure $ !(boundedUIntOp 63 "<<" x y)
+jsOp (ShiftL Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "<<" x y)
+jsOp (ShiftL Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "<<" x y)
+jsOp (ShiftL Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "<<" x y)
+jsOp (ShiftL Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "<<" x y)
 jsOp (ShiftL ty) [x, y] = pure $ binOp "<<" x y
+jsOp (ShiftR IntType) [x, y] = pure $ !(boundedUIntOp 63 ">>" x y)
+jsOp (ShiftR Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 ">>" x y)
+jsOp (ShiftR Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 ">>" x y)
+jsOp (ShiftR Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 ">>" x y)
+jsOp (ShiftR Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 ">>" x y)
 jsOp (ShiftR ty) [x, y] = pure $ binOp ">>" x y
 jsOp (BAnd ty) [x, y] = pure $ binOp "&" x y
 jsOp (BOr ty) [x, y] = pure $ binOp "|" x y
@@ -184,15 +231,14 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
-jsOp (Cast IntegerType Bits8Type) [x] = boundedInt 8 x
-jsOp (Cast IntegerType Bits16Type) [x] = boundedInt 16 x
-jsOp (Cast IntegerType Bits32Type) [x] = boundedInt 32 x
-jsOp (Cast IntegerType Bits64Type) [x] = boundedInt 64 x
+jsOp (Cast IntegerType Bits8Type) [x] = boundedUInt 8 x
+jsOp (Cast IntegerType Bits16Type) [x] = boundedUInt 16 x
+jsOp (Cast IntegerType Bits32Type) [x] = boundedUInt 32 x
+jsOp (Cast IntegerType Bits64Type) [x] = boundedUInt 64 x
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
---jsOp o args = throw $ InternalError $ "Unimplemented operator " ++ show o ++ " " ++ show args
 
 
 readCCPart : String -> (String, String)

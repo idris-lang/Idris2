@@ -120,7 +120,7 @@ nodeTests : List String
 nodeTests
   = [ "node001", "node002", "node003", "node004", "node005", "node006", "node007", "node008", "node009"
     , "node011", "node012", "node015", "node017", "node018", "node019" -- node014
-    , "node020", "node021"
+    , "node021" --, "node020"
     , "reg001"
     ]
 
