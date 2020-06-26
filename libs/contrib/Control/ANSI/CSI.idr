@@ -16,7 +16,7 @@ cursorUp1 = cursorUp 1
 ||| If the cursor is at the edge of the screen it has no effect.
 export
 cursorDown : Nat -> String
-cursorDown n = "\x1B[" ++ show n ++ "A"
+cursorDown n = "\x1B[" ++ show n ++ "B"
 
 export
 cursorDown1 : String
