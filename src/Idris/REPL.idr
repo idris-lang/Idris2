@@ -234,7 +234,11 @@ rtrim : String -> String
 rtrim str = reverse (ltrim (reverse str))
 
 addClause : String -> Nat -> List String -> List String
-addClause c Z xs = rtrim c :: xs
+addClause c Z [] = rtrim c :: []
+addClause c Z (x :: xs)
+    = if all isSpace (unpack x)
+         then rtrim c :: x :: xs
+         else x :: addClause c Z xs
 addClause c (S k) (x :: xs) = x :: addClause c k xs
 addClause c (S k) [] = [c]
 
