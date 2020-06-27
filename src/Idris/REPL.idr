@@ -216,6 +216,7 @@ data EditResult : Type where
   EditError : String -> EditResult
   MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
+  MadeCase : Maybe String -> List String -> EditResult
 
 updateFile : {auto r : Ref ROpts REPLOpts} ->
              (List String -> List String) -> Core EditResult
@@ -272,13 +273,14 @@ addMadeLemma lit n ty app line content
     addApp lit (S k) acc (x :: xs) = addApp lit k (x :: acc) xs
     addApp _ (S k) acc [] = reverse acc
 
-addMadeWith : Maybe String -> List String -> Nat -> List String -> List String
-addMadeWith lit wapp line content
+-- Replace a line; works for 'case' and 'with'
+addMadeCase : Maybe String -> List String -> Nat -> List String -> List String
+addMadeCase lit wapp line content
     = addW line [] content
   where
     addW : Nat -> List String -> List String -> List String
     addW Z acc (_ :: rest) = reverse acc ++ map (relit lit) wapp ++ rest
-    addW Z acc rest = reverse acc ++ map (relit lit) wapp ++ rest -- shouldn't happen!
+    addW Z acc [] = [] -- shouldn't happen!
     addW (S k) acc (x :: xs) = addW k (x :: acc) xs
     addW (S k) acc [] = reverse acc
 
@@ -406,7 +408,18 @@ processEdit (MakeLemma upd line name)
                         else pure $ MadeLemma markM name pty pappstr
               _ => pure $ EditError "Can't make lifted definition"
 processEdit (MakeCase upd line name)
-    = pure $ EditError "Not implemented yet"
+    = do litStyle <- getLitStyle
+         syn <- get Syn
+         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
+         Just src <- getSourceLine line
+              | Nothing => pure (EditError "Source line not available")
+         let Right l = unlit litStyle src
+              | Left err => pure (EditError "Invalid literate Idris")
+         let (markM, _) = isLitLine src
+         let c = lines $ makeCase brack name l
+         if upd
+            then updateFile (addMadeCase markM c (max 0 (integerToNat (cast (line - 1)))))
+            else pure $ MadeCase markM c
 processEdit (MakeWith upd line name)
     = do litStyle <- getLitStyle
          Just src <- getSourceLine line
@@ -416,7 +429,7 @@ processEdit (MakeWith upd line name)
          let (markM, _) = isLitLine src
          let w = lines $ makeWith name l
          if upd
-            then updateFile (addMadeWith markM w (max 0 (integerToNat (cast (line - 1)))))
+            then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
 
 public export
@@ -861,6 +874,7 @@ mutual
   displayResult  (Edited (EditError x)) = printError x
   displayResult  (Edited (MadeLemma lit name pty pappstr)) = printResult (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult  (Edited (MadeWith lit wapp)) = printResult $ showSep "\n" (map (relit lit) wapp)
+  displayResult  (Edited (MadeCase lit cstr)) = printResult $ showSep "\n" (map (relit lit) cstr)
   displayResult  (OptionsSet opts) = printResult $ showSep "\n" $ map show opts
   displayResult  _ = pure ()
 

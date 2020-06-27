@@ -54,12 +54,7 @@ idrisTests
        "interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",
        "interactive009", "interactive010", "interactive011", "interactive012",
-       "interactive013",
-       -- Literate
-       "literate001", "literate002", "literate003", "literate004",
-       "literate005", "literate006", "literate007", "literate008",
-       "literate009", "literate010", "literate011", "literate012",
-       "literate013",
+       "interactive013", "interactive014",
        -- Interfaces
        "interface001", "interface002", "interface003", "interface004",
        "interface005", "interface006", "interface007", "interface008",
@@ -73,6 +68,11 @@ idrisTests
        "linear001", "linear002", "linear003", "linear004", "linear005",
        "linear006", "linear007", "linear008", "linear009", "linear010",
        "linear011",
+       -- Literate
+       "literate001", "literate002", "literate003", "literate004",
+       "literate005", "literate006", "literate007", "literate008",
+       "literate009", "literate010", "literate011", "literate012",
+       "literate013", "literate014",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
