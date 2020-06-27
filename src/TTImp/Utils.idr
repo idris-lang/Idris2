@@ -30,13 +30,13 @@ findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-          findBindableNames True env' used aty ++
+          findBindableNames True env used aty ++
           findBindableNames True env' used retty
 findBindableNames arg env used (ILam fc rig p mn aty sc)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-      findBindableNames True env' used aty ++
+      findBindableNames True env used aty ++
       findBindableNames True env' used sc
 findBindableNames arg env used (IApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
@@ -65,6 +65,48 @@ findBindableNames arg env used (IAlternative fc u alts)
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
+
+export
+findAllNames : (env : List Name) -> RawImp -> List Name
+findAllNames env (IVar fc n)
+    = if not (n `elem` env) then [n] else []
+findAllNames env (IPi fc rig p mn aty retty)
+    = let env' = case mn of
+                      Nothing => env
+                      Just n => n :: env in
+          findAllNames env aty ++ findAllNames env' retty
+findAllNames env (ILam fc rig p mn aty sc)
+    = let env' = case mn of
+                      Nothing => env
+                      Just n => n :: env in
+      findAllNames env' aty ++ findAllNames env' sc
+findAllNames env (IApp fc fn av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IImplicitApp fc fn n av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IWithApp fc fn av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IAs fc _ n pat)
+    = n :: findAllNames env pat
+findAllNames env (IAs fc _ n pat)
+    = findAllNames env pat
+findAllNames env (IMustUnify fc r pat)
+    = findAllNames env pat
+findAllNames env (IDelayed fc r t)
+    = findAllNames env t
+findAllNames env (IDelay fc t)
+    = findAllNames env t
+findAllNames env (IForce fc t)
+    = findAllNames env t
+findAllNames env (IQuote fc t)
+    = findAllNames env t
+findAllNames env (IUnquote fc t)
+    = findAllNames env t
+findAllNames env (IAlternative fc u alts)
+    = concatMap (findAllNames env) alts
+-- We've skipped case, let and local - rather than guess where the
+-- name should be bound, leave it to the programmer
+findAllNames env tm = []
 
 -- Find the names in a type that affect the 'using' declarations (i.e. 
 -- the ones that mean the declaration will be added).

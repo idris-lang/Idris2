@@ -8,6 +8,7 @@ import Idris.Syntax
 
 import TTImp.TTImp
 import TTImp.Unelab
+import TTImp.Utils
 
 import Data.List
 import Data.Maybe
@@ -161,10 +162,21 @@ mutual
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
            if imp
-              then do arg' <- toPTerm appPrec arg
+              then do arg' <- toPTerm tyPrec arg
                       ret' <- toPTerm tyPrec ret
                       bracket p tyPrec (PPi fc rig Implicit n arg' ret')
-              else toPTerm p ret
+              else if needsBind n
+                      then do arg' <- toPTerm tyPrec arg
+                              ret' <- toPTerm tyPrec ret
+                              bracket p tyPrec (PPi fc rig Implicit n arg' ret')
+                      else toPTerm p ret
+    where
+      needsBind : Maybe Name -> Bool
+      needsBind (Just (UN t))
+          = let ns = findBindableNames False [] [] ret
+                allNs = findAllNames [] ret in
+                ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+      needsBind _ = False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg
            ret' <- toPTerm tyPrec ret
