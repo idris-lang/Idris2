@@ -2,6 +2,7 @@ module Idris.REPLOpts
 
 import Compiler.Common
 import Idris.Syntax
+import Parser.Unlit
 
 import Data.List
 import Data.Strings
@@ -20,6 +21,7 @@ record REPLOpts where
   showTypes : Bool
   evalMode : REPLEval
   mainfile : Maybe String
+  literateStyle : Maybe LiterateStyle
   source : String
   editor : String
   errorLine : Maybe Int
@@ -33,7 +35,11 @@ record REPLOpts where
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
-   = MkREPLOpts False NormaliseAll fname "" "vim" Nothing outmode "" cgs
+    = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim" Nothing outmode "" cgs
+  where
+    litStyle : Maybe String -> Maybe LiterateStyle
+    litStyle Nothing = Nothing
+    litStyle (Just fn) = isLitFile fn
 
 export
 data ROpts : Type where
@@ -59,7 +65,12 @@ setMainFile : {auto o : Ref ROpts REPLOpts} ->
               Maybe String -> Core ()
 setMainFile src
     = do opts <- get ROpts
-         put ROpts (record { mainfile = src } opts)
+         put ROpts (record { mainfile = src,
+                             literateStyle = litStyle src } opts)
+  where
+    litStyle : Maybe String -> Maybe LiterateStyle
+    litStyle Nothing = Nothing
+    litStyle (Just fn) = isLitFile fn
 
 export
 setSource : {auto o : Ref ROpts REPLOpts} ->
@@ -86,6 +97,13 @@ getSourceLine l
     findLine Z (l :: ls) = Just l
     findLine (S k) (l :: ls) = findLine k ls
     findLine _ [] = Nothing
+
+export
+getLitStyle : {auto o : Ref ROpts REPLOpts} ->
+              Core (Maybe LiterateStyle)
+getLitStyle
+    = do opts <- get ROpts
+         pure (literateStyle opts)
 
 export
 setCurrentElabSource : {auto o : Ref ROpts REPLOpts} ->
