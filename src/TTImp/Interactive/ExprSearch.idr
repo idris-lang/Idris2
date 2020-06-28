@@ -183,7 +183,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty defining all
                                             defining
                            hn <- uniqueName defs (map nameRoot vars) base
                            (idx, tm) <- newMeta fc rig env (UN hn) ty
-                                                (Hole (length env) False)
+                                                (Hole (length env) (holeInit False))
                                                 False
                            pure [tm]
                    else if holesOK opts

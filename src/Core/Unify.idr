@@ -505,6 +505,12 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          addDef (Resolved mref) newdef
          removeHole mref
   where
+    precise : Bool
+    precise
+        = case definition mdef of
+               Hole _ p => precisetype p
+               _ => False
+
     isSimple : Term vs -> Bool
     isSimple (Local _ _ _ _) = True
     isSimple (Ref _ _ _) = True
@@ -561,7 +567,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
             = do p' <- updateIVarsPi ivs p
                  if isLinear rig
                     then do t' <- updateIVars ivs t
-                            pure $ if inLam mode
+                            pure $ if inLam mode || precise
                                then (Pi linear p' t')
                                else (Pi top p' t')
                     else Just (Pi rig p' !(updateIVars ivs t))
@@ -1526,9 +1532,9 @@ giveUpConstraints
         = do defs <- get Ctxt
              case !(lookupDefExact (Resolved hid) (gamma defs)) of
                   Just (BySearch _ _ _) =>
-                         updateDef (Resolved hid) (const (Just (Hole 0 False)))
+                         updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
                   Just (Guess _ _ _) =>
-                         updateDef (Resolved hid) (const (Just (Hole 0 False)))
+                         updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
                   _ => pure ()
 
 -- Check whether any of the given hole references have the same solution

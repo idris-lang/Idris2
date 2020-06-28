@@ -50,6 +50,16 @@ defaultFlags : TypeFlags
 defaultFlags = MkTypeFlags False False
 
 public export
+record HoleFlags where
+  constructor MkHoleFlags
+  implbind : Bool -- stands for an implicitly bound name
+  precisetype : Bool -- don't generalise multiplicities when instantiating
+
+export
+holeInit : Bool -> HoleFlags
+holeInit b = MkHoleFlags b False
+
+public export
 data Def : Type where
     None : Def -- Not yet defined
     PMDef : (pminfo : PMDefInfo) ->
@@ -92,7 +102,7 @@ data Def : Type where
            Def
     Hole : (numlocs : Nat) -> -- Number of locals in scope at binding point
                               -- (mostly to help display)
-           (implbind : Bool) -> -- Does this stand for an implicitly bound name
+           HoleFlags ->
            Def
     BySearch : RigCount -> (maxdepth : Nat) -> (defining : Name) -> Def
     -- Constraints are integer references into the current map of
@@ -124,7 +134,7 @@ Show Def where
   show (ForeignDef a cs) = "<foreign def with arity " ++ show a ++
                            " " ++ show cs ++">"
   show (Builtin {arity} _) = "<builtin with arith " ++ show arity ++ ">"
-  show (Hole _ p) = "Hole" ++ if p then " [impl]" else ""
+  show (Hole _ p) = "Hole" ++ if implbind p then " [impl]" else ""
   show (BySearch c depth def) = "Search in " ++ show def
   show (Guess tm _ cs) = "Guess " ++ show tm ++ " when " ++ show cs
   show ImpBind = "Bound name"
