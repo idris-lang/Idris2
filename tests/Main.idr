@@ -67,7 +67,7 @@ idrisTests
        -- QTT and linearity related
        "linear001", "linear002", "linear003", "linear004", "linear005",
        "linear006", "linear007", "linear008", "linear009", "linear010",
-       "linear011",
+       "linear011", "linear012",
        -- Literate
        "literate001", "literate002", "literate003", "literate004",
        "literate005", "literate006", "literate007", "literate008",
