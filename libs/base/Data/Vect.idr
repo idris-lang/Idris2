@@ -789,6 +789,7 @@ transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
 --------------------------------------------------------------------------------
 -- These only work if the length is known at run time!
 
+public export
 implementation {k : Nat} -> Applicative (Vect k) where
     pure = replicate _
     fs <*> vs = zipWith apply fs vs
