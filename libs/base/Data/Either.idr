@@ -1,5 +1,7 @@
 module Data.Either
 
+%default total
+
 ||| True if the argument is Left, False otherwise
 public export
 isLeft : Either a b -> Bool
@@ -68,7 +70,6 @@ eitherToMaybe (Right x) = Just x
 -- Injectivity of constructors
 
 ||| Left is injective
-total
 leftInjective : {b : Type}
              -> {x : a}
              -> {y : a}
@@ -76,7 +77,6 @@ leftInjective : {b : Type}
 leftInjective Refl = Refl
 
 ||| Right is injective
-total
 rightInjective : {a : Type}
               -> {x : b}
               -> {y : b}

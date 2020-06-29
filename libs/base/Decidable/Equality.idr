@@ -3,6 +3,8 @@ module Decidable.Equality
 import Data.Maybe
 import Data.Nat
 
+%default total
+
 --------------------------------------------------------------------------------
 -- Decidable equality
 --------------------------------------------------------------------------------
@@ -11,19 +13,19 @@ import Data.Nat
 public export
 interface DecEq t where
   ||| Decide whether two elements of `t` are propositionally equal
-  total decEq : (x1 : t) -> (x2 : t) -> Dec (x1 = x2)
+  decEq : (x1 : t) -> (x2 : t) -> Dec (x1 = x2)
 
 --------------------------------------------------------------------------------
 -- Utility lemmas
 --------------------------------------------------------------------------------
 
 ||| The negation of equality is symmetric (follows from symmetry of equality)
-export total
+export
 negEqSym : forall a, b . (a = b -> Void) -> (b = a -> Void)
 negEqSym p h = p (sym h)
 
 ||| Everything is decidably equal to itself
-export total
+export
 decEqSelfIsYes : DecEq a => {x : a} -> decEq x x = Yes Refl
 decEqSelfIsYes {x} with (decEq x x)
   decEqSelfIsYes {x} | Yes Refl = Refl
@@ -40,7 +42,7 @@ implementation DecEq () where
 --------------------------------------------------------------------------------
 -- Booleans
 --------------------------------------------------------------------------------
-total trueNotFalse : True = False -> Void
+trueNotFalse : True = False -> Void
 trueNotFalse Refl impossible
 
 export
@@ -54,7 +56,7 @@ implementation DecEq Bool where
 -- Nat
 --------------------------------------------------------------------------------
 
-total ZnotS : Z = S n -> Void
+ZnotS : Z = S n -> Void
 ZnotS Refl impossible
 
 export
@@ -70,7 +72,7 @@ implementation DecEq Nat where
 -- Maybe
 --------------------------------------------------------------------------------
 
-total nothingNotJust : {x : t} -> (Nothing {ty = t} = Just x) -> Void
+nothingNotJust : {x : t} -> (Nothing {ty = t} = Just x) -> Void
 nothingNotJust Refl impossible
 
 export
@@ -196,4 +198,3 @@ implementation DecEq String where
              primitiveEq = believe_me (Refl {x})
              primitiveNotEq : forall x, y . x = y -> Void
              primitiveNotEq prf = believe_me {b = Void} ()
-

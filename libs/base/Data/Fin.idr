@@ -4,6 +4,8 @@ import public Data.Maybe
 import Data.Nat
 import Decidable.Equality
 
+%default total
+
 ||| Numbers strictly less than some bound.  The name comes from "finite sets".
 |||
 ||| It's probably not a good idea to use `Fin` for arithmetic, and they will be
@@ -111,7 +113,7 @@ last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
 
-public export total
+public export
 FSinjective : {f : Fin n} -> {f' : Fin n} -> (FS f = FS f') -> f = f'
 FSinjective Refl = Refl
 
@@ -165,7 +167,7 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
 -- DecEq
 --------------------------------------------------------------------------------
 
-export total
+export
 FZNotFS : {f : Fin n} -> FZ {k = n} = FS f -> Void
 FZNotFS Refl impossible
 
@@ -178,4 +180,3 @@ implementation DecEq (Fin n) where
       = case decEq f f' of
              Yes p => Yes $ cong FS p
              No p => No $ \h => p $ FSinjective {f = f} {f' = f'} h
-

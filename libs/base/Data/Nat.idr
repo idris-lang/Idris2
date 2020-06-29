@@ -241,7 +241,7 @@ data CmpNat : Nat -> Nat -> Type where
      CmpGT : (x : _) -> CmpNat (y + S x) y
 
 export
-total cmp : (x, y : Nat) -> CmpNat x y
+cmp : (x, y : Nat) -> CmpNat x y
 cmp Z Z     = CmpEQ
 cmp Z (S k) = CmpLT _
 cmp (S k) Z = CmpGT _
