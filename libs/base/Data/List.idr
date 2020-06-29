@@ -19,13 +19,12 @@ snoc xs x = xs ++ [x]
 public export
 length : List a -> Nat
 length []      = Z
-length (x::xs) = S (length xs)
+length (x::xs) = S $ length xs
 
 public export
 take : Nat -> List a -> List a
-take Z xs = []
-take (S k) [] = []
 take (S k) (x :: xs) = x :: take k xs
+take _ _ = []
 
 public export
 drop : (n : Nat) -> (xs : List a) -> List a
@@ -57,8 +56,7 @@ inBounds Z (x :: xs) = Yes InFirst
 inBounds (S k) (x :: xs) with (inBounds k xs)
   inBounds (S k) (x :: xs) | (Yes prf) = Yes (InLater prf)
   inBounds (S k) (x :: xs) | (No contra)
-      = No (\p => case p of
-                       InLater y => contra y)
+      = No $ \(InLater y) => contra y
 
 ||| Find a particular element of a list.
 |||
@@ -105,12 +103,11 @@ find p (x::xs) = if p x then Just x else find p xs
 public export
 lookupBy : (a -> a -> Bool) -> a -> List (a, b) -> Maybe b
 lookupBy p e []      = Nothing
-lookupBy p e (x::xs) =
-  let (l, r) = x in
-    if p e l then
-      Just r
-    else
-      lookupBy p e xs
+lookupBy p e ((l, r) :: xs) =
+  if p e l then
+    Just r
+  else
+    lookupBy p e xs
 
 ||| Find associated information in a list using Boolean equality.
 public export
@@ -348,7 +345,7 @@ head (x :: xs) = x
 public export
 tail : (l : List a) -> {auto ok : NonEmpty l} -> List a
 tail [] impossible
-tail (x :: xs) = xs
+tail (_ :: xs) = xs
 
 ||| Retrieve the last element of a non-empty list.
 ||| @ ok proof that the list is non-empty
@@ -363,20 +360,20 @@ last (x::y::ys) = last (y::ys)
 public export
 init : (l : List a) -> {auto ok : NonEmpty l} -> List a
 init [] impossible
-init [x] = []
+init [_] = []
 init (x::y::ys) = x :: init (y::ys)
 
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
 public export
 head' : List a -> Maybe a
 head' []      = Nothing
-head' (x::xs) = Just x
+head' (x::_) = Just x
 
 ||| Attempt to get the tail of a list. If the list is empty, return `Nothing`.
 export
 tail' : List a -> Maybe (List a)
 tail' []      = Nothing
-tail' (x::xs) = Just xs
+tail' (_::xs) = Just xs
 
 ||| Attempt to retrieve the last element of a non-empty list.
 |||
@@ -483,11 +480,8 @@ foldr1' f xs@(_::_) = Just (foldr1 f xs)
 ||| Check whether a list is sorted with respect to the default ordering for the type of its elements.
 export
 sorted : Ord a => List a -> Bool
-sorted []      = True
-sorted (x::xs) =
-  case xs of
-    Nil     => True
-    (y::ys) => x <= y && sorted (y::ys)
+sorted (x :: xs @ (y :: _)) = x <= y && sorted xs
+sorted _ = True
 
 ||| Merge two sorted lists using an arbitrary comparison
 ||| predicate. Note that the lists must have been sorted using this
@@ -539,13 +533,9 @@ sort = sortBy compare
 
 export
 isPrefixOfBy : (eq : a -> a -> Bool) -> (left, right : List a) -> Bool
-isPrefixOfBy p [] right        = True
-isPrefixOfBy p left []         = False
-isPrefixOfBy p (x::xs) (y::ys) =
-  if p x y then
-    isPrefixOfBy p xs ys
-  else
-    False
+isPrefixOfBy p [] _            = True
+isPrefixOfBy p _ []            = False
+isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 
 ||| The isPrefixOf function takes two lists and returns True iff the first list is a prefix of the second.
 export
