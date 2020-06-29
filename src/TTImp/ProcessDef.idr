@@ -795,10 +795,11 @@ processDef opts nest env fc n_in cs_in
 
     getClause : Either RawImp Clause -> Core (Maybe Clause)
     getClause (Left rawlhs)
-        = catch (do lhsp <- getImpossibleTerm env rawlhs
+        = catch (do lhsp <- getImpossibleTerm env nest rawlhs
                     log 3 $ "Generated impossible LHS: " ++ show lhsp
                     pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) True))
-                (\e => pure Nothing)
+                (\e => do log 5 $ "Error in getClause " ++ show e
+                          pure Nothing)
     getClause (Right c) = pure (Just c)
 
     checkCoverage : Int -> ClosedTerm -> RigCount ->

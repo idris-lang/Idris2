@@ -23,8 +23,8 @@ length [] = 0
 length (x::xs) = 1 + length xs
 
 ||| Show that the length function on vectors in fact calculates the length
-private
-lengthCorrect : (len : Nat) -> (xs : Vect len elem) -> length xs = len
+export
+lengthCorrect : (0 len : Nat) -> (xs : Vect len elem) -> length xs = len
 lengthCorrect Z     []        = Refl
 lengthCorrect (S n) (x :: xs) = rewrite lengthCorrect n xs in Refl
 

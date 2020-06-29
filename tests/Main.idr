@@ -47,18 +47,14 @@ idrisTests
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
+       "error011",
        -- Modules and imports
        "import001", "import002", "import003", "import004",
        -- Interactive editing support
        "interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",
        "interactive009", "interactive010", "interactive011", "interactive012",
-       "interactive013",
-       -- Literate
-       "literate001", "literate002", "literate003", "literate004",
-       "literate005", "literate006", "literate007", "literate008",
-       "literate009", "literate010", "literate011", "literate012",
-       "literate013",
+       "interactive013", "interactive014",
        -- Interfaces
        "interface001", "interface002", "interface003", "interface004",
        "interface005", "interface006", "interface007", "interface008",
@@ -71,7 +67,12 @@ idrisTests
        -- QTT and linearity related
        "linear001", "linear002", "linear003", "linear004", "linear005",
        "linear006", "linear007", "linear008", "linear009", "linear010",
-       "linear011",
+       "linear011", "linear012",
+       -- Literate
+       "literate001", "literate002", "literate003", "literate004",
+       "literate005", "literate006", "literate007", "literate008",
+       "literate009", "literate010", "literate011", "literate012",
+       "literate013", "literate014",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
@@ -96,7 +97,7 @@ idrisTests
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
-       "reg022", "reg023",
+       "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",

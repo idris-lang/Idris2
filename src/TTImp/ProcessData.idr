@@ -317,7 +317,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                   Nothing => pure []
                   Just ndef =>
                     case definition ndef of
-                         TCon _ _ _ _ _ mw _ _ =>
+                         TCon _ _ _ _ _ mw [] _ =>
                             do ok <- convert defs [] fullty (type ndef)
                                if ok then pure mw
                                      else do logTermNF 1 "Previous" [] (type ndef)

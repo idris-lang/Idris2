@@ -7,6 +7,7 @@ import Core.Env
 import Core.Metadata
 import Core.TT
 import Core.Unify
+import Core.Value
 
 import Idris.Resugar
 import Idris.Syntax
@@ -230,13 +231,13 @@ mkCon loc n
 
 updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 Name -> Name -> List Name -> List RawImp ->
+                 Name -> Name -> List Name -> List Name -> List RawImp ->
                  List (Name, RigCount, List FnOpt, (Bool, RawImp)) -> List (Name, List ImpClause) ->
                  Core ()
-updateIfaceSyn iname cn ps cs ms ds
+updateIfaceSyn iname cn impps ps cs ms ds
     = do syn <- get Syn
          ms' <- traverse totMeth ms
-         let info = MkIFaceInfo cn ps cs ms' ds
+         let info = MkIFaceInfo cn impps ps cs ms' ds
          put Syn (record { ifaces $= addName iname info } syn)
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
@@ -249,6 +250,13 @@ updateIfaceSyn iname cn ps cs ms ds
     totMeth (n, c, opts, t)
         = do let treq = findSetTotal opts
              pure (n, c, treq, t)
+
+-- Read the implicitly added parameters from an interface type, so that we
+-- know to substitute an implicit in when defining the implementation
+getImplParams : Term vars -> List Name
+getImplParams (Bind _ n (Pi _ Implicit _) sc)
+    = n :: getImplParams sc
+getImplParams _ = []
 
 export
 elabInterface : {vars : _} ->
@@ -267,6 +275,7 @@ elabInterface : {vars : _} ->
                 Core ()
 elabInterface {vars} fc vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
+         ns_iname <- inCurrentNS fullIName
          let conName_in = maybe (mkCon fc fullIName) id mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
@@ -282,9 +291,13 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
 
          ns_meths <- traverse (\mt => do n <- inCurrentNS (fst mt)
                                          pure (n, snd mt)) meth_decls
-         ns_iname <- inCurrentNS fullIName
+         defs <- get Ctxt
+         Just ty <- lookupTyExact ns_iname (gamma defs)
+              | Nothing => throw (UndefinedName fc iname)
+         let implParams = getImplParams ty
+
          updateIfaceSyn ns_iname conName
-                        (map fst params) (map snd constraints)
+                        implParams (map fst params) (map snd constraints)
                         ns_meths ds
   where
     nameCons : Int -> List (Maybe Name, RawImp) -> List (Name, RawImp)
