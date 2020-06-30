@@ -9,10 +9,6 @@ data CatList : (Type -> Type) -> Type -> Type where
   E : CatList q a 
   C : {0 q : Type -> Type} -> a -> q (Lazy (CatList q a)) -> CatList q a
   
--- %logging 5
-partial
 link : (Queue q) => CatList q a -> Lazy (CatList q a) -> CatList q a 
 link E s = s -- Just to satisfy totality for now.
-link (C x xs) s = C x (snoc xs s) -- can't solve constraint between 
-                                  -- Lazy (CatList q a) and CatList q a
--- %logging 0
+link (C x xs) s = C x (snoc xs s)
