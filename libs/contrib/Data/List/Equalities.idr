@@ -16,12 +16,6 @@ SnocNonEmpty : (xs : List a) -> (x : a) -> NonEmpty (xs `snoc` x)
 SnocNonEmpty []     _ = IsNonEmpty
 SnocNonEmpty (_::_) _ = IsNonEmpty
 
-||| (::) is injective
-export
-consInjective : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-                (x :: xs) = (y :: ys) -> (x = y, xs = ys)
-consInjective Refl = (Refl, Refl)
-
 ||| Two lists are equal, if their heads are equal and their tails are equal.
 export
 consCong2 : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
