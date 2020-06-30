@@ -9,7 +9,6 @@ Welcome to Idris 2.  Enjoy yourself!
 Main> :t main
 Main.main : IO ()
 Main> :c hello main
-compiling hello.ss with output to hello.so
-File hello.so written
+File build/exec/hello written
 Main> :q
 Bye for now!
