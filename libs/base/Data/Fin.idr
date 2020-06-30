@@ -22,6 +22,14 @@ implementation Uninhabited (Fin Z) where
   uninhabited (FS f) impossible
 
 export
+Uninhabited (FZ = FS k) where
+  uninhabited Refl impossible
+
+export
+Uninhabited (FS k = FZ) where
+  uninhabited Refl impossible
+
+export
 FSInjective : (m : Fin k) -> (n : Fin k) -> FS m = FS n -> m = n
 FSInjective left _ Refl = Refl
 
