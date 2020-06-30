@@ -1281,9 +1281,14 @@ mutual
 
     unifyWithLazyD _ _ mode loc env (NDelayed _ _ tmx) (NDelayed _ _ tmy)
        = unify (lower mode) loc env tmx tmy
-    unifyWithLazyD _ _ mode loc env (NDelayed _ r tmx) tmy
-       = do vs <- unify (lower mode) loc env tmx tmy
-            pure (record { addLazy = AddForce r } vs)
+    unifyWithLazyD _ _ mode loc env x@(NDelayed _ r tmx) tmy
+       = if isHoleApp tmy && not (umode mode == InMatch)
+            -- given type delayed, expected unknown, so let's wait and see
+            -- what the expected type turns out to be
+            then postpone True
+                          loc mode "Postponing in lazy" env x tmy
+            else do vs <- unify (lower mode) loc env tmx tmy
+                    pure (record { addLazy = AddForce r } vs)
     unifyWithLazyD _ _ mode loc env tmx (NDelayed _ r tmy)
        = do vs <- unify (lower mode) loc env tmx tmy
             pure (record { addLazy = AddDelay r } vs)
