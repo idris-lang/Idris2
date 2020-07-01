@@ -34,6 +34,8 @@ Library changes:
 * Added `Control.Monad.ST`, for update in-place via `STRef` (which is like
   `IORef`, but can escape from `IO`). Also added `Data.Ref` which provides an
   interface to both `IORef` and `STRef`.
+* Added `Control.ANSI` in `contrib`, for usage of ANSI escape codes for text
+  styling and cursor/screen control in terminals.
 
 Command-line options changes:
 
