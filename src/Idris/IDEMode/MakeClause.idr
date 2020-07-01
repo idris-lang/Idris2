@@ -52,3 +52,30 @@ makeWith n srcline
     mkWithPat mark indent lhs
         = pref mark (indent + 2) ++ lhs ++ "| with_pat = ?" ++
               showRHSName n ++ "_rhs"
+
+export
+makeCase : Bool -> Name -> String -> String
+makeCase brack n srcline
+    = let capp = ("case _ of", "case_val => ?" ++ show n) in
+          newLines capp
+  where
+    addBrackets : Bool -> String -> String
+    addBrackets False str = str
+    addBrackets True str = "(" ++ str ++ ")"
+
+    addCase : Nat -> (String, String) -> String
+    addCase n (c, pat)
+        = addBrackets brack $ c ++ "\n" ++
+              pack (replicate (n + (if brack then 6 else 5)) ' ') ++ pat
+
+    replaceStr : Nat -> String -> (String, String) -> String -> String
+    replaceStr indent rep new "" = ""
+    replaceStr indent rep new str
+        = if isPrefixOf rep str
+             then addCase indent new ++ pack (drop (length rep) (unpack str))
+             else assert_total $ strCons (prim__strHead str)
+                          (replaceStr (1 + indent) rep new
+                                      (prim__strTail str))
+
+    newLines : (String, String) -> String
+    newLines capp = replaceStr 0 ("?" ++ show n) capp srcline

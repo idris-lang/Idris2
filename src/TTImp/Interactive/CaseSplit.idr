@@ -84,6 +84,8 @@ getDefining tm
            Ref _ _ fn => Just fn
            _ => Nothing
 
+-- For the name on the lhs, return the function name being defined, the
+-- type name, and the possible constructors.
 findCons : {auto c : Ref Ctxt Defs} ->
            Name -> Term [] -> Core (SplitResult (Name, Name, List Name))
 findCons n lhs
@@ -102,7 +104,8 @@ findCons n lhs
                                             (CantSplitThis n
                                                ("Not a type constructor " ++
                                                   show res)))
-                             pure (OK (fn, tyn, cons))
+                             pure (OK (fn, !(toFullNames tyn),
+                                           !(traverse toFullNames cons)))
 
 findAllVars : Term vars -> List Name
 findAllVars (Bind _ x (PVar c p ty) sc)

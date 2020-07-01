@@ -51,7 +51,7 @@ mkArgs fc rigc env (NBind nfc x (Pi c p ty) sc)
          argTy <- quote empty env ty
          let argRig = rigMult rigc c
          (idx, arg) <- newMeta fc argRig env nm argTy
-                               (Hole (length env) False) False
+                               (Hole (length env) (holeInit False)) False
          setInvertible fc (Resolved idx)
          (rest, restTy) <- mkArgs fc rigc env
                               !(sc defs (toClosure defaultOpts env arg))
@@ -456,12 +456,16 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
                                     concrete defs argnf False) args
              pure ()
     concrete defs (NApp _ (NMeta n i _) _) True
-        = do Just (Hole _ True) <- lookupDefExact n (gamma defs)
+        = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | _ => throw (DeterminingArg fc n i [] top)
+             when (not (implbind b)) $
+                  throw (DeterminingArg fc n i [] top)
              pure ()
     concrete defs (NApp _ (NMeta n i _) _) False
-        = do Just (Hole _ True) <- lookupDefExact n (gamma defs)
+        = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | def => throw (CantSolveGoal fc [] top)
+             when (not (implbind b)) $
+                  throw (CantSolveGoal fc [] top)
              pure ()
     concrete defs tm atTop = pure ()
 

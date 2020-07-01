@@ -215,6 +215,8 @@ data EditResult : Type where
   DisplayEdit : List String -> EditResult
   EditError : String -> EditResult
   MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
+  MadeWith : Maybe String -> List String -> EditResult
+  MadeCase : Maybe String -> List String -> EditResult
 
 updateFile : {auto r : Ref ROpts REPLOpts} ->
              (List String -> List String) -> Core EditResult
@@ -232,7 +234,11 @@ rtrim : String -> String
 rtrim str = reverse (ltrim (reverse str))
 
 addClause : String -> Nat -> List String -> List String
-addClause c Z xs = rtrim c :: xs
+addClause c Z [] = rtrim c :: []
+addClause c Z (x :: xs)
+    = if all isSpace (unpack x)
+         then rtrim c :: x :: xs
+         else x :: addClause c Z xs
 addClause c (S k) (x :: xs) = x :: addClause c k xs
 addClause c (S k) [] = [c]
 
@@ -270,6 +276,17 @@ addMadeLemma lit n ty app line content
     addApp lit Z acc rest = reverse (insertInBlank lit acc) ++ rest
     addApp lit (S k) acc (x :: xs) = addApp lit k (x :: acc) xs
     addApp _ (S k) acc [] = reverse acc
+
+-- Replace a line; works for 'case' and 'with'
+addMadeCase : Maybe String -> List String -> Nat -> List String -> List String
+addMadeCase lit wapp line content
+    = addW line [] content
+  where
+    addW : Nat -> List String -> List String -> List String
+    addW Z acc (_ :: rest) = reverse acc ++ map (relit lit) wapp ++ rest
+    addW Z acc [] = [] -- shouldn't happen!
+    addW (S k) acc (x :: xs) = addW k (x :: acc) xs
+    addW (S k) acc [] = reverse acc
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -389,18 +406,35 @@ processEdit (MakeLemma upd line name)
                      Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                      let (markM,_) = isLitLine srcLine
-                     let markML : Nat = length (fromMaybe "" markM)
                      if upd
                         then updateFile (addMadeLemma markM name (show pty) pappstr
                                                       (max 0 (integerToNat (cast (line - 1)))))
                         else pure $ MadeLemma markM name pty pappstr
               _ => pure $ EditError "Can't make lifted definition"
 processEdit (MakeCase upd line name)
-    = pure $ EditError "Not implemented yet"
-processEdit (MakeWith upd line name)
-    = do Just l <- getSourceLine line
+    = do litStyle <- getLitStyle
+         syn <- get Syn
+         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
+         Just src <- getSourceLine line
               | Nothing => pure (EditError "Source line not available")
-         pure $ DisplayEdit [makeWith name l]
+         let Right l = unlit litStyle src
+              | Left err => pure (EditError "Invalid literate Idris")
+         let (markM, _) = isLitLine src
+         let c = lines $ makeCase brack name l
+         if upd
+            then updateFile (addMadeCase markM c (max 0 (integerToNat (cast (line - 1)))))
+            else pure $ MadeCase markM c
+processEdit (MakeWith upd line name)
+    = do litStyle <- getLitStyle
+         Just src <- getSourceLine line
+              | Nothing => pure (EditError "Source line not available")
+         let Right l = unlit litStyle src
+              | Left err => pure (EditError "Invalid literate Idris")
+         let (markM, _) = isLitLine src
+         let w = lines $ makeWith name l
+         if upd
+            then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
+            else pure $ MadeWith markM w
 
 public export
 data MissedResult : Type where
@@ -843,6 +877,8 @@ mutual
   displayResult  (Edited (DisplayEdit xs)) = printResult $ showSep "\n" xs
   displayResult  (Edited (EditError x)) = printError x
   displayResult  (Edited (MadeLemma lit name pty pappstr)) = printResult (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
+  displayResult  (Edited (MadeWith lit wapp)) = printResult $ showSep "\n" (map (relit lit) wapp)
+  displayResult  (Edited (MadeCase lit cstr)) = printResult $ showSep "\n" (map (relit lit) cstr)
   displayResult  (OptionsSet opts) = printResult $ showSep "\n" $ map show opts
   displayResult  _ = pure ()
 

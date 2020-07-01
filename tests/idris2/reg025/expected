@@ -1,0 +1,4 @@
+1/1: Building lift (lift.idr)
+Main> pbz_hole : {0 p : BNat -> Type} -> ((bn : BNat) -> p bn -> p (E bn)) -> ((bn : BNat) -> p bn -> p (O bn)) -> p BZ -> p BZ
+pbz_hole pe po pbz
+Main> Bye for now!

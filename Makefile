@@ -115,7 +115,7 @@ endif
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
-install-support: support
+install-support:
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
@@ -124,7 +124,7 @@ install-support: support
 	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
 	@${MAKE} -C support/c install
 
-install-libs: libs
+install-libs:
 	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}

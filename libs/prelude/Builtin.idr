@@ -174,3 +174,11 @@ believe_me = prim__believe_me _ _
 export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
+
+public export
+delay : a -> Lazy a
+delay x = Delay x
+
+public export
+force : Lazy a -> a
+force x = Force x

@@ -30,13 +30,13 @@ findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-          findBindableNames True env' used aty ++
+          findBindableNames True env used aty ++
           findBindableNames True env' used retty
 findBindableNames arg env used (ILam fc rig p mn aty sc)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-      findBindableNames True env' used aty ++
+      findBindableNames True env used aty ++
       findBindableNames True env' used sc
 findBindableNames arg env used (IApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
@@ -65,6 +65,46 @@ findBindableNames arg env used (IAlternative fc u alts)
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
+
+export
+findAllNames : (env : List Name) -> RawImp -> List Name
+findAllNames env (IVar fc n)
+    = if not (n `elem` env) then [n] else []
+findAllNames env (IPi fc rig p mn aty retty)
+    = let env' = case mn of
+                      Nothing => env
+                      Just n => n :: env in
+          findAllNames env aty ++ findAllNames env' retty
+findAllNames env (ILam fc rig p mn aty sc)
+    = let env' = case mn of
+                      Nothing => env
+                      Just n => n :: env in
+      findAllNames env' aty ++ findAllNames env' sc
+findAllNames env (IApp fc fn av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IImplicitApp fc fn n av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IWithApp fc fn av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IAs fc _ n pat)
+    = n :: findAllNames env pat
+findAllNames env (IMustUnify fc r pat)
+    = findAllNames env pat
+findAllNames env (IDelayed fc r t)
+    = findAllNames env t
+findAllNames env (IDelay fc t)
+    = findAllNames env t
+findAllNames env (IForce fc t)
+    = findAllNames env t
+findAllNames env (IQuote fc t)
+    = findAllNames env t
+findAllNames env (IUnquote fc t)
+    = findAllNames env t
+findAllNames env (IAlternative fc u alts)
+    = concatMap (findAllNames env) alts
+-- We've skipped case, let and local - rather than guess where the
+-- name should be bound, leave it to the programmer
+findAllNames env tm = []
 
 -- Find the names in a type that affect the 'using' declarations (i.e. 
 -- the ones that mean the declaration will be added).
@@ -95,97 +135,117 @@ findIBindVars (IAlternative fc u alts)
 findIBindVars tm = []
 
 mutual
-  export
-  substNames : List Name -> List (Name, RawImp) ->
-               RawImp -> RawImp
-  substNames bound ps (IVar fc n)
+  -- Substitute for either an explicit variable name, or a bound variable name
+  substNames' : Bool -> List Name -> List (Name, RawImp) ->
+                RawImp -> RawImp
+  substNames' False bound ps (IVar fc n)
       = if not (n `elem` bound)
            then case lookup n ps of
                      Just t => t
                      _ => IVar fc n
            else IVar fc n
-  substNames bound ps (IPi fc r p mn argTy retTy)
+  substNames' True bound ps (IBindVar fc n)
+      = if not (UN n `elem` bound)
+           then case lookup (UN n) ps of
+                     Just t => t
+                     _ => IBindVar fc n
+           else IBindVar fc n
+  substNames' bvar bound ps (IPi fc r p mn argTy retTy)
       = let bound' = maybe bound (\n => n :: bound) mn in
-            IPi fc r p mn (substNames bound ps argTy)
-                          (substNames bound' ps retTy)
-  substNames bound ps (ILam fc r p mn argTy scope)
+            IPi fc r p mn (substNames' bvar bound ps argTy)
+                          (substNames' bvar bound' ps retTy)
+  substNames' bvar bound ps (ILam fc r p mn argTy scope)
       = let bound' = maybe bound (\n => n :: bound) mn in
-            ILam fc r p mn (substNames bound ps argTy)
-                           (substNames bound' ps scope)
-  substNames bound ps (ILet fc r n nTy nVal scope)
+            ILam fc r p mn (substNames' bvar bound ps argTy)
+                           (substNames' bvar bound' ps scope)
+  substNames' bvar bound ps (ILet fc r n nTy nVal scope)
       = let bound' = n :: bound in
-            ILet fc r n (substNames bound ps nTy)
-                        (substNames bound ps nVal)
-                        (substNames bound' ps scope)
-  substNames bound ps (ICase fc y ty xs)
-      = ICase fc (substNames bound ps y) (substNames bound ps ty)
-                 (map (substNamesClause bound ps) xs)
-  substNames bound ps (ILocal fc xs y)
+            ILet fc r n (substNames' bvar bound ps nTy)
+                        (substNames' bvar bound ps nVal)
+                        (substNames' bvar bound' ps scope)
+  substNames' bvar bound ps (ICase fc y ty xs)
+      = ICase fc (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
+                 (map (substNamesClause' bvar bound ps) xs)
+  substNames' bvar bound ps (ILocal fc xs y)
       = let bound' = definedInBlock [] xs ++ bound in
-            ILocal fc (map (substNamesDecl bound ps) xs)
-                      (substNames bound' ps y)
-  substNames bound ps (IApp fc fn arg)
-      = IApp fc (substNames bound ps fn) (substNames bound ps arg)
-  substNames bound ps (IImplicitApp fc fn y arg)
-      = IImplicitApp fc (substNames bound ps fn) y (substNames bound ps arg)
-  substNames bound ps (IWithApp fc fn arg)
-      = IWithApp fc (substNames bound ps fn) (substNames bound ps arg)
-  substNames bound ps (IAlternative fc y xs)
-      = IAlternative fc y (map (substNames bound ps) xs)
-  substNames bound ps (ICoerced fc y)
-      = ICoerced fc (substNames bound ps y)
-  substNames bound ps (IAs fc s y pattern)
-      = IAs fc s y (substNames bound ps pattern)
-  substNames bound ps (IMustUnify fc r pattern)
-      = IMustUnify fc r (substNames bound ps pattern)
-  substNames bound ps (IDelayed fc r t)
-      = IDelayed fc r (substNames bound ps t)
-  substNames bound ps (IDelay fc t)
-      = IDelay fc (substNames bound ps t)
-  substNames bound ps (IForce fc t)
-      = IForce fc (substNames bound ps t)
-  substNames bound ps tm = tm
+            ILocal fc (map (substNamesDecl' bvar bound ps) xs)
+                      (substNames' bvar bound' ps y)
+  substNames' bvar bound ps (IApp fc fn arg)
+      = IApp fc (substNames' bvar bound ps fn) (substNames' bvar bound ps arg)
+  substNames' bvar bound ps (IImplicitApp fc fn y arg)
+      = IImplicitApp fc (substNames' bvar bound ps fn) y (substNames' bvar bound ps arg)
+  substNames' bvar bound ps (IWithApp fc fn arg)
+      = IWithApp fc (substNames' bvar bound ps fn) (substNames' bvar bound ps arg)
+  substNames' bvar bound ps (IAlternative fc y xs)
+      = IAlternative fc y (map (substNames' bvar bound ps) xs)
+  substNames' bvar bound ps (ICoerced fc y)
+      = ICoerced fc (substNames' bvar bound ps y)
+  substNames' bvar bound ps (IAs fc s y pattern)
+      = IAs fc s y (substNames' bvar bound ps pattern)
+  substNames' bvar bound ps (IMustUnify fc r pattern)
+      = IMustUnify fc r (substNames' bvar bound ps pattern)
+  substNames' bvar bound ps (IDelayed fc r t)
+      = IDelayed fc r (substNames' bvar bound ps t)
+  substNames' bvar bound ps (IDelay fc t)
+      = IDelay fc (substNames' bvar bound ps t)
+  substNames' bvar bound ps (IForce fc t)
+      = IForce fc (substNames' bvar bound ps t)
+  substNames' bvar bound ps tm = tm
 
-  export
-  substNamesClause : List Name -> List (Name, RawImp) ->
-                     ImpClause -> ImpClause
-  substNamesClause bound ps (PatClause fc lhs rhs)
+  substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
+                      ImpClause -> ImpClause
+  substNamesClause' bvar bound ps (PatClause fc lhs rhs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
                         ++ bound in
-            PatClause fc (substNames [] [] lhs)
-                         (substNames bound' ps rhs)
-  substNamesClause bound ps (WithClause fc lhs wval flags cs)
+            PatClause fc (substNames' bvar [] [] lhs)
+                         (substNames' bvar bound' ps rhs)
+  substNamesClause' bvar bound ps (WithClause fc lhs wval flags cs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
                         ++ bound in
-            WithClause fc (substNames [] [] lhs)
-                          (substNames bound' ps wval) flags cs
-  substNamesClause bound ps (ImpossibleClause fc lhs)
-      = ImpossibleClause fc (substNames bound [] lhs)
+            WithClause fc (substNames' bvar [] [] lhs)
+                          (substNames' bvar bound' ps wval) flags cs
+  substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
+      = ImpossibleClause fc (substNames' bvar bound [] lhs)
 
-  substNamesTy : List Name -> List (Name, RawImp) ->
+  substNamesTy' : Bool -> List Name -> List (Name, RawImp) ->
                   ImpTy -> ImpTy
-  substNamesTy bound ps (MkImpTy fc n ty)
-      = MkImpTy fc n (substNames bound ps ty)
+  substNamesTy' bvar bound ps (MkImpTy fc n ty)
+      = MkImpTy fc n (substNames' bvar bound ps ty)
 
-  substNamesData : List Name -> List (Name, RawImp) ->
-                   ImpData -> ImpData
-  substNamesData bound ps (MkImpData fc n con opts dcons)
-      = MkImpData fc n (substNames bound ps con) opts
-                  (map (substNamesTy bound ps) dcons)
-  substNamesData bound ps (MkImpLater fc n con)
-      = MkImpLater fc n (substNames bound ps con)
+  substNamesData' : Bool -> List Name -> List (Name, RawImp) ->
+                    ImpData -> ImpData
+  substNamesData' bvar bound ps (MkImpData fc n con opts dcons)
+      = MkImpData fc n (substNames' bvar bound ps con) opts
+                  (map (substNamesTy' bvar bound ps) dcons)
+  substNamesData' bvar bound ps (MkImpLater fc n con)
+      = MkImpLater fc n (substNames' bvar bound ps con)
 
-  substNamesDecl : List Name -> List (Name, RawImp ) ->
+  substNamesDecl' : Bool -> List Name -> List (Name, RawImp ) ->
                    ImpDecl -> ImpDecl
-  substNamesDecl bound ps (IClaim fc r vis opts td)
-      = IClaim fc r vis opts (substNamesTy bound ps td)
-  substNamesDecl bound ps (IDef fc n cs)
-      = IDef fc n (map (substNamesClause bound ps) cs)
-  substNamesDecl bound ps (IData fc vis d)
-      = IData fc vis (substNamesData bound ps d)
-  substNamesDecl bound ps (INamespace fc ns ds)
-      = INamespace fc ns (map (substNamesDecl bound ps) ds)
-  substNamesDecl bound ps d = d
+  substNamesDecl' bvar bound ps (IClaim fc r vis opts td)
+      = IClaim fc r vis opts (substNamesTy' bvar bound ps td)
+  substNamesDecl' bvar bound ps (IDef fc n cs)
+      = IDef fc n (map (substNamesClause' bvar bound ps) cs)
+  substNamesDecl' bvar bound ps (IData fc vis d)
+      = IData fc vis (substNamesData' bvar bound ps d)
+  substNamesDecl' bvar bound ps (INamespace fc ns ds)
+      = INamespace fc ns (map (substNamesDecl' bvar bound ps) ds)
+  substNamesDecl' bvar bound ps d = d
+
+export
+substNames : List Name -> List (Name, RawImp) ->
+             RawImp -> RawImp
+substNames = substNames' False
+
+export
+substBindVars : List Name -> List (Name, RawImp) ->
+                RawImp -> RawImp
+substBindVars = substNames' True
+
+export
+substNamesClause : List Name -> List (Name, RawImp) ->
+                   ImpClause -> ImpClause
+substNamesClause = substNamesClause' False
 
 mutual
   export

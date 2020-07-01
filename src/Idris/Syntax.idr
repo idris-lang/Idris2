@@ -593,6 +593,7 @@ public export
 record IFaceInfo where
   constructor MkIFaceInfo
   iconstructor : Name
+  implParams : List Name
   params : List Name
   parents : List RawImp
   methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
@@ -601,8 +602,9 @@ record IFaceInfo where
 
 export
 TTC IFaceInfo where
-  toBuf b (MkIFaceInfo ic ps cs ms ds)
+  toBuf b (MkIFaceInfo ic impps ps cs ms ds)
       = do toBuf b ic
+           toBuf b impps
            toBuf b ps
            toBuf b cs
            toBuf b ms
@@ -610,11 +612,12 @@ TTC IFaceInfo where
 
   fromBuf b
       = do ic <- fromBuf b
+           impps <- fromBuf b
            ps <- fromBuf b
            cs <- fromBuf b
            ms <- fromBuf b
            ds <- fromBuf b
-           pure (MkIFaceInfo ic ps cs ms ds)
+           pure (MkIFaceInfo ic impps ps cs ms ds)
 
 -- If you update this, update 'extendAs' in Desugar to keep it up to date
 -- when reading imports

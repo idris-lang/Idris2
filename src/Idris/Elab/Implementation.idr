@@ -182,7 +182,8 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
                -- 2. Elaborate top level function types for this interface
                defs <- get Ctxt
-               fns <- topMethTypes [] impName methImps impsp (params cdata)
+               fns <- topMethTypes [] impName methImps impsp
+                                      (implParams cdata) (params cdata)
                                       (map fst (methods cdata))
                                       (methods cdata)
                traverse_ (processDecl [] nest env) (map mkTopMethDecl fns)
@@ -316,11 +317,11 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     -- in later method types (specifically, putting implicits in)
     topMethType : List (Name, RawImp) ->
                   Name -> List (Name, RigCount, RawImp) ->
-                  List String -> List Name -> List Name ->
+                  List String -> List Name -> List Name -> List Name ->
                   (Name, RigCount, Maybe TotalReq, (Bool, RawImp)) ->
                   Core ((Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp),
                            List (Name, RawImp))
-    topMethType methupds impName methImps impsp pnames allmeths (mn, c, treq, (d, mty_in))
+    topMethType methupds impName methImps impsp imppnames pnames allmeths (mn, c, treq, (d, mty_in))
         = do -- Get the specialised type by applying the method to the
              -- parameters
              n <- inCurrentNS (methName mn)
@@ -335,9 +336,23 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
              -- parameters are passed through to any earlier methods which
              -- appear in the type
              let mty_in = substNames vars methupds mty_in
+
+             -- Substitute _ in for the implicit parameters, then
+             -- substitute in the explicit parameters.
+             let mty_iparams
+                   = substBindVars vars
+                                (map (\n => (n, Implicit fc False)) imppnames)
+                                mty_in
+             let mty_params
+                   = substNames vars (zip pnames ps) mty_iparams
+             log 5 $ "Substitute implicits " ++ show imppnames ++
+                     " parameters " ++ show (zip pnames ps) ++
+                     " "  ++ show mty_in ++ " is " ++
+                     show mty_params
+
              let mbase = bindImps methImps $
                          bindConstraints fc AutoImplicit cons $
-                         substNames vars (zip pnames ps) mty_in
+                         mty_params
              let ibound = findImplicits mbase
 
              mty <- bindTypeNamesUsed ibound vars mbase
@@ -358,13 +373,14 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
     topMethTypes : List (Name, RawImp) ->
                    Name -> List (Name, RigCount, RawImp) ->
-                   List String -> List Name -> List Name ->
+                   List String ->
+                   List Name -> List Name -> List Name ->
                    List (Name, RigCount, Maybe TotalReq, (Bool, RawImp)) ->
                    Core (List (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp))
-    topMethTypes upds impName methImps impsp pnames allmeths [] = pure []
-    topMethTypes upds impName methImps impsp pnames allmeths (m :: ms)
-        = do (m', newupds) <- topMethType upds impName methImps impsp pnames allmeths m
-             ms' <- topMethTypes (newupds ++ upds) impName methImps impsp pnames allmeths ms
+    topMethTypes upds impName methImps impsp imppnames pnames allmeths [] = pure []
+    topMethTypes upds impName methImps impsp imppnames pnames allmeths (m :: ms)
+        = do (m', newupds) <- topMethType upds impName methImps impsp imppnames pnames allmeths m
+             ms' <- topMethTypes (newupds ++ upds) impName methImps impsp imppnames pnames allmeths ms
              pure (m' :: ms')
 
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
