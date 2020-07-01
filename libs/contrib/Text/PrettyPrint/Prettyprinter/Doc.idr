@@ -1,4 +1,4 @@
-module Text.PrettyPrint.Doc
+module Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
 import Data.Maybe

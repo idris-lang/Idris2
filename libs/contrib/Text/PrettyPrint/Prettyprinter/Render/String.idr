@@ -1,8 +1,8 @@
-module Text.PrettyPrint.Render.String
+module Text.PrettyPrint.Prettyprinter.Render.String
 
 import Data.Strings
 import Data.String.Extra
-import Text.PrettyPrint.Doc
+import Text.PrettyPrint.Prettyprinter.Doc
 
 %default total
 

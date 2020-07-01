@@ -1,6 +1,6 @@
-module Text.PrettyPrint.Symbols
+module Text.PrettyPrint.Prettyprinter.Symbols
 
-import Text.PrettyPrint.Doc
+import Text.PrettyPrint.Prettyprinter.Doc
 
 %default total
 

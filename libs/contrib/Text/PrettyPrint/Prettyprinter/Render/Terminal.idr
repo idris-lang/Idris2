@@ -1,10 +1,10 @@
-module Text.PrettyPrint.Render.Terminal
+module Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import Data.Maybe
 import Data.Strings
 import Control.ANSI
 import Control.Monad.ST
-import Text.PrettyPrint.Doc
+import Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering
 
