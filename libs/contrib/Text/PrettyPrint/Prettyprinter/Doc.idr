@@ -43,8 +43,8 @@ data FusionDepth : Type where
 public export
 data Doc : Type -> Type where
   Empty : Doc ann
-  Chara : (c : Char) -> Doc ann                            -- Invariant: not '\n'
-  Text : (len : Int) -> (text : String) -> Doc ann                    -- Invariant: at least two characters long and no '\n'
+  Chara : (c : Char) -> Doc ann                      -- Invariant: not '\n'
+  Text : (len : Int) -> (text : String) -> Doc ann   -- Invariant: at least two characters long and no '\n'
   Line : Doc ann
   FlatAlt : Doc ann -> Doc ann -> Doc ann
   Cat : Doc ann -> Doc ann -> Doc ann
@@ -225,7 +225,7 @@ fillBreak f x  = width x (\w => if w > f
 ||| Concatenate all documents element-wise with a binary function.
 export
 concatWith : (Doc ann -> Doc ann -> Doc ann) -> List (Doc ann) -> Doc ann
-concatWith f [] = neutral -- foldr f Empty []
+concatWith f [] = neutral
 concatWith f (x :: xs) = foldl f x xs
 
 ||| Concatenates all documents horizontally with `(<+>)`.
@@ -436,10 +436,10 @@ fuse depth (Cat (Text lx x) (Cat (Text ly y) z)) =
       fuse depth $ assert_smaller (Cat (Text lx x) (Cat (Text ly y) z)) (Cat sub z)
 fuse depth (Cat (Cat x (Chara y)) z) =
   let sub = fuse depth (Cat (Chara y) z) in
-      assert_total $ fuse depth (Cat x sub) -- FIXME: ARE WE SURE?
+      assert_total $ fuse depth (Cat x sub)
 fuse depth (Cat (Cat x (Text ly y)) z) =
   let sub = fuse depth (Cat (Text ly y) z) in
-      assert_total $ fuse depth (Cat x sub) -- FIXME: ARE WE SURE?
+      assert_total $ fuse depth (Cat x sub)
 fuse depth (Cat x y) = Cat (fuse depth x) (fuse depth y)
 fuse depth (Nest i (Nest j x)) = fuse depth $ assert_smaller (Nest i (Nest j x)) (Nest (i + j) x)
 fuse depth (Nest _ Empty) = Empty
@@ -644,7 +644,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
                                                 _ => i in
                                       SLine i' x
     best nl cc c@(Cons i (FlatAlt x y) ds) = best nl cc $ assert_smaller c (Cons i x ds)
-    best nl cc (Cons i (Cat x y) ds) = assert_total $ best nl cc (Cons i x (Cons i y ds)) -- FIXME: check totality
+    best nl cc (Cons i (Cat x y) ds) = assert_total $ best nl cc (Cons i x (Cons i y ds))
     best nl cc c@(Cons i (Nest j x) ds) = best nl cc $ assert_smaller c (Cons (i + j) x ds)
     best nl cc c@(Cons i (Union x y) ds) = let x' = best nl cc $ assert_smaller c (Cons i x ds)
                                                y' = best nl cc $ assert_smaller c (Cons i y ds) in
