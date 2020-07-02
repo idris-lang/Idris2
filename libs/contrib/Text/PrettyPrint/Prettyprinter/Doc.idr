@@ -43,14 +43,14 @@ data FusionDepth : Type where
 public export
 data Doc : Type -> Type where
   Empty : Doc ann
-  Chara : (c : Char) -> Doc ann                      -- Invariant: not '\n'
-  Text : (len : Int) -> (text : String) -> Doc ann   -- Invariant: at least two characters long and no '\n'
+  Chara : (c : Char) -> Doc ann                         -- Invariant: not '\n'
+  Text : (len : Int) -> (text : String) -> Doc ann      -- Invariant: at least two characters long and no '\n'
   Line : Doc ann
-  FlatAlt : Doc ann -> Doc ann -> Doc ann
+  FlatAlt : Lazy (Doc ann) -> Lazy (Doc ann) -> Doc ann
   Cat : Doc ann -> Doc ann -> Doc ann
   Nest : (i : Int) -> Doc ann -> Doc ann
-  Union : Doc ann -> Doc ann -> Doc ann              -- Invariant: the first line of the first document should be
-                                                     -- longer than the first lines of the second one
+  Union : Lazy (Doc ann) -> Lazy (Doc ann) -> Doc ann   -- Invariant: the first line of the first document should be
+                                                        -- longer than the first lines of the second one
   Column : (Int -> Doc ann) -> Doc ann
   WithPageWidth : (PageWidth -> Doc ann) -> Doc ann
   Nesting : (Int -> Doc ann) -> Doc ann
@@ -200,7 +200,7 @@ group x = case changesUponFlattening x of
 ||| By default renders the first document, When grouped renders the second, with
 ||| the first as fallback when there is not enough space.
 export
-flatAlt : Doc ann -> Doc ann -> Doc ann
+flatAlt : Lazy (Doc ann) -> Lazy (Doc ann) -> Doc ann
 flatAlt = FlatAlt
 
 ||| Advances to the next line and indents to the current nesting level.
@@ -228,7 +228,7 @@ concatWith : (Doc ann -> Doc ann -> Doc ann) -> List (Doc ann) -> Doc ann
 concatWith f [] = neutral
 concatWith f (x :: xs) = foldl f x xs
 
-||| Concatenates all documents horizontally with `(<+>)`.
+||| Concatenates all documents horizontally with `(<++>)`.
 export
 hsep : List (Doc ann) -> Doc ann
 hsep = concatWith (<++>)
@@ -462,8 +462,8 @@ fuse depth x = x
 public export
 data SimpleDocStream : Type -> Type where
   SEmpty : SimpleDocStream ann
-  SChar : (c : Char) -> (rest : SimpleDocStream ann) -> SimpleDocStream ann
-  SText : (len : Int) -> (text : String) -> (rest : SimpleDocStream ann) -> SimpleDocStream ann
+  SChar : (c : Char) -> (rest : Lazy (SimpleDocStream ann)) -> SimpleDocStream ann
+  SText : (len : Int) -> (text : String) -> (rest : Lazy (SimpleDocStream ann)) -> SimpleDocStream ann
   SLine : (i : Int) -> (rest : SimpleDocStream ann) -> SimpleDocStream ann
   SAnnPush : ann -> (rest : SimpleDocStream ann) -> SimpleDocStream ann
   SAnnPop : (rest : SimpleDocStream ann) -> SimpleDocStream ann
@@ -481,8 +481,8 @@ alterAnnotationsS re = fromMaybe internalError . go []
   where
     go : List AnnotationRemoval -> SimpleDocStream ann -> Maybe (SimpleDocStream ann')
     go stack SEmpty = pure SEmpty
-    go stack (SChar c rest) = SChar c <$> go stack rest
-    go stack (SText l t rest) = SText l t <$> go stack rest
+    go stack (SChar c rest) = SChar c . delay <$> go stack rest
+    go stack (SText l t rest) = SText l t . delay <$> go stack rest
     go stack (SLine l rest) = SLine l <$> go stack rest
     go stack (SAnnPush ann rest) = case re ann of
       Nothing => go (Remove :: stack) rest
@@ -530,8 +530,8 @@ collectAnnotations f (SAnnPop rest) = collectAnnotations f rest
 export
 traverse : Applicative f => (ann -> f ann') -> SimpleDocStream ann -> f (SimpleDocStream ann')
 traverse f SEmpty = pure SEmpty
-traverse f (SChar c rest) = SChar c <$> traverse f rest
-traverse f (SText l t rest) = SText l t <$> traverse f rest
+traverse f (SChar c rest) = SChar c . delay <$> traverse f rest
+traverse f (SText l t rest) = SText l t . delay <$> traverse f rest
 traverse f (SLine l rest) = SLine l <$> traverse f rest
 traverse f (SAnnPush ann rest) = SAnnPush <$> f ann <*> traverse f rest
 traverse f (SAnnPop rest) = SAnnPop <$> traverse f rest
@@ -557,8 +557,8 @@ removeTrailingWhitespace = fromMaybe internalError . go (RecordedWithespace [] 0
 
     go : WhitespaceStrippingState -> SimpleDocStream ann -> Maybe (SimpleDocStream ann)
     go (AnnotationLevel _) SEmpty = pure SEmpty
-    go l@(AnnotationLevel _) (SChar c rest) = SChar c <$> go l rest
-    go l@(AnnotationLevel _) (SText lt text rest) = SText lt text <$> go l rest
+    go l@(AnnotationLevel _) (SChar c rest) = SChar c . delay <$> go l rest
+    go l@(AnnotationLevel _) (SText lt text rest) = SText lt text . delay <$> go l rest
     go l@(AnnotationLevel _) (SLine i rest) = SLine i <$> go l rest
     go (AnnotationLevel l) (SAnnPush ann rest) = SAnnPush ann <$> go (AnnotationLevel (l + 1)) rest
     go (AnnotationLevel l) (SAnnPop rest) =
@@ -627,7 +627,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
     initialIndentation (SAnnPop s) = initialIndentation s
     initialIndentation _ = Nothing
 
-    selectNicer : Int -> Int -> SimpleDocStream ann -> SimpleDocStream ann -> SimpleDocStream ann
+    selectNicer : Int -> Int -> SimpleDocStream ann -> Lazy (SimpleDocStream ann) -> SimpleDocStream ann
     selectNicer lineIndent currentColumn x y =
       if fits lineIndent currentColumn (initialIndentation y) x then x else y
 
@@ -647,7 +647,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
     best nl cc (Cons i (Cat x y) ds) = assert_total $ best nl cc (Cons i x (Cons i y ds))
     best nl cc c@(Cons i (Nest j x) ds) = best nl cc $ assert_smaller c (Cons (i + j) x ds)
     best nl cc c@(Cons i (Union x y) ds) = let x' = best nl cc $ assert_smaller c (Cons i x ds)
-                                               y' = best nl cc $ assert_smaller c (Cons i y ds) in
+                                               y' = delay $ best nl cc $ assert_smaller c (Cons i y ds) in
                                                selectNicer nl cc x' y'
     best nl cc c@(Cons i (Column f) ds) = best nl cc $ assert_smaller c (Cons i (f cc) ds)
     best nl cc c@(Cons i (WithPageWidth f) ds) = best nl cc $ assert_smaller c (Cons i (f pageWidth_) ds)
@@ -659,23 +659,22 @@ export
 layoutUnbounded : Doc ann -> SimpleDocStream ann
 layoutUnbounded = layoutWadlerLeijen (\_, _, _, sdoc => True) Unbounded
 
+fits : Int -> SimpleDocStream ann -> Bool
+fits w s = if w < 0 then False
+  else case s of
+            SEmpty => True
+            SChar _ x => fits (w - 1) x
+            SText l _ x => fits (w - l) x
+            SLine i x => True
+            SAnnPush _ x => fits w x
+            SAnnPop x => fits w x
+
 ||| The default layout algorithm.
 export
 layoutPretty : LayoutOptions -> Doc ann -> SimpleDocStream ann
 layoutPretty (MkLayoutOptions pageWidth_@(AvailablePerLine lineLength ribbonFraction)) =
     layoutWadlerLeijen (\lineIndent, currentColumn, _, sdoc =>
       fits (remainingWidth lineLength ribbonFraction lineIndent currentColumn) sdoc) pageWidth_
-  where
-    fits : Int -> SimpleDocStream ann -> Bool
-    fits w s = if w < 0
-      then False
-      else case s of
-                SEmpty => True
-                SChar _ x => fits (w - 1) x
-                SText l _ x => fits (w - l) x
-                SLine i x => True
-                SAnnPush _ x => fits w x
-                SAnnPop x => fits w x
 layoutPretty (MkLayoutOptions Unbounded) = layoutUnbounded
 
 ||| Layout algorithm with more lookahead than layoutPretty.
@@ -685,7 +684,7 @@ layoutSmart (MkLayoutOptions pageWidth_@(AvailablePerLine lineLength ribbonFract
     layoutWadlerLeijen fits pageWidth_
   where
     fits : Int -> Int -> Maybe Int -> SimpleDocStream ann -> Bool
-    fits lineIndent currentColumn initialIndentY = go availableWidth
+    fits lineIndent currentColumn initialIndentY sdoc = go availableWidth sdoc
       where
         availableWidth : Int
         availableWidth = remainingWidth lineLength ribbonFraction lineIndent currentColumn
