@@ -87,8 +87,7 @@ which you can run:
 ::
 
     $ idris2 hello.idr -o hello
-    compiling hello.ss with output to hello.so
-    $ ./build/exec/hello.so
+    $ ./build/exec/hello
     Hello world
 
 Please note that the dollar sign ``$`` indicates the shell prompt!

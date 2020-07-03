@@ -143,9 +143,9 @@ We can test these functions at the Idris prompt:
 ::
 
     Main> plus (S (S Z)) (S (S Z))
-    S (S (S (S Z)))
+    4
     Main> mult (S (S (S Z))) (plus (S (S Z)) (S (S Z)))
-    S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))
+    12
 
 Like arithmetic operations, integer literals are also overloaded using
 interfaces, meaning that we can also test the functions as follows:
@@ -153,9 +153,9 @@ interfaces, meaning that we can also test the functions as follows:
 ::
 
     Idris> plus 2 2
-    S (S (S (S Z)))
+    4
     Idris> mult 3 (plus 2 2)
-    S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))
+    12
 
 You may wonder, by the way, why we have unary natural numbers when our
 computers have perfectly good integer arithmetic built in. The reason

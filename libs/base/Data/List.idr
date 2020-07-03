@@ -44,13 +44,13 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
     ||| Valid indices can be extended
     InLater : InBounds k xs -> InBounds (S k) (x :: xs)
 
-export
+public export
 Uninhabited (InBounds k []) where
     uninhabited InFirst impossible
     uninhabited (InLater _) impossible
 
 ||| Decide whether `k` is a valid index into `xs`
-export
+public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
 inBounds k [] = No uninhabited
 inBounds Z (x :: xs) = Yes InFirst
@@ -63,7 +63,7 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 ||| Find a particular element of a list.
 |||
 ||| @ ok a proof that the index is within bounds
-export
+public export
 index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (x :: xs) {ok = (InLater p)} = index k xs
@@ -367,7 +367,7 @@ init [x] = []
 init (x::y::ys) = x :: init (y::ys)
 
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
-export
+public export
 head' : List a -> Maybe a
 head' []      = Nothing
 head' (x::xs) = Just x
@@ -437,7 +437,7 @@ intercalate sep xss = concat $ intersperse sep xss
 
 ||| Apply a partial function to the elements of a list, keeping the ones at which
 ||| it is defined.
-export
+public export
 mapMaybe : (a -> Maybe b) -> List a -> List b
 mapMaybe f []      = []
 mapMaybe f (x::xs) =
