@@ -24,18 +24,18 @@ consCong2 Refl Refl = Refl
 
 ||| Equal non-empty lists should result in equal components after destructuring 'snoc'.
 export
-snocCong2 : {x : a} -> {xs : List a} -> {y : a} -> {ys : List a} ->
+snocInjective : {x : a} -> {xs : List a} -> {y : a} -> {ys : List a} ->
             (xs `snoc` x) = (ys `snoc` y) -> (xs = ys, x = y)
-snocCong2 {xs = []} {ys = []} Refl = (Refl, Refl)
-snocCong2 {xs = []} {ys = z :: zs} prf =
+snocInjective {xs = []} {ys = []} Refl = (Refl, Refl)
+snocInjective {xs = []} {ys = z :: zs} prf =
   let nilIsSnoc = snd $ consInjective {xs = []} {ys = zs ++ [y]} prf
    in void $ snocNonEmpty (sym nilIsSnoc)
-snocCong2 {xs = z :: xs} {ys = []} prf =
+snocInjective {xs = z :: xs} {ys = []} prf =
   let snocIsNil = snd $ consInjective {x = z} {xs = xs ++ [x]} {ys = []} prf
    in void $ snocNonEmpty snocIsNil
-snocCong2 {xs = w :: xs} {ys = z :: ys} prf =
+snocInjective {xs = w :: xs} {ys = z :: ys} prf =
   let (wEqualsZ, xsSnocXEqualsYsSnocY) = consInjective prf
-      (xsEqualsYS, xEqualsY) = snocCong2 xsSnocXEqualsYsSnocY
+      (xsEqualsYS, xEqualsY) = snocInjective xsSnocXEqualsYsSnocY
    in (consCong2 wEqualsZ xsEqualsYS, xEqualsY)
 
 ||| Appending pairwise equal lists gives equal lists
