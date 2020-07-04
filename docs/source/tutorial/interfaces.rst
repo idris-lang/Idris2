@@ -272,6 +272,23 @@ are both available, or return ``Nothing`` if one or both are not ("fail fast"). 
     Main> m_add (Just 82) Nothing
     Nothing
 
+The translation of ``do`` notation is entirely syntactic, so there is no
+need for the ``(>>=)`` operator to be the operator defined in the ``Monad``
+interface. Idris will, in general, try to disambiguate which ``(>>=)`` you
+mean by type, but you can explicitly choose with qualified do notation,
+for example:
+
+.. code-block:: idris
+
+    m_add : Maybe Int -> Maybe Int -> Maybe Int
+    m_add x y = Prelude.do
+                   x' <- x -- Extract value from x
+                   y' <- y -- Extract value from y
+                   pure (x' + y') -- Add them
+
+The ``Prelude.do`` means that Idris will use the ``(>>=)`` operator defined
+in the ``Prelude``.
+
 Pattern Matching Bind
 ~~~~~~~~~~~~~~~~~~~~~
 
