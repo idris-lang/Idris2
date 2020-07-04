@@ -122,11 +122,11 @@ mutual
   appExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   appExpr q fname indents
       = case_ fname indents
+    <|> doBlock fname indents
     <|> lambdaCase fname indents
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
-    <|> doBlock fname indents
     <|> do start <- location
            f <- simpleExpr fname indents
            args <- many (argExpr q fname indents)
@@ -740,7 +740,17 @@ mutual
            actions <- block (doAct fname)
            end <- location
            end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
-           pure (PDoBlock (MkFC fname start end) (concat actions))
+           pure (PDoBlock (MkFC fname start end) Nothing (concat actions))
+    <|> do start <- location
+           nsdo <- namespacedIdent
+           the (SourceEmptyRule PTerm) $ case nsdo of
+                ("do" :: ns) =>
+                   do actions <- block (doAct fname)
+                      end <- location
+                      end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
+                      pure (PDoBlock (MkFC fname start end)
+                                     (Just (reverse ns)) (concat actions))
+                _ => fail "Not a namespaced 'do'"
 
   lowerFirst : String -> Bool
   lowerFirst "" = False
