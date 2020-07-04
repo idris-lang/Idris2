@@ -75,7 +75,7 @@ readModule full loc vis reexp imp as
          Just (syn, hash, more) <- readFromTTC False {extra = SyntaxInfo}
                                                   loc vis fname imp as
               | Nothing => when vis (setVisible imp) -- already loaded, just set visibility
-         extendAs imp as syn
+         extendSyn syn
 
          defs <- get Ctxt
          modNS <- getNS
@@ -140,7 +140,7 @@ readAsMain fname
               | Nothing => throw (InternalError "Already loaded")
          replNS <- getNS
          replNestedNS <- getNestedNS
-         extendAs replNS replNS syn
+         extendSyn syn
 
          -- Read the main file's top level imported modules, so we have access
          -- to their names (and any of their public imports)

@@ -54,13 +54,13 @@ ifThenElse True t e = t
 ifThenElse False t e = e
 
 export
-extendAs : {auto s : Ref Syn SyntaxInfo} ->
-           List String -> List String -> SyntaxInfo -> Core ()
-extendAs old as newsyn
+extendSyn : {auto s : Ref Syn SyntaxInfo} ->
+            SyntaxInfo -> Core ()
+extendSyn newsyn
     = do syn <- get Syn
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
-                           ifaces $= mergeAs old as (ifaces newsyn),
+                           ifaces $= merge (ifaces newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 

@@ -110,13 +110,17 @@ elabImplementation : {vars : _} ->
 elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nusing mbody
     = do let impName_in = maybe (mkImpl fc iname ps) id impln
          impName <- inCurrentNS impName_in
+         -- The interface name might be qualified, so check if it's an
+         -- alias for something
          syn <- get Syn
-         let [cndata] = lookupName iname (ifaces syn)
+         defs <- get Ctxt
+         inames <- lookupCtxtName iname (gamma defs)
+         let [cndata] = concatMap (\n => lookupName n (ifaces syn))
+                                  (map fst inames)
              | [] => throw (UndefinedName fc iname)
              | ns => throw (AmbiguousName fc (map fst ns))
          let cn : Name = fst cndata
          let cdata : IFaceInfo = snd cndata
-         defs <- get Ctxt
 
          Just ity <- lookupTyExact cn (gamma defs)
               | Nothing => throw (UndefinedName fc cn)

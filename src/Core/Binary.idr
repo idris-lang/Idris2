@@ -276,7 +276,7 @@ writeToTTC extradata fname
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
                (modns : List String) -> (importAs : Maybe (List String)) ->
                (Name, Binary) -> Core ()
-addGlobalDef modns as (n, def)
+addGlobalDef modns asm (n, def)
     = do defs <- get Ctxt
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
@@ -287,8 +287,11 @@ addGlobalDef modns as (n, def)
                         codedentry
          if completeDef entry
             then pure ()
-            else do addContextEntry (asName modns as n) def
+            else do addContextEntry n def
                     pure ()
+         maybe (pure ())
+               (\as => addContextAlias (asName modns as n) n)
+               asm
   where
     -- If the definition already exists, don't overwrite it with an empty
     -- definition or hole. This might happen if a function is declared in one

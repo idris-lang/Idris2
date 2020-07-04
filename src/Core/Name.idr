@@ -21,11 +21,11 @@ data Name : Type where
 -- Update a name imported with 'import as', for creating an alias
 export
 asName : List String -> -- Initial module name
-         Maybe (List String) -> -- 'as' module name
+         List String -> -- 'as' module name
          Name -> -- identifier
          Name
-asName mod (Just ns) (DN s n) = DN s (asName mod (Just ns) n)
-asName mod (Just ns) (NS oldns n)
+asName mod ns (DN s n) = DN s (asName mod ns n)
+asName mod ns (NS oldns n)
     = NS (updateNS mod oldns) n
   where
     updateNS : List String -> List String -> List String

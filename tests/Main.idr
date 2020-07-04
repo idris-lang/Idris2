@@ -49,7 +49,7 @@ idrisTests
        "error006", "error007", "error008", "error009", "error010",
        "error011",
        -- Modules and imports
-       "import001", "import002", "import003", "import004",
+       "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
        "interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",

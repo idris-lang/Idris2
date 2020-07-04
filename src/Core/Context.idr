@@ -298,6 +298,12 @@ data ContextEntry : Type where
      Coded : Binary -> ContextEntry
      Decoded : GlobalDef -> ContextEntry
 
+data PossibleName : Type where
+     Direct : Name -> Int -> PossibleName -- full name and resolved name id
+     Alias : Name -> -- aliased name (from "import as")
+             Name -> Int -> -- real full name and resolved name, as above
+             PossibleName
+
 -- All the GlobalDefs. We can only have one context, because name references
 -- point at locations in here, and if we have more than one the indices won't
 -- match up. So, this isn't polymorphic.
@@ -309,7 +315,7 @@ record Context where
     -- Map from full name to its position in the context
     resolvedAs : NameMap Int
     -- Map from strings to all the possible names in all namespaces
-    possibles : StringMap (List (Name, Int))
+    possibles : StringMap (List PossibleName)
     -- Reference to the actual content, indexed by Int
     content : Ref Arr (IOArray ContextEntry)
     -- Branching depth, in a backtracking elaborator. 0 is top level; at lower
@@ -355,14 +361,24 @@ initCtxt : Core Context
 initCtxt = initCtxtS initSize
 
 addPossible : Name -> Int ->
-              StringMap (List (Name, Int)) -> StringMap (List (Name, Int))
+              StringMap (List PossibleName) -> StringMap (List PossibleName)
 addPossible n i ps
     = case userNameRoot n of
            Nothing => ps
            Just nr =>
               case lookup nr ps of
-                   Nothing => insert nr [(n, i)] ps
-                   Just nis => insert nr ((n, i) :: nis) ps
+                   Nothing => insert nr [Direct n i] ps
+                   Just nis => insert nr (Direct n i :: nis) ps
+
+addAlias : Name -> Name -> Int ->
+           StringMap (List PossibleName) -> StringMap (List PossibleName)
+addAlias alias full i ps
+    = case userNameRoot alias of
+           Nothing => ps
+           Just nr =>
+              case lookup nr ps of
+                   Nothing => insert nr [Alias alias full i] ps
+                   Just nis => insert nr (Alias alias full i :: nis) ps
 
 export
 newEntry : Name -> Context -> Core (Int, Context)
@@ -389,6 +405,11 @@ getPosition n ctxt
            Just idx =>
               do pure (idx, ctxt)
            Nothing => newEntry n ctxt
+
+newAlias : Name -> Name -> Context -> Core Context
+newAlias alias full ctxt
+    = do (idx, ctxt) <- getPosition full ctxt
+         pure $ record { possibles $= addAlias alias full idx } ctxt
 
 export
 getNameID : Name -> Context -> Maybe Int
@@ -498,27 +519,32 @@ lookupCtxtName n ctxt
            Just r =>
               do let Just ps = lookup r (possibles ctxt)
                       | Nothing => pure []
-                 ps' <- the (Core (List (Maybe (Name, Int, GlobalDef)))) $
-                           traverse (\ (n, i) =>
-                                    do Just res <- lookupCtxtExact (Resolved i) ctxt
-                                            | _ => pure Nothing
-                                       pure (Just (n, i, res))) ps
-                 getMatches ps'
+                 lookupPossibles [] ps
   where
-    matches : Name -> (Name, Int, a) -> Bool
-    matches (NS ns _) (NS cns _, _, _) = ns `isPrefixOf` cns
+    matches : Name -> Name -> Bool
+    matches (NS ns _) (NS cns _) = ns `isPrefixOf` cns
     matches (NS _ _) _ = True -- no in library name, so root doesn't match
     matches _ _ = True -- no prefix, so root must match, so good
 
-    getMatches : List (Maybe (Name, Int, GlobalDef)) ->
-                 Core (List (Name, Int, GlobalDef))
-    getMatches [] = pure []
-    getMatches (Nothing :: rs) = getMatches rs
-    getMatches (Just r :: rs)
-        = if matches n r
-             then do rs' <- getMatches rs
-                     pure (r :: rs')
-             else getMatches rs
+    resn : (Name, Int, GlobalDef) -> Int
+    resn (_, i, _) = i
+
+    lookupPossibles : List (Name, Int, GlobalDef) -> -- accumulator
+                      List PossibleName ->
+                      Core (List (Name, Int, GlobalDef))
+    lookupPossibles acc [] = pure (reverse acc)
+    lookupPossibles acc (Direct fulln i :: ps)
+       = do Just res <- lookupCtxtExact (Resolved i) ctxt
+                 | Nothing => lookupPossibles acc ps
+            if (matches n fulln) && not (i `elem` map resn acc)
+               then lookupPossibles ((fulln, i, res) :: acc) ps
+               else lookupPossibles acc ps
+    lookupPossibles acc (Alias asn fulln i :: ps)
+       = do Just res <- lookupCtxtExact (Resolved i) ctxt
+                 | Nothing => lookupPossibles acc ps
+            if (matches n asn) && not (i `elem` map resn acc)
+               then lookupPossibles ((fulln, i, res) :: acc) ps
+               else lookupPossibles acc ps
 
 branchCtxt : Context -> Core Context
 branchCtxt ctxt = pure (record { branchDepth $= S } ctxt)
@@ -918,6 +944,38 @@ clearCtxt
     resetElab : Options -> Options
     resetElab = record { elabDirectives = defaultElab }
 
+-- Get the canonical name of something that might have been aliased via
+-- import as
+export
+canonicalName : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core Name
+canonicalName fc n
+    = do defs <- get Ctxt
+         case !(lookupCtxtName n (gamma defs)) of
+              [] => throw (UndefinedName fc n)
+              [(n, _, _)] => pure n
+              ns => throw (AmbiguousName fc (map fst ns))
+
+-- If the name is aliased, get the alias
+export
+aliasName : {auto c : Ref Ctxt Defs} ->
+            Name -> Core Name
+aliasName fulln
+    = do defs <- get Ctxt
+         let Just r = userNameRoot fulln
+                | Nothing => pure fulln
+         let Just ps = lookup r (possibles (gamma defs))
+                | Nothing => pure fulln
+         findAlias ps
+  where
+    findAlias : List PossibleName -> Core Name
+    findAlias [] = pure fulln
+    findAlias (Alias as full i :: ps)
+        = if full == fulln
+             then pure as
+             else findAlias ps
+    findAlias (_ :: ps) = findAlias ps
+
 -- Beware: if your hashable thing contains (potentially resolved) names,
 -- it'll be better to use addHashWithNames to make the hash independent
 -- of the internal numbering of names.
@@ -991,6 +1049,14 @@ addContextEntry n def
          (idx, gam') <- addEntry n (Coded def) (gamma defs)
          put Ctxt (record { gamma = gam' } defs)
          pure idx
+
+export
+addContextAlias : {auto c : Ref Ctxt Defs} ->
+                  Name -> Name -> Core ()
+addContextAlias alias full
+    = do defs <- get Ctxt
+         gam' <- newAlias alias full (gamma defs)
+         put Ctxt (record { gamma = gam' } defs)
 
 export
 addBuiltin : {arity : _} ->
