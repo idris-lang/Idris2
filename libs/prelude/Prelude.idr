@@ -2,8 +2,8 @@ module Prelude
 
 import public Builtin
 import public PrimIO
-import public Prelude.Basics
-import public Prelude.Uninhabited
+import public Prelude.Basics as Prelude
+import public Prelude.Uninhabited as Prelude
 
 %default total
 
