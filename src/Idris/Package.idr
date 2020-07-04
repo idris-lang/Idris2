@@ -510,6 +510,7 @@ errorMsg = unlines
   , "    --quiet"
   , "    --verbose"
   , "    --timing"
+  , "    --log <log level>"
   , "    --dumpcases <file>"
   , "    --dumplifted <file>"
   , "    --dumpvmcode <file>"
@@ -527,6 +528,7 @@ filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetai
 filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
 filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
 filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
+filterPackageOpts acc (Logging l     ::xs) = filterPackageOpts (record {oopts $= (Logging l::)}      acc) xs
 filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
 filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
 filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
