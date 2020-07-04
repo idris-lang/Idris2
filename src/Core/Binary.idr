@@ -431,16 +431,19 @@ readFromTTC nestedns loc reexp fname modNS importAs
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)
+               -- Only do the next batch if the module hasn't been loaded
+               -- in any form
+               when (not (modNS `elem` map (fst . getNSas) (allImported defs))) $
                -- Set up typeHints and autoHints based on the loaded data
-               traverse_ (addTypeHint loc) (typeHints ttc)
-               traverse_ addAutoHint (autoHints ttc)
-               -- Set up pair/rewrite etc names
-               updatePair (pairnames ttc)
-               updateRewrite (rewritenames ttc)
-               updatePrims (primnames ttc)
-               updateNameDirectives (reverse (namedirectives ttc))
-               updateCGDirectives (cgdirectives ttc)
-               updateTransforms (transforms ttc)
+                 do traverse_ (addTypeHint loc) (typeHints ttc)
+                    traverse_ addAutoHint (autoHints ttc)
+                    -- Set up pair/rewrite etc names
+                    updatePair (pairnames ttc)
+                    updateRewrite (rewritenames ttc)
+                    updatePrims (primnames ttc)
+                    updateNameDirectives (reverse (namedirectives ttc))
+                    updateCGDirectives (cgdirectives ttc)
+                    updateTransforms (transforms ttc)
 
                when (not reexp) clearSavedHints
                resetFirstEntry

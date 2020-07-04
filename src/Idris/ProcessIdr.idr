@@ -62,11 +62,10 @@ readModule : {auto c : Ref Ctxt Defs} ->
              (full : Bool) -> -- load everything transitively (needed for REPL and compiling)
              FC ->
              (visible : Bool) -> -- Is import visible to top level module?
-             (reexp : Bool) -> -- Should the module be reexported?
              (imp : List String) -> -- Module name to import
              (as : List String) -> -- Namespace to import into
              Core ()
-readModule full loc vis reexp imp as
+readModule full loc vis imp as
     = do defs <- get Ctxt
          let False = (imp, vis, as) `elem` map snd (allImported defs)
              | True => when vis (setVisible imp)
@@ -84,7 +83,7 @@ readModule full loc vis reexp imp as
                        do let m = fst mimp
                           let reexp = fst (snd mimp)
                           let as = snd (snd mimp)
-                          when (reexp || full) $ readModule full loc (vis && reexp) reexp m as) more
+                          when (reexp || full) $ readModule full loc reexp m as) more
          setNS modNS
 
 readImport : {auto c : Ref Ctxt Defs} ->
@@ -92,7 +91,7 @@ readImport : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Bool -> Import -> Core ()
 readImport full imp
-    = do readModule full (loc imp) True (reexport imp) (path imp) (nameAs imp)
+    = do readModule full (loc imp) True (path imp) (nameAs imp)
          addImported (path imp, reexport imp, nameAs imp)
 
 ||| Adds new import to the namespace without changing the current top-level namespace
@@ -148,13 +147,13 @@ readAsMain fname
          traverse_ (\ mimp =>
                        do let m = fst mimp
                           let as = snd (snd mimp)
-                          readModule True emptyFC True True m as
+                          readModule True emptyFC True m as
                           addImported (m, True, as)) more
 
          -- also load the prelude, if required, so that we have access to it
          -- at the REPL.
          when (not (noprelude !getSession)) $
-              readModule True emptyFC True True ["Prelude"] ["Prelude"]
+              readModule True emptyFC True ["Prelude"] ["Prelude"]
 
          -- We're in the namespace from the first TTC, so use the next name
          -- from that for the fresh metavariable name generation
