@@ -112,6 +112,9 @@ preOptions (DumpANF f :: opts)
 preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
          preOptions opts
+preOptions (Logging n :: opts)
+    = do setSession (record { logLevel = n } !getSession)
+         preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution
