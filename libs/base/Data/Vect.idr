@@ -28,6 +28,11 @@ lengthCorrect : (0 len : Nat) -> (xs : Vect len elem) -> length xs = len
 lengthCorrect Z     []        = Refl
 lengthCorrect (S n) (x :: xs) = rewrite lengthCorrect n xs in Refl
 
+||| If two vectors are equal, their heads and tails are equal
+export
+vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
+vectInjective Refl = (Refl, Refl)
+
 --------------------------------------------------------------------------------
 -- Indexing into vectors
 --------------------------------------------------------------------------------
@@ -303,10 +308,17 @@ unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
 --------------------------------------------------------------------------------
 
 public export
-implementation (Eq elem) => Eq (Vect len elem) where
+Eq a => Eq (Vect n a) where
   (==) []      []      = True
   (==) (x::xs) (y::ys) = x == y && xs == ys
 
+export
+DecEq a => DecEq (Vect n a) where
+  decEq []      []      = Yes Refl
+  decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
+    decEq (x::xs) (x::xs) | (Yes Refl, Yes Refl) = Yes Refl
+    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . vectInjective
+    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . vectInjective
 
 --------------------------------------------------------------------------------
 -- Order
@@ -811,67 +823,6 @@ implementation Traversable (Vect k) where
     traverse f (x :: xs) = [| f x :: traverse f xs |]
 
 --------------------------------------------------------------------------------
--- Elem
---------------------------------------------------------------------------------
-
-||| A proof that some element is found in a vector
-public export
-data Elem : a -> Vect k a -> Type where
-     Here : Elem x (x::xs)
-     There : (later : Elem x xs) -> Elem x (y::xs)
-
-||| Nothing can be in an empty Vect
-export
-noEmptyElem : forall x . Elem x [] -> Void
-noEmptyElem Here impossible
-
-export
-Uninhabited (Elem x []) where
-  uninhabited = noEmptyElem
-
-||| An item not in the head and not in the tail is not in the Vect at all
-export
-neitherHereNorThere : {x, y : a} -> {xs : Vect n a} -> Not (x = y) -> Not (Elem x xs) -> Not (Elem x (y :: xs))
-neitherHereNorThere xneqy xninxs Here = xneqy Refl
-neitherHereNorThere xneqy xninxs (There xinxs) = xninxs xinxs
-
-||| A decision procedure for Elem
-public export
-isElem : DecEq a => (x : a) -> (xs : Vect n a) -> Dec (Elem x xs)
-isElem x [] = No noEmptyElem
-isElem x (y :: xs) with (decEq x y)
-  isElem x (x :: xs) | (Yes Refl) = Yes Here
-  isElem x (y :: xs) | (No xneqy) with (isElem x xs)
-    isElem x (y :: xs) | (No xneqy) | (Yes xinxs) = Yes (There xinxs)
-    isElem x (y :: xs) | (No xneqy) | (No xninxs) = No (neitherHereNorThere xneqy xninxs)
-
-public export
-replaceElem : (xs : Vect k t) -> Elem x xs -> (y : t) -> (ys : Vect k t ** Elem y ys)
-replaceElem (x::xs) Here y = (y :: xs ** Here)
-replaceElem (x::xs) (There xinxs) y with (replaceElem xs xinxs y)
-  replaceElem (x::xs) (There xinxs) y | (ys ** yinys) = (x :: ys ** There yinys)
-
-public export
-replaceByElem : (xs : Vect k t) -> Elem x xs -> t -> Vect k t
-replaceByElem (x::xs) Here y = y :: xs
-replaceByElem (x::xs) (There xinxs) y = x :: replaceByElem xs xinxs y
-
-public export
-mapElem : {0 xs : Vect k t} -> {0 f : t -> u} ->
-          Elem x xs -> Elem (f x) (map f xs)
-mapElem Here = Here
-mapElem (There e) = There (mapElem e)
-
-||| Remove the element at the given position.
-|||
-||| @xs The vector to be removed from
-||| @p A proof that the element to be removed is in the vector
-public export
-dropElem : {k : _} -> (xs : Vect (S k) t) -> (p : Elem x xs) -> Vect k t
-dropElem (x :: ys) Here = ys
-dropElem {k = (S k)} (x :: ys) (There later) = x :: dropElem ys later
-
---------------------------------------------------------------------------------
 -- Show
 --------------------------------------------------------------------------------
 
@@ -903,5 +854,3 @@ overLength {m} n xs with (cmp m n)
          = Just (0 ** xs)
   overLength {m = plus n (S x)} n xs | (CmpGT x)
          = Just (S x ** rewrite plusCommutative (S x) n in xs)
-
-

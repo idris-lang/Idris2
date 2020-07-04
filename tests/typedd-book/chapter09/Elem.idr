@@ -1,4 +1,5 @@
 import Data.Vect
+import Data.Vect.Elem
 
 oneInVector : Elem 1 [1,2,3]
 oneInVector = Here
