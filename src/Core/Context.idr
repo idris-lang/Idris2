@@ -1065,6 +1065,8 @@ addContextAlias : {auto c : Ref Ctxt Defs} ->
                   Name -> Name -> Core ()
 addContextAlias alias full
     = do defs <- get Ctxt
+         Nothing <- lookupCtxtExact alias (gamma defs)
+             | _ => pure () -- Don't add the alias if the name exists already
          gam' <- newAlias alias full (gamma defs)
          put Ctxt (record { gamma = gam' } defs)
 
