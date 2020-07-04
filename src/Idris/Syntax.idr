@@ -12,6 +12,7 @@ import public Core.TT
 import TTImp.TTImp
 
 import Data.ANameMap
+import Data.List
 import Data.StringMap
 
 %default covering
@@ -629,6 +630,8 @@ record SyntaxInfo where
   infixes : StringMap (Fixity, Nat)
   prefixes : StringMap Nat
   ifaces : ANameMap IFaceInfo
+  saveIFaces : List Name -- interfaces defined in current session, to save
+                         -- to ttc
   bracketholes : List Name -- hole names in argument position (so need
                            -- to be bracketed when solved)
   usingImpl : List (Maybe Name, RawImp)
@@ -652,9 +655,10 @@ TTC Fixity where
 export
 TTC SyntaxInfo where
   toBuf b syn
-      = do toBuf b (toList (infixes syn))
-           toBuf b (toList (prefixes syn))
-           toBuf b (toList (ifaces syn))
+      = do toBuf b (StringMap.toList (infixes syn))
+           toBuf b (StringMap.toList (prefixes syn))
+           toBuf b (filter (\n => fst n `elem` saveIFaces syn)
+                           (ANameMap.toList (ifaces syn)))
            toBuf b (bracketholes syn)
            toBuf b (startExpr syn)
 
@@ -665,7 +669,7 @@ TTC SyntaxInfo where
            bhs <- fromBuf b
            start <- fromBuf b
            pure (MkSyntax (fromList inf) (fromList pre) (fromList ifs)
-                          bhs [] start)
+                          [] bhs [] start)
 
 HasNames IFaceInfo where
   full gam iface
@@ -709,6 +713,7 @@ initSyntax
     = MkSyntax (insert "=" (Infix, 0) empty)
                (insert "-" 10 empty)
                empty
+               []
                []
                []
                (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))

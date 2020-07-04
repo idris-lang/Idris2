@@ -162,14 +162,6 @@ HasNames e => HasNames (TTCFile e) where
       resolvedPrim gam (MkPrimNs mi ms mc)
           = pure $ MkPrimNs !(resolved gam mi) !(resolved gam ms) !(resolved gam mc)
 
-
-asName : List String -> Maybe (List String) -> Name -> Name
-asName mod (Just ns) (NS oldns n)
-    = if mod == oldns
-         then NS ns n -- TODO: What about if there are nested namespaces in a module?
-         else NS oldns n
-asName _ _ n = n
-
 -- NOTE: TTC files are only compatible if the version number is the same,
 -- *and* the 'annot/extra' type are the same, or there are no holes/constraints
 writeTTCFile : (HasNames extra, TTC extra) =>

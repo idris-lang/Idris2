@@ -95,7 +95,6 @@ merge ctxt (MkANameMap exact hier)
     insertFrom ((n, val) :: cs) ctxt
         = insertFrom cs (addName n val ctxt)
 
--- TODO: Update namespaces so 'as' works
 export
 mergeAs : List String -> List String ->
           ANameMap a -> ANameMap a -> ANameMap a
