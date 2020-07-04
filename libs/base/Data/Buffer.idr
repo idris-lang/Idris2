@@ -297,12 +297,12 @@ concatBuffers xs
 export
 splitBuffer : HasIO io => Buffer -> Int -> io (Maybe (Buffer, Buffer))
 splitBuffer buf pos = do size <- rawSize buf
-                         if pos > size
-                             then pure Nothing
-                             else do Just first <- newBuffer pos
+                         if pos > 0 && pos < size
+                             then do Just first <- newBuffer pos
                                         | Nothing => pure Nothing
                                      Just second <- newBuffer (size - pos)
                                         | Nothing => pure Nothing
                                      copyData buf 0 pos first 0
                                      copyData buf pos (size-pos) second 0
                                      pure $ Just (first, second)
+                             else pure Nothing
