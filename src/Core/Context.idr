@@ -333,6 +333,7 @@ record Context where
     allPublic : Bool -- treat everything as public. This is only intended
                      -- for checking partially evaluated definitions
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
+    hidden : NameMap () -- Never return these
 
 export
 getContent : Context -> Ref Arr (IOArray ContextEntry)
@@ -354,7 +355,7 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [["_PE"]] False False)
+         pure (MkContext 0 0 empty empty aref 0 empty [["_PE"]] False False empty)
 
 export
 initCtxt : Core Context
@@ -534,17 +535,26 @@ lookupCtxtName n ctxt
                       Core (List (Name, Int, GlobalDef))
     lookupPossibles acc [] = pure (reverse acc)
     lookupPossibles acc (Direct fulln i :: ps)
-       = do Just res <- lookupCtxtExact (Resolved i) ctxt
-                 | Nothing => lookupPossibles acc ps
-            if (matches n fulln) && not (i `elem` map resn acc)
-               then lookupPossibles ((fulln, i, res) :: acc) ps
-               else lookupPossibles acc ps
+       = case lookup fulln (hidden ctxt) of
+              Nothing =>
+                do Just res <- lookupCtxtExact (Resolved i) ctxt
+                        | Nothing => lookupPossibles acc ps
+                   if matches n fulln && not (i `elem` map resn acc)
+                      then lookupPossibles ((fulln, i, res) :: acc) ps
+                      else lookupPossibles acc ps
+              _ => lookupPossibles acc ps
     lookupPossibles acc (Alias asn fulln i :: ps)
-       = do Just res <- lookupCtxtExact (Resolved i) ctxt
-                 | Nothing => lookupPossibles acc ps
-            if (matches n asn) && not (i `elem` map resn acc)
-               then lookupPossibles ((fulln, i, res) :: acc) ps
-               else lookupPossibles acc ps
+       = case lookup fulln (hidden ctxt) of
+              Nothing =>
+                do Just res <- lookupCtxtExact (Resolved i) ctxt
+                        | Nothing => lookupPossibles acc ps
+                   if (matches n asn) && not (i `elem` map resn acc)
+                      then lookupPossibles ((fulln, i, res) :: acc) ps
+                      else lookupPossibles acc ps
+              _ => lookupPossibles acc ps
+
+hideName : Name -> Context -> Context
+hideName n ctxt = record { hidden $= insert n () } ctxt
 
 branchCtxt : Context -> Core Context
 branchCtxt ctxt = pure (record { branchDepth $= S } ctxt)
@@ -1413,7 +1423,7 @@ hide fc n
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
               | [] => throw (UndefinedName fc n)
               | res => throw (AmbiguousName fc (map fst res))
-         setVisibility fc nsn Private
+         put Ctxt (record { gamma $= hideName nsn } defs)
 
 export
 getVisibility : {auto c : Ref Ctxt Defs} ->
