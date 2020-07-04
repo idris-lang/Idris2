@@ -16,3 +16,7 @@ main = do
     case digs of
         Left err => putStrLn "NOOOOOOO!"
         Right ds => printLn ds
+    migs <- parseT (many (satisfy isDigit)) "766775"
+    case migs of
+        Left err => putStrLn "NOOOOOOO!"
+        Right ds => printLn ds
