@@ -350,16 +350,3 @@ uniqueName defs used n
     next str
         = let (n, i) = nameNum str in
               n ++ "_" ++ show (i + 1)
-
-export
-checkRefVisibility : {auto c : Ref Ctxt Defs} ->
-                     FC -> Name ->
-                     Visibility -> -- Visibility of the name
-                     Visibility -> -- Minimum visibility of references
-                     Name -> Core ()
-checkRefVisibility fc fn vis min ref
-    = do defs <- get Ctxt
-         Just gdef <- lookupCtxtExact ref (gamma defs)
-              | Nothing => pure ()
-         when (visibility gdef <= min) $
-              throw (VisibilityError fc vis fn (visibility gdef) ref)

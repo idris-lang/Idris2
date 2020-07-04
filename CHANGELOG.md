@@ -17,6 +17,11 @@ Language changes:
    + Implemented `%macro` function flag, to remove the syntactic noise of
      invoking elaborator scripts. This means the function must always
      be fully applied, and is run under `%runElab`
+* Add `import X as Y`
+   + This imports the module `X`, adding aliases for the definitions in
+     namespace `Y`, so they can be referred to as `Y`.
+* `do` notation can now be qualified with a namespace
+   + `MyDo.do` opens a `do` block where the `>>=` operator used is `MyDo.(>>=)`
 
 Library changes:
 

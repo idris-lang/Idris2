@@ -40,6 +40,7 @@ idrisTests
        "basic026", "basic027", "basic028", "basic029", "basic030",
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
+       "basic041",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -49,7 +50,7 @@ idrisTests
        "error006", "error007", "error008", "error009", "error010",
        "error011",
        -- Modules and imports
-       "import001", "import002", "import003", "import004",
+       "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
        "interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",

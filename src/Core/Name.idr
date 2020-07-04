@@ -18,6 +18,24 @@ data Name : Type where
      WithBlock : Int -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
+-- Update a name imported with 'import as', for creating an alias
+export
+asName : List String -> -- Initial module name
+         List String -> -- 'as' module name
+         Name -> -- identifier
+         Name
+asName mod ns (DN s n) = DN s (asName mod ns n)
+asName mod ns (NS oldns n)
+    = NS (updateNS mod oldns) n
+  where
+    updateNS : List String -> List String -> List String
+    updateNS mod (m :: ms)
+        = if mod == m :: ms
+             then ns
+             else m :: updateNS mod ms
+    updateNS mod [] = []
+asName _ _ n = n
+
 export
 userNameRoot : Name -> Maybe String
 userNameRoot (NS _ n) = userNameRoot n

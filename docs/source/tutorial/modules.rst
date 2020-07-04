@@ -179,6 +179,35 @@ The module ``A`` will export the name ``a``, as well as any public or
 abstract names in module ``C``, but will not re-export anything from
 module ``B``.
 
+Renaming imports
+----------------
+
+Sometimes it is convenient to be able to access the names in another module
+via a different namespace (typically, a shorter one). For this, you can
+use `import...as`. For example:
+
+::
+
+    module A
+
+    import Data.List as L
+
+This module ``A`` has access to the exported names from module ``Data.List``,
+but can also explicitly access them via the module name ``L``. ``import...as``
+can also be combined with ``import public`` to create a module which exports
+a larger API from other sub-modules:
+
+::
+
+    module Books
+
+    import Books.Hardback as Books
+    import Books.Comic as Books
+
+Here, any module which imports ``Books`` will have access to the exported
+interfaces of ``Books.Hardback`` and ``Books.Comic`` both under the namespace
+``Books``.
+
 Explicit Namespaces
 ===================
 

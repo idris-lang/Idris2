@@ -54,13 +54,13 @@ ifThenElse True t e = t
 ifThenElse False t e = e
 
 export
-extendAs : {auto s : Ref Syn SyntaxInfo} ->
-           List String -> List String -> SyntaxInfo -> Core ()
-extendAs old as newsyn
+extendSyn : {auto s : Ref Syn SyntaxInfo} ->
+            SyntaxInfo -> Core ()
+extendSyn newsyn
     = do syn <- get Syn
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
-                           ifaces $= mergeAs old as (ifaces newsyn),
+                           ifaces $= merge (ifaces newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
@@ -269,8 +269,8 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
-  desugarB side ps (PDoBlock fc block)
-      = expandDo side ps fc block
+  desugarB side ps (PDoBlock fc ns block)
+      = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
       = do itm <- desugarB side ps term
            bs <- get Bang
@@ -319,7 +319,7 @@ mutual
                    [PatClause fc (IVar fc (UN "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN "False")) !(desugar side ps e)]
   desugarB side ps (PComprehension fc ret conds)
-      = desugarB side ps (PDoBlock fc (map guard conds ++ [toPure ret]))
+      = desugarB side ps (PDoBlock fc Nothing (map guard conds ++ [toPure ret]))
     where
       guard : PDo -> PDo
       guard (DoExp fc tm) = DoExp fc (PApp fc (PRef fc (UN "guard")) tm)
@@ -379,56 +379,61 @@ mutual
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
 
+  addNS : Maybe (List String) -> Name -> Name
+  addNS (Just ns) n@(NS _ _) = n
+  addNS (Just ns) n = NS ns n
+  addNS _ n = n
+
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto m : Ref MD Metadata} ->
-             Side -> List Name -> FC -> List PDo -> Core RawImp
-  expandDo side ps fc [] = throw (GenericMsg fc "Do block cannot be empty")
-  expandDo side ps _ [DoExp fc tm] = desugar side ps tm
-  expandDo side ps fc [e]
+             Side -> List Name -> FC -> Maybe (List String) -> List PDo -> Core RawImp
+  expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
+  expandDo side ps _ _ [DoExp fc tm] = desugar side ps tm
+  expandDo side ps fc ns [e]
       = throw (GenericMsg (getLoc e)
                   "Last statement in do block must be an expression")
-  expandDo side ps topfc (DoExp fc tm :: rest)
+  expandDo side ps topfc ns (DoExp fc tm :: rest)
       = do tm' <- desugar side ps tm
-           rest' <- expandDo side ps topfc rest
+           rest' <- expandDo side ps topfc ns rest
            -- A free standing 'case' block must return ()
            let ty = case tm' of
                          ICase _ _ _ _ => IVar fc (UN "Unit")
                          _ => Implicit fc False
            gam <- get Ctxt
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                           (ILam fc top Explicit Nothing
                                 ty rest')
-  expandDo side ps topfc (DoBind fc n tm :: rest)
+  expandDo side ps topfc ns (DoBind fc n tm :: rest)
       = do tm' <- desugar side ps tm
-           rest' <- expandDo side ps topfc rest
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
+           rest' <- expandDo side ps topfc ns rest
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                      (ILam fc top Explicit (Just n)
                            (Implicit fc False) rest')
-  expandDo side ps topfc (DoBindPat fc pat exp alts :: rest)
+  expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat
            (newps, bpat) <- bindNames False pat'
            exp' <- desugar side ps exp
            alts' <- traverse (desugarClause ps True) alts
            let ps' = newps ++ ps
-           rest' <- expandDo side ps' topfc rest
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) exp')
+           rest' <- expandDo side ps' topfc ns rest
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) exp')
                     (ILam fc top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
                           (ICase fc (IVar fc (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fc bpat rest'
                                   :: alts')))
-  expandDo side ps topfc (DoLet fc n rig ty tm :: rest)
+  expandDo side ps topfc ns (DoLet fc n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
-           rest' <- expandDo side ps topfc rest
+           rest' <- expandDo side ps topfc ns rest
            let bind = ILet fc rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
-  expandDo side ps topfc (DoLetPat fc pat ty tm alts :: rest)
+  expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
       = do b <- newRef Bang initBangs
            pat' <- desugar LHS ps pat
            ty' <- desugar side ps ty
@@ -436,18 +441,18 @@ mutual
            tm' <- desugarB side ps tm
            alts' <- traverse (desugarClause ps True) alts
            let ps' = newps ++ ps
-           rest' <- expandDo side ps' topfc rest
+           rest' <- expandDo side ps' topfc ns rest
            bd <- get Bang
            pure $ bindBangs (bangNames bd) $
                     ICase fc tm' ty'
                        (PatClause fc bpat rest'
                                   :: alts')
-  expandDo side ps topfc (DoLetLocal fc decls :: rest)
-      = do rest' <- expandDo side ps topfc rest
+  expandDo side ps topfc ns (DoLetLocal fc decls :: rest)
+      = do rest' <- expandDo side ps topfc ns rest
            decls' <- traverse (desugarDecl ps) decls
            pure $ ILocal fc (concat decls') rest'
-  expandDo side ps topfc (DoRewrite fc rule :: rest)
-      = do rest' <- expandDo side ps topfc rest
+  expandDo side ps topfc ns (DoRewrite fc rule :: rest)
+      = do rest' <- expandDo side ps topfc ns rest
            rule' <- desugar side ps rule
            pure $ IRewrite fc rule' rest'
 

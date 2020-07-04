@@ -275,11 +275,6 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          def <- initDef n env ty opts
          let fullty = abstractFullEnvType tfc env ty
-         -- Check name visibility: unless it's a private name, any names in
-         -- the type must be greater than private
-         when (vis /= Private) $
-              traverse_ (checkRefVisibility fc n vis Private)
-                        (keys (getRefs (UN "") fullty))
 
          (erased, dterased) <- findErased fullty
          defs <- get Ctxt

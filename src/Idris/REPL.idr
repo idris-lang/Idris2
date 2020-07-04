@@ -85,7 +85,7 @@ displayType : {auto c : Ref Ctxt Defs} ->
               Core String
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (show (fullname gdef) ++ " : " ++ show tm))
+                pure (show !(aliasName (fullname gdef)) ++ " : " ++ show tm))
             (\num => showHole defs [] n num (type gdef))
             (isHole gdef)
 

@@ -238,7 +238,8 @@ updateIfaceSyn iname cn impps ps cs ms ds
     = do syn <- get Syn
          ms' <- traverse totMeth ms
          let info = MkIFaceInfo cn impps ps cs ms' ds
-         put Syn (record { ifaces $= addName iname info } syn)
+         put Syn (record { ifaces $= addName iname info,
+                           saveIFaces $= (iname :: ) } syn)
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
     findSetTotal [] = Nothing
