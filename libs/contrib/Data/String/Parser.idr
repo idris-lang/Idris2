@@ -2,6 +2,8 @@
 module Data.String.Parser
 
 import Control.Monad.Identity
+import Control.Monad.Trans
+
 import Data.Strings
 
 %default partial
@@ -57,13 +59,17 @@ Monad m => Alternative (ParseT m) where
                             OK r s' => pure $ OK r s'
                             Fail _ _ => b.runParser s
 
+public export
+MonadTrans ParseT where
+    lift x = P $ \s => do res <-x
+                          pure $ OK res s
 
 public export
 parseT : Monad m => ParseT m a -> String -> m (Either String a)
 parseT p str = do res <- p.runParser (S str 0 (cast $ length str))
                   case res of
-                      OK r s => pure$ Right r
-                      Fail i err => pure$ Left $ fastAppend ["Parse failed at position ", show i, ": ", err]
+                      OK r s => pure $ Right r
+                      Fail i err => pure $ Left $ fastAppend ["Parse failed at position ", show i, ": ", err]
 
 public export
 parse : Parser a ->  String -> Either String a

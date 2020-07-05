@@ -2,12 +2,21 @@ module Main
 
 import Data.String.Parser
 import Control.Monad.Identity
+import Control.Monad.Trans
 
+%default partial
 -- Buld this program with '-p contrib'
 
-partial
+parseStuff : ParseT IO ()
+parseStuff = do a <- string "abc"
+                lift $ putStrLn "hiya"
+                b <- string "def"
+                pure ()
+
+
 main : IO ()
 main = do
+    res <- parseT parseStuff "abcdef"
     res <- parseT (string "hi") "hideous"
     case res of
         Left err => putStrLn "NOOOOOOO!"
@@ -20,3 +29,4 @@ main = do
     case migs of
         Left err => putStrLn "NOOOOOOO!"
         Right ds => printLn ds
+    pure ()
