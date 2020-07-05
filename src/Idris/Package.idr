@@ -276,6 +276,27 @@ compileMain mainn mmod exec
          compileExp (PRef replFC mainn) exec
          pure ()
 
+prepareCompilation : {auto c : Ref Ctxt Defs} ->
+                     {auto s : Ref Syn SyntaxInfo} ->
+                     {auto o : Ref ROpts REPLOpts} ->
+                     PkgDesc ->
+                     List CLOpt ->
+                     Core (List Error)
+prepareCompilation pkg opts =
+  do
+    defs <- get Ctxt
+    addDeps pkg
+
+    processOptions (options pkg)
+    preOptions opts
+
+    runScript (prebuild pkg)
+
+    let toBuild = maybe (map snd (modules pkg))
+                        (\m => snd m :: map snd (modules pkg))
+                        (mainmod pkg)
+    buildAll toBuild
+
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
@@ -283,16 +304,8 @@ build : {auto c : Ref Ctxt Defs} ->
         List CLOpt ->
         Core (List Error)
 build pkg opts
-    = do defs <- get Ctxt
-         addDeps pkg
-         processOptions (options pkg)
-         preOptions opts
-         runScript (prebuild pkg)
-         let toBuild = maybe (map snd (modules pkg))
-                             (\m => snd m :: map snd (modules pkg))
-                             (mainmod pkg)
-         [] <- buildAll toBuild
-              | errs => pure errs
+    = do [] <- prepareCompilation pkg opts
+            | errs => pure errs
 
          case executable pkg of
               Nothing => pure ()
@@ -301,6 +314,7 @@ build pkg opts
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
                       let mainName = NS mainNS (UN "main")
                       compileMain mainName mainFile exec
+
          runScript (postbuild pkg)
          pure []
 
@@ -369,13 +383,11 @@ check : {auto c : Ref Ctxt Defs} ->
         Core (List Error)
 check pkg opts =
   do
-    defs <- get Ctxt
-    addDeps pkg
-    processOptions (options pkg)
-    let toBuild = maybe (map snd (modules pkg))
-                        (\m => snd m :: map snd (modules pkg))
-                        (mainmod pkg)
-    buildAll toBuild
+    [] <- prepareCompilation pkg opts
+      | errs => pure errs
+
+    runScript (postbuild pkg)
+    pure []
 
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)
