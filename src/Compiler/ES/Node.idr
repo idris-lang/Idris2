@@ -23,14 +23,14 @@ findNode =
 compileToNode : Ref Ctxt Defs ->
               ClosedTerm -> Core String
 compileToNode c tm = do
-  compileToES c tm
+  compileToES c tm ["node", "javascript"]
 
 ||| Node implementation of the `compileExpr` interface.
 compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c tmpDir outputDir tm outfile
     = do es <- compileToNode c tm
-         let out = outputDir </> outfile
+         let out = outfile
          Right () <- coreLift (writeFile out es)
             | Left err => throw (FileErr out err)
          pure (Just out)

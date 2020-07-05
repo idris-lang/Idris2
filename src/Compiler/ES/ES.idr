@@ -11,6 +11,7 @@ data ESs : Type where
 record ESSt where
   constructor MkESSt
   preamble : SortedMap String String
+  ccTypes : List String
 
 
 jsString : String -> String
@@ -270,9 +271,11 @@ makeForeign n x =
 
 foreignDecl : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
-  case searchForeign ["node", "javascript"] ccs of
-    Just x => makeForeign n x
-    Nothing => throw (InternalError $ "No node or javascript definition found for " ++ show n ++ " in " ++ show ccs)
+  do
+    s <- get ESs
+    case searchForeign (ccTypes s) ccs of
+      Just x => makeForeign n x
+      Nothing => throw (InternalError $ "No node or javascript definition found for " ++ show n ++ " in " ++ show ccs)
 
 jsPrim : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ "({value: "++ v ++"})"
@@ -376,11 +379,11 @@ static_preamble =
   ]
 
 export
-compileToES : Ref Ctxt Defs -> ClosedTerm -> Core String
-compileToES c tm =
+compileToES : Ref Ctxt Defs -> ClosedTerm -> List String -> Core String
+compileToES c tm ccTypes =
   do
     (impDefs, impMain) <- compileToImperative c tm
-    s <- newRef ESs (MkESSt empty)
+    s <- newRef ESs (MkESSt empty ccTypes)
     defs <- imperative2es 0 impDefs
     main_ <- imperative2es 0 impMain
     let main = "try{" ++ main_ ++ "}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
