@@ -145,7 +145,7 @@ genVarName str
 export
 genCaseName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genCaseName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -154,7 +154,7 @@ genCaseName root
 export
 genWithName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genWithName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
