@@ -360,6 +360,23 @@ install pkg opts -- not used but might be in the future
          coreLift $ changeDir srcdir
          runScript (postinstall pkg)
 
+-- Check package without compiling anything.
+check : {auto c : Ref Ctxt Defs} ->
+        {auto s : Ref Syn SyntaxInfo} ->
+        {auto o : Ref ROpts REPLOpts} ->
+        PkgDesc ->
+        List CLOpt ->
+        Core (List Error)
+check pkg opts =
+  do
+    defs <- get Ctxt
+    addDeps pkg
+    processOptions (options pkg)
+    let toBuild = maybe (map snd (modules pkg))
+                        (\m => snd m :: map snd (modules pkg))
+                        (mainmod pkg)
+    buildAll toBuild
+
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)
 bitraverseC f g (This a)   = [| This (f a) |]
@@ -491,6 +508,10 @@ processPackage cmd file opts
                       Install => do [] <- build pkg opts
                                        | errs => coreLift (exitWith (ExitFailure 1))
                                     install pkg opts
+                      Check => do
+                        [] <- check pkg opts
+                          | errs => coreLift (exitWith (ExitFailure 1))
+                        pure ()
                       Clean => clean pkg opts
                       REPL => do
                         [] <- build pkg opts
