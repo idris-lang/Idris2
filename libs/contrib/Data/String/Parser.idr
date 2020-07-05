@@ -8,15 +8,14 @@ import Data.Strings
 
 %default partial
 
-public export
 record State where
     constructor S
     input : String
     pos : Int
     maxPos : Int
 
-public export
 data Result a = Fail Int String | OK a State
+
 
 public export
 record ParseT (m : Type -> Type) (a : Type) where
@@ -66,7 +65,7 @@ MonadTrans ParseT where
 
 public export
 parseT : Monad m => ParseT m a -> String -> m (Either String a)
-parseT p str = do res <- p.runParser (S str 0 (cast $ length str))
+parseT p str = do res <- p.runParser (S str 0 (strLength str))
                   case res of
                       OK r s => pure $ Right r
                       Fail i err => pure $ Left $ fastAppend ["Parse failed at position ", show i, ": ", err]
@@ -86,9 +85,9 @@ satisfy f = P $ \s => do if s.pos < s.maxPos
                             else pure $ Fail (s.pos) "satisfy"
 public export
 string : Monad m => String -> ParseT m ()
-string str = P $ \s => do let len : Int = cast $ length str
+string str = P $ \s => do let len = strLength str
                           if s.pos+len < s.maxPos
-                              then do let head = substr (fromInteger $ cast s.pos) (length str) s.input
+                              then do let head = strSubstr s.pos len s.input
                                       if head == str
                                         then pure $ OK () (S s.input (s.pos + len) s.maxPos)
                                         else pure $ Fail (s.pos) ("string " ++ show str)
@@ -108,3 +107,7 @@ mutual
     many : Monad m => ParseT m a -> ParseT m (List a)
     many p = some p <|> pure []
 
+public export
+takeWhile : Monad m => (Char -> Bool) -> ParseT m String
+takeWhile f = do ls <- many (satisfy f)
+                 pure $ pack ls

@@ -7,14 +7,21 @@ import Control.Monad.Trans
 %default partial
 -- Buld this program with '-p contrib'
 
+-- test lifting
 parseStuff : ParseT IO ()
 parseStuff = do a <- string "abc"
                 lift $ putStrLn "hiya"
                 b <- string "def"
                 pure ()
 
+-- test a parsing from a pure function
 pureParsing : String -> Either String (List Char)
 pureParsing str = parse (many (satisfy isDigit)) str
+
+showRes : Show a => Either String a -> IO ()
+showRes res = case res of
+                Left err => putStrLn err
+                Right xs => printLn xs
 
 main : IO ()
 main = do
@@ -23,16 +30,11 @@ main = do
     case res of
         Left err => putStrLn "NOOOOOOO!"
         Right () => putStrLn "YEEEES!"
-    digs <- parseT (satisfy isDigit) "8878993"
-    case digs of
-        Left err => putStrLn "NOOOOOOO!"
-        Right ds => printLn ds
+    digs <- parseT (satisfy isDigit) "a"
+    showRes digs
     migs <- parseT (many (satisfy isDigit)) "766775"
-    case migs of
-        Left err => putStrLn "NOOOOOOO!"
-        Right ds => printLn ds
-    let pp = pureParsing "63553"
-    case pp of
-        Left err => putStrLn err
-        Right xs => printLn xs
+    showRes migs
+    showRes $ pureParsing "63553"
+    s <- parseT (takeWhile isDigit) "887abc8993"
+    showRes s
     pure ()
