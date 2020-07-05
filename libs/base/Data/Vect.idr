@@ -12,7 +12,7 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
   Nil  : Vect Z elem
   ||| A non-empty vector of length `S len`, consisting of a head element and
   ||| the rest of the list, of length `len`.
-  (::) : (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
+  (::) : (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
 
 -- Hints for interactive editing
 %name Vect xs,ys,zs,ws
@@ -23,10 +23,15 @@ length [] = 0
 length (x::xs) = 1 + length xs
 
 ||| Show that the length function on vectors in fact calculates the length
-private
-lengthCorrect : (len : Nat) -> (xs : Vect len elem) -> length xs = len
+export
+lengthCorrect : (0 len : Nat) -> (xs : Vect len elem) -> length xs = len
 lengthCorrect Z     []        = Refl
 lengthCorrect (S n) (x :: xs) = rewrite lengthCorrect n xs in Refl
+
+||| If two vectors are equal, their heads and tails are equal
+export
+vectInjective : {0 xs : Vect n a} -> {0 ys : Vect m b} -> x::xs = y::ys -> (x = y, xs = ys)
+vectInjective Refl = (Refl, Refl)
 
 --------------------------------------------------------------------------------
 -- Indexing into vectors
@@ -86,10 +91,9 @@ index (FS k) (x::xs) = index k xs
 ||| insertAt 1 8 [1,2,3,4]
 ||| ```
 public export
-insertAt : Fin (S len) -> elem -> Vect len elem -> Vect (S len) elem
+insertAt : (1 idx : Fin (S len)) -> (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
 insertAt FZ     y xs      = y :: xs
 insertAt (FS k) y (x::xs) = x :: insertAt k y xs
-insertAt (FS k) y []      = absurd k
 
 ||| Construct a new vector consisting of all but the indicated element
 |||
@@ -133,7 +137,7 @@ updateAt (FS k) f (x::xs) = x :: updateAt k f xs
 ||| [1,2,3,4] ++ [5,6]
 ||| ```
 public export
-(++) : (xs : Vect m elem) -> (ys : Vect n elem) -> Vect (m + n) elem
+(++) : (1 xs : Vect m elem) -> (1 ys : Vect n elem) -> Vect (m + n) elem
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
@@ -181,9 +185,9 @@ merge = mergeBy compare
 ||| reverse [1,2,3,4]
 ||| ```
 public export
-reverse : Vect len elem -> Vect len elem
+reverse : (1 xs : Vect len elem) -> Vect len elem
 reverse xs = go [] xs
-  where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
+  where go : (1 _ : Vect n elem) -> (1 _ : Vect m elem) -> Vect (n+m) elem
         go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
         go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
                                        in go (x::acc) xs
@@ -210,7 +214,7 @@ intersperse sep (x::xs) = x :: intersperse' sep xs
 --------------------------------------------------------------------------------
 
 public export
-fromList' : Vect len elem -> (l : List elem) -> Vect (length l + len) elem
+fromList' : (1 xs : Vect len elem) -> (1 l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
 fromList' {len} ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
@@ -224,7 +228,7 @@ fromList' {len} ys (x::xs) =
 ||| fromList [1,2,3,4]
 ||| ```
 public export
-fromList : (l : List elem) -> Vect (length l) elem
+fromList : (1 l : List elem) -> Vect (length l) elem
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
@@ -263,8 +267,9 @@ zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
 ||| zip (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip : (xs : Vect n a) -> (ys : Vect n b) -> Vect n (a, b)
-zip = zipWith (\x,y => (x,y))
+zip : (1 xs : Vect n a) -> (1 ys : Vect n b) -> Vect n (a, b)
+zip []      []      = []
+zip (x::xs) (y::ys) = (x, y) :: zip xs ys
 
 ||| Combine three equal-length vectors elementwise into a vector of tuples
 |||
@@ -272,8 +277,9 @@ zip = zipWith (\x,y => (x,y))
 ||| zip3 (fromList [1,2,3,4]) (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
-zip3 = zipWith3 (\x,y,z => (x,y,z))
+zip3 : (1 xs : Vect n a) -> (1 ys : Vect n b) -> (1 zs : Vect n c) -> Vect n (a, b, c)
+zip3 []      []      []      = []
+zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 
 ||| Convert a vector of pairs to a pair of vectors
 |||
@@ -281,10 +287,10 @@ zip3 = zipWith3 (\x,y,z => (x,y,z))
 ||| unzip (fromList [(1,2), (1,2)])
 ||| ```
 public export
-unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
+unzip : (1 xs : Vect n (a, b)) -> (Vect n a, Vect n b)
 unzip []           = ([], [])
-unzip ((l, r)::xs) with (unzip xs)
-  unzip ((l, r)::xs) | (lefts, rights) = (l::lefts, r::rights)
+unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
+                     in (l::lefts, r::rights)
 
 ||| Convert a vector of three-tuples to a triplet of vectors
 |||
@@ -292,21 +298,27 @@ unzip ((l, r)::xs) with (unzip xs)
 ||| unzip3 (fromList [(1,2,3), (1,2,3)])
 ||| ```
 public export
-unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
+unzip3 : (1 xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
 unzip3 []            = ([], [], [])
-unzip3 ((l,c,r)::xs) with (unzip3 xs)
-  unzip3 ((l,c,r)::xs) | (lefts, centers, rights)
-      = (l::lefts, c::centers, r::rights)
+unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
+                       in (l::lefts, c::centers, r::rights)
 
 --------------------------------------------------------------------------------
 -- Equality
 --------------------------------------------------------------------------------
 
 public export
-implementation (Eq elem) => Eq (Vect len elem) where
+Eq a => Eq (Vect n a) where
   (==) []      []      = True
   (==) (x::xs) (y::ys) = x == y && xs == ys
 
+export
+DecEq a => DecEq (Vect n a) where
+  decEq []      []      = Yes Refl
+  decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
+    decEq (x::xs) (x::xs) | (Yes Refl, Yes Refl) = Yes Refl
+    decEq (x::xs) (y::ys) | (No nhd, _) = No $ nhd . fst . vectInjective
+    decEq (x::xs) (y::ys) | (_, No ntl) = No $ ntl . snd . vectInjective
 
 --------------------------------------------------------------------------------
 -- Order
@@ -374,7 +386,7 @@ implementation Foldable (Vect n) where
 ||| concat [[1,2,3], [4,5,6]]
 ||| ```
 public export
-concat : (xss : Vect m (Vect n elem)) -> Vect (m * n) elem
+concat : (1 xss : Vect m (Vect n elem)) -> Vect (m * n) elem
 concat []      = []
 concat (v::vs) = v ++ Vect.concat vs
 
@@ -748,7 +760,7 @@ vectToMaybe (x::xs) = Just x
 ||| catMaybes [Just 1, Just 2, Nothing, Nothing, Just 5]
 ||| ```
 public export
-catMaybes : Vect n (Maybe elem) -> (p ** Vect p elem)
+catMaybes : (1 xs : Vect n (Maybe elem)) -> (p ** Vect p elem)
 catMaybes []             = (_ ** [])
 catMaybes (Nothing::xs)  = catMaybes xs
 catMaybes ((Just j)::xs) =
@@ -780,15 +792,22 @@ range {len=S _} = FZ :: map FS range
 ||| transpose [[1,2], [3,4], [5,6], [7,8]]
 ||| ```
 public export
-transpose : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
-transpose []        = replicate _ []                -- = [| [] |]
-transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
+transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
+transpose []        = replicate _ []          -- = [| [] |]
+transpose (x :: xs) = helper x (transpose xs) -- = [| x :: xs |]
+  where -- Can't use zipWith since it doesn't preserve linearity
+    helper : (1 _ : Vect a elem)
+          -> (1 _ : Vect a (Vect b elem))
+          -> Vect a (Vect (S b) elem)
+    helper [] [] = []
+    helper (x::xs) (tl::tls) = (x::tl) :: helper xs tls
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
 --------------------------------------------------------------------------------
 -- These only work if the length is known at run time!
 
+public export
 implementation {k : Nat} -> Applicative (Vect k) where
     pure = replicate _
     fs <*> vs = zipWith apply fs vs
@@ -802,67 +821,6 @@ public export
 implementation Traversable (Vect k) where
     traverse f []        = pure []
     traverse f (x :: xs) = [| f x :: traverse f xs |]
-
---------------------------------------------------------------------------------
--- Elem
---------------------------------------------------------------------------------
-
-||| A proof that some element is found in a vector
-public export
-data Elem : a -> Vect k a -> Type where
-     Here : Elem x (x::xs)
-     There : (later : Elem x xs) -> Elem x (y::xs)
-
-||| Nothing can be in an empty Vect
-export
-noEmptyElem : forall x . Elem x [] -> Void
-noEmptyElem Here impossible
-
-export
-Uninhabited (Elem x []) where
-  uninhabited = noEmptyElem
-
-||| An item not in the head and not in the tail is not in the Vect at all
-export
-neitherHereNorThere : {x, y : a} -> {xs : Vect n a} -> Not (x = y) -> Not (Elem x xs) -> Not (Elem x (y :: xs))
-neitherHereNorThere xneqy xninxs Here = xneqy Refl
-neitherHereNorThere xneqy xninxs (There xinxs) = xninxs xinxs
-
-||| A decision procedure for Elem
-public export
-isElem : DecEq a => (x : a) -> (xs : Vect n a) -> Dec (Elem x xs)
-isElem x [] = No noEmptyElem
-isElem x (y :: xs) with (decEq x y)
-  isElem x (x :: xs) | (Yes Refl) = Yes Here
-  isElem x (y :: xs) | (No xneqy) with (isElem x xs)
-    isElem x (y :: xs) | (No xneqy) | (Yes xinxs) = Yes (There xinxs)
-    isElem x (y :: xs) | (No xneqy) | (No xninxs) = No (neitherHereNorThere xneqy xninxs)
-
-public export
-replaceElem : (xs : Vect k t) -> Elem x xs -> (y : t) -> (ys : Vect k t ** Elem y ys)
-replaceElem (x::xs) Here y = (y :: xs ** Here)
-replaceElem (x::xs) (There xinxs) y with (replaceElem xs xinxs y)
-  replaceElem (x::xs) (There xinxs) y | (ys ** yinys) = (x :: ys ** There yinys)
-
-public export
-replaceByElem : (xs : Vect k t) -> Elem x xs -> t -> Vect k t
-replaceByElem (x::xs) Here y = y :: xs
-replaceByElem (x::xs) (There xinxs) y = x :: replaceByElem xs xinxs y
-
-public export
-mapElem : {0 xs : Vect k t} -> {0 f : t -> u} ->
-          Elem x xs -> Elem (f x) (map f xs)
-mapElem Here = Here
-mapElem (There e) = There (mapElem e)
-
-||| Remove the element at the given position.
-|||
-||| @xs The vector to be removed from
-||| @p A proof that the element to be removed is in the vector
-public export
-dropElem : {k : _} -> (xs : Vect (S k) t) -> (p : Elem x xs) -> Vect k t
-dropElem (x :: ys) Here = ys
-dropElem {k = (S k)} (x :: ys) (There later) = x :: dropElem ys later
 
 --------------------------------------------------------------------------------
 -- Show
@@ -896,5 +854,3 @@ overLength {m} n xs with (cmp m n)
          = Just (0 ** xs)
   overLength {m = plus n (S x)} n xs | (CmpGT x)
          = Just (S x ** rewrite plusCommutative (S x) n in xs)
-
-

@@ -39,9 +39,9 @@ The added fields are:
 + ``brief = "<text>"``, a string literal containing a brief description
   of the package.
 
-+ ``version = "<text>""``, a version string to associate with the package.
++ ``version = "<text>"``, a version string to associate with the package.
 
-+ ``readme = "<file>""``, location of the README file.
++ ``readme = "<file>"``, location of the README file.
 
 + ``license = "<text>"``, a string description of the licensing
   information.
@@ -57,6 +57,16 @@ The added fields are:
 
 + ``bugtracker = "<url>"``, the location of the project's bug tracker.
 
+Directories
+-----------
+
++ ``sourcedir = "<dir>"``, the directory to look for Idris source files.
+
++ ``builddir = "<dir>"``, the directory to put the checked modules and
+  the artefacts from the code generator.
+
++ ``outputdir = "<dir>"``, the directory where the code generator should
+  output the executable.
 
 Common Fields
 -------------
@@ -68,11 +78,11 @@ Other common fields which may be present in an ``ipkg`` file are:
   identifier. the iPKG format also takes a quoted version that accepts
   any valid filename.
 
-  Executables are placed in ``build/exec``, relative to the top level
-  source directory.
+  Executables are placed in ``build/exec`` by default. The location can
+  be changed by specifying the ``outputdir`` field.
 
 + ``main = <module>``, which takes the name of the main module, and
-  must be present if the executable field is present.
+  must be present if the ``executable`` field is present.
 
 + ``opts = "<idris options>"``, which allows options to be passed to
   Idris.

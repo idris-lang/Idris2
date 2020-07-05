@@ -83,28 +83,14 @@ fromList = fromList' empty
     fromList' acc [] = acc
     fromList' acc ((k, v) :: ns) = fromList' (addName k v acc) ns
 
--- Merge two contexts, with entries in the second overriding entries in
--- the first
+-- Merge two contexts, with entries in the first overriding entries in
+-- the second
 export
 merge : ANameMap a -> ANameMap a -> ANameMap a
-merge ctxt (MkANameMap exact hier)
+merge (MkANameMap exact hier) ctxt
     = insertFrom (toList exact) ctxt
   where
     insertFrom : List (Name, a) -> ANameMap a -> ANameMap a
     insertFrom [] ctxt = ctxt
     insertFrom ((n, val) :: cs) ctxt
         = insertFrom cs (addName n val ctxt)
-
--- TODO: Update namespaces so 'as' works
-export
-mergeAs : List String -> List String ->
-          ANameMap a -> ANameMap a -> ANameMap a
-mergeAs oldns newns ctxt (MkANameMap exact hier)
-    = insertFrom (toList exact) ctxt
-  where
-    insertFrom : List (Name, a) -> ANameMap a -> ANameMap a
-    insertFrom [] ctxt = ctxt
-    insertFrom ((n, val) :: cs) ctxt
-        = insertFrom cs (addName n val ctxt)
-
-

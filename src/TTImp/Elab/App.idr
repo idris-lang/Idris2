@@ -266,6 +266,7 @@ mutual
                 _ => pure True
   needsDelayExpr True (IApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (IImplicitApp _ f _ _) = needsDelayExpr True f
+  needsDelayExpr True (ILam _ _ _ _ _ _) = pure True
   needsDelayExpr True (ICase _ _ _ _) = pure True
   needsDelayExpr True (ILocal _ _ _) = pure True
   needsDelayExpr True (IUpdate _ _ _) = pure True
@@ -409,7 +410,7 @@ mutual
                       else pure tm
              case elabMode elabinfo of
                   InLHS _ => -- reset hole and redo it with the unexpanded definition
-                     do updateDef (Resolved idx) (const (Just (Hole 0 False)))
+                     do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
                         solveIfUndefined env metaval argv
                         pure ()
                   _ => pure ()

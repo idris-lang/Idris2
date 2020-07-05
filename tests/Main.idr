@@ -40,6 +40,7 @@ idrisTests
        "basic026", "basic027", "basic028", "basic029", "basic030",
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
+       "basic041",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -47,30 +48,34 @@ idrisTests
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
+       "error011",
        -- Modules and imports
-       "import001", "import002", "import003", "import004",
+       "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
        "interactive001", "interactive002", "interactive003", "interactive004",
        "interactive005", "interactive006", "interactive007", "interactive008",
        "interactive009", "interactive010", "interactive011", "interactive012",
-       "interactive013",
-       -- Literate
-       "literate001", "literate002", "literate003", "literate004",
-       "literate005", "literate006", "literate007", "literate008",
-       "literate009", "literate010", "literate011", "literate012",
-       "literate013",
+       "interactive013", "interactive014",
        -- Interfaces
        "interface001", "interface002", "interface003", "interface004",
        "interface005", "interface006", "interface007", "interface008",
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        -- Miscellaneous REPL
-       "interpreter001", "interpreter002",
+       "interpreter001", "interpreter002", "interpreter003",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
        "linear001", "linear002", "linear003", "linear004", "linear005",
-       "linear006", "linear007", "linear008", "linear009",
+       "linear006", "linear007", "linear008", "linear009", "linear010",
+       "linear011", "linear012",
+       -- Literate
+       "literate001", "literate002", "literate003", "literate004",
+       "literate005", "literate006", "literate007", "literate008",
+       "literate009", "literate010", "literate011", "literate012",
+       "literate013", "literate014",
+       -- Namespace blocks
+       "namespace001",
        -- Parameters blocks
        "params001",
        -- Performance: things which have been slow in the past, or which
@@ -93,7 +98,8 @@ idrisTests
        "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
-       "reg022", "reg023",
+       "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
+       "reg029",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008",
@@ -114,6 +120,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
+      "chez025", "chez026",
       "reg001"]
 
 nodeTests : List String

@@ -26,18 +26,19 @@ compileToNode c tm = do
   compileToES c tm
 
 ||| Node implementation of the `compileExpr` interface.
-compileExpr : Ref Ctxt Defs -> (execDir : String) ->
+compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c execDir tm outfile
+compileExpr c tmpDir outputDir tm outfile
     = do es <- compileToNode c tm
-         Right () <- coreLift (writeFile outfile es)
-            | Left err => throw (FileErr outfile err)
-         pure (Just outfile)
+         let out = outputDir </> outfile
+         Right () <- coreLift (writeFile out es)
+            | Left err => throw (FileErr out err)
+         pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c execDir tm
-= do let outn = execDir </> "_tmp_node" ++ ".js"
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm
+= do let outn = tmpDir </> "_tmp_node" ++ ".js"
      js <- compileToNode c tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)

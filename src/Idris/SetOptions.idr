@@ -25,13 +25,13 @@ addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> Core ()
 addPkgDir p
     = do defs <- get Ctxt
-         addExtraDir (dir_prefix (dirs (options defs)) </>
+         addExtraDir (prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version </> p)
 
 dirOption : Dirs -> DirCommand -> Core ()
 dirOption dirs LibDir
     = coreLift $ putStrLn
-         (dir_prefix dirs </> "idris2-" ++ showVersion False version)
+         (prefix_dir dirs </> "idris2-" ++ showVersion False version)
 
 -- Options to be processed before type checking. Return whether to continue.
 export
@@ -74,6 +74,15 @@ preOptions (SetCG e :: opts)
 preOptions (PkgPath p :: opts)
     = do addPkgDir p
          preOptions opts
+preOptions (SourceDir d :: opts)
+    = do setSourceDir (Just d)
+         preOptions opts
+preOptions (BuildDir d :: opts)
+    = do setBuildDir d
+         preOptions opts
+preOptions (OutputDir d :: opts)
+    = do setOutputDir (Just d)
+         preOptions opts
 preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d
@@ -102,6 +111,9 @@ preOptions (DumpANF f :: opts)
          preOptions opts
 preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
+         preOptions opts
+preOptions (Logging n :: opts)
+    = do setSession (record { logLevel = n } !getSession)
          preOptions opts
 preOptions (_ :: opts) = preOptions opts
 

@@ -354,6 +354,12 @@ displayIDEResult outf i (REPL $ Edited (EditError x))
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr)) 
   = printIDEResult outf i 
   $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
+displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n" (map (relit lit) wapp)
+displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n" (map (relit lit) cstr)
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ SExpList $ map toSExp ns
 displayIDEResult outf i (Term t)

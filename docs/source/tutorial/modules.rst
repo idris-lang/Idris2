@@ -117,7 +117,7 @@ Meaning for Functions
   about doing this.
 
 .. note::
-
+    
    Type synonyms in Idris are created by writing a function. When
    setting the visibility for a module, it is usually a good idea to
    ``public export`` all type synonyms if they are to be used outside
@@ -128,6 +128,19 @@ Since ``public export`` means that a function's definition is exported,
 this effectively makes the function definition part of the module's API.
 Therefore, it's generally a good idea to avoid using ``public export`` for
 functions unless you really mean to export the full definition.
+
+.. note::
+    *For beginners*: 
+    If the function needs to be accessed only at runtime, use ``export``.
+    However, if it's also meant to be used at *compile* time (e.g. to prove 
+    a theorem), use ``public export``.  
+    For example, consider the function ``plus : Nat -> Nat -> Nat`` discussed
+    previously, and the following theorem: ``thm : plus Z m = m``.  
+    In order to to prove it, the type checker needs to reduce ``plus Z m`` to ``m`` 
+    (and hence obtain ``thm : m = m``).
+    To achieve this, it will need access to the *definition* of ``plus``, 
+    which includes the equation ``plus Z m = m``.
+    Therefore, in this case, ``plus`` has to be marked as ``public export``.
 
 Meaning for Data Types
 ----------------------
@@ -165,6 +178,35 @@ the ``public`` modifier on an ``import``. For example:
 The module ``A`` will export the name ``a``, as well as any public or
 abstract names in module ``C``, but will not re-export anything from
 module ``B``.
+
+Renaming imports
+----------------
+
+Sometimes it is convenient to be able to access the names in another module
+via a different namespace (typically, a shorter one). For this, you can
+use `import...as`. For example:
+
+::
+
+    module A
+
+    import Data.List as L
+
+This module ``A`` has access to the exported names from module ``Data.List``,
+but can also explicitly access them via the module name ``L``. ``import...as``
+can also be combined with ``import public`` to create a module which exports
+a larger API from other sub-modules:
+
+::
+
+    module Books
+
+    import Books.Hardback as Books
+    import Books.Comic as Books
+
+Here, any module which imports ``Books`` will have access to the exported
+interfaces of ``Books.Hardback`` and ``Books.Comic`` both under the namespace
+``Books``.
 
 Explicit Namespaces
 ===================

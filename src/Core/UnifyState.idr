@@ -674,7 +674,7 @@ dumpHole lvl hole
                     (Hole _ p, ty) =>
                          log lvl $ "?" ++ show (fullname gdef) ++ " : " ++
                                            show !(normaliseHoles defs [] ty)
-                                           ++ if p then " (ImplBind)" else ""
+                                           ++ if implbind p then " (ImplBind)" else ""
                                            ++ if invertible gdef then " (Invertible)" else ""
                     (BySearch _ _ _, ty) =>
                          log lvl $ "Search " ++ show hole ++ " : " ++

@@ -71,9 +71,9 @@ updateEnv
          defs <- get Ctxt
          addPkgDir "prelude"
          addPkgDir "base"
-         addDataDir (dir_prefix (dirs (options defs)) </>
+         addDataDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "support")
-         addLibDir (dir_prefix (dirs (options defs)) </>
+         addLibDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "lib")
          Just cwd <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")

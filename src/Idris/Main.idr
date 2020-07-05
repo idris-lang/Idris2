@@ -1,4 +1,4 @@
-module Main
+module Idris.Main
 
 import Idris.Driver
 

@@ -1,0 +1,2 @@
+:exec printLn (stsum [1..1000])
+:q

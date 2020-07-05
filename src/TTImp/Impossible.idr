@@ -158,8 +158,8 @@ mutual
 export
 getImpossibleTerm : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
-                    Env Term vars -> RawImp -> Core ClosedTerm
-getImpossibleTerm env tm
+                    Env Term vars -> NestedNames vars -> RawImp -> Core ClosedTerm
+getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)
          mkTerm (applyEnv tm) Nothing [] []
   where
@@ -175,9 +175,17 @@ getImpossibleTerm env tm
           then addEnv fc env
           else Implicit fc False :: addEnv fc env
 
-    -- Need to apply the function to the surrounding environment
+    expandNest : RawImp -> RawImp
+    expandNest (IVar fc n)
+        = case lookup n (names nest) of
+               Just (Just n', _, _) => IVar fc n'
+               _ => IVar fc n
+    expandNest tm = tm
+
+    -- Need to apply the function to the surrounding environment, and update
+    -- the name to the proper one from the nested names map
     applyEnv : RawImp -> RawImp
     applyEnv (IApp fc fn arg) = IApp fc (applyEnv fn) arg
     applyEnv (IImplicitApp fc fn n arg)
         = IImplicitApp fc (applyEnv fn) n arg
-    applyEnv tm = apply tm (addEnv (getFC tm) env)
+    applyEnv tm = apply (expandNest tm) (addEnv (getFC tm) env)

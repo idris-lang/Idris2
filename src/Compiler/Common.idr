@@ -29,10 +29,10 @@ public export
 record Codegen where
   constructor MkCG
   ||| Compile an Idris 2 expression, saving it to a file.
-  compileExpr : Ref Ctxt Defs -> (execDir : String) ->
+  compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
   ||| Execute an Idris 2 expression directly.
-  executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
+  executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 
 -- Say which phase of compilation is the last one to use - it saves time if 
 -- you only ask for what you need.
@@ -80,10 +80,13 @@ compile : {auto c : Ref Ctxt Defs} ->
           Codegen ->
           ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compile {c} cg tm out
-    = do makeExecDirectory
-         d <- getDirs
+    = do d <- getDirs
+         let tmpDir = execBuildDir d
+         let outputDir = outputDirWithDefault d
+         ensureDirectoryExists tmpDir
+         ensureDirectoryExists outputDir
          logTime "Code generation overall" $
-             compileExpr cg c (exec_dir d) tm out
+             compileExpr cg c tmpDir outputDir tm out
 
 ||| execute
 ||| As with `compile`, produce a functon that executes
@@ -92,9 +95,10 @@ export
 execute : {auto c : Ref Ctxt Defs} ->
           Codegen -> ClosedTerm -> Core ()
 execute {c} cg tm
-    = do makeExecDirectory
-         d <- getDirs
-         executeExpr cg c (exec_dir d) tm
+    = do d <- getDirs
+         let tmpDir = execBuildDir d
+         ensureDirectoryExists tmpDir
+         executeExpr cg c tmpDir tm
          pure ()
 
 -- If an entry isn't already decoded, get the minimal entry we need for

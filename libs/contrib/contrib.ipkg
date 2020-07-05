@@ -1,6 +1,14 @@
 package contrib
 
-modules = Control.Delayed,
+modules = Control.ANSI,
+          Control.ANSI.SGR,
+          Control.ANSI.CSI,
+          Control.Delayed,
+          Control.Linear.LIO,
+          Control.Monad.Syntax,
+
+          Control.Algebra,
+          Control.Algebra.Laws,
 
           Data.Linear.Array,
 
@@ -23,6 +31,7 @@ modules = Control.Delayed,
           Data.SortedMap,
           Data.SortedSet,
           Data.String.Extra,
+          Data.String.Interpolation,
 
           Debug.Buffer,
 

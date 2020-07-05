@@ -1,0 +1,4 @@
+1/1: Building with (with.lidr)
+Main> > dnat x y with (_)
+>   dnat x y | with_pat = ?dnat_rhs
+Main> Bye for now!

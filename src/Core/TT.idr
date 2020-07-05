@@ -1254,6 +1254,10 @@ export
       showApp (Bind _ x (Pi c AutoImplicit ty) sc) []
           = "{auto " ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} -> " ++ show sc
+      showApp (Bind _ x (Pi c (DefImplicit tm) ty) sc) []
+          = "{default " ++ show tm ++ " "
+                ++ showCount c ++ show x ++ " : " ++ show ty ++
+            "} -> " ++ show sc
       showApp (Bind _ x (PVar c Explicit ty) sc) []
           = "pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc

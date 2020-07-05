@@ -148,9 +148,11 @@ Chapter 9
 
 + In ``ElemType.idr``, add ``import Decidable.Equality``
 
++ In ``Elem.idr``, add ``import Data.Vect.Elem``
+
 In ``Hangman.idr``:
 
-+ Add ``import Decidable.Equality`` and ``import Data.Strings``
++ Add ``import Data.Strings``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
 + ``removeElem`` pattern matches on ``n``, so it needs to be written in its
   type:
 
@@ -180,6 +182,7 @@ In ``Hangman.idr``:
 
 In ``RemoveElem.idr``
 
++ Add ``import Data.Vect.Elem``
 + ``removeElem`` needs to be updated as above.
 
 Chapter 10
@@ -427,10 +430,11 @@ In ``ATM.idr``:
 
 + Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
 
-In ``ATM.idr``, add:
+In ``Hangman.idr``, add:
 
 .. code-block:: idris
 
+    import Data.Vect.Elem -- `Elem` now has its own submodule
     import Data.Strings -- for `toUpper`
     import Data.List -- for `nub`
 

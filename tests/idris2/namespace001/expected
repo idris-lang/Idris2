@@ -1,0 +1,8 @@
+1/1: Building Dup (Dup.idr)
+Dup.idr:13:1--15:1:Main.Test is already defined
+Main> Bye for now!
+1/1: Building Scope (Scope.idr)
+Main> Main.Test : Type
+Main.X.Test : Type
+Main> 
+Bye for now!

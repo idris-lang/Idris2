@@ -122,11 +122,11 @@ mutual
   appExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   appExpr q fname indents
       = case_ fname indents
+    <|> doBlock fname indents
     <|> lambdaCase fname indents
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
-    <|> doBlock fname indents
     <|> do start <- location
            f <- simpleExpr fname indents
            args <- many (argExpr q fname indents)
@@ -740,7 +740,17 @@ mutual
            actions <- block (doAct fname)
            end <- location
            end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
-           pure (PDoBlock (MkFC fname start end) (concat actions))
+           pure (PDoBlock (MkFC fname start end) Nothing (concat actions))
+    <|> do start <- location
+           nsdo <- namespacedIdent
+           the (SourceEmptyRule PTerm) $ case nsdo of
+                ("do" :: ns) =>
+                   do actions <- block (doAct fname)
+                      end <- location
+                      end <- pure $ fromMaybe end $ map (endPos . getLoc) $ join $ last' <$> last' actions
+                      pure (PDoBlock (MkFC fname start end)
+                                     (Just (reverse ns)) (concat actions))
+                _ => fail "Not a namespaced 'do'"
 
   lowerFirst : String -> Bool
   lowerFirst "" = False
@@ -1173,9 +1183,10 @@ namespaceDecl : FileName -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
     = do start <- location
          doc   <- option "" documentation
+         col   <- column
          ns    <- namespaceHead
          end   <- location
-         ds    <- assert_total (nonEmptyBlock (topDecl fname))
+         ds    <- blockAfter col (topDecl fname)
          pure (PNamespace (MkFC fname start end) ns (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl
@@ -1737,6 +1748,9 @@ data CmdArg : Type where
      ||| The command takes a file.
      FileArg : CmdArg
 
+     ||| The command takes a module.
+     ModuleArg : CmdArg
+
 export
 Show CmdArg where
   show NoArg = ""
@@ -1746,6 +1760,7 @@ Show CmdArg where
   show NumberArg = "<number>"
   show OptionArg = "<option>"
   show FileArg = "<filename>"
+  show ModuleArg = "<module>"
 
 export
 data ParseCmd : Type where
@@ -1792,6 +1807,19 @@ nameArgCmd parseCmd command doc = (names, NameArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       n <- name
+      pure (command n)
+
+moduleArgCmd : ParseCmd -> (List String -> REPLCmd) -> String -> CommandDefinition
+moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      n <- moduleIdent
       pure (command n)
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
@@ -1865,6 +1893,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseREPLCmd ["printdef"]) PrintDef "Show the definition of a function"
   , nameArgCmd (ParseREPLCmd ["s", "search"]) ProofSearch "Search for values by type"
   , nameArgCmd (ParseIdentCmd "di") DebugInfo "Show debugging information for a name"
+  , moduleArgCmd (ParseKeywordCmd "module") ImportMod "Import an extra module"
   , noArgCmd (ParseREPLCmd ["q", "quit", "exit"]) Quit "Exit the Idris system"
   , noArgCmd (ParseREPLCmd ["cwd"]) CWD "Displays the current working directory"
   , optArgCmd (ParseIdentCmd "set") SetOpt True "Set an option"

@@ -1,0 +1,6 @@
+1/1: Building case (case.lidr)
+Main> > foo x = case _ of
+>              case_val => ?foo_rhs
+Main> > bar x = plus x (case _ of
+>                      case_val => ?bar_rhs)
+Main> Bye for now!
