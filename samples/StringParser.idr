@@ -13,6 +13,8 @@ parseStuff = do a <- string "abc"
                 b <- string "def"
                 pure ()
 
+pureParsing : String -> Either String (List Char)
+pureParsing str = parse (many (satisfy isDigit)) str
 
 main : IO ()
 main = do
@@ -29,4 +31,8 @@ main = do
     case migs of
         Left err => putStrLn "NOOOOOOO!"
         Right ds => printLn ds
+    let pp = pureParsing "63553"
+    case pp of
+        Left err => putStrLn err
+        Right xs => printLn xs
     pure ()
