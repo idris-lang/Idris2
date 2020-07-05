@@ -8,6 +8,7 @@ import Data.Strings
 
 %default partial
 
+||| The input state, pos is position in the string and maxPos is the length of the input string.
 record State where
     constructor S
     input : String
@@ -17,10 +18,13 @@ record State where
 Show State where
     show s = "(" ++ show s.input ++", " ++ show s.pos ++ ", " ++ show s.maxPos ++")"
 
+||| A debug helper to print out the input state during parsing.
 dumpState : State -> State
 dumpState s = unsafePerformIO $ do printLn s
                                    pure s
 
+
+||| Result of applying a parser
 data Result a = Fail Int String | OK a State
 
 
@@ -70,17 +74,24 @@ MonadTrans ParseT where
     lift x = P $ \s => do res <-x
                           pure $ OK res s
 
+||| Run a parser in a monad
+||| Returns a tuple of the result and final position on success.
+||| Returns an error message on failure.
 public export
-parseT : Monad m => ParseT m a -> String -> m (Either String a)
+parseT : Monad m => ParseT m a -> String -> m (Either String (a, Int))
 parseT p str = do res <- p.runParser (S str 0 (strLength str))
                   case res of
-                      OK r s => pure $ Right r
+                      OK r s => pure $ Right (r, s.pos)
                       Fail i err => pure $ Left $ fastAppend ["Parse failed at position ", show i, ": ", err]
 
+||| Run a parser in a pure function
+||| Returns a tuple of the result and final position on success.
+||| Returns an error message on failure.
 public export
-parse : Parser a ->  String -> Either String a
+parse : Parser a -> String -> Either String (a, Int)
 parse p str = runIdentity $ parseT p str
 
+||| Succeeds if the next char satisfies the predicate `f`
 public export
 satisfy : Monad m => (Char -> Bool) -> ParseT m Char
 satisfy f = P $ \s => do if s.pos < s.maxPos
@@ -90,6 +101,8 @@ satisfy f = P $ \s => do if s.pos < s.maxPos
                                     then pure $ OK ch (S s.input (s.pos + 1) s.maxPos)
                                     else pure $ Fail (s.pos) "satisfy"
                             else pure $ Fail (s.pos) "satisfy"
+
+||| Succeeds if the string `str` follows.
 public export
 string : Monad m => String -> ParseT m ()
 string str = P $ \s => do let len = strLength str
@@ -100,29 +113,37 @@ string str = P $ \s => do let len = strLength str
                                         else pure $ Fail (s.pos) ("string " ++ show str)
                               else pure $ Fail (s.pos) ("string " ++ show str)
 
+||| Succeeds if the next char is `c`
 public export
 char : Monad m => Char -> ParseT m ()
 char c = do _ <- satisfy (== c)
             pure ()
 
 mutual
+    ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
+    ||| and accumulate the results in a list
     public export
     some : Monad m => ParseT m a -> ParseT m (List a)
     some p = pure (!p :: !(many p))
 
+    ||| Always succeeds, will accumulate the results of `p` in a list until it fails.
     public export
     many : Monad m => ParseT m a -> ParseT m (List a)
     many p = some p <|> pure []
 
+||| Always succeeds, applies the predicate `f` on chars until it fails and creates a string
+||| from the results.
 public export
 takeWhile : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile f = do ls <- many (satisfy f)
                  pure $ pack ls
 
+||| Returns the result of the parser `p` or `def` if it fails.
 export
 option : Monad m => a -> ParseT m a -> ParseT m a
 option def p = p <|> pure def
 
+||| Returns a Maybe that contains the result of `p` if it succeeds or `Nothing` if it fails.
 export
 optional : Monad m => ParseT m a -> ParseT m (Maybe a)
 optional p = (p >>= \res => pure $ Just res) <|> pure Nothing
