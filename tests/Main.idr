@@ -122,6 +122,7 @@ nodeTests
     , "node011", "node012", "node015", "node017", "node018", "node019" -- node014
     , "node021" --, "node020"
     , "reg001"
+    , "tailrec001"
     ]
 
 ideModeTests : List String
