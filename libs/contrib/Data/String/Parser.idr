@@ -122,3 +122,7 @@ takeWhile f = do ls <- many (satisfy f)
 export
 option : Monad m => a -> ParseT m a -> ParseT m a
 option def p = p <|> pure def
+
+export
+optional : Monad m => ParseT m a -> ParseT m (Maybe a)
+optional p = (p >>= \res => pure $ Just res) <|> pure Nothing

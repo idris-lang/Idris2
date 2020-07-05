@@ -32,6 +32,11 @@ optParser = do res <- option "" (takeWhile isDigit)
                string "def"
                pure $ res
 
+maybeParser : ParseT IO Bool
+maybeParser = do res <- optional (string "abc")
+                 string "def"
+                 pure $ isJust res
+
 main : IO ()
 main = do
     res <- parseT parseStuff "abcdef"
@@ -49,5 +54,9 @@ main = do
     res <- parseT optParser "123def"
     showRes res
     res <- parseT optParser "def"
+    showRes res
+    res <- parseT maybeParser "abcdef"
+    showRes res
+    res <- parseT maybeParser "def"
     showRes res
     pure ()
