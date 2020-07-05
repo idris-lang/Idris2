@@ -508,7 +508,7 @@ processPackage cmd file opts
                       Install => do [] <- build pkg opts
                                        | errs => coreLift (exitWith (ExitFailure 1))
                                     install pkg opts
-                      Check => do
+                      Typecheck => do
                         [] <- check pkg opts
                           | errs => coreLift (exitWith (ExitFailure 1))
                         pure ()
