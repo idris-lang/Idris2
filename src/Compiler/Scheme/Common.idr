@@ -38,8 +38,8 @@ schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
 schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
-schName (CaseBlock x y) = "case--" ++ show x ++ "-" ++ show y
-schName (WithBlock x y) = "with--" ++ show x ++ "-" ++ show y
+schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
+schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
 schName (Resolved i) = "fn--" ++ show i
 
 export

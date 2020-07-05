@@ -178,7 +178,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          log 5 $ "Doing a case under unbound implicits " ++ show fullImps
 
          scrn <- genVarName "scr"
-         casen <- genCaseName (defining est)
+         casen <- genCaseName !(prettyName !(toFullNames (Resolved (defining est))))
 
          -- Update environment so that linear bindings which were used
          -- (esp. in the scrutinee!) are set to 0 in the case type

@@ -1,6 +1,6 @@
 1/1: Building wcov (wcov.idr)
 Main> Main.tfoo is total
 Main> Main.wfoo is total
-Main> Main.wbar is not covering due to call to function Main.with block in 1395
+Main> Main.wbar is not covering due to call to function Main.with block in wbar
 Main> Main.wbar1 is total
 Main> Bye for now!
