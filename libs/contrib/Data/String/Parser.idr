@@ -14,6 +14,13 @@ record State where
     pos : Int
     maxPos : Int
 
+Show State where
+    show s = "(" ++ show s.input ++", " ++ show s.pos ++ ", " ++ show s.maxPos ++")"
+
+dumpState : State -> State
+dumpState s = unsafePerformIO $ do printLn s
+                                   pure s
+
 data Result a = Fail Int String | OK a State
 
 
@@ -86,7 +93,7 @@ satisfy f = P $ \s => do if s.pos < s.maxPos
 public export
 string : Monad m => String -> ParseT m ()
 string str = P $ \s => do let len = strLength str
-                          if s.pos+len < s.maxPos
+                          if s.pos+len <= s.maxPos
                               then do let head = strSubstr s.pos len s.input
                                       if head == str
                                         then pure $ OK () (S s.input (s.pos + len) s.maxPos)
@@ -111,3 +118,7 @@ public export
 takeWhile : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile f = do ls <- many (satisfy f)
                  pure $ pack ls
+
+export
+option : Monad m => a -> ParseT m a -> ParseT m a
+option def p = p <|> pure def

@@ -1,11 +1,18 @@
 module Main
 
-import Data.String.Parser
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.Maybe
+import Data.String.Parser
+
 %default partial
 -- Buld this program with '-p contrib'
+
+showRes : Show a => Either String a -> IO ()
+showRes res = case res of
+                Left err => putStrLn err
+                Right xs => printLn xs
 
 -- test lifting
 parseStuff : ParseT IO ()
@@ -18,10 +25,12 @@ parseStuff = do a <- string "abc"
 pureParsing : String -> Either String (List Char)
 pureParsing str = parse (many (satisfy isDigit)) str
 
-showRes : Show a => Either String a -> IO ()
-showRes res = case res of
-                Left err => putStrLn err
-                Right xs => printLn xs
+
+
+optParser : ParseT IO String
+optParser = do res <- option "" (takeWhile isDigit)
+               string "def"
+               pure $ res
 
 main : IO ()
 main = do
@@ -37,4 +46,8 @@ main = do
     showRes $ pureParsing "63553"
     s <- parseT (takeWhile isDigit) "887abc8993"
     showRes s
+    res <- parseT optParser "123def"
+    showRes res
+    res <- parseT optParser "def"
+    showRes res
     pure ()
