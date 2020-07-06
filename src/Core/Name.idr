@@ -14,8 +14,8 @@ data Name : Type where
      DN : String -> Name -> Name -- a name and how to display it
      RF : String -> Name  -- record field name
      Nested : (Int, Int) -> Name -> Name -- nested function name
-     CaseBlock : Int -> Int -> Name -- case block nested in (resolved) name
-     WithBlock : Int -> Int -> Name -- with block nested in (resolved) name
+     CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
+     WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
 -- Update a name imported with 'import as', for creating an alias
@@ -88,8 +88,8 @@ Show Name where
   show (RF n) = "." ++ n
   show (Nested (outer, idx) inner)
       = show outer ++ ":" ++ show idx ++ ":" ++ show inner
-  show (CaseBlock outer i) = "case block in " ++ show outer ++ "(" ++ show i ++ ")"
-  show (WithBlock outer i) = "with block in " ++ show outer
+  show (CaseBlock outer i) = "case block in " ++ outer
+  show (WithBlock outer i) = "with block in " ++ outer
   show (Resolved x) = "$resolved" ++ show x
 
 export

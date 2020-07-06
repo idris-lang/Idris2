@@ -40,6 +40,7 @@ findRacoExe =
 schHeader : String -> String
 schHeader libs
   = "#lang racket/base\n" ++
+    "; @generated\n" ++
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system
     "(require rnrs/bytevectors-6)\n" ++ -- for buffers

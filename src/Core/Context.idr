@@ -1287,11 +1287,9 @@ prettyName (Nested (i, _) n)
          pure (!(prettyName i') ++ "," ++
                !(prettyName n))
 prettyName (CaseBlock outer idx)
-    = do outer' <- toFullNames (Resolved outer)
-         pure ("case block in " ++ !(prettyName outer'))
+    = pure ("case block in " ++ outer)
 prettyName (WithBlock outer idx)
-    = do outer' <- toFullNames (Resolved outer)
-         pure ("with block in " ++ !(prettyName outer'))
+    = pure ("with block in " ++ outer)
 prettyName (NS ns n) = prettyName n
 prettyName n = pure (show n)
 

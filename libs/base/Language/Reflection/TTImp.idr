@@ -132,7 +132,7 @@ mutual
   data Record : Type where
        MkRecord : FC -> (n : Name) ->
                   (params : List (Name, TTImp)) ->
-                  (conName : Maybe Name) ->
+                  (conName : Name) ->
                   (fields : List IField) ->
                   Record
 

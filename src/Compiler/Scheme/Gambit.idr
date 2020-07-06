@@ -39,7 +39,8 @@ findGSC =
      pure $ fromMaybe "/usr/bin/env gsc" env
 
 schHeader : String
-schHeader = "(declare (block)
+schHeader = "; @generated\n
+         (declare (block)
          (inlining-limit 450)
          (standard-bindings)
          (extended-bindings)

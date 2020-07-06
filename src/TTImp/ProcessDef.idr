@@ -466,7 +466,7 @@ checkClause {vars} mult vis hashit n opts nest env (WithClause fc lhs_in wval_ra
          logTerm 3 "With function type" wtype
          log 5 $ "Argument names " ++ show wargNames
 
-         wname <- genWithName n
+         wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname (newDef fc wname (if isErased mult then erased else top)
                                       vars wtype vis None)
          let rhs_in = apply (IVar fc wname)
