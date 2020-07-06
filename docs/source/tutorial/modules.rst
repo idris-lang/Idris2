@@ -201,8 +201,8 @@ a larger API from other sub-modules:
 
     module Books
 
-    import Books.Hardback as Books
-    import Books.Comic as Books
+    import public Books.Hardback as Books
+    import public Books.Comic as Books
 
 Here, any module which imports ``Books`` will have access to the exported
 interfaces of ``Books.Hardback`` and ``Books.Comic`` both under the namespace
