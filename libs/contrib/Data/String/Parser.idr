@@ -19,12 +19,6 @@ record State where
 Show State where
     show s = "(" ++ show s.input ++", " ++ show s.pos ++ ", " ++ show s.maxPos ++")"
 
-||| A debug helper to print out the input state during parsing.
-dumpState : State -> State
-dumpState s = unsafePerformIO $ do printLn s
-                                   pure s
-
-
 ||| Result of applying a parser
 public export
 data Result a = Fail Int String | OK a State
