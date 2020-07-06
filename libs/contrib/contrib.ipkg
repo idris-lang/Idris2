@@ -23,6 +23,7 @@ modules = Control.ANSI,
           Data.Logic.Propositional,
 
           Data.Nat.Ack,
+          Data.Nat.Div,
           Data.Nat.Equational,
           Data.Nat.Fact,
           Data.Nat.Factor,
@@ -32,6 +33,8 @@ modules = Control.ANSI,
           Data.SortedSet,
           Data.String.Extra,
           Data.String.Interpolation,
+
+          Data.Vect.Sort,
 
           Debug.Buffer,
 
