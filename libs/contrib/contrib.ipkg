@@ -32,6 +32,7 @@ modules = Control.ANSI,
           Data.SortedSet,
           Data.String.Extra,
           Data.String.Interpolation,
+          Data.String.Parser,
 
           Debug.Buffer,
 

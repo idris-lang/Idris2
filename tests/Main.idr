@@ -120,7 +120,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026",
+      "chez025", "chez026", "chez027",
       "reg001"]
 
 ideModeTests : List String
