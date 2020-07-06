@@ -99,10 +99,10 @@ idrisTests
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
-       "reg029",
+       "reg029", "reg030", "reg031",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008",
+       "total006", "total007", "total008", "total009",
        -- The 'with' rule
        "with001", "with002",
        -- with-disambiguation
@@ -120,7 +120,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026",
+      "chez025", "chez026", "chez027",
       "reg001"]
 
 nodeTests : List String

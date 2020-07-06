@@ -172,6 +172,14 @@ strIndex : String -> Int -> Char
 strIndex = prim__strIndex
 
 export partial
+strLength : String -> Int
+strLength = prim__strLength
+
+export partial
+strSubstr : Int -> Int -> String -> String
+strSubstr = prim__strSubstr
+
+export partial
 strTail : String -> String
 strTail = prim__strTail
 
