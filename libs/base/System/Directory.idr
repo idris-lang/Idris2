@@ -9,11 +9,8 @@ DirPtr = AnyPtr
 support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support"
 
-js_try_catch_lasterr_Int : String -> String
-js_try_catch_lasterr_Int x = "{try{" ++ x ++ ";return 0n}catch(e){process.__lasterr = e; return 1n}}"
-
 %foreign support "idris2_fileErrno"
-         "node:lambda:()=>{const n = process.__lasterr.errno; switch(n){case -17: return 4n; default: return -BigInt(n)}}"
+         "node:support:fileErrno,support_system_directory"
 prim_fileErrno : PrimIO Int
 
 returnError : HasIO io => io (Either FileError a)
@@ -35,11 +32,11 @@ ok x = pure (Right x)
 prim_currentDir : PrimIO (Ptr String)
 
 %foreign support "idris2_changeDir"
-         ("node:lambda:d=>" ++ js_try_catch_lasterr_Int "process.chdir(d)")
+         "node:support:changeDir,support_system_directory"
 prim_changeDir : String -> PrimIO Int
 
 %foreign support "idris2_createDir"
-         ("node:lambdaRequire:fs:d=>" ++ js_try_catch_lasterr_Int "__require_fs.mkdirSync(d)")
+         "node:support:createDir,support_system_directory"
 prim_createDir : String -> PrimIO Int
 
 %foreign support "idris2_openDir"

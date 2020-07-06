@@ -1,7 +1,6 @@
 module Compiler.ES.TailRec
 
 import Compiler.ES.ImperativeAst
-import Debug.Trace
 
 hasTailCall : Name -> ImperativeStatement -> Bool
 hasTailCall n (SeqStatement x y) =

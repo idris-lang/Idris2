@@ -17,21 +17,12 @@ support fn = "C:" ++ fn ++ ", libidris2_support"
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
-js_try_catch_lasterr_Int : String -> String
-js_try_catch_lasterr_Int x = "{try{" ++ x ++ ";return 0n}catch(e){process.__lasterr = e; return 1n}}"
-
-js_try_catch_lasterr_Ptr : String -> String
-js_try_catch_lasterr_Ptr x = "{try{" ++ x ++ "}catch(e){process.__lasterr = e; return null}}"
-
-js_open_file : String
-js_open_file = "return {fd:__require_fs.openSync(n, m), buffer: Buffer.alloc(0), name:n, eof: false}"
-
 %foreign support "idris2_openFile"
-         ("node:lambdaRequire:fs:(n, m) =>" ++ js_try_catch_lasterr_Ptr js_open_file)
+         "node:support:openFile,support_system_file"
 prim__open : String -> String -> Int -> PrimIO FilePtr
 
 %foreign support "idris2_closeFile"
-         ("node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)")
+         "node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
@@ -42,31 +33,8 @@ prim_error : FilePtr -> PrimIO Int
          "node:lambda:()=>-BigInt(process.__lasterr.errno)"
 prim_fileErrno : PrimIO Int
 
-
-read_line_js : String
-read_line_js =
-   "(file_ptr =>{
-     const LF = 0x0a;
-     const readBuf = Buffer.alloc(1);
-     let lineEnd = file_ptr.buffer.indexOf(LF);
-     while (lineEnd === -1) {
-      const bytesRead = __require_fs.readSync(file_ptr.fd, readBuf,0,1,null);
-      if (bytesRead === 0) {
-       file_ptr.eof = true;
-       const line = file_ptr.buffer.toString('utf-8');
-       file_ptr.buffer = Buffer.alloc(0)
-       return line  
-      }
-      file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
-      lineEnd = file_ptr.buffer.indexOf(LF);
-     }
-     const line = file_ptr.buffer.slice(0, lineEnd + 1).toString('utf-8');
-     file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1);
-     return line;
-   })"
-
 %foreign support "idris2_readLine"
-         ("node:lambda:" ++ read_line_js)
+         "node:support:readLine,support_system_file"
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 
 %foreign support "idris2_readChars"
@@ -122,7 +90,7 @@ prim__stdout : FilePtr
 prim__stderr : FilePtr
 
 %foreign libc "chmod"
-         ("node:lambdaRequire:fs:(filename, mode) => " ++ js_try_catch_lasterr_Int "__require_fs.chmodSync(filename, Number(mode))")
+         "node:support:chmod,support_system_file"
 prim__chmod : String -> Int -> PrimIO Int
 
 modeStr : Mode -> String

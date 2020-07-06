@@ -6,6 +6,8 @@ import Data.Strings
 import Data.SortedMap
 import Data.String.Extra
 
+import Core.Directory
+
 data ESs : Type where
 
 record ESSt where
@@ -58,6 +60,11 @@ addRequireToPreamble name =
     let newName = "__require_" ++ name
     let v = "const " ++ newName ++ " = require(" ++ jsString name ++ ");"
     addToPreamble name newName v
+
+addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
+addSupportToPreamble name code =
+  addToPreamble name name code
+
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -256,7 +263,7 @@ searchForeign prefixes (x::xs) =
                            else searchForeign prefixes xs
 
 
-makeForeign : {auto c : Ref ESs ESSt} -> Name -> String -> Core String
+makeForeign : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Name -> String -> Core String
 makeForeign n x =
   do
     let (ty, def) = readCCPart x
@@ -267,9 +274,18 @@ makeForeign n x =
           let (libs, def_) = readCCPart def
           traverse addRequireToPreamble (split (==',') libs)
           pure $ "const " ++ jsName n ++ " = (" ++ def_ ++ ")\n"
+      "support" =>
+        do
+          let (name, lib_) = break (== ',') def
+          let lib = drop 1 lib_
+          lib_code <- readDataFile ("js/" ++ lib ++ ".js")
+          addSupportToPreamble lib lib_code
+          pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
+
+
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supporte types are lambda")
 
-foreignDecl : {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
+foreignDecl : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
   do
     s <- get ESs
@@ -301,7 +317,7 @@ tag2es (Left x) = show x
 tag2es (Right x) = jsString x
 
 mutual
-  impExp2es : {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
+  impExp2es : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> ImperativeExp -> Core String
   impExp2es (IEVar n) =
     pure $ jsName n
   impExp2es (IELambda args body) =
@@ -330,7 +346,7 @@ mutual
   impExp2es IENull =
     pure "undefined"
 
-  imperative2es : {auto c : Ref ESs ESSt} -> Nat -> ImperativeStatement -> Core String
+  imperative2es : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Nat -> ImperativeStatement -> Core String
   imperative2es indent DoNothing =
     pure ""
   imperative2es indent (SeqStatement x y) =
@@ -367,7 +383,7 @@ mutual
   imperative2es indent (ForEverLoop x) =
     pure $ nSpaces indent ++ "while(true){\n" ++ !(imperative2es (indent+1) x) ++ "\n" ++ nSpaces indent ++ "}"
 
-  alt2es : {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
+  alt2es : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
                                 !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break;\n"
 
