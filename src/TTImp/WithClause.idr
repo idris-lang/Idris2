@@ -57,7 +57,8 @@ mutual
   -- implicit in the parent
   getMatch lhs f (IImplicitApp fc f' n a)
       = matchFail fc
-  -- Alternatives are okay as long as one of the alternatives is okay
+  -- Alternatives are okay as long as the alternatives correspond, and
+  -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
   getMatch lhs (IAs _ _ (UN n) p) (IAs fc _ (UN n') p')
