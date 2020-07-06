@@ -1,6 +1,7 @@
 hiya
 2
 Parse failed at position 0: satisfy
+Parse failed at position 0: Not good
 ['7', '6', '6', '7', '7', '5']
 ['6', '3', '5', '5', '3']
 "887"

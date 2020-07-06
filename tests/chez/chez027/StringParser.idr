@@ -47,6 +47,8 @@ main = do
         Right ((), i) => printLn i
     bad <- parseT (satisfy isDigit) "a"
     showRes bad
+    bad2 <- parseT (string "good" <?> "Not good") "bad bad bad"
+    showRes bad2
     digs <- parseT (many (satisfy isDigit)) "766775"
     showRes digs
     showRes $ pureParsing "63553"

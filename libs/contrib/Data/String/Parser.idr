@@ -87,6 +87,16 @@ export
 parse : Parser a -> String -> Either String (a, Int)
 parse p str = runIdentity $ parseT p str
 
+||| Combinator that replaces the error message on failure.
+||| This allows combinators to output relevant errors
+export
+(<?>) : Monad m => ParseT m a -> String -> ParseT m a
+(<?>) p msg = P $ \s => case !(p.runParser s) of
+                            OK r s' => pure $ OK r s'
+                            Fail i _ => pure $ Fail i msg
+
+infixl 0 <?>
+
 ||| Succeeds if the next char satisfies the predicate `f`
 export
 satisfy : Monad m => (Char -> Bool) -> ParseT m Char
