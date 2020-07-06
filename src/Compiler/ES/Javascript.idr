@@ -45,7 +45,7 @@ compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c tmpDir outputDir tm outfile
     = do es <- compileToJS c tm
-         let res = if toLower (takeLast 5 outfile) == ".html" then htmlHeader ++ es ++ htmlFooter else es
+         let res = if toLower (extension outfile) == "html" then htmlHeader ++ es ++ htmlFooter else es
          let out = outputDir </> outfile
          Right () <- coreLift (writeFile out res)
             | Left err => throw (FileErr out err)
