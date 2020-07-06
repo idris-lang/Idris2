@@ -40,12 +40,18 @@ htmlFooter = concat $ the (List String) $
            , "</html>"
            ]
 
+addHeaderAndFooter : String -> String -> String
+addHeaderAndFooter outfile es =
+  case toLower <$>  extension outfile of
+    Just "html" => htmlHeader ++ es ++ htmlFooter
+    _ => es
+
 ||| Javascript implementation of the `compileExpr` interface.
 compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr c tmpDir outputDir tm outfile
     = do es <- compileToJS c tm
-         let res = if toLower (extension outfile) == "html" then htmlHeader ++ es ++ htmlFooter else es
+         let res = addHeaderAndFooter outfile es
          let out = outputDir </> outfile
          Right () <- coreLift (writeFile out res)
             | Left err => throw (FileErr out err)
