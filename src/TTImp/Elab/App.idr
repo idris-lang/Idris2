@@ -497,8 +497,8 @@ mutual
                 NBind tfc' x' (Pi rigb' (DefImplicit aval') aty') sc'
                    => if !(convert defs env aval aval')
                          then checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
-                         else makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] kr (Just expty_in)
-                _ => makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] kr (Just expty_in)
+                         else makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] kr (Just expty_in)
+                _ => makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] kr (Just expty_in)
 
   -- Check next auto implicit argument
   checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi rigb AutoImplicit aty) sc)
