@@ -70,6 +70,14 @@ infixl 9 `div`, `mod`
 public export
 data Bool = True | False
 
+public export
+Uninhabited (True = False) where
+  uninhabited Refl impossible
+
+public export
+Uninhabited (False = True) where
+  uninhabited Refl impossible
+
 ||| Boolean NOT.
 public export
 not : (1 b : Bool) -> Bool
@@ -810,6 +818,14 @@ data Maybe : (ty : Type) -> Type where
 
   ||| A value of type `ty` is stored
   Just : (1 x : ty) -> Maybe ty
+
+public export
+Uninhabited (Nothing = Just x) where
+  uninhabited Refl impossible
+
+public export
+Uninhabited (Just x = Nothing) where
+  uninhabited Refl impossible
 
 public export
 maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b

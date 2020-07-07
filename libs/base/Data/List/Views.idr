@@ -5,6 +5,8 @@ import Data.List
 import Data.Nat
 import Data.Nat.Views
 
+%default total
+
 lengthSuc : (xs : List a) -> (y : a) -> (ys : List a) ->
             length (xs ++ (y :: ys)) = S (length (xs ++ ys))
 lengthSuc [] _ _ = Refl
@@ -62,7 +64,7 @@ data SplitRec : List a -> Type where
 
 ||| Covering function for the `SplitRec` view
 ||| Constructs the view in O(n lg n)
-public export total
+public export
 splitRec : (xs : List a) -> SplitRec xs
 splitRec xs with (sizeAccessible xs)
   splitRec xs | acc with (split xs)
@@ -92,5 +94,3 @@ snocListHelp snoc (x :: xs)
 export
 snocList : (xs : List a) -> SnocList xs
 snocList xs = snocListHelp Empty xs
-
-

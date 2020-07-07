@@ -1,34 +1,32 @@
 module Data.Either
 
+%default total
+
 ||| True if the argument is Left, False otherwise
 public export
 isLeft : Either a b -> Bool
-isLeft (Left l)  = True
-isLeft (Right r) = False
+isLeft (Left _)  = True
+isLeft (Right _) = False
 
 ||| True if the argument is Right, False otherwise
 public export
 isRight : Either a b -> Bool
-isRight (Left l)  = False
-isRight (Right r) = True
+isRight (Left _)  = False
+isRight (Right _) = True
 
 ||| Keep the payloads of all Left constructors in a list of Eithers
 public export
 lefts : List (Either a b) -> List a
-lefts []      = []
-lefts (x::xs) =
-  case x of
-    Left  l => l :: lefts xs
-    Right r => lefts xs
+lefts []              = []
+lefts (Left  l :: xs) = l :: lefts xs
+lefts (Right _ :: xs) = lefts xs
 
 ||| Keep the payloads of all Right constructors in a list of Eithers
 public export
 rights : List (Either a b) -> List b
-rights []      = []
-rights (x::xs) =
-  case x of
-    Left  l => rights xs
-    Right r => r :: rights xs
+rights []              = []
+rights (Left  _ :: xs) = rights xs
+rights (Right r :: xs) = r :: rights xs
 
 ||| Split a list of Eithers into a list of the left elements and a list of the right elements
 public export
@@ -64,21 +62,12 @@ eitherToMaybe : Either e a -> Maybe a
 eitherToMaybe (Left _) = Nothing
 eitherToMaybe (Right x) = Just x
 
-
 -- Injectivity of constructors
 
 ||| Left is injective
-total
-leftInjective : {b : Type}
-             -> {x : a}
-             -> {y : a}
-             -> (Left {b = b} x = Left {b = b} y) -> (x = y)
+leftInjective : Left x = Left y -> x = y
 leftInjective Refl = Refl
 
 ||| Right is injective
-total
-rightInjective : {a : Type}
-              -> {x : b}
-              -> {y : b}
-              -> (Right {a = a} x = Right {a = a} y) -> (x = y)
+rightInjective : Right x = Right y -> x = y
 rightInjective Refl = Refl

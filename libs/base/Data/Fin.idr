@@ -4,6 +4,8 @@ import public Data.Maybe
 import Data.Nat
 import Decidable.Equality
 
+%default total
+
 ||| Numbers strictly less than some bound.  The name comes from "finite sets".
 |||
 ||| It's probably not a good idea to use `Fin` for arithmetic, and they will be
@@ -15,47 +17,46 @@ data Fin : (n : Nat) -> Type where
     FS : Fin k -> Fin (S k)
 
 export
-implementation Uninhabited (Fin Z) where
+Uninhabited (Fin Z) where
   uninhabited FZ impossible
   uninhabited (FS f) impossible
 
 export
-FSInjective : (m : Fin k) -> (n : Fin k) -> FS m = FS n -> m = n
-FSInjective left _ Refl = Refl
+Uninhabited (FZ = FS k) where
+  uninhabited Refl impossible
 
 export
-implementation Eq (Fin n) where
+Uninhabited (FS k = FZ) where
+  uninhabited Refl impossible
+
+export
+fsInjective : FS m = FS n -> m = n
+fsInjective Refl = Refl
+
+export
+Eq (Fin n) where
     (==) FZ FZ = True
     (==) (FS k) (FS k') = k == k'
     (==) _ _ = False
-
-||| There are no elements of `Fin Z`
-export
-FinZAbsurd : Fin Z -> Void
-FinZAbsurd FZ impossible
-
-export
-FinZElim : Fin Z -> a
-FinZElim x = void (FinZAbsurd x)
 
 ||| Convert a Fin to a Nat
 public export
 finToNat : Fin n -> Nat
 finToNat FZ = Z
-finToNat (FS k) = S (finToNat k)
+finToNat (FS k) = S $ finToNat k
 
 ||| `finToNat` is injective
 export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
-finToNatInjective (FS m) FZ     Refl impossible
-finToNatInjective FZ     (FS n) Refl impossible
+finToNatInjective FZ     FZ     _    = Refl
+finToNatInjective (FS _) FZ     Refl impossible
+finToNatInjective FZ     (FS _) Refl impossible
 finToNatInjective (FS m) (FS n) prf  =
-  cong FS (finToNatInjective m n (succInjective (finToNat m) (finToNat n) prf))
-finToNatInjective FZ     FZ     Refl = Refl
+  cong FS $ finToNatInjective m n $ succInjective (finToNat m) (finToNat n) prf
 
 export
-implementation Cast (Fin n) Nat where
-    cast x = finToNat x
+Cast (Fin n) Nat where
+    cast = finToNat
 
 ||| Convert a Fin to an Integer
 public export
@@ -64,37 +65,37 @@ finToInteger FZ     = 0
 finToInteger (FS k) = 1 + finToInteger k
 
 export
-implementation Cast (Fin n) Integer where
-    cast x = finToInteger x
+Cast (Fin n) Integer where
+    cast = finToInteger
 
 ||| Weaken the bound on a Fin by 1
 public export
 weaken : Fin n -> Fin (S n)
 weaken FZ     = FZ
-weaken (FS k) = FS (weaken k)
+weaken (FS k) = FS $ weaken k
 
 ||| Weaken the bound on a Fin by some amount
 public export
 weakenN : (n : Nat) -> Fin m -> Fin (m + n)
 weakenN n FZ = FZ
-weakenN n (FS f) = FS (weakenN n f)
+weakenN n (FS f) = FS $ weakenN n f
 
 ||| Weaken the bound on a Fin using a constructive comparison
 public export
 weakenLTE : Fin n -> LTE n m -> Fin m
 weakenLTE  FZ     LTEZero impossible
 weakenLTE (FS _)  LTEZero impossible
-weakenLTE  FZ    (LTESucc y) = FZ
+weakenLTE  FZ    (LTESucc _) = FZ
 weakenLTE (FS x) (LTESucc y) = FS $ weakenLTE x y
 
 ||| Attempt to tighten the bound on a Fin.
 ||| Return `Left` if the bound could not be tightened, or `Right` if it could.
 export
 strengthen : {n : _} -> Fin (S n) -> Either (Fin (S n)) (Fin n)
-strengthen {n = S k} FZ = Right FZ
-strengthen {n = S k} (FS i) with (strengthen i)
-  strengthen (FS i) | Left x   = Left (FS x)
-  strengthen (FS i) | Right x  = Right (FS x)
+strengthen {n = S _} FZ = Right FZ
+strengthen {n = S _} (FS i) with (strengthen i)
+  strengthen (FS _) | Left x  = Left $ FS x
+  strengthen (FS _) | Right x = Right $ FS x
 strengthen f = Left f
 
 ||| Add some natural number to a Fin, extending the bound accordingly
@@ -103,7 +104,7 @@ strengthen f = Left f
 public export
 shift : (m : Nat) -> Fin n -> Fin (m + n)
 shift Z f = f
-shift {n=n} (S m) f = FS {k = (m + n)} (shift m f)
+shift (S m) f = FS $ shift m f
 
 ||| The largest element of some Fin type
 public export
@@ -111,22 +112,16 @@ last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
 
-public export total
-FSinjective : {f : Fin n} -> {f' : Fin n} -> (FS f = FS f') -> f = f'
-FSinjective Refl = Refl
-
 export
-implementation Ord (Fin n) where
+Ord (Fin n) where
   compare  FZ     FZ    = EQ
   compare  FZ    (FS _) = LT
   compare (FS _)  FZ    = GT
   compare (FS x) (FS y) = compare x y
 
-
--- Construct a Fin from an integer literal which must fit in the given Fin
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
-natToFin Z     (S j) = Just FZ
+natToFin Z     (S _) = Just FZ
 natToFin (S k) (S j)
     = case natToFin k j of
            Just k' => Just (FS k')
@@ -165,17 +160,12 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
 -- DecEq
 --------------------------------------------------------------------------------
 
-export total
-FZNotFS : {f : Fin n} -> FZ {k = n} = FS f -> Void
-FZNotFS Refl impossible
-
 export
-implementation DecEq (Fin n) where
+DecEq (Fin n) where
   decEq FZ FZ = Yes Refl
-  decEq FZ (FS f) = No FZNotFS
-  decEq (FS f) FZ = No $ negEqSym FZNotFS
+  decEq FZ (FS f) = No absurd
+  decEq (FS f) FZ = No absurd
   decEq (FS f) (FS f')
       = case decEq f f' of
              Yes p => Yes $ cong FS p
-             No p => No $ \h => p $ FSinjective {f = f} {f' = f'} h
-
+             No p => No $ p . fsInjective
