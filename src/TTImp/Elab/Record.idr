@@ -125,7 +125,11 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
     mkArgs ((p, imp, _) :: ps)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
-             pure ((p, Field imp fldn (IVar loc (UN fldn))) :: args')
+             -- If it's an implicit argument, leave it as _ by default
+             let arg = maybe (IVar loc (UN fldn))
+                             (const (Implicit loc False))
+                             imp
+             pure ((p, Field imp fldn arg) :: args')
 
 findPath loc (p :: ps) full tyn val (Constr mn con args)
    = do let Just prec = lookup p args
