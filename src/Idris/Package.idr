@@ -586,7 +586,7 @@ findIpkg fname
         case fname of
              Nothing => pure Nothing
              Just srcpath  =>
-                do let src' = up </> srcpath 
+                do let src' = up </> srcpath
                    setSource src'
                    opts <- get ROpts
                    put ROpts (record { mainfile = Just src' } opts)

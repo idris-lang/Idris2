@@ -72,12 +72,12 @@ initIDESocketFile h p = do
       res <- bind sock (Just (Hostname h)) p
       if res /= 0
         then pure (Left ("Failed to bind socket with error: " ++ show res))
-        else 
+        else
           do res <- listen sock
              if res /= 0
                 then
                   pure (Left ("Failed to listen on socket with error: " ++ show res))
-               else 
+               else
                  do putStrLn (show p)
                     res <- accept sock
                     case res of
@@ -132,15 +132,15 @@ todoCmd : {auto o : Ref ROpts REPLOpts} ->
 todoCmd cmdName = iputStrLn $ cmdName ++ ": command not yet implemented. Hopefully soon!"
 
 
-data IDEResult 
+data IDEResult
   = REPL REPLResult
   | NameList (List Name)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
-  
+
 replWrap : Core REPLResult -> Core IDEResult
 replWrap m = pure $ REPL !m
-  
+
 process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
@@ -163,7 +163,7 @@ process (CaseSplit l c n)
 process (AddClause l n)
     = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
 process (AddMissing l n)
-    = do todoCmd "add-missing" 
+    = do todoCmd "add-missing"
          pure $ REPL $ Edited $ DisplayEdit []
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
@@ -277,64 +277,64 @@ displayIDEResult : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto o : Ref ROpts REPLOpts} ->
        File -> Integer -> IDEResult -> Core ()
-displayIDEResult outf i  (REPL $ REPLError err) 
+displayIDEResult outf i  (REPL $ REPLError err)
   = printIDEError outf i err
 displayIDEResult outf i  (REPL RequestedHelp  )
-  = printIDEResult outf i 
+  = printIDEResult outf i
   $ StringAtom $ displayHelp
-displayIDEResult outf i  (REPL $ Evaluated x Nothing) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Evaluated x Nothing)
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x
-displayIDEResult outf i  (REPL $ Evaluated x (Just y)) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Evaluated x (Just y))
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y
-displayIDEResult outf i  (REPL $ Printed xs) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Printed xs)
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ showSep "\n" xs
-displayIDEResult outf i  (REPL $ TermChecked x y) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ TermChecked x y)
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y
-displayIDEResult outf i  (REPL $ FileLoaded x) 
+displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
-displayIDEResult outf i  (REPL $ ErrorLoadingFile x err) 
-  = printIDEError outf i 
+displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
+  = printIDEError outf i
   $ "Error loading file " ++ x ++ ": " ++ show err
-displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs) 
-  = printIDEError outf i 
-  $ "Error(s) building file " ++ x ++ ": " ++ 
+displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
+  = printIDEError outf i
+  $ "Error(s) building file " ++ x ++ ": " ++
     (showSep "\n" $ map show errs)
 displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i "No file can be reloaded"
-displayIDEResult outf i  (REPL $ CurrentDirectory dir) 
-  = printIDEResult outf i 
+displayIDEResult outf i  (REPL $ CurrentDirectory dir)
+  = printIDEResult outf i
   $ StringAtom $ "Current working directory is '" ++ dir ++ "'"
 displayIDEResult outf i  (REPL CompilationFailed)
   = printIDEError outf i "Compilation failed"
-displayIDEResult outf i  (REPL $ Compiled f) 
-  = printIDEResult outf i $ StringAtom 
+displayIDEResult outf i  (REPL $ Compiled f)
+  = printIDEResult outf i $ StringAtom
   $ "File " ++ f ++ " written"
-displayIDEResult outf i  (REPL $ ProofFound x) 
-  = printIDEResult outf i 
+displayIDEResult outf i  (REPL $ ProofFound x)
+  = printIDEResult outf i
   $ StringAtom $ show x
-displayIDEResult outf i  (REPL $ Missed cases) 
-  = printIDEResult outf i 
-  $ StringAtom $ showSep "\n" 
+displayIDEResult outf i  (REPL $ Missed cases)
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n"
   $ map handleMissing cases
-displayIDEResult outf i  (REPL $ CheckedTotal xs) 
-  = printIDEResult outf i 
-  $ StringAtom $ showSep "\n" 
+displayIDEResult outf i  (REPL $ CheckedTotal xs)
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes) 
+displayIDEResult outf i  (REPL $ FoundHoles holes)
   = printIDEResult outf i $ SExpList $ map sexpHole holes
-displayIDEResult outf i  (REPL $ LogLevelSet k) 
-  = printIDEResult outf i 
+displayIDEResult outf i  (REPL $ LogLevelSet k)
+  = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
-displayIDEResult outf i  (REPL $ OptionsSet opts) 
+displayIDEResult outf i  (REPL $ OptionsSet opts)
   = printIDEResult outf i optionsSexp
   where
     optionsSexp : SExp
     optionsSexp = SExpList $ map toSExp opts
-displayIDEResult outf i  (REPL $ VersionIs x) 
+displayIDEResult outf i  (REPL $ VersionIs x)
   = printIDEResult outf i versionSExp
   where
   semverSexp : SExp
@@ -347,12 +347,12 @@ displayIDEResult outf i  (REPL $ VersionIs x)
   versionSExp : SExp
   versionSExp = SExpList [ semverSexp, tagSexp ]
 
-displayIDEResult outf i (REPL $ Edited (DisplayEdit xs)) 
+displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
   = printIDEResult outf i $ StringAtom $ showSep "\n" xs
-displayIDEResult outf i (REPL $ Edited (EditError x)) 
+displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
-displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr)) 
-  = printIDEResult outf i 
+displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
+  = printIDEResult outf i
   $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
@@ -391,7 +391,7 @@ loop
               IDEMode idx inf outf => do
                 inp <- coreLift $ getInput inf
                 end <- coreLift $ fEOF inf
-                if end 
+                if end
                    then pure ()
                    else case parseSExp inp of
                       Left err =>
