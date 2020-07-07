@@ -23,7 +23,6 @@ modules = Control.ANSI,
           Data.Logic.Propositional,
 
           Data.Nat.Ack,
-          Data.Nat.Div,
           Data.Nat.Equational,
           Data.Nat.Fact,
           Data.Nat.Factor,
