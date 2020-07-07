@@ -34,6 +34,8 @@ modules = Control.ANSI,
           Data.String.Interpolation,
           Data.String.Parser,
 
+          Data.Vect.Sort,
+
           Debug.Buffer,
 
           Language.JSON,
