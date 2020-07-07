@@ -18,7 +18,7 @@ libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign support "idris2_openFile"
-prim__open : String -> String -> Int -> PrimIO FilePtr
+prim__open : String -> String -> PrimIO FilePtr
 %foreign support "idris2_closeFile"
 prim__close : FilePtr -> PrimIO ()
 
@@ -126,7 +126,7 @@ stderr = FHandle prim__stderr
 export
 openFile : HasIO io => String -> Mode -> io (Either FileError File)
 openFile f m
-    = do res <- primIO (prim__open f (modeStr m) 0)
+    = do res <- primIO (prim__open f (modeStr m))
          if prim__nullAnyPtr res /= 0
             then returnError
             else ok (FHandle res)
