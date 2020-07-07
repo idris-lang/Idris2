@@ -261,15 +261,13 @@ tryRecursive fc rig opts env ty topty (Just rdata)
       appsDiff : Term vs -> Term vs' -> List (Term vs) -> List (Term vs') ->
                  Bool
       appsDiff (Ref _ (DataCon _ _) f) (Ref _ (DataCon _ _) f') args args'
-         = if f == f' then anyTrue (zipWith argDiff args args')
-                      else True
+         = f /= f' || anyTrue (zipWith argDiff args args')
       appsDiff (Ref _ (TyCon _ _) f) (Ref _ (TyCon _ _) f') args args'
-         = if f == f' then anyTrue (zipWith argDiff args args')
-                      else True
+         = f /= f' || anyTrue (zipWith argDiff args args')
       appsDiff (Ref _ _ f) (Ref _ _ f') args args'
-         = if f == f' && length args == length args'
-              then anyTrue (zipWith argDiff args args')
-              else False -- can't be sure
+         = f == f'
+           && length args == length args'
+           && anyTrue (zipWith argDiff args args')
       appsDiff (Ref _ (DataCon _ _) f) (Local _ _ _ _) _ _ = True
       appsDiff (Local _ _ _ _) (Ref _ (DataCon _ _) f) _ _ = True
       appsDiff f f' [] [] = argDiff f f'
@@ -512,4 +510,3 @@ exprSearch fc n_in hints
                Nothing => case !(lookupCtxtName n (gamma defs)) of
                                [res] => pure $ Just res
                                _ => pure Nothing
-

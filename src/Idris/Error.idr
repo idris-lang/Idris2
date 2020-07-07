@@ -49,10 +49,10 @@ ploc (MkFC _ s e) = do
     let er = integerToNat $ cast $ fst e
     let ec = integerToNat $ cast $ snd e
     source <- lines <$> getCurrentElabSource
-    if sr == er
-       then pure $ show (sr + 1) ++ "\t" ++ fromMaybe "" (elemAt source sr)
-              ++ "\n\t" ++ repeatChar sc ' ' ++ repeatChar (ec `minus` sc) '^' ++ "\n"
-       else pure $ addLineNumbers sr $ extractRange sr er source
+    pure $ if sr == er
+              then show (sr + 1) ++ "\t" ++ fromMaybe "" (elemAt source sr)
+                   ++ "\n\t" ++ repeatChar sc ' ' ++ repeatChar (ec `minus` sc) '^' ++ "\n"
+              else addLineNumbers sr $ extractRange sr er source
   where
     extractRange : Nat -> Nat -> List a -> List a
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)

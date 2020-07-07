@@ -495,9 +495,7 @@ mutual
       isLocArg : Var vars -> List (Term vars) -> Bool
       isLocArg p [] = False
       isLocArg p (Local _ _ idx _ :: args)
-          = if idx == varIdx p
-               then True
-               else isLocArg p args
+          = idx == varIdx p || isLocArg p args
       isLocArg p (As _ _ tm pat :: args)
           = isLocArg p (tm :: pat :: args)
       isLocArg p (_ :: args) = isLocArg p args
@@ -722,4 +720,3 @@ linearCheck fc rig erase env tm
          log 5 $ "Used: " ++ show used
          when (not erase) $ checkEnvUsage {done = []} fc rig env used tm'
          pure tm'
-
