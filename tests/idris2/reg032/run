@@ -1,0 +1,3 @@
+$1 --check recupdate.idr
+
+rm -rf build
