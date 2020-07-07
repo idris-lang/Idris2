@@ -23,35 +23,24 @@ import Data.List
 import Data.Vect
 import Data.Nat
 
-length_aux : List a -> Nat -> Nat
-length_aux [] len = len
-length_aux (_::xs) len = length_aux xs (S len)
+total
+lengthAcc : List a -> Nat -> Nat
+lengthAcc [] acc = acc
+lengthAcc (_::xs) acc = lengthAcc xs $ S acc
 
-export
+export total
 length : List a -> Nat
-length xs = length_aux xs Z
+length xs = lengthAcc xs Z
 
-export
+total
+lengthAccSucc : (xs : List a) -> (n : Nat) -> lengthAcc xs (S n) = S (lengthAcc xs n)
+lengthAccSucc [] _ = Refl
+lengthAccSucc (_::xs) n = rewrite lengthAccSucc xs (S n) in cong S Refl
+
+export total
 length_ext : (xs : List a) -> Data.List.length xs = Data.List.TailRec.length xs
-length_ext xs = Calc $
-  |~ Data.List.length xs                
-  ~~ Data.List.length xs + 0             ...( sym $ plusZeroRightNeutral $ Data.List.length xs )
-  ~~ Data.List.TailRec.length_aux xs 0   ...( lemma 0 xs )
-  ~~ Data.List.TailRec.length xs         ...( Refl )
-  where
-    lemma : (n : Nat) -> (xs : List a) -> 
-            Data.List.length xs + n  = length_aux xs n
-    lemma n [] = Refl
-    lemma n (_ :: xs) = 
-      let length_xs : Nat
-          length_xs = Data.List.length xs in 
-      Calc $
-      |~ 1 + (length_xs + n) 
-      -- Hopefully we could Frex these two steps one day
-      ~~ (1 + length_xs) + n     ...( plusAssociative 1 length_xs n )      
-      ~~ (length_xs + 1) + n     ...( cong (+n) (plusCommutative 1 length_xs) )      
-      ~~ (length_xs) + (1 + n)   ...( sym (plusAssociative length_xs 1 n) )      
-      ~~ length_aux xs (1 + n)   ...( lemma (1 + n) xs )
+length_ext [] = Refl
+length_ext (_::xs) = rewrite length_ext xs in sym $ lengthAccSucc xs Z
 
 take_aux : Nat -> List a -> List a -> List a
 take_aux Z     xs        acc = reverseOnto [] acc

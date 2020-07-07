@@ -219,7 +219,7 @@ public export
   Left x == Left x' = x == x'
   Right x == Right x' = x == x'
   _ == _ = False
-  
+
 public export
 (Ord a, Ord b) => Ord (Either a b) where
   compare (Left x) (Left x') = compare x x'
@@ -328,7 +328,7 @@ Traversable List where
 public export
 elem : Eq a => a -> List a -> Bool
 x `elem` [] = False
-x `elem` (y :: ys) = if x == y then True else x `elem` ys
+x `elem` (y :: ys) = x == y ||  elem x ys
 
 -------------
 -- STREAMS --
