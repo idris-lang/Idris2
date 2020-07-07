@@ -450,17 +450,21 @@ getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
 getParseErrorLoc fname (LitFail _) = MkFC fname (0, 0) (0, 0) -- TODO: Remove this unused case
 getParseErrorLoc fname _ = replFC
 
--- Just load the 'Main' module, if it exists, which will involve building
+-- Just load the given module, if it exists, which will involve building
 -- it if necessary
 runRepl : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          PkgDesc ->
-          List CLOpt ->
+          Maybe String ->
           Core ()
-runRepl pkg opts = do
+runRepl fname = do
   u <- newRef UST initUState
   m <- newRef MD initMetadata
+  case fname of
+    Nothing => pure ()
+    Just fn => do
+      errs <- loadMainFile fn
+      displayErrors errs
   repl {u} {s}
 
 
@@ -495,7 +499,7 @@ processPackage cmd file opts
                       REPL => do
                         [] <- build pkg opts
                            | errs => coreLift (exitWith (ExitFailure 1))
-                        runRepl pkg opts
+                        runRepl (map snd $ mainmod pkg)
 
 record POptsFilterResult where
   constructor MkPFR
