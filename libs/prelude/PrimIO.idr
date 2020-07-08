@@ -68,9 +68,6 @@ data FArgList : Type where
      (::) : {a : Type} -> (1 arg : a) -> (1 args : FArgList) -> FArgList
 
 export
-%extern prim__cCall : (ret : Type) -> String -> (1 args : FArgList) ->
-                      (1 x : %World) -> IORes ret
-export
 %extern prim__schemeCall : (ret : Type) -> String -> (1 args : FArgList) ->
                            (1 x : %World) -> IORes ret
 
@@ -86,9 +83,6 @@ export %inline
 schemeCall : (ret : Type) -> String -> (1 args : FArgList) -> IO ret
 schemeCall ret fn args = fromPrim (prim__schemeCall ret fn args)
 
-export %inline
-cCall : (ret : Type) -> String -> FArgList -> IO ret
-cCall ret fn args = fromPrim (prim__cCall ret fn args)
 
 %foreign "C:idris2_isNull, libidris2_support"
 export

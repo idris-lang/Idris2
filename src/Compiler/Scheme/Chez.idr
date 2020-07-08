@@ -130,17 +130,6 @@ mutual
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   chezExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  chezExtPrim i CCall [ret, NmPrimVal fc (Str fn), fargs, world]
-      = do args <- getFArgs fargs
-           argTypes <- traverse tySpec (map fst args)
-           retType <- tySpec ret
-           argsc <- traverse (schExp chezExtPrim chezString 0) (map snd args)
-           pure $ handleRet retType ("((foreign-procedure #f " ++ show fn ++ " ("
-                    ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
-                    ++ showSep " " argsc ++ ")")
-  chezExtPrim i CCall [ret, fn, args, world]
-      = pure "(error \"bad ffi call\")"
-      -- throw (InternalError ("C FFI calls must be to statically known functions (" ++ show fn ++ ")"))
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
       = do structsc <- schExp chezExtPrim chezString 0 struct

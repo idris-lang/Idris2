@@ -89,16 +89,6 @@ mutual
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   gambitPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  gambitPrim i CCall [ret, NmPrimVal fc (Str fn), fargs, world]
-      = do args <- getFArgs fargs
-           argTypes <- traverse tySpec (map fst args)
-           retType <- tySpec ret
-           argsc <- traverse (schExp gambitPrim gambitString 0) (map snd args)
-           pure $ handleRet retType ("((c-lambda (" ++ showSep " " argTypes ++ ") "
-                    ++ retType ++ " " ++ show fn ++ ") "
-                    ++ showSep " " argsc ++ ")")
-  gambitPrim i CCall [ret, fn, args, world]
-      = pure "(error \"bad ffi call\")"
   gambitPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
       = do structsc <- schExp gambitPrim gambitString 0 struct
