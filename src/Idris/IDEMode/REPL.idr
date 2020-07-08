@@ -16,6 +16,7 @@ import Core.TT
 import Core.Unify
 
 import Data.So
+import Data.Strings
 
 import Idris.Desugar
 import Idris.Error
@@ -188,8 +189,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = do todoCmd "browse-namespace"
-         pure $ NameList []
+    = replWrap $ Idris.REPL.process (Browse (reverse (split (=='.') ns)))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm

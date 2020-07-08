@@ -63,7 +63,9 @@ getDocsFor fc n
 
     showTotal : Name -> Totality -> String
     showTotal n tot
-        = "\nTotality: " ++ show tot
+        = case isTerminating tot of
+               Unchecked => ""
+               _ => "\nTotality: " ++ show tot
 
     getConstructorDoc : Name -> Core (Maybe String)
     getConstructorDoc con
@@ -147,3 +149,44 @@ getDocsFor fc n
                               ++ "\n" ++ indent str
              extra <- getExtra n def
              pure (doc ++ extra)
+
+summarise : {auto c : Ref Ctxt Defs} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            Name -> Core String
+summarise n -- n is fully qualified
+    = do syn <- get Syn
+         defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+             | _ => pure ""
+         let doc = case lookupName n (docstrings syn) of
+                        [(_, doc)] => case lines doc of
+                                           (d :: _) => Just d
+                                           _ => Nothing
+                        _ => Nothing
+         ty <- normaliseHoles defs [] (type def)
+         pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
+                  maybe "" (\d => "\n\t" ++ d) doc)
+         
+-- Display all the exported names in the given namespace
+export
+getContents : {auto c : Ref Ctxt Defs} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              List String -> Core (List String)
+getContents ns
+   = -- Get all the names, filter by any that match the given namespace
+     -- and are visible, then display with their type
+     do defs <- get Ctxt
+        ns <- allNames (gamma defs)
+        let allNs = filter inNS ns
+        allNs <- filterM (visible defs) allNs
+        traverse summarise (sort allNs)
+  where
+    visible : Defs -> Name -> Core Bool
+    visible defs n
+        = do Just def <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure False
+             pure (visibility def /= Private)
+
+    inNS : Name -> Bool
+    inNS (NS xns (UN _)) = xns == ns
+    inNS _ = False

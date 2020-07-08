@@ -1923,6 +1923,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
+  , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
   , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"

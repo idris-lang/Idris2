@@ -1,0 +1,6 @@
+1/1: Building Doc (Doc.idr)
+Doc> hello : Int -> Int
+	 Hello!
+world : Nat -> Nat
+	 World!
+Doc> Bye for now!

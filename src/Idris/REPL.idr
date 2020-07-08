@@ -682,6 +682,9 @@ process (Total n)
 process (Doc n)
     = do doc <- getDocsFor replFC n
          pure $ Printed doc
+process (Browse ns)
+    = do doc <- getContents ns
+         pure $ Printed doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))

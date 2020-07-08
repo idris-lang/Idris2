@@ -412,6 +412,7 @@ data REPLCmd : Type where
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
+     Browse : List String -> REPLCmd
      SetLog : Nat -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
