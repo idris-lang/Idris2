@@ -356,7 +356,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                   Core (Name, List ImpClause)
     elabDefault tydecls (fc, opts, n, cs)
         = do -- orig <- branch
-             let dn_in = UN ("Default implementation of " ++ show n)
+             let dn_in = MN ("Default implementation of " ++ show n) 0
              dn <- inCurrentNS dn_in
 
              (rig, dty) <-

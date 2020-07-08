@@ -22,6 +22,7 @@ import Core.Unify
 import Parser.Unlit
 
 import Idris.Desugar
+import Idris.DocString
 import Idris.Error
 import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands
@@ -678,6 +679,12 @@ process (Total n)
                              tot <- getTotality replFC fn >>= toFullNames
                              pure $ (fn, tot))
                                (map fst ts)
+process (Doc n)
+    = do doc <- getDocsFor replFC n
+         pure $ Printed doc
+process (Browse ns)
+    = do doc <- getContents ns
+         pure $ Printed doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
@@ -896,7 +903,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = "   " ++ col 16 12 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 16 12 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->

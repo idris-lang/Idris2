@@ -16,6 +16,7 @@ import Core.TT
 import Core.Unify
 
 import Data.So
+import Data.Strings
 
 import Idris.Desugar
 import Idris.Error
@@ -177,8 +178,7 @@ process (MakeCase l n)
 process (MakeWith l n)
     = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN n)))
 process (DocsFor n modeOpt)
-    = do todoCmd "docs-for"
-         pure $ REPL $ Printed []
+    = replWrap $ Idris.REPL.process (Doc (UN n))
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed []
@@ -189,8 +189,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = do todoCmd "browse-namespace"
-         pure $ NameList []
+    = replWrap $ Idris.REPL.process (Browse (reverse (split (=='.') ns)))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm

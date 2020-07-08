@@ -863,6 +863,11 @@ HasNames Transform where
       = pure $ MkTransform !(resolved gam n) !(resolved gam env)
                            !(resolved gam lhs) !(resolved gam rhs)
 
+-- Return all the currently defined names
+export
+allNames : Context -> Core (List Name)
+allNames ctxt = traverse (full ctxt) $ map Resolved [1..nextEntry ctxt - 1]
+
 public export
 record Defs where
   constructor MkDefs

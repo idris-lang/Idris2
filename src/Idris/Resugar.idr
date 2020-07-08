@@ -354,7 +354,7 @@ mutual
   toPField (MkIField fc c p n ty)
       = do ty' <- toPTerm startPrec ty
            p' <- traverse (toPTerm startPrec) p
-           pure (MkField fc c p' n ty')
+           pure (MkField fc "" c p' n ty')
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -389,7 +389,7 @@ mutual
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
   toPDecl (IData fc vis d)
-      = pure (Just (PData fc vis !(toPData d)))
+      = pure (Just (PData fc "" vis !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
@@ -400,7 +400,7 @@ mutual
                 (mapMaybe id ds')))
   toPDecl (IRecord fc _ vis r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc vis n ps con fs))
+           pure (Just (PRecord fc "" vis n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))
