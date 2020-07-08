@@ -3,6 +3,8 @@ module Idris.REPL
 import Compiler.Scheme.Chez
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
+import Compiler.ES.Node
+import Compiler.ES.Javascript
 import Compiler.Common
 
 import Core.AutoSearch
@@ -180,6 +182,8 @@ findCG
               Chez => pure codegenChez
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
+              Node => pure codegenNode
+              Javascript => pure codegenJavascript
               Other s => case !(getCodegen s) of
                             Just cg => pure cg
                             Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
@@ -707,11 +711,11 @@ process Metavars
                                                            pure (n, gdef, args))
                                       globs
          hData <- the (Core $ List HoleData) $
-             traverse (\n_gdef_args => 
+             traverse (\n_gdef_args =>
                         -- Inference can't deal with this for now :/
                         let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
                         holeData defs [] n args (type gdef))
-                      holesWithArgs 
+                      holesWithArgs
          pure $ FoundHoles hData
 
 process (Editing cmd)

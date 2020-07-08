@@ -85,6 +85,7 @@ schemeCall ret fn args = fromPrim (prim__schemeCall ret fn args)
 
 
 %foreign "C:idris2_isNull, libidris2_support"
+         "javascript:lambda:x=>x===undefined||x===null?1n:0n"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 

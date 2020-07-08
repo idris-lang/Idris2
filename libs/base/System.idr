@@ -26,6 +26,7 @@ usleep sec = primIO (prim_usleep sec)
 -- This one is going to vary for different back ends. Probably needs a
 -- better convention. Will revisit...
 %foreign "scheme:blodwen-args"
+         "node:lambda:() => __prim_js2idris_array(process.argv.slice(1))"
 prim__getArgs : PrimIO (List String)
 
 export
@@ -33,7 +34,9 @@ getArgs : HasIO io => io (List String)
 getArgs = primIO prim__getArgs
 
 %foreign libc "getenv"
+         "node:lambda: n => process.env[n]"
 prim_getEnv : String -> PrimIO (Ptr String)
+
 %foreign support "idris2_getEnvPair"
 prim_getEnvPair : Int -> PrimIO (Ptr String)
 %foreign support "idris2_setenv"
@@ -99,6 +102,7 @@ time : HasIO io => io Integer
 time = pure $ cast !(primIO prim_time)
 
 %foreign libc "exit"
+         "node:lambda:c => process.exit(Number(c))"
 prim_exit : Int -> PrimIO ()
 
 ||| Programs can either terminate successfully, or end in a caught

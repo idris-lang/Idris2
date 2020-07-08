@@ -731,6 +731,8 @@ TTC CG where
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
+  toBuf b Node = tag 5
+  toBuf b Javascript = tag 6
 
   fromBuf b
       = case !getTag of
@@ -739,6 +741,8 @@ TTC CG where
              3 => pure Gambit
              4 => do s <- fromBuf b
                      pure (Other s)
+             5 => pure Node
+             6 => pure Javascript
              _ => corrupt "CG"
 
 export

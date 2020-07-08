@@ -83,6 +83,10 @@ language `TTImp`, which is essentially a desugared Idris, and is cleanly
 separated from the high level language which means it is potentially usable
 as a core language for other high level syntaxes.
 
+Javascript
+====================
+The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
+
 Things still missing
 ====================
 

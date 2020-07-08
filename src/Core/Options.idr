@@ -50,6 +50,8 @@ public export
 data CG = Chez
         | Racket
         | Gambit
+        | Node
+        | Javascript
         | Other String
 
 export
@@ -57,6 +59,8 @@ Eq CG where
   Chez == Chez = True
   Racket == Racket = True
   Gambit == Gambit = True
+  Node == Node = True
+  Javascript == Javascript = True
   Other s == Other t = s == t
   _ == _ = False
 
@@ -65,8 +69,9 @@ Show CG where
   show Chez = "chez"
   show Racket = "racket"
   show Gambit = "gambit"
+  show Node = "node"
+  show Javascript = "javascript"
   show (Other s) = s
-
 
 public export
 record PairNames where
@@ -152,6 +157,8 @@ availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
        ("racket", Racket),
+       ("node", Node),
+       ("javascript", Javascript),
        ("gambit", Gambit)] ++ additionalCGs o
 
 export

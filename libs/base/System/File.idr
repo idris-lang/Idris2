@@ -18,25 +18,38 @@ libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign support "idris2_openFile"
+         "node:support:openFile,support_system_file"
 prim__open : String -> String -> PrimIO FilePtr
+
 %foreign support "idris2_closeFile"
+         "node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
+         "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
 prim_error : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileErrno"
+         "node:lambda:()=>-BigInt(process.__lasterr.errno)"
 prim_fileErrno : PrimIO Int
 
 %foreign support "idris2_readLine"
+         "node:support:readLine,support_system_file"
 prim__readLine : FilePtr -> PrimIO (Ptr String)
+
 %foreign support "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 %foreign "C:fgetc,libc 6"
 prim__readChar : FilePtr -> PrimIO Int
+
 %foreign support "idris2_writeLine"
+         "node:lambdaRequire:fs:(filePtr, line) => __require_fs.writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
+
 %foreign support "idris2_eof"
+         "node:lambda:x=>(x.eof?1n:0n)"
 prim__eof : FilePtr -> PrimIO Int
+
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 %foreign support "idris2_popen"
@@ -46,26 +59,38 @@ prim__pclose : FilePtr -> PrimIO ()
 
 %foreign support "idris2_removeFile"
 prim__removeFile : String -> PrimIO Int
+
 %foreign support "idris2_fileSize"
+         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
 prim__fileSize : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileSize"
 prim__fPoll : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileAccessTime"
 prim__fileAccessTime : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileModifiedTime"
+         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
+
 %foreign support "idris2_fileStatusTime"
 prim__fileStatusTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_stdin"
+         "node:lambda:x=>({fd:0, buffer: Buffer.alloc(0), name:'<stdin>', eof: false})"
 prim__stdin : FilePtr
+
 %foreign support "idris2_stdout"
+         "node:lambda:x=>({fd:1, buffer: Buffer.alloc(0), name:'<stdout>', eof: false})"
 prim__stdout : FilePtr
+
 %foreign support "idris2_stderr"
+         "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
 %foreign libc "chmod"
+         "node:support:chmod,support_system_file"
 prim__chmod : String -> Int -> PrimIO Int
 
 modeStr : Mode -> String

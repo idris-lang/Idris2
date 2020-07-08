@@ -1517,6 +1517,7 @@ onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
 onCollect ptr c = fromPrim (prim__onCollect ptr (\x => toPrim (c x)))
 
 %foreign "C:idris2_getString, libidris2_support"
+         "javascript:lambda:x=>x"
 export
 prim__getString : Ptr String -> String
 
@@ -1526,8 +1527,11 @@ prim__putChar : Char -> (1 x : %World) -> IORes ()
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
 %foreign "C:idris2_getStr,libidris2_support"
+         "node:support:getStr,support_system_file"
 prim__getStr : PrimIO String
+
 %foreign "C:idris2_putStr,libidris2_support"
+         "node:lambda:x=>process.stdout.write(x)"
 prim__putStr : String -> PrimIO ()
 
 ||| Output a string to stdout without a trailing newline.
