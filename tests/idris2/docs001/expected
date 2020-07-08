@@ -1,30 +1,48 @@
-Main> Prelude.plus
+Main> Prelude.plus : (1 _ : Nat) -> (1 _ : Nat) -> Nat
 	 Add two natural numbers.
 	 @ x the number to case-split on
 	 @ y the other numberpublic export
 
 Totality: total
-Main> Prelude.Nat
+Main> Prelude.Nat : Type
 	 Natural numbers: unbounded, unsigned integers which can be pattern matched.
 
 Constructors:
-Z
+Z : Nat
 	 Zero.
-S
+S : (1 _ : Nat) -> Nat
 	 Successor.
 
-Main> Prelude.List
+Main> Prelude.List : (1 _ : Type) -> Type
 	 Generic lists.
 
 Constructors:
-Nil
+Nil : List a
 	 Empty list
-::
+:: : (1 _ : a) -> (1 _ : List a) -> List a
 
-Main> Prelude.Show
+Main> Prelude.Show : Type -> Type
 	 Things that have a canonical `String` representation.
 
-Main> Prelude.show
+Methods:
+show : Show ty => ty -> String
+	 Convert a value to its `String` representation.
+	 @ x the value to convert
+showPrec : Show ty => Prec -> ty -> String
+	 Convert a value to its `String` representation in a certain precedence
+	 context.
+	
+	 A value should produce parentheses around itself if and only if the given
+	 precedence context is greater than or equal to the precedence of the
+	 outermost operation represented in the produced `String`.  *This is
+	 different from Haskell*, which requires it to be strictly greater.  `Open`
+	 should thus always produce *no* outermost parens, `App` should always
+	 produce outermost parens except on atomic values and those that provide
+	 their own bracketing, like `Pair` and `List`.
+	 @ d the precedence context.
+	 @ x the value to convert
+
+Main> Prelude.show : Show ty => ty -> String
 	 Convert a value to its `String` representation.
 	 @ x the value to convert
 

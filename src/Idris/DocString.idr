@@ -2,6 +2,10 @@ module Idris.DocString
 
 import Core.Context
 import Core.Core
+import Core.Env
+import Core.TT
+
+import Idris.Resugar
 import Idris.Syntax
 
 import Data.ANameMap
@@ -59,24 +63,36 @@ getDocsFor fc n
     showTotal n tot
         = "\nTotality: " ++ show tot
 
-    getConstructorDoc : Name -> Core (Maybe String)
-    getConstructorDoc con
+    getNameDoc : Name -> Core (Maybe String)
+    getNameDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
                   | Nothing => pure Nothing
              syn <- get Syn
              let [(n, str)] = lookupName con (docstrings syn)
                   | _ => pure Nothing
-             pure (Just (nameRoot n ++ "\n" ++ indent str))
+             ty <- normaliseHoles defs [] (type def)
+             pure (Just (nameRoot n ++ " : " ++ show !(resugar [] ty)
+                          ++ "\n" ++ indent str))
 
-    -- TODO: If it's an interface, list the methods and implementations?
+    getIFaceDoc : (Name, IFaceInfo) -> Core String
+    getIFaceDoc (n, iface)
+        = do mdocs <- traverse getNameDoc (map fst (methods iface))
+             case mapMaybe id mdocs of
+                  [] => pure ""
+                  docs => pure $ "\nMethods:\n" ++ concat docs
+
     getExtra : Name -> GlobalDef -> Core String
     getExtra n d
-        = case definition d of
+        = do syn <- get Syn
+             let [] = lookupName n (ifaces syn)
+                 | [ifacedata] => getIFaceDoc ifacedata
+                 | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
+             case definition d of
                PMDef _ _ _ _ _
                    => pure (showTotal n (totality d))
                TCon _ _ _ _ _ _ cons _
-                   => do cdocs <- traverse getConstructorDoc
+                   => do cdocs <- traverse getNameDoc
                                            !(traverse toFullNames cons)
                          case mapMaybe id cdocs of
                               [] => pure ""
@@ -84,10 +100,12 @@ getDocsFor fc n
                _ => pure ""
 
     showDoc : (Name, String) -> Core String
-    showDoc (n, "") = pure $ "No documentation for " ++ show n
     showDoc (n, str)
-        = do let doc = show n ++ "\n" ++ indent str
-             defs <- get Ctxt
-             def <- lookupCtxtExact n (gamma defs)
-             extra <- maybe (pure "") (getExtra n) def
+        = do defs <- get Ctxt
+             Just def <- lookupCtxtExact n (gamma defs)
+                  | Nothing => throw (UndefinedName fc n)
+             ty <- normaliseHoles defs [] (type def)
+             let doc = show n ++ " : " ++ show !(resugar [] ty)
+                              ++ "\n" ++ indent str
+             extra <- getExtra n def
              pure (doc ++ extra)
