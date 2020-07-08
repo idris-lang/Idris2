@@ -176,7 +176,7 @@ schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg +
 
 ||| Extended primitives for the scheme backend, outside the standard set of primFn
 public export
-data ExtPrim = CCall | SchemeCall
+data ExtPrim = SchemeCall
              | NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
@@ -188,7 +188,6 @@ data ExtPrim = CCall | SchemeCall
 
 export
 Show ExtPrim where
-  show CCall = "CCall"
   show SchemeCall = "SchemeCall"
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
@@ -209,7 +208,6 @@ Show ExtPrim where
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
     = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__cCall", CCall),
             (n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),

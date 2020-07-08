@@ -70,8 +70,6 @@ racketString cs = strCons '"' (showRacketString (unpack cs) "\"")
 
 mutual
   racketPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  racketPrim i CCall [ret, fn, args, world]
-      = throw (InternalError ("Can't compile C FFI calls to Racket yet"))
   racketPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
       = do structsc <- schExp racketPrim racketString 0 struct
