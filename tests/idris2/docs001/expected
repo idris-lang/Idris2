@@ -1,0 +1,32 @@
+Main> Prelude.plus
+	 Add two natural numbers.
+	 @ x the number to case-split on
+	 @ y the other numberpublic export
+
+Totality: total
+Main> Prelude.Nat
+	 Natural numbers: unbounded, unsigned integers which can be pattern matched.
+
+Constructors:
+Z
+	 Zero.
+S
+	 Successor.
+
+Main> Prelude.List
+	 Generic lists.
+
+Constructors:
+Nil
+	 Empty list
+::
+
+Main> Prelude.Show
+	 Things that have a canonical `String` representation.
+
+Main> Prelude.show
+	 Convert a value to its `String` representation.
+	 @ x the value to convert
+
+Totality: total
+Main> Bye for now!
