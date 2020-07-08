@@ -8,6 +8,8 @@ import Core.TT
 import Idris.Resugar
 import Idris.Syntax
 
+import TTImp.TTImp
+
 import Data.ANameMap
 import Data.List
 import Data.Maybe
@@ -63,8 +65,8 @@ getDocsFor fc n
     showTotal n tot
         = "\nTotality: " ++ show tot
 
-    getNameDoc : Name -> Core (Maybe String)
-    getNameDoc con
+    getConstructorDoc : Name -> Core (Maybe String)
+    getConstructorDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
                   | Nothing => pure Nothing
@@ -75,12 +77,48 @@ getDocsFor fc n
              pure (Just (nameRoot n ++ " : " ++ show !(resugar [] ty)
                           ++ "\n" ++ indent str))
 
+    getImplDoc : Name -> Core (Maybe String)
+    getImplDoc n
+        = do defs <- get Ctxt
+             Just def <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure Nothing
+             ty <- normaliseHoles defs [] (type def)
+             pure (Just (indent (show !(resugar [] ty) ++ "\n")))
+
+    getMethDoc : (Name, RigCount, Maybe TotalReq, Bool, RawImp) ->
+                 Core (Maybe String)
+    getMethDoc (n, c, tot, _, ty)
+        = do syn <- get Syn
+             let [(n, str)] = lookupName n (docstrings syn)
+                  | _ => pure Nothing
+             pure (Just (nameRoot n ++ " : " ++ show !(pterm ty)
+                          ++ maybe "" (\t => "\n" ++ show t) tot
+                          ++ "\n" ++ indent str))
+
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
-        = do mdocs <- traverse getNameDoc (map fst (methods iface))
-             case mapMaybe id mdocs of
-                  [] => pure ""
-                  docs => pure $ "\nMethods:\n" ++ concat docs
+        = do let params =
+                case params iface of
+                     [] => ""
+                     ps => "Parameters: " ++ showSep ", " (map show ps) ++ "\n"
+             constraints <-
+                case parents iface of
+                     [] => pure ""
+                     ps => do pts <- traverse pterm ps
+                              pure ("Constraints: " ++
+                                    showSep ", " (map show pts) ++ "\n")
+             mdocs <- traverse getMethDoc (methods iface)
+             let meths = case mapMaybe id mdocs of
+                              [] => ""
+                              docs => "\nMethods:\n" ++ concat docs
+             sd <- getSearchData fc False n
+             idocs <- case hintGroups sd of
+                           [] => pure []
+                           ((_, tophs) :: _) => traverse getImplDoc tophs
+             let insts = case mapMaybe id idocs of
+                              [] => ""
+                              docs => "\nImplementations:\n" ++ concat docs
+             pure (params ++ constraints ++ meths ++ insts)
 
     getExtra : Name -> GlobalDef -> Core String
     getExtra n d
@@ -92,7 +130,7 @@ getDocsFor fc n
                PMDef _ _ _ _ _
                    => pure (showTotal n (totality d))
                TCon _ _ _ _ _ _ cons _
-                   => do cdocs <- traverse getNameDoc
+                   => do cdocs <- traverse getConstructorDoc
                                            !(traverse toFullNames cons)
                          case mapMaybe id cdocs of
                               [] => pure ""

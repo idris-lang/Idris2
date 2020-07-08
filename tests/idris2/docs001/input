@@ -3,4 +3,5 @@
 :doc List
 :doc Show
 :doc show
+:doc Monad
 :q
