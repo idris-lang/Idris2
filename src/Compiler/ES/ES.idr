@@ -84,7 +84,6 @@ jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n
 jsName (DN _ n) = jsName n
-jsName (RF n) = "rf__" ++ jsIdent n
 jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
 jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
 jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
