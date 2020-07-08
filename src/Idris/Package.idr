@@ -460,11 +460,12 @@ runRepl : {auto c : Ref Ctxt Defs} ->
 runRepl fname = do
   u <- newRef UST initUState
   m <- newRef MD initMetadata
-  case fname of
-    Nothing => pure ()
-    Just fn => do
-      errs <- loadMainFile fn
-      displayErrors errs
+  the (Core ()) $
+      case fname of
+          Nothing => pure ()
+          Just fn => do
+            errs <- loadMainFile fn
+            displayErrors errs
   repl {u} {s}
 
 
