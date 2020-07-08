@@ -1,7 +1,7 @@
 # Installing
 
 - [Installing from source](#installing-from-source)
-- [Installing from a package mananager](#installing-from-a-package-manager)
+- [Installing from a package manager](#installing-from-a-package-manager)
 
 ## Installing from source
 
