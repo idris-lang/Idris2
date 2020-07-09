@@ -931,6 +931,13 @@ public export
   Left x == Left x' = x == x'
   Right x == Right x' = x == x'
   _ == _ = False
+  
+public export
+(Ord a, Ord b) => Ord (Either a b) where
+  compare (Left x) (Left x') = compare x x'
+  compare (Left _) (Right _) = LT
+  compare (Right _) (Left _) = GT
+  compare (Right x) (Right x') = compare x x'
 
 %inline
 public export
