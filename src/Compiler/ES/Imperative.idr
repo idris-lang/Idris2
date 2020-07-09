@@ -54,14 +54,17 @@ genName =
     pure $ MN "imp_gen" i
 
 mutual
+  ifThenElse : Bool -> a -> a -> a
+  ifThenElse True t e = t
+  ifThenElse False t e = e
 
   pairToReturn : (toReturn : Bool) -> (ImperativeStatement, ImperativeExp) ->
-                     Core (if toReturn then ImperativeStatement else (ImperativeStatement, ImperativeExp))
+                     Core (ifThenElse toReturn ImperativeStatement  (ImperativeStatement, ImperativeExp))
   pairToReturn False (s, e) = pure (s, e)
   pairToReturn True (s, e) = pure $ s <+> ReturnStatement e
 
   expToReturn : (toReturn : Bool) -> ImperativeExp ->
-                     Core (if toReturn then ImperativeStatement else (ImperativeStatement, ImperativeExp))
+                     Core (ifThenElse toReturn ImperativeStatement  (ImperativeStatement, ImperativeExp))
   expToReturn False e = pure $ (DoNothing, e)
   expToReturn True e = pure $ ReturnStatement e
 
@@ -78,7 +81,7 @@ mutual
       pure (concat (map fst a), map snd a)
 
   impExp : {auto c : Ref Imps ImpSt} -> (toReturn : Bool) -> NamedCExp ->
-                     Core (if toReturn then ImperativeStatement else (ImperativeStatement, ImperativeExp))
+                     Core (ifThenElse toReturn ImperativeStatement  (ImperativeStatement, ImperativeExp))
   impExp toReturn (NmLocal fc n) = expToReturn toReturn $ IEVar n
   impExp toReturn (NmRef fc n) = expToReturn toReturn $ IEVar n
   impExp toReturn (NmLam fc n e) = expToReturn toReturn $ IELambda [n] !(impExp True e)
