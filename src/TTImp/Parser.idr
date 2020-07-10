@@ -587,7 +587,7 @@ recordParam fname indents
          info <- the (SourceEmptyRule (PiInfo RawImp))
                  (pure  AutoImplicit <* keyword "auto"
               <|>(do
-                  keyword "default"
+                  exactIdent "default"
                   t <- simpleExpr fname indents
                   pure $ DefImplicit t)
               <|> pure      Implicit)

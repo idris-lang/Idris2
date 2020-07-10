@@ -1,0 +1,5 @@
+the Nat default
+the Bool default
+foo {default=True}
+bar
+:q

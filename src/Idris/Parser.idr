@@ -536,7 +536,7 @@ mutual
   defaultImplicitPi fname indents
       = do start <- location
            symbol "{"
-           keyword "default"
+           exactIdent "default"
            commit
            t <- simpleExpr fname indents
            binders <- pibindList fname start indents
@@ -1453,7 +1453,7 @@ recordParam fname indents
          info <- the (SourceEmptyRule (PiInfo PTerm))
                  (pure  AutoImplicit <* keyword "auto"
               <|>(do
-                  keyword "default"
+                  exactIdent "default"
                   t <- simpleExpr fname indents
                   pure $ DefImplicit t)
               <|> pure      Implicit)
