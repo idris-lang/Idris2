@@ -13,7 +13,7 @@ Implementation Notes
 
    More information concerning the CC0 can be found online at: http://creativecommons.org/publicdomain/zero/1.0/
 
-This section contains (or will contain, hopefully) a vareity of notes on
+This section contains (or will contain, hopefully) a variety of notes on
 aspects of the implementation of Idris 2, in the hope that they help with
 debugging and future contributions.
 
