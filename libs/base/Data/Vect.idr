@@ -782,6 +782,25 @@ range : {len : Nat} -> Vect len (Fin len)
 range {len=Z}   = []
 range {len=S _} = FZ :: map FS range
 
+--------------------------------------------------------------------------------
+-- Matrix transposition
+--------------------------------------------------------------------------------
+||| Specialises zipWith (::) to preserve linearity
+public export
+zipWithConsLinear : (1 _ : Vect a elem)
+      -> (1 _ : Vect a (Vect b elem))
+      -> Vect a (Vect (S b) elem)
+zipWithConsLinear [] [] = []
+zipWithConsLinear (x::xs) (tl::tls) = (x::tl) :: zipWithConsLinear xs tls
+
+||| Extensional correctness lemma
+export
+zipWithConsLinearSpec : (xs : Vect a elem) -> (xss : Vect a (Vect b elem)) 
+         -> (zipWithConsLinear xs xss) = zipWith (::) xs xss
+zipWithConsLinearSpec [] [] = Refl
+zipWithConsLinearSpec (x :: xs) (tl :: tls) = rewrite zipWithConsLinearSpec xs tls in 
+                                              Refl
+
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
 |||
 ||| This is like zipping all the inner `Vect`s together and is equivalent to `traverse id` (`transposeTraverse`).
@@ -793,14 +812,22 @@ range {len=S _} = FZ :: map FS range
 ||| ```
 public export
 transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
-transpose []        = replicate _ []          -- = [| [] |]
-transpose (x :: xs) = helper x (transpose xs) -- = [| x :: xs |]
-  where -- Can't use zipWith since it doesn't preserve linearity
-    helper : (1 _ : Vect a elem)
-          -> (1 _ : Vect a (Vect b elem))
-          -> Vect a (Vect (S b) elem)
-    helper [] [] = []
-    helper (x::xs) (tl::tls) = (x::tl) :: helper xs tls
+transpose []        = replicate _ []                     -- = [| [] |]
+transpose (x :: xs) = zipWithConsLinear x (transpose xs) -- = [| x :: xs |]
+
+||| A recursive (non-linear) implementation of transpose
+||| Easier for inductive reasoning
+public export
+transpose' : {n : Nat} -> (xss : Vect m (Vect n x)) -> Vect n (Vect m x)
+transpose' []          = replicate _ []                 
+transpose' (xs :: xss) = zipWith (::) xs (transpose' xss)
+
+||| Extensional correctness lemma
+export
+transposeSpec : {n : Nat} -> (xss : Vect m (Vect n x)) -> transpose xss = transpose' xss
+transposeSpec [] = Refl
+transposeSpec (y :: xs) = rewrite transposeSpec xs in 
+                          zipWithConsLinearSpec _ _ 
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
