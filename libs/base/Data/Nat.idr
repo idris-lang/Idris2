@@ -506,6 +506,7 @@ multDistributesOverMinusRight left centre right =
 
 -- minimum / maximum proofs
 
+export
 maximumAssociative : (l, c, r : Nat) ->
   maximum l (maximum c r) = maximum (maximum l c) r
 maximumAssociative Z _ _ = Refl
@@ -513,16 +514,19 @@ maximumAssociative (S _) Z _ = Refl
 maximumAssociative (S _) (S _) Z = Refl
 maximumAssociative (S k) (S j) (S i) = rewrite maximumAssociative k j i in Refl
 
+export
 maximumCommutative : (l, r : Nat) -> maximum l r = maximum r l
 maximumCommutative Z Z = Refl
 maximumCommutative Z (S _) = Refl
 maximumCommutative (S _) Z = Refl
 maximumCommutative (S k) (S j) = rewrite maximumCommutative k j in Refl
 
+export
 maximumIdempotent : (n : Nat) -> maximum n n = n
 maximumIdempotent Z = Refl
 maximumIdempotent (S k) = cong S $ maximumIdempotent k
 
+export
 minimumAssociative : (l, c, r : Nat) ->
   minimum l (minimum c r) = minimum (minimum l c) r
 minimumAssociative Z _ _ = Refl
@@ -530,42 +534,52 @@ minimumAssociative (S _) Z _ = Refl
 minimumAssociative (S _) (S _) Z = Refl
 minimumAssociative (S k) (S j) (S i) = rewrite minimumAssociative k j i in Refl
 
+export
 minimumCommutative : (l, r : Nat) -> minimum l r = minimum r l
 minimumCommutative Z Z = Refl
 minimumCommutative Z (S _) = Refl
 minimumCommutative (S _) Z = Refl
 minimumCommutative (S k) (S j) = rewrite minimumCommutative k j in Refl
 
+export
 minimumIdempotent : (n : Nat) -> minimum n n = n
 minimumIdempotent Z = Refl
 minimumIdempotent (S k) = cong S $ minimumIdempotent k
 
+export
 minimumZeroZeroLeft : (left : Nat) -> minimum left 0 = Z
 minimumZeroZeroLeft left = rewrite minimumCommutative left 0 in Refl
 
+export
 minimumSuccSucc : (left, right : Nat) ->
   minimum (S left) (S right) = S (minimum left right)
 minimumSuccSucc _ _ = Refl
 
+export
 maximumZeroNLeft : (left : Nat) -> maximum left Z = left
 maximumZeroNLeft left = rewrite maximumCommutative left Z in Refl
 
+export
 maximumSuccSucc : (left, right : Nat) ->
   S (maximum left right) = maximum (S left) (S right)
 maximumSuccSucc _ _ = Refl
 
+export
 sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
 sucMaxL Z = Refl
 sucMaxL (S l) = cong S $ sucMaxL l
 
+export
 sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
 sucMaxR Z = Refl
 sucMaxR (S l) = cong S $ sucMaxR l
 
+export
 sucMinL : (l : Nat) -> minimum (S l) l = l
 sucMinL Z = Refl
 sucMinL (S l) = cong S $ sucMinL l
 
+export
 sucMinR : (l : Nat) -> minimum l (S l) = l
 sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
