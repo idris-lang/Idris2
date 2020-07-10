@@ -84,6 +84,7 @@ This means that terms are always well scoped, and we can use the type system
 to keep us right when manipulating names. For example, we have:
 
 ::
+
     Local : FC -> (isLet : Maybe Bool) ->
             (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
 
@@ -96,6 +97,7 @@ keeps track of the indices so that we don't have to think too hard!
 indices, such as:
 
 ::
+
     weaken : Term vars -> Term (n :: vars) -- actually in an interface, Weaken
     embed : Term vars -> Term (ns ++ vars) 
     refToLocal : (x : Name) -> -- explicit name of a reference
@@ -110,6 +112,7 @@ the core. In general, this isn't expensive at run time.
 Environments, defined in ``Core.Env``, map local variables to binders:
 
 ::
+
     data Env : (tm : List Name -> Type) -> List Name -> Type
 
 A binders is typically a lambda, a pi, or a let (with a value), but can
@@ -120,17 +123,20 @@ We also have values, which are in head normal form, and defined in
 ``Core.Value``:
 
 ::
+
     data NF : List Name -> Type
 
 We can convert a term to a value by normalising...
 
 ::
+
     nf : {vars : _} ->
          Defs -> Env Term vars -> Term vars -> Core (NF vars)
 
 ...and back again, by quoting:
 
 ::
+
     quote : {vars : _} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
 
@@ -154,6 +160,7 @@ things which are referred to by ``Meta`` in ``Term``. It is defined in
 type:
 
 ::
+
     unify : Unify tm =>
             {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
