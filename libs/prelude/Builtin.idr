@@ -110,6 +110,7 @@ data Void : Type where
 
 public export
 data Equal : forall a, b . a -> b -> Type where
+     [search a b]
      Refl : {0 x : a} -> Equal x x
 
 %name Equal prf
