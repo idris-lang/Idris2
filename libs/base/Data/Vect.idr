@@ -251,6 +251,26 @@ zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
 zipWith f []      []      = []
 zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 
+||| Linear version
+public export
+lzipWith : (f : (1 _ : a) -> (1 _ : b) -> c)
+      -> (1 _ : Vect n a)
+      -> (1 _ : Vect n b)
+      -> Vect n c
+lzipWith f [] [] = []
+lzipWith f (x::xs) (y::ys) = f x y :: lzipWith f xs ys
+
+||| Extensional correctness lemma
+export
+lzipWithSpec : (f : (1 _ : a) -> (1 _ : b) -> c)
+         -> (xs : Vect n a) -> (ys : Vect n b) 
+         -> (lzipWith f xs ys) = zipWith f xs ys
+lzipWithSpec f [] [] = Refl
+lzipWithSpec f (x :: xs) (y :: ys) = rewrite lzipWithSpec f xs ys in 
+                                     Refl
+
+
+
 ||| Combine three equal-length vectors into a vector with some function
 |||
 ||| ```idris example
@@ -785,22 +805,6 @@ range {len=S _} = FZ :: map FS range
 --------------------------------------------------------------------------------
 -- Matrix transposition
 --------------------------------------------------------------------------------
-||| Specialises zipWith (::) to preserve linearity
-public export
-zipWithConsLinear : (1 _ : Vect a elem)
-      -> (1 _ : Vect a (Vect b elem))
-      -> Vect a (Vect (S b) elem)
-zipWithConsLinear [] [] = []
-zipWithConsLinear (x::xs) (tl::tls) = (x::tl) :: zipWithConsLinear xs tls
-
-||| Extensional correctness lemma
-export
-zipWithConsLinearSpec : (xs : Vect a elem) -> (xss : Vect a (Vect b elem)) 
-         -> (zipWithConsLinear xs xss) = zipWith (::) xs xss
-zipWithConsLinearSpec [] [] = Refl
-zipWithConsLinearSpec (x :: xs) (tl :: tls) = rewrite zipWithConsLinearSpec xs tls in 
-                                              Refl
-
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
 |||
 ||| This is like zipping all the inner `Vect`s together and is equivalent to `traverse id` (`transposeTraverse`).
@@ -812,8 +816,8 @@ zipWithConsLinearSpec (x :: xs) (tl :: tls) = rewrite zipWithConsLinearSpec xs t
 ||| ```
 public export
 transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
-transpose []        = replicate _ []                     -- = [| [] |]
-transpose (x :: xs) = zipWithConsLinear x (transpose xs) -- = [| x :: xs |]
+transpose []        = replicate _ []                 -- = [| [] |]
+transpose (x :: xs) = lzipWith (::) x (transpose xs) -- = [| x :: xs |]
 
 ||| A recursive (non-linear) implementation of transpose
 ||| Easier for inductive reasoning
@@ -827,7 +831,7 @@ export
 transposeSpec : {n : Nat} -> (xss : Vect m (Vect n x)) -> transpose xss = transpose' xss
 transposeSpec [] = Refl
 transposeSpec (y :: xs) = rewrite transposeSpec xs in 
-                          zipWithConsLinearSpec _ _ 
+                          lzipWithSpec (::) _ _ 
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
