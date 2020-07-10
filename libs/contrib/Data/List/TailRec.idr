@@ -32,19 +32,19 @@ length : List a -> Nat
 length xs = length_aux xs Z
 
 export
-length_ext : (xs : List a) -> Data.List.length xs = Data.List.TailRec.length xs
+length_ext : (xs : List a) -> List.length xs = Data.List.TailRec.length xs
 length_ext xs = Calc $
-  |~ Data.List.length xs                
-  ~~ Data.List.length xs + 0             ...( sym $ plusZeroRightNeutral $ Data.List.length xs )
+  |~ List.length xs
+  ~~ List.length xs + 0                  ...( sym $ plusZeroRightNeutral $ List.length xs )
   ~~ Data.List.TailRec.length_aux xs 0   ...( lemma 0 xs )
   ~~ Data.List.TailRec.length xs         ...( Refl )
   where
-    lemma : (n : Nat) -> (xs : List a) -> 
-            Data.List.length xs + n  = length_aux xs n
+    lemma : (n : Nat) -> (xs : List a) ->
+            List.length xs + n  = length_aux xs n
     lemma n [] = Refl
     lemma n (_ :: xs) = 
       let length_xs : Nat
-          length_xs = Data.List.length xs in 
+          length_xs = List.length xs in
       Calc $
       |~ 1 + (length_xs + n) 
       -- Hopefully we could Frex these two steps one day
