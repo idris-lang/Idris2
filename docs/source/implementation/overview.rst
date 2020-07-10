@@ -31,11 +31,6 @@ General idea is that high level languages will provide a translation to TT.
 In the ``Idris/`` namespace we define the high level syntax for Idris, which
 translates to TTImp by desugaring operators, do notation, etc.
 
-TT separates ``Ref`` (global user defined names) from ``Meta``, which are
-globally defined metavariables. For efficiency, metavariables are only
-substituted into terms if they have non-0 multiplicity, to preserve sharing as
-much as possible
-
 There is a separate linearity check after elaboration, which updates types of
 holes (and is aware of case blocks). This is implemented in
 ``Core.LinearCheck``. During this check, we also recalculate the multiplicities
@@ -74,6 +69,110 @@ labels to disambiguate which one we mean. See Core.Core for their
 definition. Again, ``IORef`` is for efficiency - even if it would be neater to
 use a state monad this turned out to be about 2-3 times faster, so I'm
 going with the "ugly" choice...
+
+Term representation
+-------------------
+
+Terms in the core language are indexed by a list of the names in scope,
+most recently defined first:
+
+::
+
+    data Term : List Name -> Type
+
+This means that terms are always well scoped, and we can use the type system
+to keep us right when manipulating names. For example, we have:
+
+::
+    Local : FC -> (isLet : Maybe Bool) ->
+            (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
+
+So local variables are represented by an index into the local context (a de
+Bruijn index, ``idx``), and a proof, erased at run time, that the index 
+is valid. So everything is de Bruijn indexed, but the type checker still
+keeps track of the indices so that we don't have to think too hard!
+
+``Core.TT`` contains various handy tools for manipulating terms with their
+indices, such as:
+
+::
+    weaken : Term vars -> Term (n :: vars) -- actually in an interface, Weaken
+    embed : Term vars -> Term (ns ++ vars) 
+    refToLocal : (x : Name) -> -- explicit name of a reference
+                 (new : Name) -> -- name to bind as
+                 Term vars -> Term (new :: vars)
+
+Note that the types are explicit about when the ``vars`` needs to be passed at
+run time, and when it isn't. Mostly where it's needed it's to help with
+displaying names, or name generation, rather than any fundamental reason in
+the core. In general, this isn't expensive at run time.
+
+Environments, defined in ``Core.Env``, map local variables to binders:
+
+::
+    data Env : (tm : List Name -> Type) -> List Name -> Type
+
+A binders is typically a lambda, a pi, or a let (with a value), but can
+also be a pattern variable. See the definition of ``TT`` for more details.
+Where we have a term, we usually also need an ``Env``.
+
+We also have values, which are in head normal form, and defined in
+``Core.Value``:
+
+::
+    data NF : List Name -> Type
+
+We can convert a term to a value by normalising...
+
+::
+    nf : {vars : _} ->
+         Defs -> Env Term vars -> Term vars -> Core (NF vars)
+
+...and back again, by quoting:
+
+::
+    quote : {vars : _} ->
+            Defs -> Env Term vars -> tm vars -> Core (Term vars)
+
+Both ``nf`` and ``quote`` are defined in ``Core.Normalise``. We don't
+always know whether we'll need to work with ``NF`` or ``Term``, so
+we also have a "glued" representation, ``Glued vars``, again defined in
+``Core.Normalise``, which lazily computes either a ``NF`` or ``Term`` as
+required. Elaborating a term returns the type as a ``Glued vars``.
+
+``Term`` separates ``Ref`` (global user defined names) from ``Meta``, which
+are globally defined metavariables. For efficiency, metavariables are only
+substituted into terms if they have non-0 multiplicity, to preserve sharing as
+much as possible.
+
+Unification
+-----------
+Unification is probably the most important part of the elaboration process,
+and infers values for implicit arguments. That is, it finds values for the
+things which are referred to by ``Meta`` in ``Term``. It is defined in
+``Core.Unify``, as the top level unification function has the following
+type:
+
+::
+    unify : Unify tm =>
+            {vars : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            UnifyInfo ->
+            FC -> Env Term vars ->
+            tm vars -> tm vars ->
+            Core UnifyResult
+
+The ``Unify`` interface is there because it is convenient to be able to
+define unification on ``Term`` and ``NF``, as well as ``Closure`` (which
+is part of ``NF`` to represent unevaluated arguments to constructors).
+
+This is one place where indexing over ``vars`` is extremely valuable: we
+have to keep the environment consistent, so unification won't accidentally
+introduce any scoping bugs!
+
+Idris 2 implements pattern unification - see Adam Gundry's thesis for an
+accessible introduction.
 
 Context
 -------
