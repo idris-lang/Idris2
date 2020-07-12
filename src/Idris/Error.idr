@@ -99,7 +99,8 @@ perror (InvisibleName fc x Nothing)
 perror (BadTypeConType fc n)
     = pure $ "Return type of " ++ show n ++ " must be Type at:\n" ++ !(ploc fc)
 perror (BadDataConType fc n fam)
-    = pure $ "Return type of " ++ show n ++ " must be in " ++ show fam ++ " at:\n" ++ !(ploc fc)
+    = pure $ "Return type of " ++ show n ++ " must be in "
+                 ++ show !(toFullNames fam) ++ " at:\n" ++ !(ploc fc)
 perror (NotCovering fc n IsCovering)
     = pure $ "Internal error (Coverage of " ++ show n ++ ")"
 perror (NotCovering fc n (MissingCases cs))

@@ -9,14 +9,14 @@ data NatExpr : Nat -> Type where
      Val : (val : Nat) -> NatExpr val
 
 getNatExpr : TTImp -> Elab (n ** NatExpr n)
-getNatExpr `(Prelude.plus ~(x) ~(y))
+getNatExpr `(Prelude.Types.plus ~(x) ~(y))
    = do (_ ** xval) <- getNatExpr x
         (_ ** yval) <- getNatExpr y
         pure (_ ** Plus xval yval)
-getNatExpr `(Prelude.mult (Prelude.S (Prelude.S Prelude.Z)) ~(y))
+getNatExpr `(Prelude.Types.mult (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)) ~(y))
    = do (y ** yval) <- getNatExpr y
         pure (_ ** Dbl yval)
-getNatExpr `(Prelude.mult ~(x) ~(y))
+getNatExpr `(Prelude.Types.mult ~(x) ~(y))
    = do (_ ** xval) <- getNatExpr x
         (_ ** yval) <- getNatExpr y
         pure (_ ** Mult xval yval)

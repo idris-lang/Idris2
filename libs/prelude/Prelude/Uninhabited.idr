@@ -28,3 +28,12 @@ Uninhabited Void where
 public export
 absurd : Uninhabited t => (h : t) -> a
 absurd h = void (uninhabited h)
+
+public export
+Uninhabited (True = False) where
+  uninhabited Refl impossible
+
+public export
+Uninhabited (False = True) where
+  uninhabited Refl impossible
+

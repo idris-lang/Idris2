@@ -136,14 +136,14 @@ mkDropSubst i es rest (x :: xs)
 -- Common.idr, so that they get compiled, as they won't be spotted by the
 -- usual calls to 'getRefs'.
 natHack : CExp vars -> CExp vars
-natHack (CCon fc (NS ["Prelude"] (UN "Z")) _ []) = CPrimVal fc (BI 0)
-natHack (CCon fc (NS ["Prelude"] (UN "S")) _ [k])
+natHack (CCon fc (NS ["Types", "Prelude"] (UN "Z")) _ []) = CPrimVal fc (BI 0)
+natHack (CCon fc (NS ["Types", "Prelude"] (UN "S")) _ [k])
     = CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k]
-natHack (CApp fc (CRef _ (NS ["Prelude"] (UN "natToInteger"))) [k]) = k
-natHack (CApp fc (CRef _ (NS ["Prelude"] (UN "integerToNat"))) [k]) = k
-natHack (CApp fc (CRef fc' (NS ["Prelude"] (UN "plus"))) args)
+natHack (CApp fc (CRef _ (NS ["Types", "Prelude"] (UN "natToInteger"))) [k]) = k
+natHack (CApp fc (CRef _ (NS ["Types", "Prelude"] (UN "integerToNat"))) [k]) = k
+natHack (CApp fc (CRef fc' (NS ["Types", "Prelude"] (UN "plus"))) args)
     = CApp fc (CRef fc' (UN "prim__add_Integer")) args
-natHack (CApp fc (CRef fc' (NS ["Prelude"] (UN "mult"))) args)
+natHack (CApp fc (CRef fc' (NS ["Types", "Prelude"] (UN "mult"))) args)
     = CApp fc (CRef fc' (UN "prim__mul_Integer")) args
 natHack (CApp fc (CRef fc' (NS ["Nat", "Data"] (UN "minus"))) args)
     = CApp fc (CRef fc' (UN "prim__sub_Integer")) args
@@ -151,22 +151,22 @@ natHack (CLam fc x exp) = CLam fc x (natHack exp)
 natHack t = t
 
 isNatCon : Name -> Bool
-isNatCon (NS ["Prelude"] (UN "Z")) = True
-isNatCon (NS ["Prelude"] (UN "S")) = True
+isNatCon (NS ["Types", "Prelude"] (UN "Z")) = True
+isNatCon (NS ["Types", "Prelude"] (UN "S")) = True
 isNatCon _ = False
 
 natBranch : CConAlt vars -> Bool
 natBranch (MkConAlt n _ _ _) = isNatCon n
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
-trySBranch n (MkConAlt (NS ["Prelude"] (UN "S")) _ [arg] sc)
+trySBranch n (MkConAlt (NS ["Types", "Prelude"] (UN "S")) _ [arg] sc)
     = let fc = getFC n in
           Just (CLet fc arg True (CApp fc (CRef fc (UN "prim__sub_Integer"))
                     [n, CPrimVal fc (BI 1)]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
-tryZBranch (MkConAlt (NS ["Prelude"] (UN "Z")) _ [] sc) = Just sc
+tryZBranch (MkConAlt (NS ["Types", "Prelude"] (UN "Z")) _ [] sc) = Just sc
 tryZBranch _ = Nothing
 
 getSBranch : CExp vars -> List (CConAlt vars) -> Maybe (CExp vars)
@@ -198,15 +198,15 @@ boolHackTree (CConCase fc sc alts def)
          CConstCase fc sc alts' def
   where
     toBool : CConAlt vars -> Maybe (CConstAlt vars)
-    toBool (MkConAlt (NS ["Prelude"] (UN "True")) (Just tag) [] sc)
+    toBool (MkConAlt (NS ["Basics", "Prelude"] (UN "True")) (Just tag) [] sc)
         = Just $ MkConstAlt (I tag) sc
-    toBool (MkConAlt (NS ["Prelude"] (UN "False")) (Just tag) [] sc)
+    toBool (MkConAlt (NS ["Basics", "Prelude"] (UN "False")) (Just tag) [] sc)
         = Just $ MkConstAlt (I tag) sc
-    toBool (MkConAlt (NS ["Prelude"] (UN "LT")) (Just tag) [] sc)
+    toBool (MkConAlt (NS ["EqOrd", "Prelude"] (UN "LT")) (Just tag) [] sc)
         = Just $ MkConstAlt (I tag) sc
-    toBool (MkConAlt (NS ["Prelude"] (UN "EQ")) (Just tag) [] sc)
+    toBool (MkConAlt (NS ["EqOrd", "Prelude"] (UN "EQ")) (Just tag) [] sc)
         = Just $ MkConstAlt (I tag) sc
-    toBool (MkConAlt (NS ["Prelude"] (UN "GT")) (Just tag) [] sc)
+    toBool (MkConAlt (NS ["EqOrd", "Prelude"] (UN "GT")) (Just tag) [] sc)
         = Just $ MkConstAlt (I tag) sc
     toBool _ = Nothing
 boolHackTree t = t
@@ -219,15 +219,15 @@ mutual
       = pure $ CLocal fc prf
   -- TMP HACK: extend this to all types which look like enumerations
   -- after erasure
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "True")))
+  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Basics", "Prelude"] (UN "True")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "False")))
+  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Basics", "Prelude"] (UN "False")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "LT")))
+  toCExpTm n (Ref fc (DataCon tag Z) (NS ["EqOrd", "Prelude"] (UN "LT")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "EQ")))
+  toCExpTm n (Ref fc (DataCon tag Z) (NS ["EqOrd", "Prelude"] (UN "EQ")))
       = pure $ CPrimVal fc (I tag)
-  toCExpTm n (Ref fc (DataCon tag Z) (NS ["Prelude"] (UN "GT")))
+  toCExpTm n (Ref fc (DataCon tag Z) (NS ["EqOrd", "Prelude"] (UN "GT")))
       = pure $ CPrimVal fc (I tag)
   toCExpTm n (Ref fc (DataCon tag arity) fn)
       = -- get full name for readability, and the Nat hack

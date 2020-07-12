@@ -142,7 +142,10 @@ mutual
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
                                  _ => pure (IVar fc n, gErased fc)
-           pure (IVar fc !(aliasName !(getFullName n)), gnf env (embed ty))
+           n' <- case umode of
+                      NoSugar _ => getFullName n
+                      _ => aliasName !(getFullName n)
+           pure (IVar fc n', gnf env (embed ty))
   unelabTy' umode env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n
