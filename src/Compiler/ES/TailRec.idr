@@ -16,33 +16,55 @@ hasTailCall n (ForEverLoop x) =
 hasTailCall n o = False
 
 
-createArgUpdates : List Name -> List ImperativeExp -> ImperativeStatement
-createArgUpdates names values =
-    let tempArgNames = map (\x => MN "tailRepOptim" (cast x)) [0..(length names)]
-        setTemps = concat $ map (\(x,y) => LetDecl x (Just y)) (zip tempArgNames values)
-        setArgs = concat $ map (\(x,y) => MutateStatement x (IEVar y)) (zip names tempArgNames)
-    in setTemps <+> setArgs
+argsName : Name
+argsName = MN "tailRecOptimArgs" 0
+
+stepFnName : Name
+stepFnName = MN "tailRecOptimStep" 0
+
+createNewArgs : List ImperativeExp -> ImperativeExp
+createNewArgs values =
+    IEConstructor (Left 0) values
 
 
-replaceTailCall : List Name -> Name -> ImperativeStatement -> ImperativeStatement
-replaceTailCall args n (SeqStatement x y) = SeqStatement x (replaceTailCall args n y)
-replaceTailCall args n (ReturnStatement x) =
-    case x of
+createArgInit : List Name -> ImperativeStatement
+createArgInit names =
+    LetDecl argsName (Just $ IEConstructor (Left 0) (map IEVar names))
+
+replaceTailCall : Name -> ImperativeStatement -> ImperativeStatement
+replaceTailCall n (SeqStatement x y) = SeqStatement x (replaceTailCall n y)
+replaceTailCall n (ReturnStatement x) =
+    let defRet = ReturnStatement $ IEConstructor (Left 1) [x]
+    in case x of
         IEApp (IEVar cn) arg_vals =>
-            if n == cn then createArgUpdates args arg_vals
-                else ReturnStatement x
-        _ => ReturnStatement x
-replaceTailCall args n (SwitchStatement e alts d) =
-    SwitchStatement e (map (\(x,y) => (x, replaceTailCall args n y)) alts) (map (replaceTailCall args n) d)
-replaceTailCall args n (ForEverLoop x) =
-    ForEverLoop $ replaceTailCall args n x
-replaceTailCall args n o = o
+            if n == cn then ReturnStatement $ createNewArgs arg_vals
+                else defRet
+        _ => defRet
+
+
+replaceTailCall n (SwitchStatement e alts d) =
+    SwitchStatement e (map (\(x,y) => (x, replaceTailCall n y)) alts) (map (replaceTailCall n) d)
+replaceTailCall n (ForEverLoop x) =
+    ForEverLoop $ replaceTailCall n x
+replaceTailCall n o = o
+
+makeTailOptimToBody : Name -> List Name -> ImperativeStatement -> ImperativeStatement
+makeTailOptimToBody n argNames body =
+    let lastArg = (length argNames) + 1
+        newArgExp = map (\x => IEConstructorArg (cast x) (IEVar argsName)) [1..lastArg]
+        bodyArgsReplaced = replaceNamesExpS (zip argNames newArgExp) body
+        stepBody = replaceTailCall n bodyArgsReplaced
+        stepFn = FunDecl EmptyFC stepFnName [argsName] stepBody
+        loopRec = MutateStatement argsName (IEApp (IEVar stepFnName) [IEVar argsName])
+        loopReturn = ReturnStatement (IEConstructorArg 1 $ IEVar argsName)
+        loop = ForEverLoop $ SwitchStatement (IEConstructorHead $ IEVar argsName) [(IEConstructorTag $ Left 0, loopRec)] (Just loopReturn)
+    in stepFn <+> createArgInit argNames <+> loop
 
 export
 tailRecOptim :  ImperativeStatement -> ImperativeStatement
 tailRecOptim (SeqStatement x y) = SeqStatement (tailRecOptim x) (tailRecOptim y)
 tailRecOptim (FunDecl fc n args body) =
-    let new_body = if hasTailCall n body then ForEverLoop (replaceTailCall args n body)
+    let new_body = if hasTailCall n body then makeTailOptimToBody n args body
                         else body
     in FunDecl fc n args new_body
 tailRecOptim x = x
