@@ -5,13 +5,18 @@ modules = Control.ANSI,
           Control.ANSI.CSI,
           Control.Delayed,
           Control.Linear.LIO,
+          Control.Monad.Algebra,
           Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,
+          Control.Algebra.Implementations,
+
+          Data.Bool.Algebra,
 
           Data.Linear.Array,
 
+          Data.List.Algebra,
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,
@@ -22,6 +27,9 @@ modules = Control.ANSI,
 
           Data.Logic.Propositional,
 
+          Data.Morphisms.Algebra,
+
+          Data.Nat.Algebra,
           Data.Nat.Ack,
           Data.Nat.Equational,
           Data.Nat.Fact,
