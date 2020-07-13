@@ -145,7 +145,7 @@ getDocsFor fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => throw (UndefinedName fc n)
              ty <- normaliseHoles defs [] (type def)
-             let doc = show n ++ " : " ++ show !(resugar [] ty)
+             let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
                               ++ "\n" ++ indent str
              extra <- getExtra n def
              pure (doc ++ extra)

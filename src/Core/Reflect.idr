@@ -39,8 +39,12 @@ appCon fc defs n args
          resolved (gamma defs) (apply fc fn args)
 
 export
-prelude : String -> Name
-prelude n = NS ["Prelude"] (UN n)
+preludetypes : String -> Name
+preludetypes n = NS ["Types", "Prelude"] (UN n)
+
+export
+basics : String -> Name
+basics n = NS ["Basics", "Prelude"] (UN n)
 
 export
 builtin : String -> Name
@@ -136,8 +140,8 @@ Reify Bool where
 
 export
 Reflect Bool where
-  reflect fc defs lhs env True = getCon fc defs (prelude "True")
-  reflect fc defs lhs env False = getCon fc defs (prelude "False")
+  reflect fc defs lhs env True = getCon fc defs (basics "True")
+  reflect fc defs lhs env False = getCon fc defs (basics "False")
 
 export
 Reify Nat where
@@ -152,10 +156,10 @@ Reify Nat where
 
 export
 Reflect Nat where
-  reflect fc defs lhs env Z = getCon fc defs (prelude "Z")
+  reflect fc defs lhs env Z = getCon fc defs (preludetypes "Z")
   reflect fc defs lhs env (S k)
       = do k' <- reflect fc defs lhs env k
-           appCon fc defs (prelude "S") [k']
+           appCon fc defs (preludetypes "S") [k']
 
 export
 Reify a => Reify (List a) where
@@ -171,11 +175,11 @@ Reify a => Reify (List a) where
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs lhs env [] = appCon fc defs (prelude "Nil") [Erased fc False]
+  reflect fc defs lhs env [] = appCon fc defs (preludetypes "Nil") [Erased fc False]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (prelude "::") [Erased fc False, x', xs']
+           appCon fc defs (preludetypes "::") [Erased fc False, x', xs']
 
 export
 Reify a => Reify (Maybe a) where
@@ -190,10 +194,10 @@ Reify a => Reify (Maybe a) where
 
 export
 Reflect a => Reflect (Maybe a) where
-  reflect fc defs lhs env Nothing = appCon fc defs (prelude "Nothing") [Erased fc False]
+  reflect fc defs lhs env Nothing = appCon fc defs (preludetypes "Nothing") [Erased fc False]
   reflect fc defs lhs env (Just x)
       = do x' <- reflect fc defs lhs env x
-           appCon fc defs (prelude "Just") [Erased fc False, x']
+           appCon fc defs (preludetypes "Just") [Erased fc False, x']
 
 export
 (Reify a, Reify b) => Reify (a, b) where

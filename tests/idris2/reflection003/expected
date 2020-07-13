@@ -1,10 +1,10 @@
 1/1: Building refprims (refprims.idr)
-LOG 0: Name: Prelude.List.++
-LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi Rig1 Explicit (Just xs) (Prelude.List a) (%pi RigW Explicit (Just {arg:6633}) (Prelude.List a) (Prelude.List a))))
-LOG 0: Name: Prelude.Strings.++
+LOG 0: Name: Prelude.Types.List.++
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi Rig1 Explicit (Just xs) (Prelude.Types.List a) (%pi RigW Explicit (Just {arg:2578}) (Prelude.Types.List a) (Prelude.Types.List a))))
+LOG 0: Name: Prelude.Types.Strings.++
 LOG 0: Type: (%pi Rig1 Explicit (Just x) String (%pi Rig1 Explicit (Just y) String String))
-LOG 0: Resolved name: Prelude.Nat
-LOG 0: Constructors: [Prelude.Z, Prelude.S]
+LOG 0: Resolved name: Prelude.Types.Nat
+LOG 0: Constructors: [Prelude.Types.Z, Prelude.Types.S]
 refprims.idr:43:10--43:27:While processing right hand side of dummy1 at refprims.idr:43:1--45:1:
 Error during reflection: Not really trying at:
 43	dummy1 = %runElab logPrims
