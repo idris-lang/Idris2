@@ -280,7 +280,7 @@ names, e.g. in:
 
 ... where ``xs`` is a ``Vect n a``, it infers bindings for ``n`` and ``a``.
 
-The ``%auto_implicits`` directive means that it will no longer automatically
+The ``%unbound_implicits`` directive means that it will no longer automatically
 bind names (that is, ``a`` and ``b`` in ``map`` above) but it will still
 infer the types for any additional names, e.g. if you write:
 
