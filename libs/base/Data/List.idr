@@ -2,13 +2,13 @@ module Data.List
 
 public export
 isNil : List a -> Bool
-isNil []      = True
-isNil (x::xs) = False
+isNil [] = True
+isNil _  = False
 
 public export
 isCons : List a -> Bool
-isCons []      = False
-isCons (x::xs) = True
+isCons [] = False
+isCons _  = True
 
 public export
 snoc : List a -> a -> List a
@@ -17,7 +17,7 @@ snoc xs x = xs ++ [x]
 public export
 length : List a -> Nat
 length []      = Z
-length (x::xs) = S $ length xs
+length (_::xs) = S $ length xs
 
 public export
 take : Nat -> List a -> List a
@@ -28,7 +28,7 @@ public export
 drop : (n : Nat) -> (xs : List a) -> List a
 drop Z     xs      = xs
 drop (S n) []      = []
-drop (S n) (x::xs) = drop n xs
+drop (S n) (_::xs) = drop n xs
 
 ||| Satisfiable if `k` is a valid index into `xs`
 |||
@@ -49,8 +49,8 @@ Uninhabited (InBounds k []) where
 ||| Decide whether `k` is a valid index into `xs`
 public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
-inBounds k [] = No uninhabited
-inBounds Z (x :: xs) = Yes InFirst
+inBounds _ [] = No uninhabited
+inBounds Z (_ :: _) = Yes InFirst
 inBounds (S k) (x :: xs) with (inBounds k xs)
   inBounds (S k) (x :: xs) | (Yes prf) = Yes (InLater prf)
   inBounds (S k) (x :: xs) | (No contra)
@@ -62,7 +62,7 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 public export
 index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
-index (S k) (x :: xs) {ok = (InLater p)} = index k xs
+index (S k) (_ :: xs) {ok = InLater _} = index k xs
 
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
@@ -116,11 +116,7 @@ lookup = lookupBy (==)
 public export
 elemBy : (a -> a -> Bool) -> a -> List a -> Bool
 elemBy p e []      = False
-elemBy p e (x::xs) =
-  if p e x then
-    True
-  else
-    elemBy p e xs
+elemBy p e (x::xs) = p e x || elemBy p e xs
 
 public export
 nubBy : (a -> a -> Bool) -> List a -> List a
@@ -336,7 +332,7 @@ Uninhabited (NonEmpty []) where
 public export
 head : (l : List a) -> {auto ok : NonEmpty l} -> a
 head [] impossible
-head (x :: xs) = x
+head (x :: _) = x
 
 ||| Get the tail of a non-empty list.
 ||| @ ok proof the list is non-empty
@@ -603,24 +599,18 @@ consInjective Refl = (Refl, Refl)
 
 ||| The empty list is a right identity for append.
 export
-appendNilRightNeutral : (l : List a) ->
-  l ++ [] = l
+appendNilRightNeutral : (l : List a) -> l ++ [] = l
 appendNilRightNeutral []      = Refl
-appendNilRightNeutral (x::xs) =
-  let inductiveHypothesis = appendNilRightNeutral xs in
-    rewrite inductiveHypothesis in Refl
+appendNilRightNeutral (_::xs) = rewrite appendNilRightNeutral xs in Refl
 
 ||| Appending lists is associative.
 export
-appendAssociative : (l : List a) -> (c : List a) -> (r : List a) ->
-  l ++ (c ++ r) = (l ++ c) ++ r
+appendAssociative : (l, c, r : List a) -> l ++ (c ++ r) = (l ++ c) ++ r
 appendAssociative []      c r = Refl
-appendAssociative (x::xs) c r =
-  let inductiveHypothesis = appendAssociative xs c r in
-    rewrite inductiveHypothesis in Refl
+appendAssociative (_::xs) c r = rewrite appendAssociative xs c r in Refl
 
 revOnto : (xs, vs : _) -> reverseOnto xs vs = reverse vs ++ xs
-revOnto xs [] = Refl
+revOnto _ [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
         rewrite appendAssociative (reverse vs) [v] xs in

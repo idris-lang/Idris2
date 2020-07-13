@@ -2,6 +2,8 @@ module Data.List.Elem
 
 import Decidable.Equality
 
+%default total
+
 --------------------------------------------------------------------------------
 -- List membership proof
 --------------------------------------------------------------------------------
@@ -43,8 +45,8 @@ Uninhabited (Elem {a} x []) where
 ||| An item not in the head and not in the tail is not in the list at all.
 export
 neitherHereNorThere : Not (x = y) -> Not (Elem x xs) -> Not (Elem x (y :: xs))
-neitherHereNorThere xny xnxs  Here       = xny Refl
-neitherHereNorThere xny xnxs (There xxs) = xnxs xxs
+neitherHereNorThere xny _     Here        = xny Refl
+neitherHereNorThere _   xnxs  (There xxs) = xnxs xxs
 
 ||| Check whether the given element is a member of the given list.
 export
@@ -59,7 +61,7 @@ isElem x (y :: xs) with (decEq x y)
 ||| Remove the element at the given position.
 public export
 dropElem : (xs : List a) -> (p : Elem x xs) -> List a
-dropElem (x :: ys)  Here     = ys
+dropElem (_ :: ys)  Here     = ys
 dropElem (x :: ys) (There p) = x :: dropElem ys p
 
 ||| Erase the indices, returning the numeric position of the element
@@ -72,5 +74,5 @@ elemToNat (There p) = S (elemToNat p)
 public export
 indexElem : Nat -> (xs : List a) -> Maybe (x ** Elem x xs)
 indexElem  _    []        = Nothing
-indexElem  Z    (y :: ys) = Just (y ** Here)
-indexElem (S n) (y :: ys) = map (\(x ** p) => (x ** There p)) (indexElem n ys)
+indexElem  Z    (y :: _)  = Just (y ** Here)
+indexElem (S n) (_ :: ys) = map (\(x ** p) => (x ** There p)) (indexElem n ys)

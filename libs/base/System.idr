@@ -73,17 +73,13 @@ export
 setEnv : HasIO io => String -> String -> Bool -> io Bool
 setEnv var val overwrite
    = do ok <- primIO $ prim_setEnv var val (if overwrite then 1 else 0)
-        if ok == 0
-           then pure True
-           else pure False
+        pure $ ok == 0
 
 export
 unsetEnv : HasIO io => String -> io Bool
 unsetEnv var
    = do ok <- primIO $ prim_unsetEnv var
-        if ok == 0
-           then pure True
-           else pure False
+        pure $ ok == 0
 
 %foreign libc "system"
          "scheme:blodwen-system"

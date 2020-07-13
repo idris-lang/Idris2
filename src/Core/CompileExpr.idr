@@ -197,7 +197,7 @@ data Names : List Name -> Type where
 
 elem : Name -> Names xs -> Bool
 elem n [] = False
-elem n (x :: xs) = if n == x then True else elem n xs
+elem n (x :: xs) = n == x || elem n xs
 
 tryNext : Name -> Name
 tryNext (UN n) = MN n 0
@@ -235,7 +235,7 @@ mutual
             NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
       = let locs' = addLocs [x] locs in
-            NmLet fc (getLocName _ locs' First) 
+            NmLet fc (getLocName _ locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
   forgetExp locs (CApp fc f args)

@@ -106,7 +106,7 @@ findAllNames env (IAlternative fc u alts)
 -- name should be bound, leave it to the programmer
 findAllNames env tm = []
 
--- Find the names in a type that affect the 'using' declarations (i.e. 
+-- Find the names in a type that affect the 'using' declarations (i.e.
 -- the ones that mean the declaration will be added).
 export
 findIBindVars : RawImp -> List Name
@@ -342,9 +342,9 @@ uniqueName defs used n
   where
     usedName : Core Bool
     usedName
-        = case !(lookupTyName (UN n) (gamma defs)) of
-               [] => pure $ n `elem` used
-               _ => pure True
+        = pure $ case !(lookupTyName (UN n) (gamma defs)) of
+                      [] => n `elem` used
+                      _ => True
 
     next : String -> String
     next str

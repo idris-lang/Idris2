@@ -16,10 +16,7 @@ import Data.NameMap
 -- Return whether any of the name matches conflict
 conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
 conflictMatch [] = False
-conflictMatch ((x, tm) :: ms)
-    = if conflictArgs x tm ms
-         then True
-         else conflictMatch ms
+conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
   where
     clash : Term vars -> Term vars -> Bool
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
@@ -47,16 +44,12 @@ conflictMatch ((x, tm) :: ms)
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-              if clash f f'
-                 then True
-                 else anyTrue (zipWith conflictTm args args') 
+          clash f f' || anyTrue (zipWith conflictTm args args')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
     conflictArgs n tm ((x, tm') :: ms)
-        = if n == x && conflictTm tm tm'
-             then True
-             else conflictArgs n tm ms
+        = (n == x && conflictTm tm tm') || conflictArgs n tm ms
 
 -- Return whether any part of the type conflicts in such a way that they
 -- can't possibly be equal (i.e. mismatched constructor)
@@ -93,14 +86,14 @@ conflict defs env nfty n
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF [] -> 
+      conflictNF : Int -> NF vars -> NF [] ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
           -- twice somehow both references appear in the result  it's unlikely
           -- put posslbe
           = let x' = MN (show x) i in
-                conflictNF (i + 1) t 
+                conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
           = do empty <- clearDefs defs
@@ -426,7 +419,7 @@ eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
     = case getFnArgs tm of
-           (Ref fc Bound n, args) => 
+           (Ref fc Bound n, args) =>
                 do args' <- traverse eraseApps args
                    pure (apply fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
@@ -452,7 +445,7 @@ clauseMatches : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
-clauseMatches env tm trylhs 
+clauseMatches env tm trylhs
     = let lhs = !(eraseApps (close (getLoc tm) env tm)) in
           pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
   where

@@ -26,10 +26,8 @@ detagSafe defs (NTCon _ n _ _ args)
     notErased i ns [] = False
     notErased i ns (NErased _ True :: rest)
         = notErased (i + 1) ns rest -- Can't detag here, look elsewhere
-    notErased i ns (_ :: rest)
-        = if i `elem` ns
-             then True -- Safe to detag via this argument
-             else notErased (i + 1) ns rest
+    notErased i ns (_ :: rest) -- Safe to detag via this argument
+        = elem i ns || notErased (i + 1) ns rest
 detagSafe defs _ = pure False
 
 findErasedFrom : Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
