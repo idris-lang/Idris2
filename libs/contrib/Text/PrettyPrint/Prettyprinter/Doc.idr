@@ -351,6 +351,10 @@ Functor Doc where
 public export
 interface Pretty a where
   pretty : a -> Doc ann
+  pretty x = prettyPrec Open x
+
+  prettyPrec : Prec -> a -> Doc ann
+  prettyPrec _ x = pretty x
 
 export
 Pretty String where
@@ -652,7 +656,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
     best nl cc c@(Cons i (Column f) ds) = best nl cc $ assert_smaller c (Cons i (f cc) ds)
     best nl cc c@(Cons i (WithPageWidth f) ds) = best nl cc $ assert_smaller c (Cons i (f pageWidth_) ds)
     best nl cc c@(Cons i (Nesting f) ds) = best nl cc $ assert_smaller c (Cons i (f i) ds)
-    best nl cc c@(Cons i (Annotated ann x) ds) = best nl cc $ assert_smaller c (Cons i x (UndoAnn ds))
+    best nl cc c@(Cons i (Annotated ann x) ds) = SAnnPush ann $ best nl cc $ assert_smaller c (Cons i x (UndoAnn ds))
 
 ||| Layout a document with unbounded page width.
 export
