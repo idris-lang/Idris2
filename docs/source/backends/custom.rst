@@ -23,6 +23,8 @@ Now create a file containing
 
     module Main
 
+    import Data.List
+
     import Core.Context
     import Compiler.Common
     import Idris.Driver
