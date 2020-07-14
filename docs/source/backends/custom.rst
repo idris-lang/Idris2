@@ -2,10 +2,9 @@
 Building Idris 2 with new backends
 **********************************
 
-The way to extend Idris 2 with new backends is to use it as
-a library. The module ``Idris.Driver`` exports the function
-``mainWithCodegens``, that takes a list of ``(String, Codegen)``,
-starting idris with these codegens in addition to the built-in ones. The first 
+The way to extend Idris 2 with new backends is to use it as a library.  The
+module ``Idris.Driver`` exports the function ``mainWithCodegens``, that takes a
+list of ``(String, Codegen)``, starting idris with these codegens.  The first
 codegen in the list will be set as the default codegen.
 
 Getting started
@@ -67,7 +66,7 @@ It will not be overly eager to actually compile any code with the new backend th
 
 ::
 
-    $ ./build/exec/lazy-idris2 --cg lazy Hello.idr -o hello
+    $ ./build/exec/lazy-idris2 Hello.idr -o hello
     I'd rather not.
     $
 
