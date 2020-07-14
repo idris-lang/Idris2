@@ -68,6 +68,6 @@ elemToFin (There p) = FS (elemToFin p)
 ||| Find the element with a proof at a given bounded position
 public export
 indexElem : (1 _ : Fin n) -> (xs : Vect n a) -> (x ** Elem x xs)
-indexElem  FZ    (y::ys) = (y ** Here)
-indexElem (FS n) (y::ys) = let (x ** p) = indexElem n ys in
+indexElem  FZ    (y::_)  = (y ** Here)
+indexElem (FS n) (_::ys) = let (x ** p) = indexElem n ys in
                            (x ** There p)

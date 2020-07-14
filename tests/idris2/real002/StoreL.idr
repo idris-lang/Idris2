@@ -24,9 +24,7 @@ Has [Console] e => StoreI e where
 login : (1 s : Store LoggedOut) -> (password : String) ->
         Res Bool (\ok => Store (if ok then LoggedIn else LoggedOut))
 login (MkStore secret) password
-    = if password == "Mornington Crescent"
-         then True # MkStore secret
-         else False # MkStore secret
+    = password == "Mornington Crescent" # MkStore secret
 
 logout : (1 s : Store LoggedIn) -> Store LoggedOut
 logout (MkStore secret) = MkStore secret
@@ -41,7 +39,7 @@ storeProg
                        | False # s => do putStrLn "Incorrect password"
                                          disconnect s
                 putStrLn "Door opened"
-                let s = logout s 
+                let s = logout s
                 putStrLn "Door closed"
                 disconnect s
 

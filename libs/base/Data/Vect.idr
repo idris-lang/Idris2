@@ -6,6 +6,8 @@ import public Data.Fin
 
 import Decidable.Equality
 
+%default total
+
 public export
 data Vect : (len : Nat) -> (elem : Type) -> Type where
   ||| Empty vector
@@ -20,13 +22,13 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
 public export
 length : (xs : Vect len elem) -> Nat
 length [] = 0
-length (x::xs) = 1 + length xs
+length (_::xs) = 1 + length xs
 
 ||| Show that the length function on vectors in fact calculates the length
 export
-lengthCorrect : (0 len : Nat) -> (xs : Vect len elem) -> length xs = len
-lengthCorrect Z     []        = Refl
-lengthCorrect (S n) (x :: xs) = rewrite lengthCorrect n xs in Refl
+lengthCorrect : (xs : Vect len elem) -> length xs = len
+lengthCorrect []        = Refl
+lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
 ||| If two vectors are equal, their heads and tails are equal
 export
@@ -44,7 +46,7 @@ vectInjective Refl = (Refl, Refl)
 ||| ```
 public export
 tail : Vect (S len) elem -> Vect len elem
-tail (x::xs) = xs
+tail (_::xs) = xs
 
 ||| Only the first element of the vector
 |||
@@ -53,7 +55,7 @@ tail (x::xs) = xs
 ||| ```
 public export
 head : Vect (S len) elem -> elem
-head (x::xs) = x
+head (x::_) = x
 
 ||| The last element of the vector
 |||
@@ -62,8 +64,8 @@ head (x::xs) = x
 ||| ```
 public export
 last : Vect (S len) elem -> elem
-last (x::[])    = x
-last (x::y::ys) = last $ y::ys
+last [x]        = x
+last (_::y::ys) = last $ y::ys
 
 ||| All but the last element of the vector
 |||
@@ -72,8 +74,16 @@ last (x::y::ys) = last $ y::ys
 ||| ```
 public export
 init : Vect (S len) elem -> Vect len elem
-init (x::[])    = []
+init [_]        = []
 init (x::y::ys) = x :: init (y::ys)
+
+||| Extract the first `n` elements of a Vect.
+public export
+take : (1 n  : Nat)
+    -> (  xs : Vect (n + m) type)
+    -> Vect n type
+take 0 xs = Nil
+take (S k) (x :: xs) = x :: take k xs
 
 ||| Extract a particular element from a vector
 |||
@@ -82,8 +92,8 @@ init (x::y::ys) = x :: init (y::ys)
 ||| ```
 public export
 index : Fin len -> Vect len elem -> elem
-index FZ     (x::xs) = x
-index (FS k) (x::xs) = index k xs
+index FZ     (x::_)  = x
+index (FS k) (_::xs) = index k xs
 
 ||| Insert an element at a particular index
 |||
@@ -101,11 +111,10 @@ insertAt (FS k) y (x::xs) = x :: insertAt k y xs
 ||| deleteAt 1 [1,2,3,4]
 ||| ```
 public export
-deleteAt : {len : _} -> Fin (S len) -> Vect (S len) elem -> Vect len elem
-deleteAt             FZ     (x::xs) = xs
-deleteAt {len = S m} (FS k) (x::xs) = x :: deleteAt k xs
-deleteAt {len = Z}   (FS k) (x::xs) impossible
-deleteAt             _      []      impossible
+deleteAt : Fin (S len) -> Vect (S len) elem -> Vect len elem
+deleteAt FZ     (_::xs)        = xs
+deleteAt (FS k) [x]            = absurd k
+deleteAt (FS k) (x::xs@(_::_)) = x :: deleteAt k xs
 
 ||| Replace an element at a particlar index with another
 |||
@@ -114,7 +123,7 @@ deleteAt             _      []      impossible
 ||| ```
 public export
 replaceAt : Fin len -> elem -> Vect len elem -> Vect len elem
-replaceAt FZ     y (x::xs) = y :: xs
+replaceAt FZ     y (_::xs) = y :: xs
 replaceAt (FS k) y (x::xs) = x :: replaceAt k y xs
 
 ||| Replace the element at a particular index with the result of applying a function to it
@@ -129,7 +138,6 @@ public export
 updateAt : (i : Fin len) -> (f : elem -> elem) -> (xs : Vect len elem) -> Vect len elem
 updateAt FZ     f (x::xs) = f x :: xs
 updateAt (FS k) f (x::xs) = x :: updateAt k f xs
-
 
 ||| Append two vectors
 |||
@@ -151,7 +159,7 @@ public export
 ||| ```
 public export
 replicate : (len : Nat) -> (x : elem) -> Vect len elem
-replicate Z     x = []
+replicate Z     _ = []
 replicate (S k) x = x :: replicate k x
 
 ||| Merge two ordered vectors
@@ -161,10 +169,8 @@ replicate (S k) x = x :: replicate k x
 ||| ```
 export
 mergeBy : (elem -> elem -> Ordering) -> (xs : Vect n elem) -> (ys : Vect m elem) -> Vect (n + m) elem
-mergeBy order [] [] = []
-mergeBy order [] (x :: xs) = x :: xs
-mergeBy {n = S k} order (x :: xs) [] = rewrite plusZeroRightNeutral (S k) in
-                                               x :: xs
+mergeBy     _ [] ys = ys
+mergeBy {n} _ xs [] = rewrite plusZeroRightNeutral n in xs
 mergeBy {n = S k} {m = S k'} order (x :: xs) (y :: ys)
      = case order x y of
             LT => x :: mergeBy order xs (y :: ys)
@@ -250,6 +256,23 @@ public export
 zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
 zipWith f []      []      = []
 zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+
+||| Linear version
+public export
+lzipWith : (f : (1 _ : a) -> (1 _ : b) -> c)
+      -> (1 _ : Vect n a)
+      -> (1 _ : Vect n b)
+      -> Vect n c
+lzipWith _ [] [] = []
+lzipWith f (x::xs) (y::ys) = f x y :: lzipWith f xs ys
+
+||| Extensional correctness lemma
+export
+lzipWithSpec : (f : (1 _ : a) -> (1 _ : b) -> c)
+         -> (xs : Vect n a) -> (ys : Vect n b)
+         -> lzipWith f xs ys = zipWith f xs ys
+lzipWithSpec _ [] [] = Refl
+lzipWithSpec f (_::xs) (_::ys) = rewrite lzipWithSpec f xs ys in Refl
 
 ||| Combine three equal-length vectors into a vector with some function
 |||
@@ -754,7 +777,7 @@ vectToMaybe (x::xs) = Just x
 -- Misc
 --------------------------------------------------------------------------------
 
-||| Filter out Nothings from Vect
+||| Filter out Nothings from Vect and unwrap the Justs
 |||
 ||| ```idris example
 ||| catMaybes [Just 1, Just 2, Nothing, Nothing, Just 5]
@@ -782,6 +805,9 @@ range : {len : Nat} -> Vect len (Fin len)
 range {len=Z}   = []
 range {len=S _} = FZ :: map FS range
 
+--------------------------------------------------------------------------------
+-- Matrix transposition
+--------------------------------------------------------------------------------
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
 |||
 ||| This is like zipping all the inner `Vect`s together and is equivalent to `traverse id` (`transposeTraverse`).
@@ -793,14 +819,22 @@ range {len=S _} = FZ :: map FS range
 ||| ```
 public export
 transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
-transpose []        = replicate _ []          -- = [| [] |]
-transpose (x :: xs) = helper x (transpose xs) -- = [| x :: xs |]
-  where -- Can't use zipWith since it doesn't preserve linearity
-    helper : (1 _ : Vect a elem)
-          -> (1 _ : Vect a (Vect b elem))
-          -> Vect a (Vect (S b) elem)
-    helper [] [] = []
-    helper (x::xs) (tl::tls) = (x::tl) :: helper xs tls
+transpose []        = replicate _ []                 -- = [| [] |]
+transpose (x :: xs) = lzipWith (::) x (transpose xs) -- = [| x :: xs |]
+
+||| A recursive (non-linear) implementation of transpose
+||| Easier for inductive reasoning
+public export
+transpose' : {n : Nat} -> (xss : Vect m (Vect n x)) -> Vect n (Vect m x)
+transpose' []          = replicate _ []
+transpose' (xs :: xss) = zipWith (::) xs (transpose' xss)
+
+||| Extensional correctness lemma
+export
+transposeSpec : {n : Nat} -> (xss : Vect m (Vect n x)) -> transpose xss = transpose' xss
+transposeSpec [] = Refl
+transposeSpec (y :: xs) = rewrite transposeSpec xs in
+                          lzipWithSpec (::) _ _
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable

@@ -260,10 +260,9 @@ mutual
   needsDelayExpr False _ = pure False
   needsDelayExpr True (IVar fc n)
       = do defs <- get Ctxt
-           case !(lookupCtxtName n (gamma defs)) of
-                [] => pure False
-                [x] => pure False
-                _ => pure True
+           pure $ case !(lookupCtxtName n (gamma defs)) of
+                       (_ :: _ :: _) => True
+                       _ => False
   needsDelayExpr True (IApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (IImplicitApp _ f _ _) = needsDelayExpr True f
   needsDelayExpr True (ILam _ _ _ _ _ _) = pure True
@@ -691,4 +690,3 @@ checkApp rig elabinfo nest env fc fn expargs impargs exp
    = do (fntm, fnty_in) <- checkImp rig elabinfo nest env fn Nothing
         fnty <- getNF fnty_in
         checkAppWith rig elabinfo nest env fc fntm fnty (Nothing, 0) expargs impargs False exp
-

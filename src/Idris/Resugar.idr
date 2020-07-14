@@ -95,11 +95,17 @@ unbracket tm = tm
 ||| Attempt to extract a constant natural number
 extractNat : Nat -> PTerm -> Maybe Nat
 extractNat acc tm = case tm of
-  PRef _ (NS ["Prelude"] (UN "Z"))            => pure acc
-  PApp _ (PRef _ (NS ["Prelude"] (UN "S"))) k => extractNat (1 + acc) k
-  PPrimVal _ (BI n)                           => pure (acc + integerToNat n)
-  PBracketed _ k                              => extractNat acc k
-  _                                           => Nothing
+  PRef _ (NS ["Types", "Prelude"] (UN "Z"))
+         => pure acc
+  PApp _ (PRef _ (NS ["Types", "Prelude"] (UN "S"))) k
+         => extractNat (1 + acc) k
+  PRef _ (NS ["Prelude"] (UN "Z"))
+         => pure acc
+  PApp _ (PRef _ (NS ["Prelude"] (UN "S"))) k
+         => extractNat (1 + acc) k
+  PPrimVal _ (BI n) => pure (acc + integerToNat n)
+  PBracketed _ k    => extractNat acc k
+  _                 => Nothing
 
 mutual
 
@@ -121,6 +127,11 @@ mutual
         _           => Nothing
       _        => Nothing
   -- refolding natural numbers if the expression is a constant
+  -- we might see either Prelude.Types.Nat or Prelude.Nat, depending on whether
+  -- unelaboration used the canonical name or not
+  sugarAppM (PRef fc (NS ["Types", "Prelude"] (UN "Z"))) = pure $ PPrimVal fc (BI 0)
+  sugarAppM (PApp fc (PRef _ (NS ["Types", "Prelude"] (UN "S"))) k) =
+    PPrimVal fc . BI . cast <$> extractNat 1 k
   sugarAppM (PRef fc (NS ["Prelude"] (UN "Z"))) = pure $ PPrimVal fc (BI 0)
   sugarAppM (PApp fc (PRef _ (NS ["Prelude"] (UN "S"))) k) =
     PPrimVal fc . BI . cast <$> extractNat 1 k

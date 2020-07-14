@@ -78,9 +78,9 @@ join : m (m a) -> m a
 	 Also called `flatten` or mu.
 
 Implementations:
+	Monad IO
 	Monad Maybe
 	Monad (Either e)
 	Monad List
-	Monad IO
 
 Main> Bye for now!

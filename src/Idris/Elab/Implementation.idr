@@ -26,9 +26,16 @@ import Data.NameMap
 
 %default covering
 
+replaceSep : String -> String
+replaceSep = pack . map toForward . unpack
+  where
+    toForward : Char -> Char
+    toForward '\\' = '/'
+    toForward x = x
+
 mkImpl : FC -> Name -> List RawImp -> Name
 mkImpl fc n ps
-    = DN (show n ++ " implementation at " ++ show fc)
+    = DN (show n ++ " implementation at " ++ replaceSep (show fc))
          (UN ("__Impl_" ++ show n ++ "_" ++
           showSep "_" (map show ps)))
 

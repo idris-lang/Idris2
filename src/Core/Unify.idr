@@ -313,7 +313,7 @@ getVars got (NApp fc (NLocal r idx v) [] :: xs)
     inArgs : Nat -> List Nat -> Bool
     inArgs n [] = False
     inArgs n (n' :: ns)
-        = if natToInteger n == natToInteger n' then True else inArgs n ns
+        = natToInteger n == natToInteger n' || inArgs n ns
 getVars got (NAs _ _ _ p :: xs) = getVars got (p :: xs)
 getVars _ (_ :: xs) = Nothing
 

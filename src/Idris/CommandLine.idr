@@ -19,6 +19,7 @@ public export
 data PkgCommand
       = Build
       | Install
+      | Typecheck
       | Clean
       | REPL
 
@@ -26,6 +27,7 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
 
@@ -180,6 +182,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
               (Just "Install the given package"),
+           MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
+              (Just "Typechecks the given package without code generation"),
            MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
               (Just "Clean intermediate files/executables for the given package"),
            MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])

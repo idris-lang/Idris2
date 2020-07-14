@@ -229,9 +229,7 @@ mutual
   smaller inc defs big s (As _ _ p t)
       = smaller inc defs big s p || smaller inc defs big s t
   smaller True defs big s t
-      = if s == t
-           then True
-           else smallerArg True defs big s t
+      = s == t || smallerArg True defs big s t
   smaller inc defs big s t = smallerArg inc defs big s t
 
   assertedSmaller : Maybe (Term vars) -> Term vars -> Bool
@@ -244,9 +242,8 @@ mutual
   smallerArg inc defs big s tm
         -- If we hit a pattern that is equal to a thing we've asserted_smaller,
         -- the argument must be smaller
-      = if assertedSmaller big tm
-           then True
-           else case getFnArgs tm of
+      = assertedSmaller big tm ||
+                case getFnArgs tm of
                      (Ref _ (DataCon t a) cn, args)
                          => any (smaller True defs big s) args
                      _ => case s of

@@ -47,9 +47,7 @@ bind : LinearIO io =>
                                                     True => Bound)))
 bind (MkSocket sock) addr port
     = do ok <- Socket.bind sock addr port
-         if ok == 0
-            then pure1 (True # MkSocket sock)
-            else pure1 (False # MkSocket sock)
+         pure1 $ ok == 0 # MkSocket sock
 
 export
 connect : LinearIO io =>
@@ -61,9 +59,7 @@ connect : LinearIO io =>
                                                        True => Open)))
 connect sock addr port
     = do ok <- Socket.connect sock addr port
-         if ok == 0
-            then pure1 (True # MkSocket sock)
-            else pure1 (False # MkSocket sock)
+         pure1 $ ok == 0 # MkSocket sock
 
 export
 listen : LinearIO io =>
@@ -73,9 +69,7 @@ listen : LinearIO io =>
                                                       True => Listening)))
 listen (MkSocket sock)
     = do ok <- Socket.listen sock
-         if ok == 0
-            then pure1 (True # MkSocket sock)
-            else pure1 (False # MkSocket sock)
+         pure1 $ ok == 0 # MkSocket sock
 
 export
 accept : LinearIO io =>
@@ -99,7 +93,7 @@ send (MkSocket sock) msg
     = do Right c <- Socket.send sock msg
              | Left err => pure1 (False # MkSocket sock)
          pure1 (True # MkSocket sock)
-               
+
 export
 recv : LinearIO io =>
        (1 _ : Socket Open) ->

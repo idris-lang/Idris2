@@ -462,10 +462,9 @@ readFromTTC nestedns loc reexp fname modNS importAs
     -- 'modns' as itself and it's already imported as anything, then no
     -- need to load again.
     alreadyDone modns importAs ((_, (m, _, a)) :: rest)
-        = if ((modns == m && importAs == a) ||
-              (modns == m && modns == importAs))
-             then True
-             else alreadyDone modns importAs rest
+        = (modns == m && importAs == a)
+          || (modns == m && modns == importAs)
+          || alreadyDone modns importAs rest
 
 getImportHashes : String -> Ref Bin Binary ->
                   Core (List (List String, Int))

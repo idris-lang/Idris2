@@ -75,10 +75,8 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
         = do let NS ns x = fullname def
                  | _ => pure True
              if !(isVisible ns)
-                then if visibleInAny (!getNS :: !getNestedNS) (NS ns x)
-                                     (visibility def)
-                        then pure True
-                        else pure False
+                then pure $ visibleInAny (!getNS :: !getNestedNS) (NS ns x)
+                                         (visibility def)
                 else pure False
 
     -- If there's multiple alternatives and all else fails, resort to using
@@ -174,9 +172,9 @@ mutual
                   Closure vars -> Closure [] ->
                   Core Bool
   mightMatchArg defs l r
-      = case !(mightMatchD defs !(evalClosure defs l) !(evalClosure defs r)) of
-             NoMatch => pure False
-             _ => pure True
+      = pure $ case !(mightMatchD defs !(evalClosure defs l) !(evalClosure defs r)) of
+             NoMatch => False
+             _ => True
 
   mightMatchArgs : {vars : _} ->
                    Defs ->
@@ -420,4 +418,3 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   solveConstraints solvemode Normal
                                   log 10 $ show (getName t) ++ " success"
                                   pure res)) alts')
-

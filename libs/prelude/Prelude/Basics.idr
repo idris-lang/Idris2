@@ -69,3 +69,35 @@ public export
 public export
 cong : (0 f : t -> u) -> (1 p : a = b) -> f a = f b
 cong f Refl = Refl
+
+--------------
+-- BOOLEANS --
+--------------
+
+||| Boolean Data Type.
+public export
+data Bool = True | False
+
+||| Boolean NOT.
+public export
+not : (1 b : Bool) -> Bool
+not True = False
+not False = True
+
+||| Boolean AND only evaluates the second argument if the first is `True`.
+public export
+(&&) : (1 b : Bool) -> Lazy Bool -> Bool
+(&&) True x = x
+(&&) False x = False
+
+||| Boolean OR only evaluates the second argument if the first is `False`.
+public export
+(||) : (1 b : Bool) -> Lazy Bool -> Bool
+(||) True x = True
+(||) False x = x
+
+%inline
+public export
+intToBool : Int -> Bool
+intToBool 0 = False
+intToBool x = True

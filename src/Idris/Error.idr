@@ -49,10 +49,10 @@ ploc (MkFC _ s e) = do
     let er = integerToNat $ cast $ fst e
     let ec = integerToNat $ cast $ snd e
     source <- lines <$> getCurrentElabSource
-    if sr == er
-       then pure $ show (sr + 1) ++ "\t" ++ fromMaybe "" (elemAt source sr)
-              ++ "\n\t" ++ repeatChar sc ' ' ++ repeatChar (ec `minus` sc) '^' ++ "\n"
-       else pure $ addLineNumbers sr $ extractRange sr er source
+    pure $ if sr == er
+              then show (sr + 1) ++ "\t" ++ fromMaybe "" (elemAt source sr)
+                   ++ "\n\t" ++ repeatChar sc ' ' ++ repeatChar (ec `minus` sc) '^' ++ "\n"
+              else addLineNumbers sr $ extractRange sr er source
   where
     extractRange : Nat -> Nat -> List a -> List a
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
@@ -99,7 +99,8 @@ perror (InvisibleName fc x Nothing)
 perror (BadTypeConType fc n)
     = pure $ "Return type of " ++ show n ++ " must be Type at:\n" ++ !(ploc fc)
 perror (BadDataConType fc n fam)
-    = pure $ "Return type of " ++ show n ++ " must be in " ++ show fam ++ " at:\n" ++ !(ploc fc)
+    = pure $ "Return type of " ++ show n ++ " must be in "
+                 ++ show !(toFullNames fam) ++ " at:\n" ++ !(ploc fc)
 perror (NotCovering fc n IsCovering)
     = pure $ "Internal error (Coverage of " ++ show n ++ ")"
 perror (NotCovering fc n (MissingCases cs))
@@ -162,7 +163,8 @@ perror (AllFailed ts)
   where
     pAlterror : (Maybe Name, Error) -> Core String
     pAlterror (Just n, err)
-       = pure $ "If " ++ show !(getFullName n) ++ ": " ++ !(perror err) ++ "\n"
+       = pure $ "If " ++ show !(aliasName !(getFullName n)) ++ ": "
+                      ++ !(perror err) ++ "\n"
     pAlterror (Nothing, err)
        = pure $ "Possible error:\n\t" ++ !(perror err)
 

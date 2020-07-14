@@ -20,7 +20,7 @@ prim_isNullString : Ptr String -> Int
 
 export
 isNullString : Ptr String -> Bool
-isNullString str = if prim_isNullString str == 0 then False else True
+isNullString str = not $ prim_isNullString str == 0
 
 %foreign (rlib "readline")
 prim_readline : String -> PrimIO (Ptr String)
@@ -29,9 +29,9 @@ export
 readline : HasIO io => String -> io (Maybe String)
 readline s
     = do mstr <- primIO $ prim_readline s
-         if isNullString mstr
-            then pure $ Nothing
-            else pure $ Just (getString mstr)
+         pure $ if isNullString mstr
+                   then Nothing
+                   else Just (getString mstr)
 
 %foreign (rlib "add_history")
 prim_add_history : String -> PrimIO ()

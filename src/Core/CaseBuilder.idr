@@ -633,17 +633,11 @@ samePat (pi :: xs)
     samePatAs : Pat -> List Pat -> Bool
     samePatAs p [] = True
     samePatAs (PTyCon fc n a args) (PTyCon _ n' _ _ :: ps)
-        = if n == n'
-             then samePatAs (PTyCon fc n a args) ps
-             else False
+        = n == n' && samePatAs (PTyCon fc n a args) ps
     samePatAs (PCon fc n t a args) (PCon _ n' t' _ _ :: ps)
-        = if n == n' && t == t'
-             then samePatAs (PCon fc n t a args) ps
-             else False
+        = n == n' && t == t' && samePatAs (PCon fc n t a args) ps
     samePatAs (PConst fc c) (PConst _ c' :: ps)
-        = if c == c'
-             then samePatAs (PConst fc c) ps
-             else False
+        = c == c' && samePatAs (PConst fc c) ps
     samePatAs (PArrow fc x s t) (PArrow _ _ s' t' :: ps)
         = samePatAs (PArrow fc x s t) ps
     samePatAs (PDelay fc r t p) (PDelay _ _ _ _ :: ps)
