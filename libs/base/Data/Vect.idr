@@ -111,9 +111,10 @@ insertAt (FS k) y (x::xs) = x :: insertAt k y xs
 ||| deleteAt 1 [1,2,3,4]
 ||| ```
 public export
-deleteAt : {len : _} -> Fin (S len) -> Vect (S len) elem -> Vect len elem
-deleteAt             FZ     (_::xs) = xs
-deleteAt {len = S _} (FS k) (x::xs) = x :: deleteAt k xs
+deleteAt : Fin (S len) -> Vect (S len) elem -> Vect len elem
+deleteAt FZ     (_::xs)        = xs
+deleteAt (FS k) [x]            = absurd k
+deleteAt (FS k) (x::xs@(_::_)) = x :: deleteAt k xs
 
 ||| Replace an element at a particlar index with another
 |||
