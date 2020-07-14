@@ -173,14 +173,17 @@ stMain cgs opts
                              then findIpkg fname
                              else pure fname
                  setMainFile fname
-                 the (Core ()) $ case fname of
-                      Nothing => logTime "Loading prelude" $
+                 result <- case fname of
+                      Nothing => logTime "Loading prelude" $ do
                                    when (not $ noprelude session) $
                                      readPrelude True
-                      Just f => logTime "Loading main file" $
-                                   (loadMainFile f >>= displayErrors)
+                                   pure Done
+                      Just f => logTime "Loading main file" $ do
+                                  res <- loadMainFile f
+                                  displayErrors res
+                                  pure res
 
-                 doRepl <- postOptions opts
+                 doRepl <- postOptions result opts
                  if doRepl then
                    if ide || ideSocket then
                      if not ideSocket
