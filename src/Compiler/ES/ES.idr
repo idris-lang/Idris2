@@ -383,8 +383,8 @@ mutual
     pure $ nSpaces indent ++ "while(true){\n" ++ !(imperative2es (indent+1) x) ++ "\n" ++ nSpaces indent ++ "}"
 
   alt2es : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Nat -> (ImperativeExp, ImperativeStatement) -> Core String
-  alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ":\n" ++
-                                !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break;\n"
+  alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ": {\n" ++
+                                !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break; }\n"
 
 static_preamble : List String
 static_preamble =
