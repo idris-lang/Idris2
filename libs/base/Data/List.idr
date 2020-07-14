@@ -15,11 +15,6 @@ snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
 
 public export
-length : List a -> Nat
-length []      = Z
-length (_::xs) = S $ length xs
-
-public export
 take : Nat -> List a -> List a
 take (S k) (x :: xs) = x :: take k xs
 take _ _ = []

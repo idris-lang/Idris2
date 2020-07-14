@@ -284,6 +284,11 @@ namespace List
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
+  public export
+  length : (xs : List a) -> Nat
+  length []        = Z
+  length (x :: xs) = S (length xs)
+
 public export
 Functor List where
   map f [] = []
@@ -371,17 +376,17 @@ namespace Strings
   (++) : (1 x : String) -> (1 y : String) -> String
   x ++ y = prim__strAppend x y
 
-||| Returns the length of the string.
-|||
-||| ```idris example
-||| length ""
-||| ```
-||| ```idris example
-||| length "ABC"
-||| ```
-public export
-length : String -> Nat
-length str = fromInteger (prim__cast_IntInteger (prim__strLength str))
+  ||| Returns the length of the string.
+  |||
+  ||| ```idris example
+  ||| length ""
+  ||| ```
+  ||| ```idris example
+  ||| length "ABC"
+  ||| ```
+  public export
+  length : String -> Nat
+  length str = fromInteger (prim__cast_IntInteger (prim__strLength str))
 
 ||| Reverses the elements within a string.
 |||
