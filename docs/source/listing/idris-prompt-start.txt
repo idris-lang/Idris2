@@ -6,4 +6,5 @@ $ idris2
  /___/\__,_/_/  /_/____/   /____/      Type :? for help
 
 Welcome to Idris 2.  Enjoy yourself!
+With codegen for: chez racket gambit node javascript
 Main>
