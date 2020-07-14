@@ -47,31 +47,16 @@ toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
           , "+ Data Directories       :: " ++ show ddirs]
 
 public export
-data CG = Chez
-        | Racket
-        | Gambit
-        | Node
-        | Javascript
-        | Other String
+data CG = MkCG String
 
 export
 Eq CG where
-  Chez == Chez = True
-  Racket == Racket = True
-  Gambit == Gambit = True
-  Node == Node = True
-  Javascript == Javascript = True
-  Other s == Other t = s == t
+  MkCG s == MkCG t = s == t
   _ == _ = False
 
 export
 Show CG where
-  show Chez = "chez"
-  show Racket = "racket"
-  show Gambit = "gambit"
-  show Node = "node"
-  show Javascript = "javascript"
-  show (Other s) = s
+  show (MkCG s) = s
 
 public export
 record PairNames where
@@ -122,7 +107,7 @@ record Session where
   noprelude : Bool
   nobanner : Bool
   findipkg : Bool
-  codegen : CG
+  codegen : Maybe CG
   logLevel : Nat
   logTimings : Bool
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
@@ -149,17 +134,7 @@ record Options where
   rewritenames : Maybe RewriteNames
   primnames : PrimNames
   extensions : List LangExt
-  additionalCGs : List (String, CG)
-
-
-export
-availableCGs : Options -> List (String, CG)
-availableCGs o
-    = [("chez", Chez),
-       ("racket", Racket),
-       ("node", Node),
-       ("javascript", Javascript),
-       ("gambit", Gambit)] ++ additionalCGs o
+  availableCGs : List (String, CG)
 
 export
 getCG : Options -> String -> Maybe CG
@@ -174,7 +149,7 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez 0 False False
+defaultSession = MkSessionOpts False False False Nothing 0 False False
                                Nothing Nothing Nothing Nothing
 
 export
@@ -228,4 +203,4 @@ isExtension e opts = e `elem` extensions opts
 
 export
 addCG : (String, CG) -> Options -> Options
-addCG cg = record { additionalCGs $= (cg::) }
+addCG cg = record { availableCGs $= (cg::) }

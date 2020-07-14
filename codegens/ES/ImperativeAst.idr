@@ -1,6 +1,7 @@
-module Compiler.ES.ImperativeAst
+module ES.ImperativeAst
 
 import public Core.TT
+
 import public Data.Vect
 import public Data.List
 

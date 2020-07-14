@@ -1,9 +1,10 @@
-module Compiler.Scheme.Chez
+module Scheme.Chez
+
+import Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Inline
-import Compiler.Scheme.Common
 
 import Core.Context
 import Core.Directory
@@ -366,7 +367,7 @@ startChezWinSh chez appdir target = unlines
 compileToSS : Ref Ctxt Defs ->
               String -> ClosedTerm -> (outfile : String) -> Core ()
 compileToSS c appdir tm outfile
-    = do ds <- getDirectives Chez
+    = do ds <- getDirectives (MkCG "chez")
          libs <- findLibs ds
          traverse_ copyLib libs
          cdata <- getCompileData Cases tm

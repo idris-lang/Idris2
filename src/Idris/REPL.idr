@@ -1,10 +1,5 @@
 module Idris.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.ES.Node
-import Compiler.ES.Javascript
 import Compiler.Common
 
 import Core.AutoSearch
@@ -179,15 +174,12 @@ findCG : {auto o : Ref ROpts REPLOpts} ->
 findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
-              Chez => pure codegenChez
-              Racket => pure codegenRacket
-              Gambit => pure codegenGambit
-              Node => pure codegenNode
-              Javascript => pure codegenJavascript
-              Other s => case !(getCodegen s) of
-                            Just cg => pure cg
-                            Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
-                                          coreLift $ exitWith (ExitFailure 1)
+              Just (MkCG s) => case !(getCodegen s) of
+                                    Just cg => pure cg
+                                    Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
+                                                  coreLift $ exitWith (ExitFailure 1)
+              Nothing => do coreLift $ putStrLn "No code generator found."
+                            coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (FC -> Bool) -> FC -> a -> Bool
 anyAt p loc y = p loc

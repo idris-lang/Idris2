@@ -1,4 +1,4 @@
-module Compiler.ES.RemoveUnused
+module ES.RemoveUnused
 
 import Data.SortedSet
 import Data.SortedMap

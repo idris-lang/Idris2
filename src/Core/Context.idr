@@ -1985,7 +1985,7 @@ setCG : {auto c : Ref Ctxt Defs} ->
         CG -> Core ()
 setCG cg
     = do defs <- get Ctxt
-         put Ctxt (record { options->session->codegen = cg } defs)
+         put Ctxt (record { options->session->codegen = Just cg } defs)
 
 export
 getDirs : {auto c : Ref Ctxt Defs} -> Core Dirs

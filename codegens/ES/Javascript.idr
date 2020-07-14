@@ -1,6 +1,6 @@
-module Compiler.ES.Javascript
+module ES.Javascript
 
-import Compiler.ES.ES
+import ES.ES
 
 import Compiler.Common
 import Compiler.CompileExpr

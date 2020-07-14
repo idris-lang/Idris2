@@ -1,10 +1,5 @@
 module Idris.IDEMode.REPL
 
-import Compiler.Scheme.Chez
-import Compiler.Scheme.Racket
-import Compiler.Scheme.Gambit
-import Compiler.Common
-
 import Core.AutoSearch
 import Core.CompileExpr
 import Core.Context

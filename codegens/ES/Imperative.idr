@@ -1,6 +1,6 @@
-module Compiler.ES.Imperative
+module ES.Imperative
 
-import public Compiler.ES.ImperativeAst
+import public ES.ImperativeAst
 
 import Data.List
 
@@ -9,9 +9,8 @@ import Compiler.CompileExpr
 
 import public Core.Context
 
-import Compiler.ES.RemoveUnused
-import Compiler.ES.TailRec
-
+import ES.RemoveUnused
+import ES.TailRec
 
 mutual
   isNameUsed : Name -> NamedCExp -> Bool

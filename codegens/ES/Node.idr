@@ -1,6 +1,6 @@
-module Compiler.ES.Node
+module ES.Node
 
-import Compiler.ES.ES
+import ES.ES
 
 import Compiler.Common
 import Compiler.CompileExpr

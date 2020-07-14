@@ -1,8 +1,22 @@
 package idris2app
 
+modules =
+    ES.ES,
+    ES.Imperative,
+    ES.ImperativeAst,
+    ES.Javascript,
+    ES.Node,
+    ES.RemoveUnused,
+    ES.TailRec,
+
+    Scheme.Common,
+    Scheme.Chez,
+    Scheme.Racket,
+    Scheme.Gambit
+
 depends = idris2, contrib, network
 
-sourcedir = "src"
+sourcedir = "codegens"
 
-main = Idris.Main
+main = Main
 executable = idris2

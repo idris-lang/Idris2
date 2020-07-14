@@ -1,6 +1,7 @@
-module Compiler.ES.ES
+module ES.ES
 
-import Compiler.ES.Imperative
+import ES.Imperative
+
 import Utils.Hex
 import Data.Strings
 import Data.SortedMap

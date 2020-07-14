@@ -13,19 +13,6 @@ modules =
     Compiler.LambdaLift,
     Compiler.VMCode,
 
-    Compiler.ES.ES,
-    Compiler.ES.Imperative,
-    Compiler.ES.ImperativeAst,
-    Compiler.ES.Javascript,
-    Compiler.ES.Node,
-    Compiler.ES.RemoveUnused,
-    Compiler.ES.TailRec,
-
-    Compiler.Scheme.Chez,
-    Compiler.Scheme.Racket,
-    Compiler.Scheme.Gambit,
-    Compiler.Scheme.Common,
-
     Core.AutoSearch,
     Core.Binary,
     Core.CaseBuilder,

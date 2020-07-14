@@ -159,15 +159,15 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--no-prelude"] [] [NoPrelude]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
-              (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+              (Just "Set code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
            MkOpt ["--source-dir"] [Required "dir"] (\d => [SourceDir d])
-              (Just $ "Set source directory"),
+              (Just "Set source directory"),
            MkOpt ["--build-dir"] [Required "dir"] (\d => [BuildDir d])
-              (Just $ "Set build directory"),
+              (Just "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
-              (Just $ "Set output directory"),
+              (Just "Set output directory"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -202,6 +202,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])
               (Just "Run a REPL command then quit immediately"),
+
+           optSeparator,
+           MkOpt ["--log"] [RequiredNat "log level"] (\l => [Logging l])
+              (Just $ "Global log level " ++ showDefault (logLevel defaultSession)),
            MkOpt ["--timing"] [] [Timing]
               (Just "Display timing logs"),
 
@@ -212,8 +216,6 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Quiet mode; display fewer messages"),
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
-           MkOpt ["--log"] [RequiredNat "log level"] (\l => [Logging l])
-              (Just "Global log level (0 by default)"),
 
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
@@ -322,7 +324,6 @@ parseOpts opts args
 export
 getOpts : List String -> Either String (List CLOpt)
 getOpts opts = parseOpts options opts
-
 
 export covering
 getCmdOpts : IO (Either String (List CLOpt))

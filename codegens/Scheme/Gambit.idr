@@ -1,9 +1,10 @@
-module Compiler.Scheme.Gambit
+module Scheme.Gambit
+
+import Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Inline
-import Compiler.Scheme.Common
 
 import Core.Context
 import Core.Directory
@@ -208,7 +209,7 @@ cCall fc cfn fnWrapName clib args ret
          let body = setBoxes ++ "\n" ++ call
 
          pure $ case ret of -- XXX
-                     CFIORes _ => (handleRet retType body, wrapDeclarations) 
+                     CFIORes _ => (handleRet retType body, wrapDeclarations)
                      _ => (body, wrapDeclarations)
   where
     mkNs : Int -> List CFType -> List (Maybe String)
@@ -225,7 +226,7 @@ cCall fc cfn fnWrapName clib args ret
     replaceChar old new = pack . replaceOn old new . unpack
 
     buildCWrapperDefs : CCallbackInfo -> CWrapperDefs
-    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) = 
+    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) =
       let box = schemeWrap ++ "-box"
           setBox = "\n (set-box! " ++ box ++ " " ++ callbackStr ++ ")"
           cWrapName = replaceChar '-' '_' schemeWrap
@@ -382,7 +383,7 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++ 
+         let cmd = gsc ++
                    " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
                    (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd

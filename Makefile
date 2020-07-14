@@ -24,7 +24,9 @@ endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
+
 IDRIS2_IPKG := idris2.ipkg
+IDRIS2API_IPKG := idris2api.ipkg
 
 ifeq ($(OS), windows)
 	# This produces D:/../.. style paths
@@ -53,7 +55,7 @@ all: support ${TARGET} testbin libs
 
 idris2-exec: ${TARGET}
 
-${TARGET}: src/IdrisPaths.idr
+${TARGET}: install-api src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_IPKG}
 
 src/IdrisPaths.idr:
@@ -95,6 +97,7 @@ clean-libs:
 
 clean: clean-libs support-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_IPKG}
+	-${IDRIS2_BOOT} --clean ${IDRIS2API_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
 	$(RM) -r build
@@ -102,7 +105,7 @@ clean: clean-libs support-clean
 install: install-idris2 install-support install-libs
 
 install-api: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --install idris2api.ipkg
+	${IDRIS2_BOOT} --install ${IDRIS2API_IPKG}
 
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
