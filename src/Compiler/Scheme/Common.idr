@@ -1,4 +1,4 @@
-module Scheme.Common
+module Compiler.Scheme.Common
 
 import Compiler.Common
 import Compiler.CompileExpr

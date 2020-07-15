@@ -23,8 +23,6 @@ Now create a file containing
 
     module Main
 
-    import Data.List
-
     import Core.Context
     import Compiler.Common
     import Idris.Driver
@@ -61,14 +59,14 @@ Now you have an idris2 with an added backend.
      /___/\__,_/_/  /_/____/   /____/      Type :? for help
 
     Welcome to Idris 2.  Enjoy yourself!
-    With codegen for: lazy
+    With codegen for: chez racket lazy
     Main>
 
 It will not be overly eager to actually compile any code with the new backend though
 
 ::
 
-    $ ./build/exec/lazy-idris2 Hello.idr -o hello
+    $ ./build/exec/lazy-idris2 --cg lazy Hello.idr -o hello
     I'd rather not.
     $
 

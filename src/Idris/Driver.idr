@@ -1,6 +1,8 @@
 module Idris.Driver
 
 import Compiler.Common
+import Compiler.Scheme.Chez
+import Compiler.Scheme.Racket
 
 import Core.Core
 import Core.InitPrimitives
@@ -228,16 +230,19 @@ quitOpts (ShowPrefix :: _)
          pure False
 quitOpts (_ :: opts) = quitOpts opts
 
+defaultCgs : List (String, Codegen)
+defaultCgs = [("chez", codegenChez), ("racket", codegenRacket)]
+
 export
-mainWithCodegens : (cgs : List (String, Codegen)) -> {auto ok : NonEmpty cgs} -> IO ()
+mainWithCodegens : List (String, Codegen) -> IO ()
 mainWithCodegens cgs = do Right opts <- getCmdOpts
-                            | Left err => do putStrLn err
-                                             putStrLn usage
+                                     | Left err => do putStrLn err
+                                                      putStrLn usage
                           continue <- quitOpts opts
                           if continue
-                              then
-                                  coreRun (stMain cgs opts)
-                                    (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
-                                                        exitWith (ExitFailure 1))
-                                    (\res => pure ())
-                              else pure ()
+                             then
+                               coreRun (stMain (defaultCgs ++ cgs) opts)
+                                       (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
+                                                           exitWith (ExitFailure 1))
+                                       (\res => pure ())
+                             else pure ()

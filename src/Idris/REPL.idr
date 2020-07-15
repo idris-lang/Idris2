@@ -173,12 +173,10 @@ findCG : {auto o : Ref ROpts REPLOpts} ->
          {auto c : Ref Ctxt Defs} -> Core Codegen
 findCG
     = do defs <- get Ctxt
-         case codegen (session (options defs)) of
-              Just (MkCG s) => case !(getCodegen s) of
-                                    Just cg => pure cg
-                                    Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
-                                                  coreLift $ exitWith (ExitFailure 1)
-              Nothing => do coreLift $ putStrLn "No code generator found."
+         let (MkCG s) = codegen (session (options defs))
+         case !(getCodegen s) of
+              Just cg => pure cg
+              Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
                             coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (FC -> Bool) -> FC -> a -> Bool

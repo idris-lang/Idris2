@@ -107,7 +107,7 @@ record Session where
   noprelude : Bool
   nobanner : Bool
   findipkg : Bool
-  codegen : Maybe CG
+  codegen : CG
   logLevel : Nat
   logTimings : Bool
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
@@ -149,7 +149,7 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Nothing 0 False False
+defaultSession = MkSessionOpts False False False (MkCG "chez") 0 False False
                                Nothing Nothing Nothing Nothing
 
 export

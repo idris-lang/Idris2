@@ -9,9 +9,6 @@ modules =
     ES.RemoveUnused,
     ES.TailRec,
 
-    Scheme.Common,
-    Scheme.Chez,
-    Scheme.Racket,
     Scheme.Gambit
 
 depends = idris2, contrib, network

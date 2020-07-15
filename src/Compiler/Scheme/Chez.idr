@@ -1,10 +1,9 @@
-module Scheme.Chez
-
-import Scheme.Common
+module Compiler.Scheme.Chez
 
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.Inline
+import Compiler.Scheme.Common
 
 import Core.Context
 import Core.Directory

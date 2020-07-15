@@ -13,6 +13,10 @@ modules =
     Compiler.LambdaLift,
     Compiler.VMCode,
 
+    Compiler.Scheme.Common,
+    Compiler.Scheme.Chez,
+    Compiler.Scheme.Racket,
+
     Core.AutoSearch,
     Core.Binary,
     Core.CaseBuilder,
