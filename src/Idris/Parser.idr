@@ -1064,12 +1064,13 @@ dataDeclBody fname indents
 dataDecl : FileName -> IndentInfo -> Rule PDecl
 dataDecl fname indents
     = do start <- location
-         doc   <- option "" documentation
+         doc1  <- option "" documentation
          vis   <- visibility
+         doc2  <- option "" documentation
          dat   <- dataDeclBody fname indents
          end   <- location
          end   <- pure $ endPos $ getPDataDeclLoc dat
-         pure (PData (MkFC fname start end) doc vis dat)
+         pure (PData (MkFC fname start end) (doc1 ++ doc2) vis dat)
 
 stripBraces : String -> String
 stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
@@ -1364,8 +1365,9 @@ ifaceParam fname indents
 ifaceDecl : FileName -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
     = do start <- location
-         doc   <- option "" documentation
+         doc1  <- option "" documentation
          vis   <- visibility
+         doc2  <- option "" documentation
          col   <- column
          keyword "interface"
          commit
@@ -1384,15 +1386,16 @@ ifaceDecl fname indents
          end  <- location
          end <- pure $ fromMaybe end $ map (endPos . getPDeclLoc) $ join $ last' <$> last' body
          pure (PInterface (MkFC fname start end)
-                      vis cons n doc params det dc (collectDefs (concat body)))
+                      vis cons n (doc1 ++ doc2) params det dc (collectDefs (concat body)))
 
 implDecl : FileName -> IndentInfo -> Rule PDecl
 implDecl fname indents
-    = do start <- location
-         doc     <- option "" documentation
+    = do start   <- location
+         _       <- option "" documentation
          visOpts <- many (visOpt fname)
          vis     <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
+         _   <- option "" documentation
          col <- column
          option () (keyword "implementation")
          iname <- option Nothing (do symbol "["
