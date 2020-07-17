@@ -368,7 +368,7 @@ mutual
                 NDelayed _ r narg
                     => do defs <- get Ctxt
                           pure (TForce fc r val', glueBack defs env narg, u)
-                _ => throw (GenericMsg fc "Not a delayed tyoe")
+                _ => throw (GenericMsg fc "Not a delayed type")
   lcheck rig erase env (PrimVal fc c)
       = pure (PrimVal fc c, gErased fc, [])
   lcheck rig erase env (Erased fc i)
