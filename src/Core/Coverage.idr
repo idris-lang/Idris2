@@ -373,7 +373,9 @@ getMissing fc n ctree
         pure (map (apply fc (Ref fc Func n)) pats)
 
 -- For the given name, get the names it refers to which are not themselves
--- covering
+-- covering.
+-- Also need to go recursively into case blocks, since we only calculate
+-- references for them at the top level clause
 export
 getNonCoveringRefs : {auto c : Ref Ctxt Defs} ->
                      FC -> Name -> Core (List Name)
@@ -381,8 +383,19 @@ getNonCoveringRefs fc n
    = do defs <- get Ctxt
         Just d <- lookupCtxtExact n (gamma defs)
            | Nothing => throw (UndefinedName fc n)
-        filterM (notCovering defs) (mapMaybe noAssert (toList (refersTo d)))
+        let ds = mapMaybe noAssert (toList (refersTo d))
+        let cases = filter isCase !(traverse toFullNames ds)
+
+        -- Case blocks aren't recursive, so we're safe!
+        cbad <- traverse (getNonCoveringRefs fc) cases
+        topbad <- filterM (notCovering defs) ds
+        pure (topbad ++ concat cbad)
   where
+    isCase : Name -> Bool
+    isCase (NS _ n) = isCase n
+    isCase (CaseBlock _ _) = True
+    isCase _ = False
+
     noAssert : (Name, Bool) -> Maybe Name
     noAssert (n, True) = Nothing
     noAssert (n, False) = Just n

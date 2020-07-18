@@ -15,6 +15,7 @@ main = do
       | _ => do putStrLn "One argument expected."
                 exitFailure
   let n = stringToNatOrZ arg
+  -- case block in a case block, which is needed to test this properly
   case natToFin n (length ints + 1) of
        Nothing => do putStrLn "Invalid number."
                      exitFailure
