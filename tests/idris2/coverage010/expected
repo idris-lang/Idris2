@@ -3,4 +3,4 @@ casetot.idr:12:1--13:1:main is not covering at:
 12	main : IO ()
 13	main = do
 
-	Calls non covering function Main.case block in main
+	Calls non covering function Main.case block in case block in main
