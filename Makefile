@@ -99,7 +99,7 @@ clean: clean-libs support-clean
 	${MAKE} -C tests clean
 	$(RM) -r build
 
-install: install-idris2 install-support install-libs
+install: install-idris2 install-support install-libs install-api
 
 install-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install idris2api.ipkg
