@@ -182,6 +182,9 @@ process (DocsFor n modeOpt)
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed []
+process (Directive n)
+    = do todoCmd "directive"
+         pure $ REPL $ Printed []
 process (WhoCalls n)
     = do todoCmd "who-calls"
          pure $ NameList []
