@@ -10,10 +10,10 @@ Point = Struct "point" [("x", Int), ("y", Int)]
 mkPoint : Int -> Int -> Point
 
 %foreign (libsmall "freePoint")
-prim_freePoint : Point -> PrimIO ()
+prim__freePoint : Point -> PrimIO ()
 
 freePoint : Point -> IO ()
-freePoint p = primIO $ prim_freePoint p
+freePoint p = primIO $ prim__freePoint p
 
 showPoint : Point -> String
 showPoint pt

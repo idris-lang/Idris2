@@ -49,32 +49,32 @@ BACKLOG = 20
 
 -- Repeat to avoid a dependency cycle
 %foreign "C:idrnet_geteagain,libidris2_support"
-idrnet_geteagain : PrimIO Int
+prim__idrnet_geteagain : PrimIO Int
 
 export
 EAGAIN : Int
 EAGAIN =
   -- I'm sorry
   -- maybe
-  unsafePerformIO $ primIO $ idrnet_geteagain
+  unsafePerformIO $ primIO $ prim__idrnet_geteagain
 
 -- ---------------------------------------------------------------- [ Error Code ]
 
 -- repeat without export to avoid dependency cycles
 %foreign "C:idrnet_errno,libidris2_support"
-idrnet_errno : PrimIO Int
+prim__idrnet_errno : PrimIO Int
 
 %foreign "C:isNull,libidris2_support"
-idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
+prim__idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 
 export
 getErrno : HasIO io => io SocketError
-getErrno = primIO $ idrnet_errno
+getErrno = primIO $ prim__idrnet_errno
 
 export
 nullPtr : HasIO io => AnyPtr -> io Bool
-nullPtr p = do 0 <- primIO  $ idrnet_isNull p
+nullPtr p = do 0 <- primIO  $ prim__idrnet_isNull p
                | _ => pure True
                pure False
 

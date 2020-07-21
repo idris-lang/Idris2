@@ -20,7 +20,7 @@ socket : HasIO io
       -> (pnum : ProtocolNumber)
       -> io (Either SocketError Socket)
 socket sf st pn = do
-  socket_res <- primIO $ idrnet_socket (toCode sf) (toCode st) pn
+  socket_res <- primIO $ prim__idrnet_socket (toCode sf) (toCode st) pn
 
   if socket_res == -1
     then map Left getErrno
@@ -29,7 +29,7 @@ socket sf st pn = do
 ||| Close a socket
 export
 close : HasIO io => Socket -> io ()
-close sock = do _ <- primIO $ socket_close $ descriptor sock
+close sock = do _ <- primIO $ prim__socket_close $ descriptor sock
                 pure ()
 
 ||| Binds a socket to the given socket address and port.
@@ -41,13 +41,13 @@ bind : HasIO io
     -> (port : Port)
     -> io Int
 bind sock addr port = do
-    bind_res <- primIO $ idrnet_bind
+    bind_res <- primIO $ prim__idrnet_bind
                   (descriptor sock)
                   (toCode $ family sock)
                   (toCode $ socketType sock)
                   (saString addr)
                   port
-                
+
     if bind_res == (-1)
       then getErrno
       else pure 0
@@ -65,7 +65,7 @@ connect : HasIO io
        -> (port : Port)
        -> io ResultCode
 connect sock addr port = do
-  conn_res <- primIO $ idrnet_connect
+  conn_res <- primIO $ prim__idrnet_connect
               (descriptor sock) (toCode $ family sock) (toCode $ socketType sock) (show addr) port
 
   if conn_res == (-1)
@@ -78,7 +78,7 @@ connect sock addr port = do
 export
 listen : HasIO io => (sock : Socket) -> io Int
 listen sock = do
-  listen_res <- primIO $ socket_listen (descriptor sock) BACKLOG 
+  listen_res <- primIO $ prim__socket_listen (descriptor sock) BACKLOG
   if listen_res == (-1)
     then getErrno
     else pure 0
@@ -100,9 +100,9 @@ accept sock = do
   -- We need a pointer to a sockaddr structure. This is then passed into
   -- idrnet_accept and populated. We can then query it for the SocketAddr and free it.
 
-  sockaddr_ptr <- primIO idrnet_create_sockaddr
+  sockaddr_ptr <- primIO prim__idrnet_create_sockaddr
 
-  accept_res <- primIO $ idrnet_accept (descriptor sock) sockaddr_ptr 
+  accept_res <- primIO $ prim__idrnet_accept (descriptor sock) sockaddr_ptr
   if accept_res == (-1)
     then map Left getErrno
     else do
@@ -124,7 +124,7 @@ send : HasIO io
     -> (msg  : String)
     -> io (Either SocketError ResultCode)
 send sock dat = do
-  send_res <- primIO $ idrnet_send (descriptor sock) dat 
+  send_res <- primIO $ prim__idrnet_send (descriptor sock) dat
 
   if send_res == (-1)
     then map Left getErrno
@@ -147,8 +147,8 @@ recv : HasIO io
 recv sock len = do
   -- Firstly make the request, get some kind of recv structure which
   -- contains the result of the recv and possibly the retrieved payload
-  recv_struct_ptr <- primIO $ idrnet_recv (descriptor sock) len
-  recv_res <- primIO $ idrnet_get_recv_res recv_struct_ptr
+  recv_struct_ptr <- primIO $ prim__idrnet_recv (descriptor sock) len
+  recv_res <- primIO $ prim__idrnet_get_recv_res recv_struct_ptr
 
   if recv_res == (-1)
     then do
@@ -161,7 +161,7 @@ recv sock len = do
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Left 0
         else do
-           payload <- primIO $ idrnet_get_recv_payload recv_struct_ptr
+           payload <- primIO $ prim__idrnet_get_recv_payload recv_struct_ptr
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Right (payload, recv_res)
 
@@ -201,7 +201,7 @@ sendTo : HasIO io
       -> (msg  : String)
       -> io (Either SocketError ByteLength)
 sendTo sock addr p dat = do
-  sendto_res <- primIO $ idrnet_sendto
+  sendto_res <- primIO $ prim__idrnet_sendto
                 (descriptor sock) dat (show addr) p (toCode $ family sock)
 
   if sendto_res == (-1)
@@ -225,15 +225,15 @@ recvFrom : HasIO io
         -> (len  : ByteLength)
         -> io (Either SocketError (UDPAddrInfo, String, ResultCode))
 recvFrom sock bl = do
-  recv_ptr <- primIO $ idrnet_recvfrom
-                       (descriptor sock) bl 
+  recv_ptr <- primIO $ prim__idrnet_recvfrom
+                       (descriptor sock) bl
 
   let recv_ptr' = RFPtr recv_ptr
   isNull <- (nullPtr recv_ptr)
   if isNull
     then map Left getErrno
     else do
-      result <- primIO $ idrnet_get_recvfrom_res recv_ptr 
+      result <- primIO $ prim__idrnet_get_recvfrom_res recv_ptr
       if result == -1
         then do
           freeRecvfromStruct recv_ptr'

@@ -16,37 +16,37 @@ export
 nullString : Ptr String
 
 %foreign (rlib "isNullString")
-prim_isNullString : Ptr String -> Int
+prim__isNullString : Ptr String -> Int
 
 export
 isNullString : Ptr String -> Bool
-isNullString str = not $ prim_isNullString str == 0
+isNullString str = not $ prim__isNullString str == 0
 
 %foreign (rlib "readline")
-prim_readline : String -> PrimIO (Ptr String)
+prim__readline : String -> PrimIO (Ptr String)
 
 export
 readline : HasIO io => String -> io (Maybe String)
 readline s
-    = do mstr <- primIO $ prim_readline s
+    = do mstr <- primIO $ prim__readline s
          pure $ if isNullString mstr
                    then Nothing
                    else Just (getString mstr)
 
 %foreign (rlib "add_history")
-prim_add_history : String -> PrimIO ()
+prim__add_history : String -> PrimIO ()
 
 export
 addHistory : HasIO io => String -> io ()
-addHistory s = primIO $ prim_add_history s
+addHistory s = primIO $ prim__add_history s
 
 %foreign (rlib "idrisrl_setCompletion")
-prim_setCompletion : (String -> Int -> PrimIO (Ptr String)) -> PrimIO ()
+prim__setCompletion : (String -> Int -> PrimIO (Ptr String)) -> PrimIO ()
 
 export
 setCompletionFn : HasIO io => (String -> Int -> IO (Maybe String)) -> io ()
 setCompletionFn fn
-    = primIO $ prim_setCompletion $ \s, i => toPrim $
+    = primIO $ prim__setCompletion $ \s, i => toPrim $
           do mstr <- fn s i
              case mstr of
                   Nothing => pure nullString

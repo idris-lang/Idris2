@@ -104,8 +104,8 @@ getChar : HasIO io => io Char
 getChar = primIO prim__getChar
 
 export
-prim_fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
-prim_fork act w = prim__schemeCall ThreadID "blodwen-thread" [act] w
+prim__fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
+prim__fork act w = prim__schemeCall ThreadID "blodwen-thread" [act] w
 
 export
 fork : (1 prog : IO ()) -> IO ThreadID
