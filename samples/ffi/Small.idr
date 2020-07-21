@@ -5,22 +5,22 @@ libsmall fn = "C:" ++ fn ++ ",libsmallc"
 add : Int -> Int -> Int
 
 %foreign (libsmall "addWithMessage")
-prim_addWithMessage : String -> Int -> Int -> PrimIO Int
+prim__addWithMessage : String -> Int -> Int -> PrimIO Int
 
 addWithMessage : String -> Int -> Int -> IO Int
-addWithMessage s x y = primIO $ prim_addWithMessage s x y
+addWithMessage s x y = primIO $ prim__addWithMessage s x y
 
 %foreign (libsmall "applyFn")
-prim_applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
+prim__applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
 
 applyFn : String -> Int -> (String -> Int -> String) -> IO String
-applyFn c i f = primIO $ prim_applyFn c i f
+applyFn c i f = primIO $ prim__applyFn c i f
 
 %foreign (libsmall "applyFn")
-prim_applyFnIO : String -> Int -> (String -> Int -> PrimIO String) -> PrimIO String
+prim__applyFnIO : String -> Int -> (String -> Int -> PrimIO String) -> PrimIO String
 
 applyFnIO : String -> Int -> (String -> Int -> IO String) -> IO String
-applyFnIO c i f = primIO $ prim_applyFnIO c i (\s, i => toPrim $ f s i)
+applyFnIO c i f = primIO $ prim__applyFnIO c i (\s, i => toPrim $ f s i)
 
 pluralise : String -> Int -> IO String
 pluralise str x
@@ -33,7 +33,7 @@ pluralise str x
 main : IO ()
 main
     = do -- printLn (add 70 24)
-         -- primIO $ prim_addWithMessage "Sum" 70 24
+         -- primIO $ prim__addWithMessage "Sum" 70 24
          str1 <- applyFnIO "Biscuit" 10 pluralise
          putStrLn str1
          str2 <- applyFnIO "Tree" 1 pluralise

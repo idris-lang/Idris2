@@ -27,11 +27,11 @@ prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
          "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
-prim_error : FilePtr -> PrimIO Int
+prim__error : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileErrno"
          "node:lambda:()=>-BigInt(process.__lasterr.errno)"
-prim_fileErrno : PrimIO Int
+prim__fileErrno : PrimIO Int
 
 %foreign support "idris2_readLine"
          "node:support:readLine,support_system_file"
@@ -111,7 +111,7 @@ data FileError = GenericFileError Int -- errno
 
 returnError : HasIO io => io (Either FileError a)
 returnError
-    = do err <- primIO prim_fileErrno
+    = do err <- primIO prim__fileErrno
          case err of
               0 => pure $ Left FileReadError
               1 => pure $ Left FileWriteError
@@ -163,7 +163,7 @@ closeFile (FHandle f) = primIO (prim__close f)
 export
 fileError : HasIO io => File -> io Bool
 fileError (FHandle f)
-    = do x <- primIO $ prim_error f
+    = do x <- primIO $ prim__error f
          pure (x /= 0)
 
 export
@@ -186,7 +186,7 @@ export
 fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
 fGetChar (FHandle h)
     = do c <- primIO (prim__readChar h)
-         ferr <- primIO (prim_error h)
+         ferr <- primIO (prim__error h)
          if (ferr /= 0)
             then returnError
             else ok (cast c)
