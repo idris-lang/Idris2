@@ -8,6 +8,7 @@ import Data.List
 import Data.NameMap
 import Data.Vect
 import Decidable.Equality
+import Text.PrettyPrint.PrettyPrinter
 
 import public Algebra
 
@@ -91,6 +92,29 @@ Show Constant where
   show CharType = "Char"
   show DoubleType = "Double"
   show WorldType = "%World"
+
+export
+Pretty Constant where
+  pretty (I x) = pretty x
+  pretty (BI x) = pretty x
+  pretty (B8 x) = pretty x
+  pretty (B16 x) = pretty x
+  pretty (B32 x) = pretty x
+  pretty (B64 x) = pretty x
+  pretty (Str x) = pretty x
+  pretty (Ch x) = pretty x
+  pretty (Db x) = pretty x
+  pretty WorldVal = pretty "%MkWorld"
+  pretty IntType = pretty "Int"
+  pretty IntegerType = pretty "Int"
+  pretty Bits8Type = pretty "Bits8"
+  pretty Bits16Type = pretty "Bits16"
+  pretty Bits32Type = pretty "Bits32"
+  pretty Bits64Type = pretty "Bits64"
+  pretty StringType = pretty "String"
+  pretty CharType = pretty "Char"
+  pretty DoubleType = pretty "Double"
+  pretty WorldType = pretty "%World"
 
 export
 Eq Constant where

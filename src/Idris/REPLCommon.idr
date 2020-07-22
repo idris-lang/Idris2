@@ -10,8 +10,11 @@ import Idris.Error
 import Idris.IDEMode.Commands
 import public Idris.REPLOpts
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 %default covering
 
@@ -58,10 +61,12 @@ emitError err
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do msg <- display err
+                  do pmsg <- reAnnotate colorAnn <$> display err
+                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do msg <- perror err
+                  do pmsg <- reAnnotate colorAnn <$> perror err
+                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
                      case getErrorLoc err of
                           Nothing => iputStrLn msg
                           Just fc =>
@@ -86,10 +91,12 @@ emitWarning w
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do msg <- displayWarning w
+                  do pmsg <- reAnnotate colorAnn <$> displayWarning w
+                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do msg <- pwarning w
+                  do pmsg <- reAnnotate colorAnn <$> pwarning w
+                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
                      case getWarningLoc w of
                           Nothing => iputStrLn msg
                           Just fc =>
