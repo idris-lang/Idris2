@@ -1,5 +1,7 @@
 module Core.FC
 
+import Text.PrettyPrint.Prettyprinter
+
 %default total
 
 public export
@@ -71,4 +73,11 @@ Show FC where
              showPos (startPos loc) ++ "--" ++
              showPos (endPos loc)
 
-
+export
+Pretty FC where
+  pretty loc = pretty (file loc) <+> colon
+                 <+> prettyPos (startPos loc) <+> pretty "--"
+                 <+> prettyPos (endPos loc)
+    where
+      prettyPos : FilePos -> Doc ann
+      prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)

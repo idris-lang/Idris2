@@ -2,6 +2,8 @@ module Core.Name
 
 import Data.List
 import Decidable.Equality
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 %default total
 
@@ -86,6 +88,18 @@ Show Name where
   show (CaseBlock outer i) = "case block in " ++ outer
   show (WithBlock outer i) = "with block in " ++ outer
   show (Resolved x) = "$resolved" ++ show x
+
+export
+Pretty Name where
+  pretty (NS ns n) = concatWith (surround dot) (pretty <$> reverse ns) <+> dot <+> pretty n
+  pretty (UN x) = pretty x
+  pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
+  pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
+  pretty (DN str _) = pretty str
+  pretty (Nested (outer, idx) inner) = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+  pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
+  pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
+  pretty (Resolved x) = pretty "$resolved" <+> pretty x
 
 export
 Eq Name where

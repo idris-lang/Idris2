@@ -1,7 +1,6 @@
 Main> (interactive):1:1--1:25:Undefined name fromMaybe at:
-1	fromMaybe "test" Nothing
-	^^^^^^^^^^^^^^^^^^^^^^^^
-
+ 1 | fromMaybe "test" Nothing
+     ^^^^^^^^^^^^^^^^^^^^^^^^
 Main> Imported module Data.Maybe
 Main> "test"
 Main> Imported module Data.Strings

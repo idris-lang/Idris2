@@ -32,6 +32,7 @@ import Idris.IDEMode.MakeClause
 import Idris.IDEMode.Holes
 import Idris.ModTree
 import Idris.Parser
+import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.Resugar
 import public Idris.REPLCommon
@@ -52,6 +53,8 @@ import Data.Maybe
 import Data.NameMap
 import Data.Stream
 import Data.Strings
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import System
 import System.File
@@ -816,7 +819,9 @@ processCatch cmd
                            put UST u'
                            put Syn s'
                            put ROpts o'
-                           pure $ REPLError !(display err)
+                           pmsg <- display err
+                           let msg = reAnnotateS colorAnn $ layoutPretty defaultLayoutOptions pmsg -- FIXME: tmp
+                           pure $ REPLError $ renderString msg
                            )
 
 parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
@@ -930,7 +935,7 @@ mutual
   displayResult  (TermChecked x y) = printResult $ show x ++ " : " ++ show y
   displayResult  (FileLoaded x) = printResult $ "Loaded file " ++ x
   displayResult  (ModuleLoaded x) = printResult $ "Imported module " ++ x
-  displayResult  (ErrorLoadingModule x err) = printError $ "Error loading module " ++ x ++ ": " ++ !(perror err)
+  displayResult  (ErrorLoadingModule x err) = printError $ "Error loading module " ++ x ++ ": " ++ (renderString (layoutPretty defaultLayoutOptions (reAnnotate colorAnn !(perror err)))) -- FIXME: tmp
   displayResult  (ErrorLoadingFile x err) = printError $ "Error loading file " ++ x ++ ": " ++ show err
   displayResult  (ErrorsBuildingFile x errs) = printError $ "Error(s) building file " ++ x -- messages already displayed while building
   displayResult  NoFileLoaded = printError "No file can be reloaded"

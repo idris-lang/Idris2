@@ -25,6 +25,7 @@ import Idris.Error
 import Idris.ModTree
 import Idris.Package
 import Idris.Parser
+import Idris.Pretty
 import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
@@ -42,6 +43,9 @@ import TTImp.ProcessDecls
 
 import Utils.Hex
 
+import Data.List
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Render.String
 import System
 import System.File
 
@@ -241,7 +245,8 @@ processCatch cmd
                            put UST u'
                            put Syn s'
                            put ROpts o'
-                           msg <- perror err
+                           pmsg <- perror err
+                           let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
                            pure $ REPL $ REPLError msg)
 
 idePutStrLn : File -> Integer -> String -> Core ()
