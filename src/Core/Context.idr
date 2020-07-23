@@ -113,7 +113,7 @@ data Def : Type where
             (constraints : List Int) -> Def
     ImpBind : Def -- global name temporarily standing for an implicitly bound name
     -- A delayed elaboration. The elaborators themselves are stored in the
-    -- unifiation state
+    -- unification state
     Delayed : Def
 
 export
