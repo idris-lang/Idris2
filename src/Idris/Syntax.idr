@@ -392,7 +392,7 @@ data EditCmd : Type where
 
 public export
 data REPLCmd : Type where
-     NewDefn : List PDecl -> REPLCmd 
+     NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      PrintDef : Name -> REPLCmd
@@ -407,6 +407,7 @@ data REPLCmd : Type where
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
+     CGDirective : String -> REPLCmd
      CD : String -> REPLCmd
      CWD: REPLCmd
      Missing : Name -> REPLCmd

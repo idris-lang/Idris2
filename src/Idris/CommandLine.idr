@@ -51,6 +51,8 @@ data CLOpt
   ExecFn String |
    ||| Use a specific code generator
   SetCG String |
+   ||| Pass a directive to the code generator
+  Directive String |
    ||| Don't implicitly import Prelude
   NoPrelude |
    ||| Set source directory
@@ -160,6 +162,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
+              (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
               (Just "Add a package as a dependency"),
            MkOpt ["--source-dir"] [Required "dir"] (\d => [SourceDir d])

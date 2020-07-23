@@ -1719,7 +1719,8 @@ getDirectives : {auto c : Ref Ctxt Defs} ->
                 CG -> Core (List String)
 getDirectives cg
     = do defs <- get Ctxt
-         pure (mapMaybe getDir (cgdirectives defs))
+         pure $ defs.options.session.directives ++
+                 mapMaybe getDir (cgdirectives defs)
   where
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing

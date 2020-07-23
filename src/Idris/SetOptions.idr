@@ -71,6 +71,9 @@ preOptions (SetCG e :: opts)
                  coreLift $ putStrLn $ "Code generators available: " ++
                                  showSep ", " (map fst (availableCGs (options defs)))
                  coreLift $ exitWith (ExitFailure 1)
+preOptions (Directive d :: opts)
+    = do setSession (record { directives $= (d::) } !getSession)
+         preOptions opts
 preOptions (PkgPath p :: opts)
     = do addPkgDir p
          preOptions opts
