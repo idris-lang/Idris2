@@ -5,7 +5,7 @@
 //      gcc smallc.o -shared -o libsmallc.so
 //      idris2 Small.idr
 // For an example of using Idris packages to build external (FFI) libraries, see the `FFI-readline`
-// smaple, and specifically `readline.ipkg`
+// sample, and specifically `readline.ipkg`
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -45,4 +45,3 @@ point* mkPoint(int x, int y) {
 void freePoint(point* pt) {
     free(pt);
 }
-
