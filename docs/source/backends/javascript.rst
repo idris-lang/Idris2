@@ -22,7 +22,7 @@ For ``node`` there are two ways of defining a foreign:
 .. code-block:: idris
 
     %foreign "node:lambda: n => process.env[n]"
-    prim__setTimeout : String -> PrimIO (Ptr String)
+    prim_getEnv : String -> PrimIO (Ptr String)
 
 here ``lambda`` means that we are providing the definition as a lambda
 expression.
