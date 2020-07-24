@@ -17,7 +17,7 @@ There are three main kinds of javascript ffi specifiers ``javascript``,
 node and the browser, ``node`` for foreigns that are only available on node and
 ``browser`` for browser only foreigns.
 
-For ``node`` there are two ways o defining a foreign:
+For ``node`` there are two ways of defining a foreign:
 
 .. code-block:: idris
 
