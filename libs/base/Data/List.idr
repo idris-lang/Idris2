@@ -1,5 +1,7 @@
 module Data.List
 
+import Data.Nat
+
 public export
 isNil : List a -> Bool
 isNil [] = True
