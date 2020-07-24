@@ -58,4 +58,4 @@ An interesting example is creating a foreign for the setTimeout function:
     setTimeout callback delay = primIO $ prim__setTimeout (toPrim callback) delay
 
 An important note here is that the codegen is using ``BigInt`` to represent
-idris ``Int``, thats why we need to apply ``Number`` to the ``delay``.
+idris ``Int``, that's why we need to apply ``Number`` to the ``delay``.
