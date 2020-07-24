@@ -36,7 +36,7 @@ expression.
 ``lambdaRequire`` also accepts a list of separated modules and assigns
 them the name ``__require_<module name>``.
 
-For completion below an example of a fogeign available only with ``browser`` codegen:
+For completion below an example of a foreign available only with ``browser`` codegen:
 
 .. code-block:: idris
 
