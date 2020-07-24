@@ -24,7 +24,7 @@ For ``node`` there are two ways of defining a foreign:
     %foreign "node:lambda: n => process.env[n]"
     prim__setTimeout : String -> PrimIO (Ptr String)
 
-here ``lambda`` means that the we are providing the definition as a lambda
+here ``lambda`` means that we are providing the definition as a lambda
 expression.
 
 
