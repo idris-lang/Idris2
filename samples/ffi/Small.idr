@@ -1,5 +1,5 @@
 libsmall : String -> String
-libsmall fn = "C:" ++ fn ++ ",libsmall"
+libsmall fn = "C:" ++ fn ++ ",libsmallc"
 
 %foreign (libsmall "add")
 add : Int -> Int -> Int
