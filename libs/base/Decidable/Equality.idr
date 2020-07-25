@@ -1,6 +1,7 @@
 module Decidable.Equality
 
 import Data.Maybe
+import Data.Either
 import Data.Nat
 import Data.List
 
@@ -77,6 +78,27 @@ DecEq t => DecEq (Maybe t) where
     decEq (Just x') (Just y') | Yes p = Yes $ cong Just p
     decEq (Just x') (Just y') | No p
        = No $ \h : Just x' = Just y' => p $ justInjective h
+
+--------------------------------------------------------------------------------
+-- Either
+--------------------------------------------------------------------------------
+
+Uninhabited (Left x = Right y) where
+  uninhabited Refl impossible
+
+Uninhabited (Right x = Left y) where
+  uninhabited Refl impossible
+
+export
+(DecEq t, DecEq s) => DecEq (Either t s) where
+  decEq (Left x) (Left y) with (decEq x y)
+   decEq (Left x) (Left x) | Yes Refl = Yes Refl
+   decEq (Left x) (Left y) | No contra = No (contra . leftInjective)
+  decEq (Left x) (Right y) = No absurd
+  decEq (Right x) (Left y) = No absurd
+  decEq (Right x) (Right y) with (decEq x y)
+   decEq (Right x) (Right x) | Yes Refl = Yes Refl
+   decEq (Right x) (Right y) | No contra = No (contra . rightInjective)
 
 --------------------------------------------------------------------------------
 -- Tuple
