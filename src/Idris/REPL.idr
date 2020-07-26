@@ -336,7 +336,7 @@ processEdit (ExprSearch upd line name hints all)
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do tms <- exprSearch replFC name []
+                  do tms <- exprSearchN replFC 1 name []
                      defs <- get Ctxt
                      restms <- traverse (normaliseHoles defs []) tms
                      itms <- the (Core (List PTerm))
@@ -381,9 +381,9 @@ processEdit (GenerateDef upd line name)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
-                  catch
+                  handleUnify
                     (do Just (fc, cs) <- makeDef (\p, n => onLine (line - 1) p) n'
-                           | Nothing => processEdit (AddClause upd line name)
+                           | Nothing => pure $ EditError $ "Can't find a definition for " ++ show n'
                         Just srcLine <- getSourceLine line
                            | Nothing => pure (EditError "Source line not found")
                         let (markM, srcLineUnlit) = isLitLine srcLine
@@ -745,8 +745,7 @@ processCatch cmd
          u' <- get UST
          s' <- get Syn
          o' <- get ROpts
-         catch (do ust <- get UST
-                   r <- process cmd
+         catch (do r <- process cmd
                    commit
                    pure r)
                (\err => do put Ctxt c'

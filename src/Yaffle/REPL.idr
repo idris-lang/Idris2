@@ -76,7 +76,7 @@ process (ExprSearch n_in)
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
               | [] => throw (UndefinedName toplevelFC n_in)
               | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         results <- exprSearch toplevelFC n []
+         results <- exprSearchN toplevelFC 1 n []
          defs <- get Ctxt
          defnfs <- traverse (normaliseHoles defs []) results
          traverse_ (\d => coreLift (printLn !(toFullNames d))) defnfs

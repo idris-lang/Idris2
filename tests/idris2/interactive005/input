@@ -5,5 +5,6 @@
 :gd 15 lappend
 :gd 17 zipWith
 :gd 29 lookup
+:gd 35 foo
 :t my_uncurry
 :q
