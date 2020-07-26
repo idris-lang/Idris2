@@ -1198,6 +1198,13 @@ depth
   = do defs <- get Ctxt
        pure (branchDepth (gamma defs))
 
+export
+dumpStaging : {auto c : Ref Ctxt Defs} ->
+              Core ()
+dumpStaging
+    = do defs <- get Ctxt
+         coreLift $ putStrLn $ "Staging area: " ++ show (keys (staging (gamma defs)))
+
 -- Explicitly note that the name should be saved when writing out a .ttc
 export
 addToSave : {auto c : Ref Ctxt Defs} ->

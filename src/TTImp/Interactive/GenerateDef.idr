@@ -55,20 +55,19 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                FC -> Int -> ImpClause ->
                Core (List ImpClause)
 expandClause loc n c
-    = do log 10 $ "Trying clause " ++ show c
-         c <- uniqueRHS c
+    = do c <- uniqueRHS c
          Right clause <- checkClause linear Private False n [] (MkNested []) [] c
-            | Left _ => pure [] -- TODO: impossible clause, do something
+            | Left err => pure [] -- TODO: impossible clause, do something
                                 -- appropriate
+
          let MkClause {vars} env lhs rhs = clause
-         logTerm 10 "RHS hole" rhs
          let Meta _ i fn _ = getFn rhs
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          defs <- get Ctxt
          Just (Hole locs _) <- lookupDefExact (Resolved fn) (gamma defs)
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          log 10 $ "Expression search for " ++ show (i, fn)
-         (rhs' :: _) <- exprSearch loc (Resolved fn) []
+         (rhs' :: _) <- exprSearchN loc 1 (Resolved fn) []
             | _ => throw (GenericMsg loc "No result found for search on RHS")
          defs <- get Ctxt
          rhsnf <- normaliseHoles defs [] rhs'
@@ -162,9 +161,9 @@ mutual
       = tryAllSplits loc n err rest
   tryAllSplits loc n err ((x, cs) :: rest)
       = do log 5 $ "Splitting on " ++ show x
-           catch (do cs' <- traverse (mkSplits loc n) cs
-                     pure (concat cs'))
-                 (\err => tryAllSplits loc n err rest)
+           tryUnify (do cs' <- traverse (mkSplits loc n) cs
+                        pure (concat cs'))
+                    (tryAllSplits loc n err rest)
 
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
@@ -174,11 +173,12 @@ mutual
   -- If the clause works, use it. Otherwise, split on one of the splittable
   -- variables and try all of the resulting clauses
   mkSplits loc n c
-      = catch (expandClause loc n c)
+      = handleUnify
+          (expandClause loc n c)
           (\err =>
-              do cs <- generateSplits loc n c
-                 log 5 $ "Splits: " ++ show cs
-                 tryAllSplits loc n err cs)
+             do cs <- generateSplits loc n c
+                log 5 $ "Splits: " ++ show cs
+                tryAllSplits loc n err cs)
 
 export
 makeDef : {auto c : Ref Ctxt Defs} ->
@@ -191,23 +191,25 @@ makeDef p n
             | Nothing => pure Nothing
          n <- getFullName nidx
          logTerm 5 ("Searching for " ++ show n) ty
-         defs <- branch
-         meta <- get MD
-         ust <- get UST
-         argns <- getEnvArgNames defs envlen !(nf defs [] ty)
-         -- Need to add implicit patterns for the outer environment.
-         -- We won't try splitting on these
-         let pre_env = replicate envlen (Implicit loc True)
+         tryUnify
+           (do defs <- branch
+               meta <- get MD
+               ust <- get UST
+               argns <- getEnvArgNames defs envlen !(nf defs [] ty)
+               -- Need to add implicit patterns for the outer environment.
+               -- We won't try splitting on these
+               let pre_env = replicate envlen (Implicit loc True)
 
-         rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
-         let initcs = PatClause loc
-                            (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
-                            (IHole loc rhshole)
-         let Just nidx = getNameID n (gamma defs)
-             | Nothing => throw (UndefinedName loc n)
-         cs' <- mkSplits loc nidx initcs
-         -- restore the global state, given that we've fiddled with it a lot!
-         put Ctxt defs
-         put MD meta
-         put UST ust
-         pure (Just (loc, cs'))
+               rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+               let initcs = PatClause loc
+                                  (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
+                                  (IHole loc rhshole)
+               let Just nidx = getNameID n (gamma defs)
+                   | Nothing => throw (UndefinedName loc n)
+               cs' <- mkSplits loc nidx initcs
+               -- restore the global state, given that we've fiddled with it a lot!
+               put Ctxt defs
+               put MD meta
+               put UST ust
+               pure (Just (loc, cs')))
+           (pure Nothing)

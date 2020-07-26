@@ -298,9 +298,9 @@ mkCase : {auto c : Ref Ctxt Defs} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
     = do m <- newRef MD initMetadata
-         defs <- branch
+         defs <- get Ctxt
          ust <- get UST
-         handleUnify
+         catch
            (do -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
@@ -316,14 +316,16 @@ mkCase {c} {u} fn orig lhs_raw
                log 3 $ "New LHS: " ++ show lhs'
 
                pure (Valid lhs' !(getUpdates defs orig lhs')))
-           (\err => case err of
-                         WhenUnifying _ env l r err
-                            => do defs <- get Ctxt
-                                  if !(impossibleOK defs !(nf defs env l)
-                                                         !(nf defs env r))
-                                     then pure (Impossible lhs_raw)
-                                     else pure Invalid
-                         _ => pure Invalid)
+           (\err =>
+               do put Ctxt defs
+                  put UST ust
+                  case err of
+                       WhenUnifying _ env l r err
+                          => if !(impossibleOK defs !(nf defs env l)
+                                                    !(nf defs env r))
+                                then pure (Impossible lhs_raw)
+                                else pure Invalid
+                       _ => pure Invalid)
 
 substLets : {vars : _} ->
             Term vars -> Term vars
