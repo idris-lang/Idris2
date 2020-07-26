@@ -727,6 +727,9 @@ process (Editing cmd)
          res <- processEdit cmd
          setPPrint ppopts
          pure $ Edited res
+process (CGDirective str)
+    = do setSession (record { directives $= (str::) } !getSession)
+         pure Done
 process Quit
     = pure Exited
 process NOP

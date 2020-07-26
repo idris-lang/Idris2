@@ -20,6 +20,10 @@ interface Eq ty where
   x /= y = not (x == y)
 
 public export
+Eq Void where
+  _ == _ impossible
+
+public export
 Eq () where
   _ == _ = True
 
@@ -101,6 +105,10 @@ interface Eq ty => Ord ty where
 
   min : ty -> ty -> ty
   min x y = if (x < y) then x else y
+
+public export
+Ord Void where
+  compare _ _ impossible
 
 public export
 Ord () where

@@ -123,6 +123,7 @@ record Session where
   nobanner : Bool
   findipkg : Bool
   codegen : CG
+  directives : List String
   logLevel : Nat
   logTimings : Bool
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
@@ -174,8 +175,9 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez 0 False False
-                               Nothing Nothing Nothing Nothing
+defaultSession = MkSessionOpts False False False Chez [] 0
+                               False False Nothing Nothing
+                               Nothing Nothing
 
 export
 defaultElab : ElabDirectives

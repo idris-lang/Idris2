@@ -65,9 +65,11 @@ eitherToMaybe (Right x) = Just x
 -- Injectivity of constructors
 
 ||| Left is injective
+export
 leftInjective : Left x = Left y -> x = y
 leftInjective Refl = Refl
 
 ||| Right is injective
+export
 rightInjective : Right x = Right y -> x = y
 rightInjective Refl = Refl
