@@ -53,12 +53,12 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                FC -> Int -> ImpClause ->
-               Core (List ImpClause)
+               Core (Search (List ImpClause))
 expandClause loc n c
     = do c <- uniqueRHS c
          Right clause <- checkClause linear Private False n [] (MkNested []) [] c
-            | Left err => pure [] -- TODO: impossible clause, do something
-                                -- appropriate
+            | Left err => noResult -- TODO: impossible clause, do something
+                                   -- appropriate
 
          let MkClause {vars} env lhs rhs = clause
          let Meta _ i fn _ = getFn rhs
@@ -67,16 +67,16 @@ expandClause loc n c
          Just (Hole locs _) <- lookupDefExact (Resolved fn) (gamma defs)
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          log 10 $ "Expression search for " ++ show (i, fn)
-         (rhs' :: _) <- exprSearchN loc 1 (Resolved fn) []
-            | _ => throw (GenericMsg loc "No result found for search on RHS")
-         defs <- get Ctxt
-         rhsnf <- normaliseHoles defs [] rhs'
-         let (_ ** (env', rhsenv)) = dropLams locs [] rhsnf
+         rhs' <- exprSearch loc (Resolved fn) []
+         traverse (\rhs' =>
+            do defs <- get Ctxt
+               rhsnf <- normaliseHoles defs [] rhs'
+               let (_ ** (env', rhsenv)) = dropLams locs [] rhsnf
 
-         rhsraw <- unelab env' rhsenv
-         logTermNF 5 "Got clause" env lhs
-         logTermNF 5 "        = " env' rhsenv
-         pure [updateRHS c rhsraw]
+               rhsraw <- unelab env' rhsenv
+               logTermNF 5 "Got clause" env lhs
+               logTermNF 5 "        = " env' rhsenv
+               pure [updateRHS c rhsraw]) rhs'
   where
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
@@ -149,46 +149,54 @@ generateSplits {c} {m} {u} loc fn (PatClause fc lhs rhs)
                          (IBindHere loc PATTERN lhs) Nothing
          traverse (trySplit fc lhs lhstm rhs) (splittableNames lhs)
 
+collectClauses : {auto c : Ref Ctxt Defs} ->
+                 {auto u : Ref UST UState} ->
+                 List (Search (List ImpClause)) ->
+                 Core (Search (List ImpClause))
+collectClauses [] = one []
+collectClauses (x :: xs)
+    = do xs' <- collectClauses xs
+         combine (++) x xs'
+
 mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Int -> Error ->
+                 FC -> Int ->
                  List (Name, List ImpClause) ->
-                 Core (List ImpClause)
-  tryAllSplits loc n err [] = throw err
-  tryAllSplits loc n err ((x, []) :: rest)
-      = tryAllSplits loc n err rest
-  tryAllSplits loc n err ((x, cs) :: rest)
+                 Core (Search (List ImpClause))
+  tryAllSplits loc n [] = noResult
+  tryAllSplits loc n ((x, []) :: rest)
+      = tryAllSplits loc n rest
+  tryAllSplits loc n ((x, cs) :: rest)
       = do log 5 $ "Splitting on " ++ show x
-           tryUnify (do cs' <- traverse (mkSplits loc n) cs
-                        pure (concat cs'))
-                    (tryAllSplits loc n err rest)
+           trySearch (do cs' <- traverse (mkSplits loc n) cs
+                         collectClauses cs')
+                     (tryAllSplits loc n rest)
 
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> Int -> ImpClause ->
-             Core (List ImpClause)
+             Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
   -- variables and try all of the resulting clauses
   mkSplits loc n c
-      = handleUnify
+      = trySearch
           (expandClause loc n c)
-          (\err =>
-             do cs <- generateSplits loc n c
-                log 5 $ "Splits: " ++ show cs
-                tryAllSplits loc n err cs)
+          (do cs <- generateSplits loc n c
+              log 5 $ "Splits: " ++ show cs
+              tryAllSplits loc n cs)
 
 export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
-          Name -> Core (Maybe (FC, List ImpClause))
+          Name -> Core (Search (FC, List ImpClause))
 makeDef p n
     = do Just (loc, nidx, envlen, ty) <- findTyDeclAt p
-            | Nothing => pure Nothing
+            | Nothing => noResult
          n <- getFullName nidx
          logTerm 5 ("Searching for " ++ show n) ty
          tryUnify
@@ -211,5 +219,13 @@ makeDef p n
                put Ctxt defs
                put MD meta
                put UST ust
-               pure (Just (loc, cs')))
-           (pure Nothing)
+               pure (map (\c => (loc, c)) cs'))
+           noResult
+
+export
+makeDefN : {auto c : Ref Ctxt Defs} ->
+           {auto m : Ref MD Metadata} ->
+           {auto u : Ref UST UState} ->
+           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+           Nat -> Name -> Core (List (FC, List ImpClause))
+makeDefN p max n = searchN max (makeDef p n)

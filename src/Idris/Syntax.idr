@@ -385,7 +385,7 @@ data EditCmd : Type where
      CaseSplit : Bool -> Int -> Int -> Name -> EditCmd
      AddClause : Bool -> Int -> Name -> EditCmd
      ExprSearch : Bool -> Int -> Name -> List Name -> Bool -> EditCmd
-     GenerateDef : Bool -> Int -> Name -> EditCmd
+     GenerateDef : Bool -> Int -> Name -> Bool -> EditCmd
      MakeLemma : Bool -> Int -> Name -> EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd

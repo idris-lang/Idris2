@@ -1720,7 +1720,12 @@ editCmd
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
-         pure (GenerateDef upd (fromInteger line) n)
+         pure (GenerateDef upd (fromInteger line) n False)
+  <|> do replCmd ["gdall"]
+         upd <- option False (do symbol "!"; pure True)
+         line <- intLit
+         n <- name
+         pure (GenerateDef upd (fromInteger line) n True)
   <|> do replCmd ["ml", "makelemma"]
          upd <- option False (do symbol "!"; pure True)
          line <- intLit

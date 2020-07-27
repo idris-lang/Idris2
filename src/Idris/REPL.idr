@@ -336,7 +336,7 @@ processEdit (ExprSearch upd line name hints all)
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do tms <- exprSearchN replFC 1 name []
+                  do tms <- exprSearchN replFC (if all then 20 else 1) name []
                      defs <- get Ctxt
                      restms <- traverse (normaliseHoles defs []) tms
                      itms <- the (Core (List PTerm))
@@ -375,23 +375,33 @@ processEdit (ExprSearch upd line name hints all)
     dropLams Z env tm = (_ ** (env, tm))
     dropLams (S k) env (Bind _ _ b sc) = dropLams k (b :: env) sc
     dropLams _ env tm = (_ ** (env, tm))
-processEdit (GenerateDef upd line name)
+processEdit (GenerateDef upd line name all)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   handleUnify
-                    (do Just (fc, cs) <- makeDef (\p, n => onLine (line - 1) p) n'
-                           | Nothing => pure $ EditError $ "Can't find a definition for " ++ show n'
+                    (do progs <- makeDefN (\p, n => onLine (line - 1) p)
+                                          (if all then 20 else 1)
+                                          n'
                         Just srcLine <- getSourceLine line
                            | Nothing => pure (EditError "Source line not found")
                         let (markM, srcLineUnlit) = isLitLine srcLine
-                        let l : Nat =  integerToNat (cast (snd (startPos fc)))
-                        ls <- traverse (printClause markM l) cs
-                        if upd
-                           then updateFile (addClause (unlines ls) (integerToNat (cast line)))
-                           else pure $ DisplayEdit ls)
+                        if all
+                           then do ls <- traverse (\ (fc, cs) =>
+                                              do let l : Nat =  integerToNat (cast (snd (startPos fc)))
+                                                 res <- traverse (printClause markM l) cs
+                                                 pure (res ++ ["----"])) progs
+                                   pure $ DisplayEdit (concat ls)
+                           else case progs of
+                                     [] => pure (EditError "No search results")
+                                     ((fc, cs) :: _) =>
+                                        do let l : Nat =  integerToNat (cast (snd (startPos fc)))
+                                           ls <- traverse (printClause markM l) cs
+                                           if upd
+                                              then updateFile (addClause (unlines ls) (integerToNat (cast line)))
+                                              else pure $ DisplayEdit ls)
                     (\err => pure $ EditError $ "Can't find a definition for " ++ show n' ++ ": " ++ show err)
               Just _ => pure $ EditError "Already defined"
               Nothing => pure $ EditError $ "Can't find declaration for " ++ show name
