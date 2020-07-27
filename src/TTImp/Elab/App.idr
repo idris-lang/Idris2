@@ -315,11 +315,16 @@ mutual
               else pure ()
   checkPatTyValid fc defs env _ _ _ = pure ()
 
-  dotErased : {auto c : Ref Ctxt Defs} ->
+  dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
-  dotErased mn argpos (InLHS lrig ) rig tm
+  dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
            then
+              -- if the argument type aty has a single constructor, there's no need 
+              -- to dot it
+              if length (!(possibleConstructors argty)) <= 1
+              then pure tm
+              else 
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
                 -- necessary
                 do defs <- get Ctxt
@@ -330,6 +335,20 @@ mutual
                       else pure $ dotTerm tm
            else pure tm
     where
+      
+      ||| Find the constructors of a normal form that is a fully
+      ||| applied type constructor
+      possibleConstructors : NF vars -> Core (List Name)
+      possibleConstructors (NApp _ (NRef (TyCon _ n) tycName) args) = 
+        if length args == n
+        then do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact tycName (gamma defs)
+                | Nothing => pure []
+                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition                                                   | _ => pure []
+                pure datacons
+        else pure []
+      possibleConstructors _ = pure []
+    
       dotTerm : RawImp -> RawImp
       dotTerm tm
           = case tm of
@@ -340,7 +359,7 @@ mutual
                  IAs _ _ _ (Implicit _ _) => tm
                  IAs fc p t arg => IAs fc p t (IMustUnify fc ErasedArg tm)
                  _ => IMustUnify (getFC tm) ErasedArg tm
-  dotErased _ _ _ _ tm = pure tm
+  dotErased _ _ _ _ _ tm = pure tm
 
   -- Check the rest of an application given the argument type and the
   -- raw argument. We choose elaboration order depending on whether we know
@@ -367,7 +386,7 @@ mutual
   checkRestApp rig argRig elabinfo nest env fc tm x aty sc
                (n, argpos) arg_in expargs impargs knownret expty
      = do defs <- get Ctxt
-          arg <- dotErased n argpos (elabMode elabinfo) argRig arg_in
+          arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
           kr <- if knownret
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
