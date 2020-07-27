@@ -319,10 +319,11 @@ mutual
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
   dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
-           then
-              -- if the argument type aty has a single constructor, there's no need 
-              -- to dot it
-              if length (!(possibleConstructors argty)) <= 1
+          then do
+            -- if the argument type aty has a single constructor, there's no need 
+            -- to dot it
+            mconsCount <- countConstructors argty
+            if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
               else 
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
@@ -333,21 +334,20 @@ mutual
                    if argpos `elem` safeErase gdef
                       then pure tm
                       else pure $ dotTerm tm
-           else pure tm
+          else pure tm
     where
-      
-      ||| Find the constructors of a normal form that is a fully
-      ||| applied type constructor
-      possibleConstructors : NF vars -> Core (List Name)
-      possibleConstructors (NApp _ (NRef (TyCon _ n) tycName) args) = 
+      ||| Count the constructors of a fully applied concrete datatype
+      countConstructors : NF vars -> Core (Maybe Nat)
+      countConstructors (NTCon _ tycName _ n args) = 
         if length args == n
         then do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact tycName (gamma defs)
-                | Nothing => pure []
-                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition                                                   | _ => pure []
-                pure datacons
-        else pure []
-      possibleConstructors _ = pure []
+                | Nothing => pure Nothing
+                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition
+                | _ => pure Nothing
+                pure (Just (length datacons))
+        else pure Nothing
+      countConstructors _ = pure Nothing
     
       dotTerm : RawImp -> RawImp
       dotTerm tm
