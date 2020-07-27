@@ -386,7 +386,7 @@ data EditCmd : Type where
      AddClause : Bool -> Int -> Name -> EditCmd
      ExprSearch : Bool -> Int -> Name -> List Name -> EditCmd
      ExprSearchNext : EditCmd
-     GenerateDef : Bool -> Int -> Name -> EditCmd
+     GenerateDef : Bool -> Int -> Name -> Nat -> EditCmd
      GenerateDefNext : EditCmd
      MakeLemma : Bool -> Int -> Name -> EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd

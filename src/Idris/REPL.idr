@@ -311,8 +311,9 @@ nextProofSearch
 nextGenDef : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto o : Ref ROpts REPLOpts} ->
+             (reject : Nat) ->
              Core (Maybe (Int, (FC, List ImpClause)))
-nextGenDef
+nextGenDef reject
     = do opts <- get ROpts
          let Just (line, res) = gdResult opts
               | Nothing => pure Nothing
@@ -321,7 +322,9 @@ nextGenDef
                     do put ROpts (record { gdResult = Nothing } opts)
                        pure Nothing
          put ROpts (record { gdResult = Just (line, next) } opts)
-         pure (Just (line, res))
+         case reject of
+              Z => pure (Just (line, res))
+              S k => nextGenDef k
 
 dropLams : {vars : _} ->
            Nat -> Env Term vars -> Term vars ->
@@ -418,7 +421,7 @@ processEdit ExprSearchNext
                                        else itm))
          pure $ DisplayEdit [res]
 
-processEdit (GenerateDef upd line name)
+processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
@@ -427,7 +430,7 @@ processEdit (GenerateDef upd line name)
                  do let searchdef = makeDef (\p, n => onLine (line - 1) p) n'
                     ropts <- get ROpts
                     put ROpts (record { gdResult = Just (line, searchdef) } ropts)
-                    Just (_, (fc, cs)) <- nextGenDef
+                    Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
                     let l : Nat =  integerToNat (cast (snd (startPos fc)))
                     Just srcLine <- getSourceLine line
@@ -440,7 +443,7 @@ processEdit (GenerateDef upd line name)
               Just _ => pure $ EditError "Already defined"
               Nothing => pure $ EditError $ "Can't find declaration for " ++ show name
 processEdit GenerateDefNext
-    = do Just (line, (fc, cs)) <- nextGenDef
+    = do Just (line, (fc, cs)) <- nextGenDef 0
               | Nothing => pure (EditError "No more results")
          let l : Nat =  integerToNat (cast (snd (startPos fc)))
          Just srcLine <- getSourceLine line

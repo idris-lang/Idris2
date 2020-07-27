@@ -93,8 +93,10 @@ getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n,
   where
     getMode : String -> Bool
     getMode m = m == "all"
+getIDECommand (SymbolAtom "proof-search-next") = Just ExprSearchNext
 getIDECommand (SExpList [SymbolAtom "generate-def", IntegerAtom l, StringAtom n])
     = Just $ GenerateDef l n
+getIDECommand (SymbolAtom "generate-def-next") = Just GenerateDefNext
 getIDECommand (SExpList [SymbolAtom "make-lemma", IntegerAtom l, StringAtom n])
     = Just $ MakeLemma l n
 getIDECommand (SExpList [SymbolAtom "make-case", IntegerAtom l, StringAtom n])
