@@ -87,13 +87,11 @@ filterS p (Result r next)
 
 export
 searchN : {auto c : Ref Ctxt Defs} ->
-          {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           Nat -> Core (Search a) -> Core (List a)
 searchN max s
     = tryUnify
-         (do foo <- getNextEntry
-             res <- s
+         (do res <- s
              xs <- count max res
              pure xs)
          (pure [])
@@ -104,6 +102,17 @@ searchN max s
     count (S Z) (Result a next) = pure [a]
     count (S k) (Result a next) = pure $ a :: !(count k !next)
 
+export
+nextResult : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             Core (Search a) -> Core (Maybe (a, Core (Search a)))
+nextResult s
+    = tryUnify
+         (do res <- s
+             case res of
+                  NoMore => pure Nothing
+                  Result r next => pure (Just (r, next)))
+         (pure Nothing)
 
 search : {auto c : Ref Ctxt Defs} ->
          {auto m : Ref MD Metadata} ->

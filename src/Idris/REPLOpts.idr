@@ -3,6 +3,8 @@ module Idris.REPLOpts
 import Compiler.Common
 import Idris.Syntax
 import Parser.Unlit
+import TTImp.Interactive.ExprSearch
+import TTImp.TTImp
 
 import Data.List
 import Data.Strings
@@ -27,15 +29,17 @@ record REPLOpts where
   errorLine : Maybe Int
   idemode : OutputMode
   currentElabSource : String
+  psResult : Maybe (Name, Core (Search ClosedTerm)) -- last proof search continuation (and name)
+  gdResult : Maybe (Int, Core (Search (FC, List ImpClause))) -- last generate def continuation (and line number)
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
   -- better to stick it now.
   extraCodegens : List (String, Codegen)
 
-
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
-    = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim" Nothing outmode "" cgs
+    = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
+                 Nothing outmode "" Nothing Nothing cgs
   where
     litStyle : Maybe String -> Maybe LiterateStyle
     litStyle Nothing = Nothing
@@ -71,6 +75,14 @@ setMainFile src
     litStyle : Maybe String -> Maybe LiterateStyle
     litStyle Nothing = Nothing
     litStyle (Just fn) = isLitFile fn
+
+export
+resetProofState : {auto o : Ref ROpts REPLOpts} ->
+                  Core ()
+resetProofState
+    = do opts <- get ROpts
+         put ROpts (record { psResult = Nothing,
+                             gdResult = Nothing } opts)
 
 export
 setSource : {auto o : Ref ROpts REPLOpts} ->

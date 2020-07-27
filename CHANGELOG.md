@@ -63,6 +63,14 @@ REPL changes:
 * Implemented `:module` command, to load a module during a REPL session.
 * Implemented `:doc`, which displays documentation for a name.
 * Implemented `:browse`, which lists the names exported by a namespace.
+* Added `:psnext`, which continues the previous proof search, looking for the
+  next type correct expression
+  + Correspondingly, added the IDE mode command `proof-search-next` (which takes
+    no arguments)
+* Added `:gdnext`, which continues the previous program search, looking for the
+  next type correct implementation
+  + Correspondingly, added the IDE mode command `generate-def-next` (which takes
+    no arguments)
 
 Changes since Idris 2 v0.1.0
 ----------------------------
