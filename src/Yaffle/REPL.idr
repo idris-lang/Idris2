@@ -89,9 +89,9 @@ process (GenerateDef line name)
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do Just (fc, cs) <- logTime "Generation" $
-                                makeDef (\p, n => onLine line p) n'
-                           | Nothing => coreLift (putStrLn "Failed")
+                    (do ((fc, cs) :: _) <- logTime "Generation" $
+                                makeDefN (\p, n => onLine line p) 1 n'
+                           | _ => coreLift (putStrLn "Failed")
                         coreLift $ putStrLn (show cs))
                     (\err => coreLift $ putStrLn $ "Can't find a definition for " ++ show n')
               Just _ => coreLift $ putStrLn "Already defined"

@@ -29,7 +29,9 @@ data IDECommand
      -- deprecated: | AddProofClause
      | AddMissing Integer String
      | ExprSearch Integer String (List String) Bool
+     | ExprSearchNext
      | GenerateDef Integer String
+     | GenerateDefNext
      | MakeLemma Integer String
      | MakeCase Integer String
      | MakeWith Integer String
@@ -150,7 +152,9 @@ putIDECommand (ExprSearch line n exprs mode)  = (SExpList [SymbolAtom "proof-sea
   getMode : Bool -> SExp
   getMode True  = SymbolAtom "all"
   getMode False = SymbolAtom "other"
+putIDECommand ExprSearchNext                  = SymbolAtom "proof-search--next"
 putIDECommand (GenerateDef line n)            = (SExpList [SymbolAtom "generate-def", IntegerAtom line, StringAtom n])
+putIDECommand GenerateDefNext                 = SymbolAtom "generate-def-next"
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
 putIDECommand (MakeCase line n)               = (SExpList [SymbolAtom "make-case", IntegerAtom line, StringAtom n])
 putIDECommand (MakeWith line n)               = (SExpList [SymbolAtom "make-with", IntegerAtom line, StringAtom n])

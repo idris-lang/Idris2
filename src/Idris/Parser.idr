@@ -1710,17 +1710,16 @@ editCmd
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
-         pure (ExprSearch upd (fromInteger line) n [] False)
-  <|> do replCmd ["psall"]
-         upd <- option False (do symbol "!"; pure True)
-         line <- intLit
-         n <- name
-         pure (ExprSearch upd (fromInteger line) n [] True)
+         pure (ExprSearch upd (fromInteger line) n [])
+  <|> do replCmd ["psnext"]
+         pure ExprSearchNext
   <|> do replCmd ["gd"]
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
          pure (GenerateDef upd (fromInteger line) n)
+  <|> do replCmd ["gdnext"]
+         pure GenerateDefNext
   <|> do replCmd ["ml", "makelemma"]
          upd <- option False (do symbol "!"; pure True)
          line <- intLit

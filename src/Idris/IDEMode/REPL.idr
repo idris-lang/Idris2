@@ -168,9 +168,13 @@ process (AddMissing l n)
          pure $ REPL $ Edited $ DisplayEdit []
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs) all))
+                                                 (map UN hs)))
+process ExprSearchNext
+    = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
     = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n)))
+process GenerateDefNext
+    = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
     = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
 process (MakeCase l n)

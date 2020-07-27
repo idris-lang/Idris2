@@ -42,6 +42,7 @@ record SearchOpts where
   holesOK : Bool
   recOK : Bool
   depth : Nat
+  inArg : Bool
 
 export
 data Search : Type -> Type where
@@ -63,6 +64,10 @@ one : a -> Core (Search a)
 one res = pure $ Result res (pure NoMore)
 
 export
+noResult : Core (Search a)
+noResult = pure NoMore
+
+export
 traverse : (a -> Core b) -> Search a -> Core (Search b)
 traverse f NoMore = pure NoMore
 traverse f (Result r next)
@@ -79,6 +84,35 @@ filterS p (Result r next)
          if p r
             then pure $ Result r fnext
             else fnext
+
+export
+searchN : {auto c : Ref Ctxt Defs} ->
+          {auto u : Ref UST UState} ->
+          Nat -> Core (Search a) -> Core (List a)
+searchN max s
+    = tryUnify
+         (do res <- s
+             xs <- count max res
+             pure xs)
+         (pure [])
+  where
+    count : Nat -> Search a -> Core (List a)
+    count k NoMore = pure []
+    count Z _ = pure []
+    count (S Z) (Result a next) = pure [a]
+    count (S k) (Result a next) = pure $ a :: !(count k !next)
+
+export
+nextResult : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             Core (Search a) -> Core (Maybe (a, Core (Search a)))
+nextResult s
+    = tryUnify
+         (do res <- s
+             case res of
+                  NoMore => pure Nothing
+                  Result r next => pure (Just (r, next)))
+         (pure Nothing)
 
 search : {auto c : Ref Ctxt Defs} ->
          {auto m : Ref MD Metadata} ->
@@ -111,17 +145,18 @@ searchIfHole : {vars : _} ->
                Core (Search (Term vars))
 searchIfHole fc opts defining topty env arg
     = case depth opts of
-           Z => pure NoMore
+           Z => noResult
            S k =>
               do let hole = holeID arg
                  let rig = argRig arg
                  defs <- get Ctxt
                  Just gdef <- lookupCtxtExact (Resolved hole) (gamma defs)
-                      | Nothing => pure NoMore
+                      | Nothing => noResult
                  let Hole _ _ = definition gdef
                       | _ => one !(normaliseHoles defs env (metaApp arg))
                                 -- already solved
-                 res <- search fc rig (record { depth = k} opts)
+                 res <- search fc rig (record { depth = k,
+                                                inArg = True } opts)
                                defining topty (Resolved hole)
                  -- When we solve an argument, we're also building a lambda
                  -- expression for its environment, so we need to apply it to
@@ -137,9 +172,9 @@ explicit ai
 
 firstSuccess : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
-               List (Core (Search (Term vars))) ->
-               Core (Search (Term vars))
-firstSuccess [] = pure NoMore
+               List (Core (Search a)) ->
+               Core (Search a)
+firstSuccess [] = noResult
 firstSuccess (elab :: elabs)
     = do ust <- get UST
          defs <- get Ctxt
@@ -148,12 +183,38 @@ firstSuccess (elab :: elabs)
                    pure (Result res (continue ust defs (more :: elabs))))
                (\err => continue ust defs elabs)
   where
-    continue : UState -> Defs -> List (Core (Search (Term vars))) ->
-               Core (Search (Term vars))
+    continue : UState -> Defs -> List (Core (Search a)) ->
+               Core (Search a)
     continue ust defs elabs
         = do put UST ust
              put Ctxt defs
              firstSuccess elabs
+
+export
+trySearch : {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            Core (Search a) ->
+            Core (Search a) ->
+            Core (Search a)
+trySearch s1 s2 = firstSuccess [s1, s2]
+
+export
+combine : {auto c : Ref Ctxt Defs} ->
+          {auto u : Ref UST UState} ->
+          (a -> b -> t) -> Search a -> Search b -> Core (Search t)
+combine f NoMore y = pure NoMore
+combine f (Result x next) NoMore = pure NoMore
+combine f (Result x nextx) (Result y nexty)
+    = pure $ Result (f x y) $
+                     (do nexty' <- nexty
+                         combine f !(one x) nexty')
+                         `trySearch`
+                     ((do nextx' <- nextx
+                          combine f nextx' !(one y))
+                          `trySearch`
+                      (do nextx' <- nextx
+                          nexty' <- nexty
+                          combine f nextx' nexty'))
 
 mkCandidates : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
@@ -163,7 +224,7 @@ mkCandidates : {vars : _} ->
 -- out of arguments, we have a candidate
 mkCandidates fc f [] = one f
 -- argument has run out of ideas, we're stuck
-mkCandidates fc f (NoMore :: argss) = pure NoMore
+mkCandidates fc f (NoMore :: argss) = noResult
 -- make a candidate from 'f arg' applied to the rest of the arguments
 mkCandidates fc f (Result arg next :: argss)
     = firstSuccess
@@ -185,7 +246,7 @@ searchName fc rigc opts env target topty defining (n, ndef)
     = do defs <- get Ctxt
          let True = visibleInAny (!getNS :: !getNestedNS)
                                  (fullname ndef) (visibility ndef)
-             | _ => pure NoMore
+             | _ => noResult
          let ty = type ndef
          let namety : NameType
                  = case definition ndef of
@@ -199,7 +260,7 @@ searchName fc rigc opts env target topty defining (n, ndef)
          logNF 10 "App type" env appTy
          ures <- unify inSearch fc env target appTy
          let [] = constraints ures
-             | _ => pure NoMore
+             | _ => noResult
          -- Search the explicit arguments first, they may resolve other holes
          traverse (searchIfHole fc opts defining topty env)
                   (filter explicit args)
@@ -230,7 +291,7 @@ getSuccessful {vars} fc rig opts mkHole env ty topty defining all
                                                 (Hole (length env) (holeInit False))
                                                 False
                            one tm
-                   else pure NoMore
+                   else noResult
               r => pure r
 
 searchNames : {vars : _} ->
@@ -241,7 +302,7 @@ searchNames : {vars : _} ->
               Term vars -> ClosedTerm ->
               Maybe RecData -> List Name -> Core (Search (Term vars))
 searchNames fc rig opts env ty topty defining []
-    = pure NoMore
+    = noResult
 searchNames fc rig opts env ty topty defining (n :: ns)
     = do defs <- get Ctxt
          vis <- traverse (visible (gamma defs) (currentNS defs :: nestedNS defs)) (n :: ns)
@@ -268,11 +329,11 @@ tryRecursive : {vars : _} ->
                Env Term vars -> Term vars -> ClosedTerm ->
                Maybe RecData -> Core (Search (Term vars))
 tryRecursive fc rig opts env ty topty Nothing
-    = pure NoMore
+    = noResult
 tryRecursive fc rig opts env ty topty (Just rdata)
     = do defs <- get Ctxt
          case !(lookupCtxtExact (recname rdata) (gamma defs)) of
-              Nothing => pure NoMore
+              Nothing => noResult
               Just def =>
                 do res <- searchName fc rig opts env !(nf defs env ty)
                                      topty Nothing
@@ -337,7 +398,7 @@ searchLocalWith : {vars : _} ->
                   Term vars -> ClosedTerm -> Maybe RecData ->
                   Core (Search (Term vars))
 searchLocalWith fc rig opts env [] ty topty defining
-    = pure NoMore
+    = noResult
 searchLocalWith {vars} fc rig opts env ((p, pty) :: rest) ty topty defining
     = do defs <- get Ctxt
          nty <- nf defs env ty
@@ -364,11 +425,11 @@ searchLocalWith {vars} fc rig opts env ((p, pty) :: rest) ty topty defining
                         mkCandidates fc (f prf) [])
                     (do ures <- unify inTerm fc env ty appTy
                         let [] = constraints ures
-                            | _ => pure NoMore
+                            | _ => noResult
                         args' <- traverse (searchIfHole fc opts defining topty env)
                                           args
                         mkCandidates fc (f prf) args')
-                else pure NoMore
+                else noResult
 
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
@@ -401,7 +462,7 @@ searchLocalWith {vars} fc rig opts env ((p, pty) :: rest) ty topty defining
                                                            ytytm,
                                                            f arg])
                                            ytynf target)]
-                         else pure NoMore)]
+                         else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target
 
 searchLocal : {vars : _} ->
@@ -455,14 +516,22 @@ searchType fc rig opts env defining topty _ ty
                              -- Then try a recursive call
                              log 10 $ "Hints found for " ++ show n ++ " "
                                          ++ show allHints
-                             getSuccessful fc rig opts True env ty topty defining
-                                  ([searchLocal fc rig opts env ty topty defining,
-                                    searchNames fc rig opts env ty topty defining
-                                                allHints]
-                                    ++ if recOK opts
-                                         then [tryRecursive fc rig opts env ty topty defining]
-                                         else [])
-                     else pure NoMore
+                             let tries =
+                                   [searchLocal fc rig opts env ty topty defining,
+                                    searchNames fc rig opts env ty topty defining allHints]
+                             let tryRec =
+                                   if recOK opts
+                                      then [tryRecursive fc rig opts env ty topty defining]
+                                      else []
+                             -- if we're in an argument, try the recursive call
+                             -- first. We're more likely to want that than nested
+                             -- constructors.
+                             let allns : List _
+                                     = if inArg opts
+                                          then tryRec ++ tries
+                                          else tries ++ tryRec
+                             getSuccessful fc rig opts True env ty topty defining allns
+                     else noResult
            _ => do logTerm 10 "Searching locals only at" ty
                    getSuccessful fc rig opts True env ty topty defining
                        ([searchLocal fc rig opts env ty topty defining]
@@ -522,7 +591,7 @@ getLHSData defs (Just tm) = pure $ getLHS !(normaliseHoles defs [] tm)
 firstLinearOK : {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 FC -> Search ClosedTerm -> Core (Search ClosedTerm)
-firstLinearOK fc NoMore = pure NoMore
+firstLinearOK fc NoMore = noResult
 firstLinearOK fc (Result t next)
     = tryUnify
             (do linearCheck fc linear False [] t
@@ -541,7 +610,7 @@ exprSearch fc n_in hints
              | Nothing => throw (UndefinedName fc n_in)
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log 10 $ "LHS hole data " ++ show (n, lhs)
-         res <- search fc (multiplicity gdef) (MkSearchOpts False True 5)
+         res <- search fc (multiplicity gdef) (MkSearchOpts False True 5 False)
                        !(getLHSData defs lhs) (type gdef) n
          firstLinearOK fc res
   where
@@ -559,15 +628,4 @@ exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               FC -> Nat -> Name -> List Name -> Core (List ClosedTerm)
 exprSearchN fc max n hints
-    = tryUnify
-         (do foo <- getNextEntry
-             res <- exprSearch fc n hints
-             xs <- count max res
-             pure xs)
-         (pure [])
-  where
-    count : Nat -> Search a -> Core (List a)
-    count k NoMore = pure []
-    count Z _ = pure []
-    count (S Z) (Result a next) = pure [a]
-    count (S k) (Result a next) = pure $ a :: !(count k !next)
+    = searchN max (exprSearch fc n hints)
