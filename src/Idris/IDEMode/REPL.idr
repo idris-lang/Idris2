@@ -172,7 +172,7 @@ process (ExprSearch l n hs all)
 process ExprSearchNext
     = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
 process GenerateDefNext
     = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)

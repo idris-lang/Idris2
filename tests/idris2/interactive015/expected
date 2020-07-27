@@ -25,6 +25,8 @@ Main> lappend1 [] ys = ys
 lappend1 (x :: xs) ys = x :: lappend1 xs xs
 Main> lappend1 [] ys = ys
 lappend1 (x :: xs) ys = x :: lappend1 xs ys
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs ys
 Main> ys
 Main> []
 Main> lappend2 ys ys

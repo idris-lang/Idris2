@@ -1717,7 +1717,8 @@ editCmd
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
-         pure (GenerateDef upd (fromInteger line) n)
+         nreject <- option 0 intLit
+         pure (GenerateDef upd (fromInteger line) n (fromInteger nreject))
   <|> do replCmd ["gdnext"]
          pure GenerateDefNext
   <|> do replCmd ["ml", "makelemma"]
