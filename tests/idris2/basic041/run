@@ -1,3 +1,3 @@
-$1 --check QDo.idr
+$1 --no-color --check QDo.idr
 
 rm -rf build

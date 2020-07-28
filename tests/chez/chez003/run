@@ -1,2 +1,2 @@
-$1 --no-banner IORef.idr < input
+$1 --no-color --no-banner IORef.idr < input
 rm -rf build

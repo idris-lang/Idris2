@@ -1,3 +1,3 @@
-$1 Loop.idr --check
+$1 --no-color Loop.idr --check
 
 rm -rf build

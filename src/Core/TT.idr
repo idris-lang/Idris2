@@ -8,7 +8,8 @@ import Data.List
 import Data.NameMap
 import Data.Vect
 import Decidable.Equality
-import Text.PrettyPrint.PrettyPrinter
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import public Algebra
 
@@ -101,8 +102,8 @@ Pretty Constant where
   pretty (B16 x) = pretty x
   pretty (B32 x) = pretty x
   pretty (B64 x) = pretty x
-  pretty (Str x) = pretty x
-  pretty (Ch x) = pretty x
+  pretty (Str x) = dquotes (pretty x)
+  pretty (Ch x) = squotes (pretty x)
   pretty (Db x) = pretty x
   pretty WorldVal = pretty "%MkWorld"
   pretty IntType = pretty "Int"
@@ -558,6 +559,12 @@ Show Visibility where
   show Public = "public export"
 
 export
+Pretty Visibility where
+  pretty Private = pretty "private"
+  pretty Export = pretty "export"
+  pretty Public = pretty "public" <+> pretty "export"
+
+export
 Eq Visibility where
   Private == Private = True
   Export == Export = True
@@ -610,6 +617,16 @@ Show PartialReason where
   show (RecPath ns)
 	   = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
 
+export
+Pretty PartialReason where
+  pretty NotStrictlyPositive = reflow "not strictly positive"
+  pretty (BadCall [n])
+    = reflow "possibly not terminating due to call to" <++> pretty n
+  pretty (BadCall ns)
+    = reflow "possibly not terminating due to calls to" <++> concatWith (surround (comma <+> space)) (pretty <$> ns)
+  pretty (RecPath ns)
+    = reflow "possibly not terminating due to recursive path" <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
+
 public export
 data Terminating
        = Unchecked
@@ -621,6 +638,12 @@ Show Terminating where
   show Unchecked = "not yet checked"
   show IsTerminating = "terminating"
   show (NotTerminating p) = show p
+
+export
+Pretty Terminating where
+  pretty Unchecked = reflow "not yet checked"
+  pretty IsTerminating = pretty "terminating"
+  pretty (NotTerminating p) = pretty p
 
 public export
 data Covering
@@ -637,6 +660,15 @@ Show Covering where
   show (NonCoveringCall cs)
      = "not covering due to calls to functions " ++ showSep ", " (map show cs)
 
+export
+Pretty Covering where
+  pretty IsCovering = pretty "covering"
+  pretty (MissingCases c) = reflow "not covering all cases"
+  pretty (NonCoveringCall [f])
+     = reflow "not covering due to call to function" <++> pretty f
+  pretty (NonCoveringCall cs)
+     = reflow "not covering due to calls to functions" <++> concatWith (surround (comma <+> space)) (pretty <$> cs)
+
 -- Totality status of a definition. We separate termination checking from
 -- coverage checking.
 public export
@@ -648,7 +680,7 @@ record Totality where
 export
 Show Totality where
   show tot
-    = let t	= isTerminating tot
+    = let t = isTerminating tot
           c = isCovering tot in
         showTot t c
     where
@@ -657,6 +689,13 @@ Show Totality where
       showTot IsTerminating c = show c
       showTot t IsCovering = show t
       showTot t c = show c ++ "; " ++ show t
+
+export
+Pretty Totality where
+  pretty (MkTotality IsTerminating IsCovering) = pretty "total"
+  pretty (MkTotality IsTerminating c) = pretty c
+  pretty (MkTotality t IsCovering) = pretty t
+  pretty (MkTotality t c) = pretty c <+> semi <++> pretty t
 
 export
 unchecked : Totality

@@ -1785,6 +1785,9 @@ data CmdArg : Type where
      ||| The command takes a string
      StringArg : CmdArg
 
+     ||| The command takes a on or off.
+     OnOffArg : CmdArg
+
      ||| The command takes multiple arguments.
      Args : List CmdArg -> CmdArg
 
@@ -1799,6 +1802,7 @@ Show CmdArg where
   show FileArg = "<file>"
   show ModuleArg = "<module>"
   show StringArg = "<module>"
+  show OnOffArg = "(on|off)"
   show (Args args) = showSep " " (map show args)
 
 export
@@ -1925,6 +1929,19 @@ numberArgCmd parseCmd command doc = (names, NumberArg, doc, parse)
       i <- intLit
       pure (command (fromInteger i))
 
+onOffArgCmd : ParseCmd -> (Bool -> REPLCmd) -> String -> CommandDefinition
+onOffArgCmd parseCmd command doc = (names, OnOffArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      i <- onOffLit
+      pure (command i)
+
 compileArgsCmd : ParseCmd -> (PTerm -> String -> REPLCmd) -> String -> CommandDefinition
 compileArgsCmd parseCmd command doc
     = (names, Args [FileArg, ExprArg], doc, parse)
@@ -1961,6 +1978,8 @@ parserCommandsForHelp =
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
   , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
   , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
+  , numberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded)"
+  , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"

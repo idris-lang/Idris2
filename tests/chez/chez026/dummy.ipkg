@@ -10,6 +10,7 @@ modules = Dummy
 
 main = Dummy
 executable = check_dir
+opts = "--no-color"
 
 builddir = "custom_build"
 outputdir = "custom_output"

@@ -1,6 +1,10 @@
-Main> (interactive):1:1--1:25:Undefined name fromMaybe at:
+Main> Error: Undefined name fromMaybe. 
+
+(interactive):1:1--1:25
+   |
  1 | fromMaybe "test" Nothing
-     ^^^^^^^^^^^^^^^^^^^^^^^^
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
+
 Main> Imported module Data.Maybe
 Main> "test"
 Main> Imported module Data.Strings

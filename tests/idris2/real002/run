@@ -1,4 +1,4 @@
-$1 --check Store.idr
-$1 --check StoreL.idr
+$1 --no-color --check Store.idr
+$1 --no-color --check StoreL.idr
 
 rm -rf build
