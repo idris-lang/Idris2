@@ -1,4 +1,4 @@
-$1 --no-banner IEdit.lidr < input
-$1 --no-banner IEditOrg.org < input2
+$1 --no-color --no-banner IEdit.lidr < input
+$1 --no-color --no-banner IEditOrg.org < input2
 
 rm -rf build

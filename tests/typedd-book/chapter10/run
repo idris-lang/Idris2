@@ -1,4 +1,4 @@
-$1 DLFail.idr --check
-$1 All.idr --check
+$1 --no-color DLFail.idr --check
+$1 --no-color All.idr --check
 
 rm -rf build

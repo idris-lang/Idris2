@@ -5,51 +5,51 @@ import Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Render.Terminal
 import Text.PrettyPrint.Prettyprinter.Util
 
+import Idris.REPLOpts
 import Idris.Syntax
 
 %default covering
 
 public export
-data SyntaxAnn
-  = Typ
-  | Function
-  | Data
-  | Keyword
-  | Bound
-  | Pragma
-  | Meta
-
-public export
 data IdrisAnn
   = Warning
   | Error
+  | ErrorDesc
   | FileCtxt
-  | Syntax SyntaxAnn
+  | Code
+  | Meta
+  | Keyword
+  | Pragma
 
 export
 colorAnn : IdrisAnn -> AnsiStyle
-colorAnn Warning = color Yellow
-colorAnn Error = color BrightRed
+colorAnn Warning = color Yellow <+> bold
+colorAnn Error = color BrightRed <+> bold
+colorAnn ErrorDesc = bold
 colorAnn FileCtxt = color BrightBlue
-colorAnn (Syntax Typ) = color Magenta
-colorAnn (Syntax Function) = neutral
-colorAnn (Syntax Data) = color Blue
-colorAnn (Syntax Keyword) = color Red
-colorAnn (Syntax Bound) = color Green
-colorAnn (Syntax Pragma) = color BrightMagenta
-colorAnn (Syntax Meta) = color Magenta
+colorAnn Code = color Magenta
+colorAnn Keyword = color Red
+colorAnn Pragma = color BrightMagenta
+colorAnn Meta = color Green
 
+export
+errorDesc : Doc IdrisAnn -> Doc IdrisAnn
+errorDesc = annotate ErrorDesc
+
+export
 keyword : Doc IdrisAnn -> Doc IdrisAnn
--- keyword = annotate (Syntax Keyword)
-keyword = id
+keyword = annotate Keyword
 
-meta : String -> Doc IdrisAnn
--- meta s = annotate (Syntax Meta) (pretty s)
-meta s = pretty s
+export
+meta : Doc IdrisAnn -> Doc IdrisAnn
+meta = annotate Meta
+
+export
+code : Doc IdrisAnn -> Doc IdrisAnn
+code = annotate Code
 
 ite : Doc IdrisAnn -> Doc IdrisAnn -> Doc IdrisAnn -> Doc IdrisAnn
--- ite x t e = keyword (pretty "if") <++> x <++> hang 3 (fillSep [keyword (pretty "then") <++> t, keyword (pretty "else") <++> e])
-ite x t e = (pretty "if") <++> x <++> hang 3 (fillSep [(pretty "then") <++> t, (pretty "else") <++> e])
+ite x t e = keyword (pretty "if") <++> x <++> align (fillSep [keyword (pretty "then") <++> t, keyword (pretty "else") <++> e])
 
 let_ : Doc IdrisAnn
 let_ = keyword (pretty "let")
@@ -84,13 +84,9 @@ default_ = keyword (pretty "default")
 rewrite_ : Doc IdrisAnn
 rewrite_ = keyword (pretty "rewrite")
 
-pragma : String -> Doc IdrisAnn
--- pragma s = annotate (Syntax Pragma) (pretty s)
-pragma s = (pretty s)
-
-bound : Doc IdrisAnn -> Doc IdrisAnn
--- bound = annotate (Syntax Bound)
-bound = id
+export
+pragma : Doc IdrisAnn -> Doc IdrisAnn
+pragma = annotate Pragma
 
 prettyParens : (1 _ : Bool) -> Doc ann -> Doc ann
 prettyParens False s = s
@@ -189,16 +185,15 @@ mutual
            else go d f <++> braces (pretty n <++> equals <++> pretty a)
       go d (PImplicitApp _ f (Just n) a) =
         go d f <++> braces (pretty n <++> equals <++> go d a)
-      go d (PSearch _ _) = pragma "%search"
+      go d (PSearch _ _) = pragma (pretty "%search")
       go d (PQuote _ tm) = pretty '`' <+> parens (go d tm)
       go d (PQuoteName _ n) = pretty '`' <+> braces (braces (pretty n))
       go d (PQuoteDecl _ tm) = pretty '`' <+> brackets (angles (angles (pretty "declaration")))
       go d (PUnquote _ tm) = pretty '~' <+> parens (go d tm)
-      go d (PRunElab _ tm) = pragma "%runElab" <++> go d tm
+      go d (PRunElab _ tm) = pragma (pretty "%runElab") <++> go d tm
       go d (PPrimVal _ c) = pretty c
-      go d (PHole _ _ n) = meta (strCons '?' n)
-      -- go d (PType _) = annotate (Syntax Typ) (pretty "Type")
-      go d (PType _) = (pretty "Type")
+      go d (PHole _ _ n) = meta (pretty (strCons '?' n))
+      go d (PType _) = pretty "Type"
       go d (PAs _ n p) = pretty n <+> pretty '@' <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = pretty '_'
@@ -242,3 +237,24 @@ mutual
       go d (PPostfixProjsSection fc fields args) =
         parens (dot <+> concatWith (surround dot) (go d <$> fields) <+> fillSep (go App <$> args))
       go d (PWithUnambigNames fc ns rhs) = with_ <++> pretty ns <++> go d rhs
+
+export
+render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
+render doc = do
+  consoleWidth <- getConsoleWidth
+  color <- getColor
+  let opts = MkLayoutOptions $ if consoleWidth == 0
+                                  then Unbounded
+                                  else AvailablePerLine (cast consoleWidth) 1
+  let layout = layoutPretty opts doc
+  pure $ renderString $ if color then reAnnotateS colorAnn layout else unAnnotateS layout
+
+export
+renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
+renderWithoutColor doc = do
+  consoleWidth <- getConsoleWidth
+  let opts = MkLayoutOptions $ if consoleWidth == 0
+                                  then Unbounded
+                                  else AvailablePerLine (cast consoleWidth) 1
+  let layout = layoutPretty opts doc
+  pure $ renderString $ unAnnotateS layout

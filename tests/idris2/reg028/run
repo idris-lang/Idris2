@@ -1,3 +1,3 @@
-$1 --check Test.idr
+$1 --no-color --check Test.idr
 
 rm -rf build

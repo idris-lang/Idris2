@@ -1,3 +1,3 @@
-$1 TypeInt.idr --check
+$1 --no-color TypeInt.idr --check
 
 rm -rf build

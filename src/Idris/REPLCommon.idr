@@ -61,12 +61,10 @@ emitError err
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do pmsg <- reAnnotate colorAnn <$> display err
-                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
+                  do msg <- display err >>= render
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do pmsg <- reAnnotate colorAnn <$> perror err
-                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
+                  do msg <- perror err >>= renderWithoutColor
                      case getErrorLoc err of
                           Nothing => iputStrLn msg
                           Just fc =>
@@ -91,12 +89,10 @@ emitWarning w
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do pmsg <- reAnnotate colorAnn <$> displayWarning w
-                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
+                  do msg <- displayWarning w >>= render
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do pmsg <- reAnnotate colorAnn <$> pwarning w
-                     let msg = renderString (layoutPretty defaultLayoutOptions pmsg) -- FIXME: tmp
+                  do msg <- pwarning w >>= renderWithoutColor
                      case getWarningLoc w of
                           Nothing => iputStrLn msg
                           Just fc =>

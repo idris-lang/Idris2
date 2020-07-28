@@ -1,3 +1,3 @@
-$1 DepInt.idr --check
+$1 --no-color DepInt.idr --check
 
 rm -rf build

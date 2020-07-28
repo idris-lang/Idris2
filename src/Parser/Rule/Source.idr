@@ -71,6 +71,15 @@ intLit
                            _ => Nothing)
 
 export
+onOffLit : Rule Bool
+onOffLit
+    = terminal "Expected on or off"
+               (\x => case tok x of
+                           Ident "on" => Just True
+                           Ident "off" => Just False
+                           _ => Nothing)
+
+export
 strLit : Rule String
 strLit
     = terminal "Expected string literal"
