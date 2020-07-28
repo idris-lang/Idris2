@@ -624,10 +624,10 @@ revAppend (v :: vs) ns
               Refl
 
 export
-dropSum : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
-dropSum  Z     m    l      = Refl
-dropSum (S n)  Z    l      = rewrite plusZeroRightNeutral n in Refl
-dropSum (S n) (S m) []     = Refl
-dropSum (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
-                             rewrite plusCommutative n 1 in
-                             dropSum (S n) m l
+dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
+dropFusion  Z     m    l      = Refl
+dropFusion (S n)  Z    l      = rewrite plusZeroRightNeutral n in Refl
+dropFusion (S n) (S m) []     = Refl
+dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
+                                rewrite plusCommutative n 1 in
+                                dropFusion (S n) m l
