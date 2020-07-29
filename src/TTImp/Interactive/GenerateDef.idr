@@ -222,10 +222,54 @@ makeDef p n
                pure (map (\c => (loc, c)) cs'))
            noResult
 
+-- Given a clause, return the bindable names, and the ones that were used in
+-- the rhs
+bindableUsed : ImpClause -> Maybe (List Name, List Name)
+bindableUsed (PatClause fc lhs rhs)
+    = let lhsns = findIBindVars lhs
+          rhsns = findAllNames [] rhs in
+          Just (lhsns, filter (\x => x `elem` lhsns) rhsns)
+bindableUsed _ = Nothing
+
+propBindableUsed : List ImpClause -> Double
+propBindableUsed def
+    = let (b, u) = getProp def in
+          if b == Z
+             then 1.0
+             else the Double (cast u) / the Double (cast b)
+  where
+    getProp : List ImpClause -> (Nat, Nat)
+    getProp [] = (0, 0)
+    getProp (c :: xs)
+        = let (b, u) = getProp xs in
+              case bindableUsed c of
+                   Nothing => (b, u)
+                   Just (b', u') => (b + length (nub b'), u + length (nub u'))
+
+-- Sort by highest proportion of bound variables used. This recalculates every
+-- time it looks, which might seem expensive, but it's only inspecting (not
+-- constructing anything) and it would make the code ugly if we avoid that.
+-- Let's see if it's a bottleneck before doing anything about it...
+export
+mostUsed : List ImpClause -> List ImpClause -> Ordering
+mostUsed def1 def2 = compare (propBindableUsed def2) (propBindableUsed def1)
+
+export
+makeDefSort : {auto c : Ref Ctxt Defs} ->
+              {auto m : Ref MD Metadata} ->
+              {auto u : Ref UST UState} ->
+              (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+              Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
+              Name -> Core (Search (FC, List ImpClause))
+makeDefSort p max ord n
+    = searchSort max (makeDef p n) (\x, y => ord (snd x) (snd y))
+
 export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
-makeDefN p max n = searchN max (makeDef p n)
+makeDefN p max n
+    = do (res, _) <- searchN max (makeDef p n)
+         pure res

@@ -88,19 +88,40 @@ filterS p (Result r next)
 export
 searchN : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
-          Nat -> Core (Search a) -> Core (List a)
+          Nat -> Core (Search a) -> Core (List a, Core (Search a))
 searchN max s
     = tryUnify
          (do res <- s
              xs <- count max res
              pure xs)
-         (pure [])
+         (pure ([], pure NoMore))
   where
-    count : Nat -> Search a -> Core (List a)
-    count k NoMore = pure []
-    count Z _ = pure []
-    count (S Z) (Result a next) = pure [a]
-    count (S k) (Result a next) = pure $ a :: !(count k !next)
+    count : Nat -> Search a -> Core (List a, Core (Search a))
+    count k NoMore = pure ([], pure NoMore)
+    count Z _ = pure ([], pure NoMore)
+    count (S Z) (Result a next) = pure ([a], next)
+    count (S k) (Result a next)
+        = do (rest, cont) <- count k !next
+             pure $ (a :: rest, cont)
+
+-- Generate definitions in batches, and sort according to some user provided
+-- heuristic (highest proportion of bound variables used is a good one!)
+export
+searchSort : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             Nat -> Core (Search a) ->
+             (a -> a -> Ordering) ->
+             Core (Search a)
+searchSort max s ord
+    = do (batch, next) <- searchN max s
+         if isNil batch
+            then pure NoMore
+            else returnBatch (sortBy ord batch) next
+  where
+    returnBatch : List a -> Core (Search a) -> Core (Search a)
+    returnBatch [] res = searchSort max res ord
+    returnBatch (res :: xs) x
+        = pure (Result res (returnBatch xs x))
 
 export
 nextResult : {auto c : Ref Ctxt Defs} ->
@@ -248,6 +269,8 @@ searchName fc rigc opts env target topty defining (n, ndef)
                                  (fullname ndef) (visibility ndef)
              | _ => noResult
          let ty = type ndef
+         let True = usableName (fullname ndef)
+             | _ => noResult
          let namety : NameType
                  = case definition ndef of
                         DCon tag arity _ => DataCon tag arity
@@ -267,6 +290,14 @@ searchName fc rigc opts env target topty defining (n, ndef)
          args' <- traverse (searchIfHole fc opts defining topty env)
                            args
          mkCandidates fc (Ref fc namety n) args'
+  where
+    -- we can only use the name in a search result if it's a user writable
+    -- name (so, no recursive with blocks or case blocks, for example)
+    usableName : Name -> Bool
+    usableName (UN _) = True
+    usableName (NS _ n) = usableName n
+    usableName (Nested _ n) = usableName n
+    usableName _ = False
 
 getSuccessful : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
@@ -628,4 +659,5 @@ exprSearchN : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               FC -> Nat -> Name -> List Name -> Core (List ClosedTerm)
 exprSearchN fc max n hints
-    = searchN max (exprSearch fc n hints)
+    = do (res, _) <- searchN max (exprSearch fc n hints)
+         pure res
