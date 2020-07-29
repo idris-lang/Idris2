@@ -427,7 +427,8 @@ processEdit (GenerateDef upd line name rej)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
-                 do let searchdef = makeDef (\p, n => onLine (line - 1) p) n'
+                 do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
+                                                16 mostUsed n'
                     ropts <- get ROpts
                     put ROpts (record { gdResult = Just (line, searchdef) } ropts)
                     Just (_, (fc, cs)) <- nextGenDef rej
