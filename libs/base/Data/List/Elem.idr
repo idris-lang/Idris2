@@ -76,3 +76,9 @@ indexElem : Nat -> (xs : List a) -> Maybe (x ** Elem x xs)
 indexElem  _    []        = Nothing
 indexElem  Z    (y :: _)  = Just (y ** Here)
 indexElem (S n) (_ :: ys) = map (\(x ** p) => (x ** There p)) (indexElem n ys)
+
+||| Lift the membership proof to a mapped list
+export
+elemMap : (0 f : a -> b) -> Elem x xs -> Elem (f x) (map f xs)
+elemMap f  Here      = Here
+elemMap f (There el) = There $ elemMap f el

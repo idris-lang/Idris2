@@ -1,5 +1,7 @@
 module Data.List
 
+import Data.Nat
+
 public export
 isNil : List a -> Bool
 isNil [] = True
@@ -620,3 +622,12 @@ revAppend (v :: vs) ns
           rewrite sym (revAppend vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
+
+export
+dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
+dropFusion  Z     m    l      = Refl
+dropFusion (S n)  Z    l      = rewrite plusZeroRightNeutral n in Refl
+dropFusion (S n) (S m) []     = Refl
+dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
+                                rewrite plusCommutative n 1 in
+                                dropFusion (S n) m l
