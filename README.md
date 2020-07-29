@@ -102,8 +102,10 @@ Things still missing
 Talks
 =====
 
-[![Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)](https://img.youtube.com/vi/mOtKD7ml0NU/0.jpg)](https://www.youtube.com/watch?v=mOtKD7ml0NU "Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)")
+[![Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)](https://img.youtube.com/vi/nbClauMCeds/0.jpg)](https://www.youtube.com/watch?v=nbClauMCeds "Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)")
+
+[![Scheme Workshop Keynote (ACM SIGPLAN)](https://img.youtube.com/vi/h9YAOaBWuIk/0.jpg)](https://www.youtube.com/watch?v=h9YAOaBWuIk "Scheme Workshop Keynote (ACM SIGPLAN)")
 
 [![Idris 2 - Type-driven Development of Idris (Curry On - London 2019)](https://img.youtube.com/vi/DRq2NgeFcO0/0.jpg)](https://www.youtube.com/watch?v=DRq2NgeFcO0 "Idris 2 - Type-driven Development of Idris (Curry On - London 2019)")
 
-[![Scheme Workshop Keynote (ACM SIGPLAN)](https://img.youtube.com/vi/h9YAOaBWuIk/0.jpg)](https://www.youtube.com/watch?v=h9YAOaBWuIk "Scheme Workshop Keynote (ACM SIGPLAN)")
+[![Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)](https://img.youtube.com/vi/mOtKD7ml0NU/0.jpg)](https://www.youtube.com/watch?v=mOtKD7ml0NU "Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)")
