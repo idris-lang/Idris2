@@ -21,35 +21,35 @@ import Text.PrettyPrint.Prettyprinter.Render.Terminal
 -- Output informational messages, unless quiet flag is set
 export
 iputStrLn : {auto o : Ref ROpts REPLOpts} ->
-            String -> Core ()
+            Doc IdrisAnn -> Core ()
 iputStrLn msg
     = do opts <- get ROpts
          case idemode opts of
-              REPL False => coreLift $ putStrLn msg
+              REPL False => coreLift $ putStrLn !(render msg)
               REPL _ => pure ()
               IDEMode i _ f =>
                 send f (SExpList [SymbolAtom "write-string",
-                                 toSExp msg, toSExp i])
+                                 toSExp !(renderWithoutColor msg), toSExp i])
 
 
 printWithStatus : {auto o : Ref ROpts REPLOpts} ->
-                  String -> String -> Core ()
+                  Doc IdrisAnn -> Doc IdrisAnn -> Core ()
 printWithStatus status msg
     = do opts <- get ROpts
          case idemode opts of
-              REPL _ => coreLift $ putStrLn msg
+              REPL _ => coreLift $ putStrLn !(render msg)
               _      => pure () -- this function should never be called in IDE Mode
 
 export
 printResult : {auto o : Ref ROpts REPLOpts} ->
-              String -> Core ()
-printResult msg = printWithStatus "ok" msg
+              Doc IdrisAnn -> Core ()
+printResult msg = printWithStatus (pretty "ok") msg
 
 -- Return that a protocol request failed somehow
 export
 printError : {auto o : Ref ROpts REPLOpts} ->
-             String -> Core ()
-printError msg = printWithStatus "error" msg
+             Doc IdrisAnn -> Core ()
+printError msg = printWithStatus (pretty "error") msg
 
 -- Display an error message from checking a source file
 export
@@ -64,7 +64,7 @@ emitError err
                   do msg <- display err >>= render
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do msg <- perror err >>= renderWithoutColor
+                  do msg <- perror err
                      case getErrorLoc err of
                           Nothing => iputStrLn msg
                           Just fc =>
@@ -72,7 +72,7 @@ emitError err
                                    SExpList [toSExp (file fc),
                                             toSExp (addOne (startPos fc)),
                                               toSExp (addOne (endPos fc)),
-                                              toSExp msg,
+                                              toSExp !(renderWithoutColor msg),
                                               -- highlighting; currently blank
                                               SExpList []],
                                     toSExp i])
@@ -92,7 +92,7 @@ emitWarning w
                   do msg <- displayWarning w >>= render
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do msg <- pwarning w >>= renderWithoutColor
+                  do msg <- pwarning w
                      case getWarningLoc w of
                           Nothing => iputStrLn msg
                           Just fc =>
@@ -100,7 +100,7 @@ emitWarning w
                                    SExpList [toSExp (file fc),
                                             toSExp (addOne (startPos fc)),
                                               toSExp (addOne (endPos fc)),
-                                              toSExp msg,
+                                              toSExp !(renderWithoutColor msg),
                                               -- highlighting; currently blank
                                               SExpList []],
                                     toSExp i])

@@ -2,6 +2,8 @@ module Parser.Support
 
 import public Text.Lexer
 import public Text.Parser
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
 import Data.List
@@ -29,6 +31,17 @@ Show tok => Show (ParseError tok) where
       = "File error: " ++ show err
   show (LitFail (MkLitErr l c str))
       = "Lit error(s) at " ++ show (c, l) ++ " input: " ++ str
+
+export
+Pretty tok => Pretty (ParseError tok) where
+  pretty (ParseFail err loc toks)
+      = reflow "Parse error:" <++> pretty err <++> parens (reflow "next tokens:" <++> pretty (take 10 toks))
+  pretty (LexFail (c, l, str))
+      = reflow "Lex error at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
+  pretty (FileFail err)
+      = reflow "File error:" <++> pretty (show err)
+  pretty (LitFail (MkLitErr l c str))
+      = reflow "Lit error(s) at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
 
 export
 toGenericParsingError : ParsingError (TokenData token) -> ParseError token
