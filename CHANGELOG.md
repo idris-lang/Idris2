@@ -56,7 +56,7 @@ Compiler changes:
 * It is now possible to create new backends with minimal overhead. `Idris.Driver`
 exposes the function `mainWithCodegens` that takes a list of codegens. The
 feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
-* New code generators `node` and `js`.
+* New code generators `node` and `javascript`.
 
 REPL changes:
 
