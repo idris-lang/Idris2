@@ -1,9 +1,9 @@
 module Idris.Pretty
 
 import Control.ANSI.SGR -- FIXME: tmp
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Render.Terminal
-import Text.PrettyPrint.Prettyprinter.Util
+import public Text.PrettyPrint.Prettyprinter
+import public Text.PrettyPrint.Prettyprinter.Render.Terminal
+import public Text.PrettyPrint.Prettyprinter.Util
 
 import Idris.REPLOpts
 import Idris.Syntax
@@ -95,6 +95,7 @@ prettyParens True s = parens s
 prettyCon : Prec -> Doc ann -> Doc ann -> Doc ann
 prettyCon d conName conArgs = prettyParens (d >= App) (conName <++> conArgs)
 
+export
 prettyRig : RigCount -> Doc ann
 prettyRig = elimSemi (pretty '0' <+> space)
                      (pretty '1' <+> space)

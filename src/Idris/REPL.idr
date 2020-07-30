@@ -164,7 +164,7 @@ setOpt (CG e)
     = do defs <- get Ctxt
          case getCG (options defs) e of
             Just cg => setCG cg
-            Nothing => iputStrLn "No such code generator available"
+            Nothing => iputStrLn (reflow "No such code generator available")
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -514,7 +514,7 @@ data MissedResult : Type where
 public export
 data REPLResult : Type where
   Done : REPLResult
-  REPLError : String -> REPLResult
+  REPLError : Doc IdrisAnn -> REPLResult
   Executed : PTerm -> REPLResult
   RequestedHelp : REPLResult
   Evaluated : PTerm -> (Maybe PTerm) -> REPLResult
@@ -828,7 +828,7 @@ processCatch cmd
                            put UST u'
                            put Syn s'
                            put ROpts o'
-                           msg <- display err >>= render
+                           msg <- display err
                            pure $ REPLError msg
                            )
 
@@ -866,7 +866,7 @@ interpret : {auto c : Ref Ctxt Defs} ->
             String -> Core REPLResult
 interpret inp
     = case parseRepl inp of
-           Left err => pure $ REPLError (show err)
+           Left err => pure $ REPLError (pretty err)
            Right Nothing => pure Done
            Right (Just cmd) => do
              setCurrentElabSource inp
@@ -902,7 +902,7 @@ mutual
              then do
                -- start a new line in REPL mode (not relevant in IDE mode)
                coreLift $ putStrLn ""
-               iputStrLn "Bye for now!"
+               iputStrLn $ pretty "Bye for now!"
               else do res <- interpret inp
                       handleResult res
 
@@ -927,7 +927,7 @@ mutual
          {auto s : Ref Syn SyntaxInfo} ->
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
-  handleResult Exited = iputStrLn "Bye for now!"
+  handleResult Exited = iputStrLn (reflow "Bye for now!")
   handleResult other = do { displayResult other ; repl }
 
   export
@@ -937,64 +937,39 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayResult (REPLError err) = printError err
-  displayResult (Evaluated x Nothing) = do
-    term <- render (prettyTerm x)
-    printResult term
-  displayResult (Evaluated x (Just y)) = do
-    term <- render (prettyTerm x <++> colon <++> code (prettyTerm y))
-    printResult term
-  displayResult (Printed xs) = do
-    xs' <- render (vsep (pretty <$> xs))
-    printResult xs'
-  displayResult (TermChecked x y) = do
-    term <- render (prettyTerm x <++> colon <++> code (prettyTerm y))
-    printResult term
-  displayResult (FileLoaded x) = do
-    msg <- render (reflow "Loaded file" <++> pretty x)
-    printResult msg
-  displayResult (ModuleLoaded x) = do
-    msg <- render (reflow "Imported module" <++> pretty x)
-    printResult msg
-  displayResult (ErrorLoadingModule x err) = do
-    msg <- render (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
-    printError msg
-  displayResult (ErrorLoadingFile x err) = do
-    msg <- render (reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err))
-    printError msg
-  displayResult (ErrorsBuildingFile x errs) = do
-    msg <- render (reflow "Error(s) building file" <++> pretty x)
-    printError msg -- messages already displayed while building
-  displayResult NoFileLoaded = printError !(render (reflow "No file can be reloaded"))
-  displayResult (CurrentDirectory dir) = do
-    msg <- render (reflow "Current working directory is" <++> squotes (pretty dir))
-    printResult msg
-  displayResult CompilationFailed = printError !(render (reflow "Compilation failed"))
-  displayResult (Compiled f) = do
-    msg <- render (pretty "File" <++> pretty f <++> pretty "written")
-    printResult msg
-  displayResult (ProofFound x) = printResult !(render (prettyTerm x))
-  displayResult (Missed cases) = printResult $ showSep "\n" $ map handleMissing cases -- FIXME
-  displayResult (CheckedTotal xs) = do
-    msg <- render (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
-    printResult msg
-  displayResult (FoundHoles []) = printResult !(render (reflow "No holes"))
-  displayResult (FoundHoles [x]) = printResult !(render (reflow "1 hole" <+> colon <++> pretty x.name))
+  displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
+  displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (Printed xs) = printResult (vsep (pretty <$> xs))
+  displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
+  displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
+  displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
+  displayResult (ErrorLoadingModule x err) = printResult (reflow "Error loading module" <++> pretty x <+> colon <++> !(perror err))
+  displayResult (ErrorLoadingFile x err) = printResult (reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err))
+  displayResult (ErrorsBuildingFile x errs) = printResult (reflow "Error(s) building file" <++> pretty x) -- messages already displayed while building
+  displayResult NoFileLoaded = printError (reflow "No file can be reloaded")
+  displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> squotes (pretty dir))
+  displayResult CompilationFailed = printError (reflow "Compilation failed")
+  displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
+  displayResult (ProofFound x) = printResult (prettyTerm x)
+  displayResult (Missed cases) = printResult $ pretty $ showSep "\n" $ map handleMissing cases -- FIXME
+  displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
+  displayResult (FoundHoles []) = printResult (reflow "No holes")
+  displayResult (FoundHoles [x]) = printResult (reflow "1 hole" <+> colon <++> pretty x.name)
   displayResult (FoundHoles xs) = do
     let holes = concatWith (surround (pretty ", ")) (pretty . name <$> xs)
-    msg <- render (pretty (length xs) <++> pretty "holes" <+> colon <++> holes)
-    printResult msg
-  displayResult (LogLevelSet k) = printResult !(render (reflow "Set loglevel to" <++> pretty k))
-  displayResult (ConsoleWidthSet k) = printResult !(render (reflow "Set consolewidth to" <++> pretty k))
-  displayResult (ColorSet b) = printResult !(render (reflow (if b then "Set color on" else "Set color off")))
-  displayResult (VersionIs x) = printResult !(render (pretty (showVersion True x)))
-  displayResult (RequestedHelp) = printResult displayHelp -- FIXME
+    printResult (pretty (length xs) <++> pretty "holes" <+> colon <++> holes)
+  displayResult (LogLevelSet k) = printResult (reflow "Set loglevel to" <++> pretty k)
+  displayResult (ConsoleWidthSet k) = printResult (reflow "Set consolewidth to" <++> pretty k)
+  displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
+  displayResult (VersionIs x) = printResult (pretty (showVersion True x))
+  displayResult (RequestedHelp) = printResult (pretty displayHelp) -- FIXME
   displayResult (Edited (DisplayEdit [])) = pure ()
-  displayResult (Edited (DisplayEdit xs)) = printResult $ showSep "\n" xs
-  displayResult (Edited (EditError x)) = printError x
-  displayResult (Edited (MadeLemma lit name pty pappstr)) = printResult (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
-  displayResult (Edited (MadeWith lit wapp)) = printResult $ showSep "\n" (map (relit lit) wapp)
-  displayResult (Edited (MadeCase lit cstr)) = printResult $ showSep "\n" (map (relit lit) cstr)
-  displayResult (OptionsSet opts) = printResult !(render (vsep (pretty <$> opts)))
+  displayResult (Edited (DisplayEdit xs)) = printResult $ pretty $ showSep "\n" xs
+  displayResult (Edited (EditError x)) = printError $ pretty x
+  displayResult (Edited (MadeLemma lit name pty pappstr)) = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
+  displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
+  displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)
+  displayResult (OptionsSet opts) = printResult (vsep (pretty <$> opts))
   displayResult _ = pure ()
 
   export
@@ -1019,7 +994,5 @@ mutual
          {auto s : Ref Syn SyntaxInfo} ->
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
-  displayErrors (ErrorLoadingFile x err) = do
-    msg <- render (reflow "File error in" <++> pretty x <+> colon <++> pretty (show err))
-    printError msg
+  displayErrors (ErrorLoadingFile x err) = printError (reflow "File error in" <++> pretty x <+> colon <++> pretty (show err))
   displayErrors _ = pure ()

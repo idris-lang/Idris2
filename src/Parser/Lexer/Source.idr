@@ -6,6 +6,8 @@ import Data.List1
 import Data.List
 import Data.Strings
 import Data.String.Extra
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import Utils.Hex
 import Utils.Octal
@@ -58,6 +60,29 @@ Show Token where
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
   show (Unrecognised x) = "Unrecognised " ++ x
+
+export
+Pretty Token where
+  -- Literals
+  pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
+  pretty (DoubleLit x) = pretty "double" <++> pretty x
+  pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  -- Identifiers
+  pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
+  pretty (Ident x) = pretty "identifier" <++> pretty x
+  pretty (DotSepIdent xs) = reflow "namespaced identifier" <++> concatWith (surround dot) (pretty <$> reverse xs)
+  pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
+  pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Comments
+  pretty (Comment _) = pretty "comment"
+  pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
+  -- Special
+  pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
+  pretty EndInput = reflow "end of input"
+  pretty (Keyword x) = pretty x
+  pretty (Pragma x) = pretty "pragma" <++> pretty x
+  pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
 
 mutual
   ||| The mutually defined functions represent different states in a
