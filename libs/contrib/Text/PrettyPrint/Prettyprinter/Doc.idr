@@ -2,7 +2,7 @@ module Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import public Data.Strings
 import Data.String.Extra
 
 %default total
@@ -359,6 +359,10 @@ interface Pretty a where
 export
 Pretty String where
   pretty = vsep . map unsafeTextWithoutNewLines . lines
+
+public export
+IsString (Doc ann) where
+  fromString = pretty
 
 ||| Variant of `encloseSep` with braces and comma as separator.
 export
