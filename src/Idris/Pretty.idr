@@ -168,7 +168,7 @@ mutual
       go d (PLet _ rig n ty val sc alts) =
         let_ <++> prettyRig rig <+> go d n <++> colon <++> go d ty <++> equals <++> go d val <+> hang 4 (fillSep (prettyAlt <$> alts)) <++> in_ <++> go d sc
       go d (PCase _ tm cs) =
-        case_ <+> go d tm <++> of_ <++> braces (concatWith (surround semi) (prettyCase <$> cs))
+        case_ <++> go d tm <++> of_ <++> braces (concatWith (surround semi) (prettyCase <$> cs))
       go d (PLocal _ ds sc) =
         let_ <++> braces (angles (angles (pretty "definitions"))) <++> in_ <++> go d sc
       go d (PUpdate _ fs) =
