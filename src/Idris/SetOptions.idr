@@ -93,6 +93,9 @@ preOptions (Directory d :: opts)
 preOptions (Timing :: opts)
     = do setLogTimings True
          preOptions opts
+preOptions (RuntimePerf :: opts)
+    = do setSession (record { runtimePerf = True } !getSession)
+         preOptions opts
 preOptions (DebugElabCheck :: opts)
     = do setDebugElabCheck True
          preOptions opts

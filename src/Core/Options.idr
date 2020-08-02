@@ -126,6 +126,7 @@ record Session where
   directives : List String
   logLevel : Nat
   logTimings : Bool
+  runtimePerf : Bool -- Add runtime performanc metrics to output program
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
@@ -176,7 +177,7 @@ defaultPPrint = MkPPOpts False True False
 export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] 0
-                               False False Nothing Nothing
+                               False False False Nothing Nothing
                                Nothing Nothing
 
 export

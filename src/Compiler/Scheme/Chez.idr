@@ -380,6 +380,10 @@ compileToSS c appdir tm outfile
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
+         let main = if defs.options.session.runtimePerf
+                      then "(time " ++ main ++ ")"
+                      else main
+
          chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
          let scm = schHeader chez (map snd libs) ++
