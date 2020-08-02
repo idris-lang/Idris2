@@ -39,6 +39,7 @@ import IdrisPaths
 
 %default covering
 
+public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
@@ -92,6 +93,7 @@ Show PkgDesc where
              maybe "" (\m => "Preclean: " ++ snd m ++ "\n") (preclean pkg) ++
              maybe "" (\m => "Postclean: " ++ snd m ++ "\n") (postclean pkg)
 
+public export
 initPkgDesc : String -> PkgDesc
 initPkgDesc pname
     = MkPkgDesc pname "0" "Anonymous" Nothing Nothing
@@ -178,6 +180,7 @@ field fname
              end <- location
              pure $ fieldConstructor (MkFC fname start end) str
 
+public export
 parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
     = do exactProperty "package"
@@ -221,6 +224,7 @@ addField (PPostinstall fc e) pkg = pure $ record { postinstall = Just (fc, e) } 
 addField (PPreclean fc e)    pkg = pure $ record { preclean = Just (fc, e) } pkg
 addField (PPostclean fc e)   pkg = pure $ record { postclean = Just (fc, e) } pkg
 
+public export
 addFields : {auto c : Ref Ctxt Defs} ->
             List DescField -> PkgDesc -> Core PkgDesc
 addFields xs desc = do p <- newRef ParsedMods []
@@ -473,6 +477,7 @@ clean pkg opts -- `opts` is not used but might be in the future
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
 
+public export
 getParseErrorLoc : String -> ParseError Token -> FC
 getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
 getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
