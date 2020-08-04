@@ -15,10 +15,10 @@ export
 match : (Eq k, TokenKind k) =>
         (kind : k) ->
         Grammar (Token k) True (TokType kind)
-match kind = terminal "Unrecognised input" $
-  \(Tok kind' text) => if kind' == kind
-                          then Just $ tokValue kind text
-                          else Nothing
+match k = terminal "Unrecognised input" $
+    \t => if t.val.kind == k
+             then Just $ tokValue k t.val.text
+             else Nothing
 
 ||| Optionally parse a thing, with a default value if the grammar doesn't
 ||| match. May match the empty input.

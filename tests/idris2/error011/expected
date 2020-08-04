@@ -1,10 +1,10 @@
 1/1: Building ConstructorDuplicate (ConstructorDuplicate.idr)
 Error: Main.B is already defined.
 
-ConstructorDuplicate.idr:1:14--3:1
+ConstructorDuplicate.idr:1:14--1:15
+   |
  1 | data A = B | B
- 2 | 
- 3 | data C : Type -> Type where
+   |              ^
 
 Error: Main.D is already defined.
 

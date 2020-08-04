@@ -44,9 +44,9 @@ Pretty tok => Pretty (ParseError tok) where
       = reflow "Lit error(s) at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
 
 export
-toGenericParsingError : ParsingError (TokenData token) -> ParseError token
+toGenericParsingError : ParsingError token -> ParseError token
 toGenericParsingError (Error err [])      = ParseFail err Nothing []
-toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (line t, col t)) (map tok (t::ts))
+toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (t.startLine, t.startCol)) (map val (t :: ts))
 
 export
 hex : Char -> Maybe Int

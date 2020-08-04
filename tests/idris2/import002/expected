@@ -10,8 +10,9 @@ Test.idr:5:9--5:12
 
 Error: No type declaration for Test.thing.
 
-Test.idr:6:1--8:1
+Test.idr:6:1--6:28
+   |
  6 | thing x = mult x (plus x x)
- 7 | 
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Test> Bye for now!

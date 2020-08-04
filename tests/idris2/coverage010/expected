@@ -1,7 +1,7 @@
 1/1: Building casetot (casetot.idr)
 Error: main is not covering.
 
-casetot.idr:12:1--13:1
+casetot.idr:12:1--13:5
  12 | main : IO ()
  13 | main = do
 

@@ -15,10 +15,10 @@ Holes.idr:7:26--7:31
 
 Error: No type declaration for Main.Weird.
 
-Holes.idr:8:1--10:1
- 08 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
- 09 | 
- 10 | f : Bool -> Nat
+Holes.idr:8:1--8:41
+   |
+ 8 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing type of f. Undefined name Bool. 
 
@@ -29,9 +29,10 @@ Holes.idr:10:5--10:9
 
 Error: No type declaration for Main.f.
 
-Holes.idr:11:1--12:1
+Holes.idr:11:1--11:11
+    |
  11 | f True = 0
- 12 | f True = ?help
+    | ^^^^^^^^^^
 
 Main> Error: Undefined name help. 
 
