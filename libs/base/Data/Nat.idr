@@ -583,3 +583,13 @@ export
 sucMinR : (l : Nat) -> minimum l (S l) = l
 sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
+
+-- Algebra -----------------------------
+
+public export
+Semigroup Nat where
+  (<+>) = plus
+
+public export
+Monoid Nat where
+  neutral = Z

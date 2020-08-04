@@ -1,6 +1,5 @@
 module Control.Algebra.Laws
 
-import Prelude
 import Control.Algebra
 
 %default total
