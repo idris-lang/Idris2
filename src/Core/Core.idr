@@ -4,6 +4,7 @@ import Core.Env
 import Core.TT
 
 import Data.List
+import Data.List1
 import Data.Vect
 import Parser.Source
 
@@ -475,6 +476,10 @@ traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
 export
+traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
+traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
+
+export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
@@ -490,6 +495,12 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
+
+export
+traverseList1_ : (a -> Core b) -> List1 a -> Core ()
+traverseList1_ f (x :: xs) = do
+  f x
+  traverse_ f xs
 
 namespace PiInfo
   export

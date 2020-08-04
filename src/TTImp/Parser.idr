@@ -10,6 +10,7 @@ import TTImp.TTImp
 import public Text.Parser
 import        Data.List
 import        Data.List.Views
+import        Data.List1
 import        Data.Strings
 
 topDecl : FileName -> IndentInfo -> Rule ImpDecl
@@ -645,7 +646,7 @@ namespaceDecl
     = do keyword "namespace"
          commit
          ns <- namespacedIdent
-         pure ns
+         pure (List1.toList ns)
 
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents

@@ -4,6 +4,7 @@ import public Parser.Lexer.Package
 import public Parser.Rule.Common
 
 import Data.List
+import Data.List1
 
 %default total
 
@@ -46,14 +47,14 @@ stringLit = terminal "Expected string"
                                  _ => Nothing)
 
 export
-namespacedIdent : Rule (List String)
+namespacedIdent : Rule (List1 String)
 namespacedIdent = terminal "Expected namespaced identifier"
                            (\x => case tok x of
                                        DotSepIdent nsid => Just $ reverse nsid
                                        _ => Nothing)
 
 export
-moduleIdent : Rule (List String)
+moduleIdent : Rule (List1 String)
 moduleIdent = terminal "Expected module identifier"
                        (\x => case tok x of
                                    DotSepIdent m => Just $ reverse m

@@ -20,6 +20,7 @@ import Syntax.PreorderReasoning
 import Syntax.WithProof
 
 import Data.List
+import Data.List1
 import Data.Vect
 import Data.Nat
 
@@ -118,14 +119,14 @@ break_ext : (p : a -> Bool) -> (xs : List a) ->
   Data.List.break p xs = Data.List.TailRec.break p xs
 break_ext p xs = span_ext (not . p) xs
 
-splitOnto : List (List a) -> (a -> Bool) -> List a -> List (List a)
+splitOnto : List (List a) -> (a -> Bool) -> List a -> List1 (List a)
 splitOnto acc p xs =
   case Data.List.break p xs of
     (chunk, []       ) => reverseOnto [chunk] acc
     (chunk, (c::rest)) => splitOnto (chunk::acc) p rest
 
 export
-split : (a -> Bool) -> List a -> List (List a)
+split : (a -> Bool) -> List a -> List1 (List a)
 split p xs = splitOnto [] p xs
 
 splitOnto_ext : (acc : List (List a)) -> (p : a -> Bool) -> (xs : List a) ->

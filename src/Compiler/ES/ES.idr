@@ -2,6 +2,7 @@ module Compiler.ES.ES
 
 import Compiler.ES.Imperative
 import Utils.Hex
+import Data.List1
 import Data.Strings
 import Data.SortedMap
 import Data.String.Extra
@@ -271,7 +272,7 @@ makeForeign n x =
       "lambdaRequire" =>
         do
           let (libs, def_) = readCCPart def
-          traverse addRequireToPreamble (split (==',') libs)
+          traverseList1 addRequireToPreamble (split (==',') libs)
           pure $ "const " ++ jsName n ++ " = (" ++ def_ ++ ")\n"
       "support" =>
         do

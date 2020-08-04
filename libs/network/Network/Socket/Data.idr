@@ -6,6 +6,7 @@
 module Network.Socket.Data
 
 import Data.List
+import Data.List1
 import Data.Strings
 
 -- ------------------------------------------------------------ [ Type Aliases ]
@@ -194,7 +195,7 @@ parseIPv4 str =
     toInt : String -> Int
     toInt s = fromInteger $ toInt' s
 
-    splitted : List Int
+    splitted : List1 Int
     splitted = map toInt (split (\c => c == '.') str)
 
 -- --------------------------------------------------------- [ UDP Information ]
