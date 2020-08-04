@@ -52,9 +52,9 @@ uniqueRHS c = pure c
 expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
-               FC -> Int -> ImpClause ->
+               FC -> SearchOpts -> Int -> ImpClause ->
                Core (Search (List ImpClause))
-expandClause loc n c
+expandClause loc opts n c
     = do c <- uniqueRHS c
          Right clause <- checkClause linear Private False n [] (MkNested []) [] c
             | Left err => noResult -- TODO: impossible clause, do something
@@ -67,15 +67,11 @@ expandClause loc n c
          Just (Hole locs _) <- lookupDefExact (Resolved fn) (gamma defs)
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          log 10 $ "Expression search for " ++ show (i, fn)
-         rhs' <- exprSearch loc (Resolved fn) []
+         rhs' <- exprSearchOpts opts loc (Resolved fn) []
          traverse (\rhs' =>
-            do defs <- get Ctxt
-               rhsnf <- normaliseHoles defs [] rhs'
-               let (_ ** (env', rhsenv)) = dropLams locs [] rhsnf
-
-               rhsraw <- unelab env' rhsenv
+            do let rhsraw = dropLams locs rhs'
                logTermNF 5 "Got clause" env lhs
-               logTermNF 5 "        = " env' rhsenv
+               log 5 $ "        = " ++ show rhsraw
                pure [updateRHS c rhsraw]) rhs'
   where
     updateRHS : ImpClause -> RawImp -> ImpClause
@@ -84,12 +80,10 @@ expandClause loc n c
     updateRHS (WithClause fc lhs wval flags cs) rhs = WithClause fc lhs wval flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
-    dropLams : {vars : _} ->
-               Nat -> Env Term vars -> Term vars ->
-               (vars' ** (Env Term vars', Term vars'))
-    dropLams Z env tm = (_ ** (env, tm))
-    dropLams (S k) env (Bind _ _ b sc) = dropLams k (b :: env) sc
-    dropLams _ env tm = (_ ** (env, tm))
+    dropLams : Nat -> RawImp -> RawImp
+    dropLams Z tm = tm
+    dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
+    dropLams _ tm = tm
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
@@ -139,15 +133,18 @@ trySplit loc lhsraw lhs rhs n
 generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Int -> ImpClause ->
+                 FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
-generateSplits loc fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc fn (WithClause fc lhs wval flags cs) = pure []
-generateSplits {c} {m} {u} loc fn (PatClause fc lhs rhs)
+generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
+generateSplits loc opts fn (WithClause fc lhs wval flags cs) = pure []
+generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
                          (IBindHere loc PATTERN lhs) Nothing
-         traverse (trySplit fc lhs lhstm rhs) (splittableNames lhs)
+         let splitnames =
+                 if ltor opts then splittableNames lhs
+                              else reverse (splittableNames lhs)
+         traverse (trySplit fc lhs lhstm rhs) splitnames
 
 collectClauses : {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
@@ -162,31 +159,68 @@ mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Int ->
+                 FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
                  Core (Search (List ImpClause))
-  tryAllSplits loc n [] = noResult
-  tryAllSplits loc n ((x, []) :: rest)
-      = tryAllSplits loc n rest
-  tryAllSplits loc n ((x, cs) :: rest)
+  tryAllSplits loc opts n [] = noResult
+  tryAllSplits loc opts n ((x, []) :: rest)
+      = tryAllSplits loc opts n rest
+  tryAllSplits loc opts n ((x, cs) :: rest)
       = do log 5 $ "Splitting on " ++ show x
-           trySearch (do cs' <- traverse (mkSplits loc n) cs
+           trySearch (do cs' <- traverse (mkSplits loc opts n) cs
                          collectClauses cs')
-                     (tryAllSplits loc n rest)
+                     (tryAllSplits loc opts n rest)
 
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             FC -> Int -> ImpClause ->
+             FC -> SearchOpts -> Int -> ImpClause ->
              Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
   -- variables and try all of the resulting clauses
-  mkSplits loc n c
+  mkSplits loc opts n c
       = trySearch
-          (expandClause loc n c)
-          (do cs <- generateSplits loc n c
+          (if mustSplit opts
+              then noResult
+              else expandClause loc opts n c)
+          (do cs <- generateSplits loc opts n c
               log 5 $ "Splits: " ++ show cs
-              tryAllSplits loc n cs)
+              tryAllSplits loc (record { mustSplit = False,
+                                         doneSplit = True } opts) n cs)
+
+export
+makeDefFromType : {auto c : Ref Ctxt Defs} ->
+                  {auto m : Ref MD Metadata} ->
+                  {auto u : Ref UST UState} ->
+                  FC -> 
+                  SearchOpts ->
+                  Name -> -- function name to generate
+                  Nat -> -- number of arguments
+                  ClosedTerm -> -- type of function
+                  Core (Search (FC, List ImpClause))
+makeDefFromType loc opts n envlen ty
+    = tryUnify
+         (do defs <- branch
+             meta <- get MD
+             ust <- get UST
+             argns <- getEnvArgNames defs envlen !(nf defs [] ty)
+             -- Need to add implicit patterns for the outer environment.
+             -- We won't try splitting on these
+             let pre_env = replicate envlen (Implicit loc True)
+
+             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             let initcs = PatClause loc
+                                (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
+                                (IHole loc rhshole)
+             let Just nidx = getNameID n (gamma defs)
+                 | Nothing => throw (UndefinedName loc n)
+             cs' <- mkSplits loc opts nidx initcs
+             -- restore the global state, given that we've fiddled with it a lot!
+             put Ctxt defs
+             put MD meta
+             put UST ust
+             pure (map (\c => (loc, c)) cs'))
+         noResult
 
 export
 makeDef : {auto c : Ref Ctxt Defs} ->
@@ -199,28 +233,9 @@ makeDef p n
             | Nothing => noResult
          n <- getFullName nidx
          logTerm 5 ("Searching for " ++ show n) ty
-         tryUnify
-           (do defs <- branch
-               meta <- get MD
-               ust <- get UST
-               argns <- getEnvArgNames defs envlen !(nf defs [] ty)
-               -- Need to add implicit patterns for the outer environment.
-               -- We won't try splitting on these
-               let pre_env = replicate envlen (Implicit loc True)
-
-               rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
-               let initcs = PatClause loc
-                                  (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
-                                  (IHole loc rhshole)
-               let Just nidx = getNameID n (gamma defs)
-                   | Nothing => throw (UndefinedName loc n)
-               cs' <- mkSplits loc nidx initcs
-               -- restore the global state, given that we've fiddled with it a lot!
-               put Ctxt defs
-               put MD meta
-               put UST ust
-               pure (map (\c => (loc, c)) cs'))
-           noResult
+         let opts = record { genExpr = Just (makeDefFromType loc) }
+                           (initSearchOpts True 5)
+         makeDefFromType loc opts n envlen ty
 
 -- Given a clause, return the bindable names, and the ones that were used in
 -- the rhs

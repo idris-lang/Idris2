@@ -58,7 +58,7 @@ exposes the function `mainWithCodegens` that takes a list of codegens. The
 feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
 * New code generators `node` and `javascript`.
 
-REPL changes:
+REPL/IDE mode changes:
 
 * Implemented `:module` command, to load a module during a REPL session.
 * Implemented `:doc`, which displays documentation for a name.
@@ -71,6 +71,8 @@ REPL changes:
   next type correct implementation
   + Correspondingly, added the IDE mode command `generate-def-next` (which takes
     no arguments)
+* Improved program search to allow deconstructing intermediate values, and in
+  simple cases, the result of recursive calls.
 
 Changes since Idris 2 v0.1.0
 ----------------------------
