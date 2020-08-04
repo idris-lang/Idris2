@@ -6,6 +6,7 @@ import Data.List1
 import Data.List
 import Data.Strings
 import Data.String.Extra
+import public Text.Bounded
 import Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Util
 
@@ -71,7 +72,7 @@ Pretty Token where
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
-  pretty (DotSepIdent xs) = reflow "namespaced identifier" <++> concatWith (surround dot) (pretty <$> reverse xs)
+  pretty (DotSepIdent xs) = reflow "namespaced identifier" <++> concatWith (surround dot) (pretty <$> reverse (List1.toList xs))
   pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
   -- Comments
@@ -251,21 +252,21 @@ rawTokens =
                              ns      => DotSepIdent ns
 
 export
-lexTo : (TokenData Token -> Bool) ->
-        String -> Either (Int, Int, String) (List (TokenData Token))
+lexTo : (WithBounds Token -> Bool) ->
+        String -> Either (Int, Int, String) (List (WithBounds Token))
 lexTo pred str
     = case lexTo pred rawTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c l c EndInput])
+                                      [MkBounded EndInput False l c l c])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
-      notComment t = case tok t of
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
                           Comment _ => False
                           _ => True
 
 export
-lex : String -> Either (Int, Int, String) (List (TokenData Token))
+lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex = lexTo (const False)

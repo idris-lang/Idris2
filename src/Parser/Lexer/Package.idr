@@ -3,6 +3,7 @@ module Parser.Lexer.Package
 import public Parser.Lexer.Common
 import public Text.Lexer
 import public Text.Parser
+import public Text.Bounded
 
 import Data.List
 import Data.List1
@@ -53,11 +54,11 @@ rawTokens =
     splitNamespace = Data.Strings.split (== '.')
 
 export
-lex : String -> Either (Int, Int, String) (List (TokenData Token))
+lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex str =
   case lexTo (const False) rawTokens str of
        (tokenData, (l, c, "")) =>
-         Right $ (filter (useful . tok) tokenData) ++  [MkToken l c l c EndOfInput]
+         Right $ (filter (useful . val) tokenData) ++ [MkBounded EndOfInput False l c l c]
        (_, fail) => Left fail
   where
     useful : Token -> Bool

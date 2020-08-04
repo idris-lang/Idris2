@@ -1,6 +1,6 @@
 1/1: Building Eta (Eta.idr)
 Error: While processing right hand side of etaBad. When
-unifying \x => (\y => (MkTest ?_ ?_)) = \x => (\y => (MkTest ?_ ?_)) and MkTest = \x => (\y => (MkTest ?_ ?_)).
+unifying \x => \y => MkTest ?_ ?_ = \x => \y => MkTest ?_ ?_ and MkTest = \x => \y => MkTest ?_ ?_.
 Mismatch between: Nat and Int.
 
 Eta.idr:14:10--14:14
@@ -9,7 +9,7 @@ Eta.idr:14:10--14:14
     |          ^^^^
 
 1/1: Building Eta2 (Eta2.idr)
-Error: While processing right hand side of test. When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_).
+Error: While processing right hand side of test. When unifying \x => S ?_ = \x => S ?_ and S = \x => S ?_.
 Mismatch between: a and Nat.
 
 Eta2.idr:2:8--2:12
@@ -17,7 +17,7 @@ Eta2.idr:2:8--2:12
  2 | test = Refl
    |        ^^^^
 
-Error: While processing right hand side of test2. When unifying \x => (S ?_) = \x => (S ?_) and S = \x => (S ?_).
+Error: While processing right hand side of test2. When unifying \x => S ?_ = \x => S ?_ and S = \x => S ?_.
 Mismatch between: a and Nat.
 
 Eta2.idr:5:44--5:48

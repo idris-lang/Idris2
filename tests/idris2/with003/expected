@@ -45,10 +45,10 @@ Mismatch between: ?_ -> IO () and IO ?b.
 
 Main> Error: Can't find an implementation for Num ().
 
-(interactive):1:61--1:66
+(interactive):1:61--1:65
    |
  1 | with Prelude.(>>=) do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-   |                                                             ^^^^^
+   |                                                             ^^^^
 
 Main> Error: Ambiguous elaboration. Possible results:
     PrimIO.Nil

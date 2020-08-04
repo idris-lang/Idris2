@@ -30,17 +30,17 @@ ideTokens =
      (identAllowDashes, \x => Ident x),
      (space, Comment)]
 
-idelex : String -> Either (Int, Int, String) (List (TokenData Token))
+idelex : String -> Either (Int, Int, String) (List (WithBounds Token))
 idelex str
     = case lex ideTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c l c EndInput])
+                                      [MkBounded EndInput False l c l c])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
-      notComment t = case tok t of
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
                           Comment _ => False
                           _ => True
 
@@ -62,7 +62,7 @@ sexp
          symbol ")"
          pure (SExpList xs)
 
-ideParser : {e : _} -> String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
+ideParser : {e : _} -> String -> Grammar Token e ty -> Either (ParseError Token) ty
 ideParser str p
     = do toks   <- mapError LexFail $ idelex str
          parsed <- mapError toGenericParsingError $ parse p toks
