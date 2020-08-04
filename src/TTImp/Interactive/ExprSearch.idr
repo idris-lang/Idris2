@@ -35,6 +35,7 @@ import Data.List
 
 -- Data for building recursive calls - the function name, and the structure
 -- of the LHS. Only recursive calls with a different structure are okay.
+public export -- to keep Idris2-boot happy!
 record RecData where
   constructor MkRecData
   {vars : List Name}
