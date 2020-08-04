@@ -404,7 +404,8 @@ tryRecursive fc rig opts env ty topty rdata
                                      env !(nf defs env ty)
                                      topty (recname rdata, def)
                    defs <- get Ctxt
-                   filterS (structDiffTm (lhsapp rdata)) res
+                   res' <- traverse (\ (t, ds) => pure (!(toFullNames t), ds)) res
+                   filterS (structDiffTm (lhsapp rdata)) res'
   where
     mutual
       -- A fairly simple superficialy syntactic check to make sure that
@@ -821,9 +822,11 @@ search fc rig opts topty n_in
                                [res] => pure $ Just res
                                _ => pure Nothing
 
-getLHSData : Defs -> Maybe ClosedTerm -> Core (Maybe RecData)
+getLHSData : {auto c : Ref Ctxt Defs} ->
+             Defs -> Maybe ClosedTerm -> Core (Maybe RecData)
 getLHSData defs Nothing = pure Nothing
-getLHSData defs (Just tm) = pure $ getLHS !(normaliseHoles defs [] tm)
+getLHSData defs (Just tm)
+    = pure $ getLHS !(toFullNames !(normaliseHoles defs [] tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
     getLHS (Bind _ _ (PVar _ _ _) sc) = getLHS sc

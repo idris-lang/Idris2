@@ -34,5 +34,5 @@ Main> ys
 Main> []
 Main> lappend2 ys ys
 Main> lappend2 ys []
-Main> lappend2 [] ys
+Main> No more results
 Main> Bye for now!

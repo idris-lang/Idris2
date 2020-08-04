@@ -632,8 +632,7 @@ export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
-                | Nothing => do coreLift $ putStrLn $ "Missing name! " ++ show i
-                                pure (Ref fc x (Resolved i))
+                | Nothing => pure (Ref fc x (Resolved i))
            pure (Ref fc x (fullname gdef))
   full gam (Meta fc x y xs)
       = pure (Meta fc x y !(traverse (full gam) xs))
