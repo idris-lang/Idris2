@@ -764,7 +764,7 @@ mutual
   unifyHoleApp swap mode loc env mname mref margs margs' (NDCon nfc n t a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
-           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n t a) args'
+           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NDCon nfc n t a) args'
   unifyHoleApp swap mode loc env mname mref margs margs' (NApp nfc (NLocal r idx p) args')
       = unifyInvertible swap (lower mode) loc env mname mref margs margs' Nothing
                         (NApp nfc (NLocal r idx p)) args'
