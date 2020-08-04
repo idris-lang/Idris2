@@ -359,7 +359,7 @@ startChezWinSh chez appdir target = unlines
     , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
