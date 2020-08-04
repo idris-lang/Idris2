@@ -296,7 +296,7 @@ addMadeCase lit wapp line content
 nextProofSearch : {auto c : Ref Ctxt Defs} ->
                   {auto u : Ref UST UState} ->
                   {auto o : Ref ROpts REPLOpts} ->
-                  Core (Maybe (Name, ClosedTerm))
+                  Core (Maybe (Name, RawImp))
 nextProofSearch
     = do opts <- get ROpts
          let Just (n, res) = psResult opts
@@ -326,12 +326,17 @@ nextGenDef reject
               Z => pure (Just (line, res))
               S k => nextGenDef k
 
-dropLams : {vars : _} ->
-           Nat -> Env Term vars -> Term vars ->
-           (vars' ** (Env Term vars', Term vars'))
-dropLams Z env tm = (_ ** (env, tm))
-dropLams (S k) env (Bind _ _ b sc) = dropLams k (b :: env) sc
-dropLams _ env tm = (_ ** (env, tm))
+dropLams : Nat -> RawImp -> RawImp
+dropLams Z tm = tm
+dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
+dropLams _ tm = tm
+
+dropLamsTm : {vars : _} ->
+             Nat -> Env Term vars -> Term vars ->
+             (vars' ** (Env Term vars', Term vars'))
+dropLamsTm Z env tm = (_ ** (env, tm))
+dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
+dropLamsTm _ env tm = (_ ** (env, tm))
 
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -380,11 +385,10 @@ processEdit (ExprSearch upd line name hints)
                      ropts <- get ROpts
                      put ROpts (record { psResult = Just (name, searchtm) } ropts)
                      defs <- get Ctxt
-                     Just (_, tm) <- nextProofSearch
+                     Just (_, restm) <- nextProofSearch
                           | Nothing => pure $ EditError "No search results"
-                     restm <- normaliseHoles defs [] tm
-                     let (_ ** (env, tm')) = dropLams locs [] restm
-                     itm <- resugar env tm'
+                     let tm' = dropLams locs restm
+                     itm <- pterm tm'
                      let res = show (the PTerm (if brack
                                                    then addBracket replFC itm
                                                    else itm))
@@ -395,7 +399,7 @@ processEdit (ExprSearch upd line name hints)
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLams locs [] tm
+                          do let (_ ** (env, tm')) = dropLamsTm locs [] tm
                              itm <- resugar env tm'
                              let res = show (the PTerm (if brack
                                                 then addBracket replFC itm
@@ -408,14 +412,13 @@ processEdit (ExprSearch upd line name hints)
 processEdit ExprSearchNext
     = do defs <- get Ctxt
          syn <- get Syn
-         Just (name, tm) <- nextProofSearch
+         Just (name, restm) <- nextProofSearch
               | Nothing => pure $ EditError "No more results"
          [(n, nidx, Hole locs _)] <- lookupDefName name (gamma defs)
               | _ => pure $ EditError "Not a searchable hole"
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
-         restm <- normaliseHoles defs [] tm
-         let (_ ** (env, tm')) = dropLams locs [] restm
-         itm <- resugar env tm'
+         let tm' = dropLams locs restm
+         itm <- pterm tm'
          let res = show (the PTerm (if brack
                                        then addBracket replFC itm
                                        else itm))

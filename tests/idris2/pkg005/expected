@@ -1,7 +1,7 @@
 1/1: Building Foo (Foo.idr)
 Foo> Foo.hi : IO String
-Foo> MkIO (\1 w => (MkIORes "Hi!" w))
+Foo> MkIO (\1 w => MkIORes "Hi!" w)
 Foo> Bye for now!
 Foo> Foo.hi : IO String
-Foo> MkIO (\1 w => (MkIORes "Hi!" w))
+Foo> MkIO (\1 w => MkIORes "Hi!" w)
 Foo> Bye for now!

@@ -77,9 +77,7 @@ process (ExprSearch n_in)
               | [] => throw (UndefinedName toplevelFC n_in)
               | ns => throw (AmbiguousName toplevelFC (map fst ns))
          results <- exprSearchN toplevelFC 1 n []
-         defs <- get Ctxt
-         defnfs <- traverse (normaliseHoles defs []) results
-         traverse_ (\d => coreLift (printLn !(toFullNames d))) defnfs
+         traverse_ (\d => coreLift (printLn d)) results
          pure True
 process (GenerateDef line name)
     = do defs <- get Ctxt
