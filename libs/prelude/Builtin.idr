@@ -188,7 +188,7 @@ force x = Force x
 
 ||| Interface for types that can be constructed from string literals.
 public export
-interface IsString ty where
+interface FromString ty where
   ||| Conversion from String.
   fromString : String -> ty
 
@@ -196,11 +196,11 @@ interface IsString ty where
 
 %inline
 public export
-IsString String where
+FromString String where
   fromString s = s
 
 %defaulthint
 %inline
 public export
-defaultString : IsString String
+defaultString : FromString String
 defaultString = %search

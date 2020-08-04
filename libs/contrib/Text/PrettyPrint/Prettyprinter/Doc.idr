@@ -361,7 +361,7 @@ Pretty String where
   pretty = vsep . map unsafeTextWithoutNewLines . lines
 
 public export
-IsString (Doc ann) where
+FromString (Doc ann) where
   fromString = pretty
 
 ||| Variant of `encloseSep` with braces and comma as separator.
