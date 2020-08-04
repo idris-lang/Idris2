@@ -9,6 +9,7 @@ import        TTImp.TTImp
 import public Text.Parser
 import        Data.List
 import        Data.List.Views
+import        Data.List1
 import        Data.Maybe
 import        Data.Strings
 
@@ -1185,7 +1186,7 @@ fix
   <|> do keyword "infix"; pure Infix
   <|> do keyword "prefix"; pure Prefix
 
-namespaceHead : Rule (List String)
+namespaceHead : Rule (List1 String)
 namespaceHead
     = do keyword "namespace"
          commit
@@ -1200,7 +1201,7 @@ namespaceDecl fname indents
          ns    <- namespaceHead
          end   <- location
          ds    <- blockAfter col (topDecl fname)
-         pure (PNamespace (MkFC fname start end) ns (concat ds))
+         pure (PNamespace (MkFC fname start end) (List1.toList ns) (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl
 transformDecl fname indents
@@ -1614,7 +1615,7 @@ import_ fname indents
                                namespacedIdent)
          end <- location
          atEnd indents
-         pure (MkImport (MkFC fname start end) reexp ns nsAs)
+         pure (MkImport (MkFC fname start end) reexp (List1.toList ns) (List1.toList nsAs))
 
 export
 prog : FileName -> SourceEmptyRule Module
@@ -1628,7 +1629,7 @@ prog fname
          imports <- block (import_ fname)
          ds      <- block (topDecl fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports doc (collectDefs (concat ds)))
+                        (List1.toList nspace) imports doc (collectDefs (concat ds)))
 
 export
 progHdr : FileName -> SourceEmptyRule Module
@@ -1641,7 +1642,7 @@ progHdr fname
          end     <- location
          imports <- block (import_ fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports doc [])
+                        (List1.toList nspace) imports doc [])
 
 parseMode : Rule REPLEval
 parseMode
@@ -1854,7 +1855,7 @@ moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       n <- moduleIdent
-      pure (command n)
+      pure (command (List1.toList n))
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
 exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)

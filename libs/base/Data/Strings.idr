@@ -1,6 +1,7 @@
 module Data.Strings
 
 import Data.List
+import Data.List1
 
 export
 singleton : Char -> String
@@ -152,7 +153,7 @@ break p = span (not . p)
 ||| split (== '.') ".AB.C..D"
 ||| ```
 public export
-split : (Char -> Bool) -> String -> List String
+split : (Char -> Bool) -> String -> List1 String
 split p xs = map pack (split p (unpack xs))
 
 export
@@ -224,15 +225,15 @@ parseNumWithoutSign (c :: cs) acc =
 ||| ```
 public export
 parsePositive : Num a => String -> Maybe a
-parsePositive s = parsePosTrimmed (trim s) 
+parsePositive s = parsePosTrimmed (trim s)
   where
     parsePosTrimmed : String -> Maybe a
     parsePosTrimmed s with (strM s)
       parsePosTrimmed ""             | StrNil         = Nothing
-      parsePosTrimmed (strCons '+' xs) | (StrCons '+' xs) = 
+      parsePosTrimmed (strCons '+' xs) | (StrCons '+' xs) =
         map fromInteger (parseNumWithoutSign (unpack xs) 0)
-      parsePosTrimmed (strCons x xs) | (StrCons x xs) = 
-        if (x >= '0' && x <= '9') 
+      parsePosTrimmed (strCons x xs) | (StrCons x xs) =
+        if (x >= '0' && x <= '9')
         then  map fromInteger (parseNumWithoutSign (unpack xs)  (cast (ord x - ord '0')))
         else Nothing
 
@@ -246,15 +247,15 @@ parsePositive s = parsePosTrimmed (trim s)
 ||| ```
 public export
 parseInteger : (Num a, Neg a) => String -> Maybe a
-parseInteger s = parseIntTrimmed (trim s) 
+parseInteger s = parseIntTrimmed (trim s)
   where
     parseIntTrimmed : String -> Maybe a
     parseIntTrimmed s with (strM s)
       parseIntTrimmed ""             | StrNil         = Nothing
-      parseIntTrimmed (strCons x xs) | (StrCons x xs) = 
-        if (x == '-') 
+      parseIntTrimmed (strCons x xs) | (StrCons x xs) =
+        if (x == '-')
           then map (\y => negate (fromInteger y)) (parseNumWithoutSign (unpack xs) 0)
-          else if (x == '+') 
+          else if (x == '+')
             then map fromInteger (parseNumWithoutSign (unpack xs) (cast {from=Int} 0))
             else if (x >= '0' && x <= '9')
             then map fromInteger (parseNumWithoutSign (unpack xs) (cast (ord x - ord '0')))

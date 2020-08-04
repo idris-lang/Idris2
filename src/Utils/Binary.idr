@@ -7,6 +7,7 @@ import Data.Buffer
 import public Data.IOArray
 import Data.List
 import Data.List.Elem
+import Data.List1
 import Data.Nat
 import Data.Vect
 
@@ -329,12 +330,12 @@ TTC a => TTC (List a) where
            traverse_ (toBuf b) xs
     where
       ||| Tail-recursive length as buffer sizes can get large
-      ||| 
+      |||
       ||| Once we port to Idris2, can use Data.List.TailRec.length instead
       length_aux : List a -> Int -> Int
       length_aux [] len = len
       length_aux (_::xs) len = length_aux xs (1 + len)
-      
+
       TailRec_length : List a -> Int
       TailRec_length xs = length_aux xs 0
 
@@ -347,6 +348,16 @@ TTC a => TTC (List a) where
       readElems xs (S k)
           = do val <- fromBuf b
                readElems (val :: xs) k
+
+export
+TTC a => TTC (List1 a) where
+  toBuf b xs = toBuf b (List1.toList xs)
+
+  fromBuf b = do
+    xs <- fromBuf b
+    case fromList xs of
+      Nothing => corrupt "List1"
+      Just xs => pure xs
 
 export
 {n : Nat} -> TTC a => TTC (Vect n a) where

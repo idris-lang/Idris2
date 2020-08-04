@@ -1,6 +1,7 @@
 module Data.List
 
 import Data.Nat
+import Data.List1
 
 public export
 isNil : List a -> Bool
@@ -188,11 +189,11 @@ break : (a -> Bool) -> List a -> (List a, List a)
 break p xs = span (not . p) xs
 
 public export
-split : (a -> Bool) -> List a -> List (List a)
+split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of
     (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: split p (assert_smaller xs rest)
+    (chunk, (c :: rest)) => chunk :: toList (split p (assert_smaller xs rest))
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
@@ -243,7 +244,7 @@ tails xs = xs :: case xs of
 ||| ```
 |||
 public export
-splitOn : Eq a => a -> List a -> List (List a)
+splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
 ||| Replaces all occurences of the first argument with the second argument in a list.
@@ -590,8 +591,8 @@ Uninhabited (Prelude.(::) x xs = []) where
 
 ||| (::) is injective
 export
-consInjective : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-                x :: xs = y :: ys -> (x = y, xs = ys)
+consInjective : forall x, xs, y, ys .
+                the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
 ||| The empty list is a right identity for append.
@@ -606,7 +607,7 @@ appendAssociative : (l, c, r : List a) -> l ++ (c ++ r) = (l ++ c) ++ r
 appendAssociative []      c r = Refl
 appendAssociative (_::xs) c r = rewrite appendAssociative xs c r in Refl
 
-revOnto : (xs, vs : _) -> reverseOnto xs vs = reverse vs ++ xs
+revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
 revOnto _ [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in

@@ -2,6 +2,7 @@ module Parser.Lexer.Source
 
 import public Parser.Lexer.Common
 
+import Data.List1
 import Data.List
 import Data.Strings
 import Data.String.Extra
@@ -22,8 +23,8 @@ data Token
   -- Identifiers
   | HoleIdent String
   | Ident String
-  | DotSepIdent (List String)  -- ident.ident
-  | DotIdent String            -- .ident
+  | DotSepIdent (List1 String)  -- ident.ident
+  | DotIdent String             -- .ident
   | Symbol String
   -- Comments
   | Comment String
@@ -45,7 +46,7 @@ Show Token where
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
-  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (reverse xs)
+  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (List1.toList $ reverse xs)
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
@@ -96,9 +97,9 @@ mutual
   ||| comment unless the series of uninterrupted dashes is ended with
   ||| a closing brace in which case it is a closing delimiter.
   doubleDash : (k : Nat) -> Lexer
-  doubleDash k = many (is '-') <+> choice      -- absorb all dashes
-    [ is '}' <+> toEndComment k                -- closing delimiter
-    , many (isNot '\n') <+> toEndComment (S k) -- line comment
+  doubleDash k = many (is '-') <+> choice {t = List} -- absorb all dashes
+    [ is '}' <+> toEndComment k                      -- closing delimiter
+    , many (isNot '\n') <+> toEndComment (S k)       -- line comment
     ]
 
 blockComment : Lexer
@@ -220,7 +221,7 @@ rawTokens =
     parseIdent x = if x `elem` keywords then Keyword x
                    else Ident x
     parseNamespace : String -> Token
-    parseNamespace ns = case Data.List.reverse . split (== '.') $ ns of
+    parseNamespace ns = case List1.reverse . split (== '.') $ ns of
                              [ident] => parseIdent ident
                              ns      => DotSepIdent ns
 

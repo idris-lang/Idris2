@@ -15,6 +15,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Data.List
+import Data.List1
 import Data.So
 import Data.Strings
 
@@ -40,7 +42,6 @@ import TTImp.ProcessDecls
 
 import Utils.Hex
 
-import Data.List
 import System
 import System.File
 
@@ -196,7 +197,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = replWrap $ Idris.REPL.process (Browse (reverse (split (=='.') ns)))
+    = replWrap $ Idris.REPL.process (Browse (List1.toList $ reverse (split (=='.') ns)))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm

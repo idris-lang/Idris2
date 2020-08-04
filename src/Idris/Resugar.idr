@@ -11,6 +11,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.StringMap
 
@@ -374,17 +375,17 @@ mutual
   toPRecord (MkImpRecord fc n ps con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
-                                      p' <- mapPiInfo p 
+                                      p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', Just con, fs')
-    where      
+    where
       mapPiInfo : PiInfo RawImp -> Core (PiInfo PTerm)
       mapPiInfo Explicit        = pure   Explicit
       mapPiInfo Implicit        = pure   Implicit
       mapPiInfo AutoImplicit    = pure   AutoImplicit
       mapPiInfo (DefImplicit p) = pure $ DefImplicit !(toPTerm startPrec p)
-  
+
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              FnOpt -> Core PFnOpt
