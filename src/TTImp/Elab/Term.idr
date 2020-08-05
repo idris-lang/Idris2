@@ -8,7 +8,7 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.Options
--- import Core.Reflect
+import Core.Reflect
 import Core.Unify
 import Core.TT
 import Core.Value
@@ -25,10 +25,11 @@ import TTImp.Elab.ImplicitBind
 import TTImp.Elab.Lazy
 import TTImp.Elab.Local
 import TTImp.Elab.Prim
--- import TTImp.Elab.Quote
+import TTImp.Elab.Quote
 import TTImp.Elab.Record
 import TTImp.Elab.Rewrite
--- import TTImp.Reflect
+import TTImp.Elab.RunElab
+import TTImp.Reflect
 import TTImp.TTImp
 
 %default covering
@@ -49,6 +50,8 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
         = pure (Just tm)
     bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ AutoImplicit _) sc)
         = pure (Just tm)
+    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ (DefImplicit _) _) sc)
+        = pure (Just tm)
     bindLamTm tm (Bind fc n (Pi c Implicit ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
@@ -59,6 +62,12 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
              pure $ Just (ILam fc c AutoImplicit (Just n') (Implicit fc False) sc')
+    bindLamTm tm (Bind fc n (Pi c (DefImplicit _) ty) sc)
+        = do n' <- genVarName (nameRoot n)
+             Just sc' <- bindLamTm tm sc
+                 | Nothing => pure Nothing
+             pure $ Just (ILam fc c (DefImplicit (Implicit fc False))
+                                    (Just n') (Implicit fc False) sc')
     bindLamTm tm exp
         = case getFn exp of
                Ref _ Func _ => pure Nothing -- might still be implicit
@@ -83,6 +92,13 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c AutoImplicit (Just n') (Implicit fc False) sc'
+    bindLamNF tm (NBind fc n (Pi c (DefImplicit _) ty) sc)
+        = do defs <- get Ctxt
+             n' <- genVarName (nameRoot n)
+             sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
+             sc' <- bindLamNF tm sctm
+             pure $ ILam fc c (DefImplicit (Implicit fc False))
+                              (Just n') (Implicit fc False) sc'
     bindLamNF tm sc = pure tm
 
     bindLam : RawImp -> Glued vars -> Core RawImp
@@ -176,14 +192,15 @@ checkTerm rig elabinfo nest env (IDelay fc tm) exp
 checkTerm rig elabinfo nest env (IForce fc tm) exp
     = checkForce rig elabinfo nest env fc tm exp
 checkTerm rig elabinfo nest env (IQuote fc tm) exp
-    = throw (GenericMsg fc "Reflection not implemented yet")
---     = checkQuote rig elabinfo nest env fc tm exp
-checkTerm rig elabinfo nest env (IQuoteDecl fc tm) exp
-    = throw (GenericMsg fc "Declaration reflection not implemented yet")
+    = checkQuote rig elabinfo nest env fc tm exp
+checkTerm rig elabinfo nest env (IQuoteName fc n) exp
+    = checkQuoteName rig elabinfo nest env fc n exp
+checkTerm rig elabinfo nest env (IQuoteDecl fc ds) exp
+    = checkQuoteDecl rig elabinfo nest env fc ds exp
 checkTerm rig elabinfo nest env (IUnquote fc tm) exp
     = throw (GenericMsg fc "Can't escape outside a quoted term")
 checkTerm rig elabinfo nest env (IRunElab fc tm) exp
-    = throw (GenericMsg fc "RunElab not implemented yet")
+    = checkRunElab rig elabinfo nest env fc tm exp
 checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
          checkExp rig elabinfo env fc cval (gnf env cty) exp

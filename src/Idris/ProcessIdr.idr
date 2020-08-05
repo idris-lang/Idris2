@@ -28,6 +28,8 @@ import Data.NameMap
 
 import System.File
 
+%default covering
+
 processDecl : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -60,11 +62,10 @@ readModule : {auto c : Ref Ctxt Defs} ->
              (full : Bool) -> -- load everything transitively (needed for REPL and compiling)
              FC ->
              (visible : Bool) -> -- Is import visible to top level module?
-             (reexp : Bool) -> -- Should the module be reexported?
              (imp : List String) -> -- Module name to import
              (as : List String) -> -- Namespace to import into
              Core ()
-readModule full loc vis reexp imp as
+readModule full loc vis imp as
     = do defs <- get Ctxt
          let False = (imp, vis, as) `elem` map snd (allImported defs)
              | True => when vis (setVisible imp)
@@ -73,7 +74,7 @@ readModule full loc vis reexp imp as
          Just (syn, hash, more) <- readFromTTC False {extra = SyntaxInfo}
                                                   loc vis fname imp as
               | Nothing => when vis (setVisible imp) -- already loaded, just set visibility
-         extendAs imp as syn
+         extendSyn syn
 
          defs <- get Ctxt
          modNS <- getNS
@@ -82,7 +83,7 @@ readModule full loc vis reexp imp as
                        do let m = fst mimp
                           let reexp = fst (snd mimp)
                           let as = snd (snd mimp)
-                          when (reexp || full) $ readModule full loc (vis && reexp) reexp m as) more
+                          when (reexp || full) $ readModule full loc reexp m as) more
          setNS modNS
 
 readImport : {auto c : Ref Ctxt Defs} ->
@@ -90,22 +91,28 @@ readImport : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Bool -> Import -> Core ()
 readImport full imp
-    = do readModule full (loc imp) True (reexport imp) (path imp) (nameAs imp)
+    = do readModule full (loc imp) True (path imp) (nameAs imp)
          addImported (path imp, reexport imp, nameAs imp)
+
+||| Adds new import to the namespace without changing the current top-level namespace
+export
+addImport : {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            Import -> Core ()
+addImport imp
+    = do topNS <- getNS
+         readImport True imp
+         setNS topNS
 
 readHash : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
-           Import -> Core (List String, Int)
+           Import -> Core (Bool, (List String, Int))
 readHash imp
     = do Right fname <- nsToPath (loc imp) (path imp)
                | Left err => throw err
          h <- readIFaceHash fname
-         -- If the import is a 'public' import, then it forms part of
-         -- our own interface so add its hash to our hash
-         when (reexport imp) $
-            do log 5 $ "Reexporting " ++ show (path imp) ++ " hash " ++ show h
-               addHash h
-         pure (nameAs imp, h)
+         pure (reexport imp, (nameAs imp, h))
 
 prelude : Import
 prelude = MkImport (MkFC "(implicit)" (0, 0) (0, 0)) False
@@ -132,7 +139,7 @@ readAsMain fname
               | Nothing => throw (InternalError "Already loaded")
          replNS <- getNS
          replNestedNS <- getNestedNS
-         extendAs replNS replNS syn
+         extendSyn syn
 
          -- Read the main file's top level imported modules, so we have access
          -- to their names (and any of their public imports)
@@ -140,13 +147,13 @@ readAsMain fname
          traverse_ (\ mimp =>
                        do let m = fst mimp
                           let as = snd (snd mimp)
-                          readModule True emptyFC True True m as
+                          readModule True emptyFC True m as
                           addImported (m, True, as)) more
 
          -- also load the prelude, if required, so that we have access to it
          -- at the REPL.
          when (not (noprelude !getSession)) $
-              readModule True emptyFC True True ["Prelude"] ["Prelude"]
+              readModule True emptyFC True ["Prelude"] ["Prelude"]
 
          -- We're in the namespace from the first TTC, so use the next name
          -- from that for the fresh metavariable name generation
@@ -208,6 +215,12 @@ prim__gc : Int -> PrimIO ()
 gc : IO ()
 gc = primIO $ prim__gc 4
 
+export
+addPublicHash : {auto c : Ref Ctxt Defs} ->
+                (Bool, (List String, Int)) -> Core ()
+addPublicHash (True, (mod, h)) = do addHash mod; addHash h
+addPublicHash _ = pure ()
+
 -- Process everything in the module; return the syntax information which
 -- needs to be written to the TTC (e.g. exported infix operators)
 -- Returns 'Nothing' if it didn't reload anything
@@ -221,6 +234,7 @@ processMod : {auto c : Ref Ctxt Defs} ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
     = catch (do
+        setCurrentElabSource sourcecode
         -- Just read the header to start with (this is to get the imports and
         -- see if we can avoid rebuilding if none have changed)
         modh <- readHeader srcf
@@ -234,7 +248,7 @@ processMod srcf ttcf msg sourcecode
         defs <- get Ctxt
         log 5 $ "Current hash " ++ show (ifaceHash defs)
         log 5 $ show (moduleNS modh) ++ " hashes:\n" ++
-                show (sort hs)
+                show (sort (map snd hs))
         imphs <- readImportHashes ttcf
         log 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
 
@@ -246,7 +260,7 @@ processMod srcf ttcf msg sourcecode
 
         let ns = moduleNS modh
 
-        if (sort hs == sort imphs && srctime <= ttctime)
+        if (sort (map snd hs) == sort imphs && srctime <= ttctime)
            then -- Hashes the same, source up to date, just set the namespace
                 -- for the REPL
                 do setNS ns
@@ -257,11 +271,13 @@ processMod srcf ttcf msg sourcecode
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
                 initHash
+                traverse addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= ["Main"]) $
                    do let MkFC fname _ _ = headerloc mod
                       d <- getDirs
-                      when (pathToNS (working_dir d) (source_dir d) fname /= ns) $
+                      ns' <- pathToNS (working_dir d) (source_dir d) fname
+                      when (ns /= ns') $
                           throw (GenericMsg (headerloc mod)
                                    ("Module name " ++ showSep "." (reverse ns) ++
                                     " does not match file name " ++ fname))
@@ -289,7 +305,7 @@ processMod srcf ttcf msg sourcecode
                 -- If they haven't changed next time, and the source
                 -- file hasn't changed, no need to rebuild.
                 defs <- get Ctxt
-                put Ctxt (record { importHashes = hs } defs)
+                put Ctxt (record { importHashes = map snd hs } defs)
                 pure (Just errs))
           (\err => pure (Just [err]))
 
@@ -306,7 +322,7 @@ process : {auto c : Ref Ctxt Defs} ->
 process buildmsg file
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
-         catch (do ttcf <- getTTCFileName file ".ttc"
+         catch (do ttcf <- getTTCFileName file "ttc"
                    Just errs <- logTime ("Elaborating " ++ file) $
                                    processMod file ttcf buildmsg res
                         | Nothing => pure [] -- skipped it
@@ -314,9 +330,10 @@ process buildmsg file
                       then
                         do defs <- get Ctxt
                            d <- getDirs
-                           makeBuildDirectory (pathToNS (working_dir d) (source_dir d) file)
+                           ns <- pathToNS (working_dir d) (source_dir d) file
+                           makeBuildDirectory ns
                            writeToTTC !(get Syn) ttcf
-                           ttmf <- getTTCFileName file ".ttm"
+                           ttmf <- getTTCFileName file "ttm"
                            writeToTTM ttmf
                            pure []
                       else do pure errs)

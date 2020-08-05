@@ -1,6 +1,9 @@
 (define (blodwen-os)
   (case (machine-type)
-    [(i3le ti3le a6le ta6le) "unix"]
+    [(i3le ti3le a6le ta6le) "unix"]  ; GNU/Linux
+    [(i3ob ti3ob a6ob ta6ob) "unix"]  ; OpenBSD
+    [(i3fb ti3fb a6fb ta6fb) "unix"]  ; FreeBSD
+    [(i3nb ti3nb a6nb ta6nb) "unix"]  ; NetBSD
     [(i3osx ti3osx a6osx ta6osx) "darwin"]
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
@@ -10,11 +13,17 @@
     ((0) '())
     ((1) (cons (vector-ref desc 2)
                (blodwen-read-args (vector-ref desc 3)))))))
-(define b+ (lambda (x y bits) (remainder (+ x y) (expt 2 bits))))
-(define b- (lambda (x y bits) (remainder (- x y) (expt 2 bits))))
-(define b* (lambda (x y bits) (remainder (* x y) (expt 2 bits))))
-(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (expt 2 bits))))
+(define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
+(define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
+(define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
+(define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
 
+(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+
+(define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
 (define blodwen-and (lambda (x y) (logand x y)))
@@ -102,17 +111,35 @@
 (define (blodwen-buffer-getbyte buf loc)
   (bytevector-u8-ref buf loc))
 
-(define (blodwen-buffer-setint buf loc val)
-  (bytevector-s64-set! buf loc val (native-endianness)))
+(define (blodwen-buffer-setbits16 buf loc val)
+  (bytevector-u16-set! buf loc val (native-endianness)))
 
-(define (blodwen-buffer-getint buf loc)
-  (bytevector-s64-ref buf loc (native-endianness)))
+(define (blodwen-buffer-getbits16 buf loc)
+  (bytevector-u16-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setbits32 buf loc val)
+  (bytevector-u32-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getbits32 buf loc)
+  (bytevector-u32-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setbits64 buf loc val)
+  (bytevector-u64-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getbits64 buf loc)
+  (bytevector-u64-ref buf loc (native-endianness)))
 
 (define (blodwen-buffer-setint32 buf loc val)
   (bytevector-s32-set! buf loc val (native-endianness)))
 
 (define (blodwen-buffer-getint32 buf loc)
   (bytevector-s32-ref buf loc (native-endianness)))
+
+(define (blodwen-buffer-setint buf loc val)
+  (bytevector-s64-set! buf loc val (native-endianness)))
+
+(define (blodwen-buffer-getint buf loc)
+  (bytevector-s64-ref buf loc (native-endianness)))
 
 (define (blodwen-buffer-setdouble buf loc val)
   (bytevector-ieee-double-set! buf loc val (native-endianness)))
@@ -136,34 +163,6 @@
 (define (blodwen-buffer-copydata buf start len dest loc)
   (bytevector-copy! buf start dest loc len))
 
-; 'dir' is only needed in Racket
-(define (blodwen-read-bytevec curdir fname)
-  (guard
-    (x (#t #f))
-    (let* [(h (open-file-input-port fname
-                                    (file-options)
-                                    (buffer-mode line) #f))
-           (vec (get-bytevector-all h))]
-      (begin (close-port h)
-             vec))))
-
-(define (blodwen-isbytevec v)
-(if (bytevector? v)
-    0
-    -1))
-
-; 'dir' is only needed in Racket
-(define (blodwen-write-bytevec curdir fname vec max)
-  (guard
-    (x (#t -1))
-    (let* [(h (open-file-output-port fname (file-options no-fail)
-                                     (buffer-mode line) #f))]
-      (begin (put-bytevector h vec 0 max)
-             (close-port h)
-             0))))
-
-
-
 ;; Threads
 
 (define blodwen-thread-data (make-thread-parameter #f))
@@ -184,7 +183,10 @@
 
 (define (blodwen-condition) (make-condition))
 (define (blodwen-condition-wait c m) (condition-wait c m))
-(define (blodwen-condition-wait-timeout c m t) (condition-wait c m t))
+(define (blodwen-condition-wait-timeout c m t)
+  (let ((sec (div t 1000000))
+        (micro (mod t 1000000)))
+  (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
 (define (blodwen-condition-signal c) (condition-signal c))
 (define (blodwen-condition-broadcast c) (condition-broadcast c))
 
@@ -243,3 +245,18 @@
         (if (> k 0)
               (random k)
               (assertion-violationf 'blodwen-random "invalid range argument ~a" k)))]))
+
+;; For finalisers
+
+(define blodwen-finaliser (make-guardian))
+(define (blodwen-register-object obj proc)
+  (let [(x (cons obj proc))]
+       (blodwen-finaliser x)
+       x))
+(define blodwen-run-finalisers
+  (lambda ()
+    (let run ()
+      (let ([x (blodwen-finaliser)])
+        (when x
+          (((cdr x) (car x)) 'erased)
+          (run))))))

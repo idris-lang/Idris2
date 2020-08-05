@@ -4,14 +4,30 @@ import public Control.App
 
 public export
 interface Console e where
+  putChar : Char -> App {l} e ()
   putStr : String -> App {l} e ()
-  getStr : App {l} e String
+  getChar : App {l} e Char
+  getLine : App {l} e String
 
 export 
 PrimIO e => Console e where
+  putChar c = primIO $ putChar c
   putStr str = primIO $ putStr str
-  getStr = primIO $ getLine
+  getChar = primIO getChar
+  getLine = primIO getLine
 
 export
 putStrLn : Console e => String -> App {l} e ()
 putStrLn str = putStr (str ++ "\n")
+
+export
+putCharLn : Console e => Char -> App {l} e ()
+putCharLn c = putStrLn $ strCons c ""
+
+export
+print : (Console e, Show a) => a -> App {l} e ()
+print x = putStr $ show x
+
+export
+printLn : (Console e, Show a) => a -> App {l} e ()
+printLn x = putStrLn $ show x

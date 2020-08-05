@@ -11,8 +11,10 @@ import Core.Name
 import Core.Options
 import Core.TT
 import Utils.Hex
+import Utils.Path
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.NameMap
 import Data.Strings
@@ -25,11 +27,10 @@ import System.Info
 
 %default covering
 
-
 pathLookup : IO String
 pathLookup
     = do path <- getEnv "PATH"
-         let pathList = split (== pathSep) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let pathList = List1.toList $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
          e <- firstExists candidates
@@ -70,18 +71,19 @@ escapeString s = pack $ foldr escape [] $ unpack s
 schHeader : String -> List String -> String
 schHeader chez libs
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
+    "; @generated\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++ 
+    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
     "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
 schFooter : String
-schFooter = ")"
+schFooter = "(collect 4)\n(blodwen-run-finalisers))\n"
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -107,11 +109,14 @@ mutual
   tySpec (NmCon fc (UN "Double") _ []) = pure "double"
   tySpec (NmCon fc (UN "Char") _ []) = pure "char"
   tySpec (NmCon fc (NS _ n) _ [_])
-     = cond [(n == UN "Ptr", pure "void*")]
+     = cond [(n == UN "Ptr", pure "void*"),
+             (n == UN "GCPtr", pure "void*"),
+             (n == UN "Buffer", pure "u8*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
   tySpec (NmCon fc (NS _ n) _ [])
      = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "void*")]
+             (n == UN "AnyPtr", pure "void*"),
+             (n == UN "GCAnyPtr", pure "void*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
   tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
 
@@ -125,17 +130,6 @@ mutual
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   chezExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  chezExtPrim i CCall [ret, NmPrimVal fc (Str fn), fargs, world]
-      = do args <- getFArgs fargs
-           argTypes <- traverse tySpec (map fst args)
-           retType <- tySpec ret
-           argsc <- traverse (schExp chezExtPrim chezString 0) (map snd args)
-           pure $ handleRet retType ("((foreign-procedure #f " ++ show fn ++ " ("
-                    ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
-                    ++ showSep " " argsc ++ ")")
-  chezExtPrim i CCall [ret, fn, args, world]
-      = pure "(error \"bad ffi call\")"
-      -- throw (InternalError ("C FFI calls must be to statically known functions (" ++ show fn ++ ")"))
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
       = do structsc <- schExp chezExtPrim chezString 0 struct
@@ -153,6 +147,14 @@ mutual
       = pure "(error \"bad setField\")"
   chezExtPrim i SysCodegen []
       = pure $ "\"chez\""
+  chezExtPrim i OnCollect [_, p, c, world]
+      = do p' <- schExp chezExtPrim chezString 0 p
+           c' <- schExp chezExtPrim chezString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  chezExtPrim i OnCollectAny [p, c, world]
+      = do p' <- schExp chezExtPrim chezString 0 p
+           c' <- schExp chezExtPrim chezString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   chezExtPrim i prim args
       = schExtCommon chezExtPrim chezString i prim args
 
@@ -165,10 +167,13 @@ data Structs : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
+cftySpec fc CFUnsigned = pure "unsigned"
 cftySpec fc CFString = pure "string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
 cftySpec fc CFPtr = pure "void*"
+cftySpec fc CFGCPtr = pure "void*"
+cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
@@ -179,12 +184,20 @@ cCall : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> (cfn : String) -> (clib : String) ->
         List (Name, CFType) -> CFType -> Core (String, String)
+cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args CFGCPtr
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args (CFIORes CFBuffer)
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
+cCall appdir fc cfn clib args CFBuffer
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
 cCall appdir fc cfn clib args ret
     = do loaded <- get Loaded
          lib <- if clib `elem` loaded
                    then pure ""
                    else do (fname, fullname) <- locate clib
-                           copyLib (appdir ++ dirSep ++ fname, fullname)
+                           copyLib (appdir </> fname, fullname)
                            put Loaded (clib :: loaded)
                            pure $ "(load-shared-object \""
                                     ++ escapeString fname
@@ -236,6 +249,7 @@ cCall appdir fc cfn clib args ret
 
     buildArg : (Name, CFType) -> Core String
     buildArg (n, CFFun s t) = callback (schName n) [s] t
+    buildArg (n, CFGCPtr) = pure $ "(car " ++ schName n ++ ")"
     buildArg (n, _) = pure $ schName n
 
 schemeCall : FC -> (sfn : String) ->
@@ -317,7 +331,16 @@ startChez : String -> String -> String
 startChez appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "DIR=\"`realpath $0`\""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
@@ -336,7 +359,7 @@ startChezWinSh chez appdir target = unlines
     , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
@@ -362,6 +385,7 @@ compileToSS c appdir tm outfile
          let scm = schHeader chez (map snd libs) ++
                    support ++ code ++
                    concat (map fst fgndefs) ++
+                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
@@ -372,8 +396,8 @@ compileToSS c appdir tm outfile
 compileToSO : {auto c : Ref Ctxt Defs} ->
               String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
 compileToSO chez appDirRel outSsAbs
-    = do let tmpFileAbs = appDirRel ++ dirSep ++ "compileChez"
-         let build= "(parameterize ([optimize-level 3]) (compile-program " ++
+    = do let tmpFileAbs = appDirRel </> "compileChez"
+         let build = "(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
@@ -398,33 +422,33 @@ makeShWindows chez outShRel appdir outAbs
          pure ()
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
+compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c execDir tm outfile
+compileExpr makeitso c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
-         coreLift $ mkdirs (splitDir appDirGen)
+         let appDirGen = outputDir </> appDirRel -- relative to here
+         coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-         let outSsFile = appDirRel ++ dirSep ++ outfile ++ ".ss"
-         let outSoFile = appDirRel ++ dirSep ++ outfile ++ ".so"
-         let outSsAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSsFile
-         let outSoAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outSoFile
+         let outSsFile = appDirRel </> outfile <.> "ss"
+         let outSoFile = appDirRel </> outfile <.> "so"
+         let outSsAbs = cwd </> outputDir </> outSsFile
+         let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
          compileToSS c appDirGen tm outSsAbs
          logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
-         let outShRel = execDir ++ dirSep ++ outfile
+         let outShRel = outputDir </> outfile
          if isWindows
-            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) 
+            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          coreLift $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c execDir tm
-    = do Just sh <- compileExpr False c execDir tm "_tmpchez"
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm
+    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift $ system sh
          pure ()

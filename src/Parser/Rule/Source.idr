@@ -5,7 +5,8 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
-import Data.List.NonEmpty
+import Data.List1
+import Data.Strings
 
 %default total
 
@@ -44,8 +45,22 @@ constant
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
                            Ident "Integer" => Just IntegerType
+                           Ident "Bits8"   => Just Bits8Type
+                           Ident "Bits16"  => Just Bits16Type
+                           Ident "Bits32"  => Just Bits32Type
+                           Ident "Bits64"  => Just Bits64Type
                            Ident "String"  => Just StringType
                            _ => Nothing)
+
+documentation' : Rule String
+documentation' = terminal "Expected documentation comment"
+                          (\x => case tok x of
+                                      DocComment d => Just d
+                                      _ => Nothing)
+
+export
+documentation : Rule String
+documentation = unlines <$> some documentation'
 
 export
 intLit : Rule Integer
@@ -64,11 +79,11 @@ strLit
                            _ => Nothing)
 
 export
-recField : Rule Name
-recField
-    = terminal "Expected record field"
+dotIdent : Rule Name
+dotIdent
+    = terminal "Expected dot+identifier"
                (\x => case tok x of
-                           RecordField s => Just (RF s)
+                           DotIdent s => Just (UN s)
                            _ => Nothing)
 
 export
@@ -128,12 +143,21 @@ identPart
                            _ => Nothing)
 
 export
-namespacedIdent : Rule (List String)
+namespacedIdent : Rule (List1 String)
 namespacedIdent
     = terminal "Expected namespaced name"
         (\x => case tok x of
             DotSepIdent ns => Just ns
-            Ident i => Just $ [i]
+            Ident i => Just [i]
+            _ => Nothing)
+
+export
+moduleIdent : Rule (List1 String)
+moduleIdent
+    = terminal "Expected module identifier"
+        (\x => case tok x of
+            DotSepIdent ns => Just ns
+            Ident i => Just [i]
             _ => Nothing)
 
 export
@@ -150,8 +174,8 @@ holeName
 
 reservedNames : List String
 reservedNames
-    = ["Type", "Int", "Integer", "String", "Char", "Double",
-       "Lazy", "Inf", "Force", "Delay"]
+    = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
+       "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
 export
 name : Rule Name
@@ -162,8 +186,7 @@ name = opNonNS <|> do
   reserved : String -> Bool
   reserved n = n `elem` reservedNames
 
-  nameNS : List String -> SourceEmptyRule Name
-  nameNS [] = pure $ UN "IMPOSSIBLE"
+  nameNS : List1 String -> SourceEmptyRule Name
   nameNS [x] =
     if reserved x
       then fail $ "can't use reserved name " ++ x
@@ -174,14 +197,14 @@ name = opNonNS <|> do
       else pure $ NS xs (UN x)
 
   opNonNS : Rule Name
-  opNonNS = symbol "(" *> (operator <|> recField) <* symbol ")"
+  opNonNS = symbol "(" *> operator <* symbol ")"
 
-  opNS : List String -> Rule Name
+  opNS : List1 String -> Rule Name
   opNS ns = do
     symbol ".("
-    n <- (operator <|> recField)
+    n <- operator
     symbol ")"
-    pure (NS ns n)
+    pure (NS (toList ns) n)
 
 export
 IndentInfo : Type

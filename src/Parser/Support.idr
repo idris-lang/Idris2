@@ -155,23 +155,23 @@ escape' ('\\' :: 'o' :: xs)
 escape' ('\\' :: xs)
     = case span isDigit xs of
            ([], (a :: b :: c :: rest)) =>
-               case getEsc (pack (the (List _) [a, b, c])) of
+               case getEsc (fastPack (the (List _) [a, b, c])) of
                    Just v => Just (v :: !(assert_total (escape' rest)))
-                   Nothing => case getEsc (pack (the (List _) [a, b])) of
+                   Nothing => case getEsc (fastPack (the (List _) [a, b])) of
                                    Just v => Just (v :: !(assert_total (escape' (c :: rest))))
                                    Nothing => escape' xs
            ([], (a :: b :: [])) =>
-               case getEsc (pack (the (List _) [a, b])) of
+               case getEsc (fastPack (the (List _) [a, b])) of
                    Just v => Just (v :: [])
                    Nothing => escape' xs
            ([], rest) => assert_total (escape' rest)
-           (ds, rest) => Just $ cast (cast {to=Int} (pack ds)) ::
+           (ds, rest) => Just $ cast (cast {to=Int} (fastPack ds)) ::
                                  !(assert_total (escape' rest))
 escape' (x :: xs) = Just $ x :: !(escape' xs)
 
 export
 escape : String -> Maybe String
-escape x = pure $ pack !(escape' (unpack x))
+escape x = pure $ fastPack !(escape' (unpack x))
 
 export
 getCharLit : String -> Maybe Char

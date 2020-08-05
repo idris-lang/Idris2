@@ -30,7 +30,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 29
+ttcVersion = 38
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -162,14 +162,6 @@ HasNames e => HasNames (TTCFile e) where
       resolvedPrim gam (MkPrimNs mi ms mc)
           = pure $ MkPrimNs !(resolved gam mi) !(resolved gam ms) !(resolved gam mc)
 
-
-asName : List String -> Maybe (List String) -> Name -> Name
-asName mod (Just ns) (NS oldns n)
-    = if mod == oldns
-         then NS ns n -- TODO: What about if there are nested namespaces in a module?
-         else NS oldns n
-asName _ _ n = n
-
 -- NOTE: TTC files are only compatible if the version number is the same,
 -- *and* the 'annot/extra' type are the same, or there are no holes/constraints
 writeTTCFile : (HasNames extra, TTC extra) =>
@@ -199,14 +191,14 @@ writeTTCFile b file_in
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
-              List String -> Maybe (List String) ->
+              String -> Maybe (List String) ->
               Ref Bin Binary -> Core (TTCFile extra)
-readTTCFile modns as b
+readTTCFile file as b
       = do hdr <- fromBuf b
            chunk <- get Bin
-           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ show modns ++ " " ++ show hdr)
+           when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf b
-           checkTTCVersion (show modns) ver ttcVersion
+           checkTTCVersion file ver ttcVersion
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
            defs <- fromBuf b
@@ -246,10 +238,6 @@ getSaveDefs (n :: ns) acc defs
                       b <- get Bin
                       getSaveDefs ns ((fullname gdef, b) :: acc) defs
 
-freeDefBuffer : (Name, Binary) -> Core ()
-freeDefBuffer (n, b)
-    = coreLift $ freeBuffer (buf b)
-
 -- Write out the things in the context which have been defined in the
 -- current source file
 export
@@ -283,14 +271,12 @@ writeToTTC extradata fname
 
          Right ok <- coreLift $ writeToFile fname !(get Bin)
                | Left err => throw (InternalError (fname ++ ": " ++ show err))
-         traverse_ freeDefBuffer gdefs
-         freeBinary bin
          pure ()
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
                (modns : List String) -> (importAs : Maybe (List String)) ->
                (Name, Binary) -> Core ()
-addGlobalDef modns as (n, def)
+addGlobalDef modns asm (n, def)
     = do defs <- get Ctxt
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
@@ -301,8 +287,11 @@ addGlobalDef modns as (n, def)
                         codedentry
          if completeDef entry
             then pure ()
-            else do addContextEntry (asName modns as n) def
+            else do addContextEntry n def
                     pure ()
+         maybe (pure ())
+               (\as => addContextAlias (asName modns as n) n)
+               asm
   where
     -- If the definition already exists, don't overwrite it with an empty
     -- definition or hole. This might happen if a function is declared in one
@@ -429,30 +418,32 @@ readFromTTC nestedns loc reexp fname modNS importAs
          let as = if importAs == modNS
                      then Nothing
                      else Just importAs
-         ttc <- readTTCFile modNS as bin
+         ttc <- readTTCFile fname as bin
 
          -- If it's already imported, but without reexporting, then all we're
          -- interested in is returning which other modules to load.
          -- Otherwise, add the data
          let ex = extraData ttc
-         if ((modNS, importAs) `elem` map getNSas (allImported defs))
-            then do coreLift $ freeBuffer (buf buffer)
-                    pure (Just (ex, ifaceHash ttc, imported ttc))
+         if alreadyDone modNS importAs (allImported defs)
+            then pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
                traverse (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)
+               -- Only do the next batch if the module hasn't been loaded
+               -- in any form
+               when (not (modNS `elem` map (fst . getNSas) (allImported defs))) $
                -- Set up typeHints and autoHints based on the loaded data
-               traverse_ (addTypeHint loc) (typeHints ttc)
-               traverse_ addAutoHint (autoHints ttc)
-               -- Set up pair/rewrite etc names
-               updatePair (pairnames ttc)
-               updateRewrite (rewritenames ttc)
-               updatePrims (primnames ttc)
-               updateNameDirectives (reverse (namedirectives ttc))
-               updateCGDirectives (cgdirectives ttc)
-               updateTransforms (transforms ttc)
+                 do traverse_ (addTypeHint loc) (typeHints ttc)
+                    traverse_ addAutoHint (autoHints ttc)
+                    -- Set up pair/rewrite etc names
+                    updatePair (pairnames ttc)
+                    updateRewrite (rewritenames ttc)
+                    updatePrims (primnames ttc)
+                    updateNameDirectives (reverse (namedirectives ttc))
+                    updateCGDirectives (cgdirectives ttc)
+                    updateTransforms (transforms ttc)
 
                when (not reexp) clearSavedHints
                resetFirstEntry
@@ -461,8 +452,19 @@ readFromTTC nestedns loc reexp fname modNS importAs
                -- ttc
                ust <- get UST
                put UST (record { nextName = nextVar ttc } ust)
-               coreLift $ freeBuffer (buf buffer)
                pure (Just (ex, ifaceHash ttc, imported ttc))
+  where
+    alreadyDone : List String -> List String ->
+                  List (String, (List String, Bool, List String)) ->
+                  Bool
+    alreadyDone modns importAs [] = False
+    -- If we've already imported 'modns' as 'importAs', or we're importing
+    -- 'modns' as itself and it's already imported as anything, then no
+    -- need to load again.
+    alreadyDone modns importAs ((_, (m, _, a)) :: rest)
+        = (modns == m && importAs == a)
+          || (modns == m && modns == importAs)
+          || alreadyDone modns importAs rest
 
 getImportHashes : String -> Ref Bin Binary ->
                   Core (List (List String, Int))
@@ -490,10 +492,8 @@ readIFaceHash fname
             | Left err => pure 0
          b <- newRef Bin buffer
          catch (do res <- getHash fname b
-                   coreLift $ freeBuffer (buf buffer)
                    pure res)
-               (\err => do coreLift $ freeBuffer (buf buffer)
-                           pure 0)
+               (\err => pure 0)
 
 export
 readImportHashes : (fname : String) -> -- file containing the module
@@ -503,7 +503,5 @@ readImportHashes fname
             | Left err => pure []
          b <- newRef Bin buffer
          catch (do res <- getImportHashes fname b
-                   coreLift $ freeBuffer (buf buffer)
                    pure res)
-               (\err => do coreLift $ freeBuffer (buf buffer)
-                           pure [])
+               (\err => pure [])

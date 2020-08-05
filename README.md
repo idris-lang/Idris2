@@ -6,6 +6,7 @@ Idris 2
 [![](https://github.com/idris-lang/Idris2/workflows/Ubuntu/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu")
 [![](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20Racket/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu+Racket")
 [![](https://github.com/idris-lang/Idris2/workflows/macOS/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"macOS")
+[![](https://github.com/idris-lang/Idris2/workflows/Idris%20bootstrap/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Idris+bootstrap")
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
@@ -33,6 +34,7 @@ exceptions. The most notable user visible differences, which might cause Idris
   (such as data constructors), or which have different concrete argument
   types (such as record projections). It may struggle to resolve ambiguities
   if one name requires an interface to be resolved.
++ The `cong` function now takes its congruence explicitly as its first argument.
 + Minor differences in the meaning of export modifiers `private`, `export`,
   and `public export`, which now refer to visibility of names from other
   *namespaces* rather than visibility from other *files*.
@@ -81,6 +83,10 @@ language `TTImp`, which is essentially a desugared Idris, and is cleanly
 separated from the high level language which means it is potentially usable
 as a core language for other high level syntaxes.
 
+Javascript
+====================
+The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
+
 Things still missing
 ====================
 
@@ -96,4 +102,10 @@ Things still missing
 Talks
 =====
 
+[![Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)](https://img.youtube.com/vi/nbClauMCeds/0.jpg)](https://www.youtube.com/watch?v=nbClauMCeds "Edwin Brady Tells Us What's New in Idris 2 (Berlin Functional Programming Group)")
+
+[![Scheme Workshop Keynote (ACM SIGPLAN)](https://img.youtube.com/vi/h9YAOaBWuIk/0.jpg)](https://www.youtube.com/watch?v=h9YAOaBWuIk "Scheme Workshop Keynote (ACM SIGPLAN)")
+
 [![Idris 2 - Type-driven Development of Idris (Curry On - London 2019)](https://img.youtube.com/vi/DRq2NgeFcO0/0.jpg)](https://www.youtube.com/watch?v=DRq2NgeFcO0 "Idris 2 - Type-driven Development of Idris (Curry On - London 2019)")
+
+[![Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)](https://img.youtube.com/vi/mOtKD7ml0NU/0.jpg)](https://www.youtube.com/watch?v=mOtKD7ml0NU "Idris 2: Type-driven Development of Idris (Code Mesh LDN 18)")

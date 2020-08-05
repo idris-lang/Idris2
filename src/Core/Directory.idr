@@ -5,27 +5,17 @@ import Core.Core
 import Core.FC
 import Core.Name
 import Core.Options
+import Utils.Path
 
 import Data.List
 import Data.Strings
+import Data.Maybe
 
 import System.Directory
 import System.File
 import System.Info
 
-%default covering
-
-fullPath : String -> List String
-fullPath fp = filter (/="") $ split (==sep) fp
-
-dropExtension : String -> String
-dropExtension fname
-    = case span (/= '.') (reverse fname) of
-           (all, "") => -- no extension
-               reverse all
-           (ext, root) =>
-               -- assert that root can't be empty
-               reverse (assert_total (strTail root))
+%default total
 
 -- Return the name of the first file available in the list
 firstAvailable : List String -> Core (Maybe String)
@@ -37,11 +27,12 @@ firstAvailable (f :: fs)
          pure (Just f)
 
 export
+covering
 readDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
 readDataFile fname
     = do d <- getDirs
-         let fs = map (\p => p ++ dirSep ++ fname) (data_dirs d)
+         let fs = map (\p => p </> fname) (data_dirs d)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find data file " ++ fname ++
                                                " in any of " ++ show fs))
@@ -57,8 +48,8 @@ findLibraryFile : {auto c : Ref Ctxt Defs} ->
                   String -> Core String
 findLibraryFile fname
     = do d <- getDirs
-         let fs = map (\p => p ++ dirSep ++ fname)
-                      (lib_dirs d ++ map (\x => x ++ dirSep ++ "lib")
+         let fs = map (\p => p </> fname)
+                      (lib_dirs d ++ map (\x => x </> "lib")
                                          (extra_dirs d))
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find library " ++ fname))
@@ -71,9 +62,9 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> List String -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = showSep dirSep (reverse ns)
-         let fs = map (\p => p ++ dirSep ++ fnameBase ++ ".ttc")
-                      ((build_dir d ++ dirSep ++ "ttc") :: extra_dirs d)
+         let fnameBase = joinPath (reverse ns)
+         let fs = map (\p => p </> fnameBase <.> "ttc")
+                      ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
@@ -85,9 +76,9 @@ nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> List String -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = showSep dirSep (reverse ns)
-         let fnameBase = maybe fnameOrig (\srcdir => srcdir ++ dirSep ++ fnameOrig) (source_dir d)
-         let fs = map (\ext => fnameBase ++ ext)
+         let fnameOrig = joinPath (reverse ns)
+         let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
+         let fs = map (\ext => fnameBase <.> ext)
                       [".idr", ".lidr", ".yaff", ".org", ".md"]
          Just f <- firstAvailable fs
             | Nothing => throw (ModuleNotFound loc ns)
@@ -96,78 +87,59 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> List String
+pathToNS : String -> Maybe String -> String -> Core (List String)
 pathToNS wdir sdir fname
-    = let wsplit = splitSep wdir
-          ssplit = maybe [] splitSep sdir
-          fsplit = splitSep fname
-          wdrop = dropDir wsplit fsplit fsplit
-       in
-      dropDir ssplit wdrop wdrop
-  where
-    dropDir : List String -> List String -> List String -> List String
-    dropDir dir orig [] = []
-    dropDir dir orig (x :: xs)
-        = if dir == xs
-             then [x]
-             else x :: dropDir dir orig xs
+    = let sdir = fromMaybe "" sdir
+          base = if isAbsolute fname then wdir </> sdir else sdir
+        in
+          case stripPrefix base fname of
+               Nothing => throw (UserError ("Source file " ++ show fname
+                                            ++ " is not in the source directory " 
+                                            ++ show (wdir </> sdir)))
+               Just p => pure $ map show $ reverse $ (parse (p <.> "")).body
 
-    splitSep : String -> List String
-    splitSep fname
-        = case span (/=sep) fname of
-               (end, "") => [dropExtension end]
-               (mod, rest) => assert_total (splitSep (strTail rest)) ++ [mod]
+dirExists : String -> IO Bool
+dirExists dir = do Right d <- openDir dir
+                       | Left _ => pure False
+                   closeDir d
+                   pure True 
 
 -- Create subdirectories, if they don't exist
 export
-mkdirs : List String -> IO (Either FileError ())
-mkdirs [] = pure (Right ())
-mkdirs ("." :: ds) = mkdirs ds
-mkdirs ("" :: ds) = mkdirs ds
-mkdirs (d :: ds)
-    = do ok <- changeDir d
-         if ok
-            then do mkdirs ds
-                    changeDir ".."
-                    pure (Right ())
-            else do Right _ <- createDir d
-                        | Left err => pure (Left err)
-                    ok <- changeDir d
-                    mkdirs ds
-                    changeDir ".."
-                    pure (Right ())
-
-isDirSep : Char -> Bool
-isDirSep c = cast c == dirSep
-
-export
-splitDir : String -> List String
-splitDir = split isDirSep
+covering
+mkdirAll : String -> IO (Either FileError ())
+mkdirAll dir = if parse dir == emptyPath 
+                  then pure (Right ())
+                  else do exist <- dirExists dir
+                          if exist 
+                             then pure (Right ())
+                             else do Right () <- case parent dir of
+                                          Just parent => mkdirAll parent
+                                          Nothing => pure (Right ()) 
+                                        | err => pure err
+                                     createDir dir
 
 -- Given a namespace (i.e. a module name), make the build directory for the
 -- corresponding ttc file
 export
+covering
 makeBuildDirectory : {auto c : Ref Ctxt Defs} ->
                      List String -> Core ()
 makeBuildDirectory ns
     = do d <- getDirs
-         let bdir = splitDir $ build_dir d
-         let ndirs = case ns of
-                          [] => []
-                          (n :: ns) => ns -- first item is file name
-         let fname = showSep dirSep (reverse ndirs)
-         Right _ <- coreLift $ mkdirs (bdir ++ "ttc" :: reverse ndirs)
-            | Left err => throw (FileErr (build_dir d ++ dirSep ++ fname) err)
+         let bdir = build_dir d </> "ttc"
+         let ns = reverse $ fromMaybe [] (tail' ns) -- first item is file name
+         let ndir = joinPath ns
+         Right _ <- coreLift $ mkdirAll (bdir </> ndir)
+            | Left err => throw (FileErr (build_dir d </> ndir) err)
          pure ()
 
 export
-makeExecDirectory : {auto c : Ref Ctxt Defs} ->
-                    Core ()
-makeExecDirectory
-    = do d <- getDirs
-         let edir = splitDir $ exec_dir d
-         Right _ <- coreLift $ mkdirs edir
-            | Left err => throw (FileErr (exec_dir d) err)
+covering
+ensureDirectoryExists : String -> Core ()
+ensureDirectoryExists dir
+    = do Right _ <- coreLift $ mkdirAll dir
+            | Left err => throw (FileErr dir err)
          pure ()
 
 -- Given a source file, return the name of the ttc file to generate
@@ -179,17 +151,17 @@ getTTCFileName inp ext
          d <- getDirs
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
-         let ns = pathToNS (working_dir d) (source_dir d) inp
-         let fname = showSep dirSep (reverse ns) ++ ext
+         ns <- pathToNS (working_dir d) (source_dir d) inp
+         let fname = joinPath (reverse ns) <.> ext
          let bdir = build_dir d
-         pure $ bdir ++ dirSep ++ "ttc" ++ dirSep ++ fname
+         pure $ bdir </> "ttc" </> fname
 
 -- Given a root executable name, return the name in the build directory
 export
 getExecFileName : {auto c : Ref Ctxt Defs} -> String -> Core String
 getExecFileName efile
     = do d <- getDirs
-         pure $ build_dir d ++ dirSep ++ efile
+         pure $ build_dir d </> efile
 
 getEntries : Directory -> IO (List String)
 getEntries d
@@ -206,42 +178,25 @@ dirEntries dir
          closeDir d
          pure (Right ds)
 
-findIpkg : List String -> Maybe String
-findIpkg [] = Nothing
-findIpkg (f :: fs)
-    = if isSuffixOf ".ipkg" f
-         then Just f
-         else findIpkg fs
-
-allDirs : String -> List String -> List (String, List String)
-allDirs path [] = []
-allDirs path ("" :: ds) = (dirSep, ds) ::allDirs path ds
-allDirs "" (d :: ds)
-    = let d' = if isWindows then d ++ dirSep else strCons sep d in 
-                (d', ds) :: allDirs d' ds
-allDirs path (d :: ds)
-    = let d' = path ++ strCons sep d in
-                (d', ds) :: allDirs d' ds
-
 -- Find an ipkg file in any of the directories above this one
 -- returns the directory, the ipkg file name, and the directories we've
 -- gone up
 export
-findIpkgFile : IO (Maybe (String, String, List String))
+covering
+findIpkgFile : IO (Maybe (String, String, String))
 findIpkgFile
     = do Just dir <- currentDir
               | Nothing => pure Nothing
-         -- 'paths' are the paths to look for an .ipkg, in order
-         let paths = reverse (allDirs "" (splitDir dir))
-         res <- firstIpkg paths
+         res <- findIpkgFile' dir ""
          pure res
   where
-    firstIpkg : List (String, List String) ->
-                IO (Maybe (String, String, List String))
-    firstIpkg [] = pure Nothing
-    firstIpkg ((d, up) :: ds)
-        = do Right files <- dirEntries d
-                   | Left err => pure Nothing
-             let Just f = findIpkg files
-                   | Nothing => firstIpkg ds
-             pure $ Just (d, f, up)
+    covering
+    findIpkgFile' : String -> String -> IO (Maybe (String, String, String))
+    findIpkgFile' dir up 
+        = do Right files <- dirEntries dir
+                 | Left err => pure Nothing
+             let Just f = find (\f => extension f == Just "ipkg") files
+                 | Nothing => case splitParent dir of
+                                   Just (parent, end) => findIpkgFile' parent (end </> up)
+                                   Nothing => pure Nothing
+             pure $ Just (dir, f, up)

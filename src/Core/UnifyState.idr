@@ -125,7 +125,6 @@ genMVName : {auto c : Ref Ctxt Defs} ->
             Name -> Core Name
 genMVName (UN str) = genName str
 genMVName (MN str _) = genName str
-genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -146,7 +145,7 @@ genVarName str
 export
 genCaseName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genCaseName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -155,7 +154,7 @@ genCaseName root
 export
 genWithName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genWithName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -311,6 +310,37 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
     mkVar [] = First
     mkVar (w :: ws) = Later (mkVar ws)
 
+mkConstantAppArgsSub : {vars : _} ->
+                       Bool -> FC -> Env Term vars ->
+                       SubVars smaller vars ->
+                       (wkns : List Name) ->
+                       List (Term (wkns ++ (vars ++ done)))
+mkConstantAppArgsSub lets fc [] p wkns = []
+mkConstantAppArgsSub {done} {vars = x :: xs}
+                        lets fc (b :: env) SubRefl wkns
+    = rewrite appendAssociative wkns [x] (xs ++ done) in
+              mkConstantAppArgs lets fc env (wkns ++ [x])
+mkConstantAppArgsSub {done} {vars = x :: xs}
+                        lets fc (b :: env) (DropCons p) wkns
+    = rewrite appendAssociative wkns [x] (xs ++ done) in
+              mkConstantAppArgsSub lets fc env p (wkns ++ [x])
+mkConstantAppArgsSub {done} {vars = x :: xs}
+                        lets fc (b :: env) (KeepCons p) wkns
+    = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns ++ [x]) in
+          if lets || not (isLet b)
+             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
+                  rewrite appendAssociative wkns [x] (xs ++ done) in rec
+             else rewrite appendAssociative wkns [x] (xs ++ done) in rec
+  where
+    isLet : Binder (Term vars) -> Bool
+    isLet (Let _ _ _) = True
+    isLet _ = False
+
+    mkVar : (wkns : List Name) ->
+            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
+    mkVar [] = First
+    mkVar (w :: ws) = Later (mkVar ws)
+
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
                           SubVars smaller vars ->
@@ -355,6 +385,14 @@ applyToFull : {vars : _} ->
               FC -> Term vars -> Env Term vars -> Term vars
 applyToFull fc tm env
   = let args = reverse (mkConstantAppArgs {done = []} True fc env []) in
+        apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
+
+export
+applyToSub : {vars : _} ->
+             FC -> Term vars -> Env Term vars ->
+             SubVars smaller vars -> Term vars
+applyToSub fc tm env sub
+  = let args = reverse (mkConstantAppArgsSub {done = []} True fc env sub []) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
@@ -636,7 +674,7 @@ dumpHole lvl hole
                     (Hole _ p, ty) =>
                          log lvl $ "?" ++ show (fullname gdef) ++ " : " ++
                                            show !(normaliseHoles defs [] ty)
-                                           ++ if p then " (ImplBind)" else ""
+                                           ++ if implbind p then " (ImplBind)" else ""
                                            ++ if invertible gdef then " (Invertible)" else ""
                     (BySearch _ _ _, ty) =>
                          log lvl $ "Search " ++ show hole ++ " : " ++

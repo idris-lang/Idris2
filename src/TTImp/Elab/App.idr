@@ -99,9 +99,9 @@ getVarType rigc nest env fc x
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
                              do checkVisibleNS fc (fullname ndef) (visibility ndef)
-                                logTerm 10 ("Type of " ++ show n') tyenv
-                                logTerm 10 ("Expands to") tm
-                                log 10 $ "Arg length " ++ show arglen
+                                logTerm 5 ("Type of " ++ show n') tyenv
+                                logTerm 5 ("Expands to") tm
+                                log 5 $ "Arg length " ++ show arglen
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
@@ -195,7 +195,8 @@ mutual
                    -- so we might as well calculate the whole thing now
                    metaty <- quote defs env aty
                    est <- get EST
-                   metaval <- searchVar fc argRig 50 (Resolved (defining est))
+                   lim <- getAutoImplicitLimit
+                   metaval <- searchVar fc argRig lim (Resolved (defining est))
                                         env nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
@@ -259,12 +260,12 @@ mutual
   needsDelayExpr False _ = pure False
   needsDelayExpr True (IVar fc n)
       = do defs <- get Ctxt
-           case !(lookupCtxtName n (gamma defs)) of
-                [] => pure False
-                [x] => pure False
-                _ => pure True
+           pure $ case !(lookupCtxtName n (gamma defs)) of
+                       (_ :: _ :: _) => True
+                       _ => False
   needsDelayExpr True (IApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (IImplicitApp _ f _ _) = needsDelayExpr True f
+  needsDelayExpr True (ILam _ _ _ _ _ _) = pure True
   needsDelayExpr True (ICase _ _ _ _) = pure True
   needsDelayExpr True (ILocal _ _ _) = pure True
   needsDelayExpr True (IUpdate _ _ _) = pure True
@@ -314,11 +315,17 @@ mutual
               else pure ()
   checkPatTyValid fc defs env _ _ _ = pure ()
 
-  dotErased : {auto c : Ref Ctxt Defs} ->
+  dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
               Maybe Name -> Nat -> ElabMode -> RigCount -> RawImp -> Core RawImp
-  dotErased mn argpos (InLHS lrig ) rig tm
+  dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
-           then
+          then do
+            -- if the argument type aty has a single constructor, there's no need 
+            -- to dot it
+            mconsCount <- countConstructors argty
+            if mconsCount == Just 1 || mconsCount == Just 0
+              then pure tm
+              else 
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
                 -- necessary
                 do defs <- get Ctxt
@@ -327,8 +334,21 @@ mutual
                    if argpos `elem` safeErase gdef
                       then pure tm
                       else pure $ dotTerm tm
-           else pure tm
+          else pure tm
     where
+      ||| Count the constructors of a fully applied concrete datatype
+      countConstructors : NF vars -> Core (Maybe Nat)
+      countConstructors (NTCon _ tycName _ n args) = 
+        if length args == n
+        then do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact tycName (gamma defs)
+                | Nothing => pure Nothing
+                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition
+                | _ => pure Nothing
+                pure (Just (length datacons))
+        else pure Nothing
+      countConstructors _ = pure Nothing
+    
       dotTerm : RawImp -> RawImp
       dotTerm tm
           = case tm of
@@ -339,7 +359,7 @@ mutual
                  IAs _ _ _ (Implicit _ _) => tm
                  IAs fc p t arg => IAs fc p t (IMustUnify fc ErasedArg tm)
                  _ => IMustUnify (getFC tm) ErasedArg tm
-  dotErased _ _ _ _ tm = pure tm
+  dotErased _ _ _ _ _ tm = pure tm
 
   -- Check the rest of an application given the argument type and the
   -- raw argument. We choose elaboration order depending on whether we know
@@ -366,7 +386,7 @@ mutual
   checkRestApp rig argRig elabinfo nest env fc tm x aty sc
                (n, argpos) arg_in expargs impargs knownret expty
      = do defs <- get Ctxt
-          arg <- dotErased n argpos (elabMode elabinfo) argRig arg_in
+          arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
           kr <- if knownret
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
@@ -408,7 +428,7 @@ mutual
                       else pure tm
              case elabMode elabinfo of
                   InLHS _ => -- reset hole and redo it with the unexpanded definition
-                     do updateDef (Resolved idx) (const (Just (Hole 0 False)))
+                     do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
                         solveIfUndefined env metaval argv
                         pure ()
                   _ => pure ()
@@ -495,8 +515,8 @@ mutual
                 NBind tfc' x' (Pi rigb' (DefImplicit aval') aty') sc'
                    => if !(convert defs env aval aval')
                          then checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
-                         else makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] kr (Just expty_in)
-                _ => makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] kr (Just expty_in)
+                         else makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] kr (Just expty_in)
+                _ => makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] kr (Just expty_in)
 
   -- Check next auto implicit argument
   checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi rigb AutoImplicit aty) sc)
@@ -689,4 +709,3 @@ checkApp rig elabinfo nest env fc fn expargs impargs exp
    = do (fntm, fnty_in) <- checkImp rig elabinfo nest env fn Nothing
         fnty <- getNF fnty_in
         checkAppWith rig elabinfo nest env fc fntm fnty (Nothing, 0) expargs impargs False exp
-

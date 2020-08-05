@@ -64,7 +64,7 @@ and is not required at run-time, as explicitly stated in the types of
 These use an ``auto``-implicit to pass around
 a ``State`` with the relevant ``tag`` implicitly, so we refer
 to states by tag alone. In ``helloCount`` earlier, we used an empty type
-\texttt{Counter} as the tag:
+``Counter`` as the tag:
 
 .. code-block:: idris
 

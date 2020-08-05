@@ -148,9 +148,11 @@ Chapter 9
 
 + In ``ElemType.idr``, add ``import Decidable.Equality``
 
++ In ``Elem.idr``, add ``import Data.Vect.Elem``
+
 In ``Hangman.idr``:
 
-+ Add ``import Decidable.Equality`` and ``import Data.Strings``
++ Add ``import Data.Strings``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
 + ``removeElem`` pattern matches on ``n``, so it needs to be written in its
   type:
 
@@ -180,6 +182,7 @@ In ``Hangman.idr``:
 
 In ``RemoveElem.idr``
 
++ Add ``import Data.Vect.Elem``
 + ``removeElem`` needs to be updated as above.
 
 Chapter 10
@@ -203,6 +206,15 @@ views explicit:
       mergeSort (lefts ++ rights) | (SplitRecPair lefts rights lrec rrec)
            = merge (mergeSort lefts | lrec)
                    (mergeSort rights | rrec)
+
+In the problem 1 of exercise 10-1, the ``rest`` argument of the data
+constructor ``Exact`` of ``TakeN`` must be made explicit.
+
+.. code-block:: idris
+
+    data TakeN : List a -> Type where
+      Fewer : TakeN xs
+      Exact : (n_xs : List a) -> {rest : _} -> TakeN (n_xs ++ rest)
 
 In ``SnocList.idr``, in ``my_reverse``, the link between ``Snoc rec`` and ``xs ++ [x]``
 needs to be made explicit. Idris 1 would happily decide that ``xs`` and ``x`` were
@@ -312,6 +324,9 @@ In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also
 since export rules are per-namespace now, rather than per-file, you need to
 export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
 
+In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
+also have to be ``export``.
+
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
@@ -321,6 +336,9 @@ For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``.
 Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
 own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
 arguments ``div`` and ``rem``.
+
+In ``ArithState.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
+also have to be ``export``.
 
 Chapter 13
 ----------
@@ -412,10 +430,11 @@ In ``ATM.idr``:
 
 + Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
 
-In ``ATM.idr``, add:
+In ``Hangman.idr``, add:
 
 .. code-block:: idris
 
+    import Data.Vect.Elem -- `Elem` now has its own submodule
     import Data.Strings -- for `toUpper`
     import Data.List -- for `nub`
 

@@ -4,8 +4,11 @@
 Getting Started
 ***************
 
+Installing from Source
+======================
+
 Prerequisites
-=============
+-------------
 
 Idris 2 is implemented in Idris 2 itself, so to bootstrap it you can build from
 generated Scheme sources. To do this, you need either Chez Scheme (default, and
@@ -22,7 +25,7 @@ distributions.
 you run ``./configure --threads`` to build multithreading support in.
 
 Downloading and Installing
-==========================
+--------------------------
 
 You can download the Idris 2 source from the `Idris web site
 <https://www.idris-lang.org/pages/download.html>`_ or get the latest
@@ -40,11 +43,27 @@ follows::
 
     make bootstrap-racket
 
-This will, by default, install into ``${HOME}/.idris2``. You can change this
-by editing the options in ``config.mk``. For example,
-to install into ``/usr/local``, you can edit the ``PREFIX`` as follows::
+Once you've successfully bootstrapped with any of the above commands, you can
+install with the command ``make install``.  This will, by default, install into
+``${HOME}/.idris2``. You can change this by editing the options in
+``config.mk``. For example, to install into ``/usr/local``, you can edit the
+``PREFIX`` as follows::
 
     PREFIX ?= /usr/local
+
+Installing from a Package Manager
+=================================
+
+Installing Using Homebrew
+----------------------
+
+If you are Homebrew user you can install Idris 2 together with all the requirements
+by running following command::
+
+    brew install idris2
+
+Checking Installation
+=====================
 
 To check that installation has succeeded, and to write your first
 Idris program, create a file called ``hello.idr`` containing the
@@ -68,8 +87,7 @@ which you can run:
 ::
 
     $ idris2 hello.idr -o hello
-    compiling hello.ss with output to hello.so
-    $ ./build/exec/hello.so
+    $ ./build/exec/hello
     Hello world
 
 Please note that the dollar sign ``$`` indicates the shell prompt!

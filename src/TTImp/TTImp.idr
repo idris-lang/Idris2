@@ -21,16 +21,17 @@ record NestedNames (vars : List Name) where
   -- Takes the location and name type, because we don't know them until we
   -- elaborate the name at the point of use
   names : List (Name, (Maybe Name,  -- new name if there is one
-                       List Name, -- names used from the environment
+                       List (Var vars), -- names used from the environment
                        FC -> NameType -> Term vars))
 
 export
 Weaken NestedNames where
   weaken (MkNested ns) = MkNested (map wknName ns)
     where
-      wknName : (Name, (Maybe Name, List Name, FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List Name, FC -> NameType -> Term (n :: vars)))
-      wknName (n, (mn, len, rep)) = (n, (mn, len, \fc, nt => weaken (rep fc nt)))
+      wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
+                (Name, (Maybe Name, List (Var (n :: vars)), FC -> NameType -> Term (n :: vars)))
+      wknName (n, (mn, vars, rep))
+          = (n, (mn, map weaken vars, \fc, nt => weaken (rep fc nt)))
 
 -- Unchecked terms, with implicit arguments
 -- This is the raw, elaboratable form.
@@ -91,7 +92,8 @@ mutual
 
        -- Quasiquoting
        IQuote : FC -> RawImp -> RawImp
-       IQuoteDecl : FC -> ImpDecl -> RawImp
+       IQuoteName : FC -> Name -> RawImp
+       IQuoteDecl : FC -> List ImpDecl -> RawImp
        IUnquote : FC -> RawImp -> RawImp
        IRunElab : FC -> RawImp -> RawImp
 
@@ -123,11 +125,11 @@ mutual
     Show RawImp where
       show (IVar fc n) = show n
       show (IPi fc c p n arg ret)
-         = "(%pi " ++ show c ++ " " ++ show p ++
-           " " ++ show n ++ " " ++ show arg ++ " " ++ show ret ++ ")"
+         = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
+           showPrec App n ++ " " ++ show arg ++ " " ++ show ret ++ ")"
       show (ILam fc c p n arg sc)
-         = "(%lam " ++ show c ++ " " ++ show p ++
-           " " ++ show n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
+         = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
+           showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
       show (ILet fc c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
@@ -164,6 +166,7 @@ mutual
       show (IDelay fc tm) = "(%delay " ++ show tm ++ ")"
       show (IForce fc tm) = "(%force " ++ show tm ++ ")"
       show (IQuote fc tm) = "(%quote " ++ show tm ++ ")"
+      show (IQuoteName fc tm) = "(%quotename " ++ show tm ++ ")"
       show (IQuoteDecl fc tm) = "(%quotedecl " ++ show tm ++ ")"
       show (IUnquote fc tm) = "(%unquote " ++ show tm ++ ")"
       show (IRunElab fc tm) = "(%runelab " ++ show tm ++ ")"
@@ -293,9 +296,18 @@ mutual
           showSep "\n\t" (map show fields) ++ "\n"
 
   public export
+  data WithFlag
+         = Syntactic -- abstract syntactically, rather than by value
+
+  export
+  Eq WithFlag where
+      Syntactic == Syntactic = True
+
+  public export
   data ImpClause : Type where
        PatClause : FC -> (lhs : RawImp) -> (rhs : RawImp) -> ImpClause
        WithClause : FC -> (lhs : RawImp) -> (wval : RawImp) ->
+                    (flags : List WithFlag) ->
                     List ImpClause -> ImpClause
        ImpossibleClause : FC -> (lhs : RawImp) -> ImpClause
 
@@ -303,7 +315,7 @@ mutual
   Show ImpClause where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval block)
+    show (WithClause fc lhs wval flags block)
        = show lhs ++ " with " ++ show wval ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"
@@ -321,6 +333,7 @@ mutual
                  Visibility -> ImpRecord -> ImpDecl
        INamespace : FC -> List String -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
+       IRunElabDecl : FC -> RawImp -> ImpDecl
        IPragma : ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
@@ -328,7 +341,7 @@ mutual
 
   export
   Show ImpDecl where
-    show (IClaim _ _ _ _ ty) = show ty
+    show (IClaim _ _ _ opts ty) = show opts ++ " " ++ show ty
     show (IData _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -340,6 +353,8 @@ mutual
           showSep "\n" (assert_total $ map show decls)
     show (ITransform _ n lhs rhs)
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
+    show (IRunElabDecl _ tm)
+        = "%runElab " ++ show tm
     show (IPragma _) = "[externally defined pragma]"
     show (ILog lvl) = "%logging " ++ show lvl
 
@@ -392,6 +407,8 @@ findIBinds (IImplicitApp fc fn n av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
+findIBinds (IAs fc _ (UN n) pat)
+    = n :: findIBinds pat
 findIBinds (IAs fc _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)
@@ -521,7 +538,6 @@ definedInBlock ns decls =
     expandNS : List String -> Name -> Name
     expandNS [] n = n
     expandNS ns (UN n) = NS ns (UN n)
-    expandNS ns (RF n) = NS ns (RF n)
     expandNS ns n@(MN _ _) = NS ns n
     expandNS ns n@(DN _ _) = NS ns n
     expandNS ns n = n
@@ -539,25 +555,11 @@ definedInBlock ns decls =
         fldns' : List String
         fldns' = maybe ns (\f => f :: ns) fldns
 
-        toRF : Name -> Name
-        toRF (UN n) = RF n
-        toRF n = n
-
         fnsUN : List Name
         fnsUN = map getFieldName flds
 
-        fnsRF : List Name
-        fnsRF = map toRF fnsUN
-
-        -- Depending on %undotted_record_projections,
-        -- the record may or may not produce undotted projections (fnsUN).
-        --
-        -- However, since definedInBlock is pure, we can't check that flag
-        -- (and it would also be wrong if %undotted_record_projections appears
-        -- inside the parameter block)
-        -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
+        all = expandNS ns n :: map (expandNS fldns') fnsUN
 
     defName _ _ = []
 
@@ -589,6 +591,7 @@ getFC (IDelayed x _ _) = x
 getFC (IDelay x _) = x
 getFC (IForce x _) = x
 getFC (IQuote x _) = x
+getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
@@ -667,25 +670,27 @@ mutual
 
     toBuf b (IQuote fc t)
         = do tag 21; toBuf b fc; toBuf b t
-    toBuf b (IQuoteDecl fc t)
+    toBuf b (IQuoteName fc t)
         = do tag 22; toBuf b fc; toBuf b t
-    toBuf b (IUnquote fc t)
+    toBuf b (IQuoteDecl fc t)
         = do tag 23; toBuf b fc; toBuf b t
-    toBuf b (IRunElab fc t)
+    toBuf b (IUnquote fc t)
         = do tag 24; toBuf b fc; toBuf b t
+    toBuf b (IRunElab fc t)
+        = do tag 25; toBuf b fc; toBuf b t
 
     toBuf b (IPrimVal fc y)
-        = do tag 25; toBuf b fc; toBuf b y
+        = do tag 26; toBuf b fc; toBuf b y
     toBuf b (IType fc)
-        = do tag 26; toBuf b fc
+        = do tag 27; toBuf b fc
     toBuf b (IHole fc y)
-        = do tag 27; toBuf b fc; toBuf b y
+        = do tag 28; toBuf b fc; toBuf b y
     toBuf b (IUnifyLog fc lvl x) = toBuf b x
 
     toBuf b (Implicit fc i)
-        = do tag 28; toBuf b fc; toBuf b i
+        = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
-        = do tag 29; toBuf b ns; toBuf b rhs
+        = do tag 30; toBuf b ns; toBuf b rhs
 
     fromBuf b
         = case !getTag of
@@ -755,22 +760,24 @@ mutual
                21 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IQuote fc y)
                22 => do fc <- fromBuf b; y <- fromBuf b
-                        pure (IQuoteDecl fc y)
+                        pure (IQuoteName fc y)
                23 => do fc <- fromBuf b; y <- fromBuf b
-                        pure (IUnquote fc y)
+                        pure (IQuoteDecl fc y)
                24 => do fc <- fromBuf b; y <- fromBuf b
+                        pure (IUnquote fc y)
+               25 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IRunElab fc y)
 
-               25 => do fc <- fromBuf b; y <- fromBuf b
+               26 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IPrimVal fc y)
-               26 => do fc <- fromBuf b
+               27 => do fc <- fromBuf b
                         pure (IType fc)
-               27 => do fc <- fromBuf b; y <- fromBuf b
+               28 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IHole fc y)
-               28 => do fc <- fromBuf b
+               29 => do fc <- fromBuf b
                         i <- fromBuf b
                         pure (Implicit fc i)
-               29 => do fc <- fromBuf b
+               30 => do fc <- fromBuf b
                         ns <- fromBuf b
                         rhs <- fromBuf b
                         pure (IWithUnambigNames fc ns rhs)
@@ -833,7 +840,7 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval cs)
+    toBuf b (WithClause fc lhs wval flags cs)
         = do tag 2; toBuf b fc; toBuf b lhs; toBuf b wval; toBuf b cs
 
     fromBuf b
@@ -845,7 +852,7 @@ mutual
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
                        wval <- fromBuf b; cs <- fromBuf b
-                       pure (WithClause fc lhs wval cs)
+                       pure (WithClause fc lhs wval [] cs)
                _ => corrupt "ImpClause"
 
   export
@@ -953,9 +960,11 @@ mutual
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b ds
     toBuf b (ITransform fc n lhs rhs)
         = do tag 6; toBuf b fc; toBuf b n; toBuf b lhs; toBuf b rhs
+    toBuf b (IRunElabDecl fc tm)
+        = do tag 7; toBuf b fc; toBuf b tm
     toBuf b (IPragma f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
-        = do tag 7; toBuf b n
+        = do tag 8; toBuf b n
 
     fromBuf b
         = case !getTag of
@@ -981,7 +990,8 @@ mutual
                6 => do fc <- fromBuf b; n <- fromBuf b
                        lhs <- fromBuf b; rhs <- fromBuf b
                        pure (ITransform fc n lhs rhs)
-               7 => do n <- fromBuf b
+               7 => do fc <- fromBuf b; tm <- fromBuf b
+                       pure (IRunElabDecl fc tm)
+               8 => do n <- fromBuf b
                        pure (ILog n)
                _ => corrupt "ImpDecl"
-

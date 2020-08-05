@@ -24,7 +24,8 @@ endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
-IDRIS2_IPKG := idris2.ipkg
+IDRIS2_APP_IPKG := idris2.ipkg
+IDRIS2_LIB_IPKG := idris2api.ipkg
 
 ifeq ($(OS), windows)
 	# This produces D:/../.. style paths
@@ -42,7 +43,7 @@ IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/li
 IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
 
 # These are the library path in the build dir to be used during build
-export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc"
+export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc"
 
 export SCHEME
 
@@ -54,7 +55,7 @@ all: support ${TARGET} testbin libs
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
-	${IDRIS2_BOOT} --build ${IDRIS2_IPKG}
+	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
 
 src/IdrisPaths.idr:
 	echo 'module IdrisPaths' > src/IdrisPaths.idr
@@ -73,7 +74,7 @@ network: prelude
 contrib: prelude
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-libs : prelude base network contrib
+libs : prelude base contrib network
 
 testbin:
 	@${MAKE} -C tests testbin
@@ -90,19 +91,19 @@ support-clean:
 clean-libs:
 	${MAKE} -C libs/prelude clean
 	${MAKE} -C libs/base clean
-	${MAKE} -C libs/network clean
 	${MAKE} -C libs/contrib clean
+	${MAKE} -C libs/network clean
 
 clean: clean-libs support-clean
-	-${IDRIS2_BOOT} --clean ${IDRIS2_IPKG}
+	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
 	$(RM) -r build
 
 install: install-idris2 install-support install-libs
 
-install-api:
-	${IDRIS2_BOOT} --install idris2api.ipkg
+install-api: src/IdrisPaths.idr
+	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
 
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
@@ -115,20 +116,22 @@ endif
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
-install-support: support
+install-support:
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
 	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
+	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
 	install support/chez/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
 	install support/racket/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
+	install support/js/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
 	@${MAKE} -C support/c install
 
-install-libs: libs
+install-libs:
 	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
@@ -144,8 +147,6 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
 endif
-	SCHEME=${SCHEME} \
-	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap.sh
 
 # Bootstrapping using racket
@@ -159,7 +160,6 @@ ifeq ($(OS), darwin)
 else
 	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
 endif
-	IDRIS2_VERSION=${IDRIS2_VERSION} \
 	sh ./bootstrap-rkt.sh
 
 bootstrap-test:

@@ -7,6 +7,7 @@ import Core.Env
 import Core.Metadata
 import Core.TT
 import Core.Unify
+import Core.Value
 
 import Idris.Resugar
 import Idris.Syntax
@@ -22,6 +23,8 @@ import TTImp.Utils
 import Data.ANameMap
 import Data.List
 import Data.Maybe
+
+%default covering
 
 -- TODO: Check all the parts of the body are legal
 -- TODO: Deal with default superclass implementations
@@ -228,14 +231,15 @@ mkCon loc n
 
 updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 Name -> Name -> List Name -> List RawImp ->
+                 Name -> Name -> List Name -> List Name -> List RawImp ->
                  List (Name, RigCount, List FnOpt, (Bool, RawImp)) -> List (Name, List ImpClause) ->
                  Core ()
-updateIfaceSyn iname cn ps cs ms ds
+updateIfaceSyn iname cn impps ps cs ms ds
     = do syn <- get Syn
          ms' <- traverse totMeth ms
-         let info = MkIFaceInfo cn ps cs ms' ds
-         put Syn (record { ifaces $= addName iname info } syn)
+         let info = MkIFaceInfo cn impps ps cs ms' ds
+         put Syn (record { ifaces $= addName iname info,
+                           saveIFaces $= (iname :: ) } syn)
  where
     findSetTotal : List FnOpt -> Maybe TotalReq
     findSetTotal [] = Nothing
@@ -243,10 +247,17 @@ updateIfaceSyn iname cn ps cs ms ds
     findSetTotal (_ :: xs) = findSetTotal xs
 
     totMeth : (Name, RigCount, List FnOpt, (Bool, RawImp)) ->
-              Core (Name, RigCount, TotalReq, (Bool, RawImp))
+              Core (Name, RigCount, Maybe TotalReq, (Bool, RawImp))
     totMeth (n, c, opts, t)
-        = do let treq = fromMaybe !getDefaultTotalityOption (findSetTotal opts)
+        = do let treq = findSetTotal opts
              pure (n, c, treq, t)
+
+-- Read the implicitly added parameters from an interface type, so that we
+-- know to substitute an implicit in when defining the implementation
+getImplParams : Term vars -> List Name
+getImplParams (Bind _ n (Pi _ Implicit _) sc)
+    = n :: getImplParams sc
+getImplParams _ = []
 
 export
 elabInterface : {vars : _} ->
@@ -265,6 +276,7 @@ elabInterface : {vars : _} ->
                 Core ()
 elabInterface {vars} fc vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
+         ns_iname <- inCurrentNS fullIName
          let conName_in = maybe (mkCon fc fullIName) id mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
@@ -280,9 +292,13 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
 
          ns_meths <- traverse (\mt => do n <- inCurrentNS (fst mt)
                                          pure (n, snd mt)) meth_decls
-         ns_iname <- inCurrentNS fullIName
+         defs <- get Ctxt
+         Just ty <- lookupTyExact ns_iname (gamma defs)
+              | Nothing => throw (UndefinedName fc iname)
+         let implParams = getImplParams ty
+
          updateIfaceSyn ns_iname conName
-                        (map fst params) (map snd constraints)
+                        implParams (map fst params) (map snd constraints)
                         ns_meths ds
   where
     nameCons : Int -> List (Maybe Name, RawImp) -> List (Name, RawImp)
@@ -340,7 +356,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                   Core (Name, List ImpClause)
     elabDefault tydecls (fc, opts, n, cs)
         = do -- orig <- branch
-             let dn_in = UN ("Default implementation of " ++ show n)
+             let dn_in = MN ("Default implementation of " ++ show n) 0
              dn <- inCurrentNS dn_in
 
              (rig, dty) <-
@@ -393,9 +409,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         changeName : Name -> ImpClause -> ImpClause
         changeName dn (PatClause fc lhs rhs)
             = PatClause fc (changeNameTerm dn lhs) rhs
-        changeName dn (WithClause fc lhs wval cs)
+        changeName dn (WithClause fc lhs wval flags cs)
             = WithClause fc (changeNameTerm dn lhs) wval
-                         (map (changeName dn) cs)
+                         flags (map (changeName dn) cs)
         changeName dn (ImpossibleClause fc lhs)
             = ImpossibleClause fc (changeNameTerm dn lhs)
 

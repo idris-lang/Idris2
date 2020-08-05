@@ -1,0 +1,12 @@
+1/1: Building Dummy (Dummy.idr)
+Dummy> (interactive):1:4--1:13:Undefined name undefined at:
+1	:t undefined
+	   ^^^^^^^^^
+
+Dummy> Dummy.something : String
+Dummy> "Something something"
+Dummy> Dummy.Proxy : Type -> Type
+Dummy> Proxy
+Dummy> Proxy String : Type
+Dummy> 
+Bye for now!

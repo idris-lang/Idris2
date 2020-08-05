@@ -3,6 +3,8 @@ module Data.Nat.Views
 import Control.WellFounded
 import Data.Nat
 
+%default total
+
 ||| View for dividing a Nat in half
 public export
 data Half : Nat -> Type where
@@ -25,7 +27,7 @@ half (S k) with (half k)
                                            HalfEven (S n)
   half (S (n + n)) | HalfEven n = HalfOdd n
 
-public export total
+public export
 halfRec : (n : Nat) -> HalfRec n
 halfRec n with (sizeAccessible n)
   halfRec  Z | acc = HalfRecZ

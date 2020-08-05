@@ -1,4 +1,5 @@
 import Data.Vect
+import Data.Vect.Elem
 import Decidable.Equality
 
 removeElem_v1 : DecEq a => (value : a) -> (xs : Vect (S n) a) -> Vect n a

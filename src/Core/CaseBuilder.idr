@@ -16,10 +16,10 @@ import Decidable.Equality
 %default covering
 
 public export
-data Phase = CompileTime | RunTime
+data Phase = CompileTime RigCount | RunTime
 
 Eq Phase where
-  CompileTime == CompileTime = True
+  CompileTime r == CompileTime r' = r == r'
   RunTime == RunTime = True
   _ == _ = False
 
@@ -94,10 +94,6 @@ updatePats env nf (p :: ps)
                empty <- clearDefs defs
                pure (record { argType = Stuck !(quote empty env nf) } p :: ps)
          _ => pure (p :: ps)
-
-mkEnv : FC -> (vs : List Name) -> Env Term vs
-mkEnv fc [] = []
-mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns
 
 substInPatInfo : {pvar, vars, todo : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -257,8 +253,9 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
     clauseType' _                 = VarClause
 
     getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
-    getClauseType CompileTime (PCon _ _ _ _ xs) (Known r t)
-        = if isErased r && all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
+    getClauseType (CompileTime cr) (PCon _ _ _ _ xs) (Known r t)
+        = if isErased r && not (isErased cr) &&
+             all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
              then VarClause
              else ConClause
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t
@@ -604,6 +601,7 @@ sameType {ns} fc phase fn env (p :: xs)
     firstPat (pinf :: _) = pat pinf
 
     headEq : NF ns -> NF ns -> Phase -> Bool
+    headEq (NBind _ _ (Pi _ _ _) _) (NBind _ _ (Pi _ _ _) _) _ = True
     headEq (NTCon _ n _ _ _) (NTCon _ n' _ _ _) _ = n == n'
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
     headEq (NType _) (NType _) _ = True
@@ -636,17 +634,11 @@ samePat (pi :: xs)
     samePatAs : Pat -> List Pat -> Bool
     samePatAs p [] = True
     samePatAs (PTyCon fc n a args) (PTyCon _ n' _ _ :: ps)
-        = if n == n'
-             then samePatAs (PTyCon fc n a args) ps
-             else False
+        = n == n' && samePatAs (PTyCon fc n a args) ps
     samePatAs (PCon fc n t a args) (PCon _ n' t' _ _ :: ps)
-        = if n == n' && t == t'
-             then samePatAs (PCon fc n t a args) ps
-             else False
+        = n == n' && t == t' && samePatAs (PCon fc n t a args) ps
     samePatAs (PConst fc c) (PConst _ c' :: ps)
-        = if c == c'
-             then samePatAs (PConst fc c) ps
-             else False
+        = c == c' && samePatAs (PConst fc c) ps
     samePatAs (PArrow fc x s t) (PArrow _ _ s' t' :: ps)
         = samePatAs (PArrow fc x s t) ps
     samePatAs (PDelay fc r t p) (PDelay _ _ _ _ :: ps)

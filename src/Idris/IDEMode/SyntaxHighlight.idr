@@ -10,6 +10,8 @@ import Idris.IDEMode.Commands
 
 import Data.List
 
+%default covering
+
 data Decoration : Type where
   Typ : Decoration
   Function : Decoration

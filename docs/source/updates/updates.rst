@@ -40,7 +40,7 @@ attempting to use an argument which is erased at run time.
 Erasure
 -------
 
-In Idris, names which begin with a lower case later are automatically bound
+In Idris, names which begin with a lower case letter are automatically bound
 as implicit arguments in types, for example in the following skeleton
 definition, ``n``, ``a`` and ``m`` are implicitly bound:
 
@@ -334,6 +334,9 @@ There are several ``%language`` pragmas in Idris 1, which define various
 experimental extensions. None of these are available in Idris 2, although
 extensions may be defined in the future.
 
+Also removed was the ``%access`` pragma for default visibility, use visibility
+modifiers on each declaration instead.
+
 ``let`` bindings
 ----------------
 
@@ -457,6 +460,34 @@ checked files, and still useful to know. All checked modules are now saved in a
 directory ``build/ttc``, in the root of the source tree, with the directory
 structure following the directory structure of the source.  Executables are
 placed in ``build/exec``.
+
+Packages
+--------
+
+Dependencies on other packages are now indicated with the ``depends`` field,
+the ``pkgs`` field is no longer recognized. Also, fields with URLS or other
+string data (other than module or package names), must be enclosed in double
+quotes.
+For example:
+
+::
+
+        package lightyear
+
+        sourceloc  = "git://git@github.com:ziman/lightyear.git"
+        bugtracker = "http://www.github.com/ziman/lightyear/issues"
+
+        depends = effects
+
+        modules = Lightyear
+                , Lightyear.Position
+                , Lightyear.Core
+                , Lightyear.Combinators
+                , Lightyear.StringFile
+                , Lightyear.Strings
+                , Lightyear.Char
+                , Lightyear.Testing
+
 
 .. _sect-new-features:
 

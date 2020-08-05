@@ -1,12 +1,50 @@
 package contrib
 
-modules = Control.Delayed,
+modules = Control.ANSI,
+          Control.ANSI.SGR,
+          Control.ANSI.CSI,
+          Control.Delayed,
+          Control.Linear.LIO,
+          Control.Monad.Algebra,
+          Control.Monad.Syntax,
 
+          Control.Algebra,
+          Control.Algebra.Laws,
+          Control.Algebra.Implementations,
+
+          Data.Bool.Algebra,
+
+          Data.Linear.Array,
+
+          Data.List.Algebra,
           Data.List.TailRec,
-          Data.Bool.Extra,
+          Data.List.Equalities,
+          Data.List.Reverse,
+          Data.List.Views.Extra,
+          Data.List.Palindrome,
+
+          Data.Fin.Extra,
+
+          Data.Logic.Propositional,
+
+          Data.Morphisms.Algebra,
+
+          Data.Nat.Algebra,
+          Data.Nat.Ack,
+          Data.Nat.Equational,
+          Data.Nat.Fact,
+          Data.Nat.Factor,
+          Data.Nat.Fib,
+
           Data.SortedMap,
           Data.SortedSet,
           Data.String.Extra,
+          Data.String.Interpolation,
+          Data.String.Parser,
+
+          Data.Vect.Sort,
+
+          Debug.Buffer,
 
           Language.JSON,
           Language.JSON.Data,
@@ -24,6 +62,13 @@ modules = Control.Delayed,
           Text.Lexer,
           Text.Parser.Core,
           Text.Lexer.Core,
+          Text.PrettyPrint.Prettyprinter,
+          Text.PrettyPrint.Prettyprinter.Doc,
+          Text.PrettyPrint.Prettyprinter.Symbols,
+          Text.PrettyPrint.Prettyprinter.Util,
+          Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Render.String,
+          Text.PrettyPrint.Prettyprinter.Render.Terminal,
 
           System.Random,
           System.Path,

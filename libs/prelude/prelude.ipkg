@@ -4,5 +4,13 @@ opts = "--no-prelude"
 
 modules = Builtin,
           PrimIO,
-          Prelude
-
+          Prelude,
+          Prelude.Basics,
+          Prelude.EqOrd,
+          Prelude.Interfaces,
+          Prelude.IO,
+          Prelude.Num,
+          Prelude.Ops,
+          Prelude.Show,
+          Prelude.Types,
+          Prelude.Uninhabited

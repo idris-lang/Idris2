@@ -1,37 +1,32 @@
 module Data.IOArray
 
+import Data.IOArray.Prims
 import Data.List
-
--- Implemented externally
-data ArrayData : Type -> Type where
-
--- 'unsafe' primitive access, backend dependent
--- get and set assume that the bounds have been checked. Behavious is undefined
--- otherwise.
-%extern prim__newArray : forall a . Int -> a -> PrimIO (ArrayData a)
-%extern prim__arrayGet : forall a . ArrayData a -> Int -> PrimIO a
-%extern prim__arraySet : forall a . ArrayData a -> Int -> a -> PrimIO ()
 
 export
 record IOArray elem where
   constructor MkIOArray
-  max : Int
+  maxSize : Int
   content : ArrayData (Maybe elem)
 
 export
-newArray : Int -> IO (IOArray elem)
+max : IOArray elem -> Int
+max = maxSize
+
+export
+newArray : HasIO io => Int -> io (IOArray elem)
 newArray size
     = pure (MkIOArray size !(primIO (prim__newArray size Nothing)))
 
 export
-writeArray : IOArray elem -> Int -> elem -> IO ()
+writeArray : HasIO io => IOArray elem -> Int -> elem -> io ()
 writeArray arr pos el
     = if pos < 0 || pos >= max arr
          then pure ()
          else primIO (prim__arraySet (content arr) pos (Just el))
 
 export
-readArray : IOArray elem -> Int -> IO (Maybe elem)
+readArray : HasIO io => IOArray elem -> Int -> io (Maybe elem)
 readArray arr pos
     = if pos < 0 || pos >= max arr
          then pure Nothing
@@ -40,7 +35,8 @@ readArray arr pos
 -- Make a new array of the given size with the elements copied from the
 -- other array
 export
-newArrayCopy : (newsize : Int) -> IOArray elem -> IO (IOArray elem)
+newArrayCopy : HasIO io =>
+               (newsize : Int) -> IOArray elem -> io (IOArray elem)
 newArrayCopy newsize arr
     = do let newsize' = if newsize < max arr then max arr else newsize
          arr' <- newArray newsize'
@@ -49,7 +45,7 @@ newArrayCopy newsize arr
   where
     copyFrom : ArrayData (Maybe elem) ->
                ArrayData (Maybe elem) ->
-               Int -> IO ()
+               Int -> io ()
     copyFrom old new pos
         = if pos < 0
              then pure ()
@@ -58,10 +54,10 @@ newArrayCopy newsize arr
                      assert_total (copyFrom old new (pos - 1))
 
 export
-toList : IOArray elem -> IO (List (Maybe elem))
+toList : HasIO io => IOArray elem -> io (List (Maybe elem))
 toList arr = iter 0 (max arr) []
   where
-    iter : Int -> Int -> List (Maybe elem) -> IO (List (Maybe elem))
+    iter : Int -> Int -> List (Maybe elem) -> io (List (Maybe elem))
     iter pos end acc
          = if pos >= end
               then pure (reverse acc)

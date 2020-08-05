@@ -36,10 +36,9 @@ schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
-schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
-schName (CaseBlock x y) = "case--" ++ show x ++ "-" ++ show y
-schName (WithBlock x y) = "with--" ++ show x ++ "-" ++ show y
+schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
+schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
 schName (Resolved i) = "fn--" ++ show i
 
 export
@@ -63,6 +62,22 @@ schOp (Add IntType) [x, y] = op "b+" [x, y, "63"]
 schOp (Sub IntType) [x, y] = op "b-" [x, y, "63"]
 schOp (Mul IntType) [x, y] = op "b*" [x, y, "63"]
 schOp (Div IntType) [x, y] = op "b/" [x, y, "63"]
+schOp (Add Bits8Type) [x, y] = op "b+" [x, y, "8"]
+schOp (Sub Bits8Type) [x, y] = op "b-" [x, y, "8"]
+schOp (Mul Bits8Type) [x, y] = op "b*" [x, y, "8"]
+schOp (Div Bits8Type) [x, y] = op "b/" [x, y, "8"]
+schOp (Add Bits16Type) [x, y] = op "b+" [x, y, "16"]
+schOp (Sub Bits16Type) [x, y] = op "b-" [x, y, "16"]
+schOp (Mul Bits16Type) [x, y] = op "b*" [x, y, "16"]
+schOp (Div Bits16Type) [x, y] = op "b/" [x, y, "16"]
+schOp (Add Bits32Type) [x, y] = op "b+" [x, y, "32"]
+schOp (Sub Bits32Type) [x, y] = op "b-" [x, y, "32"]
+schOp (Mul Bits32Type) [x, y] = op "b*" [x, y, "32"]
+schOp (Div Bits32Type) [x, y] = op "b/" [x, y, "32"]
+schOp (Add Bits64Type) [x, y] = op "b+" [x, y, "64"]
+schOp (Sub Bits64Type) [x, y] = op "b-" [x, y, "64"]
+schOp (Mul Bits64Type) [x, y] = op "b*" [x, y, "64"]
+schOp (Div Bits64Type) [x, y] = op "b/" [x, y, "64"]
 schOp (Add ty) [x, y] = op "+" [x, y]
 schOp (Sub ty) [x, y] = op "-" [x, y]
 schOp (Mul ty) [x, y] = op "*" [x, y]
@@ -70,6 +85,11 @@ schOp (Div IntegerType) [x, y] = op "quotient" [x, y]
 schOp (Div ty) [x, y] = op "/" [x, y]
 schOp (Mod ty) [x, y] = op "remainder" [x, y]
 schOp (Neg ty) [x] = op "-" [x]
+schOp (ShiftL IntType) [x, y] = op "blodwen-bits-shl" [x, y, "63"]
+schOp (ShiftL Bits8Type) [x, y] = op "blodwen-bits-shl" [x, y, "8"]
+schOp (ShiftL Bits16Type) [x, y] = op "blodwen-bits-shl" [x, y, "16"]
+schOp (ShiftL Bits32Type) [x, y] = op "blodwen-bits-shl" [x, y, "32"]
+schOp (ShiftL Bits64Type) [x, y] = op "blodwen-bits-shl" [x, y, "64"]
 schOp (ShiftL ty) [x, y] = op "blodwen-shl" [x, y]
 schOp (ShiftR ty) [x, y] = op "blodwen-shr" [x, y]
 schOp (BAnd ty) [x, y] = op "blodwen-and" [x, y]
@@ -114,18 +134,34 @@ schOp DoubleCeiling [x] = op "ceiling" [x]
 
 schOp (Cast IntType StringType) [x] = op "number->string" [x]
 schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
+schOp (Cast Bits8Type StringType) [x] = op "number->string" [x]
+schOp (Cast Bits16Type StringType) [x] = op "number->string" [x]
+schOp (Cast Bits32Type StringType) [x] = op "number->string" [x]
+schOp (Cast Bits64Type StringType) [x] = op "number->string" [x]
 schOp (Cast DoubleType StringType) [x] = op "number->string" [x]
 schOp (Cast CharType StringType) [x] = op "string" [x]
 
 schOp (Cast IntType IntegerType) [x] = x
+schOp (Cast Bits8Type IntegerType) [x] = x
+schOp (Cast Bits16Type IntegerType) [x] = x
+schOp (Cast Bits32Type IntegerType) [x] = x
+schOp (Cast Bits64Type IntegerType) [x] = x
 schOp (Cast DoubleType IntegerType) [x] = op "exact-floor" [x]
 schOp (Cast CharType IntegerType) [x] = op "char->integer" [x]
 schOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
 
 schOp (Cast IntegerType IntType) [x] = x
+schOp (Cast Bits8Type IntType) [x] = x
+schOp (Cast Bits16Type IntType) [x] = x
+schOp (Cast Bits32Type IntType) [x] = x
 schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
+
+schOp (Cast IntegerType Bits8Type) [x] = op "integer->bits8" [x]
+schOp (Cast IntegerType Bits16Type) [x] = op "integer->bits16" [x]
+schOp (Cast IntegerType Bits32Type) [x] = op "integer->bits32" [x]
+schOp (Cast IntegerType Bits64Type) [x] = op "integer->bits64" [x]
 
 schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
@@ -140,17 +176,18 @@ schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg +
 
 ||| Extended primitives for the scheme backend, outside the standard set of primFn
 public export
-data ExtPrim = CCall | SchemeCall
+data ExtPrim = SchemeCall
              | NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
              | VoidElim
              | SysOS | SysCodegen
+             | OnCollect
+             | OnCollectAny
              | Unknown Name
 
 export
 Show ExtPrim where
-  show CCall = "CCall"
   show SchemeCall = "SchemeCall"
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
@@ -163,13 +200,14 @@ Show ExtPrim where
   show VoidElim = "VoidElim"
   show SysOS = "SysOS"
   show SysCodegen = "SysCodegen"
+  show OnCollect = "OnCollect"
+  show OnCollectAny = "OnCollectAny"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
     = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__cCall", CCall),
             (n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),
@@ -180,7 +218,9 @@ toPrim pn@(NS _ n)
             (n == UN "prim__setField", SetField),
             (n == UN "void", VoidElim),
             (n == UN "prim__os", SysOS),
-            (n == UN "prim__codegen", SysCodegen)
+            (n == UN "prim__codegen", SysCodegen),
+            (n == UN "prim__onCollect", OnCollect),
+            (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn
@@ -192,6 +232,10 @@ mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- M
 schConstant : (String -> String) -> Constant -> String
 schConstant _ (I x) = show x
 schConstant _ (BI x) = show x
+schConstant _ (B8 x) = show x
+schConstant _ (B16 x) = show x
+schConstant _ (B32 x) = show x
+schConstant _ (B64 x) = show x
 schConstant schString (Str x) = schString x
 schConstant _ (Ch x)
    = if (the Int (cast x) >= 32 && the Int (cast x) < 127)
@@ -201,6 +245,10 @@ schConstant _ (Db x) = show x
 schConstant _ WorldVal = "#f"
 schConstant _ IntType = "#t"
 schConstant _ IntegerType = "#t"
+schConstant _ Bits8Type = "#t"
+schConstant _ Bits16Type = "#t"
+schConstant _ Bits32Type = "#t"
+schConstant _ Bits64Type = "#t"
 schConstant _ StringType = "#t"
 schConstant _ CharType = "#t"
 schConstant _ DoubleType = "#t"

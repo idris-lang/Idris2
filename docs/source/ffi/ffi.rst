@@ -88,17 +88,19 @@ returns a primitive IO action:
 
 Internally, ``PrimIO Int`` is a function which takes the current (linear)
 state of the world, and returns an ``Int`` with an updated state of the world.
-We can convert this into an ``IO`` action using ``primIO``:
+In general, ``IO`` operations in an Idris program are defined as instances
+of the ``HasIO`` interface. We can convert a primitive operation to one usable
+in ``HasIO`` using ``primIO``:
 
 .. code-block:: idris
 
-    primIO : PrimIO a -> IO a
+    primIO : HasIO io => PrimIO a -> io a
 
 So, we can extend our program as follows:
 
 .. code-block:: idris
 
-  addWithMessage : String -> Int -> Int -> IO Int
+  addWithMessage : HasIO io => String -> Int -> Int -> io Int
   addWithMessage s x y = primIO $ prim_addWithMessage s x y
   
   main : IO ()
@@ -218,16 +220,17 @@ which takes a callback that takes a ``char*`` and an ``int`` and returns a
         return f(x, y);
     }
 
-Then, we can access this from Idris by declaring it as a ``%foreign``
-function and wrapping it in ``IO``, with the C function calling the Idris
-function as the callback:
+Then, we can access this from Idris by declaring it as a ``%foreign`` function
+and wrapping it in the ``HasIO`` interface, with the C function calling the
+Idris function as the callback:
 
 .. code-block:: idris
 
     %foreign (libsmall "applyFn")
     prim_applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
     
-    applyFn : String -> Int -> (String -> Int -> String) -> IO String
+    applyFn : HasIO io =>
+              String -> Int -> (String -> Int -> String) -> io String
     applyFn c i f = primIO $ prim_applyFn c i f
 
 For example, we can try this as follows:
@@ -256,14 +259,18 @@ As a variant, the callback could have a side effect:
     prim_applyFnIO : String -> Int -> (String -> Int -> PrimIO String) ->
                      PrimIO String
   
-This is a little more fiddly to lift to an ``IO`` function, due to the callback,
-but we can do so using ``toPrim : IO a -> PrimIO a``:
+This is a little more fiddly to lift to a ``HasIO`` function,
+due to the callback, but we can do so using ``toPrim : IO a -> PrimIO a``:
   
 .. code-block:: idris
 
-    applyFnIO : String -> Int -> (String -> Int -> IO String) -> IO String
+    applyFnIO : HasIO io =>
+                String -> Int -> (String -> Int -> IO String) -> io String
     applyFnIO c i f = primIO $ prim_applyFnIO c i (\s, i => toPrim $ f s i)
   
+Note that the callback is explicitly in ``IO`` here, since ``HasIO`` doesn't
+have a general method for extracting the primitive ``IO`` operation.
+
 For example, we can extend the above ``pluralise`` example to print a message
 in the callback:
 
@@ -409,3 +416,31 @@ can convert between a ``void*`` and a ``char*`` in C:
 
     %foreign (pfn "getString")
     getString : Ptr String -> String
+
+
+Finalisers
+----------
+
+In some libraries, a foreign function creates a pointer and the caller is
+responsible for freeing it. In this case, you can make an explicit foreign
+call to ``free``. However, this is not always convenient, or even possible.
+Instead, you can ask the Idris run-time to be responsible for freeing the
+pointer when it is no longer accessible, using ``onCollect`` (or its
+typeless variant ``onCollectAny``) defined in the Prelude:
+
+.. code-block:: idris
+
+    onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
+    onCollectAny : AnyPtr -> (AnyPtr -> IO ()) -> IO GCAnyPtr
+
+A ``GCPtr t`` behaves exactly like ``Ptr t`` when passed to a foreign
+function (and, similarly, ``GCAnyPtr`` behaves like ``AnyPtr``). A foreign
+function cannot return a ``GCPtr`` however, because then we can no longer
+assume the pointer is completely managed by the Idris run-time.
+
+The finaliser is called either when the garbage collector determines that
+the pointer is no longer accessible, or at the end of execution.
+
+Note that finalisers might not be supported by all back ends, since they depend
+on the facilities offered by a specific back end's run time system. They are
+certainly supported in the Chez Scheme and Racket back ends.

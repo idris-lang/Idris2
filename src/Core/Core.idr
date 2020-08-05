@@ -2,7 +2,9 @@ module Core.Core
 
 import Core.Env
 import Core.TT
+
 import Data.List
+import Data.List1
 import Data.Vect
 import Parser.Source
 
@@ -74,7 +76,7 @@ data Error : Type where
      AmbiguousElab : {vars : _} ->
                      FC -> Env Term vars -> List (Term vars) -> Error
      AmbiguousSearch : {vars : _} ->
-                       FC -> Env Term vars -> List (Term vars) -> Error
+                       FC -> Env Term vars -> Term vars -> List (Term vars) -> Error
      AmbiguityTooDeep : FC -> Name -> List Name -> Error
      AllFailed : List (Maybe Name, Error) -> Error
      RecordTypeNeeded : {vars : _} ->
@@ -126,6 +128,7 @@ data Error : Type where
      CyclicImports : List (List String) -> Error
      ForceNeeded : Error
      InternalError : String -> Error
+     UserError : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -213,7 +216,7 @@ Show Error where
 
   show (AmbiguousName fc ns) = show fc ++ ":Ambiguous name " ++ show ns
   show (AmbiguousElab fc env ts) = show fc ++ ":Ambiguous elaboration " ++ show ts
-  show (AmbiguousSearch fc env ts) = show fc ++ ":Ambiguous search " ++ show ts
+  show (AmbiguousSearch fc env tgt ts) = show fc ++ ":Ambiguous search " ++ show ts
   show (AmbiguityTooDeep fc n ns)
       = show fc ++ ":Ambiguity too deep in " ++ show n ++ " " ++ show ns
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
@@ -290,6 +293,7 @@ Show Error where
       showMod ns = showSep "." (reverse ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
+  show (UserError str) = "Error: " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -325,7 +329,7 @@ getErrorLoc (BorrowPartial loc _ _ _) = Just loc
 getErrorLoc (BorrowPartialType loc _ _) = Just loc
 getErrorLoc (AmbiguousName loc _) = Just loc
 getErrorLoc (AmbiguousElab loc _ _) = Just loc
-getErrorLoc (AmbiguousSearch loc _ _) = Just loc
+getErrorLoc (AmbiguousSearch loc _ _ _) = Just loc
 getErrorLoc (AmbiguityTooDeep loc _ _) = Just loc
 getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
@@ -363,6 +367,7 @@ getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
+getErrorLoc (UserError _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
@@ -471,6 +476,10 @@ traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
 export
+traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
+traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
+
+export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
@@ -486,6 +495,12 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
+
+export
+traverseList1_ : (a -> Core b) -> List1 a -> Core ()
+traverseList1_ f (x :: xs) = do
+  f x
+  traverse_ f xs
 
 namespace PiInfo
   export

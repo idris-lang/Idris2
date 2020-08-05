@@ -1,5 +1,6 @@
 import Data.Strings
 import Data.Vect
+import Data.Vect.Elem
 import Decidable.Equality
 
 data WordState : (guesses : Nat) -> (letters : Nat) -> Type where

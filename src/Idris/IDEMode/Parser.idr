@@ -14,6 +14,8 @@ import Text.Parser
 import Utils.Either
 import Utils.String
 
+%default total
+
 %hide Text.Lexer.symbols
 %hide Parser.Lexer.Source.symbols
 
@@ -34,7 +36,7 @@ idelex str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c EndInput])
+                                      [MkToken l c l c EndInput])
            (_, fail) => Left fail
     where
       notComment : TokenData Token -> Bool
@@ -42,6 +44,7 @@ idelex str
                           Comment _ => False
                           _ => True
 
+covering
 sexp : Rule SExp
 sexp
     = do symbol ":"; exactIdent "True"
@@ -67,6 +70,7 @@ ideParser str p
 
 
 export
+covering
 parseSExp : String -> Either (ParseError Token) SExp
 parseSExp inp
     = ideParser inp (do c <- sexp; eoi; pure c)

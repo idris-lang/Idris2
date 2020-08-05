@@ -7,6 +7,8 @@ import Core.TT
 
 import Data.NameMap
 
+%default total
+
 unload : List (FC, Term vars) -> Term vars -> Term vars
 unload [] fn = fn
 unload ((fc, arg) :: args) fn = unload args (App fc fn arg)
@@ -35,7 +37,7 @@ addMatch idx p val ms
                            else Nothing
 
 -- LHS of a rule must be a function application, so there's not much work
--- to do here! 
+-- to do here!
 match : MatchVars vars vs ->
         Term vars -> Term vs -> Maybe (MatchVars vars vs)
 match ms (Local _ _ idx p) val
@@ -48,6 +50,7 @@ match ms x y
          then Just ms
          else Nothing
 
+covering
 tryReplace : MatchVars vars vs -> Term vars -> Maybe (Term vs)
 tryReplace ms (Local _ _ idx p) = lookupMatch idx p ms
 tryReplace ms (Ref fc nt n) = pure (Ref fc nt n)
@@ -80,6 +83,7 @@ tryReplace ms (PrimVal fc c) = pure (PrimVal fc c)
 tryReplace ms (Erased fc i) = pure (Erased fc i)
 tryReplace ms (TType fc) = pure (TType fc)
 
+covering
 tryApply : Transform -> Term vs -> Maybe (Term vs)
 tryApply trans@(MkTransform {vars} n _ lhs rhs) tm
    = case match None lhs tm of
@@ -100,6 +104,7 @@ apply (t :: ts) tm
 
 data Upd : Type where
 
+covering
 trans : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref Upd Bool} ->
         Env Term vars -> List (FC, Term vars) -> Term vars ->
@@ -135,6 +140,7 @@ trans env stk (TForce fc r tm)
          pure $ unload stk (TForce fc r tm')
 trans env stk tm = pure $ unload stk tm
 
+covering
 transLoop : {auto c : Ref Ctxt Defs} ->
             Nat -> Env Term vars -> Term vars -> Core (Term vars)
 transLoop Z env tm = pure tm
@@ -148,6 +154,7 @@ transLoop (S k) env tm
             else pure tm'
 
 export
+covering
 applyTransforms : {auto c : Ref Ctxt Defs} ->
                   Env Term vars -> Term vars -> Core (Term vars)
 applyTransforms env tm = transLoop 5 env tm

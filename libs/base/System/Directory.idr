@@ -10,9 +10,10 @@ support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support"
 
 %foreign support "idris2_fileErrno"
+         "node:support:fileErrno,support_system_directory"
 prim_fileErrno : PrimIO Int
 
-returnError : IO (Either FileError a)
+returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim_fileErrno
          case err of
@@ -23,16 +24,19 @@ returnError
               4 => pure $ Left FileExists
               _ => pure $ Left (GenericFileError (err-5))
 
-ok : a -> IO (Either FileError a)
+ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
 %foreign support "idris2_currentDirectory"
+         "node:lambda:()=>process.cwd()"
 prim_currentDir : PrimIO (Ptr String)
 
 %foreign support "idris2_changeDir"
+         "node:support:changeDir,support_system_directory"
 prim_changeDir : String -> PrimIO Int
 
 %foreign support "idris2_createDir"
+         "node:support:createDir,support_system_directory"
 prim_createDir : String -> PrimIO Int
 
 %foreign support "idris2_openDir"
@@ -52,7 +56,7 @@ data Directory : Type where
      MkDir : DirPtr -> Directory
 
 export
-createDir : String -> IO (Either FileError ())
+createDir : HasIO io => String -> io (Either FileError ())
 createDir dir
     = do res <- primIO (prim_createDir dir)
          if res == 0
@@ -60,13 +64,13 @@ createDir dir
             else returnError
 
 export
-changeDir : String -> IO Bool
+changeDir : HasIO io => String -> io Bool
 changeDir dir
     = do ok <- primIO (prim_changeDir dir)
          pure (ok == 0)
 
 export
-currentDir : IO (Maybe String)
+currentDir : HasIO io => io (Maybe String)
 currentDir
     = do res <- primIO prim_currentDir
          if prim__nullPtr res /= 0
@@ -74,7 +78,7 @@ currentDir
             else pure (Just (prim__getString res))
 
 export
-openDir : String -> IO (Either FileError Directory)
+openDir : HasIO io => String -> io (Either FileError Directory)
 openDir d
     = do res <- primIO (prim_openDir d)
          if prim__nullAnyPtr res /= 0
@@ -82,15 +86,15 @@ openDir d
             else ok (MkDir res)
 
 export
-closeDir : Directory -> IO ()
+closeDir : HasIO io => Directory -> io ()
 closeDir (MkDir d) = primIO (prim_closeDir d)
 
 export
-removeDir : String -> IO ()
+removeDir : HasIO io => String -> io ()
 removeDir dirName = primIO (prim_removeDir dirName)
 
 export
-dirEntry : Directory -> IO (Either FileError String)
+dirEntry : HasIO io => Directory -> io (Either FileError String)
 dirEntry (MkDir d)
     = do res <- primIO (prim_dirEntry d)
          if prim__nullPtr res /= 0

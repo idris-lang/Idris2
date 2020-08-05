@@ -21,6 +21,8 @@ import Data.List
 import Data.NameMap
 import Data.StringMap
 
+%default covering
+
 public export
 data ElabMode = InType | InLHS RigCount | InExpr | InTransform
 
@@ -362,7 +364,7 @@ metaVar : {vars : _} ->
           FC -> RigCount ->
           Env Term vars -> Name -> Term vars -> Core (Term vars)
 metaVar fc rig env n ty
-    = do (_, tm) <- newMeta fc rig env n ty (Hole (length env) False) True
+    = do (_, tm) <- newMeta fc rig env n ty (Hole (length env) (holeInit False)) True
          pure tm
 
 export
@@ -372,7 +374,7 @@ implBindVar : {vars : _} ->
               FC -> RigCount ->
               Env Term vars -> Name -> Term vars -> Core (Term vars)
 implBindVar fc rig env n ty
-    = do (_, tm) <- newMeta fc rig env n ty (Hole (length env) True) True
+    = do (_, tm) <- newMeta fc rig env n ty (Hole (length env) (holeInit True)) True
          pure tm
 
 export
@@ -382,7 +384,13 @@ metaVarI : {vars : _} ->
            FC -> RigCount ->
            Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 metaVarI fc rig env n ty
-    = newMeta fc rig env n ty (Hole (length env) False) True
+    = do defs <- get Ctxt
+         tynf <- nf defs env ty
+         let hinf = case tynf of
+                         NApp _ (NMeta _ _ _) _ =>
+                              record { precisetype = True } (holeInit False)
+                         _ => holeInit False
+         newMeta fc rig env n ty (Hole (length env) hinf) True
 
 export
 argVar : {vars : _} ->
@@ -391,7 +399,7 @@ argVar : {vars : _} ->
          FC -> RigCount ->
          Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 argVar fc rig env n ty
-    = newMetaLets fc rig env n ty (Hole (length env) False) False True
+    = newMetaLets fc rig env n ty (Hole (length env) (holeInit False)) False True
 
 export
 searchVar : {vars : _} ->

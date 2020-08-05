@@ -52,45 +52,38 @@ uniqueRHS c = pure c
 expandClause : {auto c : Ref Ctxt Defs} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
-               FC -> Int -> ImpClause ->
-               Core (List ImpClause)
-expandClause loc n c
-    = do log 10 $ "Trying clause " ++ show c
-         c <- uniqueRHS c
-         Right clause <- checkClause linear False n [] (MkNested []) [] c
-            | Left _ => pure [] -- TODO: impossible clause, do something
-                                -- appropriate
+               FC -> SearchOpts -> Int -> ImpClause ->
+               Core (Search (List ImpClause))
+expandClause loc opts n c
+    = do c <- uniqueRHS c
+         Right clause <- checkClause linear Private False n [] (MkNested []) [] c
+            | Left err => noResult -- TODO: impossible clause, do something
+                                   -- appropriate
+
          let MkClause {vars} env lhs rhs = clause
-         logTerm 10 "RHS hole" rhs
          let Meta _ i fn _ = getFn rhs
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          defs <- get Ctxt
          Just (Hole locs _) <- lookupDefExact (Resolved fn) (gamma defs)
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
          log 10 $ "Expression search for " ++ show (i, fn)
-         (rhs' :: _) <- exprSearch loc (Resolved fn) []
-            | _ => throw (GenericMsg loc "No result found for search on RHS")
-         defs <- get Ctxt
-         rhsnf <- normaliseHoles defs [] rhs'
-         let (_ ** (env', rhsenv)) = dropLams locs [] rhsnf
-
-         rhsraw <- unelab env' rhsenv
-         logTermNF 5 "Got clause" env lhs
-         logTermNF 5 "        = " env' rhsenv
-         pure [updateRHS c rhsraw]
+         rhs' <- exprSearchOpts opts loc (Resolved fn) []
+         traverse (\rhs' =>
+            do let rhsraw = dropLams locs rhs'
+               logTermNF 5 "Got clause" env lhs
+               log 5 $ "        = " ++ show rhsraw
+               pure [updateRHS c rhsraw]) rhs'
   where
     updateRHS : ImpClause -> RawImp -> ImpClause
     updateRHS (PatClause fc lhs _) rhs = PatClause fc lhs rhs
     -- 'with' won't happen, include for completeness
-    updateRHS (WithClause fc lhs wval cs) rhs = WithClause fc lhs wval cs
+    updateRHS (WithClause fc lhs wval flags cs) rhs = WithClause fc lhs wval flags cs
     updateRHS (ImpossibleClause fc lhs) _ = ImpossibleClause fc lhs
 
-    dropLams : {vars : _} ->
-               Nat -> Env Term vars -> Term vars ->
-               (vars' ** (Env Term vars', Term vars'))
-    dropLams Z env tm = (_ ** (env, tm))
-    dropLams (S k) env (Bind _ _ b sc) = dropLams k (b :: env) sc
-    dropLams _ env tm = (_ ** (env, tm))
+    dropLams : Nat -> RawImp -> RawImp
+    dropLams Z tm = tm
+    dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
+    dropLams _ tm = tm
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
@@ -140,74 +133,158 @@ trySplit loc lhsraw lhs rhs n
 generateSplits : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Int -> ImpClause ->
+                 FC -> SearchOpts -> Int -> ImpClause ->
                  Core (List (Name, List ImpClause))
-generateSplits loc fn (ImpossibleClause fc lhs) = pure []
-generateSplits loc fn (WithClause fc lhs wval cs) = pure []
-generateSplits {c} {m} {u} loc fn (PatClause fc lhs rhs)
+generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
+generateSplits loc opts fn (WithClause fc lhs wval flags cs) = pure []
+generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
                 elabTerm fn (InLHS linear) [] (MkNested []) []
                          (IBindHere loc PATTERN lhs) Nothing
-         traverse (trySplit fc lhs lhstm rhs) (splittableNames lhs)
+         let splitnames =
+                 if ltor opts then splittableNames lhs
+                              else reverse (splittableNames lhs)
+         traverse (trySplit fc lhs lhstm rhs) splitnames
+
+collectClauses : {auto c : Ref Ctxt Defs} ->
+                 {auto u : Ref UST UState} ->
+                 List (Search (List ImpClause)) ->
+                 Core (Search (List ImpClause))
+collectClauses [] = one []
+collectClauses (x :: xs)
+    = do xs' <- collectClauses xs
+         combine (++) x xs'
 
 mutual
   tryAllSplits : {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 FC -> Int -> Error ->
+                 FC -> SearchOpts -> Int ->
                  List (Name, List ImpClause) ->
-                 Core (List ImpClause)
-  tryAllSplits loc n err [] = throw err
-  tryAllSplits loc n err ((x, []) :: rest)
-      = tryAllSplits loc n err rest
-  tryAllSplits loc n err ((x, cs) :: rest)
+                 Core (Search (List ImpClause))
+  tryAllSplits loc opts n [] = noResult
+  tryAllSplits loc opts n ((x, []) :: rest)
+      = tryAllSplits loc opts n rest
+  tryAllSplits loc opts n ((x, cs) :: rest)
       = do log 5 $ "Splitting on " ++ show x
-           catch (do cs' <- traverse (mkSplits loc n) cs
-                     pure (concat cs'))
-                 (\err => tryAllSplits loc n err rest)
+           trySearch (do cs' <- traverse (mkSplits loc opts n) cs
+                         collectClauses cs')
+                     (tryAllSplits loc opts n rest)
 
   mkSplits : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
-             FC -> Int -> ImpClause ->
-             Core (List ImpClause)
+             FC -> SearchOpts -> Int -> ImpClause ->
+             Core (Search (List ImpClause))
   -- If the clause works, use it. Otherwise, split on one of the splittable
   -- variables and try all of the resulting clauses
-  mkSplits loc n c
-      = catch (expandClause loc n c)
-          (\err =>
-              do cs <- generateSplits loc n c
-                 log 5 $ "Splits: " ++ show cs
-                 tryAllSplits loc n err cs)
+  mkSplits loc opts n c
+      = trySearch
+          (if mustSplit opts
+              then noResult
+              else expandClause loc opts n c)
+          (do cs <- generateSplits loc opts n c
+              log 5 $ "Splits: " ++ show cs
+              tryAllSplits loc (record { mustSplit = False,
+                                         doneSplit = True } opts) n cs)
+
+export
+makeDefFromType : {auto c : Ref Ctxt Defs} ->
+                  {auto m : Ref MD Metadata} ->
+                  {auto u : Ref UST UState} ->
+                  FC -> 
+                  SearchOpts ->
+                  Name -> -- function name to generate
+                  Nat -> -- number of arguments
+                  ClosedTerm -> -- type of function
+                  Core (Search (FC, List ImpClause))
+makeDefFromType loc opts n envlen ty
+    = tryUnify
+         (do defs <- branch
+             meta <- get MD
+             ust <- get UST
+             argns <- getEnvArgNames defs envlen !(nf defs [] ty)
+             -- Need to add implicit patterns for the outer environment.
+             -- We won't try splitting on these
+             let pre_env = replicate envlen (Implicit loc True)
+
+             rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
+             let initcs = PatClause loc
+                                (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
+                                (IHole loc rhshole)
+             let Just nidx = getNameID n (gamma defs)
+                 | Nothing => throw (UndefinedName loc n)
+             cs' <- mkSplits loc opts nidx initcs
+             -- restore the global state, given that we've fiddled with it a lot!
+             put Ctxt defs
+             put MD meta
+             put UST ust
+             pure (map (\c => (loc, c)) cs'))
+         noResult
 
 export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
-          Name -> Core (Maybe (FC, List ImpClause))
+          Name -> Core (Search (FC, List ImpClause))
 makeDef p n
     = do Just (loc, nidx, envlen, ty) <- findTyDeclAt p
-            | Nothing => pure Nothing
+            | Nothing => noResult
          n <- getFullName nidx
          logTerm 5 ("Searching for " ++ show n) ty
-         defs <- branch
-         meta <- get MD
-         ust <- get UST
-         argns <- getEnvArgNames defs envlen !(nf defs [] ty)
-         -- Need to add implicit patterns for the outer environment.
-         -- We won't try splitting on these
-         let pre_env = replicate envlen (Implicit loc True)
+         let opts = record { genExpr = Just (makeDefFromType loc) }
+                           (initSearchOpts True 5)
+         makeDefFromType loc opts n envlen ty
 
-         rhshole <- uniqueName defs [] (fnName False n ++ "_rhs")
-         let initcs = PatClause loc
-                            (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
-                            (IHole loc rhshole)
-         let Just nidx = getNameID n (gamma defs)
-             | Nothing => throw (UndefinedName loc n)
-         cs' <- mkSplits loc nidx initcs
-         -- restore the global state, given that we've fiddled with it a lot!
-         put Ctxt defs
-         put MD meta
-         put UST ust
-         pure (Just (loc, cs'))
+-- Given a clause, return the bindable names, and the ones that were used in
+-- the rhs
+bindableUsed : ImpClause -> Maybe (List Name, List Name)
+bindableUsed (PatClause fc lhs rhs)
+    = let lhsns = findIBindVars lhs
+          rhsns = findAllNames [] rhs in
+          Just (lhsns, filter (\x => x `elem` lhsns) rhsns)
+bindableUsed _ = Nothing
+
+propBindableUsed : List ImpClause -> Double
+propBindableUsed def
+    = let (b, u) = getProp def in
+          if b == Z
+             then 1.0
+             else the Double (cast u) / the Double (cast b)
+  where
+    getProp : List ImpClause -> (Nat, Nat)
+    getProp [] = (0, 0)
+    getProp (c :: xs)
+        = let (b, u) = getProp xs in
+              case bindableUsed c of
+                   Nothing => (b, u)
+                   Just (b', u') => (b + length (nub b'), u + length (nub u'))
+
+-- Sort by highest proportion of bound variables used. This recalculates every
+-- time it looks, which might seem expensive, but it's only inspecting (not
+-- constructing anything) and it would make the code ugly if we avoid that.
+-- Let's see if it's a bottleneck before doing anything about it...
+export
+mostUsed : List ImpClause -> List ImpClause -> Ordering
+mostUsed def1 def2 = compare (propBindableUsed def2) (propBindableUsed def1)
+
+export
+makeDefSort : {auto c : Ref Ctxt Defs} ->
+              {auto m : Ref MD Metadata} ->
+              {auto u : Ref UST UState} ->
+              (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+              Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
+              Name -> Core (Search (FC, List ImpClause))
+makeDefSort p max ord n
+    = searchSort max (makeDef p n) (\x, y => ord (snd x) (snd y))
+
+export
+makeDefN : {auto c : Ref Ctxt Defs} ->
+           {auto m : Ref MD Metadata} ->
+           {auto u : Ref UST UState} ->
+           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+           Nat -> Name -> Core (List (FC, List ImpClause))
+makeDefN p max n
+    = do (res, _) <- searchN max (makeDef p n)
+         pure res

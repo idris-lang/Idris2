@@ -252,5 +252,5 @@ for other editors can be added in a relatively straightforward manner
 by using ``idris2 -–client``.
 More sophisticated support can be added by using the IDE protocol (yet to
 be documented for Idris 2, but which mostly extends to protocol documented for 
-`Idris 1 <http://docs.idris-lang.org/en/latest/reference/ide-protocol.html>`_.
+`Idris 1 <https://docs.idris-lang.org/en/latest/reference/ide-protocol.html>`_.
 

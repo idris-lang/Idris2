@@ -23,6 +23,8 @@ import Data.StringMap
 import System.Directory
 import System.File
 
+import Utils.Either
+
 %default covering
 
 record ModTree where
@@ -126,7 +128,7 @@ getBuildMods : {auto c : Ref Ctxt Defs} ->
 getBuildMods loc done fname
     = do a <- newRef AllMods []
          d <- getDirs
-         let fname_ns = pathToNS (working_dir d) (source_dir d) fname
+         fname_ns <- pathToNS (working_dir d) (source_dir d) fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
@@ -158,11 +160,11 @@ buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
         let src = buildFile mod
-        mttc <- getTTCFileName src ".ttc"
+        mttc <- getTTCFileName src "ttc"
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
-        let (ferrs, depFiles) = getEithers depFilesE
+        let (ferrs, depFiles) = partitionEithers depFilesE
         ttcTime <- catch (do t <- fnameModified mttc
                              pure (Just t))
                          (\err => pure Nothing)
@@ -193,16 +195,6 @@ buildMod loc num len mod
            else do emitWarnings
                    traverse_ emitError ferrs
                    pure ferrs
-  where
-    getEithers : List (Either a b) -> (List a, List b)
-    getEithers [] = ([], [])
-    getEithers (Left x :: es)
-        = let (ls, rs) = getEithers es in
-              (x :: ls, rs)
-    getEithers (Right y :: es)
-        = let (ls, rs) = getEithers es in
-              (ls, y :: rs)
-
 
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -230,12 +222,12 @@ buildDeps fname
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
                        put MD initMetadata
-                       mainttc <- getTTCFileName fname ".ttc"
-                       log 10 $ "Reloading " ++ show mainttc
+                       mainttc <- getTTCFileName fname "ttc"
+                       log 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc
 
                        -- Load the associated metadata for interactive editing
-                       mainttm <- getTTCFileName fname ".ttm"
+                       mainttm <- getTTCFileName fname "ttm"
                        log 10 $ "Reloading " ++ show mainttm
                        readFromTTM mainttm
                        pure []

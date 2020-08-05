@@ -72,6 +72,11 @@ Linearity
 ---------
 
 The ``1`` multiplicity expresses that a variable must be used exactly once.
+By "used" we mean either:
+
+* if the variable is a data type or primitive value, it is pattern matched against, ex. by being the subject of a *case* statement, or a function argument that is pattern matched against, etc.,
+* if the variable is a function, that function is applied (i.e. ran with an argument)
+  
 First, we'll see how this works on some small examples of functions and
 data types, then see how it can be used to encode `resource protocols`_.
 

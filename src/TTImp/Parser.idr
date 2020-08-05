@@ -9,8 +9,9 @@ import TTImp.TTImp
 
 import public Text.Parser
 import        Data.List
-import        Data.List.NonEmpty
+import        Data.List1
 import        Data.List.Views
+import        Data.List1
 import        Data.Strings
 
 topDecl : FileName -> IndentInfo -> Rule ImpDecl
@@ -18,6 +19,8 @@ topDecl : FileName -> IndentInfo -> Rule ImpDecl
 -- neighbouring clauses with the same function name into one definition.
 export
 collectDefs : List ImpDecl -> List ImpDecl
+
+%default covering
 
 %hide Prelude.(>>=)
 %hide Core.Core.(>>=)
@@ -501,7 +504,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval (map snd (NonEmpty.toList ws)))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd (List1.toList ws)))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -644,7 +647,7 @@ namespaceDecl
     = do keyword "namespace"
          commit
          ns <- namespacedIdent
-         pure ns
+         pure (List1.toList ns)
 
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
@@ -684,7 +687,7 @@ topDecl fname indents
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
          end <- location
-         pure (INamespace (MkFC fname start end) ns (NonEmpty.toList ds))
+         pure (INamespace (MkFC fname start end) ns (List1.toList ds))
   <|> do start <- location
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
@@ -724,7 +727,7 @@ export
 prog : FileName -> Rule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
-         pure (collectDefs (NonEmpty.toList ds))
+         pure (collectDefs (List1.toList ds))
 
 -- TTImp REPL commands
 export

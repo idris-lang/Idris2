@@ -7,14 +7,16 @@ import Idris.Syntax
 
 import Idris.IDEMode.Commands
 
+%default covering
+
 public export
 record HolePremise where
   constructor MkHolePremise
   name         : Name
   type         : PTerm
-  multiplicity : RigCount  
+  multiplicity : RigCount
   isImplicit   : Bool
-  
+
 
 public export
 record HoleData where
@@ -25,7 +27,7 @@ record HoleData where
 
 ||| If input is a hole, return number of locals in scope at binding
 ||| point
-export  
+export
 isHole : GlobalDef -> Maybe Nat
 isHole def
     = case definition def of

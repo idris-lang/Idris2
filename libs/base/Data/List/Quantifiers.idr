@@ -78,3 +78,9 @@ export
 indexAll : Elem x xs -> All p xs -> p x
 indexAll  Here     (p::_  ) = p
 indexAll (There e) ( _::ps) = indexAll e ps
+
+||| Modify the property given a pointwise function
+export
+mapProperty : (f : {0 x : a} -> p x -> q x) -> All p l -> All q l
+mapProperty f [] = []
+mapProperty f (p::pl) = f p :: mapProperty f pl

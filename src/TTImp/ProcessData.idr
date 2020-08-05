@@ -14,6 +14,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
+import TTImp.Utils
 
 import Data.List
 import Data.NameMap
@@ -280,7 +281,6 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
-         pure ()
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
@@ -304,7 +304,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                   Nothing => pure []
                   Just ndef =>
                     case definition ndef of
-                         TCon _ _ _ _ _ mw _ _ =>
+                         TCon _ _ _ _ _ mw [] _ =>
                             do ok <- convert defs [] fullty (type ndef)
                                if ok then pure mw
                                      else do logTermNF 1 "Previous" [] (type ndef)
@@ -362,4 +362,3 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
          traverse_ updateErasable (Resolved tidx :: connames)
-

@@ -31,9 +31,17 @@
       `(remainder (floor (/ ,x ,y)) ,(arithmetic-shift 1 bits))
       `(remainder (floor (/ ,x ,y)) (arithmetic-shift 1 ,bits))))
 
+(define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
+(define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
+(define-macro (blodwen-bits-shl x y bits)
+                   `(remainder (arithmetic-shift ,x ,y)
+                               (arithmetic-shitt 1 ,bits)))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 

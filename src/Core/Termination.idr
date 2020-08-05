@@ -157,6 +157,9 @@ mutual
       = findSC defs env g pats tm
   findSC defs env g pats tm
       = do let (fn, args) = getFnArgs tm
+           -- if it's a 'case' or 'if' just go straight into the arguments
+           Nothing <- handleCase fn args
+               | Just res => pure res
            fn' <- conIfGuarded fn -- pretend it's a data constructor if
                                   -- it has the AllGuarded flag
            case (g, fn', args) of
@@ -186,6 +189,14 @@ mutual
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
       where
+        handleCase : Term vars -> List (Term vars) -> Core (Maybe (List SCCall))
+        handleCase (Ref fc nt n) args
+            = do n' <- toFullNames n
+                 if caseFn n'
+                    then Just <$> findSCcall defs env g pats fc n 4 args
+                    else pure Nothing
+        handleCase _ _ = pure Nothing
+
         conIfGuarded : Term vars -> Core (Term vars)
         conIfGuarded (Ref fc Func n)
             = do defs <- get Ctxt
@@ -218,9 +229,7 @@ mutual
   smaller inc defs big s (As _ _ p t)
       = smaller inc defs big s p || smaller inc defs big s t
   smaller True defs big s t
-      = if s == t
-           then True
-           else smallerArg True defs big s t
+      = s == t || smallerArg True defs big s t
   smaller inc defs big s t = smallerArg inc defs big s t
 
   assertedSmaller : Maybe (Term vars) -> Term vars -> Bool
@@ -229,12 +238,12 @@ mutual
 
   smallerArg : Bool -> Defs ->
                Maybe (Term vars) -> Term vars -> Term vars -> Bool
+  smallerArg inc defs big (As _ _ _ s) tm = smallerArg inc defs big s tm
   smallerArg inc defs big s tm
         -- If we hit a pattern that is equal to a thing we've asserted_smaller,
         -- the argument must be smaller
-      = if assertedSmaller big tm
-           then True
-           else case getFnArgs tm of
+      = assertedSmaller big tm ||
+                case getFnArgs tm of
                      (Ref _ (DataCon t a) cn, args)
                          => any (smaller True defs big s) args
                      _ => case s of
@@ -284,17 +293,6 @@ mutual
                 => pure $ Just (map matchArgs pdefs)
              _ => pure Nothing
     where
-      lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')
-      lookupTm tm [] = Nothing
-      lookupTm tm ((As _ _ p tm', v) :: tms)
-          = if tm == p
-               then Just v
-               else lookupTm tm ((tm', v) :: tms)
-      lookupTm tm ((tm', v) :: tms)
-          = if tm == tm'
-               then Just v
-               else lookupTm tm tms
-
       updateRHS : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> Term vs -> Term vs'
       updateRHS {vs} {vs'} ms tm
@@ -318,6 +316,22 @@ mutual
           urhs (PrimVal fc c) = PrimVal fc c
           urhs (Erased fc i) = Erased fc i
           urhs (TType fc) = TType fc
+
+          lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')
+          lookupTm tm [] = Nothing
+          lookupTm (As fc s p tm) tms -- Want to keep the pattern and the variable,
+                                      -- if there was an @ in the parent
+              = do tm' <- lookupTm tm tms
+                   Just $ As fc s tm' (urhs tm)
+          lookupTm tm ((As fc s p tm', v) :: tms)
+              = if tm == p
+                   then Just v
+                   else do tm' <- lookupTm tm ((tm', v) :: tms)
+                           Just $ As fc s (urhs p) tm'
+          lookupTm tm ((tm', v) :: tms)
+              = if tm == tm'
+                   then Just v
+                   else lookupTm tm tms
 
       updatePat : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> (Nat, Term vs) -> (Nat, Term vs')
@@ -386,7 +400,7 @@ getSC : {auto c : Ref Ctxt Defs} ->
         Defs -> Def -> Core (List SCCall)
 getSC defs (PMDef _ args _ _ pats)
    = do sc <- traverse (findCalls defs) pats
-        pure (concat sc)
+        pure $ nub (concat sc)
 getSC defs _ = pure []
 
 export
@@ -421,8 +435,6 @@ initArgs (S k)
 -- Traverse the size change graph. When we reach a point we've seen before,
 -- at least one of the arguments must have got smaller, otherwise it's
 -- potentially non-terminating
--- TODO: If we encounter a name where we already know its termination status,
--- use that rather than continuing to traverse the graph!
 checkSC : {auto a : Ref APos Arg} ->
           {auto c : Ref Ctxt Defs} ->
           Defs ->
@@ -467,6 +479,11 @@ checkSC defs f args path
     checkCall : List (Name, List (Maybe Arg)) -> SCCall -> Core Terminating
     checkCall path sc
         = do let inpath = fnCall sc `elem` map fst path
+             Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
+                  | Nothing => pure IsTerminating -- nothing to check
+             let Unchecked = isTerminating (totality gdef)
+                  | IsTerminating => pure IsTerminating
+                  | _ => pure (NotTerminating (BadCall [fnCall sc]))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
              if not inpath
                 then case term of

@@ -11,6 +11,7 @@ import Core.Directory
 import Core.Name
 import Core.TT
 import Utils.Hex
+import Utils.Path
 
 import Data.List
 import Data.Maybe
@@ -39,6 +40,7 @@ findRacoExe =
 schHeader : String -> String
 schHeader libs
   = "#lang racket/base\n" ++
+    "; @generated\n" ++
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system
     "(require rnrs/bytevectors-6)\n" ++ -- for buffers
@@ -49,20 +51,14 @@ schHeader libs
     "(let ()\n"
 
 schFooter : String
-schFooter = ")"
+schFooter = ") (collect-garbage)"
 
 showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
 showRacketChar c
    = if c < chr 32 || c > chr 126
-        then (("\\u" ++ pad (asHex (cast c))) ++)
+        then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++)
         else strCons c
-  where
-    pad : String -> String
-    pad str
-        = case isLTE (length str) 4 of
-               Yes _ => pack (List.replicate (minus 4 (length str)) '0') ++ str
-               No _ => str
 
 showRacketString : List Char -> String -> String
 showRacketString [] = id
@@ -74,8 +70,6 @@ racketString cs = strCons '"' (showRacketString (unpack cs) "\"")
 
 mutual
   racketPrim : Int -> ExtPrim -> List NamedCExp -> Core String
-  racketPrim i CCall [ret, fn, args, world]
-      = throw (InternalError ("Can't compile C FFI calls to Racket yet"))
   racketPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                          NmPrimVal _ (Str fld), _]
       = do structsc <- schExp racketPrim racketString 0 struct
@@ -92,6 +86,14 @@ mutual
       = pure "(error \"bad setField\")"
   racketPrim i SysCodegen []
       = pure $ "\"racket\""
+  racketPrim i OnCollect [_, p, c, world]
+      = do p' <- schExp racketPrim racketString 0 p
+           c' <- schExp racketPrim racketString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  racketPrim i OnCollectAny [p, c, world]
+      = do p' <- schExp racketPrim racketString 0 p
+           c' <- schExp racketPrim racketString 0 c
+           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   racketPrim i prim args
       = schExtCommon racketPrim racketString i prim args
 
@@ -107,10 +109,13 @@ data Done : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
+cftySpec fc CFUnsigned = pure "_uint"
 cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
 cftySpec fc CFPtr = pure "_pointer"
+cftySpec fc CFGCPtr = pure "_pointer"
+cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "_" ++ n ++ "-pointer"
 cftySpec fc (CFFun s t) = funTySpec [s] t
@@ -157,6 +162,14 @@ cCall : {auto f : Ref Done (List String) } ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> (cfn : String) -> (clib : String) ->
         List (Name, CFType) -> CFType -> Core (String, String)
+cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args CFGCPtr
+    = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
+cCall appdir fc cfn clib args (CFIORes CFBuffer)
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
+cCall appdir fc cfn clib args CFBuffer
+    = throw (GenericMsg fc "Can't return Buffer from a foreign function")
 cCall appdir fc cfn libspec args ret
     = do loaded <- get Loaded
          bound <- get Done
@@ -166,7 +179,7 @@ cCall appdir fc cfn libspec args ret
                    then pure ""
                    else do put Loaded (libn :: loaded)
                            (fname, fullname) <- locate libspec
-                           copyLib (appdir ++ dirSep ++ fname, fullname)
+                           copyLib (appdir </> fname, fullname)
                            pure (loadlib libn vers)
 
          argTypes <- traverse (\a => do s <- cftySpec fc (snd a)
@@ -179,7 +192,7 @@ cCall appdir fc cfn libspec args ret
                                     " (_fun " ++ showSep " " (map snd argTypes) ++ " -> " ++
                                         retType ++ "))\n"
          let call = "(" ++ cfn ++ " " ++
-                    showSep " " !(traverse useArg argTypes) ++ ")"
+                    showSep " " !(traverse useArg (map fst argTypes)) ++ ")"
 
          pure (lib ++ cbind, case ret of
                                   CFIORes rt => handleRet rt call
@@ -214,9 +227,9 @@ cCall appdir fc cfn libspec args ret
              retType <- cftySpec fc retty
              pure $ mkFun args retty n
 
-    useArg : ((Name, CFType), String) -> Core String
-    useArg ((n, CFFun s t), _) = callback (schName n) [s] t
-    useArg ((n, ty), _)
+    useArg : (Name, CFType) -> Core String
+    useArg (n, CFFun s t) = callback (schName n) [s] t
+    useArg (n, ty)
         = pure $ rktToC ty (schName n)
 
 schemeCall : FC -> (sfn : String) ->
@@ -300,7 +313,16 @@ startRacket : String -> String -> String -> String
 startRacket racket appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "DIR=\"`realpath $0`\""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
     , racket ++ "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
@@ -316,7 +338,17 @@ startRacketCmd racket appdir target = unlines
 startRacketWinSh : String -> String -> String -> String
 startRacketWinSh racket appdir target = unlines
     [ "#!/bin/sh"
-    , "DIR=\"`realpath \"$0\"`\""
+    , ""
+    , "case `uname -s` in            "
+    , "    OpenBSD|FreeBSD|NetBSD)   "
+    , "        DIR=\"`grealpath $0`\""
+    , "        ;;                    "
+    , "                              "
+    , "    *)                        "
+    , "        DIR=\"`realpath $0`\" "
+    , "        ;;                    "
+    , "esac                          "
+    , ""
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
@@ -362,20 +394,20 @@ makeShWindows racket outShRel appdir outAbs
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-compileExpr : Bool -> Ref Ctxt Defs -> (execDir : String) ->
+compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr mkexec c execDir tm outfile
+compileExpr mkexec c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = execDir ++ dirSep ++ appDirRel -- relative to here
-         coreLift $ mkdirs (splitDir appDirGen)
+         let appDirGen = outputDir </> appDirRel -- relative to here
+         coreLift $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
-          
+
          let ext = if isWindows then ".exe" else ""
-         let outRktFile = appDirRel ++ dirSep ++ outfile ++ ".rkt"
-         let outBinFile = appDirRel ++ dirSep ++ outfile ++ ext
-         let outRktAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outRktFile
-         let outBinAbs = cwd ++ dirSep ++ execDir ++ dirSep ++ outBinFile
+         let outRktFile = appDirRel </> outfile <.> "rkt"
+         let outBinFile = appDirRel </> outfile <.> ext
+         let outRktAbs = cwd </> outputDir </> outRktFile
+         let outBinAbs = cwd </> outputDir </> outBinFile
 
          compileToRKT c appDirGen tm outRktAbs
          raco <- coreLift findRacoExe
@@ -388,7 +420,7 @@ compileExpr mkexec c execDir tm outfile
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
-                    let outShRel = execDir ++ dirSep ++ outfile
+                    let outShRel = outputDir </> outfile
                     the (Core ()) $ if isWindows
                        then if mkexec
                                then makeShWindows "" outShRel appDirRel outBinFile
@@ -400,9 +432,9 @@ compileExpr mkexec c execDir tm outfile
                     pure (Just outShRel)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c execDir tm
-    = do Just sh <- compileExpr False c execDir tm "_tmpracket"
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+executeExpr c tmpDir tm
+    = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift $ system sh
          pure ()
@@ -410,4 +442,3 @@ executeExpr c execDir tm
 export
 codegenRacket : Codegen
 codegenRacket = MkCG (compileExpr True) executeExpr
-

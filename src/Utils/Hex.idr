@@ -1,6 +1,9 @@
 module Utils.Hex
 
+import Data.List
 import Data.Primitives.Views
+
+%default total
 
 hexDigit : Int -> Char
 hexDigit 0 = '0'
@@ -24,12 +27,23 @@ hexDigit _ = 'X' -- TMP HACK: Ideally we'd have a bounds proof, generated below
 ||| Convert a positive integer into a list of (lower case) hexadecimal characters
 export
 asHex : Int -> String
-asHex n = pack $ asHex' n []
+asHex n =
+  if n > 0
+    then pack $ asHex' n []
+    else "0"
   where
     asHex' : Int -> List Char -> List Char
     asHex' 0 hex = hex
     asHex' n hex with (n `divides` 16)
-      asHex' (16 * div + rem) hex | DivBy div rem _ = asHex' div (hexDigit rem :: hex)
+      asHex' (16 * div + rem) hex | DivBy div rem _ =
+        asHex' (assert_smaller n div) (hexDigit rem :: hex)
+
+export
+leftPad : Char -> Nat -> String -> String
+leftPad paddingChar padToLength str =
+  if length str < padToLength
+    then pack (List.replicate (minus padToLength (length str)) paddingChar) ++ str
+    else str
 
 export
 fromHexDigit : Char -> Maybe Int

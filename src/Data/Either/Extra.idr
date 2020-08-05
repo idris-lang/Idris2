@@ -1,6 +1,6 @@
 module Data.Either.Extra
 
-import Data.List.NonEmpty
+import Data.List1
 
 %default total
 
@@ -27,7 +27,7 @@ mutual
   lefts : List1 a -> List (Either a b) -> List (Either (List1 a) (List1 b))
   lefts acc (Left a :: abs) = lefts (cons a acc) abs
   lefts acc abs             = Left (reverse acc) :: group abs
-  
+
   rights : List1 b -> List (Either a b) -> List (Either (List1 a) (List1 b))
   rights acc (Right b :: abs) = rights (cons b acc) abs
   rights acc abs              = Right (reverse acc) :: group abs
@@ -37,8 +37,8 @@ mutual
 export
 ungroup : List (Either (List1 a) (List1 b)) -> List (Either a b)
 ungroup = concatMap $ \ abs => case abs of
-  Left as  => map Left  $ NonEmpty.toList as
-  Right bs => map Right $ NonEmpty.toList bs
+  Left as  => map Left  $ List1.toList as
+  Right bs => map Right $ List1.toList bs
 
 export
 pushInto : c -> Either a b -> Either (c, a) (c, b)

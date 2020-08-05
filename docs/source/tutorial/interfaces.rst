@@ -272,6 +272,23 @@ are both available, or return ``Nothing`` if one or both are not ("fail fast"). 
     Main> m_add (Just 82) Nothing
     Nothing
 
+The translation of ``do`` notation is entirely syntactic, so there is no
+need for the ``(>>=)`` operator to be the operator defined in the ``Monad``
+interface. Idris will, in general, try to disambiguate which ``(>>=)`` you
+mean by type, but you can explicitly choose with qualified do notation,
+for example:
+
+.. code-block:: idris
+
+    m_add : Maybe Int -> Maybe Int -> Maybe Int
+    m_add x y = Prelude.do
+                   x' <- x -- Extract value from x
+                   y' <- y -- Extract value from y
+                   pure (x' + y') -- Add them
+
+The ``Prelude.do`` means that Idris will use the ``(>>=)`` operator defined
+in the ``Prelude``.
+
 Pattern Matching Bind
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -427,6 +444,23 @@ would be:
 
     m_add : Maybe Int -> Maybe Int -> Maybe Int
     m_add x y = [ x' + y' | x' <- x, y' <- y ]
+
+Interfaces and IO
+=================
+
+In general, ``IO`` operations in the libraries aren't written using ``IO``
+directly, but rather via the ``HasIO`` interface:
+
+.. code-block:: idris
+
+    interface Monad io => HasIO io where
+      liftIO : (1 _ : IO a) -> io a
+
+``HasIO`` explains, via ``liftIO``, how to convert a primitive ``IO`` operation
+to an operation in some underlying type, as long as that type has a ``Monad``
+implementation.  These interface allows a programmer to define some more
+expressive notion of interactive program, while still giving direct access to
+``IO`` primitives.
 
 Idiom brackets
 ==============
@@ -658,4 +692,4 @@ parameter used to find an implementation.
 .. [#ConorRoss] Conor McBride and Ross Paterson. 2008. Applicative programming
        with effects. J. Funct. Program. 18, 1 (January 2008),
        1-13. DOI=10.1017/S0956796807006326
-       http://dx.doi.org/10.1017/S0956796807006326
+       https://dx.doi.org/10.1017/S0956796807006326

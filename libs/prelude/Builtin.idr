@@ -6,22 +6,35 @@ module Builtin
 
 ||| Assert to the totality checker that the given expression will always
 ||| terminate.
+|||
+||| The multiplicity of its argument is 1, so `assert_total` won't affect how
+||| many times variables are used. If you're not writing a linear function,
+||| this doesn't make a difference.
+|||
 ||| Note: assert_total can reduce at compile time, if required for unification,
 ||| which might mean that it's no longer guarded a subexpression. Therefore,
 ||| it is best to use it around the smallest possible subexpression.
 %inline
 public export
-assert_total : {0 a : _} -> a -> a
+assert_total : (1 _ : a) -> a
 assert_total x = x
 
 ||| Assert to the totality checker that y is always structurally smaller than x
 ||| (which is typically a pattern argument, and *must* be in normal form for
 ||| this to work).
+|||
+||| The multiplicity of x is 0, so in a linear function, you can pass values to
+||| x even if they have already been used.
+||| The multiplicity of y is 1, so `assert_smaller` won't affect how many times
+||| its y argument is used.
+||| If you're not writing a linear function, the multiplicities don't make a
+||| difference.
+|||
 ||| @ x the larger value (typically a pattern argument)
 ||| @ y the smaller value (typically an argument to a recursive call)
 %inline
 public export
-assert_smaller : {0 a, b : _} -> (x : a) -> (y : b) -> b
+assert_smaller : (0 x : a) -> (1 y : b) -> b
 assert_smaller x y = y
 
 -- Unit type and pairs
@@ -54,21 +67,35 @@ snd (x, y) = y
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-||| Dependent pairs aid in the construction of dependent types by providing
-||| evidence that some value resides in the type.
-|||
-||| Formally, speaking, dependent pairs represent existential quantification -
-||| they consist of a witness for the existential claim and a proof that the
-||| property holds for it.
-|||
-||| @ a the value to place in the type.
-||| @ p the dependent type that requires the value.
+infix 5 #
+
+||| A pair type for use in operations on linear resources, which return a
+||| value and an updated resource
+public export
+data LPair : Type -> Type -> Type where
+     (#) : (x : a) -> (1 _ : b) -> LPair a b
+
 namespace DPair
+  ||| Dependent pairs aid in the construction of dependent types by providing
+  ||| evidence that some value resides in the type.
+  |||
+  ||| Formally, speaking, dependent pairs represent existential quantification -
+  ||| they consist of a witness for the existential claim and a proof that the
+  ||| property holds for it.
+  |||
+  ||| @ a the value to place in the type.
+  ||| @ p the dependent type that requires the value.
   public export
   record DPair a (p : a -> Type) where
     constructor MkDPair
     fst : a
     snd : p fst
+
+  ||| A dependent variant of LPair, pairing a result value with a resource
+  ||| that depends on the result value
+  public export
+  data Res : (a : Type) -> (a -> Type) -> Type where
+       (#) : (val : a) -> (1 r : t val) -> Res a t
 
 -- The empty type
 
@@ -83,6 +110,7 @@ data Void : Type where
 
 public export
 data Equal : forall a, b . a -> b -> Type where
+     [search a b]
      Refl : {0 x : a} -> Equal x x
 
 %name Equal prf
@@ -147,3 +175,11 @@ believe_me = prim__believe_me _ _
 export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
+
+public export
+delay : a -> Lazy a
+delay x = Delay x
+
+public export
+force : Lazy a -> a
+force x = Force x

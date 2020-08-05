@@ -22,20 +22,43 @@ getRecordType env (NTCon _ n _ _ _) = Just n
 getRecordType env _ = Nothing
 
 data Rec : Type where
-     Field : String -> RawImp -> Rec -- field name on left, value on right
-     Constr : Name -> List (String, Rec) -> Rec
+     Field : Maybe Name -> -- implicit argument name, if any
+             String -> RawImp -> Rec -- field name on left, value on right
+     Constr : Maybe Name -> -- implicit argument name, if any
+              Name -> List (String, Rec) -> Rec
+
+Show Rec where
+  show (Field mn n ty)
+      = "Field " ++ show mn ++ "; " ++ show n ++ " : " ++ show ty
+  show (Constr mn n args)
+      = "Constr " ++ show mn ++ " " ++ show n ++ " " ++ show args
+
+applyImp : RawImp -> List (Maybe Name, RawImp) -> RawImp
+applyImp f [] = f
+applyImp f ((Nothing, arg) :: xs)
+    = applyImp (IApp (getFC f) f arg) xs
+applyImp f ((Just n, arg) :: xs)
+    = applyImp (IImplicitApp (getFC f) f (Just n) arg) xs
+
+toLHS' : FC -> Rec -> (Maybe Name, RawImp)
+toLHS' loc (Field mn@(Just _) n _)
+    = (mn, IAs loc UseRight (UN n) (Implicit loc True))
+toLHS' loc (Field mn n _) = (mn, IBindVar loc n)
+toLHS' loc (Constr mn con args)
+    = let args' = map (\a => toLHS' loc (snd a)) args in
+          (mn, applyImp (IVar loc con) args')
 
 toLHS : FC -> Rec -> RawImp
-toLHS loc (Field n _) = IBindVar loc n
-toLHS loc (Constr con args)
-    = let args' = map (\a => toLHS loc (snd a)) args in
-          apply (IVar loc con) args'
+toLHS fc r = snd (toLHS' fc r)
+
+toRHS' : FC -> Rec -> (Maybe Name, RawImp)
+toRHS' loc (Field mn _ val) = (mn, val)
+toRHS' loc (Constr mn con args)
+    = let args' = map (\a => toRHS' loc (snd a)) args in
+          (mn, applyImp (IVar loc con) args')
 
 toRHS : FC -> Rec -> RawImp
-toRHS loc (Field _ val) = val
-toRHS loc (Constr con args)
-    = let args' = map (\a => toRHS loc (snd a)) args in
-          apply (IVar loc con) args'
+toRHS fc r = snd (toRHS' fc r)
 
 findConName : Defs -> Name -> Core (Maybe Name)
 findConName defs tyn
@@ -43,18 +66,20 @@ findConName defs tyn
            Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
            _ => pure Nothing
 
-findFields : Defs -> Name -> Core (Maybe (List (String, Maybe Name)))
+findFields : Defs -> Name ->
+             Core (Maybe (List (String, Maybe Name, Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
            Just t => pure (Just !(getExpNames !(nf defs [] t)))
            _ => pure Nothing
   where
-    getExpNames : NF [] -> Core (List (String, Maybe Name))
+    getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
     getExpNames (NBind fc x (Pi _ p ty) sc)
         = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-             case p of
-                  Explicit => pure $ (nameRoot x, getRecordType [] ty) :: rest
-                  _ => pure rest
+             let imp = case p of
+                            Explicit => Nothing
+                            _ => Just x
+             pure $ (nameRoot x, imp, getRecordType [] ty) :: rest
     getExpNames _ = pure []
 
 genFieldName : {auto u : Ref UST UState} ->
@@ -79,39 +104,43 @@ findPath : {auto c : Ref Ctxt Defs} ->
            FC -> List String -> List String -> Maybe Name ->
            (String -> RawImp) ->
            Rec -> Core Rec
-findPath loc [] full tyn val (Field lhs _) = pure (Field lhs (val lhs))
+findPath loc [] full tyn val (Field mn lhs _) = pure (Field mn lhs (val lhs))
 findPath loc [] full tyn val rec
    = throw (IncompatibleFieldUpdate loc full)
-findPath loc (p :: ps) full Nothing val (Field n v)
+findPath loc (p :: ps) full Nothing val (Field mn n v)
    = throw (NotRecordField loc p Nothing)
-findPath loc (p :: ps) full (Just tyn) val (Field n v)
+findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
    = do defs <- get Ctxt
         Just con <- findConName defs tyn
              | Nothing => throw (NotRecordType loc tyn)
         Just fs <- findFields defs con
              | Nothing => throw (NotRecordType loc tyn)
         args <- mkArgs fs
-        let rec' = Constr con args
+        let rec' = Constr mn con args
         findPath loc (p :: ps) full (Just tyn) val rec'
   where
-    mkArgs : List (String, Maybe Name) ->
+    mkArgs : List (String, Maybe Name, Maybe Name) ->
              Core (List (String, Rec))
     mkArgs [] = pure []
-    mkArgs ((p, _) :: ps)
+    mkArgs ((p, imp, _) :: ps)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
-             pure ((p, Field fldn (IVar loc (UN fldn))) :: args')
+             -- If it's an implicit argument, leave it as _ by default
+             let arg = maybe (IVar loc (UN fldn))
+                             (const (Implicit loc False))
+                             imp
+             pure ((p, Field imp fldn arg) :: args')
 
-findPath loc (p :: ps) full tyn val (Constr con args)
+findPath loc (p :: ps) full tyn val (Constr mn con args)
    = do let Just prec = lookup p args
                  | Nothing => throw (NotRecordField loc p tyn)
         defs <- get Ctxt
         Just fs <- findFields defs con
-             | Nothing => pure (Constr con args)
-        let Just mfty = lookup p fs
+             | Nothing => pure (Constr mn con args)
+        let Just (imp, mfty) = lookup p fs
                  | Nothing => throw (NotRecordField loc p tyn)
         prec' <- findPath loc ps full mfty val prec
-        pure (Constr con (replace p prec' args))
+        pure (Constr mn con (replace p prec' args))
 
 getSides : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
@@ -155,7 +184,8 @@ recUpdate rigc elabinfo loc nest env flds rec grecty
            let Just rectyn = getRecordType env rectynf
                     | Nothing => throw (RecordTypeNeeded loc env)
            fldn <- genFieldName "__fld"
-           sides <- getAllSides loc flds rectyn rec (Field fldn (IVar loc (UN fldn)))
+           sides <- getAllSides loc flds rectyn rec
+                                (Field Nothing fldn (IVar loc (UN fldn)))
            pure $ ICase loc rec (Implicit loc False) [mkClause sides]
   where
     mkClause : Rec -> ImpClause

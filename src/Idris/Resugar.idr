@@ -8,8 +8,10 @@ import Idris.Syntax
 
 import TTImp.TTImp
 import TTImp.Unelab
+import TTImp.Utils
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.StringMap
 
@@ -94,11 +96,17 @@ unbracket tm = tm
 ||| Attempt to extract a constant natural number
 extractNat : Nat -> PTerm -> Maybe Nat
 extractNat acc tm = case tm of
-  PRef _ (NS ["Prelude"] (UN "Z"))            => pure acc
-  PApp _ (PRef _ (NS ["Prelude"] (UN "S"))) k => extractNat (1 + acc) k
-  PPrimVal _ (BI n)                           => pure (acc + integerToNat n)
-  PBracketed _ k                              => extractNat acc k
-  _                                           => Nothing
+  PRef _ (NS ["Types", "Prelude"] (UN "Z"))
+         => pure acc
+  PApp _ (PRef _ (NS ["Types", "Prelude"] (UN "S"))) k
+         => extractNat (1 + acc) k
+  PRef _ (NS ["Prelude"] (UN "Z"))
+         => pure acc
+  PApp _ (PRef _ (NS ["Prelude"] (UN "S"))) k
+         => extractNat (1 + acc) k
+  PPrimVal _ (BI n) => pure (acc + integerToNat n)
+  PBracketed _ k    => extractNat acc k
+  _                 => Nothing
 
 mutual
 
@@ -120,6 +128,11 @@ mutual
         _           => Nothing
       _        => Nothing
   -- refolding natural numbers if the expression is a constant
+  -- we might see either Prelude.Types.Nat or Prelude.Nat, depending on whether
+  -- unelaboration used the canonical name or not
+  sugarAppM (PRef fc (NS ["Types", "Prelude"] (UN "Z"))) = pure $ PPrimVal fc (BI 0)
+  sugarAppM (PApp fc (PRef _ (NS ["Types", "Prelude"] (UN "S"))) k) =
+    PPrimVal fc . BI . cast <$> extractNat 1 k
   sugarAppM (PRef fc (NS ["Prelude"] (UN "Z"))) = pure $ PPrimVal fc (BI 0)
   sugarAppM (PApp fc (PRef _ (NS ["Prelude"] (UN "S"))) k) =
     PPrimVal fc . BI . cast <$> extractNat 1 k
@@ -155,14 +168,27 @@ mutual
   toPTerm : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             (prec : Nat) -> RawImp -> Core PTerm
-  toPTerm p (IVar fc nm) = toPRef fc nm
+  toPTerm p (IVar fc nm) = if fullNamespace !(getPPrint)
+                             then pure $ PRef fc nm
+                             else toPRef fc nm
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
            if imp
-              then do arg' <- toPTerm appPrec arg
+              then do arg' <- toPTerm tyPrec arg
                       ret' <- toPTerm tyPrec ret
                       bracket p tyPrec (PPi fc rig Implicit n arg' ret')
-              else toPTerm p ret
+              else if needsBind n
+                      then do arg' <- toPTerm tyPrec arg
+                              ret' <- toPTerm tyPrec ret
+                              bracket p tyPrec (PPi fc rig Implicit n arg' ret')
+                      else toPTerm p ret
+    where
+      needsBind : Maybe Name -> Bool
+      needsBind (Just (UN t))
+          = let ns = findBindableNames False [] [] ret
+                allNs = findAllNames [] ret in
+                ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+      needsBind _ = False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg
            ret' <- toPTerm tyPrec ret
@@ -175,7 +201,7 @@ mutual
            imp <- showImplicits
            arg' <- if imp then toPTerm tyPrec arg
                           else pure (PImplicit fc)
-           sc' <- toPTerm p sc
+           sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
            bracket p startPrec (PLam fc rig pt' (PRef fc n) arg' sc')
   toPTerm p (ILet fc rig n ty val sc)
@@ -186,6 +212,12 @@ mutual
            sc' <- toPTerm startPrec sc
            bracket p startPrec (PLet fc rig (PRef fc n)
                                      ty' val' sc' [])
+  toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
+      = do sc' <- toPTerm startPrec sc
+           lhs' <- toPTerm startPrec lhs
+           rhs' <- toPTerm startPrec rhs
+           bracket p startPrec
+                   (PLet fc top lhs' (PImplicit fc) sc' rhs' [])
   toPTerm p (ICase fc sc scty alts)
       = do sc' <- toPTerm startPrec sc
            alts' <- traverse toPClause alts
@@ -240,11 +272,10 @@ mutual
   toPTerm p (IDelay fc tm) = pure (PDelay fc !(toPTerm argPrec tm))
   toPTerm p (IForce fc tm) = pure (PForce fc !(toPTerm argPrec tm))
   toPTerm p (IQuote fc tm) = pure (PQuote fc !(toPTerm argPrec tm))
-  toPTerm p (IQuoteDecl fc d)
-      = do md <- toPDecl d
-           case md of
-                Nothing => throw (InternalError "Can't resugar log or pragma")
-                Just d' => pure (PQuoteDecl fc d')
+  toPTerm p (IQuoteName fc n) = pure (PQuoteName fc n)
+  toPTerm p (IQuoteDecl fc ds)
+      = do ds' <- traverse toPDecl ds
+           pure $ PQuoteDecl fc (mapMaybe id ds')
   toPTerm p (IUnquote fc tm) = pure (PUnquote fc !(toPTerm argPrec tm))
   toPTerm p (IRunElab fc tm) = pure (PRunElab fc !(toPTerm argPrec tm))
 
@@ -312,9 +343,10 @@ mutual
       = pure (MkPatClause fc !(toPTerm startPrec lhs)
                              !(toPTerm startPrec rhs)
                              [])
-  toPClause (WithClause fc lhs rhs cs)
+  toPClause (WithClause fc lhs rhs flags cs)
       = pure (MkWithClause fc !(toPTerm startPrec lhs)
                               !(toPTerm startPrec rhs)
+                              flags
                               !(traverse toPClause cs))
   toPClause (ImpossibleClause fc lhs)
       = pure (MkImpossible fc !(toPTerm startPrec lhs))
@@ -323,7 +355,7 @@ mutual
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy -> Core PTypeDecl
   toPTypeDecl (MkImpTy fc n ty)
-      = pure (MkPTy fc n !(toPTerm startPrec ty))
+      = pure (MkPTy fc n "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -340,7 +372,7 @@ mutual
   toPField (MkIField fc c p n ty)
       = do ty' <- toPTerm startPrec ty
            p' <- traverse (toPTerm startPrec) p
-           pure (MkField fc c p' n ty')
+           pure (MkField fc "" c p' n ty')
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -349,17 +381,17 @@ mutual
   toPRecord (MkImpRecord fc n ps con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
-                                      p' <- mapPiInfo p 
+                                      p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', Just con, fs')
-    where      
+    where
       mapPiInfo : PiInfo RawImp -> Core (PiInfo PTerm)
       mapPiInfo Explicit        = pure   Explicit
       mapPiInfo Implicit        = pure   Implicit
       mapPiInfo AutoImplicit    = pure   AutoImplicit
       mapPiInfo (DefImplicit p) = pure $ DefImplicit !(toPTerm startPrec p)
-  
+
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              FnOpt -> Core PFnOpt
@@ -375,7 +407,7 @@ mutual
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
   toPDecl (IData fc vis d)
-      = pure (Just (PData fc vis !(toPData d)))
+      = pure (Just (PData fc "" vis !(toPData d)))
   toPDecl (IDef fc n cs)
       = pure (Just (PDef fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
@@ -386,7 +418,7 @@ mutual
                 (mapMaybe id ds')))
   toPDecl (IRecord fc _ vis r)
       = do (n, ps, con, fs) <- toPRecord r
-           pure (Just (PRecord fc vis n ps con fs))
+           pure (Just (PRecord fc "" vis n ps con fs))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PNamespace fc ns (mapMaybe id ds')))
@@ -394,6 +426,8 @@ mutual
       = pure (Just (PTransform fc (show n)
                                   !(toPTerm startPrec lhs)
                                   !(toPTerm startPrec rhs)))
+  toPDecl (IRunElabDecl fc tm)
+      = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
 

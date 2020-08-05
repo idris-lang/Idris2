@@ -1,6 +1,10 @@
 package network
 
-modules = Network.Socket,
+opts = "-p contrib"
+
+modules = Control.Linear.Network,
+
+          Network.Socket,
           Network.Socket.Data,
           Network.Socket.Raw,
           Network.FFI

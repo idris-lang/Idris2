@@ -1,5 +1,7 @@
 module Data.Bool.Extra
 
+%default total
+
 ||| A non-dependent alternative to if-then-else
 public export
 boolCase : Bool -> Lazy a -> Lazy a -> a

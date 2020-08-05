@@ -1,0 +1,8 @@
+fromMaybe "test" Nothing
+:module Data.Maybe
+fromMaybe "test" Nothing
+:module Data.Strings
+toLower "HELLO"
+isJust (Just 'x')
+:module DoesNotExists
+:q

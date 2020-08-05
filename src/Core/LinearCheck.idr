@@ -215,7 +215,9 @@ mutual
            Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                 | _ => throw (UndefinedName fc n)
            let expand = branchZero
-                          False
+                          (case type gdef of
+                                Erased _ _ => True -- defined elsewhere, need to expand
+                                _ => False)
                           (case definition gdef of
                                 (PMDef _ _ _ _ _) => True
                                 _ => False)
@@ -245,7 +247,13 @@ mutual
       unusedHoleArgs _ ty = ty
 
   lcheck rig_in erase env (Bind fc nm b sc)
-      = do (b', bt, usedb) <- lcheckBinder rig erase env b
+      = do (b', bt, usedb) <- handleUnify (lcheckBinder rig erase env b)
+                                 (\err =>
+                                     case err of
+                                          LinearMisuse _ _ r _ =>
+                                             lcheckBinder rig erase env
+                                                (setMultiplicity b linear)
+                                          _ => throw err)
            -- Anything linear can't be used in the scope of a lambda, if we're
            -- checking in general context
            let env' = if rig_in == top
@@ -360,7 +368,7 @@ mutual
                 NDelayed _ r narg
                     => do defs <- get Ctxt
                           pure (TForce fc r val', glueBack defs env narg, u)
-                _ => throw (GenericMsg fc "Not a delayed tyoe")
+                _ => throw (GenericMsg fc "Not a delayed type")
   lcheck rig erase env (PrimVal fc c)
       = pure (PrimVal fc c, gErased fc, [])
   lcheck rig erase env (Erased fc i)
@@ -487,9 +495,7 @@ mutual
       isLocArg : Var vars -> List (Term vars) -> Bool
       isLocArg p [] = False
       isLocArg p (Local _ _ idx _ :: args)
-          = if idx == varIdx p
-               then True
-               else isLocArg p args
+          = idx == varIdx p || isLocArg p args
       isLocArg p (As _ _ tm pat :: args)
           = isLocArg p (tm :: pat :: args)
       isLocArg p (_ :: args) = isLocArg p args
@@ -714,4 +720,3 @@ linearCheck fc rig erase env tm
          log 5 $ "Used: " ++ show used
          when (not erase) $ checkEnvUsage {done = []} fc rig env used tm'
          pure tm'
-

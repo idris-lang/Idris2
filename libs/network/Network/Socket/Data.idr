@@ -6,6 +6,7 @@
 module Network.Socket.Data
 
 import Data.List
+import Data.List1
 import Data.Strings
 
 -- ------------------------------------------------------------ [ Type Aliases ]
@@ -68,11 +69,11 @@ idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 
 export
-getErrno : IO SocketError
+getErrno : HasIO io => io SocketError
 getErrno = primIO $ idrnet_errno
 
 export
-nullPtr : AnyPtr -> IO Bool
+nullPtr : HasIO io => AnyPtr -> io Bool
 nullPtr p = do 0 <- primIO  $ idrnet_isNull p
                | _ => pure True
                pure False
@@ -194,7 +195,7 @@ parseIPv4 str =
     toInt : String -> Int
     toInt s = fromInteger $ toInt' s
 
-    splitted : List Int
+    splitted : List1 Int
     splitted = map toInt (split (\c => c == '.') str)
 
 -- --------------------------------------------------------- [ UDP Information ]

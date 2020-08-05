@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <sys/time.h>
 #include <dirent.h>
 #include <unistd.h>
 
@@ -78,7 +79,22 @@ int idris2_fpoll(FILE* f)
 #endif
 }
 
+void *idris2_popen(const char *cmd, const char *mode) {
+#ifdef _WIN32
+    FILE *f = win32_u8popen(cmd, mode);
+#else
+    FILE *f = popen(cmd, mode);
+#endif
+    return f;
+}
 
+void idris2_pclose(void *stream) {
+#ifdef _WIN32
+    _pclose(stream);
+#else
+    pclose(stream);
+#endif
+}
 
 char* idris2_readLine(FILE* f) {
     char *buffer = NULL;
@@ -91,7 +107,7 @@ char* idris2_readLine(FILE* f) {
     return buffer; // freed by RTS if not NULL
 }
 
-char* idris_readChars(int num, FILE* f) {
+char* idris2_readChars(int num, FILE* f) {
     char *buffer = malloc((num+1)*sizeof(char));
     size_t len;
     len = fread(buffer, sizeof(char), (size_t)num, f);

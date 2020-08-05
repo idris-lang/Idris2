@@ -13,6 +13,7 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.UnifyState
+import Utils.Path
 
 import TTImp.Parser
 import TTImp.ProcessDecls
@@ -24,6 +25,8 @@ import Data.List
 import Data.So
 import Data.Strings
 import System
+
+%default covering
 
 usage : String
 usage = "Usage: yaffle <input file> [--timing]"
@@ -50,15 +53,16 @@ yaffleMain fname args
          t <- processArgs args
          setLogTimings t
          addPrimitives
-         case span (/= '.') fname of
-              (_, ".ttc") => do coreLift $ putStrLn "Processing as TTC"
-                                readFromTTC {extra = ()} True emptyFC True fname [] []
-                                coreLift $ putStrLn "Read TTC"
+         case extension fname of
+              Just "ttc" => do coreLift $ putStrLn "Processing as TTC"
+                               readFromTTC {extra = ()} True emptyFC True fname [] []
+                               coreLift $ putStrLn "Read TTC"
               _ => do coreLift $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile fname
                       when ok $
-                         do makeBuildDirectory (pathToNS (working_dir d) (source_dir d) fname)
-                            writeToTTC () !(getTTCFileName fname ".ttc")
+                         do ns <- pathToNS (working_dir d) (source_dir d) fname
+                            makeBuildDirectory ns
+                            writeToTTC () !(getTTCFileName fname "ttc")
                             coreLift $ putStrLn "Written TTC"
          ust <- get UST
 

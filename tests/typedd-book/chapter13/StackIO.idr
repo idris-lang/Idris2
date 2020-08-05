@@ -1,5 +1,6 @@
 import Data.Vect
 
+export
 data StackCmd : Type -> Nat -> Nat -> Type where
   Push : Integer -> StackCmd ()      height     (S height)
   Pop :             StackCmd Integer (S height) height
@@ -35,6 +36,7 @@ testAdd = do Push 10
              val2 <- Pop
              PutStr (show (val1 + val2) ++ "\n")
 
+export
 data StackIO : Nat -> Type where
   Do : StackCmd a height1 height2 ->
        (a -> Inf (StackIO height2)) -> StackIO height1
