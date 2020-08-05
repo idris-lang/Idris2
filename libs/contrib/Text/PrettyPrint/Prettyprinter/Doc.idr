@@ -2,7 +2,7 @@ module Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
 import Data.Maybe
-import public Data.Strings
+import Data.Strings
 import Data.String.Extra
 
 %default total
