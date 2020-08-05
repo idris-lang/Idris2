@@ -183,3 +183,24 @@ delay x = Delay x
 public export
 force : Lazy a -> a
 force x = Force x
+
+%stringLit fromString
+
+||| Interface for types that can be constructed from string literals.
+public export
+interface FromString ty where
+  ||| Conversion from String.
+  fromString : String -> ty
+
+%allow_overloads fromString
+
+%inline
+public export
+FromString String where
+  fromString s = s
+
+%defaulthint
+%inline
+public export
+defaultString : FromString String
+defaultString = %search

@@ -1,0 +1,4 @@
+$1 --no-banner LiteralsString.idr < input
+$1 --no-banner LiteralsInteger.idr < input2
+
+rm -rf build

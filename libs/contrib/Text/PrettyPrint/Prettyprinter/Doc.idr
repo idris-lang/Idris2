@@ -360,6 +360,10 @@ export
 Pretty String where
   pretty = vsep . map unsafeTextWithoutNewLines . lines
 
+public export
+FromString (Doc ann) where
+  fromString = pretty
+
 ||| Variant of `encloseSep` with braces and comma as separator.
 export
 list : List (Doc ann) -> Doc ann
