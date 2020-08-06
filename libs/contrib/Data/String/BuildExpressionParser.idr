@@ -20,12 +20,8 @@ data Operator a = Infix (Parser (a -> a -> a)) Assoc
                 | Postfix (Parser (a -> a))
 
 public export
-LO : Type -> Type
-LO a = List (Operator a)
-
-public export
 OperatorTable : Type -> Type
-OperatorTable a = List (LO a)
+OperatorTable a = List (List (Operator a))
 
 public export
 BinaryOperator : Type -> Type
@@ -97,7 +93,7 @@ buildExpressionParser a operators simpleExpr =
     splitOp x (Prefix op) (rassoc, lassoc, nassoc, prefixx, postfix) = (rassoc, lassoc, nassoc, op :: prefixx, postfix)
     splitOp x (Postfix op) (rassoc, lassoc, nassoc, prefixx, postfix) = (rassoc, lassoc, nassoc, prefixx, op :: postfix)
 
-    makeParser : (a : Type) -> Parser a -> LO a -> Parser a
+    makeParser : (a : Type) -> Parser a -> List (Operator a) -> Parser a
     makeParser a term ops =
       let (rassoc,lassoc,nassoc
                ,prefixx,postfix) = foldr (splitOp a) ([],[],[],[],[]) ops
