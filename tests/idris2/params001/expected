@@ -7,3 +7,4 @@ parambad.idr:7:7--7:10
  7 |   U = foo
    |       ^^^
 
+Suggestion: add an explicit export or public export modifier. By default, all names are private in namespace blocks.

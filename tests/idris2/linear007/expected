@@ -7,3 +7,4 @@ LCase.idr:7:11--10:15
  09 |                         (S k) => S z
  10 |             in
 
+Suggestion: linearly bounded variables must be used exactly once.

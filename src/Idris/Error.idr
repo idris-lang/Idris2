@@ -80,13 +80,13 @@ perror (Fatal err) = perror err
 perror (CantConvert fc env l r)
     = pure $ errorDesc (hsep [ reflow "Mismatch between" <+> colon
                   , code !(pshow env l)
-                  , pretty "and"
+                  , "and"
                   , code !(pshow env r) <+> dot
                   ]) <+> line <+> !(ploc fc)
 perror (CantSolveEq fc env l r)
     = pure $ errorDesc (hsep [ reflow "Can't solve constraint between" <+> colon
                   , code !(pshow env l)
-                  , pretty "and"
+                  , "and"
                   , code !(pshow env r) <+> dot
                   ]) <+> line <+> !(ploc fc)
 perror (PatternVariableUnifies fc env n tm)
@@ -103,7 +103,7 @@ perror (CyclicMeta fc env n tm)
     = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
 perror (WhenUnifying _ env x y err)
-    = pure $ errorDesc (reflow "When unifying" <++> code !(pshow env x) <++> pretty "and"
+    = pure $ errorDesc (reflow "When unifying" <++> code !(pshow env x) <++> "and"
         <++> code !(pshow env y)) <+> dot <+> line <+> !(perror err)
 perror (ValidCase fc env (Left tm))
     = pure $ errorDesc (code !(pshow env tm) <++> reflow "is not a valid impossible case.")
@@ -113,13 +113,17 @@ perror (ValidCase _ env (Right err))
 perror (UndefinedName fc x)
     = pure $ errorDesc (reflow "Undefined name" <++> code (pretty x) <+> dot) <++> line <+> !(ploc fc)
 perror (InvisibleName fc n (Just ns))
-    = pure $ errorDesc (pretty "Name" <++> code (pretty n) <++> reflow "is inaccessible since"
+    = pure $ errorDesc ("Name" <++> code (pretty n) <++> reflow "is inaccessible since"
         <++> code (concatWith (surround dot) (pretty <$> reverse ns)) <++> reflow "is not explicitly imported.")
         <+> line <+> !(ploc fc)
+        <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
+        <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
 perror (InvisibleName fc x Nothing)
-    = pure $ errorDesc (pretty "Name" <++> code (pretty x) <++> reflow "is private.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc ("Name" <++> code (pretty x) <++> reflow "is private.") <+> line <+> !(ploc fc)
+        <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
+        <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
 perror (BadTypeConType fc n)
-    = pure $ errorDesc (reflow "Return type of" <++> code (pretty n) <++> reflow "must be" <++> code (pretty "Type")
+    = pure $ errorDesc (reflow "Return type of" <++> code (pretty n) <++> reflow "must be" <++> code "Type"
         <+> dot) <+> line <+> !(ploc fc)
 perror (BadDataConType fc n fam)
     = pure $ errorDesc (reflow "Return type of" <++> code (pretty n) <++> reflow "must be in"
@@ -145,23 +149,24 @@ perror (LinearUsed fc count n)
     = pure $ errorDesc (reflow "There are" <++> pretty count <++> reflow "uses of linear name"
         <++> code (pretty (sugarName n)) <+> dot)
         <++> line <+> !(ploc fc)
+        <+> line <+> reflow "Suggestion: linearly bounded variables must be used exactly once."
 perror (LinearMisuse fc n exp ctx)
     = if isErased exp
          then pure $ errorDesc (code (pretty n) <++> reflow "is not accessible in this context.")
                 <+> line <+> !(ploc fc)
-         else pure $ errorDesc (reflow "Trying to use" <++> prettyRig exp <++> pretty "name"
-                <++> code (pretty (sugarName n)) <++> pretty "in" <++> prettyRel ctx <++> pretty "context.")
+         else pure $ errorDesc (reflow "Trying to use" <++> prettyRig exp <++> "name"
+                <++> code (pretty (sugarName n)) <++> "in" <++> prettyRel ctx <++> "context.")
                 <+> line <+> !(ploc fc)
   where
     prettyRig : RigCount -> Doc ann
-    prettyRig = elimSemi (pretty "irrelevant")
-                         (pretty "linear")
-                         (const $ pretty "unrestricted")
+    prettyRig = elimSemi "irrelevant"
+                         "linear"
+                         (const "unrestricted")
 
     prettyRel : RigCount -> Doc ann
-    prettyRel = elimSemi (pretty "irrelevant")
-                         (pretty "relevant")
-                         (const $ pretty "non-linear")
+    prettyRel = elimSemi "irrelevant"
+                         "relevant"
+                         (const "non-linear")
 perror (BorrowPartial fc env tm arg)
     = pure $ errorDesc (code !(pshow env tm) <++> reflow "borrows argument" <++> code !(pshow env arg)
         <++> reflow "so must be fully applied.")
@@ -170,7 +175,7 @@ perror (BorrowPartialType fc env tm)
     = pure $ errorDesc (code !(pshow env tm) <++>
         reflow "borrows, so must return a concrete type.") <+> line <+> !(ploc fc)
 perror (AmbiguousName fc ns)
-    = pure $ errorDesc (pretty "Ambiguous name" <++> code (pretty ns))
+    = pure $ errorDesc (reflow "Ambiguous name" <++> code (pretty ns))
         <+> line <+> !(ploc fc)
 perror (AmbiguousElab fc env ts)
     = do pp <- getPPrint
@@ -191,6 +196,8 @@ perror (AmbiguityTooDeep fc n ns)
     = pure $ errorDesc (reflow "Maximum ambiguity depth exceeded in" <++> code (pretty !(getFullName n))
         <+> colon) <+> line <+> concatWith (surround (pretty " --> ")) (pretty <$> !(traverse getFullName ns))
         <++> line <+> !(ploc fc)
+        <+> line <+> reflow "Suggestion: the default ambiguity depth limit is 3, the" <++> code "%ambiguity_depth"
+        <++> reflow "pragma can be used to extend this limit, but beware compilation times can be severely impacted."
 perror (AllFailed ts)
     = case allUndefined ts of
            Just e => perror e
@@ -199,7 +206,7 @@ perror (AllFailed ts)
   where
     pAlterror : (Maybe Name, Error) -> Core (Doc IdrisAnn)
     pAlterror (Just n, err)
-       = pure $ pretty "If" <++> code (pretty !(aliasName !(getFullName n))) <+> colon <++> !(perror err)
+       = pure $ "If" <++> code (pretty !(aliasName !(getFullName n))) <+> colon <++> !(perror err)
     pAlterror (Nothing, err)
        = pure $ reflow "Possible error" <+> colon <+> line <+> indent 4 !(perror err)
 
@@ -237,7 +244,7 @@ perror (TryWithImplicits fc env imps)
     tshow env (n, ty) = pure $ pretty n <++> colon <++> code !(pshow env ty)
 perror (BadUnboundImplicit fc env n ty)
     = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
-        <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Try binding explicitly."
+        <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try binding explicitly."
 perror (CantSolveGoal fc env g)
     = let (_ ** (env', g')) = dropEnv env g in
           pure $ errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
@@ -265,11 +272,11 @@ perror (UnsolvedHoles hs)
         = pure $ meta (pretty n) <++> reflow "introduced at:" <++> !(ploc fc) <+> !(prettyHoles hs)
 perror (CantInferArgType fc env n h ty)
     = pure $ errorDesc (reflow "Can't infer type for argument" <++> code (pretty n)) <+> line
-        <+> pretty "Got" <++> code !(pshow env ty) <++> reflow "with hole" <++> meta (pretty h) <+> dot
+        <+> "Got" <++> code !(pshow env ty) <++> reflow "with hole" <++> meta (pretty h) <+> dot
         <+> line <+> !(ploc fc)
 perror (SolvedNamedHole fc env h tm)
     = pure $ errorDesc (reflow "Named hole" <++> meta (pretty h) <++> reflow "has been solved by unification.") <+> line
-        <+> pretty "Result" <+> colon <++> code !(pshow env tm)
+        <+> "Result" <+> colon <++> code !(pshow env tm)
         <+> line <+> !(ploc fc)
 perror (VisibilityError fc vx x vy y)
     = pure $ errorDesc (keyword (pretty vx) <++> code (pretty (sugarName !(toFullNames x)))
@@ -281,7 +288,8 @@ perror (BadPattern fc n)
     = pure $ errorDesc (reflow "Pattern not allowed here" <+> colon <++> code (pretty n) <+> dot) <+> line <+> !(ploc fc)
 perror (NoDeclaration fc n)
     = pure $ errorDesc (reflow "No type declaration for" <++> code (pretty n) <+> dot) <+> line <+> !(ploc fc)
-perror (AlreadyDefined fc n) = pure $ errorDesc (code (pretty n) <++> reflow "is already defined.") <+> line <+> !(ploc fc)
+perror (AlreadyDefined fc n)
+    = pure $ errorDesc (code (pretty n) <++> reflow "is already defined.") <+> line <+> !(ploc fc)
 perror (NotFunctionType fc env tm)
     = pure $ errorDesc (code !(pshow env tm) <++> reflow "is not a function type.") <+> line <+> !(ploc fc)
 perror (RewriteNoChange fc env rule ty)
@@ -313,7 +321,7 @@ perror (MatchTooSpecific fc env tm)
         <++> reflow "as it has a polymorphic type.") <+> line <+> !(ploc fc)
 perror (BadImplicit fc str)
     = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
-        <+> line <+> !(ploc fc) <+> line <+> reflow "Try making it a bound implicit."
+        <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
 perror (BadRunElab fc env script)
     = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <+> dot)
         <+> line <+> !(ploc fc)
