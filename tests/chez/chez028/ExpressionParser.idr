@@ -7,7 +7,7 @@ import Data.Maybe
 import Data.Fin
 import Data.Nat
 import Data.String.Parser
-import Data.String.BuildExpressionParser
+import Data.String.Parser.Expression
 
 %default partial
 

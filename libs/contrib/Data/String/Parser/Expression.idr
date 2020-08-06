@@ -1,7 +1,7 @@
 -- Port of https://hackage.haskell.org/package/parsec-3.1.13.0/docs/Text-Parsec-Expr.html
 -- Original License	BSD-style: https://hackage.haskell.org/package/parsec-3.1.13.0/src/LICENSE
 
-module Data.String.BuildExpressionParser
+module Data.String.Parser.Expression
 
 import Control.Monad.Identity
 import Data.String.Parser
