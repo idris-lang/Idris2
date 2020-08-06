@@ -93,10 +93,11 @@ prim__nullAnyPtr : AnyPtr -> Int
 export
 prim__getNullAnyPtr : AnyPtr
 
-%foreign "C:idris2_getNull,libidris2_support"
 export
-prim__getNullString : Ptr String
+prim__castPtr : AnyPtr -> Ptr t
+prim__castPtr = believe_me
 
+export
 prim__forgetPtr : Ptr t -> AnyPtr
 prim__forgetPtr = believe_me
 
