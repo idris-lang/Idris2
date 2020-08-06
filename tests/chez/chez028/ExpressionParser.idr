@@ -39,21 +39,6 @@ natural : Parser Nat
 natural = do x <- some digit
              pure (fromDigits x)
 
-skip : Parser a -> Parser ()
-skip = map (const ())
-
-space : Parser Char
-space = satisfy isSpace
-
-spaces : Parser ()
-spaces = skip (many space) <?> "white space"
-
-lexeme : Parser a -> Parser a
-lexeme p = p <* spaces
-
-token : String -> Parser ()
-token s = lexeme (skip (string s)) <?> "token " ++ show s
-
 table : OperatorTable Nat
 table =
   [ [Infix (do token "^"; pure (power) ) AssocRight]

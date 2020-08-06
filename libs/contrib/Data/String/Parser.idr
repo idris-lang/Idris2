@@ -153,3 +153,33 @@ option def p = p <|> pure def
 export
 optional : Monad m => ParseT m a -> ParseT m (Maybe a)
 optional p = (p >>= \res => pure $ Just res) <|> pure Nothing
+
+||| Discards the result of a parser
+export
+skip : Parser a -> Parser ()
+skip = map (const ())
+
+||| Parses a space character
+export
+space : Parser Char
+space = satisfy isSpace
+
+||| Parses one or more space characters
+export
+spaces : Parser ()
+spaces = skip (many space) <?> "white space"
+
+||| Discards whitespace after a matching parser
+export
+lexeme : Parser a -> Parser a
+lexeme p = p <* spaces
+
+||| Matches a specific string, then skips following whitespace
+export
+token : String -> Parser ()
+token s = lexeme (skip (string s)) <?> "token " ++ show s
+
+||| Fail with some error message
+export
+fail : Monad m => String -> ParseT m a
+fail x = P $ \s => do pure $ Fail s.pos x

@@ -6,9 +6,6 @@ module Data.String.Parser.Expression
 import Control.Monad.Identity
 import Data.String.Parser
 
-fail : Monad m => String -> ParseT m a
-fail x = P $ \s => do pure $ Fail s.pos x
-
 public export
 data Assoc = AssocNone
            | AssocLeft
