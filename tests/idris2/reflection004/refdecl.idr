@@ -4,6 +4,12 @@ import Language.Reflection
 
 %language ElabReflection
 
+fc : FC
+fc = EmptyFC
+
+quoteTest : TTImp -> TTImp -> List Decl
+quoteTest f arg = `[ myFunc : ~(IApp fc f arg) ]
+
 axes : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Vect n String
 axes 1 = ["x"]
 axes 2 = "y" :: axes 1
