@@ -230,23 +230,28 @@ mutual
                  pure (POp (MkFC fname start end) op l r))
                <|> pure l
 
-  dpair : FileName -> FilePos -> IndentInfo -> Rule PTerm
-  dpair fname start indents
+  dpairType : FileName -> FilePos -> IndentInfo -> Rule PTerm
+  dpairType fname start indents
       = do x <- unqualifiedName
            symbol ":"
            ty <- expr pdef fname indents
-           loc <- pure $ endPos $ getPTermLoc ty
-           symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rest
-           pure (PDPair (MkFC fname start end)
-                        (PRef (MkFC fname start loc) (UN x))
-                        ty
-                        rest)
+           (do loc <- pure $ endPos $ getPTermLoc ty
+               symbol "**"
+               rest <- nestedDpair fname loc indents <|> expr pdef fname indents
+               end <- pure $ endPos $ getPTermLoc rest
+               pure (PDPair (MkFC fname start end)
+                            (PRef (MkFC fname start loc) (UN x))
+                            ty
+                            rest))
+              <|> pure ty
+
+  nestedDpair : FileName -> FilePos -> IndentInfo -> Rule PTerm
+  nestedDpair fname start indents
+      = dpairType fname start indents
     <|> do l <- expr pdef fname indents
            loc <- location
            symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
+           rest <- nestedDpair fname loc indents
            end <- pure $ endPos $ getPTermLoc rest
            pure (PDPair (MkFC fname start end)
                         l
@@ -274,18 +279,30 @@ mutual
     <|> do continueWith indents ")"
            end <- location
            pure (PUnit (MkFC fname start end))
-      -- right section (1-tuple is just an expression)
-    <|> do p <- dpair fname start indents
+      -- dependent pairs with type annotation (so, the type form)
+    <|> do p <- dpairType fname start indents
            symbol ")"
            pure p
-    <|> do e <- expr pdef fname indents
-           (do op <- iOperator
-               end <- endLocation
+    <|> do here <- location
+           e <- expr pdef fname indents
+           -- dependent pairs with no type annotation
+           (do loc <- location
+               symbol "**"
+               rest <- nestedDpair fname loc indents <|> expr pdef fname indents
+               end <- pure $ endPos $ getPTermLoc rest
                symbol ")"
-               pure (PSectionR (MkFC fname start end) e op)
-             <|>
-            -- all the other bracketed expressions
-            tuple fname start indents e)
+               pure (PDPair (MkFC fname start end)
+                            e
+                            (PImplicit (MkFC fname start end))
+                            rest)) <|>
+             -- right sections
+             ((do op <- iOperator
+                  end <- endLocation
+                  symbol ")"
+                  pure (PSectionR (MkFC fname start end) e op)
+               <|>
+              -- all the other bracketed expressions
+              tuple fname start indents e))
 
   getInitRange : List PTerm -> SourceEmptyRule (PTerm, Maybe PTerm)
   getInitRange [x] = pure (x, Nothing)
