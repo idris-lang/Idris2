@@ -262,7 +262,7 @@ checkValid (AfterPos x) c = if c >= x
                                else fail "Invalid indentation"
 checkValid EndOfBlock c = fail "End of block"
 
-||| Any token which indicates the end of a statement/block
+||| Any token which indicates the end of a statement/block/expression
 isTerminator : Token -> Bool
 isTerminator (Symbol ",") = True
 isTerminator (Symbol "]") = True
@@ -270,6 +270,7 @@ isTerminator (Symbol ";") = True
 isTerminator (Symbol "}") = True
 isTerminator (Symbol ")") = True
 isTerminator (Symbol "|") = True
+isTerminator (Symbol "**") = True
 isTerminator (Keyword "in") = True
 isTerminator (Keyword "then") = True
 isTerminator (Keyword "else") = True
