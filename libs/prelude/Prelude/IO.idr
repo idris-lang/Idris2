@@ -88,17 +88,17 @@ export
 getLine : HasIO io => io String
 getLine = primIO prim__getStr
 
-||| Write a single character to stdout.
+||| Write one single-byte character to stdout.
 export
 putChar : HasIO io => Char -> io ()
 putChar c = primIO (prim__putChar c)
 
-||| Write a single character to stdout, with a trailing newline.
+||| Write one multi-byte character to stdout, with a trailing newline.
 export
 putCharLn : HasIO io => Char -> io ()
 putCharLn c = putStrLn (prim__cast_CharString c)
 
-||| Read a single character from stdin.
+||| Read one single-byte character from stdin.
 export
 getChar : HasIO io => io Char
 getChar = primIO prim__getChar
