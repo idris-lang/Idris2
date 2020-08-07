@@ -3,41 +3,11 @@ module Main
 import Control.Monad.Identity
 import Control.Monad.Trans
 
-import Data.Maybe
-import Data.Fin
 import Data.Nat
 import Data.String.Parser
 import Data.String.Parser.Expression
 
 %default partial
-
-addDigit : Nat -> Nat -> Nat
-addDigit num d = 10*num + d
-
-fromDigits : List Nat -> Nat
-fromDigits xs = foldl addDigit 0 xs
-
-digit : Parser Nat
-digit = do x <- satisfy isDigit
-           case fromChar x of
-                Nothing => P $ \s => do pure $ Fail s.pos "not a digit"
-                Just y => P $ \s => Id (OK y s)
-  where fromChar : Char -> Maybe Nat
-        fromChar '0' = Just 0
-        fromChar '1' = Just 1
-        fromChar '2' = Just 2
-        fromChar '3' = Just 3
-        fromChar '4' = Just 4
-        fromChar '5' = Just 5
-        fromChar '6' = Just 6
-        fromChar '7' = Just 7
-        fromChar '8' = Just 8
-        fromChar '9' = Just 9
-        fromChar _ = Nothing
-
-natural : Parser Nat
-natural = do x <- some digit
-             pure (fromDigits x)
 
 table : OperatorTable Nat
 table =

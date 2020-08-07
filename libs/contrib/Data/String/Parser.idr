@@ -5,6 +5,8 @@ import Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.Strings
+import Data.Fin
+import Data.List
 
 %default partial
 
@@ -157,7 +159,7 @@ optional p = (p >>= \res => pure $ Just res) <|> pure Nothing
 ||| Discards the result of a parser
 export
 skip : Parser a -> Parser ()
-skip = map (const ())
+skip = ignore
 
 ||| Parses a space character
 export
@@ -183,3 +185,33 @@ token s = lexeme (skip (string s)) <?> "token " ++ show s
 export
 fail : Monad m => String -> ParseT m a
 fail x = P $ \s => do pure $ Fail s.pos x
+
+export
+digit : Parser (Fin 10)
+digit = do x <- satisfy isDigit
+           case lookup x digits of
+                Nothing => P $ \s => do pure $ Fail s.pos "not a digit"
+                Just y => P $ \s => Id (OK y s)
+  where
+    digits : List (Char, Fin 10)
+    digits = [ ('0', FZ)
+             , ('1', (FS (FZ)))
+             , ('2', (FS (FS (FZ))))
+             , ('3', (FS (FS (FS (FZ)))))
+             , ('4', (FS (FS (FS (FS (FZ))))))
+             , ('5', (FS (FS (FS (FS (FS (FZ)))))))
+             , ('6', (FS (FS (FS (FS (FS (FS (FZ))))))))
+             , ('7', (FS (FS (FS (FS (FS (FS (FS (FZ)))))))))
+             , ('8', (FS (FS (FS (FS (FS (FS (FS (FS (FZ))))))))))
+             , ('9', (FS (FS (FS (FS (FS (FS (FS (FS (FS (FZ)))))))))))
+             ]
+
+export
+natural : Parser Nat
+natural = do x <- some digit
+             pure (fromDigits x)
+  where
+    addDigit : Nat -> (Fin 10) -> Nat
+    addDigit num d = 10*num + (finToNat d)
+    fromDigits : List (Fin 10) -> Nat
+    fromDigits xs = foldl addDigit 0 xs
