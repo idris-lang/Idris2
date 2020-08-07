@@ -267,7 +267,7 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("Parsing " ++ srcf) $
+                Right mod <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
                 initHash
@@ -287,7 +287,7 @@ processMod srcf ttcf msg sourcecode
                 -- a phase before this which builds the dependency graph
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
-                logTime "Reading imports" $
+                logTime "++ Reading imports" $
                    traverse_ (readImport False) imps
 
                 -- Before we process the source, make sure the "hide_everywhere"
@@ -295,11 +295,11 @@ processMod srcf ttcf msg sourcecode
 --                 defs <- get Ctxt
 --                 traverse (\x => setVisibility emptyFC x Private) (hiddenNames defs)
                 setNS ns
-                errs <- logTime "Processing decls" $
+                errs <- logTime "++ Processing decls" $
                             processDecls (decls mod)
 --                 coreLift $ gc
 
-                logTime "Compile defs" $ compileAndInlineAll
+                logTime "++ Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
@@ -323,7 +323,7 @@ process buildmsg file
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
          catch (do ttcf <- getTTCFileName file "ttc"
-                   Just errs <- logTime ("Elaborating " ++ file) $
+                   Just errs <- logTime ("+ Elaborating " ++ file) $
                                    processMod file ttcf buildmsg res
                         | Nothing => pure [] -- skipped it
                    if isNil errs
