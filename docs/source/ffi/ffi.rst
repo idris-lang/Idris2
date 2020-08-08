@@ -153,6 +153,10 @@ others.  Argument types can be any of the following primitives:
 * ``Int``
 * ``Char``
 * ``Double`` (as ``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``String`` (as ``char*`` in C)
 * ``Ptr t`` and ``AnyPtr`` (both as ``void*`` in C)
 
@@ -377,6 +381,10 @@ The field types of a ``Struct`` can be any of the following:
 * ``Int``
 * ``Char``
 * ``Double`` (``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``Ptr a`` or ``AnyPtr`` (``void*`` in C)
 * Another ``Struct``, which is a pointer to a ``struct`` in C
 
