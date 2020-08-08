@@ -52,7 +52,7 @@ use ``PrimIO`` in the initial list of errors ``Init``.
 
     HasErr Void e => PrimIO e where ...
 
-Given this, we can implement \texttt{Console} and run our \texttt{hello}
+Given this, we can implement ``Console`` and run our ``hello``
 program in ``IO``. It is implemented as follows in ``Control.App.Console``:
 
 .. code-block:: idris
