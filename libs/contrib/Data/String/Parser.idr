@@ -194,16 +194,16 @@ digit = do x <- satisfy isDigit
                 Just y => P $ \s => Id (OK y s)
   where
     digits : List (Char, Fin 10)
-    digits = [ ('0', FZ)
-             , ('1', (FS (FZ)))
-             , ('2', (FS (FS (FZ))))
-             , ('3', (FS (FS (FS (FZ)))))
-             , ('4', (FS (FS (FS (FS (FZ))))))
-             , ('5', (FS (FS (FS (FS (FS (FZ)))))))
-             , ('6', (FS (FS (FS (FS (FS (FS (FZ))))))))
-             , ('7', (FS (FS (FS (FS (FS (FS (FS (FZ)))))))))
-             , ('8', (FS (FS (FS (FS (FS (FS (FS (FS (FZ))))))))))
-             , ('9', (FS (FS (FS (FS (FS (FS (FS (FS (FS (FZ)))))))))))
+    digits = [ ('0', 0)
+             , ('1', 1)
+             , ('2', 2)
+             , ('3', 3)
+             , ('4', 4)
+             , ('5', 5)
+             , ('6', 6)
+             , ('7', 7)
+             , ('8', 8)
+             , ('9', 9)
              ]
 
 export
