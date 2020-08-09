@@ -39,6 +39,7 @@ modules = Control.App,
           Debug.Trace,
 
           Decidable.Equality,
+          Decidable.Order,
 
           Language.Reflection,
           Language.Reflection.TT,
