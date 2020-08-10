@@ -1,6 +1,5 @@
 ||| A simple parser combinator library for strings. Inspired by attoparsec zepto.
 module Data.String.Parser
-
 import Control.Monad.Identity
 import Control.Monad.Trans
 
@@ -186,6 +185,7 @@ export
 fail : Monad m => String -> ParseT m a
 fail x = P $ \s => do pure $ Fail s.pos x
 
+||| Matches a single digit
 export
 digit : Parser (Fin 10)
 digit = do x <- satisfy isDigit
@@ -206,12 +206,29 @@ digit = do x <- satisfy isDigit
              , ('9', 9)
              ]
 
+fromDigits : Num a => ((Fin 10) -> a) -> List (Fin 10) -> a
+fromDigits f xs = foldl (addDigit) 0 xs
+where
+  addDigit : a -> (Fin 10) -> a
+  addDigit num d = 10*num + (f d)
+
+intFromDigits : List (Fin 10) -> Integer
+intFromDigits = fromDigits finToInteger
+
+natFromDigits : List (Fin 10) -> Nat
+natFromDigits = fromDigits finToNat
+
+||| Matches a natural number
 export
 natural : Parser Nat
 natural = do x <- some digit
-             pure (fromDigits x)
-  where
-    addDigit : Nat -> (Fin 10) -> Nat
-    addDigit num d = 10*num + (finToNat d)
-    fromDigits : List (Fin 10) -> Nat
-    fromDigits xs = foldl addDigit 0 xs
+             pure (natFromDigits x)
+
+||| Matches an integer, eg. "12", "-4"
+export
+integer : Parser Integer
+integer = do minus <- optional (char '-')
+             x <- some digit
+             case minus of
+                  Nothing => pure (intFromDigits x)
+                  (Just y) => pure ((intFromDigits x)*(-1))
