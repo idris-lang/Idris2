@@ -40,7 +40,7 @@ attempting to use an argument which is erased at run time.
 Erasure
 -------
 
-In Idris, names which begin with a lower case later are automatically bound
+In Idris, names which begin with a lower case letter are automatically bound
 as implicit arguments in types, for example in the following skeleton
 definition, ``n``, ``a`` and ``m`` are implicitly bound:
 

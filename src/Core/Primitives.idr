@@ -76,28 +76,28 @@ b64max = 18446744073709551616 -- 0x10000000000000000
 
 castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits8 [NPrimVal fc (BI i)]
-    = if i > 0 -- oops, we don't have `rem` yet!
+    = if i >= 0 -- oops, we don't have `rem` yet!
           then Just (NPrimVal fc (B8 (fromInteger i `mod` b8max)))
           else Just (NPrimVal fc (B8 (b8max + fromInteger i `mod` b8max)))
 castBits8 _ = Nothing
 
 castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits16 [NPrimVal fc (BI i)]
-    = if i > 0 -- oops, we don't have `rem` yet!
+    = if i >= 0 -- oops, we don't have `rem` yet!
           then Just (NPrimVal fc (B8 (fromInteger i `mod` b16max)))
           else Just (NPrimVal fc (B8 (b16max + fromInteger i `mod` b16max)))
 castBits16 _ = Nothing
 
 castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits32 [NPrimVal fc (BI i)]
-    = if i > 0 -- oops, we don't have `rem` yet!
+    = if i >= 0 -- oops, we don't have `rem` yet!
           then Just (NPrimVal fc (B8 (fromInteger i `mod` b32max)))
           else Just (NPrimVal fc (B8 (b32max + fromInteger i `mod` b32max)))
 castBits32 _ = Nothing
 
 castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
 castBits64 [NPrimVal fc (BI i)]
-    = if i > 0 -- oops, we don't have `rem` yet!
+    = if i >= 0 -- oops, we don't have `rem` yet!
           then Just (NPrimVal fc (B64 (i `mod` b64max)))
           else Just (NPrimVal fc (B64 (b64max + i `mod` b64max)))
 castBits64 _ = Nothing

@@ -56,13 +56,23 @@ Compiler changes:
 * It is now possible to create new backends with minimal overhead. `Idris.Driver`
 exposes the function `mainWithCodegens` that takes a list of codegens. The
 feature in documented [here](https://idris2.readthedocs.io/en/latest/backends/custom.html).
-* New code generators `node` and `js`.
+* New code generators `node` and `javascript`.
 
-REPL changes:
+REPL/IDE mode changes:
 
 * Implemented `:module` command, to load a module during a REPL session.
 * Implemented `:doc`, which displays documentation for a name.
 * Implemented `:browse`, which lists the names exported by a namespace.
+* Added `:psnext`, which continues the previous proof search, looking for the
+  next type correct expression
+  + Correspondingly, added the IDE mode command `proof-search-next` (which takes
+    no arguments)
+* Added `:gdnext`, which continues the previous program search, looking for the
+  next type correct implementation
+  + Correspondingly, added the IDE mode command `generate-def-next` (which takes
+    no arguments)
+* Improved program search to allow deconstructing intermediate values, and in
+  simple cases, the result of recursive calls.
 
 Changes since Idris 2 v0.1.0
 ----------------------------

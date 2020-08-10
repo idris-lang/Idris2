@@ -729,13 +729,14 @@ processDef opts nest env fc n_in cs_in
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
          atotal <- toResolvedNames (NS ["Builtin"] (UN "assert_total"))
-         calcRefs False atotal (Resolved nidx)
          when (not (InCase `elem` opts)) $
-             do sc <- calculateSizeChange fc n
+             do calcRefs False atotal (Resolved nidx)
+                sc <- calculateSizeChange fc n
                 setSizeChange fc n sc
                 checkIfGuarded fc n
 
          md <- get MD -- don't need the metadata collected on the coverage check
+
          cov <- checkCoverage nidx ty mult cs
          setCovering fc n cov
          put MD md

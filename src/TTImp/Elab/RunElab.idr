@@ -55,10 +55,9 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
                   NBind _ x (Lam _ _ _) sc =>
-                      do empty <- clearDefs defs
-                         elabScript fc nest env
-                                 !(sc defs (toClosure withAll env
-                                                 !(quote empty env act'))) exp
+                      elabScript fc nest env
+                              !(sc defs (toClosure withAll env
+                                              !(quote defs env act'))) exp
                   _ => failWith defs
     elabCon defs "Fail" [_,msg]
         = do msg' <- evalClosure defs msg

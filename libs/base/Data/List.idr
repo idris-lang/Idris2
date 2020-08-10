@@ -1,5 +1,8 @@
 module Data.List
 
+import Data.Nat
+import Data.List1
+
 public export
 isNil : List a -> Bool
 isNil [] = True
@@ -13,11 +16,6 @@ isCons _  = True
 public export
 snoc : List a -> a -> List a
 snoc xs x = xs ++ [x]
-
-public export
-length : List a -> Nat
-length []      = Z
-length (_::xs) = S $ length xs
 
 public export
 take : Nat -> List a -> List a
@@ -191,11 +189,11 @@ break : (a -> Bool) -> List a -> (List a, List a)
 break p xs = span (not . p) xs
 
 public export
-split : (a -> Bool) -> List a -> List (List a)
+split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of
     (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: split p (assert_smaller xs rest)
+    (chunk, (c :: rest)) => chunk :: toList (split p (assert_smaller xs rest))
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
@@ -246,7 +244,7 @@ tails xs = xs :: case xs of
 ||| ```
 |||
 public export
-splitOn : Eq a => a -> List a -> List (List a)
+splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
 ||| Replaces all occurences of the first argument with the second argument in a list.
@@ -330,21 +328,21 @@ Uninhabited (NonEmpty []) where
 ||| Get the head of a non-empty list.
 ||| @ ok proof the list is non-empty
 public export
-head : (l : List a) -> {auto ok : NonEmpty l} -> a
+head : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 head [] impossible
 head (x :: _) = x
 
 ||| Get the tail of a non-empty list.
 ||| @ ok proof the list is non-empty
 public export
-tail : (l : List a) -> {auto ok : NonEmpty l} -> List a
+tail : (l : List a) -> {auto 0 ok : NonEmpty l} -> List a
 tail [] impossible
 tail (_ :: xs) = xs
 
 ||| Retrieve the last element of a non-empty list.
 ||| @ ok proof that the list is non-empty
 public export
-last : (l : List a) -> {auto ok : NonEmpty l} -> a
+last : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 last [] impossible
 last [x] = x
 last (x::y::ys) = last (y::ys)
@@ -352,7 +350,7 @@ last (x::y::ys) = last (y::ys)
 ||| Return all but the last element of a non-empty list.
 ||| @ ok proof the list is non-empty
 public export
-init : (l : List a) -> {auto ok : NonEmpty l} -> List a
+init : (l : List a) -> {auto 0 ok : NonEmpty l} -> List a
 init [] impossible
 init [_] = []
 init (x::y::ys) = x :: init (y::ys)
@@ -443,14 +441,14 @@ mapMaybe f (x::xs) =
 ||| Foldl a non-empty list without seeding the accumulator.
 ||| @ ok proof that the list is non-empty
 public export
-foldl1 : (a -> a -> a) -> (l : List a)  -> {auto ok : NonEmpty l} -> a
+foldl1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
 foldl1 f [] impossible
 foldl1 f (x::xs) = foldl f x xs
 
 ||| Foldr a non-empty list without seeding the accumulator.
 ||| @ ok proof that the list is non-empty
 public export
-foldr1 : (a -> a -> a) -> (l : List a)  -> {auto ok : NonEmpty l} -> a
+foldr1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
 foldr1 f [] impossible
 foldr1 f [x] = x
 foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
@@ -593,8 +591,8 @@ Uninhabited (Prelude.(::) x xs = []) where
 
 ||| (::) is injective
 export
-consInjective : {x : a} -> {xs : List a} -> {y : b} -> {ys : List b} ->
-                x :: xs = y :: ys -> (x = y, xs = ys)
+consInjective : forall x, xs, y, ys .
+                the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
 ||| The empty list is a right identity for append.
@@ -609,7 +607,7 @@ appendAssociative : (l, c, r : List a) -> l ++ (c ++ r) = (l ++ c) ++ r
 appendAssociative []      c r = Refl
 appendAssociative (_::xs) c r = rewrite appendAssociative xs c r in Refl
 
-revOnto : (xs, vs : _) -> reverseOnto xs vs = reverse vs ++ xs
+revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
 revOnto _ [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
@@ -625,3 +623,12 @@ revAppend (v :: vs) ns
           rewrite sym (revAppend vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
+
+export
+dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
+dropFusion  Z     m    l      = Refl
+dropFusion (S n)  Z    l      = rewrite plusZeroRightNeutral n in Refl
+dropFusion (S n) (S m) []     = Refl
+dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
+                                rewrite plusCommutative n 1 in
+                                dropFusion (S n) m l

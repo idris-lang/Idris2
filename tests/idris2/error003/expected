@@ -11,7 +11,7 @@ at:
 	                 ^
 
 
-If Data.List.length: When unifying Nat and List ?a
+If Prelude.List.length: When unifying Nat and List ?a
 Mismatch between:
 	Nat
 and
@@ -21,7 +21,7 @@ at:
 	                 ^
 
 
-If Prelude.length: When unifying Nat and String
+If Prelude.Strings.length: When unifying Nat and String
 Mismatch between:
 	Nat
 and

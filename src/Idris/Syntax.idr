@@ -384,15 +384,17 @@ data EditCmd : Type where
      TypeAt : Int -> Int -> Name -> EditCmd
      CaseSplit : Bool -> Int -> Int -> Name -> EditCmd
      AddClause : Bool -> Int -> Name -> EditCmd
-     ExprSearch : Bool -> Int -> Name -> List Name -> Bool -> EditCmd
-     GenerateDef : Bool -> Int -> Name -> EditCmd
+     ExprSearch : Bool -> Int -> Name -> List Name -> EditCmd
+     ExprSearchNext : EditCmd
+     GenerateDef : Bool -> Int -> Name -> Nat -> EditCmd
+     GenerateDefNext : EditCmd
      MakeLemma : Bool -> Int -> Name -> EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd
 
 public export
 data REPLCmd : Type where
-     NewDefn : List PDecl -> REPLCmd 
+     NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
      PrintDef : Name -> REPLCmd
@@ -407,6 +409,7 @@ data REPLCmd : Type where
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
+     CGDirective : String -> REPLCmd
      CD : String -> REPLCmd
      CWD: REPLCmd
      Missing : Name -> REPLCmd

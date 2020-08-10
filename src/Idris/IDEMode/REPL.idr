@@ -15,6 +15,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Data.List
+import Data.List1
 import Data.So
 import Data.Strings
 
@@ -40,7 +42,6 @@ import TTImp.ProcessDecls
 
 import Utils.Hex
 
-import Data.List
 import System
 import System.File
 
@@ -168,9 +169,13 @@ process (AddMissing l n)
          pure $ REPL $ Edited $ DisplayEdit []
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs) all))
+                                                 (map UN hs)))
+process ExprSearchNext
+    = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
+process GenerateDefNext
+    = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
     = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
 process (MakeCase l n)
@@ -182,6 +187,9 @@ process (DocsFor n modeOpt)
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed []
+process (Directive n)
+    = do todoCmd "directive"
+         pure $ REPL $ Printed []
 process (WhoCalls n)
     = do todoCmd "who-calls"
          pure $ NameList []
@@ -189,7 +197,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = replWrap $ Idris.REPL.process (Browse (reverse (split (=='.') ns)))
+    = replWrap $ Idris.REPL.process (Browse (List1.toList $ reverse (split (=='.') ns)))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm

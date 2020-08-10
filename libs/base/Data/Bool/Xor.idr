@@ -42,14 +42,14 @@ notXorCancel False b = rewrite xorFalseNeutral b in
                        notInvolutive b
 
 export
-xorAssociative : (a, b, c : Bool) -> xor (xor a b) c = xor a (xor b c)
+xorAssociative : (a, b, c : Bool) -> xor a (xor b c) = xor (xor a b) c
 xorAssociative False b c =
   rewrite xorFalseNeutral b in
-  sym $ xorFalseNeutral (xor b c)
+  xorFalseNeutral $ xor b c
 xorAssociative True  b c =
   rewrite xorTrueNot b in
   rewrite xorTrueNot (xor b c) in
-  sym $ notXor b c
+  notXor b c
 
 export
 xorCommutative : (a, b : Bool) -> xor a b = xor b a

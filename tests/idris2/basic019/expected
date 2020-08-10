@@ -4,5 +4,5 @@ Main> Prelude.elem : Eq a => a -> List a -> Bool
 elem x [] = False
 elem x (y :: ys) = (x == y) || Delay (elem x ys)
 Main> PrimIO.io_bind : (1 _ : IO a) -> (1 _ : (a -> IO b)) -> IO b
-io_bind (MkIO fn) k = MkIO (\1 w => (case fn w of { MkIORes x' w' => case k x' of { MkIO res => res w' } }))
+io_bind (MkIO fn) k = MkIO (\1 w => let MkIORes x' w' = fn w in let MkIO res = k x' in res w')
 Main> Bye for now!

@@ -27,3 +27,9 @@ data Elem : a -> Vect n a -> Type where
      There : (p : Elem x xs) -> Elem x (y :: xs)
 
 lookup : Elem ty vs -> Env vs -> ty
+
+data Tree : (a : Type) -> Type where
+  Leaf : a -> Tree a
+  Node : a -> Tree a -> Tree a -> Tree a
+
+foo : Tree Nat

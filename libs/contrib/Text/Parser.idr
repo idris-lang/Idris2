@@ -254,7 +254,7 @@ endBy1' {c} sep p = some' $ rewrite sym (orTrueTrue c) in
 export
 between : {c : _} ->
           (left : Grammar tok True l) ->
-          (right : Grammar tok True r) ->
-          (p : Grammar tok c a) ->
+          (right : Inf (Grammar tok True r)) ->
+          (p : Inf (Grammar tok c a)) ->
           Grammar tok True a
 between left right contents = left *> contents <* right

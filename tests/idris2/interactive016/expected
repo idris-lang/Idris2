@@ -1,0 +1,5 @@
+1/1: Building Cont (Cont.idr)
+Main> cbind (MkCont g) f = MkCont (\k => g (\x => let MkCont f1 = f x in f1 k))
+Main> ctbind (MkContT g) f = MkContT (\k => g (\x => let MkContT f1 = f x in f1 k))
+Main> callCC f = MkContT (\k => let MkContT g = f (\x => MkContT (\g => k x)) in g k)
+Main> Bye for now!

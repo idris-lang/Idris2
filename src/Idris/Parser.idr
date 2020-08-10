@@ -9,6 +9,7 @@ import        TTImp.TTImp
 import public Text.Parser
 import        Data.List
 import        Data.List.Views
+import        Data.List1
 import        Data.Maybe
 import        Data.Strings
 
@@ -229,23 +230,28 @@ mutual
                  pure (POp (MkFC fname start end) op l r))
                <|> pure l
 
-  dpair : FileName -> FilePos -> IndentInfo -> Rule PTerm
-  dpair fname start indents
+  dpairType : FileName -> FilePos -> IndentInfo -> Rule PTerm
+  dpairType fname start indents
       = do x <- unqualifiedName
            symbol ":"
            ty <- expr pdef fname indents
-           loc <- pure $ endPos $ getPTermLoc ty
-           symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
-           end <- pure $ endPos $ getPTermLoc rest
-           pure (PDPair (MkFC fname start end)
-                        (PRef (MkFC fname start loc) (UN x))
-                        ty
-                        rest)
+           (do loc <- pure $ endPos $ getPTermLoc ty
+               symbol "**"
+               rest <- nestedDpair fname loc indents <|> expr pdef fname indents
+               end <- pure $ endPos $ getPTermLoc rest
+               pure (PDPair (MkFC fname start end)
+                            (PRef (MkFC fname start loc) (UN x))
+                            ty
+                            rest))
+              <|> pure ty
+
+  nestedDpair : FileName -> FilePos -> IndentInfo -> Rule PTerm
+  nestedDpair fname start indents
+      = dpairType fname start indents
     <|> do l <- expr pdef fname indents
            loc <- location
            symbol "**"
-           rest <- dpair fname loc indents <|> expr pdef fname indents
+           rest <- nestedDpair fname loc indents
            end <- pure $ endPos $ getPTermLoc rest
            pure (PDPair (MkFC fname start end)
                         l
@@ -273,18 +279,30 @@ mutual
     <|> do continueWith indents ")"
            end <- location
            pure (PUnit (MkFC fname start end))
-      -- right section (1-tuple is just an expression)
-    <|> do p <- dpair fname start indents
+      -- dependent pairs with type annotation (so, the type form)
+    <|> do p <- dpairType fname start indents
            symbol ")"
            pure p
-    <|> do e <- expr pdef fname indents
-           (do op <- iOperator
-               end <- endLocation
+    <|> do here <- location
+           e <- expr pdef fname indents
+           -- dependent pairs with no type annotation
+           (do loc <- location
+               symbol "**"
+               rest <- nestedDpair fname loc indents <|> expr pdef fname indents
+               end <- pure $ endPos $ getPTermLoc rest
                symbol ")"
-               pure (PSectionR (MkFC fname start end) e op)
-             <|>
-            -- all the other bracketed expressions
-            tuple fname start indents e)
+               pure (PDPair (MkFC fname start end)
+                            e
+                            (PImplicit (MkFC fname start end))
+                            rest)) <|>
+             -- right sections
+             ((do op <- iOperator
+                  end <- endLocation
+                  symbol ")"
+                  pure (PSectionR (MkFC fname start end) e op)
+               <|>
+              -- all the other bracketed expressions
+              tuple fname start indents e))
 
   getInitRange : List PTerm -> SourceEmptyRule (PTerm, Maybe PTerm)
   getInitRange [x] = pure (x, Nothing)
@@ -1185,7 +1203,7 @@ fix
   <|> do keyword "infix"; pure Infix
   <|> do keyword "prefix"; pure Prefix
 
-namespaceHead : Rule (List String)
+namespaceHead : Rule (List1 String)
 namespaceHead
     = do keyword "namespace"
          commit
@@ -1200,7 +1218,7 @@ namespaceDecl fname indents
          ns    <- namespaceHead
          end   <- location
          ds    <- blockAfter col (topDecl fname)
-         pure (PNamespace (MkFC fname start end) ns (concat ds))
+         pure (PNamespace (MkFC fname start end) (List1.toList ns) (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl
 transformDecl fname indents
@@ -1614,7 +1632,7 @@ import_ fname indents
                                namespacedIdent)
          end <- location
          atEnd indents
-         pure (MkImport (MkFC fname start end) reexp ns nsAs)
+         pure (MkImport (MkFC fname start end) reexp (List1.toList ns) (List1.toList nsAs))
 
 export
 prog : FileName -> SourceEmptyRule Module
@@ -1628,7 +1646,7 @@ prog fname
          imports <- block (import_ fname)
          ds      <- block (topDecl fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports doc (collectDefs (concat ds)))
+                        (List1.toList nspace) imports doc (collectDefs (concat ds)))
 
 export
 progHdr : FileName -> SourceEmptyRule Module
@@ -1641,7 +1659,7 @@ progHdr fname
          end     <- location
          imports <- block (import_ fname)
          pure (MkModule (MkFC fname start end)
-                        nspace imports doc [])
+                        (List1.toList nspace) imports doc [])
 
 parseMode : Rule REPLEval
 parseMode
@@ -1710,17 +1728,17 @@ editCmd
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
-         pure (ExprSearch upd (fromInteger line) n [] False)
-  <|> do replCmd ["psall"]
-         upd <- option False (do symbol "!"; pure True)
-         line <- intLit
-         n <- name
-         pure (ExprSearch upd (fromInteger line) n [] True)
+         pure (ExprSearch upd (fromInteger line) n [])
+  <|> do replCmd ["psnext"]
+         pure ExprSearchNext
   <|> do replCmd ["gd"]
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
          n <- name
-         pure (GenerateDef upd (fromInteger line) n)
+         nreject <- option 0 intLit
+         pure (GenerateDef upd (fromInteger line) n (fromInteger nreject))
+  <|> do replCmd ["gdnext"]
+         pure GenerateDefNext
   <|> do replCmd ["ml", "makelemma"]
          upd <- option False (do symbol "!"; pure True)
          line <- intLit
@@ -1764,6 +1782,9 @@ data CmdArg : Type where
      ||| The command takes a module.
      ModuleArg : CmdArg
 
+     ||| The command takes a string
+     StringArg : CmdArg
+
      ||| The command takes multiple arguments.
      Args : List CmdArg -> CmdArg
 
@@ -1777,6 +1798,7 @@ Show CmdArg where
   show OptionArg = "<option>"
   show FileArg = "<file>"
   show ModuleArg = "<module>"
+  show StringArg = "<module>"
   show (Args args) = showSep " " (map show args)
 
 export
@@ -1826,6 +1848,19 @@ nameArgCmd parseCmd command doc = (names, NameArg, doc, parse)
       n <- name
       pure (command n)
 
+stringArgCmd : ParseCmd -> (String -> REPLCmd) -> String -> CommandDefinition
+stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      s <- strLit
+      pure (command s)
+
 moduleArgCmd : ParseCmd -> (List String -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
   where
@@ -1837,7 +1872,7 @@ moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       n <- moduleIdent
-      pure (command n)
+      pure (command (List1.toList n))
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
 exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
@@ -1918,6 +1953,7 @@ parserCommandsForHelp =
   , optArgCmd (ParseIdentCmd "unset") SetOpt False "Unset an option"
   , compileArgsCmd (ParseREPLCmd ["c", "compile"]) Compile "Compile to an executable"
   , exprArgCmd (ParseIdentCmd "exec") Exec "Compile to an executable and run"
+  , stringArgCmd (ParseIdentCmd "directive") CGDirective "Set a codegen-specific directive"
   , noArgCmd (ParseREPLCmd ["r", "reload"]) Reload "Reload current file"
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"

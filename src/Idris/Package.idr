@@ -10,6 +10,7 @@ import Core.Options
 import Core.Unify
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.So
 import Data.StringMap
@@ -52,8 +53,8 @@ record PkgDesc where
   sourceloc : Maybe String
   bugtracker : Maybe String
   depends : List String -- packages to add to search path
-  modules : List (List String, String) -- modules to install (namespace, filename)
-  mainmod : Maybe (List String, String) -- main file (i.e. file to load at REPL)
+  modules : List (List1 String, String) -- modules to install (namespace, filename)
+  mainmod : Maybe (List1 String, String) -- main file (i.e. file to load at REPL)
   executable : Maybe String -- name of executable
   options : Maybe (FC, String)
   sourcedir : Maybe String
@@ -111,8 +112,8 @@ data DescField : Type where
   PSourceLoc   : FC -> String -> DescField
   PBugTracker  : FC -> String -> DescField
   PDepends     : List String -> DescField
-  PModules     : List (FC, List String) -> DescField
-  PMainMod     : FC -> List String -> DescField
+  PModules     : List (FC, List1 String) -> DescField
+  PMainMod     : FC -> List1 String -> DescField
   PExec        : String -> DescField
   POpts        : FC -> String -> DescField
   PSourceDir   : FC -> String -> DescField
@@ -190,8 +191,8 @@ data ParsedMods : Type where
 data MainMod : Type where
 
 addField : {auto c : Ref Ctxt Defs} ->
-           {auto p : Ref ParsedMods (List (FC, List String))} ->
-           {auto m : Ref MainMod (Maybe (FC, List String))} ->
+           {auto p : Ref ParsedMods (List (FC, List1 String))} ->
+           {auto m : Ref MainMod (Maybe (FC, List1 String))} ->
            DescField -> PkgDesc -> Core PkgDesc
 addField (PVersion fc n)     pkg = pure $ record { version = n } pkg
 addField (PAuthors fc a)     pkg = pure $ record { authors = a } pkg
@@ -233,10 +234,10 @@ addFields xs desc = do p <- newRef ParsedMods []
                                      , mainmod = !(traverseOpt toSource mmod)
                                      } added
   where
-    toSource : (FC, List String) -> Core (List String, String)
-    toSource (loc, ns) = pure (ns, !(nsToSource loc ns))
-    go : {auto p : Ref ParsedMods (List (FC, List String))} ->
-         {auto m : Ref MainMod (Maybe (FC, List String))} ->
+    toSource : (FC, List1 String) -> Core (List1 String, String)
+    toSource (loc, ns) = pure (ns, !(nsToSource loc (List1.toList ns)))
+    go : {auto p : Ref ParsedMods (List (FC, List1 String))} ->
+         {auto m : Ref MainMod (Maybe (FC, List1 String))} ->
          List DescField -> PkgDesc -> Core PkgDesc
     go [] dsc = pure dsc
     go (x :: xs) dsc = go xs !(addField x dsc)
@@ -312,7 +313,7 @@ build pkg opts
               Just exec =>
                    do let Just (mainNS, mainFile) = mainmod pkg
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS mainNS (UN "main")
+                      let mainName = NS (List1.toList mainNS) (UN "main")
                       compileMain mainName mainFile exec
 
          runScript (postbuild pkg)
@@ -325,10 +326,9 @@ copyFile src dest
          writeToFile dest buf
 
 installFrom : {auto c : Ref Ctxt Defs} ->
-              String -> String -> String -> List String -> Core ()
-installFrom _ _ _ [] = pure ()
+              String -> String -> String -> List1 String -> Core ()
 installFrom pname builddir destdir ns@(m :: dns)
-    = do let ttcfile = joinPath (reverse ns)
+    = do let ttcfile = joinPath (List1.toList $ reverse ns)
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
          let destPath = destdir </> joinPath (reverse dns)
          let destFile = destdir </> ttcfile <.> "ttc"
@@ -352,7 +352,7 @@ install pkg opts -- not used but might be in the future
          let build = build_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (map fst (modules pkg))
-                               (\m => fst m :: map fst (modules pkg))
+                               (\ m => fst m :: map fst (modules pkg))
                                (mainmod pkg)
          Just srcdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
@@ -436,9 +436,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                          (\m => fst m :: map fst (modules pkg))
                          (mainmod pkg)
          let toClean : List (List String, String)
-               = mapMaybe (\ks => case ks of
-                                       [] => Nothing
-                                       (x :: xs) => Just (xs, x)) pkgmods
+               = map (\ (x :: xs) => (xs, x)) pkgmods
          Just srcdir <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          let d = dirs (options defs)
@@ -548,6 +546,7 @@ errorMsg = unlines
   , "    --quiet"
   , "    --verbose"
   , "    --timing"
+  , "    --log <log level>"
   , "    --dumpcases <file>"
   , "    --dumplifted <file>"
   , "    --dumpvmcode <file>"
@@ -565,6 +564,7 @@ filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetai
 filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
 filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
 filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
+filterPackageOpts acc (Logging l     ::xs) = filterPackageOpts (record {oopts $= (Logging l::)}      acc) xs
 filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
 filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
 filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs

@@ -71,6 +71,9 @@ preOptions (SetCG e :: opts)
                  coreLift $ putStrLn $ "Code generators available: " ++
                                  showSep ", " (map fst (availableCGs (options defs)))
                  coreLift $ exitWith (ExitFailure 1)
+preOptions (Directive d :: opts)
+    = do setSession (record { directives $= (d::) } !getSession)
+         preOptions opts
 preOptions (PkgPath p :: opts)
     = do addPkgDir p
          preOptions opts
@@ -125,23 +128,26 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              List CLOpt -> Core Bool
-postOptions [] = pure True
-postOptions (OutputFile outfile :: rest)
+              REPLResult -> List CLOpt -> Core Bool
+postOptions _ [] = pure True
+postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
+    = do postOptions res rest
+         pure False
+postOptions res (OutputFile outfile :: rest)
     = do compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
-         postOptions rest
+         postOptions res rest
          pure False
-postOptions (ExecFn str :: rest)
+postOptions res (ExecFn str :: rest)
     = do execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
-         postOptions rest
+         postOptions res rest
          pure False
-postOptions (CheckOnly :: rest)
-    = do postOptions rest
+postOptions res (CheckOnly :: rest)
+    = do postOptions res rest
          pure False
-postOptions (RunREPL str :: rest)
+postOptions res (RunREPL str :: rest)
     = do replCmd str
          pure False
-postOptions (_ :: rest) = postOptions rest
+postOptions res (_ :: rest) = postOptions res rest
 
 export
 ideMode : List CLOpt -> Bool

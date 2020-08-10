@@ -11,6 +11,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.StringMap
 
@@ -200,7 +201,7 @@ mutual
            imp <- showImplicits
            arg' <- if imp then toPTerm tyPrec arg
                           else pure (PImplicit fc)
-           sc' <- toPTerm p sc
+           sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
            bracket p startPrec (PLam fc rig pt' (PRef fc n) arg' sc')
   toPTerm p (ILet fc rig n ty val sc)
@@ -211,6 +212,12 @@ mutual
            sc' <- toPTerm startPrec sc
            bracket p startPrec (PLet fc rig (PRef fc n)
                                      ty' val' sc' [])
+  toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
+      = do sc' <- toPTerm startPrec sc
+           lhs' <- toPTerm startPrec lhs
+           rhs' <- toPTerm startPrec rhs
+           bracket p startPrec
+                   (PLet fc top lhs' (PImplicit fc) sc' rhs' [])
   toPTerm p (ICase fc sc scty alts)
       = do sc' <- toPTerm startPrec sc
            alts' <- traverse toPClause alts
@@ -374,17 +381,17 @@ mutual
   toPRecord (MkImpRecord fc n ps con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
-                                      p' <- mapPiInfo p 
+                                      p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', Just con, fs')
-    where      
+    where
       mapPiInfo : PiInfo RawImp -> Core (PiInfo PTerm)
       mapPiInfo Explicit        = pure   Explicit
       mapPiInfo Implicit        = pure   Implicit
       mapPiInfo AutoImplicit    = pure   AutoImplicit
       mapPiInfo (DefImplicit p) = pure $ DefImplicit !(toPTerm startPrec p)
-  
+
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              FnOpt -> Core PFnOpt

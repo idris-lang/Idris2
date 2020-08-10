@@ -5,6 +5,7 @@ Overridable options are:
     --quiet
     --verbose
     --timing
+    --log <log level>
     --dumpcases <file>
     --dumplifted <file>
     --dumpvmcode <file>

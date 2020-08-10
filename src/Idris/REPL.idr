@@ -293,6 +293,51 @@ addMadeCase lit wapp line content
     addW (S k) acc (x :: xs) = addW k (x :: acc) xs
     addW (S k) acc [] = reverse acc
 
+nextProofSearch : {auto c : Ref Ctxt Defs} ->
+                  {auto u : Ref UST UState} ->
+                  {auto o : Ref ROpts REPLOpts} ->
+                  Core (Maybe (Name, RawImp))
+nextProofSearch
+    = do opts <- get ROpts
+         let Just (n, res) = psResult opts
+              | Nothing => pure Nothing
+         Just (res, next) <- nextResult res
+              | Nothing =>
+                    do put ROpts (record { psResult = Nothing } opts)
+                       pure Nothing
+         put ROpts (record { psResult = Just (n, next) } opts)
+         pure (Just (n, res))
+
+nextGenDef : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             {auto o : Ref ROpts REPLOpts} ->
+             (reject : Nat) ->
+             Core (Maybe (Int, (FC, List ImpClause)))
+nextGenDef reject
+    = do opts <- get ROpts
+         let Just (line, res) = gdResult opts
+              | Nothing => pure Nothing
+         Just (res, next) <- nextResult res
+              | Nothing =>
+                    do put ROpts (record { gdResult = Nothing } opts)
+                       pure Nothing
+         put ROpts (record { gdResult = Just (line, next) } opts)
+         case reject of
+              Z => pure (Just (line, res))
+              S k => nextGenDef k
+
+dropLams : Nat -> RawImp -> RawImp
+dropLams Z tm = tm
+dropLams (S k) (ILam _ _ _ _ _ sc) = dropLams k sc
+dropLams _ tm = tm
+
+dropLamsTm : {vars : _} ->
+             Nat -> Env Term vars -> Term vars ->
+             (vars' ** (Env Term vars', Term vars'))
+dropLamsTm Z env tm = (_ ** (env, tm))
+dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
+dropLamsTm _ env tm = (_ ** (env, tm))
+
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -330,35 +375,31 @@ processEdit (AddClause upd line name)
          if upd
             then updateFile (addClause c (integerToNat (cast line)))
             else pure $ DisplayEdit [c]
-processEdit (ExprSearch upd line name hints all)
+processEdit (ExprSearch upd line name hints)
     = do defs <- get Ctxt
          syn <- get Syn
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          case !(lookupDefName name (gamma defs)) of
               [(n, nidx, Hole locs _)] =>
-                  do tms <- exprSearch replFC name []
+                  do let searchtm = exprSearch replFC name []
+                     ropts <- get ROpts
+                     put ROpts (record { psResult = Just (name, searchtm) } ropts)
                      defs <- get Ctxt
-                     restms <- traverse (normaliseHoles defs []) tms
-                     itms <- the (Core (List PTerm))
-                               (traverse (\tm =>
-                                           do let (_ ** (env, tm')) = dropLams locs [] tm
-                                              resugar env tm') restms)
-                     if all
-                        then pure $ DisplayEdit (map show itms)
-                        else case itms of
-                                  [] => pure $ EditError "No search results"
-                                  (x :: xs) =>
-                                     let res = show (the PTerm (if brack
-                                                        then addBracket replFC x
-                                                        else x)) in
-                                       if upd
-                                          then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
-                                          else pure $ DisplayEdit [res]
+                     Just (_, restm) <- nextProofSearch
+                          | Nothing => pure $ EditError "No search results"
+                     let tm' = dropLams locs restm
+                     itm <- pterm tm'
+                     let res = show (the PTerm (if brack
+                                                   then addBracket replFC itm
+                                                   else itm))
+                     if upd
+                        then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
+                        else pure $ DisplayEdit [res]
               [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLams locs [] tm
+                          do let (_ ** (env, tm')) = dropLamsTm locs [] tm
                              itm <- resugar env tm'
                              let res = show (the PTerm (if brack
                                                 then addBracket replFC itm
@@ -368,33 +409,52 @@ processEdit (ExprSearch upd line name hints all)
                                 else pure $ DisplayEdit [res]
               [] => pure $ EditError $ "Unknown name " ++ show name
               _ => pure $ EditError "Not a searchable hole"
-  where
-    dropLams : {vars : _} ->
-               Nat -> Env Term vars -> Term vars ->
-               (vars' ** (Env Term vars', Term vars'))
-    dropLams Z env tm = (_ ** (env, tm))
-    dropLams (S k) env (Bind _ _ b sc) = dropLams k (b :: env) sc
-    dropLams _ env tm = (_ ** (env, tm))
-processEdit (GenerateDef upd line name)
+processEdit ExprSearchNext
+    = do defs <- get Ctxt
+         syn <- get Syn
+         Just (name, restm) <- nextProofSearch
+              | Nothing => pure $ EditError "No more results"
+         [(n, nidx, Hole locs _)] <- lookupDefName name (gamma defs)
+              | _ => pure $ EditError "Not a searchable hole"
+         let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
+         let tm' = dropLams locs restm
+         itm <- pterm tm'
+         let res = show (the PTerm (if brack
+                                       then addBracket replFC itm
+                                       else itm))
+         pure $ DisplayEdit [res]
+
+processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
              | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
-                  catch
-                    (do Just (fc, cs) <- makeDef (\p, n => onLine (line - 1) p) n'
-                           | Nothing => processEdit (AddClause upd line name)
-                        Just srcLine <- getSourceLine line
-                           | Nothing => pure (EditError "Source line not found")
-                        let (markM, srcLineUnlit) = isLitLine srcLine
-                        let l : Nat =  integerToNat (cast (snd (startPos fc)))
-                        ls <- traverse (printClause markM l) cs
-                        if upd
-                           then updateFile (addClause (unlines ls) (integerToNat (cast line)))
-                           else pure $ DisplayEdit ls)
-                    (\err => pure $ EditError $ "Can't find a definition for " ++ show n' ++ ": " ++ show err)
+                 do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
+                                                16 mostUsed n'
+                    ropts <- get ROpts
+                    put ROpts (record { gdResult = Just (line, searchdef) } ropts)
+                    Just (_, (fc, cs)) <- nextGenDef rej
+                         | Nothing => pure (EditError "No search results")
+                    let l : Nat =  integerToNat (cast (snd (startPos fc)))
+                    Just srcLine <- getSourceLine line
+                       | Nothing => pure (EditError "Source line not found")
+                    let (markM, srcLineUnlit) = isLitLine srcLine
+                    ls <- traverse (printClause markM l) cs
+                    if upd
+                       then updateFile (addClause (unlines ls) (integerToNat (cast line)))
+                       else pure $ DisplayEdit ls
               Just _ => pure $ EditError "Already defined"
               Nothing => pure $ EditError $ "Can't find declaration for " ++ show name
+processEdit GenerateDefNext
+    = do Just (line, (fc, cs)) <- nextGenDef 0
+              | Nothing => pure (EditError "No more results")
+         let l : Nat =  integerToNat (cast (snd (startPos fc)))
+         Just srcLine <- getSourceLine line
+            | Nothing => pure (EditError "Source line not found")
+         let (markM, srcLineUnlit) = isLitLine srcLine
+         ls <- traverse (printClause markM l) cs
+         pure $ DisplayEdit ls
 processEdit (MakeLemma upd line name)
     = do defs <- get Ctxt
          syn <- get Syn
@@ -540,6 +600,7 @@ loadMainFile f
          errs <- logTime "Build deps" $ buildDeps f
          updateErrorLine errs
          setSource res
+         resetProofState
          case errs of
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
@@ -727,6 +788,9 @@ process (Editing cmd)
          res <- processEdit cmd
          setPPrint ppopts
          pure $ Edited res
+process (CGDirective str)
+    = do setSession (record { directives $= (str::) } !getSession)
+         pure Done
 process Quit
     = pure Exited
 process NOP
@@ -745,8 +809,7 @@ processCatch cmd
          u' <- get UST
          s' <- get Syn
          o' <- get ROpts
-         catch (do ust <- get UST
-                   r <- process cmd
+         catch (do r <- process cmd
                    commit
                    pure r)
                (\err => do put Ctxt c'

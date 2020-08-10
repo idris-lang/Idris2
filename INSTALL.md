@@ -107,6 +107,13 @@ the intermediate code versions need to be consistent throughout.
 ### Installing using Homebrew
 
 If you are Homebrew user you can install Idris 2 together with all the requirements
-by running following command:
+by running the following command:
 
     brew install idris2
+
+### Installing from nix
+
+If you are a [nix](https://nixos.org/features.html) user you can install Idris 2 together with all the requirements
+by running the following command:
+
+    nix-env -i idris2

@@ -1,0 +1,6 @@
+1/1: Building PlusPrf (PlusPrf.idr)
+Main> plusZ 0 = Refl
+plusZ (S k) = mycong S (plusZ k)
+Main> plusS 0 m = Refl
+plusS (S k) m = mycong S (plusS k m)
+Main> Bye for now!

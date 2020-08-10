@@ -14,6 +14,7 @@ import Utils.Hex
 import Utils.Path
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.NameMap
 import Data.Strings
@@ -26,11 +27,10 @@ import System.Info
 
 %default covering
 
-
 pathLookup : IO String
 pathLookup
     = do path <- getEnv "PATH"
-         let pathList = split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let pathList = List1.toList $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
          e <- firstExists candidates
@@ -359,7 +359,7 @@ startChezWinSh chez appdir target = unlines
     , "DIR=\"`realpath \"$0\"`\""
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
-    , "$CHEZ --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme

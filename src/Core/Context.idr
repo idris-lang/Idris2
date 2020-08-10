@@ -113,7 +113,7 @@ data Def : Type where
             (constraints : List Int) -> Def
     ImpBind : Def -- global name temporarily standing for an implicitly bound name
     -- A delayed elaboration. The elaborators themselves are stored in the
-    -- unifiation state
+    -- unification state
     Delayed : Def
 
 export
@@ -632,8 +632,7 @@ export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
-                | Nothing => do coreLift $ putStrLn $ "Missing name! " ++ show i
-                                pure (Ref fc x (Resolved i))
+                | Nothing => pure (Ref fc x (Resolved i))
            pure (Ref fc x (fullname gdef))
   full gam (Meta fc x y xs)
       = pure (Meta fc x y !(traverse (full gam) xs))
@@ -1198,6 +1197,13 @@ depth
   = do defs <- get Ctxt
        pure (branchDepth (gamma defs))
 
+export
+dumpStaging : {auto c : Ref Ctxt Defs} ->
+              Core ()
+dumpStaging
+    = do defs <- get Ctxt
+         coreLift $ putStrLn $ "Staging area: " ++ show (keys (staging (gamma defs)))
+
 -- Explicitly note that the name should be saved when writing out a .ttc
 export
 addToSave : {auto c : Ref Ctxt Defs} ->
@@ -1719,7 +1725,8 @@ getDirectives : {auto c : Ref Ctxt Defs} ->
                 CG -> Core (List String)
 getDirectives cg
     = do defs <- get Ctxt
-         pure (mapMaybe getDir (cgdirectives defs))
+         pure $ defs.options.session.directives ++
+                 mapMaybe getDir (cgdirectives defs)
   where
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing

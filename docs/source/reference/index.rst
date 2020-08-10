@@ -20,3 +20,4 @@ This is a placeholder, to get set up with readthedocs.
    envvars
    postfixprojs
    literate
+   overloadedlit
