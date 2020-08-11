@@ -8,6 +8,7 @@ import Text.PrettyPrint.Prettyprinter.Util
 import Core.TT
 import Data.List
 import Data.List.Views
+import Data.Strings
 import Parser.Unlit
 import System.File
 
@@ -35,7 +36,12 @@ Show tok => Show (ParseError tok) where
 export
 Pretty tok => Pretty (ParseError tok) where
   pretty (ParseFail err loc toks)
-      = reflow "Parse error:" <++> pretty err <++> parens (reflow "next tokens:" <++> pretty (take 10 toks))
+      = reflow "Parse error" <+> prettyLine loc <+> ":" <+> line <+> pretty err <++> parens (reflow "next tokens:"
+            <++> brackets (align $ concatWith (surround (comma <+> space)) (pretty <$> take 10 toks)))
+    where
+      prettyLine : Maybe (Int, Int) -> Doc ann
+      prettyLine Nothing = emptyDoc
+      prettyLine (Just (r, c)) = space <+> "at" <++> "line" <++> pretty (r + 1) <+> ":" <+> pretty (c + 1)
   pretty (LexFail (c, l, str))
       = reflow "Lex error at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
   pretty (FileFail err)

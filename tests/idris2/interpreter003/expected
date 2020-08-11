@@ -10,5 +10,6 @@ Main> "test"
 Main> Imported module Data.Strings
 Main> "hello"
 Main> True
-Main> Error loading module DoesNotExists: DoesNotExists not found
+Main> Error loading module DoesNotExists: Module DoesNotExists not found
+
 Main> Bye for now!

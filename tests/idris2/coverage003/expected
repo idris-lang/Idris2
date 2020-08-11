@@ -6,10 +6,8 @@ Cover.idr:16:1--16:7
  16 | badBar Z = Z
     | ^^^^^^
 
-Main> Main.foo:
-foo (0, S _)
+Main> Main.foo: foo (0, S _)
 foo (S _, _)
-Main> Main.bar:
-bar _
+Main> Main.bar: bar _
 Main> Main.cty: All cases covered
 Main> Bye for now!

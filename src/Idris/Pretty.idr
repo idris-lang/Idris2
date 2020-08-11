@@ -33,8 +33,16 @@ colorAnn Pragma = color BrightMagenta
 colorAnn Meta = color Green
 
 export
+error : Doc IdrisAnn -> Doc IdrisAnn
+error = annotate Error
+
+export
 errorDesc : Doc IdrisAnn -> Doc IdrisAnn
 errorDesc = annotate ErrorDesc
+
+export
+fileCtxt : Doc IdrisAnn -> Doc IdrisAnn
+fileCtxt = annotate FileCtxt
 
 export
 keyword : Doc IdrisAnn -> Doc IdrisAnn

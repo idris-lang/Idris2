@@ -913,13 +913,23 @@ mutual
       prompt Execute = "[exec] "
 
   export
-  handleMissing : MissedResult -> String
-  handleMissing (CasesMissing x xs) = show x ++ ":\n" ++ showSep "\n" xs
-  handleMissing (CallsNonCovering fn ns) = (show fn ++ ": Calls non covering function"
+  handleMissing' : MissedResult -> String
+  handleMissing' (CasesMissing x xs) = show x ++ ":\n" ++ showSep "\n" xs
+  handleMissing' (CallsNonCovering fn ns) = (show fn ++ ": Calls non covering function"
                                            ++ (case ns of
                                                  [f] => " " ++ show f
                                                  _ => "s: " ++ showSep ", " (map show ns)))
-  handleMissing (AllCasesCovered fn) = show fn ++ ": All cases covered"
+  handleMissing' (AllCasesCovered fn) = show fn ++ ": All cases covered"
+
+  export
+  handleMissing : MissedResult -> Doc IdrisAnn
+  handleMissing (CasesMissing x xs) = pretty x <+> colon <++> vsep (code . pretty <$> xs)
+  handleMissing (CallsNonCovering fn ns) =
+    pretty fn <+> colon <++> reflow "Calls non covering"
+      <++> (case ns of
+                 [f] => "function" <++> code (pretty f)
+                 _ => "functions:" <++> concatWith (surround (comma <+> space)) (code . pretty <$> ns))
+  handleMissing (AllCasesCovered fn) = pretty fn <+> colon <++> reflow "All cases covered"
 
   export
   handleResult : {auto c : Ref Ctxt Defs} ->
@@ -951,7 +961,7 @@ mutual
   displayResult CompilationFailed = printError (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
   displayResult (ProofFound x) = printResult (prettyTerm x)
-  displayResult (Missed cases) = printResult $ pretty $ showSep "\n" $ map handleMissing cases -- FIXME
+  displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
   displayResult (CheckedTotal xs) = printResult (vsep (map (\(fn, tot) => pretty fn <++> pretty "is" <++> pretty tot) xs))
   displayResult (FoundHoles []) = printResult (reflow "No holes")
   displayResult (FoundHoles [x]) = printResult (reflow "1 hole" <+> colon <++> pretty x.name)

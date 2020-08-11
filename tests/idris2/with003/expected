@@ -71,5 +71,6 @@ Mismatch between: Vect 0 ?elem and List ?a.
    |                                  ^^^^^^^
 
 Main> the (Maybe Int) (pure 4) : Maybe Int
-Main> Parse error: Unrecognised command (next tokens: [identifier t, with, symbol [, symbol ], literal 4, end of input])
+Main> Parse error at line 1:2:
+Unrecognised command (next tokens: [identifier t, with, symbol [, symbol ], literal 4, end of input])
 Main> Bye for now!
