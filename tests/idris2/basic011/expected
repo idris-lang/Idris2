@@ -10,8 +10,9 @@ Dots2.idr:2:7--2:8
 1/1: Building Dots3 (Dots3.idr)
 Error: While processing left hand side of addBaz. Pattern variable z unifies with: ?y [no locals in scope].
 
-Dots3.idr:5:29--5:30
+Dots3.idr:5:13--5:30
    |
  5 | addBaz (x + y) (AddThings x z) = x + y
-   |                             ^
+   |             ^               ^
 
+Suggestion: Use the same name for both pattern variables, since they unify.

@@ -327,7 +327,7 @@ displayIDEResult outf i  (REPL $ ProofFound x)
 displayIDEResult outf i  (REPL $ Missed cases)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"
-  $ map handleMissing cases
+  $ map handleMissing' cases
 displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
   $ StringAtom $ showSep "\n"

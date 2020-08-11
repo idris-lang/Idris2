@@ -611,11 +611,11 @@ export
 Show PartialReason where
   show NotStrictlyPositive = "not strictly positive"
   show (BadCall [n])
-	   = "possibly not terminating due to call to " ++ show n
+      = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
-	   = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
+      = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
   show (RecPath ns)
-	   = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
+      = "possibly not terminating due to recursive path " ++ showSep " -> " (map show ns)
 
 export
 Pretty PartialReason where

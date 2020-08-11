@@ -11,8 +11,7 @@
 42
 1/1: Building TypeCase (TypeCase.idr)
 Main> Main> Main.strangeId is total
-Main> Main.strangeId':
-strangeId' _
+Main> Main.strangeId': strangeId' _
 Main> Bye for now!
 1/1: Building TypeCase2 (TypeCase2.idr)
 Error: While processing left hand side of strangeId. Can't match on Nat (Erased argument).

@@ -15,6 +15,7 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
+import Data.List1
 import Data.List.Extra
 import Data.Maybe
 import Data.Stream
@@ -23,8 +24,12 @@ import Data.String.Extra
 import Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Util
 import System.File
+import Utils.String
 
 %default covering
+
+joinNs : List String -> Doc (IdrisAnn)
+joinNs ns = concatWith (surround dot) (pretty <$> reverse ns)
 
 pshow : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
@@ -48,21 +53,83 @@ ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
 ploc EmptyFC = pure emptyDoc
 ploc fc@(MkFC fn s e) = do
-    let sr = fromInteger $ cast $ fst s
-    let sc = fromInteger $ cast $ snd s
-    let er = fromInteger $ cast $ fst e
-    let ec = fromInteger $ cast $ snd e
+    let (sr, sc) = bimap (fromInteger . cast) s
+    let (er, ec) = bimap (fromInteger . cast) e
     let nsize = length $ show (er + 1)
     let head = annotate FileCtxt (pretty fc)
-    let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
     source <- lines <$> getCurrentElabSource
     if sr == er
        then do
+         let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
          let line = (annotate FileCtxt pipe) <++> maybe emptyDoc pretty (elemAt source sr)
          let emph = (annotate FileCtxt pipe) <++> spaces (cast sc) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
          pure $ vsep [emptyDoc, head, firstRow, annotate FileCtxt (space <+> pretty (sr + 1)) <++> align (vsep [line, emph]), emptyDoc]
        else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
   where
+    bimap : (a -> b) -> (a, a) -> (b, b)
+    bimap f (x, y) = (f x, f y)
+    extractRange : Nat -> Nat -> List String -> List String
+    extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
+    pad : Nat -> String -> String
+    pad size s = replicate (size `minus` length s) '0' ++ s
+    addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
+    addLineNumbers size st xs =
+      snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
+
+-- Assumes the two FCs are sorted
+ploc2 : {auto o : Ref ROpts REPLOpts} ->
+        FC -> FC -> Core (Doc IdrisAnn)
+ploc2 fc EmptyFC = ploc fc
+ploc2 EmptyFC fc = ploc fc
+ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
+    do let (sr1, sc1) = bimap (fromInteger . cast) s1
+       let (sr2, sc2) = bimap (fromInteger . cast) s2
+       let (er1, ec1) = bimap (fromInteger . cast) e1
+       let (er2, ec2) = bimap (fromInteger . cast) e2
+       if (er2 > er1 + 5)
+          then pure $ !(ploc (MkFC fn1 s1 e1)) <+> line <+> !(ploc (MkFC fn2 s2 e2))
+          else do let nsize = length $ show (er2 + 1)
+                  let head = annotate FileCtxt (pretty $ MkFC fn1 s1 e2)
+                  let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
+                  source <- lines <$> getCurrentElabSource
+                  case (sr1 == er1, sr2 == er2, sr1 == sr2) of
+                       (True, True, True) => do
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                                      <+> spaces (cast $ sc2 `minus` ec1) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         pure $ vsep [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                       (True, True, False) => do
+                         let line1 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
+                         let emph1 = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         let line2 = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr2)
+                         let emph2 = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         let numbered = if (sr2 `minus` er1) == 1
+                                           then []
+                                           else addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line1, emph1])]
+                            ++ numbered
+                            ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line2, emph2]), emptyDoc]
+                       (True, False, _) => do
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                            ++ [emptyDoc]
+                       (False, True, True) => do
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                            ++ [emptyDoc]
+                       (False, True, False) => do
+                         let top = addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)
+                         let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
+                         let emph = fileCtxt pipe <++> spaces (cast sc2) <+> error (pretty (Extra.replicate (ec2 `minus` sc2) '^'))
+                         pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
+                       (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty <$> extractRange sr1 er2 source)) <+> line
+  where
+    bimap : (a -> b) -> (a, a) -> (b, b)
+    bimap f (x, y) = (f x, f y)
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
@@ -90,15 +157,22 @@ perror (CantSolveEq fc env l r)
                   , code !(pshow env r) <+> dot
                   ]) <+> line <+> !(ploc fc)
 perror (PatternVariableUnifies fc env n tm)
-    = pure $ errorDesc (hsep [ reflow "Pattern variable"
+    = do let (min, max) = order fc (getLoc tm)
+         pure $ errorDesc (hsep [ reflow "Pattern variable"
                   , code (prettyVar n)
                   , reflow "unifies with" <+> colon
                   , code !(pshow env tm) <+> dot
-                  ]) <+> line <+> !(ploc fc)
+                  ]) <+> line <+> !(ploc2 min max) <+> line
+                     <+> reflow "Suggestion: Use the same name for both pattern variables, since they unify."
   where
     prettyVar : Name -> Doc IdrisAnn
     prettyVar (PV n _) = prettyVar n
     prettyVar n = pretty n
+    order : FC -> FC -> (FC, FC)
+    order EmptyFC fc2 = (EmptyFC, fc2)
+    order fc1 EmptyFC = (fc1, EmptyFC)
+    order fc1@(MkFC _ sr1 sc1) fc2@(MkFC _ sr2 sc2) =
+      if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
 perror (CyclicMeta fc env n tm)
     = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
@@ -114,7 +188,7 @@ perror (UndefinedName fc x)
     = pure $ errorDesc (reflow "Undefined name" <++> code (pretty x) <+> dot) <++> line <+> !(ploc fc)
 perror (InvisibleName fc n (Just ns))
     = pure $ errorDesc ("Name" <++> code (pretty n) <++> reflow "is inaccessible since"
-        <++> code (concatWith (surround dot) (pretty <$> reverse ns)) <++> reflow "is not explicitly imported.")
+        <++> code (joinNs ns) <++> reflow "is not explicitly imported.")
         <+> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
         <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
@@ -134,7 +208,7 @@ perror (NotCovering fc n (MissingCases cs))
     = pure $ errorDesc (code (pretty !(prettyName n)) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Missing cases" <+> colon <+> line
-        <+> indent 4 (vsep !(traverse (pshow []) cs))
+        <+> indent 4 (vsep !(traverse (pshow []) cs)) <+> line
 perror (NotCovering fc n (NonCoveringCall ns))
     = pure $ errorDesc (pretty !(prettyName n) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
@@ -244,7 +318,7 @@ perror (TryWithImplicits fc env imps)
     tshow env (n, ty) = pure $ pretty n <++> colon <++> code !(pshow env ty)
 perror (BadUnboundImplicit fc env n ty)
     = pure $ errorDesc (reflow "Can't bind name" <++> code (pretty (nameRoot n)) <++> reflow "with type" <++> code !(pshow env ty)
-        <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try binding explicitly."
+        <+> colon) <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try an explicit bind."
 perror (CantSolveGoal fc env g)
     = let (_ ** (env', g')) = dropEnv env g in
           pure $ errorDesc (reflow "Can't find an implementation for" <++> code !(pshow env' g')
@@ -264,7 +338,7 @@ perror (DeterminingArg fc n i env g)
         <+> reflow "since I can't infer a value for argument" <++> code (pretty n) <+> dot)
         <+> line <+> !(ploc fc)
 perror (UnsolvedHoles hs)
-    = pure $ errorDesc (reflow "unsolved holes" <+> colon) <+> line <+> !(prettyHoles hs)
+    = pure $ errorDesc (reflow "Unsolved holes" <+> colon) <+> line <+> !(prettyHoles hs)
   where
     prettyHoles : List (FC, Name) -> Core (Doc IdrisAnn)
     prettyHoles [] = pure emptyDoc
@@ -332,14 +406,11 @@ perror (TTCError msg)
 perror (FileErr fname err)
     = pure $ errorDesc (reflow "File error in" <++> pretty fname <++> colon) <++> pretty (show err)
 perror (ParseFail _ err)
-    = pure $ pretty (show err)
-perror (ModuleNotFound _ ns)
-    = pure $ errorDesc (concatWith (surround dot) (pretty <$> reverse ns) <++> reflow "not found")
+    = pure $ pretty err
+perror (ModuleNotFound fc ns)
+    = pure $ errorDesc ("Module" <++> annotate FileCtxt (joinNs ns) <++> reflow "not found") <+> line <+> !(ploc fc)
 perror (CyclicImports ns)
-    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon) <++> concatWith (surround (pretty " -> ")) (prettyMod <$> ns)
-  where
-    prettyMod : List String -> Doc IdrisAnn
-    prettyMod ns = concatWith (surround dot) (pretty <$> reverse ns)
+    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon) <++> concatWith (surround (pretty " -> ")) (joinNs <$> ns)
 perror ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perror (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
 perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str

@@ -6,7 +6,6 @@ Cover.idr:14:1--14:4
  14 | bad (Just 0) _ = False
     | ^^^
 
-Main> Main.okay:
-okay (S _) IsNat
+Main> Main.okay: okay (S _) IsNat
 okay False IsBool
 Main> Bye for now!

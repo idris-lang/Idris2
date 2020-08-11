@@ -133,7 +133,7 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
-     ParseFail : Show token =>
+     ParseFail : (Show token, Pretty token) =>
                FC -> ParseError token -> Error
      ModuleNotFound : FC -> List String -> Error
      CyclicImports : List (List String) -> Error
