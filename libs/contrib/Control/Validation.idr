@@ -10,7 +10,9 @@ module Control.Validation
 -- about user input and constructing proofs that input is indeed valid or
 -- failing early with a nice error message if it isn't.
 
+import Control.Monad.Identity
 import Control.Monad.Syntax
+import Control.Monad.Trans.Either
 import Data.Nat
 import Data.Strings
 import Data.Vect
@@ -20,8 +22,8 @@ import Decidable.Equality
 
 
 public export
-Result : Type -> Type
-Result = Either String
+Result : (Type -> Type) -> Type -> Type
+Result m = EitherT m String
 
 ||| Validators in this module come in two flavours: Structural Validators and
 ||| Property Validators. They are both wrappers around functions which take
@@ -34,94 +36,111 @@ Result = Either String
 |||
 ||| Property Validators try to prove that (usually already refined) input has
 ||| some property and return the proof if it does.
-public export
-data Validator : Type -> Type -> Type where
-    StructValidator : (a -> Result b) -> Validator a b
-    PropValidator : {0 a, b : Type} -> {0 p : b -> Type} -> {0 x : b} -> (a -> Result (p x)) -> Validator a (p x)
-
-
-unwrap : Validator a b -> a -> Result b
-unwrap (StructValidator f) = f
-unwrap (PropValidator f) = f
-
 export
-Functor (Validator a) where
-    map f v = StructValidator (map f . unwrap v)
+data ValidatorT : (Type -> Type) -> Type -> Type -> Type where
+    StructValidator : (a -> Result m b) -> ValidatorT m a b
+    PropValidator : {0 a, b : Type} -> {0 p : b -> Type} -> {0 x : b} -> (a -> Result m (p x)) -> ValidatorT m a (p x)
 
-export
-Applicative (Validator a) where
-    pure a = StructValidator (const $ pure a)
-    f <*> a = StructValidator (\x => unwrap f x <*> unwrap a x)
+Validator : Type -> Type -> Type
+Validator = ValidatorT Identity
 
-export
-Monad (Validator a) where
-    v >>= f = StructValidator $ \x => do
-        r <- unwrap v x
-        unwrap (f r) x
 
 ||| Run validation on given input, returning (Right refinedInput) if everything
 ||| is all right or (Left errorMessage) if it's not.
 export
-validate : Validator a b -> a -> Result b
-validate (StructValidator v) = v
-validate (PropValidator v) = v
+validateT : ValidatorT m a b -> a -> Result m b
+validateT (StructValidator v) = v
+validateT (PropValidator v) = v
 
-replaceError : String -> Result a -> Result a
-replaceError e (Left _) = Left e
-replaceError _ (Right x) = Right x
+||| Run validation within the Identity monad and unwrap result immediately.
+export
+validate : Validator a b -> a -> Either String b
+validate v = runIdentity . runEitherT . validateT v
+
+||| Given a function from input to Either String output, make a structural
+||| validator.
+export
+structValidator : (a -> Result m b) -> ValidatorT m a b
+structValidator = StructValidator
+
+||| Given a refined input and a decision procedure for a property, make a
+||| validator checking whether input has that property. NOTE: the input is
+||| required for type-checking only. It's user's responsibility to make sure
+||| that supplied function actually uses it.
+export
+propValidator : {0 a, b : Type} -> {0 p : b -> Type} -> (0 x : b) -> (a -> Result m (p x)) -> ValidatorT m a (p x)
+propValidator {p} x = PropValidator {p} {x}
+
+export
+Functor m => Functor (ValidatorT m a) where
+    map f v = StructValidator (map f . validateT v)
+
+export
+Monad m => Applicative (ValidatorT m a) where
+    pure a = StructValidator (const $ pure a)
+    f <*> a = StructValidator (\x => validateT f x <*> validateT a x)
+
+export
+Monad m => Monad (ValidatorT m a) where
+    v >>= f = StructValidator $ \x => do
+        r <- validateT v x
+        validateT (f r) x
+
+replaceError : Monad m => String -> Result m a -> Result m a
+replaceError e = bimapEitherT (const e) id
 
 ||| Replace validator's default error message.
 export
-withError : String -> Validator a b -> Validator a b
+withError : Monad m => String -> ValidatorT m a b -> ValidatorT m a b
 withError e (StructValidator f) = StructValidator (replaceError e . f)
 withError e (PropValidator {p} {x} f) = PropValidator {p} {x} (replaceError e . f)
 
 ||| A validator which always fails with a given message.
 export
-fail : String -> Validator a b
-fail s = StructValidator $ \_ => Left s
+fail : Applicative m => String -> ValidatorT m a b
+fail s = StructValidator $ \_ => fail s
 
 infixl 2 >>>
 
 ||| Compose two validators so that the second validates the output of the first.
 export
-(>>>) : Validator a b -> Validator b c -> Validator a c
-left >>> right = StructValidator (unwrap left >=> unwrap right)
+(>>>) : Monad m => ValidatorT m a b -> ValidatorT m b c -> ValidatorT m a c
+left >>> right = StructValidator (validateT left >=> validateT right)
 
-Alternative (Validator a) where
-    left <|> right = StructValidator \x =>
-        case unwrap left x of
-            Right b => pure b
-            Left e => case unwrap right x of
-                Right b => pure b
-                Left e' => Left (e <+> " / " <+> e')
+Monad m => Alternative (ValidatorT m a) where
+    left <|> right = StructValidator \x => MkEitherT $ do
+        case !(runEitherT $ validateT left x) of
+            (Right r) => pure $ Right r
+            (Left e) => case !(runEitherT $ validateT right x) of
+                (Right r) => pure $ Right r
+                (Left e') => pure $ Left (e <+> " / " <+> e')
 
 ||| Alter the input before validation using given function.
 export
-contramap : (a -> b) -> Validator b c -> Validator a c
-contramap f v = StructValidator (unwrap v . f)
+contramap : (a -> b) -> ValidatorT m b c -> ValidatorT m a c
+contramap f v = StructValidator (validateT v . f)
 
 
-||| Given a value x and a decision procedure for property p, validate if p x
+||| Given a value x and a decision procedure for property p, validateT if p x
 ||| holds, returning a proof if it does. The procedure also has access to the
 ||| raw input in case it was helpful.
 export
-decide : {0 a, b : Type} -> String -> (x : b) -> {p : b -> Type} -> (a -> (x : b) -> Dec (p x)) -> Validator a (p x)
+decide : Monad m => {0 a, b : Type} -> String -> (x : b) -> {p : b -> Type} -> (a -> (x : b) -> Dec (p x)) -> ValidatorT m a (p x)
 decide {a} {b} msg x {p} f = PropValidator {p} {x} $ \a => case f a x of
-    Yes prf => Right prf
-    No _ => Left msg
+    Yes prf => pure prf
+    No _ => fail msg
 
 ||| Given a function converting a into Maybe b, build a Validator of a
 ||| converting it into b.
 export
-fromMaybe : (a -> String) -> (a -> Maybe b) -> Validator a b
+fromMaybe : Monad m => (a -> String) -> (a -> Maybe b) -> ValidatorT m a b
 fromMaybe e f = StructValidator \a => case f a of
-    Nothing => Left $ e a
-    Just b => Right b
+    Nothing => fail $ e a
+    Just b => pure b
 
 ||| Verify whether a String represents a natural number.
 export
-natural : Validator String Nat
+natural : Monad m => ValidatorT m String Nat
 natural = fromMaybe mkError parsePositive
     where
     mkError : String -> String
@@ -129,7 +148,7 @@ natural = fromMaybe mkError parsePositive
 
 ||| Verify whether a String represents an Integer
 export
-integral : (Num a, Neg a) => Validator String a
+integral : (Num a, Neg a, Monad m) => ValidatorT m String a
 integral = fromMaybe mkError parseInteger
     where
     mkError : String -> String
@@ -137,7 +156,7 @@ integral = fromMaybe mkError parseInteger
 
 ||| Verify that a string represents a decimal fraction.
 export
-double : Validator String Double
+double : Monad m => ValidatorT m String Double
 double = fromMaybe mkError parseDouble
     where
     mkError : String -> String
@@ -146,30 +165,30 @@ double = fromMaybe mkError parseDouble
 
 ||| Verify whether a list has a desired length.
 export
-length : (l : Nat) -> Validator (List a) (Vect l a)
+length : Monad m => (l : Nat) -> ValidatorT m (List a) (Vect l a)
 length l = StructValidator (validateVector l)
     where
-    validateVector : (l : Nat) -> List a -> Result (Vect l a)
-    validateVector Z [] = Right []
-    validateVector (S _) [] = Left "Missing list element."
-    validateVector Z (_ :: _) = Left "Excessive list element."
+    validateVector : (l : Nat) -> List a -> Result m (Vect l a)
+    validateVector Z [] = pure []
+    validateVector (S _) [] = fail "Missing list element."
+    validateVector Z (_ :: _) = fail "Excessive list element."
     validateVector (S k) (x :: xs) = do
         ys <- validateVector k xs
         pure (x :: ys)
 
 ||| Verify that certain values are equal.
 export
-equal : DecEq a => (x, y : a) -> Validator z (x = y)
+equal : (DecEq a, Monad m) => (x, y : a) -> ValidatorT m z (x = y)
 equal x y = PropValidator {p = \z => fst z = snd z} {x = (x, y)} dec
     where
-    dec : z -> Result (x = y)
+    dec : z -> Result m (x = y)
     dec _ = case decEq x y of
-        Yes prf => Right prf
-        No _ => Left "Values are not equal."
+        Yes prf => pure prf
+        No _ => fail "Values are not equal."
 
 ||| Verify that a Nat is less than or equal to  certain bound.
 export
-lteNat : {0 a : Type} -> (bound, n : Nat) -> Validator a (LTE n bound)
+lteNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (LTE n bound)
 lteNat {a} bound n = decide
     (show n <+> " is not lower or equal to " <+> show bound)
     {p = \x => LTE x bound}
@@ -178,15 +197,15 @@ lteNat {a} bound n = decide
 
 ||| Verify that a Nat is greater than or equal to certain bound.
 export
-gteNat : {0 a : Type} -> (bound, n : Nat) -> Validator a (GTE n bound)
+gteNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (GTE n bound)
 gteNat {a} bound n = lteNat n bound
 
 ||| Verify that a Nat is strictly less than a certain bound.
 export
-ltNat : {0 a : Type} -> (bound, n : Nat) -> Validator a (LT n bound)
+ltNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (LT n bound)
 ltNat bound n = lteNat bound (S n)
 
 ||| Verify that a Nat is strictly greate than a certain bound.
 export
-gtNat : {0 a : Type} -> (bound, n : Nat) -> Validator a (GT n bound)
+gtNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (GT n bound)
 gtNat bound n = ltNat n bound
