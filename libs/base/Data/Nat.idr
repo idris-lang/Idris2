@@ -58,6 +58,10 @@ data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
   RightIsNotZero : NotBothZero n     (S m)
 
+Uninhabited (NotBothZero 0 0) where
+  uninhabited LeftIsNotZero impossible
+  uninhabited RightIsNotZero impossible
+
 public export
 data LTE  : (n, m : Nat) -> Type where
   LTEZero : LTE Z    right
