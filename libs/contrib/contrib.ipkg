@@ -12,6 +12,8 @@ modules = Control.ANSI,
           Control.Algebra.Laws,
           Control.Algebra.Implementations,
 
+          Control.Validation,
+
           Data.Bool.Algebra,
 
           Data.Linear.Array,

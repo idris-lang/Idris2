@@ -58,6 +58,7 @@ data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
   RightIsNotZero : NotBothZero n     (S m)
 
+export
 Uninhabited (NotBothZero 0 0) where
   uninhabited LeftIsNotZero impossible
   uninhabited RightIsNotZero impossible
