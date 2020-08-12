@@ -41,6 +41,7 @@ data ValidatorT : (Type -> Type) -> Type -> Type -> Type where
     StructValidator : (a -> Result m b) -> ValidatorT m a b
     PropValidator : {0 a, b : Type} -> {0 p : b -> Type} -> {0 x : b} -> (a -> Result m (p x)) -> ValidatorT m a (p x)
 
+public export
 Validator : Type -> Type -> Type
 Validator = ValidatorT Identity
 
