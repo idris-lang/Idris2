@@ -112,7 +112,7 @@ ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
   let (h, p) = Strings.break (== ':') hp
-      port = fromMaybe 38398 (portPart p >>= parsePositive)
+      port = fromMaybe 38398 (portPart p >>= parseNatural)
       host = if h == "" then "localhost" else h
   in (host, port)
   where
