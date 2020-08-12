@@ -215,17 +215,20 @@ parseNumWithoutSign (c :: cs) acc =
   then parseNumWithoutSign cs ((acc * 10) + (cast ((ord c) - (ord '0'))))
   else Nothing
 
-||| Convert a positive number string to a Num.
+||| Convert a natural number string to a Num.
 |||
 ||| ```idris example
-||| parsePositive "123"
+||| parseNatural "123"
 ||| ```
 ||| ```idris example
-||| parsePositive {a=Int} " +123"
+||| parseNatural {a=Int} " +123"
+||| ```
+||| ```idris example
+||| parseNatural {a=Int} "0"
 ||| ```
 public export
-parsePositive : Num a => String -> Maybe a
-parsePositive s = parsePosTrimmed (trim s)
+parseNatural : Num a => String -> Maybe a
+parseNatural s = parsePosTrimmed (trim s)
   where
     parsePosTrimmed : String -> Maybe a
     parsePosTrimmed s with (strM s)
@@ -237,7 +240,7 @@ parsePositive s = parsePosTrimmed (trim s)
         then  map fromInteger (parseNumWithoutSign (unpack xs)  (cast (ord x - ord '0')))
         else Nothing
 
-||| Convert a number string to a Num.
+||| Convert an integer string to a Num.
 |||
 ||| ```idris example
 ||| parseInteger " 123"
@@ -262,7 +265,7 @@ parseInteger s = parseIntTrimmed (trim s)
               else Nothing
 
 
-||| Convert a number string to a Double.
+||| Convert a floating-point string to a Double.
 |||
 ||| ```idris example
 ||| parseDouble "+123.123e-2"
