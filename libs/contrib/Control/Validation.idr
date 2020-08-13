@@ -1,4 +1,4 @@
-module Validation
+module Control.Validation
 
 -- Main purpose of this module is verifying programmer's assumptions about
 -- user input. On one hand we want to write precisely typed programs, including
