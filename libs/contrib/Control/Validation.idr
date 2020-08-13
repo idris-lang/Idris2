@@ -29,13 +29,6 @@ Result m = EitherT m String
 ||| Property Validators. They are both wrappers around functions which take
 ||| some input and confirm that it's valid (returning some witness of its
 ||| validity) or fail with an error described by a string.
-|||
-||| Structural Validators work by refining the type of input, for instance
-||| checking whether a string encodes a number and returning that number if it
-||| does. More generally, they convert raw input to some more restricted type.
-|||
-||| Property Validators try to prove that (usually already refined) input has
-||| some property and return the proof if it does.
 export
 data ValidatorT : (Type -> Type) -> Type -> Type -> Type where
     MkValidator : (a -> Result m b) -> ValidatorT m a b
@@ -56,8 +49,7 @@ export
 validate : Validator a b -> a -> Either String b
 validate v = runIdentity . runEitherT . validateT v
 
-||| Given a function from input to Either String output, make a structural
-||| validator.
+||| Given a function from input to Either String output, make a validator.
 export
 validator : (a -> Result m b) -> ValidatorT m a b
 validator = MkValidator
