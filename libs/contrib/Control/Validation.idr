@@ -1,4 +1,4 @@
-module Control.Validation
+module Validation
 
 -- Main purpose of this module is verifying programmer's assumptions about
 -- user input. On one hand we want to write precisely typed programs, including
@@ -38,8 +38,7 @@ Result m = EitherT m String
 ||| some property and return the proof if it does.
 export
 data ValidatorT : (Type -> Type) -> Type -> Type -> Type where
-    StructValidator : (a -> Result m b) -> ValidatorT m a b
-    PropValidator : {0 a, b : Type} -> {0 p : b -> Type} -> {0 x : b} -> (a -> Result m (p x)) -> ValidatorT m a (p x)
+    MkValidator : (a -> Result m b) -> ValidatorT m a b
 
 public export
 Validator : Type -> Type -> Type
@@ -50,8 +49,7 @@ Validator = ValidatorT Identity
 ||| is all right or (Left errorMessage) if it's not.
 export
 validateT : ValidatorT m a b -> a -> Result m b
-validateT (StructValidator v) = v
-validateT (PropValidator v) = v
+validateT (MkValidator v) = v
 
 ||| Run validation within the Identity monad and unwrap result immediately.
 export
@@ -61,29 +59,21 @@ validate v = runIdentity . runEitherT . validateT v
 ||| Given a function from input to Either String output, make a structural
 ||| validator.
 export
-structValidator : (a -> Result m b) -> ValidatorT m a b
-structValidator = StructValidator
-
-||| Given a refined input and a decision procedure for a property, make a
-||| validator checking whether input has that property. NOTE: the input is
-||| required for type-checking only. It's user's responsibility to make sure
-||| that supplied function actually uses it.
-export
-propValidator : {0 a, b : Type} -> {0 p : b -> Type} -> (0 x : b) -> (a -> Result m (p x)) -> ValidatorT m a (p x)
-propValidator {p} x = PropValidator {p} {x}
+validator : (a -> Result m b) -> ValidatorT m a b
+validator = MkValidator
 
 export
 Functor m => Functor (ValidatorT m a) where
-    map f v = StructValidator (map f . validateT v)
+    map f v = MkValidator (map f . validateT v)
 
 export
 Monad m => Applicative (ValidatorT m a) where
-    pure a = StructValidator (const $ pure a)
-    f <*> a = StructValidator (\x => validateT f x <*> validateT a x)
+    pure a = MkValidator (const $ pure a)
+    f <*> a = MkValidator (\x => validateT f x <*> validateT a x)
 
 export
 Monad m => Monad (ValidatorT m a) where
-    v >>= f = StructValidator $ \x => do
+    v >>= f = MkValidator $ \x => do
         r <- validateT v x
         validateT (f r) x
 
@@ -93,23 +83,22 @@ replaceError e = bimapEitherT (const e) id
 ||| Replace validator's default error message.
 export
 withError : Monad m => String -> ValidatorT m a b -> ValidatorT m a b
-withError e (StructValidator f) = StructValidator (replaceError e . f)
-withError e (PropValidator {p} {x} f) = PropValidator {p} {x} (replaceError e . f)
+withError e (MkValidator f) = MkValidator (replaceError e . f)
 
 ||| A validator which always fails with a given message.
 export
 fail : Applicative m => String -> ValidatorT m a b
-fail s = StructValidator $ \_ => fail s
+fail s = MkValidator $ \_ => fail s
 
 infixl 2 >>>
 
 ||| Compose two validators so that the second validates the output of the first.
 export
 (>>>) : Monad m => ValidatorT m a b -> ValidatorT m b c -> ValidatorT m a c
-left >>> right = StructValidator (validateT left >=> validateT right)
+left >>> right = MkValidator (validateT left >=> validateT right)
 
 Monad m => Alternative (ValidatorT m a) where
-    left <|> right = StructValidator \x => MkEitherT $ do
+    left <|> right = MkValidator \x => MkEitherT $ do
         case !(runEitherT $ validateT left x) of
             (Right r) => pure $ Right r
             (Left e) => case !(runEitherT $ validateT right x) of
@@ -119,7 +108,7 @@ Monad m => Alternative (ValidatorT m a) where
 ||| Alter the input before validation using given function.
 export
 contramap : (a -> b) -> ValidatorT m b c -> ValidatorT m a c
-contramap f v = StructValidator (validateT v . f)
+contramap f v = MkValidator (validateT v . f)
 
 
 ||| Given a value x and a decision procedure for property p, validateT if p x
@@ -127,7 +116,7 @@ contramap f v = StructValidator (validateT v . f)
 ||| raw input in case it was helpful.
 export
 decide : Monad m => {0 a, b : Type} -> String -> (x : b) -> {p : b -> Type} -> (a -> (x : b) -> Dec (p x)) -> ValidatorT m a (p x)
-decide {a} {b} msg x {p} f = PropValidator {p} {x} $ \a => case f a x of
+decide {a} {b} msg x {p} f = MkValidator $ \a => case f a x of
     Yes prf => pure prf
     No _ => fail msg
 
@@ -135,7 +124,7 @@ decide {a} {b} msg x {p} f = PropValidator {p} {x} $ \a => case f a x of
 ||| converting it into b.
 export
 fromMaybe : Monad m => (a -> String) -> (a -> Maybe b) -> ValidatorT m a b
-fromMaybe e f = StructValidator \a => case f a of
+fromMaybe e f = MkValidator \a => case f a of
     Nothing => fail $ e a
     Just b => pure b
 
@@ -167,7 +156,7 @@ double = fromMaybe mkError parseDouble
 ||| Verify whether a list has a desired length.
 export
 length : Monad m => (l : Nat) -> ValidatorT m (List a) (Vect l a)
-length l = StructValidator (validateVector l)
+length l = MkValidator (validateVector l)
     where
     validateVector : (l : Nat) -> List a -> Result m (Vect l a)
     validateVector Z [] = pure []
@@ -180,7 +169,7 @@ length l = StructValidator (validateVector l)
 ||| Verify that certain values are equal.
 export
 equal : (DecEq a, Monad m) => (x, y : a) -> ValidatorT m z (x = y)
-equal x y = PropValidator {p = \z => fst z = snd z} {x = (x, y)} dec
+equal x y = MkValidator dec
     where
     dec : z -> Result m (x = y)
     dec _ = case decEq x y of
