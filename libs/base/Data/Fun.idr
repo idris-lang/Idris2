@@ -16,5 +16,10 @@ chain {ts = []} g r  = g r
 chain {ts = (_::_)} g f = \ x => chain g (f x)
 
 public export
+[Nary] {ts : Vect n Type} -> Functor (Fun ts) where
+  map = chain
+
+||| Returns the co-domain of a n-ary function.
+public export
 target : {ts : Vect n Type} -> {r: Type} -> Fun ts r -> Type
 target {r} _ = r
