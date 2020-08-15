@@ -27,7 +27,7 @@ Calc (|~ x) = Refl
 Calc ((~~) {z=_} {y=_} der (_ ** Refl)) = Calc der
 
 ||| Two-holed congruence
-export 0
+export
 -- These are natural in equational reasoning, less so when rewriting,
 -- so that's why it's here.
 cong2 : (f : t -> s -> u) -> a = b -> c = d -> f a c = f b d
