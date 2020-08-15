@@ -13,6 +13,7 @@ modules = Control.ANSI,
           Control.Algebra.Laws,
           Control.Algebra.Implementations,
 
+          Control.Arrow,
           Control.Category,
 
           Control.Validation,
