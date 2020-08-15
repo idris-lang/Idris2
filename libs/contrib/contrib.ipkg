@@ -28,6 +28,8 @@ modules = Control.ANSI,
           Data.List.Views.Extra,
           Data.List.Palindrome,
 
+          Data.Either,
+
           Data.Fin.Extra,
 
           Data.Logic.Propositional,

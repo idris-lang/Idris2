@@ -1,0 +1,103 @@
+ module Data.Either
+
+--------------------------------------------------------------------------------
+-- Syntactic tests
+--------------------------------------------------------------------------------
+
+public export
+||| True if the argument is Left, False otherwise
+isLeft : Either a b -> Bool
+isLeft (Left l)  = True
+isLeft (Right r) = False
+
+public export
+||| True if the argument is Right, False otherwise
+isRight : Either a b -> Bool
+isRight (Left l)  = False
+isRight (Right r) = True
+
+--------------------------------------------------------------------------------
+-- Misc.
+--------------------------------------------------------------------------------
+
+public export
+||| Keep the payloads of all Left constructors in a list of Eithers
+lefts : List (Either a b) -> List a
+lefts []      = []
+lefts (x::xs) =
+  case x of
+    Left  l => l :: lefts xs
+    Right r => lefts xs
+
+public export
+||| Keep the payloads of all Right constructors in a list of Eithers
+rights : List (Either a b) -> List b
+rights []      = []
+rights (x::xs) =
+  case x of
+    Left  l => rights xs
+    Right r => r :: rights xs
+
+public export
+||| Split a list of Eithers into a list of the left elements and a list of the right elements
+partitionEithers : List (Either a b) -> (List a, List b)
+partitionEithers l = (lefts l, rights l)
+
+public export
+||| Remove a "useless" Either by collapsing the case distinction
+fromEither : Either a a -> a
+fromEither (Left l)  = l
+fromEither (Right r) = r
+
+public export
+||| Right becomes left and left becomes right
+mirror : Either a b -> Either b a
+mirror (Left  x) = Right x
+mirror (Right x) = Left x
+
+--------------------------------------------------------------------------------
+-- Conversions
+--------------------------------------------------------------------------------
+
+public export
+||| Convert a Maybe to an Either by using a default value in case of Nothing
+||| @ e the default value
+maybeToEither : (def : Lazy e) -> Maybe a -> Either e a
+maybeToEither def (Just j) = Right j
+maybeToEither def Nothing  = Left  def
+
+public export
+||| Convert an Either to a Maybe from Right injection
+eitherToMaybe : Either e a -> Maybe a
+eitherToMaybe (Left _) = Nothing
+eitherToMaybe (Right x) = Just x
+
+--------------------------------------------------------------------------------
+-- Implementations
+--------------------------------------------------------------------------------
+
+public export
+(Eq a, Eq b) => Eq (Either a b) where
+  (==) (Left x)  (Left y)  = x == y
+  (==) (Right x) (Right y) = x == y
+  (==) _         _         = False
+
+
+
+--------------------------------------------------------------------------------
+-- Injectivity of constructors
+--------------------------------------------------------------------------------
+
+total
+public export
+||| Left is injective
+leftInjective : {b : Type} -> {x : a} -> {y : a}
+                    -> (Left {b = b} x = Left {b = b} y) -> (x = y)
+leftInjective Refl = Refl
+
+total
+public export
+||| Right is injective
+rightInjective : {a : Type} -> {x : b} -> {y : b}
+                     -> (Right {a = a} x = Right {a = a} y) -> (x = y)
+rightInjective Refl = Refl
