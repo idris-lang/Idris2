@@ -1576,6 +1576,9 @@ data CmdArg : Type where
      ||| The command takes a number.
      NumberArg : CmdArg
 
+     ||| The command takes a number or auto.
+     AutoNumberArg : CmdArg
+
      ||| The command takes an option.
      OptionArg : CmdArg
 
@@ -1601,6 +1604,7 @@ Show CmdArg where
   show ExprArg = "<expr>"
   show DeclsArg = "<decls>"
   show NumberArg = "<number>"
+  show AutoNumberArg = "<number|auto>"
   show OptionArg = "<option>"
   show FileArg = "<file>"
   show ModuleArg = "<module>"
@@ -1732,6 +1736,18 @@ numberArgCmd parseCmd command doc = (names, NumberArg, doc, parse)
       i <- intLit
       pure (command (fromInteger i))
 
+autoNumberArgCmd : ParseCmd -> (Maybe Nat -> REPLCmd) -> String -> CommandDefinition
+autoNumberArgCmd parseCmd command doc = (names, AutoNumberArg, doc, parse)
+  where
+    names : List String
+    names = extractNames parseCmd
+
+    parse : Rule REPLCmd
+    parse = do
+      symbol ":"
+      runParseCmd parseCmd
+      (do keyword "auto"; pure (command Nothing)) <|> (do i <- intLit; pure (command (Just (fromInteger i))))
+
 onOffArgCmd : ParseCmd -> (Bool -> REPLCmd) -> String -> CommandDefinition
 onOffArgCmd parseCmd command doc = (names, OnOffArg, doc, parse)
   where
@@ -1781,7 +1797,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
   , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
   , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
-  , numberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded)"
+  , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
   , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"

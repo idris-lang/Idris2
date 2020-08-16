@@ -1,3 +1,3 @@
-$1 --no-color --check iftype.idr
+$1 --no-color --consolewidth 0 --check iftype.idr
 
 rm -rf build

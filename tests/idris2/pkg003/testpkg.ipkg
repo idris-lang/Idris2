@@ -9,4 +9,4 @@ readme = "README.md"
 main = Main
 
 modules = Main
-opts = "--no-color"
+opts = "--no-color --consolewidth 0"

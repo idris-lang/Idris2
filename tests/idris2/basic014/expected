@@ -1,6 +1,5 @@
 1/1: Building Rewrite (Rewrite.idr)
-Error: While processing right hand side of wrongCommutes. Rewriting by m + k = k + m did not change
-type S k + m = m + S k.
+Error: While processing right hand side of wrongCommutes. Rewriting by m + k = k + m did not change type S k + m = m + S k.
 
 Rewrite.idr:15:25--15:57
     |

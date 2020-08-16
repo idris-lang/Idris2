@@ -74,7 +74,7 @@ data CLOpt
    ||| Run Idris 2 in verbose mode (cancels quiet if it's the default)
   Verbose |
    ||| Set the console width for REPL output
-  ConsoleWidth Nat |
+  ConsoleWidth (Maybe Nat) |
    ||| Whether to use color in the console output
   Color Bool |
    ||| Set the log level globally
@@ -129,18 +129,20 @@ ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
 formatSocketAddress : (String, Int) -> String
 formatSocketAddress (host, port) = host ++ ":" ++ show port
 
-data OptType = Required String | Optional String | RequiredNat String
+data OptType = Required String | Optional String | RequiredNat String | AutoNat String
 
 Show OptType where
   show (Required a) = "<" ++ a ++ ">"
   show (RequiredNat a) = "<" ++ a ++ ">"
   show (Optional a) = "[" ++ a ++ "]"
+  show (AutoNat a) = "<" ++ a ++ ">"
 
 ActType : List OptType -> Type
 ActType [] = List CLOpt
 ActType (Required a :: as) = String -> ActType as
 ActType (RequiredNat a :: as) = Nat -> ActType as
 ActType (Optional a :: as) = Maybe String -> ActType as
+ActType (AutoNat a :: as) = Maybe Nat -> ActType as
 
 record OptDesc where
   constructor MkOpt
@@ -218,8 +220,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
               (Just "Quiet mode; display fewer messages"),
-           MkOpt ["--consolewidth"] [RequiredNat "console width"] (\l => [ConsoleWidth l])
-              (Just "Width for console output (0 for unbounded) (120 by default)"),
+           MkOpt ["--consolewidth"] [AutoNat "console width"] (\l => [ConsoleWidth l])
+              (Just "Width for console output (0 for unbounded) (auto by default)"),
            MkOpt ["--color", "--colour"] [] ([Color True])
               (Just "Forces colored console output (enabled by default)"),
            MkOpt ["--no-color", "--no-colour"] [] ([Color False])
@@ -303,6 +305,14 @@ processArgs flag (RequiredNat a :: as) (x :: xs) f =
   do arg <- maybeToEither ("Expected Nat argument " ++ show x ++ " for flag " ++ flag)
                           (parseInteger x >>= checkNat)
      processArgs flag as xs (f arg)
+processArgs flag (opt@(AutoNat _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (AutoNat a :: as) ("auto" :: xs) f =
+  processArgs flag as xs (f Nothing)
+processArgs flag (AutoNat a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected Nat or \"auto\" argument " ++ show x ++ " for flag " ++ flag)
+                          (parseInteger x >>= checkNat)
+     processArgs flag as xs (f (Just arg))
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
 processArgs flag (Optional a :: as) (x :: xs) f =

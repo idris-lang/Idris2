@@ -1,3 +1,3 @@
-$1 --no-color cycle.idr --check
+$1 --no-color --consolewidth 0 cycle.idr --check
 
 rm -rf build

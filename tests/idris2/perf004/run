@@ -1,3 +1,3 @@
-$1 --no-color --check bigdpair.idr
+$1 --no-color --consolewidth 0 --check bigdpair.idr
 
 rm -rf build

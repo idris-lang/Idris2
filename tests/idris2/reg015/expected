@@ -1,6 +1,5 @@
 1/1: Building anyfail (anyfail.idr)
-Error: showing (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndSize addr len)))) SomethingVeryComplicatedIs is
-not a valid impossible case.
+Error: showing (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndSize addr len)))) SomethingVeryComplicatedIs is not a valid impossible case.
 
 anyfail.idr:21:1--21:48
     |

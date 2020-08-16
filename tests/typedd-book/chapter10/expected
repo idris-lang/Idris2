@@ -1,6 +1,5 @@
 1/1: Building DLFail (DLFail.idr)
-Error: While processing left hand side of describe_list_end. Can't match on ?xs ++ [?x] (Not a constructor application
-or primitive).
+Error: While processing left hand side of describe_list_end. Can't match on ?xs ++ [?x] (Not a constructor application or primitive).
 
 DLFail.idr:3:20--3:29
    |

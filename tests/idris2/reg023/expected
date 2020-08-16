@@ -1,6 +1,5 @@
 1/1: Building boom (boom.idr)
-Error: While processing right hand side of with block in eraseVar. Can't solve constraint
-between: S (countGreater thr xs) and countGreater thr xs.
+Error: While processing right hand side of with block in eraseVar. Can't solve constraint between: S (countGreater thr xs) and countGreater thr xs.
 
 boom.idr:23:42--23:66
     |
