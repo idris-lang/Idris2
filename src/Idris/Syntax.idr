@@ -433,7 +433,7 @@ data REPLCmd : Type where
      Doc : Name -> REPLCmd
      Browse : List String -> REPLCmd
      SetLog : Nat -> REPLCmd
-     SetConsoleWidth : Nat -> REPLCmd
+     SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd

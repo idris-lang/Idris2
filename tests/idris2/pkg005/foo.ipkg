@@ -3,4 +3,4 @@ package foo
 modules = Foo
 
 main = Foo
-opts = "--no-color"
+opts = "--no-color --consolewidth 0"

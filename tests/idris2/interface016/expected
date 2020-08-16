@@ -1,6 +1,5 @@
 1/1: Building TwoNum (TwoNum.idr)
-Error: While processing right hand side of f. While processing right hand side of f,g. Multiple solutions found in
-search of:
+Error: While processing right hand side of f. While processing right hand side of f,g. Multiple solutions found in search of:
     Num a
 
 TwoNum.idr:4:7--4:8

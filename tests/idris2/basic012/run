@@ -1,3 +1,3 @@
-$1 --no-color --check VIndex.idr
+$1 --no-color --consolewidth 0 --check VIndex.idr
 
 rm -rf build

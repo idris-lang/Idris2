@@ -1,3 +1,3 @@
-$1 --no-color matchlits.idr --no-banner < input
+$1 --no-color --consolewidth 0 matchlits.idr --no-banner < input
 
 rm -rf build

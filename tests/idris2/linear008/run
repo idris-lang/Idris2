@@ -1,3 +1,3 @@
-$1 --no-color --check Door.idr
+$1 --no-color --consolewidth 0 --check Door.idr
 
 rm -rf build

@@ -1,3 +1,3 @@
-$1 --no-color Recordname.idr --check
+$1 --no-color --consolewidth 0 Recordname.idr --check
 
 rm -rf build

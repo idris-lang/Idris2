@@ -7,6 +7,7 @@ import public Text.PrettyPrint.Prettyprinter.Util
 
 import Idris.REPLOpts
 import Idris.Syntax
+import Utils.Term
 
 %default covering
 
@@ -252,9 +253,11 @@ render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 render doc = do
   consoleWidth <- getConsoleWidth
   color <- getColor
-  let opts = MkLayoutOptions $ if consoleWidth == 0
-                                  then Unbounded
-                                  else AvailablePerLine (cast consoleWidth) 1
+  opts <- case consoleWidth of
+               Nothing => do cols <- coreLift getTermCols
+                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
+               Just 0 => pure $ MkLayoutOptions Unbounded
+               Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
   let layout = layoutPretty opts doc
   pure $ renderString $ if color then reAnnotateS colorAnn layout else unAnnotateS layout
 
@@ -262,8 +265,10 @@ export
 renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 renderWithoutColor doc = do
   consoleWidth <- getConsoleWidth
-  let opts = MkLayoutOptions $ if consoleWidth == 0
-                                  then Unbounded
-                                  else AvailablePerLine (cast consoleWidth) 1
+  opts <- case consoleWidth of
+               Nothing => do cols <- coreLift getTermCols
+                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
+               Just 0 => pure $ MkLayoutOptions Unbounded
+               Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
   let layout = layoutPretty opts doc
   pure $ renderString $ unAnnotateS layout

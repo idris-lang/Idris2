@@ -173,6 +173,7 @@ modules =
     Utils.Path,
     Utils.Shunting,
     Utils.String,
+    Utils.Term,
 
     Yaffle.Main,
     Yaffle.REPL

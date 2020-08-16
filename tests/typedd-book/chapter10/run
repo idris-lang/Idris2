@@ -1,4 +1,4 @@
-$1 --no-color DLFail.idr --check
-$1 --no-color All.idr --check
+$1 --no-color --consolewidth 0 DLFail.idr --check
+$1 --no-color --consolewidth 0 All.idr --check
 
 rm -rf build
