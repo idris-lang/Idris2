@@ -80,12 +80,12 @@ public export
   (x :: xs) == (y :: ys) = x == y && xs == ys
 
 public export
-hvectInjective1 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> x = y
-hvectInjective1 Refl = Refl
+consInjective1 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> x = y
+consInjective1 Refl = Refl
 
 public export
-hvectInjective2 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> xs = ys
-hvectInjective2 Refl = Refl
+consInjective2 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> xs = ys
+consInjective2 Refl = Refl
 
 public export
 DecEq (HVect []) where
@@ -96,8 +96,8 @@ public export
   decEq (x :: xs) (y :: ys) with (decEq x y)
     decEq (z :: xs) (z :: ys) | Yes Refl with (decEq xs ys)
       decEq (z :: zs) (z :: zs) | Yes Refl | Yes Refl = Yes Refl
-      decEq (z :: xs) (z :: ys) | Yes Refl | No contra = No (contra . hvectInjective2)
-    decEq (x :: xs) (y :: ys) | No contra = No (contra . hvectInjective1)
+      decEq (z :: xs) (z :: ys) | Yes Refl | No contra = No (contra . consInjective2)
+    decEq (x :: xs) (y :: ys) | No contra = No (contra . consInjective1)
 
 public export
 interface Shows (k : Nat) (ts : Vect k Type) where
