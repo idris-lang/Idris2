@@ -119,16 +119,16 @@ public export
 public export
 get : HVect ts -> {auto 1 p : Elem t ts} -> t
 get (x :: xs) {p = Here} = x
-get (x :: xs) {p = (There p')} = get {p = p'} xs
+get (x :: xs) {p = (There p')} = get xs
 
 ||| Replace an element with the correct type.
 public export
 put : t -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
 put y (x :: xs) {p = Here} = y :: xs
-put y (x :: xs) {p = (There p')} = x :: put {p = p'} y xs
+put y (x :: xs) {p = (There p')} = x :: put y xs
 
 ||| Update an element with the correct type.
 public export
 update : (t -> u) -> HVect ts -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
 update f (x :: xs) {p = Here} = f x :: xs
-update f (x :: xs) {p = (There p')} = x :: update {p = p'} f xs
+update f (x :: xs) {p = (There p')} = x :: update f xs
