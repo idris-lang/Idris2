@@ -45,6 +45,8 @@ modules = Control.ANSI,
 
           Data.Vect.Sort,
 
+          Data.HVect,
+
           Debug.Buffer,
 
           Language.JSON,
