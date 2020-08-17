@@ -32,11 +32,10 @@ index (FS j) (x :: xs) = index j xs
 ||| ["string"]
 ||| ```
 public export
-deleteAt : {l : Nat} -> {ts : Vect (S l) Type} -> (1 i : Fin (S l)) -> HVect ts -> HVect (deleteAt i ts)
-deleteAt FZ (x :: xs@(_ :: _)) = xs
-deleteAt {l = S m} (FS j) (x :: xs@(_ :: _)) = x :: deleteAt j xs
-deleteAt {l = Z} (FS j) (x :: xs) = absurd j
-deleteAt _ [] impossible
+deleteAt : (1 i : Fin (S l)) -> HVect ts -> HVect (deleteAt i ts)
+deleteAt FZ (x :: xs) = xs
+deleteAt (FS FZ) (x :: (y :: xs)) = x :: xs
+deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
 
 ||| Replace an element in an HVect.
 |||
