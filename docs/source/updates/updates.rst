@@ -313,7 +313,7 @@ So if you have the following, all in the same file...
       aVisible : Int -> Int
       aVisibile x = aHidden x
 
-    mamespace B
+    namespace B
       export
       bVisible : Int -> Int
       bVisible x = aVisible (x * 2)
