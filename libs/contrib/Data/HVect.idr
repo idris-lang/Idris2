@@ -34,8 +34,8 @@ index (FS j) (x :: xs) = index j xs
 public export
 deleteAt : (1 i : Fin (S l)) -> HVect ts -> HVect (deleteAt i ts)
 deleteAt FZ (x :: xs) = xs
-deleteAt (FS FZ) (x :: (y :: xs)) = x :: xs
-deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
+deleteAt (FS n) [x] = absurd n
+deleteAt (FS n) (x :: xs@(_::_)) = x :: deleteAt n xs
 
 ||| Replace an element in an HVect.
 |||
