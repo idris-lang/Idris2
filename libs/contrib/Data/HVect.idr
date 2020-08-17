@@ -117,18 +117,18 @@ public export
 ||| Extract an arbitrary element of the correct type.
 ||| @ t the goal type
 public export
-get : HVect ts -> {auto p : Elem t ts} -> t
+get : HVect ts -> {auto 1 p : Elem t ts} -> t
 get (x :: xs) {p = Here} = x
 get (x :: xs) {p = (There p')} = get {p = p'} xs
 
 ||| Replace an element with the correct type.
 public export
-put : t -> HVect ts -> {auto p : Elem t ts} -> HVect ts
+put : t -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
 put y (x :: xs) {p = Here} = y :: xs
 put y (x :: xs) {p = (There p')} = x :: put {p = p'} y xs
 
 ||| Update an element with the correct type.
 public export
-update : (t -> u) -> HVect ts -> {auto p : Elem t ts} -> HVect (replaceByElem ts p u)
+update : (t -> u) -> HVect ts -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
 update f (x :: xs) {p = Here} = f x :: xs
 update f (x :: xs) {p = (There p')} = x :: update {p = p'} f xs
