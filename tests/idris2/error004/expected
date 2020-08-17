@@ -1,5 +1,5 @@
 1/1: Building Error1 (Error1.idr)
-Error: While processing right hand side of wrong. Can't find an implementation for Show (Vect 4 Int).
+Error: While processing right hand side of wrong. Can't find an implementation for Show (Vect 4 Integer).
 
 Error1.idr:8:9--8:40
    |
@@ -8,7 +8,7 @@ Error1.idr:8:9--8:40
 
 1/1: Building Error2 (Error2.idr)
 Error: While processing right hand side of show. Multiple solutions found in search of:
-    Show (Vect k Int)
+    Show (Vect k Integer)
 
 Error2.idr:13:38--13:45
     |
@@ -19,7 +19,7 @@ Possible correct results:
     Show implementation at Error2.idr:11:1--15:6
     Show implementation at Error2.idr:7:1--11:5
 Error: While processing right hand side of wrong. Multiple solutions found in search of:
-    Show (Vect 1 Int)
+    Show (Vect 1 Integer)
 
 Error2.idr:16:9--16:34
     |
