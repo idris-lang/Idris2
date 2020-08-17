@@ -2,13 +2,13 @@ Defining Interfaces
 ===================
 
 The only way provided by ``Control.App`` to run an ``App`` is
-via the ``run`` function, which takes a concrete environment
+via the ``run`` function, which takes a concrete list of errors
 ``Init``.
-All concrete extensions to this environment are via either ``handle``,
+All concrete extensions to this list of errors are via either ``handle``,
 to introduce a new exception, or ``new``, to introduce a new state.
 In order to compose ``App`` programs effectively, rather than
 introducing concrete exceptions and state in general, we define interfaces for
-collections of operations which work in a specific environment.
+collections of operations which work in a specific list of errors.
 
 Example: Console I/O
 --------------------
@@ -38,21 +38,21 @@ The ``Control.App`` library defines a primitive interface for this:
       fork : (forall e' . PrimIO e' => App {l} e' ()) -> App e ()
 
 We use ``primIO`` to invoke an ``IO`` function. We also have a ``fork``
-primitive, which starts a new thread in a new environment supporting
-``PrimIO``.  Note that ``fork`` starts a new environment ``e'`` so that states
+primitive, which starts a new thread in a new list of errors supporting
+``PrimIO``.  Note that ``fork`` starts a new list of errors ``e'`` so that states
 are only available in a single thread.
 
-There is an implementation of ``PrimIO`` for an environment which can
+There is an implementation of ``PrimIO`` for a list of errors which can
 throw the empty type as an exception. This means that if ``PrimIO``
 is the only interface available, we cannot throw an exception, which is
 consistent with the definition of ``IO``. This also allows us to
-use ``PrimIO`` in the initial environment ``Init``.
+use ``PrimIO`` in the initial list of errors ``Init``.
 
 .. code-block:: idris
 
     HasErr Void e => PrimIO e where ...
 
-Given this, we can implement \texttt{Console} and run our \texttt{hello}
+Given this, we can implement ``Console`` and run our ``hello``
 program in ``IO``. It is implemented as follows in ``Control.App.Console``:
 
 .. code-block:: idris
@@ -75,7 +75,7 @@ primitive reflects this in its type:
 
 While precise, this becomes unwieldy when there are long sequences of
 ``IO`` operations. Using ``App``, we can provide an interface
-which throws an exception when an operation fails, and guarantee that any 
+which throws an exception when an operation fails, and guarantee that any
 exceptions are handled at the top level using ``handle``.
 We begin by defining the ``FileIO`` interface, in ``Control.App.FileIO``:
 
@@ -90,14 +90,14 @@ We begin by defining the ``FileIO`` interface, in ``Control.App.FileIO``:
 
 We use resource bracketing - passing a function to ``withFile`` for working
 with the opened file - rather than an explicit ``open`` operation,
-to open a file, to ensure that the file handle is cleaned up on 
+to open a file, to ensure that the file handle is cleaned up on
 completion.
 
 One could also imagine an interface using a linear resource for the file, which
 might be appropriate in some safety critical contexts, but for most programming
 tasks, exceptions should suffice.
 All of the operations can fail, and the interface makes this explicit by
-saying we can only implement ``FileIO`` if the environment supports
+saying we can only implement ``FileIO`` if the list of errors supports
 throwing and catching the ``IOError`` exception. ``IOError`` is defined
 in ``Control.App``.
 

@@ -1586,6 +1586,13 @@ checkDots
          ust <- get UST
          put UST (record { dotConstraints = [] } ust)
   where
+    getHoleName : Term [] -> Core (Maybe Name)
+    getHoleName tm
+        = do defs <- get Ctxt
+             NApp _ (NMeta n' i args) _ <- nf defs [] tm
+                 | _ => pure Nothing
+             pure (Just n')
+
     checkConstraint : (Name, DotReason, Constraint) -> Core ()
     checkConstraint (n, reason, MkConstraint fc wl blocked env x y)
         = do logTermNF 10 "Dot" env y
@@ -1595,8 +1602,10 @@ checkDots
              ust <- get UST
              handleUnify
                (do defs <- get Ctxt
-                   Just olddef <- lookupDefExact n (gamma defs)
-                        | Nothing => throw (UndefinedName fc n)
+                   -- get the hole name that 'n' is currently resolved to,
+                   -- if indeed it is still a hole
+                   (i, _) <- getPosition n (gamma defs)
+                   oldholen <- getHoleName (Meta fc n i [])
 
                    -- Check that what was given (x) matches what was
                    -- solved by unification (y).
@@ -1605,25 +1614,25 @@ checkDots
                    -- must be complete.
                    cs <- unify inMatch fc env x y
                    defs <- get Ctxt
-                   Just ndef <- lookupDefExact n (gamma defs)
-                        | Nothing => throw (UndefinedName fc n)
 
                    -- If the name standing for the dot wasn't solved
                    -- earlier, but is now (even with another metavariable)
                    -- this is bad (it most likely means there's a non-linear
                    -- variable)
-                   let hBefore = case olddef of
-                                      Hole _ _ => True -- dot not solved
-                                      _ => False
-                   let h = case ndef of
-                                Hole _ _ => True -- dot not solved
-                                _ => False
+                   dotSolved <-
+                      maybe (pure False)
+                            (\n => do Just ndef <- lookupDefExact n (gamma defs)
+                                           | Nothing => throw (UndefinedName fc n)
+                                      case ndef of
+                                           Hole _ _ => pure False
+                                           _ => pure True)
+                            oldholen
 
                    -- If any of the things we solved have the same definition,
                    -- we've sneaked a non-linear pattern variable in
                    argsSame <- checkArgsSame (namesSolved cs)
                    when (not (isNil (constraints cs))
-                            || (hBefore && not h) || argsSame) $
+                            || dotSolved || argsSame) $
                       throw (InternalError "Dot pattern match fail"))
                (\err =>
                     case err of
