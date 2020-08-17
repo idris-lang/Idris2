@@ -1,6 +1,10 @@
 Changes since Idris 2 v0.2.1
 ----------------------------
 
+Library changes:
+
+* Added `Data.HVect` in `contrib`, for heterogeneous vectors.
+
 Command-line options changes:
 
 * Added `--color` and `--no-color` options for colored terminal output.
