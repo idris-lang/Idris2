@@ -973,7 +973,7 @@ mutual
   displayResult (ConsoleWidthSet Nothing) = printResult (reflow "Set consolewidth to auto")
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty (showVersion True x))
-  displayResult (RequestedHelp) = printResult (pretty displayHelp) -- FIXME
+  displayResult (RequestedHelp) = printResult (pretty displayHelp)
   displayResult (Edited (DisplayEdit [])) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult $ pretty $ showSep "\n" xs
   displayResult (Edited (EditError x)) = printError $ pretty x

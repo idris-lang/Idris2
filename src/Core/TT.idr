@@ -107,7 +107,7 @@ Pretty Constant where
   pretty (Db x) = pretty x
   pretty WorldVal = pretty "%MkWorld"
   pretty IntType = pretty "Int"
-  pretty IntegerType = pretty "Int"
+  pretty IntegerType = pretty "Integer"
   pretty Bits8Type = pretty "Bits8"
   pretty Bits16Type = pretty "Bits16"
   pretty Bits32Type = pretty "Bits32"

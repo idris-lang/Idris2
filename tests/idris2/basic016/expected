@@ -1,6 +1,6 @@
 1/1: Building Eta (Eta.idr)
-Error: While processing right hand side of etaBad. When unifying \x => \y => MkTest ?_ ?_ = \x => \y => MkTest ?_ ?_ and MkTest = \x => \y => MkTest ?_ ?_.
-Mismatch between: Nat and Int.
+Error: While processing right hand side of etaBad. When unifying \x, y => MkTest ?_ ?_ = \x, y => MkTest ?_ ?_ and MkTest = \x, y => MkTest ?_ ?_.
+Mismatch between: Nat and Integer.
 
 Eta.idr:14:10--14:14
     |
