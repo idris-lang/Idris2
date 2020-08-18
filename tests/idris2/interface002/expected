@@ -4,12 +4,12 @@ Main>  0 b : Type
  0 a : Type
  0 d : Type
  0 c : Type
--------------------------------------
+------------------------------
 foo : (a -> b) -> Test c d a -> Test c d b
 Main>  0 b' : Type
  0 a' : Type
  0 b : Type
  0 a : Type
--------------------------------------
+------------------------------
 bar : (a' -> b') -> Test a b a' -> Test a b b'
 Main> Bye for now!
