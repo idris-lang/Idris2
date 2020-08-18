@@ -44,9 +44,8 @@ Make sure that:
 
 ### 2: Installing without an existing Idris 2
 
-If you _don't_ have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot) installed, you can build from pre-built
-Chez Scheme source, as long as you have Chez Scheme installed (or,
-alternatively, Racket). To do this, enter one of the following:
+You can build from pre-built Chez Scheme source, as long as you have Chez Scheme
+installed (or, alternatively, Racket). To do this, enter one of the following:
 
 - `make bootstrap SCHEME=chez`
 - `make bootstrap-racket`
@@ -65,20 +64,14 @@ If all is well, to install, type:
 
 - `make install`
 
-### (Alternative 2: Installing with an existing Idris 2)
+### 3: Installing with an existing Idris 2
 
-If you have [Idris-2-in-Idris-1](https://github.com/edwinb/Idris2-boot)
-installed:
-
-- `make all IDRIS2_BOOT=idris2boot`
-- `make install IDRIS2_BOOT=idris2boot`
-
-If you have an earlier version of this Idris 2 installer
+If you have an earlier version of this Idris 2 installed
 
 - `make all`
 - `make install`
 
-### 3: (Optional) Self-hosting step
+### 4: (Optional) Self-hosting step
 
 As a final step, you can rebuild from the newly installed Idris 2 to verify
 that everything has worked correctly. Assuming that `idris2` is in your
@@ -87,12 +80,12 @@ that everything has worked correctly. Assuming that `idris2` is in your
 - `make clean` -- to make sure you're building everything with the new version
 - `make all && make install`
 
-### 4: Running tests
+### 5: Running tests
 
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
 
-### 5: (Optional) Installing the Idris 2 API
+### 6: (Optional) Installing the Idris 2 API
 
 You'll only need this if you're developing support tools, such as an external
 code generator. To do so, once everything is successfully installed, type:
