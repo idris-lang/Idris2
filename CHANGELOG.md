@@ -1,3 +1,26 @@
+Changes since Idris 2 v0.2.1
+----------------------------
+
+Command-line options changes:
+
+* Added `--color` and `--no-color` options for colored terminal output.
+  Color is enabled by default.
+* Added `--consolewidth <auto|n>` option for printing margins. By default the
+  `auto` option is selected, the result is that the compiler detects the current
+  terminal width and sets it as the option value, otherwise a user value can be
+  provided. An explicit `0` has the effect of simulating a terminal with
+  unbounded width.
+
+Compiler changes:
+
+* Added primitives to the parsing library used in the compiler to get more precise
+  boundaries to the AST nodes `FC`.
+
+REPL/IDE mode changes:
+
+* Added `:color (on|off)` option for colored terminal output.
+* Added `:consolewidth (auto|n)` option for printing margins. Mirrors the command line option.
+
 Changes since Idris 2 v0.2.0
 ----------------------------
 
