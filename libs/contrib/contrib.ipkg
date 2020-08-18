@@ -41,6 +41,7 @@ modules = Control.ANSI,
           Data.String.Extra,
           Data.String.Interpolation,
           Data.String.Parser,
+          Data.String.Parser.Expression,
 
           Data.Vect.Sort,
 
