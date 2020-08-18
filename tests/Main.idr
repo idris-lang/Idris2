@@ -142,6 +142,10 @@ ideModeTests : List String
 ideModeTests
   =  [ "ideMode001", "ideMode002", "ideMode003" ]
 
+preludeTests : List String
+preludeTests
+  =  [ "reg001" ]
+
 ------------------------------------------------------------------------
 -- Options
 
@@ -320,6 +324,7 @@ main
                  , testPaths "idris2" idrisTests
                  , testPaths "typedd-book" typeddTests
                  , testPaths "ideMode" ideModeTests
+                 , testPaths "prelude" preludeTests
                  ]
          let filteredChezTests = filterTests opts (testPaths "chez" chezTests)
          let filteredNodeTests = filterTests opts (testPaths "node" nodeTests)
