@@ -112,6 +112,7 @@ modules =
     Parser.Rule.Package,
     Parser.Rule.Source,
 
+    Text.Bounded,
     Text.Literate,
     Text.Quantity,
     Text.Token,
