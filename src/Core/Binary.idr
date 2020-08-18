@@ -30,7 +30,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 38
+ttcVersion = 40
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -250,7 +250,7 @@ writeToTTC extradata fname
          defs <- get Ctxt
          ust <- get UST
          gdefs <- getSaveDefs (keys (toSave defs)) [] defs
-         log 5 $ "Writing " ++ fname ++ " with hash " ++ show (ifaceHash defs)
+         log "ttc.write" 5 $ "Writing " ++ fname ++ " with hash " ++ show (ifaceHash defs)
          writeTTCFile bin
                    (MkTTCFile ttcVersion (ifaceHash defs) (importHashes defs)
                               gdefs
@@ -307,8 +307,8 @@ addGlobalDef modns asm (n, def)
 addTypeHint : {auto c : Ref Ctxt Defs} ->
               FC -> (Name, Name, Bool) -> Core ()
 addTypeHint fc (tyn, hintn, d)
-   = do logC 10 (pure (show !(getFullName hintn) ++ " for " ++
-                       show !(getFullName tyn)))
+   = do logC "ttc.read" 10 (pure (show !(getFullName hintn) ++ " for " ++
+                            show !(getFullName tyn)))
         addHintFor fc tyn hintn d True
 
 addAutoHint : {auto c : Ref Ctxt Defs} ->

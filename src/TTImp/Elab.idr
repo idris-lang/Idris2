@@ -128,7 +128,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                               InLHS _ => inLHS
                               _ => inTermP False
          solveConstraints solvemode Normal
-         logTerm 5 "Looking for delayed in " chktm
+         logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
          catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
                                      (delayedElab ust)))
@@ -143,14 +143,14 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          -- As long as we're not in a case block, finish off constraint solving
          when (not incase) $
            -- resolve any default hints
-           do log 5 "Resolving default hints"
+           do log "elab" 5 "Resolving default hints"
               solveConstraintsAfter constart solvemode Defaults
               -- perhaps resolving defaults helps...
               -- otherwise, this last go is most likely just to give us more
               -- helpful errors.
               solveConstraintsAfter constart solvemode LastChance
 
-         dumpConstraints 4 False
+         dumpConstraints "elab" 4 False
          defs <- get Ctxt
          chktm <- if inPE -- Need to fully normalise holes in partial evaluation
                           -- because the holes don't have types saved to ttc
@@ -193,7 +193,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                  do let vs = findPLetRenames chktm
                     let ret = doPLetRenames vs [] chktm
                     pure (ret, gnf env (doPLetRenames vs [] !(getTerm chkty)))
-              _ => do dumpConstraints 2 False
+              _ => do dumpConstraints "elab" 2 False
                       pure (chktm, chkty)
   where
     addHoles : (acc : IntMap (FC, Name)) ->

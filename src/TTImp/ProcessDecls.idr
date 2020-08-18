@@ -57,8 +57,8 @@ process eopts nest env (IRunElabDecl fc tm)
     = processRunElab eopts nest env fc tm
 process eopts nest env (IPragma act)
     = act nest env
-process eopts nest env (ILog n)
-    = setLogLevel n
+process eopts nest env (ILog lvl)
+    = addLogLevel (uncurry unsafeMkLogLevel lvl)
 
 TTImp.Elab.Check.processDecl = process
 
@@ -74,7 +74,7 @@ checkTotalityOK n
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
          let fc = location gdef
-         log 3 $ show n ++ " must be: " ++ show treq
+         log "totality" 3 $ show n ++ " must be: " ++ show treq
          case treq of
               PartialOK => pure Nothing
               CoveringOnly => checkCovering fc (isCovering tot)

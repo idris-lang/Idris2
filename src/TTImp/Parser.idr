@@ -11,6 +11,7 @@ import public Text.Parser
 import        Data.List
 import        Data.List.Views
 import        Data.List1
+import        Data.Maybe
 import        Data.Strings
 
 topDecl : FileName -> IndentInfo -> Rule ImpDecl
@@ -652,9 +653,11 @@ directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
+         ps <- optional namespacedIdent
+         let topic = fromMaybe [] $ map List1.toList ps
          lvl <- intLit
          atEnd indents
-         pure (ILog (integerToNat lvl))
+         pure (ILog (topic, integerToNat lvl))
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit

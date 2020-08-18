@@ -74,7 +74,7 @@ data CLOpt
    ||| Run Idris 2 in verbose mode (cancels quiet if it's the default)
   Verbose |
    ||| Set the log level globally
-  Logging Nat |
+  Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
    ||| Build or install a given package, depending on PkgCommand
@@ -125,17 +125,19 @@ ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
 formatSocketAddress : (String, Int) -> String
 formatSocketAddress (host, port) = host ++ ":" ++ show port
 
-data OptType = Required String | Optional String | RequiredNat String
+data OptType = Required String | Optional String | RequiredNat String | RequiredLogLevel String
 
 Show OptType where
   show (Required a) = "<" ++ a ++ ">"
   show (RequiredNat a) = "<" ++ a ++ ">"
+  show (RequiredLogLevel a) = "<" ++ a ++ ">"
   show (Optional a) = "[" ++ a ++ "]"
 
 ActType : List OptType -> Type
 ActType [] = List CLOpt
 ActType (Required a :: as) = String -> ActType as
 ActType (RequiredNat a :: as) = Nat -> ActType as
+ActType (RequiredLogLevel a :: as) = LogLevel -> ActType as
 ActType (Optional a :: as) = Maybe String -> ActType as
 
 record OptDesc where
@@ -216,7 +218,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Quiet mode; display fewer messages"),
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
-           MkOpt ["--log"] [RequiredNat "log level"] (\l => [Logging l])
+           MkOpt ["--log"] [RequiredLogLevel "log level"] (\l => [Logging l])
               (Just "Global log level (0 by default)"),
 
            optSeparator,
@@ -283,15 +285,22 @@ checkNat n = toMaybe (n >= 0) (integerToNat n)
 processArgs : String -> (args : List OptType) -> List String -> ActType args ->
               Either String (List CLOpt, List String)
 processArgs flag [] xs f = Right (f, xs)
+-- Missing required arguments
 processArgs flag (opt@(Required _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredNat _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredLogLevel _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (Optional a :: as) [] f =
   processArgs flag as [] (f Nothing)
-processArgs flag (opt@(RequiredNat _) :: as) [] f =
-  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (RequiredNat a :: as) (x :: xs) f =
   do arg <- maybeToEither ("Expected Nat argument " ++ show x ++ " for flag " ++ flag)
                           (parseInteger x >>= checkNat)
+     processArgs flag as xs (f arg)
+processArgs flag (RequiredLogLevel a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected LogLevel argument " ++ show x ++ " for flag " ++ flag)
+                          (parseLogLevel x)
      processArgs flag as xs (f arg)
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)

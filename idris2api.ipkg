@@ -45,6 +45,7 @@ modules =
     Core.Name,
     Core.Normalise,
     Core.Options,
+    Core.Options.Log,
     Core.Primitives,
     Core.Reflect,
     Core.Termination,

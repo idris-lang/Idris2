@@ -20,7 +20,7 @@ Error during reflection: Undefined name at:
 49	dummy3 = %runElab logBad
 	         ^^^^^^^^^^^^^^^
 
-refprims.idr:52:10--52:28:While processing right hand side of dummy4 at refprims.idr:52:1--54:1:
+refprims.idr:52:10--52:28:While processing right hand side of dummy4 at refprims.idr:52:1--53:1:
 Error during reflection: failed after generating Main.{plus:XXXX} at:
 52	dummy4 = %runElab tryGenSym
 	         ^^^^^^^^^^^^^^^^^^

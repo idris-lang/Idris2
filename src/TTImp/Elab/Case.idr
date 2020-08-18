@@ -175,7 +175,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          est <- get EST
          fullImps <- getToBind fc (elabMode elabinfo)
                                (implicitMode elabinfo) env []
-         log 5 $ "Doing a case under unbound implicits " ++ show fullImps
+         log "elab.case" 5 $ "Doing a case under unbound implicits " ++ show fullImps
 
          scrn <- genVarName "scr"
          casen <- genCaseName !(prettyName !(toFullNames (Resolved (defining est))))
@@ -209,8 +209,8 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
 
-         logEnv 10 "Case env" env
-         logTermNF 2 ("Case function type: " ++ show casen) [] casefnty
+         logEnv "elab.case" 10 "Case env" env
+         logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
 
          -- If we've had to add implicits to the case type (because there
          -- were unbound implicits) then we're in a bit of a mess. Easiest
@@ -239,9 +239,9 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                            splitOn
 
          let alts' = map (updateClause casen splitOn nest env) alts
-         log 2 $ "Nested: " ++ show (map getNestData (names nest))
-         log 2 $ "Generated alts: " ++ show alts'
-         logTermNF 2 "Case application" env appTm
+         log "elab.case" 2 $ "Nested: " ++ show (map getNestData (names nest))
+         log "elab.case" 2 $ "Generated alts: " ++ show alts'
+         logTermNF "elab.case" 2 "Case application" env appTm
 
          -- Start with empty nested names, since we've extended the rhs with
          -- ICaseLocal so they'll get rebuilt with the right environment
@@ -369,12 +369,12 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
                              _ => pure scrty_in
            (scrtyv, scrtyt) <- check erased elabinfo nest env scrty_exp
                                      (Just (gType fc))
-           logTerm 10 "Expected scrutinee type" scrtyv
+           logTerm "elab.case" 10 "Expected scrutinee type" scrtyv
            -- Try checking at the given multiplicity; if that doesn't work,
            -- try checking at Rig1 (meaning that we're using a linear variable
            -- so the scrutinee should be linear)
            let chrig = if isErased rig then erased else top
-           log 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
+           log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
 
            (scrtm_in, gscrty, caseRig) <- handle
               (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
@@ -390,7 +390,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
                             e => throw e)
 
            scrty <- getTerm gscrty
-           logTermNF 5 "Scrutinee type" env scrty
+           logTermNF "elab.case" 5 "Scrutinee type" env scrty
            defs <- get Ctxt
            checkConcrete !(nf defs env scrty)
            caseBlock rig elabinfo fc nest env scr scrtm_in scrty caseRig alts exp

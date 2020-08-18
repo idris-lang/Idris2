@@ -452,10 +452,11 @@ mutual
            pure (PRunElab (MkFC fname start end) e)
     <|> do start <- location
            pragma "logging"
+           topic <- optional namespacedIdent
            lvl <- intLit
            e <- expr pdef fname indents
            end <- pure $ endPos $ getPTermLoc e
-           pure (PUnifyLog (MkFC fname start end) (integerToNat lvl) e)
+           pure (PUnifyLog (MkFC fname start end) (mkLogLevel' topic (integerToNat lvl)) e)
 
   multiplicity : SourceEmptyRule (Maybe Integer)
   multiplicity
@@ -1132,9 +1133,10 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do pragma "logging"
+         topic <- optional namespacedIdent
          lvl <- intLit
          atEnd indents
-         pure (Logging (fromInteger lvl))
+         pure (Logging (mkLogLevel' topic (fromInteger lvl)))
   <|> do pragma "auto_lazy"
          b <- onoff
          atEnd indents
@@ -1798,7 +1800,7 @@ Show CmdArg where
   show OptionArg = "<option>"
   show FileArg = "<file>"
   show ModuleArg = "<module>"
-  show StringArg = "<module>"
+  show StringArg = "<string>"
   show (Args args) = showSep " " (map show args)
 
 export
@@ -1940,6 +1942,20 @@ compileArgsCmd parseCmd command doc
       tm <- expr pdef "(interactive)" init
       pure (command tm n)
 
+loggingArgCmd : ParseCmd -> (LogLevel -> REPLCmd) -> String -> CommandDefinition
+loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, parse) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    topic <- optional namespacedIdent
+    lvl <- intLit
+    pure (command (mkLogLevel' topic (fromInteger lvl)))
+
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
@@ -1960,7 +1976,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
   , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
-  , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
+  , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"
   , noArgCmd (ParseREPLCmd ["version"]) ShowVersion "Display the Idris version"
   , noArgCmd (ParseREPLCmd ["?", "h", "help"]) Help "Display this help text"
