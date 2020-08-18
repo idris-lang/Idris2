@@ -80,7 +80,7 @@ mutual
        -- A saturated constructor application
        NmCon : FC -> Name -> (tag : Maybe Int) -> List NamedCExp -> NamedCExp
        -- Internally defined primitive operations
-       NmOp : FC -> PrimFn arity -> Vect arity NamedCExp -> NamedCExp
+       NmOp : {arity : _ } -> FC -> PrimFn arity -> Vect arity NamedCExp -> NamedCExp
        -- Externally defined primitive operations
        NmExtPrim : FC -> (p : Name) -> List NamedCExp -> NamedCExp
        -- A forced (evaluated) value
