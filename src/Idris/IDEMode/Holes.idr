@@ -4,8 +4,12 @@ import Core.Env
 
 import Idris.Resugar
 import Idris.Syntax
+import Idris.Pretty
 
 import Idris.IDEMode.Commands
+
+import Data.String.Extra
+import Utils.Term
 
 %default covering
 
@@ -57,9 +61,17 @@ impBracket : Bool -> String -> String
 impBracket False str = str
 impBracket True str = "{" ++ str ++ "}"
 
+prettyImpBracket : Bool -> Doc ann -> Doc ann
+prettyImpBracket False = id
+prettyImpBracket True = braces
+
 tidy : Name -> String
 tidy (MN n _) = n
 tidy n = show n
+
+prettyName : Name -> Doc ann
+prettyName (MN n _) = pretty n
+prettyName n = pretty n
 
 export
 extractHoleData : {vars : _} ->
@@ -128,6 +140,29 @@ showHole defs env fn args ty
                    ) hdata.context)
               ++ "-------------------------------------\n"
               ++ nameRoot (hdata.name) ++ " : " ++ show hdata.type
+
+export
+prettyRigHole : RigCount -> Doc ann
+prettyRigHole = elimSemi (pretty '0' <+> space)
+                         (pretty '1' <+> space)
+                         (const $ space <+> space)
+
+export
+prettyHole : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             Defs -> Env Term vars -> Name -> Nat -> Term vars ->
+             Core (Doc IdrisAnn)
+prettyHole defs env fn args ty
+  = do hdata <- holeData defs env fn args ty
+       case hdata.context of
+            [] => pure $ pretty hdata.name <++> colon <++> prettyTerm hdata.type
+            _  => pure $ (indent 1 $ vsep $
+                            map (\premise => prettyRigHole premise.multiplicity
+                                    <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
+                                    hdata.context) <+> hardline
+                    <+> (pretty $ replicate 30 '-') <+> hardline
+                    <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 sexpPremise : HolePremise -> SExp
 sexpPremise premise = 

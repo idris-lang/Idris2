@@ -1,6 +1,6 @@
 1/1: Building Interp (Interp.idr)
 Main> Main.evalAdd : Nat -> Nat -> Nat
-evalAdd x y = let add = \val => \val => plus val val in add x y
+evalAdd x y = let add = \val, val => plus val val in add x y
 Main> Main.evalBlock : Nat
 evalBlock = plus 3 4
 Main> 5

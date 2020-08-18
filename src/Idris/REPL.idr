@@ -89,11 +89,11 @@ showInfo (n, idx, d)
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
-              Core String
+              Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
-                pure (show !(aliasName (fullname gdef)) ++ " : " ++ show tm))
-            (\num => showHole defs [] n num (type gdef))
+                pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
+            (\num => prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
 getEnvTerm : {vars : _} ->
@@ -108,10 +108,10 @@ getEnvTerm _ env tm = (_ ** (env, tm))
 displayTerm : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> ClosedTerm ->
-              Core String
+              Core (Doc IdrisAnn)
 displayTerm defs tm
     = do ptm <- resugar [] !(normaliseHoles defs [] tm)
-         pure (show ptm)
+         pure (prettyTerm ptm)
 
 displayPatTerm : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
@@ -124,23 +124,23 @@ displayPatTerm defs tm
 displayClause : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 Defs -> (vs ** (Env Term vs, Term vs, Term vs)) ->
-                Core String
+                Core (Doc IdrisAnn)
 displayClause defs (vs ** (env, lhs, rhs))
     = do lhstm <- resugar env !(normaliseHoles defs env lhs)
          rhstm <- resugar env !(normaliseHoles defs env rhs)
-         pure (show lhstm ++ " = " ++ show rhstm)
+         pure (prettyTerm lhstm <++> equals <++> prettyTerm rhstm)
 
 displayPats : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
-              Core String
+              Core (Doc IdrisAnn)
 displayPats defs (n, idx, gdef)
     = case definition gdef of
            PMDef _ _ _ _ pats
                => do ty <- displayType defs (n, idx, gdef)
                      ps <- traverse (displayClause defs) pats
-                     pure (ty ++ "\n" ++ showSep "\n" ps)
-           _ => pure (show n ++ " is not a pattern matching definition")
+                     pure (vsep (ty :: ps))
+           _ => pure (pretty n <++> reflow "is not a pattern matching definition")
 
 setOpt : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -221,8 +221,8 @@ lookupDefTyName = lookupNameBy (\g => (definition g, type g))
 
 public export
 data EditResult : Type where
-  DisplayEdit : List String -> EditResult
-  EditError : String -> EditResult
+  DisplayEdit : Doc IdrisAnn -> EditResult
+  EditError : Doc IdrisAnn -> EditResult
   MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
   MadeCase : Maybe String -> List String -> EditResult
@@ -232,12 +232,12 @@ updateFile : {auto r : Ref ROpts REPLOpts} ->
 updateFile update
     = do opts <- get ROpts
          let Just f = mainfile opts
-             | Nothing => pure (DisplayEdit []) -- no file, nothing to do
+             | Nothing => pure (DisplayEdit emptyDoc) -- no file, nothing to do
          Right content <- coreLift $ readFile f
                | Left err => throw (FileErr f err)
          coreLift $ writeFile (f ++ "~") content
          coreLift $ writeFile f (unlines (update (lines content)))
-         pure (DisplayEdit [])
+         pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
 rtrim str = reverse (ltrim (reverse str))
@@ -351,34 +351,33 @@ processEdit : {auto c : Ref Ctxt Defs} ->
 processEdit (TypeAt line col name)
     = do defs <- get Ctxt
          glob <- lookupCtxtName name (gamma defs)
-         res <- the (Core String) $ case glob of
-                     [] => pure ""
+         res <- the (Core (Doc IdrisAnn)) $ case glob of
+                     [] => pure emptyDoc
                      ts => do tys <- traverse (displayType defs) ts
-                              pure (showSep "\n" tys)
+                              pure (vsep tys)
          Just (n, num, t) <- findTypeAt (\p, n => within (line-1, col-1) p)
-            | Nothing => if res == ""
-                            then throw (UndefinedName (MkFC "(interactive)" (0,0) (0,0)) name)
-                            else pure (DisplayEdit [res])
-         if res == ""
-            then pure (DisplayEdit [ nameRoot n ++ " : " ++
-                                       !(displayTerm defs t)])
-            else pure (DisplayEdit [])  -- ? Why () This means there is a global name and a type at (line,col)
+            | Nothing => case res of
+                              Empty => throw (UndefinedName (MkFC "(interactive)" (0,0) (0,0)) name)
+                              _     => pure (DisplayEdit res)
+         case res of
+            Empty => pure (DisplayEdit $ pretty (nameRoot n) <++> colon <++> !(displayTerm defs t))
+            _     => pure (DisplayEdit emptyDoc)  -- ? Why () This means there is a global name and a type at (line,col)
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
                        then within (line-1, col-1)
                        else onLine (line-1)
          OK splits <- getSplits (anyAt find) name
-             | SplitFail err => pure (EditError (show err))
+             | SplitFail err => pure (EditError (pretty $ show err))
          lines <- updateCase splits (line-1) (col-1)
          if upd
             then updateFile (caseSplit (unlines lines) (integerToNat (cast (line - 1))))
-            else pure $ DisplayEdit lines
+            else pure $ DisplayEdit (vsep $ pretty <$> lines)
 processEdit (AddClause upd line name)
     = do Just c <- getClause line name
-             | Nothing => pure (EditError (show name ++ " not defined here"))
+             | Nothing => pure (EditError (pretty name <++> reflow "not defined here"))
          if upd
             then updateFile (addClause c (integerToNat (cast line)))
-            else pure $ DisplayEdit [c]
+            else pure $ DisplayEdit (pretty c)
 processEdit (ExprSearch upd line name hints)
     = do defs <- get Ctxt
          syn <- get Syn
@@ -393,25 +392,21 @@ processEdit (ExprSearch upd line name hints)
                           | Nothing => pure $ EditError "No search results"
                      let tm' = dropLams locs restm
                      itm <- pterm tm'
-                     let res = show (the PTerm (if brack
-                                                   then addBracket replFC itm
-                                                   else itm))
+                     let itm' : PTerm = if brack then addBracket replFC itm else itm
                      if upd
-                        then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
-                        else pure $ DisplayEdit [res]
+                        then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
+                        else pure $ DisplayEdit (prettyTerm itm')
               [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
                           do let (_ ** (env, tm')) = dropLamsTm locs [] tm
                              itm <- resugar env tm'
-                             let res = show (the PTerm (if brack
-                                                then addBracket replFC itm
-                                                else itm))
+                             let itm' : PTerm = if brack then addBracket replFC itm else itm
                              if upd
-                                then updateFile (proofSearch name res (integerToNat (cast (line - 1))))
-                                else pure $ DisplayEdit [res]
-              [] => pure $ EditError $ "Unknown name " ++ show name
+                                then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
+                                else pure $ DisplayEdit (prettyTerm itm')
+              [] => pure $ EditError $ "Unknown name" <++> pretty name
               _ => pure $ EditError "Not a searchable hole"
 processEdit ExprSearchNext
     = do defs <- get Ctxt
@@ -423,15 +418,13 @@ processEdit ExprSearchNext
          let brack = elemBy (\x, y => dropNS x == dropNS y) name (bracketholes syn)
          let tm' = dropLams locs restm
          itm <- pterm tm'
-         let res = show (the PTerm (if brack
-                                       then addBracket replFC itm
-                                       else itm))
-         pure $ DisplayEdit [res]
+         let itm' : PTerm = if brack then addBracket replFC itm else itm
+         pure $ DisplayEdit (prettyTerm itm')
 
 processEdit (GenerateDef upd line name rej)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine (line - 1) p)
-             | Nothing => pure (EditError ("Can't find declaration for " ++ show name ++ " on line " ++ show line))
+             | Nothing => pure (EditError ("Can't find declaration for" <++> pretty name <++> "on line" <++> pretty line))
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                  do let searchdef = makeDefSort (\p, n => onLine (line - 1) p)
@@ -447,9 +440,9 @@ processEdit (GenerateDef upd line name rej)
                     ls <- traverse (printClause markM l) cs
                     if upd
                        then updateFile (addClause (unlines ls) (integerToNat (cast line)))
-                       else pure $ DisplayEdit ls
+                       else pure $ DisplayEdit (vsep $ pretty <$> ls)
               Just _ => pure $ EditError "Already defined"
-              Nothing => pure $ EditError $ "Can't find declaration for " ++ show name
+              Nothing => pure $ EditError $ "Can't find declaration for" <++> pretty name
 processEdit GenerateDefNext
     = do Just (line, (fc, cs)) <- nextGenDef 0
               | Nothing => pure (EditError "No more results")
@@ -458,7 +451,7 @@ processEdit GenerateDefNext
             | Nothing => pure (EditError "Source line not found")
          let (markM, srcLineUnlit) = isLitLine srcLine
          ls <- traverse (printClause markM l) cs
-         pure $ DisplayEdit ls
+         pure $ DisplayEdit (vsep $ pretty <$> ls)
 processEdit (MakeLemma upd line name)
     = do defs <- get Ctxt
          syn <- get Syn
@@ -518,7 +511,7 @@ data REPLResult : Type where
   Executed : PTerm -> REPLResult
   RequestedHelp : REPLResult
   Evaluated : PTerm -> (Maybe PTerm) -> REPLResult
-  Printed : List String -> REPLResult
+  Printed : Doc IdrisAnn -> REPLResult
   TermChecked : PTerm -> PTerm -> REPLResult
   FileLoaded : String -> REPLResult
   ModuleLoaded : String -> REPLResult
@@ -665,7 +658,7 @@ process (Check (PRef fc fn))
          case !(lookupCtxtName fn (gamma defs)) of
               [] => throw (UndefinedName fc fn)
               ts => do tys <- traverse (displayType defs) ts
-                       pure (Printed tys)
+                       pure (Printed $ vsep tys)
 process (Check itm)
     = do inidx <- resolveName (UN "[input]")
          ttimp <- desugar AnyExpr [] itm
@@ -681,7 +674,7 @@ process (PrintDef fn)
          case !(lookupCtxtName fn (gamma defs)) of
               [] => throw (UndefinedName replFC fn)
               ts => do defs <- traverse (displayPats defs) ts
-                       pure (Printed defs)
+                       pure (Printed $ vsep defs)
 process Reload
     = do opts <- get ROpts
          case mainfile opts of
@@ -752,10 +745,10 @@ process (Total n)
                                (map fst ts)
 process (Doc n)
     = do doc <- getDocsFor replFC n
-         pure $ Printed doc
+         pure $ Printed $ vsep $ pretty <$> doc
 process (Browse ns)
     = do doc <- getContents ns
-         pure $ Printed doc
+         pure $ Printed $ vsep $ pretty <$> doc
 process (DebugInfo n)
     = do defs <- get Ctxt
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
@@ -949,7 +942,7 @@ mutual
   displayResult (REPLError err) = printError err
   displayResult (Evaluated x Nothing) = printResult $ prettyTerm x
   displayResult (Evaluated x (Just y)) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
-  displayResult (Printed xs) = printResult (vsep (pretty <$> xs))
+  displayResult (Printed xs) = printResult xs
   displayResult (TermChecked x y) = printResult (prettyTerm x <++> colon <++> code (prettyTerm y))
   displayResult (FileLoaded x) = printResult (reflow "Loaded file" <++> pretty x)
   displayResult (ModuleLoaded x) = printResult (reflow "Imported module" <++> pretty x)
@@ -974,9 +967,9 @@ mutual
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty (showVersion True x))
   displayResult (RequestedHelp) = printResult (pretty displayHelp)
-  displayResult (Edited (DisplayEdit [])) = pure ()
-  displayResult (Edited (DisplayEdit xs)) = printResult $ pretty $ showSep "\n" xs
-  displayResult (Edited (EditError x)) = printError $ pretty x
+  displayResult (Edited (DisplayEdit Empty)) = pure ()
+  displayResult (Edited (DisplayEdit xs)) = printResult xs
+  displayResult (Edited (EditError x)) = printError x
   displayResult (Edited (MadeLemma lit name pty pappstr)) = printResult $ pretty (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
   displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty $ showSep "\n" (map (relit lit) wapp)
   displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty $ showSep "\n" (map (relit lit) cstr)

@@ -169,7 +169,7 @@ process (AddClause l n)
     = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
 process (AddMissing l n)
     = do todoCmd "add-missing"
-         pure $ REPL $ Edited $ DisplayEdit []
+         pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
                                                  (map UN hs)))
@@ -189,10 +189,10 @@ process (DocsFor n modeOpt)
     = replWrap $ Idris.REPL.process (Doc (UN n))
 process (Apropos n)
     = do todoCmd "apropros"
-         pure $ REPL $ Printed []
+         pure $ REPL $ Printed emptyDoc
 process (Directive n)
     = do todoCmd "directive"
-         pure $ REPL $ Printed []
+         pure $ REPL $ Printed emptyDoc
 process (WhoCalls n)
     = do todoCmd "who-calls"
          pure $ NameList []
@@ -215,7 +215,7 @@ process (ElaborateTerm tm)
          pure $ TTTerm tm
 process (PrintDefinition n)
     = do todoCmd "print-definition"
-         pure $ REPL $ Printed [n]
+         pure $ REPL $ Printed (pretty n)
 process (ReplCompletions n)
     = do todoCmd "repl-completions"
          pure $ NameList []
@@ -300,7 +300,7 @@ displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   $ StringAtom $ show x ++ " : " ++ show y
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ showSep "\n" xs
+  $ StringAtom $ show xs
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y
@@ -356,9 +356,9 @@ displayIDEResult outf i  (REPL $ VersionIs x)
   versionSExp = SExpList [ semverSexp, tagSexp ]
 
 displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
-  = printIDEResult outf i $ StringAtom $ showSep "\n" xs
+  = printIDEResult outf i $ StringAtom $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
-  = printIDEError outf i (pretty x)
+  = printIDEError outf i x
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i
   $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
