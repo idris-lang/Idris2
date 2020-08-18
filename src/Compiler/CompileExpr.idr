@@ -506,10 +506,10 @@ getNArgs defs n args = pure $ User n args
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> (inStruct : Bool) -> NF [] -> Core CFType
 nfToCFType _ _ (NPrimVal _ IntType) = pure CFInt
-nfToCFType _ _ (NPrimVal _ Bits8Type) = pure CFUnsigned
-nfToCFType _ _ (NPrimVal _ Bits16Type) = pure CFUnsigned
-nfToCFType _ _ (NPrimVal _ Bits32Type) = pure CFUnsigned
-nfToCFType _ _ (NPrimVal _ Bits64Type) = pure CFUnsigned
+nfToCFType _ _ (NPrimVal _ Bits8Type) = pure CFUnsigned8
+nfToCFType _ _ (NPrimVal _ Bits16Type) = pure CFUnsigned16
+nfToCFType _ _ (NPrimVal _ Bits32Type) = pure CFUnsigned32
+nfToCFType _ _ (NPrimVal _ Bits64Type) = pure CFUnsigned64
 nfToCFType _ False (NPrimVal _ StringType) = pure CFString
 nfToCFType fc True (NPrimVal _ StringType)
     = throw (GenericMsg fc "String not allowed in a foreign struct")

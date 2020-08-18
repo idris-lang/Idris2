@@ -55,10 +55,17 @@ addConstToPreamble name def =
     let v = "const " ++ newName ++ " = (" ++ def ++ ");"
     addToPreamble name newName v
 
+requireSafe : String -> String
+requireSafe = pack . map (\c => case c of 
+                                     '@' => '_'
+                                     '/' => '_'
+                                     '-' => '_'
+                                     _ => c
+                         ) . unpack
 addRequireToPreamble : {auto c : Ref ESs ESSt} -> String -> Core String
 addRequireToPreamble name =
   do
-    let newName = "__require_" ++ name
+    let newName = "__require_" ++ requireSafe name
     let v = "const " ++ newName ++ " = require(" ++ jsString name ++ ");"
     addToPreamble name newName v
 
@@ -283,7 +290,7 @@ makeForeign n x =
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
 
 
-      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supporte types are lambda")
+      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
 
 foreignDecl : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
@@ -392,6 +399,7 @@ static_preamble =
   [ "class IdrisError extends Error { }"
   , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
   , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
+  , "function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}"
   ]
 
 export

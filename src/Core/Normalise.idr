@@ -112,7 +112,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Bind fc x (Lam r _ ty) scope) (thunk :: stk)
         = eval env (thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let r val ty) scope) stk
-        = if holesOnly topopts || argHolesOnly topopts && not (tcInline topopts)
+        = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
              then do b' <- traverse (\tm => eval env locs tm []) b
                      pure $ NBind fc x b'
                         (\defs', arg => evalWithOpts defs' topopts

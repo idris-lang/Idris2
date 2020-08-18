@@ -125,7 +125,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026", "chez027",
+      "chez025", "chez026", "chez027", "chez028",
       "reg001"]
 
 nodeTests : List String
@@ -141,6 +141,10 @@ nodeTests
 ideModeTests : List String
 ideModeTests
   =  [ "ideMode001", "ideMode002", "ideMode003" ]
+
+preludeTests : List String
+preludeTests
+  =  [ "reg001" ]
 
 ------------------------------------------------------------------------
 -- Options
@@ -245,10 +249,7 @@ runTest opts testPath
                      | Left err => do print err
                                       pure False
                  let result = normalize out == normalize exp
-                 -- The issue #116 that made this necessary is fixed, but
-                 -- please resist putting 'result' here until it's also
-                 -- fixed in Idris2-boot!
-                 if normalize out == normalize exp
+                 if result
                     then putStrLn "success"
                     else do
                       putStrLn "FAILURE"
@@ -323,6 +324,7 @@ main
                  , testPaths "idris2" idrisTests
                  , testPaths "typedd-book" typeddTests
                  , testPaths "ideMode" ideModeTests
+                 , testPaths "prelude" preludeTests
                  ]
          let filteredChezTests = filterTests opts (testPaths "chez" chezTests)
          let filteredNodeTests = filterTests opts (testPaths "node" nodeTests)
