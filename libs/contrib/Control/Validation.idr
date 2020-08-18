@@ -33,6 +33,14 @@ export
 data ValidatorT : (Type -> Type) -> Type -> Type -> Type where
     MkValidator : (a -> Result m b) -> ValidatorT m a b
 
+||| A type of validator trying to prove properties of values. It's type is
+||| significantly different than that of an ordinary validator and cannot be
+||| made an instance of Monad interface, because it's last parameter is
+||| (t -> Type) instead of just Type. Therefore it must be explicitly turned
+||| into an ordinary validator using the prop function below.
+data PropValidator : (Type -> Type) -> (t : Type) -> (t -> Type) -> Type where
+    MkPropValidator : ((x : t) -> Result m (p x)) -> PropValidator m t p
+
 public export
 Validator : Type -> Type -> Type
 Validator = ValidatorT Identity
@@ -68,6 +76,13 @@ Monad m => Monad (ValidatorT m a) where
     v >>= f = MkValidator $ \x => do
         r <- validateT v x
         validateT (f r) x
+
+||| Plug a property validator into the chain of other validators. The value
+||| under validation will be ignored and the value whose property is going to
+||| be checked must be supplied manually. Otherwise Idris won;t be able to
+||| unify.
+prop : PropValidator m t p -> (x : t) -> ValidatorT m a (p x)
+prop (MkPropValidator v) x = MkValidator (const $ v x)
 
 replaceError : Monad m => String -> Result m a -> Result m a
 replaceError e = bimapEitherT (const e) id
@@ -107,10 +122,10 @@ contramap f v = MkValidator (validateT v . f)
 ||| holds, returning a proof if it does. The procedure also has access to the
 ||| raw input in case it was helpful.
 export
-decide : Monad m => {0 a, b : Type} -> String -> (x : b) -> {p : b -> Type} -> (a -> (x : b) -> Dec (p x)) -> ValidatorT m a (p x)
-decide {a} {b} msg x {p} f = MkValidator $ \a => case f a x of
+decide : Monad m => (t -> String) -> ((x : t) -> Dec (p x)) -> PropValidator m t p
+decide msg dec = MkPropValidator \x => case dec x of
     Yes prf => pure prf
-    No _ => fail msg
+    No _ => fail (msg x)
 
 ||| Given a function converting a into Maybe b, build a Validator of a
 ||| converting it into b.
@@ -160,34 +175,35 @@ length l = MkValidator (validateVector l)
 
 ||| Verify that certain values are equal.
 export
-equal : (DecEq a, Monad m) => (x, y : a) -> ValidatorT m z (x = y)
-equal x y = MkValidator dec
-    where
-    dec : z -> Result m (x = y)
-    dec _ = case decEq x y of
-        Yes prf => pure prf
-        No _ => fail "Values are not equal."
+equal : (DecEq t, Monad m) => (a : t) -> PropValidator m t (\b => a = b)
+equal a = MkPropValidator \b => case decEq a b of
+    Yes prf => pure prf
+    No _ => fail "Values are not equal."
 
 ||| Verify that a Nat is less than or equal to  certain bound.
 export
-lteNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (LTE n bound)
-lteNat {a} bound n = decide
-    (show n <+> " is not lower or equal to " <+> show bound)
-    {p = \x => LTE x bound}
-    n
-    (\_, x => isLTE x bound)
+lteNat : Monad m => (bound : Nat) -> PropValidator m Nat (flip LTE bound)
+lteNat bound = decide
+    (\n => show n <+> " is not lower or equal to " <+> show bound)
+    (\n => isLTE n bound)
 
 ||| Verify that a Nat is greater than or equal to certain bound.
 export
-gteNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (GTE n bound)
-gteNat {a} bound n = lteNat n bound
+gteNat : Monad m => (bound : Nat) -> PropValidator m Nat (flip GTE bound)
+gteNat bound = decide
+    (\n => show n <+> " is not greater or equal to " <+> show bound)
+    (isLTE bound)
 
 ||| Verify that a Nat is strictly less than a certain bound.
 export
-ltNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (LT n bound)
-ltNat bound n = lteNat bound (S n)
+ltNat : Monad m => (bound : Nat) -> PropValidator m Nat (flip LT bound)
+ltNat bound = decide
+    (\n => show n <+> " is not strictly lower than " <+> show bound)
+    (\n => isLTE (S n) bound)
 
 ||| Verify that a Nat is strictly greate than a certain bound.
 export
-gtNat : Monad m => {0 a : Type} -> (bound, n : Nat) -> ValidatorT m a (GT n bound)
-gtNat bound n = ltNat n bound
+gtNat : Monad m => (bound : Nat) -> PropValidator m Nat (flip GT bound)
+gtNat bound = decide
+    (\n => show n <+> " is not strictly greater than " <+> show bound)
+    (isLTE (S bound))
