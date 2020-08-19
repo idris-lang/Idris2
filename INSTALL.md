@@ -95,6 +95,13 @@ code generator. To do so, once everything is successfully installed, type:
 The API will only work if you've completed the self-hosting step, step 3, since
 the intermediate code versions need to be consistent throughout.
 
+### Troubleshooting
+
+If you get the message `variable make-thread-parameter is not bound` while
+bootstrapping via Chez Scheme, or while running the tests when bootstrapping via
+Racket, then your copy of Chez Scheme was built without thread support. Pass
+`--threads` to `./configure` while building Chez Scheme to correct the issue.
+
 ## Installing from a package manager
 
 ### Installing using Homebrew
