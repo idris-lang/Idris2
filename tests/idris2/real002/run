@@ -1,4 +1,4 @@
-$1 --no-color --consolewidth 0 --check Store.idr
-$1 --no-color --consolewidth 0 --check StoreL.idr
+$1 --no-color --console-width 0 --check Store.idr
+$1 --no-color --console-width 0 --check StoreL.idr
 
 rm -rf build
