@@ -30,7 +30,7 @@ Calc ((~~) {z=_} {y=_} der (_ ** Refl)) = Calc der
 export
 -- These are natural in equational reasoning, less so when rewriting,
 -- so that's why it's here.
-cong2 : (f : t -> s -> u) -> a = b -> c = d -> f a c = f b d
+cong2 : (0 f : t -> s -> u) -> (1 _ : a = b) -> (1 _ : c = d) -> f a c = f b d
 cong2 f Refl Refl = Refl
 
 {- -- requires import Data.Nat
