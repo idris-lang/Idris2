@@ -70,6 +70,12 @@ public export
 cong : (0 f : t -> u) -> (1 p : a = b) -> f a = f b
 cong f Refl = Refl
 
+||| Two-holed congruence.
+export
+-- These are natural in equational reasoning.
+cong2 : (0 f : t1 -> t2 -> u) -> (1 p1 : a = b) -> (1 p2 : c = d) -> f a c = f b d
+cong2 f Refl Refl = Refl
+
 --------------
 -- BOOLEANS --
 --------------
