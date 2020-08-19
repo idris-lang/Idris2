@@ -1,3 +1,3 @@
-$1 --no-banner eq.idr --check
+$1 --no-color --console-width 0 --no-banner eq.idr --check
 
 rm -rf build

@@ -24,6 +24,7 @@ import System.Directory
 import System.File
 
 import Text.Parser
+import Text.PrettyPrint.Prettyprinter
 import Utils.Binary
 import Utils.String
 import Utils.Path

@@ -1,10 +1,11 @@
 1/1: Building Cover (Cover.idr)
-Cover.idr:14:1--14:4:While processing left hand side of bad at Cover.idr:14:1--15:1:
-Can't match on Just (fromInteger 0) as it has a polymorphic type at:
-14	bad (Just 0) _ = False
-	^^^
+Error: While processing left hand side of bad. Can't match on Just (fromInteger 0) as it has a polymorphic type.
 
-Main> Main.okay:
-okay (S _) IsNat
+Cover.idr:14:1--14:4
+    |
+ 14 | bad (Just 0) _ = False
+    | ^^^
+
+Main> Main.okay: okay (S _) IsNat
 okay False IsBool
 Main> Bye for now!

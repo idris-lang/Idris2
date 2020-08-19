@@ -1,4 +1,4 @@
-$1 --no-banner --no-prelude IFace.idr < input
-$1 --no-banner --no-prelude IFace1.idr < input1
+$1 --no-color --console-width 0 --no-banner --no-prelude IFace.idr < input
+$1 --no-color --console-width 0 --no-banner --no-prelude IFace1.idr < input1
 
 rm -rf build

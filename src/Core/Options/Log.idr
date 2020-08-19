@@ -7,6 +7,7 @@ import Data.StringMap
 import Data.StringTrie
 import Data.Strings
 import Data.These
+import Text.PrettyPrint.Prettyprinter
 
 %default total
 
@@ -83,6 +84,11 @@ Show LogLevel where
   show (MkLogLevel ps n) = case ps of
     [] => show n
     _  => fastAppend (intersperse "." ps) ++ ":" ++ show n
+
+export
+Pretty LogLevel where
+
+  pretty = pretty . show
 
 export
 parseLogLevel : String -> Maybe LogLevel

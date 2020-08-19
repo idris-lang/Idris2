@@ -34,12 +34,14 @@ record REPLOpts where
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
   -- better to stick it now.
   extraCodegens : List (String, Codegen)
+  consoleWidth : Maybe Nat -- Nothing is auto
+  color : Bool
 
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
     = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
-                 Nothing outmode "" Nothing Nothing cgs
+                 Nothing outmode "" Nothing Nothing cgs Nothing True
   where
     litStyle : Maybe String -> Maybe LiterateStyle
     litStyle Nothing = Nothing
@@ -141,3 +143,23 @@ getCodegen : {auto o : Ref ROpts REPLOpts} ->
              String -> Core (Maybe Codegen)
 getCodegen s = do opts <- get ROpts
                   pure $ lookup s (extraCodegens opts)
+
+export
+getConsoleWidth : {auto o : Ref ROpts REPLOpts} -> Core (Maybe Nat)
+getConsoleWidth = do opts <- get ROpts
+                     pure $ opts.consoleWidth
+
+export
+setConsoleWidth : {auto o : Ref ROpts REPLOpts} -> Maybe Nat -> Core ()
+setConsoleWidth n = do opts <- get ROpts
+                       put ROpts (record { consoleWidth = n } opts)
+
+export
+getColor : {auto o : Ref ROpts REPLOpts} -> Core Bool
+getColor = do opts <- get ROpts
+              pure $ opts.color
+
+export
+setColor : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
+setColor b = do opts <- get ROpts
+                put ROpts (record { color = b } opts)

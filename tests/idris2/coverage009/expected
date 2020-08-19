@@ -1,3 +1,15 @@
 1/1: Building unreachable (unreachable.idr)
-unreachable.idr:3:1--3:17:Warning: unreachable clause: foo Nothing True
-unreachable.idr:5:1--5:18:Warning: unreachable clause: foo Nothing False
+Warning: Unreachable clause: foo Nothing True
+
+unreachable.idr:3:1--3:17
+   |
+ 3 | foo Nothing True = 94
+   | ^^^^^^^^^^^^^^^^
+
+Warning: Unreachable clause: foo Nothing False
+
+unreachable.idr:5:1--5:18
+   |
+ 5 | foo Nothing False = 42
+   | ^^^^^^^^^^^^^^^^^
+

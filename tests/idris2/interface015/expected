@@ -1,26 +1,30 @@
 1/1: Building gnu (gnu.idr)
-gnu.idr:47:27--47:32:While processing right hand side of TestSurprise1 at gnu.idr:47:1--49:1:
-Multiple solutions found in search of:
-	Gnu
-at:
-47	TestSurprise1 gnu1 gnu2 = Guess
-	                          ^^^^^
+Error: While processing right hand side of TestSurprise1. Multiple solutions found in search of:
+    Gnu
+
+gnu.idr:47:27--47:32
+    |
+ 47 | TestSurprise1 gnu1 gnu2 = Guess
+    |                           ^^^^^
 
 Possible correct results:
-	gnu1
-	gnu2
-gnu.idr:50:21--50:26:While processing right hand side of TestSurprise2 at gnu.idr:50:1--52:1:
-Multiple solutions found in search of:
-	Gnu
-at:
-50	TestSurprise2 f g = Guess
-	                    ^^^^^
+    gnu1
+    gnu2
+Error: While processing right hand side of TestSurprise2. Multiple solutions found in search of:
+    Gnu
+
+gnu.idr:50:21--50:26
+    |
+ 50 | TestSurprise2 f g = Guess
+    |                     ^^^^^
 
 Possible correct results:
-	f ()
-	g ()
-gnu.idr:53:19--53:24:While processing right hand side of TestSurprise3 at gnu.idr:53:1--54:1:
-Can't find an implementation for Gnu at:
-53	TestSurprise3 f = Guess
-	                  ^^^^^
+    f ()
+    g ()
+Error: While processing right hand side of TestSurprise3. Can't find an implementation for Gnu.
+
+gnu.idr:53:19--53:24
+    |
+ 53 | TestSurprise3 f = Guess
+    |                   ^^^^^
 

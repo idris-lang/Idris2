@@ -1,3 +1,3 @@
-$1 --check Rewrite.idr
+$1 --no-color --console-width 0 --check Rewrite.idr
 
 rm -rf build

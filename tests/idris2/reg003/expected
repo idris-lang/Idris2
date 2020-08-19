@@ -1,39 +1,59 @@
 1/1: Building Holes (Holes.idr)
-Holes.idr:4:64--4:85:While processing type of Vect_ext at Holes.idr:4:1--5:11:
-Undefined name ~=~ at:
-4	Vect_ext : (v : Vect n a) -> (w : Vect n a) -> ((i : Fin n) -> index i v = index i w)
-	                                                               ^^^^^^^^^^^^^^^^^^^^^
+Error: While processing type of Vect_ext. Undefined name ~=~. 
 
-Holes.idr:7:26--7:31:While processing type of Weird at Holes.idr:7:1--7:31:
-Undefined name ~=~ at:
-7	Weird : (v: Vect n a) -> v = v
-	                         ^^^^^
+Holes.idr:4:64--4:85
+   |
+ 4 | Vect_ext : (v : Vect n a) -> (w : Vect n a) -> ((i : Fin n) -> index i v = index i w)
+   |                                                                ^^^^^^^^^^^^^^^^^^^^^
 
-Holes.idr:8:1--10:1:No type declaration for Main.Weird at:
-8	Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
-9	
-10	f : Bool -> Nat
+Error: While processing type of Weird. Undefined name ~=~. 
 
-Holes.idr:10:5--10:9:While processing type of f at Holes.idr:10:1--10:16:
-Undefined name Bool at:
-10	f : Bool -> Nat
-	    ^^^^
+Holes.idr:7:26--7:31
+   |
+ 7 | Weird : (v: Vect n a) -> v = v
+   |                          ^^^^^
 
-Holes.idr:11:1--12:1:No type declaration for Main.f at:
-11	f True = 0
-12	f True = ?help
+Error: No type declaration for Main.Weird.
 
-Main> (interactive):1:4--1:8:Undefined name help at:
-1	:t help
-	   ^^^^
+Holes.idr:8:1--8:41
+   |
+ 8 | Weird v =  Vect_ext ?hole0 ?hole1 ?hole2
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Main> (interactive):1:4--1:9:Undefined name hole0 at:
-1	:t hole0
-	   ^^^^^
+Error: While processing type of f. Undefined name Bool. 
 
-Main> (interactive):1:4--1:9:Undefined name hole1 at:
-1	:t hole1
-	   ^^^^^
+Holes.idr:10:5--10:9
+    |
+ 10 | f : Bool -> Nat
+    |     ^^^^
+
+Error: No type declaration for Main.f.
+
+Holes.idr:11:1--11:11
+    |
+ 11 | f True = 0
+    | ^^^^^^^^^^
+
+Main> Error: Undefined name help. 
+
+(interactive):1:4--1:8
+   |
+ 1 | :t help
+   |    ^^^^
+
+Main> Error: Undefined name hole0. 
+
+(interactive):1:4--1:9
+   |
+ 1 | :t hole0
+   |    ^^^^^
+
+Main> Error: Undefined name hole1. 
+
+(interactive):1:4--1:9
+   |
+ 1 | :t hole1
+   |    ^^^^^
 
 Main> Unknown name hole1
 Main> Bye for now!

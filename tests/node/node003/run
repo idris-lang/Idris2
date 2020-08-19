@@ -1,2 +1,2 @@
-$1 --cg node --no-banner IORef.idr < input
+$1 --no-color --console-width 0 --cg node --no-banner IORef.idr < input
 rm -rf build

@@ -1,8 +1,6 @@
 1/1: Building Total (Total.idr)
-Main> Main.onlyOne:
-onlyOne _
+Main> Main.onlyOne: onlyOne _
 Main> Main.covered: All cases covered
 Main> Main.matchInt: All cases covered
-Main> Main.matchInt':
-matchInt' _ _ _
+Main> Main.matchInt': matchInt' _ _ _
 Main> Bye for now!

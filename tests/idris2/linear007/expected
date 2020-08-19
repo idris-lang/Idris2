@@ -1,8 +1,10 @@
 1/1: Building LCase (LCase.idr)
-LCase.idr:7:11--10:13:While processing right hand side of foo at LCase.idr:6:1--12:1:
-There are 0 uses of linear name y at:
-7	    = let 1 test = the Nat $ case z of
-8	                        Z => Z
-9	                        (S k) => S z
-10	            in
+Error: While processing right hand side of foo. There are 0 uses of linear name y. 
 
+LCase.idr:7:11--10:15
+ 07 |     = let 1 test = the Nat $ case z of
+ 08 |                         Z => Z
+ 09 |                         (S k) => S z
+ 10 |             in
+
+Suggestion: linearly bounded variables must be used exactly once.

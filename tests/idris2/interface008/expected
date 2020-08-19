@@ -1,6 +1,8 @@
 1/1: Building Deps (Deps.idr)
-Deps.idr:18:13--18:14:While processing right hand side of badcard at Deps.idr:18:3--19:3:
-k is not accessible in this context at:
-18	  badcard = k
-	            ^
+Error: While processing right hand side of badcard. k is not accessible in this context.
+
+Deps.idr:18:13--18:14
+    |
+ 18 |   badcard = k
+    |             ^
 

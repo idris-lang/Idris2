@@ -1,11 +1,9 @@
 1/1: Building Main (Main.idr)
-Main.idr:27:26--27:72:While processing right hand side of dpairWithExtraInfoBad at Main.idr:27:1--28:1:
-When unifying [MN 0, MN 0] and [MN 0]
-Mismatch between:
-	[MN 0]
-and
-	[]
-at:
-27	dpairWithExtraInfoBad = [([MN 0] ** CLocal {x=MN 0} (First {ns=[MN 0]}))]
-	                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: While processing right hand side of dpairWithExtraInfoBad. When unifying [MN 0, MN 0] and [MN 0].
+Mismatch between: [MN 0] and [].
+
+Main.idr:27:26--27:73
+    |
+ 27 | dpairWithExtraInfoBad = [([MN 0] ** CLocal {x=MN 0} (First {ns=[MN 0]}))]
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

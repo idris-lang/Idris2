@@ -1,3 +1,3 @@
-$1 --check --no-banner MyFirstIdrisProgram.org
+$1 --no-color --console-width 0 --check --no-banner MyFirstIdrisProgram.org
 
 rm -rf build

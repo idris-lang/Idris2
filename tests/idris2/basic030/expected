@@ -1,11 +1,9 @@
 1/1: Building arity (arity.idr)
-arity.idr:4:16--4:21:While processing right hand side of foo at arity.idr:4:1--7:1:
-When unifying (1 _ : Nat) -> MyN and MyN
-Mismatch between:
-	(1 _ : Nat) -> MyN
-and
-	MyN
-at:
-4	foo x y = case MkN x of
-	               ^^^^^
+Error: While processing right hand side of foo. When unifying (1 _ : Nat) -> MyN and MyN.
+Mismatch between: (1 _ : Nat) -> MyN and MyN.
+
+arity.idr:4:16--4:21
+   |
+ 4 | foo x y = case MkN x of
+   |                ^^^^^
 

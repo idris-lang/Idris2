@@ -78,6 +78,7 @@ modules =
     Idris.ModTree,
     Idris.Package,
     Idris.Parser,
+    Idris.Pretty,
     Idris.ProcessIdr,
     Idris.REPL,
     Idris.REPLCommon,
@@ -112,6 +113,7 @@ modules =
     Parser.Rule.Package,
     Parser.Rule.Source,
 
+    Text.Bounded,
     Text.Literate,
     Text.Quantity,
     Text.Token,
@@ -173,6 +175,7 @@ modules =
     Utils.Path,
     Utils.Shunting,
     Utils.String,
+    Utils.Term,
 
     Yaffle.Main,
     Yaffle.REPL

@@ -22,6 +22,7 @@ import Idris.Parser
 import Idris.REPLCommon
 import Idris.REPLOpts
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
 import Data.NameMap
@@ -203,9 +204,9 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData Token -> Bool
+    isColon : WithBounds Token -> Bool
     isColon t
-        = case tok t of
+        = case t.val of
                Symbol ":" => True
                _ => False
 
@@ -229,7 +230,7 @@ processMod : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto m : Ref MD Metadata} ->
              {auto o : Ref ROpts REPLOpts} ->
-             (srcf : String) -> (ttcf : String) -> (msg : String) ->
+             (srcf : String) -> (ttcf : String) -> (msg : Doc IdrisAnn) ->
              (sourcecode : String) ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
@@ -317,7 +318,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          String -> FileName ->
+          Doc IdrisAnn -> FileName ->
           Core (List Error)
 process buildmsg file
     = do Right res <- coreLift (readFile file)

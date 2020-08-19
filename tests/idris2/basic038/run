@@ -1,3 +1,3 @@
-$1 --no-banner Resugar.idr < input
+$1 --no-color --console-width 0 --no-banner Resugar.idr < input
 
 rm -rf build

@@ -1,5 +1,9 @@
 1/1: Building NoInfer (NoInfer.idr)
-NoInfer.idr:1:7--1:8:Unsolved holes:
-Main.{_:1} introduced at NoInfer.idr:1:7--1:8
+Error: Unsolved holes:
+Main.{_:1} introduced at: 
+NoInfer.idr:1:7--1:8
+   |
+ 1 | foo : ? -> Int
+   |       ^
 
 Main> Bye for now!

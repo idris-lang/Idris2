@@ -62,15 +62,15 @@ rawTokens delims ls =
        ++ [(notCodeLine, Any)]
 
 ||| Merge the tokens into a single source file.
-reduce : List (TokenData Token) -> List String -> String
+reduce : List (WithBounds Token) -> List String -> String
 reduce [] acc = fastAppend (reverse acc)
-reduce (MkToken _ _ _ _ (Any x) :: rest) acc = reduce rest (blank_content::acc)
+reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc = reduce rest (blank_content::acc)
   where
     -- Preserve the original document's line count.
     blank_content : String
     blank_content = fastAppend (replicate (length (lines x)) "\n")
 
-reduce (MkToken _ _ _ _ (CodeLine m src) :: rest) acc =
+reduce (MkBounded (CodeLine m src) _ _ _ _ _ :: rest) acc =
     if m == trim src
     then reduce rest ("\n"::acc)
     else reduce rest ((substr (length m + 1) -- remove space to right of marker.
@@ -78,11 +78,11 @@ reduce (MkToken _ _ _ _ (CodeLine m src) :: rest) acc =
                               src
                       )::acc)
 
-reduce (MkToken _ _ _ _ (CodeBlock l r src) :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
-  reduce (MkToken _ _ _ _ (CodeBlock l r src) :: rest) acc | [] = reduce rest acc -- 1
-  reduce (MkToken _ _ _ _ (CodeBlock l r src) :: rest) acc | (s :: ys) with (snocList ys)
-    reduce (MkToken _ _ _ _ (CodeBlock l r src) :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
-    reduce (MkToken _ _ _ _ (CodeBlock l r src) :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
+reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
+  reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | [] = reduce rest acc -- 1
+  reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: ys) with (snocList ys)
+    reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
+    reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
         reduce rest ("\n" :: unlines srcs :: acc)
 
 -- [ NOTE ] 1 & 2 shouldn't happen as code blocks are well formed i.e. have two deliminators.
@@ -184,7 +184,7 @@ isLiterateLine : (specification : LiterateStyle)
               -> (str : String)
               -> Pair (Maybe String) String
 isLiterateLine (MkLitStyle delims markers _) str with (lex (rawTokens delims markers) str)
-  isLiterateLine (MkLitStyle delims markers _) str | ([MkToken _ _ _ _ (CodeLine m str')], (_,_, "")) = (Just m, str')
+  isLiterateLine (MkLitStyle delims markers _) str | ([MkBounded (CodeLine m str') _ _ _ _ _], (_,_, "")) = (Just m, str')
   isLiterateLine (MkLitStyle delims markers _) str | (_, _) = (Nothing, str)
 
 ||| Given a 'literate specification' embed the given code using the

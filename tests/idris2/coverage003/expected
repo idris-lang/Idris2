@@ -1,13 +1,13 @@
 1/1: Building Cover (Cover.idr)
-Cover.idr:16:1--16:7:While processing left hand side of badBar at Cover.idr:16:1--17:1:
-Can't match on 0 as it has a polymorphic type at:
-16	badBar Z = Z
-	^^^^^^
+Error: While processing left hand side of badBar. Can't match on 0 as it has a polymorphic type.
 
-Main> Main.foo:
-foo (0, S _)
+Cover.idr:16:1--16:7
+    |
+ 16 | badBar Z = Z
+    | ^^^^^^
+
+Main> Main.foo: foo (0, S _)
 foo (S _, _)
-Main> Main.bar:
-bar _
+Main> Main.bar: bar _
 Main> Main.cty: All cases covered
 Main> Bye for now!

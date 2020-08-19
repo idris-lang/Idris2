@@ -1,11 +1,15 @@
 1/1: Building Rewrite (Rewrite.idr)
-Rewrite.idr:15:25--15:57:While processing right hand side of wrongCommutes at Rewrite.idr:15:1--17:1:
-Rewriting by m + k = k + m did not change type S k + m = m + S k at:
-15	wrongCommutes (S k) m = rewrite plusCommutes m k in ?bar
-	                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: While processing right hand side of wrongCommutes. Rewriting by m + k = k + m did not change type S k + m = m + S k.
 
-Rewrite.idr:19:26--19:43:While processing right hand side of wrongCommutes2 at Rewrite.idr:19:1--20:1:
-Nat is not a rewrite rule type at:
-19	wrongCommutes2 (S k) m = rewrite m in ?bar
-	                         ^^^^^^^^^^^^^^^^^
+Rewrite.idr:15:25--15:57
+    |
+ 15 | wrongCommutes (S k) m = rewrite plusCommutes m k in ?bar
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing right hand side of wrongCommutes2. Nat is not a rewrite rule type.
+
+Rewrite.idr:19:26--19:43
+    |
+ 19 | wrongCommutes2 (S k) m = rewrite m in ?bar
+    |                          ^^^^^^^^^^^^^^^^^
 

@@ -6,6 +6,8 @@ Main> [1, 2, 3, 4]
 Main> [4, 3, 2, 1]
 Main> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 Main> [100, 99, 98, 97, 96, 95, 94, 93, 92, 91]
-Main> Parse error: Invalid list range syntax (next tokens: [end of input])
-Main> Parse error: Invalid list range syntax (next tokens: [end of input])
+Main> Parse error at line 1:12:
+Invalid list range syntax (next tokens: [end of input])
+Main> Parse error at line 1:7:
+Invalid list range syntax (next tokens: [end of input])
 Main> Bye for now!

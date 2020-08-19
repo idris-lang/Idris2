@@ -1,11 +1,15 @@
-Main> (interactive):1:1--1:25:Undefined name fromMaybe at:
-1	fromMaybe "test" Nothing
-	^^^^^^^^^^^^^^^^^^^^^^^^
+Main> Error: Undefined name fromMaybe. 
+
+(interactive):1:1--1:25
+   |
+ 1 | fromMaybe "test" Nothing
+   | ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Main> Imported module Data.Maybe
 Main> "test"
 Main> Imported module Data.Strings
 Main> "hello"
 Main> True
-Main> Error loading module DoesNotExists: DoesNotExists not found
+Main> Error loading module DoesNotExists: Module DoesNotExists not found
+
 Main> Bye for now!

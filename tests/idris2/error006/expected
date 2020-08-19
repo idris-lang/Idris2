@@ -1,11 +1,15 @@
 1/1: Building IfErr (IfErr.idr)
-IfErr.idr:15:10--15:30:While processing right hand side of test at IfErr.idr:15:1--17:1:
-Can't find an implementation for Eq Foo at:
-15	test x = showIfEq MkFoo MkBar
-	         ^^^^^^^^^^^^^^^^^^^^
+Error: While processing right hand side of test. Can't find an implementation for Eq Foo.
 
-IfErr.idr:23:9--23:29:While processing right hand side of test2 at IfErr.idr:23:1--25:1:
-Can't find an implementation for Show Foo at:
-23	test2 = showIfEq MkFoo MkBar
-	        ^^^^^^^^^^^^^^^^^^^^
+IfErr.idr:15:10--15:30
+    |
+ 15 | test x = showIfEq MkFoo MkBar
+    |          ^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing right hand side of test2. Can't find an implementation for Show Foo.
+
+IfErr.idr:23:9--23:29
+    |
+ 23 | test2 = showIfEq MkFoo MkBar
+    |         ^^^^^^^^^^^^^^^^^^^^
 

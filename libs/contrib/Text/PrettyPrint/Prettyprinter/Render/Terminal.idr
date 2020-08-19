@@ -2,7 +2,7 @@ module Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import Data.Maybe
 import Data.Strings
-import Control.ANSI
+import public Control.ANSI
 import Control.Monad.ST
 import Text.PrettyPrint.Prettyprinter.Doc
 
@@ -39,7 +39,7 @@ strike = pure $ SetStyle Striked
 export
 renderString : SimpleDocStream AnsiStyle -> String
 renderString sdoc = fromMaybe "<internal pretty printing error>" $ runST $ do
-    styleStackRef <- newSTRef {a = List (List SGR)} [neutral]
+    styleStackRef <- newSTRef {a = List AnsiStyle} [neutral]
     outputRef <- newSTRef {a = String} neutral
     go styleStackRef outputRef sdoc
     readSTRef styleStackRef >>= \case

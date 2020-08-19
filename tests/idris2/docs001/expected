@@ -12,7 +12,6 @@ Z : Nat
 	 Zero.
 S : (1 _ : Nat) -> Nat
 	 Successor.
-
 Main> Prelude.List : (1 _ : Type) -> Type
 	 Generic lists.
 
@@ -20,7 +19,6 @@ Constructors:
 Nil : List a
 	 Empty list
 :: : (1 _ : a) -> (1 _ : List a) -> List a
-
 Main> Prelude.Show : Type -> Type
 	 Things that have a canonical `String` representation.
 Parameters: ty
@@ -61,7 +59,6 @@ Implementations:
 	Show a => Show (List a)
 	Show a => Show (Maybe a)
 	(Show a, Show b) => Show (Either a b)
-
 Main> Prelude.show : Show ty => ty -> String
 	 Convert a value to its `String` representation.
 	 @ x the value to convert
@@ -82,5 +79,4 @@ Implementations:
 	Monad Maybe
 	Monad (Either e)
 	Monad List
-
 Main> Bye for now!

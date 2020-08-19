@@ -1,10 +1,8 @@
 1/1: Building boom (boom.idr)
-boom.idr:23:42--23:66:While processing right hand side of with block in eraseVar at boom.idr:23:3--24:3:
-Can't solve constraint between:
-	S (countGreater thr xs)
-and
-	countGreater thr xs
-at:
-23	  eraseVar thr (x :: xs) (FS i) | True = FS <$> eraseVar thr xs i
-	                                         ^^^^^^^^^^^^^^^^^^^^^^^^
+Error: While processing right hand side of with block in eraseVar. Can't solve constraint between: S (countGreater thr xs) and countGreater thr xs.
+
+boom.idr:23:42--23:66
+    |
+ 23 |   eraseVar thr (x :: xs) (FS i) | True = FS <$> eraseVar thr xs i
+    |                                          ^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -1,12 +1,11 @@
 1/1: Building Vect (Vect.idr)
 Main> Main> Cons (S Z) (Cons (S (S Z)) []) : Vect (S (S Z)) Nat
-Main> (interactive):1:28--1:51:When unifying Vect (S (S Z)) Nat and Vect (S Z) Nat
-Mismatch between:
-	S Z
-and
-	Z
-at:
-1	zipWith plus (Cons Z Nil) (Cons (S Z) (Cons Z Nil))
-	                           ^^^^^^^^^^^^^^^^^^^^^^^
+Main> Error: When unifying Vect (S (S Z)) Nat and Vect (S Z) Nat.
+Mismatch between: S Z and Z.
+
+(interactive):1:28--1:51
+   |
+ 1 | zipWith plus (Cons Z Nil) (Cons (S Z) (Cons Z Nil))
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^
 
 Main> Bye for now!
