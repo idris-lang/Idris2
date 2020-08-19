@@ -1,3 +1,3 @@
-$1 --no-color --consolewidth 0 --check Lambda.idr
+$1 --no-color --console-width 0 --check Lambda.idr
 
 rm -rf build

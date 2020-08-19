@@ -220,7 +220,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
               (Just "Quiet mode; display fewer messages"),
-           MkOpt ["--consolewidth"] [AutoNat "console width"] (\l => [ConsoleWidth l])
+           MkOpt ["--console-width"] [AutoNat "console width"] (\l => [ConsoleWidth l])
               (Just "Width for console output (0 for unbounded) (auto by default)"),
            MkOpt ["--color", "--colour"] [] ([Color True])
               (Just "Forces colored console output (enabled by default)"),
