@@ -28,6 +28,7 @@ import System
 import System.Directory
 import System.File
 import Utils.Path
+import Utils.Term
 
 import Yaffle.Main
 
@@ -233,9 +234,9 @@ mainWithCodegens cgs = do Right opts <- getCmdOpts
                                              putStrLn usage
                           continue <- quitOpts opts
                           if continue
-                              then
-                                  coreRun (stMain cgs opts)
-                                    (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
-                                                        exitWith (ExitFailure 1))
-                                    (\res => pure ())
+                              then do setupTerm
+                                      coreRun (stMain cgs opts)
+                                        (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
+                                                            exitWith (ExitFailure 1))
+                                        (\res => pure ())
                               else pure ()
