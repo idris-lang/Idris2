@@ -20,6 +20,13 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))

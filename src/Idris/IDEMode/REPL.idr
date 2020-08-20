@@ -374,6 +374,11 @@ displayIDEResult outf i (Term t)
   = printIDEResult outf i $ StringAtom t
 displayIDEResult outf i (TTTerm t)
   = printIDEResult outf i $ StringAtom t
+displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
+  = let width = case mn of 
+                    Just k  => show k
+                    Nothing => "auto"
+    in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
 displayIDEResult outf i  _ = pure ()
 
 

@@ -19,6 +19,10 @@ int idris2_isNull(void* ptr) {
     return (ptr == NULL);
 }
 
+void *idris2_getNull() {
+    return NULL;
+}
+
 char* idris2_getString(void *p) {
     return (char*)p;
 }

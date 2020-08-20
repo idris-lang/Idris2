@@ -158,10 +158,32 @@ schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
 
+schOp (Cast IntType Bits8Type) [x] = op "integer->bits8" [x]
+schOp (Cast IntType Bits16Type) [x] = op "integer->bits16" [x]
+schOp (Cast IntType Bits32Type) [x] = op "integer->bits32" [x]
+schOp (Cast IntType Bits64Type) [x] = op "integer->bits64" [x]
+
 schOp (Cast IntegerType Bits8Type) [x] = op "integer->bits8" [x]
 schOp (Cast IntegerType Bits16Type) [x] = op "integer->bits16" [x]
 schOp (Cast IntegerType Bits32Type) [x] = op "integer->bits32" [x]
 schOp (Cast IntegerType Bits64Type) [x] = op "integer->bits64" [x]
+
+schOp (Cast Bits8Type Bits16Type) [x] = x
+schOp (Cast Bits8Type Bits32Type) [x] = x
+schOp (Cast Bits8Type Bits64Type) [x] = x
+
+schOp (Cast Bits16Type Bits8Type) [x] = op "bits16->bits8" [x]
+schOp (Cast Bits16Type Bits32Type) [x] = x
+schOp (Cast Bits16Type Bits64Type) [x] = x
+
+schOp (Cast Bits32Type Bits8Type) [x] = op "bits32->bits8" [x]
+schOp (Cast Bits32Type Bits16Type) [x] = op "bits32->bits16" [x]
+schOp (Cast Bits32Type Bits64Type) [x] = x
+
+schOp (Cast Bits64Type Bits8Type) [x] = op "bits64->bits8" [x]
+schOp (Cast Bits64Type Bits16Type) [x] = op "bits64->bits16" [x]
+schOp (Cast Bits64Type Bits32Type) [x] = op "bits64->bits32" [x]
+
 
 schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
