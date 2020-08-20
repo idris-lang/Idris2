@@ -9,6 +9,9 @@ interface Monad m => MonadReader stateType (m : Type -> Type) | m where
   ||| Get the context
   ask : m stateType
 
+  ||| `local f c` runs the computation `c` in an environment modified by `f`.
+  local : MonadReader stateType m => (stateType -> stateType) -> m a -> m a
+
 ||| The transformer on which the Reader monad is based
 public export
 record ReaderT (stateType : Type) (m: Type -> Type) (a: Type) where
@@ -43,6 +46,8 @@ implementation MonadTrans (ReaderT stateType) where
 public export
 implementation Monad m => MonadReader stateType (ReaderT stateType m) where
   ask = MkReaderT (\st => pure st)
+
+  local f (MkReaderT action) = MkReaderT (action . f)
 
 public export
 implementation HasIO m => HasIO (ReaderT stateType m) where
