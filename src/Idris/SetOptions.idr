@@ -52,6 +52,9 @@ preOptions (ExecFn _ :: opts)
 preOptions (IdeMode :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
+preOptions (IdeModeSocket _ :: opts)
+    = do setSession (record { nobanner = True } !getSession)
+         preOptions opts
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
