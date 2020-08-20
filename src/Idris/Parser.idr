@@ -362,9 +362,11 @@ mutual
            pure (PIdiom (boundToFC fname b) b.val)
     <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
            pure (PRunElab (boundToFC fname b) b.val)
-    <|> do b <- bounds (MkPair <$> (mkLogLevel' <$> (pragma "logging" *> optional namespacedIdent)
-                                                                     <*> (integerToNat <$> intLit))
-                               <*> expr pdef fname indents)
+    <|> do b <- bounds $ do pragma "logging"
+                            topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
+                            lvl   <- intLit
+                            e     <- expr pdef fname indents
+                            pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
            (lvl, e) <- pure b.val
            pure (PUnifyLog (boundToFC fname b) lvl e)
 
@@ -970,7 +972,7 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do pragma "logging"
-         topic <- optional namespacedIdent
+         topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
          lvl <- intLit
          atEnd indents
          pure (Logging (mkLogLevel' topic (fromInteger lvl)))
