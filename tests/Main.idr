@@ -41,7 +41,7 @@ idrisTests
        "basic026", "basic027", "basic028", "basic029", "basic030",
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
-       "basic041", "basic042",
+       "basic041", "basic042", "basic043",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -125,14 +125,14 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026", "chez027", "chez028",
+      "chez025", "chez026", "chez027", "chez028", "chez029",
       "reg001"]
 
 nodeTests : List String
 nodeTests
   = [ "node001", "node002", "node003", "node004", "node005", "node006", "node007", "node008", "node009"
     , "node011", "node012", "node015", "node017", "node018", "node019" -- node014
-    , "node021" --, "node020"
+    , "node021", "node022" --, "node020"
     , "reg001"
     , "syntax001"
     , "tailrec001"

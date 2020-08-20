@@ -246,10 +246,33 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+
+jsOp (Cast IntType Bits8Type) [x] = boundedUInt 8 x
+jsOp (Cast IntType Bits16Type) [x] = boundedUInt 16 x
+jsOp (Cast IntType Bits32Type) [x] = boundedUInt 32 x
+jsOp (Cast IntType Bits64Type) [x] = boundedUInt 64 x
+
 jsOp (Cast IntegerType Bits8Type) [x] = boundedUInt 8 x
 jsOp (Cast IntegerType Bits16Type) [x] = boundedUInt 16 x
 jsOp (Cast IntegerType Bits32Type) [x] = boundedUInt 32 x
 jsOp (Cast IntegerType Bits64Type) [x] = boundedUInt 64 x
+
+jsOp (Cast Bits8Type Bits16Type) [x] = pure x
+jsOp (Cast Bits8Type Bits32Type) [x] = pure x
+jsOp (Cast Bits8Type Bits64Type) [x] = pure x
+
+jsOp (Cast Bits16Type Bits8Type) [x] = boundedUInt 8 x
+jsOp (Cast Bits16Type Bits32Type) [x] = pure x
+jsOp (Cast Bits16Type Bits64Type) [x] = pure x
+
+jsOp (Cast Bits32Type Bits8Type) [x] = boundedUInt 8 x
+jsOp (Cast Bits32Type Bits16Type) [x] = boundedUInt 16 x
+jsOp (Cast Bits32Type Bits64Type) [x] = pure x
+
+jsOp (Cast Bits64Type Bits8Type) [x] = boundedUInt 8 x
+jsOp (Cast Bits64Type Bits16Type) [x] = boundedUInt 16 x
+jsOp (Cast Bits64Type Bits32Type) [x] = boundedUInt 32 x
+
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
