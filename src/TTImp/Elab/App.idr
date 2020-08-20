@@ -99,9 +99,9 @@ getVarType rigc nest env fc x
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
                              do checkVisibleNS fc (fullname ndef) (visibility ndef)
-                                logTerm 5 ("Type of " ++ show n') tyenv
-                                logTerm 5 ("Expands to") tm
-                                log 5 $ "Arg length " ++ show arglen
+                                logTerm "elab" 5 ("Type of " ++ show n') tyenv
+                                logTerm "elab" 5 ("Expands to") tm
+                                log "elab" 5 $ "Arg length " ++ show arglen
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
@@ -320,12 +320,12 @@ mutual
   dotErased argty mn argpos (InLHS lrig ) rig tm
       = if not (isErased lrig) && isErased rig
           then do
-            -- if the argument type aty has a single constructor, there's no need 
+            -- if the argument type aty has a single constructor, there's no need
             -- to dot it
             mconsCount <- countConstructors argty
             if mconsCount == Just 1 || mconsCount == Just 0
               then pure tm
-              else 
+              else
                 -- if argpos is an erased position of 'n', leave it, otherwise dot if
                 -- necessary
                 do defs <- get Ctxt
@@ -338,7 +338,7 @@ mutual
     where
       ||| Count the constructors of a fully applied concrete datatype
       countConstructors : NF vars -> Core (Maybe Nat)
-      countConstructors (NTCon _ tycName _ n args) = 
+      countConstructors (NTCon _ tycName _ n args) =
         if length args == n
         then do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact tycName (gamma defs)
@@ -348,7 +348,7 @@ mutual
                 pure (Just (length datacons))
         else pure Nothing
       countConstructors _ = pure Nothing
-    
+
       dotTerm : RawImp -> RawImp
       dotTerm tm
           = case tm of
@@ -397,14 +397,14 @@ mutual
              metaty <- quote empty env aty
              (idx, metaval) <- argVar (getFC arg) argRig env nm metaty
              let fntm = App fc tm metaval
-             logNF 10 ("Delaying " ++ show nm ++ " " ++ show arg) env aty
-             logTerm 10 "...as" metaval
+             logNF "elab" 10 ("Delaying " ++ show nm ++ " " ++ show arg) env aty
+             logTerm "elab" 10 "...as" metaval
              fnty <- sc defs (toClosure defaultOpts env metaval)
              (tm, gty) <- checkAppWith rig elabinfo nest env fc
                                        fntm fnty (n, 1 + argpos) expargs impargs kr expty
              defs <- get Ctxt
              aty' <- nf defs env metaty
-             logNF 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
+             logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
              (argv, argt) <- check argRig elabinfo
                                    nest env arg (Just (glueBack defs env aty'))
              when (onLHS (elabMode elabinfo)) $
@@ -414,7 +414,7 @@ mutual
              -- *may* have as patterns in it and we need to retain them.
              -- (As patterns are a bit of a hack but I don't yet see a
              -- better way that leads to good code...)
-             logTerm 5 ("Solving " ++ show metaval ++ " with") argv
+             logTerm "elab" 5 ("Solving " ++ show metaval ++ " with") argv
              ok <- solveIfUndefined env metaval argv
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
@@ -435,16 +435,17 @@ mutual
              removeHole idx
              pure (tm, gty)
            else do
-             logNF 10 ("Argument type " ++ show x) env aty
-             logNF 10 ("Full function type") env
+             logNF "elab" 10 ("Argument type " ++ show x) env aty
+             logNF "elab" 10 ("Full function type") env
                       (NBind fc x (Pi argRig Explicit aty) sc)
-             logC 10 (do ety <- maybe (pure Nothing)
+             logC "elab" 10
+                     (do ety <- maybe (pure Nothing)
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
              (argv, argt) <- check argRig elabinfo
                                    nest env arg (Just (glueBack defs env aty))
-             logGlueNF 10 "Got arg type" env argt
+             logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
              let fntm = App fc tm argv
              fnty <- sc defs (toClosure defaultOpts env argv)
@@ -597,8 +598,8 @@ mutual
   checkAppWith {vars} rig elabinfo nest env fc tm ty (n, argpos) (arg :: expargs) impargs kr expty
       = -- Invent a function type,  and hope that we'll know enough to solve it
         -- later when we unify with expty
-        do logNF 10 "Function type" env ty
-           logTerm 10 "Function " tm
+        do logNF "elab.with" 10 "Function type" env ty
+           logTerm "elab.with" 10 "Function " tm
            argn <- genName "argTy"
            retn <- genName "retTy"
            argTy <- metaVar fc erased env argn (TType fc)
@@ -612,8 +613,8 @@ mutual
            defs <- get Ctxt
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi top Explicit argTy) (weaken retTy))
-           logGlue 10 "Expected function type" env expfnty
-           maybe (pure ()) (logGlue 10 "Expected result type" env) expty
+           logGlue "elab.with" 10 "Expected function type" env expfnty
+           maybe (pure ()) (logGlue "elab.with" 10 "Expected result type" env) expty
            res <- checkAppWith rig elabinfo nest env fc fntm fnty (n, 1 + argpos) expargs impargs kr expty
            cres <- Check.convert fc elabinfo env (glueBack defs env ty) expfnty
            let [] = constraints cres
@@ -646,7 +647,8 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
                      [!fromIntegerName, !fromStringName, !fromCharName]
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
-        logC 10 (do defs <- get Ctxt
+        logC "elab" 10
+                (do defs <- get Ctxt
                     fnty <- quote defs env nty
                     exptyt <- maybe (pure Nothing)
                                        (\t => do ety <- getTerm t

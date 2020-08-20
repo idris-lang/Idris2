@@ -482,11 +482,11 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF 10 "Nothing matches" [] ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" [] ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)
-             then do logTermNF 10 "Yes" env lhs
+             then do logTermNF "coverage" 10 "Yes" env lhs
                      pure Nothing -- something matches, discared it
-             else do logTermNF 10 "No match" env lhs
+             else do logTermNF "coverage" 10 "No match" env lhs
                      tryClauses cs ulhs

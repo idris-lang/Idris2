@@ -4,18 +4,18 @@ import Language.Reflection
 
 logPrims : Elab a
 logPrims
-    = do ns <- getType `{{ (++) }} 
+    = do ns <- getType `{{ (++) }}
          traverse (\ (n, ty) =>
-                        do logMsg 0 ("Name: " ++ show n)
-                           logTerm 0 "Type" ty) ns
+                        do logMsg "" 0 ("Name: " ++ show n)
+                           logTerm "" 0 "Type" ty) ns
          fail "Not really trying"
 
 logDataCons : Elab a
 logDataCons
     = do [(n, _)] <- getType `{{ Nat }}
              | _ => fail "Ambiguous name"
-         logMsg 0 ("Resolved name: " ++ show n)
-         logMsg 0 ("Constructors: " ++ show !(getCons n))
+         logMsg "" 0 ("Resolved name: " ++ show n)
+         logMsg "" 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
 logBad : Elab a
@@ -23,8 +23,8 @@ logBad
     = do [(n, _)] <- getType `{{ DoesntExist }}
              | [] => fail "Undefined name"
              | _ => fail "Ambiguous name"
-         logMsg 0 ("Resolved name: " ++ show n)
-         logMsg 0 ("Constructors: " ++ show !(getCons n))
+         logMsg "" 0 ("Resolved name: " ++ show n)
+         logMsg "" 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
 -- because the exact sequence number in a gensym depends on
@@ -50,4 +50,3 @@ dummy3 = %runElab logBad
 
 dummy4 : a
 dummy4 = %runElab tryGenSym
-

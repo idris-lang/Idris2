@@ -102,7 +102,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
              let dt = MkImpData fc tn !(bindTypeNames [] (map fst params ++
                                            map fname fields ++ vars)
                                          (mkDataTy fc params)) [] [con]
-             log 5 $ "Record data type " ++ show dt
+             log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc vis dt)
 
     countExp : Term vs -> Nat
@@ -135,7 +135,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
 
                    ty <- unelab tyenv ty_chk
                    let ty' = substNames vars upds ty
-                   log 5 $ "Field type: " ++ show ty'
+                   log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
 
                    -- Claim the projection type
@@ -143,7 +143,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
                                       IPi fc top Explicit (Just rname) recTy ty'
-                   log 5 $ "Projection " ++ show projNameNS ++ " : " ++ show projTy
+                   log "declare.record.projection" 5 $ "Projection " ++ show projNameNS ++ " : " ++ show projTy
                    processDecl [] nest env
                        (IClaim fc (if isErased rc
                                       then erased
@@ -163,7 +163,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                     else IImplicitApp fc lhs_exp (Just (UN fldNameStr))
                                              (IBindVar fc fldNameStr))
                    let rhs = IVar fc (UN fldNameStr)
-                   log 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
+                   log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef fc projNameNS [PatClause fc lhs rhs])
 
@@ -186,4 +186,3 @@ processRecord : {vars : _} ->
                 Visibility -> ImpRecord -> Core ()
 processRecord eopts nest env newns vis (MkImpRecord fc n ps cons fs)
     = elabRecord eopts fc env nest newns vis n ps cons fs
-

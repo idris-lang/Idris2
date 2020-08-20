@@ -362,9 +362,13 @@ mutual
            pure (PIdiom (boundToFC fname b) b.val)
     <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
            pure (PRunElab (boundToFC fname b) b.val)
-    <|> do b <- bounds (MkPair <$> (pragma "logging" *> intLit) <*> expr pdef fname indents)
+    <|> do b <- bounds $ do pragma "logging"
+                            topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
+                            lvl   <- intLit
+                            e     <- expr pdef fname indents
+                            pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
            (lvl, e) <- pure b.val
-           pure (PUnifyLog (boundToFC fname b) (integerToNat lvl) e)
+           pure (PUnifyLog (boundToFC fname b) lvl e)
 
   multiplicity : SourceEmptyRule (Maybe Integer)
   multiplicity
@@ -968,9 +972,10 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do pragma "logging"
+         topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
          lvl <- intLit
          atEnd indents
-         pure (Logging (fromInteger lvl))
+         pure (Logging (mkLogLevel' topic (fromInteger lvl)))
   <|> do pragma "auto_lazy"
          b <- onoff
          atEnd indents
@@ -1608,7 +1613,7 @@ Show CmdArg where
   show OptionArg = "<option>"
   show FileArg = "<file>"
   show ModuleArg = "<module>"
-  show StringArg = "<module>"
+  show StringArg = "<string>"
   show OnOffArg = "(on|off)"
   show (Args args) = showSep " " (map show args)
 
@@ -1776,6 +1781,20 @@ compileArgsCmd parseCmd command doc
       tm <- expr pdef "(interactive)" init
       pure (command tm n)
 
+loggingArgCmd : ParseCmd -> (LogLevel -> REPLCmd) -> String -> CommandDefinition
+loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, parse) where
+
+  names : List String
+  names = extractNames parseCmd
+
+  parse : Rule REPLCmd
+  parse = do
+    symbol ":"
+    runParseCmd parseCmd
+    topic <- optional namespacedIdent
+    lvl <- intLit
+    pure (command (mkLogLevel' topic (fromInteger lvl)))
+
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
   [ exprArgCmd (ParseREPLCmd ["t", "type"]) Check "Check the type of an expression"
@@ -1796,7 +1815,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
   , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
-  , numberArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
+  , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
   , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"
   , noArgCmd (ParseREPLCmd ["m", "metavars"]) Metavars "Show remaining proof obligations (metavariables or holes)"

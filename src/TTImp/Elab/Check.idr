@@ -492,8 +492,9 @@ successful allowCons ((tm, elab) :: elabs)
          md <- get MD
          defs <- branch
          catch (do -- Run the elaborator
-                   logC 5 $ do tm' <- maybe (pure (UN "__"))
-                                            toFullNames tm
+                   logC "elab" 5 $
+                            do tm' <- maybe (pure (UN "__"))
+                                             toFullNames tm
                                pure ("Running " ++ show tm')
                    res <- elab
                    -- Record post-elaborator state
@@ -511,7 +512,8 @@ successful allowCons ((tm, elab) :: elabs)
                    put EST est
                    put MD md
                    put Ctxt defs
-                   logC 5 $ do tm' <- maybe (pure (UN "__"))
+                   logC "elab" 5 $
+                            do tm' <- maybe (pure (UN "__"))
                                             toFullNames tm
                                pure ("Success " ++ show tm' ++
                                      " (" ++ show ncons' ++ " - "
@@ -654,9 +656,9 @@ convertWithLazy withLazy prec fc elabinfo env x y
                        _ => inTermP prec in
           catch
             (do let lazy = !isLazyActive && withLazy
-                logGlueNF 5 ("Unifying " ++ show withLazy ++ " "
+                logGlueNF "elab.unify" 5 ("Unifying " ++ show withLazy ++ " "
                              ++ show (elabMode elabinfo)) env x
-                logGlueNF 5 "....with" env y
+                logGlueNF "elab.unify" 5 "....with" env y
                 vs <- if isFromTerm x && isFromTerm y
                          then do xtm <- getTerm x
                                  ytm <- getTerm y
@@ -722,21 +724,21 @@ checkExpP rig prec elabinfo env fc tm got (Just exp)
     = do vs <- convertWithLazy True prec fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
-                         NoLazy => do logTerm 5 "Solved" tm
+                         NoLazy => do logTerm "elab" 5 "Solved" tm
                                       pure (tm, got)
-                         AddForce r => do logTerm 5 "Force" tm
-                                          logGlue 5 "Got" env got
-                                          logGlue 5 "Exp" env exp
+                         AddForce r => do logTerm "elab" 5 "Force" tm
+                                          logGlue "elab" 5 "Got" env got
+                                          logGlue "elab" 5 "Exp" env exp
                                           pure (TForce fc r tm, exp)
                          AddDelay r => do ty <- getTerm got
-                                          logTerm 5 "Delay" tm
+                                          logTerm "elab" 5 "Delay" tm
                                           pure (TDelay fc r ty tm, exp)
-              cs => do logTerm 5 "Not solved" tm
+              cs => do logTerm "elab" 5 "Not solved" tm
                        defs <- get Ctxt
                        empty <- clearDefs defs
                        cty <- getTerm exp
                        ctm <- newConstant fc rig env tm cty cs
-                       dumpConstraints 5 False
+                       dumpConstraints "elab" 5 False
                        case addLazy vs of
                             NoLazy => pure (ctm, got)
                             AddForce r => pure (TForce fc r tm, exp)

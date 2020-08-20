@@ -134,13 +134,13 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
 
          let (warg :: rest) = reverse wrest
              | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
-         log 5 $ show lhs ++ " against " ++ show mlhs ++
+         log "with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
-         log 5 $ "Matches: " ++ show ms
+         log "with" 5 $ "Matches: " ++ show ms
          let newlhs = apply (IVar ploc wname)
                             (map (getArgMatch ploc False warg ms) wargnames ++ rest)
-         log 5 $ "New LHS: " ++ show newlhs
+         log "with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
     dropWithArgs : Nat -> RawImp ->
@@ -171,13 +171,13 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm []
         = throw (GenericMsg fc "Badly formed 'with' application")
     updateWith fc tm (arg :: args)
-        = do log 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
+        = do log "with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
-             log 10 $ "Result: " ++ show ms
+             log "with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar fc wname)
                                 (map (getArgMatch fc True arg ms) wargnames)
-             log 10 $ "With args for RHS: " ++ show wargnames
-             log 10 $ "New RHS: " ++ show newrhs
+             log "with" 10 $ "With args for RHS: " ++ show wargnames
+             log "with" 10 $ "New RHS: " ++ show newrhs
              pure (withApply fc newrhs args)
 
     mutual

@@ -314,17 +314,17 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         = do -- set up the implicit arguments correctly in the method
              -- signatures and constraint hints
              meths <- traverse (getMethDecl env nest params meth_names) meth_sigs
-             log 5 $ "Method declarations: " ++ show meths
+             log "elab.interface" 5 $ "Method declarations: " ++ show meths
 
              consts <- traverse (getMethDecl env nest params meth_names)
                                 (map (\c => (fc, linear, [], c))
                                    (map notData constraints))
-             log 5 $ "Constraints: " ++ show consts
+             log "elab.interface" 5 $ "Constraints: " ++ show consts
 
              dt <- mkIfaceData fc vis env consts iname conName params
                                   dets meths
-             log 10 $ "Methods: " ++ show meths
-             log 5 $ "Making interface data type " ++ show dt
+             log "elab.interface" 10 $ "Methods: " ++ show meths
+             log "elab.interface" 5 $ "Making interface data type " ++ show dt
              processDecls nest env [dt]
              pure ()
       where
@@ -341,7 +341,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                                meth_names
                                                params) meth_sigs
              let fns = concat fnsm
-             log 5 $ "Top level methods: " ++ show fns
+             log "elab.interface" 5 $ "Top level methods: " ++ show fns
              traverse (processDecl [] nest env) fns
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag fc mn Inline
@@ -378,12 +378,12 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
 
              dty_imp <- bindTypeNames [] (map fst tydecls ++ vars)
                                       (bindIFace fc ity dty)
-             log 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
+             log "elab.interface" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
              let dtydecl = IClaim fc rig vis [] (MkImpTy fc dn dty_imp)
              processDecl [] nest env dtydecl
 
              let cs' = map (changeName dn) cs
-             log 5 $ "Default method body " ++ show cs'
+             log "elab.interface" 5 $ "Default method body " ++ show cs'
 
              processDecl [] nest env (IDef fc dn cs')
              -- Reset the original context, we don't need to keep the definition
@@ -423,8 +423,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                                  (map fst nconstraints)
                                                  meth_names
                                                  (map fst params)) nconstraints
-             log 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
+             log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
              traverse (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag fc mn TCInline) (map fst chints)
-

@@ -99,7 +99,7 @@ mutual
        PPostfixProjsSection : FC -> List PTerm -> List PTerm -> PTerm
 
        -- Debugging
-       PUnifyLog : FC -> Nat -> PTerm -> PTerm
+       PUnifyLog : FC -> LogLevel -> PTerm -> PTerm
 
        -- with-disambiguation
        PWithUnambigNames : FC -> List Name -> PTerm -> PTerm
@@ -222,7 +222,7 @@ mutual
   public export
   data Directive : Type where
        Hide : Name -> Directive
-       Logging : Nat -> Directive
+       Logging : LogLevel -> Directive
        LazyOn : Bool -> Directive
        UnboundImplicits : Bool -> Directive
        AmbigDepth : Nat -> Directive
@@ -432,7 +432,7 @@ data REPLCmd : Type where
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
      Browse : List String -> REPLCmd
-     SetLog : Nat -> REPLCmd
+     SetLog : LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
@@ -607,7 +607,7 @@ mutual
         = "[" ++ showPrec d start ++ " .. ]"
     showPrec d (PRangeStream _ start (Just next))
         = "[" ++ showPrec d start ++ ", " ++ showPrec d next ++ " .. ]"
-    showPrec d (PUnifyLog _ lvl tm) = showPrec d tm
+    showPrec d (PUnifyLog _ _ tm) = showPrec d tm
     showPrec d (PPostfixProjs fc rec fields)
         = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
     showPrec d (PPostfixProjsSection fc fields args)
