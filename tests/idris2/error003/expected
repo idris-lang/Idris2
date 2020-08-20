@@ -1,33 +1,26 @@
 1/1: Building Error (Error.idr)
-Error.idr:12:18--12:19:While processing right hand side of wrong at Error.idr:12:1--13:1:
-Sorry, I can't find any elaboration which works. All errors:
-If Main.length: When unifying Nat and Vect ?n ?a
-Mismatch between:
-	Nat
-and
-	Vect ?n ?a
-at:
-12	wrong x = length x
-	                 ^
+Error: While processing right hand side of wrong. Sorry, I can't find any elaboration which works. All errors:
+If Main.length: When unifying Nat and Vect ?n ?a.
+Mismatch between: Nat and Vect ?n ?a.
 
+Error.idr:12:18--12:19
+    |
+ 12 | wrong x = length x
+    |                  ^
 
-If Prelude.List.length: When unifying Nat and List ?a
-Mismatch between:
-	Nat
-and
-	List ?a
-at:
-12	wrong x = length x
-	                 ^
+If Prelude.List.length: When unifying Nat and List ?a.
+Mismatch between: Nat and List ?a.
 
+Error.idr:12:18--12:19
+    |
+ 12 | wrong x = length x
+    |                  ^
 
-If Prelude.Strings.length: When unifying Nat and String
-Mismatch between:
-	Nat
-and
-	String
-at:
-12	wrong x = length x
-	                 ^
+If Prelude.Strings.length: When unifying Nat and String.
+Mismatch between: Nat and String.
 
+Error.idr:12:18--12:19
+    |
+ 12 | wrong x = length x
+    |                  ^
 

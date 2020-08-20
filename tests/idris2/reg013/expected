@@ -1,20 +1,29 @@
 1/1: Building UnboundImplicits (UnboundImplicits.idr)
-UnboundImplicits.idr:6:22--6:23:While processing constructor Foo at UnboundImplicits.idr:6:1--9:1:
-Undefined name n at:
-6	record Foo (x : Vect n Nat) where
-	                     ^
+Error: While processing constructor Foo. Undefined name n. 
 
-UnboundImplicits.idr:9:24--9:25:Undefined name n at:
-9	parameters (Foo : Vect n Nat)
-	                       ^
+UnboundImplicits.idr:6:22--6:23
+   |
+ 6 | record Foo (x : Vect n Nat) where
+   |                      ^
 
-UnboundImplicits.idr:14:25--14:26:While processing constructor Foo at UnboundImplicits.idr:14:1--15:12:
-Undefined name n at:
-14	interface Foo (a : Vect n Nat) where
-	                        ^
+Error: Undefined name n. 
 
-UnboundImplicits.idr:17:30--17:31:While processing type of Functor implementation at UnboundImplicits.idr:17:1--18:1 at UnboundImplicits.idr:17:1--18:1:
-Undefined name n at:
-17	implementation Functor (Vect n) where
-	                             ^
+UnboundImplicits.idr:9:24--9:25
+   |
+ 9 | parameters (Foo : Vect n Nat)
+   |                        ^
+
+Error: While processing constructor Foo. Undefined name n. 
+
+UnboundImplicits.idr:14:25--14:26
+    |
+ 14 | interface Foo (a : Vect n Nat) where
+    |                         ^
+
+Error: While processing type of Functor implementation at UnboundImplicits.idr:17:1--18:1. Undefined name n. 
+
+UnboundImplicits.idr:17:30--17:31
+    |
+ 17 | implementation Functor (Vect n) where
+    |                              ^
 

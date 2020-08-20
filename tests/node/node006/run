@@ -1,4 +1,4 @@
-$1 --cg node --no-banner TypeCase.idr < input
-$1 --cg node --no-banner TypeCase2.idr --check
+$1 --no-color --console-width 0 --cg node --no-banner TypeCase.idr < input
+$1 --no-color --console-width 0 --cg node --no-banner TypeCase2.idr --check
 
 rm -rf build

@@ -1,10 +1,11 @@
 ||| A simple parser combinator library for strings. Inspired by attoparsec zepto.
 module Data.String.Parser
-
 import Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.Strings
+import Data.Fin
+import Data.List
 
 %default partial
 
@@ -153,3 +154,81 @@ option def p = p <|> pure def
 export
 optional : Monad m => ParseT m a -> ParseT m (Maybe a)
 optional p = (p >>= \res => pure $ Just res) <|> pure Nothing
+
+||| Discards the result of a parser
+export
+skip : Parser a -> Parser ()
+skip = ignore
+
+||| Parses a space character
+export
+space : Parser Char
+space = satisfy isSpace
+
+||| Parses one or more space characters
+export
+spaces : Parser ()
+spaces = skip (many space) <?> "white space"
+
+||| Discards whitespace after a matching parser
+export
+lexeme : Parser a -> Parser a
+lexeme p = p <* spaces
+
+||| Matches a specific string, then skips following whitespace
+export
+token : String -> Parser ()
+token s = lexeme (skip (string s)) <?> "token " ++ show s
+
+||| Fail with some error message
+export
+fail : Monad m => String -> ParseT m a
+fail x = P $ \s => do pure $ Fail s.pos x
+
+||| Matches a single digit
+export
+digit : Parser (Fin 10)
+digit = do x <- satisfy isDigit
+           case lookup x digits of
+                Nothing => P $ \s => do pure $ Fail s.pos "not a digit"
+                Just y => P $ \s => Id (OK y s)
+  where
+    digits : List (Char, Fin 10)
+    digits = [ ('0', 0)
+             , ('1', 1)
+             , ('2', 2)
+             , ('3', 3)
+             , ('4', 4)
+             , ('5', 5)
+             , ('6', 6)
+             , ('7', 7)
+             , ('8', 8)
+             , ('9', 9)
+             ]
+
+fromDigits : Num a => ((Fin 10) -> a) -> List (Fin 10) -> a
+fromDigits f xs = foldl (addDigit) 0 xs
+where
+  addDigit : a -> (Fin 10) -> a
+  addDigit num d = 10*num + (f d)
+
+intFromDigits : List (Fin 10) -> Integer
+intFromDigits = fromDigits finToInteger
+
+natFromDigits : List (Fin 10) -> Nat
+natFromDigits = fromDigits finToNat
+
+||| Matches a natural number
+export
+natural : Parser Nat
+natural = do x <- some digit
+             pure (natFromDigits x)
+
+||| Matches an integer, eg. "12", "-4"
+export
+integer : Parser Integer
+integer = do minus <- optional (char '-')
+             x <- some digit
+             case minus of
+                  Nothing => pure (intFromDigits x)
+                  (Just y) => pure ((intFromDigits x)*(-1))

@@ -52,6 +52,9 @@ preOptions (ExecFn _ :: opts)
 preOptions (IdeMode :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
+preOptions (IdeModeSocket _ :: opts)
+    = do setSession (record { nobanner = True } !getSession)
+         preOptions opts
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
@@ -117,6 +120,12 @@ preOptions (DumpVMCode f :: opts)
          preOptions opts
 preOptions (Logging n :: opts)
     = do setSession (record { logLevel = n } !getSession)
+         preOptions opts
+preOptions (ConsoleWidth n :: opts)
+    = do setConsoleWidth n
+         preOptions opts
+preOptions (Color b :: opts)
+    = do setColor b
          preOptions opts
 preOptions (_ :: opts) = preOptions opts
 

@@ -1,5 +1,10 @@
 1/1: Building Dup (Dup.idr)
-Dup.idr:13:1--15:1:Main.Test is already defined
+Error: Main.Test is already defined.
+
+Dup.idr:13:1--15:1
+ 13 | private
+ 14 | data Test = A | B
+
 Main> Bye for now!
 1/1: Building Scope (Scope.idr)
 Main> Main.Test : Type

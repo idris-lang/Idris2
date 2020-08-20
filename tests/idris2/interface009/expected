@@ -5,6 +5,6 @@ Main>  0 v : Type
    x : k'
    y : v
    z : List (k', v)
--------------------------------------
+------------------------------
 bang : List (k', v)
 Main> Bye for now!

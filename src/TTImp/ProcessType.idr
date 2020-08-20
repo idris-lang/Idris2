@@ -264,7 +264,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          -- Check 'n' is undefined
          defs <- get Ctxt
          Nothing <- lookupCtxtExact (Resolved idx) (gamma defs)
-              | Just _ => throw (AlreadyDefined fc n)
+              | Just gdef => throw (AlreadyDefined fc n)
 
          ty <-
              wrapErrorC eopts (InType fc n) $

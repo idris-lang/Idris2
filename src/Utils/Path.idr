@@ -146,9 +146,8 @@ pathTokenMap = toTokenMap $
   , (some $ non $ oneOf "/\\:?", PTText)
   ]
 
-lexPath : String -> List PathToken
-lexPath str = let (tokens, _, _, _) = lex pathTokenMap str in 
-                map TokenData.tok tokens
+lexPath : String -> List (WithBounds PathToken)
+lexPath str = let (tokens, _, _, _) = lex pathTokenMap str in tokens
 
 -- match both '/' and '\\' regardless of the platform.
 bodySeparator : Grammar PathToken True ()

@@ -1,6 +1,8 @@
 1/1: Building Fin (Fin.idr)
-Fin.idr:34:7--34:8:While processing right hand side of bar at Fin.idr:34:1--36:1:
-Can't find an implementation for IsJust (integerToFin 8 5) at:
-34	bar = 8
-	      ^
+Error: While processing right hand side of bar. Can't find an implementation for IsJust (integerToFin 8 5).
+
+Fin.idr:34:7--34:8
+    |
+ 34 | bar = 8
+    |       ^
 

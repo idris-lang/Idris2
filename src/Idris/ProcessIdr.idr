@@ -22,6 +22,7 @@ import Idris.Parser
 import Idris.REPLCommon
 import Idris.REPLOpts
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
 import Data.NameMap
@@ -203,9 +204,9 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData Token -> Bool
+    isColon : WithBounds Token -> Bool
     isColon t
-        = case tok t of
+        = case t.val of
                Symbol ":" => True
                _ => False
 
@@ -229,7 +230,7 @@ processMod : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto m : Ref MD Metadata} ->
              {auto o : Ref ROpts REPLOpts} ->
-             (srcf : String) -> (ttcf : String) -> (msg : String) ->
+             (srcf : String) -> (ttcf : String) -> (msg : Doc IdrisAnn) ->
              (sourcecode : String) ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
@@ -267,7 +268,7 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("Parsing " ++ srcf) $
+                Right mod <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
                 initHash
@@ -287,7 +288,7 @@ processMod srcf ttcf msg sourcecode
                 -- a phase before this which builds the dependency graph
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
-                logTime "Reading imports" $
+                logTime "++ Reading imports" $
                    traverse_ (readImport False) imps
 
                 -- Before we process the source, make sure the "hide_everywhere"
@@ -295,11 +296,11 @@ processMod srcf ttcf msg sourcecode
 --                 defs <- get Ctxt
 --                 traverse (\x => setVisibility emptyFC x Private) (hiddenNames defs)
                 setNS ns
-                errs <- logTime "Processing decls" $
+                errs <- logTime "++ Processing decls" $
                             processDecls (decls mod)
 --                 coreLift $ gc
 
-                logTime "Compile defs" $ compileAndInlineAll
+                logTime "++ Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
@@ -317,13 +318,13 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          String -> FileName ->
+          Doc IdrisAnn -> FileName ->
           Core (List Error)
 process buildmsg file
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
          catch (do ttcf <- getTTCFileName file "ttc"
-                   Just errs <- logTime ("Elaborating " ++ file) $
+                   Just errs <- logTime ("+ Elaborating " ++ file) $
                                    processMod file ttcf buildmsg res
                         | Nothing => pure [] -- skipped it
                    if isNil errs

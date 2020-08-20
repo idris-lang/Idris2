@@ -7,3 +7,4 @@ brief = "This is a dummy package."
 readme = "README.md"
 
 modules = Dummy
+opts = "--no-color --console-width 0"

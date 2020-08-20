@@ -1,7 +1,10 @@
 1/1: Building param (param.idr)
 1/1: Building parambad (parambad.idr)
-parambad.idr:7:7--7:10:While processing right hand side of U at parambad.idr:7:3--8:1:
-Name Main.X.foo is private at:
-7	  U = foo
-	      ^^^
+Error: While processing right hand side of U. Name Main.X.foo is private.
 
+parambad.idr:7:7--7:10
+   |
+ 7 |   U = foo
+   |       ^^^
+
+Suggestion: add an explicit export or public export modifier. By default, all names are private in namespace blocks.

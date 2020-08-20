@@ -1,3 +1,15 @@
 1/1: Building ConstructorDuplicate (ConstructorDuplicate.idr)
-ConstructorDuplicate.idr:1:14--3:1:Main.B is already defined
-ConstructorDuplicate.idr:5:3--5:15:Main.D is already defined
+Error: Main.B is already defined.
+
+ConstructorDuplicate.idr:1:14--1:15
+   |
+ 1 | data A = B | B
+   |              ^
+
+Error: Main.D is already defined.
+
+ConstructorDuplicate.idr:5:3--5:15
+   |
+ 5 |   D : C String
+   |   ^^^^^^^^^^^^
+

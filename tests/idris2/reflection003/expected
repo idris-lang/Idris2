@@ -5,23 +5,31 @@ LOG 0: Name: Prelude.Types.Strings.++
 LOG 0: Type: (%pi Rig1 Explicit (Just x) String (%pi Rig1 Explicit (Just y) String String))
 LOG 0: Resolved name: Prelude.Types.Nat
 LOG 0: Constructors: [Prelude.Types.Z, Prelude.Types.S]
-refprims.idr:43:10--43:27:While processing right hand side of dummy1 at refprims.idr:43:1--45:1:
-Error during reflection: Not really trying at:
-43	dummy1 = %runElab logPrims
-	         ^^^^^^^^^^^^^^^^^
+Error: While processing right hand side of dummy1. Error during reflection: Not really trying
 
-refprims.idr:46:10--46:30:While processing right hand side of dummy2 at refprims.idr:46:1--48:1:
-Error during reflection: Still not trying at:
-46	dummy2 = %runElab logDataCons
-	         ^^^^^^^^^^^^^^^^^^^^
+refprims.idr:43:10--43:27
+    |
+ 43 | dummy1 = %runElab logPrims
+    |          ^^^^^^^^^^^^^^^^^
 
-refprims.idr:49:10--49:25:While processing right hand side of dummy3 at refprims.idr:49:1--51:1:
-Error during reflection: Undefined name at:
-49	dummy3 = %runElab logBad
-	         ^^^^^^^^^^^^^^^
+Error: While processing right hand side of dummy2. Error during reflection: Still not trying
 
-refprims.idr:52:10--52:28:While processing right hand side of dummy4 at refprims.idr:52:1--54:1:
-Error during reflection: failed after generating Main.{plus:XXXX} at:
-52	dummy4 = %runElab tryGenSym
-	         ^^^^^^^^^^^^^^^^^^
+refprims.idr:46:10--46:30
+    |
+ 46 | dummy2 = %runElab logDataCons
+    |          ^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing right hand side of dummy3. Error during reflection: Undefined name
+
+refprims.idr:49:10--49:25
+    |
+ 49 | dummy3 = %runElab logBad
+    |          ^^^^^^^^^^^^^^^
+
+Error: While processing right hand side of dummy4. Error during reflection: failed after generating Main.{plus:XXXX}
+
+refprims.idr:52:10--52:28
+    |
+ 52 | dummy4 = %runElab tryGenSym
+    |          ^^^^^^^^^^^^^^^^^^
 

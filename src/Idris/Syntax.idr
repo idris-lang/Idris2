@@ -15,6 +15,8 @@ import Data.ANameMap
 import Data.List
 import Data.NameMap
 import Data.StringMap
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 %default covering
 
@@ -360,6 +362,12 @@ Show REPLEval where
   show NormaliseAll = "normalise"
   show Execute = "execute"
 
+export
+Pretty REPLEval where
+  pretty EvalTC = pretty "typecheck"
+  pretty NormaliseAll = pretty "normalise"
+  pretty Execute = pretty "execute"
+
 public export
 data REPLOpt : Type where
      ShowImplicits : Bool -> REPLOpt
@@ -378,6 +386,14 @@ Show REPLOpt where
   show (Editor editor) = "editor = " ++ show editor
   show (CG str) = "cg = " ++ str
 
+export
+Pretty REPLOpt where
+  pretty (ShowImplicits impl) = pretty "showimplicits" <++> equals <++> pretty impl
+  pretty (ShowNamespace ns) = pretty "shownamespace" <++> equals <++> pretty ns
+  pretty (ShowTypes typs) = pretty "showtypes" <++> equals <++> pretty typs
+  pretty (EvalMode mod) = pretty "eval" <++> equals <++> pretty mod
+  pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
+  pretty (CG str) = pretty "cg" <++> equals <++> pretty str
 
 public export
 data EditCmd : Type where
@@ -417,6 +433,8 @@ data REPLCmd : Type where
      Doc : Name -> REPLCmd
      Browse : List String -> REPLCmd
      SetLog : Nat -> REPLCmd
+     SetConsoleWidth : Maybe Nat -> REPLCmd
+     SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
      ShowVersion : REPLCmd

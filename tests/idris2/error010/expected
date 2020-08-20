@@ -1,3 +1,8 @@
 1/1: Building Loop (Loop.idr)
-Loop.idr:2:11--2:19:While processing right hand side of example at Loop.idr:2:1--3:1:
-Main.example is already defined
+Error: While processing right hand side of example. Main.example is already defined.
+
+Loop.idr:2:11--2:19
+   |
+ 2 | example = ?example
+   |           ^^^^^^^^
+

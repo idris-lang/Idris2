@@ -1,3 +1,3 @@
-$1 --no-banner quote.idr < input
+$1 --no-color --console-width 0 --no-banner quote.idr < input
 
 rm -rf build

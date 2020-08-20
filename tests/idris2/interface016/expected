@@ -1,12 +1,12 @@
 1/1: Building TwoNum (TwoNum.idr)
-TwoNum.idr:4:7--4:8:While processing right hand side of f at TwoNum.idr:2:1--5:1:
-While processing right hand side of f,g at TwoNum.idr:4:3--5:1:
-Multiple solutions found in search of:
-	Num a
-at:
-4	  g = 0
-	      ^
+Error: While processing right hand side of f. While processing right hand side of f,g. Multiple solutions found in search of:
+    Num a
+
+TwoNum.idr:4:7--4:8
+   |
+ 4 |   g = 0
+   |       ^
 
 Possible correct results:
-	conArg
-	conArg
+    conArg
+    conArg

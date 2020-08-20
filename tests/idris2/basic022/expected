@@ -1,13 +1,17 @@
 1/1: Building Erase (Erase.idr)
-Erase.idr:5:5--5:10:While processing left hand side of bad at Erase.idr:5:1--6:1:
-Can't match on False (Erased argument) at
-5	bad False = True
-	    ^^^^^
+Error: While processing left hand side of bad. Can't match on False (Erased argument).
 
-Erase.idr:19:18--19:21:While processing left hand side of minusBad at Erase.idr:19:1--20:1:
-Can't match on LeZ (Erased argument) at
-19	minusBad (S k) Z LeZ = S k
-	                 ^^^
+Erase.idr:5:5--5:10
+   |
+ 5 | bad False = True
+   |     ^^^^^
+
+Error: While processing left hand side of minusBad. Can't match on LeZ (Erased argument).
+
+Erase.idr:19:18--19:21
+    |
+ 19 | minusBad (S k) Z LeZ = S k
+    |                  ^^^
 
 Main> \m => minus (S (S m)) m prf
 Main> Bye for now!

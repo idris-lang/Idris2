@@ -1,3 +1,3 @@
-$1 --no-banner Interp.idr < input
+$1 --no-color --console-width 0 --no-banner Interp.idr < input
 
 rm -rf build

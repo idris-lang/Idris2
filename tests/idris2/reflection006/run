@@ -1,3 +1,3 @@
-$1 --check refleq.idr
+$1 --no-color --console-width 0 --check refleq.idr
 
 rm -rf build

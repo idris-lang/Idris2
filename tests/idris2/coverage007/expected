@@ -1,9 +1,15 @@
 1/1: Building eq (eq.idr)
-eq.idr:27:1--27:23:badeq x y p is not a valid impossible case at:
-27	badeq x y p impossible
-	^^^^^^^^^^^^^^^^^^^^^^
+Error: badeq x y p is not a valid impossible case.
 
-eq.idr:30:1--30:26:badeqL xs ys p is not a valid impossible case at:
-30	badeqL xs ys p impossible
-	^^^^^^^^^^^^^^^^^^^^^^^^^
+eq.idr:27:1--27:23
+    |
+ 27 | badeq x y p impossible
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+Error: badeqL xs ys p is not a valid impossible case.
+
+eq.idr:30:1--30:26
+    |
+ 30 | badeqL xs ys p impossible
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^
 

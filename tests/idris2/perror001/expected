@@ -1,2 +1,3 @@
 1/1: Building PError (PError.idr)
-PError.idr:5:1--5:1:Parse error: Expected ')' (next tokens: [identifier bar, identifier x, symbol =, let, identifier y, symbol =, literal 42, in, identifier y, symbol +])
+Error: Parse error at line 5:1:
+Expected ')' (next tokens: [identifier bar, identifier x, symbol =, let, identifier y, symbol =, literal 42, in, identifier y, symbol +])

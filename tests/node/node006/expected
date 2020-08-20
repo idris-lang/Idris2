@@ -11,17 +11,20 @@
 42
 1/1: Building TypeCase (TypeCase.idr)
 Main> Main> Main.strangeId is total
-Main> Main.strangeId':
-strangeId' _
+Main> Main.strangeId': strangeId' _
 Main> Bye for now!
 1/1: Building TypeCase2 (TypeCase2.idr)
-TypeCase2.idr:5:14--5:17:While processing left hand side of strangeId at TypeCase2.idr:5:1--6:1:
-Can't match on Nat (Erased argument) at
-5	strangeId {a=Nat} x = x+1
-	             ^^^
+Error: While processing left hand side of strangeId. Can't match on Nat (Erased argument).
 
-TypeCase2.idr:9:5--9:8:While processing left hand side of foo at TypeCase2.idr:9:1--10:1:
-Can't match on Nat (Erased argument) at
-9	foo Nat = "Nat"
-	    ^^^
+TypeCase2.idr:5:14--5:17
+   |
+ 5 | strangeId {a=Nat} x = x+1
+   |              ^^^
+
+Error: While processing left hand side of foo. Can't match on Nat (Erased argument).
+
+TypeCase2.idr:9:5--9:8
+   |
+ 9 | foo Nat = "Nat"
+   |     ^^^
 

@@ -9,6 +9,6 @@ case `uname -s` in
 esac
 
 ${MAKE} all > /dev/null
-$1 --no-banner usealloc.idr < input
+$1 --no-color --console-width 0 --no-banner usealloc.idr < input
 rm -rf build
 ${MAKE} clean > /dev/null

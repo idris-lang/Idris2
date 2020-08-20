@@ -21,7 +21,7 @@ SourceEmptyRule = EmptyRule Token
 export
 eoi : SourceEmptyRule ()
 eoi
-    = do nextIs "Expected end of input" (isEOI . tok)
+    = do nextIs "Expected end of input" (isEOI . val)
          pure ()
   where
     isEOI : Token -> Bool
@@ -32,7 +32,7 @@ export
 constant : Rule Constant
 constant
     = terminal "Expected constant"
-               (\x => case tok x of
+               (\x => case x.val of
                            CharLit c => case getCharLit c of
                                              Nothing => Nothing
                                              Just c' => Just (Ch c')
@@ -54,7 +54,7 @@ constant
 
 documentation' : Rule String
 documentation' = terminal "Expected documentation comment"
-                          (\x => case tok x of
+                          (\x => case x.val of
                                       DocComment d => Just d
                                       _ => Nothing)
 
@@ -66,15 +66,24 @@ export
 intLit : Rule Integer
 intLit
     = terminal "Expected integer literal"
-               (\x => case tok x of
+               (\x => case x.val of
                            IntegerLit i => Just i
+                           _ => Nothing)
+
+export
+onOffLit : Rule Bool
+onOffLit
+    = terminal "Expected on or off"
+               (\x => case x.val of
+                           Ident "on" => Just True
+                           Ident "off" => Just False
                            _ => Nothing)
 
 export
 strLit : Rule String
 strLit
     = terminal "Expected string literal"
-               (\x => case tok x of
+               (\x => case x.val of
                            StringLit s => Just s
                            _ => Nothing)
 
@@ -82,7 +91,7 @@ export
 dotIdent : Rule Name
 dotIdent
     = terminal "Expected dot+identifier"
-               (\x => case tok x of
+               (\x => case x.val of
                            DotIdent s => Just (UN s)
                            _ => Nothing)
 
@@ -90,7 +99,7 @@ export
 symbol : String -> Rule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case tok x of
+               (\x => case x.val of
                            Symbol s => if s == req then Just ()
                                                    else Nothing
                            _ => Nothing)
@@ -99,7 +108,7 @@ export
 keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case tok x of
+               (\x => case x.val of
                            Keyword s => if s == req then Just ()
                                                     else Nothing
                            _ => Nothing)
@@ -108,7 +117,7 @@ export
 exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req)
-               (\x => case tok x of
+               (\x => case x.val of
                            Ident s => if s == req then Just ()
                                       else Nothing
                            _ => Nothing)
@@ -117,7 +126,7 @@ export
 pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
-    (\x => case tok x of
+    (\x => case x.val of
       Pragma s =>
         if s == n
           then Just ()
@@ -128,7 +137,7 @@ export
 operator : Rule Name
 operator
     = terminal "Expected operator"
-               (\x => case tok x of
+               (\x => case x.val of
                            Symbol s =>
                                 if s `elem` reservedSymbols
                                    then Nothing
@@ -138,7 +147,7 @@ operator
 identPart : Rule String
 identPart
     = terminal "Expected name"
-               (\x => case tok x of
+               (\x => case x.val of
                            Ident str => Just str
                            _ => Nothing)
 
@@ -146,7 +155,7 @@ export
 namespacedIdent : Rule (List1 String)
 namespacedIdent
     = terminal "Expected namespaced name"
-        (\x => case tok x of
+        (\x => case x.val of
             DotSepIdent ns => Just ns
             Ident i => Just [i]
             _ => Nothing)
@@ -155,7 +164,7 @@ export
 moduleIdent : Rule (List1 String)
 moduleIdent
     = terminal "Expected module identifier"
-        (\x => case tok x of
+        (\x => case x.val of
             DotSepIdent ns => Just ns
             Ident i => Just [i]
             _ => Nothing)
@@ -168,7 +177,7 @@ export
 holeName : Rule String
 holeName
     = terminal "Expected hole name"
-               (\x => case tok x of
+               (\x => case x.val of
                            HoleIdent str => Just str
                            _ => Nothing)
 
@@ -286,7 +295,7 @@ export
 atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
 atEnd indent
     = eoi
-  <|> do nextIs "Expected end of block" (isTerminator . tok)
+  <|> do nextIs "Expected end of block" (isTerminator . val)
          pure ()
   <|> do col <- Common.column
          if (col <= indent)

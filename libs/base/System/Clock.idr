@@ -80,17 +80,17 @@ isClockMandatory GCCPU  = Optional
 isClockMandatory GCReal = Optional
 isClockMandatory _      = Mandatory
 
-prim_clockTimeMonotonic : IO OSClock
-prim_clockTimeMonotonic = schemeCall OSClock "blodwen-clock-time-monotonic" []
+prim__clockTimeMonotonic : IO OSClock
+prim__clockTimeMonotonic = schemeCall OSClock "blodwen-clock-time-monotonic" []
 
 fetchOSClock : ClockType -> IO OSClock
 fetchOSClock UTC       = schemeCall OSClock "blodwen-clock-time-utc" []
-fetchOSClock Monotonic = prim_clockTimeMonotonic
+fetchOSClock Monotonic = prim__clockTimeMonotonic
 fetchOSClock Process   = schemeCall OSClock "blodwen-clock-time-process" []
 fetchOSClock Thread    = schemeCall OSClock "blodwen-clock-time-thread" []
 fetchOSClock GCCPU     = schemeCall OSClock "blodwen-clock-time-gccpu" []
 fetchOSClock GCReal    = schemeCall OSClock "blodwen-clock-time-gcreal" []
-fetchOSClock Duration  = prim_clockTimeMonotonic
+fetchOSClock Duration  = prim__clockTimeMonotonic
 
 ||| A test to determine the status of optional clocks.
 osClockValid : OSClock -> IO Int

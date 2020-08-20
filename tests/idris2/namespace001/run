@@ -1,4 +1,4 @@
-echo ':q' | $1 --no-banner Dup.idr
-echo ':t Test' | $1 --no-banner Scope.idr
+echo ':q' | $1 --no-color --console-width 0 --no-banner Dup.idr
+echo ':t Test' | $1 --no-color --console-width 0 --no-banner Scope.idr
 
 rm -rf build

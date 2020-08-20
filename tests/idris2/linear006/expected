@@ -1,8 +1,10 @@
 1/1: Building ZFun (ZFun.idr)
-ZFun.idr:13:7--13:15:While processing right hand side of bar at ZFun.idr:13:1--15:1:
-Main.test is not accessible in this context at:
-13	bar = test foo -- bad!
-	      ^^^^^^^^
+Error: While processing right hand side of bar. Main.test is not accessible in this context.
+
+ZFun.idr:13:7--13:15
+    |
+ 13 | bar = test foo -- bad!
+    |       ^^^^^^^^
 
 Main> [tc] Main> 10
 [tc] Main> Bye for now!

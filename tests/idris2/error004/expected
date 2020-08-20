@@ -1,25 +1,31 @@
 1/1: Building Error1 (Error1.idr)
-Error1.idr:8:9--9:1:While processing right hand side of wrong at Error1.idr:8:1--9:1:
-Can't find an implementation for Show (Vect 4 Integer) at:
-8	wrong = show (the (Vect _ _) [1,2,3,4])
+Error: While processing right hand side of wrong. Can't find an implementation for Show (Vect 4 Integer).
+
+Error1.idr:8:9--8:40
+   |
+ 8 | wrong = show (the (Vect _ _) [1,2,3,4])
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building Error2 (Error2.idr)
-Error2.idr:13:38--13:45:While processing right hand side of show at Error2.idr:13:3--15:1:
-Multiple solutions found in search of:
-	Show (Vect k Integer)
-at:
-13	  show (x :: xs) = show x ++ ", " ++ show xs
-	                                     ^^^^^^^
+Error: While processing right hand side of show. Multiple solutions found in search of:
+    Show (Vect k Integer)
+
+Error2.idr:13:38--13:45
+    |
+ 13 |   show (x :: xs) = show x ++ ", " ++ show xs
+    |                                      ^^^^^^^
 
 Possible correct results:
-	Show implementation at Error2.idr:11:1--15:1
-	Show implementation at Error2.idr:7:1--11:1
-Error2.idr:16:9--17:1:While processing right hand side of wrong at Error2.idr:16:1--17:1:
-Multiple solutions found in search of:
-	Show (Vect 1 Integer)
-at:
-16	wrong = show (the (Vect _ _) [1])
+    Show implementation at Error2.idr:11:1--15:6
+    Show implementation at Error2.idr:7:1--11:5
+Error: While processing right hand side of wrong. Multiple solutions found in search of:
+    Show (Vect 1 Integer)
+
+Error2.idr:16:9--16:34
+    |
+ 16 | wrong = show (the (Vect _ _) [1])
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Possible correct results:
-	Show implementation at Error2.idr:11:1--15:1
-	Show implementation at Error2.idr:7:1--11:1
+    Show implementation at Error2.idr:11:1--15:6
+    Show implementation at Error2.idr:7:1--11:5

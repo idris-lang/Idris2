@@ -1,11 +1,9 @@
 1/1: Building lets (lets.idr)
-lets.idr:22:39--22:40:While processing right hand side of dolet2 at lets.idr:21:1--26:1:
-When unifying Maybe Int and Maybe String
-Mismatch between:
-	Int
-and
-	String
-at:
-22	    = do let Just x' : Maybe String = x
-	                                      ^
+Error: While processing right hand side of dolet2. When unifying Maybe Int and Maybe String.
+Mismatch between: Int and String.
+
+lets.idr:22:39--22:40
+    |
+ 22 |     = do let Just x' : Maybe String = x
+    |                                       ^
 

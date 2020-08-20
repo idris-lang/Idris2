@@ -1,3 +1,3 @@
-$1 --check Meh.idr
+$1 --no-color --console-width 0 --check Meh.idr
 
 rm -rf build

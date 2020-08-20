@@ -2,8 +2,10 @@
 LOG 0: [x, y]
 LOG 0: Left: ((Prelude.Types.plus x) y)
 LOG 0: Right: ((Prelude.Types.plus y) x)
-refleq.idr:24:16--24:21:While processing right hand side of commutes at refleq.idr:24:1--25:1:
-Error during reflection: Not done at:
-24	commutes x y = prove
-	               ^^^^^
+Error: While processing right hand side of commutes. Error during reflection: Not done
+
+refleq.idr:24:16--24:21
+    |
+ 24 | commutes x y = prove
+    |                ^^^^^
 

@@ -1,3 +1,3 @@
-$1 TwoNum.idr --check
+$1 --no-color --console-width 0 TwoNum.idr --check
 
 rm -rf build

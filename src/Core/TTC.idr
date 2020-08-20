@@ -675,35 +675,41 @@ export
 TTC CFType where
   toBuf b CFUnit = tag 0
   toBuf b CFInt = tag 1
-  toBuf b CFUnsigned = tag 2
-  toBuf b CFString = tag 3
-  toBuf b CFDouble = tag 4
-  toBuf b CFChar = tag 5
-  toBuf b CFPtr = tag 6
-  toBuf b CFWorld = tag 7
-  toBuf b (CFFun s t) = do tag 8; toBuf b s; toBuf b t
-  toBuf b (CFIORes t) = do tag 9; toBuf b t
-  toBuf b (CFStruct n a) = do tag 10; toBuf b n; toBuf b a
-  toBuf b (CFUser n a) = do tag 11; toBuf b n; toBuf b a
-  toBuf b CFGCPtr = tag 12
-  toBuf b CFBuffer = tag 13
+  toBuf b CFUnsigned8 = tag 2
+  toBuf b CFUnsigned16 = tag 3
+  toBuf b CFUnsigned32 = tag 4
+  toBuf b CFUnsigned64 = tag 5
+  toBuf b CFString = tag 6
+  toBuf b CFDouble = tag 7
+  toBuf b CFChar = tag 8
+  toBuf b CFPtr = tag 9
+  toBuf b CFWorld = tag 10
+  toBuf b (CFFun s t) = do tag 11; toBuf b s; toBuf b t
+  toBuf b (CFIORes t) = do tag 12; toBuf b t
+  toBuf b (CFStruct n a) = do tag 13; toBuf b n; toBuf b a
+  toBuf b (CFUser n a) = do tag 14; toBuf b n; toBuf b a
+  toBuf b CFGCPtr = tag 15
+  toBuf b CFBuffer = tag 16
 
   fromBuf b
       = case !getTag of
              0 => pure CFUnit
              1 => pure CFInt
-             2 => pure CFUnsigned
-             3 => pure CFString
-             4 => pure CFDouble
-             5 => pure CFChar
-             6 => pure CFPtr
-             7 => pure CFWorld
-             8 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
-             9 => do t <- fromBuf b; pure (CFIORes t)
-             10 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
-             11 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
-             12 => pure CFGCPtr
-             13 => pure CFBuffer
+             2 => pure CFUnsigned8
+             3 => pure CFUnsigned16
+             4 => pure CFUnsigned32
+             5 => pure CFUnsigned64
+             6 => pure CFString
+             7 => pure CFDouble
+             8 => pure CFChar
+             9 => pure CFPtr
+             10 => pure CFWorld
+             11 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
+             12 => do t <- fromBuf b; pure (CFIORes t)
+             13 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
+             14 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
+             15 => pure CFGCPtr
+             16 => pure CFBuffer
              _ => corrupt "CFType"
 
 export

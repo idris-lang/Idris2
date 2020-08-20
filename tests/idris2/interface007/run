@@ -1,3 +1,3 @@
-$1 --debug-elab-check --check A.idr
+$1 --no-color --console-width 0 --debug-elab-check --check A.idr
 
 rm -rf build

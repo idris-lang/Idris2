@@ -2,21 +2,21 @@
 2/2: Building Door (Door.idr)
 Door>  0 m : Type -> Type
  1 d : Door Closed
--------------------------------------
+------------------------------
 something : Int
 Door>  0 m : Type -> Type
  1 d : Door Closed
    x : Int
--------------------------------------
+------------------------------
 bar : Use Many m ()
 Door>  0 m : Type -> Type
  0 d : Door Closed
--------------------------------------
+------------------------------
 something2 : Int
 Door>  0 m : Type -> Type
  0 d : Door Closed
    x : Int
  1 d' : Door Closed
--------------------------------------
+------------------------------
 bar2 : Use Many m ()
 Door> Bye for now!

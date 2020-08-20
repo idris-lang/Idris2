@@ -1,6 +1,8 @@
 1/1: Building erased (erased.idr)
-erased.idr:7:17--7:21:While processing left hand side of nameOf at erased.idr:7:1--8:1:
-Can't match on Bool (Erased argument) at
-7	nameOf (MyMaybe Bool) = "MyMaybe Bool"
-	                ^^^^
+Error: While processing left hand side of nameOf. Can't match on Bool (Erased argument).
+
+erased.idr:7:17--7:21
+   |
+ 7 | nameOf (MyMaybe Bool) = "MyMaybe Bool"
+   |                 ^^^^
 

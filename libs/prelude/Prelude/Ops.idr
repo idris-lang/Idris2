@@ -7,8 +7,8 @@ infixl 8 +, -
 infixl 9 *, /
 
 -- Boolean operators
-infixr 4 &&
-infixr 5 ||
+infixr 5 &&
+infixr 4 ||
 
 -- List and String operators
 infixr 7 ::, ++

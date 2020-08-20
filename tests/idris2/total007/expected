@@ -1,12 +1,18 @@
 1/1: Building partial (partial.idr)
-partial.idr:5:1--6:19:foo is not covering at:
-5	total
-6	foo : Maybe a -> a
+Error: foo is not covering.
+
+partial.idr:5:1--7:4
+ 5 | total
+ 6 | foo : Maybe a -> a
+ 7 | foo (Just x) = x
+
 Missing cases:
-	foo Nothing
-partial.idr:13:1--14:37:qsortBad is not total:
-	possibly not terminating due to recursive path Main.qsortBad -> Main.qsortBad -> Main.qsortBad
-at:
-13	total
-14	qsortBad : Ord a => List a -> List a
+    foo Nothing
+
+Error: qsortBad is not total, possibly not terminating due to recursive path Main.qsortBad -> Main.qsortBad -> Main.qsortBad
+
+partial.idr:13:1--15:9
+ 13 | total
+ 14 | qsortBad : Ord a => List a -> List a
+ 15 | qsortBad [] = []
 

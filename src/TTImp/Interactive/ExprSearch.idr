@@ -35,7 +35,6 @@ import Data.List
 
 -- Data for building recursive calls - the function name, and the structure
 -- of the LHS. Only recursive calls with a different structure are okay.
-public export -- to keep Idris2-boot happy!
 record RecData where
   constructor MkRecData
   {vars : List Name}
@@ -592,7 +591,7 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
          -- Go right to left on variable split, to get the variable we just
          -- added first.
          -- There must be at least one case split.
-         ((helper :: _), nextdef) <- 
+         ((helper :: _), nextdef) <-
                     searchN 1 $ gendef (record { getRecData = False,
                                                  inUnwrap = True,
                                                  depth = depth',
@@ -601,14 +600,14 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
                                        helpern 0 ty
               | _ => do log 10 "No results"
                         noResult
-         
+
          let helperdef = IDef fc helpern (snd helper)
          log 10 $ "Def: " ++ show helperdef
          pure (Result (def, helperdef :: ds) -- plus helper
                       (do next' <- next
                           makeHelper fc rig opts env letty targetty next'))
   where
-    -- convert a metavar application (as created by 'metaVar') to a normal 
+    -- convert a metavar application (as created by 'metaVar') to a normal
     -- application (as required by a case block)
     toApp : forall vars . Term vars -> Term vars
     toApp (Meta fc n i args) = apply fc (Ref fc Func (Resolved i)) args
@@ -645,8 +644,8 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
           -- something we can pattern match on (so, NTCon) then apply it,
           -- let bind the result, and try to generate a definition for
           -- the scope of the let binding
-          do True <- matchable defs 
-                           !(sc defs (toClosure defaultOpts env 
+          do True <- matchable defs
+                           !(sc defs (toClosure defaultOpts env
                                                 (Erased fc False)))
                  | False => noResult
              intnty <- genVarName "cty"
@@ -680,7 +679,7 @@ tryIntermediateRec : {vars : _} ->
                      {auto m : Ref MD Metadata} ->
                      {auto u : Ref UST UState} ->
                      FC -> RigCount -> SearchOpts ->
-                     Env Term vars -> 
+                     Env Term vars ->
                      Term vars -> ClosedTerm ->
                      Maybe RecData -> Core (Search (Term vars, ExprDefs))
 tryIntermediateRec fc rig opts env ty topty Nothing = noResult
@@ -754,7 +753,7 @@ searchType fc rig opts env topty _ ty
                                    case recData opts of
                                         Nothing => []
                                         Just rd => [tryRecursive fc rig opts env ty topty rd]
-                             let tryIntRec = 
+                             let tryIntRec =
                                    if doneSplit opts
                                       then [tryIntermediateRec fc rig opts env ty topty (recData opts)]
                                       else []

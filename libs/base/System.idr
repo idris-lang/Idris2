@@ -11,17 +11,17 @@ libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign support "idris2_sleep"
-prim_sleep : Int -> PrimIO ()
+prim__sleep : Int -> PrimIO ()
 %foreign support "idris2_usleep"
-prim_usleep : Int -> PrimIO ()
+prim__usleep : Int -> PrimIO ()
 
 export
 sleep : HasIO io => Int -> io ()
-sleep sec = primIO (prim_sleep sec)
+sleep sec = primIO (prim__sleep sec)
 
 export
 usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
-usleep sec = primIO (prim_usleep sec)
+usleep sec = primIO (prim__usleep sec)
 
 -- This one is going to vary for different back ends. Probably needs a
 -- better convention. Will revisit...
@@ -35,19 +35,19 @@ getArgs = primIO prim__getArgs
 
 %foreign libc "getenv"
          "node:lambda: n => process.env[n]"
-prim_getEnv : String -> PrimIO (Ptr String)
+prim__getEnv : String -> PrimIO (Ptr String)
 
 %foreign support "idris2_getEnvPair"
-prim_getEnvPair : Int -> PrimIO (Ptr String)
+prim__getEnvPair : Int -> PrimIO (Ptr String)
 %foreign support "idris2_setenv"
-prim_setEnv : String -> String -> Int -> PrimIO Int
+prim__setEnv : String -> String -> Int -> PrimIO Int
 %foreign support "idris2_unsetenv"
-prim_unsetEnv : String -> PrimIO Int
+prim__unsetEnv : String -> PrimIO Int
 
 export
 getEnv : HasIO io => String -> io (Maybe String)
 getEnv var
-   = do env <- primIO $ prim_getEnv var
+   = do env <- primIO $ prim__getEnv var
         if prim__nullPtr env /= 0
            then pure Nothing
            else pure (Just (prim__getString env))
@@ -64,7 +64,7 @@ getEnvironment = getAllPairs 0 []
 
     getAllPairs : Int -> List String -> io (List (String, String))
     getAllPairs n acc = do
-      envPair <- primIO $ prim_getEnvPair n
+      envPair <- primIO $ prim__getEnvPair n
       if prim__nullPtr envPair /= 0
          then pure $ reverse $ map splitEq acc
          else getAllPairs (n + 1) (prim__getString envPair :: acc)
@@ -72,34 +72,34 @@ getEnvironment = getAllPairs 0 []
 export
 setEnv : HasIO io => String -> String -> Bool -> io Bool
 setEnv var val overwrite
-   = do ok <- primIO $ prim_setEnv var val (if overwrite then 1 else 0)
+   = do ok <- primIO $ prim__setEnv var val (if overwrite then 1 else 0)
         pure $ ok == 0
 
 export
 unsetEnv : HasIO io => String -> io Bool
 unsetEnv var
-   = do ok <- primIO $ prim_unsetEnv var
+   = do ok <- primIO $ prim__unsetEnv var
         pure $ ok == 0
 
 %foreign libc "system"
          "scheme:blodwen-system"
-prim_system : String -> PrimIO Int
+prim__system : String -> PrimIO Int
 
 export
 system : HasIO io => String -> io Int
-system cmd = primIO (prim_system cmd)
+system cmd = primIO (prim__system cmd)
 
 %foreign support "idris2_time"
          "scheme:blodwen-time"
-prim_time : PrimIO Int
+prim__time : PrimIO Int
 
 export
 time : HasIO io => io Integer
-time = pure $ cast !(primIO prim_time)
+time = pure $ cast !(primIO prim__time)
 
 %foreign libc "exit"
          "node:lambda:c => process.exit(Number(c))"
-prim_exit : Int -> PrimIO ()
+prim__exit : Int -> PrimIO ()
 
 ||| Programs can either terminate successfully, or end in a caught
 ||| failure.
@@ -115,8 +115,8 @@ data ExitCode : Type where
 
 export
 exitWith : HasIO io => ExitCode -> io a
-exitWith ExitSuccess = primIO $ believe_me $ prim_exit 0
-exitWith (ExitFailure code) = primIO $ believe_me $ prim_exit code
+exitWith ExitSuccess = primIO $ believe_me $ prim__exit 0
+exitWith (ExitFailure code) = primIO $ believe_me $ prim__exit code
 
 ||| Exit the program indicating failure.
 export
