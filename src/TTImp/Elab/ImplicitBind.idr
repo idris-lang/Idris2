@@ -46,7 +46,7 @@ mkOuterHole loc rig n topenv Nothing
          let env = outerEnv est
          nm <- genName ("type_of_" ++ nameRoot n)
          ty <- metaVar loc erased env nm (TType loc)
-         log 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
+         log "elab" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
          put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc) est)
          tm <- implBindVar loc rig env n ty
          pure (embedSub sub tm, embedSub sub ty)
@@ -113,7 +113,7 @@ bindUnsolved {vars} fc elabmode _
     = do est <- get EST
          defs <- get Ctxt
          let bifs = bindIfUnsolved est
-         log 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
+         log "elab" 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
          traverse_ (mkImplicit defs (outerEnv est) (subEnv est)) (bindIfUnsolved est)
   where
     makeBoundVar : {outer, vs : _} ->
@@ -145,7 +145,7 @@ bindUnsolved {vars} fc elabmode _
              bindtm <- makeBoundVar n rig p outerEnv
                                     sub subEnv
                                     !(normaliseHoles defs env exp)
-             logTerm 5 ("Added unbound implicit") bindtm
+             logTerm "elab" 5 ("Added unbound implicit") bindtm
              unify (case elabmode of
                          InLHS _ => inLHS
                          _ => inTermP False)
@@ -330,8 +330,8 @@ getToBind {vars} fc elabmode impmode env excepts
          let hnames = map fst res
          -- Return then in dependency order
          let res' = depSort hnames res
-         log 10 $ "Bound names: " ++ show res
-         log 10 $ "Sorted: " ++ show res'
+         log "elab" 10 $ "Bound names: " ++ show res
+         log "elab" 10 $ "Sorted: " ++ show res'
          pure res'
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
@@ -345,7 +345,7 @@ getToBind {vars} fc elabmode impmode env excepts
                Core (List (Name, ImplBinding vars))
     normImps defs ns [] = pure []
     normImps defs ns ((PV n i, bty) :: ts)
-        = do logTermNF 10 ("Implicit pattern var " ++ show (PV n i)) env
+        = do logTermNF "elab" 10 ("Implicit pattern var " ++ show (PV n i)) env
                        (bindingType bty)
              if PV n i `elem` ns
                 then normImps defs ns ts
@@ -353,7 +353,7 @@ getToBind {vars} fc elabmode impmode env excepts
                         pure ((PV n i, !(normBindingTy defs bty)) :: rest)
     normImps defs ns ((n, bty) :: ts)
         = do tmnf <- normaliseHoles defs env (bindingTerm bty)
-             logTerm 10 ("Normalising implicit " ++ show n) tmnf
+             logTerm "elab" 10 ("Normalising implicit " ++ show n) tmnf
              case getFnArgs tmnf of
                 -- n reduces to another hole, n', so treat it as that as long
                 -- as it isn't already done
@@ -424,7 +424,7 @@ checkBindVar rig elabinfo nest env fc str topexp
                    case implicitMode elabinfo of
                         PI _ => setInvertible fc n
                         _ => pure ()
-                   log 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
+                   log "elab" 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
                    est <- get EST
                    put EST (record { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
                                      toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
@@ -499,8 +499,8 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          checkDots -- Check dot patterns unifying with the claimed thing
                    -- before binding names
 
-         logTerm 5 "Binding names" tmv
-         logTermNF 5 "Normalised" env tmv
+         logTerm "elab" 5 "Binding names" tmv
+         logTermNF "elab" 5 "Normalised" env tmv
          argImps <- getToBind fc (elabMode elabinfo)
                               bindmode env dontbind
          clearToBind dontbind

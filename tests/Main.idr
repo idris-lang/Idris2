@@ -41,7 +41,7 @@ idrisTests
        "basic026", "basic027", "basic028", "basic029", "basic030",
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
-       "basic041", "basic042", "basic043",
+       "basic041", "basic042", "basic043", "basic044",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -125,7 +125,7 @@ chezTests
       "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026", "chez027", "chez028", "chez029",
+      "chez025", "chez026", "chez027", "chez028", "chez029", "chez030",
       "reg001"]
 
 nodeTests : List String

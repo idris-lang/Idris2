@@ -45,3 +45,29 @@ that.
 Chez Scheme is the default code generator, so if you invoke ``idris2`` with the
 ``-o execname`` flag, it will generate an executable script
 ``build/exec/execname``, again with support files in ``build/exec/execname_app``.
+
+
+Chez Directives
+===============
+
+* ``--directive extraRuntime=<path>``
+
+  Embed Scheme source from ``<path>`` directly into generated output. Can be specified more than
+  once, in which case all given files will be included in the order specified.
+
+  .. code-block:: scheme
+
+    ; extensions.scm
+    (define (my-mul a b)
+      (* a b))
+
+
+  .. code-block:: idris
+
+    -- Main.idr
+    %foreign "scheme:my-mul"
+    myMul : Int -> Int -> Int
+
+  .. code-block::
+
+    $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr

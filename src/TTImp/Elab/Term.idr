@@ -209,13 +209,8 @@ checkTerm rig elabinfo nest env (IType fc) exp
 
 checkTerm rig elabinfo nest env (IHole fc str) exp
     = checkHole rig elabinfo nest env fc str exp
-checkTerm rig elabinfo nest env (IUnifyLog fc n tm) exp
-    = do opts <- getSession
-         let lvl = logLevel opts
-         setLogLevel n
-         r <- check rig elabinfo nest env tm exp
-         setLogLevel lvl
-         pure r
+checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
+    = withLogLevel lvl $ check rig elabinfo nest env tm exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty

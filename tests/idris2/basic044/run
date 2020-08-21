@@ -1,0 +1,4 @@
+echo ":q" | $1 --no-banner --no-color --console-width 0 --log unify.equal:10 --log unify:5 Term.idr
+echo ":q" | $1 --no-banner --no-color --console-width 0 --log unify:3 --log elab.ambiguous:5 Vec.idr
+
+rm -rf build

@@ -61,7 +61,7 @@ checkDelay rig elabinfo nest env fc tm mexpected
                             ty <- getTerm gty
                             pure (TDelay fc r ty tm',
                                   glueBack defs env (NDelayed fc r tynf))
-                      ty => do logNF 5 "Expected delay type" env ty
+                      ty => do logNF "elab.delay" 5 "Expected delay type" env ty
                                throw (GenericMsg fc ("Can't infer delay type")))
   where
     delayError : Error -> Bool

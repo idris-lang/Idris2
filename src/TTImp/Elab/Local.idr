@@ -155,8 +155,8 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
                          TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
                          _ => Ref fc Func iname
          (app, args) <- getLocalTerm fc env name args
-         log 5 $ "Updating case local " ++ show uname ++ " " ++ show args
-         logTermNF 5 "To" env app
+         log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
+         logTermNF "elab.local" 5 "To" env app
          let nest' = record { names $= ((uname, (Just iname, args,
                                                 (\fc, nt => app))) :: ) }
                             nest

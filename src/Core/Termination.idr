@@ -361,7 +361,7 @@ mutual
       = do Just gdef <- lookupCtxtExact fn_in (gamma defs)
                 | Nothing => throw (UndefinedName fc fn_in)
            let fn = fullname gdef
-           log 10 $ "Looking under " ++ show fn
+           log "termination" 10 $ "Looking under " ++ show fn
            aSmaller <- resolved (gamma defs) (NS ["Builtin"] (UN "assert_smaller"))
            cond [(fn == NS ["Builtin"] (UN "assert_total"), pure []),
               (caseFn fn,
@@ -381,9 +381,10 @@ mutual
                (vs ** (Env Term vs, List (Nat, Term vs), Term vs)) ->
                Core (List SCCall)
   findInCase defs g (_ ** (env, pats, tm))
-     = do logC 10 (do ps <- traverse toFullNames (map snd pats)
-                      pure ("Looking in case args " ++ show ps))
-          logTermNF 10 "        =" env tm
+     = do logC "termination" 10 $
+                   do ps <- traverse toFullNames (map snd pats)
+                      pure ("Looking in case args " ++ show ps)
+          logTermNF "termination" 10 "        =" env tm
           rhs <- normaliseOpts tcOnly defs env tm
           findSC defs env g pats (delazy defs rhs)
 

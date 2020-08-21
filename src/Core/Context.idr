@@ -7,6 +7,7 @@ import        Core.Env
 import        Core.Hash
 import public Core.Name
 import        Core.Options
+import public Core.Options.Log
 import public Core.TT
 
 import Utils.Binary
@@ -2261,11 +2262,23 @@ fromCharName
          pure $ fromCharName (primnames (options defs))
 
 export
-setLogLevel : {auto c : Ref Ctxt Defs} ->
-              Nat -> Core ()
-setLogLevel l
+addLogLevel : {auto c : Ref Ctxt Defs} ->
+              LogLevel -> Core ()
+addLogLevel l
     = do defs <- get Ctxt
-         put Ctxt (record { options->session->logLevel = l } defs)
+         put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
+
+export
+withLogLevel : {auto c : Ref Ctxt Defs} ->
+               LogLevel -> Core a -> Core a
+withLogLevel l comp = do
+  defs <- get Ctxt
+  let logs = logLevel (session (options defs))
+  put Ctxt (record { options->session->logLevel = insertLogLevel l logs } defs)
+  r <- comp
+  defs <- get Ctxt
+  put Ctxt (record { options->session->logLevel = logs } defs)
+  pure r
 
 export
 setLogTimings : {auto c : Ref Ctxt Defs} ->
@@ -2306,30 +2319,38 @@ recordWarning w
 export
 logTerm : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          Nat -> Lazy String -> Term vars -> Core ()
-logTerm lvl msg tm
+          String -> Nat -> Lazy String -> Term vars -> Core ()
+logTerm str n msg tm
     = do opts <- getSession
-         if logLevel opts >= lvl
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
             then do tm' <- toFullNames tm
                     coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
             else pure ()
-
 export
-log : {auto c : Ref Ctxt Defs} ->
-      Nat -> Lazy String -> Core ()
-log lvl msg
+log' : {auto c : Ref Ctxt Defs} ->
+       LogLevel -> Lazy String -> Core ()
+log' lvl msg
     = do opts <- getSession
-         if logLevel opts >= lvl
+         if keepLog lvl (logLevel opts)
             then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
             else pure ()
 
 export
+log : {auto c : Ref Ctxt Defs} ->
+      String -> Nat -> Lazy String -> Core ()
+log str n msg
+    = do let lvl = mkLogLevel str n
+         log' lvl msg
+
+export
 logC : {auto c : Ref Ctxt Defs} ->
-       Nat -> Core String -> Core ()
-logC lvl cmsg
+       String -> Nat -> Core String -> Core ()
+logC str n cmsg
     = do opts <- getSession
-         if logLevel opts >= lvl
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
             then do msg <- cmsg
                     coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
             else pure ()

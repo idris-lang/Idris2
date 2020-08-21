@@ -372,8 +372,10 @@ compileToRKT c appdir tm outfile
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp racketPrim racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
+         ds <- getDirectives Racket
+         extraRuntime <- getExtraRuntime ds
          let scm = schHeader (concat (map fst fgndefs)) ++
-                   support ++ code ++
+                   support ++ extraRuntime ++ code ++
                    "(void " ++ main ++ ")\n" ++
                    schFooter
          Right () <- coreLift $ writeFile outfile scm

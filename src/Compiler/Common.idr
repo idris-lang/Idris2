@@ -407,3 +407,29 @@ copyLib (lib, fullname)
                  Right _ <- coreLift $ writeToFile lib bin
                     | Left err => throw (FileErr lib err)
                  pure ()
+
+
+-- parses `--directive extraRuntime=/path/to/defs.scm` options for textual inclusion in generated
+-- source. Use with `%foreign "scheme:..."` declarations to write runtime-specific scheme calls.
+export
+getExtraRuntime : List String -> Core String
+getExtraRuntime directives
+    = do fileContents <- traverse readPath paths
+         pure $ concat $ intersperse "\n" fileContents
+  where
+    getArg : String -> Maybe String
+    getArg directive =
+      let (k,v) = break (== '=') directive
+      in
+        if (trim k) == "extraRuntime"
+          then Just $ trim $ substr 1 (length v) v
+          else Nothing
+
+    paths : List String
+    paths = nub $ mapMaybe getArg $ reverse directives
+
+    readPath : String -> Core String
+    readPath p = do
+      Right contents <- coreLift $ readFile p
+        | Left err => throw (FileErr p err)
+      pure contents

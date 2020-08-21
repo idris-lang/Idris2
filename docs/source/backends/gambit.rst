@@ -40,3 +40,29 @@ You can also execute an expression directly:
 
 Again, ``expr`` must have type ``IO ()``. This will generate a temporary
 Scheme file, and execute the Gambit interpreter on it.
+
+
+Gambit Directives
+=================
+
+* ``--directive extraRuntime=<path>``
+
+  Embed Scheme source from ``<path>`` directly into generated output. Can be specified more than
+  once, in which case all given files will be included in the order specified.
+
+  .. code-block:: scheme
+
+    ; extensions.scm
+    (define (my-mul a b)
+      (* a b))
+
+
+  .. code-block:: idris
+
+    -- Main.idr
+    %foreign "scheme:my-mul"
+    myMul : Int -> Int -> Int
+
+  .. code-block::
+
+    $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
