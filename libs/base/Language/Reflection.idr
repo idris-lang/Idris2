@@ -12,8 +12,8 @@ data Elab : Type -> Type where
      Bind : Elab a -> (a -> Elab b) -> Elab b
      Fail : String -> Elab a
 
-     LogMsg : Nat -> String -> Elab ()
-     LogTerm : Nat -> String -> TTImp -> Elab ()
+     LogMsg : String -> Nat -> String -> Elab ()
+     LogTerm : String -> Nat -> String -> TTImp -> Elab ()
 
      -- Elaborate a TTImp term to a concrete value
      Check : {expected : Type} -> TTImp -> Elab expected
@@ -25,7 +25,7 @@ data Elab : Type -> Type where
               {0 ty : x -> Type} ->
               ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 
-     -- Get the current goal type, if known 
+     -- Get the current goal type, if known
      -- (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
      -- Get the names of local variables in scope
@@ -69,22 +69,22 @@ fail = Fail
 
 ||| Write a log message, if the log level is >= the given level
 export
-logMsg : Nat -> String -> Elab ()
+logMsg : String -> Nat -> String -> Elab ()
 logMsg = LogMsg
 
 ||| Write a log message and a rendered term, if the log level is >= the given level
 export
-logTerm : Nat -> String -> TTImp -> Elab ()
+logTerm : String -> Nat -> String -> TTImp -> Elab ()
 logTerm = LogTerm
 
 ||| Log the current goal type, if the log level is >= the given level
 export
-logGoal : Nat -> String -> Elab ()
-logGoal n msg
+logGoal : String -> Nat -> String -> Elab ()
+logGoal str n msg
     = do g <- Goal
          case g of
               Nothing => pure ()
-              Just t => logTerm n msg t
+              Just t => logTerm str n msg t
 
 ||| Check that some TTImp syntax has the expected type
 ||| Returns the type checked value

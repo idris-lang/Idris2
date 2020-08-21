@@ -257,8 +257,8 @@ processType : {vars : _} ->
 processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
     = do n <- inCurrentNS n_in
 
-         log 1 $ "Processing " ++ show n
-         log 5 $ "Checking type decl " ++ show n ++ " : " ++ show ty_raw
+         log "declare.type" 1 $ "Processing " ++ show n
+         log "declare.type" 5 $ "Checking type decl " ++ show n ++ " : " ++ show ty_raw
          idx <- resolveName n
 
          -- Check 'n' is undefined
@@ -271,7 +271,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
                              (gType fc)
-         logTermNF 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
+         logTermNF "declare.type" 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
 
          def <- initDef n env ty opts
          let fullty = abstractFullEnvType tfc env ty
@@ -292,7 +292,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          -- level check so don't set the flag.
          when (not (InCase `elem` eopts)) $ setLinearCheck idx True
 
-         log 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
+         log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          traverse (processFnOpt fc (Resolved idx)) opts
 
          -- Add to the interactive editing metadata
@@ -301,7 +301,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
-         log 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
+         log "declare.type" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          when (vis /= Private) $
               do addHashWithNames n

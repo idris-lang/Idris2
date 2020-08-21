@@ -66,12 +66,12 @@ expandClause loc opts n c
          defs <- get Ctxt
          Just (Hole locs _) <- lookupDefExact (Resolved fn) (gamma defs)
             | _ => throw (GenericMsg loc "No searchable hole on RHS")
-         log 10 $ "Expression search for " ++ show (i, fn)
+         log "interaction.generate" 10 $ "Expression search for " ++ show (i, fn)
          rhs' <- exprSearchOpts opts loc (Resolved fn) []
          traverse (\rhs' =>
             do let rhsraw = dropLams locs rhs'
-               logTermNF 5 "Got clause" env lhs
-               log 5 $ "        = " ++ show rhsraw
+               logTermNF "interaction.generate" 5 "Got clause" env lhs
+               log "interaction.generate" 5 $ "        = " ++ show rhsraw
                pure [updateRHS c rhsraw]) rhs'
   where
     updateRHS : ImpClause -> RawImp -> ImpClause
@@ -166,7 +166,7 @@ mutual
   tryAllSplits loc opts n ((x, []) :: rest)
       = tryAllSplits loc opts n rest
   tryAllSplits loc opts n ((x, cs) :: rest)
-      = do log 5 $ "Splitting on " ++ show x
+      = do log "interaction.generate" 5 $ "Splitting on " ++ show x
            trySearch (do cs' <- traverse (mkSplits loc opts n) cs
                          collectClauses cs')
                      (tryAllSplits loc opts n rest)
@@ -184,7 +184,7 @@ mutual
               then noResult
               else expandClause loc opts n c)
           (do cs <- generateSplits loc opts n c
-              log 5 $ "Splits: " ++ show cs
+              log "interaction.generate" 5 $ "Splits: " ++ show cs
               tryAllSplits loc (record { mustSplit = False,
                                          doneSplit = True } opts) n cs)
 
@@ -192,7 +192,7 @@ export
 makeDefFromType : {auto c : Ref Ctxt Defs} ->
                   {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
-                  FC -> 
+                  FC ->
                   SearchOpts ->
                   Name -> -- function name to generate
                   Nat -> -- number of arguments
@@ -232,7 +232,7 @@ makeDef p n
     = do Just (loc, nidx, envlen, ty) <- findTyDeclAt p
             | Nothing => noResult
          n <- getFullName nidx
-         logTerm 5 ("Searching for " ++ show n) ty
+         logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
          let opts = record { genExpr = Just (makeDefFromType loc) }
                            (initSearchOpts True 5)
          makeDefFromType loc opts n envlen ty

@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.Options.Log
 import Core.TT
 import Core.TTC
 import Core.Value
@@ -101,7 +102,7 @@ mutual
        IType : FC -> RawImp
        IHole : FC -> String -> RawImp
 
-       IUnifyLog : FC -> Nat -> RawImp -> RawImp
+       IUnifyLog : FC -> LogLevel -> RawImp -> RawImp
        -- An implicit value, solved by unification, but which will also be
        -- bound (either as a pattern variable or a type variable) if unsolved
        -- at the end of elaborator
@@ -337,7 +338,7 @@ mutual
        IPragma : ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
-       ILog : Nat -> ImpDecl
+       ILog : (List String, Nat) -> ImpDecl
 
   export
   Show ImpDecl where
@@ -356,7 +357,9 @@ mutual
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
     show (IPragma _) = "[externally defined pragma]"
-    show (ILog lvl) = "%logging " ++ show lvl
+    show (ILog (topic, lvl)) = "%logging " ++ case topic of
+      [] => show lvl
+      _  => concat (intersperse "." topic) ++ " " ++ show lvl
 
 -- REPL commands for TTImp interaction
 public export

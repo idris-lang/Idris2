@@ -63,15 +63,17 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
         = do msg' <- evalClosure defs msg
              throw (GenericMsg fc ("Error during reflection: " ++
                                       !(reify defs msg')))
-    elabCon defs "LogMsg" [lvl, str]
-        = do lvl' <- evalClosure defs lvl
-             logC !(reify defs lvl') $
+    elabCon defs "LogMsg" [topic, verb, str]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             logC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      reify defs str'
              scriptRet ()
-    elabCon defs "LogTerm" [lvl, str, tm]
-        = do lvl' <- evalClosure defs lvl
-             logC !(reify defs lvl') $
+    elabCon defs "LogTerm" [topic, verb, str, tm]
+        = do topic' <- evalClosure defs topic
+             verb' <- evalClosure defs verb
+             logC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      tm' <- evalClosure defs tm
                      pure $ !(reify defs str') ++ ": " ++
@@ -171,7 +173,7 @@ checkRunElab : {vars : _} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
                RigCount -> ElabInfo ->
-               NestedNames vars -> Env Term vars -> 
+               NestedNames vars -> Env Term vars ->
                FC -> RawImp -> Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
 checkRunElab rig elabinfo nest env fc script exp

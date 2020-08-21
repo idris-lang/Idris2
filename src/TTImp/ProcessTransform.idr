@@ -26,9 +26,9 @@ processTransform eopts nest env fc tn_in lhs rhs
          tidx <- resolveName tn
          (_, (vars'  ** (sub', env', nest', lhstm, lhsty))) <-
              checkLHS True top True tidx eopts nest env fc lhs
-         logTerm 3 "Transform LHS" lhstm
+         logTerm "" 3 "Transform LHS" lhstm
          rhstm <- wrapError (InRHS fc tn_in) $
                        checkTermSub tidx InExpr (InTrans :: eopts) nest' env' env sub' rhs (gnf env' lhsty)
          clearHoleLHS
-         logTerm 3 "Transform RHS" rhstm
+         logTerm "" 3 "Transform RHS" rhstm
          addTransform fc (MkTransform tn env' lhstm rhstm)

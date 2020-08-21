@@ -850,7 +850,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma (\nest, env => hide fc n)]
-             Logging i => pure [ILog i]
+             Logging i => pure [ILog (topics i, verbosity i)]
              LazyOn a => pure [IPragma (\nest, env => lazyActive a)]
              UnboundImplicits a => do
                setUnboundImplicits a
@@ -881,4 +881,3 @@ mutual
            tm' <- desugarB s ps tm
            bd <- get Bang
            pure $ bindBangs (bangNames bd) tm'
-

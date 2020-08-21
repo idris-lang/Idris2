@@ -89,6 +89,15 @@ schemeCall ret fn args = fromPrim (prim__schemeCall ret fn args)
 export
 prim__nullAnyPtr : AnyPtr -> Int
 
+%foreign "C:idris2_getNull,libidris2_support"
+export
+prim__getNullAnyPtr : AnyPtr
+
+export
+prim__castPtr : AnyPtr -> Ptr t
+prim__castPtr = believe_me
+
+export
 prim__forgetPtr : Ptr t -> AnyPtr
 prim__forgetPtr = believe_me
 

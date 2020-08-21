@@ -31,7 +31,7 @@ checkAs : {vars : _} ->
 checkAs rig elabinfo nest env fc side n_in pat topexp
     = do let elabmode = elabMode elabinfo
          let InLHS _ = elabmode
-             | _ => do log 2 $ "Bad @-pattern " ++ show pat
+             | _ => do log "elab.as" 2 $ "Bad @-pattern " ++ show pat
                        throw (GenericMsg fc "@-patterns only allowed in pattern clauses")
          est <- get EST
          let n = PV n_in (defining est)
@@ -43,7 +43,7 @@ checkAs rig elabinfo nest env fc side n_in pat topexp
                     (tm, exp, bty) <- mkPatternHole fc rig n env
                                             (implicitMode elabinfo)
                                             topexp
-                    log 5 $ "Added as pattern name " ++ show (n, (rigAs, tm, exp, bty))
+                    log "elab.as" 5 $ "Added as pattern name " ++ show (n, (rigAs, tm, exp, bty))
                     defs <- get Ctxt
                     est <- get EST
                     put EST
@@ -71,4 +71,3 @@ checkAs rig elabinfo nest env fc side n_in pat topexp
 
     rigAs : RigCount
     rigAs = rigAs' side
-

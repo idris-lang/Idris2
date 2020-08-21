@@ -1,0 +1,29 @@
+name: API
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+
+env:
+  SCHEME: scheme
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install build dependencies
+        run: |
+          sudo apt-get install -y chezscheme
+          echo "::add-path::$HOME/.idris2/bin"
+      - name: Build from bootstrap
+        run: make bootstrap && make install && idris2 --clean idris2api.ipkg && make install-api
+        shell: bash
+      - name: Test API
+        run: cd tests/idris2/api001 && ./run idris2
+        shell: bash

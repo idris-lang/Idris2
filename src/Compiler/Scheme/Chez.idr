@@ -385,8 +385,9 @@ compileToSS c appdir tm outfile
          main <- schExp chezExtPrim chezString 0 ctm
          chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
+         extraRuntime <- getExtraRuntime ds
          let scm = schHeader chez (map snd libs) ++
-                   support ++ code ++
+                   support ++ extraRuntime ++ code ++
                    concat (map fst fgndefs) ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter

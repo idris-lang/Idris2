@@ -40,8 +40,8 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
     = do nm <- inCurrentNS (UN n_in)
          defs <- get Ctxt
          Nothing <- lookupCtxtExact nm (gamma defs)
-             | Just gdef => do log 1 $ show nm ++ " already defined"
-                               throw (AlreadyDefined fc nm)
+             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
+                       throw (AlreadyDefined fc nm)
          expty <- getTerm gexpty
          -- Turn lets into lambda before making the hole so that they
          -- get abstracted over in the hole (it's fine here, unlike other
@@ -64,8 +64,8 @@ checkHole rig elabinfo nest env fc n_in exp
          mkPrecise !(nf defs env' ty)
 
          Nothing <- lookupCtxtExact nm (gamma defs)
-             | Just gdef => do log 1 $ show nm ++ " already defined"
-                               throw (AlreadyDefined fc nm)
+             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
+                       throw (AlreadyDefined fc nm)
          (idx, metaval) <- metaVarI fc rig env' nm ty
          withCurrentLHS (Resolved idx)
          addUserHole nm

@@ -10,6 +10,18 @@ fromEither : Either a b -> These a b
 fromEither = either This That
 
 public export
+fromThis : These a b -> Maybe a
+fromThis (This a) = Just a
+fromThis (That _) = Nothing
+fromThis (Both a _) = Just a
+
+public export
+fromThat : These a b -> Maybe b
+fromThat (This _) = Nothing
+fromThat (That b) = Just b
+fromThat (Both _ b) = Just b
+
+public export
 these : (a -> c) -> (b -> c) -> (a -> b -> c) -> These a b -> c
 these l r lr (This a)   = l a
 these l r lr (That b)   = r b

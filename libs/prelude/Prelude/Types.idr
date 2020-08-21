@@ -689,6 +689,22 @@ export
 Cast Nat Integer where
   cast = natToInteger
 
+export
+Cast Bits8 Integer where
+  cast = prim__cast_Bits8Integer
+
+export
+Cast Bits16 Integer where
+  cast = prim__cast_Bits16Integer
+
+export
+Cast Bits32 Integer where
+  cast = prim__cast_Bits32Integer
+
+export
+Cast Bits64 Integer where
+  cast = prim__cast_Bits64Integer
+
 -- To Int
 
 export
@@ -710,6 +726,22 @@ Cast String Int where
 export
 Cast Nat Int where
   cast = fromInteger . natToInteger
+
+export
+Cast Bits8 Int where
+  cast = prim__cast_Bits8Int
+
+export
+Cast Bits16 Int where
+  cast = prim__cast_Bits16Int
+
+export
+Cast Bits32 Int where
+  cast = prim__cast_Bits32Int
+
+export
+Cast Bits64 Int where
+  cast = prim__cast_Bits64Int
 
 -- To Char
 
@@ -734,6 +766,98 @@ Cast String Double where
 export
 Cast Nat Double where
   cast = prim__cast_IntegerDouble . natToInteger
+
+
+-- To Bits8
+
+export
+Cast Int Bits8 where
+  cast = prim__cast_IntBits8
+
+export
+Cast Integer Bits8 where
+  cast = prim__cast_IntegerBits8
+
+export
+Cast Bits16 Bits8 where
+  cast = prim__cast_Bits16Bits8
+
+export
+Cast Bits32 Bits8 where
+  cast = prim__cast_Bits32Bits8
+
+export
+Cast Bits64 Bits8 where
+  cast = prim__cast_Bits64Bits8
+
+
+-- To Bits16
+
+export
+Cast Int Bits16 where
+  cast = prim__cast_IntBits16
+
+export
+Cast Integer Bits16 where
+  cast = prim__cast_IntegerBits16
+
+export
+Cast Bits8 Bits16 where
+  cast = prim__cast_Bits8Bits16
+
+export
+Cast Bits32 Bits16 where
+  cast = prim__cast_Bits32Bits16
+
+export
+Cast Bits64 Bits16 where
+  cast = prim__cast_Bits64Bits16
+
+
+-- To Bits32
+
+export
+Cast Int Bits32 where
+  cast = prim__cast_IntBits32
+
+export
+Cast Integer Bits32 where
+  cast = prim__cast_IntegerBits32
+
+export
+Cast Bits8 Bits32 where
+  cast = prim__cast_Bits8Bits32
+
+export
+Cast Bits16 Bits32 where
+  cast = prim__cast_Bits16Bits32
+
+export
+Cast Bits64 Bits32 where
+  cast = prim__cast_Bits64Bits32
+
+-- To Bits64
+
+export
+Cast Int Bits64 where
+  cast = prim__cast_IntBits64
+
+export
+Cast Integer Bits64 where
+  cast = prim__cast_IntegerBits64
+
+export
+Cast Bits8 Bits64 where
+  cast = prim__cast_Bits8Bits64
+
+export
+Cast Bits16 Bits64 where
+  cast = prim__cast_Bits16Bits64
+
+export
+Cast Bits32 Bits64 where
+  cast = prim__cast_Bits32Bits64
+
 
 ------------
 -- RANGES --

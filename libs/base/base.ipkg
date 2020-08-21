@@ -5,6 +5,7 @@ modules = Control.App,
           Control.App.FileIO,
 
           Control.Monad.Identity,
+          Control.Monad.Reader,
           Control.Monad.ST,
           Control.Monad.State,
           Control.Monad.Trans,

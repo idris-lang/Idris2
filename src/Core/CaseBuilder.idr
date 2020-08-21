@@ -899,7 +899,7 @@ patCompile fc fn phase ty [] def
 patCompile fc fn phase ty (p :: ps) def
     = do let ns = getNames 0 (fst p)
          pats <- mkPatClausesFrom 0 ns (p :: ps)
-         log 5 $ "Pattern clauses " ++ show pats
+         log "compile.casetree" 5 $ "Pattern clauses " ++ show pats
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
@@ -942,11 +942,12 @@ simpleCase : {auto c : Ref Ctxt Defs} ->
              (clauses : List (ClosedTerm, ClosedTerm)) ->
              Core (args ** CaseTree args)
 simpleCase fc phase fn ty def clauses
-    = do logC 2 (do cs <- traverse (\c =>
+    = do logC "compile.casetree" 2 $
+                do cs <- traverse (\c =>
                                 do lhs <- toFullNames (fst c)
                                    rhs <- toFullNames (snd c)
                                    pure ("Clause " ++ show lhs ++ " = " ++ show rhs ++ "\n")) clauses
-                    pure (concat cs))
+                   pure (concat cs)
          ps <- traverse (toPatClause fc fn) clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def

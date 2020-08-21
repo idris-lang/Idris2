@@ -420,8 +420,8 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
                            else abstractEnvType fc env ty
          let hole = record { noCycles = nocyc }
                            (newDef fc n rig [] hty Public def)
-         log 5 $ "Adding new meta " ++ show (n, fc, rig)
-         logTerm 10 ("New meta type " ++ show n) hty
+         log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
+         logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          defs <- get Ctxt
          idx <- addDef n hole
          addHoleName fc n idx
@@ -467,8 +467,8 @@ newConstant {vars} fc rig env tm ty constrs
          cn <- genName "postpone"
          let guess = newDef fc cn rig [] defty Public
                             (Guess def (length env) constrs)
-         log 5 $ "Adding new constant " ++ show (cn, fc, rig)
-         logTerm 10 ("New constant type " ++ show cn) defty
+         log "unify.constant" 5 $ "Adding new constant " ++ show (cn, fc, rig)
+         logTerm "unify.constant" 10 ("New constant type " ++ show cn) defty
          idx <- addDef cn guess
          addGuessName fc cn idx
          pure (Meta fc cn idx envArgs)
@@ -489,8 +489,8 @@ newSearch : {vars : _} ->
 newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
-         log 10 $ "Adding new search " ++ show fc ++ " " ++ show n
-         logTermNF 10 "New search type" env ty
+         log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
+         logTermNF "unify.search" 10 "New search type" env ty
          idx <- addDef n hole
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)
@@ -511,7 +511,7 @@ newDelayed {vars} fc rig env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public Delayed
          idx <- addDef n hole
-         log 10 $ "Added delayed elaborator " ++ show (n, idx)
+         log "unify.delay" 10 $ "Added delayed elaborator " ++ show (n, idx)
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
@@ -628,7 +628,7 @@ checkUserHoles : {auto u : Ref UST UState} ->
 checkUserHoles now
     = do gs_map <- getGuesses
          let gs = toList gs_map
-         log 10 $ "Unsolved guesses " ++ show gs
+         log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
          traverse_ checkValidHole gs
          hs_map <- getCurrentHoles
          let hs = toList hs_map
@@ -650,13 +650,13 @@ checkNoGuards : {auto u : Ref UST UState} ->
 checkNoGuards = checkUserHoles False
 
 export
-dumpHole : {auto u : Ref UST UState} ->
-           {auto c : Ref Ctxt Defs} ->
-           (loglevel : Nat) -> (hole : Int) -> Core ()
-dumpHole lvl hole
+dumpHole' : {auto u : Ref UST UState} ->
+            {auto c : Ref Ctxt Defs} ->
+            LogLevel -> (hole : Int) -> Core ()
+dumpHole' lvl hole
     = do ust <- get UST
          defs <- get Ctxt
-         if logLevel (session (options defs)) < lvl
+         if keepLog lvl (logLevel $ session $ options defs)
             then pure ()
             else do
                defs <- get Ctxt
@@ -664,30 +664,33 @@ dumpHole lvl hole
                  Nothing => pure ()
                  Just gdef => case (definition gdef, type gdef) of
                     (Guess tm envb constraints, ty) =>
-                         do log lvl $ "!" ++ show !(getFullName (Resolved hole)) ++ " : " ++
+                         do log' lvl $ "!" ++ show !(getFullName (Resolved hole)) ++ " : " ++
                                               show !(toFullNames !(normaliseHoles defs [] ty))
-                            log lvl $ "\t  = " ++ show !(normaliseHoles defs [] tm)
+                            log' lvl $ "\t  = " ++ show !(normaliseHoles defs [] tm)
                                             ++ "\n\twhen"
                             traverse dumpConstraint constraints
                             pure ()
                     (Hole _ p, ty) =>
-                         log lvl $ "?" ++ show (fullname gdef) ++ " : " ++
+                         log' lvl $ "?" ++ show (fullname gdef) ++ " : " ++
                                            show !(normaliseHoles defs [] ty)
                                            ++ if implbind p then " (ImplBind)" else ""
                                            ++ if invertible gdef then " (Invertible)" else ""
                     (BySearch _ _ _, ty) =>
-                         log lvl $ "Search " ++ show hole ++ " : " ++
+                         log' lvl $ "Search " ++ show hole ++ " : " ++
                                            show !(toFullNames !(normaliseHoles defs [] ty))
                     (PMDef _ args t _ _, ty) =>
-                         log 4 $ "Solved: " ++ show hole ++ " : " ++
-                                       show !(normalise defs [] ty) ++
-                                       " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
+                         log' (withVerbosity 4 lvl) $
+                            "Solved: " ++ show hole ++ " : " ++
+                            show !(normalise defs [] ty) ++
+                            " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
                     (ImpBind, ty) =>
-                         log 4 $ "Bound: " ++ show hole ++ " : " ++
-                                       show !(normalise defs [] ty)
+                         log' (withVerbosity 4 lvl) $
+                             "Bound: " ++ show hole ++ " : " ++
+                             show !(normalise defs [] ty)
                     (Delayed, ty) =>
-                         log 4 $ "Delayed elaborator : " ++
-                                       show !(normalise defs [] ty)
+                         log' (withVerbosity 4 lvl) $
+                            "Delayed elaborator : " ++
+                            show !(normalise defs [] ty)
                     _ => pure ()
   where
     dumpConstraint : Int -> Core ()
@@ -696,31 +699,33 @@ dumpHole lvl hole
              defs <- get Ctxt
              case lookup n (constraints ust) of
                   Nothing => pure ()
-                  Just Resolved => log lvl "\tResolved"
+                  Just Resolved => log' lvl "\tResolved"
                   Just (MkConstraint _ lazy _ env x y) =>
-                    do log lvl $ "\t  " ++ show !(toFullNames !(normalise defs env x))
-                                      ++ " =?= " ++ show !(toFullNames !(normalise defs env y))
-                       log 5 $ "\t    from " ++ show !(toFullNames x)
+                    do log' lvl $ "\t  " ++ show !(toFullNames !(normalise defs env x))
+                                       ++ " =?= " ++ show !(toFullNames !(normalise defs env y))
+                       log' (withVerbosity 5 lvl)
+                                $ "\t    from " ++ show !(toFullNames x)
                                       ++ " =?= " ++ show !(toFullNames y) ++
                                if lazy then "\n\t(lazy allowed)" else ""
                   Just (MkSeqConstraint _ _ xs ys) =>
-                       log lvl $ "\t\t" ++ show xs ++ " =?= " ++ show ys
+                       log' lvl $ "\t\t" ++ show xs ++ " =?= " ++ show ys
 
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (loglevel : Nat) ->
+                  (topics : String) -> (verbosity : Nat) ->
                   (all : Bool) ->
                   Core ()
-dumpConstraints loglevel all
+dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
-         if logLevel (session (options defs)) >= loglevel then
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel $ session $ options defs) then
             do let hs = toList (guesses ust) ++
                         toList (if all then holes ust else currentHoles ust)
                case hs of
                     [] => pure ()
-                    _ => do log loglevel "--- CONSTRAINTS AND HOLES ---"
-                            traverse (dumpHole loglevel) (map fst hs)
+                    _ => do log' lvl "--- CONSTRAINTS AND HOLES ---"
+                            traverse (dumpHole' lvl) (map fst hs)
                             pure ()
             else pure ()

@@ -1051,10 +1051,11 @@ getArity defs env tm = getValArity defs env !(nf defs env tm)
 export
 logNF : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
-        Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
-logNF lvl msg env tmnf
+        String -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
+logNF str n msg env tmnf
     = do opts <- getSession
-         if logLevel opts >= lvl
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
             then do defs <- get Ctxt
                     tm <- quote defs env tmnf
                     tm' <- toFullNames tm
@@ -1065,12 +1066,12 @@ logNF lvl msg env tmnf
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
 export
-logTermNF : {vars : _} ->
-            {auto c : Ref Ctxt Defs} ->
-            Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF lvl msg env tm
+logTermNF' : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             LogLevel -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF' lvl msg env tm
     = do opts <- getSession
-         if logLevel opts >= lvl
+         if keepLog lvl (logLevel opts)
             then do defs <- get Ctxt
                     tmnf <- normaliseHoles defs env tm
                     tm' <- toFullNames tmnf
@@ -1079,12 +1080,21 @@ logTermNF lvl msg env tm
             else pure ()
 
 export
+logTermNF : {vars : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            String -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF str n msg env tm
+    = do let lvl = mkLogLevel str n
+         logTermNF' lvl msg env tm
+
+export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlue lvl msg env gtm
+          String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+logGlue str n msg env gtm
     = do opts <- getSession
-         if logLevel opts >= lvl
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
             then do defs <- get Ctxt
                     tm <- getTerm gtm
                     tm' <- toFullNames tm
@@ -1095,10 +1105,11 @@ logGlue lvl msg env gtm
 export
 logGlueNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlueNF lvl msg env gtm
+            String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+logGlueNF str n msg env gtm
     = do opts <- getSession
-         if logLevel opts >= lvl
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
             then do defs <- get Ctxt
                     tm <- getTerm gtm
                     tmnf <- normaliseHoles defs env tm
@@ -1110,24 +1121,27 @@ logGlueNF lvl msg env gtm
 export
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         Nat -> String -> Env Term vars -> Core ()
-logEnv lvl msg env
+         String -> Nat -> String -> Env Term vars -> Core ()
+logEnv str n msg env
     = do opts <- getSession
-         if logLevel opts >= lvl
+         if keepLog lvl (logLevel opts)
             then dumpEnv env
             else pure ()
   where
+    lvl : LogLevel
+    lvl = mkLogLevel str n
+
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let c val ty :: bs)
-        = do logTermNF lvl (msg ++ ": let " ++ show x) bs val
-             logTermNF lvl (msg ++ ":" ++ show c ++ " " ++
-                            show x) bs ty
+        = do logTermNF' lvl (msg ++ ": let " ++ show x) bs val
+             logTermNF' lvl (msg ++ ":" ++ show c ++ " " ++
+                             show x) bs ty
              dumpEnv bs
     dumpEnv {vs = x :: _} (b :: bs)
-        = do logTermNF lvl (msg ++ ":" ++ show (multiplicity b) ++ " " ++
-                            show (piInfo b) ++ " " ++
-                            show x) bs (binderType b)
+        = do logTermNF' lvl (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                             show (piInfo b) ++ " " ++
+                             show x) bs (binderType b)
              dumpEnv bs
 
 replace' : {vars : _} ->

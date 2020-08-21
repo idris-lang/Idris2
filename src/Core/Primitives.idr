@@ -57,6 +57,7 @@ castInt [NPrimVal fc (BI i)] = Just (NPrimVal fc (I (fromInteger i)))
 castInt [NPrimVal fc (B8 i)] = Just (NPrimVal fc (I i))
 castInt [NPrimVal fc (B16 i)] = Just (NPrimVal fc (I i))
 castInt [NPrimVal fc (B32 i)] = Just (NPrimVal fc (I i))
+castInt [NPrimVal fc (B64 i)] = Just (NPrimVal fc (I (fromInteger i)))
 castInt [NPrimVal fc (Db i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Ch i)] = Just (NPrimVal fc (I (cast i)))
 castInt [NPrimVal fc (Str i)] = Just (NPrimVal fc (I (cast i)))
@@ -74,32 +75,47 @@ b32max = 0x100000000
 b64max : Integer
 b64max = 18446744073709551616 -- 0x10000000000000000
 
-castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits8 [NPrimVal fc (BI i)]
+bitCastWrap : (i : Integer) -> (max : Integer) -> Integer
+bitCastWrap i max
     = if i >= 0 -- oops, we don't have `rem` yet!
-          then Just (NPrimVal fc (B8 (fromInteger i `mod` b8max)))
-          else Just (NPrimVal fc (B8 (b8max + fromInteger i `mod` b8max)))
+        then i `mod` max
+        else max + i `mod` max
+
+constantIntegerValue : Constant -> Maybe Integer
+constantIntegerValue (I i)   = Just $ cast i
+constantIntegerValue (BI i)  = Just i
+constantIntegerValue (B8 i)  = Just $ cast i
+constantIntegerValue (B16 i) = Just $ cast i
+constantIntegerValue (B32 i) = Just $ cast i
+constantIntegerValue (B64 i) = Just i
+constantIntegerValue _       = Nothing
+
+castBits8 : Vect 1 (NF vars) -> Maybe (NF vars)
+castBits8 [NPrimVal fc constant] = do
+    value <- constantIntegerValue constant
+    let wrapped = bitCastWrap value (cast b8max)
+    pure (NPrimVal fc (B8 (cast wrapped)))
 castBits8 _ = Nothing
 
 castBits16 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits16 [NPrimVal fc (BI i)]
-    = if i >= 0 -- oops, we don't have `rem` yet!
-          then Just (NPrimVal fc (B8 (fromInteger i `mod` b16max)))
-          else Just (NPrimVal fc (B8 (b16max + fromInteger i `mod` b16max)))
+castBits16 [NPrimVal fc constant] = do
+    value <- constantIntegerValue constant
+    let wrapped = bitCastWrap value (cast b16max)
+    pure (NPrimVal fc (B16 (cast wrapped)))
 castBits16 _ = Nothing
 
 castBits32 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits32 [NPrimVal fc (BI i)]
-    = if i >= 0 -- oops, we don't have `rem` yet!
-          then Just (NPrimVal fc (B8 (fromInteger i `mod` b32max)))
-          else Just (NPrimVal fc (B8 (b32max + fromInteger i `mod` b32max)))
+castBits32 [NPrimVal fc constant] = do
+    value <- constantIntegerValue constant
+    let wrapped = bitCastWrap value (cast b32max)
+    pure (NPrimVal fc (B32 (cast wrapped)))
 castBits32 _ = Nothing
 
 castBits64 : Vect 1 (NF vars) -> Maybe (NF vars)
-castBits64 [NPrimVal fc (BI i)]
-    = if i >= 0 -- oops, we don't have `rem` yet!
-          then Just (NPrimVal fc (B64 (i `mod` b64max)))
-          else Just (NPrimVal fc (B64 (b64max + i `mod` b64max)))
+castBits64 [NPrimVal fc constant] = do
+    value <- constantIntegerValue constant
+    let wrapped = bitCastWrap value b64max
+    pure (NPrimVal fc (B64 wrapped))
 castBits64 _ = Nothing
 
 castDouble : Vect 1 (NF vars) -> Maybe (NF vars)
@@ -544,11 +560,11 @@ allPrimitives =
 
     map (\t => MkPrim (Cast t StringType) (predTy t StringType) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
     map (\t => MkPrim (Cast t IntegerType) (predTy t IntegerType) isTotal) [StringType, IntType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t IntType) (predTy t IntType) isTotal) [StringType, IntegerType, Bits8Type, Bits16Type, Bits32Type, CharType, DoubleType] ++
+    map (\t => MkPrim (Cast t IntType) (predTy t IntType) isTotal) [StringType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
     map (\t => MkPrim (Cast t DoubleType) (predTy t DoubleType) isTotal) [StringType, IntType, IntegerType] ++
     map (\t => MkPrim (Cast t CharType) (predTy t CharType) isTotal) [StringType, IntType] ++
 
-    map (\t => MkPrim (Cast t Bits8Type) (predTy t Bits8Type) isTotal) [IntegerType] ++
-    map (\t => MkPrim (Cast t Bits16Type) (predTy t Bits16Type) isTotal) [IntegerType] ++
-    map (\t => MkPrim (Cast t Bits32Type) (predTy t Bits32Type) isTotal) [IntegerType] ++
-    map (\t => MkPrim (Cast t Bits64Type) (predTy t Bits64Type) isTotal) [IntegerType]
+    map (\t => MkPrim (Cast t Bits8Type) (predTy t Bits8Type) isTotal) [IntType, IntegerType, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (Cast t Bits16Type) (predTy t Bits16Type) isTotal) [IntType, IntegerType, Bits8Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (Cast t Bits32Type) (predTy t Bits32Type) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits64Type] ++
+    map (\t => MkPrim (Cast t Bits64Type) (predTy t Bits64Type) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type]

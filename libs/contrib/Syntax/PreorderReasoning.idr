@@ -26,13 +26,6 @@ Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
 Calc (|~ x) = Refl
 Calc ((~~) {z=_} {y=_} der (_ ** Refl)) = Calc der
 
-||| Two-holed congruence
-export
--- These are natural in equational reasoning, less so when rewriting,
--- so that's why it's here.
-cong2 : (f : t -> s -> u) -> a = b -> c = d -> f a c = f b d
-cong2 f Refl Refl = Refl
-
 {- -- requires import Data.Nat
 0
 example : (x : Nat) -> (x + 1) + 0 = 1 + x

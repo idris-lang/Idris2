@@ -88,12 +88,16 @@ strLit
                            _ => Nothing)
 
 export
-dotIdent : Rule Name
-dotIdent
-    = terminal "Expected dot+identifier"
+aDotIdent : Rule String
+aDotIdent = terminal "Expected dot+identifier"
                (\x => case x.val of
-                           DotIdent s => Just (UN s)
+                           DotIdent s => Just s
                            _ => Nothing)
+
+
+export
+dotIdent : Rule Name
+dotIdent = UN <$> aDotIdent
 
 export
 symbol : String -> Rule ()
