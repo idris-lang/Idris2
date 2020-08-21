@@ -371,8 +371,10 @@ compileToSCM c tm outfile
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
+         ds <- getDirectives Gambit
+         extraRuntime <- getExtraRuntime ds
          foreign <- readDataFile "gambit/foreign.scm"
-         let scm = showSep "\n" [schHeader, support, foreign, code, main]
+         let scm = showSep "\n" [schHeader, support, extraRuntime, foreign, code, main]
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
