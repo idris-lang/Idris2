@@ -12,7 +12,7 @@ import Data.List
 
 %default covering
 
--- This file contains support for building a guess at the term on the LHS of an 
+-- This file contains support for building a guess at the term on the LHS of an
 -- 'impossible' case, in order to help build a tree of covered cases for
 -- coverage checking. Since the LHS by definition won't be well typed, we are
 -- only guessing! But we can still do some type-directed disambiguation of
@@ -35,7 +35,7 @@ match nty (n, i, rty)
     sameRet (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = pure (n == n')
     sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
     sameRet (NType _) (NType _) = pure True
-    sameRet nf (NBind fc _ (Pi _ _ _) sc)
+    sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              sameRet nf sc'
@@ -63,12 +63,12 @@ mutual
                 Term [] -> NF [] ->
                 (expargs : List RawImp) -> (impargs : List (Maybe Name, RawImp)) ->
                 Core ClosedTerm
-  processArgs fn (NBind fc x (Pi r Explicit ty) sc) (e :: exp) imp
+  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exp) imp
      = do e' <- mkTerm e (Just ty) [] []
           defs <- get Ctxt
           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
                       exp imp
-  processArgs fn (NBind fc x (Pi r Implicit ty) sc) exp imp
+  processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exp imp
      = do defs <- get Ctxt
           case useImp [] imp of
             Nothing => do e' <- nextVar fc
@@ -89,7 +89,7 @@ mutual
                else useImp ((Just x', xtm) :: acc) rest
       useImp acc (ximp :: rest)
           = useImp (ximp :: acc) rest
-  processArgs fn (NBind fc x (Pi r AutoImplicit ty) sc) exp imp
+  processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exp imp
      = do defs <- get Ctxt
           case useAutoImp [] imp of
             Nothing => do e' <- nextVar fc
@@ -114,7 +114,7 @@ mutual
           = useAutoImp (ximp :: acc) rest
   processArgs fn ty [] [] = pure fn
   processArgs fn ty exp imp
-     = throw (GenericMsg (getLoc fn) 
+     = throw (GenericMsg (getLoc fn)
                 ("Badly formed impossible clause "
                      ++ show (fn, exp, imp)))
 
@@ -138,7 +138,7 @@ mutual
            tynf <- nf defs [] ty
            processArgs (Ref fc Func n') tynf exp imp
 
-  mkTerm : {auto c : Ref Ctxt Defs} -> 
+  mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
            RawImp -> Maybe (NF []) ->
            (expargs : List RawImp) -> (impargs : List (Maybe Name, RawImp)) ->
@@ -163,10 +163,6 @@ getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)
          mkTerm (applyEnv tm) Nothing [] []
   where
-    isLet : forall vars . Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp
     addEnv fc [] = []

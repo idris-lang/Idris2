@@ -194,21 +194,21 @@ getName _ [] = Nothing
 mutual
   export
   {vars : _} -> TTC (Binder (Term vars)) where
-    toBuf b (Lam c x ty) = do tag 0; toBuf b c; toBuf b x; toBuf b ty
-    toBuf b (Let c val ty) = do tag 1; toBuf b c; toBuf b val -- ; toBuf b ty
-    toBuf b (Pi c x ty) = do tag 2; toBuf b c; toBuf b x; toBuf b ty
-    toBuf b (PVar c p ty) = do tag 3; toBuf b c; toBuf b p; toBuf b ty
-    toBuf b (PLet c val ty) = do tag 4; toBuf b c; toBuf b val -- ; toBuf b ty
-    toBuf b (PVTy c ty) = do tag 5; toBuf b c -- ; toBuf b ty
+    toBuf b (Lam _ c x ty) = do tag 0; toBuf b c; toBuf b x; toBuf b ty
+    toBuf b (Let _ c val ty) = do tag 1; toBuf b c; toBuf b val -- ; toBuf b ty
+    toBuf b (Pi _ c x ty) = do tag 2; toBuf b c; toBuf b x; toBuf b ty
+    toBuf b (PVar _ c p ty) = do tag 3; toBuf b c; toBuf b p; toBuf b ty
+    toBuf b (PLet _ c val ty) = do tag 4; toBuf b c; toBuf b val -- ; toBuf b ty
+    toBuf b (PVTy _ c ty) = do tag 5; toBuf b c -- ; toBuf b ty
 
     fromBuf b
         = case !getTag of
-               0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam c x ty)
-               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let c x (Erased emptyFC False))
-               2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi c x y)
-               3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar c p ty)
-               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet c x (Erased emptyFC False))
-               5 => do c <- fromBuf b; pure (PVTy c (Erased emptyFC False))
+               0 => do c <- fromBuf b; x <- fromBuf b; ty <- fromBuf b; pure (Lam emptyFC c x ty)
+               1 => do c <- fromBuf b; x <- fromBuf b; pure (Let emptyFC c x (Erased emptyFC False))
+               2 => do c <- fromBuf b; x <- fromBuf b; y <- fromBuf b; pure (Pi emptyFC c x y)
+               3 => do c <- fromBuf b; p <- fromBuf b; ty <- fromBuf b; pure (PVar emptyFC c p ty)
+               4 => do c <- fromBuf b; x <- fromBuf b; pure (PLet emptyFC c x (Erased emptyFC False))
+               5 => do c <- fromBuf b; pure (PVTy emptyFC c (Erased emptyFC False))
                _ => corrupt "Binder"
 
   export

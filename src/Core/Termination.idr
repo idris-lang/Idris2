@@ -148,7 +148,7 @@ mutual
             !(findSC defs (b :: env) g (map (\ (p, tm) => (p, weaken tm)) pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
-      findSCbinder (Let c val ty) = findSC defs env g pats val
+      findSCbinder (Let _ c val ty) = findSC defs env g pats val
       findSCbinder b = pure [] -- only types, no need to look
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
   findSC defs env Guarded pats (TDelay _ _ _ tm)
@@ -595,7 +595,7 @@ posArg defs tyns (NTCon _ tc _ _ args)
              then dropParams (S i) ps xs
              else x :: dropParams (S i) ps xs
 -- a tyn can not appear as part of ty
-posArg defs tyns (NBind fc x (Pi c e ty) sc)
+posArg defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = if !(nameIn defs tyns ty)
          then pure (NotTerminating NotStrictlyPositive)
          else do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -603,7 +603,7 @@ posArg defs tyns (NBind fc x (Pi c e ty) sc)
 posArg defs tyn _ = pure IsTerminating
 
 checkPosArgs : Defs -> List Name -> NF [] -> Core Terminating
-checkPosArgs defs tyns (NBind fc x (Pi c e ty) sc)
+checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns ty) of
            IsTerminating =>
                 checkPosArgs defs tyns

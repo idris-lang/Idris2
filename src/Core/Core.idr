@@ -524,12 +524,12 @@ namespace PiInfo
 namespace Binder
   export
   traverse : (a -> Core b) -> Binder a -> Core (Binder b)
-  traverse f (Lam c p ty) = pure $ Lam c !(traverse f p) !(f ty)
-  traverse f (Let c val ty) = pure $ Let c !(f val) !(f ty)
-  traverse f (Pi c p ty) = pure $ Pi c !(traverse f p) !(f ty)
-  traverse f (PVar c p ty) = pure $ PVar c !(traverse f p) !(f ty)
-  traverse f (PLet c val ty) = pure $ PLet c !(f val) !(f ty)
-  traverse f (PVTy c ty) = pure $ PVTy c !(f ty)
+  traverse f (Lam fc c p ty) = pure $ Lam fc c !(traverse f p) !(f ty)
+  traverse f (Let fc c val ty) = pure $ Let fc c !(f val) !(f ty)
+  traverse f (Pi fc c p ty) = pure $ Pi fc c !(traverse f p) !(f ty)
+  traverse f (PVar fc c p ty) = pure $ PVar fc c !(traverse f p) !(f ty)
+  traverse f (PLet fc c val ty) = pure $ PLet fc c !(f val) !(f ty)
+  traverse f (PVTy fc c ty) = pure $ PVTy fc c !(f ty)
 
 export
 anyM : (a -> Core Bool) -> List a -> Core Bool

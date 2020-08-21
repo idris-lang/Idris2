@@ -79,23 +79,15 @@ extractHoleData : {vars : _} ->
           {auto s : Ref Syn SyntaxInfo} ->
           Defs -> Env Term vars -> Name -> Nat -> Term vars ->
           Core HoleData
-extractHoleData defs env fn (S args) (Bind fc x (Let c val ty) sc) 
+extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
   = extractHoleData defs env fn args (subst val sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
   = do rest <- extractHoleData defs (b :: env) fn args sc
        let True = showName x
          | False => pure rest
        ity <- resugar env !(normalise defs env (binderType b))
-       let premise = MkHolePremise x ity (multiplicity b) (implicitBind b)
+       let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ record { context $= (premise ::)  } rest
-  where
-    implicitBind : Binder (Term vars) -> Bool
-    implicitBind (Pi _ Explicit _) = False
-    implicitBind (Pi _ _ _) = True
-    implicitBind (Lam _ Explicit _) = False
-    implicitBind (Lam _ _ _) = True
-    implicitBind _ = False
-   
 extractHoleData defs env fn args ty
   = do ity <- resugar env !(normalise defs env ty)
        pure $ MkHoleData fn ity []
@@ -121,7 +113,7 @@ holeData gam env fn args ty
         = if premise.name `elem` map name rest
              then            dropShadows rest
              else premise :: dropShadows rest
-       
+
 
 export
 showHole : {vars : _} ->
@@ -133,7 +125,7 @@ showHole defs env fn args ty
     = do hdata <- holeData defs env fn args ty
          case hdata.context of
            [] => pure $ show (hdata.name) ++ " : " ++ show hdata.type
-           _  => pure $ concat 
+           _  => pure $ concat
               (map (\premise => showCount premise.multiplicity
                              ++ (impBracket premise.isImplicit $
                                  tidy premise.name ++ " : " ++ (show premise.type) ++ "\n" )
@@ -165,8 +157,8 @@ prettyHole defs env fn args ty
                     <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 sexpPremise : HolePremise -> SExp
-sexpPremise premise = 
-  SExpList [StringAtom $ showCount premise.multiplicity 
+sexpPremise premise =
+  SExpList [StringAtom $ showCount premise.multiplicity
                        ++ (impBracket premise.isImplicit $
                            tidy premise.name)
            ,StringAtom $ show premise.type
@@ -175,7 +167,7 @@ sexpPremise premise =
 
 export
 sexpHole : HoleData -> SExp
-sexpHole hole = SExpList 
+sexpHole hole = SExpList
   [ StringAtom (show  hole.name)
   , SExpList $ map sexpPremise hole.context  -- Premises
   , SExpList [ StringAtom $ show hole.type   -- Conclusion

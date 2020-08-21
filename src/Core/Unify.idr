@@ -516,7 +516,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple (Local _ _ _ _) = True
     isSimple (Ref _ _ _) = True
     isSimple (Meta _ _ _ _) = True
-    isSimple (Bind _ _ (Lam _ _ _) sc) = isSimple sc
+    isSimple (Bind _ _ (Lam _ _ _ _) sc) = isSimple sc
     isSimple (PrimVal _ _) = True
     isSimple (TType _) = True
     isSimple _ = False
@@ -558,25 +558,25 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
 
         updateIVarsB : {vs, newvars : _} ->
                        IVars vs newvars -> Binder (Term newvars) -> Maybe (Binder (Term vs))
-        updateIVarsB ivs (Lam c p t)
+        updateIVarsB ivs (Lam fc c p t)
             = do p' <- updateIVarsPi ivs p
-                 Just (Lam c p' !(updateIVars ivs t))
-        updateIVarsB ivs (Let c v t) = Just (Let c !(updateIVars ivs v) !(updateIVars ivs t))
+                 Just (Lam fc c p' !(updateIVars ivs t))
+        updateIVarsB ivs (Let fc c v t) = Just (Let fc c !(updateIVars ivs v) !(updateIVars ivs t))
         -- Make 'pi' binders have multiplicity W when we infer a Rig1 metavariable,
         -- since this is the most general thing to do if it's unknown.
-        updateIVarsB ivs (Pi rig p t)
+        updateIVarsB ivs (Pi fc rig p t)
             = do p' <- updateIVarsPi ivs p
                  if isLinear rig
                     then do t' <- updateIVars ivs t
                             pure $ if inLam mode || precise
-                               then (Pi linear p' t')
-                               else (Pi top p' t')
-                    else Just (Pi rig p' !(updateIVars ivs t))
-        updateIVarsB ivs (PVar c p t)
+                               then (Pi fc linear p' t')
+                               else (Pi fc top p' t')
+                    else Just (Pi fc rig p' !(updateIVars ivs t))
+        updateIVarsB ivs (PVar fc c p t)
             = do p' <- updateIVarsPi ivs p
-                 Just (PVar c p' !(updateIVars ivs t))
-        updateIVarsB ivs (PLet c v t) = Just (PLet c !(updateIVars ivs v) !(updateIVars ivs t))
-        updateIVarsB ivs (PVTy c t) = Just (PVTy c !(updateIVars ivs t))
+                 Just (PVar fc c p' !(updateIVars ivs t))
+        updateIVarsB ivs (PLet fc c v t) = Just (PLet fc c !(updateIVars ivs v) !(updateIVars ivs t))
+        updateIVarsB ivs (PVTy fc c t) = Just (PVTy fc c !(updateIVars ivs t))
     updateIVars ivs (App fc f a)
         = Just (App fc !(updateIVars ivs f) !(updateIVars ivs a))
     updateIVars ivs (As fc u a p)
@@ -595,10 +595,10 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
             List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
             Core (Term vs)
-    mkDef (v :: vs) vars soln (Bind bfc x (Pi c _ ty) sc)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ Bind bfc x (Lam c Explicit (Erased bfc False)) sc'
-    mkDef vs vars soln (Bind bfc x b@(Let c val ty) sc)
+            pure $ Bind bfc x (Lam fc c Explicit (Erased bfc False)) sc'
+    mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do sc' <- mkDef vs (ICons Nothing vars) soln sc
             let Just scs = shrinkTerm sc' (DropCons SubRefl)
                 | Nothing => pure $ Bind bfc x b sc'
@@ -660,7 +660,7 @@ mutual
 
   getArgTypes : Defs -> (fnType : NF vars) -> List (Closure vars) ->
                 Core (Maybe (List (NF vars)))
-  getArgTypes defs (NBind _ n (Pi _ _ ty) sc) (a :: as)
+  getArgTypes defs (NBind _ n (Pi _ _ _ ty) sc) (a :: as)
      = do Just scTys <- getArgTypes defs !(sc defs a) as
                | Nothing => pure Nothing
           pure (Just (ty :: scTys))
@@ -1049,12 +1049,12 @@ mutual
                     FC -> Name -> Binder (NF vars) ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     Core UnifyResult
-  unifyBothBinders mode loc env xfc x (Pi cx ix tx) scx yfc y (Pi cy iy ty) scy
+  unifyBothBinders mode loc env xfc x (Pi fcx cx ix tx) scx yfc y (Pi fcy cy iy ty) scy
       = do defs <- get Ctxt
            if not (subRig cx cy)
              then convertError loc env
-                    (NBind xfc x (Pi cx ix tx) scx)
-                    (NBind yfc y (Pi cy iy ty) scy)
+                    (NBind xfc x (Pi fcx cx ix tx) scx)
+                    (NBind yfc y (Pi fcy cy iy ty) scy)
              else
                do empty <- clearDefs defs
                   tx' <- quote empty env tx
@@ -1064,42 +1064,44 @@ mutual
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
                   let env' : Env Term (x :: _)
-                           = Pi cy Explicit tx' :: env
+                           = Pi fcy cy Explicit tx' :: env
                   case constraints ct of
                       [] => -- No constraints, check the scope
                          do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tmx <- quote empty env tscx
                             tmy <- quote empty env tscy
-                            unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
-                                                (refsToLocals (Add x xn None) tmy)
+                            unify (lower mode) loc env'
+                              (refsToLocals (Add x xn None) tmx)
+                              (refsToLocals (Add x xn None) tmy)
                       cs => -- Constraints, make new guarded constant
                          do txtm <- quote empty env tx
                             tytm <- quote empty env ty
                             c <- newConstant loc erased env
-                                   (Bind xfc x (Lam cy Explicit txtm) (Local xfc Nothing _ First))
-                                   (Bind xfc x (Pi cy Explicit txtm)
+                                   (Bind xfc x (Lam fcy cy Explicit txtm) (Local xfc Nothing _ First))
+                                   (Bind xfc x (Pi fcy cy Explicit txtm)
                                        (weaken tytm)) cs
                             tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tscy <- scy defs (toClosure defaultOpts env (App loc c (Ref loc Bound xn)))
                             tmx <- quote empty env tscx
                             tmy <- quote empty env tscy
-                            cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
-                                                       (refsToLocals (Add x xn None) tmy)
+                            cs' <- unify (lower mode) loc env'
+                                     (refsToLocals (Add x xn None) tmx)
+                                     (refsToLocals (Add x xn None) tmy)
                             pure (union ct cs')
-  unifyBothBinders mode loc env xfc x (Lam cx ix tx) scx yfc y (Lam cy iy ty) scy
+  unifyBothBinders mode loc env xfc x (Lam fcx cx ix tx) scx yfc y (Lam fcy cy iy ty) scy
       = do defs <- get Ctxt
            if not (subRig cx cy)
              then convertError loc env
-                    (NBind xfc x (Lam cx ix tx) scx)
-                    (NBind yfc y (Lam cy iy ty) scy)
+                    (NBind xfc x (Lam fcx cx ix tx) scx)
+                    (NBind yfc y (Lam fcy cy iy ty) scy)
              else
                do empty <- clearDefs defs
                   tx' <- quote empty env tx
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
                   let env' : Env Term (x :: _)
-                           = Lam cx Explicit tx' :: env
+                           = Lam fcx cx Explicit tx' :: env
                   txtm <- quote empty env tx
                   tytm <- quote empty env ty
 
@@ -1108,7 +1110,7 @@ mutual
                   tmx <- quote empty env tscx
                   tmy <- quote empty env tscy
                   cs' <- unify (lower (lam mode)) loc env' (refsToLocals (Add x xn None) tmx)
-                                                   (refsToLocals (Add x xn None) tmy)
+                                                           (refsToLocals (Add x xn None) tmy)
                   pure (union ct cs')
 
   unifyBothBinders mode loc env xfc x bx scx yfc y by scy
@@ -1230,7 +1232,7 @@ mutual
       = do fty <- getType env f
            logGlue "unify.eta" 10 "Function type" env fty
            case !(getNF fty) of
-                NBind _ _ (Pi _ _ ty) sc =>
+                NBind _ _ (Pi _ _ _ ty) sc =>
                     do defs <- get Ctxt
                        empty <- clearDefs defs
                        pure (Just !(quote empty env ty))
@@ -1245,7 +1247,7 @@ mutual
   Unify NF where
     unifyD _ _ mode loc env (NBind xfc x bx scx) (NBind yfc y by scy)
         = unifyBothBinders mode loc env xfc x bx scx yfc y by scy
-    unifyD _ _ mode loc env tmx@(NBind xfc x (Lam cx ix tx) scx) tmy
+    unifyD _ _ mode loc env tmx@(NBind xfc x (Lam fcx cx ix tx) scx) tmy
         = do defs <- get Ctxt
              logNF "unify" 10 "EtaR" env tmx
              logNF "unify" 10 "...with" env tmy
@@ -1256,14 +1258,14 @@ mutual
                         case ety of
                              Just argty =>
                                do etay <- nf defs env
-                                             (Bind xfc x (Lam cx Explicit argty)
+                                             (Bind xfc x (Lam fcx cx Explicit argty)
                                                      (App xfc
                                                           (weaken !(quote empty env tmy))
                                                           (Local xfc Nothing 0 First)))
                                   logNF "unify" 10 "Expand" env etay
                                   unify mode loc env tmx etay
                              _ => unifyNoEta mode loc env tmx tmy
-    unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam cy iy ty) scy)
+    unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam fcy cy iy ty) scy)
         = do defs <- get Ctxt
              logNF "unify" 10 "EtaL" env tmx
              logNF "unify" 10 "...with" env tmy
@@ -1274,7 +1276,7 @@ mutual
                         case ety of
                              Just argty =>
                                do etax <- nf defs env
-                                             (Bind yfc y (Lam cy Explicit argty)
+                                             (Bind yfc y (Lam fcy cy Explicit argty)
                                                      (App yfc
                                                           (weaken !(quote empty env tmx))
                                                           (Local yfc Nothing 0 First)))

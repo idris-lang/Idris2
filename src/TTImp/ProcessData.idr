@@ -37,7 +37,7 @@ processDataOpt fc ndef NoNewtype
 checkRetType : {auto c : Ref Ctxt Defs} ->
                Env Term vars -> NF vars ->
                (NF vars -> Core ()) -> Core ()
-checkRetType env (NBind fc x (Pi _ _ ty) sc) chk
+checkRetType env (NBind fc x (Pi _ _ _ ty) sc) chk
     = do defs <- get Ctxt
          checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc False))) chk
 checkRetType env nf chk = chk nf
@@ -126,7 +126,7 @@ getIndexPats tm
          getPats defs ret
   where
     getRetType : Defs -> NF [] -> Core (NF [])
-    getRetType defs (NBind fc _ (Pi _ _ _) sc)
+    getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
         = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              getRetType defs sc'
     getRetType defs t = pure t
@@ -201,7 +201,7 @@ getDetags fc tys
 -- If exactly one argument is unerased, return its position
 getRelevantArg : Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
                  Core (Maybe (Bool, Nat))
-getRelevantArg defs i rel world (NBind fc _ (Pi rig _ val) sc)
+getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
                               !(sc defs (toClosure defaultOpts [] (Erased fc False))))
                  (case val of

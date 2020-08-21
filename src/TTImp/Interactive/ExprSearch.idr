@@ -570,14 +570,14 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
          intn <- genVarName "cval"
          helpern_in <- genCaseName "search"
          helpern <- inCurrentNS helpern_in
-         let env' = Lam top Explicit letty :: env
+         let env' = Lam fc top Explicit letty :: env
          scopeMeta <- metaVar fc top env' helpern
                              (weaken {n = intn} targetty)
          let scope = toApp scopeMeta
          updateDef helpern (const (Just None))
          -- Apply the intermediate result to the helper function we're
          -- about to generate.
-         let def = App fc (Bind fc intn (Lam top Explicit letty) scope)
+         let def = App fc (Bind fc intn (Lam fc top Explicit letty) scope)
                           locapp
 
          logTermNF "interaction.search" 10 "Binding def" env def
@@ -631,7 +631,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
                                             topty]
   where
     matchable : Defs -> NF vars -> Core Bool
-    matchable defs (NBind fc x (Pi _ _ _) sc)
+    matchable defs (NBind fc x (Pi _ _ _ _) sc)
         = matchable defs !(sc defs (toClosure defaultOpts env
                                               (Erased fc False)))
     matchable defs (NTCon _ _ _ _ _) = pure True
@@ -639,7 +639,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
 
     applyLocal : Defs -> Term vars ->
                  NF vars -> Term vars -> Core (Search (Term vars, ExprDefs))
-    applyLocal defs tm locty@(NBind _ x (Pi _ _ _) sc) targetty
+    applyLocal defs tm locty@(NBind _ x (Pi fc' _ _ _) sc) targetty
         = -- If the local has a function type, and the return type is
           -- something we can pattern match on (so, NTCon) then apply it,
           -- let bind the result, and try to generate a definition for
@@ -649,7 +649,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
                                                 (Erased fc False)))
                  | False => noResult
              intnty <- genVarName "cty"
-             letty <- metaVar fc erased env intnty (TType fc)
+             letty <- metaVar fc' erased env intnty (TType fc)
              let opts' = record { inUnwrap = True } opts
              locsearch <- searchLocalWith fc True rig opts' env [(p, pty)]
                                           letty topty
@@ -700,7 +700,7 @@ tryIntermediateRec fc rig opts env ty topty (Just rd)
          makeHelper fc rig opts' env letty ty recsearch
   where
     isSingleCon : Defs -> NF [] -> Core Bool
-    isSingleCon defs (NBind fc x (Pi _ _ _) sc)
+    isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
         = isSingleCon defs !(sc defs (toClosure defaultOpts []
                                               (Erased fc False)))
     isSingleCon defs (NTCon _ n _ _ _)
@@ -716,23 +716,23 @@ searchType : {vars : _} ->
              FC -> RigCount -> SearchOpts -> Env Term vars ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
-searchType fc rig opts env topty (S k) (Bind bfc n (Pi c info ty) sc)
-    = do let env' : Env Term (n :: _) = Pi c info ty :: env
+searchType fc rig opts env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
+    = do let env' : Env Term (n :: _) = b :: env
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts env' topty k sc
-         pure (map (\ (sc, ds) => (Bind bfc n (Lam c info ty) sc, ds)) scVal)
-searchType {vars} fc rig opts env topty Z (Bind bfc n (Pi c info ty) sc)
+         pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
+searchType {vars} fc rig opts env topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
     = -- try a local before creating a lambda...
       getSuccessful fc rig opts False env ty topty
-           [searchLocal fc rig opts env (Bind bfc n (Pi c info ty) sc) topty,
+           [searchLocal fc rig opts env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
                 let n' = UN !(getArgName defs n [] vars !(nf defs env ty))
-                let env' : Env Term (n' :: _) = Pi c info ty :: env
+                let env' : Env Term (n' :: _) = b :: env
                 let sc' = renameTop n' sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts env' topty Z sc'
                 pure (map (\ (sc, ds) =>
-                             (Bind bfc n' (Lam c info ty) sc, ds)) scVal))]
+                             (Bind bfc n' (Lam fc' c info ty) sc, ds)) scVal))]
 searchType fc rig opts env topty _ ty
     = case getFnArgs ty of
            (Ref rfc (TyCon t ar) n, args) =>
@@ -828,8 +828,8 @@ getLHSData defs (Just tm)
     = pure $ getLHS !(toFullNames !(normaliseHoles defs [] tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
-    getLHS (Bind _ _ (PVar _ _ _) sc) = getLHS sc
-    getLHS (Bind _ _ (PLet _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PLet _ _ _ _) sc) = getLHS sc
     getLHS sc
         = case getFn sc of
                Ref _ _ n => Just (MkRecData n sc)

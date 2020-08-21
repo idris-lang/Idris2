@@ -39,7 +39,7 @@ mutual
   chk env (App fc f a)
       = do fty <- chk env f
            case !(getNF fty) of
-                NBind _ _ (Pi _ _ ty) scdone =>
+                NBind _ _ (Pi _ _ _ ty) scdone =>
                       do defs <- get Ctxt
                          aty <- chk env a
                          sc' <- scdone defs (toClosure defaultOpts env a)
@@ -71,7 +71,7 @@ mutual
   chkMeta fc env ty []
       = do defs <- get Ctxt
            pure $ glueBack defs env ty
-  chkMeta fc env (NBind _ _ (Pi _ _ ty) scdone) (a :: args)
+  chkMeta fc env (NBind _ _ (Pi _ _ _ ty) scdone) (a :: args)
       = do defs <- get Ctxt
            aty <- chk env a
            sc' <- scdone defs (toClosure defaultOpts env a)
@@ -87,17 +87,17 @@ mutual
 
   discharge : FC -> (nm : Name) -> Binder (Term vars) ->
               Term vars -> Term (nm :: vars) -> (Term vars)
-  discharge fc n (Lam c x ty) bindty scopety
-      = Bind fc n (Pi c x ty) scopety
-  discharge fc n (Let c val ty) bindty scopety
-      = Bind fc n (Let c val ty) scopety
-  discharge fc n (Pi c x ty) bindty scopety
+  discharge fc n (Lam fc' c x ty) bindty scopety
+      = Bind fc n (Pi fc' c x ty) scopety
+  discharge fc n (Let fc' c val ty) bindty scopety
+      = Bind fc n (Let fc' c val ty) scopety
+  discharge fc n (Pi _ _ _ _) bindty scopety
       = bindty
-  discharge fc n (PVar c p ty) bindty scopety
-      = Bind fc n (PVTy c ty) scopety
-  discharge fc n (PLet c val ty) bindty scopety
-      = Bind fc n (PLet c val ty) scopety
-  discharge fc n (PVTy c ty) bindty scopety
+  discharge fc n (PVar fc' c p ty) bindty scopety
+      = Bind fc n (PVTy fc' c ty) scopety
+  discharge fc n (PLet fc' c val ty) bindty scopety
+      = Bind fc n (PLet fc' c val ty) scopety
+  discharge fc n (PVTy _ _ _) bindty scopety
       = bindty
 
   chkConstant : FC -> Constant -> Term vars
@@ -118,4 +118,3 @@ getType : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Env Term vars -> (term : Term vars) -> Core (Glued vars)
 getType env term = chk env term
-

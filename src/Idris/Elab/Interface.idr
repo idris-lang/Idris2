@@ -255,7 +255,7 @@ updateIfaceSyn iname cn impps ps cs ms ds
 -- Read the implicitly added parameters from an interface type, so that we
 -- know to substitute an implicit in when defining the implementation
 getImplParams : Term vars -> List Name
-getImplParams (Bind _ n (Pi _ Implicit _) sc)
+getImplParams (Bind _ n (Pi _ _ Implicit _) sc)
     = n :: getImplParams sc
 getImplParams _ = []
 

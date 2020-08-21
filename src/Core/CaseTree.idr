@@ -185,7 +185,7 @@ mkPat' : List Pat -> ClosedTerm -> ClosedTerm -> Pat
 mkPat' args orig (Ref fc Bound n) = PLoc fc n
 mkPat' args orig (Ref fc (DataCon t a) n) = PCon fc n t a args
 mkPat' args orig (Ref fc (TyCon t a) n) = PTyCon fc n a args
-mkPat' args orig (Bind fc x (Pi _ _ s) t)
+mkPat' args orig (Bind fc x (Pi _ _ _ s) t)
     = let t' = subst (Erased fc False) t in
           PArrow fc x (mkPat' [] s s) (mkPat' [] t' t')
 mkPat' args orig (App fc fn arg)
@@ -220,7 +220,7 @@ mkTerm vars (PTyCon fc x arity xs)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)
@@ -228,5 +228,3 @@ mkTerm vars (PLoc fc n)
            Just (MkVar prf) => Local fc Nothing _ prf
            _ => Ref fc Bound n
 mkTerm vars (PUnmatchable fc tm) = embed tm
-
-

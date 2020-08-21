@@ -70,6 +70,12 @@ dropNS : Name -> Name
 dropNS (NS _ n) = n
 dropNS n = n
 
+-- Drop all of the namespaces from a name
+export
+dropAllNS : Name -> Name
+dropAllNS (NS _ n) = dropAllNS n
+dropAllNS n = n
+
 export
 showSep : String -> List String -> String
 showSep sep [] = ""

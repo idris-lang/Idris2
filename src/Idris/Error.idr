@@ -28,6 +28,14 @@ import Utils.String
 
 %default covering
 
+-- | Add binding site information if the term is simply a machine-inserted name
+pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
+pShowMN t env acc = case t of
+  Local fc _ idx p => case dropAllNS (nameAt idx p) of
+      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty (getBinderLoc p env))
+      _ => acc
+  _ => acc
+
 joinNs : List String -> Doc (IdrisAnn)
 joinNs ns = concatWith (surround dot) (pretty <$> reverse ns)
 
@@ -37,8 +45,9 @@ pshow : {vars : _} ->
         Env Term vars -> Term vars -> Core (Doc IdrisAnn)
 pshow env tm
     = do defs <- get Ctxt
-         itm <- resugar env !(normaliseHoles defs env tm)
-         pure (prettyTerm itm)
+         ntm <- normaliseHoles defs env tm
+         itm <- resugar env ntm
+         pure (pShowMN ntm env $ prettyTerm itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -47,7 +56,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (prettyTerm itm)
+         pure (pShowMN tm env $ prettyTerm itm)
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
@@ -329,8 +338,8 @@ perror (CantSolveGoal fc env g)
     dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropEnv env (Bind _ n b@(Pi _ _ _) sc) = dropEnv (b :: env) sc
-    dropEnv env (Bind _ n b@(Let _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (b :: env) sc
     dropEnv env tm = (_ ** (env, tm))
 
 perror (DeterminingArg fc n i env g)

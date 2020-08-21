@@ -375,17 +375,19 @@ believeMe [_, _, val] = Nothing
 
 constTy : Constant -> Constant -> Constant -> ClosedTerm
 constTy a b c
-    = PrimVal emptyFC a `linFnType`
-         (PrimVal emptyFC b `linFnType` PrimVal emptyFC c)
+    = let arr = linFnType emptyFC in
+    PrimVal emptyFC a `arr` (PrimVal emptyFC b `arr` PrimVal emptyFC c)
 
 constTy3 : Constant -> Constant -> Constant -> Constant -> ClosedTerm
 constTy3 a b c d
-    = PrimVal emptyFC a `linFnType`
-         (PrimVal emptyFC b `linFnType`
-             (PrimVal emptyFC c `linFnType` PrimVal emptyFC d))
+    = let arr = linFnType emptyFC in
+    PrimVal emptyFC a `arr`
+         (PrimVal emptyFC b `arr`
+             (PrimVal emptyFC c `arr` PrimVal emptyFC d))
 
 predTy : Constant -> Constant -> ClosedTerm
-predTy a b = PrimVal emptyFC a `linFnType` PrimVal emptyFC b
+predTy a b = let arr = linFnType emptyFC in
+             PrimVal emptyFC a `arr` PrimVal emptyFC b
 
 arithTy : Constant -> ClosedTerm
 arithTy t = constTy t t t
@@ -398,15 +400,15 @@ doubleTy = predTy DoubleType DoubleType
 
 believeMeTy : ClosedTerm
 believeMeTy
-    = Bind emptyFC (UN "a") (Pi erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "b") (Pi erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "x") (Pi top Explicit (Local emptyFC Nothing _ (Later First))) $
+    = Bind emptyFC (UN "a") (Pi emptyFC erased Explicit (TType emptyFC)) $
+      Bind emptyFC (UN "b") (Pi emptyFC erased Explicit (TType emptyFC)) $
+      Bind emptyFC (UN "x") (Pi emptyFC top Explicit (Local emptyFC Nothing _ (Later First))) $
       Local emptyFC Nothing _ (Later First)
 
 crashTy : ClosedTerm
 crashTy
-    = Bind emptyFC (UN "a") (Pi erased Explicit (TType emptyFC)) $
-      Bind emptyFC (UN "msg") (Pi top Explicit (PrimVal emptyFC StringType)) $
+    = Bind emptyFC (UN "a") (Pi emptyFC erased Explicit (TType emptyFC)) $
+      Bind emptyFC (UN "msg") (Pi emptyFC top Explicit (PrimVal emptyFC StringType)) $
       Local emptyFC Nothing _ (Later First)
 
 castTo : Constant -> Vect 1 (NF vars) -> Maybe (NF vars)

@@ -23,13 +23,13 @@ length (_ :: xs) = S (length xs)
 export
 lengthNoLet : Env tm xs -> Nat
 lengthNoLet [] = 0
-lengthNoLet (Let _ _ _ :: xs) = lengthNoLet xs
+lengthNoLet (Let _ _ _ _ :: xs) = lengthNoLet xs
 lengthNoLet (_ :: xs) = S (lengthNoLet xs)
 
 export
 namesNoLet : {xs : _} -> Env tm xs -> List Name
 namesNoLet [] = []
-namesNoLet (Let _ _ _ :: xs) = namesNoLet xs
+namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
 namesNoLet {xs = x :: _} (_ :: env) = x :: namesNoLet env
 
 public export
@@ -90,6 +90,13 @@ getBinder : Weaken tm =>
             (0 p : IsVar x idx vars) -> Env tm vars -> Binder (tm vars)
 getBinder el env = getBinderUnder [] el env
 
+-- For getBinderLoc, we are not reusing getBinder because there is no need to
+-- needlessly weaken stuff;
+export
+getBinderLoc : {vars : _} -> {idx : Nat} -> (0 p : IsVar x idx vars) -> Env tm vars -> FC
+getBinderLoc {idx = Z}   First     (b :: _)   = binderLoc b
+getBinderLoc {idx = S k} (Later p) (_ :: env) = getBinderLoc p env
+
 -- Make a type which abstracts over an environment
 -- Don't include 'let' bindings, since they have a concrete value and
 -- shouldn't be generalised
@@ -97,40 +104,40 @@ export
 abstractEnvType : {vars : _} ->
                   FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
 abstractEnvType fc [] tm = tm
-abstractEnvType fc (Let c val ty :: env) tm
-    = abstractEnvType fc env (Bind fc _ (Let c val ty) tm)
-abstractEnvType fc (Pi c e ty :: env) tm
-    = abstractEnvType fc env (Bind fc _ (Pi c e ty) tm)
+abstractEnvType fc (Let fc' c val ty :: env) tm
+    = abstractEnvType fc env (Bind fc _ (Let fc' c val ty) tm)
+abstractEnvType fc (Pi fc' c e ty :: env) tm
+    = abstractEnvType fc env (Bind fc _ (Pi fc' c e ty) tm)
 abstractEnvType fc (b :: env) tm
-    = abstractEnvType fc env (Bind fc _
-						(Pi (multiplicity b) Explicit (binderType b)) tm)
+    = let bnd = Pi (binderLoc b) (multiplicity b) Explicit (binderType b)
+       in abstractEnvType fc env (Bind fc _ bnd tm)
 
 -- As above, for the corresponding term
 export
 abstractEnv : {vars : _} ->
               FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
 abstractEnv fc [] tm = tm
-abstractEnv fc (Let c val ty :: env) tm
-    = abstractEnv fc env (Bind fc _ (Let c val ty) tm)
+abstractEnv fc (Let fc' c val ty :: env) tm
+    = abstractEnv fc env (Bind fc _ (Let fc' c val ty) tm)
 abstractEnv fc (b :: env) tm
-    = abstractEnv fc env (Bind fc _
-						(Lam (multiplicity b) Explicit (binderType b)) tm)
+    = let bnd = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
+      in abstractEnv fc env (Bind fc _ bnd tm)
 
 -- As above, but abstract over all binders including lets
 export
 abstractFullEnvType : {vars : _} ->
                       FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
 abstractFullEnvType fc [] tm = tm
-abstractFullEnvType fc (Pi c e ty :: env) tm
-    = abstractFullEnvType fc env (Bind fc _ (Pi c e ty) tm)
+abstractFullEnvType fc (Pi fc' c e ty :: env) tm
+    = abstractFullEnvType fc env (Bind fc _ (Pi fc' c e ty) tm)
 abstractFullEnvType fc (b :: env) tm
-    = abstractFullEnvType fc env (Bind fc _
-						(Pi (multiplicity b) Explicit (binderType b)) tm)
+    = let bnd = Pi fc (multiplicity b) Explicit (binderType b)
+      in abstractFullEnvType fc env (Bind fc _ bnd tm)
 
 export
 letToLam : Env Term vars -> Env Term vars
 letToLam [] = []
-letToLam (Let c val ty :: env) = Lam c Explicit ty :: letToLam env
+letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
@@ -176,10 +183,10 @@ mutual
 
   findUsedInBinder : {vars : _} ->
                      Env Term vars -> List Nat ->
-										 Binder (Term vars) -> List Nat
-  findUsedInBinder env used (Let _ val ty)
+                     Binder (Term vars) -> List Nat
+  findUsedInBinder env used (Let _ _ val ty)
     = findUsed env (findUsed env used val) ty
-  findUsedInBinder env used (PLet _ val ty)
+  findUsedInBinder env used (PLet _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used b = findUsed env used (binderType b)
 
@@ -242,7 +249,7 @@ shrinkEnv (b :: env) (KeepCons p)
 export
 mkEnv : FC -> (vs : List Name) -> Env Term vs
 mkEnv fc [] = []
-mkEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: mkEnv fc ns
+mkEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.
@@ -291,5 +298,5 @@ allVars (v :: vs) = MkVar First :: map weaken (allVars vs)
 export
 allVarsNoLet : {vars : _} -> Env Term vars -> List (Var vars)
 allVarsNoLet [] = []
-allVarsNoLet (Let _ _ _ :: vs) = map weaken (allVars vs)
+allVarsNoLet (Let _ _ _ _ :: vs) = map weaken (allVars vs)
 allVarsNoLet (v :: vs) = MkVar First :: map weaken (allVars vs)

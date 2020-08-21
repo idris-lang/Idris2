@@ -106,8 +106,8 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
              processDecl [] nest env (IData fc vis dt)
 
     countExp : Term vs -> Nat
-    countExp (Bind _ n (Pi c Explicit _) sc) = S (countExp sc)
-    countExp (Bind _ n (Pi c _ _) sc) = countExp sc
+    countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)
+    countExp (Bind _ _ (Pi _ _ _ _) sc) = countExp sc
     countExp _ = 0
 
     -- Generate getters from the elaborated record constructor type
@@ -123,7 +123,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                     -- on an earlier projection)
                   Env Term vs -> Term vs ->
                   Core ()
-    elabGetters con done upds tyenv (Bind bfc n b@(Pi rc imp ty_chk) sc)
+    elabGetters con done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)

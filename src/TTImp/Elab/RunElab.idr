@@ -54,7 +54,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
         = do act' <- elabScript fc nest env
                                 !(evalClosure defs act) exp
              case !(evalClosure defs k) of
-                  NBind _ x (Lam _ _ _) sc =>
+                  NBind _ x (Lam _ _ _ _) sc =>
                       elabScript fc nest env
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
@@ -96,7 +96,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              scriptRet !(unelabUniqueBinders env !(quote empty env tm'))
     elabCon defs "Lambda" [x, _, scope]
         = do empty <- clearDefs defs
-             NBind bfc x (Lam c p ty) sc <- evalClosure defs scope
+             NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
                    | _ => throw (GenericMsg fc "Not a lambda")
              n <- genVarName "x"
              sc' <- sc defs (toClosure withAll env (Ref bfc Bound n))
@@ -104,11 +104,11 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              let lamsc = refToLocal n x qsc
              qp <- quotePi p
              qty <- quote empty env ty
-             let env' = Lam c qp qty :: env
+             let env' = Lam fc' c qp qty :: env
 
              runsc <- elabScript fc (weaken nest) env'
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
-             nf empty env (Bind bfc x (Lam c qp qty) !(quote empty env' runsc))
+             nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))
        where
          quotePi : PiInfo (NF vars) -> Core (PiInfo (Term vars))
          quotePi Explicit = pure Explicit

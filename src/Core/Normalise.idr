@@ -109,9 +109,9 @@ parameters (defs : Defs, topopts : EvalOpts)
         closeArgs : List (Term (vars ++ free)) -> List (Closure free)
         closeArgs [] = []
         closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
-    eval env locs (Bind fc x (Lam r _ ty) scope) (thunk :: stk)
+    eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (thunk :: locs) scope stk
-    eval env locs (Bind fc x b@(Let r val ty) scope) stk
+    eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
              then do b' <- traverse (\tm => eval env locs tm []) b
                      pure $ NBind fc x b'
@@ -159,7 +159,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         = applyToStack nf stk
       where
         applyToStack : NF free -> Stack free -> Core (NF free)
-        applyToStack (NBind fc _ (Lam r e ty) sc) (arg :: stk)
+        applyToStack (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
             = do arg' <- sc defs arg
                  applyToStack arg' stk
         applyToStack (NApp fc (NRef nt fn) args) stk
@@ -188,7 +188,7 @@ parameters (defs : Defs, topopts : EvalOpts)
              && fromMaybe True mrig
              then
                case getBinder prf env of
-                    Let _ val _ => eval env [] val stk
+                    Let _ _ val _ => eval env [] val stk
                     _ => pure $ NApp fc (NLocal mrig idx prf) stk
              else pure $ NApp fc (NLocal mrig idx prf) stk
     evalLocal env fc mrig Z First stk (x :: locs)
@@ -287,10 +287,10 @@ parameters (defs : Defs, topopts : EvalOpts)
          = evalTree env loc opts fc stk sc
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN "->") tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
                   [MkNFClosure aty,
-                   MkNFClosure (NBind pfc x (Lam r e aty) scty)]
+                   MkNFClosure (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
     tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
@@ -548,29 +548,29 @@ mutual
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (NF free) ->
                 Core (Binder (Term (bound ++ free)))
-  quoteBinder q defs bounds env (Lam r p ty)
+  quoteBinder q defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (Lam r p' ty')
-  quoteBinder q defs bounds env (Let r val ty)
+           pure (Lam fc r p' ty')
+  quoteBinder q defs bounds env (Let fc r val ty)
       = do val' <- quoteGenNF q defs bounds env val
            ty' <- quoteGenNF q defs bounds env ty
-           pure (Let r val' ty')
-  quoteBinder q defs bounds env (Pi r p ty)
+           pure (Let fc r val' ty')
+  quoteBinder q defs bounds env (Pi fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (Pi r p' ty')
-  quoteBinder q defs bounds env (PVar r p ty)
+           pure (Pi fc r p' ty')
+  quoteBinder q defs bounds env (PVar fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (PVar r p' ty')
-  quoteBinder q defs bounds env (PLet r val ty)
+           pure (PVar fc r p' ty')
+  quoteBinder q defs bounds env (PLet fc r val ty)
       = do val' <- quoteGenNF q defs bounds env val
            ty' <- quoteGenNF q defs bounds env ty
-           pure (PLet r val' ty')
-  quoteBinder q defs bounds env (PVTy r ty)
+           pure (PLet fc r val' ty')
+  quoteBinder q defs bounds env (PVTy fc r ty)
       = do ty' <- quoteGenNF q defs bounds env ty
-           pure (PVTy r ty')
+           pure (PVTy fc r ty')
 
   quoteGenNF : {bound, vars : _} ->
                Ref QVar Int ->
@@ -730,9 +730,9 @@ tryUpdate ms (Bind fc x b sc)
     tryUpdatePi (DefImplicit t) = pure $ DefImplicit !(tryUpdate ms t)
 
     tryUpdateB : Binder (Term vars) -> Maybe (Binder (Term vars'))
-    tryUpdateB (Lam r p t) = pure $ Lam r !(tryUpdatePi p) !(tryUpdate ms t)
-    tryUpdateB (Let r v t) = pure $ Let r !(tryUpdate ms v) !(tryUpdate ms t)
-    tryUpdateB (Pi r p t) = pure $ Pi r !(tryUpdatePi p) !(tryUpdate ms t)
+    tryUpdateB (Lam fc r p t) = pure $ Lam fc r !(tryUpdatePi p) !(tryUpdate ms t)
+    tryUpdateB (Let fc r v t) = pure $ Let fc r !(tryUpdate ms v) !(tryUpdate ms t)
+    tryUpdateB (Pi fc r p t) = pure $ Pi fc r !(tryUpdatePi p) !(tryUpdate ms t)
     tryUpdateB _ = Nothing
 
     weakenP : {n : _} -> (Var vars, Var vars') ->
@@ -942,11 +942,11 @@ mutual
   convBinders : {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
                 Binder (NF vars) -> Binder (NF vars) -> Core Bool
-  convBinders q defs env (Pi cx ix tx) (Pi cy iy ty)
+  convBinders q defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
       = if not (subRig cx cy)
            then pure False
            else convGen q defs env tx ty
-  convBinders q defs env (Lam cx ix tx) (Lam cy iy ty)
+  convBinders q defs env (Lam _ cx ix tx) (Lam _ cy iy ty)
       = if cx /= cy
            then pure False
            else convGen q defs env tx ty
@@ -968,17 +968,17 @@ mutual
                         convGen q defs env bsc bsc'
                 else pure False
 
-    convGen q defs env tmx@(NBind fc x (Lam c ix tx) scx) tmy
+    convGen q defs env tmx@(NBind fc x (Lam fc' c ix tx) scx) tmy
         = do empty <- clearDefs defs
              etay <- nf defs env
-                        (Bind fc x (Lam c !(traverse (quote empty env) ix) !(quote empty env tx))
+                        (Bind fc x (Lam fc' c !(traverse (quote empty env) ix) !(quote empty env tx))
                            (App fc (weaken !(quote empty env tmy))
                                 (Local fc Nothing _ First)))
              convGen q defs env tmx etay
-    convGen q defs env tmx tmy@(NBind fc y (Lam c iy ty) scy)
+    convGen q defs env tmx tmy@(NBind fc y (Lam fc' c iy ty) scy)
         = do empty <- clearDefs defs
              etax <- nf defs env
-                        (Bind fc y (Lam c !(traverse (quote empty env) iy) !(quote empty env ty))
+                        (Bind fc y (Lam fc' c !(traverse (quote empty env) iy) !(quote empty env ty))
                            (App fc (weaken !(quote empty env tmx))
                                 (Local fc Nothing _ First)))
              convGen q defs env etax tmy
@@ -1038,7 +1038,7 @@ mutual
 export
 getValArity : {vars : _} ->
               Defs -> Env Term vars -> NF vars -> Core Nat
-getValArity defs env (NBind fc x (Pi _ _ _) sc)
+getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
     = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc False)))))
 getValArity defs env val = pure 0
 
@@ -1133,7 +1133,7 @@ logEnv str n msg env
 
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
-    dumpEnv {vs = x :: _} (Let c val ty :: bs)
+    dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
         = do logTermNF' lvl (msg ++ ": let " ++ show x) bs val
              logTermNF' lvl (msg ++ ":" ++ show c ++ " " ++
                              show x) bs ty

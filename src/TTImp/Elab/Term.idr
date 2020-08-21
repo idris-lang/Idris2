@@ -46,23 +46,23 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
     -- If we can decide whether we need implicit lambdas without looking
     -- at the normal form, do so
     bindLamTm : RawImp -> Term vs -> Core (Maybe RawImp)
-    bindLamTm tm@(ILam _ _ Implicit _ _ _) (Bind fc n (Pi _ Implicit _) sc)
+    bindLamTm tm@(ILam _ _ Implicit _ _ _) (Bind fc n (Pi _ _ Implicit _) sc)
         = pure (Just tm)
-    bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ AutoImplicit _) sc)
+    bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ _ AutoImplicit _) sc)
         = pure (Just tm)
-    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ (DefImplicit _) _) sc)
+    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ _ (DefImplicit _) _) sc)
         = pure (Just tm)
-    bindLamTm tm (Bind fc n (Pi c Implicit ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c Implicit ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
              pure $ Just (ILam fc c Implicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi c AutoImplicit ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c AutoImplicit ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
              pure $ Just (ILam fc c AutoImplicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi c (DefImplicit _) ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c (DefImplicit _) ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
@@ -72,27 +72,27 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
         = case getFn exp of
                Ref _ Func _ => pure Nothing -- might still be implicit
                TForce _ _ _ => pure Nothing
-               Bind _ _ (Lam _ _ _) _ => pure Nothing
+               Bind _ _ (Lam _ _ _ _) _ => pure Nothing
                _ => pure $ Just tm
 
     bindLamNF : RawImp -> NF vars -> Core RawImp
-    bindLamNF tm@(ILam _ _ Implicit _ _ _) (NBind fc n (Pi _ Implicit _) sc)
+    bindLamNF tm@(ILam _ _ Implicit _ _ _) (NBind fc n (Pi _ _ Implicit _) sc)
         = pure tm
-    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (NBind fc n (Pi _ AutoImplicit _) sc)
+    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (NBind fc n (Pi _ _ AutoImplicit _) sc)
         = pure tm
-    bindLamNF tm (NBind fc n (Pi c Implicit ty) sc)
+    bindLamNF tm (NBind fc n (Pi fc' c Implicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c Implicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi c AutoImplicit ty) sc)
+    bindLamNF tm (NBind fc n (Pi fc' c AutoImplicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c AutoImplicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi c (DefImplicit _) ty) sc)
+    bindLamNF tm (NBind fc n (Pi _ c (DefImplicit _) ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))

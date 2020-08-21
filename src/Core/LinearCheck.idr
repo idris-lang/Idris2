@@ -72,23 +72,23 @@ mutual
                    Var vars -> List (Var vars) ->
                    Term vs -> List (Term vars) ->
                    Core (Term vs)
-  updateHoleType useInHole var zs (Bind bfc nm (Pi c e ty) sc) (Local _ r v _ :: as)
+  updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (Local _ r v _ :: as)
       -- if the argument to the hole type is the variable of interest,
       -- and the variable should be used in the hole, set it to Rig1,
       -- otherwise set it to Rig0
       = if varIdx var == v
            then do scty <- updateHoleType False var zs sc as
                    let c' = if useInHole then c else erased
-                   pure (Bind bfc nm (Pi c' e ty) scty)
+                   pure (Bind bfc nm (Pi fc' c' e ty) scty)
            else if elem v (map varIdx zs)
                 then do scty <- updateHoleType useInHole var zs sc as
-                        pure (Bind bfc nm (Pi erased e ty) scty)
+                        pure (Bind bfc nm (Pi fc' erased e ty) scty)
                 else do scty <- updateHoleType useInHole var zs sc as
-                        pure (Bind bfc nm (Pi c e ty) scty)
-  updateHoleType useInHole var zs (Bind bfc nm (Pi c e ty) sc) (a :: as)
+                        pure (Bind bfc nm (Pi fc' c e ty) scty)
+  updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (a :: as)
       = do updateHoleUsage False var zs a
            scty <- updateHoleType useInHole var zs sc as
-           pure (Bind bfc nm (Pi c e ty) scty)
+           pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs ty as
       = do updateHoleUsageArgs False var zs as
            pure ty
@@ -130,7 +130,7 @@ mutual
                     (useInHole : Bool) ->
                     Var vars -> List (Var vars) ->
                     Term vars -> Core Bool
-  updateHoleUsage useInHole (MkVar var) zs (Bind _ n (Let c val ty) sc)
+  updateHoleUsage useInHole (MkVar var) zs (Bind _ _ (Let _ _ val _) sc)
       = do h <- updateHoleUsage useInHole (MkVar var) zs val
            h' <- updateHoleUsage useInHole (MkVar (Later var)) (map weaken zs) sc
            pure (h || h')
@@ -240,10 +240,10 @@ mutual
                       lcheckMeta rig erase env fc n idx args [] nty
     where
       unusedHoleArgs : List a -> Term vs -> Term vs
-      unusedHoleArgs (_ :: args) (Bind bfc n (Pi _ e ty) sc)
-          = Bind bfc n (Pi erased e ty) (unusedHoleArgs args sc)
-      unusedHoleArgs args (Bind bfc n (Let c e ty) sc)
-          = Bind bfc n (Let c e ty) (unusedHoleArgs args sc)
+      unusedHoleArgs (_ :: args) (Bind bfc n (Pi fc _ e ty) sc)
+          = Bind bfc n (Pi fc erased e ty) (unusedHoleArgs args sc)
+      unusedHoleArgs args (Bind bfc n (Let fc c e ty) sc)
+          = Bind bfc n (Let fc c e ty) (unusedHoleArgs args sc)
       unusedHoleArgs _ ty = ty
 
   lcheck rig_in erase env (Bind fc nm b sc)
@@ -258,7 +258,7 @@ mutual
            -- checking in general context
            let env' = if rig_in == top
                          then case b of
-                              (Lam _ _ _) => eraseLinear env
+                              (Lam _ _ _ _) => eraseLinear env
                               _ => env
                          else env
            (sc', sct, usedsc) <- lcheck rig erase (b' :: env') sc
@@ -286,7 +286,7 @@ mutual
     where
       rig : RigCount
       rig = case b of
-                 Pi _ _ _ => erased
+                 Pi _ _ _ _ => erased
                  _ => if isErased rig_in
                          then erased
                          else linear
@@ -314,7 +314,7 @@ mutual
            defs <- get Ctxt
            fty <- getNF gfty
            case fty of
-                NBind _ _ (Pi rigf _ ty) scdone =>
+                NBind _ _ (Pi _ rigf _ ty) scdone =>
                      -- if the argument is borrowed, it's okay to use it in
                      -- unrestricted context, because we'll be out of the
                      -- application without spending it
@@ -382,52 +382,52 @@ mutual
                  RigCount -> (erase : Bool) -> Env Term vars ->
                  Binder (Term vars) ->
                  Core (Binder (Term vars), Glued vars, Usage vars)
-  lcheckBinder rig erase env (Lam c x ty)
+  lcheckBinder rig erase env (Lam fc c x ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (Lam c x tyv, tyt, [])
-  lcheckBinder rig erase env (Let rigc val ty)
-      = do (tyv, tyt, _) <- lcheck erased erase env ty
-           (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
-           pure (Let rigc valv tyv, tyt, vs)
-  lcheckBinder rig erase env (Pi c x ty)
-      = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (Pi c x tyv, tyt, [])
-  lcheckBinder rig erase env (PVar c p ty)
-      = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVar c p tyv, tyt, [])
-  lcheckBinder rig erase env (PLet rigc val ty)
+           pure (Lam fc c x tyv, tyt, [])
+  lcheckBinder rig erase env (Let fc rigc val ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
-           pure (PLet rigc valv tyv, tyt, vs)
-  lcheckBinder rig erase env (PVTy c ty)
+           pure (Let fc rigc valv tyv, tyt, vs)
+  lcheckBinder rig erase env (Pi fc c x ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVTy c tyv, tyt, [])
+           pure (Pi fc c x tyv, tyt, [])
+  lcheckBinder rig erase env (PVar fc c p ty)
+      = do (tyv, tyt, _) <- lcheck erased erase env ty
+           pure (PVar fc c p tyv, tyt, [])
+  lcheckBinder rig erase env (PLet fc rigc val ty)
+      = do (tyv, tyt, _) <- lcheck erased erase env ty
+           (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
+           pure (PLet fc rigc valv tyv, tyt, vs)
+  lcheckBinder rig erase env (PVTy fc c ty)
+      = do (tyv, tyt, _) <- lcheck erased erase env ty
+           pure (PVTy fc c tyv, tyt, [])
 
   discharge : {vars : _} ->
               Defs -> Env Term vars ->
               FC -> (nm : Name) -> Binder (Term vars) -> Glued vars ->
               Term (nm :: vars) -> Glued (nm :: vars) -> Usage vars ->
               Core (Term vars, Glued vars, Usage vars)
-  discharge defs env fc nm (Lam c x ty) gbindty scope gscopety used
+  discharge defs env fc nm (Lam fc' c x ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
-            pure (Bind fc nm (Lam c x ty) scope,
-                  gnf env (Bind fc nm (Pi c x ty) scty), used)
-  discharge defs env fc nm (Let c val ty) gbindty scope gscopety used
+            pure (Bind fc nm (Lam fc' c x ty) scope,
+                  gnf env (Bind fc nm (Pi fc' c x ty) scty), used)
+  discharge defs env fc nm (Let fc' c val ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
-            pure (Bind fc nm (Let c val ty) scope,
-                  gnf env (Bind fc nm (Let c val ty) scty), used)
-  discharge defs env fc nm (Pi c x ty) gbindty scope gscopety used
-       = pure (Bind fc nm (Pi c x ty) scope, gbindty, used)
-  discharge defs env fc nm (PVar c p ty) gbindty scope gscopety used
+            pure (Bind fc nm (Let fc' c val ty) scope,
+                  gnf env (Bind fc nm (Let fc' c val ty) scty), used)
+  discharge defs env fc nm (Pi fc' c x ty) gbindty scope gscopety used
+       = pure (Bind fc nm (Pi fc' c x ty) scope, gbindty, used)
+  discharge defs env fc nm (PVar fc' c p ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
-            pure (Bind fc nm (PVar c p ty) scope,
-                  gnf env (Bind fc nm (PVTy c ty) scty), used)
-  discharge defs env fc nm (PLet c val ty) gbindty scope gscopety used
+            pure (Bind fc nm (PVar fc' c p ty) scope,
+                  gnf env (Bind fc nm (PVTy fc' c ty) scty), used)
+  discharge defs env fc nm (PLet fc' c val ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
-            pure (Bind fc nm (PLet c val ty) scope,
-                  gnf env (Bind fc nm (PLet c val ty) scty), used)
-  discharge defs env fc nm (PVTy c ty) gbindty scope gscopety used
-       = pure (Bind fc nm (PVTy c ty) scope, gbindty, used)
+            pure (Bind fc nm (PLet fc' c val ty) scope,
+                  gnf env (Bind fc nm (PLet fc' c val ty) scty), used)
+  discharge defs env fc nm (PVTy fc' c ty) gbindty scope gscopety used
+       = pure (Bind fc nm (PVTy fc' c ty) scope, gbindty, used)
 
   data ArgUsage
        = UseAny -- RigW so we don't care
@@ -461,7 +461,7 @@ mutual
                      Core (List (Name, ArgUsage))
       getCaseUsage ty env (As _ _ _ p :: args) used rhs
           = getCaseUsage ty env (p :: args) used rhs
-      getCaseUsage (Bind _ n (Pi rig e ty) sc) env (arg :: args) used rhs
+      getCaseUsage (Bind _ n (Pi _ rig _ ty) sc) env (arg :: args) used rhs
           = if isLinear rig
                then case arg of
                          (Local _ _ idx p) =>
@@ -607,7 +607,7 @@ mutual
                         _ => pure (type def)
     where
       updateUsage : List ArgUsage -> Term ns -> Term ns
-      updateUsage (u :: us) (Bind bfc n (Pi c e ty) sc)
+      updateUsage (u :: us) (Bind bfc n (Pi fc c e ty) sc)
           = let sc' = updateUsage us sc
                 c' = case u of
                           Use0 => erased
@@ -615,7 +615,7 @@ mutual
                           UseUnknown => c -- don't know, assumed unchanged and update hole types
                           UseKeep => c -- matched here, so count usage elsewhere
                           UseAny => c in -- no constraint, so leave alone
-                Bind bfc n (Pi c' e ty) sc'
+                Bind bfc n (Pi fc c' e ty) sc'
       updateUsage _ ty = ty
 
       rigSafe : RigCount -> RigCount -> Core ()
@@ -635,9 +635,9 @@ mutual
       substMeta : {drop, vs : _} ->
                   Term (drop ++ vs) -> List (Term vs) -> SubstEnv drop vs ->
                   Core (Term vs)
-      substMeta (Bind bfc n (Lam c e ty) sc) (a :: as) env
+      substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) env
           = substMeta sc as (a :: env)
-      substMeta (Bind bfc n (Let c val ty) sc) as env
+      substMeta (Bind bfc n (Let _ c val ty) sc) as env
           = substMeta (subst val sc) as env
       substMeta rhs [] env = pure (substs env rhs)
       substMeta rhs _ _ = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show fn))
@@ -653,7 +653,7 @@ mutual
                (checked : List (Term vars)) ->
                NF vars -> Core (Term vars, Glued vars, Usage vars)
   lcheckMeta rig erase env fc n idx
-             (arg :: args) chk (NBind _ _ (Pi rigf _ ty) sc)
+             (arg :: args) chk (NBind _ _ (Pi _ rigf _ ty) sc)
       = do let checkRig = rigf |*| rig
            (arg', gargTy, aused) <- lcheck checkRig erase env arg
            defs <- get Ctxt

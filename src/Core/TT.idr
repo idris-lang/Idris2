@@ -248,6 +248,17 @@ Show (PrimFn arity) where
 public export
 data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
 
+export
+eqPiInfoBy : (t -> u -> Bool) -> PiInfo t -> PiInfo u -> Bool
+eqPiInfoBy eqT = go where
+
+  go : PiInfo t -> PiInfo u -> Bool
+  go Implicit Implicit = True
+  go Explicit Explicit = True
+  go AutoImplicit AutoImplicit = True
+  go (DefImplicit t) (DefImplicit t') = eqT t t'
+  go _ _ = False
+
 -- There's few places where we need the default - it's just when checking if
 -- there's a default during elaboration - so often it's easier just to erase it
 -- to a normal implicit
@@ -267,86 +278,104 @@ Show t => Show (PiInfo t) where
 
 export
 Eq t => Eq (PiInfo t) where
-  (==) Implicit Implicit = True
-  (==) Explicit Explicit = True
-  (==) AutoImplicit AutoImplicit = True
-  (==) (DefImplicit t) (DefImplicit t') = t == t'
-  (==) _ _ = False
+  (==) = eqPiInfoBy (==)
 
 public export
 data Binder : Type -> Type where
-	   -- Lambda bound variables with their implicitness
-     Lam : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- Let bound variables with their value
-     Let : RigCount -> (val : type) -> (ty : type) -> Binder type
-		 -- Forall/pi bound variables with their implicitness
-     Pi : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- pattern bound variables. The PiInfo gives the implicitness at the
+     -- Lambda bound variables with their implicitness
+     Lam : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- Let bound variables with their value
+     Let : FC -> RigCount -> (val : type) -> (ty : type) -> Binder type
+     -- Forall/pi bound variables with their implicitness
+     Pi : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- pattern bound variables. The PiInfo gives the implicitness at the
      -- point it was bound (Explicit if it was explicitly named in the
      -- program)
-     PVar : RigCount -> PiInfo type -> (ty : type) -> Binder type
-		 -- variable bound for an as pattern (Like a let, but no computational
+     PVar : FC -> RigCount -> PiInfo type -> (ty : type) -> Binder type
+     -- variable bound for an as pattern (Like a let, but no computational
      -- force, and only used on the lhs. Converted to a let on the rhs because
      -- we want the computational behaviour.)
-     PLet : RigCount -> (val : type) -> (ty : type) -> Binder type
-		 -- the type of pattern bound variables
-     PVTy : RigCount -> (ty : type) -> Binder type
+     PLet : FC -> RigCount -> (val : type) -> (ty : type) -> Binder type
+     -- the type of pattern bound variables
+     PVTy : FC -> RigCount -> (ty : type) -> Binder type
+
+export
+isLet : Binder t -> Bool
+isLet (Let _ _ _ _) = True
+isLet _ = False
+
+export
+isImplicit : Binder t -> Bool
+isImplicit (Pi _ _ Explicit _) = False
+isImplicit (Pi _ _ _ _) = True
+isImplicit (Lam _ _ Explicit _) = False
+isImplicit (Lam _ _ _ _) = True
+isImplicit _ = False
+
+export
+binderLoc : Binder tm -> FC
+binderLoc (Lam fc _ x ty) = fc
+binderLoc (Let fc _ val ty) = fc
+binderLoc (Pi fc _ x ty) = fc
+binderLoc (PVar fc _ p ty) = fc
+binderLoc (PLet fc _ val ty) = fc
+binderLoc (PVTy fc _ ty) = fc
 
 export
 binderType : Binder tm -> tm
-binderType (Lam _ x ty) = ty
-binderType (Let _ val ty) = ty
-binderType (Pi _ x ty) = ty
-binderType (PVar _ _ ty) = ty
-binderType (PLet _ val ty) = ty
-binderType (PVTy _ ty) = ty
+binderType (Lam _ _ x ty) = ty
+binderType (Let _ _ val ty) = ty
+binderType (Pi _ _ x ty) = ty
+binderType (PVar _ _ _ ty) = ty
+binderType (PLet _ _ val ty) = ty
+binderType (PVTy _ _ ty) = ty
 
 export
 multiplicity : Binder tm -> RigCount
-multiplicity (Lam c x ty) = c
-multiplicity (Let c val ty) = c
-multiplicity (Pi c x ty) = c
-multiplicity (PVar c p ty) = c
-multiplicity (PLet c val ty) = c
-multiplicity (PVTy c ty) = c
+multiplicity (Lam _ c x ty) = c
+multiplicity (Let _ c val ty) = c
+multiplicity (Pi _ c x ty) = c
+multiplicity (PVar _ c p ty) = c
+multiplicity (PLet _ c val ty) = c
+multiplicity (PVTy _ c ty) = c
 
 export
 piInfo : Binder tm -> PiInfo tm
-piInfo (Lam c x ty) = x
-piInfo (Let c val ty) = Explicit
-piInfo (Pi c x ty) = x
-piInfo (PVar c p ty) = p
-piInfo (PLet c val ty) = Explicit
-piInfo (PVTy c ty) = Explicit
+piInfo (Lam _ c x ty) = x
+piInfo (Let _ c val ty) = Explicit
+piInfo (Pi _ c x ty) = x
+piInfo (PVar _ c p ty) = p
+piInfo (PLet _ c val ty) = Explicit
+piInfo (PVTy _ c ty) = Explicit
 
 export
 setMultiplicity : Binder tm -> RigCount -> Binder tm
-setMultiplicity (Lam c x ty) c' = Lam c' x ty
-setMultiplicity (Let c val ty) c' = Let c' val ty
-setMultiplicity (Pi c x ty) c' = Pi c' x ty
-setMultiplicity (PVar c p ty) c' = PVar c' p ty
-setMultiplicity (PLet c val ty) c' = PLet c' val ty
-setMultiplicity (PVTy c ty) c' = PVTy c' ty
+setMultiplicity (Lam fc _ x ty) c = Lam fc c x ty
+setMultiplicity (Let fc _ val ty) c = Let fc c val ty
+setMultiplicity (Pi fc _ x ty) c = Pi fc c x ty
+setMultiplicity (PVar fc _ p ty) c = PVar fc c p ty
+setMultiplicity (PLet fc _ val ty) c = PLet fc c val ty
+setMultiplicity (PVTy fc _ ty) c = PVTy fc c ty
 
 showCount : RigCount -> String
 showCount = elimSemi "0 " "1 " (const "")
 
 Show ty => Show (Binder ty) where
-	show (Lam c _ t) = "\\" ++ showCount c ++ show t
-	show (Pi c _ t) = "Pi " ++ showCount c ++ show t
-	show (Let c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVar c _ t) = "pat " ++ showCount c ++ show t
-	show (PLet c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVTy c t) = "pty " ++ showCount c ++ show t
+	show (Lam _ c _ t) = "\\" ++ showCount c ++ show t
+	show (Pi _ c _ t) = "Pi " ++ showCount c ++ show t
+	show (Let _ c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
+	show (PVar _ c _ t) = "pat " ++ showCount c ++ show t
+	show (PLet _ c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
+	show (PVTy _ c t) = "pty " ++ showCount c ++ show t
 
 export
 setType : Binder tm -> tm -> Binder tm
-setType (Lam c x _) ty = Lam c x ty
-setType (Let c val _) ty = Let c val ty
-setType (Pi c x _) ty = Pi c x ty
-setType (PVar c p _) ty = PVar c p ty
-setType (PLet c val _) ty = PLet c val ty
-setType (PVTy c _) ty = PVTy c ty
+setType (Lam fc c x _) ty = Lam fc c x ty
+setType (Let fc c val _) ty = Let fc c val ty
+setType (Pi fc c x _) ty = Pi fc c x ty
+setType (PVar fc c p _) ty = PVar fc c p ty
+setType (PLet fc c val _) ty = PLet fc c val ty
+setType (PVTy fc c _) ty = PVTy fc c ty
 
 export
 Functor PiInfo where
@@ -357,12 +386,12 @@ Functor PiInfo where
 
 export
 Functor Binder where
-  map func (Lam c x ty) = Lam c (map func x) (func ty)
-  map func (Let c val ty) = Let c (func val) (func ty)
-  map func (Pi c x ty) = Pi c (map func x) (func ty)
-  map func (PVar c p ty) = PVar c (map func p) (func ty)
-  map func (PLet c val ty) = PLet c (func val) (func ty)
-  map func (PVTy c ty) = PVTy c (func ty)
+  map func (Lam fc c x ty) = Lam fc c (map func x) (func ty)
+  map func (Let fc c val ty) = Let fc c (func val) (func ty)
+  map func (Pi fc c x ty) = Pi fc c (map func x) (func ty)
+  map func (PVar fc c p ty) = PVar fc c (map func p) (func ty)
+  map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
+  map func (PVTy fc c ty) = PVTy fc c (func ty)
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
@@ -471,14 +500,21 @@ compatible _ LUnknown = True
 compatible x y = x == y
 
 export
+eqBinderBy : (t -> u -> Bool) -> (Binder t -> Binder u -> Bool)
+eqBinderBy eqTU = go where
+
+  go : Binder t -> Binder u -> Bool
+  go (Lam _ c p ty) (Lam _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (Let _ c v ty) (Let _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (Pi _ c p ty) (Pi _ c' p' ty')   = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PVar _ c p ty) (PVar _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PLet _ c v ty) (PLet _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (PVTy _ c ty) (PVTy _ c' ty') = c == c' && eqTU ty ty'
+  go _ _ = False
+
+export
 Eq a => Eq (Binder a) where
-  (Lam c p ty) == (Lam c' p' ty') = c == c' && p == p' && ty == ty'
-  (Let c v ty) == (Let c' v' ty') = c == c' && v == v' && ty == ty'
-  (Pi c p ty) == (Pi c' p' ty') = c == c' && p == p' && ty == ty'
-  (PVar c p ty) == (PVar c' p' ty') = c == c' && p == p' && ty == ty'
-  (PLet c v ty) == (PLet c' v' ty') = c == c' && v == v' && ty == ty'
-  (PVTy c ty) == (PVTy c' ty') = c == c' && ty == ty'
-  _ == _ = False
+  (==) = eqBinderBy (==)
 
 export
 Eq (Term vars) where
@@ -506,29 +542,7 @@ eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
     = assert_total (i == i' && allTrue (zipWith eqTerm args args'))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
-    = assert_total (eqBinder b b' && eqTerm sc sc')
-  where
-    eqPiInfo : PiInfo (Term vs) -> PiInfo (Term vs') -> Bool
-    eqPiInfo Explicit Explicit = True
-    eqPiInfo Implicit Implicit = True
-    eqPiInfo AutoImplicit AutoImplicit = True
-    eqPiInfo (DefImplicit t) (DefImplicit t') = eqTerm t t'
-    eqPiInfo _ _ = False
-
-    eqBinder : Binder (Term vs) -> Binder (Term vs') -> Bool
-    eqBinder (Lam c p ty) (Lam c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (Let c v ty) (Let c' v' ty')
-        = c == c' && eqTerm v v' && eqTerm ty ty'
-    eqBinder (Pi c p ty) (Pi c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (PVar c p ty) (PVar c' p' ty')
-        = c == c' && eqPiInfo p p' && eqTerm ty ty'
-    eqBinder (PLet c v ty) (PLet c' v' ty')
-        = c == c' && eqTerm v v' && eqTerm ty ty'
-    eqBinder (PVTy c ty) (PVTy c' ty')
-        = c == c' && eqTerm ty ty'
-    eqBinder _ _ = False
+    = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
 eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'
 eqTerm (As _ _ a p) (As _ _ a' p') = eqTerm a a' && eqTerm p p'
 eqTerm (TDelayed _ _ t) (TDelayed _ _ t') = eqTerm t t'
@@ -830,12 +844,12 @@ apply loc fn (a :: args) = apply loc (App loc fn a) args
 
 -- Build a simple function type
 export
-fnType : {vars : _} -> Term vars -> Term vars -> Term vars
-fnType arg scope = Bind emptyFC (MN "_" 0) (Pi top Explicit arg) (weaken scope)
+fnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+fnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc top Explicit arg) (weaken scope)
 
 export
-linFnType : {vars : _} -> Term vars -> Term vars -> Term vars
-linFnType arg scope = Bind emptyFC (MN "_" 0) (Pi linear Explicit arg) (weaken scope)
+linFnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+linFnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc linear Explicit arg) (weaken scope)
 
 export
 getFnArgs : Term vars -> (Term vars, List (Term vars))
@@ -960,18 +974,18 @@ mutual
   export
   shrinkBinder : Binder (Term vars) -> SubVars newvars vars ->
                  Maybe (Binder (Term newvars))
-  shrinkBinder (Lam c p ty) prf
-      = Just (Lam c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (Let c val ty) prf
-      = Just (Let c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (Pi c p ty) prf
-      = Just (Pi c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVar c p ty) prf
-      = Just (PVar c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PLet c val ty) prf
-      = Just (PLet c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVTy c ty) prf
-      = Just (PVTy c !(shrinkTerm ty prf))
+  shrinkBinder (Lam fc c p ty) prf
+      = Just (Lam fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (Let fc c val ty) prf
+      = Just (Let fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
+  shrinkBinder (Pi fc c p ty) prf
+      = Just (Pi fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (PVar fc c p ty) prf
+      = Just (PVar fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
+  shrinkBinder (PLet fc c val ty) prf
+      = Just (PLet fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
+  shrinkBinder (PVTy fc c ty) prf
+      = Just (PVTy fc c !(shrinkTerm ty prf))
 
   export
   shrinkVar : Var vars -> SubVars newvars vars -> Maybe (Var newvars)
@@ -1229,7 +1243,7 @@ addMetas ns (Meta fc n i xs) = addMetaArgs (insert n False ns) xs
     addMetaArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addMetaArgs ns [] = ns
     addMetaArgs ns (t :: ts) = addMetaArgs (addMetas ns t) ts
-addMetas ns (Bind fc x (Let c val ty) scope)
+addMetas ns (Bind fc x (Let _ c val ty) scope)
     = addMetas (addMetas (addMetas ns val) ty) scope
 addMetas ns (Bind fc x b scope)
     = addMetas (addMetas ns (binderType b)) scope
@@ -1260,7 +1274,7 @@ addRefs ua at ns (Meta fc n i xs)
     addRefsArgs : NameMap Bool -> List (Term vars) -> NameMap Bool
     addRefsArgs ns [] = ns
     addRefsArgs ns (t :: ts) = addRefsArgs (addRefs ua at ns t) ts
-addRefs ua at ns (Bind fc x (Let c val ty) scope)
+addRefs ua at ns (Bind fc x (Let _ c val ty) scope)
     = addRefs ua at (addRefs ua at (addRefs ua at ns val) ty) scope
 addRefs ua at ns (Bind fc x b scope)
     = addRefs ua at (addRefs ua at ns (binderType b)) scope
@@ -1292,7 +1306,7 @@ nameAt : {vars : _} ->
 nameAt {vars = n :: ns} Z First = n
 nameAt {vars = n :: ns} (S k) (Later p) = nameAt k p
 
-export 
+export
 {vars : _} -> Show (Term vars) where
   show tm = let (fn, args) = getFnArgs tm in showApp fn args
     where
@@ -1302,38 +1316,38 @@ export
       showApp (Ref _ _ n) [] = show n
       showApp (Meta _ n i args) []
           = "?" ++ show n ++ "_" ++ show args
-      showApp (Bind _ x (Lam c p ty) sc) []
+      showApp (Bind _ x (Lam _ c p ty) sc) []
           = "\\" ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
-      showApp (Bind _ x (Let c val ty) sc) []
+      showApp (Bind _ x (Let _ c val ty) sc) []
           = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " = " ++ show val ++ " in " ++ show sc
-      showApp (Bind _ x (Pi c Explicit ty) sc) []
+      showApp (Bind _ x (Pi _ c Explicit ty) sc) []
           = "((" ++ showCount c ++ show x ++ " : " ++ show ty ++
             ") -> " ++ show sc ++ ")"
-      showApp (Bind _ x (Pi c Implicit ty) sc) []
+      showApp (Bind _ x (Pi _ c Implicit ty) sc) []
           = "{" ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} -> " ++ show sc
-      showApp (Bind _ x (Pi c AutoImplicit ty) sc) []
+      showApp (Bind _ x (Pi _ c AutoImplicit ty) sc) []
           = "{auto " ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} -> " ++ show sc
-      showApp (Bind _ x (Pi c (DefImplicit tm) ty) sc) []
+      showApp (Bind _ x (Pi _ c (DefImplicit tm) ty) sc) []
           = "{default " ++ show tm ++ " "
                 ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} -> " ++ show sc
-      showApp (Bind _ x (PVar c Explicit ty) sc) []
+      showApp (Bind _ x (PVar _ c Explicit ty) sc) []
           = "pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
-      showApp (Bind _ x (PVar c Implicit ty) sc) []
+      showApp (Bind _ x (PVar _ c Implicit ty) sc) []
           = "{pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} => " ++ show sc
-      showApp (Bind _ x (PVar c AutoImplicit ty) sc) []
+      showApp (Bind _ x (PVar _ c AutoImplicit ty) sc) []
           = "{auto pat " ++ showCount c ++ show x ++ " : " ++ show ty ++
             "} => " ++ show sc
-      showApp (Bind _ x (PLet c val ty) sc) []
+      showApp (Bind _ x (PLet _ c val ty) sc) []
           = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " = " ++ show val ++ " in " ++ show sc
-      showApp (Bind _ x (PVTy c ty) sc) []
+      showApp (Bind _ x (PVTy _ c ty) sc) []
           = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
       showApp (App _ _ _) [] = "[can't happen]"

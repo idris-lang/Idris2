@@ -66,14 +66,14 @@ findTyName : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              Defs -> Env Term vars -> Name -> Term vars ->
              Core (Maybe Name)
-findTyName defs env n (Bind _ x (PVar c p ty) sc)
+findTyName defs env n (Bind _ x b@(PVar _ c p ty) sc)
       -- Take the first one, which is the most recently bound
     = if n == x
          then do tynf <- nf defs env ty
                  case tynf of
                       NTCon _ tyn _ _ _ => pure $ Just tyn
                       _ => pure Nothing
-         else findTyName defs (PVar c p ty :: env) n sc
+         else findTyName defs (b :: env) n sc
 findTyName defs env n (Bind _ x b sc) = findTyName defs (b :: env) n sc
 findTyName _ _ _ _ = pure Nothing
 
@@ -108,11 +108,11 @@ findCons n lhs
                                            !(traverse toFullNames cons)))
 
 findAllVars : Term vars -> List Name
-findAllVars (Bind _ x (PVar c p ty) sc)
+findAllVars (Bind _ x (PVar _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (Let c p ty) sc)
+findAllVars (Bind _ x (Let _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (PLet c p ty) sc)
+findAllVars (Bind _ x (PLet _ _ _ _) sc)
     = x :: findAllVars sc
 findAllVars _ = []
 
@@ -154,7 +154,7 @@ getArgName defs x bound allvars ty
     notBound x = not $ UN x `elem` bound
 
     findNames : NF vars -> Core (List String)
-    findNames (NBind _ x (Pi _ _ _) _)
+    findNames (NBind _ x (Pi _ _ _ _) _)
         = pure (filter notBound ["f", "g"])
     findNames (NTCon _ n _ _ _)
         = case !(lookupName n (NameMap.toList (namedirectives defs))) of
@@ -170,7 +170,7 @@ export
 getArgNames : {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
               Core (List String)
-getArgNames defs bound allvars env nf@(NBind fc x (Pi _ p ty) sc)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
                     Explicit => pure [!(getArgName defs x bound allvars ty)]
                     _ => pure []
@@ -180,7 +180,7 @@ getArgNames defs bound allvars env val = pure []
 
 export
 explicitlyBound : Defs -> NF [] -> Core (List Name)
-explicitlyBound defs (NBind fc x (Pi _ _ _) sc)
+explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
     = pure $ x :: !(explicitlyBound defs
                     !(sc defs (toClosure defaultOpts [] (Erased fc False))))
 explicitlyBound defs _ = pure []
@@ -345,8 +345,8 @@ mkCase {c} {u} fn orig lhs_raw
 
 substLets : {vars : _} ->
             Term vars -> Term vars
-substLets (Bind _ n (Let c val ty) sc) = substLets (subst val sc)
-substLets (Bind _ n (PLet c val ty) sc) = substLets (subst val sc)
+substLets (Bind _ n (Let _ c val ty) sc) = substLets (subst val sc)
+substLets (Bind _ n (PLet _ c val ty) sc) = substLets (subst val sc)
 substLets (Bind fc n b sc) = Bind fc n b (substLets sc)
 substLets tm = tm
 

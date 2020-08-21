@@ -145,17 +145,17 @@ extendEnv : {vars : _} ->
                     (SubVars inner vars',
                      Env Term vars', NestedNames vars',
                      Term vars', Term vars'))
-extendEnv env p nest (Bind _ n (PVar c pi tmty) sc) (Bind _ n' (PVTy _ _) tysc) with (nameEq n n')
-  extendEnv env p nest (Bind _ n (PVar c pi tmty) sc) (Bind _ n' (PVTy _ _) tysc) | Nothing
+extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) with (nameEq n n')
+  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
-  extendEnv env p nest (Bind _ n (PVar c pi tmty) sc) (Bind _ n (PVTy _ _) tysc) | (Just Refl)
-      = extendEnv (PVar c pi tmty :: env) (DropCons p) (weaken nest) sc tysc
-extendEnv env p nest (Bind _ n (PLet c tmval tmty) sc) (Bind _ n' (PLet _ _ _) tysc) with (nameEq n n')
-  extendEnv env p nest (Bind _ n (PLet c tmval tmty) sc) (Bind _ n' (PLet _ _ _) tysc) | Nothing
+  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy _ _ _) tysc) | (Just Refl)
+      = extendEnv (PVar fc c pi tmty :: env) (DropCons p) (weaken nest) sc tysc
+extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) with (nameEq n n')
+  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
-  extendEnv env p nest (Bind _ n (PLet c tmval tmty) sc) (Bind _ n (PLet _ _ _) tysc) | (Just Refl)
-      = extendEnv (Let c tmval tmty :: env) (DropCons p) (weaken nest) sc tysc
+  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet _ _ _ _) tysc) | (Just Refl)
+      = extendEnv (Let fc c tmval tmty :: env) (DropCons p) (weaken nest) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
 
@@ -194,7 +194,7 @@ findLinear top bound rig tm
           = findLinArg rig ty (p :: as)
       findLinArg rig ty (As fc UseRight p _ :: as)
           = findLinArg rig ty (p :: as)
-      findLinArg rig (NBind _ x (Pi c _ _) sc) (Local {name=a} fc _ idx prf :: as)
+      findLinArg rig (NBind _ x (Pi _ c _ _) sc) (Local {name=a} fc _ idx prf :: as)
           = do defs <- get Ctxt
                let a = nameAt idx prf
                if idx < bound
@@ -203,7 +203,7 @@ findLinear top bound rig tm
                                     !(findLinArg rig sc' as)
                  else do sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound x))
                          findLinArg rig sc' as
-      findLinArg rig (NBind fc x (Pi c _ _) sc) (a :: as)
+      findLinArg rig (NBind fc x (Pi _ c _ _) sc) (a :: as)
           = do defs <- get Ctxt
                pure $ !(findLinear False bound (c |*| rig) a) ++
                       !(findLinArg rig !(sc defs (toClosure defaultOpts [] (Ref fc Bound x))) as)
@@ -212,14 +212,14 @@ findLinear top bound rig tm
       findLinArg _ _ [] = pure []
 
 setLinear : List (Name, RigCount) -> Term vars -> Term vars
-setLinear vs (Bind fc x (PVar c p ty) sc)
+setLinear vs (Bind fc x b@(PVar _ _ _ _) sc)
     = case lookup x vs of
-           Just c' => Bind fc x (PVar c' p ty) (setLinear vs sc)
-           _ => Bind fc x (PVar c p ty) (setLinear vs sc)
-setLinear vs (Bind fc x (PVTy c ty) sc)
+           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
+           _ => Bind fc x b (setLinear vs sc)
+setLinear vs (Bind fc x b@(PVTy _ _ _) sc)
     = case lookup x vs of
-           Just c' => Bind fc x (PVTy c' ty) (setLinear vs sc)
-           _ => Bind fc x (PVTy c ty) (setLinear vs sc)
+           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
+           _ => Bind fc x b (setLinear vs sc)
 setLinear vs tm = tm
 
 -- Combining multiplicities on LHS:
@@ -329,9 +329,9 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 hasEmptyPat : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
-hasEmptyPat defs env (Bind fc x (PVar c p ty) sc)
+hasEmptyPat defs env (Bind fc x b@(PVar _ _ _ ty) sc)
    = pure $ !(isEmpty defs env !(nf defs env ty))
-            || !(hasEmptyPat defs (PVar c p ty :: env) sc)
+            || !(hasEmptyPat defs (b :: env) sc)
 hasEmptyPat defs env _ = pure False
 
 -- For checking with blocks as nested names
@@ -438,7 +438,7 @@ checkClause {vars} mult vis hashit n opts nest env (WithClause fc lhs_in wval_ra
          -- Abstracting over 'wval' in the scope of bNotReq in order
          -- to get the 'magic with' behaviour
          let wargn = MN "warg" 0
-         let scenv = Pi top Explicit wvalTy :: wvalEnv
+         let scenv = Pi fc top Explicit wvalTy :: wvalEnv
 
          let bnr = bindNotReq fc 0 env' withSub [] reqty
          let notreqns = fst bnr
@@ -451,7 +451,7 @@ checkClause {vars} mult vis hashit n opts nest env (WithClause fc lhs_in wval_ra
                             (Local fc (Just False) _ First)
                             !(nf rdefs scenv
                                  (weaken {n=wargn} notreqty))
-         let bNotReq = Bind fc wargn (Pi top Explicit wvalTy) wtyScope
+         let bNotReq = Bind fc wargn (Pi fc top Explicit wvalTy) wtyScope
 
          let Just (reqns, envns, wtype) = bindReq fc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
@@ -791,7 +791,7 @@ processDef opts nest env fc n_in cs_in
                               else pure (Just tm))
       where
         closeEnv : Defs -> NF [] -> Core ClosedTerm
-        closeEnv defs (NBind _ x (PVar _ _ _) sc)
+        closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
             = closeEnv defs !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
         closeEnv defs nf = quote defs [] nf
 

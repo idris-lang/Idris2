@@ -81,7 +81,7 @@ elabRewrite loc env expected rulety
          logTerm "elab.rewrite" 5 "Rewritten to" rwexp_sc
 
          empty <- clearDefs defs
-         let pred = Bind loc parg (Lam top Explicit
+         let pred = Bind loc parg (Lam loc top Explicit
                           !(quote empty env lty))
                           (refsToLocals (Add parg parg None) rwexp_sc)
          gpredty <- getType env pred
@@ -117,8 +117,8 @@ checkRewrite {vars} rigc elabinfo nest env fc rule tm (Just expected)
            rname <- genVarName "_"
            pname <- genVarName "_"
 
-           let pbind = Let erased pred predty
-           let rbind = Let erased (weaken rulev) (weaken rulet)
+           let pbind = Let fc erased pred predty
+           let rbind = Let fc erased (weaken rulev) (weaken rulet)
 
            let env' = rbind :: pbind :: env
 

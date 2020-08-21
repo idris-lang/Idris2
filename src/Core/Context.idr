@@ -1536,7 +1536,7 @@ setDetermining fc tyn args
     -- Type isn't normalised, but the argument names refer to those given
     -- explicitly in the type, so there's no need.
     getPos : Nat -> List Name -> Term vs -> Core (List Nat)
-    getPos i ns (Bind _ x (Pi _ _ _) sc)
+    getPos i ns (Bind _ x (Pi _ _ _ _) sc)
         = if x `elem` ns
              then do rest <- getPos (1 + i) (filter (/=x) ns) sc
                      pure $ i :: rest
@@ -1775,7 +1775,7 @@ updateParams (Just args) args' = dropReps $ zipWith mergeArg args args'
 getPs : {vars : _} ->
         Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
         Maybe (List (Maybe (Term vars)))
-getPs acc tyn (Bind _ x (Pi _ _ ty) sc)
+getPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
       = let scPs = getPs (Prelude.map (Prelude.map (Prelude.map weaken)) acc) tyn sc in
             map (map shrink) scPs
   where
@@ -1801,7 +1801,7 @@ toPos (Just ns) = justPos 0 ns
 
 getConPs : {vars : _} ->
            Maybe (List (Maybe (Term vars))) -> Name -> Term vars -> List Nat
-getConPs acc tyn (Bind _ x (Pi _ _ ty) sc)
+getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
     = let bacc = getPs acc tyn ty in
           getConPs (map (map (map weaken)) bacc) tyn sc
 getConPs acc tyn tm = toPos (getPs acc tyn tm)

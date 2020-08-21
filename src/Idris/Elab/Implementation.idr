@@ -91,9 +91,9 @@ getMethImps : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Env Term vars -> Term vars ->
               Core (List (Name, RigCount, RawImp))
-getMethImps env (Bind fc x (Pi c Implicit ty) sc)
+getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- unelabNoSugar env ty
-         ts <- getMethImps (Pi c Implicit ty :: env) sc
+         ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
          pure ((x, c, rty) :: ts)
 getMethImps env tm = pure []
 
@@ -254,11 +254,11 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     -- For the method fields in the record, get the arguments we need to abstract
     -- over
     getFieldArgs : Term vs -> List (Name, List (Name, RigCount, PiInfo RawImp))
-    getFieldArgs (Bind _ x (Pi c p ty) sc)
+    getFieldArgs (Bind _ x (Pi _ _ _ ty) sc)
         = (x, getArgs ty) :: getFieldArgs sc
       where
         getArgs : Term vs' -> List (Name, RigCount, PiInfo RawImp)
-        getArgs (Bind _ x (Pi c p _) sc)
+        getArgs (Bind _ x (Pi _ c p _) sc)
             = (x, c, forgetDef p) :: getArgs sc
         getArgs _ = []
     getFieldArgs _ = []

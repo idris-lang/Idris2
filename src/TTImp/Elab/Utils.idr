@@ -31,7 +31,7 @@ detagSafe defs (NTCon _ n _ _ args)
 detagSafe defs _ = pure False
 
 findErasedFrom : Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
-findErasedFrom defs pos (NBind fc x (Pi c _ aty) scf)
+findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc True' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
          -- argument position is available
@@ -73,8 +73,8 @@ wrapErrorC opts err
          else wrapError err
 
 plicit : Binder (Term vars) -> PiInfo RawImp
-plicit (Pi _ p _) = forgetDef p
-plicit (PVar _ p _) = forgetDef p
+plicit (Pi _ _ p _) = forgetDef p
+plicit (PVar _ _ p _) = forgetDef p
 plicit _ = Explicit
 
 export
@@ -93,7 +93,7 @@ bindNotReq fc i (b :: env) (KeepCons p) ns tm
          (ns', refToLocal (MN "arg" i) _ btm)
 bindNotReq {vs = n :: _} fc i (b :: env) (DropCons p) ns tm
    = bindNotReq fc i env p ((plicit b, n) :: ns)
-       (Bind fc _ (Pi (multiplicity b) Explicit (binderType b)) tm)
+       (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b)) tm)
 
 export
 bindReq : {vs : _} ->
@@ -105,11 +105,11 @@ bindReq {vs} fc env SubRefl ns tm
   where
     notLets : List Name -> (vars : List Name) -> Env Term vars -> List Name
     notLets acc [] _ = acc
-    notLets acc (v :: vs) (Let _ _ _ :: env) = notLets acc vs env
-    notLets acc (v :: vs) (_ :: env) = notLets (v :: acc) vs env
+    notLets acc (v :: vs) (b :: env) = if isLet b then notLets acc vs env
+                                       else notLets (v :: acc) vs env
 bindReq {vs = n :: _} fc (b :: env) (KeepCons p) ns tm
     = do b' <- shrinkBinder b p
          bindReq fc env p ((plicit b, n) :: ns)
-            (Bind fc _ (Pi (multiplicity b) Explicit (binderType b')) tm)
+            (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b')) tm)
 bindReq fc (b :: env) (DropCons p) ns tm
     = bindReq fc env p ns tm
