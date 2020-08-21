@@ -384,51 +384,52 @@ mutual
   getMult Nothing = pure top
   getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
 
-  pibindAll : FC -> PiInfo PTerm -> List (RigCount, Maybe Name, PTerm) ->
+  pibindAll : FileName -> PiInfo PTerm ->
+              List (RigCount, WithBounds (Maybe Name), PTerm) ->
               PTerm -> PTerm
-  pibindAll fc p [] scope = scope
-  pibindAll fc p ((rig, n, ty) :: rest) scope
-           = PPi fc rig p n ty (pibindAll fc p rest scope)
+  pibindAll fname p [] scope = scope
+  pibindAll fname p ((rig, n, ty) :: rest) scope
+           = PPi (boundToFC fname n) rig p (n.val) ty (pibindAll fname p rest scope)
 
-  bindList : FileName -> WithBounds t -> IndentInfo ->
-             Rule (List (RigCount, PTerm, PTerm))
-  bindList fname start indents
+  bindList : FileName -> IndentInfo ->
+             Rule (List (RigCount, WithBounds PTerm, PTerm))
+  bindList fname indents
       = sepBy1 (symbol ",")
                (do rigc <- multiplicity
-                   pat <- simpleExpr fname indents
+                   pat <- bounds (simpleExpr fname indents)
                    ty <- option
-                            (PInfer (boundToFC fname start))
+                            (PInfer (boundToFC fname pat))
                             (symbol ":" *> opExpr pdef fname indents)
                    rig <- getMult rigc
                    pure (rig, pat, ty))
 
   pibindListName : FileName -> IndentInfo ->
-                   Rule (List (RigCount, Name, PTerm))
+                   Rule (List (RigCount, WithBounds Name, PTerm))
   pibindListName fname indents
        = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") binderName
+            ns <- sepBy1 (symbol ",") (bounds binderName)
             symbol ":"
             ty <- expr pdef fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, UN n, ty)) ns)
+            pure (map (\n => (rig, map UN n, ty)) ns)
      <|> sepBy1 (symbol ",")
                 (do rigc <- multiplicity
-                    n <- binderName
+                    n <- bounds binderName
                     symbol ":"
                     ty <- expr pdef fname indents
                     rig <- getMult rigc
-                    pure (rig, UN n, ty))
+                    pure (rig, map UN n, ty))
     where
       -- _ gets treated specially here, it means "I don't care about the name"
       binderName : Rule String
       binderName = unqualifiedName <|> (symbol "_" *> pure "_")
 
   pibindList : FileName -> IndentInfo ->
-               Rule (List (RigCount, Maybe Name, PTerm))
+               Rule (List (RigCount, WithBounds (Maybe Name), PTerm))
   pibindList fname indents
     = do params <- pibindListName fname indents
-         pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
+         pure $ map (\(rig, n, ty) => (rig, map Just n, ty)) params
 
   bindSymbol : Rule (PiInfo PTerm)
   bindSymbol
@@ -437,81 +438,72 @@ mutual
 
   explicitPi : FileName -> IndentInfo -> Rule PTerm
   explicitPi fname indents
-      = do b <- bounds (do s <- bounds (symbol "(")
-                           binders <- pibindList fname indents
-                           symbol ")"
-                           exp <- bindSymbol
-                           scope <- typeExpr pdef fname indents
-                           pure (binders, exp, scope))
-           (binders, exp, scope) <- pure b.val
-           pure (pibindAll (boundToFC fname b) exp binders scope)
+      = do symbol "("
+           binders <- pibindList fname indents
+           symbol ")"
+           exp <- bindSymbol
+           scope <- typeExpr pdef fname indents
+           pure (pibindAll fname exp binders scope)
 
   autoImplicitPi : FileName -> IndentInfo -> Rule PTerm
   autoImplicitPi fname indents
-      = do b <- bounds (do s <- bounds (symbol "{")
-                           keyword "auto"
-                           commit
-                           binders <- pibindList fname indents
-                           symbol "}"
-                           symbol "->"
-                           scope <- typeExpr pdef fname indents
-                           pure (binders, scope))
-           (binders, scope) <- pure b.val
-           pure (pibindAll (boundToFC fname b) AutoImplicit binders scope)
+      = do symbol "{"
+           keyword "auto"
+           commit
+           binders <- pibindList fname indents
+           symbol "}"
+           symbol "->"
+           scope <- typeExpr pdef fname indents
+           pure (pibindAll fname AutoImplicit binders scope)
 
   defaultImplicitPi : FileName -> IndentInfo -> Rule PTerm
   defaultImplicitPi fname indents
-      = do b <- bounds (do s <- bounds (symbol "{")
-                           keyword "default"
-                           commit
-                           t <- simpleExpr fname indents
-                           binders <- pibindList fname indents
-                           symbol "}"
-                           symbol "->"
-                           scope <- typeExpr pdef fname indents
-                           pure (t, binders, scope))
-           (t, binders, scope) <- pure b.val
-           pure (pibindAll (boundToFC fname b) (DefImplicit t) binders scope)
+      = do symbol "{"
+           keyword "default"
+           commit
+           t <- simpleExpr fname indents
+           binders <- pibindList fname indents
+           symbol "}"
+           symbol "->"
+           scope <- typeExpr pdef fname indents
+           pure (pibindAll fname (DefImplicit t) binders scope)
 
   forall_ : FileName -> IndentInfo -> Rule PTerm
   forall_ fname indents
-      = do b <- bounds (do keyword "forall"
-                           commit
-                           ns <- bounds $ sepBy1 (symbol ",") unqualifiedName
-                           let binders = map (\n => (erased {a=RigCount},
-                                                     Just (UN n), PImplicit (boundToFC fname ns))) ns.val
-                           symbol "."
-                           scope <- typeExpr pdef fname indents
-                           pure (binders, scope))
-           (binders, scope) <- pure b.val
-           pure (pibindAll (boundToFC fname b) Implicit binders scope)
+      = do keyword "forall"
+           commit
+           ns <- sepBy1 (symbol ",") (bounds unqualifiedName)
+           let binders = map (\n => ( erased {a=RigCount}
+                                    , map (Just . UN) n
+                                    , PImplicit (boundToFC fname n))
+                                    ) ns
+           symbol "."
+           scope <- typeExpr pdef fname indents
+           pure (pibindAll fname Implicit binders scope)
 
   implicitPi : FileName -> IndentInfo -> Rule PTerm
   implicitPi fname indents
-      = do b <- bounds (do s <- bounds (symbol "{")
-                           binders <- pibindList fname indents
-                           symbol "}"
-                           symbol "->"
-                           scope <- typeExpr pdef fname indents
-                           pure (binders, scope))
-           (binders, scope) <- pure b.val
-           pure (pibindAll (boundToFC fname b) Implicit binders scope)
+      = do symbol "{"
+           binders <- pibindList fname indents
+           symbol "}"
+           symbol "->"
+           scope <- typeExpr pdef fname indents
+           pure (pibindAll fname Implicit binders scope)
 
   lam : FileName -> IndentInfo -> Rule PTerm
   lam fname indents
-      = do b <- bounds (do s <- bounds (symbol "\\")
-                           binders <- bindList fname s indents
-                           symbol "=>"
-                           mustContinue indents Nothing
-                           scope <- expr pdef fname indents
-                           pure (binders, scope))
-           (binders, scope) <- pure b.val
-           pure (bindAll (boundToFC fname b) binders scope)
+      = do symbol "\\"
+           binders <- bindList fname indents
+           symbol "=>"
+           mustContinue indents Nothing
+           scope <- expr pdef fname indents
+           pure (bindAll binders scope)
      where
-       bindAll : FC -> List (RigCount, PTerm, PTerm) -> PTerm -> PTerm
-       bindAll fc [] scope = scope
-       bindAll fc ((rig, pat, ty) :: rest) scope
-           = PLam fc rig Explicit pat ty (bindAll fc rest scope)
+       bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
+       bindAll [] scope = scope
+       bindAll ((rig, pat, ty) :: rest) scope
+           = PLam (boundToFC fname pat) rig Explicit pat.val ty
+                  (bindAll rest scope)
 
   letBinder : FileName -> IndentInfo ->
               Rule (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause)
@@ -746,17 +738,17 @@ mutual
   typeExpr q fname indents
       = do arg <- bounds (opExpr q fname indents)
            (do continue indents
-               rest <- bounds (some (do exp <- bindSymbol
-                                        op <- opExpr pdef fname indents
-                                        pure (exp, op)))
-               pure (mkPi (start arg) (end rest) arg.val rest.val))
+               rest <- some (do exp <- bindSymbol
+                                op <- bounds (opExpr pdef fname indents)
+                                pure (exp, op))
+               pure (mkPi arg rest))
              <|> pure arg.val
     where
-      mkPi : FilePos -> FilePos -> PTerm -> List (PiInfo PTerm, PTerm) -> PTerm
-      mkPi start end arg [] = arg
-      mkPi start end arg ((exp, a) :: as)
-            = PPi (MkFC fname start end) top exp Nothing arg
-                  (mkPi start end a as)
+      mkPi : WithBounds PTerm -> List (PiInfo PTerm, WithBounds PTerm) -> PTerm
+      mkPi arg [] = arg.val
+      mkPi arg ((exp, a) :: as)
+            = PPi (boundToFC fname arg) top exp Nothing arg.val
+                  (mkPi a as)
 
   export
   expr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
@@ -1284,7 +1276,7 @@ recordParam fname indents
     = do symbol "("
          params <- pibindListName fname indents
          symbol ")"
-         pure $ map (\(c, n, tm) => (n, c, Explicit, tm)) params
+         pure $ map (\(c, n, tm) => (n.val, c, Explicit, tm)) params
   <|> do symbol "{"
          commit
          info <- the (SourceEmptyRule (PiInfo PTerm))
@@ -1296,7 +1288,7 @@ recordParam fname indents
               <|> pure      Implicit)
          params <- pibindListName fname indents
          symbol "}"
-         pure $ map (\(c, n, tm) => (n, c, info, tm)) params
+         pure $ map (\(c, n, tm) => (n.val, c, info, tm)) params
   <|> do n <- bounds name
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 

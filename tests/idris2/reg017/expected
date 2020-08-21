@@ -2,8 +2,8 @@
 Error: While processing right hand side of badmap. When unifying (0 _ : ?a) -> ?b and ?a -> ?b.
 Mismatch between: (0 _ : ?a) -> ?b and ?a -> ?b.
 
-lammult.idr:2:15--2:24
+lammult.idr:2:18--2:19
    |
  2 | badmap = map (\0 x => 2)
-   |               ^^^^^^^^^
+   |                  ^
 
