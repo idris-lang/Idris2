@@ -7,7 +7,7 @@ import Data.Strings
 import Data.Fin
 import Data.List
 
-%default partial
+%default total
 
 ||| The input state, pos is position in the string and maxPos is the length of the input string.
 public export
@@ -74,7 +74,6 @@ MonadTrans ParseT where
 ||| Returns a tuple of the result and final position on success.
 ||| Returns an error message on failure.
 export
-total
 parseT : Monad m => ParseT m a -> String -> m (Either String (a, Int))
 parseT p str = do res <- p.runParser (S str 0 (strLength str))
                   case res of
@@ -85,14 +84,12 @@ parseT p str = do res <- p.runParser (S str 0 (strLength str))
 ||| Returns a tuple of the result and final position on success.
 ||| Returns an error message on failure.
 export
-total
 parse : Parser a -> String -> Either String (a, Int)
 parse p str = runIdentity $ parseT p str
 
 ||| Combinator that replaces the error message on failure.
 ||| This allows combinators to output relevant errors
 export
-total
 (<?>) : Monad m => ParseT m a -> String -> ParseT m a
 (<?>) p msg = P $ \s => case !(p.runParser s) of
                             OK r s' => pure $ OK r s'
@@ -102,9 +99,23 @@ infixl 0 <?>
 
 ||| Fail with some error message
 export
-total
 fail : Monad m => String -> ParseT m a
 fail x = P $ \s => pure $ Fail s.pos x
+
+||| Returns the result of the parser `p` or `def` if it fails.
+export
+option : Monad m => a -> ParseT m a -> ParseT m a
+option def p = p <|> pure def
+
+||| Returns a Maybe that contains the result of `p` if it succeeds or `Nothing` if it fails.
+export
+optional : Monad m => ParseT m a -> ParseT m (Maybe a)
+optional p = (Just <$> p) <|> pure Nothing
+
+||| Discards the result of a parser
+export
+skip : Monad m => ParseT m a -> ParseT m ()
+skip = ignore
 
 mutual
     ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
@@ -120,31 +131,14 @@ mutual
     many : Monad m => ParseT m a -> ParseT m (List a)
     many p = some p <|> pure []
 
-||| Returns the result of the parser `p` or `def` if it fails.
-export
-total
-option : Monad m => a -> ParseT m a -> ParseT m a
-option def p = p <|> pure def
-
-||| Returns a Maybe that contains the result of `p` if it succeeds or `Nothing` if it fails.
-export
-total
-optional : Monad m => ParseT m a -> ParseT m (Maybe a)
-optional p = (Just <$> p) <|> pure Nothing
-
-||| Discards the result of a parser
-export
-total
-skip : Parser a -> Parser ()
-skip = ignore
-
 ||| Parse left-nested lists of the form `((init op arg) op arg) op arg`
 export
 covering
-hchainl : Parser init -> Parser (init -> arg -> init) -> Parser arg -> Parser init
+hchainl : Monad m => ParseT m init -> ParseT m (init -> arg -> init) -> ParseT m arg -> ParseT m init
 hchainl pini pop parg = pini >>= go
   where
-  go : init -> Parser init
+  covering
+  go : init -> ParseT m init
   go x = (do op <- pop
              arg <- parg
              go $ op x arg) <|> pure x
@@ -152,10 +146,11 @@ hchainl pini pop parg = pini >>= go
 ||| Parse right-nested lists of the form `arg op (arg op (arg op end))`
 export
 covering
-hchainr : Parser arg -> Parser (arg -> end -> end) -> Parser end -> Parser end
+hchainr : Monad m => ParseT m arg -> ParseT m (arg -> end -> end) -> ParseT m end -> ParseT m end
 hchainr parg pop pend = go id <*> pend
   where
-  go : (end -> end) -> Parser (end -> end)
+  covering
+  go : (end -> end) -> ParseT m (end -> end)
   go f = (do arg <- parg
              op <- pop
              go $ f . op arg) <|> pure f
@@ -164,7 +159,7 @@ hchainr parg pop pend = go id <*> pend
 export
 satisfy : Monad m => (Char -> Bool) -> ParseT m Char
 satisfy f = P $ \s => pure $ if s.pos < s.maxPos
-                                  then let ch = strIndex s.input s.pos in
+                                  then let ch = assert_total $ strIndex s.input s.pos in
                                        if f ch
                                            then OK ch (S s.input (s.pos + 1) s.maxPos)
                                            else Fail (s.pos) "satisfy"
@@ -173,12 +168,12 @@ satisfy f = P $ \s => pure $ if s.pos < s.maxPos
 ||| Always succeeds, applies the predicate `f` on chars until it fails and creates a string
 ||| from the results.
 export
+covering
 takeWhile : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile f = pack <$> many (satisfy f)
 
 ||| Succeeds if the string `str` follows.
 export
-total
 string : Monad m => String -> ParseT m ()
 string str = P $ \s => pure $ let len = strLength str in
                               if s.pos+len <= s.maxPos
@@ -195,36 +190,39 @@ char c = ignore $ satisfy (== c)
 
 ||| Parses a space character
 export
-space : Parser Char
+space : Monad m => ParseT m Char
 space = satisfy isSpace
 
 ||| Parses one or more space characters
 export
-spaces : Parser ()
+covering
+spaces : Monad m => ParseT m ()
 spaces = skip (many space) <?> "white space"
 
 ||| Discards brackets around a matching parser
 export
-parens : Parser a -> Parser a
+parens : Monad m => ParseT m a -> ParseT m a
 parens p = char '(' *> p <* char ')'
 
 ||| Discards whitespace after a matching parser
 export
-lexeme : Parser a -> Parser a
+covering
+lexeme : Monad m => ParseT m a -> ParseT m a
 lexeme p = p <* spaces
 
 ||| Matches a specific string, then skips following whitespace
 export
-token : String -> Parser ()
+covering
+token : Monad m => String -> ParseT m ()
 token s = lexeme (skip (string s)) <?> "token " ++ show s
 
 ||| Matches a single digit
 export
-digit : Parser (Fin 10)
+digit : Monad m => ParseT m (Fin 10)
 digit = do x <- satisfy isDigit
            case lookup x digits of
                 Nothing => P $ \s => pure $ Fail s.pos "not a digit"
-                Just y => P $ \s => Id (OK y s)
+                Just y => P $ \s => pure $ OK y s
   where
     digits : List (Char, Fin 10)
     digits = [ ('0', 0)
@@ -239,29 +237,28 @@ digit = do x <- satisfy isDigit
              , ('9', 9)
              ]
 
-total
 fromDigits : Num a => ((Fin 10) -> a) -> List (Fin 10) -> a
 fromDigits f xs = foldl (addDigit) 0 xs
 where
   addDigit : a -> (Fin 10) -> a
   addDigit num d = 10*num + (f d)
 
-total
 intFromDigits : List (Fin 10) -> Integer
 intFromDigits = fromDigits finToInteger
 
-total
 natFromDigits : List (Fin 10) -> Nat
 natFromDigits = fromDigits finToNat
 
 ||| Matches a natural number
 export
-natural : Parser Nat
+covering
+natural : Monad m => ParseT m Nat
 natural = natFromDigits <$> some digit
 
 ||| Matches an integer, eg. "12", "-4"
 export
-integer : Parser Integer
+covering
+integer : Monad m => ParseT m Integer
 integer = do minus <- optional (char '-')
              x <- some digit
              pure $ case minus of

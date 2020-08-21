@@ -11,18 +11,18 @@ import Data.String.Parser.Expression
 
 table : OperatorTable Nat
 table =
-  [ [ Infix (token "^" *> pure power ) AssocRight]
-  , [ Infix (token "*" *> pure (*)   ) AssocLeft ]
-  , [ Infix (token "+" *> pure (+)   ) AssocLeft ]
+  [ [ Infix (token "^" $> power ) AssocRight]
+  , [ Infix (token "*" $> (*)   ) AssocLeft ]
+  , [ Infix (token "+" $> (+)   ) AssocLeft ]
   ]
 
 table' : OperatorTable Integer
 table' =
-  [ [ Infix (token "*" *> pure (*)   ) AssocLeft
-    , Infix (token "/" *> pure (div) ) AssocLeft
+  [ [ Infix (token "*" $> (*) ) AssocLeft
+    , Infix (token "/" $> div ) AssocLeft
     ]
-  , [ Infix (token "+" *> pure (+) ) AssocLeft
-    , Infix (token "-" *> pure (-) ) AssocLeft
+  , [ Infix (token "+" $> (+) ) AssocLeft
+    , Infix (token "-" $> (-) ) AssocLeft
     ]
   ]
 
