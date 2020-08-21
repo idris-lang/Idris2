@@ -27,11 +27,17 @@ logBad
          logMsg 0 ("Constructors: " ++ show !(getCons n))
          fail "Still not trying"
 
+-- because the exact sequence number in a gensym depends on
+-- the library and compiler internals we need to censor it so the
+-- output won't be overly dependent on the exact versions used.
+censorDigits : String -> String
+censorDigits str = pack $ map (\c => if isDigit c then 'X' else c) (unpack str)
+
 tryGenSym : Elab a
 tryGenSym
    = do n <- genSym "plus"
         ns <- inCurrentNS n
-        fail $ "failed after generating " ++ show ns
+        fail $ "failed after generating " ++ censorDigits (show ns)
 
 dummy1 : a
 dummy1 = %runElab logPrims

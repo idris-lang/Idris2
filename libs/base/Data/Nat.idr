@@ -241,7 +241,7 @@ data CmpNat : Nat -> Nat -> Type where
      CmpGT : (x : _) -> CmpNat (y + S x) y
 
 export
-total cmp : (x, y : Nat) -> CmpNat x y
+cmp : (x, y : Nat) -> CmpNat x y
 cmp Z Z     = CmpEQ
 cmp Z (S k) = CmpLT _
 cmp (S k) Z = CmpGT _
@@ -318,6 +318,11 @@ plusLeftLeftRightZero left right p =
   plusLeftCancel left right Z $
     rewrite plusZeroRightNeutral left in
       p
+
+plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
+plusLteMonotoneRight p  Z     r     LTEZero    = rewrite plusCommutative r p in
+                                                 lteAddRight p
+plusLteMonotoneRight p (S q) (S r) (LTESucc l) = LTESucc $ plusLteMonotoneRight p q r l
 
 -- Proofs on *
 
@@ -427,6 +432,14 @@ minusPlusZero Z     _ = Refl
 minusPlusZero (S n) m = minusPlusZero n m
 
 export
+plusMinusLte : (n, m : Nat) -> LTE n m -> (minus m n) + n = m
+plusMinusLte  Z     m    _   = rewrite minusZeroRight m in
+                               plusZeroRightNeutral m
+plusMinusLte (S _)  Z    lte = absurd lte
+plusMinusLte (S n) (S m) lte = rewrite sym $ plusSuccRightSucc (minus m n) n in
+                               cong S $ plusMinusLte n m (fromLteSucc lte)
+
+export
 minusMinusMinusPlus : (left, centre, right : Nat) ->
   minus (minus left centre) right = minus left (centre + right)
 minusMinusMinusPlus Z Z _ = Refl
@@ -466,8 +479,8 @@ multDistributesOverMinusRight left centre right =
 
 -- power proofs
 
-multPowerPowerPlus : (base, exp, exp' : Nat) ->
-  power base (exp + exp') = (power base exp) * (power base exp')
+-- multPowerPowerPlus : (base, exp, exp' : Nat) ->
+--   power base (exp + exp') = (power base exp) * (power base exp')
 -- multPowerPowerPlus base Z       exp' =
 --     rewrite sym $ plusZeroRightNeutral (power base exp') in Refl
 -- multPowerPowerPlus base (S exp) exp' =
@@ -475,24 +488,25 @@ multPowerPowerPlus : (base, exp, exp' : Nat) ->
 --     rewrite sym $ multAssociative base (power base exp) (power base exp') in
 --       Refl
 
-powerOneNeutral : (base : Nat) -> power base 1 = base
-powerOneNeutral base = rewrite multCommutative base 1 in multOneLeftNeutral base
-
-powerOneSuccOne : (exp : Nat) -> power 1 exp = 1
-powerOneSuccOne Z       = Refl
-powerOneSuccOne (S exp) = rewrite powerOneSuccOne exp in Refl
-
-powerPowerMultPower : (base, exp, exp' : Nat) ->
-  power (power base exp) exp' = power base (exp * exp')
-powerPowerMultPower _ exp Z = rewrite multZeroRightZero exp in Refl
-powerPowerMultPower base exp (S exp') =
-  rewrite powerPowerMultPower base exp exp' in
-  rewrite multRightSuccPlus exp exp' in
-  rewrite sym $ multPowerPowerPlus base exp (exp * exp') in
-          Refl
+--powerOneNeutral : (base : Nat) -> power base 1 = base
+--powerOneNeutral base = rewrite multCommutative base 1 in multOneLeftNeutral base
+--
+--powerOneSuccOne : (exp : Nat) -> power 1 exp = 1
+--powerOneSuccOne Z       = Refl
+--powerOneSuccOne (S exp) = rewrite powerOneSuccOne exp in Refl
+--
+--powerPowerMultPower : (base, exp, exp' : Nat) ->
+--  power (power base exp) exp' = power base (exp * exp')
+--powerPowerMultPower _ exp Z = rewrite multZeroRightZero exp in Refl
+--powerPowerMultPower base exp (S exp') =
+--  rewrite powerPowerMultPower base exp exp' in
+--  rewrite multRightSuccPlus exp exp' in
+--  rewrite sym $ multPowerPowerPlus base exp (exp * exp') in
+--          Refl
 
 -- minimum / maximum proofs
 
+export
 maximumAssociative : (l, c, r : Nat) ->
   maximum l (maximum c r) = maximum (maximum l c) r
 maximumAssociative Z _ _ = Refl
@@ -500,16 +514,19 @@ maximumAssociative (S _) Z _ = Refl
 maximumAssociative (S _) (S _) Z = Refl
 maximumAssociative (S k) (S j) (S i) = rewrite maximumAssociative k j i in Refl
 
+export
 maximumCommutative : (l, r : Nat) -> maximum l r = maximum r l
 maximumCommutative Z Z = Refl
 maximumCommutative Z (S _) = Refl
 maximumCommutative (S _) Z = Refl
 maximumCommutative (S k) (S j) = rewrite maximumCommutative k j in Refl
 
+export
 maximumIdempotent : (n : Nat) -> maximum n n = n
--- maximumIdempotent Z = Refl
--- maximumIdempotent (S k) = cong $ maximumIdempotent k
+maximumIdempotent Z = Refl
+maximumIdempotent (S k) = cong S $ maximumIdempotent k
 
+export
 minimumAssociative : (l, c, r : Nat) ->
   minimum l (minimum c r) = minimum (minimum l c) r
 minimumAssociative Z _ _ = Refl
@@ -517,42 +534,62 @@ minimumAssociative (S _) Z _ = Refl
 minimumAssociative (S _) (S _) Z = Refl
 minimumAssociative (S k) (S j) (S i) = rewrite minimumAssociative k j i in Refl
 
+export
 minimumCommutative : (l, r : Nat) -> minimum l r = minimum r l
 minimumCommutative Z Z = Refl
 minimumCommutative Z (S _) = Refl
 minimumCommutative (S _) Z = Refl
 minimumCommutative (S k) (S j) = rewrite minimumCommutative k j in Refl
 
+export
 minimumIdempotent : (n : Nat) -> minimum n n = n
--- minimumIdempotent Z = Refl
--- minimumIdempotent (S k) = cong (minimumIdempotent k)
+minimumIdempotent Z = Refl
+minimumIdempotent (S k) = cong S $ minimumIdempotent k
 
+export
 minimumZeroZeroLeft : (left : Nat) -> minimum left 0 = Z
 minimumZeroZeroLeft left = rewrite minimumCommutative left 0 in Refl
 
+export
 minimumSuccSucc : (left, right : Nat) ->
   minimum (S left) (S right) = S (minimum left right)
 minimumSuccSucc _ _ = Refl
 
+export
 maximumZeroNLeft : (left : Nat) -> maximum left Z = left
 maximumZeroNLeft left = rewrite maximumCommutative left Z in Refl
 
+export
 maximumSuccSucc : (left, right : Nat) ->
   S (maximum left right) = maximum (S left) (S right)
 maximumSuccSucc _ _ = Refl
 
+export
 sucMaxL : (l : Nat) -> maximum (S l) l = (S l)
--- sucMaxL Z = Refl
--- sucMaxL (S l) = cong $ sucMaxL l
+sucMaxL Z = Refl
+sucMaxL (S l) = cong S $ sucMaxL l
 
+export
 sucMaxR : (l : Nat) -> maximum l (S l) = (S l)
--- sucMaxR Z = Refl
--- sucMaxR (S l) = cong $ sucMaxR l
+sucMaxR Z = Refl
+sucMaxR (S l) = cong S $ sucMaxR l
 
+export
 sucMinL : (l : Nat) -> minimum (S l) l = l
--- sucMinL Z = Refl
--- sucMinL (S l) = cong $ sucMinL l
+sucMinL Z = Refl
+sucMinL (S l) = cong S $ sucMinL l
 
+export
 sucMinR : (l : Nat) -> minimum l (S l) = l
--- sucMinR Z = Refl
--- sucMinR (S l) = cong $ sucMinR l
+sucMinR Z = Refl
+sucMinR (S l) = cong S $ sucMinR l
+
+-- Algebra -----------------------------
+
+public export
+Semigroup Nat where
+  (<+>) = plus
+
+public export
+Monoid Nat where
+  neutral = Z

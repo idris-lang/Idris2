@@ -229,9 +229,7 @@ mutual
   smaller inc defs big s (As _ _ p t)
       = smaller inc defs big s p || smaller inc defs big s t
   smaller True defs big s t
-      = if s == t
-           then True
-           else smallerArg True defs big s t
+      = s == t || smallerArg True defs big s t
   smaller inc defs big s t = smallerArg inc defs big s t
 
   assertedSmaller : Maybe (Term vars) -> Term vars -> Bool
@@ -240,12 +238,12 @@ mutual
 
   smallerArg : Bool -> Defs ->
                Maybe (Term vars) -> Term vars -> Term vars -> Bool
+  smallerArg inc defs big (As _ _ _ s) tm = smallerArg inc defs big s tm
   smallerArg inc defs big s tm
         -- If we hit a pattern that is equal to a thing we've asserted_smaller,
         -- the argument must be smaller
-      = if assertedSmaller big tm
-           then True
-           else case getFnArgs tm of
+      = assertedSmaller big tm ||
+                case getFnArgs tm of
                      (Ref _ (DataCon t a) cn, args)
                          => any (smaller True defs big s) args
                      _ => case s of
@@ -295,17 +293,6 @@ mutual
                 => pure $ Just (map matchArgs pdefs)
              _ => pure Nothing
     where
-      lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')
-      lookupTm tm [] = Nothing
-      lookupTm tm ((As _ _ p tm', v) :: tms)
-          = if tm == p
-               then Just v
-               else lookupTm tm ((tm', v) :: tms)
-      lookupTm tm ((tm', v) :: tms)
-          = if tm == tm'
-               then Just v
-               else lookupTm tm tms
-
       updateRHS : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> Term vs -> Term vs'
       updateRHS {vs} {vs'} ms tm
@@ -329,6 +316,22 @@ mutual
           urhs (PrimVal fc c) = PrimVal fc c
           urhs (Erased fc i) = Erased fc i
           urhs (TType fc) = TType fc
+
+          lookupTm : Term vs -> List (Term vs, Term vs') -> Maybe (Term vs')
+          lookupTm tm [] = Nothing
+          lookupTm (As fc s p tm) tms -- Want to keep the pattern and the variable,
+                                      -- if there was an @ in the parent
+              = do tm' <- lookupTm tm tms
+                   Just $ As fc s tm' (urhs tm)
+          lookupTm tm ((As fc s p tm', v) :: tms)
+              = if tm == p
+                   then Just v
+                   else do tm' <- lookupTm tm ((tm', v) :: tms)
+                           Just $ As fc s (urhs p) tm'
+          lookupTm tm ((tm', v) :: tms)
+              = if tm == tm'
+                   then Just v
+                   else lookupTm tm tms
 
       updatePat : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> (Nat, Term vs) -> (Nat, Term vs')

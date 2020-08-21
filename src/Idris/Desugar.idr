@@ -12,6 +12,7 @@ import Core.Unify
 import Data.StringMap
 import Data.ANameMap
 
+import Idris.DocString
 import Idris.Syntax
 
 import Idris.Elab.Implementation
@@ -54,13 +55,14 @@ ifThenElse True t e = t
 ifThenElse False t e = e
 
 export
-extendAs : {auto s : Ref Syn SyntaxInfo} ->
-           List String -> List String -> SyntaxInfo -> Core ()
-extendAs old as newsyn
+extendSyn : {auto s : Ref Syn SyntaxInfo} ->
+            SyntaxInfo -> Core ()
+extendSyn newsyn
     = do syn <- get Syn
          put Syn (record { infixes $= mergeLeft (infixes newsyn),
                            prefixes $= mergeLeft (prefixes newsyn),
-                           ifaces $= mergeAs old as (ifaces newsyn),
+                           ifaces $= merge (ifaces newsyn),
+                           docstrings $= merge (docstrings newsyn),
                            bracketholes $= ((bracketholes newsyn) ++) }
                   syn)
 
@@ -269,8 +271,8 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
-  desugarB side ps (PDoBlock fc block)
-      = expandDo side ps fc block
+  desugarB side ps (PDoBlock fc ns block)
+      = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
       = do itm <- desugarB side ps term
            bs <- get Bang
@@ -319,7 +321,7 @@ mutual
                    [PatClause fc (IVar fc (UN "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN "False")) !(desugar side ps e)]
   desugarB side ps (PComprehension fc ret conds)
-      = desugarB side ps (PDoBlock fc (map guard conds ++ [toPure ret]))
+      = desugarB side ps (PDoBlock fc Nothing (map guard conds ++ [toPure ret]))
     where
       guard : PDo -> PDo
       guard (DoExp fc tm) = DoExp fc (PApp fc (PRef fc (UN "guard")) tm)
@@ -348,12 +350,43 @@ mutual
                 desugarB side ps (PApp fc (PApp fc (PRef fc (UN "rangeFromThen")) start) n)
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
-  desugarB side ps (PRecordFieldAccess fc rec fields)
-      = desugarB side ps $ foldl (\r, f => PApp fc (PRef fc f) r) rec fields
-  desugarB side ps (PRecordProjection fc fields)
-      = desugarB side ps $
-          PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc) $
-            foldl (\r, f => PApp fc (PRef fc f) r) (PRef fc (MN "rec" 0)) fields
+
+  desugarB side ps (PPostfixProjs fc rec projs)
+      = do
+        let isPRef = \case
+              PRef _ _ => True
+              _ => False
+        defs <- get Ctxt
+        when (not (isExtension PostfixProjections defs) && not (all isPRef projs)) $
+          throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+        desugarB side ps $ foldl (\x, proj => PApp fc proj x) rec projs
+
+  desugarB side ps (PPostfixProjsSection fc projs args)
+      = do
+        let isPRef = \case
+              PRef _ _ => True
+              _ => False
+        defs <- get Ctxt
+
+        when (not (isExtension PostfixProjections defs)) $ do
+          when (not (all isPRef projs)) $
+            throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
+
+          case args of
+            [] => pure ()
+            _  => throw $ GenericMsg fc "postfix projection sections require %language PostfixProjections"
+
+        desugarB side ps $
+          PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
+            foldl
+              (\r, arg => PApp fc r arg)
+              (foldl
+                (\r, proj => PApp fc proj r)
+                (PRef fc (MN "paRoot" 0))
+                projs)
+              args
+
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
 
@@ -379,56 +412,61 @@ mutual
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
 
+  addNS : Maybe (List String) -> Name -> Name
+  addNS (Just ns) n@(NS _ _) = n
+  addNS (Just ns) n = NS ns n
+  addNS _ n = n
+
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto m : Ref MD Metadata} ->
-             Side -> List Name -> FC -> List PDo -> Core RawImp
-  expandDo side ps fc [] = throw (GenericMsg fc "Do block cannot be empty")
-  expandDo side ps _ [DoExp fc tm] = desugar side ps tm
-  expandDo side ps fc [e]
+             Side -> List Name -> FC -> Maybe (List String) -> List PDo -> Core RawImp
+  expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
+  expandDo side ps _ _ [DoExp fc tm] = desugar side ps tm
+  expandDo side ps fc ns [e]
       = throw (GenericMsg (getLoc e)
                   "Last statement in do block must be an expression")
-  expandDo side ps topfc (DoExp fc tm :: rest)
+  expandDo side ps topfc ns (DoExp fc tm :: rest)
       = do tm' <- desugar side ps tm
-           rest' <- expandDo side ps topfc rest
+           rest' <- expandDo side ps topfc ns rest
            -- A free standing 'case' block must return ()
            let ty = case tm' of
                          ICase _ _ _ _ => IVar fc (UN "Unit")
                          _ => Implicit fc False
            gam <- get Ctxt
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                           (ILam fc top Explicit Nothing
                                 ty rest')
-  expandDo side ps topfc (DoBind fc n tm :: rest)
+  expandDo side ps topfc ns (DoBind fc n tm :: rest)
       = do tm' <- desugar side ps tm
-           rest' <- expandDo side ps topfc rest
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) tm')
+           rest' <- expandDo side ps topfc ns rest
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                      (ILam fc top Explicit (Just n)
                            (Implicit fc False) rest')
-  expandDo side ps topfc (DoBindPat fc pat exp alts :: rest)
+  expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat
            (newps, bpat) <- bindNames False pat'
            exp' <- desugar side ps exp
            alts' <- traverse (desugarClause ps True) alts
            let ps' = newps ++ ps
-           rest' <- expandDo side ps' topfc rest
-           pure $ IApp fc (IApp fc (IVar fc (UN ">>=")) exp')
+           rest' <- expandDo side ps' topfc ns rest
+           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) exp')
                     (ILam fc top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
                           (ICase fc (IVar fc (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fc bpat rest'
                                   :: alts')))
-  expandDo side ps topfc (DoLet fc n rig ty tm :: rest)
+  expandDo side ps topfc ns (DoLet fc n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
-           rest' <- expandDo side ps topfc rest
+           rest' <- expandDo side ps topfc ns rest
            let bind = ILet fc rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
-  expandDo side ps topfc (DoLetPat fc pat ty tm alts :: rest)
+  expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
       = do b <- newRef Bang initBangs
            pat' <- desugar LHS ps pat
            ty' <- desugar side ps ty
@@ -436,18 +474,18 @@ mutual
            tm' <- desugarB side ps tm
            alts' <- traverse (desugarClause ps True) alts
            let ps' = newps ++ ps
-           rest' <- expandDo side ps' topfc rest
+           rest' <- expandDo side ps' topfc ns rest
            bd <- get Bang
            pure $ bindBangs (bangNames bd) $
                     ICase fc tm' ty'
                        (PatClause fc bpat rest'
                                   :: alts')
-  expandDo side ps topfc (DoLetLocal fc decls :: rest)
-      = do rest' <- expandDo side ps topfc rest
+  expandDo side ps topfc ns (DoLetLocal fc decls :: rest)
+      = do rest' <- expandDo side ps topfc ns rest
            decls' <- traverse (desugarDecl ps) decls
            pure $ ILocal fc (concat decls') rest'
-  expandDo side ps topfc (DoRewrite fc rule :: rest)
-      = do rest' <- expandDo side ps topfc rest
+  expandDo side ps topfc ns (DoRewrite fc rule :: rest)
+      = do rest' <- expandDo side ps topfc ns rest
            rule' <- desugar side ps rule
            pure $ IRewrite fc rule' rest'
 
@@ -487,7 +525,8 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 List Name -> PTypeDecl -> Core ImpTy
   desugarType ps (MkPTy fc n d ty)
-      = do syn <- get Syn
+      = do addDocString n d
+           syn <- get Syn
            pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
@@ -517,16 +556,19 @@ mutual
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
-                List Name -> PDataDecl -> Core ImpData
-  desugarData ps (MkPData fc n tycon opts datacons)
-      = do syn <- get Syn
+                List Name -> (doc : String) ->
+                PDataDecl -> Core ImpData
+  desugarData ps doc (MkPData fc n tycon opts datacons)
+      = do addDocString n doc
+           syn <- get Syn
            pure $ MkImpData fc n
                               !(bindTypeNames (usingImpl syn)
                                               ps !(desugar AnyExpr ps tycon))
                               opts
                               !(traverse (desugarType ps) datacons)
-  desugarData ps (MkPLater fc n tycon)
-      = do syn <- get Syn
+  desugarData ps doc (MkPLater fc n tycon)
+      = do addDocString n doc
+           syn <- get Syn
            pure $ MkImpLater fc n !(bindTypeNames (usingImpl syn)
                                                   ps !(desugar AnyExpr ps tycon))
 
@@ -534,10 +576,11 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto m : Ref MD Metadata} ->
-                 List Name -> PField ->
+                 List Name -> List String -> PField ->
                  Core IField
-  desugarField ps (MkField fc rig p n ty)
-      = do syn <- get Syn
+  desugarField ps ns (MkField fc doc rig p n ty)
+      = do addDocStringNS ns n doc
+           syn <- get Syn
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
                           n !(bindTypeNames (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
@@ -558,11 +601,11 @@ mutual
       = Just (PNamespace fc ns (mapMaybe (getDecl p) ds))
 
   getDecl AsType d@(PClaim _ _ _ _ _) = Just d
-  getDecl AsType (PData fc vis (MkPData dfc tyn tyc _ _))
-      = Just (PData fc vis (MkPLater dfc tyn tyc))
+  getDecl AsType (PData fc doc vis (MkPData dfc tyn tyc _ _))
+      = Just (PData fc doc vis (MkPLater dfc tyn tyc))
   getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
-  getDecl AsType d@(PRecord fc vis n ps _ _)
-      = Just (PData fc vis (MkPLater fc n (mkRecType ps)))
+  getDecl AsType d@(PRecord fc doc vis n ps _ _)
+      = Just (PData fc doc vis (MkPLater fc n (mkRecType ps)))
     where
       mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
       mkRecType [] = PType fc
@@ -572,9 +615,9 @@ mutual
   getDecl AsType d = Nothing
 
   getDecl AsDef (PClaim _ _ _ _ _) = Nothing
-  getDecl AsDef d@(PData _ _ (MkPLater _ _ _)) = Just d
+  getDecl AsDef d@(PData _ _ _ (MkPLater _ _ _)) = Just d
   getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
-  getDecl AsDef d@(PRecord _ _ _ _ _ _) = Just d
+  getDecl AsDef d@(PRecord _ _ _ _ _ _ _) = Just d
   getDecl AsDef (PFixity _ _ _ _) = Nothing
   getDecl AsDef (PDirective _ _) = Nothing
   getDecl AsDef d = Just d
@@ -634,8 +677,8 @@ mutual
       toIDef (ImpossibleClause fc lhs)
           = pure $ IDef fc !(getFn lhs) [ImpossibleClause fc lhs]
 
-  desugarDecl ps (PData fc vis ddecl)
-      = pure [IData fc vis !(desugarData ps ddecl)]
+  desugarDecl ps (PData fc doc vis ddecl)
+      = pure [IData fc vis !(desugarData ps doc ddecl)]
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
            params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
@@ -664,7 +707,8 @@ mutual
       = throw (GenericMsg fc "Reflection not implemented yet")
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
   desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
-      = do let cons = concatMap expandConstraint cons_in
+      = do addDocString tn doc
+           let cons = concatMap expandConstraint cons_in
            cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ map fst params)
                                                          (snd ntm)
                                           pure (fst ntm, tm')) cons
@@ -734,8 +778,9 @@ mutual
                                                 tn paramsb impname nusing
                                                 body')]
 
-  desugarDecl ps (PRecord fc vis tn params conname_in fields)
-      = do params' <- traverse (\ (n,c,p,tm) =>
+  desugarDecl ps (PRecord fc doc vis tn params conname_in fields)
+      = do addDocString tn doc
+           params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps p
                              pure (n, c, p', tm'))
@@ -755,17 +800,16 @@ mutual
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
            fields' <- traverse (desugarField (ps ++ map fname fields ++
-                                              map fst params)) fields
+                                              map fst params) [nameRoot tn])
+                               fields
            let _ = the (List IField) fields'
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
-           -- True flag set so that the parent namespace can look inside the
-           -- record definition
            pure [IRecord fc (Just (nameRoot tn))
                          vis (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
-      fname (MkField _ _ _ n _) = n
+      fname (MkField _ _ _ _ n _) = n
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n)) = NS ns (DN n (MN ("__mk" ++ n) 0))
@@ -811,8 +855,6 @@ mutual
              UnboundImplicits a => do
                setUnboundImplicits a
                pure [IPragma (\nest, env => setUnboundImplicits a)]
-             UndottedRecordProjections b => do
-               pure [IPragma (\nest, env => setUndottedRecordProjections b)]
              AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
              PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]

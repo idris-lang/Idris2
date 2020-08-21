@@ -111,12 +111,6 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
               Public => do addHashWithNames cn
                            addHashWithNames fullty
               _ => pure ()
-
-         -- Check name visibility: unless it's a private name, any names in
-         -- the type must be greater than private
-         when (vis /= Private) $
-              traverse_ (checkRefVisibility fc cn vis Private)
-                        (keys (getRefs (UN "") fullty))
          pure (MkCon fc cn !(getArity defs [] fullty) fullty)
 
 conName : Constructor -> Name
@@ -288,13 +282,6 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
               _ => do addHashWithNames n
                       addHashWithNames fullty
 
-         -- Check name visibility: unless it's a private name, any names in
-         -- the type must be greater than private
-         when (vis /= Private) $
-              traverse_ (checkRefVisibility fc n vis Private)
-                        (keys (getRefs (UN "") fullty))
-         pure ()
-
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames [] vars ty_raw
@@ -317,7 +304,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                   Nothing => pure []
                   Just ndef =>
                     case definition ndef of
-                         TCon _ _ _ _ _ mw _ _ =>
+                         TCon _ _ _ _ _ mw [] _ =>
                             do ok <- convert defs [] fullty (type ndef)
                                if ok then pure mw
                                      else do logTermNF 1 "Previous" [] (type ndef)

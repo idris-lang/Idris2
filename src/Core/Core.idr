@@ -4,8 +4,11 @@ import Core.Env
 import Core.TT
 
 import Data.List
+import Data.List1
 import Data.Vect
 import Parser.Source
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
 import System
@@ -42,6 +45,15 @@ Show DotReason where
   show ErasedArg = "Erased argument"
   show UserDotted = "User dotted"
   show UnknownDot = "Unknown reason"
+
+export
+Pretty DotReason where
+  pretty NonLinearVar = reflow "Non linear pattern variable"
+  pretty VarApplied = reflow "Variable applied to arguments"
+  pretty NotConstructor = reflow "Not a constructor application or primitive"
+  pretty ErasedArg = reflow "Erased argument"
+  pretty UserDotted = reflow "User dotted"
+  pretty UnknownDot = reflow "Unknown reason"
 
 -- All possible errors, carrying a location
 public export
@@ -121,7 +133,7 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
-     ParseFail : Show token =>
+     ParseFail : (Show token, Pretty token) =>
                FC -> ParseError token -> Error
      ModuleNotFound : FC -> List String -> Error
      CyclicImports : List (List String) -> Error
@@ -475,6 +487,10 @@ traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
 export
+traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
+traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
+
+export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
@@ -490,6 +506,12 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
+
+export
+traverseList1_ : (a -> Core b) -> List1 a -> Core ()
+traverseList1_ f (x :: xs) = do
+  f x
+  traverse_ f xs
 
 namespace PiInfo
   export

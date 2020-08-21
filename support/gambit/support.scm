@@ -36,6 +36,13 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))

@@ -1,7 +1,9 @@
 module Text.Parser.Core
 
+import Data.Bool.Extra
 import Data.List
 import public Control.Delayed
+import public Text.Bounded
 
 %default total
 
@@ -16,8 +18,8 @@ import public Control.Delayed
 export
 data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
      Empty : (val : ty) -> Grammar tok False ty
-     Terminal : String -> (tok -> Maybe a) -> Grammar tok True a
-     NextIs : String -> (tok -> Bool) -> Grammar tok False tok
+     Terminal : String -> (WithBounds tok -> Maybe a) -> Grammar tok True a
+     NextIs : String -> (WithBounds tok -> Bool) -> Grammar tok False tok
      EOF : Grammar tok False ()
 
      Fail : Bool -> String -> Grammar tok c ty
@@ -33,6 +35,7 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
      Alt : {c1, c2 : Bool} ->
            Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
            Grammar tok (c1 && c2) ty
+     Bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume some input. If the first one consumes input, the
@@ -80,12 +83,13 @@ Functor (Grammar tok c) where
   map f (Empty val)  = Empty (f val)
   map f (Fail fatal msg) = Fail fatal msg
   map f (MustWork g) = MustWork (map f g)
-  map f (Terminal msg g) = Terminal msg (\t => map f (g t))
+  map f (Terminal msg g) = Terminal msg (map f . g)
   map f (Alt x y)    = Alt (map f x) (map f y)
   map f (SeqEat act next)
       = SeqEat act (\val => map f (next val))
   map f (SeqEmpty act next)
       = SeqEmpty act (\val => map f (next val))
+  map {c} f (Bounds act) = rewrite sym $ orFalseNeutral c in SeqEmpty (Bounds act) (Empty . f) -- Bounds (map f act)
   -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
   -- so a sequence must be used.
   map {c = False} f p = SeqEmpty p (Empty . f)
@@ -124,8 +128,8 @@ export %inline
 export
 mapToken : (a -> b) -> Grammar b c ty -> Grammar a c ty
 mapToken f (Empty val) = Empty val
-mapToken f (Terminal msg g) = Terminal msg (g . f)
-mapToken f (NextIs msg g) = SeqEmpty (NextIs msg (g . f)) (Empty . f)
+mapToken f (Terminal msg g) = Terminal msg (g . map f)
+mapToken f (NextIs msg g) = SeqEmpty (NextIs msg (g . map f)) (Empty . f)
 mapToken f EOF = EOF
 mapToken f (Fail fatal msg) = Fail fatal msg
 mapToken f (MustWork g) = MustWork (mapToken f g)
@@ -133,6 +137,7 @@ mapToken f Commit = Commit
 mapToken f (SeqEat act next) = SeqEat (mapToken f act) (\x => mapToken f (next x))
 mapToken f (SeqEmpty act next) = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
+mapToken f (Bounds act) = Bounds (mapToken f act)
 
 ||| Always succeed with the given value.
 export %inline
@@ -141,7 +146,7 @@ pure = Empty
 
 ||| Check whether the next token satisfies a predicate
 export %inline
-nextIs : String -> (tok -> Bool) -> Grammar tok False tok
+nextIs : String -> (WithBounds tok -> Bool) -> Grammar tok False tok
 nextIs = NextIs
 
 ||| Look at the next token in the input
@@ -152,7 +157,7 @@ peek = nextIs "Unrecognised token" (const True)
 ||| Succeeds if running the predicate on the next token returns Just x,
 ||| returning x. Otherwise fails.
 export %inline
-terminal : String -> (tok -> Maybe a) -> Grammar tok True a
+terminal : String -> (WithBounds tok -> Maybe a) -> Grammar tok True a
 terminal = Terminal
 
 ||| Always fail with a message
@@ -180,34 +185,35 @@ export %inline
 mustWork : {c : Bool} -> Grammar tok c ty -> Grammar tok c ty
 mustWork = MustWork
 
+export %inline
+bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
+bounds = Bounds
+
 data ParseResult : Type -> Type -> Type where
      Failure : (committed : Bool) -> (fatal : Bool) ->
-               (err : String) -> (rest : List tok) -> ParseResult tok ty
+               (err : String) -> (rest : List (WithBounds tok)) -> ParseResult tok ty
      Res : (committed : Bool) ->
-           (val : ty) -> (more : List tok) -> ParseResult tok ty
+           (val : WithBounds ty) -> (more : List (WithBounds tok)) -> ParseResult tok ty
 
 mutual
-  doParse : (commit : Bool) -> 
+  doParse : (commit : Bool) ->
             (act : Grammar tok c ty) ->
-            (xs : List tok) -> 
+            (xs : List (WithBounds tok)) ->
             ParseResult tok ty
-  doParse com (Empty val) xs = Res com val xs
-  doParse com (Fail fatal str) [] = Failure com fatal str []
-  doParse com (Fail fatal str) (x :: xs) = Failure com fatal str (x :: xs)
-  doParse com Commit xs = Res True () xs
+  doParse com (Empty val) xs = Res com (irrelevantBounds val) xs
+  doParse com (Fail fatal str) xs = Failure com fatal str xs
+  doParse com Commit xs = Res True (irrelevantBounds ()) xs
   doParse com (MustWork g) xs =
-      let p' = assert_total (doParse com g xs) in
-        case p' of
-             Failure com' _ msg ts => Failure com' True msg ts
-             res => res
+    case assert_total (doParse com g xs) of
+         Failure com' _ msg ts => Failure com' True msg ts
+         res => res
   doParse com (Terminal err f) [] = Failure com False "End of input" []
-  doParse com (Terminal err f) (x :: xs)
-        = case f x of
-               Nothing => Failure com False err (x :: xs)
-               Just a => Res com a xs
-  doParse com EOF [] = Res com () []
-  doParse com EOF (x :: xs)
-        = Failure com False "Expected end of input" (x :: xs)
+  doParse com (Terminal err f) (x :: xs) =
+    case f x of
+         Nothing => Failure com False err (x :: xs)
+         Just a => Res com (const a <$> x) xs
+  doParse com EOF [] = Res com (irrelevantBounds ()) []
+  doParse com EOF (x :: xs) = Failure com False "Expected end of input" (x :: xs)
   doParse com (NextIs err f) [] = Failure com False "End of input" []
   doParse com (NextIs err f) (x :: xs)
         = if f x
@@ -226,28 +232,32 @@ mutual
   doParse com (SeqEmpty act next) xs
       = case assert_total (doParse com act xs) of
              Failure com fatal msg ts => Failure com fatal msg ts
-             Res com val xs =>
-                   case assert_total (doParse com (next val) xs) of
-                        Failure com' fatal msg ts => Failure com' fatal msg ts
-                        Res com' val xs => Res com' val xs
+             Res com v xs =>
+               case assert_total (doParse com (next v.val) xs) of
+                    Failure com' fatal msg ts => Failure com' fatal msg ts
+                    Res com' v' xs => Res com' (mergeBounds v v') xs
   doParse com (SeqEat act next) xs
       = case assert_total (doParse com act xs) of
              Failure com fatal msg ts => Failure com fatal msg ts
-             Res com val xs =>
-                   case assert_total (doParse com (next val) xs) of
+             Res com v xs =>
+                   case assert_total (doParse com (next v.val) xs) of
                         Failure com' fatal msg ts => Failure com' fatal msg ts
-                        Res com' val xs => Res com' val xs
+                        Res com' v' xs => Res com' (mergeBounds v v') xs
+  doParse com (Bounds act) xs
+      = case assert_total (doParse com act xs) of
+             Failure com fatal msg ts => Failure com fatal msg ts
+             Res com v xs => Res com (const v <$> v) xs
 
 public export
-data ParsingError tok = Error String (List tok)
+data ParsingError tok = Error String (List (WithBounds tok))
 
 ||| Parse a list of tokens according to the given grammar. If successful,
 ||| returns a pair of the parse result and the unparsed tokens (the remaining
 ||| input).
 export
-parse : {c : Bool} -> (act : Grammar tok c ty) -> (xs : List tok) ->
-        Either (ParsingError tok) (ty, List tok)
+parse : {c : Bool} -> (act : Grammar tok c ty) -> (xs : List (WithBounds tok)) ->
+        Either (ParsingError tok) (ty, List (WithBounds tok))
 parse act xs
     = case doParse False act xs of
            Failure _ _ msg ts => Left (Error msg ts)
-           Res _ val rest => pure (val, rest)
+           Res _ v rest => Right (v.val, rest)

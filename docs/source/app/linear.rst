@@ -1,7 +1,7 @@
 Linear Resources
 ================
 
-We have introduced ``App`` for writing 
+We have introduced ``App`` for writing
 interactive programs, using interfaces to constrain which operations are
 permitted, but have not yet seen the ``Path`` parameter in action.
 Its purpose is to constrain when programs can throw exceptions,
@@ -36,7 +36,7 @@ continuation exactly once:
 
 .. code-block:: idris
 
-    bindL : App {l=NoThrow} e a -> 
+    bindL : App {l=NoThrow} e a ->
             (1 k : a -> App {l} e b) -> App {l} e b
 
 To illustrate the need for ``bindL``, we can try writing a program which
@@ -83,15 +83,15 @@ access the resource directly:
 .. code-block:: idris
 
     data Res : (a : Type) -> (a -> Type) -> Type where
-         (@@) : (val : a) -> (1 resource : r val) -> Res a r
+         (#) : (val : a) -> (1 resource : r val) -> Res a r
 
     login : (1 s : Store LoggedOut) -> (password : String) ->
             Res Bool (\ok => Store (if ok then LoggedIn else LoggedOut))
     logout : (1 s : Store LoggedIn) -> Store LoggedOut
-    readSecret : (1 s : Store LoggedIn) -> 
+    readSecret : (1 s : Store LoggedIn) ->
                  Res String (const (Store LoggedIn))
 
-``Res`` is defined in ``Control.App`` since it is commonly useful.  It is a
+``Res`` is defined in the Prelude, since it is commonly useful.  It is a
 dependent pair type, which associates a value with a linear resource.
 We'll leave the other definitions abstract, for the purposes of this
 introductory example.
@@ -108,10 +108,10 @@ secret data. It uses ``let (>>=) = bindL`` to redefine
           do putStr "Password: "
              password <- getStr
              connect $ \s =>
-               do let True @@ s = login s password
-                    | False @@ s => do putStrLn "Wrong password"
-                                       disconnect s
-                  let str @@ s = readSecret s
+               do let True # s = login s password
+                    | False # s => do putStrLn "Wrong password"
+                                      disconnect s
+                  let str # s = readSecret s
                   putStrLn $ "Secret: " ++ show str
                   let s = logout s
                   disconnect s
@@ -144,7 +144,7 @@ parameterised type ``App1``:
 .. code-block:: idris
 
     data App1 : {default One u : Usage} ->
-                (e : Environment) -> Type -> Type
+                (es : List Error) -> Type -> Type
 
 There is no need for a ``Path`` argument, since linear programs can
 never throw. The ``Usage`` argument states whether the value
@@ -161,8 +161,7 @@ depending on the usage of the first action:
 
 .. code-block:: idris
 
-    Cont1Type : Usage -> Type -> Usage -> Environment -> 
-                Type -> Type
+    Cont1Type : Usage -> Type -> Usage -> List Error -> Type -> Type
     Cont1Type One a u e b = (1 x : a) -> App1 {u} e b
     Cont1Type Any a u e b = (x : a) -> App1 {u} e b
 
@@ -184,7 +183,7 @@ Each operation other than ``disconnect`` returns a `linear` resource.
     interface StoreI e where
       connect : App1 e (Store LoggedOut)
       login : (1 d : Store LoggedOut) -> (password : String) ->
-              App1 e (Res Bool (\ok => Store (if ok then LoggedIn 
+              App1 e (Res Bool (\ok => Store (if ok then LoggedIn
                                                     else LoggedOut))
       logout : (1 d : Store LoggedIn) -> App1 e (Store LoggedOut)
       readSecret : (1 d : Store LoggedIn) ->
@@ -237,13 +236,13 @@ hard coded password and internal data:
 
       login (MkStore str) pwd
           = if pwd == "Mornington Crescent"
-               then pure1 (True @@ MkStore str)
-               else pure1 (False @@ MkStore str)
+               then pure1 (True # MkStore str)
+               else pure1 (False # MkStore str)
       logout (MkStore str) = pure1 (MkStore str)
-      readSecret (MkStore str) = pure1 (str @@ MkStore str)
+      readSecret (MkStore str) = pure1 (str # MkStore str)
 
       disconnect (MkStore _)
-          = putStrLn "Door destroyed"
+          = putStrLn "Disconnect"
 
 Then we can run it in ``main``:
 

@@ -2,10 +2,10 @@ Processing as TTImp
 Written TTC
 Yaffle> Bye for now!
 Processing as TTImp
-Vect2.yaff:25:1--26:1:{pat 0 {b:27} : Type} => {pat 0 {a:26} : Type} => ($resolved186 {b:27}[1] {a:26}[0] $resolved168 ($resolved177 {a:26}[0]) ($resolved177 {b:27}[1])) is not a valid impossible pattern because it typechecks
+Vect2.yaff:25:1--26:1:{pat 0 {b:27} : Type} => {pat 0 {a:26} : Type} => ($resolved203 {b:27}[1] {a:26}[0] $resolved185 ($resolved194 {a:26}[0]) ($resolved194 {b:27}[1])) is not a valid impossible pattern because it typechecks
 Yaffle> Bye for now!
 Processing as TTImp
 Vect3.yaff:25:1--26:1:Not a valid impossible pattern:
-	Vect3.yaff:25:9--25:11:When unifying: $resolved167 and ($resolved175 ?Main.{n:21}_[] ?Main.{b:19}_[])
-	Vect3.yaff:25:9--25:11:Type mismatch: $resolved167 and ($resolved175 ?Main.{n:21}_[] ?Main.{b:19}_[])
+	Vect3.yaff:25:9--25:11:When unifying: $resolved184 and ($resolved192 ?Main.{n:21}_[] ?Main.{b:19}_[])
+	Vect3.yaff:25:9--25:11:Type mismatch: $resolved184 and ($resolved192 ?Main.{n:21}_[] ?Main.{b:19}_[])
 Yaffle> Bye for now!

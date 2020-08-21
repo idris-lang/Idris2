@@ -1,0 +1,5 @@
+-- This is just so the above Idris 1 ipkg doesn't interfere with the
+-- interactive editing modes for the Idris 2 code here!
+
+package dummy
+

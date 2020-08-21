@@ -16,10 +16,7 @@ import Data.NameMap
 -- Return whether any of the name matches conflict
 conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
 conflictMatch [] = False
-conflictMatch ((x, tm) :: ms)
-    = if conflictArgs x tm ms
-         then True
-         else conflictMatch ms
+conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
   where
     clash : Term vars -> Term vars -> Bool
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
@@ -47,16 +44,12 @@ conflictMatch ((x, tm) :: ms)
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-              if clash f f'
-                 then True
-                 else anyTrue (zipWith conflictTm args args')
+          clash f f' || anyTrue (zipWith conflictTm args args')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
     conflictArgs n tm ((x, tm') :: ms)
-        = if n == x && conflictTm tm tm'
-             then True
-             else conflictArgs n tm ms
+        = (n == x && conflictTm tm tm') || conflictArgs n tm ms
 
 -- Return whether any part of the type conflicts in such a way that they
 -- can't possibly be equal (i.e. mismatched constructor)
@@ -380,7 +373,9 @@ getMissing fc n ctree
         pure (map (apply fc (Ref fc Func n)) pats)
 
 -- For the given name, get the names it refers to which are not themselves
--- covering
+-- covering.
+-- Also need to go recursively into case blocks, since we only calculate
+-- references for them at the top level clause
 export
 getNonCoveringRefs : {auto c : Ref Ctxt Defs} ->
                      FC -> Name -> Core (List Name)
@@ -388,8 +383,19 @@ getNonCoveringRefs fc n
    = do defs <- get Ctxt
         Just d <- lookupCtxtExact n (gamma defs)
            | Nothing => throw (UndefinedName fc n)
-        filterM (notCovering defs) (mapMaybe noAssert (toList (refersTo d)))
+        let ds = mapMaybe noAssert (toList (refersTo d))
+        let cases = filter isCase !(traverse toFullNames ds)
+
+        -- Case blocks aren't recursive, so we're safe!
+        cbad <- traverse (getNonCoveringRefs fc) cases
+        topbad <- filterM (notCovering defs) ds
+        pure (topbad ++ concat cbad)
   where
+    isCase : Name -> Bool
+    isCase (NS _ n) = isCase n
+    isCase (CaseBlock _ _) = True
+    isCase _ = False
+
     noAssert : (Name, Bool) -> Maybe Name
     noAssert (n, True) = Nothing
     noAssert (n, False) = Just n

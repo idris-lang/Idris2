@@ -1,0 +1,14 @@
+1/2: Building Test (Test.idr)
+2/2: Building As (As.idr)
+As> Prelude.id : (1 _ : a) -> a
+As> Prelude.Uninhabited : Type -> Type
+As> Toast.pythag : Int -> List (Int, (Int, Int))
+As> Toast.Inside.fact : Nat -> Nat
+As> Toast.nardle : Needle a => a -> a
+As> Toast.noo : Needle a => a -> a
+As> 16
+As> [(3, (4, 5)), (6, (8, 10))]
+As> pythag
+As> 24
+As> 24
+As> Bye for now!

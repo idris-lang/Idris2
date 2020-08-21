@@ -7,7 +7,7 @@ record Morphism a b where
 
 infixr 1 ~>
 
-export
+public export
 (~>) : Type -> Type -> Type
 (~>) = Morphism
 

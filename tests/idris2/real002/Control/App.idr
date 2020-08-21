@@ -333,17 +333,11 @@ HasErr Void e => PrimIO e where
   fork thread
       = MkApp $
             prim_app_bind
-                (toPrimApp $ PrimIO.fork $
+                (toPrimApp $ Prelude.fork $
                       do run thread
                          pure ())
                     $ \_ =>
                MkAppRes (Right ())
-
-infix 5 @@
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (val : a) -> (1 r : t val) -> Res a t
 
 public export
 data FileEx = GenericFileEx Int -- errno

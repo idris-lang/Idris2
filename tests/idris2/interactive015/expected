@@ -1,0 +1,38 @@
+1/1: Building IEdit (IEdit.idr)
+Main> my_cong x x Refl = Refl
+Main> No more results
+Main> append [] ys = ys
+append (x :: xs) ys = x :: append xs ys
+Main> append [] ys = ys
+append (x :: xs) [] = x :: append xs []
+append (x :: xs) (y :: ys) = x :: append xs (y :: ys)
+Main> lappend [] ys = ys
+lappend (x :: xs) ys = x :: lappend xs ys
+Main> lappend [] ys = ys
+lappend (x :: xs) ys = x :: lappend ys xs
+Main> lappend [] ys = ys
+lappend (x :: xs) ys = lappend xs (x :: ys)
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs ys
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs (x :: ys)
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs (x :: (x :: ys))
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs xs
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs []
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs (x :: xs)
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs [x]
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs (x :: (x :: xs))
+Main> lappend1 [] ys = ys
+lappend1 (x :: xs) ys = x :: lappend1 xs (x :: (x :: xs))
+Main> ys
+Main> []
+Main> lappend2 ys ys
+Main> lappend2 ys []
+Main> No more results
+Main> Bye for now!

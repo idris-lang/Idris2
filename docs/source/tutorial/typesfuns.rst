@@ -143,9 +143,9 @@ We can test these functions at the Idris prompt:
 ::
 
     Main> plus (S (S Z)) (S (S Z))
-    S (S (S (S Z)))
+    4
     Main> mult (S (S (S Z))) (plus (S (S Z)) (S (S Z)))
-    S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))
+    12
 
 Like arithmetic operations, integer literals are also overloaded using
 interfaces, meaning that we can also test the functions as follows:
@@ -153,9 +153,9 @@ interfaces, meaning that we can also test the functions as follows:
 ::
 
     Idris> plus 2 2
-    S (S (S (S Z)))
+    4
     Idris> mult 3 (plus 2 2)
-    S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))
+    12
 
 You may wonder, by the way, why we have unary natural numbers when our
 computers have perfectly good integer arithmetic built in. The reason
@@ -988,8 +988,8 @@ type. The field names can be used to access the field values:
     "Fred" : String
     *Record> fred.age
     30 : Int
-    *Record> :t (.firstName)
-    Main.Person.(.firstName) : Person -> String
+    *Record> :t firstName
+    firstName : Person -> String
 
 We can use prefix field projections, like in Haskell:
 
@@ -999,14 +999,6 @@ We can use prefix field projections, like in Haskell:
     "Fred" : String
     *Record> age fred
     30 : Int
-    *Record> :t firstName
-    firstName : Person -> String
-
-Prefix field projections can be disabled per record definition
-using pragma ``%undotted_record_projections off``, which makes
-all subsequently defined records generate only dotted projections.
-This pragma has effect until the end of the module
-or until the closest occurrence of ``%undotted_record_projections on``.
 
 We can also use the field names to update a record (or, more
 precisely, produce a copy of the record with the given fields

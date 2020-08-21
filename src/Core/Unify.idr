@@ -313,7 +313,7 @@ getVars got (NApp fc (NLocal r idx v) [] :: xs)
     inArgs : Nat -> List Nat -> Bool
     inArgs n [] = False
     inArgs n (n' :: ns)
-        = if natToInteger n == natToInteger n' then True else inArgs n ns
+        = natToInteger n == natToInteger n' || inArgs n ns
 getVars got (NAs _ _ _ p :: xs) = getVars got (p :: xs)
 getVars _ (_ :: xs) = Nothing
 
@@ -505,6 +505,12 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          addDef (Resolved mref) newdef
          removeHole mref
   where
+    precise : Bool
+    precise
+        = case definition mdef of
+               Hole _ p => precisetype p
+               _ => False
+
     isSimple : Term vs -> Bool
     isSimple (Local _ _ _ _) = True
     isSimple (Ref _ _ _) = True
@@ -561,7 +567,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
             = do p' <- updateIVarsPi ivs p
                  if isLinear rig
                     then do t' <- updateIVars ivs t
-                            pure $ if inLam mode
+                            pure $ if inLam mode || precise
                                then (Pi fc linear p' t')
                                else (Pi fc top p' t')
                     else Just (Pi fc rig p' !(updateIVars ivs t))
@@ -662,18 +668,22 @@ mutual
 
   headsConvert : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
-                 Env Term vars ->
+                 {auto u : Ref UST UState} ->
+                 UnifyInfo ->
+                 FC -> Env Term vars ->
                  Maybe (List (NF vars)) -> Maybe (List (NF vars)) ->
                  Core Bool
-  headsConvert env (Just vs) (Just ns)
+  headsConvert mode fc env (Just vs) (Just ns)
       = case (reverse vs, reverse ns) of
              (v :: _, n :: _) =>
-                do logNF 10 "Converting" env v
-                   logNF 10 "......with" env n
-                   defs <- get Ctxt
-                   convert defs env v n
+                do logNF 10 "Unifying head" env v
+                   logNF 10 ".........with" env n
+                   res <- unify mode fc env v n
+                   -- If there's constraints, we postpone the whole equation
+                   -- so no need to record them
+                   pure (isNil (constraints res ))
              _ => pure False
-  headsConvert env _ _
+  headsConvert mode fc env _ _
       = do log 10 "Nothing to convert"
            pure True
 
@@ -701,7 +711,7 @@ mutual
                             nty
            -- If the rightmost arguments have the same type, or we don't
            -- know the types of the arguments, we'll get on with it.
-           if !(headsConvert env vargTys nargTys)
+           if !(headsConvert mode fc env vargTys nargTys)
               then
                 -- Unify the rightmost arguments, with the goal of turning the
                 -- hole application into a pattern form
@@ -754,7 +764,7 @@ mutual
   unifyHoleApp swap mode loc env mname mref margs margs' (NDCon nfc n t a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
-           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n t a) args'
+           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NDCon nfc n t a) args'
   unifyHoleApp swap mode loc env mname mref margs margs' (NApp nfc (NLocal r idx p) args')
       = unifyInvertible swap (lower mode) loc env mname mref margs margs' Nothing
                         (NApp nfc (NLocal r idx p)) args'
@@ -1273,9 +1283,14 @@ mutual
 
     unifyWithLazyD _ _ mode loc env (NDelayed _ _ tmx) (NDelayed _ _ tmy)
        = unify (lower mode) loc env tmx tmy
-    unifyWithLazyD _ _ mode loc env (NDelayed _ r tmx) tmy
-       = do vs <- unify (lower mode) loc env tmx tmy
-            pure (record { addLazy = AddForce r } vs)
+    unifyWithLazyD _ _ mode loc env x@(NDelayed _ r tmx) tmy
+       = if isHoleApp tmy && not (umode mode == InMatch)
+            -- given type delayed, expected unknown, so let's wait and see
+            -- what the expected type turns out to be
+            then postpone True
+                          loc mode "Postponing in lazy" env x tmy
+            else do vs <- unify (lower mode) loc env tmx tmy
+                    pure (record { addLazy = AddForce r } vs)
     unifyWithLazyD _ _ mode loc env tmx (NDelayed _ r tmy)
        = do vs <- unify (lower mode) loc env tmx tmy
             pure (record { addLazy = AddDelay r } vs)
@@ -1432,7 +1447,7 @@ retryGuess mode smode (hid, (loc, hname))
                                     do logTerm 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
                                                  (type def)
                                        setInvertible loc (Resolved i)
-                                       pure False -- progress made!
+                                       pure False -- progress not made yet!
                                 _ => do logTermNF 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
                                                   [] (type def)
                                         case smode of
@@ -1528,9 +1543,9 @@ giveUpConstraints
         = do defs <- get Ctxt
              case !(lookupDefExact (Resolved hid) (gamma defs)) of
                   Just (BySearch _ _ _) =>
-                         updateDef (Resolved hid) (const (Just (Hole 0 False)))
+                         updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
                   Just (Guess _ _ _) =>
-                         updateDef (Resolved hid) (const (Just (Hole 0 False)))
+                         updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
                   _ => pure ()
 
 -- Check whether any of the given hole references have the same solution
@@ -1573,6 +1588,13 @@ checkDots
          ust <- get UST
          put UST (record { dotConstraints = [] } ust)
   where
+    getHoleName : Term [] -> Core (Maybe Name)
+    getHoleName tm
+        = do defs <- get Ctxt
+             NApp _ (NMeta n' i args) _ <- nf defs [] tm
+                 | _ => pure Nothing
+             pure (Just n')
+
     checkConstraint : (Name, DotReason, Constraint) -> Core ()
     checkConstraint (n, reason, MkConstraint fc wl blocked env x y)
         = do logTermNF 10 "Dot" env y
@@ -1582,8 +1604,10 @@ checkDots
              ust <- get UST
              handleUnify
                (do defs <- get Ctxt
-                   Just olddef <- lookupDefExact n (gamma defs)
-                        | Nothing => throw (UndefinedName fc n)
+                   -- get the hole name that 'n' is currently resolved to,
+                   -- if indeed it is still a hole
+                   (i, _) <- getPosition n (gamma defs)
+                   oldholen <- getHoleName (Meta fc n i [])
 
                    -- Check that what was given (x) matches what was
                    -- solved by unification (y).
@@ -1592,25 +1616,25 @@ checkDots
                    -- must be complete.
                    cs <- unify inMatch fc env x y
                    defs <- get Ctxt
-                   Just ndef <- lookupDefExact n (gamma defs)
-                        | Nothing => throw (UndefinedName fc n)
 
                    -- If the name standing for the dot wasn't solved
                    -- earlier, but is now (even with another metavariable)
                    -- this is bad (it most likely means there's a non-linear
                    -- variable)
-                   let hBefore = case olddef of
-                                      Hole _ _ => True -- dot not solved
-                                      _ => False
-                   let h = case ndef of
-                                Hole _ _ => True -- dot not solved
-                                _ => False
+                   dotSolved <-
+                      maybe (pure False)
+                            (\n => do Just ndef <- lookupDefExact n (gamma defs)
+                                           | Nothing => throw (UndefinedName fc n)
+                                      case ndef of
+                                           Hole _ _ => pure False
+                                           _ => pure True)
+                            oldholen
 
                    -- If any of the things we solved have the same definition,
                    -- we've sneaked a non-linear pattern variable in
                    argsSame <- checkArgsSame (namesSolved cs)
                    when (not (isNil (constraints cs))
-                            || (hBefore && not h) || argsSame) $
+                            || dotSolved || argsSame) $
                       throw (InternalError "Dot pattern match fail"))
                (\err =>
                     case err of

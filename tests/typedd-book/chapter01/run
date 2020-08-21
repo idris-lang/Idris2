@@ -1,4 +1,4 @@
-$1 All.idr --check
-$1 --no-banner HoleFix.idr < input
+$1 --no-color --console-width 0 All.idr --check
+$1 --no-color --console-width 0 --no-banner HoleFix.idr < input
 
 rm -rf build

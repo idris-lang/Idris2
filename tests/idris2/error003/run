@@ -1,3 +1,3 @@
-$1 --check Error.idr
+$1 --no-color --console-width 0 --check Error.idr
 
 rm -rf build

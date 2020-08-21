@@ -80,7 +80,7 @@ mutual
        -- A saturated constructor application
        NmCon : FC -> Name -> (tag : Maybe Int) -> List NamedCExp -> NamedCExp
        -- Internally defined primitive operations
-       NmOp : FC -> PrimFn arity -> Vect arity NamedCExp -> NamedCExp
+       NmOp : {arity : _ } -> FC -> PrimFn arity -> Vect arity NamedCExp -> NamedCExp
        -- Externally defined primitive operations
        NmExtPrim : FC -> (p : Name) -> List NamedCExp -> NamedCExp
        -- A forced (evaluated) value
@@ -111,7 +111,10 @@ public export
 data CFType : Type where
      CFUnit : CFType
      CFInt : CFType
-     CFUnsigned : CFType
+     CFUnsigned8 : CFType
+     CFUnsigned16 : CFType
+     CFUnsigned32 : CFType
+     CFUnsigned64 : CFType
      CFString : CFType
      CFDouble : CFType
      CFChar : CFType
@@ -197,7 +200,7 @@ data Names : List Name -> Type where
 
 elem : Name -> Names xs -> Bool
 elem n [] = False
-elem n (x :: xs) = if n == x then True else elem n xs
+elem n (x :: xs) = n == x || elem n xs
 
 tryNext : Name -> Name
 tryNext (UN n) = MN n 0
@@ -235,7 +238,7 @@ mutual
             NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
       = let locs' = addLocs [x] locs in
-            NmLet fc (getLocName _ locs' First) 
+            NmLet fc (getLocName _ locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
   forgetExp locs (CApp fc f args)
@@ -293,7 +296,10 @@ export
 Show CFType where
   show CFUnit = "Unit"
   show CFInt = "Int"
-  show CFUnsigned = "Bits_n"
+  show CFUnsigned8 = "Bits_8"
+  show CFUnsigned16 = "Bits_16"
+  show CFUnsigned32 = "Bits_32"
+  show CFUnsigned64 = "Bits_64"
   show CFString = "String"
   show CFDouble = "Double"
   show CFChar = "Char"

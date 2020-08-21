@@ -57,7 +57,7 @@ write a small program which uses ``add`` to add two integers:
 
     %foreign "C:add,libsmall"
     add : Int -> Int -> Int
-  
+
     main : IO ()
     main = printLn (add 70 24)
 
@@ -84,23 +84,25 @@ returns a primitive IO action:
 .. code-block:: idris
 
     %foreign "C:addWithMessage,libsmall"
-    prim_addWithMessage : String -> Int -> Int -> PrimIO Int
+    prim__addWithMessage : String -> Int -> Int -> PrimIO Int
 
 Internally, ``PrimIO Int`` is a function which takes the current (linear)
 state of the world, and returns an ``Int`` with an updated state of the world.
-We can convert this into an ``IO`` action using ``primIO``:
+In general, ``IO`` operations in an Idris program are defined as instances
+of the ``HasIO`` interface. We can convert a primitive operation to one usable
+in ``HasIO`` using ``primIO``:
 
 .. code-block:: idris
 
-    primIO : PrimIO a -> IO a
+    primIO : HasIO io => PrimIO a -> io a
 
 So, we can extend our program as follows:
 
 .. code-block:: idris
 
-  addWithMessage : String -> Int -> Int -> IO Int
-  addWithMessage s x y = primIO $ prim_addWithMessage s x y
-  
+  addWithMessage : HasIO io => String -> Int -> Int -> io Int
+  addWithMessage s x y = primIO $ prim__addWithMessage s x y
+
   main : IO ()
   main
       = do printLn (add 70 24)
@@ -136,7 +138,7 @@ use that instead:
     add : Int -> Int -> Int
 
     %foreign (libsmall "addWithMessage")
-    prim_addWithMessage : String -> Int -> Int -> PrimIO Int
+    prim__addWithMessage : String -> Int -> Int -> PrimIO Int
 
 .. _sect-ffi-string:
 
@@ -151,6 +153,10 @@ others.  Argument types can be any of the following primitives:
 * ``Int``
 * ``Char``
 * ``Double`` (as ``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``String`` (as ``char*`` in C)
 * ``Ptr t`` and ``AnyPtr`` (both as ``void*`` in C)
 
@@ -218,17 +224,18 @@ which takes a callback that takes a ``char*`` and an ``int`` and returns a
         return f(x, y);
     }
 
-Then, we can access this from Idris by declaring it as a ``%foreign``
-function and wrapping it in ``IO``, with the C function calling the Idris
-function as the callback:
+Then, we can access this from Idris by declaring it as a ``%foreign`` function
+and wrapping it in the ``HasIO`` interface, with the C function calling the
+Idris function as the callback:
 
 .. code-block:: idris
 
     %foreign (libsmall "applyFn")
-    prim_applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
-    
-    applyFn : String -> Int -> (String -> Int -> String) -> IO String
-    applyFn c i f = primIO $ prim_applyFn c i f
+    prim__applyFn : String -> Int -> (String -> Int -> String) -> PrimIO String
+
+    applyFn : HasIO io =>
+              String -> Int -> (String -> Int -> String) -> io String
+    applyFn c i f = primIO $ prim__applyFn c i f
 
 For example, we can try this as follows:
 
@@ -240,7 +247,7 @@ For example, we can try this as follows:
                  if x == 1
                     then str
                     else str ++ "s"
-    
+
     main : IO ()
     main
         = do str1 <- applyFn "Biscuit" 10 pluralise
@@ -253,17 +260,21 @@ As a variant, the callback could have a side effect:
 .. code-block:: idris
 
     %foreign (libsmall "applyFn")
-    prim_applyFnIO : String -> Int -> (String -> Int -> PrimIO String) ->
+    prim__applyFnIO : String -> Int -> (String -> Int -> PrimIO String) ->
                      PrimIO String
-  
-This is a little more fiddly to lift to an ``IO`` function, due to the callback,
-but we can do so using ``toPrim : IO a -> PrimIO a``:
-  
+
+This is a little more fiddly to lift to a ``HasIO`` function,
+due to the callback, but we can do so using ``toPrim : IO a -> PrimIO a``:
+
 .. code-block:: idris
 
-    applyFnIO : String -> Int -> (String -> Int -> IO String) -> IO String
-    applyFnIO c i f = primIO $ prim_applyFnIO c i (\s, i => toPrim $ f s i)
-  
+    applyFnIO : HasIO io =>
+                String -> Int -> (String -> Int -> IO String) -> io String
+    applyFnIO c i f = primIO $ prim__applyFnIO c i (\s, i => toPrim $ f s i)
+
+Note that the callback is explicitly in ``IO`` here, since ``HasIO`` doesn't
+have a general method for extracting the primitive ``IO`` operation.
+
 For example, we can extend the above ``pluralise`` example to print a message
 in the callback:
 
@@ -276,7 +287,7 @@ in the callback:
                     if x == 1
                        then str
                        else str ++ "s"
-    
+
     main : IO ()
     main
         = do str1 <- applyFnIO "Biscuit" 10 pluralise
@@ -321,15 +332,15 @@ We can define a type for accessing ``point`` in Idris by importing
 
     Point : Type
     Point = Struct "point" [("x", Int), ("y", Int)]
-    
+
     %foreign (libsmall "mkPoint")
     mkPoint : Int -> Int -> Point
-    
+
     %foreign (libsmall "freePoint")
-    prim_freePoint : Point -> PrimIO ()
-    
+    prim__freePoint : Point -> PrimIO ()
+
     freePoint : Point -> IO ()
-    freePoint p = primIO $ prim_freePoint p
+    freePoint p = primIO $ prim__freePoint p
 
 The ``Point`` type in Idris now corresponds to ``point*`` in C. Fields can
 be read and written using the following, also from ``System.FFI``:
@@ -370,6 +381,10 @@ The field types of a ``Struct`` can be any of the following:
 * ``Int``
 * ``Char``
 * ``Double`` (``double`` in C)
+* ``Bits8``
+* ``Bits16``
+* ``Bits32``
+* ``Bits64``
 * ``Ptr a`` or ``AnyPtr`` (``void*`` in C)
 * Another ``Struct``, which is a pointer to a ``struct`` in C
 
@@ -389,8 +404,8 @@ You can represent this in Idris as:
 ::
 
     NamedPoint : Type
-    NamedPoint 
-        = Struct "namedpoint" 
+    NamedPoint
+        = Struct "namedpoint"
                    [("name", Ptr String),
                    ("pt", Point)]
 

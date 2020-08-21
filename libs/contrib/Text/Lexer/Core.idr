@@ -1,7 +1,7 @@
 module Text.Lexer.Core
 
 import public Control.Delayed
-import Data.Bool.Extra
+import Data.Bool
 import Data.List
 import Data.Nat
 import Data.Strings
@@ -76,10 +76,10 @@ reject = Lookahead False
 ||| of a list. The resulting recogniser will consume input if the produced
 ||| recognisers consume and the list is non-empty.
 export
-concatMap : (a -> Recognise c) -> (xs : List a) -> 
+concatMap : (a -> Recognise c) -> (xs : List a) ->
             Recognise (c && (isCons xs))
 concatMap {c} _ [] = rewrite andFalseFalse c in Empty
-concatMap {c} f (x :: xs) 
+concatMap {c} f (x :: xs)
    = rewrite andTrueNeutral c in
      rewrite sym (orSameAndRightNeutral c (isCons xs)) in
              SeqEmpty (f x) (Core.concatMap f xs)
@@ -111,7 +111,7 @@ isJust (Just x) = True
 
 export
 unpack' : String -> List Char
-unpack' str 
+unpack' str
     = case strUncons str of
            Nothing => []
            Just (x, xs) => x :: unpack' xs
@@ -182,12 +182,12 @@ tokenise pred line col acc tmap str
                 (incol, []) => c + cast (length incol)
                 (incol, _) => cast (length incol)
 
-    getFirstToken : TokenMap a -> List Char -> 
+    getFirstToken : TokenMap a -> List Char ->
                     Maybe (TokenData a, Int, Int, List Char)
     getFirstToken [] str = Nothing
     getFirstToken ((lex, fn) :: ts) str
         = case scan lex [] str of
-               Just (tok, rest) => Just (MkToken line col (fn (pack (reverse tok))), 
+               Just (tok, rest) => Just (MkToken line col (fn (pack (reverse tok))),
                                          line + cast (countNLs tok),
                                          getCols tok col, rest)
                Nothing => getFirstToken ts str

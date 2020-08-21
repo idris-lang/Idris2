@@ -2,10 +2,13 @@ module Parser.Support
 
 import public Text.Lexer
 import public Text.Parser
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
 import Data.List
 import Data.List.Views
+import Data.Strings
 import Parser.Unlit
 import System.File
 
@@ -31,9 +34,25 @@ Show tok => Show (ParseError tok) where
       = "Lit error(s) at " ++ show (c, l) ++ " input: " ++ str
 
 export
-toGenericParsingError : ParsingError (TokenData token) -> ParseError token
+Pretty tok => Pretty (ParseError tok) where
+  pretty (ParseFail err loc toks)
+      = reflow "Parse error" <+> prettyLine loc <+> ":" <+> line <+> pretty err <++> parens (reflow "next tokens:"
+            <++> brackets (align $ concatWith (surround (comma <+> space)) (pretty <$> take 10 toks)))
+    where
+      prettyLine : Maybe (Int, Int) -> Doc ann
+      prettyLine Nothing = emptyDoc
+      prettyLine (Just (r, c)) = space <+> "at" <++> "line" <++> pretty (r + 1) <+> ":" <+> pretty (c + 1)
+  pretty (LexFail (c, l, str))
+      = reflow "Lex error at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
+  pretty (FileFail err)
+      = reflow "File error:" <++> pretty (show err)
+  pretty (LitFail (MkLitErr l c str))
+      = reflow "Lit error(s) at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
+
+export
+toGenericParsingError : ParsingError token -> ParseError token
 toGenericParsingError (Error err [])      = ParseFail err Nothing []
-toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (line t, col t)) (map tok (t::ts))
+toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (t.startLine, t.startCol)) (map val (t :: ts))
 
 export
 hex : Char -> Maybe Int

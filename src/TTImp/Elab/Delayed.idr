@@ -179,6 +179,7 @@ recoverable (CantSolveEq _ env l r)
    = do defs <- get Ctxt
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
 recoverable (UndefinedName _ _) = pure False
+recoverable (LinearMisuse _ _ _ _) = pure False
 recoverable (InType _ _ err) = recoverable err
 recoverable (InCon _ _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err

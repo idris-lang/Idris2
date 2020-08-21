@@ -66,7 +66,7 @@ prim_app_bind fn k w
     = let MkAppRes x' w' = fn w in k x' w'
 
 toPrimApp : (1 act : IO a) -> PrimApp a
-toPrimApp x 
+toPrimApp x
     = \w => case toPrim x w of
                  MkIORes r w => MkAppRes r w
 
@@ -74,9 +74,9 @@ PrimApp1 : Usage -> Type -> Type
 PrimApp1 u a = (1 x : %World) -> App1Res u a
 
 toPrimApp1 : {u : _} -> (1 act : IO a) -> PrimApp1 u a
-toPrimApp1 x 
+toPrimApp1 x
     = \w => case toPrim x w of
-                 MkIORes r w => 
+                 MkIORes r w =>
                      case u of
                           One => MkApp1Res1 r w
                           Any => MkApp1ResW r w
@@ -272,13 +272,13 @@ handle (MkApp prog) onok onerr
     = MkApp $
            prim_app_bind prog $ \res =>
              case res of
-                  Left (First err) => 
+                  Left (First err) =>
                         let MkApp err' = onerr err in
                             err'
-                  Left (Later p) => 
+                  Left (Later p) =>
                         -- different exception, so rethrow
                         MkAppRes (Left p)
-                  Right ok => 
+                  Right ok =>
                         let MkApp ok' = onok ok in
                             ok'
 
@@ -333,13 +333,11 @@ HasErr Void e => PrimIO e where
   fork thread
       = MkApp $
             prim_app_bind
-                (toPrimApp $ PrimIO.fork $
+                (toPrimApp $ Prelude.fork $
                       do run thread
                          pure ())
                     $ \_ =>
                MkAppRes (Right ())
-
-infix 5 @@
 
 export
 new1 :  t -> (1 p : State tag t e => App1 {u} e a) -> App1 {u} e a
@@ -348,10 +346,6 @@ new1 val prog
         let st = MkState ref
             MkApp1 res = prog @{st} in
             res
-
-public export
-data Res : (a : Type) -> (a -> Type) -> Type where
-     (@@) : (val : a) -> (1 r : t val) -> Res a t
 
 public export
 data FileEx = GenericFileEx Int -- errno

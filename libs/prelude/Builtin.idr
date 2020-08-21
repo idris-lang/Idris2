@@ -67,21 +67,35 @@ snd (x, y) = y
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-||| Dependent pairs aid in the construction of dependent types by providing
-||| evidence that some value resides in the type.
-|||
-||| Formally, speaking, dependent pairs represent existential quantification -
-||| they consist of a witness for the existential claim and a proof that the
-||| property holds for it.
-|||
-||| @ a the value to place in the type.
-||| @ p the dependent type that requires the value.
+infix 5 #
+
+||| A pair type for use in operations on linear resources, which return a
+||| value and an updated resource
+public export
+data LPair : Type -> Type -> Type where
+     (#) : (x : a) -> (1 _ : b) -> LPair a b
+
 namespace DPair
+  ||| Dependent pairs aid in the construction of dependent types by providing
+  ||| evidence that some value resides in the type.
+  |||
+  ||| Formally, speaking, dependent pairs represent existential quantification -
+  ||| they consist of a witness for the existential claim and a proof that the
+  ||| property holds for it.
+  |||
+  ||| @ a the value to place in the type.
+  ||| @ p the dependent type that requires the value.
   public export
   record DPair a (p : a -> Type) where
     constructor MkDPair
     fst : a
     snd : p fst
+
+  ||| A dependent variant of LPair, pairing a result value with a resource
+  ||| that depends on the result value
+  public export
+  data Res : (a : Type) -> (a -> Type) -> Type where
+       (#) : (val : a) -> (1 r : t val) -> Res a t
 
 -- The empty type
 
@@ -96,6 +110,7 @@ data Void : Type where
 
 public export
 data Equal : forall a, b . a -> b -> Type where
+     [search a b]
      Refl : {0 x : a} -> Equal x x
 
 %name Equal prf
@@ -160,3 +175,32 @@ believe_me = prim__believe_me _ _
 export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
+
+public export
+delay : a -> Lazy a
+delay x = Delay x
+
+public export
+force : Lazy a -> a
+force x = Force x
+
+%stringLit fromString
+
+||| Interface for types that can be constructed from string literals.
+public export
+interface FromString ty where
+  ||| Conversion from String.
+  fromString : String -> ty
+
+%allow_overloads fromString
+
+%inline
+public export
+FromString String where
+  fromString s = s
+
+%defaulthint
+%inline
+public export
+defaultString : FromString String
+defaultString = %search

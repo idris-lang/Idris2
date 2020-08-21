@@ -2,6 +2,8 @@ module Core.Name
 
 import Data.List
 import Decidable.Equality
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 %default total
 
@@ -12,18 +14,34 @@ data Name : Type where
      MN : String -> Int -> Name -- machine generated name
      PV : Name -> Int -> Name -- pattern variable name; int is the resolved function id
      DN : String -> Name -> Name -- a name and how to display it
-     RF : String -> Name  -- record field name
      Nested : (Int, Int) -> Name -> Name -- nested function name
-     CaseBlock : Int -> Int -> Name -- case block nested in (resolved) name
-     WithBlock : Int -> Int -> Name -- with block nested in (resolved) name
+     CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
+     WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
+
+-- Update a name imported with 'import as', for creating an alias
+export
+asName : List String -> -- Initial module name
+         List String -> -- 'as' module name
+         Name -> -- identifier
+         Name
+asName mod ns (DN s n) = DN s (asName mod ns n)
+asName mod ns (NS oldns n)
+    = NS (updateNS mod oldns) n
+  where
+    updateNS : List String -> List String -> List String
+    updateNS mod (m :: ms)
+        = if mod == m :: ms
+             then ns
+             else m :: updateNS mod ms
+    updateNS mod [] = []
+asName _ _ n = n
 
 export
 userNameRoot : Name -> Maybe String
 userNameRoot (NS _ n) = userNameRoot n
 userNameRoot (UN n) = Just n
 userNameRoot (DN _ n) = userNameRoot n
-userNameRoot (RF n) = Just ("." ++ n)  -- TMP HACK
 userNameRoot _ = Nothing
 
 export
@@ -41,7 +59,6 @@ nameRoot (UN n) = n
 nameRoot (MN n _) = n
 nameRoot (PV n _) = nameRoot n
 nameRoot (DN _ n) = nameRoot n
-nameRoot (RF n) = n
 nameRoot (Nested _ inner) = nameRoot inner
 nameRoot (CaseBlock n _) = "$" ++ show n
 nameRoot (WithBlock n _) = "$" ++ show n
@@ -67,18 +84,28 @@ showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
 export
 Show Name where
-  show (NS ns n@(RF _)) = showSep "." (reverse ns) ++ ".(" ++ show n ++ ")"
   show (NS ns n) = showSep "." (reverse ns) ++ "." ++ show n
   show (UN x) = x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
   show (DN str n) = str
-  show (RF n) = "." ++ n
   show (Nested (outer, idx) inner)
       = show outer ++ ":" ++ show idx ++ ":" ++ show inner
-  show (CaseBlock outer i) = "case block in " ++ show outer ++ "(" ++ show i ++ ")"
-  show (WithBlock outer i) = "with block in " ++ show outer
+  show (CaseBlock outer i) = "case block in " ++ outer
+  show (WithBlock outer i) = "with block in " ++ outer
   show (Resolved x) = "$resolved" ++ show x
+
+export
+Pretty Name where
+  pretty (NS ns n) = concatWith (surround dot) (pretty <$> reverse ns) <+> dot <+> pretty n
+  pretty (UN x) = pretty x
+  pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
+  pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
+  pretty (DN str _) = pretty str
+  pretty (Nested (outer, idx) inner) = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+  pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
+  pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
+  pretty (Resolved x) = pretty "$resolved" <+> pretty x
 
 export
 Eq Name where
@@ -87,7 +114,6 @@ Eq Name where
     (==) (MN x y) (MN x' y') = y == y' && x == x'
     (==) (PV x y) (PV x' y') = x == x' && y == y'
     (==) (DN _ n) (DN _ n') = n == n'
-    (==) (RF n) (RF n') = n == n'
     (==) (Nested x y) (Nested x' y') = x == x' && y == y'
     (==) (CaseBlock x y) (CaseBlock x' y') = y == y' && x == x'
     (==) (WithBlock x y) (WithBlock x' y') = y == y' && x == x'
@@ -100,11 +126,10 @@ nameTag (UN _) = 1
 nameTag (MN _ _) = 2
 nameTag (PV _ _) = 3
 nameTag (DN _ _) = 4
-nameTag (RF _) = 5
-nameTag (Nested _ _) = 6
-nameTag (CaseBlock _ _) = 7
-nameTag (WithBlock _ _) = 8
-nameTag (Resolved _) = 9
+nameTag (Nested _ _) = 5
+nameTag (CaseBlock _ _) = 6
+nameTag (WithBlock _ _) = 7
+nameTag (Resolved _) = 8
 
 export
 Ord Name where
@@ -127,7 +152,6 @@ Ord Name where
                GT => GT
                LT => LT
     compare (DN _ n) (DN _ n') = compare n n'
-    compare (RF n) (RF n') = compare n n'
     compare (Nested x y) (Nested x' y')
         = case compare y y' of
                EQ => compare x x'
@@ -172,9 +196,6 @@ nameEq (DN x t) (DN y t') with (decEq x y)
     nameEq (DN y t) (DN y t) | (Yes Refl) | (Just Refl) = Just Refl
     nameEq (DN y t) (DN y t') | (Yes Refl) | Nothing = Nothing
   nameEq (DN x t) (DN y t') | (No p) = Nothing
-nameEq (RF x) (RF y) with (decEq x y)
-  nameEq (RF y) (RF y) | (Yes Refl) = Just Refl
-  nameEq (RF x) (RF y) | (No contra) = Nothing
 nameEq (Nested x y) (Nested x' y') with (decEq x x')
   nameEq (Nested x y) (Nested x' y') | (No p) = Nothing
   nameEq (Nested x y) (Nested x y') | (Yes Refl) with (nameEq y y')

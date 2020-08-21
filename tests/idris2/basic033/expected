@@ -1,5 +1,15 @@
 1/1: Building unboundimps (unboundimps.idr)
-unboundimps.idr:18:11--18:14:While processing type of len' at unboundimps.idr:18:1--19:1:
-Undefined name xs
-unboundimps.idr:19:16--19:18:While processing type of append' at unboundimps.idr:19:1--21:1:
-Undefined name n
+Error: While processing type of len'. Undefined name xs. 
+
+unboundimps.idr:18:11--18:13
+    |
+ 18 | len': Env xs -> Nat
+    |           ^^
+
+Error: While processing type of append'. Undefined name n. 
+
+unboundimps.idr:19:16--19:17
+    |
+ 19 | append' : Vect n a -> Vect m a -> Vect (n + m) a
+    |                ^
+

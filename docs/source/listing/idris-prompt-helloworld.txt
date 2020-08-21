@@ -1,7 +1,7 @@
 $ idris hello.idr
      ____    __     _         ___
     /  _/___/ /____(_)____   |__ \
-    / // __  / ___/ / ___/   __/ /     Version 0.2.0
+    / // __  / ___/ / ___/   __/ /     Version 0.2.1
   _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
  /___/\__,_/_/  /_/____/   /____/      Type :? for help
 
@@ -9,7 +9,6 @@ Welcome to Idris 2.  Enjoy yourself!
 Main> :t main
 Main.main : IO ()
 Main> :c hello main
-compiling hello.ss with output to hello.so
-File hello.so written
+File build/exec/hello written
 Main> :q
 Bye for now!

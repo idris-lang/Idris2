@@ -124,7 +124,6 @@ genMVName : {auto c : Ref Ctxt Defs} ->
             Name -> Core Name
 genMVName (UN str) = genName str
 genMVName (MN str _) = genName str
-genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -145,7 +144,7 @@ genVarName str
 export
 genCaseName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genCaseName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -154,7 +153,7 @@ genCaseName root
 export
 genWithName : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
-			     		Int -> Core Name
+              String -> Core Name
 genWithName root
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -662,7 +661,7 @@ dumpHole lvl hole
                     (Hole _ p, ty) =>
                          log lvl $ "?" ++ show (fullname gdef) ++ " : " ++
                                            show !(normaliseHoles defs [] ty)
-                                           ++ if p then " (ImplBind)" else ""
+                                           ++ if implbind p then " (ImplBind)" else ""
                                            ++ if invertible gdef then " (Invertible)" else ""
                     (BySearch _ _ _, ty) =>
                          log lvl $ "Search " ++ show hole ++ " : " ++

@@ -16,12 +16,15 @@ import Idris.Parser
 import Idris.ProcessIdr
 import Idris.REPLCommon
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
 import Data.StringMap
 
 import System.Directory
 import System.File
+
+import Utils.Either
 
 %default covering
 
@@ -162,7 +165,7 @@ buildMod loc num len mod
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
-        let (ferrs, depFiles) = getEithers depFilesE
+        let (ferrs, depFiles) = partitionEithers depFilesE
         ttcTime <- catch (do t <- fnameModified mttc
                              pure (Just t))
                          (\err => pure Nothing)
@@ -177,12 +180,11 @@ buildMod loc num len mod
         m <- newRef MD initMetadata
         put Syn initSyntax
 
-        let showMod = showSep "." (reverse (buildNS mod))
+        let showMod : Doc IdrisAnn = concatWith (surround dot) (pretty <$> reverse mod.buildNS)
 
         if needsBuilding
-           then do let msg = show num ++ "/" ++ show len ++
-                                   ": Building " ++ showMod ++
-                                   " (" ++ src ++ ")"
+           then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
+                               <++> pretty "Building" <++> showMod <++> parens (pretty src)
                    [] <- process {u} {m} msg src
                       | errs => do emitWarnings
                                    traverse emitError errs
@@ -193,16 +195,6 @@ buildMod loc num len mod
            else do emitWarnings
                    traverse_ emitError ferrs
                    pure ferrs
-  where
-    getEithers : List (Either a b) -> (List a, List b)
-    getEithers [] = ([], [])
-    getEithers (Left x :: es)
-        = let (ls, rs) = getEithers es in
-              (x :: ls, rs)
-    getEithers (Right y :: es)
-        = let (ls, rs) = getEithers es in
-              (ls, y :: rs)
-
 
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

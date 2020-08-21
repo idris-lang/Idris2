@@ -84,6 +84,8 @@ getDefining tm
            Ref _ _ fn => Just fn
            _ => Nothing
 
+-- For the name on the lhs, return the function name being defined, the
+-- type name, and the possible constructors.
 findCons : {auto c : Ref Ctxt Defs} ->
            Name -> Term [] -> Core (SplitResult (Name, Name, List Name))
 findCons n lhs
@@ -102,7 +104,8 @@ findCons n lhs
                                             (CantSplitThis n
                                                ("Not a type constructor " ++
                                                   show res)))
-                             pure (OK (fn, tyn, cons))
+                             pure (OK (fn, !(toFullNames tyn),
+                                           !(traverse toFullNames cons)))
 
 findAllVars : Term vars -> List Name
 findAllVars (Bind _ x (PVar _ _ _ _) sc)
@@ -130,8 +133,13 @@ defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
 
 export
 getArgName : {auto c : Ref Ctxt Defs} ->
-             Defs -> Name -> List Name -> NF vars -> Core String
-getArgName defs x allvars ty
+             Defs -> Name ->
+             List Name -> -- explicitly bound names (possibly coming later),
+                          -- so we don't invent a default
+                          -- name that duplicates it
+             List Name -> -- names bound so far
+             NF vars -> Core String
+getArgName defs x bound allvars ty
     = do defnames <- findNames ty
          pure $ getName x defnames allvars
   where
@@ -142,13 +150,17 @@ getArgName defs x allvars ty
              then pure (Just t)
              else lookupName n ts
 
+    notBound : String -> Bool
+    notBound x = not $ UN x `elem` bound
+
     findNames : NF vars -> Core (List String)
-    findNames (NBind _ x (Pi _ _ _ _) _) = pure ["f", "g"]
+    findNames (NBind _ x (Pi _ _ _ _) _)
+        = pure (filter notBound ["f", "g"])
     findNames (NTCon _ n _ _ _)
         = case !(lookupName n (NameMap.toList (namedirectives defs))) of
-               Nothing => pure defaultNames
-               Just ns => pure ns
-    findNames ty = pure defaultNames
+               Nothing => pure (filter notBound defaultNames)
+               Just ns => pure (filter notBound ns)
+    findNames ty = pure (filter notBound defaultNames)
 
     getName : Name -> List String -> List Name -> String
     getName (UN n) defs used = unique (n :: defs) (n :: defs) 0 used
@@ -156,20 +168,27 @@ getArgName defs x allvars ty
 
 export
 getArgNames : {auto c : Ref Ctxt Defs} ->
-              Defs -> List Name -> Env Term vars -> NF vars ->
+              Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
               Core (List String)
-getArgNames defs allvars env (NBind fc x (Pi _ _ p ty) sc)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
-                    Explicit => pure [!(getArgName defs x allvars ty)]
+                    Explicit => pure [!(getArgName defs x bound allvars ty)]
                     _ => pure []
          sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
-         pure $ ns ++ !(getArgNames defs (map UN ns ++ allvars) env sc')
-getArgNames defs allvars env val = pure []
+         pure $ ns ++ !(getArgNames defs bound (map UN ns ++ allvars) env sc')
+getArgNames defs bound allvars env val = pure []
+
+export
+explicitlyBound : Defs -> NF [] -> Core (List Name)
+explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
+    = pure $ x :: !(explicitlyBound defs
+                    !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+explicitlyBound defs _ = pure []
 
 export
 getEnvArgNames : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> NF [] -> Core (List String)
-getEnvArgNames defs Z sc = getArgNames defs [] [] sc
+getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] [] sc
 getEnvArgNames defs (S k) (NBind fc n _ sc)
     = getEnvArgNames defs k !(sc defs (toClosure defaultOpts [] (Erased fc False)))
 getEnvArgNames defs n ty = pure []
@@ -182,7 +201,7 @@ expandCon fc usedvars con
               | Nothing => throw (UndefinedName fc con)
          pure (apply (IVar fc con)
                 (map (IBindVar fc)
-                     !(getArgNames defs usedvars []
+                     !(getArgNames defs [] usedvars []
                                    !(nf defs [] ty))))
 
 updateArg : {auto c : Ref Ctxt Defs} ->
@@ -295,9 +314,9 @@ mkCase : {auto c : Ref Ctxt Defs} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
     = do m <- newRef MD initMetadata
-         defs <- branch
+         defs <- get Ctxt
          ust <- get UST
-         handleUnify
+         catch
            (do -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
@@ -313,14 +332,16 @@ mkCase {c} {u} fn orig lhs_raw
                log 3 $ "New LHS: " ++ show lhs'
 
                pure (Valid lhs' !(getUpdates defs orig lhs')))
-           (\err => case err of
-                         WhenUnifying _ env l r err
-                            => do defs <- get Ctxt
-                                  if !(impossibleOK defs !(nf defs env l)
-                                                         !(nf defs env r))
-                                     then pure (Impossible lhs_raw)
-                                     else pure Invalid
-                         _ => pure Invalid)
+           (\err =>
+               do put Ctxt defs
+                  put UST ust
+                  case err of
+                       WhenUnifying _ env l r err
+                          => if !(impossibleOK defs !(nf defs env l)
+                                                    !(nf defs env r))
+                                then pure (Impossible lhs_raw)
+                                else pure Invalid
+                       _ => pure Invalid)
 
 substLets : {vars : _} ->
             Term vars -> Term vars

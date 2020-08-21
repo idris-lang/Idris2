@@ -3,6 +3,6 @@
 Main>    y : Nat
    res : Nat
    x : Nat
--------------------------------------
+------------------------------
 foo : IsSuc y
 Main> Bye for now!

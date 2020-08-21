@@ -251,13 +251,20 @@ checkTermSub defining mode opts nest env env' sub tm ty
                               _ => throw err)
          pure (fst res)
   where
+    bindImps' : {vs : _} ->
+                FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
+                Core RawImp
+    bindImps' loc env [] ty = pure ty
+    bindImps' loc env ((n, ty) :: ntys) sc
+        = pure $ IPi loc erased Implicit (Just n)
+                     (Implicit loc True) !(bindImps' loc env ntys sc)
+
     bindImps : {vs : _} ->
                FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
                Core RawImp
-    bindImps loc env [] ty = pure ty
-    bindImps loc env ((n, ty) :: ntys) sc
-        = pure $ IPi loc erased Implicit (Just n)
-                     !(unelabNoSugar env ty) !(bindImps loc env ntys sc)
+    bindImps loc env ns (IBindHere fc m ty)
+        = pure $ IBindHere fc m !(bindImps' loc env ns ty)
+    bindImps loc env ns ty = bindImps' loc env ns ty
 
 export
 checkTerm : {vars : _} ->

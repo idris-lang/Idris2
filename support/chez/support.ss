@@ -1,6 +1,9 @@
 (define (blodwen-os)
   (case (machine-type)
-    [(i3le ti3le a6le ta6le) "unix"]
+    [(i3le ti3le a6le ta6le) "unix"]  ; GNU/Linux
+    [(i3ob ti3ob a6ob ta6ob) "unix"]  ; OpenBSD
+    [(i3fb ti3fb a6fb ta6fb) "unix"]  ; FreeBSD
+    [(i3nb ti3nb a6nb ta6nb) "unix"]  ; NetBSD
     [(i3osx ti3osx a6osx ta6osx) "darwin"]
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
@@ -19,6 +22,13 @@
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
+
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 (define blodwen-shl (lambda (x y) (ash x y)))
@@ -180,7 +190,10 @@
 
 (define (blodwen-condition) (make-condition))
 (define (blodwen-condition-wait c m) (condition-wait c m))
-(define (blodwen-condition-wait-timeout c m t) (condition-wait c m t))
+(define (blodwen-condition-wait-timeout c m t)
+  (let ((sec (div t 1000000))
+        (micro (mod t 1000000)))
+  (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
 (define (blodwen-condition-signal c) (condition-signal c))
 (define (blodwen-condition-broadcast c) (condition-broadcast c))
 

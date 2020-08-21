@@ -14,12 +14,13 @@ import Network.FFI
 ||| Creates a UNIX socket with the given family, socket type and protocol
 ||| number. Returns either a socket or an error.
 export
-socket : (fam  : SocketFamily)
+socket : HasIO io
+      => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
-      -> IO (Either SocketError Socket)
+      -> io (Either SocketError Socket)
 socket sf st pn = do
-  socket_res <- primIO $ idrnet_socket (toCode sf) (toCode st) pn
+  socket_res <- primIO $ prim__idrnet_socket (toCode sf) (toCode st) pn
 
   if socket_res == -1
     then map Left getErrno
@@ -27,25 +28,26 @@ socket sf st pn = do
 
 ||| Close a socket
 export
-close : Socket -> IO ()
-close sock = do _ <- primIO $ socket_close $ descriptor sock
+close : HasIO io => Socket -> io ()
+close sock = do _ <- primIO $ prim__socket_close $ descriptor sock
                 pure ()
 
 ||| Binds a socket to the given socket address and port.
 ||| Returns 0 on success, an error code otherwise.
 export
-bind : (sock : Socket)
+bind : HasIO io
+    => (sock : Socket)
     -> (addr : Maybe SocketAddress)
     -> (port : Port)
-    -> IO Int
+    -> io Int
 bind sock addr port = do
-    bind_res <- primIO $ idrnet_bind
+    bind_res <- primIO $ prim__idrnet_bind
                   (descriptor sock)
                   (toCode $ family sock)
                   (toCode $ socketType sock)
                   (saString addr)
                   port
-                
+
     if bind_res == (-1)
       then getErrno
       else pure 0
@@ -57,12 +59,13 @@ bind sock addr port = do
 ||| Connects to a given address and port.
 ||| Returns 0 on success, and an error number on error.
 export
-connect : (sock : Socket)
+connect : HasIO io
+       => (sock : Socket)
        -> (addr : SocketAddress)
        -> (port : Port)
-       -> IO ResultCode
+       -> io ResultCode
 connect sock addr port = do
-  conn_res <- primIO $ idrnet_connect
+  conn_res <- primIO $ prim__idrnet_connect
               (descriptor sock) (toCode $ family sock) (toCode $ socketType sock) (show addr) port
 
   if conn_res == (-1)
@@ -73,9 +76,9 @@ connect sock addr port = do
 |||
 ||| @sock The socket to listen on.
 export
-listen : (sock : Socket) -> IO Int
+listen : HasIO io => (sock : Socket) -> io Int
 listen sock = do
-  listen_res <- primIO $ socket_listen (descriptor sock) BACKLOG 
+  listen_res <- primIO $ prim__socket_listen (descriptor sock) BACKLOG
   if listen_res == (-1)
     then getErrno
     else pure 0
@@ -89,16 +92,17 @@ listen sock = do
 |||
 ||| @sock The socket used to establish connection.
 export
-accept : (sock : Socket)
-      -> IO (Either SocketError (Socket, SocketAddress))
+accept : HasIO io
+      => (sock : Socket)
+      -> io (Either SocketError (Socket, SocketAddress))
 accept sock = do
 
   -- We need a pointer to a sockaddr structure. This is then passed into
   -- idrnet_accept and populated. We can then query it for the SocketAddr and free it.
 
-  sockaddr_ptr <- primIO idrnet_create_sockaddr
+  sockaddr_ptr <- primIO prim__idrnet_create_sockaddr
 
-  accept_res <- primIO $ idrnet_accept (descriptor sock) sockaddr_ptr 
+  accept_res <- primIO $ prim__idrnet_accept (descriptor sock) sockaddr_ptr
   if accept_res == (-1)
     then map Left getErrno
     else do
@@ -115,11 +119,12 @@ accept sock = do
 ||| @sock The socket on which to send the message.
 ||| @msg  The data to send.
 export
-send : (sock : Socket)
+send : HasIO io
+    => (sock : Socket)
     -> (msg  : String)
-    -> IO (Either SocketError ResultCode)
+    -> io (Either SocketError ResultCode)
 send sock dat = do
-  send_res <- primIO $ idrnet_send (descriptor sock) dat 
+  send_res <- primIO $ prim__idrnet_send (descriptor sock) dat
 
   if send_res == (-1)
     then map Left getErrno
@@ -135,14 +140,15 @@ send sock dat = do
 ||| @sock The socket on which to receive the message.
 ||| @len  How much of the data to receive.
 export
-recv : (sock : Socket)
+recv : HasIO io
+    => (sock : Socket)
     -> (len : ByteLength)
-    -> IO (Either SocketError (String, ResultCode))
+    -> io (Either SocketError (String, ResultCode))
 recv sock len = do
   -- Firstly make the request, get some kind of recv structure which
   -- contains the result of the recv and possibly the retrieved payload
-  recv_struct_ptr <- primIO $ idrnet_recv (descriptor sock) len
-  recv_res <- primIO $ idrnet_get_recv_res recv_struct_ptr
+  recv_struct_ptr <- primIO $ prim__idrnet_recv (descriptor sock) len
+  recv_res <- primIO $ prim__idrnet_get_recv_res recv_struct_ptr
 
   if recv_res == (-1)
     then do
@@ -155,7 +161,7 @@ recv sock len = do
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Left 0
         else do
-           payload <- primIO $ idrnet_get_recv_payload recv_struct_ptr
+           payload <- primIO $ prim__idrnet_get_recv_payload recv_struct_ptr
            freeRecvStruct (RSPtr recv_struct_ptr)
            pure $ Right (payload, recv_res)
 
@@ -166,17 +172,17 @@ recv sock len = do
 |||
 ||| @sock The socket on which to receive the message.
 export
-recvAll : (sock : Socket) -> IO (Either SocketError String)
+recvAll : HasIO io => (sock : Socket) -> io (Either SocketError String)
 recvAll sock = recvRec sock [] 64
   where
     partial
-    recvRec : Socket -> List String -> ByteLength -> IO (Either SocketError String)
+    recvRec : Socket -> List String -> ByteLength -> io (Either SocketError String)
     recvRec sock acc n = do res <- recv sock n
                             case res of
-                              Left 0 => pure (Right $ concat $ reverse acc)
                               Left c => pure (Left c)
-                              Right (str, _) => let n' = min (n * 2) 65536 in
-                                                recvRec sock (str :: acc) n'
+                              Right (str, res) => let n' = min (n * 2) 65536 in
+                                                  if res < n then pure (Right $ concat $ reverse $ str :: acc)
+                                                  else recvRec sock (str :: acc) n'
 
 ||| Send a message.
 |||
@@ -188,13 +194,14 @@ recvAll sock = recvRec sock [] 64
 ||| @port The port on which to send the message.
 ||| @msg  The message to send.
 export
-sendTo : (sock : Socket)
+sendTo : HasIO io
+      => (sock : Socket)
       -> (addr : SocketAddress)
       -> (port : Port)
       -> (msg  : String)
-      -> IO (Either SocketError ByteLength)
+      -> io (Either SocketError ByteLength)
 sendTo sock addr p dat = do
-  sendto_res <- primIO $ idrnet_sendto
+  sendto_res <- primIO $ prim__idrnet_sendto
                 (descriptor sock) dat (show addr) p (toCode $ family sock)
 
   if sendto_res == (-1)
@@ -213,19 +220,20 @@ sendTo sock addr p dat = do
 ||| @len  Size of the expected message.
 |||
 export
-recvFrom : (sock : Socket)
+recvFrom : HasIO io
+        => (sock : Socket)
         -> (len  : ByteLength)
-        -> IO (Either SocketError (UDPAddrInfo, String, ResultCode))
+        -> io (Either SocketError (UDPAddrInfo, String, ResultCode))
 recvFrom sock bl = do
-  recv_ptr <- primIO $ idrnet_recvfrom
-                       (descriptor sock) bl 
+  recv_ptr <- primIO $ prim__idrnet_recvfrom
+                       (descriptor sock) bl
 
   let recv_ptr' = RFPtr recv_ptr
   isNull <- (nullPtr recv_ptr)
   if isNull
     then map Left getErrno
     else do
-      result <- primIO $ idrnet_get_recvfrom_res recv_ptr 
+      result <- primIO $ prim__idrnet_get_recvfrom_res recv_ptr
       if result == -1
         then do
           freeRecvfromStruct recv_ptr'

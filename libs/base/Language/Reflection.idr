@@ -3,8 +3,9 @@ module Language.Reflection
 import public Language.Reflection.TT
 import public Language.Reflection.TTImp
 
--- Elaboration scripts. Where types/terms are returned, binders will have
--- unique, if not necessarily human readabe, names
+||| Elaboration scripts
+||| Where types/terms are returned, binders will have unique, if not
+||| necessarily human readabe, names
 export
 data Elab : Type -> Type where
      Pure : a -> Elab a
@@ -61,18 +62,22 @@ mutual
   Monad Elab where
     (>>=) = Bind
 
+||| Report an error in elaboration
 export
 fail : String -> Elab a
 fail = Fail
 
+||| Write a log message, if the log level is >= the given level
 export
 logMsg : Nat -> String -> Elab ()
 logMsg = LogMsg
 
+||| Write a log message and a rendered term, if the log level is >= the given level
 export
 logTerm : Nat -> String -> TTImp -> Elab ()
 logTerm = LogTerm
 
+||| Log the current goal type, if the log level is >= the given level
 export
 logGoal : Nat -> String -> Elab ()
 logGoal n msg
@@ -81,48 +86,60 @@ logGoal n msg
               Nothing => pure ()
               Just t => logTerm n msg t
 
+||| Check that some TTImp syntax has the expected type
+||| Returns the type checked value
 export
 check : {expected : Type} -> TTImp -> Elab expected
 check = Check
 
+||| Return TTImp syntax of a given value
 export
 quote : val -> Elab TTImp
 quote = Quote
 
+||| Build a lambda expression
 export
 lambda : (0 x : Type) ->
          {0 ty : x -> Type} ->
          ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 lambda = Lambda
 
+||| Get the goal type of the current elaboration
 export
 goal : Elab (Maybe TTImp)
 goal = Goal
 
+||| Get the names of the local variables in scope
 export
 localVars : Elab (List Name)
 localVars = LocalVars
 
+||| Generate a new unique name
 export
 genSym : String -> Elab Name
 genSym = GenSym
 
+||| Given a name, return the name decorated with the current namespace
 export
 inCurrentNS : Name -> Elab Name
 inCurrentNS = InCurrentNS
 
+||| Given a possibly ambiguous name, get all the matching names and their types
 export
 getType : Name -> Elab (List (Name, TTImp))
 getType = GetType
 
+||| Get the type of a local variable
 export
 getLocalType : Name -> Elab TTImp
 getLocalType = GetLocalType
 
+||| Get the constructors of a fully qualified data type name
 export
 getCons : Name -> Elab (List Name)
 getCons = GetCons
 
+||| Make some top level declarations
 export
 declare : List Decl -> Elab ()
 declare = Declare

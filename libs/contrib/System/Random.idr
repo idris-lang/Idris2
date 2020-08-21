@@ -6,15 +6,15 @@ import Data.List
 
 public export
 interface Random a where
-  randomIO : IO a
+  randomIO : HasIO io => io a
 
   -- Takes a range (lo, hi), and returns a random value uniformly
   -- distributed in the closed interval [lo, hi]. It is unspecified what
   -- happens if lo > hi.
-  randomRIO : (a, a) -> IO a
+  randomRIO : HasIO io => (a, a) -> io a
 
-prim_randomInt : Int -> IO Int
-prim_randomInt upperBound = schemeCall Int "blodwen-random" [upperBound]
+prim__randomInt : Int -> IO Int
+prim__randomInt upperBound = schemeCall Int "blodwen-random" [upperBound]
 
 public export
 Random Int where
@@ -23,23 +23,23 @@ Random Int where
     let maxInt = shiftL 1 31 - 1
         minInt = negate $ shiftL 1 31
         range = maxInt - minInt
-     in map (+ minInt) $ prim_randomInt range
+     in map (+ minInt) $ liftIO $ prim__randomInt range
 
   -- Generate a random value within [lo, hi].
   randomRIO (lo, hi) =
     let range = hi - lo + 1
-     in map (+ lo) $ prim_randomInt range
+     in map (+ lo) $ liftIO $ prim__randomInt range
 
-prim_randomDouble : IO Double
-prim_randomDouble = schemeCall Double "blodwen-random" []
+prim__randomDouble : IO Double
+prim__randomDouble = schemeCall Double "blodwen-random" []
 
 public export
 Random Double where
   -- Generate a random value within [0, 1].
-  randomIO = prim_randomDouble
+  randomIO = liftIO prim__randomDouble
 
   -- Generate a random value within [lo, hi].
-  randomRIO (lo, hi) = map ((+ lo) . (* (hi - lo))) prim_randomDouble
+  randomRIO (lo, hi) = map ((+ lo) . (* (hi - lo))) (liftIO prim__randomDouble)
 
 ||| Sets the random seed
 export

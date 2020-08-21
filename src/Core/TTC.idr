@@ -38,10 +38,9 @@ TTC Name where
   toBuf b (MN x y) = do tag 2; toBuf b x; toBuf b y
   toBuf b (PV x y) = do tag 3; toBuf b x; toBuf b y
   toBuf b (DN x y) = do tag 4; toBuf b x; toBuf b y
-  toBuf b (RF x) = do tag 5; toBuf b x
-  toBuf b (Nested x y) = do tag 6; toBuf b x; toBuf b y
-  toBuf b (CaseBlock x y) = do tag 7; toBuf b x; toBuf b y
-  toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
+  toBuf b (Nested x y) = do tag 5; toBuf b x; toBuf b y
+  toBuf b (CaseBlock x y) = do tag 6; toBuf b x; toBuf b y
+  toBuf b (WithBlock x y) = do tag 7; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
 
@@ -62,14 +61,12 @@ TTC Name where
                      y <- fromBuf b
                      pure (DN x y)
              5 => do x <- fromBuf b
-                     pure (RF x)
-             6 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (Nested x y)
-             7 => do x <- fromBuf b
+             6 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (CaseBlock x y)
-             8 => do x <- fromBuf b
+             7 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (WithBlock x y)
              _ => corrupt "Name"
@@ -678,35 +675,41 @@ export
 TTC CFType where
   toBuf b CFUnit = tag 0
   toBuf b CFInt = tag 1
-  toBuf b CFUnsigned = tag 2
-  toBuf b CFString = tag 3
-  toBuf b CFDouble = tag 4
-  toBuf b CFChar = tag 5
-  toBuf b CFPtr = tag 6
-  toBuf b CFWorld = tag 7
-  toBuf b (CFFun s t) = do tag 8; toBuf b s; toBuf b t
-  toBuf b (CFIORes t) = do tag 9; toBuf b t
-  toBuf b (CFStruct n a) = do tag 10; toBuf b n; toBuf b a
-  toBuf b (CFUser n a) = do tag 11; toBuf b n; toBuf b a
-  toBuf b CFGCPtr = tag 12
-  toBuf b CFBuffer = tag 13
+  toBuf b CFUnsigned8 = tag 2
+  toBuf b CFUnsigned16 = tag 3
+  toBuf b CFUnsigned32 = tag 4
+  toBuf b CFUnsigned64 = tag 5
+  toBuf b CFString = tag 6
+  toBuf b CFDouble = tag 7
+  toBuf b CFChar = tag 8
+  toBuf b CFPtr = tag 9
+  toBuf b CFWorld = tag 10
+  toBuf b (CFFun s t) = do tag 11; toBuf b s; toBuf b t
+  toBuf b (CFIORes t) = do tag 12; toBuf b t
+  toBuf b (CFStruct n a) = do tag 13; toBuf b n; toBuf b a
+  toBuf b (CFUser n a) = do tag 14; toBuf b n; toBuf b a
+  toBuf b CFGCPtr = tag 15
+  toBuf b CFBuffer = tag 16
 
   fromBuf b
       = case !getTag of
              0 => pure CFUnit
              1 => pure CFInt
-             2 => pure CFUnsigned
-             3 => pure CFString
-             4 => pure CFDouble
-             5 => pure CFChar
-             6 => pure CFPtr
-             7 => pure CFWorld
-             8 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
-             9 => do t <- fromBuf b; pure (CFIORes t)
-             10 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
-             11 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
-             12 => pure CFGCPtr
-             13 => pure CFBuffer
+             2 => pure CFUnsigned8
+             3 => pure CFUnsigned16
+             4 => pure CFUnsigned32
+             5 => pure CFUnsigned64
+             6 => pure CFString
+             7 => pure CFDouble
+             8 => pure CFChar
+             9 => pure CFPtr
+             10 => pure CFWorld
+             11 => do s <- fromBuf b; t <- fromBuf b; pure (CFFun s t)
+             12 => do t <- fromBuf b; pure (CFIORes t)
+             13 => do n <- fromBuf b; a <- fromBuf b; pure (CFStruct n a)
+             14 => do n <- fromBuf b; a <- fromBuf b; pure (CFUser n a)
+             15 => pure CFGCPtr
+             16 => pure CFBuffer
              _ => corrupt "CFType"
 
 export
@@ -733,12 +736,19 @@ TTC CG where
   toBuf b Chez = tag 0
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
+  toBuf b (Other s) = do tag 4; toBuf b s
+  toBuf b Node = tag 5
+  toBuf b Javascript = tag 6
 
   fromBuf b
       = case !getTag of
              0 => pure Chez
              2 => pure Racket
              3 => pure Gambit
+             4 => do s <- fromBuf b
+                     pure (Other s)
+             5 => pure Node
+             6 => pure Javascript
              _ => corrupt "CG"
 
 export
@@ -823,7 +833,7 @@ TTC Def where
            toBuf b detpos; toBuf b u; toBuf b ms; toBuf b datacons
            toBuf b dets
   toBuf b (Hole locs p)
-      = do tag 6; toBuf b locs; toBuf b p
+      = do tag 6; toBuf b locs; toBuf b (implbind p)
   toBuf b (BySearch c depth def)
       = do tag 7; toBuf b c; toBuf b depth; toBuf b def
   toBuf b (Guess guess envb constraints)
@@ -854,7 +864,7 @@ TTC Def where
                      pure (TCon t a ps dets u ms cs detags)
              6 => do l <- fromBuf b
                      p <- fromBuf b
-                     pure (Hole l p)
+                     pure (Hole l (holeInit p))
              7 => do c <- fromBuf b; depth <- fromBuf b
                      def <- fromBuf b
                      pure (BySearch c depth def)

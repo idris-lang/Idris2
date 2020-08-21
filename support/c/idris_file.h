@@ -18,7 +18,7 @@ int idris2_fpoll(FILE* f);
 
 // Treat as a Ptr String (might be NULL)
 char* idris2_readLine(FILE* f);
-char* idris_readChars(int num, FILE* f);
+char* idris2_readChars(int num, FILE* f);
 
 int idris2_writeLine(FILE* f, char* str);
 

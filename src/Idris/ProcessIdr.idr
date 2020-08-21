@@ -22,6 +22,7 @@ import Idris.Parser
 import Idris.REPLCommon
 import Idris.REPLOpts
 import Idris.Syntax
+import Idris.Pretty
 
 import Data.List
 import Data.NameMap
@@ -62,11 +63,10 @@ readModule : {auto c : Ref Ctxt Defs} ->
              (full : Bool) -> -- load everything transitively (needed for REPL and compiling)
              FC ->
              (visible : Bool) -> -- Is import visible to top level module?
-             (reexp : Bool) -> -- Should the module be reexported?
              (imp : List String) -> -- Module name to import
              (as : List String) -> -- Namespace to import into
              Core ()
-readModule full loc vis reexp imp as
+readModule full loc vis imp as
     = do defs <- get Ctxt
          let False = (imp, vis, as) `elem` map snd (allImported defs)
              | True => when vis (setVisible imp)
@@ -75,7 +75,7 @@ readModule full loc vis reexp imp as
          Just (syn, hash, more) <- readFromTTC False {extra = SyntaxInfo}
                                                   loc vis fname imp as
               | Nothing => when vis (setVisible imp) -- already loaded, just set visibility
-         extendAs imp as syn
+         extendSyn syn
 
          defs <- get Ctxt
          modNS <- getNS
@@ -84,7 +84,7 @@ readModule full loc vis reexp imp as
                        do let m = fst mimp
                           let reexp = fst (snd mimp)
                           let as = snd (snd mimp)
-                          when (reexp || full) $ readModule full loc (vis && reexp) reexp m as) more
+                          when (reexp || full) $ readModule full loc reexp m as) more
          setNS modNS
 
 readImport : {auto c : Ref Ctxt Defs} ->
@@ -92,8 +92,19 @@ readImport : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Bool -> Import -> Core ()
 readImport full imp
-    = do readModule full (loc imp) True (reexport imp) (path imp) (nameAs imp)
+    = do readModule full (loc imp) True (path imp) (nameAs imp)
          addImported (path imp, reexport imp, nameAs imp)
+
+||| Adds new import to the namespace without changing the current top-level namespace
+export
+addImport : {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            Import -> Core ()
+addImport imp
+    = do topNS <- getNS
+         readImport True imp
+         setNS topNS
 
 readHash : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
@@ -129,7 +140,7 @@ readAsMain fname
               | Nothing => throw (InternalError "Already loaded")
          replNS <- getNS
          replNestedNS <- getNestedNS
-         extendAs replNS replNS syn
+         extendSyn syn
 
          -- Read the main file's top level imported modules, so we have access
          -- to their names (and any of their public imports)
@@ -137,13 +148,13 @@ readAsMain fname
          traverse_ (\ mimp =>
                        do let m = fst mimp
                           let as = snd (snd mimp)
-                          readModule True emptyFC True True m as
+                          readModule True emptyFC True m as
                           addImported (m, True, as)) more
 
          -- also load the prelude, if required, so that we have access to it
          -- at the REPL.
          when (not (noprelude !getSession)) $
-              readModule True emptyFC True True ["Prelude"] ["Prelude"]
+              readModule True emptyFC True ["Prelude"] ["Prelude"]
 
          -- We're in the namespace from the first TTC, so use the next name
          -- from that for the fresh metavariable name generation
@@ -193,9 +204,9 @@ readHeader path
   where
     -- Stop at the first :, that's definitely not part of the header, to
     -- save lexing the whole file unnecessarily
-    isColon : TokenData Token -> Bool
+    isColon : WithBounds Token -> Bool
     isColon t
-        = case tok t of
+        = case t.val of
                Symbol ":" => True
                _ => False
 
@@ -219,11 +230,12 @@ processMod : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto m : Ref MD Metadata} ->
              {auto o : Ref ROpts REPLOpts} ->
-             (srcf : String) -> (ttcf : String) -> (msg : String) ->
+             (srcf : String) -> (ttcf : String) -> (msg : Doc IdrisAnn) ->
              (sourcecode : String) ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
     = catch (do
+        setCurrentElabSource sourcecode
         -- Just read the header to start with (this is to get the imports and
         -- see if we can avoid rebuilding if none have changed)
         modh <- readHeader srcf
@@ -256,7 +268,7 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("Parsing " ++ srcf) $
+                Right mod <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
                 initHash
@@ -276,7 +288,7 @@ processMod srcf ttcf msg sourcecode
                 -- a phase before this which builds the dependency graph
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
-                logTime "Reading imports" $
+                logTime "++ Reading imports" $
                    traverse_ (readImport False) imps
 
                 -- Before we process the source, make sure the "hide_everywhere"
@@ -284,11 +296,11 @@ processMod srcf ttcf msg sourcecode
 --                 defs <- get Ctxt
 --                 traverse (\x => setVisibility emptyFC x Private) (hiddenNames defs)
                 setNS ns
-                errs <- logTime "Processing decls" $
+                errs <- logTime "++ Processing decls" $
                             processDecls (decls mod)
 --                 coreLift $ gc
 
-                logTime "Compile defs" $ compileAndInlineAll
+                logTime "++ Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source
@@ -306,13 +318,13 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
-          String -> FileName ->
+          Doc IdrisAnn -> FileName ->
           Core (List Error)
 process buildmsg file
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
          catch (do ttcf <- getTTCFileName file "ttc"
-                   Just errs <- logTime ("Elaborating " ++ file) $
+                   Just errs <- logTime ("+ Elaborating " ++ file) $
                                    processMod file ttcf buildmsg res
                         | Nothing => pure [] -- skipped it
                    if isNil errs

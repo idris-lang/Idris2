@@ -142,7 +142,10 @@ mutual
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
                                  _ => pure (IVar fc n, gErased fc)
-           pure (IVar fc !(getFullName n), gnf env (embed ty))
+           n' <- case umode of
+                      NoSugar _ => getFullName n
+                      _ => aliasName !(getFullName n)
+           pure (IVar fc n', gnf env (embed ty))
   unelabTy' umode env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n
@@ -247,13 +250,16 @@ mutual
   unelabBinder umode fc env x (Pi _ rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode env ty
            p' <- unelabPi umode env p
-           let nm = if used 0 sctm
+           let nm = if used 0 sctm || isNoSugar umode
                        then Just x
                        else if rig /= top || isDefImp p
                                then Just (UN "_")
                                else Nothing
            pure (IPi fc rig p' nm ty' sc, gType fc)
     where
+      isNoSugar : UnelabMode -> Bool
+      isNoSugar (NoSugar _) = True
+      isNoSugar _ = False
       isDefImp : PiInfo t -> Bool
       isDefImp (DefImplicit _) = True
       isDefImp _ = False

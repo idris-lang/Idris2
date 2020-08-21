@@ -1,0 +1,22 @@
+:gd 7 my_cong
+:gdnext
+:gd 9 append
+:gdnext
+:gd 11 lappend
+:gdnext
+:gdnext
+:gd 13 lappend1
+:gdnext
+:gdnext
+:gdnext
+:gdnext
+:gdnext
+:gdnext
+:gdnext
+:gd 13 lappend1 7
+:ps 16 lappend2_rhs_1
+:psnext
+:psnext
+:psnext
+:psnext
+:q

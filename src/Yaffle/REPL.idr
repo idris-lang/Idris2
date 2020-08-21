@@ -76,10 +76,8 @@ process (ExprSearch n_in)
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
               | [] => throw (UndefinedName toplevelFC n_in)
               | ns => throw (AmbiguousName toplevelFC (map fst ns))
-         results <- exprSearch toplevelFC n []
-         defs <- get Ctxt
-         defnfs <- traverse (normaliseHoles defs []) results
-         traverse_ (\d => coreLift (printLn !(toFullNames d))) defnfs
+         results <- exprSearchN toplevelFC 1 n []
+         traverse_ (\d => coreLift (printLn d)) results
          pure True
 process (GenerateDef line name)
     = do defs <- get Ctxt
@@ -89,9 +87,9 @@ process (GenerateDef line name)
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
-                    (do Just (fc, cs) <- logTime "Generation" $
-                                makeDef (\p, n => onLine line p) n'
-                           | Nothing => coreLift (putStrLn "Failed")
+                    (do ((fc, cs) :: _) <- logTime "Generation" $
+                                makeDefN (\p, n => onLine line p) 1 n'
+                           | _ => coreLift (putStrLn "Failed")
                         coreLift $ putStrLn (show cs))
                     (\err => coreLift $ putStrLn $ "Can't find a definition for " ++ show n')
               Just _ => coreLift $ putStrLn "Already defined"

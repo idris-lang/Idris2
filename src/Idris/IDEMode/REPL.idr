@@ -15,17 +15,22 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Data.List
+import Data.List1
 import Data.So
+import Data.Strings
 
 import Idris.Desugar
 import Idris.Error
 import Idris.ModTree
 import Idris.Package
 import Idris.Parser
+import Idris.Pretty
 import Idris.Resugar
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
+import Idris.Pretty
 
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
@@ -72,12 +77,12 @@ initIDESocketFile h p = do
       res <- bind sock (Just (Hostname h)) p
       if res /= 0
         then pure (Left ("Failed to bind socket with error: " ++ show res))
-        else 
+        else
           do res <- listen sock
              if res /= 0
                 then
                   pure (Left ("Failed to listen on socket with error: " ++ show res))
-               else 
+               else
                  do putStrLn (show p)
                     res <- accept sock
                     case res of
@@ -129,18 +134,18 @@ getInput f
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
 todoCmd : {auto o : Ref ROpts REPLOpts} ->
           String -> Core ()
-todoCmd cmdName = iputStrLn $ cmdName ++ ": command not yet implemented. Hopefully soon!"
+todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented. Hopefully soon!"
 
 
-data IDEResult 
+data IDEResult
   = REPL REPLResult
   | NameList (List Name)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
-  
+
 replWrap : Core REPLResult -> Core IDEResult
 replWrap m = pure $ REPL !m
-  
+
 process : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
@@ -163,13 +168,17 @@ process (CaseSplit l c n)
 process (AddClause l n)
     = replWrap $ Idris.REPL.process (Editing (AddClause False (fromInteger l) (UN n)))
 process (AddMissing l n)
-    = do todoCmd "add-missing" 
-         pure $ REPL $ Edited $ DisplayEdit []
+    = do todoCmd "add-missing"
+         pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (ExprSearch l n hs all)
     = replWrap $ Idris.REPL.process (Editing (ExprSearch False (fromInteger l) (UN n)
-                                                 (map UN hs) all))
+                                                 (map UN hs)))
+process ExprSearchNext
+    = replWrap $ Idris.REPL.process (Editing ExprSearchNext)
 process (GenerateDef l n)
-    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n)))
+    = replWrap $ Idris.REPL.process (Editing (GenerateDef False (fromInteger l) (UN n) 0))
+process GenerateDefNext
+    = replWrap $ Idris.REPL.process (Editing GenerateDefNext)
 process (MakeLemma l n)
     = replWrap $ Idris.REPL.process (Editing (MakeLemma False (fromInteger l) (UN n)))
 process (MakeCase l n)
@@ -177,11 +186,13 @@ process (MakeCase l n)
 process (MakeWith l n)
     = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN n)))
 process (DocsFor n modeOpt)
-    = do todoCmd "docs-for"
-         pure $ REPL $ Printed []
+    = replWrap $ Idris.REPL.process (Doc (UN n))
 process (Apropos n)
     = do todoCmd "apropros"
-         pure $ REPL $ Printed []
+         pure $ REPL $ Printed emptyDoc
+process (Directive n)
+    = do todoCmd "directive"
+         pure $ REPL $ Printed emptyDoc
 process (WhoCalls n)
     = do todoCmd "who-calls"
          pure $ NameList []
@@ -189,8 +200,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = do todoCmd "browse-namespace"
-         pure $ NameList []
+    = replWrap $ Idris.REPL.process (Browse (List1.toList $ reverse (split (=='.') ns)))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm
@@ -205,7 +215,7 @@ process (ElaborateTerm tm)
          pure $ TTTerm tm
 process (PrintDefinition n)
     = do todoCmd "print-definition"
-         pure $ REPL $ Printed [n]
+         pure $ REPL $ Printed (pretty n)
 process (ReplCompletions n)
     = do todoCmd "repl-completions"
          pure $ NameList []
@@ -254,8 +264,8 @@ printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolA
                                                                         -- TODO return syntax highlighted result
                                                                         , SExpList []])
 
-printIDEError : File -> Integer -> String -> Core ()
-printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp msg ])
+printIDEError : Ref ROpts REPLOpts => File -> Integer -> Doc IdrisAnn -> Core ()
+printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
 
 SExpable REPLEval where
   toSExp EvalTC = SymbolAtom "typecheck"
@@ -277,64 +287,62 @@ displayIDEResult : {auto c : Ref Ctxt Defs} ->
        {auto m : Ref MD Metadata} ->
        {auto o : Ref ROpts REPLOpts} ->
        File -> Integer -> IDEResult -> Core ()
-displayIDEResult outf i  (REPL $ REPLError err) 
+displayIDEResult outf i  (REPL $ REPLError err)
   = printIDEError outf i err
 displayIDEResult outf i  (REPL RequestedHelp  )
-  = printIDEResult outf i 
+  = printIDEResult outf i
   $ StringAtom $ displayHelp
-displayIDEResult outf i  (REPL $ Evaluated x Nothing) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Evaluated x Nothing)
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x
-displayIDEResult outf i  (REPL $ Evaluated x (Just y)) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Evaluated x (Just y))
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y
-displayIDEResult outf i  (REPL $ Printed xs) 
-  = printIDEResultWithHighlight outf i 
-  $ StringAtom $ showSep "\n" xs
-displayIDEResult outf i  (REPL $ TermChecked x y) 
-  = printIDEResultWithHighlight outf i 
+displayIDEResult outf i  (REPL $ Printed xs)
+  = printIDEResultWithHighlight outf i
+  $ StringAtom $ show xs
+displayIDEResult outf i  (REPL $ TermChecked x y)
+  = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y
-displayIDEResult outf i  (REPL $ FileLoaded x) 
+displayIDEResult outf i  (REPL $ FileLoaded x)
   = printIDEResult outf i $ SExpList []
-displayIDEResult outf i  (REPL $ ErrorLoadingFile x err) 
-  = printIDEError outf i 
-  $ "Error loading file " ++ x ++ ": " ++ show err
-displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs) 
-  = printIDEError outf i 
-  $ "Error(s) building file " ++ x ++ ": " ++ 
-    (showSep "\n" $ map show errs)
+displayIDEResult outf i  (REPL $ ErrorLoadingFile x err)
+  = printIDEError outf i $ reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err)
+displayIDEResult outf i  (REPL $ ErrorsBuildingFile x errs)
+  = do errs' <- traverse perror errs
+       printIDEError outf i $ reflow "Error(s) building file" <++> pretty x <+> colon <++> vsep errs'
 displayIDEResult outf i  (REPL $ NoFileLoaded)
-  = printIDEError outf i "No file can be reloaded"
-displayIDEResult outf i  (REPL $ CurrentDirectory dir) 
-  = printIDEResult outf i 
+  = printIDEError outf i $ reflow "No file can be reloaded"
+displayIDEResult outf i  (REPL $ CurrentDirectory dir)
+  = printIDEResult outf i
   $ StringAtom $ "Current working directory is '" ++ dir ++ "'"
 displayIDEResult outf i  (REPL CompilationFailed)
-  = printIDEError outf i "Compilation failed"
-displayIDEResult outf i  (REPL $ Compiled f) 
-  = printIDEResult outf i $ StringAtom 
+  = printIDEError outf i $ reflow "Compilation failed"
+displayIDEResult outf i  (REPL $ Compiled f)
+  = printIDEResult outf i $ StringAtom
   $ "File " ++ f ++ " written"
-displayIDEResult outf i  (REPL $ ProofFound x) 
-  = printIDEResult outf i 
+displayIDEResult outf i  (REPL $ ProofFound x)
+  = printIDEResult outf i
   $ StringAtom $ show x
-displayIDEResult outf i  (REPL $ Missed cases) 
-  = printIDEResult outf i 
-  $ StringAtom $ showSep "\n" 
-  $ map handleMissing cases
-displayIDEResult outf i  (REPL $ CheckedTotal xs) 
-  = printIDEResult outf i 
-  $ StringAtom $ showSep "\n" 
+displayIDEResult outf i  (REPL $ Missed cases)
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n"
+  $ map handleMissing' cases
+displayIDEResult outf i  (REPL $ CheckedTotal xs)
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
-displayIDEResult outf i  (REPL $ FoundHoles holes) 
+displayIDEResult outf i  (REPL $ FoundHoles holes)
   = printIDEResult outf i $ SExpList $ map sexpHole holes
-displayIDEResult outf i  (REPL $ LogLevelSet k) 
-  = printIDEResult outf i 
+displayIDEResult outf i  (REPL $ LogLevelSet k)
+  = printIDEResult outf i
   $ StringAtom $ "Set loglevel to " ++ show k
-displayIDEResult outf i  (REPL $ OptionsSet opts) 
+displayIDEResult outf i  (REPL $ OptionsSet opts)
   = printIDEResult outf i optionsSexp
   where
     optionsSexp : SExp
     optionsSexp = SExpList $ map toSExp opts
-displayIDEResult outf i  (REPL $ VersionIs x) 
+displayIDEResult outf i  (REPL $ VersionIs x)
   = printIDEResult outf i versionSExp
   where
   semverSexp : SExp
@@ -347,19 +355,30 @@ displayIDEResult outf i  (REPL $ VersionIs x)
   versionSExp : SExp
   versionSExp = SExpList [ semverSexp, tagSexp ]
 
-displayIDEResult outf i (REPL $ Edited (DisplayEdit xs)) 
-  = printIDEResult outf i $ StringAtom $ showSep "\n" xs
-displayIDEResult outf i (REPL $ Edited (EditError x)) 
+displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
+  = printIDEResult outf i $ StringAtom $ show xs
+displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
-displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr)) 
-  = printIDEResult outf i 
+displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
+  = printIDEResult outf i
   $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
+displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n" (map (relit lit) wapp)
+displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
+  = printIDEResult outf i
+  $ StringAtom $ showSep "\n" (map (relit lit) cstr)
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ SExpList $ map toSExp ns
 displayIDEResult outf i (Term t)
   = printIDEResult outf i $ StringAtom t
 displayIDEResult outf i (TTTerm t)
   = printIDEResult outf i $ StringAtom t
+displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
+  = let width = case mn of 
+                    Just k  => show k
+                    Nothing => "auto"
+    in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
 displayIDEResult outf i  _ = pure ()
 
 
@@ -381,15 +400,15 @@ loop : {auto c : Ref Ctxt Defs} ->
 loop
     = do res <- getOutput
          case res of
-              REPL _ => printError "Running idemode but output isn't"
+              REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode idx inf outf => do
                 inp <- coreLift $ getInput inf
                 end <- coreLift $ fEOF inf
-                if end 
+                if end
                    then pure ()
                    else case parseSExp inp of
                       Left err =>
-                        do printIDEError outf idx ("Parse error: " ++ show err)
+                        do printIDEError outf idx (reflow "Parse error:" <++> pretty err)
                            loop
                       Right sexp =>
                         case getMsg sexp of
@@ -399,7 +418,7 @@ loop
                                handleIDEResult outf i res
                                loop
                           Nothing =>
-                            do printIDEError outf idx ("Unrecognised command: " ++ show sexp)
+                            do printIDEError outf idx (reflow "Unrecognised command:" <++> pretty (show sexp))
                                loop
   where
     updateOutput : Integer -> Core ()
@@ -418,7 +437,7 @@ replIDE : {auto c : Ref Ctxt Defs} ->
 replIDE
     = do res <- getOutput
          case res of
-              REPL _ => printError "Running idemode but output isn't"
+              REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do
                 send outf (version 2 0)
                 loop

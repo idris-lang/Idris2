@@ -11,8 +11,8 @@ import Utils.Either
 
 export
 runParserTo : {e : _} ->
-              Maybe LiterateStyle -> (TokenData Token -> Bool) ->
-              String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
+              Maybe LiterateStyle -> (WithBounds Token -> Bool) ->
+              String -> Grammar Token e ty -> Either (ParseError Token) ty
 runParserTo lit pred str p
     = do str    <- mapError LitFail $ unlit lit str
          toks   <- mapError LexFail $ lexTo pred str
@@ -21,7 +21,7 @@ runParserTo lit pred str p
 
 export
 runParser : {e : _} ->
-            Maybe LiterateStyle -> String -> Grammar (TokenData Token) e ty -> Either (ParseError Token) ty
+            Maybe LiterateStyle -> String -> Grammar Token e ty -> Either (ParseError Token) ty
 runParser lit = runParserTo lit (const False)
 
 export covering

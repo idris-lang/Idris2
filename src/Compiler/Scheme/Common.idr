@@ -36,10 +36,9 @@ schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
-schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
-schName (CaseBlock x y) = "case--" ++ show x ++ "-" ++ show y
-schName (WithBlock x y) = "with--" ++ show x ++ "-" ++ show y
+schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
+schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
 schName (Resolved i) = "fn--" ++ show i
 
 export
@@ -159,10 +158,32 @@ schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
 
+schOp (Cast IntType Bits8Type) [x] = op "integer->bits8" [x]
+schOp (Cast IntType Bits16Type) [x] = op "integer->bits16" [x]
+schOp (Cast IntType Bits32Type) [x] = op "integer->bits32" [x]
+schOp (Cast IntType Bits64Type) [x] = op "integer->bits64" [x]
+
 schOp (Cast IntegerType Bits8Type) [x] = op "integer->bits8" [x]
 schOp (Cast IntegerType Bits16Type) [x] = op "integer->bits16" [x]
 schOp (Cast IntegerType Bits32Type) [x] = op "integer->bits32" [x]
 schOp (Cast IntegerType Bits64Type) [x] = op "integer->bits64" [x]
+
+schOp (Cast Bits8Type Bits16Type) [x] = x
+schOp (Cast Bits8Type Bits32Type) [x] = x
+schOp (Cast Bits8Type Bits64Type) [x] = x
+
+schOp (Cast Bits16Type Bits8Type) [x] = op "bits16->bits8" [x]
+schOp (Cast Bits16Type Bits32Type) [x] = x
+schOp (Cast Bits16Type Bits64Type) [x] = x
+
+schOp (Cast Bits32Type Bits8Type) [x] = op "bits32->bits8" [x]
+schOp (Cast Bits32Type Bits16Type) [x] = op "bits32->bits16" [x]
+schOp (Cast Bits32Type Bits64Type) [x] = x
+
+schOp (Cast Bits64Type Bits8Type) [x] = op "bits64->bits8" [x]
+schOp (Cast Bits64Type Bits16Type) [x] = op "bits64->bits16" [x]
+schOp (Cast Bits64Type Bits32Type) [x] = op "bits64->bits32" [x]
+
 
 schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
@@ -177,7 +198,7 @@ schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg +
 
 ||| Extended primitives for the scheme backend, outside the standard set of primFn
 public export
-data ExtPrim = CCall | SchemeCall
+data ExtPrim = SchemeCall
              | NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
@@ -189,7 +210,6 @@ data ExtPrim = CCall | SchemeCall
 
 export
 Show ExtPrim where
-  show CCall = "CCall"
   show SchemeCall = "SchemeCall"
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
@@ -210,7 +230,6 @@ Show ExtPrim where
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
     = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__cCall", CCall),
             (n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),

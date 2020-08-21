@@ -1,0 +1,12 @@
+1/1: Building Lambda (Lambda.idr)
+Error: While processing right hand side of term. When unifying Term ?g (TyFunc ?tyA (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat)))))))) and Term Empty (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat))))))).
+Mismatch between: TyFunc TyNat TyNat and TyNat.
+
+Lambda.idr:60:3--86:9
+ 60 |   Func
+ 61 |       (Func
+ 62 |            (Func
+ 63 |                 (Func
+ 64 |                      (Func
+ 65 |                           (Func
+

@@ -1,0 +1,6 @@
+package foo
+
+modules = Foo
+
+main = Foo
+opts = "--no-color --console-width 0"

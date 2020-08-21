@@ -57,9 +57,10 @@ mutual
   -- implicit in the parent
   getMatch lhs f (IImplicitApp fc f' n a)
       = matchFail fc
-  -- Alternatives are okay as long as all corresponding alternatives are okay
-  getMatch lhs (IAlternative _ _ as) (IAlternative _ _ as')
-      = matchAll lhs (zip as as')
+  -- Alternatives are okay as long as the alternatives correspond, and
+  -- one of them is okay
+  getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
+      = matchAny fc lhs (zip as as')
   getMatch lhs (IAs _ _ (UN n) p) (IAs fc _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
@@ -74,6 +75,13 @@ mutual
     then pure []
     else matchFail fc
   getMatch lhs pat spec = matchFail (getFC pat)
+
+  matchAny : FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
+             Core (List (String, RawImp))
+  matchAny fc lhs [] = matchFail fc
+  matchAny fc lhs ((x, y) :: ms)
+      = catch (getMatch lhs x y)
+              (\err => matchAny fc lhs ms)
 
   matchAll : (lhs : Bool) -> List (RawImp, RawImp) ->
              Core (List (String, RawImp))

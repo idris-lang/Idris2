@@ -4,6 +4,7 @@ import public Parser.Lexer.Package
 import public Parser.Rule.Common
 
 import Data.List
+import Data.List1
 
 %default total
 
@@ -18,21 +19,21 @@ PackageEmptyRule = EmptyRule Token
 export
 equals : Rule ()
 equals = terminal "Expected equals"
-                      (\x => case tok x of
+                      (\x => case x.val of
                                   Equals => Just ()
                                   _ => Nothing)
 
 export
 eoi : Rule ()
 eoi = terminal "Expected end of input"
-               (\x => case tok x of
+               (\x => case x.val of
                            EndOfInput => Just ()
                            _ => Nothing)
 
 export
 exactProperty : String -> Rule String
 exactProperty p = terminal ("Expected property " ++ p)
-                           (\x => case tok x of
+                           (\x => case x.val of
                                        DotSepIdent [p'] =>
                                          if p == p' then Just p
                                          else Nothing
@@ -41,28 +42,28 @@ exactProperty p = terminal ("Expected property " ++ p)
 export
 stringLit : Rule String
 stringLit = terminal "Expected string"
-                     (\x => case tok x of
+                     (\x => case x.val of
                                  StringLit str => Just str
                                  _ => Nothing)
 
 export
-namespacedIdent : Rule (List String)
+namespacedIdent : Rule (List1 String)
 namespacedIdent = terminal "Expected namespaced identifier"
-                           (\x => case tok x of
+                           (\x => case x.val of
                                        DotSepIdent nsid => Just $ reverse nsid
                                        _ => Nothing)
 
 export
-moduleIdent : Rule (List String)
+moduleIdent : Rule (List1 String)
 moduleIdent = terminal "Expected module identifier"
-                       (\x => case tok x of
+                       (\x => case x.val of
                                    DotSepIdent m => Just $ reverse m
                                    _ => Nothing)
 
 export
 packageName : Rule String
 packageName = terminal "Expected package name"
-                       (\x => case tok x of
+                       (\x => case x.val of
                                    DotSepIdent [str] =>
                                      if isIdent AllowDashes str then Just str
                                      else Nothing
@@ -70,7 +71,7 @@ packageName = terminal "Expected package name"
 
 sep' : Rule ()
 sep' = terminal "Expected separator"
-                (\x => case tok x of
+                (\x => case x.val of
                             Separator => Just ()
                             _ => Nothing)
 

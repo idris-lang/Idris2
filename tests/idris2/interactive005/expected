@@ -6,9 +6,10 @@ Main> append [] ys = ys
 append (x :: xs) ys = x :: append xs ys
 Main> lappend [] ys = ys
 lappend (x :: xs) ys = x :: lappend xs ys
-Main> zipWith f [] ys = []
+Main> zipWith f [] [] = []
 zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 Main> lookup Here (ECons x es) = x
 lookup (There p) (ECons x es) = lookup p es
+Main> foo = Leaf 0
 Main> Main.my_uncurry : (a -> b -> c) -> (a, b) -> c
 Main> Bye for now!

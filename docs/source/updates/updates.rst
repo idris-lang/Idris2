@@ -40,7 +40,7 @@ attempting to use an argument which is erased at run time.
 Erasure
 -------
 
-In Idris, names which begin with a lower case later are automatically bound
+In Idris, names which begin with a lower case letter are automatically bound
 as implicit arguments in types, for example in the following skeleton
 definition, ``n``, ``a`` and ``m`` are implicitly bound:
 
@@ -313,7 +313,7 @@ So if you have the following, all in the same file...
       aVisible : Int -> Int
       aVisibile x = aHidden x
 
-    mamespace B
+    namespace B
       export
       bVisible : Int -> Int
       bVisible x = aVisible (x * 2)

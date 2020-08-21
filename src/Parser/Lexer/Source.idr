@@ -2,9 +2,13 @@ module Parser.Lexer.Source
 
 import public Parser.Lexer.Common
 
+import Data.List1
 import Data.List
 import Data.Strings
 import Data.String.Extra
+import public Text.Bounded
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import Utils.Hex
 import Utils.Octal
@@ -22,8 +26,8 @@ data Token
   -- Identifiers
   | HoleIdent String
   | Ident String
-  | DotSepIdent (List String)
-  | RecordField String
+  | DotSepIdent (List1 String)  -- ident.ident
+  | DotIdent String             -- .ident
   | Symbol String
   -- Comments
   | Comment String
@@ -45,8 +49,8 @@ Show Token where
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
-  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (reverse xs)
-  show (RecordField x) = "record field " ++ x
+  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (List1.toList $ reverse xs)
+  show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
   show (Comment _) = "comment"
@@ -57,6 +61,29 @@ Show Token where
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
   show (Unrecognised x) = "Unrecognised " ++ x
+
+export
+Pretty Token where
+  -- Literals
+  pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
+  pretty (DoubleLit x) = pretty "double" <++> pretty x
+  pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  -- Identifiers
+  pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
+  pretty (Ident x) = pretty "identifier" <++> pretty x
+  pretty (DotSepIdent xs) = reflow "namespaced identifier" <++> concatWith (surround dot) (pretty <$> reverse (List1.toList xs))
+  pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
+  pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Comments
+  pretty (Comment _) = pretty "comment"
+  pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
+  -- Special
+  pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
+  pretty EndInput = reflow "end of input"
+  pretty (Keyword x) = pretty x
+  pretty (Pragma x) = pretty "pragma" <++> pretty x
+  pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
 
 mutual
   ||| The mutually defined functions represent different states in a
@@ -96,9 +123,9 @@ mutual
   ||| comment unless the series of uninterrupted dashes is ended with
   ||| a closing brace in which case it is a closing delimiter.
   doubleDash : (k : Nat) -> Lexer
-  doubleDash k = many (is '-') <+> choice      -- absorb all dashes
-    [ is '}' <+> toEndComment k                -- closing delimiter
-    , many (isNot '\n') <+> toEndComment (S k) -- line comment
+  doubleDash k = many (is '-') <+> choice {t = List} -- absorb all dashes
+    [ is '}' <+> toEndComment k                      -- closing delimiter
+    , many (isNot '\n') <+> toEndComment (S k)       -- line comment
     ]
 
 blockComment : Lexer
@@ -110,8 +137,8 @@ docComment = is '|' <+> is '|' <+> is '|' <+> many (isNot '\n')
 holeIdent : Lexer
 holeIdent = is '?' <+> identNormal
 
-recField : Lexer
-recField = is '.' <+> identNormal
+dotIdent : Lexer
+dotIdent = is '.' <+> identNormal
 
 pragma : Lexer
 pragma = is '%' <+> identNormal
@@ -208,7 +235,7 @@ rawTokens =
      (digits, \x => IntegerLit (cast x)),
      (stringLit, \x => StringLit (stripQuotes x)),
      (charLit, \x => CharLit (stripQuotes x)),
-     (recField, \x => RecordField (assert_total $ strTail x)),
+     (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),
      (identNormal, parseIdent),
      (pragma, \x => Pragma (assert_total $ strTail x)),
@@ -220,26 +247,26 @@ rawTokens =
     parseIdent x = if x `elem` keywords then Keyword x
                    else Ident x
     parseNamespace : String -> Token
-    parseNamespace ns = case Data.List.reverse . split (== '.') $ ns of
+    parseNamespace ns = case List1.reverse . split (== '.') $ ns of
                              [ident] => parseIdent ident
                              ns      => DotSepIdent ns
 
 export
-lexTo : (TokenData Token -> Bool) ->
-        String -> Either (Int, Int, String) (List (TokenData Token))
+lexTo : (WithBounds Token -> Bool) ->
+        String -> Either (Int, Int, String) (List (WithBounds Token))
 lexTo pred str
     = case lexTo pred rawTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c EndInput])
+                                      [MkBounded EndInput False l c l c])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
-      notComment t = case tok t of
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
                           Comment _ => False
                           _ => True
 
 export
-lex : String -> Either (Int, Int, String) (List (TokenData Token))
+lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex = lexTo (const False)

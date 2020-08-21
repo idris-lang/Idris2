@@ -3,12 +3,12 @@ module Data.Maybe
 public export
 isNothing : Maybe a -> Bool
 isNothing Nothing  = True
-isNothing (Just j) = False
+isNothing (Just _) = False
 
 public export
 isJust : Maybe a -> Bool
 isJust Nothing  = False
-isJust (Just j) = True
+isJust (Just _) = True
 
 ||| Proof that some `Maybe` is actually `Just`
 public export
@@ -22,7 +22,7 @@ Uninhabited (IsJust Nothing) where
 ||| Decide whether a 'Maybe' is 'Just'
 public export
 isItJust : (v : Maybe a) -> Dec (IsJust v)
-isItJust (Just x) = Yes ItIsJust
+isItJust (Just _) = Yes ItIsJust
 isItJust Nothing = No absurd
 
 ||| Convert a `Maybe a` value to an `a` value by providing a default `a` value
@@ -30,7 +30,7 @@ isItJust Nothing = No absurd
 public export
 fromMaybe : (Lazy a) -> Maybe a -> a
 fromMaybe def Nothing  = def
-fromMaybe def (Just j) = j
+fromMaybe _   (Just j) = j
 
 ||| Returns the `a` value of a `Maybe a` which is proved `Just`.
 public export
@@ -43,10 +43,10 @@ fromJust Nothing impossible
 public export
 toMaybe : Bool -> Lazy a -> Maybe a
 toMaybe True  j = Just j
-toMaybe False j = Nothing
+toMaybe False _ = Nothing
 
 export
-justInjective : {x : t} -> {y : t} -> (Just x = Just y) -> x = y
+justInjective : Just x = Just y -> x = y
 justInjective Refl = Refl
 
 ||| Convert a `Maybe a` value to an `a` value, using `neutral` in the case
@@ -60,4 +60,3 @@ lowerMaybe (Just x) = x
 export
 raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
 raiseToMaybe x = if x == neutral then Nothing else Just x
-

@@ -26,4 +26,5 @@ Documentation for the Idris 2 Language
    ffi/index
    proofs/index
    faq/faq
+   implementation/index
    reference/index

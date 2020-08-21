@@ -1,0 +1,12 @@
+:t id
+:t Uninhabited
+:t pythag
+:t fact
+:t nardle
+:t noo
+Toast.nardle (the Int 8)
+Toast.pythag 10
+Test.pythag
+Toast.Inside.fact 4
+Test.Inside.fact 4
+:q

@@ -7,6 +7,7 @@ import Utils.Binary
 import Utils.Path
 
 import Data.List
+import Data.Maybe
 import Data.Strings
 
 import System.Info
@@ -19,48 +20,59 @@ record Dirs where
   working_dir : String
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
-  exec_dir : String -- executable directory, relative to working directory
-  dir_prefix : String -- installation prefix, for finding data files (e.g. run time support)
+  output_dir : Maybe String -- output directory, relative to working directory
+  prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file
 
+export
+execBuildDir : Dirs -> String
+execBuildDir d = build_dir d </> "exec"
+
+export
+outputDirWithDefault : Dirs -> String
+outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
+
 public export
 toString : Dirs -> String
-toString (MkDirs wdir sdir bdir edir dfix edirs ldirs ddirs) =
-  unlines [ "+ Working Directory   :: " ++ show wdir
-          , "+ Source Directory    :: " ++ show sdir
-          , "+ Build Directory     :: " ++ show bdir
-          , "+ Executable Directory     :: " ++ show edir
-          , "+ Installation Prefix :: " ++ show dfix
-          , "+ Extra Directories :: " ++ show edirs
+toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
+  unlines [ "+ Working Directory      :: " ++ show wdir
+          , "+ Source Directory       :: " ++ show sdir
+          , "+ Build Directory        :: " ++ show bdir
+          , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
+          , "+ Installation Prefix    :: " ++ show dfix
+          , "+ Extra Directories      :: " ++ show edirs
           , "+ CG Library Directories :: " ++ show ldirs
-          , "+ Data Directories :: " ++ show ddirs]
+          , "+ Data Directories       :: " ++ show ddirs]
 
 public export
 data CG = Chez
         | Racket
         | Gambit
+        | Node
+        | Javascript
+        | Other String
 
 export
 Eq CG where
   Chez == Chez = True
   Racket == Racket = True
   Gambit == Gambit = True
+  Node == Node = True
+  Javascript == Javascript = True
+  Other s == Other t = s == t
   _ == _ = False
 
 export
-availableCGs : List (String, CG)
-availableCGs
-    = [("chez", Chez),
-       ("racket", Racket),
-       ("gambit", Gambit)]
+Show CG where
+  show Chez = "chez"
+  show Racket = "racket"
+  show Gambit = "gambit"
+  show Node = "node"
+  show Javascript = "javascript"
+  show (Other s) = s
 
-export
-getCG : String -> Maybe CG
-getCG cg = lookup (toLower cg) availableCGs
-
--- Name options, to be saved in TTC
 public export
 record PairNames where
   constructor MkPairNs
@@ -85,11 +97,13 @@ public export
 data LangExt
      = ElabReflection
      | Borrowing -- not yet implemented
+     | PostfixProjections
 
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
+  PostfixProjections == PostfixProjections = True
   _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
@@ -100,7 +114,6 @@ record ElabDirectives where
   unboundImplicits : Bool
   totality : TotalReq
   ambigLimit : Nat
-  undottedRecordProjections : Bool
   autoImplicitLimit : Nat
 
 public export
@@ -110,6 +123,7 @@ record Session where
   nobanner : Bool
   findipkg : Bool
   codegen : CG
+  directives : List String
   logLevel : Nat
   logTimings : Bool
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
@@ -136,28 +150,44 @@ record Options where
   rewritenames : Maybe RewriteNames
   primnames : PrimNames
   extensions : List LangExt
+  additionalCGs : List (String, CG)
+
+
+export
+availableCGs : Options -> List (String, CG)
+availableCGs o
+    = [("chez", Chez),
+       ("racket", Racket),
+       ("node", Node),
+       ("javascript", Javascript),
+       ("gambit", Gambit)] ++ additionalCGs o
+
+export
+getCG : Options -> String -> Maybe CG
+getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" 
-                     ("build" </> "exec") 
+defaultDirs = MkDirs "." Nothing "build" Nothing
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter
 defaultPPrint = MkPPOpts False True False
 
+export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez 0 False False
-                               Nothing Nothing Nothing Nothing
+defaultSession = MkSessionOpts False False False Chez [] 0
+                               False False Nothing Nothing
+                               Nothing Nothing
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 True 50
+defaultElab = MkElabDirectives True True CoveringOnly 3 50
 
 export
 defaults : Options
 defaults = MkOptions defaultDirs defaultPPrint defaultSession
                      defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing)
+                     (MkPrimNs Nothing Nothing Nothing) []
                      []
 
 -- Reset the options which are set by source files
@@ -197,3 +227,7 @@ setExtension e = record { extensions $= (e ::) }
 export
 isExtension : LangExt -> Options -> Bool
 isExtension e opts = e `elem` extensions opts
+
+export
+addCG : (String, CG) -> Options -> Options
+addCG cg = record { additionalCGs $= (cg::) }

@@ -1,0 +1,9 @@
+1/1: Building split (split.idr)
+Main> notLtz BLT_ZO impossible
+notLtz BLT_ZE impossible
+notLtz (BLT_OO x) impossible
+notLtz (BLT_OE x) impossible
+notLtz BLT_OE_Eq impossible
+notLtz (BLT_EO x) impossible
+notLtz (BLT_EE x) impossible
+Main> Bye for now!

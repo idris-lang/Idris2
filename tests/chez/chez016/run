@@ -16,5 +16,5 @@ IDRIS2_EXEC="$(basename "$1")"
 
 cd "folder with spaces" || exit
 
-"$IDRIS2_DIR/$IDRIS2_EXEC" --no-banner Main.idr < ../input
+"$IDRIS2_DIR/$IDRIS2_EXEC" --no-color --console-width 0 --no-banner Main.idr < ../input
 rm -rf build

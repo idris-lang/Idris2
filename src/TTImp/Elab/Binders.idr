@@ -141,6 +141,10 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
     = do let rig = the RigCount $ if isErased rig_in then erased else linear
+         let solvemode = case elabMode elabinfo of
+                              InLHS _ => inLHS
+                              _ => inTermP False
+         solveConstraints solvemode Normal
          expty <- getTerm expty_in
          exptynf <- getTyNF env expty
          defs <- get Ctxt
@@ -201,17 +205,17 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
                              (record { preciseInf = True } elabinfo)
                              nest env nVal (Just (gnf env tyv))
                   pure (fst c, snd c, rigl |*| rigc))
-              (\err => case err of
-                            (LinearMisuse _ _ r _)
-                              => branchOne
-                                   (do c <- runDelays 0 $ check linear elabinfo
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, linear))
-                                   (do c <- check (rigl |*| rigc)
-                                                elabinfo -- without preciseInf
-                                                nest env nVal (Just (gnf env tyv))
-                                       pure (fst c, snd c, rigMult rigl rigc))
-                                   r
+              (\err => case linearErr err of
+                            Just r
+                              => do branchOne
+                                     (do c <- runDelays 0 $ check linear elabinfo
+                                                  nest env nVal (Just (gnf env tyv))
+                                         pure (fst c, snd c, linear))
+                                     (do c <- check (rigl |*| rigc)
+                                                  elabinfo -- without preciseInf
+                                                  nest env nVal (Just (gnf env tyv))
+                                         pure (fst c, snd c, rigMult rigl rigc))
+                                     r
                             _ => do c <- check (rigl |*| rigc)
                                                elabinfo -- without preciseInf
                                                nest env nVal (Just (gnf env tyv))
@@ -229,3 +233,11 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          -- build the term directly
          pure (Bind fc n (Let fc rigb valv tyv) scopev,
                gnf env (Bind fc n (Let fc rigb valv tyv) scopet))
+  where
+    linearErr : Error -> Maybe RigCount
+    linearErr (LinearMisuse _ _ r _) = Just r
+    linearErr (InType _ _ e) = linearErr e
+    linearErr (InCon _ _ e) = linearErr e
+    linearErr (InLHS _ _ e) = linearErr e
+    linearErr (InRHS _ _ e) = linearErr e
+    linearErr _ = Nothing

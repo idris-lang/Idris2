@@ -11,46 +11,49 @@ libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign support "idris2_sleep"
-prim_sleep : Int -> PrimIO ()
+prim__sleep : Int -> PrimIO ()
 %foreign support "idris2_usleep"
-prim_usleep : Int -> PrimIO ()
+prim__usleep : Int -> PrimIO ()
 
 export
-sleep : Int -> IO ()
-sleep sec = primIO (prim_sleep sec)
+sleep : HasIO io => Int -> io ()
+sleep sec = primIO (prim__sleep sec)
 
 export
-usleep : (x : Int) -> So (x >= 0) => IO ()
-usleep sec = primIO (prim_usleep sec)
+usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
+usleep sec = primIO (prim__usleep sec)
 
 -- This one is going to vary for different back ends. Probably needs a
 -- better convention. Will revisit...
 %foreign "scheme:blodwen-args"
+         "node:lambda:() => __prim_js2idris_array(process.argv.slice(1))"
 prim__getArgs : PrimIO (List String)
 
 export
-getArgs : IO (List String)
+getArgs : HasIO io => io (List String)
 getArgs = primIO prim__getArgs
 
 %foreign libc "getenv"
-prim_getEnv : String -> PrimIO (Ptr String)
+         "node:lambda: n => process.env[n]"
+prim__getEnv : String -> PrimIO (Ptr String)
+
 %foreign support "idris2_getEnvPair"
-prim_getEnvPair : Int -> PrimIO (Ptr String)
-%foreign libc "setenv"
-prim_setEnv : String -> String -> Int -> PrimIO Int
-%foreign libc "setenv"
-prim_unsetEnv : String -> PrimIO Int
+prim__getEnvPair : Int -> PrimIO (Ptr String)
+%foreign support "idris2_setenv"
+prim__setEnv : String -> String -> Int -> PrimIO Int
+%foreign support "idris2_unsetenv"
+prim__unsetEnv : String -> PrimIO Int
 
 export
-getEnv : String -> IO (Maybe String)
+getEnv : HasIO io => String -> io (Maybe String)
 getEnv var
-   = do env <- primIO $ prim_getEnv var
+   = do env <- primIO $ prim__getEnv var
         if prim__nullPtr env /= 0
            then pure Nothing
            else pure (Just (prim__getString env))
 
 export
-getEnvironment : IO (List (String, String))
+getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where
     splitEq : String -> (String, String)
@@ -59,47 +62,44 @@ getEnvironment = getAllPairs 0 []
               (_, v') = break (/= '=') v in
               (k, v')
 
-    getAllPairs : Int -> List String -> IO (List (String, String))
+    getAllPairs : Int -> List String -> io (List (String, String))
     getAllPairs n acc = do
-      envPair <- primIO $ prim_getEnvPair n
+      envPair <- primIO $ prim__getEnvPair n
       if prim__nullPtr envPair /= 0
          then pure $ reverse $ map splitEq acc
          else getAllPairs (n + 1) (prim__getString envPair :: acc)
 
 export
-setEnv : String -> String -> Bool -> IO Bool
+setEnv : HasIO io => String -> String -> Bool -> io Bool
 setEnv var val overwrite
-   = do ok <- primIO $ prim_setEnv var val (if overwrite then 1 else 0)
-        if ok == 0
-           then pure True
-           else pure False
+   = do ok <- primIO $ prim__setEnv var val (if overwrite then 1 else 0)
+        pure $ ok == 0
 
 export
-unsetEnv : String -> IO Bool
+unsetEnv : HasIO io => String -> io Bool
 unsetEnv var
-   = do ok <- primIO $ prim_unsetEnv var
-        if ok == 0
-           then pure True
-           else pure False
+   = do ok <- primIO $ prim__unsetEnv var
+        pure $ ok == 0
 
 %foreign libc "system"
          "scheme:blodwen-system"
-prim_system : String -> PrimIO Int
+prim__system : String -> PrimIO Int
 
 export
-system : String -> IO Int
-system cmd = primIO (prim_system cmd)
+system : HasIO io => String -> io Int
+system cmd = primIO (prim__system cmd)
 
 %foreign support "idris2_time"
          "scheme:blodwen-time"
-prim_time : PrimIO Int
+prim__time : PrimIO Int
 
 export
-time : IO Integer
-time = pure $ cast !(primIO prim_time)
+time : HasIO io => io Integer
+time = pure $ cast !(primIO prim__time)
 
 %foreign libc "exit"
-prim_exit : Int -> PrimIO ()
+         "node:lambda:c => process.exit(Number(c))"
+prim__exit : Int -> PrimIO ()
 
 ||| Programs can either terminate successfully, or end in a caught
 ||| failure.
@@ -114,16 +114,16 @@ data ExitCode : Type where
   ExitFailure : (errNo    : Int) -> (So (not $ errNo == 0)) => ExitCode
 
 export
-exitWith : ExitCode -> IO a
-exitWith ExitSuccess = believe_me $ primIO $ prim_exit 0
-exitWith (ExitFailure code) = believe_me $ primIO $ prim_exit code
+exitWith : HasIO io => ExitCode -> io a
+exitWith ExitSuccess = primIO $ believe_me $ prim__exit 0
+exitWith (ExitFailure code) = primIO $ believe_me $ prim__exit code
 
 ||| Exit the program indicating failure.
 export
-exitFailure : IO a
+exitFailure : HasIO io => io a
 exitFailure = exitWith (ExitFailure 1)
 
 ||| Exit the program after a successful run.
 export
-exitSuccess : IO a
+exitSuccess : HasIO io => io a
 exitSuccess = exitWith ExitSuccess
