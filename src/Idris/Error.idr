@@ -32,7 +32,7 @@ import Utils.String
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
   Local fc _ idx p => case dropAllNS (nameAt idx p) of
-      MN _ _ => acc <+> parens ("implicitly bound at " <+> pretty (getBinderLoc p env))
+      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty (getBinderLoc p env))
       _ => acc
   _ => acc
 
