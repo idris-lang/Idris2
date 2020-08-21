@@ -43,7 +43,7 @@ mutual
   expr' = buildExpressionParser Integer table' term'
 
 run : Show a => Parser a -> String -> IO ()
-run p s = case parse p s of
+run p s = case parse (p <* eos) s of
                 Left err => putStrLn err
                 Right (xs, _) => printLn xs
 

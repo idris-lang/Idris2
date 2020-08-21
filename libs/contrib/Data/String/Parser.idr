@@ -183,6 +183,13 @@ string str = P $ \s => pure $ let len = strLength str in
                                          else Fail (s.pos) ("string " ++ show str)
                                   else Fail (s.pos) ("string " ++ show str)
 
+||| Succeeds if the end of the string is reached.
+export
+eos : Monad m => ParseT m ()
+eos = P $ \s => pure $ if s.pos == s.maxPos
+                           then OK () s
+                           else Fail s.pos "expected the end of the string"
+
 ||| Succeeds if the next char is `c`
 export
 char : Monad m => Char -> ParseT m ()
@@ -221,8 +228,8 @@ export
 digit : Monad m => ParseT m (Fin 10)
 digit = do x <- satisfy isDigit
            case lookup x digits of
-                Nothing => P $ \s => pure $ Fail s.pos "not a digit"
-                Just y => P $ \s => pure $ OK y s
+                Nothing => fail "not a digit"
+                Just y => pure y
   where
     digits : List (Char, Fin 10)
     digits = [ ('0', 0)
@@ -263,4 +270,4 @@ integer = do minus <- optional (char '-')
              x <- some digit
              pure $ case minus of
                       Nothing => intFromDigits x
-                      Just y => (intFromDigits x)*(-1)
+                      Just _ => (intFromDigits x)*(-1)
