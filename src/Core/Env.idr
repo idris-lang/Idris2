@@ -109,7 +109,7 @@ abstractEnvType fc (Let fc' c val ty :: env) tm
 abstractEnvType fc (Pi fc' c e ty :: env) tm
     = abstractEnvType fc env (Bind fc _ (Pi fc' c e ty) tm)
 abstractEnvType fc (b :: env) tm
-    = let bnd = Pi fc (multiplicity b) Explicit (binderType b)
+    = let bnd = Pi (binderLoc b) (multiplicity b) Explicit (binderType b)
        in abstractEnvType fc env (Bind fc _ bnd tm)
 
 -- As above, for the corresponding term
@@ -120,7 +120,7 @@ abstractEnv fc [] tm = tm
 abstractEnv fc (Let fc' c val ty :: env) tm
     = abstractEnv fc env (Bind fc _ (Let fc' c val ty) tm)
 abstractEnv fc (b :: env) tm
-    = let bnd = Lam fc (multiplicity b) Explicit (binderType b)
+    = let bnd = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
       in abstractEnv fc env (Bind fc _ bnd tm)
 
 -- As above, but abstract over all binders including lets
