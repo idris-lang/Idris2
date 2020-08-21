@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y chezscheme
           echo "::add-path::$HOME/.idris2/bin"
       - name: Build from bootstrap
-        run: make bootstrap && make install && make install-api
+        run: make bootstrap && make install && idris2 --clean idris2api.ipkg && make install-api
         shell: bash
       - name: Test API
         run: cd tests/idris2/api001 && ./run idris2
