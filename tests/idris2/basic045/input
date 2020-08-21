@@ -1,0 +1,7 @@
+:t zero
+:t one
+:t multiple
+:t equality
+(n : Int) #1-> ()
+(1 n : Int) #0-> ()
+:q

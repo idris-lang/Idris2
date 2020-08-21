@@ -1,0 +1,68 @@
+1/1: Building Sugar (Sugar.idr)
+Error: While processing type of fail1. Sorry, I can't find any elaboration which works. All errors:
+If Builtin.#: When unifying LPair ?a ?b and Type.
+Mismatch between: LPair ?a ?b and Type.
+
+Sugar.idr:11:9--11:18
+    |
+ 11 | fail1 : String #3-> ()
+    |         ^^^^^^^^^
+
+If Builtin.DPair.#: When unifying Res ?a ?t and Type.
+Mismatch between: Res ?a ?t and Type.
+
+Sugar.idr:11:9--11:18
+    |
+ 11 | fail1 : String #3-> ()
+    |         ^^^^^^^^^
+
+Error: While processing type of fail2. Sorry, I can't find any elaboration which works. All errors:
+If Builtin.#: When unifying LPair ?a ?b and Type.
+Mismatch between: LPair ?a ?b and Type.
+
+Sugar.idr:13:9--13:19
+    |
+ 13 | fail2 : String # 3-> ()
+    |         ^^^^^^^^^^
+
+If Builtin.DPair.#: When unifying Res ?a ?t and Type.
+Mismatch between: Res ?a ?t and Type.
+
+Sugar.idr:13:9--13:19
+    |
+ 13 | fail2 : String # 3-> ()
+    |         ^^^^^^^^^^
+
+Error: While processing type of fail3. Sorry, I can't find any elaboration which works. All errors:
+If Builtin.#: When unifying LPair ?a ?b and Type.
+Mismatch between: LPair ?a ?b and Type.
+
+Sugar.idr:15:9--15:18
+    |
+ 15 | fail3 : String #3 -> ()
+    |         ^^^^^^^^^
+
+If Builtin.DPair.#: When unifying Res ?a ?t and Type.
+Mismatch between: Res ?a ?t and Type.
+
+Sugar.idr:15:9--15:18
+    |
+ 15 | fail3 : String #3 -> ()
+    |         ^^^^^^^^^
+
+Error: Unknown operator '#->'
+
+Sugar.idr:17:9--17:22
+    |
+ 17 | fail4 : String #-> ()
+    |         ^^^^^^^^^^^^^
+
+Main> Main.zero : Int -> (0 _ : String) -> Int -> ()
+Main> Main.one : (1 _ : Int) -> (0 _ : String) -> ()
+Main> Main.multiple : (1 _ : Int) -> (0 _ : Int) -> Nat -> ()
+Main> Main.equality : (0 _ : 2 = 3) -> Void
+Main> Parse error at line 1:9:
+Expected end of input (next tokens: [symbol ), symbol #1->, symbol (, symbol ), end of input])
+Main> Parse error at line 1:1:
+Expected 'case', 'if', 'do', application or operator expression (next tokens: [symbol (, literal 1, identifier n, symbol :, identifier Int, symbol ), symbol #0->, symbol (, symbol ), end of input])
+Main> Bye for now!

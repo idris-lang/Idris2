@@ -430,6 +430,10 @@ mutual
     = do params <- pibindListName fname indents
          pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
 
+  multBindSymbol : Rule RigCount
+  multBindSymbol
+      = (symbol "#0->" *> pure erased) <|> (symbol "#1->" *> pure linear)
+
   bindSymbol : Rule (PiInfo PTerm)
   bindSymbol
       = (symbol "->" *> pure Explicit)
@@ -746,16 +750,16 @@ mutual
   typeExpr q fname indents
       = do arg <- bounds (opExpr q fname indents)
            (do continue indents
-               rest <- bounds (some (do exp <- bindSymbol
+               rest <- bounds (some (do b <- ((MkPair top) <$> bindSymbol) <|> ((flip MkPair Explicit) <$> multBindSymbol)
                                         op <- opExpr pdef fname indents
-                                        pure (exp, op)))
+                                        pure (fst b, snd b, op)))
                pure (mkPi (start arg) (end rest) arg.val rest.val))
              <|> pure arg.val
     where
-      mkPi : FilePos -> FilePos -> PTerm -> List (PiInfo PTerm, PTerm) -> PTerm
+      mkPi : FilePos -> FilePos -> PTerm -> List (RigCount, PiInfo PTerm, PTerm) -> PTerm
       mkPi start end arg [] = arg
-      mkPi start end arg ((exp, a) :: as)
-            = PPi (MkFC fname start end) top exp Nothing arg
+      mkPi start end arg ((rig, exp, a) :: as)
+            = PPi (MkFC fname start end) rig exp Nothing arg
                   (mkPi start end a as)
 
   export
