@@ -1,0 +1,3 @@
+This isn't run by the test runner as it requires the API to be installed and takes a while to run.
+
+It is run by the CI API check.
