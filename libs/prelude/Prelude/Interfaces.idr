@@ -62,6 +62,16 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Run something for effects, replacing the return value with a given parameter.
+public export
+(<$) : Functor f => b -> f a -> f b
+(<$) b = map (const b)
+
+||| Flipped version of `<$`.
+public export
+($>) : Functor f => f a -> b -> f b
+($>) fa b = map (const b) fa
+
 ||| Run something for effects, throwing away the return value.
 public export
 ignore : Functor f => f a -> f ()

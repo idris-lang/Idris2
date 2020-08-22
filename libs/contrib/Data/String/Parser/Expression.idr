@@ -43,8 +43,8 @@ toParserUn : UnaryOperator a -> Parser (a -> a)
 toParserUn [] = fail "couldn't create unary parser"
 toParserUn (x :: xs) = x <|> toParserUn xs
 
-ambigious : (assoc : String) -> (op : Parser (a -> a -> a)) -> Parser a
-ambigious assoc op = do op
+ambiguous : (assoc : String) -> (op : Parser (a -> a -> a)) -> Parser a
+ambiguous assoc op = do op
                         fail ("ambiguous use of a " ++ assoc ++ " associative operator")
 
 mutual
@@ -100,9 +100,9 @@ buildExpressionParser a operators simpleExpr =
           prefixxOp = toParserUn prefixx
           postfixOp = toParserUn postfix
 
-          amRight = ambigious "right" rassocOp
-          amLeft = ambigious "left" lassocOp
-          amNon = ambigious "non" nassocOp
+          amRight = ambiguous "right" rassocOp
+          amLeft = ambiguous "left" lassocOp
+          amNon = ambiguous "non" nassocOp
 
           prefixxP = prefixxOp <|> pure (\x => x)
 
@@ -114,12 +114,8 @@ buildExpressionParser a operators simpleExpr =
                      pure (post (pre x))
 
           rassocP = mkRassocP amLeft amNon rassocOp termP
-          rassocP1 = mkRassocP1 amLeft amNon rassocOp termP
-
           lassocP = mkLassocP amRight amNon lassocOp termP
-          lassocP1 = mkLassocP1 amRight amNon lassocOp termP
-
           nassocP = mkNassocP amRight amLeft amNon nassocOp termP
           in
           do x <- termP
-             rassocP x <|> lassocP  x <|> nassocP x <|> pure x <?> "operator"
+             rassocP x <|> lassocP x <|> nassocP x <|> pure x <?> "operator"

@@ -11,24 +11,24 @@ import Data.String.Parser.Expression
 
 table : OperatorTable Nat
 table =
-  [ [Infix (do token "^"; pure (power) ) AssocRight]
-  , [ Infix (do token "*"; pure (*) ) AssocLeft ]
-  , [ Infix (do token "+"; pure (+) ) AssocLeft ]
+  [ [ Infix (token "^" $> power ) AssocRight]
+  , [ Infix (token "*" $> (*)   ) AssocLeft ]
+  , [ Infix (token "+" $> (+)   ) AssocLeft ]
   ]
 
 table' : OperatorTable Integer
 table' =
-  [ [ Infix (do token "*"; pure (*) ) AssocLeft
-    , Infix (do token "/"; pure (div) ) AssocLeft
+  [ [ Infix (token "*" $> (*) ) AssocLeft
+    , Infix (token "/" $> div ) AssocLeft
     ]
-  , [ Infix (do token "+"; pure (+) ) AssocLeft
-    , Infix (do token "-"; pure (-) ) AssocLeft
+  , [ Infix (token "+" $> (+) ) AssocLeft
+    , Infix (token "-" $> (-) ) AssocLeft
     ]
   ]
 
 mutual
   term : Parser Nat
-  term = (natural <|> expr) <* spaces
+  term = lexeme (natural <|> expr)
          <?> "simple expression"
 
   expr : Parser Nat
@@ -36,20 +36,20 @@ mutual
 
 mutual
   term' : Parser Integer
-  term' = (integer <|> expr') <* spaces
-         <?> "simple expression"
+  term' = lexeme (integer <|> expr')
+          <?> "simple expression"
 
   expr' : Parser Integer
   expr' = buildExpressionParser Integer table' term'
 
-showRes : Show a => Either String (a, Int) -> IO ()
-showRes res = case res of
+run : Show a => Parser a -> String -> IO ()
+run p s = case parse (p <* eos) s of
                 Left err => putStrLn err
-                Right (xs, rem) => printLn xs
+                Right (xs, _) => printLn xs
 
 main : IO ()
-main = do showRes (parse natural "5678")
-          showRes (parse integer "-3")
-          showRes (parse expr "1+4^3^2^1")
-          showRes (parse expr' "4 + 2 * 3")
-          showRes (parse expr' "13-3+1*2-10/2")
+main = do run natural "5678"
+          run integer "-3"
+          run expr "1+4^3^2^1"
+          run expr' "4 + 2 * 3"
+          run expr' "13-3+1*2-10/2"

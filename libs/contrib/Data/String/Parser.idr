@@ -7,7 +7,7 @@ import Data.Strings
 import Data.Fin
 import Data.List
 
-%default partial
+%default total
 
 ||| The input state, pos is position in the string and maxPos is the length of the input string.
 public export
@@ -18,12 +18,11 @@ record State where
     maxPos : Int
 
 Show State where
-    show s = "(" ++ show s.input ++", " ++ show s.pos ++ ", " ++ show s.maxPos ++")"
+    show s = "(" ++ show s.input ++ ", " ++ show s.pos ++ ", " ++ show s.maxPos ++ ")"
 
 ||| Result of applying a parser
 public export
 data Result a = Fail Int String | OK a State
-
 
 public export
 record ParseT (m : Type -> Type) (a : Type) where
@@ -32,7 +31,7 @@ record ParseT (m : Type -> Type) (a : Type) where
 
 public export
 Parser : Type -> Type
-Parser a = ParseT Identity a
+Parser = ParseT Identity
 
 public export
 implementation Monad m => Functor (ParseT m) where
@@ -45,9 +44,9 @@ implementation Monad m => Functor (ParseT m) where
 public export
 Monad m => Applicative (ParseT m) where
     pure x = P $ \s => pure (OK x s)
-    f <*> x = P $ \s => case !(x.runParser s) of
-                            OK r s' => case !(f.runParser s') of
-                                            OK f' fs => pure (OK (f' r) fs)
+    f <*> x = P $ \s => case !(f.runParser s) of
+                            OK f' s' => case !(x.runParser s') of
+                                            OK r rs => pure (OK (f' r) rs)
                                             Fail i err => pure (Fail i err)
                             Fail i err => pure (Fail i err)
 
@@ -68,7 +67,7 @@ Monad m => Alternative (ParseT m) where
 
 public export
 MonadTrans ParseT where
-    lift x = P $ \s => do res <-x
+    lift x = P $ \s => do res <- x
                           pure $ OK res s
 
 ||| Run a parser in a monad
@@ -98,52 +97,10 @@ export
 
 infixl 0 <?>
 
-||| Succeeds if the next char satisfies the predicate `f`
+||| Fail with some error message
 export
-satisfy : Monad m => (Char -> Bool) -> ParseT m Char
-satisfy f = P $ \s => do if s.pos < s.maxPos
-                            then do
-                                let ch = strIndex s.input s.pos
-                                if f ch
-                                    then pure $ OK ch (S s.input (s.pos + 1) s.maxPos)
-                                    else pure $ Fail (s.pos) "satisfy"
-                            else pure $ Fail (s.pos) "satisfy"
-
-||| Succeeds if the string `str` follows.
-export
-string : Monad m => String -> ParseT m ()
-string str = P $ \s => do let len = strLength str
-                          if s.pos+len <= s.maxPos
-                              then do let head = strSubstr s.pos len s.input
-                                      if head == str
-                                        then pure $ OK () (S s.input (s.pos + len) s.maxPos)
-                                        else pure $ Fail (s.pos) ("string " ++ show str)
-                              else pure $ Fail (s.pos) ("string " ++ show str)
-
-||| Succeeds if the next char is `c`
-export
-char : Monad m => Char -> ParseT m ()
-char c = do _ <- satisfy (== c)
-            pure ()
-
-mutual
-    ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
-    ||| and accumulate the results in a list
-    export
-    some : Monad m => ParseT m a -> ParseT m (List a)
-    some p = pure (!p :: !(many p))
-
-    ||| Always succeeds, will accumulate the results of `p` in a list until it fails.
-    export
-    many : Monad m => ParseT m a -> ParseT m (List a)
-    many p = some p <|> pure []
-
-||| Always succeeds, applies the predicate `f` on chars until it fails and creates a string
-||| from the results.
-export
-takeWhile : Monad m => (Char -> Bool) -> ParseT m String
-takeWhile f = do ls <- many (satisfy f)
-                 pure $ pack ls
+fail : Monad m => String -> ParseT m a
+fail x = P $ \s => pure $ Fail s.pos x
 
 ||| Returns the result of the parser `p` or `def` if it fails.
 export
@@ -153,45 +110,126 @@ option def p = p <|> pure def
 ||| Returns a Maybe that contains the result of `p` if it succeeds or `Nothing` if it fails.
 export
 optional : Monad m => ParseT m a -> ParseT m (Maybe a)
-optional p = (p >>= \res => pure $ Just res) <|> pure Nothing
+optional p = (Just <$> p) <|> pure Nothing
 
 ||| Discards the result of a parser
 export
-skip : Parser a -> Parser ()
+skip : Monad m => ParseT m a -> ParseT m ()
 skip = ignore
+
+mutual
+    ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
+    ||| and accumulate the results in a list
+    export
+    covering
+    some : Monad m => ParseT m a -> ParseT m (List a)
+    some p = pure (!p :: !(many p))
+
+    ||| Always succeeds, will accumulate the results of `p` in a list until it fails.
+    export
+    covering
+    many : Monad m => ParseT m a -> ParseT m (List a)
+    many p = some p <|> pure []
+
+||| Parse left-nested lists of the form `((init op arg) op arg) op arg`
+export
+covering
+hchainl : Monad m => ParseT m init -> ParseT m (init -> arg -> init) -> ParseT m arg -> ParseT m init
+hchainl pini pop parg = pini >>= go
+  where
+  covering
+  go : init -> ParseT m init
+  go x = (do op <- pop
+             arg <- parg
+             go $ op x arg) <|> pure x
+
+||| Parse right-nested lists of the form `arg op (arg op (arg op end))`
+export
+covering
+hchainr : Monad m => ParseT m arg -> ParseT m (arg -> end -> end) -> ParseT m end -> ParseT m end
+hchainr parg pop pend = go id <*> pend
+  where
+  covering
+  go : (end -> end) -> ParseT m (end -> end)
+  go f = (do arg <- parg
+             op <- pop
+             go $ f . op arg) <|> pure f
+
+||| Succeeds if the next char satisfies the predicate `f`
+export
+satisfy : Monad m => (Char -> Bool) -> ParseT m Char
+satisfy f = P $ \s => pure $ if s.pos < s.maxPos
+                                  then let ch = assert_total $ strIndex s.input s.pos in
+                                       if f ch
+                                           then OK ch (S s.input (s.pos + 1) s.maxPos)
+                                           else Fail (s.pos) "satisfy"
+                                  else Fail (s.pos) "satisfy"
+
+||| Always succeeds, applies the predicate `f` on chars until it fails and creates a string
+||| from the results.
+export
+covering
+takeWhile : Monad m => (Char -> Bool) -> ParseT m String
+takeWhile f = pack <$> many (satisfy f)
+
+||| Succeeds if the string `str` follows.
+export
+string : Monad m => String -> ParseT m ()
+string str = P $ \s => pure $ let len = strLength str in
+                              if s.pos+len <= s.maxPos
+                                  then let head = strSubstr s.pos len s.input in
+                                       if head == str
+                                         then OK () (S s.input (s.pos + len) s.maxPos)
+                                         else Fail (s.pos) ("string " ++ show str)
+                                  else Fail (s.pos) ("string " ++ show str)
+
+||| Succeeds if the end of the string is reached.
+export
+eos : Monad m => ParseT m ()
+eos = P $ \s => pure $ if s.pos == s.maxPos
+                           then OK () s
+                           else Fail s.pos "expected the end of the string"
+
+||| Succeeds if the next char is `c`
+export
+char : Monad m => Char -> ParseT m ()
+char c = ignore $ satisfy (== c)
 
 ||| Parses a space character
 export
-space : Parser Char
+space : Monad m => ParseT m Char
 space = satisfy isSpace
 
 ||| Parses one or more space characters
 export
-spaces : Parser ()
+covering
+spaces : Monad m => ParseT m ()
 spaces = skip (many space) <?> "white space"
+
+||| Discards brackets around a matching parser
+export
+parens : Monad m => ParseT m a -> ParseT m a
+parens p = char '(' *> p <* char ')'
 
 ||| Discards whitespace after a matching parser
 export
-lexeme : Parser a -> Parser a
+covering
+lexeme : Monad m => ParseT m a -> ParseT m a
 lexeme p = p <* spaces
 
 ||| Matches a specific string, then skips following whitespace
 export
-token : String -> Parser ()
+covering
+token : Monad m => String -> ParseT m ()
 token s = lexeme (skip (string s)) <?> "token " ++ show s
-
-||| Fail with some error message
-export
-fail : Monad m => String -> ParseT m a
-fail x = P $ \s => do pure $ Fail s.pos x
 
 ||| Matches a single digit
 export
-digit : Parser (Fin 10)
+digit : Monad m => ParseT m (Fin 10)
 digit = do x <- satisfy isDigit
            case lookup x digits of
-                Nothing => P $ \s => do pure $ Fail s.pos "not a digit"
-                Just y => P $ \s => Id (OK y s)
+                Nothing => fail "not a digit"
+                Just y => pure y
   where
     digits : List (Char, Fin 10)
     digits = [ ('0', 0)
@@ -220,15 +258,16 @@ natFromDigits = fromDigits finToNat
 
 ||| Matches a natural number
 export
-natural : Parser Nat
-natural = do x <- some digit
-             pure (natFromDigits x)
+covering
+natural : Monad m => ParseT m Nat
+natural = natFromDigits <$> some digit
 
 ||| Matches an integer, eg. "12", "-4"
 export
-integer : Parser Integer
+covering
+integer : Monad m => ParseT m Integer
 integer = do minus <- optional (char '-')
              x <- some digit
-             case minus of
-                  Nothing => pure (intFromDigits x)
-                  (Just y) => pure ((intFromDigits x)*(-1))
+             pure $ case minus of
+                      Nothing => intFromDigits x
+                      Just _ => (intFromDigits x)*(-1)
