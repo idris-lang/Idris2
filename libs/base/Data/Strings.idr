@@ -21,7 +21,13 @@ foldl1 f (x::xs) = foldl f x xs
 %foreign
     "scheme:string-concat"
 export
+fastConcat : List String -> String
+
+-- This is a deprecated alias for fastConcat for backwards compatibility
+-- (unfortunately, we don't have %deprecated yet).
+export
 fastAppend : List String -> String
+fastAppend = fastConcat
 
 ||| Splits a character list into a list of whitespace separated character lists.
 |||
