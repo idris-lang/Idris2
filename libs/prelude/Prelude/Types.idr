@@ -440,13 +440,8 @@ pack [] = ""
 pack (x :: xs) = strCons x (pack xs)
 
 export
+%foreign "scheme:string-pack"
 fastPack : List Char -> String
-fastPack xs
-   = unsafePerformIO (schemeCall String "string" (toFArgs xs))
-  where
-    toFArgs : List Char -> FArgList
-    toFArgs [] = []
-    toFArgs (x :: xs) = x :: toFArgs xs
 
 ||| Turns a string into a list of characters.
 |||

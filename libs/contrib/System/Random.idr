@@ -13,8 +13,11 @@ interface Random a where
   -- happens if lo > hi.
   randomRIO : HasIO io => (a, a) -> io a
 
-prim__randomInt : Int -> IO Int
-prim__randomInt upperBound = schemeCall Int "blodwen-random" [upperBound]
+%foreign "scheme:blodwen-random"
+prim__randomInt : Int -> PrimIO Int
+
+randomInt : Int -> IO Int
+randomInt upperBound = fromPrim (prim__randomInt upperBound)
 
 public export
 Random Int where
@@ -23,28 +26,34 @@ Random Int where
     let maxInt = shiftL 1 31 - 1
         minInt = negate $ shiftL 1 31
         range = maxInt - minInt
-     in map (+ minInt) $ liftIO $ prim__randomInt range
+     in map (+ minInt) $ liftIO $ randomInt range
 
   -- Generate a random value within [lo, hi].
   randomRIO (lo, hi) =
     let range = hi - lo + 1
-     in map (+ lo) $ liftIO $ prim__randomInt range
+     in map (+ lo) $ liftIO $ randomInt range
 
-prim__randomDouble : IO Double
-prim__randomDouble = schemeCall Double "blodwen-random" []
+%foreign "scheme:blodwen-random"
+prim__randomDouble : PrimIO Double
+
+randomDouble : IO Double
+randomDouble = fromPrim prim__randomDouble
 
 public export
 Random Double where
   -- Generate a random value within [0, 1].
-  randomIO = liftIO prim__randomDouble
+  randomIO = liftIO randomDouble
 
   -- Generate a random value within [lo, hi].
-  randomRIO (lo, hi) = map ((+ lo) . (* (hi - lo))) (liftIO prim__randomDouble)
+  randomRIO (lo, hi) = map ((+ lo) . (* (hi - lo))) (liftIO randomDouble)
+
+%foreign "scheme:blodwen-random-seed"  
+prim__srand : Bits64 -> PrimIO ()
 
 ||| Sets the random seed
 export
-srand : Integer -> IO ()
-srand n = schemeCall () "blodwen-random-seed" [n]
+srand : Bits64 -> IO ()
+srand n = fromPrim (prim__srand n)
 
 ||| Generate a random number in Fin (S `k`)
 |||

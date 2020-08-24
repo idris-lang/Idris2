@@ -80,29 +80,76 @@ isClockMandatory GCCPU  = Optional
 isClockMandatory GCReal = Optional
 isClockMandatory _      = Mandatory
 
-prim__clockTimeMonotonic : IO OSClock
-prim__clockTimeMonotonic = schemeCall OSClock "blodwen-clock-time-monotonic" []
+%foreign "scheme:blodwen-clock-time-monotonic"
+prim__clockTimeMonotonic : PrimIO OSClock
+
+clockTimeMonotonic : IO OSClock
+clockTimeMonotonic = fromPrim prim__clockTimeMonotonic
+
+%foreign "scheme:blodwen-clock-time-utc"
+prim__clockTimeUtc : PrimIO OSClock
+
+clockTimeUtc : IO OSClock
+clockTimeUtc = fromPrim prim__clockTimeUtc
+
+%foreign "scheme:blodwen-clock-time-process"
+prim__clockTimeProcess : PrimIO OSClock
+
+clockTimeProcess : IO OSClock
+clockTimeProcess = fromPrim prim__clockTimeProcess
+
+%foreign "scheme:blodwen-clock-time-thread"
+prim__clockTimeThread : PrimIO OSClock
+
+clockTimeThread : IO OSClock
+clockTimeThread = fromPrim prim__clockTimeThread
+
+%foreign "scheme:blodwen-clock-time-gccpu"
+prim__clockTimeGcCpu : PrimIO OSClock
+
+clockTimeGcCpu : IO OSClock
+clockTimeGcCpu = fromPrim prim__clockTimeGcCpu
+
+%foreign "scheme:blodwen-clock-time-gcreal"
+prim__clockTimeGcReal : PrimIO OSClock
+
+clockTimeGcReal : IO OSClock
+clockTimeGcReal = fromPrim prim__clockTimeGcReal
 
 fetchOSClock : ClockType -> IO OSClock
-fetchOSClock UTC       = schemeCall OSClock "blodwen-clock-time-utc" []
-fetchOSClock Monotonic = prim__clockTimeMonotonic
-fetchOSClock Process   = schemeCall OSClock "blodwen-clock-time-process" []
-fetchOSClock Thread    = schemeCall OSClock "blodwen-clock-time-thread" []
-fetchOSClock GCCPU     = schemeCall OSClock "blodwen-clock-time-gccpu" []
-fetchOSClock GCReal    = schemeCall OSClock "blodwen-clock-time-gcreal" []
-fetchOSClock Duration  = prim__clockTimeMonotonic
+fetchOSClock UTC       = clockTimeUtc
+fetchOSClock Monotonic = clockTimeMonotonic
+fetchOSClock Process   = clockTimeProcess
+fetchOSClock Thread    = clockTimeThread
+fetchOSClock GCCPU     = clockTimeGcCpu
+fetchOSClock GCReal    = clockTimeGcReal
+fetchOSClock Duration  = clockTimeMonotonic
+
+prim__osClockValid : OSClock -> PrimIO Int
 
 ||| A test to determine the status of optional clocks.
 osClockValid : OSClock -> IO Int
-osClockValid clk = schemeCall Int "blodwen-is-time?" [clk]
+osClockValid clk = fromPrim (prim__osClockValid clk)
+
+%foreign "scheme:blodwen-clock-second"
+prim__osClockSecond : OSClock -> PrimIO Bits64
+
+osClockSecond : OSClock -> IO Bits64
+osClockSecond clk = fromPrim (prim__osClockSecond clk)
+
+%foreign "scheme:blodwen-clock-nanosecond"
+prim__osClockNanosecond : OSClock -> PrimIO Bits64
+
+osClockNanosecond : OSClock -> IO Bits64
+osClockNanosecond clk = fromPrim (prim__osClockNanosecond clk)
 
 fromOSClock : {type : ClockType} -> OSClock -> IO (Clock type)
 fromOSClock clk =
   pure $
     MkClock
       {type}
-      !(schemeCall Integer "blodwen-clock-second" [clk])
-      !(schemeCall Integer "blodwen-clock-nanosecond" [clk])
+      (cast !(osClockSecond clk))
+      (cast !(osClockNanosecond clk))
 
 public export
 clockTimeReturnType : (typ : ClockType) -> Type
