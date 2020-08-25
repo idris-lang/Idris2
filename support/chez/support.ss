@@ -61,6 +61,12 @@
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
+
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+(define (string-concat xs) (apply string-append (from-idris-list xs)))
 (define string-cons (lambda (x y) (string-append (string x) y)))
 (define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)

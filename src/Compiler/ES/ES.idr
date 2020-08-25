@@ -337,9 +337,7 @@ jsPrim (NS _ (UN "prim__os")) [] =
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
 jsPrim  (NS _ (UN "prim__schemeCall"))[_, fn, args, _] =
-  case fn of
-    "'string-append'" => pure $ "''.concat(...__prim_idris2js_FArgList("++ args ++"))"
-    o => throw (InternalError $ "schemeCall not implemented " ++ show o)
+    throw (InternalError $ "schemeCall not implemented " ++ show (fn, args))
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
