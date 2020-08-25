@@ -150,13 +150,13 @@ htPut y (x :: xs) {p = There p'} = x :: htPut y xs
 ||| Update an element with the correct type. (Homogeneous)
 |||
 ||| ```idris example
-||| > update "hello world!" [1, "string"]
+||| > update (const "hello world!") [1, "string"]
 ||| [1, "hello world!"]
 ||| ```
 public export
-update : t -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
-update y (x :: xs) {p = Here} = y :: xs
-update y (x :: xs) {p = There p'} = x :: update y xs
+update : (t -> t) -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
+update f (x :: xs) {p = Here} = f x :: xs
+update f (x :: xs) {p = There p'} = x :: update f xs
 
 ||| Update an element with the correct type. (Heterogeneous)
 |||
