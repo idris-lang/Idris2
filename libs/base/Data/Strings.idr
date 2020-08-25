@@ -20,7 +20,7 @@ foldl1 f (x::xs) = foldl f x xs
 -- enough room in advance so there's only one allocation, rather than lots!
 %foreign
     "scheme:string-concat"
-    "node:lambda:__prim_idris2js_stringConcat"
+    "javascript:lambda:__prim_idris2js_stringConcat"
 export
 fastConcat : List String -> String
 
