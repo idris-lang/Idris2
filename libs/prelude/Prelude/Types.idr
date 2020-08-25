@@ -449,8 +449,10 @@ pack : List Char -> String
 pack [] = ""
 pack (x :: xs) = strCons x (pack xs)
 
+%foreign
+    "scheme:string-pack"
+    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
-%foreign "scheme:string-pack"
 fastPack : List Char -> String
 
 ||| Turns a string into a list of characters.

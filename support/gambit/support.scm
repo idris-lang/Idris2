@@ -75,6 +75,9 @@
 (define-macro (string-concat xs)
   `(apply string-append (from-idris-list ,xs)))
 
+(define-macro (string-pack xs)
+  `(apply string (from-idris-list ,xs)))
+
 (define-macro (string-cons x y)
   `(string-append (string ,x) ,y))
 

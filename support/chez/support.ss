@@ -67,6 +67,7 @@
     '()
     (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
 (define (string-concat xs) (apply string-append (from-idris-list xs)))
+(define (string-pack xs) (apply string (from-idris-list xs)))
 (define string-cons (lambda (x y) (string-append (string x) y)))
 (define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)

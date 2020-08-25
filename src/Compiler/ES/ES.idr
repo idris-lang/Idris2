@@ -336,8 +336,6 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
-jsPrim  (NS _ (UN "prim__schemeCall"))[_, fn, args, _] =
-    throw (InternalError $ "schemeCall not implemented " ++ show (fn, args))
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String

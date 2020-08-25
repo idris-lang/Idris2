@@ -125,6 +125,7 @@ fetchOSClock GCCPU     = clockTimeGcCpu
 fetchOSClock GCReal    = clockTimeGcReal
 fetchOSClock Duration  = clockTimeMonotonic
 
+%foreign "scheme:blodwen-is-time?"
 prim__osClockValid : OSClock -> PrimIO Int
 
 ||| A test to determine the status of optional clocks.

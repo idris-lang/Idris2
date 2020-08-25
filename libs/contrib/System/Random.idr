@@ -47,7 +47,7 @@ Random Double where
   -- Generate a random value within [lo, hi].
   randomRIO (lo, hi) = map ((+ lo) . (* (hi - lo))) (liftIO randomDouble)
 
-%foreign "scheme:blodwen-random-seed"  
+%foreign "scheme:blodwen-random-seed"
 prim__srand : Bits64 -> PrimIO ()
 
 ||| Sets the random seed
