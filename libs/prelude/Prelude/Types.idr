@@ -449,14 +449,11 @@ pack : List Char -> String
 pack [] = ""
 pack (x :: xs) = strCons x (pack xs)
 
+%foreign
+    "scheme:string-pack"
+    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastPack : List Char -> String
-fastPack xs
-   = unsafePerformIO (schemeCall String "string" (toFArgs xs))
-  where
-    toFArgs : List Char -> FArgList
-    toFArgs [] = []
-    toFArgs (x :: xs) = x :: toFArgs xs
 
 ||| Turns a string into a list of characters.
 |||
