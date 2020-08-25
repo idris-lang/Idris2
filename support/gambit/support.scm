@@ -68,6 +68,13 @@
 (define-macro (cast-string-int x)
   `(floor (cast-string-double ,x)))
 
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+(define-macro (string-concat xs)
+  `(apply string-append (from-idris-list ,xs)))
+
 (define-macro (string-cons x y)
   `(string-append (string ,x) ,y))
 
