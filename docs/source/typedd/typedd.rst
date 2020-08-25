@@ -66,6 +66,12 @@ For the reasons described above:
 
     tryIndex : {n : _} -> Integer -> Vect n a -> Maybe a
 
++ In exercise 5 of 4.2, add an implicit argument:
+
+.. code-block:: idris
+
+    sumEntries : Num a => {n : _} -> (pos : Integer) -> Vect n a -> Vect n a -> Maybe a
+
 Chapter 5
 ---------
 
