@@ -337,9 +337,7 @@ jsPrim (NS _ (UN "prim__os")) [] =
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
 jsPrim  (NS _ (UN "prim__schemeCall"))[_, fn, args, _] =
-  case fn of
-    "'string-append'" => pure $ "''.concat(...__prim_idris2js_FArgList("++ args ++"))"
-    o => throw (InternalError $ "schemeCall not implemented " ++ show o)
+    throw (InternalError $ "schemeCall not implemented " ++ show (fn, args))
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
@@ -423,6 +421,7 @@ static_preamble =
   , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
   , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
   , "function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}"
+  , "function __prim_idris2js_stringConcat(x){return ''.concat(...__prim_idris2js_array(x))}"
   ]
 
 export
