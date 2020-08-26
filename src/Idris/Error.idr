@@ -31,7 +31,7 @@ import Utils.String
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
-  Local fc _ idx p => case dropAllNS (nameAt idx p) of
+  Local fc _ idx p => case dropAllNS (nameAt p) of
       MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty (getBinderLoc p env))
       _ => acc
   _ => acc
@@ -95,7 +95,7 @@ ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
        let (sr2, sc2) = bimap (fromInteger . cast) s2
        let (er1, ec1) = bimap (fromInteger . cast) e1
        let (er2, ec2) = bimap (fromInteger . cast) e2
-       if (er2 > er1 + 5)
+       if (er2 > the Nat (er1 + 5))
           then pure $ !(ploc (MkFC fn1 s1 e1)) <+> line <+> !(ploc (MkFC fn2 s2 e2))
           else do let nsize = length $ show (er2 + 1)
                   let head = annotate FileCtxt (pretty $ MkFC fn1 s1 e2)

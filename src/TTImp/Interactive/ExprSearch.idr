@@ -168,19 +168,19 @@ search : {auto c : Ref Ctxt Defs} ->
          SearchOpts -> ClosedTerm ->
          Name -> Core (Search (ClosedTerm, ExprDefs))
 
-getAllEnv : {vars : _} ->
-            FC -> (done : List Name) ->
+getAllEnv : {vars : _} -> FC ->
+            SizeOf done ->
             Env Term vars ->
             List (Term (done ++ vars), Term (done ++ vars))
 getAllEnv fc done [] = []
-getAllEnv {vars = v :: vs} fc done (b :: env)
-   = let rest = getAllEnv fc (done ++ [v]) env
-         MkVar p = weakenVar done {inner = v :: vs} First
+getAllEnv {vars = v :: vs} {done} fc p (b :: env)
+   = let rest = getAllEnv fc (sucR p) env
+         MkVar var = weakenVar p (MkVar First)
          usable = usableName v in
          if usable
-            then (Local fc Nothing _ p,
+            then (Local fc Nothing _ var,
                      rewrite appendAssociative done [v] vs in
-                        weakenNs (done ++ [v]) (binderType b)) ::
+                        weakenNs (sucR p) (binderType b)) ::
                              rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
   where
@@ -547,7 +547,7 @@ searchLocal fc rig opts env ty topty
     = -- Reverse the environment so we try the patterns left to right.
       -- This heuristic is just so arguments appear the same order in
       -- recursive calls
-      searchLocalWith fc False rig opts env (reverse (getAllEnv fc [] env))
+      searchLocalWith fc False rig opts env (reverse (getAllEnv fc zero env))
                       ty topty
 
 makeHelper : {vars : _} ->
@@ -667,7 +667,7 @@ tryIntermediate : {vars : _} ->
                   Env Term vars -> Term vars -> ClosedTerm ->
                   Core (Search (Term vars, ExprDefs))
 tryIntermediate fc rig opts env ty topty
-    = tryIntermediateWith fc rig opts env (reverse (getAllEnv fc [] env))
+    = tryIntermediateWith fc rig opts env (reverse (getAllEnv fc zero env))
                           ty topty
 
 -- Try making a recursive call and unpacking the result. Only do this if

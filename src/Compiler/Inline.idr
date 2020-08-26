@@ -57,8 +57,7 @@ genName n
          put LVar (i + 1)
          pure (MN n i)
 
-refToLocal : {vars : _} ->
-             Name -> (x : Name) -> CExp vars -> CExp (x :: vars)
+refToLocal : Name -> (x : Name) -> CExp vars -> CExp (x :: vars)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 largest : Ord a => a -> List a -> a
@@ -97,7 +96,7 @@ mutual
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
   usedCon n (MkConAlt _ _ args sc)
-      = let MkVar n' = weakenNs args (MkVar n) in
+      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
             used n' sc
 
   usedConst : {free : _} ->
@@ -117,7 +116,7 @@ mutual
   evalLocal {vars = x :: xs} fc rec stk (v :: env) First
       = case stk of
              [] => pure v
-             _ => eval rec env stk (weakenNs xs v)
+             _ => eval rec env stk (weakenNs (mkSizeOf xs) v)
   evalLocal {vars = x :: xs} fc rec stk (_ :: env) (Later p)
       = evalLocal fc rec stk env p
 
@@ -357,6 +356,7 @@ fixArity (MkFun args exp) = pure $ MkFun args !(fixArityTm exp [])
 fixArity (MkError exp) = pure $ MkError !(fixArityTm exp [])
 fixArity d = pure d
 
+-- TODO: get rid of this `done` by making the return `args'` runtime irrelevant?
 getLams : {done : _} ->
           Int -> SubstCEnv done args -> CExp (done ++ args) ->
           (args' ** (SubstCEnv args' args, CExp (args' ++ args)))
@@ -383,7 +383,7 @@ mergeLambdas args (CLam fc x sc)
     = let (args' ** (env, exp')) = getLams 0 [] (CLam fc x sc)
           expNs = substs env exp'
           newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals {later = args} {vars=[]} (mkBounds newArgs)
+          expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)
                              (rewrite appendNilRightNeutral args in expNs) in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)

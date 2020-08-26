@@ -80,7 +80,7 @@ getBinderUnder : Weaken tm =>
                  (0 p : IsVar x idx vars) -> Env tm vars ->
                  Binder (tm (reverseOnto vars ns))
 getBinderUnder {idx = Z} {vars = v :: vs} ns First (b :: env)
-    = rewrite revOnto vs (v :: ns) in map (weakenNs (reverse (v :: ns))) b
+    = rewrite revOnto vs (v :: ns) in map (weakenNs (reverse (mkSizeOf (v :: ns)))) b
 getBinderUnder {idx = S k} {vars = v :: vs} ns (Later lp) (b :: env)
     = getBinderUnder (v :: ns) lp env
 

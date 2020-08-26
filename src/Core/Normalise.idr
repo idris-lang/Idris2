@@ -1036,8 +1036,7 @@ mutual
         = convGen q defs env !(evalClosure defs x) !(evalClosure defs y)
 
 export
-getValArity : {vars : _} ->
-              Defs -> Env Term vars -> NF vars -> Core Nat
+getValArity : Defs -> Env Term vars -> NF vars -> Core Nat
 getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
     = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc False)))))
 getValArity defs env val = pure 0

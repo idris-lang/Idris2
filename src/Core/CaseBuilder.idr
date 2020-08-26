@@ -163,9 +163,9 @@ weaken : {x, vars : _} ->
 weaken [] = []
 weaken (p :: ps) = weaken p :: weaken ps
 
-weakenNs : {vars : _} ->
-           (ns : List Name) ->
-           NamedPats vars todo -> NamedPats (ns ++ vars) todo
+weakenNs : SizeOf ns ->
+           NamedPats vars todo ->
+           NamedPats (ns ++ vars) todo
 weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
@@ -358,8 +358,8 @@ nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> String -> List Pat -> Maybe (NF vars) ->
-            Core (args ** NamedPats (args ++ vars) args)
-nextNames fc root [] fty = pure ([] ** [])
+            Core (args ** (SizeOf args, NamedPats (args ++ vars) args))
+nextNames fc root [] fty = pure ([] ** (zero, []))
 nextNames {vars} fc root (p :: pats) fty
      = do defs <- get Ctxt
           empty <- clearDefs defs
@@ -376,12 +376,12 @@ nextNames {vars} fc root (p :: pats) fty
                         Known c !(quote empty env farg))
                    Just t =>
                       pure (Nothing, Stuck !(quote empty env t))
-          (args ** ps) <- nextNames {vars} fc root pats (fst fa_tys)
+          (args ** (l, ps)) <- nextNames {vars} fc root pats (fst fa_tys)
           let argTy = case snd fa_tys of
                            Unknown => Unknown
-                           Known rig t => Known rig (weakenNs (n :: args) t)
-                           Stuck t => Stuck (weakenNs (n :: args) t)
-          pure (n :: args ** MkInfo p First argTy :: weaken ps)
+                           Known rig t => Known rig (weakenNs (suc l) t)
+                           Stuck t => Stuck (weakenNs (suc l) t)
+          pure (n :: args ** (suc l, MkInfo p First argTy :: weaken ps))
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : List Pat) -> LengthMatch pargs ns ->
@@ -447,28 +447,29 @@ groupCons fc fn pvars cs
                               Just t <- lookupTyExact n (gamma defs)
                                    | Nothing => pure (NErased fc False)
                               nf defs (mkEnv fc vars') (embed t)
-             (patnames ** newargs) <- nextNames {vars=vars'} fc "e" pargs (Just cty)
+             (patnames ** (l, newargs)) <- nextNames {vars=vars'} fc "e" pargs (Just cty)
              -- Update non-linear names in remaining patterns (to keep
              -- explicit dependencies in types accurate)
              let pats' = updatePatNames (updateNames (zip patnames pargs))
-                                        (weakenNs patnames pats)
+                                        (weakenNs l pats)
              let clause = MkPatClause {todo = patnames ++ todo'}
                               pvars
                               (newargs ++ pats')
-                              pid (weakenNs patnames rhs)
+                              pid (weakenNs l rhs)
              pure [ConGroup n tag [clause]]
     addConG {vars'} {todo'} n tag pargs pats pid rhs (g :: gs) with (checkGroupMatch (CName n tag) pargs g)
       addConG {vars'} {todo'} n tag pargs pats pid rhs
               ((ConGroup {newargs} n tag ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                    | (ConMatch {newargs} lprf)
         = do let newps = newPats pargs lprf ps
+             let l = mkSizeOf newargs
              let pats' = updatePatNames (updateNames (zip newargs pargs))
-                                        (weakenNs newargs pats)
+                                        (weakenNs l pats)
              let newclause : PatClause (newargs ++ vars') (newargs ++ todo')
                    = MkPatClause pvars
                                  (newps ++ pats')
                                  pid
-                                 (weakenNs newargs rhs)
+                                 (weakenNs l rhs)
              -- put the new clause at the end of the group, since we
              -- match the clauses top to bottom.
              pure ((ConGroup n tag (MkPatClause pvars ps tid tm :: rest ++ [newclause]))
@@ -492,28 +493,29 @@ groupCons fc fn pvars cs
                             do a' <- evalClosure d a
                                pure (NBind fc (MN "x" 0) (Pi fc top Explicit a')
                                        (\dv, av => pure (NDelayed fc LUnknown a'))))
-             ([tyname, argname] ** newargs) <- nextNames {vars=vars'} fc "e" [pty, parg]
+             ([tyname, argname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [pty, parg]
                                                   (Just dty)
                 | _ => throw (InternalError "Error compiling Delay pattern match")
              let pats' = updatePatNames (updateNames [(tyname, pty),
                                                       (argname, parg)])
-                                        (weakenNs [tyname, argname] pats)
+                                        (weakenNs l pats)
              let clause = MkPatClause {todo = tyname :: argname :: todo'}
                              pvars (newargs ++  pats')
-                                   pid (weakenNs [tyname, argname] rhs)
+                                   pid (weakenNs l rhs)
              pure [DelayGroup [clause]]
     addDelayG {vars'} {todo'} pty parg pats pid rhs (g :: gs) with (checkGroupMatch CDelay [] g)
       addDelayG {vars'} {todo'} pty parg pats pid rhs
           ((DelayGroup {tyarg} {valarg} ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                  | (DelayMatch {tyarg} {valarg})
-         = do let newps = newPats [pty, parg] (ConsMatch (ConsMatch NilMatch)) ps
+         = do let l = mkSizeOf [tyarg, valarg]
+              let newps = newPats [pty, parg] (ConsMatch (ConsMatch NilMatch)) ps
               let pats' = updatePatNames (updateNames [(tyarg, pty),
                                                        (valarg, parg)])
-                                         (weakenNs [tyarg, valarg] pats)
+                                         (weakenNs l pats)
               let newclause : PatClause (tyarg :: valarg :: vars')
                                         (tyarg :: valarg :: todo')
                     = MkPatClause pvars (newps ++ pats') pid
-                                        (weakenNs [tyarg, valarg] rhs)
+                                        (weakenNs l rhs)
               pure ((DelayGroup (MkPatClause pvars ps tid tm :: rest ++ [newclause]))
                          :: gs)
       addDelayG pty parg pats pid rhs (g :: gs) | NoMatch
@@ -771,11 +773,11 @@ mutual
                            (\e => pure [DefaultCase e])
                            errorCase
       altGroups (ConGroup {newargs} cn tag rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs newargs) errorCase)
+          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf newargs)) errorCase)
                cs' <- altGroups cs
                pure (ConCase cn tag newargs crest :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs [tyarg, valarg]) errorCase)
+          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [tyarg, valarg])) errorCase)
                cs' <- altGroups cs
                pure (DelayCase tyarg valarg crest :: cs')
       altGroups (ConstGroup c rest :: cs)
@@ -862,7 +864,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   ns <- mkNames args ps eq (Just nty)
                   pure (MkPatClause [] ns pid
                           (rewrite sym (appendNilRightNeutral args) in
-                                   (weakenNs args rhs))))
+                                   (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
     mkNames : (vars : List Name) -> (ps : List Pat) ->
@@ -897,13 +899,13 @@ patCompile fc fn phase ty [] def
             (\e => pure ([] ** e))
             def
 patCompile fc fn phase ty (p :: ps) def
-    = do let ns = getNames 0 (fst p)
+    = do let (ns ** n) = getNames 0 (fst p)
          pats <- mkPatClausesFrom 0 ns (p :: ps)
          log "compile.casetree" 5 $ "Pattern clauses " ++ show pats
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
-                                 map (TT.weakenNs ns) def)
+                                 map (TT.weakenNs n) def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : List Name) ->
@@ -915,9 +917,11 @@ patCompile fc fn phase ty (p :: ps) def
              ps' <- mkPatClausesFrom (i + 1) ns ps
              pure (p' :: ps')
 
-    getNames : Int -> List Pat -> List Name
-    getNames i [] = []
-    getNames i (x :: xs) = MN "arg" i :: getNames (i + 1) xs
+    getNames : Int -> List Pat -> (ns : List Name ** SizeOf ns)
+    getNames i [] = ([] ** zero)
+    getNames i (x :: xs) =
+      let (ns ** n) = getNames (i + 1) xs
+      in (MN "arg" i :: ns ** suc n)
 
 toPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> (ClosedTerm, ClosedTerm) ->

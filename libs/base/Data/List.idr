@@ -632,3 +632,8 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+lengthMap : (xs : List a) -> length (map f xs) = length xs
+lengthMap [] = Refl
+lengthMap (x :: xs) = cong S (lengthMap xs)

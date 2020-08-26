@@ -196,7 +196,7 @@ findLinear top bound rig tm
           = findLinArg rig ty (p :: as)
       findLinArg rig (NBind _ x (Pi _ c _ _) sc) (Local {name=a} fc _ idx prf :: as)
           = do defs <- get Ctxt
-               let a = nameAt idx prf
+               let a = nameAt prf
                if idx < bound
                  then do sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound x))
                          pure $ (a, rigMult c rig) ::
