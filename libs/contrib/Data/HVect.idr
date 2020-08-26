@@ -32,7 +32,7 @@ index (FS j) (x :: xs) = index j xs
 ||| ["string"]
 ||| ```
 public export
-deleteAt : (1 i : Fin (S l)) -> HVect ts -> HVect (deleteAt i ts)
+deleteAt : (1 i : Fin (S l)) -> (1 _ : HVect ts) -> HVect (deleteAt i ts)
 deleteAt FZ (x :: xs) = xs
 deleteAt (FS FZ) (x :: (y :: xs)) = x :: xs
 deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
@@ -44,7 +44,7 @@ deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
 ||| ["firstString", "string"]
 ||| ```
 public export
-replaceAt : (1 i : Fin k) -> t -> HVect ts -> HVect (replaceAt i t ts)
+replaceAt : (1 i : Fin k) -> t -> (1 _ : HVect ts) -> HVect (replaceAt i t ts)
 replaceAt FZ y (x :: xs) = y :: xs
 replaceAt (FS j) y (x :: xs) = x :: replaceAt j y xs
 
@@ -55,7 +55,7 @@ replaceAt (FS j) y (x :: xs) = x :: replaceAt j y xs
 ||| [True, "string"]
 ||| ```
 public export
-updateAt : (1 i : Fin k) -> (index i ts -> t) -> HVect ts -> HVect (replaceAt i t ts)
+updateAt : (1 i : Fin k) -> (index i ts -> t) -> (1 _ : HVect ts) -> HVect (replaceAt i t ts)
 updateAt FZ f (x :: xs) = f x :: xs
 updateAt (FS j) f (x :: xs) = x :: updateAt j f xs
 
@@ -66,7 +66,7 @@ updateAt (FS j) f (x :: xs) = x :: updateAt j f xs
 ||| [1, "string"]
 ||| ```
 public export
-(++) : HVect ts -> HVect us -> HVect (ts ++ us)
+(++) : (1 _ : HVect ts) -> HVect us -> HVect (ts ++ us)
 (++) [] ys = ys
 (++) (x :: xs) ys = x :: (xs ++ ys)
 
@@ -79,11 +79,11 @@ public export
   (x :: xs) == (y :: ys) = x == y && xs == ys
 
 public export
-consInjective1 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> x = y
+consInjective1 : {xs, ys: HVect ts} -> {x, y: a} -> (1 _ : x :: xs = y :: ys) -> x = y
 consInjective1 Refl = Refl
 
 public export
-consInjective2 : {xs, ys: HVect ts} -> {x, y: a} -> x :: xs = y :: ys -> xs = ys
+consInjective2 : {xs, ys: HVect ts} -> {x, y: a} -> (1 _ : x :: xs = y :: ys) -> xs = ys
 consInjective2 Refl = Refl
 
 public export
@@ -121,7 +121,7 @@ public export
 ||| 1
 ||| ```
 public export
-get : HVect ts -> {auto 1 p : Elem t ts} -> t
+get : (1 _ : HVect ts) -> {auto 1 p : Elem t ts} -> t
 get (x :: xs) {p = Here} = x
 get (x :: xs) {p = (There p')} = get xs
 
@@ -132,7 +132,7 @@ get (x :: xs) {p = (There p')} = get xs
 ||| [2, "string"]
 ||| ```
 public export
-put : t -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
+put : t -> (1 _ : HVect ts) -> {auto 1 p : Elem t ts} -> HVect ts
 put y (x :: xs) {p = Here} = y :: xs
 put y (x :: xs) {p = (There p')} = x :: put y xs
 
@@ -143,7 +143,7 @@ put y (x :: xs) {p = (There p')} = x :: put y xs
 ||| [True, "string"]
 ||| ```
 public export
-htPut : u -> HVect ts -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
+htPut : u -> (1 _ : HVect ts) -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
 htPut y (x :: xs) {p = Here} = y :: xs
 htPut y (x :: xs) {p = There p'} = x :: htPut y xs
 
@@ -154,7 +154,7 @@ htPut y (x :: xs) {p = There p'} = x :: htPut y xs
 ||| [1, "hello world!"]
 ||| ```
 public export
-update : (t -> t) -> HVect ts -> {auto 1 p : Elem t ts} -> HVect ts
+update : (t -> t) -> (1 _ : HVect ts) -> {auto 1 p : Elem t ts} -> HVect ts
 update f (x :: xs) {p = Here} = f x :: xs
 update f (x :: xs) {p = There p'} = x :: update f xs
 
@@ -165,6 +165,6 @@ update f (x :: xs) {p = There p'} = x :: update f xs
 ||| [1, 2]
 ||| ```
 public export
-htUpdate : (t -> u) -> HVect ts -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
+htUpdate : (t -> u) -> (1 _ : HVect ts) -> {auto 1 p : Elem t ts} -> HVect (replaceByElem ts p u)
 htUpdate f (x :: xs) {p = Here} = f x :: xs
 htUpdate f (x :: xs) {p = (There p')} = x :: htUpdate f xs
