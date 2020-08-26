@@ -24,7 +24,7 @@ import Data.NameMap
 findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
 findPLetRenames (Bind fc n (PLet _ c (Local _ _ idx p) ty) sc)
-    = case nameAt idx p of
+    = case nameAt p of
            x@(MN _ _) => (x, (c, n)) :: findPLetRenames sc
            _ => findPLetRenames sc
 findPLetRenames (Bind fc n _ sc) = findPLetRenames sc

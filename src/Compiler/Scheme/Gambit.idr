@@ -211,7 +211,7 @@ cCall fc cfn fnWrapName clib args ret
          let body = setBoxes ++ "\n" ++ call
 
          pure $ case ret of -- XXX
-                     CFIORes _ => (handleRet retType body, wrapDeclarations) 
+                     CFIORes _ => (handleRet retType body, wrapDeclarations)
                      _ => (body, wrapDeclarations)
   where
     mkNs : Int -> List CFType -> List (Maybe String)
@@ -387,7 +387,7 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++ 
+         let cmd = gsc ++
                    " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
                    (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd

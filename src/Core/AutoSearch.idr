@@ -175,17 +175,18 @@ exactlyOne {vars} fc env top target all
 -- because something is apparently available now, it will be available by the
 -- time we get to linearity checking.
 -- It's also fine to use anything if we're working at multiplicity 0
-getAllEnv : {vars : _} ->
-            FC -> RigCount -> (done : List Name) ->
-            Env Term vars -> List (Term (done ++ vars), Term (done ++ vars))
-getAllEnv fc rigc done [] = []
-getAllEnv {vars = v :: vs} fc rigc done (b :: env)
-   = let rest = getAllEnv fc rigc (done ++ [v]) env in
+getAllEnv : FC -> RigCount ->
+            SizeOf done ->
+            Env Term vars ->
+            List (Term (done ++ vars), Term (done ++ vars))
+getAllEnv fc rigc p [] = []
+getAllEnv {vars = v :: vs} {done} fc rigc p (b :: env)
+   = let rest = getAllEnv fc rigc (sucR p) env in
          if multiplicity b == top || isErased rigc
-            then let MkVar p = weakenVar {name=v} {inner=v :: vs} done First in
-                     (Local (binderLoc b) Nothing _ p,
+            then let MkVar var = weakenVar p (MkVar First) in
+                     (Local (binderLoc b) Nothing _ var,
                        rewrite appendAssociative done [v] vs in
-                          weakenNs (done ++ [v]) (binderType b)) ::
+                          weakenNs (sucR p) (binderType b)) ::
                                rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
 
@@ -338,7 +339,7 @@ searchLocal : {vars : _} ->
 searchLocal fc rig defaults trying depth def top env target
     = let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                              top env t target)
-                      (getAllEnv fc rig [] env) in
+                      (getAllEnv fc rig zero env) in
           exactlyOne fc env top target elabs
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
