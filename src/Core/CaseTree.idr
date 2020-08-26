@@ -82,8 +82,8 @@ mutual
   export
   eqTree : CaseTree vs -> CaseTree vs' -> Bool
   eqTree (Case i _ _ alts) (Case i' _ _ alts')
-      = i == i
-       && length alts == length alts
+      = i == i'
+       && length alts == length alts'
        && allTrue (zipWith eqAlt alts alts')
   eqTree (STerm _ t) (STerm _ t') = eqTerm t t'
   eqTree (Unmatched _) (Unmatched _) = True
