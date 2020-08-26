@@ -73,11 +73,11 @@ data LiftedDef : Type where
 mutual
   export
   {vs : _} -> Show (Lifted vs) where
-    show (LLocal {idx} _ p) = "!" ++ show (nameAt idx p)
+    show (LLocal {idx} _ p) = "!" ++ show (nameAt p)
     show (LAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (LApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -102,7 +102,7 @@ mutual
   export
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export

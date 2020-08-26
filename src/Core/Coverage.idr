@@ -168,7 +168,7 @@ mkAlt : {vars : _} ->
         FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
 mkAlt fc sc (cn, t, ar)
     = ConCase cn t (map (MN "m") (take ar [0..]))
-              (weakenNs _ (emptyRHS fc sc))
+              (weakenNs (map take) (emptyRHS fc sc))
 
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
 altMatch _ (DefaultCase _) = True
@@ -230,12 +230,10 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (getName v, t)
 
-weakenNs : {vars : _} ->
-           (args : List Name) -> KnownVars vars a -> KnownVars (args ++ vars) a
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
-weakenNs {vars} args ((MkVar p, t) :: xs)
-  = (insertVarNames _ {outer = []} {ns=args} {inner=vars} p, t)
-         :: weakenNs args xs
+weakenNs args ((v, t) :: xs)
+  = (weakenNs args v, t) :: weakenNs args xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
@@ -323,17 +321,19 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt : KnownVars vars (List Int) ->
                   CaseAlt vars -> Core (List (List ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
-        = do let con = Ref fc (DataCon t (length args)) n
+        = do let l = mkSizeOf args
+             let con = Ref fc (DataCon t (size l)) n
              let ps' = map (substName var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs args ((MkVar el, t) :: known))
-                               (weakenNs args not') ps' sc
+             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
+                               (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let ps' = map (substName var (TDelay fc LUnknown
+        = let l = mkSizeOf [t, a] in
+          let ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs [t,a] known) (weakenNs [t,a] not')
+              buildArgs fc defs (weakenNs l known) (weakenNs l not')
                                 ps' sc
     buildArgAlt not' (ConstCase c sc)
         = do let ps' = map (substName var (PrimVal fc c)) ps

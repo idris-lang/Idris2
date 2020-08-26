@@ -135,7 +135,7 @@ mutual
               Env Term vars -> Term vars ->
               Core (RawImp, Glued vars)
   unelabTy' umode env (Local fc _ idx p)
-      = pure (IVar fc (nameAt idx p), gnf env (binderType (getBinder p env)))
+      = pure (IVar fc (nameAt p), gnf env (binderType (getBinder p env)))
   unelabTy' umode env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
@@ -308,7 +308,7 @@ unelab env (Meta fc n i args)
          pure (IHole fc mkn)
   where
     toName : Term vars -> Maybe Name
-    toName (Local _ _ idx p) = Just (nameAt idx p)
+    toName (Local _ _ idx p) = Just (nameAt p)
     toName _ = Nothing
 
     showNScope : List Name -> String

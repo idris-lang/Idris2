@@ -14,7 +14,7 @@ mutual
   public export
   data CaseTree : List Name -> Type where
        ||| case x return scTy of { p1 => e1 ; ... }
-       Case : {name, vars : _} ->
+       Case : {name : _} ->
               (idx : Nat) ->
               (0 p : IsVar name idx vars) ->
               (scTy : Term vars) -> List (CaseAlt vars) ->
@@ -113,38 +113,39 @@ Show Pat where
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
 
 mutual
-  insertCaseNames : {outer, inner : _} ->
-                    (ns : List Name) -> CaseTree (outer ++ inner) ->
+  insertCaseNames : SizeOf outer ->
+                    SizeOf ns ->
+                    CaseTree (outer ++ inner) ->
                     CaseTree (outer ++ (ns ++ inner))
-  insertCaseNames {inner} {outer} ns (Case idx prf scTy alts)
-      = let MkNVar prf' = insertNVarNames {outer} {inner} {ns} _ prf in
-            Case _ prf' (insertNames {outer} ns scTy)
-                (map (insertCaseAltNames {outer} {inner} ns) alts)
-  insertCaseNames {outer} ns (STerm i x) = STerm i (insertNames {outer} ns x)
-  insertCaseNames ns (Unmatched msg) = Unmatched msg
-  insertCaseNames ns Impossible = Impossible
+  insertCaseNames outer ns (Case idx prf scTy alts)
+      = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
+            Case _ prf' (insertNames outer ns scTy)
+                (map (insertCaseAltNames outer ns) alts)
+  insertCaseNames outer ns (STerm i x) = STerm i (insertNames outer ns x)
+  insertCaseNames _ _ (Unmatched msg) = Unmatched msg
+  insertCaseNames _ _ Impossible = Impossible
 
-  insertCaseAltNames : {outer, inner : _} ->
-                       (ns : List Name) ->
+  insertCaseAltNames : SizeOf outer ->
+                       SizeOf ns ->
                        CaseAlt (outer ++ inner) ->
                        CaseAlt (outer ++ (ns ++ inner))
-  insertCaseAltNames {outer} {inner} ns (ConCase x tag args ct)
+  insertCaseAltNames p q (ConCase x tag args ct)
       = ConCase x tag args
            (rewrite appendAssociative args outer (ns ++ inner) in
-                    insertCaseNames {outer = args ++ outer} {inner} ns
+                    insertCaseNames (mkSizeOf args + p) q {inner}
                         (rewrite sym (appendAssociative args outer inner) in
                                  ct))
-  insertCaseAltNames {outer} {inner} ns (DelayCase tyn valn ct)
+  insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
-                  (insertCaseNames {outer = tyn :: valn :: outer} {inner} ns ct)
-  insertCaseAltNames ns (ConstCase x ct)
-      = ConstCase x (insertCaseNames ns ct)
-  insertCaseAltNames ns (DefaultCase ct)
-      = DefaultCase (insertCaseNames ns ct)
+                  (insertCaseNames (suc (suc outer)) ns ct)
+  insertCaseAltNames outer ns (ConstCase x ct)
+      = ConstCase x (insertCaseNames outer ns ct)
+  insertCaseAltNames outer ns (DefaultCase ct)
+      = DefaultCase (insertCaseNames outer ns ct)
 
 export
 Weaken CaseTree where
-  weakenNs ns t = insertCaseNames {outer = []} ns t
+  weakenNs ns t = insertCaseNames zero ns t
 
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->
            NameMap Bool -> CaseTree vars -> NameMap Bool

@@ -114,3 +114,10 @@ export
 Monad Stream where
   s >>= f = diag (map f s)
 
+--------------------------------------------------------------------------------
+-- Properties
+--------------------------------------------------------------------------------
+
+lengthTake : (1 n : Nat) -> (xs : Stream a) -> length (take n xs) = n
+lengthTake Z _ = Refl
+lengthTake (S n) (x :: xs) = cong S (lengthTake n xs)

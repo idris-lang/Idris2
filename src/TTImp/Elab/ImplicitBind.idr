@@ -238,8 +238,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
     tidyName (Nested n inner) = tidyName inner
     tidyName n = n
 
-    getBinds : {new : _} ->
-               (imps : List (Name, Name, ImplBinding vs)) ->
+    getBinds : (imps : List (Name, Name, ImplBinding vs)) ->
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
                (Term (new ++ vs), Term (new ++ vs))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
@@ -251,7 +250,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
                       (Bind fc _ (Pi fc c Implicit bty') tm',
                        TType fc)
                    _ =>
-                      (Bind fc _ (PVar fc c (map (weakenNs new) p) bty') tm',
+                      (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
                        Bind fc _ (PVTy fc c bty') ty')
     getBinds ((n, metan, AsBinding c _ _ bty bpat) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
