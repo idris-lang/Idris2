@@ -15,7 +15,6 @@ import TTImp.TTImp
 
 import Data.List
 import Data.Maybe
-import Data.SortedSet as Set
 
 %default covering
 
