@@ -526,6 +526,15 @@ traverse_ f (x :: xs)
          traverse_ f xs
 
 export
+sequence : List (Core a) -> Core (List a)
+sequence (x :: xs)
+   = do
+        x' <- x
+        xs' <- sequence xs
+        pure (x' :: xs')
+sequence [] = pure []
+
+export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
 traverseList1_ f (x :: xs) = do
   f x

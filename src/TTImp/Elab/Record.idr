@@ -250,67 +250,41 @@ elabInstance env fc n fs
          defs <- get Ctxt
          names@(_ :: _) <- getConNames defs n
               | _ => throw (NotRecordType fc n)
-         names@(_ :: _) <- filterWith (sequenceM . bimap pure id)
-                              <$> (sequence' $ map (sequence . bimap pure (findFieldsExplicit defs) . dup) names)
+         names@(_ :: _) <- mapMaybe (sequenceM . bimap pure id)
+                              <$> (sequence $ map (sequenceCore . bimap pure (findFieldsExplicit defs) . dup) names)
               | _ => throw (GenericMsg fc "No constructor satisfies provided fields.")
-         providedfields <- sequence' $ map getName fs
+         providedfields <- sequence $ map getName fs
          let True = length providedfields == length (nub providedfields)
              | _ => throw (GenericMsg fc "Duplicate fields.")
          let (Right fullname) = disambigConName fc env names providedfields
              | Left err => throw err
          (Just allfields) <- findFieldsExplicit defs fullname
                | _ => throw (NotRecordType fc n)
-         fs' <- sequence' $ map (sequence . bimap getName getExp . dup) fs
-         seqexp <- sequence' $ map (\x => lookupOrElse x fs' (throw $ NotCoveredField fc x)) allfields
+         fs' <- sequence $ map (sequenceCore . bimap getName getExp . dup) fs
+         seqexp <- sequence $ map (\x => [| pure (lookup x fs') `orElse` throw (NotCoveredField fc x) |]) allfields
          pure $ (foldl (IApp fc) (IVar fc fullname) seqexp)
   where
-
-
-    filterWith : forall a, b. (a -> Maybe b) -> List a -> List b
-    filterWith f (x :: xs)
-       = case f x of
-              Just y => y :: filterWith f xs
-              Nothing => filterWith f xs
-    filterWith _ [] = []
-
-
-    sequence' : List (Core a) -> Core (List a)
-    sequence' (x :: xs) = do
-                             x' <- x
-                             xs' <- sequence' xs
-                             pure (x' :: xs')
-    sequence' [] = pure []
-
-    sequence : (Core a, Core b) -> Core (a, b)
-    sequence (x, y) = do
+    sequenceCore : (Core a, Core b) -> Core (a, b) --specialize
+    sequenceCore (x, y) = do
                          x' <- x
                          y' <- y
                          pure (x', y')
 
-    sequenceM : forall a, b, m. Monad m => (m a, m b) -> m (a, b)
+    sequenceM : forall a, b, m. Monad m => (m a, m b) -> m (a, b) --Core is not a monad
     sequenceM (mx, my)
         = do x <- mx
              y <- my
              pure (x, y)
 
-    -- TODO add this to prelude ?
-    dup : forall a. a -> (a, a)
-    dup x = (x, x)
-
-
-    -- TODO add this to contrib ? As an interface
     bimap : forall a, b, a', b'. (a -> a') -> (b -> b') -> (a, b) -> (a', b')
     bimap f g (x, y) = (f x, g y)
 
-
-    -- TODO add this to Data.Maybe ?
     orElse : forall a. Maybe a -> Lazy a -> a
     orElse (Just x) _ = x
     orElse Nothing x = x
 
-    -- TODO add this to Data.List ?
-    lookupOrElse : forall a. Eq a => a -> (xs : List (a, b)) -> Core b -> Core b
-    lookupOrElse x xs def = (pure <$> lookup x xs) `orElse` def
+    subsetOf : forall a. Eq a => List a -> List a -> Bool
+    subsetOf subset set = length (intersect subset set) == length subset
 
     getName : IFieldUpdate -> Core String
     getName (ISetField [name] _) = pure name
@@ -324,10 +298,6 @@ elabInstance env fc n fs
     getConNames defs name
        = do list <- lookupDefName name (gamma defs)
             pure $ map fst list
-
-    -- TODO add this to Data.List ?
-    subsetOf : forall a. Eq a => List a -> List a -> Bool
-    subsetOf subset set = length (intersect subset set) == length subset
 
     findFieldsExplicit : Defs -> Name -> Core (Maybe (List String))
     findFieldsExplicit defs con = pure $ map (map fst) $ map (filter (isNothing . fst . snd)) !(findFields defs con)

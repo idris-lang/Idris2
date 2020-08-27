@@ -17,6 +17,10 @@ Command-line options changes:
 
 Compiler changes:
 
+* Added syntax for record instantiation:
+
+     `record <Constructor> {<field1> = <expr1>, <field2 = <expr2>, ..., <fieldN> = <exprN>}`
+
 * Added primitives to the parsing library used in the compiler to get more precise
   boundaries to the AST nodes `FC`.
 
