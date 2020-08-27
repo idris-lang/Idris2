@@ -342,6 +342,7 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
+    <|> recordInstance fname indents
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")
@@ -619,14 +620,14 @@ mutual
       = do b <- bounds (do keyword "record"
                            symbol "{"
                            commit
-                           fs <- sepBy1 (symbol ",") (field fname indents)
+                           fs <- sepBy1 (symbol ",") (field fname indents True)
                            symbol "}"
                            pure fs)
            pure (PUpdate (boundToFC fname b) b.val)
 
-  field : FileName -> IndentInfo -> Rule PFieldUpdate
-  field fname indents
-      = do path <- map fieldName <$> [| name :: many recFieldCompat |]
+  field : FileName -> IndentInfo -> Bool -> Rule PFieldUpdate
+  field fname indents allowNS
+      = do path <- parseFieldName allowNS
            upd <- (symbol "=" *> pure PSetField)
                       <|>
                   (symbol "$=" *> pure PSetFieldApp)
@@ -641,6 +642,22 @@ mutual
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
       recFieldCompat = dotIdent <|> (symbol "->" *> name)
+
+      parseFieldName : Bool -> Rule (List String)
+      parseFieldName True  = map fieldName <$> [| name :: many recFieldCompat |]
+      parseFieldName False = map fieldName <$> [| name :: pure [] |]
+
+  recordInstance : FileName -> IndentInfo -> Rule PTerm
+  recordInstance fname indents
+      = do b <- bounds (do keyword "record"
+                           n <- name
+                           symbol "{"
+                           commit
+                           fs <- sepBy1 (symbol ",") (field fname indents False)
+                           symbol "}"
+                           pure (n, fs))
+           (name, fs) <- pure b.val
+           pure (PInstance (boundToFC fname b) name fs)
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents

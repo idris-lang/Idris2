@@ -93,6 +93,7 @@ data Error : Type where
      RecordTypeNeeded : {vars : _} ->
                         FC -> Env Term vars -> Error
      NotRecordField : FC -> String -> Maybe Name -> Error
+     NotCoveredField : FC -> String -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
      InvalidImplicits : {vars : _} ->
@@ -237,6 +238,8 @@ Show Error where
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
       = show fc ++ ":Record type " ++ show ty ++ " has no field " ++ fld
+  show (NotCoveredField fc fieldname)
+      = show fc ++ ":Field not covered " ++ fieldname
   show (NotRecordType fc ty)
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
@@ -346,6 +349,7 @@ getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
 getErrorLoc (RecordTypeNeeded loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
+getErrorLoc (NotCoveredField loc _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
 getErrorLoc (InvalidImplicits loc _ _ _) = Just loc
@@ -450,6 +454,16 @@ export %inline
 export %inline
 pure : a -> Core a
 pure x = MkCore (pure (pure x))
+
+infixr 1 <=<
+
+-- Right-to-left Kleisli composition of monads (specialised)
+export %inline
+(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
+(<=<) g f x
+    = do y <- f x
+         z <- g y
+         pure z
 
 export
 (<*>) : Core (a -> b) -> Core a -> Core b

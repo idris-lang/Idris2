@@ -214,6 +214,8 @@ mutual
           let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> go startPrec sc
       go d (PUpdate _ fs) =
         parenthesise (d > appPrec) $ group $ record_ <++> braces (vsep $ punctuate comma (prettyUpdate <$> fs))
+      go d (PInstance _ n fs) =
+        parenthesise (d > appPrec) $ group $ record_ <++> pretty n <++> braces (vsep $ punctuate comma (prettyUpdate <$> fs))
       go d (PApp _ f a) = parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> go appPrec a
       go d (PWithApp _ f a) = go d f <++> pipe <++> go d a
       go d (PDelayed _ LInf ty) = parenthesise (d > appPrec) $ "Inf" <++> go appPrec ty

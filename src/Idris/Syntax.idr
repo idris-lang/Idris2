@@ -46,6 +46,7 @@ mutual
        PCase : FC -> PTerm -> List PClause -> PTerm
        PLocal : FC -> List PDecl -> (scope : PTerm) -> PTerm
        PUpdate : FC -> List PFieldUpdate -> PTerm
+       PInstance : FC -> Name -> List PFieldUpdate -> PTerm
        PApp : FC -> PTerm -> PTerm -> PTerm
        PWithApp : FC -> PTerm -> PTerm -> PTerm
        PImplicitApp : FC -> PTerm -> (argn : Maybe Name) -> PTerm -> PTerm
@@ -113,6 +114,7 @@ mutual
   getPTermLoc (PCase fc _ _) = fc
   getPTermLoc (PLocal fc _ _) = fc
   getPTermLoc (PUpdate fc _) = fc
+  getPTermLoc (PInstance fc _ _) = fc
   getPTermLoc (PApp fc _ _) = fc
   getPTermLoc (PWithApp fc _ _) = fc
   getPTermLoc (PImplicitApp fc _ _ _) = fc
@@ -534,6 +536,8 @@ mutual
         = "let { << definitions >>  } in " ++ showPrec d sc
     showPrec d (PUpdate _ fs)
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
+    showPrec d (PInstance _ n fs)
+        = "record " ++ showPrec d n ++ " { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
     showPrec d (PImplicitApp _ f Nothing a)
@@ -796,6 +800,9 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm (PUpdate fc xs) =
       PUpdate fc <$> goPFieldUpdates xs
+      >>= f
+    goPTerm (PInstance fc n xs) =
+      PInstance fc n <$> goPFieldUpdates xs
       >>= f
     goPTerm (PApp fc x y) =
       PApp fc <$> goPTerm x

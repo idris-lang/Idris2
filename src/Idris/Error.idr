@@ -305,6 +305,8 @@ perror (NotRecordField fc fld Nothing)
 perror (NotRecordField fc fld (Just ty))
     = pure $ errorDesc (reflow "Record type" <++> code (pretty !(getFullName ty)) <++> reflow "has no field"
         <++> code (pretty fld) <+> dot) <+> line <+> !(ploc fc)
+perror (NotCoveredField fc fld)
+    = pure $ errorDesc (reflow "Field not covered" <++> code (pretty fld) <+> dot) <+> line <+> !(ploc fc)
 perror (NotRecordType fc ty)
     = pure $ errorDesc (code (pretty !(getFullName ty)) <++> reflow "is not a record type.") <+> line <+> !(ploc fc)
 perror (IncompatibleFieldUpdate fc flds)

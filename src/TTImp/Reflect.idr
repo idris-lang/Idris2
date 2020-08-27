@@ -476,6 +476,11 @@ mutual
              ds' <- reflect fc defs lhs env ds
              sc' <- reflect fc defs lhs env sc
              appCon fc defs (reflectionttimp "IUpdate") [fc', ds', sc']
+    reflect fc defs lhs env (IInstance tfc n ds)
+        = do fc' <- reflect fc defs lhs env tfc
+             n'  <- reflect fc defs lhs env n
+             ds' <- reflect fc defs lhs env ds
+             appCon fc defs (reflectionttimp "IInstance") [fc', n', ds']
     reflect fc defs lhs env (IApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f

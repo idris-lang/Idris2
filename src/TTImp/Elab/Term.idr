@@ -152,6 +152,8 @@ checkTerm rig elabinfo nest env (ICaseLocal fc uname iname args scope) exp
     = checkCaseLocal rig elabinfo nest env fc uname iname args scope exp
 checkTerm rig elabinfo nest env (IUpdate fc upds rec) exp
     = checkUpdate rig elabinfo nest env fc upds rec exp
+checkTerm rig elabinfo nest env (IInstance fc n fs) exp
+    = checkTerm rig elabinfo nest env !(elabInstance env fc n fs) exp
 checkTerm rig elabinfo nest env (IApp fc fn arg) exp
     = checkApp rig elabinfo nest env fc fn [arg] [] exp
 checkTerm rig elabinfo nest env (IWithApp fc fn arg) exp

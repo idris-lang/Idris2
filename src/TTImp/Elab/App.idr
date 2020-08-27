@@ -11,6 +11,7 @@ import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
+import TTImp.Elab.Record
 import TTImp.TTImp
 
 import Data.List
@@ -636,6 +637,8 @@ checkApp rig elabinfo nest env fc (IApp fc' fn arg) expargs impargs exp
    = checkApp rig elabinfo nest env fc' fn (arg :: expargs) impargs exp
 checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs exp
    = checkApp rig elabinfo nest env fc' fn expargs ((nm, arg) :: impargs) exp
+checkApp rig elabinfo nest env fc (IInstance fc' name fs) expargs impargs exp
+   = checkApp rig elabinfo nest env fc !(elabInstance env fc' name fs) expargs impargs exp
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in

@@ -189,6 +189,8 @@ mutual
   desugarB side ps (PUpdate fc fs)
       = desugarB side ps (PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc)
                             (PApp fc (PUpdate fc fs) (PRef fc (MN "rec" 0))))
+  desugarB side ps (PInstance fc n fs)
+      = pure $ IInstance fc n !(traverse (desugarUpdate side ps) fs)
   desugarB side ps (PApp fc x y)
       = pure $ IApp fc !(desugarB side ps x) !(desugarB side ps y)
   desugarB side ps (PWithApp fc x y)

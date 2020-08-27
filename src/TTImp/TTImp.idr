@@ -65,6 +65,7 @@ mutual
                     (args : List Name) -> RawImp -> RawImp
 
        IUpdate : FC -> List IFieldUpdate -> RawImp -> RawImp
+       IInstance : FC -> Name -> List IFieldUpdate -> RawImp
 
        IApp : FC -> RawImp -> RawImp -> RawImp
        IImplicitApp : FC -> RawImp -> Maybe Name -> RawImp -> RawImp
@@ -143,6 +144,8 @@ mutual
                ++ " " ++ show args ++ ") " ++ show sc ++ ")"
       show (IUpdate _ flds rec)
          = "(%record " ++ showSep ", " (map show flds) ++ " " ++ show rec ++ ")"
+      show (IInstance _ n flds)
+         = "(%recordinst " ++ show n ++ " " ++ showSep ", " (map show flds) ++ ")"
 
       show (IApp fc f a)
          = "(" ++ show f ++ " " ++ show a ++ ")"
@@ -582,6 +585,7 @@ getFC (ICase x _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x
+getFC (IInstance x _ _) = x
 getFC (IApp x _ _) = x
 getFC (IImplicitApp x _ _ _) = x
 getFC (IWithApp x _ _) = x
@@ -700,6 +704,8 @@ mutual
         = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
         = do tag 30; toBuf b ns; toBuf b rhs
+    toBuf b (IInstance fc n fs)
+        = do tag 31; toBuf b fc; toBuf b n; toBuf b fs
 
     fromBuf b
         = case !getTag of
@@ -790,6 +796,10 @@ mutual
                         ns <- fromBuf b
                         rhs <- fromBuf b
                         pure (IWithUnambigNames fc ns rhs)
+               31 => do fc <- fromBuf b
+                        n <- fromBuf b
+                        fs <- fromBuf b
+                        pure (IInstance fc n fs)
                _ => corrupt "RawImp"
 
   export
