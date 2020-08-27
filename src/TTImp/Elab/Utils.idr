@@ -12,7 +12,8 @@ import TTImp.TTImp
 
 %default covering
 
-detagSafe : Defs -> NF [] -> Core Bool
+detagSafe : {auto c : Ref Ctxt Defs} ->
+            Defs -> NF [] -> Core Bool
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
@@ -30,7 +31,8 @@ detagSafe defs (NTCon _ n _ _ args)
         = elem i ns || notErased (i + 1) ns rest
 detagSafe defs _ = pure False
 
-findErasedFrom : Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
+findErasedFrom : {auto c : Ref Ctxt Defs} ->
+                 Defs -> Nat -> NF [] -> Core (List Nat, List Nat)
 findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc True' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable

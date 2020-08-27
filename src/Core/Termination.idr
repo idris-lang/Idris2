@@ -553,7 +553,8 @@ checkTerminating loc n
                     pure tot'
               t => pure t
 
-nameIn : Defs -> List Name -> NF [] -> Core Bool
+nameIn : {auto c : Ref Ctxt Defs} ->
+         Defs -> List Name -> NF [] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns (binderType b))
          then pure True
@@ -574,7 +575,8 @@ nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
 -- the given type names
-posArg : Defs -> List Name -> NF [] -> Core Terminating
+posArg : {auto c : Ref Ctxt Defs} ->
+         Defs -> List Name -> NF [] -> Core Terminating
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
 posArg defs tyns (NTCon _ tc _ _ args)
@@ -602,7 +604,8 @@ posArg defs tyns (NBind fc x (Pi _ _ e ty) sc)
                  posArg defs tyns sc'
 posArg defs tyn _ = pure IsTerminating
 
-checkPosArgs : Defs -> List Name -> NF [] -> Core Terminating
+checkPosArgs : {auto c : Ref Ctxt Defs} ->
+               Defs -> List Name -> NF [] -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns ty) of
            IsTerminating =>

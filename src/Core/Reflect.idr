@@ -12,7 +12,8 @@ import Core.Value
 
 public export
 interface Reify a where
-  reify : {vars : _} ->
+  reify : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> NF vars -> Core a
 
 public export

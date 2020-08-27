@@ -41,16 +41,18 @@ getNF {c} (MkGlue _ _ nf) = nf c
 Stack : List Name -> Type
 Stack vars = List (Closure vars)
 
-evalWithOpts : {free, vars : _} ->
+evalWithOpts : {auto c : Ref Ctxt Defs} ->
+               {free, vars : _} ->
                Defs -> EvalOpts ->
                Env Term free -> LocalEnv free vars ->
                Term (vars ++ free) -> Stack free -> Core (NF free)
 
 export
-evalClosure : {free : _} -> Defs -> Closure free -> Core (NF free)
+evalClosure : {auto c : Ref Ctxt Defs} ->
+              {free : _} -> Defs -> Closure free -> Core (NF free)
 
 export
-evalArg : {free : _} -> Defs -> Closure free -> Core (NF free)
+evalArg : {auto c : Ref Ctxt Defs} -> {free : _} -> Defs -> Closure free -> Core (NF free)
 evalArg defs c = evalClosure defs c
 
 export
@@ -93,7 +95,8 @@ data CaseResult a
 
 parameters (defs : Defs, topopts : EvalOpts)
   mutual
-    eval : {free, vars : _} ->
+    eval : {auto c : Ref Ctxt Defs} ->
+           {free, vars : _} ->
            Env Term free -> LocalEnv free vars ->
            Term (vars ++ free) -> Stack free -> Core (NF free)
     eval env locs (Local fc mrig idx prf) stk
@@ -147,7 +150,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Erased fc i) stk = pure $ NErased fc i
     eval env locs (TType fc) stk = pure $ NType fc
 
-    evalLocClosure : {free : _} ->
+    evalLocClosure : {auto c : Ref Ctxt Defs} ->
+                     {free : _} ->
                      Env Term free ->
                      FC -> Maybe Bool ->
                      Stack free ->
@@ -173,7 +177,8 @@ parameters (defs : Defs, topopts : EvalOpts)
             = pure $ NTCon fc n t a (args ++ stk)
         applyToStack nf _ = pure nf
 
-    evalLocal : {free, vars : _} ->
+    evalLocal : {auto c : Ref Ctxt Defs} ->
+                {free, vars : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
                 (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
@@ -204,7 +209,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     updateLocal (S idx) (Later p) (x :: locs) nf = x :: updateLocal idx p locs nf
     updateLocal _ _ locs nf = locs
 
-    evalMeta : {free : _} ->
+    evalMeta : {auto c : Ref Ctxt Defs} ->
+               {free : _} ->
                Env Term free ->
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
@@ -212,7 +218,8 @@ parameters (defs : Defs, topopts : EvalOpts)
         = evalRef env True fc Func (Resolved i) (args ++ stk)
                   (NApp fc (NMeta nm i args) stk)
 
-    evalRef : {free : _} ->
+    evalRef : {auto c : Ref Ctxt Defs} ->
+              {free : _} ->
               Env Term free ->
               (isMeta : Bool) ->
               FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
@@ -223,19 +230,22 @@ parameters (defs : Defs, topopts : EvalOpts)
         = pure $ NTCon fc fn tag arity stk
     evalRef env meta fc Bound fn stk def
         = pure def
-    evalRef env meta fc nt n stk def
+    evalRef env meta fc nt@Func n stk def
         = do Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
-             let redok = evalAll topopts ||
-                         reducibleInAny (currentNS defs :: nestedNS defs)
-                                        (fullname res)
-                                        (visibility res)
+             let redok1 = evalAll topopts
+             let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
+                                         (fullname res)
+                                         (visibility res)
+             let redok = redok1 || redok2
+             unless redok2 $ logC "eval.stuck" 5 $ pure $ "Stuck function: " ++ show !(toFullNames n)
              if redok
                 then do
                    Just opts' <- useMeta (noCycles res) fc n defs topopts
                         | Nothing => pure def
                    Just opts' <- updateLimit nt n opts'
-                        | Nothing => pure def -- name is past reduction limit
+                        | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
+                                        pure def -- name is past reduction limit
                    evalDef env opts' meta fc
                            (multiplicity res) (definition res) (flags res) stk def
                 else pure def
@@ -249,7 +259,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
     getCaseBound (arg :: args) (n :: ns) loc = (arg ::) <$> getCaseBound args ns loc
 
-    evalConAlt : {more, free : _} ->
+    evalConAlt : {auto c : Ref Ctxt Defs} ->
+                 {more, free : _} ->
                  Env Term free ->
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
@@ -262,7 +273,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                    | Nothing => pure GotStuck
               evalTree env bound opts fc stk sc
 
-    tryAlt : {free, more : _} ->
+    tryAlt : {auto c : Ref Ctxt Defs} ->
+             {free, more : _} ->
              Env Term free ->
              LocalEnv free more -> EvalOpts -> FC ->
              Stack free -> NF free -> CaseAlt more ->
@@ -314,7 +326,8 @@ parameters (defs : Defs, topopts : EvalOpts)
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 
-    findAlt : {args, free : _} ->
+    findAlt : {auto c : Ref Ctxt Defs} ->
+              {args, free : _} ->
               Env Term free ->
               LocalEnv free args -> EvalOpts -> FC ->
               Stack free -> NF free -> List (CaseAlt args) ->
@@ -326,7 +339,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                    | GotStuck => pure GotStuck
               pure (Result val)
 
-    evalTree : {args, free : _} -> Env Term free -> LocalEnv free args ->
+    evalTree : {auto c : Ref Ctxt Defs} ->
+               {args, free : _} -> Env Term free -> LocalEnv free args ->
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
                Core (CaseResult (NF free))
@@ -370,7 +384,8 @@ parameters (defs : Defs, topopts : EvalOpts)
          = do (loc', stk') <- argsFromStack ns args
               pure (arg :: loc', stk')
 
-    evalOp : {arity, free : _} ->
+    evalOp : {auto c : Ref Ctxt Defs} ->
+             {arity, free : _} ->
              (Vect arity (NF free) -> Maybe (NF free)) ->
              Stack free -> (def : Lazy (NF free)) ->
              Core (NF free)
@@ -389,7 +404,8 @@ parameters (defs : Defs, topopts : EvalOpts)
         evalAll [] = pure []
         evalAll (c :: cs) = pure $ !(evalClosure defs c) :: !(evalAll cs)
 
-    evalDef : {free : _} ->
+    evalDef : {auto c : Ref Ctxt Defs} ->
+              {free : _} ->
               Env Term free -> EvalOpts ->
               (isMeta : Bool) -> FC ->
               RigCount -> Def -> List DefFlag ->
@@ -432,12 +448,14 @@ evalClosure defs (MkClosure opts locs env tm)
 evalClosure defs (MkNFClosure nf) = pure nf
 
 export
-nf : {vars : _} ->
+nf : {auto c : Ref Ctxt Defs} ->
+     {vars : _} ->
      Defs -> Env Term vars -> Term vars -> Core (NF vars)
 nf defs env tm = eval defs defaultOpts env [] tm []
 
 export
-nfOpts : {vars : _} ->
+nfOpts : {auto c : Ref Ctxt Defs} ->
+         {vars : _} ->
          EvalOpts -> Defs -> Env Term vars -> Term vars -> Core (NF vars)
 nfOpts opts defs env tm = eval defs opts env [] tm []
 
@@ -472,9 +490,11 @@ data QVar : Type where
 
 public export
 interface Quote (tm : List Name -> Type) where
-    quote : {vars : _} ->
+    quote : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
-    quoteGen : {vars : _} ->
+    quoteGen : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Ref QVar Int -> Defs -> Env Term vars -> tm vars -> Core (Term vars)
 
     quote defs env tm
@@ -488,7 +508,8 @@ genName n
          pure (MN n i)
 
 mutual
-  quoteArgs : {bound, free : _} ->
+  quoteArgs : {auto c : Ref Ctxt Defs} ->
+              {bound, free : _} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (bound ++ free)))
@@ -497,7 +518,8 @@ mutual
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
                 !(quoteArgs q defs bounds env args))
 
-  quoteHead : {bound, free : _} ->
+  quoteHead : {auto c : Ref Ctxt Defs} ->
+              {bound, free : _} ->
               Ref QVar Int -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
               Core (Term (bound ++ free))
@@ -533,7 +555,8 @@ mutual
       = do args' <- quoteArgs q defs bounds env args
            pure $ Meta fc n i args'
 
-  quotePi : {bound, free : _} ->
+  quotePi : {auto c : Ref Ctxt Defs} ->
+            {bound, free : _} ->
             Ref QVar Int -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (NF free) ->
             Core (PiInfo (Term (bound ++ free)))
@@ -544,7 +567,8 @@ mutual
       = do t' <- quoteGenNF q defs bounds env t
            pure (DefImplicit t')
 
-  quoteBinder : {bound, free : _} ->
+  quoteBinder : {auto c : Ref Ctxt Defs} ->
+                {bound, free : _} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (NF free) ->
                 Core (Binder (Term (bound ++ free)))
@@ -572,7 +596,8 @@ mutual
       = do ty' <- quoteGenNF q defs bounds env ty
            pure (PVTy fc r ty')
 
-  quoteGenNF : {bound, vars : _} ->
+  quoteGenNF : {auto c : Ref Ctxt Defs} ->
+               {bound, vars : _} ->
                Ref QVar Int ->
                Defs -> Bounds bound ->
                Env Term vars -> NF vars -> Core (Term (bound ++ vars))
@@ -637,7 +662,8 @@ Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
 export
-glueBack : {vars : _} ->
+glueBack : {auto c : Ref Ctxt Defs} ->
+           {vars : _} ->
            Defs -> Env Term vars -> NF vars -> Glued vars
 glueBack defs env nf
     = MkGlue False
@@ -646,24 +672,28 @@ glueBack defs env nf
              (const (pure nf))
 
 export
-normalise : {free : _} ->
+normalise : {auto c : Ref Ctxt Defs} ->
+            {free : _} ->
             Defs -> Env Term free -> Term free -> Core (Term free)
 normalise defs env tm = quote defs env !(nf defs env tm)
 
 export
-normaliseOpts : {free : _} ->
+normaliseOpts : {auto c : Ref Ctxt Defs} ->
+                {free : _} ->
                 EvalOpts -> Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseOpts opts defs env tm
     = quote defs env !(nfOpts opts defs env tm)
 
 export
-normaliseHoles : {free : _} ->
+normaliseHoles : {auto c : Ref Ctxt Defs} ->
+                 {free : _} ->
                  Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseHoles defs env tm
     = quote defs env !(nfOpts withHoles defs env tm)
 
 export
-normaliseLHS : {free : _} ->
+normaliseLHS : {auto c : Ref Ctxt Defs} ->
+               {free : _} ->
                Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseLHS defs env (Bind fc n b sc)
     = pure $ Bind fc n b !(normaliseLHS defs (b :: env) sc)
@@ -671,13 +701,15 @@ normaliseLHS defs env tm
     = quote defs env !(nfOpts onLHS defs env tm)
 
 export
-normaliseArgHoles : {free : _} ->
+normaliseArgHoles : {auto c : Ref Ctxt Defs} ->
+                    {free : _} ->
                     Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseArgHoles defs env tm
     = quote defs env !(nfOpts withArgHoles defs env tm)
 
 export
-normaliseAll : {free : _} ->
+normaliseAll : {auto c : Ref Ctxt Defs} ->
+               {free : _} ->
                Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseAll defs env tm
     = quote defs env !(nfOpts withAll defs env tm)
@@ -686,7 +718,8 @@ normaliseAll defs env tm
 -- binders is the slow part of normalisation so whenever we can avoid it, it's
 -- a big win
 export
-normaliseScope : {free : _} ->
+normaliseScope : {auto c : Ref Ctxt Defs} ->
+                 {free : _} ->
                  Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
@@ -694,10 +727,12 @@ normaliseScope defs env tm = normalise defs env tm
 
 public export
 interface Convert (tm : List Name -> Type) where
-  convert : {vars : _} ->
+  convert : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
-  convGen : {vars : _} ->
+  convGen : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             Ref QVar Int ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
@@ -748,7 +783,8 @@ tryUpdate ms (Erased fc i) = pure $ Erased fc i
 tryUpdate ms (TType fc) = pure $ TType fc
 
 mutual
-  allConv : {vars : _} ->
+  allConv : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
   allConv q defs env [] [] = pure True
@@ -758,7 +794,8 @@ mutual
 
   -- If the case trees match in structure, get the list of variables which
   -- have to match in the call
-  getMatchingVarAlt : {args, args' : _} ->
+  getMatchingVarAlt : {auto c : Ref Ctxt Defs} ->
+                      {args, args' : _} ->
                       Defs ->
                       List (Var args, Var args') ->
                       CaseAlt args -> CaseAlt args' ->
@@ -808,7 +845,8 @@ mutual
       = getMatchingVars defs ms t t'
   getMatchingVarAlt defs _ _ _ = pure Nothing
 
-  getMatchingVarAlts : {args, args' : _} ->
+  getMatchingVarAlts : {auto c : Ref Ctxt Defs} ->
+                       {args, args' : _} ->
                        Defs ->
                        List (Var args, Var args') ->
                        List (CaseAlt args) -> List (CaseAlt args') ->
@@ -820,7 +858,8 @@ mutual
            getMatchingVarAlts defs ms as as'
   getMatchingVarAlts defs _ _ _ = pure Nothing
 
-  getMatchingVars : {args, args' : _} ->
+  getMatchingVars : {auto c : Ref Ctxt Defs} ->
+                    {args, args' : _} ->
                     Defs ->
                     List (Var args, Var args') ->
                     CaseTree args -> CaseTree args' ->
@@ -837,7 +876,8 @@ mutual
   getMatchingVars defs ms Impossible Impossible = pure (Just ms)
   getMatchingVars _ _ _ _ = pure Nothing
 
-  chkSameDefs : {vars : _} ->
+  chkSameDefs : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
                 Name -> Name ->
                 List (Closure vars) -> List (Closure vars) -> Core Bool
@@ -875,7 +915,8 @@ mutual
 
   -- If two names are standing for case blocks, check the blocks originate
   -- from the same place, and have the same scrutinee
-  chkConvCaseBlock : {vars : _} ->
+  chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
+                     {vars : _} ->
                      FC -> Ref QVar Int -> Defs -> Env Term vars ->
                      NHead vars -> List (Closure vars) ->
                      NHead vars -> List (Closure vars) -> Core Bool
@@ -923,7 +964,8 @@ mutual
       getScrutinee _ _ = Nothing
   chkConvCaseBlock _ _ _ _ _ _ _ _ = pure False
 
-  chkConvHead : {vars : _} ->
+  chkConvHead : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
                 NHead vars -> NHead vars -> Core Bool
   chkConvHead q defs env (NLocal _ idx _) (NLocal _ idx' _) = pure $ idx == idx'
@@ -939,7 +981,8 @@ mutual
   subRig x y = (isLinear x && isRigOther y) ||
                x == y
 
-  convBinders : {vars : _} ->
+  convBinders : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
                 Binder (NF vars) -> Binder (NF vars) -> Core Bool
   convBinders q defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
@@ -1042,7 +1085,8 @@ getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
 getValArity defs env val = pure 0
 
 export
-getArity : {vars : _} ->
+getArity : {auto c : Ref Ctxt Defs} ->
+           {vars : _} ->
            Defs -> Env Term vars -> Term vars -> Core Nat
 getArity defs env tm = getValArity defs env !(nf defs env tm)
 
@@ -1143,7 +1187,8 @@ logEnv str n msg env
                              show x) bs (binderType b)
              dumpEnv bs
 
-replace' : {vars : _} ->
+replace' : {auto c : Ref Ctxt Defs} ->
+           {vars : _} ->
            Int -> Defs -> Env Term vars ->
            (lhs : NF vars) -> (parg : Term vars) -> (exp : NF vars) ->
            Core (Term vars)
@@ -1203,7 +1248,8 @@ replace' {vars} tmpi defs env lhs parg tm
                    quote empty env tm
 
 export
-replace : {vars : _} ->
+replace : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> Env Term vars ->
           (orig : NF vars) -> (new : Term vars) -> (tm : NF vars) ->
           Core (Term vars)

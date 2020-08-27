@@ -33,7 +33,8 @@ import Data.NameMap
 %default covering
 
 mutual
-  mismatchNF : {vars : _} ->
+  mismatchNF : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
@@ -49,7 +50,8 @@ mutual
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
   mismatchNF _ _ _ = pure False
 
-  mismatch : {vars : _} ->
+  mismatch : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
              Defs -> (Closure vars, Closure vars) -> Core Bool
   mismatch defs (x, y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
@@ -58,7 +60,8 @@ mutual
 -- the argument positions has different constructors at its head, then this
 -- is an impossible case, so return True
 export
-impossibleOK : {vars : _} ->
+impossibleOK : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn == yn
@@ -95,7 +98,8 @@ impossibleErrOK defs _ = pure False
 -- is, if we have a concrete thing, and we're expecting the same concrete
 -- thing, or a function of something, then we might have a match.
 export
-recoverable : {vars : _} ->
+recoverable : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
               Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike the above, any mismatch will do
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)

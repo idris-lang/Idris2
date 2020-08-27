@@ -460,6 +460,10 @@ when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
 
+export %inline
+unless : Bool -> Lazy (Core ()) -> Core ()
+unless = when . not
+
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export

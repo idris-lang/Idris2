@@ -464,7 +464,8 @@ findImplicits tm = []
 -- IBindVar anywhere else in the pattern) so that they will be available on the
 -- rhs
 export
-implicitsAs : Defs -> List Name -> RawImp -> Core RawImp
+implicitsAs : {auto c : Ref Ctxt Defs} ->
+              Defs -> List Name -> RawImp -> Core RawImp
 implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
   where
     setAs : List (Maybe Name) -> RawImp -> Core RawImp

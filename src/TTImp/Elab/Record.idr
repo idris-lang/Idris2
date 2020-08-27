@@ -66,7 +66,8 @@ findConName defs tyn
            Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
            _ => pure Nothing
 
-findFields : Defs -> Name ->
+findFields : {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
              Core (Maybe (List (String, Maybe Name, Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
