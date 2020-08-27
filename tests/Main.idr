@@ -41,7 +41,7 @@ idrisTests
        "basic026", "basic027", "basic028", "basic029", "basic030",
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
-       "basic041", "basic042", "basic043", "basic044",
+       "basic041", "basic042", "basic043", "basic044", "basic045",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",

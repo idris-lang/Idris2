@@ -260,7 +260,8 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
               (Bind fc _ (PLet fc c bpat' bty') tm',
                Bind fc _ (PLet fc c bpat' bty') ty')
 
-normaliseHolesScope : {vars : _} ->
+normaliseHolesScope : {auto c : Ref Ctxt Defs} ->
+                      {vars : _} ->
                       Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normaliseHolesScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b
@@ -270,7 +271,8 @@ normaliseHolesScope defs env (Bind fc n b sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export
-bindImplicits : {vars : _} ->
+bindImplicits : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 FC -> BindMode ->
                 Defs -> Env Term vars ->
                 List (Name, ImplBinding vars) ->

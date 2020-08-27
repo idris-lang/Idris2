@@ -162,12 +162,14 @@ Show TypeMatch where
   show NoMatch = "NoMatch"
 
 mutual
-  mightMatchD : {vars : _} ->
+  mightMatchD : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 Defs -> NF vars -> NF [] -> Core TypeMatch
   mightMatchD defs l r
       = mightMatch defs (stripDelay l) (stripDelay r)
 
-  mightMatchArg : {vars : _} ->
+  mightMatchArg : {auto c : Ref Ctxt Defs} ->
+                  {vars : _} ->
                   Defs ->
                   Closure vars -> Closure [] ->
                   Core Bool
@@ -176,7 +178,8 @@ mutual
              NoMatch => False
              _ => True
 
-  mightMatchArgs : {vars : _} ->
+  mightMatchArgs : {auto c : Ref Ctxt Defs} ->
+                   {vars : _} ->
                    Defs ->
                    List (Closure vars) -> List (Closure []) ->
                    Core Bool
@@ -188,7 +191,8 @@ mutual
               else pure False
   mightMatchArgs _ _ _ = pure False
 
-  mightMatch : {vars : _} ->
+  mightMatch : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Defs -> NF vars -> NF [] -> Core TypeMatch
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
@@ -212,14 +216,16 @@ mutual
   mightMatch _ _ _ = pure NoMatch
 
 -- Return true if the given name could return something of the given target type
-couldBeName : {vars : _} ->
+couldBeName : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
               Defs -> NF vars -> Name -> Core TypeMatch
 couldBeName defs target n
     = case !(lookupTyExact n (gamma defs)) of
            Nothing => pure Poly -- could be a local name, don't rule it out
            Just ty => mightMatchD defs target !(nf defs [] ty)
 
-couldBeFn : {vars : _} ->
+couldBeFn : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             Defs -> NF vars -> RawImp -> Core TypeMatch
 couldBeFn defs ty (IVar _ n) = couldBeName defs ty n
 couldBeFn defs ty (IAlternative _ _ _) = pure Concrete
@@ -229,7 +235,8 @@ couldBeFn defs ty _ = pure Poly
 -- the target type
 -- Just (True, app) if it's a match on concrete return type
 -- Just (False, app) if it might be a match due to being polymorphic
-couldBe : {vars : _} ->
+couldBe : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> NF vars -> RawImp -> Core (Maybe (Bool, RawImp))
 couldBe {vars} defs ty@(NTCon _ n _ _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
