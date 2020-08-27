@@ -1,0 +1,18 @@
+1/1: Building Fld (Fld.idr)
+Error: While processing type of myDog_notWorking. Field not covered age.
+
+Fld.idr:26:20--26:47
+    |
+ 26 | myDog_notWorking : record MkDog {name = "Sam"} -- Not all fields are covered
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing type of myDog_notWorking2. Duplicate fields.
+
+Fld.idr:28:21--32:38
+ 28 | myDog_notWorking2 : record MkDog 
+ 29 |                      { age = 4
+ 30 |                      , age = 2
+ 31 |                      , weight = 12
+ 32 |                      , name = "Sam" } -- Duplicate names
+
+Fld> Bye for now!

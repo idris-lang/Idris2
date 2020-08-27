@@ -261,7 +261,7 @@ elabInstance env fc n fs
          (Just allfields) <- findFieldsExplicit defs fullname
                | _ => throw (NotRecordType fc n)
          fs' <- sequence $ map (sequenceCore . bimap getName getExp . dup) fs
-         seqexp <- sequence $ map (\x => [| pure (lookup x fs') `orElse` throw (NotCoveredField fc x) |]) allfields
+         seqexp <- sequence $ map (\x => lookupOrElse x fs' (throw (NotCoveredField fc x))) allfields
          pure $ (foldl (IApp fc) (IVar fc fullname) seqexp)
   where
     sequenceCore : (Core a, Core b) -> Core (a, b) --specialize
@@ -279,9 +279,12 @@ elabInstance env fc n fs
     bimap : forall a, b, a', b'. (a -> a') -> (b -> b') -> (a, b) -> (a', b')
     bimap f g (x, y) = (f x, g y)
 
-    orElse : forall a. Maybe a -> Lazy a -> a
-    orElse (Just x) _ = x
-    orElse Nothing x = x
+    lookupOrElse : forall a. Eq a => a -> List (a, b) -> Core b -> Core b
+    lookupOrElse x xs def 
+        = case lookup x xs of
+               Nothing => def
+               (Just x) => pure x
+
 
     subsetOf : forall a. Eq a => List a -> List a -> Bool
     subsetOf subset set = length (intersect subset set) == length subset
