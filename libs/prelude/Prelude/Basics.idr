@@ -25,6 +25,11 @@ id : (1 x : a) -> a           -- Hopefully linearity annotation won't
                               -- break equality proofs involving id
 id x = x
 
+||| Function that duplicates its input
+public export
+dup : a -> (a, a)
+dup x = (x, x)
+
 ||| Constant function.  Ignores its second argument.
 public export %inline
 const : a -> b -> a
