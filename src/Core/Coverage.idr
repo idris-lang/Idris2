@@ -134,7 +134,8 @@ freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
 
 -- Given a normalised type, get all the possible constructors for that
 -- type family, with their type, name, tag, and arity
-getCons : {vars : _} ->
+getCons : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
 getCons defs (NTCon _ tn _ _ _)
     = case !(lookupDefExact tn (gamma defs)) of
@@ -179,7 +180,8 @@ altMatch _ _ = False
 
 -- Given a type and a list of case alternatives, return the
 -- well-typed alternatives which were *not* in the list
-getMissingAlts : {vars : _} ->
+getMissingAlts : {auto c : Ref Ctxt Defs} ->
+                 {vars : _} ->
                  FC -> Defs -> NF vars -> List (CaseAlt vars) ->
                  Core (List (CaseAlt vars))
 -- If it's a primitive other than WorldVal, there's too many to reasonably
@@ -267,7 +269,8 @@ tagIsNot ts (DefaultCase _) = False
 -- Replace a default case with explicit branches for the constructors.
 -- This is easier than checking whether a default is needed when traversing
 -- the tree (just one constructor lookup up front).
-replaceDefaults : {vars : _} ->
+replaceDefaults : {auto c : Ref Ctxt Defs} ->
+                  {vars : _} ->
                   FC -> Defs -> NF vars -> List (CaseAlt vars) ->
                   Core (List (CaseAlt vars))
 -- Leave it alone if it's a primitive type though, since we need the catch
@@ -296,7 +299,8 @@ replaceDefaults fc defs nfty cs
 -- when we reach a leaf we know what patterns were used to get there,
 -- and return those patterns.
 -- The returned patterns are those arising from the *missing* cases
-buildArgs : {vars : _} ->
+buildArgs : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             FC -> Defs ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be

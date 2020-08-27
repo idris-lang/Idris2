@@ -465,7 +465,8 @@ data NArgs : Type where
      NBuffer : NArgs
      NIORes : Closure [] -> NArgs
 
-getPArgs : Defs -> Closure [] -> Core (String, Closure [])
+getPArgs : {auto c : Ref Ctxt Defs} ->
+           Defs -> Closure [] -> Core (String, Closure [])
 getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
@@ -476,7 +477,8 @@ getPArgs defs cl
                      pure (n', tydesc)
               _ => throw (GenericMsg fc "Badly formed struct type")
 
-getFieldArgs : Defs -> Closure [] -> Core (List (String, Closure []))
+getFieldArgs : {auto c : Ref Ctxt Defs} ->
+               Defs -> Closure [] -> Core (List (String, Closure []))
 getFieldArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
@@ -489,7 +491,8 @@ getFieldArgs defs cl
               -- nil
               _ => pure []
 
-getNArgs : Defs -> Name -> List (Closure []) -> Core NArgs
+getNArgs : {auto c : Ref Ctxt Defs} ->
+           Defs -> Name -> List (Closure []) -> Core NArgs
 getNArgs defs (NS _ (UN "IORes")) [arg] = pure $ NIORes arg
 getNArgs defs (NS _ (UN "Ptr")) [arg] = pure NPtr
 getNArgs defs (NS _ (UN "AnyPtr")) [] = pure NPtr

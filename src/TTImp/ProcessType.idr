@@ -212,7 +212,8 @@ initDef n env ty (_ :: opts) = initDef n env ty opts
 -- Find the inferrable argument positions in a type. This is useful for
 -- generalising partially evaluated definitions and (potentially) in interactive
 -- editing
-findInferrable : Defs -> NF [] -> Core (List Nat)
+findInferrable : {auto c : Ref Ctxt Defs} ->
+                 Defs -> NF [] -> Core (List Nat)
 findInferrable defs ty = fi 0 0 [] [] ty
   where
     mutual

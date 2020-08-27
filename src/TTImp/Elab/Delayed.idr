@@ -130,7 +130,8 @@ ambiguous (WhenUnifying _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
 mutual
-  mismatchNF : {vars : _} ->
+  mismatchNF : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
@@ -146,13 +147,15 @@ mutual
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
   mismatchNF _ _ _ = pure False
 
-  mismatch : {vars : _} ->
+  mismatch : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
              Defs -> (Closure vars, Closure vars) -> Core Bool
   mismatch defs (x, y)
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
 
-contra : {vars : _} ->
-               Defs -> NF vars -> NF vars -> Core Bool
+contra : {auto c : Ref Ctxt Defs} ->
+         {vars : _} ->
+         Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
 contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn

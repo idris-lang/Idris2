@@ -633,12 +633,13 @@ process (Eval itm)
                        (\err => pure ())
                  (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
                                        [] ttimp Nothing
+                 logTerm "repl.eval" 10 "Elaborated input" tm
                  defs <- get Ctxt
                  opts <- get ROpts
                  let norm = nfun (evalMode opts)
                  ntm <- norm defs [] tm
+                 logTermNF "repl.eval" 5 "Normalised" [] ntm
                  itm <- resugar [] ntm
-                 logTermNF "" 5 "Normalised" [] ntm
                  if showTypes opts
                     then do ty <- getTerm gty
                             ity <- resugar [] !(norm defs [] ty)
