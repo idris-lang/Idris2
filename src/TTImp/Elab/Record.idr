@@ -263,13 +263,13 @@ elabInstance env fc n fs
          seqexp <- sequence $ map (\x => lookupOrElse x fs' (throw (NotCoveredField fc x))) allfields
          pure $ (foldl (IApp fc) (IVar fc fullname) seqexp)
   where
-    sequenceCore : (Core a, Core b) -> Core (a, b) --specialize
+    sequenceCore : (Core a, Core b) -> Core (a, b) -- specialize
     sequenceCore (x, y) = do
                          x' <- x
                          y' <- y
                          pure (x', y')
 
-    sequenceM : forall a, b, m. Monad m => (m a, m b) -> m (a, b) --Core is not a monad
+    sequenceM : forall a, b, m. Monad m => (m a, m b) -> m (a, b) -- Core is not a monad
     sequenceM (mx, my)
         = do x <- mx
              y <- my
