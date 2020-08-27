@@ -455,16 +455,6 @@ export %inline
 pure : a -> Core a
 pure x = MkCore (pure (pure x))
 
-infixr 1 <=<
-
--- Right-to-left Kleisli composition of monads (specialised)
-export %inline
-(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
-(<=<) g f x
-    = do y <- f x
-         z <- g y
-         pure z
-
 export
 (<*>) : Core (a -> b) -> Core a -> Core b
 (<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]

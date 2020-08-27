@@ -284,7 +284,6 @@ elabInstance env fc n fs
                Nothing => def
                (Just x) => pure x
 
-
     subsetOf : forall a. Eq a => List a -> List a -> Bool
     subsetOf subset set = length (intersect subset set) == length subset
 
