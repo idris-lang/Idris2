@@ -284,7 +284,7 @@ elabInstance env fc providedName fs
     bitraverse f g p = sequenceCore (bimap f g p)
 
     lookupOrElse : forall a. Eq a => a -> List (a, b) -> Core b -> Core b
-    lookupOrElse x xs def 
+    lookupOrElse x xs def
         = case lookup x xs of
                Nothing => def
                (Just x) => pure x
