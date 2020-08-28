@@ -26,7 +26,7 @@ id : (1 x : a) -> a           -- Hopefully linearity annotation won't
 id x = x
 
 ||| Function that duplicates its input
-public export
+public export %inline
 dup : a -> (a, a)
 dup x = (x, x)
 
