@@ -1783,7 +1783,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    topic <- optional namespacedIdent
+    topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
     lvl <- intLit
     pure (command (mkLogLevel' topic (fromInteger lvl)))
 
