@@ -16,11 +16,20 @@ Fld.idr:27:21--27:58
 Error: While processing type of myDog_notWorking2. Duplicate fields.
 
 Fld.idr:29:21--33:38
- 29 | myDog_notWorking2 : record MkDog 
+ 29 | myDog_notWorking2 : record MkDog
  30 |                      { age = 4
  31 |                      , age = 2
  32 |                      , weight = 12
  33 |                      , name = "Sam" } -- Duplicate names
+
+Error: While processing right hand side of r2. Ambiguous elaboration. Possible results:
+    Fld.R2.MkR ?field
+    Fld.R1.MkR ?field
+
+Fld.idr:75:6--75:37
+    |
+ 75 | r2 = record MkR {field = the Nat 22} -- fail, impossible to disambiguate
+    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Fld> Fld.myDog : OrdinaryDog
 Fld> Fld.mySuperDog : SuperDog

@@ -495,6 +495,10 @@ traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
 export
+for : List a -> (a -> Core b) -> Core (List b)
+for = flip traverse
+
+export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
 traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
 

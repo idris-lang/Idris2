@@ -653,7 +653,7 @@ mutual
                            n <- name
                            symbol "{"
                            commit
-                           fs <- sepBy1 (symbol ",") (field fname indents False)
+                           fs <- sepBy (symbol ",") (field fname indents False)
                            symbol "}"
                            pure (n, fs))
            (name, fs) <- pure b.val

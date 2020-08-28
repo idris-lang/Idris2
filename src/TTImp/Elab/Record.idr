@@ -243,26 +243,28 @@ elabInstance : {vars : _} ->
                 {auto e : Ref EST (EState vars)} ->
                 Env Term vars ->
                 FC -> Name -> List IFieldUpdate ->
-                Core RawImp
-elabInstance env fc n fs
+                Core (List (Name, List RawImp)) -- one or more possible elaborations
+elabInstance env fc providedName fs
     = do
          defs <- get Ctxt
-         names@(_ :: _) <- getConNames defs n
-              | _ => throw (NotRecordType fc n)
-         names@(_ :: _) <- mapMaybe (sequenceM . bimap pure id)
-                              <$> (sequence $ map (sequenceCore . bimap pure (findFieldsExplicit defs) . dup) names)
-              | _ => throw (GenericMsg fc "No constructor satisfies provided fields.")
-         providedfields <- sequence $ map getName fs
+         names@(_ :: _) <- getConNames defs providedName
+              | _ => throw (NotRecordType fc providedName)
+         names@(_ :: _) <- do expFldsForEachCon <- traverse (bitraverse pure (findFieldsExplicit defs) . dup) names
+                              pure $ mapMaybe (sequenceM . mapFst pure) expFldsForEachCon
+              | _ => throw errorConstructorNotFound
+         providedfields <- traverse getName fs
          let True = length providedfields == length (nub providedfields)
              | _ => throw (GenericMsg fc "Duplicate fields.")
-         let (Right fullname) = disambigConName fc env names providedfields
+         let (Right fullnames) = tryDisambigConName fc env names providedfields
              | Left err => throw err
-         (Just allfields) <- findFieldsExplicit defs fullname
-               | _ => throw (NotRecordType fc n)
-         fs' <- sequence $ map (sequenceCore . bimap getName getExp . dup) fs
-         seqexp <- sequence $ map (\x => lookupOrElse x fs' (throw (NotCoveredField fc x))) allfields
-         pure $ (foldl (IApp fc) (IVar fc fullname) seqexp)
+         fs' <- traverse (bitraverse getName getExp . dup) fs
+         for fullnames \(fullname, allfields) => do
+                           seqexp <- flip traverse allfields \x => lookupOrElse x fs' (throw (NotCoveredField fc x))
+                           pure $ (fullname, seqexp)
   where
+    errorConstructorNotFound : Error
+    errorConstructorNotFound = GenericMsg fc "No constructor satisfies provided fields."
+
     sequenceCore : (Core a, Core b) -> Core (a, b) -- specialize
     sequenceCore (x, y) = do
                          x' <- x
@@ -277,6 +279,9 @@ elabInstance env fc n fs
 
     bimap : forall a, b, a', b'. (a -> a') -> (b -> b') -> (a, b) -> (a', b')
     bimap f g (x, y) = (f x, g y)
+
+    bitraverse : (a -> Core a') -> (b -> Core b') -> (a, b) -> Core (a', b')
+    bitraverse f g p = sequenceCore (bimap f g p)
 
     lookupOrElse : forall a. Eq a => a -> List (a, b) -> Core b -> Core b
     lookupOrElse x xs def 
@@ -303,12 +308,16 @@ elabInstance env fc n fs
     findFieldsExplicit : Defs -> Name -> Core (Maybe (List String))
     findFieldsExplicit defs con = pure $ map (map fst) $ map (filter (isNothing . fst . snd)) !(findFields defs con)
 
-    disambigConName : {vars : _} -> FC -> Env Term vars -> List (Name, List String) -> List String -> Either Error Name
-    disambigConName fc env exactNames fields
-       = case filter snd $ map (bimap id (subsetOf fields)) exactNames of
-              [] => Left (GenericMsg fc "No constructor satisfies provided fields.")
-              [(name, _)] => Right name
-              ambignames => Left (AmbiguousName fc (map fst ambignames))
+    tryDisambigConName : {vars : _}
+                      -> FC
+                      -> Env Term vars
+                      -> List (Name, List String)
+                      -> List String
+                      -> Either Error (List (Name, List String))
+    tryDisambigConName fc env exactNames fields
+       = case filter fst $ map (mapFst (subsetOf fields . snd) . dup) exactNames of
+              [] => Left errorConstructorNotFound
+              oneOrMoreNames => Right (map snd oneOrMoreNames)
 
     isConName : Defs -> Name -> Core Bool
     isConName defs name

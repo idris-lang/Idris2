@@ -638,7 +638,12 @@ checkApp rig elabinfo nest env fc (IApp fc' fn arg) expargs impargs exp
 checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs exp
    = checkApp rig elabinfo nest env fc' fn expargs ((nm, arg) :: impargs) exp
 checkApp rig elabinfo nest env fc (IInstance fc' name fs) expargs impargs exp
-   = checkApp rig elabinfo nest env fc !(elabInstance env fc' name fs) expargs impargs exp
+   = do elabs <- elabInstance env fc' name fs
+        let namedElabs = map (\(name, args) =>
+                                  ( Just name
+                                  , checkApp rig elabinfo nest env fc (apply (IVar fc name) args) expargs impargs exp))
+                             elabs
+        exactlyOne fc env namedElabs
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in

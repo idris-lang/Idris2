@@ -51,5 +51,25 @@ same = Refl
 record Unit where
   constructor MkUnit
 
-unit : Unit
+unit : Fld.Unit
 unit = record MkUnit {}
+
+namespace R1
+
+  public export
+  record R1 where
+    constructor MkR
+    field : a
+
+namespace R2
+
+  public export
+  record R2 where
+    constructor MkR
+    field : a
+
+r1 : R1
+r1 = record MkR {field = "string"} -- type-driven disambiguation
+
+r2 : ?
+r2 = record MkR {field = the Nat 22} -- fail, impossible to disambiguate
