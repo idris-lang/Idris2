@@ -26,12 +26,12 @@ myDog_notWorking0 : record MkDog {name = "Sam"} -- Not all fields are covered
 
 myDog_notWorking1 : record MkDog {age = 3, name1 = "Sam"} -- No constructor with name `MkDog`
                                                           -- has field `name1`
-myDog_notWorking2 : record MkDog 
+myDog_notWorking2 : record MkDog
                      { age = 4
                      , age = 2
                      , weight = 12
                      , name = "Sam" } -- Duplicate names
- 
+
 myDog : ?
 myDog = record MkDog { age = 4
                      , weight = 12
@@ -47,3 +47,9 @@ other = record MkOther {fieldB = the Int 1, fieldA = "hi"} {imp = "Secret string
 
 same : record MkDog {name = "Rex", age = 2, weight = 10} = MkDog "Rex" 2 10
 same = Refl
+
+record Unit where
+  constructor MkUnit
+
+unit : Unit
+unit = record MkUnit {}
