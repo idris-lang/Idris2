@@ -1251,7 +1251,8 @@ fieldDecl fname indents
       = do doc <- option "" documentation
            symbol "{"
            commit
-           fs <- fieldBody doc Implicit
+           impl <- option Implicit (AutoImplicit <$ keyword "auto")
+           fs <- fieldBody doc impl
            symbol "}"
            atEnd indents
            pure fs
