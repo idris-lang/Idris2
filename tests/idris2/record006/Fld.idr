@@ -22,9 +22,10 @@ record Other a where
    fieldA : a
    fieldB : b
 
+myDog_notWorking0 : record MkDog {name = "Sam"} -- Not all fields are covered
 
-myDog_notWorking : record MkDog {name = "Sam"} -- Not all fields are covered
-
+myDog_notWorking1 : record MkDog {age = 3, name1 = "Sam"} -- No constructor with name `MkDog`
+                                                          -- has field `name1`
 myDog_notWorking2 : record MkDog 
                      { age = 4
                      , age = 2

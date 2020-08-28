@@ -1,18 +1,28 @@
 1/1: Building Fld (Fld.idr)
-Error: While processing type of myDog_notWorking. Field not covered age.
+Error: While processing type of myDog_notWorking0. Field not covered age.
 
-Fld.idr:26:20--26:47
+Fld.idr:25:21--25:48
     |
- 26 | myDog_notWorking : record MkDog {name = "Sam"} -- Not all fields are covered
-    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 25 | myDog_notWorking0 : record MkDog {name = "Sam"} -- Not all fields are covered
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing type of myDog_notWorking1. No constructor satisfies provided fields.
+
+Fld.idr:27:21--27:58
+    |
+ 27 | myDog_notWorking1 : record MkDog {age = 3, name1 = "Sam"} -- No constructor with name `MkDog`
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing type of myDog_notWorking2. Duplicate fields.
 
-Fld.idr:28:21--32:38
- 28 | myDog_notWorking2 : record MkDog 
- 29 |                      { age = 4
- 30 |                      , age = 2
- 31 |                      , weight = 12
- 32 |                      , name = "Sam" } -- Duplicate names
+Fld.idr:29:21--33:38
+ 29 | myDog_notWorking2 : record MkDog 
+ 30 |                      { age = 4
+ 31 |                      , age = 2
+ 32 |                      , weight = 12
+ 33 |                      , name = "Sam" } -- Duplicate names
 
+Fld> Fld.myDog : OrdinaryDog
+Fld> Fld.mySuperDog : SuperDog
+Fld> Fld.other : Other String
 Fld> Bye for now!
