@@ -662,7 +662,7 @@ mutual
                 ("do" :: ns) =>
                    do actions <- bounds (block (doAct fname))
                       pure (PDoBlock (boundToFC fname (mergeBounds nsdo actions))
-                                     (Just (reverse ns)) (concat actions.val))
+                                     (Just ns) (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
   lowerFirst : String -> Bool
