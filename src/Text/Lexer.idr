@@ -166,6 +166,18 @@ export
 digits : Lexer
 digits = some digit
 
+||| Recognise a single binary digit
+||| /[0-1]/
+export
+binDigit : Lexer
+binDigit = pred (\c => c == '0' || c == '1')
+
+||| Recognise one or more binary digits
+||| /[0-1]+/
+export
+binDigits : Lexer
+binDigits = some binDigit
+
 ||| Recognise a single hexidecimal digit
 ||| /[0-9A-Fa-f]/
 export
@@ -332,6 +344,7 @@ charLit = let q = '\'' in
                       "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB",
                       "CAN", "EM",  "SUB", "ESC", "FS",  "GS",  "RS",  "US",
                       "SP",  "DEL"]
+                <|> (is 'b' <+> binDigits)
                 <|> (is 'x' <+> hexDigits)
                 <|> (is 'o' <+> octDigits)
                 <|> digits
@@ -342,6 +355,12 @@ export
 intLit : Lexer
 intLit = opt (is '-') <+> digits
 
+||| Recognise a binary literal, prefixed by "0b"
+||| /0b[0-1]+/
+export
+binLit : Lexer
+binLit = exact "0b" <+> binDigits
+
 ||| Recognise a hexidecimal literal, prefixed by "0x" or "0X"
 ||| /0[Xx][0-9A-Fa-f]+/
 export
@@ -349,7 +368,7 @@ hexLit : Lexer
 hexLit = approx "0x" <+> hexDigits
 
 ||| Recognise an octal literal, prefixed by "0o"
-||| /0[Xx][0-9A-Fa-f]+/
+||| /0o[0-9A-Fa-f]+/
 export
 octLit : Lexer
 octLit = exact "0o" <+> octDigits
