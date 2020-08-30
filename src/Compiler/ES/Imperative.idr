@@ -200,7 +200,7 @@ getImp (n, fc, MkNmFun args exp) =
 getImp (n, fc, MkNmError exp) =
   throw $ (InternalError $ show exp)
 getImp (n, fc, MkNmForeign cs args ret) =
-  pure $ ForeignDecl n cs
+  pure $ ForeignDecl fc n cs args ret
 getImp (n, fc, MkNmCon _ _ _) =
   pure DoNothing
 
