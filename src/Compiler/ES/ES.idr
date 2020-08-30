@@ -380,7 +380,7 @@ mutual
   imperative2es indent (FunDecl fc n args body) =
     pure $ nSpaces indent ++ "function " ++ jsName n ++ "(" ++ showSep ", " (map jsName args) ++ "){//"++ show fc ++"\n" ++
            !(imperative2es (indent+1) body) ++ "\n" ++ nSpaces indent ++ "}\n"
-  imperative2es indent (ForeignDecl n path) =
+  imperative2es indent (ForeignDecl fc n path args ret) =
     pure $ !(foreignDecl n path) ++ "\n"
   imperative2es indent (ReturnStatement x) =
     pure $ nSpaces indent ++ "return " ++ !(impExp2es x) ++ ";"

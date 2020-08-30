@@ -1,5 +1,6 @@
 module Compiler.ES.ImperativeAst
 
+import Compiler.CompileExpr
 import public Core.TT
 import public Data.Vect
 import public Data.List
@@ -24,7 +25,7 @@ mutual
   data ImperativeStatement = DoNothing
                            | SeqStatement ImperativeStatement ImperativeStatement
                            | FunDecl FC Name (List Name) ImperativeStatement
-                           | ForeignDecl Name (List String)
+                           | ForeignDecl FC Name (List String) (List CFType) CFType
                            | ReturnStatement ImperativeExp
                            | SwitchStatement ImperativeExp (List (ImperativeExp, ImperativeStatement)) (Maybe ImperativeStatement)
                            | LetDecl Name (Maybe ImperativeExp)
@@ -67,7 +68,7 @@ mutual
     show DoNothing = "DoNothing"
     show (SeqStatement x y) = show x ++ ";" ++ show y
     show (FunDecl fc n args b) = "\n\n" ++ "(FunDecl (" ++ show fc ++ ") " ++ show n ++ " " ++ show args ++ " " ++ show b ++ ")"
-    show (ForeignDecl n path) = "(ForeignDecl " ++ show n ++ " " ++ show path ++")"
+    show (ForeignDecl fc n path args ret) = "(ForeignDecl " ++ show n ++ " " ++ show path ++")"
     show (ReturnStatement x) = "(ReturnStatement " ++ show x ++ ")"
     show (SwitchStatement e alts d) = "(SwitchStatement " ++ show e ++ " " ++ show alts ++ " " ++ show d ++ ")"
     show (LetDecl n v) = "(LetDecl " ++ show n ++ " " ++ show v ++ ")"
@@ -118,8 +119,8 @@ mutual
     SeqStatement (replaceNamesExpS reps x) (replaceNamesExpS reps y)
   replaceNamesExpS reps (FunDecl fc n args body) =
     FunDecl fc n args $ replaceNamesExpS reps body
-  replaceNamesExpS reps (ForeignDecl n path) =
-    ForeignDecl n path
+  replaceNamesExpS reps decl@(ForeignDecl fc n path args ret) =
+    decl
   replaceNamesExpS reps (ReturnStatement e) =
     ReturnStatement $ replaceNamesExp reps e
   replaceNamesExpS reps (SwitchStatement s alts def) =
