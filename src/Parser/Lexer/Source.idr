@@ -203,6 +203,20 @@ reservedSymbols
       ["%", "\\", ":", "=", "|", "|||", "<-", "->", "=>", "?", "!",
        "&", "**", "..", "~"]
 
+fromBinLit : String -> Integer
+fromBinLit str
+    = if length str <= 2
+         then 0
+         else let num = assert_total (strTail (strTail str)) in
+                fromBin . reverse . map castBin . unpack $ num
+    where
+      castBin : Char -> Integer
+      castBin '1' = 1; castBin _ = 0 -- This can only be '1' and '0' once lexed
+      fromBin : List Integer -> Integer
+      fromBin [] = 0
+      fromBin (0 :: xs) = 2 * fromBin xs
+      fromBin (1 :: xs) = 1 + (2 * fromBin xs)
+
 fromHexLit : String -> Integer
 fromHexLit str
   = if length str <= 2
@@ -230,6 +244,7 @@ rawTokens =
      (holeIdent, \x => HoleIdent (assert_total (strTail x)))] ++
     map (\x => (exact x, Symbol)) symbols ++
     [(doubleLit, \x => DoubleLit (cast x)),
+     (binLit, \x => IntegerLit (fromBinLit x)),
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
