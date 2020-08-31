@@ -36,7 +36,11 @@ Embedding in Markdown-like documents
 While Bird Style literate mode is useful, it does not lend itself well
 to more modern markdown-like notations such as Org-Mode and CommonMark.
 
-Idris2 also provides support for recognising both 'visible' and 'invisible' code blocks and lines in both CommonMark and OrgMode documents.
+Idris2 also provides support for recognising both 'visible' and 'invisible'
+code blocks and lines in both CommonMark and OrgMode documents.
+
+'Visible' content will be kept in the pretty printer's output while
+the 'invisible' blocks and lines will be removed.
 
 OrgMode
 *******
