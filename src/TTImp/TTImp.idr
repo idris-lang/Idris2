@@ -202,6 +202,11 @@ mutual
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
 
+  public export
+  isTotalityReq : FnOpt -> Bool
+  isTotalityReq (Totality _) = True
+  isTotalityReq _ = False
+
   export
   Show FnOpt where
     show Inline = "%inline"
