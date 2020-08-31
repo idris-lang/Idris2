@@ -650,14 +650,14 @@ mutual
   recordInstance : FileName -> IndentInfo -> Rule PTerm
   recordInstance fname indents
       = do b <- bounds (do keyword "record"
-                           n <- name
+                           mbname <- (Just <$> name) <|> (const Nothing <$> symbol "_")
                            symbol "{"
                            commit
                            fs <- sepBy (symbol ",") (field fname indents False)
                            symbol "}"
-                           pure (n, fs))
-           (name, fs) <- pure b.val
-           pure (PInstance (boundToFC fname b) name fs)
+                           pure (mbname, fs))
+           (mbname, fs) <- pure b.val
+           pure (PInstance (boundToFC fname b) mbname fs)
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents

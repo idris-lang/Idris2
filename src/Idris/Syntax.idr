@@ -13,6 +13,7 @@ import TTImp.TTImp
 
 import Data.ANameMap
 import Data.List
+import Data.Maybe
 import Data.NameMap
 import Data.StringMap
 import Text.PrettyPrint.Prettyprinter
@@ -46,7 +47,7 @@ mutual
        PCase : FC -> PTerm -> List PClause -> PTerm
        PLocal : FC -> List PDecl -> (scope : PTerm) -> PTerm
        PUpdate : FC -> List PFieldUpdate -> PTerm
-       PInstance : FC -> Name -> List PFieldUpdate -> PTerm
+       PInstance : FC -> Maybe Name -> List PFieldUpdate -> PTerm
        PApp : FC -> PTerm -> PTerm -> PTerm
        PWithApp : FC -> PTerm -> PTerm -> PTerm
        PImplicitApp : FC -> PTerm -> (argn : Maybe Name) -> PTerm -> PTerm
@@ -537,7 +538,7 @@ mutual
     showPrec d (PUpdate _ fs)
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PInstance _ n fs)
-        = "record " ++ showPrec d n ++ " { " ++ showSep ", " (map showUpdate fs) ++ " }"
+        = "record " ++ fromMaybe "_" (showPrec d <$> n) ++ " { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
     showPrec d (PImplicitApp _ f Nothing a)

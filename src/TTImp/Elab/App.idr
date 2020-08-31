@@ -631,20 +631,23 @@ checkApp : {vars : _} ->
            FC -> (fn : RawImp) ->
            (expargs : List RawImp) ->
            (impargs : List (Maybe Name, RawImp)) ->
+           (mkFullyApplied : RawImp -> RawImp) ->
            Maybe (Glued vars) ->
            Core (Term vars, Glued vars)
-checkApp rig elabinfo nest env fc (IApp fc' fn arg) expargs impargs exp
-   = checkApp rig elabinfo nest env fc' fn (arg :: expargs) impargs exp
-checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs exp
-   = checkApp rig elabinfo nest env fc' fn expargs ((nm, arg) :: impargs) exp
-checkApp rig elabinfo nest env fc (IInstance fc' name fs) expargs impargs exp
-   = do elabs <- elabInstance env fc' name fs
-        let namedElabs = map (\(name, args) =>
-                                  ( Just name
-                                  , checkApp rig elabinfo nest env fc (apply (IVar fc name) args) expargs impargs exp))
-                             elabs
-        exactlyOne fc env namedElabs
-checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
+checkApp rig elabinfo nest env fc (IApp fc' fn arg) expargs impargs mkFull exp
+   = checkApp rig elabinfo nest env fc' fn (arg :: expargs) impargs (\fn => mkFull (IApp fc' fn arg)) exp
+checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs mkFull exp
+   = checkApp rig elabinfo nest env fc' fn expargs ((nm, arg) :: impargs) (\fn => mkFull (IImplicitApp fc' fn nm arg)) exp
+checkApp rig elabinfo nest env fc (IInstance fc' name fs) expargs impargs mkFull exp
+   = do mbelabs <- elabInstance rig elabinfo nest env fc' name fs mkFull exp
+        case mbelabs of
+             Right elabs =>
+                   let namedElabs = map (\(name, args) =>
+                                             ( Just name
+                                             , checkApp rig elabinfo nest env fc (apply (IVar fc name) args) expargs impargs mkFull exp)) elabs in
+                       exactlyOne fc env namedElabs
+             Left (meta, ty) => pure (meta, ty)
+checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs _ exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in
         let prims = mapMaybe id
@@ -711,7 +714,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info
 
-checkApp rig elabinfo nest env fc fn expargs impargs exp
+checkApp rig elabinfo nest env fc fn expargs impargs _ exp
    = do (fntm, fnty_in) <- checkImp rig elabinfo nest env fn Nothing
         fnty <- getNF fnty_in
         checkAppWith rig elabinfo nest env fc fntm fnty (Nothing, 0) expargs impargs False exp

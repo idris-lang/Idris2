@@ -236,32 +236,58 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                 check rig elabinfo nest env rcase expected
 
 export
-elabInstance : {vars : _} ->
+elabInstance :  {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
+                RigCount ->
+                ElabInfo ->
+                NestedNames vars ->
                 Env Term vars ->
-                FC -> Name -> List IFieldUpdate ->
-                Core (List (Name, List RawImp)) -- one or more possible elaborations
-elabInstance env fc providedName fs
-    = do
-         defs <- get Ctxt
-         names@(_ :: _) <- getConNames defs providedName
-              | _ => throw (NotRecordType fc providedName)
-         names@(_ :: _) <- do expFldsForEachCon <- traverse (bitraverse pure (findFieldsExplicit defs) . dup) names
-                              pure $ mapMaybe (sequenceM . mapFst pure) expFldsForEachCon
-              | _ => throw errorConstructorNotFound
-         providedfields <- traverse getName fs
-         let True = length providedfields == length (nub providedfields)
-             | _ => throw (GenericMsg fc "Duplicate fields.")
-         let (Right fullnames) = tryDisambigConName fc env names providedfields
-             | Left err => throw err
-         fs' <- traverse (bitraverse getName getExp . dup) fs
-         for fullnames \(fullname, allfields) => do
-                           seqexp <- flip traverse allfields \x => lookupOrElse x fs' (throw (NotCoveredField fc x))
-                           pure $ (fullname, seqexp)
+                FC -> Maybe Name -> List IFieldUpdate ->
+                (RawImp -> RawImp) ->
+                Maybe (Glued vars) ->
+                Core (Either (Term vars, Glued vars) (List (Name, List RawImp))) -- a hole or 1+ possible elaborations
+elabInstance rig elabinfo nest env fc mbprovidedName fs mkFull expected
+    = case mbprovidedName of
+           Just providedName => do
+                defs <- get Ctxt
+                names@(_ :: _) <- getConNames defs providedName
+                     | _ => throw (NotRecordType fc providedName)
+                names@(_ :: _) <- do expFldsForEachCon <- traverse (bitraverse pure (findFieldsExplicit defs) . dup) names
+                                     pure $ mapMaybe (sequenceM . mapFst pure) expFldsForEachCon
+                     | _ => throw errorConstructorNotFound
+                providedfields <- traverse getName fs
+                let True = length providedfields == length (nub providedfields)
+                    | _ => throw (GenericMsg fc "Duplicate fields.")
+                let (Right fullnames) = tryDisambigConName fc env names providedfields
+                    | Left err => throw err
+                fs' <- traverse (bitraverse getName getExp . dup) fs
+                res <- for fullnames \(fullname, allfields) => do
+                                       seqexp <- flip traverse allfields \x => lookupOrElse x fs' (throw (NotCoveredField fc x))
+                                       pure (fullname, seqexp)
+                pure (Right res)
+           Nothing => do defs <- get Ctxt
+                         let full = mkFull (IInstance fc mbprovidedName fs)
+                         let fullLoc = getFC full
+                         tyormeta <- mkExpected expected fullLoc
+                         pure $ Left !(delayOnFailure fullLoc rig env tyormeta notInfered 5 (const $ elabCon tyormeta fullLoc))
   where
+    mkExpected : Maybe (Glued vars) -> FC -> Core (Glued vars)
+    mkExpected (Just ty) _ = pure ty
+    mkExpected Nothing fc
+        = do nm <- genName "delayTy"
+             ty <- metaVar fc erased env nm (TType fc)
+             pure (gnf env ty)
+
+    notInferedMsg : String
+    notInferedMsg = "Can't infer the type of the record." --TODO make a proper error
+
+    notInfered : Error -> Bool
+    notInfered (GenericMsg _ msg) = msg == notInferedMsg
+    notInfered _ = False
+
     errorConstructorNotFound : Error
     errorConstructorNotFound = GenericMsg fc "No constructor satisfies provided fields."
 
@@ -319,8 +345,17 @@ elabInstance env fc providedName fs
               [] => Left errorConstructorNotFound
               oneOrMoreNames => Right (map snd oneOrMoreNames)
 
-    isConName : Defs -> Name -> Core Bool
-    isConName defs name
-       = case !(lookupDefExact name (gamma defs)) of
-              Just (DCon _ _ _) => pure True
-              _ => pure False
+    -- taken from Desugar.idr, better find one common place for this def ?
+    mkConName : (tConName : Name) -> Name
+    mkConName (NS ns (UN n)) = NS ns (DN n (MN ("__mk" ++ n) 0))
+    mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
+
+    elabCon : (ty : Glued vars) -> FC -> Core (Term vars, Glued vars) -- TODO seek for constructor if there is one
+    elabCon gty fullLoc
+       = do defs <- get Ctxt
+            tynf <- getNF gty
+            let (Just tconName) = getRecordType env tynf
+                      | _ => throw (GenericMsg fullLoc notInferedMsg)
+            (Just [conName]) <- findConNames defs tconName
+                  | mbnames => throw (InternalError (show mbnames))
+            check rig elabinfo nest env (mkFull (IInstance fc (Just conName) fs)) expected

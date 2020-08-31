@@ -211,9 +211,8 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                defs <- get Ctxt
                let fldTys = getFieldArgs !(normaliseHoles defs [] conty)
                log "elab.implementation" 5 $ "Field types " ++ show fldTys
-               let irhs = apply (IVar fc con)
-                                (map (const (ISearch fc 500)) (parents cdata)
-                                 ++ map (mkMethField methImps fldTys) fns)
+               let irhs = apply (autoImpsApply (IVar fc con) $ map (const (ISearch fc 500)) (parents cdata))
+                                  (map (mkMethField methImps fldTys) fns)
                let impFn = IDef fc impName [PatClause fc ilhs irhs]
                log "elab.implementation" 5 $ "Implementation record: " ++ show impFn
 
@@ -267,6 +266,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     impsApply fn [] = fn
     impsApply fn ((n, arg) :: ns)
         = impsApply (IImplicitApp fc fn (Just n) arg) ns
+
+    autoImpsApply : RawImp -> List RawImp -> RawImp
+    autoImpsApply f [] = f
+    autoImpsApply f (x :: xs) = autoImpsApply (IImplicitApp (getFC f) f Nothing x) xs
 
     mkLam : List (Name, RigCount, PiInfo RawImp) -> RawImp -> RawImp
     mkLam [] tm = tm

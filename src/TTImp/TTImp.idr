@@ -10,6 +10,7 @@ import Core.TTC
 import Core.Value
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -65,7 +66,7 @@ mutual
                     (args : List Name) -> RawImp -> RawImp
 
        IUpdate : FC -> List IFieldUpdate -> RawImp -> RawImp
-       IInstance : FC -> Name -> List IFieldUpdate -> RawImp
+       IInstance : FC -> Maybe Name -> List IFieldUpdate -> RawImp
 
        IApp : FC -> RawImp -> RawImp -> RawImp
        IImplicitApp : FC -> RawImp -> Maybe Name -> RawImp -> RawImp
@@ -144,8 +145,8 @@ mutual
                ++ " " ++ show args ++ ") " ++ show sc ++ ")"
       show (IUpdate _ flds rec)
          = "(%record " ++ showSep ", " (map show flds) ++ " " ++ show rec ++ ")"
-      show (IInstance _ n flds)
-         = "(%recordinst " ++ show n ++ " " ++ showSep ", " (map show flds) ++ ")"
+      show (IInstance _ mbname flds)
+         = "(%recordinst " ++ fromMaybe "_" (show <$> mbname) ++ " " ++ showSep ", " (map show flds) ++ ")"
 
       show (IApp fc f a)
          = "(" ++ show f ++ " " ++ show a ++ ")"

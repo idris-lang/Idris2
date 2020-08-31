@@ -46,7 +46,7 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
                     else [NoHints, UniqueSearch, SearchBy dets]
           retty = apply (IVar fc n) (map (IVar fc) (map fst ps))
           conty = mkTy Implicit (map jname ps) $
-                  mkTy Explicit (map bhere constraints ++ map bname meths) retty
+                  mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
           con = MkImpTy fc conName !(bindTypeNames [] (map fst ps ++ map fst meths ++ vars) conty) in
           pure $ IData fc vis (MkImpData fc n
                                   !(bindTypeNames [] (map fst ps ++ map fst meths ++ vars)
@@ -135,8 +135,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
                                             else [Inline])
                                       (MkImpTy fc cn ty_imp)
          let conapp = apply (IVar fc cname)
-                         (map (const (Implicit fc True)) constraints ++
-                          map (IBindVar fc) (map bindName allmeths))
+                              (map (IBindVar fc) (map bindName allmeths))
          let argns = getExplicitArgs 0 ty
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause fc (IImplicitApp fc (IVar fc cn)
@@ -178,6 +177,11 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
     methName : Name -> Name
     methName n = UN (bindName n)
 
+    impsBind : RawImp -> Nat -> RawImp
+    impsBind fn Z = fn
+    impsBind fn (S k)
+        = impsBind (IImplicitApp fc fn Nothing (Implicit fc True)) k
+
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
 getConstraintHint : {vars : _} ->
@@ -196,9 +200,8 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
                           (UN ("__" ++ show iname ++ "_" ++ show con))
          let tydecl = IClaim fc top vis [Inline, Hint False]
                           (MkImpTy fc hintname ty_imp)
-         let conapp = apply (IVar fc cname)
-                        (map (IBindVar fc) (map bindName constraints) ++
-                         map (const (Implicit fc True)) meths)
+         let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
+                              (map (const (Implicit fc True)) meths)
          let fnclause = PatClause fc (IApp fc (IVar fc hintname) conapp)
                                   (IVar fc (constName cn))
          let fndef = IDef fc hintname [fnclause]
@@ -211,6 +214,12 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
 
     constName : Name -> Name
     constName n = UN (bindName n)
+
+    impsBind : RawImp -> List String -> RawImp
+    impsBind fn [] = fn
+    impsBind fn (n :: ns)
+        = impsBind (IImplicitApp fc fn Nothing (IBindVar fc n)) ns
+
 
 getSig : ImpDecl -> Maybe (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
 getSig (IClaim _ c _ opts (MkImpTy fc n ty))
