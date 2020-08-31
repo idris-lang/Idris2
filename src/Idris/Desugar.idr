@@ -867,8 +867,7 @@ mutual
              StartExpr tm => pure [IPragma (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
              Overloadable n => pure [IPragma (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma (\nest, env => setExtension e)]
-             DefaultTotality tot => do setDefaultTotalityOption tot
-                                       pure []
+             DefaultTotality tot => pure [IPragma (\_, _ => setDefaultTotalityOption tot)]
 
   export
   desugar : {auto s : Ref Syn SyntaxInfo} ->
