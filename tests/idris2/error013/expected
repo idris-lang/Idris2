@@ -1,0 +1,21 @@
+1/1: Building Issue361 (Issue361.idr)
+Error: main is not total, possibly not terminating due to recursive path Main.main -> Main.Eq implementation at Issue361.idr:5:1--7:5 -> Main.== -> Main./= -> Main.==
+
+Issue361.idr:7:1--8:5
+ 7 | main : IO ()
+ 8 | main = printLn $ T == T
+
+Error: /= is not total, possibly not terminating due to recursive path Main./= -> Main.== -> Main./= -> Main.==
+
+Issue361.idr:5:1--7:5
+ 5 | Eq S where
+ 6 | 
+ 7 | main : IO ()
+
+Error: == is not total, possibly not terminating due to call to Main./=
+
+Issue361.idr:5:1--7:5
+ 5 | Eq S where
+ 6 | 
+ 7 | main : IO ()
+

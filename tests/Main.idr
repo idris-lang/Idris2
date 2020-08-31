@@ -51,7 +51,7 @@ idrisTests
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012",
+       "error011", "error012", "error013",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support

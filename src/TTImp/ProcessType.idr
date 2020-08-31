@@ -294,7 +294,11 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          when (not (InCase `elem` eopts)) $ setLinearCheck idx True
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
-         traverse (processFnOpt fc (Resolved idx)) opts
+         let name = Resolved idx
+         traverse (processFnOpt fc name) opts
+         -- If no function-specific totality pragma has been used, attach the default totality
+         unless (any isTotalityReq opts) $
+           setFlag fc name (SetTotal !getDefaultTotalityOption)
 
          -- Add to the interactive editing metadata
          addTyDecl fc (Resolved idx) env ty -- for definition generation
