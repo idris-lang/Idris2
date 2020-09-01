@@ -7,7 +7,7 @@ import Data.Maybe
 -- What would be a reason to have named constructors anyway, if we were to instantiate records by their
                                                                         -- type constructors ?
 
--- Also it turned out that specifing type constructors instead of data constructors
+-- Also it turned out that specifying type constructors instead of data constructors
 --      does not simplify or provide any other benifit in internal implementation.
 
 
