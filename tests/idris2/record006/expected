@@ -41,4 +41,5 @@ Fld.idr:89:26--89:55
 Fld> Fld.myDog : OrdinaryDog
 Fld> Fld.mySuperDog : SuperDog
 Fld> Fld.other : Other String
+Fld> 2 holes: Fld.r2_shouldNotTypecheck3, Fld.r3_shouldNotTypecheck4
 Fld> Bye for now!
