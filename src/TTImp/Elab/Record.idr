@@ -338,11 +338,6 @@ elabInstance rig elabinfo nest env fc mbprovidedName fs mkFull expected
               [] => Left errorConstructorNotFound
               oneOrMoreNames => Right (map snd oneOrMoreNames)
 
-    -- taken from Desugar.idr, better find one common place for this def ?
-    mkConName : (tConName : Name) -> Name
-    mkConName (NS ns (UN n)) = NS ns (DN n (MN ("__mk" ++ n) 0))
-    mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
-
     elabCon : (ty : Glued vars) -> FC -> Core (Term vars, Glued vars)
     elabCon gty fullLoc
        = do defs <- get Ctxt
