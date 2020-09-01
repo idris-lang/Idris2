@@ -177,11 +177,6 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
     methName : Name -> Name
     methName n = UN (bindName n)
 
-    impsBind : RawImp -> Nat -> RawImp
-    impsBind fn Z = fn
-    impsBind fn (S k)
-        = impsBind (IImplicitApp fc fn Nothing (Implicit fc True)) k
-
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
 getConstraintHint : {vars : _} ->
