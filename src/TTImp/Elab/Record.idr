@@ -272,7 +272,7 @@ elabInstance rig elabinfo nest env fc mbprovidedName fs mkFull expected
                          let full = mkFull (IInstance fc mbprovidedName fs)
                          let fullLoc = getFC full
                          tyormeta <- mkExpected expected fullLoc
-                         pure $ Left !(delayOnFailure fullLoc rig env tyormeta notInfered 5 (const $ elabCon tyormeta fullLoc))
+                         pure $ Left !(delayOnFailure fullLoc rig env tyormeta needType 5 (const $ elabCon tyormeta fullLoc))
   where
     mkExpected : Maybe (Glued vars) -> FC -> Core (Glued vars)
     mkExpected (Just ty) _ = pure ty
@@ -280,13 +280,6 @@ elabInstance rig elabinfo nest env fc mbprovidedName fs mkFull expected
         = do nm <- genName "delayTy"
              ty <- metaVar fc erased env nm (TType fc)
              pure (gnf env ty)
-
-    notInferedMsg : String
-    notInferedMsg = "Can't infer the type of the record." --TODO make a proper error
-
-    notInfered : Error -> Bool
-    notInfered (GenericMsg _ msg) = msg == notInferedMsg
-    notInfered _ = False
 
     errorConstructorNotFound : Error
     errorConstructorNotFound = GenericMsg fc "No constructor satisfies provided fields."
@@ -350,12 +343,12 @@ elabInstance rig elabinfo nest env fc mbprovidedName fs mkFull expected
     mkConName (NS ns (UN n)) = NS ns (DN n (MN ("__mk" ++ n) 0))
     mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-    elabCon : (ty : Glued vars) -> FC -> Core (Term vars, Glued vars) -- TODO seek for constructor if there is one
+    elabCon : (ty : Glued vars) -> FC -> Core (Term vars, Glued vars)
     elabCon gty fullLoc
        = do defs <- get Ctxt
             tynf <- getNF gty
             let (Just tconName) = getRecordType env tynf
-                      | _ => throw (GenericMsg fullLoc notInferedMsg)
-            (Just [conName]) <- findConNames defs tconName
+                      | _ => throw (RecordTypeNeeded fullLoc env)
+            (Just conName) <- findConName defs tconName
                   | mbnames => throw (InternalError (show mbnames))
             check rig elabinfo nest env (mkFull (IInstance fc (Just conName) fs)) expected

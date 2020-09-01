@@ -1,35 +1,42 @@
 1/1: Building Fld (Fld.idr)
-Error: While processing type of myDog_notWorking0. Field not covered age.
+Error: While processing type of myDog_shouldNotTypecheck0. Field not covered age.
 
-Fld.idr:25:21--25:48
+Fld.idr:36:29--36:56
     |
- 25 | myDog_notWorking0 : record MkDog {name = "Sam"} -- Not all fields are covered
-    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 36 | myDog_shouldNotTypecheck0 : record MkDog {name = "Sam"}           -- Not all fields are covered
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: While processing type of myDog_notWorking1. No constructor satisfies provided fields.
+Error: While processing type of myDog_shouldNotTypecheck1. No constructor satisfies provided fields.
 
-Fld.idr:27:21--27:58
+Fld.idr:38:29--38:66
     |
- 27 | myDog_notWorking1 : record MkDog {age = 3, name1 = "Sam"} -- No constructor with name `MkDog`
-    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 38 | myDog_shouldNotTypecheck1 : record MkDog {age = 3, name1 = "Sam"} -- No constructor with name `MkDog`
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: While processing type of myDog_notWorking2. Duplicate fields.
+Error: While processing type of myDog_shouldNotTypecheck2. Duplicate fields.
 
-Fld.idr:29:21--33:38
- 29 | myDog_notWorking2 : record MkDog
- 30 |                      { age = 4
- 31 |                      , age = 2
- 32 |                      , weight = 12
- 33 |                      , name = "Sam" } -- Duplicate names
+Fld.idr:40:29--44:47
+ 40 | myDog_shouldNotTypecheck2 : record MkDog
+ 41 |                               { age = 4
+ 42 |                               , age = 2
+ 43 |                               , weight = 12
+ 44 |                               , name = "Sam" } -- Duplicate names
 
-Error: While processing right hand side of r2. Ambiguous elaboration. Possible results:
+Error: While processing right hand side of r2_shouldNotTypecheck3. Ambiguous elaboration. Possible results:
     Fld.R2.MkR ?field
     Fld.R1.MkR ?field
 
-Fld.idr:75:6--75:37
+Fld.idr:86:26--86:57
     |
- 75 | r2 = record MkR {field = the Nat 22} -- fail, impossible to disambiguate
-    |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 86 | r2_shouldNotTypecheck3 = record MkR {field = the Nat 22} -- fail, impossible to disambiguate
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: While processing right hand side of r3_shouldNotTypecheck4. Can't infer type for this record.
+
+Fld.idr:89:26--89:55
+    |
+ 89 | r3_shouldNotTypecheck4 = record _ {field = the Nat 22} -- fail, impossible to disambiguate
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Fld> Fld.myDog : OrdinaryDog
 Fld> Fld.mySuperDog : SuperDog

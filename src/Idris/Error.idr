@@ -299,7 +299,7 @@ perror (AllFailed ts)
     allUndefined ((_, UndefinedName _ e) :: es) = allUndefined es
     allUndefined _ = Nothing
 perror (RecordTypeNeeded fc _)
-    = pure $ errorDesc (reflow "Can't infer type for this record update.") <+> line <+> !(ploc fc)
+    = pure $ errorDesc (reflow "Can't infer type for this record.") <+> line <+> !(ploc fc)
 perror (NotRecordField fc fld Nothing)
     = pure $ errorDesc (code (pretty fld) <++> reflow "is not part of a record type.") <+> line <+> !(ploc fc)
 perror (NotRecordField fc fld (Just ty))
