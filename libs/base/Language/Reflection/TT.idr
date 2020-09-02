@@ -1,6 +1,7 @@
 module Language.Reflection.TT
 
 import public Data.List
+import public Data.List1
 
 public export
 FilePos : Type
@@ -47,19 +48,27 @@ data Constant
     | WorldType
 
 public export
+data Namespace = MkNS (List1 String) -- namespace, stored in reverse order
+
+export
+showSep : String -> List String -> String
+showSep sep [] = ""
+showSep sep [x] = x
+showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+
+export
+Show Namespace where
+  show (MkNS ns) = showSep "." (reverse $ List1.toList ns)
+
+public export
 data Name = UN String -- user defined name
           | MN String Int -- machine generated name
-          | NS (List String) Name -- name in a namespace
+          | NS Namespace Name -- name in a namespace
           | DN String Name -- a name and how to display it
 
 export
 Show Name where
-  show (NS ns n) = showSep "." (reverse ns) ++ "." ++ show n
-    where
-      showSep : String -> List String -> String
-      showSep sep [] = ""
-      showSep sep [x] = x
-      showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+  show (NS ns n) = show ns ++ "." ++ show n
   show (UN x) = x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (DN str y) = str
@@ -107,4 +116,3 @@ data TotalReq = Total | CoveringOnly | PartialOK
 
 public export
 data Visibility = Private | Export | Public
-

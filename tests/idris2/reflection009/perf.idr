@@ -11,29 +11,29 @@ import Language.Reflection
 perftest : Elab ()
 perftest = do
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 1 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 1 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 2 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 2 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 3 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 3 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 4 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 4 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 5 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 5 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 6 . show)) [[the Int 1..10]] -- minor difference
+  traverse {t = List} (traverse {t = List} (logMsg "" 6 . show)) [[the Int 1..10]] -- minor difference
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 7 . show)) [[the Int 1..10]] -- 0.3s
+  traverse {t = List} (traverse {t = List} (logMsg "" 7 . show)) [[the Int 1..10]] -- 0.3s
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 8 . show)) [[the Int 1..10]] -- 0.4s
+  traverse {t = List} (traverse {t = List} (logMsg "" 8 . show)) [[the Int 1..10]] -- 0.4s
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 9 . show)) [[the Int 1..10]] -- 0.5s
+  traverse {t = List} (traverse {t = List} (logMsg "" 9 . show)) [[the Int 1..10]] -- 0.5s
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 10 . show)) [[the Int 1..10]] -- 1.5s
+  traverse {t = List} (traverse {t = List} (logMsg "" 10 . show)) [[the Int 1..10]] -- 1.5s
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 11 . show)) [[the Int 1..10]] -- 4s
+  traverse {t = List} (traverse {t = List} (logMsg "" 11 . show)) [[the Int 1..10]] -- 4s
   logMsg "" 0 "Progress"
-  traverse (traverse (logMsg "" 12 . show)) [[the Int 1..10]] -- 13s
+  traverse {t = List} (traverse {t = List} (logMsg "" 12 . show)) [[the Int 1..10]] -- 13s
   pure ()
 
 %runElab perftest

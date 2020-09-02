@@ -337,7 +337,7 @@ mutual
        IRecord : FC ->
                  Maybe String -> -- nested namespace
                  Visibility -> ImpRecord -> ImpDecl
-       INamespace : FC -> List String -> List ImpDecl -> ImpDecl
+       INamespace : FC -> Namespace -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
        IRunElabDecl : FC -> RawImp -> ImpDecl
        IPragma : ({vars : _} ->
@@ -533,7 +533,7 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
     setAs is tm = pure tm
 
 export
-definedInBlock : List String -> -- namespace to resolve names
+definedInBlock : Maybe Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
     concatMap (defName ns) decls
@@ -544,25 +544,24 @@ definedInBlock ns decls =
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
 
-    expandNS : List String -> Name -> Name
-    expandNS [] n = n
-    expandNS ns (UN n) = NS ns (UN n)
-    expandNS ns n@(MN _ _) = NS ns n
-    expandNS ns n@(DN _ _) = NS ns n
-    expandNS ns n = n
+    expandNS : Maybe Namespace -> Name -> Name
+    expandNS (Just ns) (UN n) = NS ns (UN n)
+    expandNS (Just ns) n@(MN _ _) = NS ns n
+    expandNS (Just ns) n@(DN _ _) = NS ns n
+    expandNS _ n = n
 
-    defName : List String -> ImpDecl -> List Name
+    defName : Maybe Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (INamespace _ n nds) = concatMap (defName (n ++ ns)) nds
+    defName ns (INamespace _ n nds) = concatMap (defName (Just $ maybe n (<.> n) ns)) nds
     defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
-        fldns' : List String
-        fldns' = maybe ns (\f => f :: ns) fldns
+        fldns' : Maybe Namespace
+        fldns' = maybe ns (Just . mkNestedNamespace ns) fldns
 
         fnsUN : List Name
         fnsUN = map getFieldName flds

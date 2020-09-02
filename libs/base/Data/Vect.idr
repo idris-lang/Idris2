@@ -220,6 +220,14 @@ intersperse sep (x::xs) = x :: intersperse' sep xs
 --------------------------------------------------------------------------------
 
 public export
+toVect : (n : Nat) -> List a -> Maybe (Vect n a)
+toVect Z [] = Just []
+toVect (S k) (x :: xs)
+    = do xs' <- toVect k xs
+         pure (x :: xs')
+toVect _ _ = Nothing
+
+public export
 fromList' : (1 xs : Vect len elem) -> (1 l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
 fromList' {len} ys (x::xs) =
