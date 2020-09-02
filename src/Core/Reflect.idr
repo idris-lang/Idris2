@@ -251,7 +251,7 @@ export
 Reflect Namespace where
   reflect fc defs lhs env ns
     = do ns' <- reflect fc defs lhs env (unsafeUnfoldNamespace ns)
-         appCon fc defs (NS (mkNamespace "Core.Name.Namespace") (UN "MkNS")) [ns']
+         appCon fc defs (reflectiontt "MkNS") [ns']
 
 export
 Reify Name where
