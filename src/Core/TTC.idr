@@ -10,6 +10,7 @@ import Core.Name
 import Core.Options
 import Core.TT
 
+import Data.List1
 import Data.NameMap
 import Data.Vect
 
@@ -30,6 +31,15 @@ TTC FC where
                      pure (MkFC f s e)
              1 => pure EmptyFC
              _ => corrupt "FC"
+export
+TTC Namespace where
+  toBuf b = toBuf b . unsafeUnfoldNamespace
+  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+
+export
+TTC ModuleIdent where
+  toBuf b = toBuf b . unsafeUnfoldModuleIdent
+  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
 
 export
 TTC Name where

@@ -29,7 +29,7 @@ processRunElab eopts nest env fc tm
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          tidx <- resolveName (UN "[elaborator script]")
-         let n = NS ["Reflection", "Language"] (UN "Elab")
+         let n = NS reflectionNS (UN "Elab")
          unit <- getCon fc defs (builtin "Unit")
          exp <- appCon fc defs n [unit]
 

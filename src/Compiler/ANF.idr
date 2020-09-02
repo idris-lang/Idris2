@@ -67,7 +67,7 @@ mutual
     show (AAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (AApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -92,7 +92,7 @@ mutual
   export
   Show AConAlt where
     show (MkAConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String

@@ -30,7 +30,7 @@ import Utils.Either
 
 record ModTree where
   constructor MkModTree
-  nspace : List String
+  nspace : ModuleIdent
   sourceFile : Maybe String
   deps : List ModTree
 
@@ -49,23 +49,20 @@ public export
 record BuildMod where
   constructor MkBuildMod
   buildFile : String
-  buildNS : List String
-  imports : List (List String)
+  buildNS : ModuleIdent
+  imports : List ModuleIdent
 
 export
 Show BuildMod where
-  show t = buildFile t ++ " [" ++ showSep ", " (map showNS (imports t)) ++ "]"
-    where
-      showNS : List String -> String
-      showNS ns = showSep "." (reverse ns)
+  show t = buildFile t ++ " [" ++ showSep ", " (map show (imports t)) ++ "]"
 
 data AllMods : Type where
 
 mkModTree : {auto c : Ref Ctxt Defs} ->
-            {auto a : Ref AllMods (List (List String, ModTree))} ->
+            {auto a : Ref AllMods (List (ModuleIdent, ModTree))} ->
             FC ->
-            (done : List (List String)) -> -- if 'mod' is here we have a cycle
-            (mod : List String) ->
+            (done : List ModuleIdent) -> -- if 'mod' is here we have a cycle
+            (mod : ModuleIdent) ->
             Core ModTree
 mkModTree loc done mod
   = if mod `elem` done
@@ -180,11 +177,9 @@ buildMod loc num len mod
         m <- newRef MD initMetadata
         put Syn initSyntax
 
-        let showMod : Doc IdrisAnn = concatWith (surround dot) (pretty <$> reverse mod.buildNS)
-
         if needsBuilding
            then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> showMod <++> parens (pretty src)
+                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
                    [] <- process {u} {m} msg src
                       | errs => do emitWarnings
                                    traverse emitError errs

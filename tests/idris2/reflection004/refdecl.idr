@@ -15,7 +15,7 @@ mkPoint : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Decl
 mkPoint n
     = let type = "Point" ++ show n ++ "D" in
       IRecord emptyFC Public
-      (MkRecord emptyFC (NS ["Main"] (UN type)) [] (NS ["Main"] (UN ("Mk" ++ type)))
+      (MkRecord emptyFC (NS (MkNS ["Main"]) (UN type)) [] (NS (MkNS ["Main"]) (UN ("Mk" ++ type)))
         (toList $ map (\axis => MkIField emptyFC MW ExplicitArg (UN axis) `(Double)) (axes n)))
 
 logDecls : TTImp -> Elab (Int -> Int)
