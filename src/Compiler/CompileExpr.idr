@@ -193,7 +193,7 @@ natBranch (MkConAlt n _ _ _) = isNatCon n
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
 trySBranch n (MkConAlt (NS ns (UN nm)) _ [arg] sc)
-  = do guard (nm == "Z" && ns == typesNS)
+  = do guard (nm == "S" && ns == typesNS)
        let fc = getFC n
        pure (CLet fc arg True (natMinus fc fc [n, CPrimVal fc (BI 1)]) sc)
 trySBranch _ _ = Nothing
