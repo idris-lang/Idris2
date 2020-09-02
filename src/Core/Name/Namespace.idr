@@ -200,7 +200,7 @@ showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
 export
 showNSWithSep : String -> Namespace -> String
-showNSWithSep sep (MkNS ns) = showSep "." (reverse (List1.toList ns))
+showNSWithSep sep (MkNS ns) = showSep sep (reverse (List1.toList ns))
 
 export
 Show Namespace where
