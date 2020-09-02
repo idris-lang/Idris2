@@ -401,28 +401,25 @@ foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
 foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 
 -- Data.StringTrie.foldWithKeysM hand specialised for Core
-foldWithKeysC : Monoid b => (List String -> Core b) -> (List String -> a -> Core b) -> StringTrie a -> Core b
-foldWithKeysC {a} {b} fk fv = go []
+-- TODO: Revert to Monoid b after next release
+foldWithKeysC : (List String -> Core ()) -> (List String -> a -> Core ()) -> StringTrie a -> Core ()
+foldWithKeysC {a} fk fv = go []
   where
-  go : List String -> StringTrie a -> Core b
+  bifold' : These () () -> ()
+  bifold' _ = ()
+  go : List String -> StringTrie a -> Core ()
   go ks (MkStringTrie nd) =
-    map bifold $ bitraverseC
+    map bifold' $ bitraverseC
                    (fv ks)
                    (\sm => foldlC
                              (\x, (k, vs) =>
                                do let ks' = ks++[k]
                                   y <- assert_total $ go ks' vs
                                   z <- fk ks'
-                                  pure $ x <+> y <+> z)
-                             neutral
+                                  pure ())
+                             ()
                              (StringMap.toList sm))
                    nd
-
-Semigroup () where
-  (<+>) _ _ = ()
-
-Monoid () where
-  neutral = ()
 
 clean : {auto c : Ref Ctxt Defs} ->
         {auto o : Ref ROpts REPLOpts} ->
@@ -451,7 +448,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                                   in
                                 insertWith (reverse ks) (maybe [v] (v::)) trie) empty toClean
          foldWithKeysC (deleteFolder builddir)
-                       (\ks => map concat . traverse (deleteBin builddir ks))
+                       (\ks => map concat' . traverse (deleteBin builddir ks))
                        pkgTrie
          deleteFolder builddir []
          maybe (pure ()) (\e => delete (outputdir </> e))
@@ -471,6 +468,9 @@ clean pkg opts -- `opts` is not used but might be in the future
         = do let ttFile = builddir </> joinPath ns </> mod
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
+    -- TODO: Remove on next release
+    concat' : List () -> ()
+    concat' _ = ()
 
 getParseErrorLoc : String -> ParseError Token -> FC
 getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
