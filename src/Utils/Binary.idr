@@ -351,13 +351,14 @@ TTC a => TTC (List a) where
 
 export
 TTC a => TTC (List1 a) where
-  toBuf b xs = toBuf b (List1.toList xs)
+  toBuf b (x :: xs)
+     = do toBuf b x
+          toBuf b xs
 
   fromBuf b = do
+    x <- fromBuf b
     xs <- fromBuf b
-    case fromList xs of
-      Nothing => corrupt "List1"
-      Just xs => pure xs
+    pure (x :: xs)
 
 export
 {n : Nat} -> TTC a => TTC (Vect n a) where

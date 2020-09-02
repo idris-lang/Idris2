@@ -362,8 +362,8 @@ mutual
                 | Nothing => throw (UndefinedName fc fn_in)
            let fn = fullname gdef
            log "termination" 10 $ "Looking under " ++ show fn
-           aSmaller <- resolved (gamma defs) (NS ["Builtin"] (UN "assert_smaller"))
-           cond [(fn == NS ["Builtin"] (UN "assert_total"), pure []),
+           aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
+           cond [(fn == NS builtinNS (UN "assert_total"), pure []),
               (caseFn fn,
                   do mps <- getCasePats defs fn pats args
                      case mps of

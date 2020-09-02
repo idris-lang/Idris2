@@ -200,7 +200,7 @@ process (CallsWho n)
     = do todoCmd "calls-who"
          pure $ NameList []
 process (BrowseNamespace ns)
-    = replWrap $ Idris.REPL.process (Browse (List1.toList $ reverse (split (=='.') ns)))
+    = replWrap $ Idris.REPL.process (Browse (mkNamespace ns))
 process (NormaliseTerm tm)
     = do todoCmd "normalise-term"
          pure $ Term tm
@@ -375,7 +375,7 @@ displayIDEResult outf i (Term t)
 displayIDEResult outf i (TTTerm t)
   = printIDEResult outf i $ StringAtom t
 displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
-  = let width = case mn of 
+  = let width = case mn of
                     Just k  => show k
                     Nothing => "auto"
     in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
