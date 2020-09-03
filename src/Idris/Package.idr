@@ -10,7 +10,6 @@ import Core.Options
 import Core.Unify
 
 import Data.List
-import Data.List1
 import Data.Maybe
 import Data.So
 import Data.StringMap
@@ -329,10 +328,10 @@ copyFile src dest
 installFrom : {auto c : Ref Ctxt Defs} ->
               String -> String -> String -> ModuleIdent -> Core ()
 installFrom pname builddir destdir ns
-    = do let ttcfile = joinPath (List1.toList $ reverse $ unsafeUnfoldModuleIdent ns)
+    = do let ttcfile = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
 
-         let modPath  = reverse $ tail $ unsafeUnfoldModuleIdent ns
+         let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
          let destPath = destdir </> destNest
          let destFile = destdir </> ttcfile <.> "ttc"
@@ -435,7 +434,10 @@ clean pkg opts -- `opts` is not used but might be in the future
                          (\m => fst m :: map fst (modules pkg))
                          (mainmod pkg)
          let toClean : List (List String, String)
-               = map (\ ns => let (x :: xs) = unsafeUnfoldModuleIdent ns in (xs, x)) pkgmods
+               = mapMaybe (\ mod => case unsafeUnfoldModuleIdent mod of
+                                       [] => Nothing
+                                       (x :: xs) => Just(xs, x))
+                          pkgmods
          Just srcdir <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          let d = dirs (options defs)

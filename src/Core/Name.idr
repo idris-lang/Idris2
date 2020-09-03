@@ -37,7 +37,9 @@ mkNamespacedName (Just ns) nm = NS ns (UN nm)
 export
 matches : Name -> Name -> Bool
 matches (NS ns _) (NS cns _) = isApproximationOf ns cns
-matches (NS _ _) _ = False -- no in library name, so root doesn't match
+matches (NS _ _) _
+  -- gallais: I don't understand this case but that's what was there.
+  = True -- no in library name, so root doesn't match
 matches _ _ = True -- no prefix, so root must match, so good
 
 -- Update a name imported with 'import as', for creating an alias
