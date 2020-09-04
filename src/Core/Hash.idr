@@ -4,7 +4,6 @@ import Core.CaseTree
 import Core.TT
 
 import Data.List
-import Data.List1
 import Data.Strings
 
 %default covering
@@ -46,10 +45,6 @@ Hashable a => Hashable (List a) where
   hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
 
 export
-Hashable a => Hashable (List1 a) where
-  hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
-
-export
 Hashable a => Hashable (Maybe a) where
   hashWithSalt h Nothing = abs h
   hashWithSalt h (Just x) = hashWithSalt h x
@@ -65,10 +60,6 @@ Hashable String where
                  then h
                  else hashChars (h * 33 + cast (strIndex str p))
                                 (p + 1) len str
-
-export
-Hashable Namespace where
-  hashWithSalt h ns = hashWithSalt h (unsafeUnfoldNamespace ns)
 
 export
 Hashable Name where

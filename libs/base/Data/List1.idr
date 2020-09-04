@@ -59,15 +59,3 @@ Applicative List1 where
 export
 Monad List1 where
   (x :: xs) >>= f = appendl (f x) (xs >>= toList . f)
-
-export
-Eq a => Eq (List1 a) where
-  (x :: xs) == (y :: ys) = x == y && xs == ys
-
-export
-Ord a => Ord (List1 a) where
-  compare xs ys = compare (toList xs) (toList ys)
-
-export
-consInjective : the (List1 a) (x :: xs) === (y :: ys) -> (x === y, xs === ys)
-consInjective Refl = (Refl, Refl)

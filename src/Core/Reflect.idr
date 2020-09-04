@@ -1,7 +1,6 @@
 module Core.Reflect
 
 import Algebra.Semiring
-import Data.List1
 
 import Core.Context
 import Core.Env
@@ -42,31 +41,31 @@ appCon fc defs n args
 
 export
 preludetypes : String -> Name
-preludetypes n = NS typesNS (UN n)
+preludetypes n = NS ["Types", "Prelude"] (UN n)
 
 export
 basics : String -> Name
-basics n = NS basicsNS (UN n)
+basics n = NS ["Basics", "Prelude"] (UN n)
 
 export
 builtin : String -> Name
-builtin n = NS builtinNS (UN n)
+builtin n = NS ["Builtin"] (UN n)
 
 export
 primio : String -> Name
-primio n = NS primIONS (UN n)
+primio n = NS ["PrimIO"] (UN n)
 
 export
 reflection : String -> Name
-reflection n = NS reflectionNS (UN n)
+reflection n = NS ["Reflection", "Language"] (UN n)
 
 export
 reflectiontt : String -> Name
-reflectiontt n = NS reflectionTTNS (UN n)
+reflectiontt n = NS ["TT", "Reflection", "Language"] (UN n)
 
 export
 reflectionttimp : String -> Name
-reflectionttimp n = NS reflectionTTImpNS (UN n)
+reflectionttimp n = NS ["TTImp", "Reflection", "Language"] (UN n)
 
 export
 cantReify : NF vars -> String -> Core a
@@ -184,24 +183,6 @@ Reflect a => Reflect (List a) where
            appCon fc defs (preludetypes "::") [Erased fc False, x', xs']
 
 export
-Reify a => Reify (List1 a) where
-  reify defs val@(NDCon _ n _ _ [_, x, xs])
-      = case !(full (gamma defs) n) of
-             NS _ (UN "::")
-                  => do x' <- reify defs !(evalClosure defs x)
-                        xs' <- reify defs !(evalClosure defs xs)
-                        pure (x' :: xs')
-             _ => cantReify val "List1"
-  reify defs val = cantReify val "List1"
-
-export
-Reflect a => Reflect (List1 a) where
-  reflect fc defs lhs env (x :: xs)
-      = do x' <- reflect fc defs lhs env x
-           xs' <- reflect fc defs lhs env xs
-           appCon fc defs (NS (mkNamespace "Data.List1") (UN "::")) [Erased fc False, x', xs']
-
-export
 Reify a => Reify (Maybe a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
@@ -236,22 +217,6 @@ export
       = do x' <- reflect fc defs lhs env x
            y' <- reflect fc defs lhs env y
            appCon fc defs (builtin "MkPair") [Erased fc False, Erased fc False, x', y']
-
-export
-Reify Namespace where
-  reify defs val@(NDCon _ n _ _ [ns])
-    = case (!(full (gamma defs) n)) of
-        NS _ (UN "MkNS")
-          => do ns' <- reify defs !(evalClosure defs ns)
-                pure (unsafeFoldNamespace ns')
-        _ => cantReify val "Namespace"
-  reify defs val = cantReify val "Namespace"
-
-export
-Reflect Namespace where
-  reflect fc defs lhs env ns
-    = do ns' <- reflect fc defs lhs env (unsafeUnfoldNamespace ns)
-         appCon fc defs (reflectiontt "MkNS") [ns']
 
 export
 Reify Name where

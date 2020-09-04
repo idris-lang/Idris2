@@ -167,7 +167,7 @@ mutual
       = ICase fc (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
                  (map (substNamesClause' bvar bound ps) xs)
   substNames' bvar bound ps (ILocal fc xs y)
-      = let bound' = definedInBlock Nothing xs ++ bound in
+      = let bound' = definedInBlock [] xs ++ bound in
             ILocal fc (map (substNamesDecl' bvar bound ps) xs)
                       (substNames' bvar bound' ps y)
   substNames' bvar bound ps (IApp fc fn arg)

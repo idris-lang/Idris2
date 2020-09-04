@@ -53,7 +53,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
-                      extendNS (mkNamespace ns)
+                      extendNS [ns]
                       newns <- getNS
                       elabGetters conName 0 [] [] conty -- make projections
                       defs <- get Ctxt

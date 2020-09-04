@@ -378,7 +378,7 @@ searchNames fc rig opts env ty topty (n :: ns)
          getSuccessful fc rig opts False env ty topty
             (map (searchName fc rig opts env nfty topty) visns)
   where
-    visible : Context -> List Namespace -> Name ->
+    visible : Context -> List (List String) -> Name ->
               Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam

@@ -36,10 +36,17 @@ lookupName n dict
                            Just res => [(n, res)]
            Just r => case lookup r (hierarchy dict) of
                           Nothing => []
-                          Just ns => filter (matches n . fst) ns
+                          Just ns => filter (matches n) ns
+	where
+		-- Name matches if a prefix of the namespace matches a prefix of the
+    -- namespace in the context
+    matches : Name -> (Name, a) -> Bool
+    matches (NS ns _) (NS cns _, _) = ns `isPrefixOf` cns
+    matches (NS _ _) _ = True -- no in library name, so root doesn't match
+    matches _ _ = True -- no prefix, so root must match, so good
 
 addToHier : Name -> a ->
-            StringMap (List (Name, a)) -> StringMap (List (Name, a))
+						StringMap (List (Name, a)) -> StringMap (List (Name, a))
 addToHier n val hier
      -- Only add user defined names. Machine generated names can only be
 		 -- found with the exactNames

@@ -55,7 +55,7 @@ yaffleMain fname args
          addPrimitives
          case extension fname of
               Just "ttc" => do coreLift $ putStrLn "Processing as TTC"
-                               readFromTTC {extra = ()} True emptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
+                               readFromTTC {extra = ()} True emptyFC True fname [] []
                                coreLift $ putStrLn "Read TTC"
               _ => do coreLift $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile fname

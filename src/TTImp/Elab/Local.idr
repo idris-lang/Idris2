@@ -42,7 +42,7 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
-         let defNames = definedInBlock Nothing nestdecls
+         let defNames = definedInBlock [] nestdecls
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115

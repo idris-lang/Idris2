@@ -4,7 +4,6 @@ import Data.Maybe
 import Data.Either
 import Data.Nat
 import Data.List
-import Data.List1
 
 %default total
 
@@ -134,20 +133,6 @@ DecEq a => DecEq (List a) where
       decEq (x :: xs) (x :: xs) | (Yes Refl) | (Yes Refl) = Yes Refl
       decEq (x :: xs) (x :: ys) | (Yes Refl) | (No contra) =
         No $ contra . snd . consInjective
-
-
---------------------------------------------------------------------------------
--- List1
---------------------------------------------------------------------------------
-
-export
-DecEq a => DecEq (List1 a) where
-
-  decEq (x :: xs) (y :: ys) with (decEq x y)
-    decEq (x :: xs) (y :: ys) | No contra = No (contra . fst . consInjective)
-    decEq (x :: xs) (y :: ys) | Yes eqxy with (decEq xs ys)
-    decEq (x :: xs) (y :: ys) | Yes eqxy | No contra = No (contra . snd . consInjective)
-    decEq (x :: xs) (y :: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (::) eqxy eqxsys)
 
 -- TODO: Other prelude data types
 

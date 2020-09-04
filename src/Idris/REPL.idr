@@ -628,8 +628,8 @@ process (Eval itm)
                  -- foreign argument lists. TODO: once the new FFI is fully
                  -- up and running we won't need this. Also, if we add
                  -- 'with' disambiguation we can use that instead.
-                 catch (do hide replFC (NS primIONS (UN "::"))
-                           hide replFC (NS primIONS (UN "Nil")))
+                 catch (do hide replFC (NS ["PrimIO"] (UN "::"))
+                           hide replFC (NS ["PrimIO"] (UN "Nil")))
                        (\err => pure ())
                  (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
                                        [] ttimp Nothing
@@ -687,9 +687,9 @@ process (Load f)
          -- Clear the context and load again
          loadMainFile f
 process (ImportMod m)
-    = do catch (do addImport (MkImport emptyFC False m (miAsNamespace m))
-                   pure $ ModuleLoaded (show m))
-               (\err => pure $ ErrorLoadingModule (show m) err)
+    = do catch (do addImport (MkImport emptyFC False m m)
+                   pure $ ModuleLoaded (showSep "." (reverse m)))
+               (\err => pure $ ErrorLoadingModule (showSep "." (reverse m)) err)
 process (CD dir)
     = do setWorkingDir dir
          workDir <- getWorkingDir
@@ -889,7 +889,7 @@ mutual
   repl
       = do ns <- getNS
            opts <- get ROpts
-           coreLift (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
+           coreLift (putStr (prompt (evalMode opts) ++ showSep "." (reverse ns) ++ "> "))
            inp <- coreLift getLine
            end <- coreLift $ fEOF stdin
            if end

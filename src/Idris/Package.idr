@@ -54,8 +54,8 @@ record PkgDesc where
   sourceloc : Maybe String
   bugtracker : Maybe String
   depends : List String -- packages to add to search path
-  modules : List (ModuleIdent, String) -- modules to install (namespace, filename)
-  mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
+  modules : List (List1 String, String) -- modules to install (namespace, filename)
+  mainmod : Maybe (List1 String, String) -- main file (i.e. file to load at REPL)
   executable : Maybe String -- name of executable
   options : Maybe (FC, String)
   sourcedir : Maybe String
@@ -113,8 +113,8 @@ data DescField : Type where
   PSourceLoc   : FC -> String -> DescField
   PBugTracker  : FC -> String -> DescField
   PDepends     : List String -> DescField
-  PModules     : List (FC, ModuleIdent) -> DescField
-  PMainMod     : FC -> ModuleIdent -> DescField
+  PModules     : List (FC, List1 String) -> DescField
+  PMainMod     : FC -> List1 String -> DescField
   PExec        : String -> DescField
   POpts        : FC -> String -> DescField
   PSourceDir   : FC -> String -> DescField
@@ -163,7 +163,7 @@ field fname
     <|> do exactProperty "main"
            equals
            start <- location
-           m <- moduleIdent
+           m <- namespacedIdent
            end <- location
            pure (PMainMod (MkFC fname start end) m)
     <|> do exactProperty "executable"
@@ -192,8 +192,8 @@ data ParsedMods : Type where
 data MainMod : Type where
 
 addField : {auto c : Ref Ctxt Defs} ->
-           {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
-           {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
+           {auto p : Ref ParsedMods (List (FC, List1 String))} ->
+           {auto m : Ref MainMod (Maybe (FC, List1 String))} ->
            DescField -> PkgDesc -> Core PkgDesc
 addField (PVersion fc n)     pkg = pure $ record { version = n } pkg
 addField (PAuthors fc a)     pkg = pure $ record { authors = a } pkg
@@ -235,10 +235,10 @@ addFields xs desc = do p <- newRef ParsedMods []
                                      , mainmod = !(traverseOpt toSource mmod)
                                      } added
   where
-    toSource : (FC, ModuleIdent) -> Core (ModuleIdent, String)
-    toSource (loc, ns) = pure (ns, !(nsToSource loc ns))
-    go : {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
-         {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
+    toSource : (FC, List1 String) -> Core (List1 String, String)
+    toSource (loc, ns) = pure (ns, !(nsToSource loc (List1.toList ns)))
+    go : {auto p : Ref ParsedMods (List (FC, List1 String))} ->
+         {auto m : Ref MainMod (Maybe (FC, List1 String))} ->
          List DescField -> PkgDesc -> Core PkgDesc
     go [] dsc = pure dsc
     go (x :: xs) dsc = go xs !(addField x dsc)
@@ -314,7 +314,7 @@ build pkg opts
               Just exec =>
                    do let Just (mainNS, mainFile) = mainmod pkg
                                | Nothing => throw (GenericMsg emptyFC "No main module given")
-                      let mainName = NS (miAsNamespace mainNS) (UN "main")
+                      let mainName = NS (List1.toList mainNS) (UN "main")
                       compileMain mainName mainFile exec
 
          runScript (postbuild pkg)
@@ -327,18 +327,14 @@ copyFile src dest
          writeToFile dest buf
 
 installFrom : {auto c : Ref Ctxt Defs} ->
-              String -> String -> String -> ModuleIdent -> Core ()
-installFrom pname builddir destdir ns
-    = do let ttcfile = joinPath (List1.toList $ reverse $ unsafeUnfoldModuleIdent ns)
+              String -> String -> String -> List1 String -> Core ()
+installFrom pname builddir destdir ns@(m :: dns)
+    = do let ttcfile = joinPath (List1.toList $ reverse ns)
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
-
-         let modPath  = reverse $ tail $ unsafeUnfoldModuleIdent ns
-         let destNest = joinPath modPath
-         let destPath = destdir </> destNest
+         let destPath = destdir </> joinPath (reverse dns)
          let destFile = destdir </> ttcfile <.> "ttc"
-
-         Right _ <- coreLift $ mkdirAll $ destNest
-             | Left err => throw (InternalError ("Can't make directories " ++ show modPath))
+         Right _ <- coreLift $ mkdirAll $ joinPath (reverse dns)
+             | Left err => throw (InternalError ("Can't make directories " ++ show (reverse dns)))
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
          Right _ <- coreLift $ copyFile ttcPath destFile
              | Left err => throw (InternalError ("Can't copy file " ++ ttcPath ++ " to " ++ destPath))
@@ -435,15 +431,15 @@ clean pkg opts -- `opts` is not used but might be in the future
                          (\m => fst m :: map fst (modules pkg))
                          (mainmod pkg)
          let toClean : List (List String, String)
-               = map (\ ns => let (x :: xs) = unsafeUnfoldModuleIdent ns in (xs, x)) pkgmods
+               = map (\ (x :: xs) => (xs, x)) pkgmods
          Just srcdir <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          let d = dirs (options defs)
          let builddir = srcdir </> build_dir d </> "ttc"
          let outputdir = srcdir </> outputDirWithDefault d
          -- the usual pair syntax breaks with `No such variable a` here for some reason
-         let pkgTrie : StringTrie (List String)
-                     = foldl (\trie, ksv =>
+         let pkgTrie = the (StringTrie (List String)) $
+                       foldl (\trie, ksv =>
                                 let ks = Builtin.fst ksv
                                     v = Builtin.snd ksv
                                   in
