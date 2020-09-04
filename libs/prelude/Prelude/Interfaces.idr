@@ -33,6 +33,14 @@ public export
 interface Semigroup ty => Monoid ty where
   neutral : ty
 
+public export
+Semigroup () where
+  _ <+> _ = ()
+
+public export
+Monoid () where
+  neutral = ()
+
 export
 shiftL : Int -> Int -> Int
 shiftL = prim__shl_Int

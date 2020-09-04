@@ -536,7 +536,7 @@ export
 definedInBlock : Maybe Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
-    concatMap (defName ns) decls
+    concatMap (defName (maybe [] unsafeUnfoldNamespace ns)) decls
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ n _) = n
@@ -544,11 +544,12 @@ definedInBlock ns decls =
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
 
-    expandNS : Maybe Namespace -> Name -> Name
-    expandNS (Just ns) (UN n) = NS ns (UN n)
-    expandNS (Just ns) n@(MN _ _) = NS ns n
-    expandNS (Just ns) n@(DN _ _) = NS ns n
-    expandNS _ n = n
+    expandNS : List String -> Name -> Name
+    expandNS [] n = n
+    expandNS ns (UN n) = NS (unsafeFoldNamespace ns) (UN n)
+    expandNS ns n@(MN _ _) = NS (unsafeFoldNamespace ns) n
+    expandNS ns n@(DN _ _) = NS (unsafeFoldNamespace ns) n
+    expandNS ns n = n
 
     defName : Maybe Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
@@ -556,12 +557,12 @@ definedInBlock ns decls =
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (INamespace _ n nds) = concatMap (defName (Just $ maybe n (<.> n) ns)) nds
+    defName ns (INamespace _ n nds) = concatMap (defName (unsafeUnfoldNamespace n ++ ns)) nds
     defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
-        fldns' : Maybe Namespace
-        fldns' = maybe ns (Just . mkNestedNamespace ns) fldns
+        fldns' : List String
+        fldns' = maybe id (::) fldns ns
 
         fnsUN : List Name
         fnsUN = map getFieldName flds

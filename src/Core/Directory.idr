@@ -63,7 +63,7 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> ModuleIdent -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns)
+         let fnameBase = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
          let fs = map (\p => p </> fnameBase <.> "ttc")
                       ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
@@ -77,7 +77,7 @@ nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns)
+         let fnameOrig = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
          let fs = map (\ext => fnameBase <.> ext)
                       [".idr", ".lidr", ".yaff", ".org", ".md"]
@@ -131,7 +131,7 @@ makeBuildDirectory : {auto c : Ref Ctxt Defs} ->
 makeBuildDirectory ns
     = do d <- getDirs
          let bdir = build_dir d </> "ttc"
-         let ns = reverse $ tail $ unsafeUnfoldModuleIdent ns -- first item is file name
+         let ns = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns -- first item is file name
          let ndir = joinPath ns
          Right _ <- coreLift $ mkdirAll (bdir </> ndir)
             | Left err => throw (FileErr (build_dir d </> ndir) err)
@@ -155,7 +155,7 @@ getTTCFileName inp ext
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
          ns <- pathToNS (working_dir d) (source_dir d) inp
-         let fname = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns) <.> ext
+         let fname = joinPath (reverse $ unsafeUnfoldModuleIdent ns) <.> ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
 

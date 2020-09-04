@@ -20,12 +20,12 @@ import Text.PrettyPrint.Prettyprinter.Util
 ||| functions we provide.
 export
 data Namespace : Type where
-  MkNS : List1 String -> Namespace
+  MkNS : List String -> Namespace
 
 ||| A Module Identifier is, similarly to a namespace, stored inside out.
 export
 data ModuleIdent : Type where
-  MkMI : List1 String -> ModuleIdent
+  MkMI : List String -> ModuleIdent
 
 ||| Sometimes we need to convert a module identifier to the corresponding
 ||| namespace. It is still useful to have them as distinct types as it
@@ -49,23 +49,24 @@ nsAsModuleIdent (MkNS ns) = MkMI ns
 
 export
 mkNamespacedIdent : String -> (Maybe Namespace, String)
-mkNamespacedIdent str = case List1.reverse (split (== '.') str) of
-  [name]               => (Nothing, name)
-  (name :: ns1 :: nss) => (Just (MkNS (ns1 :: nss)), name)
+mkNamespacedIdent str = case reverse (split (== '.') str) of
+  [name]       => (Nothing, name)
+  (name :: ns) => (Just (MkNS ns), name)
 
 export
 mkNestedNamespace : Maybe Namespace -> String -> Namespace
 mkNestedNamespace Nothing n = MkNS [n]
-mkNestedNamespace (Just (MkNS ns)) n = MkNS (n :: List1.toList ns)
+mkNestedNamespace (Just (MkNS ns)) n = MkNS (n :: ns)
 
 export
 mkNamespace : String -> Namespace
-mkNamespace = uncurry mkNestedNamespace . mkNamespacedIdent
+mkNamespace ""  = MkNS []
+mkNamespace str = uncurry mkNestedNamespace (mkNamespacedIdent str)
 
 export
 mkModuleIdent : Maybe Namespace -> String -> ModuleIdent
 mkModuleIdent Nothing n = MkMI [n]
-mkModuleIdent (Just (MkNS ns)) n = MkMI (n :: List1.toList ns)
+mkModuleIdent (Just (MkNS ns)) n = MkMI (n :: ns)
 
 -------------------------------------------------------------------------------------
 -- MANIPULATING NAMESPACES
@@ -78,39 +79,35 @@ export
 (<.>) : (existing, local : Namespace) -> Namespace
 (MkNS existing) <.> (MkNS local)
    -- The namespaces are stored in reverse order so the local should end up at
-   -- the front of the underlying `List1 String`
-   = MkNS (append local existing)
+   -- the front of the existing one
+   = MkNS (local ++ existing)
 
 export
 replace : (old : ModuleIdent) -> (new, ns : Namespace) -> Namespace
-replace (MkMI old) new (MkNS (n :: ns)) = go n ns where
+replace (MkMI old) (MkNS new) (MkNS ns) = MkNS (go ns) where
 
-  go : String -> List String -> Namespace
-  go m []
-        = if old == [m]
+  go : List String -> List String
+  go [] = []
+  go (m :: ms)
+        = if old == (m :: ms)
              then new
-             else MkNS [m]
-  go m (m' :: ms)
-        = if old == (m :: m' :: ms)
-             then new
-             else let (MkNS ms') = go m' ms in
-                  MkNS (m :: List1.toList ms')
+             else m :: go ms
 
 ||| Use at your own risks!
 export
-unsafeUnfoldNamespace : Namespace -> List1 String
+unsafeUnfoldNamespace : Namespace -> List String
 unsafeUnfoldNamespace (MkNS ns) = ns
 
 export
-unsafeFoldNamespace : List1 String -> Namespace
+unsafeFoldNamespace : List String -> Namespace
 unsafeFoldNamespace = MkNS
 
 export
-unsafeUnfoldModuleIdent : ModuleIdent -> List1 String
+unsafeUnfoldModuleIdent : ModuleIdent -> List String
 unsafeUnfoldModuleIdent (MkMI ns) = ns
 
 export
-unsafeFoldModuleIdent : List1 String -> ModuleIdent
+unsafeFoldModuleIdent : List String -> ModuleIdent
 unsafeFoldModuleIdent = MkMI
 
 -------------------------------------------------------------------------------------
@@ -127,7 +124,7 @@ unsafeFoldModuleIdent = MkMI
 ||| both `Data.List` and `Data` (no guarantee is given on the order).
 export
 allParents : Namespace -> List Namespace
-allParents (MkNS ns) = go (List1.toList ns) where
+allParents (MkNS ns) = go ns where
 
   go : List String -> List Namespace
   go [] = []
@@ -142,7 +139,7 @@ isParentOf (MkNS ms) (MkNS ns)
   -- This is not a typo: namespaces are stored in reverse order so a namespace is
   -- a prefix of another if its reversed list of identifiers is a suffix of that
   -- other's list of identifiers
-  = isSuffixOf (List1.toList ms) (List1.toList ns)
+  = isSuffixOf ms ns
 
 ||| We can check whether a given namespace is a children (aka subspace) namespace
 ||| of a candidate namespace.
@@ -163,7 +160,7 @@ isApproximationOf (MkNS ms) (MkNS ns)
   -- This is not a typo: namespaces are stored in reverse order so a namespace matches
   -- the end of another if its representation as a list of identifiers is a prefix of
   -- the other's.
-  = isPrefixOf (List1.toList ms) (List1.toList ns)
+  = isPrefixOf ms ns
 
 -------------------------------------------------------------------------------------
 -- INSTANCES
@@ -200,7 +197,7 @@ showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
 export
 showNSWithSep : String -> Namespace -> String
-showNSWithSep sep (MkNS ns) = showSep sep (reverse (List1.toList ns))
+showNSWithSep sep (MkNS ns) = showSep sep (reverse ns)
 
 export
 Show Namespace where
@@ -212,7 +209,7 @@ Show ModuleIdent where
 
 export
 Pretty Namespace where
-  pretty (MkNS ns) = concatWith (surround dot) (pretty <$> reverse (List1.toList ns))
+  pretty (MkNS ns) = concatWith (surround dot) (pretty <$> reverse ns)
 
 export
 Pretty ModuleIdent where
