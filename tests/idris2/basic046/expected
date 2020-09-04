@@ -1,0 +1,8 @@
+1/1: Building Main (Main.idr)
+Error: While processing right hand side of main. Can't find an implementation for Semigroup Type.
+
+Main.idr:6:14--6:20
+   |
+ 6 | main = pure (foo ())
+   |              ^^^^^^
+
