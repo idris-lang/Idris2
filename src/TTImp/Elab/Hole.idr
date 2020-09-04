@@ -26,6 +26,18 @@ mkPrecise (NApp _ (NMeta n i _) _)
                     d => Nothing)
 mkPrecise _ = pure ()
 
+checkName : {auto c : Ref Ctxt Defs} ->
+            FC ->
+            String ->
+            Core (Name, String)
+checkName fc n_in
+    = do nm <- inCurrentNS (UN n_in)
+         defs <- get Ctxt
+         Nothing <- lookupCtxtExact nm (gamma defs)
+             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
+                       throw (AlreadyDefined fc nm)
+         pure (nm, n_in)
+
 export
 checkHole : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -36,12 +48,8 @@ checkHole : {vars : _} ->
             NestedNames vars -> Env Term vars ->
             FC -> String -> Maybe (Glued vars) ->
             Core (Term vars, Glued vars)
-checkHole rig elabinfo nest env fc n_in (Just gexpty)
-    = do nm <- inCurrentNS (UN n_in)
-         defs <- get Ctxt
-         Nothing <- lookupCtxtExact nm (gamma defs)
-             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
-                       throw (AlreadyDefined fc nm)
+checkHole rig elabinfo nest env fc n_in_src (Just gexpty)
+    = do (nm, n_in) <- checkName fc n_in_src
          expty <- getTerm gexpty
          -- Turn lets into lambda before making the hole so that they
          -- get abstracted over in the hole (it's fine here, unlike other
@@ -55,17 +63,14 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
          addUserHole nm
          saveHole nm
          pure (metaval, gexpty)
-checkHole rig elabinfo nest env fc n_in exp
-    = do nmty <- genName ("type_of_" ++ n_in)
+checkHole rig elabinfo nest env fc n_in_src exp
+    = do (nm, n_in) <- checkName fc n_in_src
+         nmty <- genName ("type_of_" ++ n_in)
          let env' = letToLam env
          ty <- metaVar fc erased env' nmty (TType fc)
-         nm <- inCurrentNS (UN n_in)
          defs <- get Ctxt
          mkPrecise !(nf defs env' ty)
 
-         Nothing <- lookupCtxtExact nm (gamma defs)
-             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
-                       throw (AlreadyDefined fc nm)
          (idx, metaval) <- metaVarI fc rig env' nm ty
          withCurrentLHS (Resolved idx)
          addUserHole nm
