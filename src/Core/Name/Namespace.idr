@@ -265,3 +265,7 @@ reflectionTTImpNS = mkNamespace "Language.Reflection.TTImp"
 export
 dpairNS : Namespace
 dpairNS = mkNamespace "Builtin.DPair"
+
+export
+natNS : Namespace
+natNS = mkNamespace "Data.Nat"

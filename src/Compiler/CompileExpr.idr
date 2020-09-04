@@ -179,7 +179,7 @@ natHack = magic
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef typesNS "mult" 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
-    , MagicCRef typesNS "minus" 2 natMinus
+    , MagicCRef natNS "minus" 2 natMinus
     ]
 
 
