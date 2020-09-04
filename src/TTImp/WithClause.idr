@@ -20,7 +20,7 @@ mutual
   getMatch lhs (Implicit _ _) tm = pure []
 
   getMatch lhs (IVar _ (NS ns n)) (IVar loc (NS ns' n'))
-      = if n == n' && isApproximationOf ns ns' then pure [] else matchFail loc
+      = if n == n' && isSuffixOf ns' ns then pure [] else matchFail loc
   getMatch lhs (IVar _ (NS ns n)) (IVar loc n')
       = if n == n' then pure [] else matchFail loc
   getMatch lhs (IVar _ n) (IVar loc n')

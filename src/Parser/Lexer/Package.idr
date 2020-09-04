@@ -12,8 +12,6 @@ import Data.Strings
 import Data.String.Extra
 import Utils.String
 
-import Core.Name.Namespace
-
 %default total
 
 public export
@@ -21,7 +19,7 @@ data Token
   = Comment String
   | EndOfInput
   | Equals
-  | DotSepIdent (Maybe Namespace) String
+  | DotSepIdent (List1 String)
   | Separator
   | Space
   | StringLit String
@@ -31,7 +29,7 @@ Show Token where
   show (Comment str) = "Comment: " ++ str
   show EndOfInput = "EndOfInput"
   show Equals = "Equals"
-  show (DotSepIdent ns n) = "DotSepIdentifier: " ++ show ns ++ "." ++ show n
+  show (DotSepIdent dsid) = "DotSepIdentifier: " ++ dotSep (List1.toList dsid)
   show Separator = "Separator"
   show Space = "Space"
   show (StringLit s) = "StringLit: " ++ s
@@ -41,7 +39,7 @@ Pretty Token where
   pretty (Comment str) = "Comment:" <++> pretty str
   pretty EndOfInput = "EndOfInput"
   pretty Equals = "Equals"
-  pretty (DotSepIdent ns n) = "DotSepIdentifier:" <++> pretty ns <+> dot <+> pretty n
+  pretty (DotSepIdent dsid) = "DotSepIdentifier:" <++> concatWith (surround dot) (pretty <$> List1.toList dsid)
   pretty Separator = "Separator"
   pretty Space = "Space"
   pretty (StringLit s) = "StringLit:" <++> pretty s
@@ -56,12 +54,15 @@ rawTokens : TokenMap Token
 rawTokens =
   [ (equals, const Equals)
   , (comment, Comment . drop 2)
-  , (namespacedIdent, uncurry DotSepIdent . mkNamespacedIdent)
-  , (identAllowDashes, DotSepIdent Nothing)
+  , (namespacedIdent, DotSepIdent . splitNamespace)
+  , (identAllowDashes, DotSepIdent . pure)
   , (separator, const Separator)
   , (spacesOrNewlines, const Space)
   , (stringLit, \s => StringLit (stripQuotes s))
   ]
+  where
+    splitNamespace : String -> List1 String
+    splitNamespace = Data.Strings.split (== '.')
 
 export
 lex : String -> Either (Int, Int, String) (List (WithBounds Token))

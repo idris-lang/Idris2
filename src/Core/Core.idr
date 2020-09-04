@@ -72,7 +72,7 @@ data Error : Type where
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
      UndefinedName : FC -> Name -> Error
-     InvisibleName : FC -> Name -> Maybe Namespace -> Error
+     InvisibleName : FC -> Name -> Maybe (List String) -> Error
      BadTypeConType : FC -> Name -> Error
      BadDataConType : FC -> Name -> Name -> Error
      NotCovering : FC -> Name -> Covering -> Error
@@ -135,8 +135,8 @@ data Error : Type where
      FileErr : String -> FileError -> Error
      ParseFail : (Show token, Pretty token) =>
                FC -> ParseError token -> Error
-     ModuleNotFound : FC -> ModuleIdent -> Error
-     CyclicImports : List ModuleIdent -> Error
+     ModuleNotFound : FC -> List String -> Error
+     CyclicImports : List (List String) -> Error
      ForceNeeded : Error
      InternalError : String -> Error
      UserError : String -> Error
@@ -183,7 +183,7 @@ Show Error where
   show (UndefinedName fc x) = show fc ++ ":Undefined name " ++ show x
   show (InvisibleName fc x (Just ns))
        = show fc ++ ":Name " ++ show x ++ " is inaccessible since " ++
-         show ns ++ " is not explicitly imported"
+         showSep "." (reverse ns) ++ " is not explicitly imported"
   show (InvisibleName fc x _) = show fc ++ ":Name " ++ show x ++ " is private"
   show (BadTypeConType fc n)
        = show fc ++ ":Return type of " ++ show n ++ " must be Type"
@@ -296,9 +296,12 @@ Show Error where
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
   show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
   show (ModuleNotFound fc ns)
-      = show fc ++ ":" ++ show ns ++ " not found"
+      = show fc ++ ":" ++ showSep "." (reverse ns) ++ " not found"
   show (CyclicImports ns)
-      = "Module imports form a cycle: " ++ showSep " -> " (map show ns)
+      = "Module imports form a cycle: " ++ showSep " -> " (map showMod ns)
+    where
+      showMod : List String -> String
+      showMod ns = showSep "." (reverse ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str

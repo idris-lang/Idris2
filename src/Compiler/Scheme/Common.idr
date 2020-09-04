@@ -31,7 +31,7 @@ schString s = concatMap okchar (unpack s)
 
 export
 schName : Name -> String
-schName (NS ns n) = showNSWithSep "-" ns ++ "-" ++ schName n
+schName (NS ns n) = showSep "-" ns ++ "-" ++ schName n
 schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n

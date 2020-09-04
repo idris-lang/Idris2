@@ -43,7 +43,6 @@ modules =
     Core.LinearCheck,
     Core.Metadata,
     Core.Name,
-    Core.Name.Namespace,
     Core.Normalise,
     Core.Options,
     Core.Options.Log,

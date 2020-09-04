@@ -26,7 +26,7 @@ processRunElab : {vars : _} ->
 processRunElab eopts nest env fc tm
     = do defs <- get Ctxt
          tidx <- resolveName (UN "[elaborator script]")
-         let n = NS reflectionNS (UN "Elab")
+         let n = NS ["Reflection", "Language"] (UN "Elab")
          unit <- getCon fc defs (builtin "Unit")
          exp <- appCon fc defs n [unit]
 

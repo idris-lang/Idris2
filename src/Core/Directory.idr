@@ -8,7 +8,6 @@ import Core.Options
 import Utils.Path
 
 import Data.List
-import Data.List1
 import Data.Strings
 import Data.Maybe
 
@@ -60,10 +59,10 @@ findLibraryFile fname
 -- looking first in the build directory then in the extra_dirs
 export
 nsToPath : {auto c : Ref Ctxt Defs} ->
-           FC -> ModuleIdent -> Core (Either Error String)
+           FC -> List String -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns)
+         let fnameBase = joinPath (reverse ns)
          let fs = map (\p => p </> fnameBase <.> "ttc")
                       ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
@@ -74,10 +73,10 @@ nsToPath loc ns
 -- exists in the working directory)
 export
 nsToSource : {auto c : Ref Ctxt Defs} ->
-             FC -> ModuleIdent -> Core String
+             FC -> List String -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns)
+         let fnameOrig = joinPath (reverse ns)
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
          let fs = map (\ext => fnameBase <.> ext)
                       [".idr", ".lidr", ".yaff", ".org", ".md"]
@@ -88,37 +87,35 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> Core ModuleIdent
+pathToNS : String -> Maybe String -> String -> Core (List String)
 pathToNS wdir sdir fname
     = let sdir = fromMaybe "" sdir
           base = if isAbsolute fname then wdir </> sdir else sdir
         in
           case stripPrefix base fname of
                Nothing => throw (UserError ("Source file " ++ show fname
-                                            ++ " is not in the source directory "
+                                            ++ " is not in the source directory " 
                                             ++ show (wdir </> sdir)))
-               Just p => case map show $ reverse $ (parse (p <.> "")).body of
-                           [] => throw (UserError ("IMPOSSIBLE: empty module ident from " ++ show fname))
-                           (x::xs) => pure (unsafeFoldModuleIdent (x :: xs))
+               Just p => pure $ map show $ reverse $ (parse (p <.> "")).body
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
                        | Left _ => pure False
                    closeDir d
-                   pure True
+                   pure True 
 
 -- Create subdirectories, if they don't exist
 export
 covering
 mkdirAll : String -> IO (Either FileError ())
-mkdirAll dir = if parse dir == emptyPath
+mkdirAll dir = if parse dir == emptyPath 
                   then pure (Right ())
                   else do exist <- dirExists dir
-                          if exist
+                          if exist 
                              then pure (Right ())
                              else do Right () <- case parent dir of
                                           Just parent => mkdirAll parent
-                                          Nothing => pure (Right ())
+                                          Nothing => pure (Right ()) 
                                         | err => pure err
                                      createDir dir
 
@@ -127,11 +124,11 @@ mkdirAll dir = if parse dir == emptyPath
 export
 covering
 makeBuildDirectory : {auto c : Ref Ctxt Defs} ->
-                     ModuleIdent -> Core ()
+                     List String -> Core ()
 makeBuildDirectory ns
     = do d <- getDirs
          let bdir = build_dir d </> "ttc"
-         let ns = reverse $ tail $ unsafeUnfoldModuleIdent ns -- first item is file name
+         let ns = reverse $ fromMaybe [] (tail' ns) -- first item is file name
          let ndir = joinPath ns
          Right _ <- coreLift $ mkdirAll (bdir </> ndir)
             | Left err => throw (FileErr (build_dir d </> ndir) err)
@@ -155,7 +152,7 @@ getTTCFileName inp ext
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
          ns <- pathToNS (working_dir d) (source_dir d) inp
-         let fname = joinPath (reverse $ List1.toList $ unsafeUnfoldModuleIdent ns) <.> ext
+         let fname = joinPath (reverse ns) <.> ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
 
@@ -195,7 +192,7 @@ findIpkgFile
   where
     covering
     findIpkgFile' : String -> String -> IO (Maybe (String, String, String))
-    findIpkgFile' dir up
+    findIpkgFile' dir up 
         = do Right files <- dirEntries dir
                  | Left err => pure Nothing
              let Just f = find (\f => extension f == Just "ipkg") files

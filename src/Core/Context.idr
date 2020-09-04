@@ -330,7 +330,7 @@ record Context where
     -- This only matters during evaluation and type checking, to control
     -- access in a program - in all other cases, we'll assume everything is
     -- visible
-    visibleNS : List Namespace
+    visibleNS : List (List String)
     allPublic : Bool -- treat everything as public. This is only intended
                      -- for checking partially evaluated definitions
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
@@ -356,7 +356,7 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty)
+         pure (MkContext 0 0 empty empty aref 0 empty [["_PE"]] False False empty)
 
 export
 initCtxt : Core Context
@@ -524,7 +524,7 @@ lookupCtxtName n ctxt
                  lookupPossibles [] ps
   where
     matches : Name -> Name -> Bool
-    matches (NS ns _) (NS cns _) = ns `isApproximationOf` cns
+    matches (NS ns _) (NS cns _) = ns `isPrefixOf` cns
     matches (NS _ _) _ = True -- no in library name, so root doesn't match
     matches _ _ = True -- no prefix, so root must match, so good
 
@@ -873,8 +873,8 @@ record Defs where
   constructor MkDefs
   gamma : Context
   mutData : List Name -- Currently declared but undefined data types
-  currentNS : Namespace -- namespace for current definitions
-  nestedNS : List Namespace -- other nested namespaces we can look in
+  currentNS : List String -- namespace for current definitions
+  nestedNS : List (List String) -- other nested namespaces we can look in
   options : Options
   toSave : NameMap ()
   nextTag : Int
@@ -902,11 +902,11 @@ record Defs where
   saveTransforms : List (Name, Transform)
   namedirectives : NameMap (List String)
   ifaceHash : Int
-  importHashes : List (Namespace, Int)
+  importHashes : List (List String, Int)
      -- ^ interface hashes of imported modules
-  imported : List (ModuleIdent, Bool, Namespace)
+  imported : List (List String, Bool, List String)
      -- ^ imported modules, whether to rexport, as namespace
-  allImported : List (String, (ModuleIdent, Bool, Namespace))
+  allImported : List (String, (List String, Bool, List String))
      -- ^ all imported filenames/namespaces, just to avoid loading something
      -- twice unnecessarily (this is a record of all the things we've
      -- called 'readFromTTC' with, in practice)
@@ -943,7 +943,7 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
-         pure (MkDefs gam [] mainNS [] defaults empty 100
+         pure (MkDefs gam [] ["Main"] [] defaults empty 100
                       empty empty empty [] [] empty []
                       empty 5381 [] [] [] [] [] empty empty empty empty [])
 
@@ -1254,23 +1254,24 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 
 -- private names are only visible in this namespace if their namespace
 -- is the current namespace (or an outer one)
--- that is: the namespace of 'n' is a parent of nspace
-visibleIn : Namespace -> Name -> Visibility -> Bool
-visibleIn nspace (NS ns n) Private = isParentOf ns nspace
+-- that is: given that most recent namespace is first in the list,
+-- the namespace of 'n' is a suffix of nspace
+visibleIn : (nspace : List String) -> Name -> Visibility -> Bool
+visibleIn nspace (NS ns n) Private = isSuffixOf ns nspace
 -- Public and Export names are always visible
 visibleIn nspace n _ = True
 
 export
-visibleInAny : List Namespace -> Name -> Visibility -> Bool
+visibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
 visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 
-reducibleIn : Namespace -> Name -> Visibility -> Bool
-reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
-reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
+reducibleIn : (nspace : List String) -> Name -> Visibility -> Bool
+reducibleIn nspace (NS ns (UN n)) Export = isSuffixOf ns nspace
+reducibleIn nspace (NS ns (UN n)) Private = isSuffixOf ns nspace
 reducibleIn nspace n _ = True
 
 export
-reducibleInAny : List Namespace -> Name -> Visibility -> Bool
+reducibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
 reducibleInAny nss n vis = any (\ns => reducibleIn ns n vis) nss
 
 export
@@ -1662,7 +1663,7 @@ clearSavedHints
 -- Set the default namespace for new definitions
 export
 setNS : {auto c : Ref Ctxt Defs} ->
-        Namespace -> Core ()
+        List String -> Core ()
 setNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS = ns } defs)
@@ -1670,7 +1671,7 @@ setNS ns
 -- Set the nested namespaces we're allowed to look inside
 export
 setNestedNS : {auto c : Ref Ctxt Defs} ->
-              List Namespace -> Core ()
+              List (List String) -> Core ()
 setNestedNS ns
     = do defs <- get Ctxt
          put Ctxt (record { nestedNS = ns } defs)
@@ -1678,7 +1679,7 @@ setNestedNS ns
 -- Get the default namespace for new definitions
 export
 getNS : {auto c : Ref Ctxt Defs} ->
-        Core Namespace
+        Core (List String)
 getNS
     = do defs <- get Ctxt
          pure (currentNS defs)
@@ -1686,7 +1687,7 @@ getNS
 -- Get the nested namespaces we're allowed to look inside
 export
 getNestedNS : {auto c : Ref Ctxt Defs} ->
-              Core (List Namespace)
+              Core (List (List String))
 getNestedNS
     = do defs <- get Ctxt
          pure (nestedNS defs)
@@ -1697,14 +1698,14 @@ getNestedNS
 -- "import X as [current namespace]")
 export
 addImported : {auto c : Ref Ctxt Defs} ->
-              (ModuleIdent, Bool, Namespace) -> Core ()
+              (List String, Bool, List String) -> Core ()
 addImported mod
     = do defs <- get Ctxt
          put Ctxt (record { imported $= (mod ::) } defs)
 
 export
 getImported : {auto c : Ref Ctxt Defs} ->
-              Core (List (ModuleIdent, Bool, Namespace))
+              Core (List (List String, Bool, List String))
 getImported
     = do defs <- get Ctxt
          pure (imported defs)
@@ -1854,10 +1855,10 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
 -- Inner namespaces go first, for ease of name lookup
 export
 extendNS : {auto c : Ref Ctxt Defs} ->
-           Namespace -> Core ()
+           List String -> Core ()
 extendNS ns
     = do defs <- get Ctxt
-         put Ctxt (record { currentNS $= (<.> ns) } defs)
+         put Ctxt (record { currentNS $= ((reverse ns) ++) } defs)
 
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
@@ -1887,14 +1888,14 @@ inCurrentNS n = pure n
 
 export
 setVisible : {auto c : Ref Ctxt Defs} ->
-             Namespace -> Core ()
+             (nspace : List String) -> Core ()
 setVisible nspace
     = do defs <- get Ctxt
          put Ctxt (record { gamma->visibleNS $= (nspace ::) } defs)
 
 export
 getVisible : {auto c : Ref Ctxt Defs} ->
-             Core (List Namespace)
+             Core (List (List String))
 getVisible
     = do defs <- get Ctxt
          pure (visibleNS (gamma defs))
@@ -1920,18 +1921,21 @@ isAllPublic
 -- the namespace itself, and any namespace it's nested inside)
 export
 isVisible : {auto c : Ref Ctxt Defs} ->
-            Namespace -> Core Bool
+            (nspace : List String) -> Core Bool
 isVisible nspace
     = do defs <- get Ctxt
          pure (any visible (allParents (currentNS defs) ++
                             nestedNS defs ++
                             visibleNS (gamma defs)))
-
   where
-    -- Visible if any visible namespace is a parent of the namespace we're
+    allParents : List String -> List (List String)
+    allParents [] = []
+    allParents (n :: ns) = (n :: ns) :: allParents ns
+
+    -- Visible if any visible namespace is a suffix of the namespace we're
     -- asking about
-    visible : Namespace -> Bool
-    visible visns = isParentOf visns nspace
+    visible : List String -> Bool
+    visible visns = isSuffixOf visns nspace
 
 -- Get the next entry id in the context (this is for recording where to go
 -- back to when backtracking in the elaborator)

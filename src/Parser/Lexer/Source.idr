@@ -14,8 +14,6 @@ import Utils.Hex
 import Utils.Octal
 import Utils.String
 
-import Core.Name
-
 %default total
 
 public export
@@ -28,8 +26,8 @@ data Token
   -- Identifiers
   | HoleIdent String
   | Ident String
-  | DotSepIdent Namespace String -- ident.ident
-  | DotIdent String               -- .ident
+  | DotSepIdent (List1 String)  -- ident.ident
+  | DotIdent String             -- .ident
   | Symbol String
   -- Comments
   | Comment String
@@ -51,7 +49,7 @@ Show Token where
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
-  show (DotSepIdent ns n) = "namespaced identifier " ++ show ns ++ "." ++ show n
+  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (List1.toList $ reverse xs)
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
@@ -74,7 +72,7 @@ Pretty Token where
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
-  pretty (DotSepIdent ns n) = reflow "namespaced identifier" <++> pretty ns <+> dot <+> pretty n
+  pretty (DotSepIdent xs) = reflow "namespaced identifier" <++> concatWith (surround dot) (pretty <$> reverse (List1.toList xs))
   pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
   -- Comments
@@ -264,9 +262,9 @@ rawTokens =
     parseIdent x = if x `elem` keywords then Keyword x
                    else Ident x
     parseNamespace : String -> Token
-    parseNamespace ns = case mkNamespacedIdent ns of
-                             (Nothing, ident) => parseIdent ident
-                             (Just ns, n)     => DotSepIdent ns n
+    parseNamespace ns = case List1.reverse . split (== '.') $ ns of
+                             [ident] => parseIdent ident
+                             ns      => DotSepIdent ns
 
 export
 lexTo : (WithBounds Token -> Bool) ->

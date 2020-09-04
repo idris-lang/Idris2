@@ -6,8 +6,6 @@ import public Parser.Rule.Common
 import Data.List
 import Data.List1
 
-import Core.Name.Namespace
-
 %default total
 
 public export
@@ -36,7 +34,7 @@ export
 exactProperty : String -> Rule String
 exactProperty p = terminal ("Expected property " ++ p)
                            (\x => case x.val of
-                                       DotSepIdent Nothing p' =>
+                                       DotSepIdent [p'] =>
                                          if p == p' then Just p
                                          else Nothing
                                        _ => Nothing)
@@ -49,24 +47,24 @@ stringLit = terminal "Expected string"
                                  _ => Nothing)
 
 export
-namespacedIdent : Rule (Maybe Namespace, String)
+namespacedIdent : Rule (List1 String)
 namespacedIdent = terminal "Expected namespaced identifier"
                            (\x => case x.val of
-                                       DotSepIdent ns n => Just (ns, n)
+                                       DotSepIdent nsid => Just $ reverse nsid
                                        _ => Nothing)
 
 export
-moduleIdent : Rule ModuleIdent
+moduleIdent : Rule (List1 String)
 moduleIdent = terminal "Expected module identifier"
                        (\x => case x.val of
-                                   DotSepIdent ns m => Just $ nsAsModuleIdent (mkNestedNamespace ns m)
+                                   DotSepIdent m => Just $ reverse m
                                    _ => Nothing)
 
 export
 packageName : Rule String
 packageName = terminal "Expected package name"
                        (\x => case x.val of
-                                   DotSepIdent Nothing str =>
+                                   DotSepIdent [str] =>
                                      if isIdent AllowDashes str then Just str
                                      else Nothing
                                    _ => Nothing)

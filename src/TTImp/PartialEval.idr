@@ -364,7 +364,7 @@ specialise {vars} fc env gdef fn stk
                    | Nothing => pure Nothing
                let nhash = hash (mapMaybe getStatic (map snd sargs))
                               `hashWithSalt` fn -- add function name to hash to avoid namespace clashes
-               let pename = NS partialEvalNS
+               let pename = NS ["_PE"]
                             (UN ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex nhash))
                defs <- get Ctxt
                case lookup pename (peFailures defs) of
