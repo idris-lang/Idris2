@@ -10,7 +10,6 @@ import Core.Name
 import Core.Options
 import Core.TT
 
-import Data.List1
 import Data.NameMap
 import Data.Vect
 

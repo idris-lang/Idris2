@@ -141,13 +141,6 @@ isParentOf (MkNS ms) (MkNS ns)
   -- other's list of identifiers
   = isSuffixOf ms ns
 
-||| We can check whether a given namespace is a children (aka subspace) namespace
-||| of a candidate namespace.
-||| We expect that `all (isChildOf ns) (allParents ns)` holds true.
-export
-isChildOf : (given, candidate : Namespace) -> Bool
-isChildOf given candidate = isParentOf candidate given
-
 ||| When writing qualified names users often do not want to spell out the full
 ||| namespace, rightly considering that an unambiguous segment should be enough.
 ||| This function checks whether a candidate is an approximation of a given

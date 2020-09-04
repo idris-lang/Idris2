@@ -8,6 +8,7 @@ import Core.FC
 import Core.TT
 
 import Data.LengthMatch
+import Data.Maybe
 import Data.NameMap
 import Data.List
 import Data.Vect
@@ -162,7 +163,7 @@ mutual
                 let arity = getArity def
                 if (Inline `elem` flags gdef) && (not (n `elem` rec))
                    then do ap <- tryApply (n :: rec) stk env def
-                           pure $ maybe (unloadApp arity stk (CRef fc n)) id ap
+                           pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
                    else pure $ unloadApp arity stk (CRef fc n)
   eval {vars} {free} rec env [] (CLam fc x sc)
       = do xn <- genName "lamv"

@@ -409,7 +409,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          -- don't load it again (we do need to load it again if it's visible
          -- this time, because we need to reexport the dependencies.)
          let False = (modNS, reexp, importAs) `elem` map snd (allImported defs)
-              | _ => pure Nothing
+              | True => pure Nothing
          put Ctxt (record { allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
 
          Right buffer <- coreLift $ readFromFile fname

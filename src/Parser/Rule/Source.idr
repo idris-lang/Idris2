@@ -202,7 +202,7 @@ name = opNonNS <|> do
   -- on a simplified example.
   let ns = fst nsx
   let x = snd nsx
-  opNS ns x <|> nameNS ns x
+  opNS (mkNestedNamespace ns x) <|> nameNS ns x
  where
   reserved : String -> Bool
   reserved n = n `elem` reservedNames
@@ -216,12 +216,12 @@ name = opNonNS <|> do
   opNonNS : Rule Name
   opNonNS = symbol "(" *> operator <* symbol ")"
 
-  opNS : Maybe Namespace -> String -> Rule Name
-  opNS ns x = do
+  opNS : Namespace -> Rule Name
+  opNS ns = do
     symbol ".("
     n <- operator
     symbol ")"
-    pure (NS (mkNestedNamespace ns x) n)
+    pure (NS ns n)
 
 export
 IndentInfo : Type

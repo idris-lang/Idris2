@@ -4,7 +4,6 @@ import public Parser.Lexer.Package
 import public Parser.Rule.Common
 
 import Data.List
-import Data.List1
 
 import Core.Name.Namespace
 

@@ -1,7 +1,6 @@
 module Language.Reflection.TT
 
 import public Data.List
-import public Data.List1
 
 public export
 FilePos : Type

@@ -8,7 +8,6 @@ import Core.Options
 import Utils.Path
 
 import Data.List
-import Data.List1
 import Data.Strings
 import Data.Maybe
 
@@ -97,9 +96,7 @@ pathToNS wdir sdir fname
                Nothing => throw (UserError ("Source file " ++ show fname
                                             ++ " is not in the source directory "
                                             ++ show (wdir </> sdir)))
-               Just p => case map show $ reverse $ (parse (p <.> "")).body of
-                           [] => throw (UserError ("IMPOSSIBLE: empty module ident from " ++ show fname))
-                           (x::xs) => pure (unsafeFoldModuleIdent (x :: xs))
+               Just p => pure $ unsafeFoldModuleIdent $ map show $ reverse $ (parse (p <.> "")).body
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir

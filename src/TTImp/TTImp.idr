@@ -533,10 +533,10 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
     setAs is tm = pure tm
 
 export
-definedInBlock : Maybe Namespace -> -- namespace to resolve names
+definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
-    concatMap (defName (maybe [] unsafeUnfoldNamespace ns)) decls
+    concatMap (defName ns) decls
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ n _) = n
@@ -544,25 +544,26 @@ definedInBlock ns decls =
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
 
-    expandNS : List String -> Name -> Name
-    expandNS [] n = n
-    expandNS ns (UN n) = NS (unsafeFoldNamespace ns) (UN n)
-    expandNS ns n@(MN _ _) = NS (unsafeFoldNamespace ns) n
-    expandNS ns n@(DN _ _) = NS (unsafeFoldNamespace ns) n
-    expandNS ns n = n
+    expandNS : Namespace -> Name -> Name
+    expandNS ns n
+       = if ns == emptyNS then n else case n of
+           UN _ => NS ns n
+           MN _ _ => NS ns n
+           DN _ _ => NS ns n
+           _ => n
 
-    defName : Maybe Namespace -> ImpDecl -> List Name
+    defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (INamespace _ n nds) = concatMap (defName (unsafeUnfoldNamespace n ++ ns)) nds
+    defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
-        fldns' : List String
-        fldns' = maybe id (::) fldns ns
+        fldns' : Namespace
+        fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
 
         fnsUN : List Name
         fnsUN = map getFieldName flds

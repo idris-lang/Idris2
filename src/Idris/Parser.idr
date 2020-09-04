@@ -1430,12 +1430,13 @@ import_ fname indents
                          reexp <- option False (do keyword "public"
                                                    pure True)
                          ns <- moduleIdent
-                         nsAs <- option ns (do exactIdent "as"
-                                               moduleIdent)
+                         nsAs <- option (miAsNamespace ns)
+                                        (do exactIdent "as"
+                                            namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
          (reexp, ns, nsAs) <- pure b.val
-         pure (MkImport (boundToFC fname b) reexp ns (miAsNamespace nsAs))
+         pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
 prog : FileName -> SourceEmptyRule Module

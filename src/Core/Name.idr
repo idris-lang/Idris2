@@ -1,7 +1,6 @@
 module Core.Name
 
 import Data.List
-import Data.List1
 import Data.Strings
 import Decidable.Equality
 import Text.PrettyPrint.Prettyprinter
