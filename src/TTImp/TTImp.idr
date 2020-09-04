@@ -551,7 +551,7 @@ definedInBlock ns decls =
     expandNS ns n@(DN _ _) = NS (unsafeFoldNamespace ns) n
     expandNS ns n = n
 
-    defName : List String -> ImpDecl -> List Name
+    defName : Maybe Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)

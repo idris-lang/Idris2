@@ -523,6 +523,10 @@ lookupCtxtName n ctxt
                       | Nothing => pure []
                  lookupPossibles [] ps
   where
+    matches : Name -> Name -> Bool
+    matches (NS ns _) (NS cns _) = ns `isApproximationOf` cns
+    matches (NS _ _) _ = True -- no in library name, so root doesn't match
+    matches _ _ = True -- no prefix, so root must match, so good
 
     resn : (Name, Int, GlobalDef) -> Int
     resn (_, i, _) = i
