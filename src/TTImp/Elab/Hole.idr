@@ -30,13 +30,22 @@ checkName : {auto c : Ref Ctxt Defs} ->
             FC ->
             String ->
             Core (Name, String)
-checkName fc n_in
-    = do nm <- inCurrentNS (UN n_in)
-         defs <- get Ctxt
-         Nothing <- lookupCtxtExact nm (gamma defs)
-             | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
-                       throw (AlreadyDefined fc nm)
-         pure (nm, n_in)
+checkName fc n_in = go n_in 0
+  where
+    go : String -> Int -> Core (Name, String)
+    go cur_n_in cnt
+        = do nm <- inCurrentNS (UN cur_n_in)
+             defs <- get Ctxt
+             Just def <- lookupCtxtExact nm (gamma defs)
+                  | Nothing => pure (nm, cur_n_in)
+
+             let tryNextCnt = go (n_in ++ show (cnt + 1)) (cnt + 1)
+             case definition def of
+                  Hole _ _ => tryNextCnt
+                  _ => if cnt /= 0
+                          then tryNextCnt
+                          else do log "elab.hole" 1 $ show nm ++ " already defined"
+                                  throw (AlreadyDefined fc nm)
 
 export
 checkHole : {vars : _} ->
