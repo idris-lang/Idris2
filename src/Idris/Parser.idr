@@ -656,13 +656,15 @@ mutual
   doBlock fname indents
       = do b <- bounds (do keyword "do"
                            block (doAct fname))
+           commit
            pure (PDoBlock (boundToFC fname b) Nothing (concat b.val))
     <|> do nsdo <- bounds namespacedIdent
            the (SourceEmptyRule PTerm) $ case nsdo.val of
-                ("do" :: ns) =>
-                   do actions <- bounds (block (doAct fname))
+                (ns, "do") =>
+                   do commit
+                      actions <- bounds (block (doAct fname))
                       pure (PDoBlock (boundToFC fname (mergeBounds nsdo actions))
-                                     (Just ns) (concat actions.val))
+                                     ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
   lowerFirst : String -> Bool
@@ -1036,8 +1038,8 @@ fix
   <|> (keyword "infix"  *> pure Infix)
   <|> (keyword "prefix" *> pure Prefix)
 
-namespaceHead : Rule (List1 String)
-namespaceHead = keyword "namespace" *> commit *> namespacedIdent
+namespaceHead : Rule Namespace
+namespaceHead = keyword "namespace" *> commit *> namespaceId
 
 namespaceDecl : FileName -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
@@ -1047,7 +1049,7 @@ namespaceDecl fname indents
                          ds    <- blockAfter col (topDecl fname)
                          pure (doc, ns, ds))
          (doc, ns, ds) <- pure b.val
-         pure (PNamespace (boundToFC fname b) (List1.toList ns) (concat ds))
+         pure (PNamespace (boundToFC fname b) ns (concat ds))
 
 transformDecl : FileName -> IndentInfo -> Rule PDecl
 transformDecl fname indents
@@ -1427,40 +1429,41 @@ import_ fname indents
     = do b <- bounds (do keyword "import"
                          reexp <- option False (do keyword "public"
                                                    pure True)
-                         ns <- namespacedIdent
-                         nsAs <- option ns (do exactIdent "as"
-                                               namespacedIdent)
+                         ns <- moduleIdent
+                         nsAs <- option (miAsNamespace ns)
+                                        (do exactIdent "as"
+                                            namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
          (reexp, ns, nsAs) <- pure b.val
-         pure (MkImport (boundToFC fname b) reexp (List1.toList ns) (List1.toList nsAs))
+         pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
 prog : FileName -> SourceEmptyRule Module
 prog fname
     = do b <- bounds (do doc    <- option "" documentation
-                         nspace <- option ["Main"]
+                         nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         namespacedIdent)
+                                         moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          ds      <- block (topDecl fname)
          (doc, nspace, imports) <- pure b.val
          pure (MkModule (boundToFC fname b)
-                        (List1.toList nspace) imports doc (collectDefs (concat ds)))
+                        nspace imports doc (collectDefs (concat ds)))
 
 export
 progHdr : FileName -> SourceEmptyRule Module
 progHdr fname
     = do b <- bounds (do doc    <- option "" documentation
-                         nspace <- option ["Main"]
+                         nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         namespacedIdent)
+                                         moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          (doc, nspace, imports) <- pure b.val
          pure (MkModule (boundToFC fname b)
-                        (List1.toList nspace) imports doc [])
+                        nspace imports doc [])
 
 parseMode : Rule REPLEval
 parseMode
@@ -1670,7 +1673,7 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
       s <- strLit
       pure (command s)
 
-moduleArgCmd : ParseCmd -> (List String -> REPLCmd) -> String -> CommandDefinition
+moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
 moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
   where
     names : List String
@@ -1681,7 +1684,7 @@ moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       n <- moduleIdent
-      pure (command (List1.toList n))
+      pure (command n)
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
 exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
@@ -1807,7 +1810,7 @@ parserCommandsForHelp =
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
   , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
-  , moduleArgCmd (ParseIdentCmd "browse") Browse "Browse contents of a namespace"
+  , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
   , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
   , onOffArgCmd (ParseREPLCmd ["color", "colour"]) SetColor "Whether to use color for the console output (enabled by default)"

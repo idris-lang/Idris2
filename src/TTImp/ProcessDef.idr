@@ -621,7 +621,7 @@ mkRunTime fc n
   where
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
-       = apply fc (Ref fc Func (NS ["Builtin"] (UN "idris_crash")))
+       = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))
                [Erased fc False, PrimVal fc (Str msg)]
 
     matchAny : Term vars -> Term vars
@@ -733,7 +733,7 @@ processDef opts nest env fc n_in cs_in
          defs <- get Ctxt
          put Ctxt (record { toCompileCase $= (n ::) } defs)
 
-         atotal <- toResolvedNames (NS ["Builtin"] (UN "assert_total"))
+         atotal <- toResolvedNames (NS builtinNS (UN "assert_total"))
          when (not (InCase `elem` opts)) $
              do calcRefs False atotal (Resolved nidx)
                 sc <- calculateSizeChange fc n

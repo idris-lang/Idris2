@@ -47,7 +47,7 @@ process eopts nest env (IRecord fc ns vis rec)
 process eopts nest env (INamespace fc ns decls)
     = do defs <- get Ctxt
          let cns = currentNS defs
-         extendNS (reverse ns)
+         extendNS ns
          traverse_ (processDecl eopts nest env) decls
          defs <- get Ctxt
          put Ctxt (record { currentNS = cns } defs)
