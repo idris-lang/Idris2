@@ -8,6 +8,7 @@ import Core.FC
 import Core.TT
 
 import Data.LengthMatch
+import Data.Maybe
 import Data.NameMap
 import Data.List
 import Data.Vect
@@ -145,24 +146,25 @@ mutual
   -- in case they duplicate work. We should fix that, to decide more accurately
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
-  eval rec env (_ :: _ :: act :: cont :: world :: stk)
-               (CRef fc (NS ["PrimIO"] (UN "io_bind")))
-      = do xn <- genName "act"
-           sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
-           pure $ unload stk $
-                CLet fc xn False (CApp fc act [world])
-                     (refToLocal xn xn sc)
   eval rec env stk (CRef fc n)
-      = do defs <- get Ctxt
-           Just gdef <- lookupCtxtExact n (gamma defs)
-                | Nothing => pure (unload stk (CRef fc n))
-           let Just def = compexpr gdef
-                | Nothing => pure (unload stk (CRef fc n))
-           let arity = getArity def
-           if (Inline `elem` flags gdef) && (not (n `elem` rec))
-              then do ap <- tryApply (n :: rec) stk env def
-                      pure $ maybe (unloadApp arity stk (CRef fc n)) id ap
-              else pure $ unloadApp arity stk (CRef fc n)
+      = case (n == NS primIONS (UN "io_bind"), stk) of
+          (True, _ :: _ :: act :: cont :: world :: stk) =>
+                 do xn <- genName "act"
+                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    pure $ unload stk $
+                             CLet fc xn False (CApp fc act [world])
+                                              (refToLocal xn xn sc)
+          (_,_) =>
+             do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure (unload stk (CRef fc n))
+                let Just def = compexpr gdef
+                  | Nothing => pure (unload stk (CRef fc n))
+                let arity = getArity def
+                if (Inline `elem` flags gdef) && (not (n `elem` rec))
+                   then do ap <- tryApply (n :: rec) stk env def
+                           pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
+                   else pure $ unloadApp arity stk (CRef fc n)
   eval {vars} {free} rec env [] (CLam fc x sc)
       = do xn <- genName "lamv"
            sc' <- eval rec (CRef fc xn :: env) [] sc

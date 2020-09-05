@@ -67,7 +67,7 @@ mutual
     show (AAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (AApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -92,7 +92,7 @@ mutual
   export
   Show AConAlt where
     show (MkAConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String
@@ -161,7 +161,7 @@ mlet : {auto v : Ref Next Int} ->
 mlet fc (AV _ var) sc = pure $ sc var
 mlet fc val sc
     = do i <- nextVar
-         pure $ ALet fc i val (sc (ALocal i)) 
+         pure $ ALet fc i val (sc (ALocal i))
 
 mutual
   anfArgs : {vars : _} ->

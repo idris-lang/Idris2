@@ -36,9 +36,6 @@ pShowMN t env acc = case t of
       _ => acc
   _ => acc
 
-joinNs : List String -> Doc (IdrisAnn)
-joinNs ns = concatWith (surround dot) (pretty <$> reverse ns)
-
 pshow : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
@@ -197,7 +194,7 @@ perror (UndefinedName fc x)
     = pure $ errorDesc (reflow "Undefined name" <++> code (pretty x) <+> dot) <++> line <+> !(ploc fc)
 perror (InvisibleName fc n (Just ns))
     = pure $ errorDesc ("Name" <++> code (pretty n) <++> reflow "is inaccessible since"
-        <++> code (joinNs ns) <++> reflow "is not explicitly imported.")
+        <++> code (pretty ns) <++> reflow "is not explicitly imported.")
         <+> line <+> !(ploc fc)
         <+> line <+> reflow "Suggestion: add an explicit" <++> keyword "export" <++> "or" <++> keyword ("public" <++> "export")
         <++> reflow "modifier. By default, all names are" <++> keyword "private" <++> reflow "in namespace blocks."
@@ -417,9 +414,9 @@ perror (FileErr fname err)
 perror (ParseFail _ err)
     = pure $ pretty err
 perror (ModuleNotFound fc ns)
-    = pure $ errorDesc ("Module" <++> annotate FileCtxt (joinNs ns) <++> reflow "not found") <+> line <+> !(ploc fc)
+    = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty ns) <++> reflow "not found") <+> line <+> !(ploc fc)
 perror (CyclicImports ns)
-    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon) <++> concatWith (surround (pretty " -> ")) (joinNs <$> ns)
+    = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon) <++> concatWith (surround (pretty " -> ")) (pretty <$> ns)
 perror ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perror (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
 perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str

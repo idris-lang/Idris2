@@ -79,7 +79,7 @@ mutual
 
        -- Syntactic sugar
 
-       PDoBlock : FC -> Maybe (List String) -> List PDo -> PTerm
+       PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
        PList : FC -> List PTerm -> PTerm
@@ -310,7 +310,7 @@ mutual
        -- TODO: POpen (for opening named interfaces)
        PMutual : FC -> List PDecl -> PDecl
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl
-       PNamespace : FC -> List String -> List PDecl -> PDecl
+       PNamespace : FC -> Namespace -> List PDecl -> PDecl
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
@@ -416,7 +416,7 @@ data REPLCmd : Type where
      PrintDef : Name -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
-     ImportMod : List String -> REPLCmd
+     ImportMod : ModuleIdent -> REPLCmd
      Edit : REPLCmd
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
@@ -431,7 +431,7 @@ data REPLCmd : Type where
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
-     Browse : List String -> REPLCmd
+     Browse : Namespace -> REPLCmd
      SetLog : LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
@@ -446,14 +446,14 @@ record Import where
   constructor MkImport
   loc : FC
   reexport : Bool
-  path : List String
-  nameAs : List String
+  path : ModuleIdent
+  nameAs : Namespace
 
 public export
 record Module where
   constructor MkModule
   headerloc : FC
-  moduleNS : List String
+  moduleNS : ModuleIdent
   imports : List Import
   documentation : String
   decls : List PDecl

@@ -5,7 +5,6 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
-import Data.List1
 import Data.Strings
 
 %default total
@@ -156,21 +155,25 @@ identPart
                            _ => Nothing)
 
 export
-namespacedIdent : Rule (List1 String)
+namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
     = terminal "Expected namespaced name"
         (\x => case x.val of
-            DotSepIdent ns => Just ns
-            Ident i => Just [i]
+            DotSepIdent ns n => Just (Just ns, n)
+            Ident i => Just (Nothing, i)
             _ => Nothing)
 
 export
-moduleIdent : Rule (List1 String)
+namespaceId : Rule Namespace
+namespaceId = map (uncurry mkNestedNamespace) namespacedIdent
+
+export
+moduleIdent : Rule ModuleIdent
 moduleIdent
     = terminal "Expected module identifier"
         (\x => case x.val of
-            DotSepIdent ns => Just ns
-            Ident i => Just [i]
+            DotSepIdent ns n => Just (mkModuleIdent (Just ns) n)
+            Ident i => Just (mkModuleIdent Nothing i)
             _ => Nothing)
 
 export
@@ -193,31 +196,32 @@ reservedNames
 export
 name : Rule Name
 name = opNonNS <|> do
-  ns <- namespacedIdent
-  opNS ns <|> nameNS ns
+  nsx <- namespacedIdent
+  -- writing (ns, x) <- namespacedIdent leads to an unsoled constraint.
+  -- I tried to write a minimised test case but could not reproduce the error
+  -- on a simplified example.
+  let ns = fst nsx
+  let x = snd nsx
+  opNS (mkNestedNamespace ns x) <|> nameNS ns x
  where
   reserved : String -> Bool
   reserved n = n `elem` reservedNames
 
-  nameNS : List1 String -> SourceEmptyRule Name
-  nameNS [x] =
+  nameNS : Maybe Namespace -> String -> SourceEmptyRule Name
+  nameNS ns x =
     if reserved x
       then fail $ "can't use reserved name " ++ x
-      else pure $ UN x
-  nameNS (x :: xs) =
-    if reserved x
-      then fail $ "can't use reserved name " ++ x
-      else pure $ NS xs (UN x)
+      else pure $ mkNamespacedName ns x
 
   opNonNS : Rule Name
   opNonNS = symbol "(" *> operator <* symbol ")"
 
-  opNS : List1 String -> Rule Name
+  opNS : Namespace -> Rule Name
   opNS ns = do
     symbol ".("
     n <- operator
     symbol ")"
-    pure (NS (toList ns) n)
+    pure (NS ns n)
 
 export
 IndentInfo : Type
