@@ -79,11 +79,11 @@ public export
   (x :: xs) == (y :: ys) = x == y && xs == ys
 
 public export
-consInjective1 : {xs, ys: HVect ts} -> {x, y: a} -> (1 _ : x :: xs = y :: ys) -> x = y
+consInjective1 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (1 _ : x :: xs = y :: ys) -> x = y
 consInjective1 Refl = Refl
 
 public export
-consInjective2 : {xs, ys: HVect ts} -> {x, y: a} -> (1 _ : x :: xs = y :: ys) -> xs = ys
+consInjective2 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (1 _ : x :: xs = y :: ys) -> xs = ys
 consInjective2 Refl = Refl
 
 public export
