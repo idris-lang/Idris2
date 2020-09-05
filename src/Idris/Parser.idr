@@ -211,7 +211,7 @@ mutual
                              pure (x, ty))
            (x, ty) <- pure loc.val
            (do symbol "**"
-               rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* symbol ")")
+               rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
                pure (PDPair (boundToFC fname (mergeBounds start rest))
                             (PRef (boundToFC fname loc) (UN x))
                             ty
@@ -223,7 +223,7 @@ mutual
       = dpairType fname start indents
     <|> do l <- expr pdef fname indents
            loc <- bounds (symbol "**")
-           rest <- bounds (nestedDpair fname loc indents <* symbol ")")
+           rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
            pure (PDPair (boundToFC fname (mergeBounds start rest))
                         l
                         (PImplicit (boundToFC fname (mergeBounds start rest)))
@@ -249,7 +249,7 @@ mutual
     <|> do b <- bounds (continueWith indents ")")
            pure (PUnit (boundToFC fname (mergeBounds s b)))
       -- dependent pairs with type annotation (so, the type form)
-    <|> do dpairType fname s indents
+    <|> do dpairType fname s indents <* symbol ")"
     <|> do here <- location
            e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
