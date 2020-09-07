@@ -95,8 +95,8 @@ aDotIdent = terminal "Expected dot+identifier"
 
 
 export
-dotIdent : Rule Name
-dotIdent = UN <$> aDotIdent
+postfixProj : Rule Name
+postfixProj = RF <$> aDotIdent
 
 export
 symbol : String -> Rule ()
@@ -214,12 +214,12 @@ name = opNonNS <|> do
       else pure $ mkNamespacedName ns x
 
   opNonNS : Rule Name
-  opNonNS = symbol "(" *> operator <* symbol ")"
+  opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 
   opNS : Namespace -> Rule Name
   opNS ns = do
     symbol ".("
-    n <- operator
+    n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
 

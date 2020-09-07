@@ -241,10 +241,9 @@ mutual
            (op, e) <- pure b.val
            pure (PSectionL (boundToFC fname (mergeBounds s b)) op e)
     <|> do  -- (.y.z)  -- section of projection (chain)
-           b <- bounds (MkPair <$> (some $ postfixApp fname indents) <*> (many $ simpleExpr fname indents))
-           (projs, args) <- pure b.val
+           b <- bounds $ some postfixProj
            symbol ")"
-           pure $ PPostfixProjsSection (boundToFC fname b) projs args
+           pure $ PPostfixAppPartial (boundToFC fname b) b.val
       -- unit type/value
     <|> do b <- bounds (continueWith indents ")")
            pure (PUnit (boundToFC fname (mergeBounds s b)))
@@ -312,22 +311,24 @@ mutual
       mergePairs end (exp :: rest)
           = PPair (boundToFC fname (mergeBounds exp end)) exp.val (mergePairs end rest)
 
-  postfixApp : FileName -> IndentInfo -> Rule PTerm
-  postfixApp fname indents
-    = do di <- bounds dotIdent
+  postfixProjection : FileName -> IndentInfo -> Rule PTerm
+  postfixProjection fname indents
+    = do di <- bounds postfixProj
          pure $ PRef (boundToFC fname di) di.val
-    <|> (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
 
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
     = do  -- x.y.z
           b <- bounds (do root <- simplerExpr fname indents
-                          projs <- many $ postfixApp fname indents
+                          projs <- many postfixProj
                           pure (root, projs))
           (root, projs) <- pure b.val
           pure $ case projs of
             [] => root
-            _  => PPostfixProjs (boundToFC fname b) root projs
+            _  => PPostfixApp (boundToFC fname b) root projs
+    <|> do
+          b <- bounds (some postfixProj)
+          pure $ PPostfixAppPartial (boundToFC fname b) b.val
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
@@ -635,12 +636,13 @@ mutual
     where
       fieldName : Name -> String
       fieldName (UN s) = s
+      fieldName (RF s) = s
       fieldName _ = "_impossible"
 
       -- this allows the dotted syntax .field
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
-      recFieldCompat = dotIdent <|> (symbol "->" *> name)
+      recFieldCompat = postfixProj <|> (symbol "->" *> name)
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents
@@ -946,7 +948,6 @@ onoff
 extension : Rule LangExt
 extension
     = (exactIdent "ElabReflection" *> pure ElabReflection)
-  <|> (exactIdent "PostfixProjections" *> pure PostfixProjections)
   <|> (exactIdent "Borrowing" *> pure Borrowing)
 
 totalityOpt : Rule TotalReq
@@ -978,6 +979,10 @@ directive fname indents
          b <- onoff
          atEnd indents
          pure (UnboundImplicits b)
+  <|> do pragma "undotted_record_projections"
+         b <- onoff
+         atEnd indents
+         pure (UndottedRecordProjections b)
   <|> do pragma "ambiguity_depth"
          lvl <- intLit
          atEnd indents
