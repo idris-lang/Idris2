@@ -97,7 +97,7 @@ mutual
        GlobalHint : Bool -> FnOpt
        ExternFn : FnOpt
        -- Defined externally, list calling conventions
-       ForeignFn : List String -> FnOpt
+       ForeignFn : List TTImp -> FnOpt
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt
        Totalty : TotalReq -> FnOpt
