@@ -1250,6 +1250,7 @@ implDecl fname indents
                                              (map (collectDefs . concat) body)))
          atEnd indents
          pure (b.val (boundToFC fname b))
+
 fieldDecl : FileName -> IndentInfo -> Rule (List PField)
 fieldDecl fname indents
       = do doc <- option "" documentation
