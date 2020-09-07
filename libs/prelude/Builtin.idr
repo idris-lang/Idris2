@@ -104,7 +104,7 @@ namespace DPair
 ||| Use `void` or `absurd` to prove anything if you have a variable of type
 ||| `Void` in scope.
 public export
-data Void : Type where
+data Void : Type
 
 -- Equality
 

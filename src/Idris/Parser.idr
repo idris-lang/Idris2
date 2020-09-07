@@ -78,6 +78,12 @@ whereBlock fname col
          ds <- blockAfter col (topDecl fname)
          pure (collectDefs (concat ds))
 
+ctor : IndentInfo -> Rule Name
+ctor idt = do exactIdent "constructor"
+              n <- name
+              atEnd idt
+              pure n
+
 -- Expect a keyword, but if we get anything else it's a fatal error
 commitKeyword : IndentInfo -> String -> Rule ()
 commitKeyword indents req
@@ -1211,12 +1217,9 @@ ifaceDecl fname indents
                          det    <- option []
                                      (do symbol "|"
                                          sepBy (symbol ",") name)
-                         keyword "where"
-                         dc <- option Nothing
-                                 (do exactIdent "constructor"
-                                     n <- name
-                                     pure (Just n))
-                         body <- assert_total (blockAfter col (topDecl fname))
+                         (dc, body) <- option (Nothing, []) $
+                                          do keyword "where"
+                                             blockWithOptHeaderAfter col ctor (topDecl fname)
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
          pure (b.val (boundToFC fname b))
@@ -1247,7 +1250,6 @@ implDecl fname indents
                                              (map (collectDefs . concat) body)))
          atEnd indents
          pure (b.val (boundToFC fname b))
-
 fieldDecl : FileName -> IndentInfo -> Rule (List PField)
 fieldDecl fname indents
       = do doc <- option "" documentation
@@ -1304,16 +1306,11 @@ recordDecl fname indents
                          n       <- name
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
-                         keyword "where"
-                         dcflds <- blockWithOptHeaderAfter col ctor (fieldDecl fname)
+                         dcflds <- option (Nothing, []) $
+                                      do keyword "where"
+                                         blockWithOptHeaderAfter col ctor (fieldDecl fname)
                          pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
-  where
-  ctor : IndentInfo -> Rule Name
-  ctor idt = do exactIdent "constructor"
-                n <- name
-                atEnd idt
-                pure n
 
 claim : FileName -> IndentInfo -> Rule PDecl
 claim fname indents
