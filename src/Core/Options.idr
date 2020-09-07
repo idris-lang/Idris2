@@ -98,13 +98,11 @@ public export
 data LangExt
      = ElabReflection
      | Borrowing -- not yet implemented
-     | PostfixProjections
 
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
-  PostfixProjections == PostfixProjections = True
   _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
@@ -115,6 +113,7 @@ record ElabDirectives where
   unboundImplicits : Bool
   totality : TotalReq
   ambigLimit : Nat
+  undottedRecordProjections : Bool
   autoImplicitLimit : Nat
 
 public export
@@ -182,7 +181,7 @@ defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50
+defaultElab = MkElabDirectives True True CoveringOnly 3 True 50
 
 export
 defaults : Options

@@ -556,6 +556,7 @@ definedInBlock ns decls =
            UN _ => NS ns n
            MN _ _ => NS ns n
            DN _ _ => NS ns n
+           RF _ => NS ns n
            _ => n
 
     defName : Namespace -> ImpDecl -> List Name
@@ -571,11 +572,25 @@ definedInBlock ns decls =
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
 
+        toRF : Name -> Name
+        toRF (UN n) = RF n
+        toRF n = n
+
         fnsUN : List Name
         fnsUN = map getFieldName flds
 
+        fnsRF : List Name
+        fnsRF = map toRF fnsUN
+
+        -- Depending on %undotted_record_projections,
+        -- the record may or may not produce undotted projections (fnsUN).
+        --
+        -- However, since definedInBlock is pure, we can't check that flag
+        -- (and it would also be wrong if %undotted_record_projections appears
+        -- inside the parameter block)
+        -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') fnsUN
+        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
     defName _ _ = []
 
