@@ -606,7 +606,7 @@ mkRunTime fc n
            let PMDef r cargs tree_ct _ pats = definition gdef
                 | _ => pure () -- not a function definition
            let ty = type gdef
-           -- Prepare RHS of definitions, by erasing 0m-ultiplicities, and
+           -- Prepare RHS of definitions, by erasing 0-multiplicities, and
            -- finding any applications to specialise (partially evaluate)
            pats' <- traverse (toErased (location gdef) (getSpec (flags gdef)))
                              pats
