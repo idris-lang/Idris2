@@ -1454,3 +1454,8 @@ export
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))
                      ++ ")"
+
+export
+{vars : _} -> Pretty (Term vars) where
+  pretty = pretty . show
+  -- TODO: prettier output

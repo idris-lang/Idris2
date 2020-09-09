@@ -6,6 +6,8 @@ import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
+import Text.PrettyPrint.Prettyprinter.Doc
+
 %default covering
 
 mutual
@@ -60,8 +62,8 @@ mutual
   export
   {vars : _} -> Show (CaseTree vars) where
     show (Case {name} idx prf ty alts)
-        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of { " ++
-                showSep " | " (assert_total (map show alts)) ++ " }"
+        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of\n { " ++
+                showSep "\n | " (assert_total (map show alts)) ++ "\n }"
     show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
     show (Unmatched msg) = "Error: " ++ show msg
     show Impossible = "Impossible"
@@ -77,6 +79,32 @@ mutual
         = show c ++ " => " ++ show sc
     show (DefaultCase sc)
         = "_ => " ++ show sc
+
+mutual
+  export
+  {vars : _} -> Pretty (CaseTree vars) where
+    pretty (Case {name} idx prf ty alts)
+      = "case" <++> pretty name <++> ":" <++> pretty ty <++> "of"
+         <+> nest 2 (hardline
+         <+> vsep (assert_total (map pretty alts)))
+    pretty (STerm i tm) = pretty tm
+    pretty (Unmatched msg) = pretty "Error:" <++> pretty msg
+    pretty Impossible = pretty "Impossible"
+
+  export
+  {vars : _} -> Pretty (CaseAlt vars) where
+    pretty (ConCase n tag args sc)
+      = hsep (map pretty (n :: args)) <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+    pretty (DelayCase _ arg sc) =
+        pretty "Delay" <++> pretty arg <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+    pretty (ConstCase c sc) =
+        pretty c <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+    pretty (DefaultCase sc) =
+        pretty "_ =>"
+        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
 
 mutual
   export
