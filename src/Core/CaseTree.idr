@@ -95,16 +95,16 @@ mutual
   {vars : _} -> Pretty (CaseAlt vars) where
     pretty (ConCase n tag args sc)
       = hsep (map pretty (n :: args)) <++> pretty "=>"
-        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DelayCase _ arg sc) =
         pretty "Delay" <++> pretty arg <++> pretty "=>"
-        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (ConstCase c sc) =
         pretty c <++> pretty "=>"
-        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
     pretty (DefaultCase sc) =
         pretty "_ =>"
-        <+> Union (spaces 1 <+> pretty sc) (hardline <+> nest 2 (pretty sc))
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
 
 mutual
   export

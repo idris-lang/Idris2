@@ -1402,8 +1402,6 @@ withPiInfo Implicit tm = "{" ++ tm ++ "}"
 withPiInfo AutoImplicit tm = "{auto " ++ tm ++ "}"
 withPiInfo (DefImplicit t) tm = "{default " ++ show t ++ " " ++ tm ++ "}"
 
--- data PiInfo t = Implicit | Explicit | AutoImplicit | DefImplicit t
-
 
 export
 {vars : _} -> Show (Term vars) where
