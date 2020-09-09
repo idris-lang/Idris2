@@ -290,8 +290,8 @@ parameters (defs : Defs, topopts : EvalOpts)
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
     -- Primitive type matching, in typecase
-    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc)
-         = if show c == x
+    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag [] sc)
+         = if UN (show c) == nm
               then evalTree env loc opts fc stk sc
               else pure NoMatch
     -- Type of type matching, in typecase
@@ -332,11 +332,16 @@ parameters (defs : Defs, topopts : EvalOpts)
               LocalEnv free args -> EvalOpts -> FC ->
               Stack free -> NF free -> List (CaseAlt args) ->
               Core (CaseResult (NF free))
-    findAlt env loc opts fc stk val [] = pure GotStuck
+    findAlt env loc opts fc stk val [] = do
+      log "eval.casetree.stuck" 2 "Ran out of alternatives"
+      pure GotStuck
     findAlt env loc opts fc stk val (x :: xs)
          = do Result val <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
-                   | GotStuck => pure GotStuck
+                   | GotStuck => do
+                       logC "eval.casetree.stuck" 5 $
+                         pure $ "Got stuck matching " ++ show val ++ " against " ++ show !(toFullNames x)
+                       pure GotStuck
               pure (Result val)
 
     evalTree : {auto c : Ref Ctxt Defs} ->
