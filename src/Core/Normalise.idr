@@ -289,6 +289,7 @@ parameters (defs : Defs, topopts : EvalOpts)
          = if nm == nm'
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
+    tryAlt _ _ _ _ _ (NTCon _ _ _ _ _) (ConstCase _ _) = pure NoMatch
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc)
          = if show c == x
@@ -344,8 +345,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
                Core (CaseResult (NF free))
-    evalTree env loc opts fc stk (Case idx x _ alts)
+    evalTree env loc opts fc stk (Case {name} idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
+           log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
            let loc' = updateLocal idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)

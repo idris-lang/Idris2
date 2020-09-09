@@ -619,6 +619,7 @@ mkRunTime fc n
              , "Runtime tree for " ++ show (fullname gdef) ++ ":"
              , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
              ]
+           log "compile.casetree" 10 $ show tree_rt
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
