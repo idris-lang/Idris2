@@ -289,7 +289,6 @@ parameters (defs : Defs, topopts : EvalOpts)
          = if nm == nm'
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
-    tryAlt _ _ _ _ _ (NTCon _ _ _ _ _) (ConstCase _ _) = pure NoMatch
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc)
          = if show c == x
