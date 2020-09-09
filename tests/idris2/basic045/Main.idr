@@ -1,11 +1,6 @@
-module Main
 
-import Lib
+foo : Semigroup a => a -> ()
+foo x = ()
 
-%logging eval 10
-
-test : List Int
-test = accMap (1+) [1,2,3]
-
--- refl : Main.test = [2,3,4]
--- refl = Refl
+main : IO ()
+main = pure (foo ())
