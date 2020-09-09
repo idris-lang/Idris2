@@ -71,7 +71,7 @@ mutual
   export
   {vars : _} -> Show (CaseAlt vars) where
     show (ConCase n tag args sc)
-        = showSep " " (show n :: map show args) ++ " => " ++
+        = showSep " " (map show (n :: args)) ++ " => " ++
           show sc
     show (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ show sc
