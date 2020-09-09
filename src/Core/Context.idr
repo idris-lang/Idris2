@@ -294,8 +294,6 @@ findSetTotal [] = Nothing
 findSetTotal (SetTotal t :: _) = Just t
 findSetTotal (_ :: xs) = findSetTotal xs
 
-
-
 -- Label for array references
 export
 data Arr : Type where
