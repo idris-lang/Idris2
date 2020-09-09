@@ -110,7 +110,7 @@ idrisTests
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009",
+       "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
        "with001", "with002",
        -- with-disambiguation

@@ -95,11 +95,6 @@ checkTotalityOK n
                          _ => pure Nothing)
                    (pure . Just) err
 
-    findSetTotal : List DefFlag -> Maybe TotalReq
-    findSetTotal [] = Nothing
-    findSetTotal (SetTotal t :: _) = Just t
-    findSetTotal (_ :: xs) = findSetTotal xs
-
 -- Check totality of all the names added in the file, and return a list of
 -- totality errors.
 -- Do this at the end of processing a file (or a batch of definitions) since
