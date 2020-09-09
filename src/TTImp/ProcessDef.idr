@@ -29,6 +29,9 @@ import TTImp.WithClause
 import Data.Either
 import Data.List
 import Data.NameMap
+import Data.Strings
+
+import Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -611,7 +614,12 @@ mkRunTime fc n
                               _ => clauses_init
 
            (rargs ** (tree_rt, _)) <- getPMDef (location gdef) RunTime n ty clauses
-           log "compile.casetree" 5 $ show cov ++ ":\nRuntime tree for " ++ show (fullname gdef) ++ ": " ++ show tree_rt
+           logC "compile.casetree" 5 $ pure $ unlines
+             [ show cov ++ ":"
+             , "Runtime tree for " ++ show (fullname gdef) ++ ":"
+             , show (indent 2 $ pretty {ann = ()} !(toFullNames tree_rt))
+             ]
+           log "compile.casetree" 10 $ show tree_rt
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")

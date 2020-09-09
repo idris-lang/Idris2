@@ -1,5 +1,5 @@
 Processing as TTImp
 Eta.yaff:16:1--17:1:When elaborating right hand side of Main.etaBad:
-Eta.yaff:16:10--17:1:When unifying: ($resolved186 ?Main.{b:18}_[] ?Main.{b:18}_[] \x : Char => \y : ?Main.{_:15}_[x[0]] => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]]) \x : Char => \y : ?Main.{_:15}_[x[0]] => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]])) and ($resolved186 ((x : Char) -> ((y : ?Main.{_:15}_[x[0]]) -> $resolved195)) (({arg:11} : Integer) -> (({arg:12} : Integer) -> $resolved195)) $resolved196 \x : Char => \y : ?Main.{_:15}_[x[0]] => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]]))
+Eta.yaff:16:10--17:1:When unifying: ($resolved186 ?Main.{b:18}_[] ?Main.{b:18}_[] \(x : Char) => \(y : ?Main.{_:15}_[x[0]]) => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]]) \(x : Char) => \(y : ?Main.{_:15}_[x[0]]) => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]])) and ($resolved186 (x : Char) -> (y : ?Main.{_:15}_[x[0]]) -> $resolved195)) ({arg:11} : Integer) -> ({arg:12} : Integer) -> $resolved195)) $resolved196 \(x : Char) => \(y : ?Main.{_:15}_[x[0]]) => ($resolved196 ?Main.{_:16}_[x[1], y[0]] ?Main.{_:17}_[x[1], y[0]]))
 	Eta.yaff:16:10--17:1:Type mismatch: Char and Integer
 Yaffle> Bye for now!

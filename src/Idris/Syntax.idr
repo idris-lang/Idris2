@@ -458,12 +458,6 @@ record Module where
   documentation : String
   decls : List PDecl
 
-showCount : RigCount -> String
-showCount = elimSemi
-                ("0 ")
-                ("1 ")
-                (const "")
-
 mutual
   showAlt : PClause -> String
   showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
@@ -494,11 +488,11 @@ mutual
     showPrec d (PPi _ rig Explicit Nothing arg ret)
         = showPrec d arg ++ " -> " ++ showPrec d ret
     showPrec d (PPi _ rig Explicit (Just n) arg ret)
-        = "(" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ ") -> " ++ showPrec d ret
+        = "(" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ ") -> " ++ showPrec d ret
     showPrec d (PPi _ rig Implicit Nothing arg ret) -- shouldn't happen
-        = "{" ++ Syntax.showCount rig ++ "_ : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
+        = "{" ++ showCount rig ++ "_ : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PPi _ rig Implicit (Just n) arg ret)
-        = "{" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
+        = "{" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PPi _ top AutoImplicit Nothing arg ret)
         = showPrec d arg ++ " => " ++ showPrec d ret
     showPrec d (PPi _ rig AutoImplicit (Just n) arg ret)
@@ -508,13 +502,13 @@ mutual
     showPrec d (PPi _ rig (DefImplicit t) (Just n) arg ret)
         = "{default " ++ showPrec App t ++ " " ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PLam _ rig _ n (PImplicit _) sc)
-        = "\\" ++ Syntax.showCount rig ++ showPrec d n ++ " => " ++ showPrec d sc
+        = "\\" ++ showCount rig ++ showPrec d n ++ " => " ++ showPrec d sc
     showPrec d (PLam _ rig _ n ty sc)
-        = "\\" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " => " ++ showPrec d sc
+        = "\\" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " => " ++ showPrec d sc
     showPrec d (PLet _ rig n (PImplicit _) val sc alts)
-        = "let " ++ Syntax.showCount rig ++ showPrec d n ++ " = " ++ showPrec d val ++ " in " ++ showPrec d sc
+        = "let " ++ showCount rig ++ showPrec d n ++ " = " ++ showPrec d val ++ " in " ++ showPrec d sc
     showPrec d (PLet _ rig n ty val sc alts)
-        = "let " ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " = "
+        = "let " ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " = "
                  ++ showPrec d val ++ concatMap showAlt alts ++
                  " in " ++ showPrec d sc
       where
