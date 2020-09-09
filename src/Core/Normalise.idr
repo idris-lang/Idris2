@@ -344,8 +344,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
                Core (CaseResult (NF free))
-    evalTree env loc opts fc stk (Case idx x _ alts)
+    evalTree env loc opts fc stk (Case {name} idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
+           -- we have not defined quote yet (it depends on eval itself) so we show the NF
+           -- i.e. only the top-level constructor.
+           log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
            let loc' = updateLocal idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)

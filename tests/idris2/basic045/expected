@@ -1,9 +1,35 @@
 1/2: Building Lib (Lib.idr)
 2/2: Building Main (Main.idr)
+LOG eval.casetree:5: Evaluated {arg:1} to ?Main.{__con:3830}_[0 closures] [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to ?Main.{__con:3832}_[0 closures] [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to ?Main.{__con:3834}_[0 closures] [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to ?Main.{__con:3839}_[1 closures] [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved935 [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved935 [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved935 [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved935 [0 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved935 [0 closures]
 Main> LOG eval.stuck:5: Stuck function: Lib.accMapAux
+LOG eval.casetree:5: Evaluated {arg:3} to $resolved1269 [3 closures]
 LOG eval.stuck:5: Stuck function: Lib.accMapAux
+LOG eval.casetree:5: Evaluated {arg:3} to $resolved1269 [3 closures]
 LOG eval.stuck:5: Stuck function: Lib.accMapAux
+LOG eval.casetree:5: Evaluated {arg:3} to $resolved1269 [3 closures]
 LOG eval.stuck:5: Stuck function: Lib.accMapAux
+LOG eval.casetree:5: Evaluated {arg:3} to $resolved1260 [1 closures]
+LOG eval.casetree:5: Evaluated {arg:2} to $resolved1269 [3 closures]
+LOG eval.casetree:5: Evaluated {arg:2} to $resolved1269 [3 closures]
+LOG eval.casetree:5: Evaluated {arg:2} to $resolved1269 [3 closures]
+LOG eval.casetree:5: Evaluated {arg:2} to $resolved1260 [1 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
+LOG eval.casetree:5: Evaluated {arg:1} to $resolved1298 [4 closures]
 [2, 3, 4]
 Main> 
 Bye for now!

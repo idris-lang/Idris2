@@ -62,7 +62,7 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Typ
-LOG unify.equal:10: Skipped unification (equal already): ((vars : $resolvedN) -> Type) and ((vars : $resolvedN) -> Type)
+LOG unify.equal:10: Skipped unification (equal already): (vars : $resolvedN) -> Type) and (vars : $resolvedN) -> Type)
 LOG declare.def.clause:3: RHS term: Term.Chk
 LOG declare.def:2: Case tree for Term.Typ: [0] Term.Chk
 LOG declare.def:3: Working from [0] Term.Chk
@@ -96,32 +96,35 @@ LOG declare.def:3: Initially missing in Term.NF:
 Term> Bye for now!
 1/1: Building Vec (Vec.idr)
 LOG declare.type:1: Processing Vec.Vec
-LOG declare.def:2: Case tree for Vec.Vec: [0] (({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1])
+LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1])
 LOG declare.type:1: Processing Vec.Nil
 LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] ?Vec.{t:N}_[{arg:N}[0]] Data.Fin.Uninhabited implementation at Data/Fin.idr:19:1--24:7)
 LOG declare.type:1: Processing Vec.::
-LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of { Data.Fin.FZ {e:N} => [0] {arg:N}[3] | Data.Fin.FS {e:N} {e:N} => [1] ({arg:N}[5] {e:N}[1]) }
+LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
+ { Data.Fin.FZ {e:N} => [0] {arg:N}[3]
+ | Data.Fin.FS {e:N} {e:N} => [1] ({arg:N}[5] {e:N}[1])
+ }
 LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 2), ($resolvedN 2)] at Vec.idr:20:23--20:24
 With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration False [(($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil)), (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil)), (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil)), (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))] at Vec.idr:21:8--21:17
-Target type : (({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Types.List Prelude.Types.Nat))
+Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Types.List Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration False [$resolvedN, $resolvedN, $resolvedN] at Vec.idr:21:9--21:11
 Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration False [(($resolvedN ((:: (fromInteger 0)) Nil)) Nil), (($resolvedN ((:: (fromInteger 0)) Nil)) Nil), (($resolvedN ((:: (fromInteger 0)) Nil)) Nil), (($resolvedN ((:: (fromInteger 0)) Nil)) Nil)] at Vec.idr:21:8--21:17
-Target type : (({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
+Target type : ({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration False [(($resolvedN (fromInteger 0)) Nil), (($resolvedN (fromInteger 0)) Nil), (($resolvedN (fromInteger 0)) Nil), (($resolvedN (fromInteger 0)) Nil)] at Vec.idr:21:13--21:16
 Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 0), ($resolvedN 0)] at Vec.idr:21:14--21:15
 With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration False [$resolvedN, $resolvedN, $resolvedN] at Vec.idr:21:13--21:16
-Target type : (({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
+Target type : ({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 0), ($resolvedN 0)] at Vec.idr:21:14--21:15
 With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 0), ($resolvedN 0)] at Vec.idr:21:14--21:15
 With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration False [$resolvedN, $resolvedN, $resolvedN] at Vec.idr:21:8--21:17
-Target type : (({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
+Target type : ({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration True [(($resolvedN (fromInteger 0)) Nil)] at Vec.idr:21:13--21:16
 Target type : (Prelude.Types.List Prelude.Types.Nat)
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 0), ($resolvedN 0)] at Vec.idr:21:14--21:15
