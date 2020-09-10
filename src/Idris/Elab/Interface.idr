@@ -103,13 +103,9 @@ getMethDecl {vars} env nest params mnames (fc, c, opts, n, (d, ty))
              else IPi fc r p mn arg (stripParams ps ret)
     stripParams ps ty = ty
 
--- bind the auto implicit for the interface - put it after all the other
--- implicits
+-- bind the auto implicit for the interface - put it first, as it may be needed
+-- in other method variables, including implicit variables
 bindIFace : FC -> RawImp -> RawImp -> RawImp
-bindIFace _ ity (IPi fc rig Implicit n ty sc)
-       = IPi fc rig Implicit n ty (bindIFace fc ity sc)
-bindIFace _ ity (IPi fc rig AutoImplicit n ty sc)
-       = IPi fc rig AutoImplicit n ty (bindIFace fc ity sc)
 bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN "__con")) ity sc
 
 -- Get the top level function for implementing a method
@@ -128,8 +124,8 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
          let ty_constr =
-             bindPs params $ substNames vars (map applyCon allmeths) ty
-         ty_imp <- bindTypeNames [] vars (bindIFace fc ity ty_constr)
+             substNames vars (map applyCon allmeths) ty
+         ty_imp <- bindTypeNames [] vars (bindPs params $ bindIFace fc ity ty_constr)
          cn <- inCurrentNS n
          let tydecl = IClaim fc c vis (if d then [Inline, Invertible]
                                             else [Inline])
