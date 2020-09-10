@@ -113,8 +113,12 @@ record ElabDirectives where
   unboundImplicits : Bool
   totality : TotalReq
   ambigLimit : Nat
-  undottedRecordProjections : Bool
   autoImplicitLimit : Nat
+  --
+  -- produce traditional (prefix) record projections,
+  -- in addition to postfix (dot) projections
+  -- default: yes
+  prefixRecordProjections : Bool
 
 public export
 record Session where
@@ -181,7 +185,7 @@ defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 True 50
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 True
 
 export
 defaults : Options

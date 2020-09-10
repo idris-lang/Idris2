@@ -53,13 +53,13 @@ Desugaring rules
 Record elaboration
 ------------------
 
-* there is a new pragma ``%undotted_record_projections``, which is ``on`` by
+* there is a new pragma ``%prefix_record_projections``, which is ``on`` by
   default
 
 * for every field ``f`` of a record ``R``, we get:
 
   * projection ``f`` in namespace ``R`` (exactly like now), unless
-    ``%undotted_record_projections`` is ``off``
+    ``%prefix_record_projections`` is ``off``
 
   * projection ``.f`` in namespace ``R`` with the same definition
 
@@ -77,7 +77,7 @@ This record creates two projections:
 * ``.x : Point -> Double``
 * ``.y : Point -> Double``
 
-Because ``%undotted_record_projections`` are ``on`` by default, we also get:
+Because ``%prefix_record_projections`` are ``on`` by default, we also get:
 * ``x : Point -> Double``
 * ``y : Point -> Double``
 
@@ -85,14 +85,14 @@ To prevent cluttering the ordinary global name space with short identifiers, we 
 
 .. code-block:: idris
 
-    %undotted_record_projections off
+    %prefix_record_projections off
 
     record Rect where
       constructor MkRect
       topLeft : Point
       bottomRight : Point
 
-For ``Rect``, we don't get the undotted projections:
+For ``Rect``, we don't get the prefix projections:
 
 .. code-block:: idris
 

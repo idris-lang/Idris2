@@ -237,7 +237,7 @@ mutual
        Overloadable : Name -> Directive
        Extension : LangExt -> Directive
        DefaultTotality : TotalReq -> Directive
-       UndottedRecordProjections : Bool -> Directive
+       PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
 
   public export

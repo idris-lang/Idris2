@@ -362,7 +362,7 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty)
+         pure $ MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty
 
 export
 initCtxt : Core Context
@@ -2097,10 +2097,10 @@ setUnboundImplicits a
          put Ctxt (record { options->elabDirectives->unboundImplicits = a } defs)
 
 export
-setUndottedRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
-setUndottedRecordProjections b = do
+setPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setPrefixRecordProjections b = do
   defs <- get Ctxt
-  put Ctxt (record { options->elabDirectives->undottedRecordProjections = b } defs)
+  put Ctxt (record { options->elabDirectives->prefixRecordProjections = b } defs)
 
 export
 setDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
@@ -2138,9 +2138,9 @@ isUnboundImplicits
          pure (unboundImplicits (elabDirectives (options defs)))
 
 export
-isUndottedRecordProjections : {auto c : Ref Ctxt Defs} -> Core Bool
-isUndottedRecordProjections =
-  undottedRecordProjections . elabDirectives . options <$> get Ctxt
+isPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Core Bool
+isPrefixRecordProjections =
+  prefixRecordProjections . elabDirectives . options <$> get Ctxt
 
 export
 getDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
