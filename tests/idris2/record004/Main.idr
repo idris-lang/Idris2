@@ -75,3 +75,14 @@ rect =
 -- user-defined projections work, too (should they?)
 (.squared) : Double -> Double
 (.squared) x = x * x
+
+
+-- #649: Forced patterns remain unaffected by postfix projections.
+test649 : (x, y : Bool) -> x = y -> Bool
+test649 .(x) x Refl = x
+
+
+-- #441: Locals do not shadow record projections.
+test441 : (Point -> Double) -> (Point -> Double) -> Point -> Double
+test441 x y pt = pt.x + pt.y
+  -- no ambiguity errors: the locals "x" and "y" are not considered in pt.x and pt.y
