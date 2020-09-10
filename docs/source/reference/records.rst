@@ -32,8 +32,8 @@ Expressions binding tighter than application (``simpleExpr``), such as variables
 
 .. code-block:: idris
 
-    simpleExpr ::= (.field)+               -- parses as PRecordProjection
-                 | simplerExpr (.field)+   -- parses as PRecordFieldAccess
+    simpleExpr ::= (.field)+               -- parses as PPostfixAppPartial
+                 | simplerExpr (.field)+   -- parses as PPostfixApp
                  | simplerExpr             -- (parses as whatever it used to)
 
 * ``(.foo)`` is a name, so you can use it to e.g. define a function called
