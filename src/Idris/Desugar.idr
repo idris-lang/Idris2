@@ -830,8 +830,8 @@ mutual
              UnboundImplicits a => do
                setUnboundImplicits a
                pure [IPragma (\nest, env => setUnboundImplicits a)]
-             UndottedRecordProjections b => do
-               pure [IPragma (\nest, env => setUndottedRecordProjections b)]
+             PrefixRecordProjections b => do
+               pure [IPragma (\nest, env => setPrefixRecordProjections b)]
              AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
              PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]

@@ -582,11 +582,11 @@ definedInBlock ns decls =
         fnsRF : List Name
         fnsRF = map toRF fnsUN
 
-        -- Depending on %undotted_record_projections,
-        -- the record may or may not produce undotted projections (fnsUN).
+        -- Depending on %prefix_record_projections,
+        -- the record may or may not produce prefix projections (fnsUN).
         --
         -- However, since definedInBlock is pure, we can't check that flag
-        -- (and it would also be wrong if %undotted_record_projections appears
+        -- (and it would also be wrong if %prefix_record_projections appears
         -- inside the parameter block)
         -- so let's just declare all of them and some may go unused.
         all : List Name

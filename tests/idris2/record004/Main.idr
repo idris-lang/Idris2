@@ -10,13 +10,13 @@ record Point where
 -- .x : Point -> Double
 -- .y : Point -> Double
 --
--- because %undotted_record_projections are on by default, we also get:
+-- because %prefix_record_projections are on by default, we also get:
 --
 -- x : Point -> Double
 -- y : Point -> Double
 
 -- to prevent cluttering the ordinary name space with short identifiers
-%undotted_record_projections off
+%prefix_record_projections off
 
 record Rect where
   constructor MkRect
@@ -26,7 +26,7 @@ record Rect where
 -- .topLeft : Rect -> Point
 -- .bottomRight : Rect -> Point
 --
--- For Rect, we don't get the undotted projections:
+-- For Rect, we don't get the prefix projections:
 --
 -- Main> :t topLeft
 -- (interactive):1:4--1:11:Undefined name topLeft

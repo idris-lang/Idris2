@@ -47,19 +47,21 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
-         addUndotted <- isUndottedRecordProjections
+
          -- Go into new namespace, if there is one, for getters
          case newns of
               Nothing =>
                    do elabGetters conName 0 [] RF [] conty -- make postfix projections
-                      elabGetters conName 0 [] UN [] conty -- make prefix projections
+                      when !isPrefixRecordProjections $
+                        elabGetters conName 0 [] UN [] conty -- make prefix projections
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
                       elabGetters conName 0 [] RF [] conty -- make postfix projections
-                      elabGetters conName 0 [] UN [] conty -- make prefix projections
+                      when !isPrefixRecordProjections $
+                        elabGetters conName 0 [] UN [] conty -- make prefix projections
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
