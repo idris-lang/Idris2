@@ -712,16 +712,13 @@ processDef opts nest env fc n_in cs_in
                        else linear
          nidx <- resolveName n
          
-         -- Set the default totality option to the current one, saving the global one
-         defaultTotality <- getDefaultTotalityOption
-         let treq = fromMaybe defaultTotality (findSetTotal (flags gdef))
-         setDefaultTotalityOption treq
-         
-         cs <- traverse (checkClause mult (visibility gdef) treq
+         -- Dynamically rebind default totality requirement to this function's totality requirement
+         -- and use this requirement when processing `with` blocks
+         let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
+         cs <- withTotality treq $ 
+               traverse (checkClause mult (visibility gdef) treq
                                      hashit nidx opts nest env) cs_in
-         -- Restore global default
-         setDefaultTotalityOption defaultTotality
-                                                                 
+         
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
@@ -771,6 +768,18 @@ processDef opts nest env fc n_in cs_in
          when (not (elem InCase opts)) $
               compileRunTime fc atotal
   where
+    -- Move `withTotality` to Core.Context if we need it elsewhere
+    ||| Temporarily rebind the default totality requirement (%default total/partial/covering).
+    withTotality : TotalReq -> Lazy (Core a) -> Core a
+    withTotality tot c = do
+         defaultTotality <- getDefaultTotalityOption
+         setDefaultTotalityOption tot
+         x <- catch c (\error => do setDefaultTotalityOption defaultTotality
+                                    throw error)
+         setDefaultTotalityOption defaultTotality
+         pure x
+
+  
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True
     simplePat (Erased _ _) = True
