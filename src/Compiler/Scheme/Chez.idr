@@ -274,6 +274,9 @@ useCC appdir fc [] args ret
 useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC appdir fc ccs args ret
+           Just ("scheme,chez", [sfn]) =>
+               do body <- schemeCall fc sfn (map fst args) ret
+                  pure ("", body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
