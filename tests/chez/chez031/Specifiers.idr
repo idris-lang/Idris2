@@ -1,5 +1,15 @@
 module Specifiers
 
+{- This tests both the given specifiers and the error reporting of them.
+   To this end it tests via:
+   --exec main      -- testing cli
+
+   > :exec main     -- testing repl
+
+   > :set eval exec -- repl with eval set to execute
+   > main
+-}
+
 -- Generic match good for any scheme backend
 %foreign "scheme:+"
 plusGeneric : Int -> Int -> Int

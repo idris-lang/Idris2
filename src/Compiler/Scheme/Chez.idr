@@ -269,8 +269,7 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC appdir fc [] args ret = throw (NoForeignCC fc)
 useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC appdir fc ccs args ret
