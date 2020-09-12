@@ -8,6 +8,7 @@ import Core.Unify
 import Utils.Path
 
 import Idris.CommandLine
+import Idris.Error
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -147,9 +148,10 @@ postOptions res (OutputFile outfile :: rest)
          postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
-         postOptions res rest
-         pure False
+    = catch (do execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+                postOptions res rest
+                pure False)
+            (\err => do perror err >>= printError; pure False)
 postOptions res (CheckOnly :: rest)
     = do postOptions res rest
          pure False
