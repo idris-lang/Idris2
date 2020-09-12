@@ -1,1 +1,27 @@
-Uncaught error: Specifiers.idr:18:1--24:5:No recognised foreign calling convention
+The given specifier was not accepted by any backend. Available backends:
+  chez, racket, node, javascript, gambit
+Some backends have additional specifier rules, refer to their documentation.
+
+Specifiers.idr:28:1--34:5
+ 28 | %foreign "scheme,racket:+"
+ 29 | plusRacketFail : Int -> Int -> Int
+ 30 | 
+ 31 | 
+ 32 | -- We don't actually do any printing this is just to use the specifiers so the
+ 33 | -- failures are exposed.
+
+Main> Loaded file Specifiers.idr
+Specifiers> Error: The given specifier was not accepted by any backend. Available backends:
+  chez, racket, node, javascript, gambit
+Some backends have additional specifier rules, refer to their documentation.
+
+Specifiers.idr:28:1--34:5
+
+Specifiers> [exec] Specifiers> Error: The given specifier was not accepted by any backend. Available backends:
+  chez, racket, node, javascript, gambit
+Some backends have additional specifier rules, refer to their documentation.
+
+Specifiers.idr:28:1--34:5
+
+[exec] Specifiers> 
+Bye for now!

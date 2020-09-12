@@ -1,3 +1,4 @@
 $1 --no-banner --no-color --console-width 0 --cg chez Specifiers.idr --exec main
+$1 --no-banner --no-color --console-width 0 --cg chez < input
 
 rm -rf build
