@@ -7,6 +7,7 @@
 module Decidable.Order.Strict
 
 import Decidable.Order
+import Decidable.Equality
 
 %default total
 
@@ -70,3 +71,14 @@ HackOrder {t} {spo} @{so} = MkOrdered @{HackPoset} {ord = ord}
      ord a b | DecLT aLTb = Left  (Right aLTb)
      ord a b | DecGT bLTa = Right (Right bLTa)
 
+
+public export
+(tot : StrictOrdered t lt) => (pre : StrictPreorder t lt) => DecEq t where
+  decEq x y = case order @{tot} x y of
+    DecEQ x_eq_y => Yes x_eq_y
+    DecLT xlty => No $ \x_eq_y => absurd $ irreflexive @{pre} y 
+                                         $ replace {p = \u => u `lt` y} x_eq_y xlty
+    -- Similarly                                         
+    DecGT yltx => No $ \x_eq_y => absurd $ irreflexive @{pre} y
+                                         $ replace {p = \u => y `lt` u} x_eq_y yltx
+    
