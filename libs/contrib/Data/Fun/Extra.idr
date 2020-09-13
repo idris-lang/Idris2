@@ -1,54 +1,87 @@
 module Data.Fun.Extra
 
 import Data.Fun
+import Data.Rel
 import Data.HVect
 
-||| Apply an n-ary function to an n-ary tuple of inputs
-public export
-apply : {ts : Vect n Type} -> {cod : Type} -> Fun ts cod -> HVect ts -> cod
-apply f [] = f
-apply f (t::ts) = apply (f t) ts
+%default total
 
 ||| Apply an n-ary function to an n-ary tuple of inputs
 public export
-applyPartially : {ts : Vect n Type} -> {ss : Vect m Type} -> {rs : Vect k Type} 
-               -> {auto 0 fordShape : rs = ts ++ ss}
-               -> {cod : Type} -> Fun rs cod -> HVect ts -> Fun ss cod
-applyPartially {fordShape = Refl} f [] = f
-applyPartially {fordShape = Refl} f (x::xs) = applyPartially (f x) xs
+uncurry : {ts : Vect n Type} -> {cod : Type} -> Fun ts cod -> HVect ts -> cod
+uncurry f [] = f
+uncurry f (t::ts) = uncurry (f t) ts
+
+||| Apply an n-ary function to an n-ary tuple of inputs
+public export
+curry : {ts : Vect n Type} -> {cod : Type} -> (HVect ts -> cod) -> Fun ts cod 
+curry {ts = []     } f = f []
+curry {ts = t :: ts} f = \x => curry (\xs => f (x :: xs))
+
+{- 
+
+The higher kind Type -> Type has a monoid structure given by
+composition and the identity (Cayley). The type (n : Nat ** Vect n a)
+has a monoid structure given by `(n, rs) * (m, ss) := (n + m, rs +
+ss)` and `(0,[])`. 
+
+  `Fun' : (n : Nat ** Vect n Type) -> Type -> Type` 
+  
+is then a monoid homomorphism between them. I guess this is some
+instance of Cayley's theorem, but because of extensionality we can't
+show we have an isomorphism.
+-}
+public export
+homoFunNeut_ext : Fun [] cod -> id cod
+homoFunNeut_ext x = x
+
+public export
+homoFunMult_ext : {rs : Vect n Type} -> Fun (rs ++ ss) cod -> (Fun rs . Fun ss) cod
+homoFunMult_ext {rs = []     }  gs = gs
+homoFunMult_ext {rs = t :: ts} fgs = \x => homoFunMult_ext (fgs x)
+
+public export
+homoFunNeut_inv : id cod -> Fun [] cod
+homoFunNeut_inv x = x
+
+public export
+homoFunMult_inv : {rs : Vect n Type} -> (Fun rs . Fun ss) cod -> Fun (rs ++ ss) cod
+homoFunMult_inv {rs = []     } gs = gs
+homoFunMult_inv {rs = t :: ts} fgs = \x => homoFunMult_inv (fgs x)
+
+
+||| Apply an n-ary function to an n-ary tuple of inputs
+public export
+applyPartially : {ts : Vect n Type} -> {ss : Vect m Type} 
+               -> {cod : Type} -> Fun (ts ++ ss) cod -> (HVect ts -> Fun ss cod)
+applyPartially fgs = uncurry {ts} {cod = Fun ss cod} (homoFunMult_ext {rs=ts} {ss} {cod} fgs)
 
 
 {- -------- (slightly) dependent versions of the above ---------------
    As usual, type dependencies make everything complicated          -}
 
-
-||| Build an n-ary dependent function type from a Vect of Types and a dependent result type
-||| NB: the types in the tuple do not depend on each other.
-public export
-GenFun : (ts : Vect n Type) -> (cod : Fun ts Type) -> Type
-GenFun [] cod = cod
-GenFun (t :: ts) cod = (x : t) -> GenFun ts (cod x )
-
 ||| Apply an n-ary dependent function to its tuple of inputs (given by an HVect)
 public export
-applyGen : {ts : Vect n Type} -> {cod : Fun ts Type} 
-        -> GenFun ts cod -> (xs : HVect ts) -> apply cod xs
-applyGen f [] = f
-applyGen {ts = t :: ts} {cod} f (x :: xs) = applyGen {cod= cod x} (f x) xs
+uncurryAll : {ts : Vect n Type} -> {cod : Fun ts Type} 
+        -> All ts cod -> (xs : HVect ts) -> uncurry cod xs
+uncurryAll f [] = f
+uncurryAll {ts = t :: ts} {cod} f (x :: xs) = uncurryAll {cod= cod x} (f x) xs
+
+public export
+curryAll : {ts : Vect n Type} -> {cod : Fun ts Type}
+        -> ((xs : HVect ts) -> uncurry cod xs)
+        -> All ts cod
+curryAll {ts = []     } f = f []
+curryAll {ts = t :: ts} f = \x => curryAll (\ xs => f (x:: xs))
 
 chainGenUncurried : {ts : Vect n Type} -> {cod,cod' : Fun ts Type} -> 
-           ((xs : HVect ts) -> apply cod xs -> apply cod' xs) ->  
-           GenFun ts cod -> GenFun ts cod'
+           ((xs : HVect ts) -> uncurry cod xs -> uncurry cod' xs) ->  
+           All ts cod -> All ts cod'
 chainGenUncurried {ts = []} f gs = f [] gs
 chainGenUncurried {ts = (t :: ts)} f gs = \x => chainGenUncurried (\u => f (x :: u)) (gs x)
 
-||| Partially apply an n-ary dependent function to a tuple of its inputs
-||| Yes, the type is disgusting
-applyPartiallyGen : {ts : Vect n Type} -> {ss : Vect m Type} -> {rs : Vect k Type} 
-                -> {cod : Fun rs Type} 
-                -> {auto 0 fordShape : rs = ts ++ ss}
-                -> GenFun rs cod -> (xs : HVect ts) -> 
-                   GenFun ss $ applyPartially {ts} {ss} {rs} {cod = Type} cod xs
-applyPartiallyGen {ts = []     } {fordShape = Refl} f [] = f
-applyPartiallyGen {ts = t :: ts} {fordShape = Refl} f (x :: xs) = applyPartiallyGen (f x) xs
-  
+public export
+homoAllNeut_ext : Fun [] cod -> id cod
+homoAllNeut_ext x = x
+
+-- Not sure it's worth it getting the rest of Cayley's theorem to work
