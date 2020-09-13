@@ -2,11 +2,12 @@ module Specifiers
 
 {- This tests both the given specifiers and the error reporting of them.
    To this end it tests via:
-   --exec main      -- testing cli
+   -o foo           -- testing cli compilation
+   --exec main      -- testing cli execution
 
-   > :exec main     -- testing repl
+   > :exec main     -- testing repl execution
 
-   > :set eval exec -- repl with eval set to execute
+   > :set eval exec -- testing repl evaluation with eval set to execute
    > main
 -}
 
@@ -27,7 +28,6 @@ plusRacketOK : Int -> Int -> Int
 -- We're testing with --cg chez so this shouldn't find a valid specifier to use.
 %foreign "scheme,racket:+"
 plusRacketFail : Int -> Int -> Int
-
 
 -- We don't actually do any printing this is just to use the specifiers so the
 -- failures are exposed.
