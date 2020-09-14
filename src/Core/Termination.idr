@@ -584,8 +584,8 @@ posArg defs tyns (NTCon _ tc _ _ args)
              = case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) =>
                          dropParams 0 params args
-                    _ => args in
-          if !(anyM (nameIn defs tyns)
+                    _ => args
+      in if !(anyM (nameIn defs tyns)
                   !(traverse (evalClosure defs) testargs))
              then pure (NotTerminating NotStrictlyPositive)
              else pure IsTerminating
