@@ -102,6 +102,3 @@ introduceWitness : {0 r : Rel ts} -> (witness : HVect ts) ->
                    uncurry {ts} r witness -> Ex ts r
 introduceWitness []             f = f
 introduceWitness (w :: witness) f = (w ** introduceWitness witness f)
-
-
-

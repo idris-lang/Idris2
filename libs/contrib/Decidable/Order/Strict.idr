@@ -27,7 +27,7 @@ EqOr spo a b = Either (a = b) (a `spo` b)
 
 -- Can generalise to an arbitrary equivalence, I belive
 public export
-[HackPreorder] {spo : t -> t -> Type} -> StrictPreorder t spo => Preorder t (EqOr spo) where
+[MkPreorder] {spo : t -> t -> Type} -> StrictPreorder t spo => Preorder t (EqOr spo) where
   reflexive a = Left Refl
   transitive a _ c (Left  Refl) bLTEc        = bLTEc
   transitive a b _ (Right aLTb) (Left  Refl) = Right aLTb
@@ -38,8 +38,8 @@ public export
            
 %hint
 public export
-HackPoset : {t : Type} -> {spo : t -> t -> Type} -> StrictPreorder t spo => Poset t (EqOr spo) 
-HackPoset {t} {spo} = MkPoset @{HackPreorder} {antisym = antisym}
+InferPoset : {t : Type} -> {spo : t -> t -> Type} -> StrictPreorder t spo => Poset t (EqOr spo) 
+InferPoset {t} {spo} = MkPoset @{MkPreorder} {antisym = antisym}
   where
     antisym : (a,b : t) -> EqOr spo a b -> EqOr spo b a -> a = b
     antisym a a (Left  Refl) (Left  Refl) = Refl
@@ -62,8 +62,8 @@ interface StrictPreorder t spo => StrictOrdered t (spo : t -> t -> Type) where
 
 %hint
 public export
-HackOrder : {t : Type} -> {spo : t -> t -> Type} -> StrictOrdered t spo => Ordered t (EqOr spo)
-HackOrder {t} {spo} @{so} = MkOrdered @{HackPoset} {ord = ord}
+InferOrder : {t : Type} -> {spo : t -> t -> Type} -> StrictOrdered t spo => Ordered t (EqOr spo)
+InferOrder {t} {spo} @{so} = MkOrdered @{InferPoset} {ord = ord}
   where
     ord : (a,b : t) -> Either (EqOr spo a b) (EqOr spo b a)
     ord  a b with (Strict.order @{so} a b)
