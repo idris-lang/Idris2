@@ -284,6 +284,15 @@ export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
 
+export
+intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy eq [] = []
+intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
+
+export
+intersectAll : Eq a => List (List a) -> List a
+intersectAll = intersectAllBy (==)
+
 ||| Combine two lists elementwise using some function.
 |||
 ||| If the lists are different lengths, the result is truncated to the

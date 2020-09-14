@@ -15,6 +15,7 @@ import Utils.Binary
 import Data.IntMap
 import Data.IOArray
 import Data.List
+import Data.Maybe
 import Data.NameMap
 import Data.StringMap
 
@@ -1807,13 +1808,10 @@ getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
           getConPs (map (map (map weaken)) bacc) tyn sc
 getConPs acc tyn tm = toPos (getPs acc tyn tm)
 
-combinePos : Eq a => List (List a) -> List a
-combinePos [] = []
-combinePos (xs :: xss) = filter (\x => all (elem x) xss) xs
-
 paramPos : Name -> (dcons : List ClosedTerm) ->
-           List Nat
-paramPos tyn dcons = combinePos (map (getConPs Nothing tyn) dcons)
+           Maybe (List Nat)
+paramPos tyn [] = Nothing -- no constructor!
+paramPos tyn dcons = Just $ intersectAll (map (getConPs Nothing tyn) dcons)
 
 export
 addData : {auto c : Ref Ctxt Defs} ->
@@ -1821,10 +1819,13 @@ addData : {auto c : Ref Ctxt Defs} ->
 addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     = do defs <- get Ctxt
          tag <- getNextTypeTag
+         let allPos = allDet arity
+         -- In case there are no constructors, all the positions are parameter positions!
+         let paramPositions = fromMaybe allPos (paramPos (Resolved tidx) (map type datacons))
          let tydef = newDef dfc tyn top vars tycon vis
                             (TCon tag arity
-                                  (paramPos (Resolved tidx) (map type datacons))
-                                  (allDet arity)
+                                  paramPositions
+                                  allPos
                                   defaultFlags [] (map name datacons) Nothing)
          (idx, gam') <- addCtxt tyn tydef (gamma defs)
          gam'' <- addDataConstructors 0 datacons gam'
