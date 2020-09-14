@@ -8,14 +8,14 @@ import Data.Fun.Extra
 import Decidable.Decidable
 
 public export
-NotNot : {ts : Vect n Type} -> (r : Rel ts) -> Rel ts
+NotNot : {n : Nat} -> {ts : Vect n Type} -> (r : Rel ts) -> Rel ts
 NotNot r = map @{Nary} (Not . Not) r 
 
 [DecidablePartialApplication] {x : t} -> (tts : Decidable (t :: ts) r) => Decidable ts (r x) where
   decide = decide @{tts} x
 
 public export
-doubleNegationElimination : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+doubleNegationElimination : {n : Nat} -> {0 ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
   (witness : HVect ts) -> 
   uncurry (NotNot {ts} r) witness -> 
   uncurry              r  witness
@@ -26,7 +26,7 @@ doubleNegationElimination {ts = []     } @{dec} [] prfnn =
 doubleNegationElimination {ts = t :: ts} @{dec} (w :: witness) prfnn = 
   doubleNegationElimination {ts} {r = r w} @{ DecidablePartialApplication @{dec} } witness prfnn
 
-doubleNegationForall : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+doubleNegationForall : {n : Nat} -> {0 ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
   All ts (NotNot {ts} r) -> All ts r
 doubleNegationForall @{dec} forall_prf = 
   let prfnn : (witness : HVect ts) -> uncurry (NotNot {ts} r) witness
@@ -36,7 +36,7 @@ doubleNegationForall @{dec} forall_prf =
   in curryAll prf
 
 public export
-doubleNegationExists : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+doubleNegationExists : {n : Nat} -> {0 ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
   Ex ts (NotNot {ts} r) -> 
   Ex ts r
 doubleNegationExists {ts} {r} @{dec} nnxs = 
