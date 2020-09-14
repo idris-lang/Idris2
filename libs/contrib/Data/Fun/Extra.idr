@@ -105,11 +105,12 @@ introduceWitness (w :: witness) f = (w ** introduceWitness witness f)
 
 ----------------------------------------------------------------------
 public export
-data FunVect : (ts, ss : Vect n Type) -> Type where
-  Nil  : FunVect [] []
-  (::) : (f : t -> s) -> FunVect ts ss -> FunVect (t::ts) (s::ss)
+data Pointwise : (r : a -> b -> Type) -> (ts : Vect n a) -> (ss : Vect n b) -> Type where
+  Nil  : Pointwise r [] []
+  (::) : {0 ss, ts : Vect n Type} -> 
+         (f : r t s) -> Pointwise r ts ss -> Pointwise r (t::ts) (s::ss)
 
 public export
-precompose : FunVect ts ss -> Fun ss cod -> Fun ts cod
+precompose : Pointwise (\a,b => a -> b) ts ss -> Fun ss cod -> Fun ts cod
 precompose [] h = h
 precompose (f :: fs) h = \x => precompose fs (h (f x))
