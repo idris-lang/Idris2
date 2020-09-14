@@ -3,6 +3,7 @@ module Decidable.Decidable.Extra
 import Data.Rel
 import Data.Fun
 import Data.Vect
+import Data.HVect
 import Data.Fun.Extra
 import Decidable.Decidable
 
@@ -14,12 +15,36 @@ NotNot r = map @{Nary} (Not . Not) r
   decide = decide @{tts} x
 
 public export
-doubleNegation : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+doubleNegationElimination : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+  (witness : HVect ts) -> 
+  uncurry (NotNot {ts} r) witness -> 
+  uncurry              r  witness
+doubleNegationElimination {ts = []     } @{dec} [] prfnn = 
+  case decide @{dec} of
+    Yes prf   => prf
+    No  prfn => absurd $ prfnn prfn
+doubleNegationElimination {ts = t :: ts} @{dec} (w :: witness) prfnn = 
+  doubleNegationElimination {ts} {r = r w} @{ DecidablePartialApplication @{dec} } witness prfnn
+
+doubleNegationForall : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
+  All ts (NotNot {ts} r) -> All ts r
+doubleNegationForall @{dec} forall_prf = 
+  let prfnn : (witness : HVect ts) -> uncurry (NotNot {ts} r) witness
+      prfnn = uncurryAll forall_prf
+      prf   : (witness : HVect ts) -> uncurry              r  witness
+      prf witness = doubleNegationElimination @{dec} witness (prfnn witness)
+  in curryAll prf
+
+public export
+doubleNegationExists : {ts : Vect n Type} -> {r : Rel ts} -> Decidable ts r =>
   Ex ts (NotNot {ts} r) -> 
   Ex ts r
-doubleNegation {ts = []} @{dec} nnxs = case decide @{dec} of 
-  Yes prf => prf
-  No  not => absurd (nnxs not)
-doubleNegation {ts = (t :: ts)} @{dec} (x ** nnxs) = 
-  (x ** doubleNegation {ts} {r = r x} @{ DecidablePartialApplication @{dec} } nnxs)
- 
+doubleNegationExists {ts} {r} @{dec} nnxs = 
+  let witness : HVect ts
+      witness = extractWitness nnxs 
+      witnessingnn : uncurry (NotNot {ts} r) witness
+      witnessingnn = extractWitnessCorrect nnxs
+      witnessing   : uncurry              r  witness
+      witnessing   = doubleNegationElimination @{dec} witness witnessingnn
+  in introduceWitness witness witnessing
+

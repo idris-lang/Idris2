@@ -85,3 +85,22 @@ homoAllNeut_ext : Fun [] cod -> id cod
 homoAllNeut_ext x = x
 
 -- Not sure it's worth it getting the rest of Cayley's theorem to work
+
+public export
+extractWitness : {ts : Vect n Type} -> {r : Rel ts} -> Ex ts r -> HVect ts
+extractWitness {ts = []     }  _       = []
+extractWitness {ts = t :: ts} (w ** f) = w :: extractWitness f
+
+public export
+extractWitnessCorrect : {ts : Vect n Type} -> {r : Rel ts} -> (f : Ex ts r) -> 
+                        uncurry {ts} r (extractWitness {r} f)
+extractWitnessCorrect {ts = []     } f = f
+extractWitnessCorrect {ts = t :: ts} (w ** f) = extractWitnessCorrect f
+
+public export
+introduceWitness : {ts : Vect n Type} -> {r : Rel ts} -> (witness : HVect ts) -> 
+  uncurry {ts} r witness -> Ex ts r
+introduceWitness {ts = []     } []             f = f
+introduceWitness {ts = t :: ts} (w :: witness) f = (w ** introduceWitness witness f)
+
+
