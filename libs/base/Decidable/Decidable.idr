@@ -4,6 +4,7 @@ import Data.Rel
 import Data.Fun
 
 
+
 ||| Interface for decidable n-ary Relations
 public export
 interface Decidable (ts : Vect k Type) (p : Rel ts) where
