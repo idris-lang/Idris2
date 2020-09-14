@@ -102,3 +102,14 @@ introduceWitness : {0 r : Rel ts} -> (witness : HVect ts) ->
                    uncurry {ts} r witness -> Ex ts r
 introduceWitness []             f = f
 introduceWitness (w :: witness) f = (w ** introduceWitness witness f)
+
+----------------------------------------------------------------------
+public export
+data FunVect : (ts, ss : Vect n Type) -> Type where
+  Nil  : FunVect [] []
+  (::) : (f : t -> s) -> FunVect ts ss -> FunVect (t::ts) (s::ss)
+
+public export
+precompose : FunVect ts ss -> Fun ss cod -> Fun ts cod
+precompose [] h = h
+precompose (f :: fs) h = \x => precompose fs (h (f x))
