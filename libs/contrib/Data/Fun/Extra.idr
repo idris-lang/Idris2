@@ -8,9 +8,9 @@ import Data.HVect
 
 ||| Apply an n-ary function to an n-ary tuple of inputs
 public export
-uncurry : {n : Nat} -> {0 ts : Vect n Type} -> Fun ts cod -> HVect ts -> cod
-uncurry {n = 0  } f [] = f
-uncurry {n = S n} f (x::xs) = uncurry (f x) xs
+uncurry : {0 n : Nat} -> {0 ts : Vect n Type} -> Fun ts cod -> HVect ts -> cod
+uncurry f [] = f
+uncurry f (x::xs) = uncurry (f x) xs
 
 ||| Apply an n-ary function to an n-ary tuple of inputs
 public export
@@ -53,8 +53,8 @@ homoFunMult_inv {rs = t :: ts} fgs = \x => homoFunMult_inv (fgs x)
 ||| Apply an n-ary function to an n-ary tuple of inputs
 public export
 applyPartially : {n : Nat} -> {0 ts : Vect n Type} 
-               -> {cod : Type} -> Fun (ts ++ ss) cod -> (HVect ts -> Fun ss cod)
-applyPartially fgs = uncurry {ts} {cod = Fun ss cod} (homoFunMult_ext {rs=ts} {ss} {cod} fgs)
+               -> Fun (ts ++ ss) cod -> (HVect ts -> Fun ss cod)
+applyPartially fgs = uncurry {ts} {cod = Fun ss cod} (homoFunMult_ext {rs=ts} {ss} fgs)
 
 
 {- -------- (slightly) dependent versions of the above ---------------
@@ -62,10 +62,10 @@ applyPartially fgs = uncurry {ts} {cod = Fun ss cod} (homoFunMult_ext {rs=ts} {s
 
 ||| Apply an n-ary dependent function to its tuple of inputs (given by an HVect)
 public export
-uncurryAll : {n : Nat} -> {0 ts : Vect n Type} -> {0 cod : Fun ts Type} 
+uncurryAll : {0 n : Nat} -> {0 ts : Vect n Type} -> {0 cod : Fun ts Type} 
         -> All ts cod -> (xs : HVect ts) -> uncurry cod xs
 uncurryAll f [] = f
-uncurryAll {ts = t :: ts} {cod} f (x :: xs) = uncurryAll {cod= cod x} (f x) xs
+uncurryAll {ts = t :: ts} f (x :: xs) = uncurryAll {cod= cod x} (f x) xs
 
 public export
 curryAll : {n : Nat} -> {0 ts : Vect n Type} -> {0 cod : Fun ts Type}
@@ -98,10 +98,10 @@ extractWitnessCorrect {ts = []     } f = f
 extractWitnessCorrect {ts = t :: ts} (w ** f) = extractWitnessCorrect f
 
 public export
-introduceWitness : {0 ts : Vect n Type} -> {0 r : Rel ts} -> (witness : HVect ts) -> 
-  uncurry {ts} r witness -> Ex ts r
-introduceWitness {ts = []     } []             f = f
-introduceWitness {ts = t :: ts} (w :: witness) f = (w ** introduceWitness witness f)
+introduceWitness : {0 r : Rel ts} -> (witness : HVect ts) -> 
+                   uncurry {ts} r witness -> Ex ts r
+introduceWitness []             f = f
+introduceWitness (w :: witness) f = (w ** introduceWitness witness f)
 
 
 
