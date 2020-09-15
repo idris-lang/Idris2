@@ -7,6 +7,7 @@ import Compiler.LambdaLift
 import Compiler.VMCode
 
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Options
 import Core.TT

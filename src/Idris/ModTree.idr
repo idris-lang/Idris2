@@ -2,6 +2,7 @@ module Idris.ModTree
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Metadata
