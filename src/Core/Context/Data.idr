@@ -3,6 +3,7 @@
 module Core.Context.Data
 
 import Core.Context
+import Core.Context.Log
 
 import Data.List
 import Data.Maybe
@@ -90,6 +91,9 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          let allPos = allDet arity
          -- In case there are no constructors, all the positions are parameter positions!
          let paramPositions = fromMaybe allPos (paramPos (Resolved tidx) (map type datacons))
+         log "declare.data.parameters" 20 $
+            "Positions of parameters for datatype" ++ show tyn ++
+            ": [" ++ showSep ", " (map show paramPositions) ++ "]"
          let tydef = newDef dfc tyn top vars tycon vis
                             (TCon tag arity
                                   paramPositions
