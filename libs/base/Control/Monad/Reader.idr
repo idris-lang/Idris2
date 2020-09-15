@@ -14,9 +14,9 @@ interface Monad m => MonadReader stateType (m : Type -> Type) | m where
 
 ||| The transformer on which the Reader monad is based
 public export
-record ReaderT (stateType : Type) (m: Type -> Type) (a: Type) where
+record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor MkReaderT
-  runReaderT : stateType -> m a
+  runReaderT' : stateType -> m a
 
 public export
 implementation Functor f => Functor (ReaderT stateType f) where
@@ -64,12 +64,18 @@ public export
 asks : MonadReader stateType m => (stateType -> a) -> m a
 asks f = ask >>= pure . f
 
+||| Unwrap and apply a ReaderT monad computation
+public export
+%inline
+runReaderT : stateType -> ReaderT stateType m a -> m a
+runReaderT s action = runReaderT' action s
+
 ||| The Reader monad. The ReaderT transformer applied to the Identity monad.
 public export
 Reader : (stateType : Type) -> (a : Type) -> Type
 Reader s a = ReaderT s Identity a
 
-||| Executes a Reader computation given a context.
+||| Unwrap and apply a Reader monad computation
 public export
-runReader : Reader stateType a -> stateType -> a
-runReader action = runIdentity . runReaderT action
+runReader : stateType -> Reader stateType a -> a
+runReader s = runIdentity . runReaderT s
