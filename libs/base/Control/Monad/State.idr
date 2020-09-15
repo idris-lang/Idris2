@@ -15,7 +15,7 @@ interface Monad m => MonadState stateType (m : Type -> Type) | m where
 public export
 record StateT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor ST
-  runStateT : stateType -> m (stateType, a)
+  runStateT' : stateType -> m (stateType, a)
 
 public export
 implementation Functor f => Functor (StateT stateType f) where
@@ -74,22 +74,28 @@ gets f
     = do s <- get
          pure (f s)
 
+||| Unwrap and apply a StateT monad computation.
+public export
+%inline
+runStateT : stateType -> StateT stateType m a -> m (stateType, a)
+runStateT s act = runStateT' act s
+
 ||| The State monad. See the MonadState interface
 public export
 State : (stateType : Type) -> (ty : Type) -> Type
 State = \s, a => StateT s Identity a
 
-||| Unwrap a State monad computation.
+||| Unwrap and apply a State monad computation.
 public export
-runState : StateT stateType Identity a -> stateType -> (stateType, a)
-runState act = runIdentity . runStateT act
+runState : stateType -> StateT stateType Identity a -> (stateType, a)
+runState s act = runIdentity (runStateT s act)
 
-||| Unwrap a State monad computation, but discard the final state.
+||| Unwrap and apply a State monad computation, but discard the final state.
 public export
-evalState : State stateType a -> stateType -> a
-evalState m = snd . runState m
+evalState : stateType -> State stateType a -> a
+evalState s = snd . runState s
 
-||| Unwrap a State monad computation, but discard the resulting value.
+||| Unwrap and apply a State monad computation, but discard the resulting value.
 public export
-execState : State stateType a -> stateType -> stateType
-execState m = fst . runState m
+execState : stateType -> State stateType a -> stateType
+execState s = fst . runState s
