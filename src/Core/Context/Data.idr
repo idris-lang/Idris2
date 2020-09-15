@@ -75,6 +75,8 @@ getConPs : {vars : _} ->
 getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
     = let bacc = getPs acc tyn ty in
           getConPs (map (map (map weaken)) bacc) tyn sc
+getConPs acc tyn (Bind _ x (Let _ _ v ty) sc)
+    = getConPs acc tyn (subst v sc)
 getConPs acc tyn tm = toPos (getPs acc tyn tm)
 
 paramPos : Name -> (dcons : List ClosedTerm) ->
