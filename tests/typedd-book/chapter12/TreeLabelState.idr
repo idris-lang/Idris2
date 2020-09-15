@@ -22,5 +22,5 @@ treeLabelWith (Node left val right)
           pure (Node left_labelled (this, val) right_labelled)
 
 treeLabel : Tree a -> Tree (Integer, a)
-treeLabel tree = evalState (treeLabelWith tree) [1..]
+treeLabel tree = evalState [1..] (treeLabelWith tree)
 

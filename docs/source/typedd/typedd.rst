@@ -346,6 +346,8 @@ arguments ``div`` and ``rem``.
 In ``ArithState.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
 also have to be ``export``.
 
+evalState from Control.Monad.State now takes the ``stateType`` argument first.
+
 Chapter 13
 ----------
 
