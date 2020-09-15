@@ -4,6 +4,7 @@ import Compiler.Inline
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Env
 import Core.Hash

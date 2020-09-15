@@ -6,6 +6,7 @@ import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.Options

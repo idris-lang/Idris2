@@ -13,6 +13,7 @@ module TTImp.Interactive.ExprSearch
 import Core.AutoSearch
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.LinearCheck
 import Core.Metadata

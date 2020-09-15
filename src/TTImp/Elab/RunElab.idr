@@ -1,6 +1,7 @@
 module TTImp.Elab.RunElab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType

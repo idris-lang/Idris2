@@ -32,6 +32,8 @@ modules =
     Core.CaseTree,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Data,
+    Core.Context.Log,
     Core.Core,
     Core.Coverage,
     Core.Directory,

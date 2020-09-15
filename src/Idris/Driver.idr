@@ -2,6 +2,7 @@ module Idris.Driver
 
 import Compiler.Common
 
+import Core.Context.Log
 import Core.Core
 import Core.InitPrimitives
 import Core.Metadata
