@@ -3,6 +3,7 @@ module TTImp.Interactive.GenerateDef
 -- Attempt to generate a complete definition from a type
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Metadata
 import Core.Normalise

@@ -2,6 +2,7 @@ module Core.Termination
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.TT

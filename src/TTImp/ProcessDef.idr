@@ -3,6 +3,7 @@ module TTImp.ProcessDef
 import Core.CaseBuilder
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Coverage
 import Core.Env
@@ -711,14 +712,14 @@ processDef opts nest env fc n_in cs_in
                        then erased
                        else linear
          nidx <- resolveName n
-         
+
          -- Dynamically rebind default totality requirement to this function's totality requirement
          -- and use this requirement when processing `with` blocks
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
-         cs <- withTotality treq $ 
+         cs <- withTotality treq $
                traverse (checkClause mult (visibility gdef) treq
                                      hashit nidx opts nest env) cs_in
-         
+
          let pats = map toPats (rights cs)
 
          (cargs ** (tree_ct, unreachable)) <-
@@ -779,7 +780,7 @@ processDef opts nest env fc n_in cs_in
          setDefaultTotalityOption defaultTotality
          pure x
 
-  
+
     simplePat : forall vars . Term vars -> Bool
     simplePat (Local _ _ _ _) = True
     simplePat (Erased _ _) = True

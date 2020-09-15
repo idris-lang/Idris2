@@ -1,6 +1,7 @@
 module TTImp.ProcessParams
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.TT
 import Core.Unify

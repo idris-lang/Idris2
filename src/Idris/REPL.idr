@@ -11,6 +11,7 @@ import Core.AutoSearch
 import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.InitPrimitives
 import Core.LinearCheck
