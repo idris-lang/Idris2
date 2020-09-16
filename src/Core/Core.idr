@@ -447,6 +447,12 @@ export %inline
                                Left err => pure (Left err)
                                Right val => runCore (f val)))
 
+-- Flipped bind
+infixr 1 =<<
+export %inline
+(=<<) : (a -> Core b) -> Core a -> Core b
+(=<<) = flip (>>=)
+
 -- Applicative (specialised)
 export %inline
 pure : a -> Core a
@@ -535,6 +541,26 @@ namespace Binder
   traverse f (PVar fc c p ty) = pure $ PVar fc c !(traverse f p) !(f ty)
   traverse f (PLet fc c val ty) = pure $ PLet fc c !(f val) !(f ty)
   traverse f (PVTy fc c ty) = pure $ PVTy fc c !(f ty)
+
+export
+mapTermM : ({vars : _} -> Term vars -> Core (Term vars)) ->
+           ({vars : _} -> Term vars -> Core (Term vars))
+mapTermM f = goTerm where
+
+    goTerm : {vars : _} -> Term vars -> Core (Term vars)
+    goTerm tm@(Local _ _ _ _) = f tm
+    goTerm tm@(Ref _ _ _) = f tm
+    goTerm (Meta fc n i args) = f =<< Meta fc n i <$> traverse goTerm args
+    goTerm (Bind fc x bd sc) = f =<< Bind fc x <$> traverse goTerm bd <*> goTerm sc
+    goTerm (App fc fn arg) = f =<< App fc <$> goTerm fn <*> goTerm arg
+    goTerm (As fc u as pat) = f =<< As fc u <$> goTerm as <*> goTerm pat
+    goTerm (TDelayed fc la d) = f =<< TDelayed fc la <$> goTerm d
+    goTerm (TDelay fc la ty arg) = f =<< TDelay fc la <$> goTerm ty <*> goTerm arg
+    goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
+    goTerm tm@(PrimVal _ _) = f tm
+    goTerm tm@(Erased _ _) = f tm
+    goTerm tm@(TType _) = f tm
+
 
 export
 anyM : (a -> Core Bool) -> List a -> Core Bool

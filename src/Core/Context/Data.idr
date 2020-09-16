@@ -4,6 +4,7 @@ module Core.Context.Data
 
 import Core.Context
 import Core.Context.Log
+import Core.Normalise
 
 import Data.List
 import Data.Maybe
@@ -23,32 +24,34 @@ dropReps {vars} (Just (Local fc r x p) :: xs)
     toNothing tm = tm
 dropReps (x :: xs) = x :: dropReps xs
 
-updateParams : Maybe (List (Maybe (Term vars))) ->
+updateParams : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
+               Maybe (List (Maybe (Term vars))) ->
                   -- arguments to the type constructor which could be
                   -- parameters
                   -- Nothing, as an argument, means this argument can't
                   -- be a parameter position
                List (Term vars) ->
                   -- arguments to an application
-               List (Maybe (Term vars))
-updateParams Nothing args = dropReps $ map couldBeParam args
+               Core (List (Maybe (Term vars)))
+updateParams Nothing args = dropReps <$> traverse couldBeParam args
   where
-    couldBeParam : Term vars -> Maybe (Term vars)
-    couldBeParam (Local fc r v p) = Just (Local fc r v p)
-    couldBeParam _ = Nothing
-updateParams (Just args) args' = dropReps $ zipWith mergeArg args args'
+    couldBeParam : Term vars -> Core (Maybe (Term vars))
+    couldBeParam tm = pure $ case !(etaContract tm) of
+      Local fc r v p => Just (Local fc r v p)
+      _ => Nothing
+updateParams (Just args) args' = pure $ dropReps $ zipWith mergeArg args args'
   where
     mergeArg : Maybe (Term vars) -> Term vars -> Maybe (Term vars)
     mergeArg (Just (Local fc r x p)) (Local _ _ y _)
         = if x == y then Just (Local fc r x p) else Nothing
     mergeArg _ _ = Nothing
 
-getPs : {vars : _} ->
+getPs : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
         Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
-        Maybe (List (Maybe (Term vars)))
+        Core (Maybe (List (Maybe (Term vars))))
 getPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
-      = let scPs = getPs (Prelude.map (Prelude.map (Prelude.map weaken)) acc) tyn sc in
-            map (map shrink) scPs
+      = do scPs <- getPs (map (map (map weaken)) acc) tyn sc
+           pure $ map (map shrink) scPs
   where
     shrink : Maybe (Term (x :: vars)) -> Maybe (Term vars)
     shrink Nothing = Nothing
@@ -57,9 +60,9 @@ getPs acc tyn tm
     = case getFnArgs tm of
            (Ref _ _ n, args) =>
               if n == tyn
-                 then Just (updateParams acc args)
-                 else acc
-           _ => acc
+                 then Just <$> updateParams acc args
+                 else pure acc
+           _ => pure acc
 
 toPos : Maybe (List (Maybe a)) -> List Nat
 toPos Nothing = []
@@ -70,19 +73,22 @@ toPos (Just ns) = justPos 0 ns
     justPos i (Just x :: xs) = i :: justPos (1 + i) xs
     justPos i (Nothing :: xs) = justPos (1 + i) xs
 
-getConPs : {vars : _} ->
-           Maybe (List (Maybe (Term vars))) -> Name -> Term vars -> List Nat
+getConPs : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
+           Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
+           Core (List Nat)
 getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
-    = let bacc = getPs acc tyn ty in
-          getConPs (map (map (map weaken)) bacc) tyn sc
+    = do bacc <- getPs acc tyn ty
+         getConPs (map (map (map weaken)) bacc) tyn sc
 getConPs acc tyn (Bind _ x (Let _ _ v ty) sc)
     = getConPs acc tyn (subst v sc)
-getConPs acc tyn tm = toPos (getPs acc tyn tm)
+getConPs acc tyn tm = toPos <$> getPs acc tyn tm
 
-paramPos : Name -> (dcons : List ClosedTerm) ->
-           Maybe (List Nat)
-paramPos tyn [] = Nothing -- no constructor!
-paramPos tyn dcons = Just $ intersectAll (map (getConPs Nothing tyn) dcons)
+paramPos : {auto _ : Ref Ctxt Defs} -> Name -> (dcons : List ClosedTerm) ->
+           Core (Maybe (List Nat))
+paramPos tyn [] = pure Nothing -- no constructor!
+paramPos tyn dcons = do
+  candidates <- traverse (getConPs Nothing tyn) dcons
+  pure $ Just $ intersectAll candidates
 
 export
 addData : {auto c : Ref Ctxt Defs} ->
@@ -92,7 +98,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          tag <- getNextTypeTag
          let allPos = allDet arity
          -- In case there are no constructors, all the positions are parameter positions!
-         let paramPositions = fromMaybe allPos (paramPos (Resolved tidx) (map type datacons))
+         let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map type datacons))
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyn ++
             ": [" ++ showSep ", " (map show paramPositions) ++ "]"
