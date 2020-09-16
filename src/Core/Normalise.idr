@@ -734,6 +734,36 @@ normaliseScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
 normaliseScope defs env tm = normalise defs env tm
 
+export
+etaContract : {auto _ : Ref Ctxt Defs} ->
+              {vars : _} -> Term vars -> Core (Term vars)
+etaContract tm = do
+  defs <- get Ctxt
+  logTerm "eval.eta" 5 "Attempting to eta contract subterms of" tm
+  nf <- normalise defs (mkEnv EmptyFC _) tm
+  logTerm "eval.eta" 5 "Evaluated to" nf
+  res <- mapTermM act tm
+  logTerm "eval.eta" 5 "Result of eta-contraction" res
+  pure res
+
+   where
+
+    act : {vars : _} -> Term vars -> Core (Term vars)
+    act tm = do
+      logTerm "eval.eta" 10 "  Considering" tm
+      case tm of
+        (Bind _ x (Lam _ _ _ _) (App _ fn (Local _ _ Z _))) => do
+          logTerm "eval.eta" 10 "  Shrinking candidate" fn
+          let shrunk = shrinkTerm fn (DropCons SubRefl)
+          case shrunk of
+            Nothing => do
+              log "eval.eta" 10 "  Failure!"
+              pure tm
+            Just tm' => do
+              logTerm "eval.eta" 10 "  Success!" tm'
+              pure tm'
+        _ => pure tm
+
 public export
 interface Convert (tm : List Name -> Type) where
   convert : {auto c : Ref Ctxt Defs} ->

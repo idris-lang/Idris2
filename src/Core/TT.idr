@@ -3,7 +3,6 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Control.Monad.Identity
 import Data.Bool.Extra
 import Data.List
 import Data.Nat
@@ -568,46 +567,6 @@ data Term : List Name -> Type where
      Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
               Term vars
      TType : FC -> Term vars
-
-export
-mapTermM : Monad m => (forall vars. Term vars -> m (Term vars)) ->
-                      forall vars. Term vars -> m (Term vars)
-mapTermM f = goTerm where
-
-  mutual
-
-    goTerm : forall vars. Term vars -> m (Term vars)
-    goTerm tm@(Local _ _ _ _) = f tm
-    goTerm tm@(Ref _ _ _) = f tm
-    goTerm (Meta fc n i args) = (>>= f) $ Meta fc n i <$> traverse goTerm args
-    goTerm (Bind fc x bd sc) = (>>= f) $ Bind fc x <$> goBinder bd <*> goTerm sc
-    goTerm (App fc fn arg) = (>>= f) $ App fc <$> goTerm fn <*> goTerm arg
-    goTerm (As fc u as pat) = (>>= f) $ As fc u <$> goTerm as <*> goTerm pat
-    goTerm (TDelayed fc la d) = (>>= f) $ TDelayed fc la <$> goTerm d
-    goTerm (TDelay fc la ty arg) = (>>= f) $ TDelay fc la <$> goTerm ty <*> goTerm arg
-    goTerm (TForce fc la t) = (>>= f) $ TForce fc la <$> goTerm t
-    goTerm tm@(PrimVal _ _) = f tm
-    goTerm tm@(Erased _ _) = f tm
-    goTerm tm@(TType _) = f tm
-
-    goBinder : forall vars. Binder (Term vars) -> m (Binder (Term vars))
-    goBinder (Lam fc rig info ty) = Lam fc rig <$> goPiInfo info <*> goTerm ty
-    goBinder (Let fc rig val ty) = Let fc rig <$> goTerm val <*> goTerm ty
-    goBinder (Pi fc rig info ty) = Pi fc rig <$> goPiInfo info <*> goTerm ty
-    goBinder (PVar fc rig info ty) = PVar fc rig <$> goPiInfo info <*> goTerm ty
-    goBinder (PLet fc rig val ty) = PLet fc rig <$> goTerm val <*> goTerm ty
-    goBinder (PVTy fc rig ty) = PVTy fc rig <$> goTerm ty
-
-    goPiInfo : forall vars. PiInfo (Term vars) -> m (PiInfo (Term vars))
-    goPiInfo (DefImplicit t) = DefImplicit <$> goTerm t
-    goPiInfo Implicit = pure Implicit
-    goPiInfo Explicit = pure Explicit
-    goPiInfo AutoImplicit = pure AutoImplicit
-
-export
-mapTerm : (forall vars. Term vars -> Term vars) ->
-          (forall vars. Term vars -> Term vars)
-mapTerm f = runIdentity . mapTermM (Id . f)
 
 export
 getLoc : Term vars -> FC
