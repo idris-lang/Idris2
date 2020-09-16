@@ -3,7 +3,6 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Control.Monad.Identity
 import Data.Bool.Extra
 import Data.List
 import Data.Nat
