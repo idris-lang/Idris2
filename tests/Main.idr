@@ -93,7 +93,7 @@ idrisTests
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005",
        -- Positivity checking
-       "positivity001", "positivity002",
+       "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
