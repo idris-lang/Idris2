@@ -380,6 +380,11 @@ data ImpREPL : Type where
      Quit : ImpREPL
 
 export
+mapAltType : (RawImp -> RawImp) -> AltType -> AltType
+mapAltType f (UniqueDefault x) = UniqueDefault (f x)
+mapAltType _ u = u
+
+export
 lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
                  NestedNames vars -> RawImp -> Core RawImp
 lhsInCurrentNS nest (IApp loc f a)
