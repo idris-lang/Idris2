@@ -114,6 +114,8 @@ bindBangs ((n, fc, btm) :: bs) tm
                                 (Implicit fc False) tm)
 
 idiomise : FC -> RawImp -> RawImp
+idiomise fc (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc) u) (idiomise afc <$> alts)
 idiomise fc (IApp afc f a)
     = IApp fc (IApp fc (IVar fc (UN "<*>"))
                     (idiomise afc f))
