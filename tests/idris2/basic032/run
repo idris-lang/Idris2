@@ -1,4 +1,4 @@
 $1 --no-color --console-width 0 --no-banner Idiom.idr < input
-$1 --no-color --console-width 0 --no-banner Idiom2.idr --exec fuzz
+$1 --no-color --console-width 0 --no-banner Idiom2.idr --check
 
 rm -rf build
