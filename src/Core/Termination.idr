@@ -489,6 +489,7 @@ checkSC defs f args path
              let Unchecked = isTerminating (totality gdef)
                   | IsTerminating => pure IsTerminating
                   | _ => pure (NotTerminating (BadCall [fnCall sc]))
+             log "termination.termination.sizechange.checkCall" 8 $ "CheckCall Size Change Graph: " ++ show (fnCall sc)
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
              if not inpath
                 then case term of
@@ -497,7 +498,8 @@ checkSC defs f args path
                           -- was mutually recursive, so start again with new
                           -- arguments (that is, where we'd start if the
                           -- function was the top level thing we were checking)
-                          do args' <- initArgs (length (fnArgs sc))
+                          do log "termination.termination.sizechange.restart" 8 $ "ReChecking Size Change Graph: " ++ show (fnCall sc)
+                             args' <- initArgs (length (fnArgs sc))
                              checkSC defs (fnCall sc) args' path
                        t => pure t
                 else pure term
