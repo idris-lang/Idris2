@@ -10,8 +10,3 @@ fez1 = [| MkPair fez (pure ()) |]
 
 fez2 : IO (Int, Maybe Int)
 fez2 = [| ( fez , (pure Nothing) ) |]
-
-fuzz : IO ()
-fuzz = do
-  fez1 >>= printLn
-  fez2 >>= printLn

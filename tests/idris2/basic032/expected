@@ -1,5 +1,4 @@
 1/1: Building Idiom (Idiom.idr)
 Main> Just 7
 Main> Bye for now!
-(1, ())
-(1, Nothing)
+1/1: Building Idiom2 (Idiom2.idr)
