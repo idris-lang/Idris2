@@ -43,7 +43,8 @@ export
 checkIfGuarded : {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Core ()
 checkIfGuarded fc n
-    = do defs <- get Ctxt
+    = do log "termination.guarded" 6 $ "Check if Guarded: " ++ show n
+         defs <- get Ctxt
          Just (PMDef _ _ _ _ pats) <- lookupDefExact n (gamma defs)
               | _ => pure ()
          t <- allGuarded pats
@@ -362,7 +363,7 @@ mutual
       = do Just gdef <- lookupCtxtExact fn_in (gamma defs)
                 | Nothing => throw (UndefinedName fc fn_in)
            let fn = fullname gdef
-           log "termination" 10 $ "Looking under " ++ show fn
+           log "termination.termination.sizechange" 10 $ "Looking under " ++ show fn
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
            cond [(fn == NS builtinNS (UN "assert_total"), pure []),
               (caseFn fn,
@@ -409,7 +410,8 @@ export
 calculateSizeChange : {auto c : Ref Ctxt Defs} ->
                       FC -> Name -> Core (List SCCall)
 calculateSizeChange loc n
-    = do defs <- get Ctxt
+    = do log "termination.sizechange" 5 $ "Calculating Size Change: " ++ show n
+         defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
          getSC defs (definition def)
@@ -445,12 +447,13 @@ checkSC : {auto a : Ref APos Arg} ->
           List (Name, List (Maybe Arg)) -> -- calls we've seen so far
           Core Terminating
 checkSC defs f args path
-   = let pos = (f, map (map Builtin.fst) args) in
-         if pos `elem` path
-            then toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
-            else case !(lookupCtxtExact f (gamma defs)) of
-                      Nothing => pure IsTerminating
-                      Just def => continue (sizeChange def) (pos :: path)
+   = do log "termination.termination.sizechange" 7 $ "Checking Size Change Graph: " ++ show f
+        let pos = (f, map (map Builtin.fst) args)
+        if pos `elem` path
+           then toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
+           else case !(lookupCtxtExact f (gamma defs)) of
+                     Nothing => pure IsTerminating
+                     Just def => continue (sizeChange def) (pos :: path)
   where
     -- Look for something descending in the list of size changes
     checkDesc : List SizeChange -> List (Name, List (Maybe Arg)) -> Terminating
@@ -514,6 +517,7 @@ calcTerminating : {auto c : Ref Ctxt Defs} ->
                   FC -> Name -> Core Terminating
 calcTerminating loc n
     = do defs <- get Ctxt
+         log "termination.termination.calc" 7 $ "Calculating termination: " ++ show n
          case !(lookupCtxtExact n (gamma defs)) of
               Nothing => throw (UndefinedName loc n)
               Just def =>
@@ -547,6 +551,7 @@ checkTerminating : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> Core Terminating
 checkTerminating loc n
     = do tot <- getTotality loc n
+         log "termination.termination" 6 $ "Checking termination: " ++ show n
          case isTerminating tot of
               Unchecked =>
                  do tot' <- calcTerminating loc n
@@ -639,6 +644,7 @@ calcPositive : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> Core (Terminating, List Name)
 calcPositive loc n
     = do defs <- get Ctxt
+         log "termination.positivity" 6 $ "Calculating positivity: " ++ show n
          case !(lookupDefTyExact n (gamma defs)) of
               Just (TCon _ _ _ _ _ tns dcons _, ty) =>
                   case !(totRefsIn defs ty) of
@@ -657,6 +663,7 @@ checkPositive : {auto c : Ref Ctxt Defs} ->
 checkPositive loc n_in
     = do n <- toResolvedNames n_in
          tot <- getTotality loc n
+         log "termination.positivity" 6 $ "Checking positivity: " ++ show n
          case isTerminating tot of
               Unchecked =>
                   do (tot', cons) <- calcPositive loc n
@@ -676,6 +683,7 @@ checkTotal loc n_in
              | Nothing => throw (UndefinedName loc n_in)
          let n = Resolved nidx
          tot <- getTotality loc n
+         log "termination" 5 $ "Checking totality: " ++ show n
          defs <- get Ctxt
          case isTerminating tot of
               Unchecked =>
