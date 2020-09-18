@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.Options
 import Core.Options.Log
 import Core.TT
 import Core.TTC
@@ -1010,3 +1011,16 @@ mutual
                8 => do n <- fromBuf b
                        pure (ILog n)
                _ => corrupt "ImpDecl"
+
+
+-- Log message with a RawImp
+export
+logRaw : {auto c : Ref Ctxt Defs} ->
+         String -> Nat -> Lazy String -> RawImp -> Core ()
+logRaw str n msg tm
+    = do opts <- getSession
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
+            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+                                          ++ ": " ++ show tm
+            else pure ()

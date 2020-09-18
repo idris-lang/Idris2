@@ -281,7 +281,10 @@ mutual
            pure (IVar fc bn)
   desugarB side ps (PIdiom fc term)
       = do itm <- desugarB side ps term
-           pure (idiomise fc itm)
+           logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
+           let val = idiomise fc itm
+           logRaw "desugar.idiom" 10 "Desugared to" val
+           pure val
   desugarB side ps (PList fc args)
       = expandList side ps fc args
   desugarB side ps (PPair fc l r)
