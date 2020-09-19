@@ -1,44 +1,26 @@
 module Data.String.Iterator
 
+%default total
+
 export
-record StringIterator where
-  constructor MkSI
-  string : String
+data StringIterator : Type where [external]
 
-  -- backend-dependent offset into the string
-  -- see prim__readChar below
-  offset : Int
-
+%foreign
+  "scheme:blodwen-string-iterator-new"
 export
 fromString : String -> StringIterator
-fromString s = MkSI s 0
 
-private
-data ReadResult
-  = EOF
-  | Character Char Int  -- character + width in backend-dependent units
-
--- Runs in O(1) time.
--- Takes a backend-dependent offset into the string.
--- On ML-based backends, this is in bytes;
--- in Scheme, this is in codepoints.
-private
-%foreign "scheme:read-string-char"
-prim__readChar : Int -> String -> ReadResult
-
+%foreign
+  "scheme:blodwen-string-iterator-next"
 export
 uncons : StringIterator -> Maybe (Char, StringIterator)
-uncons (MkSI s ofs) =
-  case prim__readChar ofs s of
-    EOF => Nothing
-    Character ch width => Just (ch, MkSI s (ofs + width))
 
-export
+covering export
 foldl : (a -> Char -> a) -> a -> String -> a
-foldl f acc s = loop 0 acc
+foldl f acc = loop acc . fromString
   where
-    loop : Int -> a -> a
-    loop ofs acc =
-      case prim__readChar ofs s of
-        EOF => acc
-        Character ch width => loop (ofs + width) (f acc ch)
+    loop : a -> StringIterator -> a
+    loop acc it =
+      case uncons it of
+        Nothing => acc
+        Just (ch, it') => loop (f acc ch) it'

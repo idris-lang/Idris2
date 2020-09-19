@@ -76,10 +76,15 @@
           (x (max 0 len))
           (end (min l (+ b x))))
           (substring s b end)))
-(define (read-string-char ofs s)
-  (if (>= ofs (string-length s))
-    (vector 0)  ; EOF
-    (vector 1 (string-ref s ofs) 1)))
+
+(define (blodwen-string-iterator-new s)
+  (cons s 0))
+
+(define (blodwen-string-iterator-next s-ofs)
+  (let ((s (car s-ofs)) (ofs (cdr s-ofs)))
+    (if (>= ofs (string-length s))
+        (vector 0)  ; Nothing
+        (vector 1 (vector 0 (string-ref s ofs) (cons s (+ ofs 1)))))))
 
 (define either-left
   (lambda (x)

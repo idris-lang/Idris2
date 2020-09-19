@@ -95,12 +95,17 @@
          (end (fxmin (fx+ start (fxmax 0 len))
                      (string-length s))))
     (substring s start end)))
-(define (read-string-char ofs s)
-  (if (>= ofs (string-length s))
-    (vector 0)  ; EOF
-    (vector 1 (string-ref s ofs) 1)))
 
 (define-macro (get-tag x) `(vector-ref ,x 0))
+
+(define (blodwen-string-iterator-new s)
+  (cons s 0))
+
+(define (blodwen-string-iterator-next s-ofs)
+  (let ((s (car s-ofs)) (ofs (cdr s-ofs)))
+    (if (>= ofs (string-length s))
+        (vector 0)  ; Nothing
+        (vector 1 (vector 0 (string-ref s ofs) (cons s (+ ofs 1)))))))
 
 ;; These two are only used in this file
 (define-macro (either-left x) `(vector 0 ,x))
