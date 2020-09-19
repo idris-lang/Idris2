@@ -139,6 +139,7 @@ nodeTests
     , "reg001"
     , "syntax001"
     , "tailrec001"
+    , "idiom001"
     ]
 
 ideModeTests : List String

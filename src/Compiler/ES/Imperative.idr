@@ -159,8 +159,17 @@ mutual
     do
       (s1, v) <- impExp False val
       (s2, sc_) <- impExp False sc
-      let decl  = if isNameUsed x sc then ConstDecl x v else EvalExpStatement v
-      pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
+      if isNameUsed x sc
+        then do
+          x_ <- genName
+          let reps = [(x, IEVar x_)]
+          let s2_ = replaceNamesExpS reps s2
+          let sc__ = replaceNamesExp reps sc_
+          let decl = ConstDecl x_ v
+          pairToReturn toReturn (s1 <+> decl <+> s2_, sc__)
+        else do
+          let decl = EvalExpStatement v
+          pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
   impExp toReturn (NmErased fc) =
     expToReturn toReturn $ IENull
   impExp toReturn (NmCrash fc msg) =
