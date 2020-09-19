@@ -250,8 +250,7 @@ mutual
            pure (PUnit (boundToFC fname (mergeBounds s b)))
       -- dependent pairs with type annotation (so, the type form)
     <|> do dpairType fname s indents <* symbol ")"
-    <|> do here <- location
-           e <- bounds (expr pdef fname indents)
+    <|> do e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
            (do loc <- bounds (symbol "**")
                rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* symbol ")")
@@ -265,6 +264,11 @@ mutual
                <|>
               -- all the other bracketed expressions
               tuple fname s indents e.val))
+    <|> do here <- location
+           let fc = MkFC fname here here
+           let var = PRef fc (MN "__leftTupleSection" 0)
+           ts <- bounds (nonEmptyTuple fname s indents var)
+           pure (PLam fc top Explicit var (PInfer fc) ts.val)
 
   getInitRange : List PTerm -> SourceEmptyRule (PTerm, Maybe PTerm)
   getInitRange [x] = pure (x, Nothing)
@@ -297,20 +301,24 @@ mutual
              <|> (do b <- bounds (symbol "]")
                      pure (PList (boundToFC fname (mergeBounds s b)) xs))
 
-  -- A pair, dependent pair, or just a single expression
-  tuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
-  tuple fname s indents e
+  nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
+  nonEmptyTuple fname s indents e
       = do rest <- bounds (some (symbol "," *> bounds (expr pdef fname indents)) <* continueWith indents ")")
            pure (PPair (boundToFC fname (mergeBounds s rest)) e
                        (mergePairs rest rest.val))
-     <|> do end <- bounds (continueWith indents ")")
-            pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
-    where
+   where
       mergePairs : WithBounds t' -> List (WithBounds PTerm) -> PTerm
       mergePairs end [] = PUnit (boundToFC fname (mergeBounds s end))
       mergePairs end [exp] = exp.val
       mergePairs end (exp :: rest)
           = PPair (boundToFC fname (mergeBounds exp end)) exp.val (mergePairs end rest)
+
+  -- A pair, dependent pair, or just a single expression
+  tuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
+  tuple fname s indents e
+     =   nonEmptyTuple fname s indents e
+     <|> do end <- bounds (continueWith indents ")")
+            pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
 
   postfixApp : FileName -> IndentInfo -> Rule PTerm
   postfixApp fname indents
