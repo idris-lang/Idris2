@@ -51,7 +51,8 @@ cleandep: clean
 .PHONY: install
 
 install: build
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/{lib,include}
+	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
+	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/include
 	install -m 755 $(DYLIBTARGET) ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
 	install -m 644 $(LIBTARGET)   ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
 	install -m 644 *.h            ${PREFIX}/idris2-${IDRIS2_VERSION}/include
