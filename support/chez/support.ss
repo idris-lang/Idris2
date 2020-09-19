@@ -122,69 +122,11 @@
 
 ;; Buffers
 
-(define (blodwen-new-buffer size)
-  (make-bytevector size 0))
-
-(define (blodwen-buffer-size buf)
-  (bytevector-length buf))
-
-(define (blodwen-buffer-setbyte buf loc val)
-  (bytevector-u8-set! buf loc val))
-
-(define (blodwen-buffer-getbyte buf loc)
-  (bytevector-u8-ref buf loc))
-
-(define (blodwen-buffer-setbits16 buf loc val)
-  (bytevector-u16-set! buf loc val (native-endianness)))
-
-(define (blodwen-buffer-getbits16 buf loc)
-  (bytevector-u16-ref buf loc (native-endianness)))
-
-(define (blodwen-buffer-setbits32 buf loc val)
-  (bytevector-u32-set! buf loc val (native-endianness)))
-
-(define (blodwen-buffer-getbits32 buf loc)
-  (bytevector-u32-ref buf loc (native-endianness)))
-
-(define (blodwen-buffer-setbits64 buf loc val)
-  (bytevector-u64-set! buf loc val (native-endianness)))
-
-(define (blodwen-buffer-getbits64 buf loc)
-  (bytevector-u64-ref buf loc (native-endianness)))
-
 (define (blodwen-buffer-setint32 buf loc val)
   (bytevector-s32-set! buf loc val (native-endianness)))
 
 (define (blodwen-buffer-getint32 buf loc)
   (bytevector-s32-ref buf loc (native-endianness)))
-
-(define (blodwen-buffer-setint buf loc val)
-  (bytevector-s64-set! buf loc val (native-endianness)))
-
-(define (blodwen-buffer-getint buf loc)
-  (bytevector-s64-ref buf loc (native-endianness)))
-
-(define (blodwen-buffer-setdouble buf loc val)
-  (bytevector-ieee-double-set! buf loc val (native-endianness)))
-
-(define (blodwen-buffer-getdouble buf loc)
-  (bytevector-ieee-double-ref buf loc (native-endianness)))
-
-(define (blodwen-stringbytelen str)
-  (bytevector-length (string->utf8 str)))
-
-(define (blodwen-buffer-setstring buf loc val)
-  (let* [(strvec (string->utf8 val))
-         (len (bytevector-length strvec))]
-    (bytevector-copy! strvec 0 buf loc len)))
-
-(define (blodwen-buffer-getstring buf loc len)
-  (let [(newvec (make-bytevector len))]
-    (bytevector-copy! buf loc newvec 0 len)
-    (utf8->string newvec)))
-
-(define (blodwen-buffer-copydata buf start len dest loc)
-  (bytevector-copy! buf start dest loc len))
 
 ;; Threads
 
