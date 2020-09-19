@@ -20,6 +20,7 @@ modules = Control.ANSI,
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,
+          Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
 

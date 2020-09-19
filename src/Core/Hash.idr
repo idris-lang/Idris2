@@ -5,6 +5,7 @@ import Core.TT
 
 import Data.List
 import Data.List1
+import Data.List.Lazy
 import Data.Strings
 import Data.String.Iterator
 
@@ -57,7 +58,7 @@ Hashable a => Hashable (Maybe a) where
 
 export
 Hashable String where
-  hashWithSalt h = Data.String.Iterator.foldl hashWithSalt h
+  hashWithSalt h = foldl hashWithSalt h . String.Iterator.unpack
 
 export
 Hashable Namespace where
