@@ -1187,16 +1187,16 @@ implBinds fname indents
          pure ((n, rig, tm) :: more)
   <|> pure []
 
-ifaceParam : FileName -> IndentInfo -> Rule (Name, PTerm)
+ifaceParam : FileName -> IndentInfo -> Rule (List Name, PTerm)
 ifaceParam fname indents
     = do symbol "("
-         n <- name
+         ns <- sepBy1 (symbol ",") name
          symbol ":"
          tm <- expr pdef fname indents
          symbol ")"
-         pure (n, tm)
+         pure (ns, tm)
   <|> do n <- bounds name
-         pure (n.val, PInfer (boundToFC fname n))
+         pure ([n.val], PInfer (boundToFC fname n))
 
 ifaceDecl : FileName -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
@@ -1207,7 +1207,8 @@ ifaceDecl fname indents
                          commit
                          cons   <- constraints fname indents
                          n      <- name
-                         params <- many (ifaceParam fname indents)
+                         paramss <- many (ifaceParam fname indents)
+                         let params = concatMap (\ (ns, t) => map (\ n => (n, t)) ns) paramss
                          det    <- option []
                                      (do symbol "|"
                                          sepBy (symbol ",") name)
