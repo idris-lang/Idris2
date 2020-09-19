@@ -19,6 +19,7 @@ covering export
 foldl : (a -> Char -> a) -> a -> String -> a
 foldl f acc = loop acc . fromString
   where
+    covering
     loop : a -> StringIterator -> a
     loop acc it =
       case uncons it of
