@@ -16,11 +16,12 @@ fromString s = MkSI s 0
 private
 data ReadResult
   = EOF
-  | Character Char Int  -- character, width
+  | Character Char Int  -- character + width in backend-dependent units
 
--- takes a backend-dependent offset into the string
--- on ML-based backends, this is in bytes
--- in Scheme, this is in codepoints
+-- Runs in O(1) time.
+-- Takes a backend-dependent offset into the string.
+-- On ML-based backends, this is in bytes;
+-- in Scheme, this is in codepoints.
 private
 %foreign "scheme:read-string-char"
 prim__readChar : Int -> String -> ReadResult
