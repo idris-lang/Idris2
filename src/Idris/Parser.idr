@@ -303,15 +303,35 @@ mutual
 
   nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   nonEmptyTuple fname s indents e
-      = do rest <- bounds (some (symbol "," *> bounds (expr pdef fname indents)) <* continueWith indents ")")
-           pure (PPair (boundToFC fname (mergeBounds s rest)) e
-                       (mergePairs rest rest.val))
-   where
-      mergePairs : WithBounds t' -> List (WithBounds PTerm) -> PTerm
-      mergePairs end [] = PUnit (boundToFC fname (mergeBounds s end))
-      mergePairs end [exp] = exp.val
-      mergePairs end (exp :: rest)
-          = PPair (boundToFC fname (mergeBounds exp end)) exp.val (mergePairs end rest)
+      = do rest <- bounds (some (bounds (symbol "," *> optional (bounds (expr pdef fname indents))))
+                           <* continueWith indents ")")
+           pure $ buildOutput rest (mergePairs 0 rest rest.val)
+    where
+
+      lams : List (FC, PTerm) -> PTerm -> PTerm
+      lams [] e = e
+      lams ((fc, var) :: vars) e
+        = PLam fc top Explicit var (PInfer fc)
+        $ lams vars e
+
+      buildOutput : WithBounds t' -> (List (FC, PTerm), PTerm) -> PTerm
+      buildOutput rest (vars, scope) = lams vars $ PPair (boundToFC fname (mergeBounds s rest)) e scope
+
+      optionalPair : Int -> WithBounds (Maybe (WithBounds PTerm)) -> (Int, (List (FC, PTerm), PTerm))
+      optionalPair i exp = case exp.val of
+        Just e  => (i, ([], e.val))
+        Nothing => let fc = boundToFC fname exp in
+                   let var = PRef fc (MN "__infixTupleSection" i) in
+                   (i+1, ([(fc, var)], var))
+
+      mergePairs : Int -> WithBounds t' -> List (WithBounds (Maybe (WithBounds PTerm))) ->
+                   (List (FC, PTerm), PTerm)
+      mergePairs _ end [] = ([], PUnit (boundToFC fname (mergeBounds s end)))
+      mergePairs i end [exp] = snd (optionalPair i exp)
+      mergePairs i end (exp :: rest)
+          = let (j, (var, t)) = optionalPair i exp in
+            let (vars, ts)    = mergePairs j end rest in
+            (var ++ vars, PPair (boundToFC fname (mergeBounds exp end)) t ts)
 
   -- A pair, dependent pair, or just a single expression
   tuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
