@@ -16,11 +16,20 @@ partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
 
+%foreign
+  "scheme:string-pack"
+  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+fastPack : List Char -> String
+
+%foreign
+  "scheme:string-unpack"
+fastUnpack : String -> List Char
+
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!
 %foreign
-    "scheme:string-concat"
-    "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+  "scheme:string-concat"
+  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastConcat : List String -> String
 
