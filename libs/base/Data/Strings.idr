@@ -19,10 +19,12 @@ foldl1 f (x::xs) = foldl f x xs
 %foreign
   "scheme:string-pack"
   "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+export
 fastPack : List Char -> String
 
 %foreign
   "scheme:string-unpack"
+export
 fastUnpack : String -> List Char
 
 -- This works quickly because when string-concat builds the result, it allocates
