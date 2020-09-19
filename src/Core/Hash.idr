@@ -6,6 +6,7 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Strings
+import Data.String.Iterator
 
 %default covering
 
@@ -56,15 +57,7 @@ Hashable a => Hashable (Maybe a) where
 
 export
 Hashable String where
-  hashWithSalt h str = hashChars h 0 (cast (length str)) str
-    where
-      hashChars : Int -> Int -> Int -> String -> Int
-      hashChars h p len str
-          = assert_total $
-              if p == len
-                 then h
-                 else hashChars (h * 33 + cast (strIndex str p))
-                                (p + 1) len str
+  hashWithSalt h = Data.String.Iterator.foldl hashWithSalt h
 
 export
 Hashable Namespace where
