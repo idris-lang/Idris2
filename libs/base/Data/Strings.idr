@@ -17,12 +17,6 @@ foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
 
 %foreign
-  "scheme:string-pack"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
-export
-fastPack : List Char -> String
-
-%foreign
   "scheme:string-unpack"
 export
 fastUnpack : String -> List Char
