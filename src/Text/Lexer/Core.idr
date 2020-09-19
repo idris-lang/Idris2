@@ -164,11 +164,6 @@ tokenise pred line col acc tmap str
                            line', col', rest)
                Nothing => getFirstToken ts str
 
--- to avoid breaking the bootstrap,
--- we can't depend on the stdlib version of fastUnpack here
-%foreign "scheme:string-unpack"
-fastUnpack : String -> List Char
-
 ||| Given a mapping from lexers to token generating functions (the
 ||| TokenMap a) and an input string, return a list of recognised tokens,
 ||| and the line, column, and remainder of the input at the first point in the
@@ -176,12 +171,12 @@ fastUnpack : String -> List Char
 export
 lex : TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lex tmap str
-    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (Lexer.Core.fastUnpack str) in
+    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (fastUnpack str) in
           (ts, (l, c, fastPack str'))
 
 export
 lexTo : (WithBounds a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
-    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (Lexer.Core.fastUnpack str) in
+    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (fastUnpack str) in
           (ts, (l, c, fastPack str'))
