@@ -16,6 +16,8 @@ partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
 
+-- This function runs fast when compiled but won't compute at compile time.
+-- If you need to unpack strings at compile time, use Prelude.unpack.
 %foreign
   "scheme:string-unpack"
 export
@@ -23,6 +25,9 @@ fastUnpack : String -> List Char
 
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!
+--
+-- Like fastUnpack, this function won't reduce at compile time.
+-- If you need to concatenate strings at compile time, use Prelude.concat.
 %foreign
   "scheme:string-concat"
   "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
