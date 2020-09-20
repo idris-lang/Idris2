@@ -8,7 +8,7 @@ module Data.List.Lazy
 public export
 data LazyList : Type -> Type where
   Nil : LazyList a
-  (::) : a -> Lazy (LazyList a) -> LazyList a
+  (::) : (1 x : a) -> (1 xs : Lazy (LazyList a)) -> LazyList a
 
 public export
 Semigroup (LazyList a) where
@@ -53,16 +53,3 @@ public export
 traverse : Applicative f => (a -> f b) -> LazyList a -> f (List b)
 traverse g [] = pure []
 traverse g (x :: xs) = [| g x :: traverse g xs |]
-
--- This function is unsafe because it asserts
--- that the seed gets smaller in every iteration
--- but the type system does not check that.
---
--- Use cautiously.
-public export
-unsafeUnfoldr : (b -> Maybe (a, b)) -> b -> LazyList a
-unsafeUnfoldr next seed =
-  case next seed of
-    Nothing => []
-    Just (x, seed') =>
-      x :: Delay (unsafeUnfoldr next $ assert_smaller seed seed')

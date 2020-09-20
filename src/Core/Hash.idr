@@ -58,7 +58,7 @@ Hashable a => Hashable (Maybe a) where
 
 export
 Hashable String where
-  hashWithSalt h = foldl hashWithSalt h . String.Iterator.unpack
+  hashWithSalt h = String.Iterator.foldl hashWithSalt h
 
 export
 Hashable Namespace where
