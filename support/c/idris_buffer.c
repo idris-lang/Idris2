@@ -2,6 +2,11 @@
 #include <sys/stat.h>
 #include <string.h>
 
+typedef struct {
+    int size;
+    uint8_t data[];
+} Buffer;
+
 void* idris2_newBuffer(int bytes) {
     size_t size = sizeof(Buffer) + bytes*sizeof(uint8_t);
 
