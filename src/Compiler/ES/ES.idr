@@ -73,6 +73,28 @@ addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core Strin
 addSupportToPreamble name code =
   addToPreamble name name code
 
+addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
+addStringIteratorToPreamble =
+  do
+    let defs = "
+function __prim_stringIteratorNew(str) {
+  return str[Symbol.iterator]();
+}
+function __prim_stringIteratorNext(str, it) {
+  const char = it.next();
+  if (char.done) {
+    return {h: 0}; // EOF
+  } else {
+    return {
+      h: 1, // Character
+      a1: char.value,
+      a2: it
+    };
+  }
+}"
+    let name = "stringIterator"
+    let newName = esName name
+    addToPreamble name newName defs
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -311,6 +333,13 @@ makeForeign n x =
           lib_code <- readDataFile ("js/" ++ lib ++ ".js")
           addSupportToPreamble lib lib_code
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
+      "stringIterator" =>
+        do
+          addStringIteratorToPreamble
+          case def of
+            "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
+            "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
 
 
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
