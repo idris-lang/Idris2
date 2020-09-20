@@ -46,18 +46,18 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
+(define exact-floor
+  (lambda (x)
+    (inexact->exact (floor x))))
 (define cast-string-int
   (lambda (x)
-    (floor (cast-num (string->number (destroy-prefix x))))))
+    (exact-floor (cast-num (string->number (destroy-prefix x))))))
 (define cast-int-char
   (lambda (x)
     (if (and (>= x 0)
              (<= x #x10ffff))
         (integer->char x)
         0)))
-(define exact-floor
-  (lambda (x)
-    (inexact->exact (floor x))))
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))

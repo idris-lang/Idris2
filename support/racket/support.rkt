@@ -45,7 +45,7 @@
       (else x))))
 (define cast-string-int
   (lambda (x)
-    (floor (cast-num (string->number (destroy-prefix x))))))
+    (exact-floor (cast-num (string->number (destroy-prefix x))))))
 (define cast-int-char
   (lambda (x)
     (if (and (>= x 0)
