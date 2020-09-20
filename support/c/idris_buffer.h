@@ -5,11 +5,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-typedef struct {
-    int size;
-    uint8_t data[0];
-} Buffer;
-
 void* idris2_newBuffer(int bytes);
 void idris2_freeBuffer(void* buf);
 
