@@ -6,6 +6,15 @@ import public Data.List.Lazy
 
 -- Backend-dependent string iteration type,
 -- parameterised by the string that it iterates over.
+--
+-- Beware: the index is checked only up to definitional equality.
+-- In theory, you could run `decEq` on two strings
+-- with the same content but allocated in different memory locations
+-- and use the obtained Refl to coerce iterators between them.
+--
+-- The strictly correct solution is to make the iterators independent
+-- from the exact memory location of the string given to `uncons`.
+-- (For example, byte offsets satisfy this requirement.)
 export
 data StringIterator : String -> Type where [external]
 
