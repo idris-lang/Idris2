@@ -4,21 +4,22 @@ import public Data.List.Lazy
 
 %default total
 
--- Backend-dependent string iteration type.
+-- Backend-dependent string iteration type,
+-- parameterised by the string that it iterates over.
 export
-data StringIterator : Type where [external]
+data StringIterator : String -> Type where [external]
 
 -- This function is private
 -- to avoid subverting the linearity guarantees of withString.
 %foreign
   "scheme:blodwen-string-iterator-new"
 private
-fromString : String -> StringIterator
+fromString : (str : String) -> StringIterator str
 
 -- This function uses a linear string iterator
 -- so that backends can use mutating iterators.
 export
-withString : String -> ((1 it : StringIterator) -> a) -> a
+withString : (str : String) -> ((1 it : StringIterator str) -> a) -> a
 withString str f = f (fromString str)
 
 -- We use a custom data type instead of Maybe (Char, StringIterator)
@@ -28,9 +29,9 @@ withString str f = f (fromString str)
 --
 -- The Char field of Character is unrestricted for flexibility.
 public export
-data UnconsResult : Type where
-  EOF : UnconsResult
-  Character : (c : Char) -> (1 it : StringIterator) -> UnconsResult
+data UnconsResult : String -> Type where
+  EOF : UnconsResult str
+  Character : (c : Char) -> (1 it : StringIterator str) -> UnconsResult str
 
 -- We pass the whole string to the uncons function
 -- to avoid yet another allocation per character
@@ -39,13 +40,13 @@ data UnconsResult : Type where
 %foreign
   "scheme:blodwen-string-iterator-next"
 export
-uncons : String -> (1 it : StringIterator) -> UnconsResult
+uncons : (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 
 export
 foldl : (accTy -> Char -> accTy) -> accTy -> String -> accTy
 foldl op acc str = withString str (loop acc)
   where
-    loop : accTy -> (1 it : StringIterator) -> accTy
+    loop : accTy -> (1 it : StringIterator str) -> accTy
     loop acc it =
       case uncons str it of
         EOF => acc
@@ -55,7 +56,7 @@ export
 unpack : String -> LazyList Char
 unpack str = withString str unpack'
   where
-    unpack' : (1 it : StringIterator) -> LazyList Char
+    unpack' : (1 it : StringIterator str) -> LazyList Char
     unpack' it =
       case uncons str it of
         EOF => []
