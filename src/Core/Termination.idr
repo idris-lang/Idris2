@@ -450,7 +450,8 @@ checkSC defs f args path
    = do log "totality.termination.sizechange" 7 $ "Checking Size Change Graph: " ++ show f
         let pos = (f, map (map Builtin.fst) args)
         if pos `elem` path
-           then toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
+           then do log "totality.termination.sizechange.inPath" 8 $ "Checking arguments: " ++ show f
+                   toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
            else case !(lookupCtxtExact f (gamma defs)) of
                      Nothing => do log "totality.termination.sizechange.isTerminating" 8 $ "Size Change Graph is Terminating for: " ++ show f
                                    pure IsTerminating
@@ -500,11 +501,13 @@ checkSC defs f args path
                           -- was mutually recursive, so start again with new
                           -- arguments (that is, where we'd start if the
                           -- function was the top level thing we were checking)
-                          do log "totality.termination.sizechange.restart" 8 $ "ReChecking Size Change Graph: " ++ show (fnCall sc)
+                          do log "totality.termination.sizechange.checkCall.inPathNot.restart" 9 $ "ReChecking Size Change Graph: " ++ show (fnCall sc)
                              args' <- initArgs (length (fnArgs sc))
                              checkSC defs (fnCall sc) args' path
-                       t => pure t
-                else pure term
+                       t => do log "totality.termination.sizechange.checkCall.inPathNot.return" 9 $ "Have result: " ++ show (fnCall sc)
+                               pure t
+                else do log "totality.termination.sizechange.checkCall.inPath" 9 $ "Have Result: " ++ show (fnCall sc)
+                        pure term
 
     getWorst : Terminating -> List Terminating -> Terminating
     getWorst term [] = term
