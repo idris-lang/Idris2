@@ -62,11 +62,6 @@ data GCAnyPtr : Type where [external]
 public export
 data ThreadID : Type where [external]
 
-public export
-data FArgList : Type where
-     Nil : FArgList
-     (::) : {a : Type} -> (1 arg : a) -> (1 args : FArgList) -> FArgList
-
 export %inline
 fromPrim : (1 fn : (1 x : %World) -> IORes a) -> IO a
 fromPrim op = MkIO op
