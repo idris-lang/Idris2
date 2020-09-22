@@ -43,7 +43,7 @@ export
 checkIfGuarded : {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Core ()
 checkIfGuarded fc n
-    = do log "totality.guarded" 6 $ "Check if Guarded: " ++ show n
+    = do log "totality.termination.guarded" 6 $ "Check if Guarded: " ++ show n
          defs <- get Ctxt
          Just (PMDef _ _ _ _ pats) <- lookupDefExact n (gamma defs)
               | _ => pure ()
@@ -410,7 +410,7 @@ export
 calculateSizeChange : {auto c : Ref Ctxt Defs} ->
                       FC -> Name -> Core (List SCCall)
 calculateSizeChange loc n
-    = do log "totality.sizechange" 5 $ "Calculating Size Change: " ++ show n
+    = do log "totality.termination.sizechange" 5 $ "Calculating Size Change: " ++ show n
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
