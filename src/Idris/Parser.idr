@@ -533,8 +533,15 @@ mutual
            = PLam (boundToFC fname pat) rig Explicit pat.val ty
                   (bindAll rest scope)
 
-  letBinder : FileName -> IndentInfo ->
-              Rule (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause))
+  record LetBinder where
+    constructor MkLetBinder
+    letUsage     : RigCount
+    letPattern   : PTerm
+    letBoundType : PTerm
+    letBoundTerm : PTerm
+    letUnhappy   : List PClause
+
+  letBinder : FileName -> IndentInfo -> Rule (WithBounds LetBinder)
   letBinder fname indents
       = bounds $ do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
                     (rigc, pat) <- pure s.val
@@ -544,29 +551,25 @@ mutual
                     val <- expr pnowith fname indents
                     alts <- block (patAlt fname)
                     rig <- getMult rigc
-                    pure (rig, pat, ty, val, alts)
+                    pure (MkLetBinder rig pat ty val alts)
 
-  buildLets : FileName ->
-              List (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause)) ->
-              PTerm -> PTerm
+  buildLets : FileName -> List (WithBounds LetBinder) -> PTerm -> PTerm
   buildLets fname [] sc = sc
   buildLets fname (b :: rest) sc
-      = let (rig, pat, ty, val, alts) = b.val
+      = let (MkLetBinder rig pat ty val alts) = b.val
             fc = boundToFC fname b
         in PLet fc rig pat ty val
                 (buildLets fname rest sc) alts
 
-  buildDoLets : FileName ->
-                List (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause)) ->
-                List PDo
+  buildDoLets : FileName -> List (WithBounds LetBinder) -> List PDo
   buildDoLets fname [] = []
   buildDoLets fname (b :: rest) = let fc = boundToFC fname b in case b.val of
-    (rig, PRef fc' (UN n), ty, val, []) =>
+    (MkLetBinder rig (PRef fc' (UN n)) ty val []) =>
        (if lowerFirst n
           then DoLet fc (UN n) rig ty val
           else DoLetPat fc (PRef fc' (UN n)) ty val []
        ) :: buildDoLets fname rest
-    (rig, pat, ty, val, alts) => DoLetPat fc pat ty val alts :: buildDoLets fname rest
+    (MkLetBinder rig pat ty val alts) => DoLetPat fc pat ty val alts :: buildDoLets fname rest
 
   let_ : FileName -> IndentInfo -> Rule PTerm
   let_ fname indents
