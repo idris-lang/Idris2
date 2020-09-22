@@ -191,7 +191,7 @@ modNat left (S right) = modNatNZ left (S right) SIsNotZ
 public export total
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
-divNatNZ left (S right) p = div' left left right
+divNatNZ left (S right) _ = div' left left right
   where
     public export
     div' : Nat -> Nat -> Nat -> Nat
