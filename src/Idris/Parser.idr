@@ -534,43 +534,39 @@ mutual
                   (bindAll rest scope)
 
   letBinder : FileName -> IndentInfo ->
-              Rule (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause)
+              Rule (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause))
   letBinder fname indents
-      = do b <- bounds (do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
-                           (rigc, pat) <- pure s.val
-                           ty <- option (PImplicit (boundToFC fname s))
-                                        (do symbol ":"
-                                            typeExpr (pnoeq pdef) fname indents)
-                           symbol "="
-                           val <- expr pnowith fname indents
-                           alts <- block (patAlt fname)
-                           rig <- getMult rigc
-                           pure (rig, pat, ty, val, alts))
-           (rig, pat, ty, val, alts) <- the (SourceEmptyRule (RigCount, PTerm, PTerm, PTerm, List PClause)) (pure b.val)
-           pure (start b, end b, rig, pat, ty, val, alts)
+      = bounds $ do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
+                    (rigc, pat) <- pure s.val
+                    ty <- option (PImplicit (boundToFC fname s))
+                                 (symbol ":" *> typeExpr (pnoeq pdef) fname indents)
+                    symbol "="
+                    val <- expr pnowith fname indents
+                    alts <- block (patAlt fname)
+                    rig <- getMult rigc
+                    pure (rig, pat, ty, val, alts)
 
   buildLets : FileName ->
-              List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
+              List (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause)) ->
               PTerm -> PTerm
   buildLets fname [] sc = sc
-  buildLets fname ((start, end, rig, pat, ty, val, alts) :: rest) sc
-      = let fc = MkFC fname start end in
-            PLet fc rig pat ty val
-                 (buildLets fname rest sc) alts
+  buildLets fname (b :: rest) sc
+      = let (rig, pat, ty, val, alts) = b.val
+            fc = boundToFC fname b
+        in PLet fc rig pat ty val
+                (buildLets fname rest sc) alts
 
   buildDoLets : FileName ->
-                List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
+                List (WithBounds (RigCount, PTerm, PTerm, PTerm, List PClause)) ->
                 List PDo
   buildDoLets fname [] = []
-  buildDoLets fname ((start, end, rig, PRef fc' (UN n), ty, val, []) :: rest)
-      = let fc = MkFC fname start end in
-            if lowerFirst n
-               then DoLet fc (UN n) rig ty val :: buildDoLets fname rest
-               else DoLetPat fc (PRef fc' (UN n)) ty val []
-                         :: buildDoLets fname rest
-  buildDoLets fname ((start, end, rig, pat, ty, val, alts) :: rest)
-      = let fc = MkFC fname start end in
-            DoLetPat fc pat ty val alts :: buildDoLets fname rest
+  buildDoLets fname (b :: rest) = let fc = boundToFC fname b in case b.val of
+    (rig, PRef fc' (UN n), ty, val, []) =>
+       (if lowerFirst n
+          then DoLet fc (UN n) rig ty val
+          else DoLetPat fc (PRef fc' (UN n)) ty val []
+       ) :: buildDoLets fname rest
+    (rig, pat, ty, val, alts) => DoLetPat fc pat ty val alts :: buildDoLets fname rest
 
   let_ : FileName -> IndentInfo -> Rule PTerm
   let_ fname indents
