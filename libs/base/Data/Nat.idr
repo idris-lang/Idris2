@@ -187,11 +187,13 @@ export partial
 modNat : Nat -> Nat -> Nat
 modNat left (S right) = modNatNZ left (S right) SIsNotZ
 
-export partial
+-- 'public' to allow type-level division
+public export total
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
   where
+    public export
     div' : Nat -> Nat -> Nat -> Nat
     div' Z        centre right = Z
     div' (S left) centre right =
