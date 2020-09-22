@@ -67,15 +67,6 @@ join : {c1,c2 : Bool} ->
 join {c1 = False} p = SeqEmpty p id
 join {c1 = True} p = SeqEat p id
 
-||| Give two alternative grammars. If both consume, the combination is
-||| guaranteed to consume.
-export %inline
-(<|>) : {c1,c2 : Bool} -> 
-        Grammar tok c1 ty ->
-        Lazy (Grammar tok c2 ty) ->
-        Grammar tok (c1 && c2) ty
-(<|>) = Alt
-
 ||| Allows the result of a grammar to be mapped to a different value.
 export
 {c : _} ->
@@ -93,6 +84,25 @@ Functor (Grammar tok c) where
   -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
   -- so a sequence must be used.
   map {c = False} f p = SeqEmpty p (Empty . f)
+
+||| Give two alternative grammars. If both consume, the combination is
+||| guaranteed to consume.
+export %inline
+(<|>) : {c1,c2 : Bool} ->
+        Grammar tok c1 ty ->
+        Lazy (Grammar tok c2 ty) ->
+        Grammar tok (c1 && c2) ty
+(<|>) = Alt
+
+infixr 2 <||>
+||| Take the tagged disjunction of two grammars. If both consume, the
+||| combination is guaranteed to consume.
+export
+(<||>) : {c1,c2 : Bool} ->
+        Grammar tok c1 a ->
+        Lazy (Grammar tok c2 b) ->
+        Grammar tok (c1 && c2) (Either a b)
+(<||>) p q = (Left <$> p) <|> (Right <$> q)
 
 ||| Sequence a grammar with value type `a -> b` and a grammar
 ||| with value type `a`. If both succeed, apply the function
