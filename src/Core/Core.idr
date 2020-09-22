@@ -499,7 +499,7 @@ traverse f xs = traverse' f xs []
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f (x :: xs) = [| f x :: traverse f xs |]
+traverseList1 f (x ::: xs) = [| f x ::: traverse f xs |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -520,7 +520,7 @@ traverse_ f (x :: xs)
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f (x :: xs) = do
+traverseList1_ f (x ::: xs) = do
   f x
   traverse_ f xs
 

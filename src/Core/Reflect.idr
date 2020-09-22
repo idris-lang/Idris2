@@ -187,19 +187,19 @@ export
 Reify a => Reify (List1 a) where
   reify defs val@(NDCon _ n _ _ [_, x, xs])
       = case !(full (gamma defs) n) of
-             NS _ (UN "::")
+             NS _ (UN ":::")
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
-                        pure (x' :: xs')
+                        pure (x' ::: xs')
              _ => cantReify val "List1"
   reify defs val = cantReify val "List1"
 
 export
 Reflect a => Reflect (List1 a) where
-  reflect fc defs lhs env (x :: xs)
+  reflect fc defs lhs env (x ::: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (NS (mkNamespace "Data.List1") (UN "::")) [Erased fc False, x', xs']
+           appCon fc defs (NS (mkNamespace "Data.List1") (UN ":::")) [Erased fc False, x', xs']
 
 export
 Reify a => Reify (Maybe a) where

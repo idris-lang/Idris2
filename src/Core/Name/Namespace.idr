@@ -50,8 +50,8 @@ nsAsModuleIdent (MkNS ns) = MkMI ns
 export
 mkNamespacedIdent : String -> (Maybe Namespace, String)
 mkNamespacedIdent str = case reverse (split (== '.') str) of
-  [name]       => (Nothing, name)
-  (name :: ns) => (Just (MkNS ns), name)
+  (name ::: []) => (Nothing, name)
+  (name ::: ns) => (Just (MkNS ns), name)
 
 export
 mkNestedNamespace : Maybe Namespace -> String -> Namespace

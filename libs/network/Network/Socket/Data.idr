@@ -186,8 +186,8 @@ export
 parseIPv4 : String -> SocketAddress
 parseIPv4 str =
     case splitted of
-      (i1 :: i2 :: i3 :: i4 :: _) => IPv4Addr i1 i2 i3 i4
-      otherwise                   => InvalidAddress
+      (i1 ::: i2 :: i3 :: i4 :: _) => IPv4Addr i1 i2 i3 i4
+      _ => InvalidAddress
   where
     toInt' : String -> Integer
     toInt' = cast

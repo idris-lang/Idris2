@@ -351,14 +351,14 @@ TTC a => TTC (List a) where
 
 export
 TTC a => TTC (List1 a) where
-  toBuf b (x :: xs)
+  toBuf b (x ::: xs)
      = do toBuf b x
           toBuf b xs
 
   fromBuf b = do
     x <- fromBuf b
     xs <- fromBuf b
-    pure (x :: xs)
+    pure (x ::: xs)
 
 export
 {n : Nat} -> TTC a => TTC (Vect n a) where
