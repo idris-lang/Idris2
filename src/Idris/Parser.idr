@@ -391,7 +391,7 @@ mutual
     <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
            pure (PRunElab (boundToFC fname b) b.val)
     <|> do b <- bounds $ do pragma "logging"
-                            topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
+                            topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
                             lvl   <- intLit
                             e     <- expr pdef fname indents
                             pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
@@ -994,7 +994,7 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do pragma "logging"
-         topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
+         topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
          lvl <- intLit
          atEnd indents
          pure (Logging (mkLogLevel' topic (fromInteger lvl)))
@@ -1816,7 +1816,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    topic <- optional ((::) <$> unqualifiedName <*> many aDotIdent)
+    topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
     lvl <- intLit
     pure (command (mkLogLevel' topic (fromInteger lvl)))
 

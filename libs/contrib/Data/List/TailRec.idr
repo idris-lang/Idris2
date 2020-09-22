@@ -122,7 +122,7 @@ break_ext p xs = span_ext (not . p) xs
 splitOnto : List (List a) -> (a -> Bool) -> List a -> List1 (List a)
 splitOnto acc p xs =
   case Data.List.break p xs of
-    (chunk, []       ) => reverseOnto [chunk] acc
+    (chunk, []       ) => reverseOnto (chunk ::: []) acc
     (chunk, (c::rest)) => splitOnto (chunk::acc) p rest
 
 export

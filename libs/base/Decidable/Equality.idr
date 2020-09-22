@@ -143,11 +143,11 @@ DecEq a => DecEq (List a) where
 export
 DecEq a => DecEq (List1 a) where
 
-  decEq (x :: xs) (y :: ys) with (decEq x y)
-    decEq (x :: xs) (y :: ys) | No contra = No (contra . fst . consInjective)
-    decEq (x :: xs) (y :: ys) | Yes eqxy with (decEq xs ys)
-    decEq (x :: xs) (y :: ys) | Yes eqxy | No contra = No (contra . snd . consInjective)
-    decEq (x :: xs) (y :: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (::) eqxy eqxsys)
+  decEq (x ::: xs) (y ::: ys) with (decEq x y)
+    decEq (x ::: xs) (y ::: ys) | No contra = No (contra . fst . consInjective)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy with (decEq xs ys)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy | No contra = No (contra . snd . consInjective)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (:::) eqxy eqxsys)
 
 -- TODO: Other prelude data types
 

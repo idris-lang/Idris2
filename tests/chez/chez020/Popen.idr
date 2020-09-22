@@ -25,6 +25,6 @@ main = do
         | Left err => printLn err
     pclose fh
     putStrLn "closed"
-    let [idris2, _] = split ((==) ',') output
+    let (idris2 ::: _) = split ((==) ',') output
         | _ => printLn "Unexpected result"
     putStrLn idris2
