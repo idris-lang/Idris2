@@ -1327,7 +1327,7 @@ fixDecl fname indents
     = do b <- bounds (do fixity <- fix
                          commit
                          prec <- intLit
-                         ops <- sepBy1 (symbol ",") operator
+                         ops <- sepBy1 (symbol ",") iOperator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
          pure (map (PFixity (boundToFC fname b) fixity (fromInteger prec)) ops)
