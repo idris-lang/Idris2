@@ -84,7 +84,7 @@ schHeader chez libs
     "(let ()\n"
 
 schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers))\n"
+schFooter = "(collect-rendezvous)\n(blodwen-run-finalisers))\n"
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
