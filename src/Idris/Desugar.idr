@@ -50,10 +50,6 @@ import Data.List
 public export
 data Side = LHS | AnyExpr
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
-
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
             SyntaxInfo -> Core ()

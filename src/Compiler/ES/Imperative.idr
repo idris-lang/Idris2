@@ -54,9 +54,6 @@ genName =
     pure $ MN "imp_gen" i
 
 mutual
-  ifThenElse : Bool -> a -> a -> a
-  ifThenElse True t e = t
-  ifThenElse False t e = e
 
   pairToReturn : (toReturn : Bool) -> (ImperativeStatement, ImperativeExp) ->
                      Core (ifThenElse toReturn ImperativeStatement  (ImperativeStatement, ImperativeExp))

@@ -838,10 +838,6 @@ mutual
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
 
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
-
   clause : Nat -> FileName -> IndentInfo -> Rule PClause
   clause withArgs fname indents
       = do b <- bounds (do col <- column
