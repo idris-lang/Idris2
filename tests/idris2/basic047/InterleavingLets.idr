@@ -47,3 +47,16 @@ test =
 -- ^ does not work because  prf' is opaque
 
   in show prf
+
+
+reverse : List a -> List a
+reverse xs =
+  let revOnto : List a -> List a -> List a
+      revOnto acc [] = acc
+      revOnto acc (x :: xs) = revOnto (x :: acc) xs
+
+      rev := revOnto []
+
+      result := rev xs
+
+  in result
