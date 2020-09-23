@@ -192,8 +192,8 @@ public export
 split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of
-    (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: toList (split p (assert_smaller xs rest))
+    (chunk, [])          => singleton chunk
+    (chunk, (c :: rest)) => cons chunk (split p (assert_smaller xs rest))
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
@@ -354,7 +354,7 @@ public export
 last : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 last [] impossible
 last [x] = x
-last (x::y::ys) = last (y::ys)
+last (_::x::xs) = List.last (x::xs)
 
 ||| Return all but the last element of a non-empty list.
 ||| @ ok proof the list is non-empty
@@ -460,19 +460,19 @@ public export
 foldr1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
 foldr1 f [] impossible
 foldr1 f [x] = x
-foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
+foldr1 f (x::y::ys) = f x (List.foldr1 f (y::ys))
 
 ||| Foldl without seeding the accumulator. If the list is empty, return `Nothing`.
 public export
 foldl1' : (a -> a -> a) -> List a -> Maybe a
 foldl1' f [] = Nothing
-foldl1' f xs@(_::_) = Just (foldl1 f xs)
+foldl1' f xs@(_::_) = Just (List.foldl1 f xs)
 
 ||| Foldr without seeding the accumulator. If the list is empty, return `Nothing`.
 public export
 foldr1' : (a -> a -> a) -> List a -> Maybe a
 foldr1' f [] = Nothing
-foldr1' f xs@(_::_) = Just (foldr1 f xs)
+foldr1' f xs@(_::_) = Just (List.foldr1 f xs)
 
 --------------------------------------------------------------------------------
 -- Sorting

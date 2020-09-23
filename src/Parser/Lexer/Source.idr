@@ -125,7 +125,7 @@ mutual
   ||| comment unless the series of uninterrupted dashes is ended with
   ||| a closing brace in which case it is a closing delimiter.
   doubleDash : (k : Nat) -> Lexer
-  doubleDash k = many (is '-') <+> choice {t = List} -- absorb all dashes
+  doubleDash k = many (is '-') <+> choice            -- absorb all dashes
     [ is '}' <+> toEndComment k                      -- closing delimiter
     , many (isNot '\n') <+> toEndComment (S k)       -- line comment
     ]

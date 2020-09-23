@@ -207,7 +207,6 @@ public export total
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
-  where
 
 export partial
 divNat : Nat -> Nat -> Nat

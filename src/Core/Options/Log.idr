@@ -44,7 +44,7 @@ data LogLevel : Type where
 ||| non-empty topics we can safely make a `LogLevel`.
 export
 mkLogLevel' : Maybe (List1 String) -> Nat -> LogLevel
-mkLogLevel' ps n = MkLogLevel (maybe [] List1.toList ps) n
+mkLogLevel' ps n = MkLogLevel (maybe [] forget ps) n
 
 ||| The smart constructor makes sure that the empty string is mapped to the empty
 ||| list. This bypasses the fact that the function `split` returns a non-empty
@@ -94,8 +94,8 @@ export
 parseLogLevel : String -> Maybe LogLevel
 parseLogLevel str = do
   (c, n) <- case split (== ':') str of
-             [n]    => pure (MkLogLevel [], n)
-             [ps,n] => pure (mkLogLevel ps, n)
+             n ::: [] => pure (MkLogLevel [], n)
+             ps ::: [n] => pure (mkLogLevel ps, n)
              _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)

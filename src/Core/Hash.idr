@@ -47,7 +47,7 @@ Hashable a => Hashable (List a) where
 
 export
 Hashable a => Hashable (List1 a) where
-  hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
+  hashWithSalt h (x ::: xs) = hashWithSalt (h * 33 + hash x) xs
 
 export
 Hashable a => Hashable (Maybe a) where

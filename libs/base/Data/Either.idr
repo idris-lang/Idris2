@@ -1,6 +1,23 @@
 module Data.Either
 
+import Data.List1
+
 %default total
+
+--------------------------------------------------------------------------------
+-- Checking for a specific constructor
+
+||| Extract the Left value, if possible
+public export
+getLeft : Either a b -> Maybe a
+getLeft (Left a) = Just a
+getLeft _ = Nothing
+
+||| Extract the Right value, if possible
+public export
+getRight : Either a b -> Maybe b
+getRight (Right b) = Just b
+getRight _ = Nothing
 
 ||| True if the argument is Left, False otherwise
 public export
@@ -13,6 +30,35 @@ public export
 isRight : Either a b -> Bool
 isRight (Left _)  = False
 isRight (Right _) = True
+
+--------------------------------------------------------------------------------
+-- Grouping values
+
+mutual
+
+  ||| Compress the list of Lefts and Rights by accumulating
+  ||| all of the lefts and rights into non-empty blocks.
+  export
+  compress : List (Either a b) -> List (Either (List1 a) (List1 b))
+  compress [] = []
+  compress (Left a :: abs) = compressLefts (singleton a) abs
+  compress (Right b :: abs) = compressRights (singleton b) abs
+
+  compressLefts : List1 a -> List (Either a b) -> List (Either (List1 a) (List1 b))
+  compressLefts acc (Left a :: abs) = compressLefts (cons a acc) abs
+  compressLefts acc abs = Left (reverse acc) :: compress abs
+
+  compressRights : List1 b -> List (Either a b) -> List (Either (List1 a) (List1 b))
+  compressRights acc (Right b :: abs) = compressRights (cons b acc) abs
+  compressRights acc abs = Right (reverse acc) :: compress abs
+
+||| Decompress a compressed list. This is the left inverse of `compress` but not its
+||| right inverse because nothing forces the input to be maximally compressed!
+export
+decompress : List (Either (List1 a) (List1 b)) -> List (Either a b)
+decompress = concatMap $ \ abs => case abs of
+  Left as => map Left  $ forget as
+  Right bs => map Right $ forget bs
 
 ||| Keep the payloads of all Left constructors in a list of Eithers
 public export
@@ -44,6 +90,19 @@ public export
 mirror : Either a b -> Either b a
 mirror (Left  x) = Right x
 mirror (Right x) = Left x
+
+--------------------------------------------------------------------------------
+-- Bifunctor
+
+export
+bimap : (a -> c) -> (b -> d) -> Either a b -> Either c d
+bimap l r (Left a) = Left (l a)
+bimap l r (Right b) = Right (r b)
+
+export
+pushInto : c -> Either a b -> Either (c, a) (c, b)
+pushInto c = bimap (\ a => (c, a)) (\ b => (c, b))
+  -- ^ not using sections to keep it backwards compatible
 
 --------------------------------------------------------------------------------
 -- Conversions
