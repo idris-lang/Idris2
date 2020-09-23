@@ -23,6 +23,8 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
      EOF : Grammar tok False ()
 
      Fail : Bool -> String -> Grammar tok c ty
+     Try : Grammar tok c ty -> Grammar tok c ty
+
      Commit : Grammar tok False ()
      MustWork : Grammar tok c a -> Grammar tok c a
 
@@ -73,6 +75,7 @@ export
 Functor (Grammar tok c) where
   map f (Empty val)  = Empty (f val)
   map f (Fail fatal msg) = Fail fatal msg
+  map f (Try g) = Try (map f g)
   map f (MustWork g) = MustWork (map f g)
   map f (Terminal msg g) = Terminal msg (map f . g)
   map f (Alt x y)    = Alt (map f x) (map f y)
@@ -142,6 +145,7 @@ mapToken f (Terminal msg g) = Terminal msg (g . map f)
 mapToken f (NextIs msg g) = SeqEmpty (NextIs msg (g . map f)) (Empty . f)
 mapToken f EOF = EOF
 mapToken f (Fail fatal msg) = Fail fatal msg
+mapToken f (Try g) = Try (mapToken f g)
 mapToken f (MustWork g) = MustWork (mapToken f g)
 mapToken f Commit = Commit
 mapToken f (SeqEat act next) = SeqEat (mapToken f act) (\x => mapToken f (next x))
@@ -179,6 +183,11 @@ export %inline
 fatalError : String -> Grammar tok c ty
 fatalError = Fail True
 
+||| Catch a fatal error
+export %inline
+try : Grammar tok c ty -> Grammar tok c ty
+try = Try
+
 ||| Succeed if the input is empty
 export %inline
 eof : Grammar tok False ()
@@ -212,6 +221,9 @@ mutual
             ParseResult tok ty
   doParse com (Empty val) xs = Res com (irrelevantBounds val) xs
   doParse com (Fail fatal str) xs = Failure com fatal str xs
+  doParse com (Try g) xs = case doParse com g xs of
+    Failure _ _ msg ts => Failure False False msg ts
+    res => res
   doParse com Commit xs = Res True (irrelevantBounds ()) xs
   doParse com (MustWork g) xs =
     case assert_total (doParse com g xs) of

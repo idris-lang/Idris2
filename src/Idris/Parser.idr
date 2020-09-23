@@ -52,6 +52,9 @@ plhs = MkParseOpts False False
 %hide Prelude.pure
 %hide Core.Core.pure
 
+assignment : Rule ()
+assignment = symbol "=" <|> symbol ":="
+
 atom : FileName -> Rule PTerm
 atom fname
     = do x <- bounds $ exactIdent "Type"
@@ -157,7 +160,7 @@ mutual
   implicitArg : FileName -> IndentInfo -> Rule (Maybe Name, PTerm)
   implicitArg fname indents
       = do x <- bounds (symbol "{" *> unqualifiedName)
-           (do tm <- symbol "=" *> commit *> expr pdef fname indents <* symbol "}"
+           (do tm <- assignment *> commit *> expr pdef fname indents <* symbol "}"
                pure (Just (UN x.val), tm))
              <|> (do b <- bounds (symbol "}")
                      pure (Just (UN x.val), PRef (boundToFC fname (mergeBounds x b)) (UN x.val)))
@@ -542,14 +545,14 @@ mutual
                    (rigc, pat) <- pure s.val
                    ty <- option (PImplicit (boundToFC fname s))
                                 (symbol ":" *> typeExpr (pnoeq pdef) fname indents)
-                   symbol "="
+                   assignment
                    val <- expr pnowith fname indents
                    alts <- block (patAlt fname)
                    rig <- getMult rigc
                    pure (MkLetBinder rig pat ty val alts)
 
     letDecl : Rule LetDecl
-    letDecl = collectDefs . concat <$> nonEmptyBlock (topDecl fname)
+    letDecl = collectDefs . concat <$> nonEmptyBlock (try . topDecl fname)
 
   let_ : FileName -> IndentInfo -> Rule PTerm
   let_ fname indents
@@ -623,7 +626,7 @@ mutual
   field : FileName -> IndentInfo -> Rule PFieldUpdate
   field fname indents
       = do path <- map fieldName <$> [| name :: many recFieldCompat |]
-           upd <- (symbol "=" *> pure PSetField)
+           upd <- (assignment *> pure PSetField)
                       <|>
                   (symbol "$=" *> pure PSetFieldApp)
            val <- opExpr plhs fname indents
@@ -780,7 +783,7 @@ mutual
              FileName -> WithBounds t -> Int ->
              IndentInfo -> (lhs : PTerm) -> Rule PClause
   parseRHS withArgs fname start col indents lhs
-       = do b <- bounds (symbol "=" *> mustWork (
+       = do b <- bounds (assignment *> mustWork (
                            do rhs <- expr pdef fname indents
                               ws <- option [] (whereBlock fname col)
                               pure (rhs, ws)))
@@ -861,7 +864,7 @@ simpleCon fname ret indents
 simpleData : FileName -> WithBounds t -> Name -> IndentInfo -> Rule PDataDecl
 simpleData fname start n indents
     = do b <- bounds (do params <- many name
-                         tyend <- bounds (symbol "=")
+                         tyend <- bounds assignment
                          let tyfc = boundToFC fname (mergeBounds start tyend)
                          let conRetTy = papply tyfc (PRef tyfc n) (map (PRef tyfc) params)
                          cons <- sepBy1 (symbol "|") (simpleCon fname conRetTy indents)
@@ -1324,7 +1327,7 @@ fixDecl fname indents
     = do b <- bounds (do fixity <- fix
                          commit
                          prec <- intLit
-                         ops <- sepBy1 (symbol ",") iOperator
+                         ops <- sepBy1 (symbol ",") operator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
          pure (map (PFixity (boundToFC fname b) fixity (fromInteger prec)) ops)
