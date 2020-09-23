@@ -107,6 +107,12 @@ public export
 (||) True x = True
 (||) False x = x
 
+||| Non-dependent if-then-else
+public export
+ifThenElse : (1 b : Bool) -> Lazy a -> Lazy a -> a
+ifThenElse True l r = l
+ifThenElse False l r = r
+
 %inline
 public export
 intToBool : Int -> Bool
