@@ -53,7 +53,8 @@ plhs = MkParseOpts False False
 %hide Core.Core.pure
 
 assignment : Rule ()
-assignment = symbol "=" <|> symbol ":="
+assignment = symbol "="
+         <|> (symbol ":=" *> commit) -- := is NOT ambiguous!
 
 atom : FileName -> Rule PTerm
 atom fname

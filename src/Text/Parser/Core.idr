@@ -222,7 +222,8 @@ mutual
   doParse com (Empty val) xs = Res com (irrelevantBounds val) xs
   doParse com (Fail fatal str) xs = Failure com fatal str xs
   doParse com (Try g) xs = case doParse com g xs of
-    Failure _ _ msg ts => Failure False False msg ts
+    -- recover from fatal match but still propagate the 'commit'
+    Failure com _ msg ts => Failure com False msg ts
     res => res
   doParse com Commit xs = Res True (irrelevantBounds ()) xs
   doParse com (MustWork g) xs =
