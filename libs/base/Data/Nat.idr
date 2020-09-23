@@ -171,7 +171,8 @@ SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
 ||| Auxiliary function: 
-||| mod' fuel b c = a `mod` (S c)
+||| mod' fuel a b = a `mod` (S b)
+||| assuming we have enough fuel
 public export
 mod' : Nat -> Nat -> Nat -> Nat
 mod' Z        centre right = centre
@@ -192,7 +193,8 @@ modNat : Nat -> Nat -> Nat
 modNat left (S right) = modNatNZ left (S right) SIsNotZ
 
 ||| Auxiliary function:
-||| div' fuel a b c = a `div` (S c)
+||| div' fuel a b = a `div` (S b)
+||| assuming we have enough fuel
 public export
 div' : Nat -> Nat -> Nat -> Nat
 div' Z        centre right = Z
