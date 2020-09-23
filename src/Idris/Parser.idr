@@ -557,6 +557,7 @@ mutual
   let_ : FileName -> IndentInfo -> Rule PTerm
   let_ fname indents
       = do keyword "let"
+           commit
            res <- nonEmptyBlock (letBlock fname)
            commitKeyword indents "in"
            scope <- typeExpr pdef fname indents
@@ -685,6 +686,7 @@ mutual
            (n, val) <- pure b.val
            pure [DoBind (boundToFC fname b) n val]
     <|> do keyword "let"
+           commit
            res <- nonEmptyBlock (letBlock fname)
            atEnd indents
            pure (mkDoLets fname res)
