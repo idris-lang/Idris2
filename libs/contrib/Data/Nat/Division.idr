@@ -12,6 +12,8 @@ import Decidable.Equality
 import Decidable.Order
 import Decidable.Order.Strict
 
+%default total
+
 -- Need a few more facts about order
 -- The converse to lteIsLTE:
 LteIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
@@ -184,7 +186,7 @@ multiplicationLemma q predn r bound =
       qn_eq_z = zeroPlusLeftZero (q * (S predn)) r (sym $ lteZeroIsZero bound)
       q_eq_z : q = 0
       q_eq_z = case zeroMultEitherZero q (S predn) qn_eq_z of
-        Left  q_eq_z => q_eq_z
+        Left  q_eq_0 => q_eq_0
         Right spred_eq_z impossible
   in (q_eq_z, r_eq_z)
 
