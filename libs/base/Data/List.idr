@@ -175,12 +175,19 @@ union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
 public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 

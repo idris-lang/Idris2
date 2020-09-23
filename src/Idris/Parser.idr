@@ -1388,16 +1388,9 @@ topDecl fname indents
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
-    = let (cs', rest) = spanMap isClause ds in
-          PDef annot (cs ++ cs') :: assert_total (collectDefs rest)
+    = let (cs', rest) = spanBy isClause ds in
+          PDef annot (cs ++ concat cs') :: assert_total (collectDefs rest)
   where
-    spanMap : (a -> Maybe (List b)) -> List a -> (List b, List a)
-    spanMap f [] = ([], [])
-    spanMap f (x :: xs) = case f x of
-                               Nothing => ([], x :: xs)
-                               Just y => case spanMap f xs of
-                                              (ys, zs) => (y ++ ys, zs)
-
     isClause : PDecl -> Maybe (List PClause)
     isClause (PDef annot cs)
         = Just cs
