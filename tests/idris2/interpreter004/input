@@ -1,2 +1,31 @@
+"Int"
+the Int (cast "12.0")
 the Int (cast "12.3")
+the Int (cast "12.5")
+the Int (cast "12.7")
+"Negative Int"
+the Int (cast "-12.0")
+the Int (cast "-12.3")
+the Int (cast "-12.5")
+the Int (cast "-12.7")
+"Integer"
+the Integer (cast "12.0")
+the Integer (cast "12.3")
+the Integer (cast "12.5")
+the Integer (cast "12.7")
+"Negative Integer"
+the Integer (cast "-12.0")
+the Integer (cast "-12.3")
+the Integer (cast "-12.5")
+the Integer (cast "-12.7")
+"Double"
+the Double (cast "12.0")
+the Double (cast "12.3")
+the Double (cast "12.5")
+the Double (cast "12.7")
+"Negative Double"
+the Double (cast "-12.0")
+the Double (cast "-12.3")
+the Double (cast "-12.5")
+the Double (cast "-12.7")
 :q
