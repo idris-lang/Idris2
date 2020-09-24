@@ -28,16 +28,16 @@ these l r lr (That b)   = r b
 these l r lr (Both a b) = lr a b
 
 public export
-bimap : (f : a -> b) -> (g : c -> d) -> These a c -> These b d
-bimap f g (This a)   = This (f a)
-bimap f g (That b)   = That (g b)
-bimap f g (Both a b) = Both (f a) (g b)
-
-public export
 (Show a, Show b) => Show (These a b) where
   showPrec d (This x)   = showCon d "This" $ showArg x
   showPrec d (That x)   = showCon d "That" $ showArg x
   showPrec d (Both x y) = showCon d "Both" $ showArg x ++ showArg y
+
+public export
+Bifunctor These where
+  bimap f g (This a)   = This (f a)
+  bimap f g (That b)   = That (g b)
+  bimap f g (Both a b) = Both (f a) (g b)
 
 public export
 Functor (These a) where

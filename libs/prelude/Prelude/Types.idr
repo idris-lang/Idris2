@@ -86,12 +86,24 @@ natToInteger (S k) = 1 + natToInteger k
 -----------
 
 public export
+Bifunctor Pair where
+  bimap f g (x, y) = (f x, g y)
+
+public export
 Functor (Pair a) where
-  map f (x, y) = (x, f y)
+  map = smap
 
 public export
 mapFst : (a -> c) -> (a, b) -> (c, b)
-mapFst f (x, y) = (f x, y)
+mapFst = fmap
+
+public export
+mapSnd : (b -> d) -> (a, b) -> (a, d)
+mapSnd = smap
+
+public export
+mapHom : (a -> b) -> (a, a) -> (b, b)
+mapHom f = bimap f f
 
 -----------
 -- MAYBE --
@@ -157,10 +169,10 @@ Applicative Maybe where
 
 public export
 Alternative Maybe where
-    empty = Nothing
+  empty = Nothing
 
-    (Just x) <|> _ = Just x
-    Nothing  <|> v = v
+  (Just x) <|> _ = Just x
+  Nothing  <|> v = v
 
 public export
 Monad Maybe where
@@ -235,17 +247,23 @@ Functor (Either e) where
 
 %inline
 public export
-Applicative (Either e) where
-    pure = Right
+Bifunctor Either where
+  bimap f _ (Left x) = Left (f x)
+  bimap _ g (Right y) = Right (g y)
 
-    (Left a) <*> _          = Left a
-    (Right f) <*> (Right r) = Right (f r)
-    (Right _) <*> (Left l)  = Left l
+%inline
+public export
+Applicative (Either e) where
+  pure = Right
+
+  (Left a) <*> _          = Left a
+  (Right f) <*> (Right r) = Right (f r)
+  (Right _) <*> (Left l)  = Left l
 
 public export
 Monad (Either e) where
-    (Left n) >>= _ = Left n
-    (Right r) >>= f = f r
+  (Left n) >>= _ = Left n
+  (Right r) >>= f = f r
 
 public export
 Foldable (Either e) where
@@ -327,8 +345,8 @@ Applicative List where
 
 public export
 Alternative List where
-    empty = []
-    (<|>) = (++)
+  empty = []
+  (<|>) = (++)
 
 public export
 Monad List where

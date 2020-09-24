@@ -69,9 +69,9 @@ export
 shiftR : Int -> Int -> Int
 shiftR = prim__shr_Int
 
-----------------------------------------------
--- FUNCTOR, APPLICATIVE, ALTERNATIVE, MONAD --
-----------------------------------------------
+---------------------------------------------------------
+-- FUNCTOR, BIFUNCTOR, APPLICATIVE, ALTERNATIVE, MONAD --
+---------------------------------------------------------
 
 ||| Functors allow a uniform action over a parameterised type.
 ||| @ f a parameterised type
@@ -104,6 +104,37 @@ public export
 public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
+
+||| Bifunctors
+||| @f The action of the Bifunctor on pairs of objects
+public export
+interface Bifunctor f where
+  ||| The action of the Bifunctor on pairs of morphisms
+  |||
+  ||| ````idris example
+  ||| bimap (\x => x + 1) reverse (1, "hello") == (2, "olleh")
+  ||| ````
+  |||
+  bimap : (a -> c) -> (b -> d) -> f a b -> f c d
+  bimap f g = fmap f . smap g
+
+  ||| The action of the Bifunctor on morphisms pertaining to the first object
+  |||
+  ||| ````idris example
+  ||| fmap (\x => x + 1) (1, "hello") == (2, "hello")
+  ||| ````
+  |||
+  fmap : (a -> c) -> f a b -> f c b
+  fmap f = bimap f id
+
+  ||| The action of the Bifunctor on morphisms pertaining to the second object
+  |||
+  ||| ````idris example
+  ||| smap reverse (1, "hello") == (1, "olleh")
+  ||| ````
+  |||
+  smap : (b -> d) -> f a b -> f a d
+  smap = bimap id
 
 public export
 interface Functor f => Applicative f where
