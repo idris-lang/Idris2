@@ -63,9 +63,10 @@ mkModTree : {auto c : Ref Ctxt Defs} ->
             {auto a : Ref AllMods (List (ModuleIdent, ModTree))} ->
             FC ->
             (done : List ModuleIdent) -> -- if 'mod' is here we have a cycle
-            (mod : ModuleIdent) ->
+            (modFP : Maybe FileName) -> -- Sometimes we know already know what the file name is
+            (mod : ModuleIdent) ->      -- Otherwise we'll compute it from the module name
             Core ModTree
-mkModTree loc done mod
+mkModTree loc done modFP mod
   = if mod `elem` done
        then throw (CyclicImports (done ++ [mod]))
        else
@@ -75,10 +76,10 @@ mkModTree loc done mod
                     -- If we've seen it before, reuse what we found
                     case lookup mod all of
                          Nothing =>
-                           do file <- nsToSource loc mod
+                           do file <- maybe (nsToSource loc mod) pure modFP
                               modInfo <- readHeader file
                               let imps = map path (imports modInfo)
-                              ms <- traverse (mkModTree loc (mod :: done)) imps
+                              ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                               let mt = MkModTree mod (Just file) ms
                               all <- get AllMods
                               put AllMods ((mod, mt) :: all)
@@ -131,7 +132,7 @@ getBuildMods loc done fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
-              do t <- mkModTree {a} loc [] fname_ns
+              do t <- mkModTree {a} loc [] (Just fname) fname_ns
                  dm <- newRef DoneMod empty
                  o <- newRef BuildOrder []
                  mkBuildMods {d=dm} {o} t
