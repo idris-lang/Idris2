@@ -17,7 +17,7 @@ import Decidable.Order.Strict
 -- Need a few more facts about order
 -- The converse to lteIsLTE:
 LteIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
-                          -- DYI Syntex.PreorderReasoning from contrib
+                          -- DYI Syntax.PreorderReasoning from contrib
 LteIslte  a b a_lt_b with (the (x : Bool ** a `lte` b = x) (a `lte` b ** Refl))
  LteIslte a b a_lt_b | (True  ** prf) = prf
  LteIslte a b a_lt_b | (False ** prf) = void $ irreflexive {spo = Data.Nat.LT} a 
