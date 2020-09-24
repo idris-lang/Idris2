@@ -183,7 +183,7 @@ mod' (S fuel) centre right =
         mod' fuel (minus centre (S right)) right
 
 
-public export total
+public export
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 modNatNZ left Z         p = void (p Refl)
 modNatNZ left (S right) _ = mod' left left right
@@ -205,7 +205,7 @@ div' (S fuel) centre right =
     S (div' fuel (minus centre (S right)) right)
 
 -- 'public' to allow type-level division
-public export total
+public export
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
