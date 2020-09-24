@@ -1361,10 +1361,6 @@ Eq SolveMode where
   _ == _ = False
 
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
-
 retry : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref UST UState} ->
         UnifyInfo -> Int -> Core UnifyResult
