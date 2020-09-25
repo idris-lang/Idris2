@@ -224,6 +224,23 @@ export partial
 divCeil : Nat -> Nat -> Nat
 divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
 
+
+public export
+divmod' : Nat -> Nat -> Nat -> (Nat, Nat)
+divmod' Z        centre right = (Z, centre)
+divmod' (S fuel) centre right =
+  if lte centre right then
+    (Z, centre)
+  else
+    let qr = divmod' fuel (minus centre (S right)) right
+    in (S (fst qr), snd qr)
+
+public export
+divmodNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> (Nat, Nat)
+divmodNatNZ left Z         p = void (p Refl)
+divmodNatNZ left (S right) _ = divmod' left left right
+
+
 public export
 Integral Nat where
   div = divNat
