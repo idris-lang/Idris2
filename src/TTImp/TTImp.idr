@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.Options
 import Core.Options.Log
 import Core.TT
 import Core.TTC
@@ -378,6 +379,11 @@ data ImpREPL : Type where
      CheckTotal : Name -> ImpREPL
      DebugInfo : Name -> ImpREPL
      Quit : ImpREPL
+
+export
+mapAltType : (RawImp -> RawImp) -> AltType -> AltType
+mapAltType f (UniqueDefault x) = UniqueDefault (f x)
+mapAltType _ u = u
 
 export
 lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
@@ -1005,3 +1011,16 @@ mutual
                8 => do n <- fromBuf b
                        pure (ILog n)
                _ => corrupt "ImpDecl"
+
+
+-- Log message with a RawImp
+export
+logRaw : {auto c : Ref Ctxt Defs} ->
+         String -> Nat -> Lazy String -> RawImp -> Core ()
+logRaw str n msg tm
+    = do opts <- getSession
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
+            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+                                          ++ ": " ++ show tm
+            else pure ()

@@ -32,7 +32,7 @@ ttimpTests
 
 idrisTests : List String
 idrisTests
-    = -- Fundamental language feturea
+    = -- Fundamental language features
       ["basic001", "basic002", "basic003", "basic004", "basic005",
        "basic006", "basic007", "basic008", "basic009", "basic010",
        "basic011", "basic012", "basic013", "basic014", "basic015",
@@ -71,6 +71,7 @@ idrisTests
        "interface017",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
+       "interpreter005",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
