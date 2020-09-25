@@ -85,18 +85,22 @@ natToInteger (S k) = 1 + natToInteger k
 -- PAIRS --
 -----------
 
+%inline
 public export
 Bifunctor Pair where
   bimap f g (x, y) = (f x, g y)
 
+%inline
 public export
 Functor (Pair a) where
   map = smap
 
+%inline
 public export
 mapFst : (a -> c) -> (a, b) -> (c, b)
 mapFst = fmap
 
+%inline
 public export
 mapSnd : (b -> d) -> (a, b) -> (a, d)
 mapSnd = smap

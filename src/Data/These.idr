@@ -33,19 +33,27 @@ public export
   showPrec d (That x)   = showCon d "That" $ showArg x
   showPrec d (Both x y) = showCon d "Both" $ showArg x ++ showArg y
 
+%inline
 public export
 Bifunctor These where
   bimap f g (This a)   = This (f a)
   bimap f g (That b)   = That (g b)
   bimap f g (Both a b) = Both (f a) (g b)
 
+%inline
 public export
 Functor (These a) where
-  map = bimap id
+  map = smap
 
+%inline
 public export
 mapFst : (f : a -> b) -> These a c -> These b c
-mapFst f = bimap f id
+mapFst = fmap
+
+%inline
+public export
+mapSnd : (f : b -> c) -> These a b -> These a c
+mapSnd = smap
 
 public export
 bifold : Monoid m => These m m -> m
