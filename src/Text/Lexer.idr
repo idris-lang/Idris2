@@ -344,7 +344,6 @@ charLit = let q = '\'' in
                       "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB",
                       "CAN", "EM",  "SUB", "ESC", "FS",  "GS",  "RS",  "US",
                       "SP",  "DEL"]
-                <|> (is 'b' <+> binDigits)
                 <|> (is 'x' <+> hexDigits)
                 <|> (is 'o' <+> octDigits)
                 <|> digits
