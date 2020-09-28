@@ -95,10 +95,6 @@ public export
 Functor (Pair a) where
   map = mapSnd
 
-public export
-mapHom : (a -> b) -> (a, a) -> (b, b)
-mapHom f = bimap f f
-
 -----------
 -- MAYBE --
 -----------

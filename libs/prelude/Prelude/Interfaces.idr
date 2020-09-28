@@ -137,6 +137,10 @@ interface Bifunctor f where
   mapSnd = bimap id
 
 public export
+mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
+mapHom f = bimap f f
+
+public export
 interface Functor f => Applicative f where
   pure : a -> f a
   (<*>) : f (a -> b) -> f a -> f b
