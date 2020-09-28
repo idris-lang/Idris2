@@ -20,9 +20,7 @@ setSchema : DataStore 0 -> Schema -> DataStore 0
 setSchema (MkData schema []) schema' = MkData schema' []
 
 data Command : Schema -> Type where
-     SetSchema : Schema -> Command schema
-     Add : SchemaType schema -> Command schema
-     Get : Integer -> Command schema
-     Quit : Command schema
-
-
+     SetSchema : Schema -> Command sch
+     Add : SchemaType sch -> Command sch
+     Get : Integer -> Command sch
+     Quit : Command sch

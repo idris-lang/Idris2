@@ -12,15 +12,15 @@ data GameState : Type where
   NotRunning : GameState
   Running : (guesses : Nat) -> (letters : Nat) -> GameState
 
-letters : String -> List Char
-letters str = nub (map toUpper (unpack str))
+initLetters : String -> List Char
+initLetters str = nub (map toUpper (unpack str))
 
 data GuessResult = Correct | Incorrect
 
 export
 data GameCmd : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
   NewGame : (word : String) ->
-            GameCmd () NotRunning (const (Running 6 (length (letters word))))
+            GameCmd () NotRunning (const (Running 6 (length (initLetters word))))
 
   Won :  GameCmd () (Running (S guesses) 0) (const NotRunning)
   Lost : GameCmd () (Running 0 (S guesses)) (const NotRunning)
@@ -104,7 +104,7 @@ ok : (res : ty) -> Game (outstate_fn res) -> IO (GameResult ty outstate_fn)
 ok res st = pure (OK res st)
 
 runCmd : Fuel -> Game inState -> GameCmd ty inState outState_fn -> IO (GameResult ty outState_fn)
-runCmd fuel state (NewGame word) = ok () (InProgress (toUpper word) _ (fromList (letters word)))
+runCmd fuel state (NewGame word) = ok () (InProgress (toUpper word) _ (fromList (initLetters word)))
 runCmd fuel (InProgress word _ missing) Won = ok () (GameWon word)
 runCmd fuel (InProgress word _ missing) Lost = ok () (GameLost word)
 runCmd fuel (InProgress word _ missing) (Guess c) = case isElem c missing of

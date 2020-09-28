@@ -290,7 +290,7 @@ pruneByType env target alts
          matches_in <- traverse (couldBe defs (stripDelay target)) alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
-         log "elab.prun" 10 (show matches)
+         log "elab.prune" 10 (show matches)
          res <- if anyTrue (map fst matches)
                 -- if there's any concrete matches, drop the non-concrete
                 -- matches marked as '%allow_overloads' from the possible set
@@ -360,7 +360,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                " at " ++ show fc ++
                                "\nWith default. Target type ") env exp'
                   alts' <- pruneByType env !(getNF exp') alts
-                  log "elab.prun" 5 ("Pruned alts (" ++ show (length alts') ++ ") " ++
+                  log "elab.prune" 5 ("Pruned alts (" ++ show (length alts') ++ ") " ++
                           show alts')
 
                   if delayed -- use the default if there's still ambiguity

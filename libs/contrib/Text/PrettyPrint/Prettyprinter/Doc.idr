@@ -385,10 +385,6 @@ Pretty a => Pretty (List a) where
 export
 [prettyListMaybe] Pretty a => Pretty (List (Maybe a)) where
   pretty = pretty . catMaybes
-    where catMaybes : List (Maybe a) -> List a
-          catMaybes [] = []
-          catMaybes (Nothing :: xs) = catMaybes xs
-          catMaybes ((Just x) :: xs) = x :: catMaybes xs
 
 export
 Pretty () where

@@ -56,7 +56,7 @@ AsServer proto = ServerK proto (\res => Close)
 
 public export
 data QueueEntry : Type where
-     Entry : (1 val : any) -> QueueEntry
+     Entry : (1 val : anyType) -> QueueEntry
 
 public export
 record RawMsgQueue where
@@ -135,10 +135,10 @@ tryRecv (MkChannel lock cond_lock cond local remote)
               Nothing =>
                   do lift $ mutexRelease lock
                      pure (Nothing # MkChannel lock cond_lock cond local remote)
-              Just (rq', Entry {any} val) =>
+              Just (rq', Entry {anyType} val) =>
                   do lift $ writeIORef local rq'
                      lift $ mutexRelease lock
-                     pure (Just (believe_me {a=any} val) #
+                     pure (Just (believe_me {a=anyType} val) #
                            MkChannel lock cond_lock cond local remote)
 
 -- blocks until the message is there
@@ -155,10 +155,10 @@ recv (MkChannel lock cond_lock cond local remote)
                      lift $ conditionWait cond cond_lock
                      lift $ mutexRelease cond_lock
                      recv (MkChannel lock cond_lock cond local remote)
-              Just (rq', Entry {any} val) =>
+              Just (rq', Entry {anyType} val) =>
                   do lift $ writeIORef local rq'
                      lift $ mutexRelease lock
-                     pure (believe_me {a=any} val #
+                     pure (believe_me {a=anyType} val #
                            MkChannel lock cond_lock cond local remote)
 
 export
@@ -184,10 +184,10 @@ timeoutRecv (MkChannel lock cond_lock cond local remote) timeout
                      case res of
                           Nothing => pure (Nothing # chan)
                           Just res => pure (Just res # chan)
-              Just (rq', Entry {any} val) =>
+              Just (rq', Entry {anyType} val) =>
                   do lift $ writeIORef local rq'
                      lift $ mutexRelease lock
-                     pure (Just (believe_me {a=any} val) #
+                     pure (Just (believe_me {a=anyType} val) #
                            MkChannel lock cond_lock cond local remote)
 
 export

@@ -114,7 +114,7 @@ bindUnsolved {vars} fc elabmode _
     = do est <- get EST
          defs <- get Ctxt
          let bifs = bindIfUnsolved est
-         log "elab" 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
+         log "elab.implicit" 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
          traverse_ (mkImplicit defs (outerEnv est) (subEnv est)) (bindIfUnsolved est)
   where
     makeBoundVar : {outer, vs : _} ->

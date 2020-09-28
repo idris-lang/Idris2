@@ -158,9 +158,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
          let initTy = bindImpls fc is $ bindConstraints fc AutoImplicit cons
                          (apply (IVar fc iname) ps)
-         let paramBinds = if !isUnboundImplicits
-                          then findBindableNames True vars [] initTy
-                          else []
+         paramBinds <- if !isUnboundImplicits
+                       then findBindableNames True vars [] initTy
+                       else pure []
          let impTy = doBind paramBinds initTy
 
          let impTyDecl = IClaim fc top vis opts (MkImpTy fc impName impTy)

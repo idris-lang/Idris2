@@ -12,9 +12,8 @@ implementation Finite (Fin k) where
 
 interface BadFinite t where
   badcard   : Nat
-  badto     : t -> Fin card
+  badto     : t -> Fin badcard
 
 implementation BadFinite (Fin k) where
   badcard = k
   badto = id
-

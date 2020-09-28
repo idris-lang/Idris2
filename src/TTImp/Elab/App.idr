@@ -595,8 +595,8 @@ mutual
   checkAppWith {vars} rig elabinfo nest env fc tm ty (n, argpos) (arg :: expargs) impargs kr expty
       = -- Invent a function type,  and hope that we'll know enough to solve it
         -- later when we unify with expty
-        do logNF "elab.with" 10 "Function type" env ty
-           logTerm "elab.with" 10 "Function " tm
+        do logNF "elab.application.with" 10 "Function type" env ty
+           logTerm "elab.application.with" 10 "Function " tm
            argn <- genName "argTy"
            retn <- genName "retTy"
            argTy <- metaVar fc erased env argn (TType fc)
@@ -610,8 +610,8 @@ mutual
            defs <- get Ctxt
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi fc top Explicit argTy) (weaken retTy))
-           logGlue "elab.with" 10 "Expected function type" env expfnty
-           maybe (pure ()) (logGlue "elab.with" 10 "Expected result type" env) expty
+           logGlue "elab.application.with" 10 "Expected function type" env expfnty
+           maybe (pure ()) (logGlue "elab.application.with" 10 "Expected result type" env) expty
            res <- checkAppWith rig elabinfo nest env fc fntm fnty (n, 1 + argpos) expargs impargs kr expty
            cres <- Check.convert fc elabinfo env (glueBack defs env ty) expfnty
            let [] = constraints cres
@@ -640,11 +640,10 @@ checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs e
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in
-        let prims = mapMaybe id
-                     [!fromIntegerName, !fromStringName, !fromCharName]
+        let prims = catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
-        logC "elab" 10
+        logC "elab.application" 10
                 (do defs <- get Ctxt
                     fnty <- quote defs env nty
                     exptyt <- maybe (pure Nothing)

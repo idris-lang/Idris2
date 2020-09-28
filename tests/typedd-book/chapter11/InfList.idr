@@ -1,5 +1,5 @@
 data InfList : Type -> Type where
-     (::) : (value : elem) -> Inf (InfList elem) -> InfList elem
+     (::) : (value : elt) -> Inf (InfList elt) -> InfList elt
 
 %name InfList xs, ys, zs
 

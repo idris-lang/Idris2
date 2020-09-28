@@ -124,13 +124,13 @@ bindApp1 {u=Any} (MkApp1 fn)
                               MkApp1 res = k x' in
                               res w')
 
-absurdWith1 : (1 w : b) -> OneOf e NoThrow -> any
+absurdWith1 : (1 w : b) -> OneOf e NoThrow -> anyType
 absurdWith1 w (First p) impossible
 
-absurdWithVoid : (1 w : b) -> OneOf [Void] t -> any
+absurdWithVoid : (1 w : b) -> OneOf [Void] t -> anyType
 absurdWithVoid w (First p) impossible
 
-absurdWith2 : (1 x : a) -> (1 w : b) -> OneOf e NoThrow -> any
+absurdWith2 : (1 x : a) -> (1 w : b) -> OneOf e NoThrow -> anyType
 absurdWith2 x w (First p) impossible
 
 export

@@ -1,9 +1,9 @@
-data Tree elem = Empty
-               | Node (Tree elem) elem (Tree elem)
+data Tree elt = Empty
+               | Node (Tree elt) elt (Tree elt)
 
 %name Tree tree, tree1
 
-insert : Ord elem => elem -> Tree elem -> Tree elem
+insert : Ord elt => elt -> Tree elt -> Tree elt
 insert x Empty = Node Empty x Empty
 insert x orig@(Node left val right)
     = case compare x val of

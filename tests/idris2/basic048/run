@@ -1,0 +1,5 @@
+$1 --no-banner --no-color --console-width 0 Implicit.idr < input
+$1 --no-banner --no-color --console-width 0 Issue621.idr --check
+$1 --no-banner --no-color --console-width 0 ImplicitError.idr --check
+
+rm -rf build

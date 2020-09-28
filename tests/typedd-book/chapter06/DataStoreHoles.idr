@@ -27,11 +27,11 @@ addToStore (MkData schema size store) newitem = MkData schema _ (addToData store
     addToData (x :: xs) = x :: addToData xs
 
 data Command : Schema -> Type where
-     Add : SchemaType schema -> Command schema
-     Get : Integer -> Command schema
-     Quit : Command schema
+     Add : SchemaType sch -> Command sch
+     Get : Integer -> Command sch
+     Quit : Command sch
 
-parseCommand : String -> String -> Maybe (Command schema)
+parseCommand : String -> String -> Maybe (Command sch)
 parseCommand "add" rest = Just (Add (?parseBySchema rest))
 parseCommand "get" val = case all isDigit (unpack val) of
                               False => Nothing

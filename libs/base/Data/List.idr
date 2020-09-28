@@ -450,6 +450,13 @@ mapMaybe f (x::xs) =
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
 
+||| Only keep the `Just` values in a list
+public export
+catMaybes : List (Maybe a) -> List a
+catMaybes [] = []
+catMaybes (Nothing :: xs) = catMaybes xs
+catMaybes ((Just x) :: xs) = x :: catMaybes xs
+
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------

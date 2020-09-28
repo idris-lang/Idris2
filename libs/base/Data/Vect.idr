@@ -9,24 +9,24 @@ import Decidable.Equality
 %default total
 
 public export
-data Vect : (len : Nat) -> (elem : Type) -> Type where
+data Vect : (len : Nat) -> (elt : Type) -> Type where
   ||| Empty vector
-  Nil  : Vect Z elem
+  Nil  : Vect Z elt
   ||| A non-empty vector of length `S len`, consisting of a head element and
   ||| the rest of the list, of length `len`.
-  (::) : (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
+  (::) : (1 x : elt) -> (1 xs : Vect len elt) -> Vect (S len) elt
 
 -- Hints for interactive editing
 %name Vect xs,ys,zs,ws
 
 public export
-length : (xs : Vect len elem) -> Nat
+length : (xs : Vect len elt) -> Nat
 length [] = 0
 length (_::xs) = 1 + length xs
 
 ||| Show that the length function on vectors in fact calculates the length
 export
-lengthCorrect : (xs : Vect len elem) -> length xs = len
+lengthCorrect : (xs : Vect len elt) -> length xs = len
 lengthCorrect []        = Refl
 lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
 
@@ -45,7 +45,7 @@ vectInjective Refl = (Refl, Refl)
 ||| tail [1,2,3,4]
 ||| ```
 public export
-tail : Vect (S len) elem -> Vect len elem
+tail : Vect (S len) elt -> Vect len elt
 tail (_::xs) = xs
 
 ||| Only the first element of the vector
@@ -54,7 +54,7 @@ tail (_::xs) = xs
 ||| head [1,2,3,4]
 ||| ```
 public export
-head : Vect (S len) elem -> elem
+head : Vect (S len) elt -> elt
 head (x::_) = x
 
 ||| The last element of the vector
@@ -63,7 +63,7 @@ head (x::_) = x
 ||| last [1,2,3,4]
 ||| ```
 public export
-last : Vect (S len) elem -> elem
+last : Vect (S len) elt -> elt
 last [x]        = x
 last (_::y::ys) = last $ y::ys
 
@@ -73,7 +73,7 @@ last (_::y::ys) = last $ y::ys
 ||| init [1,2,3,4]
 ||| ```
 public export
-init : Vect (S len) elem -> Vect len elem
+init : Vect (S len) elt -> Vect len elt
 init [_]        = []
 init (x::y::ys) = x :: init (y::ys)
 
@@ -91,7 +91,7 @@ take (S k) (x :: xs) = x :: take k xs
 ||| index 1 [1,2,3,4]
 ||| ```
 public export
-index : Fin len -> Vect len elem -> elem
+index : Fin len -> Vect len elt -> elt
 index FZ     (x::_)  = x
 index (FS k) (_::xs) = index k xs
 
@@ -101,7 +101,7 @@ index (FS k) (_::xs) = index k xs
 ||| insertAt 1 8 [1,2,3,4]
 ||| ```
 public export
-insertAt : (1 idx : Fin (S len)) -> (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
+insertAt : (1 idx : Fin (S len)) -> (1 x : elt) -> (1 xs : Vect len elt) -> Vect (S len) elt
 insertAt FZ     y xs      = y :: xs
 insertAt (FS k) y (x::xs) = x :: insertAt k y xs
 
@@ -111,7 +111,7 @@ insertAt (FS k) y (x::xs) = x :: insertAt k y xs
 ||| deleteAt 1 [1,2,3,4]
 ||| ```
 public export
-deleteAt : Fin (S len) -> Vect (S len) elem -> Vect len elem
+deleteAt : (1 idx : Fin (S len)) -> Vect (S len) elt -> Vect len elt
 deleteAt FZ     (_::xs)        = xs
 deleteAt (FS k) [x]            = absurd k
 deleteAt (FS k) (x::xs@(_::_)) = x :: deleteAt k xs
@@ -122,7 +122,7 @@ deleteAt (FS k) (x::xs@(_::_)) = x :: deleteAt k xs
 ||| replaceAt 1 8 [1,2,3,4]
 ||| ```
 public export
-replaceAt : Fin len -> elem -> Vect len elem -> Vect len elem
+replaceAt : Fin len -> elt -> Vect len elt -> Vect len elt
 replaceAt FZ     y (_::xs) = y :: xs
 replaceAt (FS k) y (x::xs) = x :: replaceAt k y xs
 
@@ -135,7 +135,7 @@ replaceAt (FS k) y (x::xs) = x :: replaceAt k y xs
 ||| updateAt 1 (+10) [1,2,3,4]
 ||| ```
 public export
-updateAt : (i : Fin len) -> (f : elem -> elem) -> (xs : Vect len elem) -> Vect len elem
+updateAt : (i : Fin len) -> (f : elt -> elt) -> (xs : Vect len elt) -> Vect len elt
 updateAt FZ     f (x::xs) = f x :: xs
 updateAt (FS k) f (x::xs) = x :: updateAt k f xs
 
@@ -145,7 +145,7 @@ updateAt (FS k) f (x::xs) = x :: updateAt k f xs
 ||| [1,2,3,4] ++ [5,6]
 ||| ```
 public export
-(++) : (1 xs : Vect m elem) -> (1 ys : Vect n elem) -> Vect (m + n) elem
+(++) : (1 xs : Vect m elt) -> (1 ys : Vect n elt) -> Vect (m + n) elt
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
@@ -158,7 +158,7 @@ public export
 ||| replicate 4 1
 ||| ```
 public export
-replicate : (len : Nat) -> (x : elem) -> Vect len elem
+replicate : (len : Nat) -> (x : elt) -> Vect len elt
 replicate Z     _ = []
 replicate (S k) x = x :: replicate k x
 
@@ -168,7 +168,7 @@ replicate (S k) x = x :: replicate k x
 ||| mergeBy compare (fromList [1,3,5]) (fromList [2,3,4,5,6])
 ||| ```
 export
-mergeBy : (elem -> elem -> Ordering) -> (xs : Vect n elem) -> (ys : Vect m elem) -> Vect (n + m) elem
+mergeBy : (elt -> elt -> Ordering) -> (xs : Vect n elt) -> (ys : Vect m elt) -> Vect (n + m) elt
 mergeBy     _ [] ys = ys
 mergeBy {n} _ xs [] = rewrite plusZeroRightNeutral n in xs
 mergeBy {n = S k} {m = S k'} order (x :: xs) (y :: ys)
@@ -178,7 +178,7 @@ mergeBy {n = S k} {m = S k'} order (x :: xs) (y :: ys)
                              y :: mergeBy order (x :: xs) ys
 
 export
-merge : Ord elem => Vect n elem -> Vect m elem -> Vect (n + m) elem
+merge : Ord elt => Vect n elt -> Vect m elt -> Vect (n + m) elt
 merge = mergeBy compare
 
 --------------------------------------------------------------------------------
@@ -191,9 +191,9 @@ merge = mergeBy compare
 ||| reverse [1,2,3,4]
 ||| ```
 public export
-reverse : (1 xs : Vect len elem) -> Vect len elem
+reverse : (1 xs : Vect len elt) -> Vect len elt
 reverse xs = go [] xs
-  where go : (1 _ : Vect n elem) -> (1 _ : Vect m elem) -> Vect (n+m) elem
+  where go : (1 _ : Vect n elt) -> (1 _ : Vect m elt) -> Vect (n+m) elt
         go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
         go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
                                        in go (x::acc) xs
@@ -206,11 +206,11 @@ reverse xs = go [] xs
 ||| intersperse 0 [1,2,3,4]
 ||| ```
 export
-intersperse : (sep : elem) -> (xs : Vect len elem) -> Vect (len + pred len) elem
+intersperse : (sep : elt) -> (xs : Vect len elt) -> Vect (len + pred len) elt
 intersperse sep []      = []
 intersperse sep (x::xs) = x :: intersperse' sep xs
   where
-    intersperse' : elem -> Vect n elem -> Vect (n + n) elem
+    intersperse' : elt -> Vect n elt -> Vect (n + n) elt
     intersperse'         sep []      = []
     intersperse' {n=S n} sep (x::xs) = rewrite sym $ plusSuccRightSucc n n
                                        in sep :: x :: intersperse' sep xs
@@ -228,7 +228,7 @@ toVect (S k) (x :: xs)
 toVect _ _ = Nothing
 
 public export
-fromList' : (1 xs : Vect len elem) -> (1 l : List elem) -> Vect (length l + len) elem
+fromList' : (1 xs : Vect len elt) -> (1 l : List elt) -> Vect (length l + len) elt
 fromList' ys [] = ys
 fromList' {len} ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
@@ -242,7 +242,7 @@ fromList' {len} ys (x::xs) =
 ||| fromList [1,2,3,4]
 ||| ```
 public export
-fromList : (1 l : List elem) -> Vect (length l) elem
+fromList : (1 l : List elt) -> Vect (length l) elt
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
@@ -356,7 +356,7 @@ DecEq a => DecEq (Vect n a) where
 --------------------------------------------------------------------------------
 
 public export
-implementation Ord elem => Ord (Vect len elem) where
+implementation Ord elt => Ord (Vect len elt) where
   compare []      []      = EQ
   compare (x::xs) (y::ys)
       = case compare x y of
@@ -417,7 +417,7 @@ implementation Foldable (Vect n) where
 ||| concat [[1,2,3], [4,5,6]]
 ||| ```
 public export
-concat : (1 xss : Vect m (Vect n elem)) -> Vect (m * n) elem
+concat : (1 xss : Vect m (Vect n elt)) -> Vect (m * n) elt
 concat []      = []
 concat (v::vs) = v ++ Vect.concat vs
 
@@ -450,7 +450,7 @@ foldl1 f (x::xs) = foldl f x xs
 ||| scanl (-) 0 (fromList [1,2,3])
 ||| ```
 public export
-scanl : (res -> elem -> res) -> res -> Vect len elem -> Vect (S len) res
+scanl : (res -> elt -> res) -> res -> Vect len elt -> Vect (S len) res
 scanl f q []      = [q]
 scanl f q (x::xs) = q :: scanl f (f q x) xs
 
@@ -463,7 +463,7 @@ scanl f q (x::xs) = q :: scanl f (f q x) xs
 ||| scanl1 (-) (fromList [1,2,3])
 ||| ```
 public export
-scanl1 : (elem -> elem -> elem) -> Vect len elem -> Vect len elem
+scanl1 : (elt -> elt -> elt) -> Vect len elt -> Vect len elt
 scanl1 f [] = []
 scanl1 f (x::xs) = scanl f x xs
 
@@ -480,7 +480,7 @@ scanl1 f (x::xs) = scanl f x xs
 ||| elemBy (==) 2 [1,2,3,4]
 ||| ```
 public export
-elemBy : (p : elem -> elem -> Bool) -> (e : elem) -> (xs : Vect len elem) -> Bool
+elemBy : (p : elt -> elt -> Bool) -> (e : elt) -> (xs : Vect len elt) -> Bool
 elemBy p e []      = False
 elemBy p e (x::xs) = p e x || elemBy p e xs
 
@@ -492,7 +492,7 @@ elemBy p e (x::xs) = p e x || elemBy p e xs
 ||| elem 3 [1,2,3,4]
 ||| ```
 public export
-elem : Eq elem => (x : elem) -> (xs : Vect len elem) -> Bool
+elem : Eq elt => (x : elt) -> (xs : Vect len elt) -> Bool
 elem = elemBy (==)
 
 ||| Find the association of some key with a user-provided comparison
@@ -516,26 +516,26 @@ public export
 lookup : Eq key => key -> Vect n (key, val) -> Maybe val
 lookup = lookupBy (==)
 
-||| Check if any element of xs is found in elems by a user-provided comparison
+||| Check if any element of xs is found in elts by a user-provided comparison
 ||| @ p the comparison operator
-||| @ elems the vector to search
+||| @ elts the vector to search
 ||| @ xs what to search for
 |||
 ||| ```idris example
 ||| hasAnyBy (==) [2,5] [1,2,3,4]
 ||| ```
 public export
-hasAnyBy : (p : elem -> elem -> Bool) -> (elems : Vect m elem) -> (xs : Vect len elem) -> Bool
-hasAnyBy p elems []      = False
-hasAnyBy p elems (x::xs) = elemBy p x elems || hasAnyBy p elems xs
+hasAnyBy : (p : elt -> elt -> Bool) -> (elts : Vect m elt) -> (xs : Vect len elt) -> Bool
+hasAnyBy p elts []      = False
+hasAnyBy p elts (x::xs) = elemBy p x elts || hasAnyBy p elts xs
 
-||| Check if any element of xs is found in elems using the default Boolean equality test
+||| Check if any element of xs is found in elts using the default Boolean equality test
 |||
 ||| ```idris example
 ||| hasAny [2,5] [1,2,3,4]
 ||| ```
 public export
-hasAny : Eq elem => Vect m elem -> Vect len elem -> Bool
+hasAny : Eq elt => Vect m elt -> Vect len elt -> Bool
 hasAny = hasAnyBy (==)
 
 --------------------------------------------------------------------------------
@@ -549,7 +549,7 @@ hasAny = hasAnyBy (==)
 ||| find (== 3) [1,2,3,4]
 ||| ```
 public export
-find : (p : elem -> Bool) -> (xs : Vect len elem) -> Maybe elem
+find : (p : elt -> Bool) -> (xs : Vect len elt) -> Maybe elt
 find p []      = Nothing
 find p (x::xs) = if p x then Just x else find p xs
 
@@ -559,7 +559,7 @@ find p (x::xs) = if p x then Just x else find p xs
 ||| findIndex (== 3) [1,2,3,4]
 ||| ```
 public export
-findIndex : (elem -> Bool) -> Vect len elem -> Maybe (Fin len)
+findIndex : (elt -> Bool) -> Vect len elt -> Maybe (Fin len)
 findIndex p []        = Nothing
 findIndex p (x :: xs) = if p x then Just FZ else map FS (findIndex p xs)
 
@@ -569,7 +569,7 @@ findIndex p (x :: xs) = if p x then Just FZ else map FS (findIndex p xs)
 ||| findIndices (< 3) [1,2,3,4]
 ||| ```
 public export
-findIndices : (elem -> Bool) -> Vect m elem -> List (Fin m)
+findIndices : (elt -> Bool) -> Vect m elt -> List (Fin m)
 findIndices p []        = []
 findIndices p (x :: xs)
      = let is = map FS $ findIndices p xs in
@@ -581,7 +581,7 @@ findIndices p (x :: xs)
 ||| elemIndexBy (==) 3 [1,2,3,4]
 ||| ```
 public export
-elemIndexBy : (elem -> elem -> Bool) -> elem -> Vect m elem -> Maybe (Fin m)
+elemIndexBy : (elt -> elt -> Bool) -> elt -> Vect m elt -> Maybe (Fin m)
 elemIndexBy p e = findIndex $ p e
 
 ||| Find the index of the first element of the vector equal to the given one.
@@ -590,7 +590,7 @@ elemIndexBy p e = findIndex $ p e
 ||| elemIndex 3 [1,2,3,4]
 ||| ```
 public export
-elemIndex : Eq elem => elem -> Vect m elem -> Maybe (Fin m)
+elemIndex : Eq elt => elt -> Vect m elt -> Maybe (Fin m)
 elemIndex = elemIndexBy (==)
 
 ||| Find the indices of all elements that satisfy some test
@@ -599,7 +599,7 @@ elemIndex = elemIndexBy (==)
 ||| elemIndicesBy (<=) 3 [1,2,3,4]
 ||| ```
 public export
-elemIndicesBy : (elem -> elem -> Bool) -> elem -> Vect m elem -> List (Fin m)
+elemIndicesBy : (elt -> elt -> Bool) -> elt -> Vect m elt -> List (Fin m)
 elemIndicesBy p e = findIndices $ p e
 
 ||| Find the indices of all elements uquals to the given one
@@ -608,7 +608,7 @@ elemIndicesBy p e = findIndices $ p e
 ||| elemIndices 3 [1,2,3,4,3]
 ||| ```
 public export
-elemIndices : Eq elem => elem -> Vect m elem -> List (Fin m)
+elemIndices : Eq elt => elt -> Vect m elt -> List (Fin m)
 elemIndices = elemIndicesBy (==)
 
 --------------------------------------------------------------------------------
@@ -621,7 +621,7 @@ elemIndices = elemIndicesBy (==)
 ||| filter (< 3) (fromList [1,2,3,4])
 ||| ```
 public export
-filter : (elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
+filter : (elt -> Bool) -> Vect len elt -> (p ** Vect p elt)
 filter p []      = ( _ ** [] )
 filter p (x::xs) =
   let (_ ** tail) = filter p xs
@@ -636,10 +636,10 @@ filter p (x::xs) =
 ||| nubBy (==) (fromList [1,2,2,3,4,4])
 ||| ```
 public export
-nubBy : (elem -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
+nubBy : (elt -> elt -> Bool) -> Vect len elt -> (p ** Vect p elt)
 nubBy = nubBy' []
   where
-    nubBy' : forall len . Vect m elem -> (elem -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
+    nubBy' : forall len . Vect m elt -> (elt -> elt -> Bool) -> Vect len elt -> (p ** Vect p elt)
     nubBy' acc p []      = (_ ** [])
     nubBy' acc p (x::xs) with (elemBy p x acc)
       nubBy' acc p (x :: xs) | True  = nubBy' acc p xs
@@ -652,7 +652,7 @@ nubBy = nubBy' []
 ||| nub (fromList [1,2,2,3,4,4])
 ||| ```
 public export
-nub : Eq elem => Vect len elem -> (p ** Vect p elem)
+nub : Eq elt => Vect len elt -> (p ** Vect p elt)
 nub = nubBy (==)
 
 ||| Delete first element from list according to some test
@@ -662,7 +662,7 @@ nub = nubBy (==)
 ||| ```
 public export
 deleteBy : {len : _} -> -- needed for the dependent pair
-           (elem -> elem -> Bool) -> elem -> Vect len elem -> (p ** Vect p elem)
+           (elt -> elt -> Bool) -> elt -> Vect len elt -> (p ** Vect p elt)
 deleteBy _  _ []      = (_ ** [])
 deleteBy eq x (y::ys) =
   let (len ** zs) = deleteBy eq x ys
@@ -675,7 +675,7 @@ deleteBy eq x (y::ys) =
 ||| ```
 public export
 delete : {len : _} ->
-         Eq elem => elem -> Vect len elem -> (p ** Vect p elem)
+         Eq elt => elt -> Vect len elt -> (p ** Vect p elt)
 delete = deleteBy (==)
 
 --------------------------------------------------------------------------------
@@ -694,7 +694,7 @@ delete = deleteBy (==)
 ||| splitAt 2 (fromList [1,2,3,4])
 ||| ```
 public export
-splitAt : (n : Nat) -> (xs : Vect (n + m) elem) -> (Vect n elem, Vect m elem)
+splitAt : (n : Nat) -> (xs : Vect (n + m) elt) -> (Vect n elt, Vect m elt)
 splitAt Z xs = ([], xs)
 splitAt (S k) (x :: xs) with (splitAt k {m} xs)
   splitAt (S k) (x :: xs) | (tk, dr) = (x :: tk, dr)
@@ -706,7 +706,7 @@ splitAt (S k) (x :: xs) with (splitAt k {m} xs)
 ||| partition (== 2) (fromList [1,2,3,2,4])
 ||| ```
 public export
-partition : (elem -> Bool) -> Vect len elem -> ((p ** Vect p elem), (q ** Vect q elem))
+partition : (elt -> Bool) -> Vect len elt -> ((p ** Vect p elt), (q ** Vect q elt))
 partition p []      = ((_ ** []), (_ ** []))
 partition p (x::xs) =
   let ((leftLen ** lefts), (rightLen ** rights)) = partition p xs in
@@ -725,7 +725,7 @@ partition p (x::xs) =
 ||| isPrefixOfBy (==) (fromList [1,2]) (fromList [1,2,3,4])
 ||| ```
 public export
-isPrefixOfBy : (elem -> elem -> Bool) -> Vect m elem -> Vect len elem -> Bool
+isPrefixOfBy : (elt -> elt -> Bool) -> Vect m elt -> Vect len elt -> Bool
 isPrefixOfBy p [] right        = True
 isPrefixOfBy p left []         = False
 isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
@@ -736,7 +736,7 @@ isPrefixOfBy p (x::xs) (y::ys) = p x y && isPrefixOfBy p xs ys
 ||| isPrefixOf (fromList [1,2]) (fromList [1,2,3,4])
 ||| ```
 public export
-isPrefixOf : Eq elem => Vect m elem -> Vect len elem -> Bool
+isPrefixOf : Eq elt => Vect m elt -> Vect len elt -> Bool
 isPrefixOf = isPrefixOfBy (==)
 
 ||| Verify vector suffix
@@ -745,7 +745,7 @@ isPrefixOf = isPrefixOfBy (==)
 ||| isSuffixOfBy (==) (fromList [3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-isSuffixOfBy : (elem -> elem -> Bool) -> Vect m elem -> Vect len elem -> Bool
+isSuffixOfBy : (elt -> elt -> Bool) -> Vect m elt -> Vect len elt -> Bool
 isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 
 ||| Verify vector suffix
@@ -754,7 +754,7 @@ isSuffixOfBy p left right = isPrefixOfBy p (reverse left) (reverse right)
 ||| isSuffixOf (fromList [3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-isSuffixOf : Eq elem => Vect m elem -> Vect len elem -> Bool
+isSuffixOf : Eq elt => Vect m elt -> Vect len elt -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
 --------------------------------------------------------------------------------
@@ -767,7 +767,7 @@ isSuffixOf = isSuffixOfBy (==)
 ||| maybeToVect (Just 2)
 ||| ```
 public export
-maybeToVect : Maybe elem -> (p ** Vect p elem)
+maybeToVect : Maybe elt -> (p ** Vect p elt)
 maybeToVect Nothing  = (_ ** [])
 maybeToVect (Just j) = (_ ** [j])
 
@@ -777,7 +777,7 @@ maybeToVect (Just j) = (_ ** [j])
 ||| vectToMaybe [2]
 ||| ```
 public export
-vectToMaybe : Vect len elem -> Maybe elem
+vectToMaybe : Vect len elt -> Maybe elt
 vectToMaybe []      = Nothing
 vectToMaybe (x::xs) = Just x
 
@@ -791,7 +791,7 @@ vectToMaybe (x::xs) = Just x
 ||| catMaybes [Just 1, Just 2, Nothing, Nothing, Just 5]
 ||| ```
 public export
-catMaybes : (1 xs : Vect n (Maybe elem)) -> (p ** Vect p elem)
+catMaybes : (1 xs : Vect n (Maybe elt)) -> (p ** Vect p elt)
 catMaybes []             = (_ ** [])
 catMaybes (Nothing::xs)  = catMaybes xs
 catMaybes ((Just j)::xs) =
@@ -804,7 +804,7 @@ catMaybes ((Just j)::xs) =
 ||| diag [[1,2,3], [4,5,6], [7,8,9]]
 ||| ```
 public export
-diag : Vect len (Vect len elem) -> Vect len elem
+diag : Vect len (Vect len elt) -> Vect len elt
 diag []             = []
 diag ((x::xs)::xss) = x :: diag (map tail xss)
 
@@ -826,7 +826,7 @@ range {len=S _} = FZ :: map FS range
 ||| transpose [[1,2], [3,4], [5,6], [7,8]]
 ||| ```
 public export
-transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
+transpose : {n : _} -> (1 array : Vect m (Vect n elt)) -> Vect n (Vect m elt)
 transpose []        = replicate _ []                 -- = [| [] |]
 transpose (x :: xs) = lzipWith (::) x (transpose xs) -- = [| x :: xs |]
 
@@ -869,7 +869,7 @@ implementation Traversable (Vect k) where
 --------------------------------------------------------------------------------
 
 export
-implementation Show elem => Show (Vect len elem) where
+implementation Show elt => Show (Vect len elt) where
     show = show . toList
 
 -- Some convenience functions for testing lengths

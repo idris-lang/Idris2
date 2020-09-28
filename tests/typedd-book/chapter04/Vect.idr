@@ -4,7 +4,7 @@ data Vect : Nat -> Type -> Type where
 
 %name Vect xs, ys, zs
 
-append : Vect n elem -> Vect m elem -> Vect (n + m) elem
+append : Vect n elt -> Vect m elt -> Vect (n + m) elt
 append [] ys = ys
 append (x :: xs) ys = x :: append xs ys
 

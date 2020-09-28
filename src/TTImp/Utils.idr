@@ -1,6 +1,7 @@
 module TTImp.Utils
 
 import Core.Context
+import Core.Context.Log
 import Core.TT
 import TTImp.TTImp
 
@@ -18,51 +19,74 @@ getUnique xs x = if x `elem` xs then getUnique xs (x ++ "'") else x
 -- Bind lower case names in argument position
 -- Don't go under case, let, or local bindings, or IAlternative
 export
-findBindableNames : (arg : Bool) -> List Name -> (used : List String) ->
+findBindableNames' : (arg : Bool) -> List Name -> (used : List String) ->
                     RawImp -> List (String, String)
-findBindableNames True env used (IVar fc (UN n))
+findBindableNames' True env used (IVar fc (UN n))
     = if not (UN n `elem` env) && lowerFirst n
          then [(n, getUnique used n)]
          else []
-findBindableNames arg env used (IPi fc rig p mn aty retty)
+findBindableNames' arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-          findBindableNames True env used aty ++
-          findBindableNames True env' used retty
-findBindableNames arg env used (ILam fc rig p mn aty sc)
+          findBindableNames' True env used aty ++
+          findBindableNames' True env' used retty
+findBindableNames' arg env used (ILam fc rig p mn aty sc)
     = let env' = case mn of
                       Nothing => env
                       Just n => n :: env in
-      findBindableNames True env used aty ++
-      findBindableNames True env' used sc
-findBindableNames arg env used (IApp fc fn av)
-    = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IImplicitApp fc fn n av)
-    = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IWithApp fc fn av)
-    = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IAs fc _ (UN n) pat)
-    = (n, getUnique used n) :: findBindableNames arg env used pat
-findBindableNames arg env used (IAs fc _ n pat)
-    = findBindableNames arg env used pat
-findBindableNames arg env used (IMustUnify fc r pat)
-    = findBindableNames arg env used pat
-findBindableNames arg env used (IDelayed fc r t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IDelay fc t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IForce fc t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IQuote fc t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IUnquote fc t)
-    = findBindableNames arg env used t
-findBindableNames arg env used (IAlternative fc u alts)
-    = concatMap (findBindableNames arg env used) alts
+      findBindableNames' True env used aty ++
+      findBindableNames' True env' used sc
+findBindableNames' arg env used (IApp fc fn av)
+    = findBindableNames' False env used fn ++ findBindableNames' True env used av
+findBindableNames' arg env used (IImplicitApp fc fn n av)
+    = findBindableNames' False env used fn ++ findBindableNames' True env used av
+findBindableNames' arg env used (IWithApp fc fn av)
+    = findBindableNames' False env used fn ++ findBindableNames' True env used av
+findBindableNames' arg env used (IAs fc _ (UN n) pat)
+    = (n, getUnique used n) :: findBindableNames' arg env used pat
+findBindableNames' arg env used (IAs fc _ n pat)
+    = findBindableNames' arg env used pat
+findBindableNames' arg env used (IMustUnify fc r pat)
+    = findBindableNames' arg env used pat
+findBindableNames' arg env used (IDelayed fc r t)
+    = findBindableNames' arg env used t
+findBindableNames' arg env used (IDelay fc t)
+    = findBindableNames' arg env used t
+findBindableNames' arg env used (IForce fc t)
+    = findBindableNames' arg env used t
+findBindableNames' arg env used (IQuote fc t)
+    = findBindableNames' arg env used t
+findBindableNames' arg env used (IUnquote fc t)
+    = findBindableNames' arg env used t
+findBindableNames' arg env used (IAlternative fc u alts)
+    = concatMap (findBindableNames' arg env used) alts
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
-findBindableNames arg env used tm = []
+findBindableNames' arg env used tm = []
+
+export
+findBindableNames : {auto c : Ref Ctxt Defs} ->
+                    (arg : Bool) -> List Name -> (used : List String) ->
+                    RawImp -> Core (List (String, String))
+findBindableNames arg env used t = do
+  do let binds = nub (findBindableNames' arg env used t)
+     defs      <- get Ctxt
+     visibleNS <- [| (::) getNS getNestedNS |]
+     flip filterM binds $ \ candidate => do
+       ns <- lookupCtxtName (UN $ fst candidate) (gamma defs)
+       ns <- flip filterM ns $ \ (_, _, def) => do
+             do let fulln@(NS ns x) = fullname def
+                   | _ => pure True
+                pure $ if !(isVisible ns)
+                   then visibleInAny visibleNS fulln (visibility def)
+                   else False
+       -- only keep the names that are not visible in any context
+       case ns of
+         [] => do log "elab.generalise" 20 $ "Generalising " ++ show candidate
+                  pure True
+         _ => do log "elab.generalise" 20 $ "Not generalising " ++ show candidate
+                 pure False
 
 export
 findAllNames : (env : List Name) -> RawImp -> List Name
@@ -193,12 +217,12 @@ mutual
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map (UN . snd) (findBindableNames' True bound [] lhs)
                         ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs wval flags cs)
-      = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map (UN . snd) (findBindableNames' True bound [] lhs)
                         ++ bound in
             WithClause fc (substNames' bvar [] [] lhs)
                           (substNames' bvar bound' ps wval) flags cs

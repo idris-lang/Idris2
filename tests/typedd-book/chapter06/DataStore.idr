@@ -33,13 +33,13 @@ setSchema store schema = case size store of
                               S k => Nothing
 
 data Command : Schema -> Type where
-     SetSchema : Schema -> Command schema
-     Add : SchemaType schema -> Command schema
-     Get : Integer -> Command schema
-     Quit : Command schema
+     SetSchema : Schema -> Command sch
+     Add : SchemaType sch -> Command sch
+     Get : Integer -> Command sch
+     Quit : Command sch
 
 
-parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
+parsePrefix : (sch : Schema) -> String -> Maybe (SchemaType sch, String)
 parsePrefix SString input = getQuoted (unpack input)
   where
     getQuoted : List Char -> Maybe (String, String)

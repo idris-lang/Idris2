@@ -685,11 +685,11 @@ mutual
            params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
                                             pure (fst ntm, tm')) params
            -- Look for implicitly bindable names in the parameters
-           let pnames = ifThenElse !isUnboundImplicits
-                          (concatMap (findBindableNames True
+           pnames <- ifThenElse !isUnboundImplicits
+                          (concat <$> traverse (findBindableNames True
                                          (ps ++ map Builtin.fst params) [])
                                        (map Builtin.snd params'))
-                          []
+                          (pure [])
            let paramsb = map (\ ntm => (Builtin.fst ntm,
                                         doBind pnames (Builtin.snd ntm))) params'
            pure [IParameters fc paramsb (concat pds')]
@@ -717,14 +717,13 @@ mutual
                                             pure (fst ntm, tm')) params
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn body)
-           let bnames = ifThenElse !isUnboundImplicits
-                          (concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
-                                  (map Builtin.snd cons') ++
-                           concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
-                                  (map Builtin.snd params'))
-                          []
+           bnames <- ifThenElse !isUnboundImplicits
+                          (do let env = ps ++ mnames ++ map fst params
+                              let find = findBindableNames True env []
+                              xs <- concat <$> traverse (find . snd) cons'
+                              ys <- concat <$> traverse (find . snd) params'
+                              pure (xs ++ ys))
+                          (pure [])
            let paramsb = map (\ ntm => (Builtin.fst ntm,
                                         doBind bnames (Builtin.snd ntm))) params'
            let consb = map (\ ntm => (Builtin.fst ntm,
@@ -759,11 +758,12 @@ mutual
            params' <- traverse (desugar AnyExpr ps) params
            let _ = the (List RawImp) params'
            -- Look for bindable names in all the constraints and parameters
-           let bnames = if !isUnboundImplicits
-                        then
-                        concatMap (findBindableNames True ps []) (map snd cons') ++
-                        concatMap (findBindableNames True ps []) params'
-                        else []
+           bnames <- if !isUnboundImplicits
+                        then do let find = findBindableNames True ps []
+                                xs <- concat <$> traverse (find . snd) cons'
+                                ys <- concat <$> traverse find params'
+                                pure (xs ++ ys)
+                        else pure []
 
            let paramsb = map (doBind bnames) params'
            let isb = map (\ (n, r, tm) => (n, r, doBind bnames tm)) is'
@@ -791,11 +791,11 @@ mutual
            let _ = the (List Name) fnames
            -- Look for bindable names in the parameters
 
-           let bnames = if !isUnboundImplicits
-                        then concatMap (findBindableNames True
-                                         (ps ++ fnames ++ map fst params) [])
-                                       (map (\(_,_,_,d) => d) params')
-                        else []
+           bnames <- if !isUnboundImplicits
+                        then do let env = ps ++ fnames ++ map fst params
+                                let find = findBindableNames True env []
+                                concat <$> traverse (find . (\(_,_,_,d) => d)) params'
+                        else pure []
            let _ = the (List (String, String)) bnames
 
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'

@@ -178,14 +178,14 @@ mutual
     many : Monad m => ParseT m a -> ParseT m (List a)
     many p = some p <|> pure []
 
-||| Parse left-nested lists of the form `((init op arg) op arg) op arg`
+||| Parse left-nested lists of the form `((acc op arg) op arg) op arg`
 export
 covering
-hchainl : Monad m => ParseT m init -> ParseT m (init -> arg -> init) -> ParseT m arg -> ParseT m init
+hchainl : Monad m => ParseT m acc -> ParseT m (acc -> arg -> acc) -> ParseT m arg -> ParseT m acc
 hchainl pini pop parg = pini >>= go
   where
   covering
-  go : init -> ParseT m init
+  go : acc -> ParseT m acc
   go x = (do op <- pop
              arg <- parg
              go $ op x arg) <|> pure x

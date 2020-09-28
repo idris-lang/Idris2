@@ -1,7 +1,7 @@
-data Tree elem = Empty
-               | Node (Tree elem) elem (Tree elem)
+data Tree elt = Empty
+               | Node (Tree elt) elt (Tree elt)
 
-Eq elem => Eq (Tree elem) where
+Eq elt => Eq (Tree elt) where
     (==) Empty Empty = True
     (==) (Node left e right) (Node left' e' right')
           = left == left' && e == e' && right == right'

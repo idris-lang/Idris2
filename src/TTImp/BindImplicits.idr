@@ -113,7 +113,7 @@ bindNames : {auto c : Ref Ctxt Defs} ->
             (arg : Bool) -> RawImp -> Core (List Name, RawImp)
 bindNames arg tm
     = if !isUnboundImplicits
-         then do let ns = nub (findBindableNames arg [] [] tm)
+         then do let ns = nub (findBindableNames' arg [] [] tm)
                  pure (map UN (map snd ns), doBind ns tm)
          else pure ([], tm)
 
@@ -162,9 +162,9 @@ bindTypeNames : {auto c : Ref Ctxt Defs} ->
                 List Name -> RawImp-> Core RawImp
 bindTypeNames uimpls env tm
     = if !isUnboundImplicits
-             then let ns = nub (findBindableNames True env [] tm)
-                      btm = doBind ns tm in
-                      pure (addUsing uimpls btm)
+             then do ns <- findBindableNames True env [] tm
+                     let btm = doBind ns tm
+                     pure (addUsing uimpls btm)
              else pure tm
 
 export
@@ -172,18 +172,19 @@ bindTypeNamesUsed : {auto c : Ref Ctxt Defs} ->
                     List String -> List Name -> RawImp -> Core RawImp
 bindTypeNamesUsed used env tm
     = if !isUnboundImplicits
-         then do let ns = nub (findBindableNames True env used tm)
+         then do ns <- findBindableNames True env used tm
                  pure (doBind ns tm)
          else pure tm
 
+{-
 export
-piBindNames : FC -> List Name -> RawImp -> RawImp
+piBindNames : {auto c : Ref Ctxt Defs} -> FC -> List Name -> RawImp -> Core RawImp
 piBindNames loc env tm
-    = let ns = nub (findBindableNames True env [] tm) in
-          piBind (map fst ns) tm
+    = do ns <- findBindableNames True env [] tm
+         pure $ piBind (map fst ns) tm
   where
     piBind : List String -> RawImp -> RawImp
     piBind [] ty = ty
     piBind (n :: ns) ty
        = IPi loc erased Implicit (Just (UN n)) (Implicit loc False) (piBind ns ty)
-
+-}

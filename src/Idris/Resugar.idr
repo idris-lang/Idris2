@@ -172,18 +172,18 @@ mutual
               then do arg' <- toPTerm tyPrec arg
                       ret' <- toPTerm tyPrec ret
                       bracket p tyPrec (PPi fc rig Implicit n arg' ret')
-              else if needsBind n
+              else if !(needsBind n)
                       then do arg' <- toPTerm tyPrec arg
                               ret' <- toPTerm tyPrec ret
                               bracket p tyPrec (PPi fc rig Implicit n arg' ret')
                       else toPTerm p ret
     where
-      needsBind : Maybe Name -> Bool
+      needsBind : Maybe Name -> Core Bool
       needsBind (Just (UN t))
-          = let ns = findBindableNames False [] [] ret
-                allNs = findAllNames [] ret in
-                ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
-      needsBind _ = False
+          = do ns <- findBindableNames False [] [] ret
+               let allNs = findAllNames [] ret
+               pure $ ((UN t) `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+      needsBind _ = pure False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg
            ret' <- toPTerm tyPrec ret
