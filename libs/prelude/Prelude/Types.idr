@@ -93,17 +93,7 @@ Bifunctor Pair where
 %inline
 public export
 Functor (Pair a) where
-  map = mapRight
-
-%inline
-public export
-mapFst : (a -> c) -> (a, b) -> (c, b)
-mapFst = mapLeft
-
-%inline
-public export
-mapSnd : (b -> d) -> (a, b) -> (a, d)
-mapSnd = mapRight
+  map = mapSnd
 
 public export
 mapHom : (a -> b) -> (a, a) -> (b, b)
