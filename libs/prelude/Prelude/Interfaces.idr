@@ -116,25 +116,25 @@ interface Bifunctor f where
   ||| ````
   |||
   bimap : (a -> c) -> (b -> d) -> f a b -> f c d
-  bimap f g = fmap f . smap g
+  bimap f g = mapLeft f . mapRight g
 
-  ||| The action of the Bifunctor on morphisms pertaining to the first object
+  ||| The action of the Bifunctor on morphisms pertaining to the left object
   |||
   ||| ````idris example
-  ||| fmap (\x => x + 1) (1, "hello") == (2, "hello")
+  ||| mapLeft (\x => x + 1) (1, "hello") == (2, "hello")
   ||| ````
   |||
-  fmap : (a -> c) -> f a b -> f c b
-  fmap f = bimap f id
+  mapLeft : (a -> c) -> f a b -> f c b
+  mapLeft f = bimap f id
 
-  ||| The action of the Bifunctor on morphisms pertaining to the second object
+  ||| The action of the Bifunctor on morphisms pertaining to the right object
   |||
   ||| ````idris example
-  ||| smap reverse (1, "hello") == (1, "olleh")
+  ||| mapRight reverse (1, "hello") == (1, "olleh")
   ||| ````
   |||
-  smap : (b -> d) -> f a b -> f a d
-  smap = bimap id
+  mapRight : (b -> d) -> f a b -> f a d
+  mapRight = bimap id
 
 public export
 interface Functor f => Applicative f where

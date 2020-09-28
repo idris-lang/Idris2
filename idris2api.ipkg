@@ -65,7 +65,6 @@ modules =
     Data.NameMap,
     Data.StringMap,
     Data.StringTrie,
-    Data.These,
 
     Data.Bool.Extra,
 

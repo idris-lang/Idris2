@@ -43,17 +43,17 @@ Bifunctor These where
 %inline
 public export
 Functor (These a) where
-  map = smap
+  map = mapRight
 
 %inline
 public export
 mapFst : (f : a -> b) -> These a c -> These b c
-mapFst = fmap
+mapFst = mapLeft
 
 %inline
 public export
 mapSnd : (f : b -> c) -> These a b -> These a c
-mapSnd = smap
+mapSnd = mapRight
 
 public export
 bifold : Monoid m => These m m -> m
