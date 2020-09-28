@@ -347,7 +347,7 @@ startChez appdir target = unlines
     , "        ;;                    "
     , "esac                          "
     , ""
-    , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
+    , "export LD_LIBRARY_PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
 
