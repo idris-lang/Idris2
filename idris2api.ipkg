@@ -81,6 +81,7 @@ modules =
     Idris.ModTree,
     Idris.Package,
     Idris.Parser,
+    Idris.Parser.Let,
     Idris.Pretty,
     Idris.ProcessIdr,
     Idris.REPL,

@@ -1,8 +1,12 @@
 module Core.FC
 
+import Text.Bounded
 import Text.PrettyPrint.Prettyprinter
 
 %default total
+
+------------------------------------------------------------------------
+-- Types
 
 public export
 FilePos : Type
@@ -20,11 +24,8 @@ public export
 data FC = MkFC FileName FilePos FilePos
         | EmptyFC
 
-export
-Eq FC where
-  (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
-  (==) EmptyFC EmptyFC = True
-  (==) _ _ = False
+------------------------------------------------------------------------
+-- Projections
 
 export
 file : FC -> FileName
@@ -40,6 +41,16 @@ export
 endPos : FC -> FilePos
 endPos (MkFC _ _ e) = e
 endPos EmptyFC = (0, 0)
+
+------------------------------------------------------------------------
+-- Smart constructor
+
+export
+boundToFC : FileName -> WithBounds t -> FC
+boundToFC fname b = MkFC fname (start b) (end b)
+
+------------------------------------------------------------------------
+-- Predicates
 
 -- Return whether a given file position is within the file context (assuming we're
 -- in the right file)
@@ -57,6 +68,9 @@ onLine x (MkFC _ start end)
    = x >= fst start && x <= fst end
 onLine _ _ = False
 
+------------------------------------------------------------------------
+-- Constant values
+
 export
 emptyFC : FC
 emptyFC = EmptyFC
@@ -66,6 +80,15 @@ toplevelFC : FC
 toplevelFC = MkFC "(toplevel)" (0, 0) (0, 0)
 
 %name FC fc
+
+------------------------------------------------------------------------
+-- Instances
+
+export
+Eq FC where
+  (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
+  (==) EmptyFC EmptyFC = True
+  (==) _ _ = False
 
 export
 Show FC where
