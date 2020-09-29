@@ -50,10 +50,6 @@ import Data.List
 public export
 data Side = LHS | AnyExpr
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
-
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
             SyntaxInfo -> Core ()
@@ -118,6 +114,8 @@ bindBangs ((n, fc, btm) :: bs) tm
                                 (Implicit fc False) tm)
 
 idiomise : FC -> RawImp -> RawImp
+idiomise fc (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc) u) (idiomise afc <$> alts)
 idiomise fc (IApp afc f a)
     = IApp fc (IApp fc (IVar fc (UN "<*>"))
                     (idiomise afc f))
@@ -125,16 +123,16 @@ idiomise fc (IApp afc f a)
 idiomise fc fn = IApp fc (IVar fc (UN "pure")) fn
 
 pairname : Name
-pairname = NS ["Builtin"] (UN "Pair")
+pairname = NS builtinNS (UN "Pair")
 
 mkpairname : Name
-mkpairname = NS ["Builtin"] (UN "MkPair")
+mkpairname = NS builtinNS (UN "MkPair")
 
 dpairname : Name
-dpairname = NS ["DPair", "Builtin"] (UN "DPair")
+dpairname = NS dpairNS (UN "DPair")
 
 mkdpairname : Name
-mkdpairname = NS ["DPair", "Builtin"] (UN "MkDPair")
+mkdpairname = NS dpairNS (UN "MkDPair")
 
 data Bang : Type where
 
@@ -285,7 +283,10 @@ mutual
            pure (IVar fc bn)
   desugarB side ps (PIdiom fc term)
       = do itm <- desugarB side ps term
-           pure (idiomise fc itm)
+           logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
+           let val = idiomise fc itm
+           logRaw "desugar.idiom" 10 "Desugared to" val
+           pure val
   desugarB side ps (PList fc args)
       = expandList side ps fc args
   desugarB side ps (PPair fc l r)
@@ -414,7 +415,7 @@ mutual
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
 
-  addNS : Maybe (List String) -> Name -> Name
+  addNS : Maybe Namespace -> Name -> Name
   addNS (Just ns) n@(NS _ _) = n
   addNS (Just ns) n = NS ns n
   addNS _ n = n
@@ -423,7 +424,7 @@ mutual
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto m : Ref MD Metadata} ->
-             Side -> List Name -> FC -> Maybe (List String) -> List PDo -> Core RawImp
+             Side -> List Name -> FC -> Maybe Namespace -> List PDo -> Core RawImp
   expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
   expandDo side ps _ _ [DoExp fc tm] = desugar side ps tm
   expandDo side ps fc ns [e]
@@ -578,7 +579,7 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto m : Ref MD Metadata} ->
-                 List Name -> List String -> PField ->
+                 List Name -> Namespace -> PField ->
                  Core IField
   desugarField ps ns (MkField fc doc rig p n ty)
       = do addDocStringNS ns n doc
@@ -801,13 +802,14 @@ mutual
 
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
+           let recName = nameRoot tn
            fields' <- traverse (desugarField (ps ++ map fname fields ++
-                                              map fst params) [nameRoot tn])
+                                              map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
-           pure [IRecord fc (Just (nameRoot tn))
+           pure [IRecord fc (Just recName)
                          vis (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name

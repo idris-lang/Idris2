@@ -47,7 +47,7 @@ total zeroAlwaysSmaller : {n : Nat} -> LTE Z n
 zeroAlwaysSmaller = LTEZero
 
 public export
-total ltesuccinjective : {n : Nat} -> {m : Nat} -> (LTE n m -> Void) -> LTE (S n) (S m) -> Void
+total ltesuccinjective : {0 n : Nat} -> {0 m : Nat} -> (LTE n m -> Void) -> LTE (S n) (S m) -> Void
 ltesuccinjective {n} {m} disprf (LTESucc nLTEm) = void (disprf nLTEm)
 ltesuccinjective {n} {m} disprf LTEZero         impossible
 

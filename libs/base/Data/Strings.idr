@@ -301,29 +301,29 @@ parseDouble = mkDouble . wfe . trim
 
     wfe : String -> Maybe (Double, Double, Integer)
     wfe cs = case split (== '.') cs of
-               (wholeAndExp :: []) =>
+               (wholeAndExp ::: []) =>
                  case split (\c => c == 'e' || c == 'E') wholeAndExp of
-                   (whole::exp::[]) =>
+                   (whole:::exp::[]) =>
                      do
                        w <- cast {from=Integer} <$> parseInteger whole
                        e <- parseInteger exp
                        pure (w, 0, e)
-                   (whole::[]) =>
+                   (whole:::[]) =>
                      do
                        w <- cast {from=Integer} <$> parseInteger whole
                        pure (w, 0, 0)
                    _ => Nothing
-               (whole::fracAndExp::[]) =>
+               (whole:::fracAndExp::[]) =>
                  case split (\c => c == 'e' || c == 'E') fracAndExp of
-                   (""::exp::[]) => Nothing
-                   (frac::exp::[]) =>
+                   ("":::exp::[]) => Nothing
+                   (frac:::exp::[]) =>
                      do
                        w <- cast {from=Integer} <$> parseInteger whole
                        f <- (/ (natpow 10 (length frac))) <$>
                             (cast <$> parseNumWithoutSign (unpack frac) 0)
                        e <- parseInteger exp
                        pure (w, if w < 0 then (-f) else f, e)
-                   (frac::[]) =>
+                   (frac:::[]) =>
                      do
                        w <- cast {from=Integer} <$> parseInteger whole
                        f <- (/ (natpow 10 (length frac))) <$>

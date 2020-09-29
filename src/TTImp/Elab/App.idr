@@ -2,6 +2,7 @@ module TTImp.Elab.App
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata

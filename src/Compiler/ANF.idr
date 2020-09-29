@@ -67,7 +67,7 @@ mutual
     show (AAppName fc n args)
         = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
-        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++ 
+        = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (AApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
@@ -92,7 +92,7 @@ mutual
   export
   Show AConAlt where
     show (MkAConAlt n t args sc)
-        = "%conalt " ++ show n ++ 
+        = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String
@@ -156,19 +156,13 @@ letBind fc args f
         = ALet fc i t (doBind (ALocal i :: vs) xs)
     doBind vs ((var, _) :: xs) = doBind (var :: vs) xs
 
-toVect : (n : Nat) -> List a -> Maybe (Vect n a)
-toVect Z [] = Just []
-toVect (S k) (x :: xs)
-    = do xs' <- toVect k xs
-         pure (x :: xs')
-toVect _ _ = Nothing
 
 mlet : {auto v : Ref Next Int} ->
        FC -> ANF -> (AVar -> ANF) -> Core ANF
 mlet fc (AV _ var) sc = pure $ sc var
 mlet fc val sc
     = do i <- nextVar
-         pure $ ALet fc i val (sc (ALocal i)) 
+         pure $ ALet fc i val (sc (ALocal i))
 
 mutual
   anfArgs : {vars : _} ->

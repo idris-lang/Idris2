@@ -13,6 +13,7 @@ module TTImp.Interactive.ExprSearch
 import Core.AutoSearch
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.LinearCheck
 import Core.Metadata
@@ -378,7 +379,7 @@ searchNames fc rig opts env ty topty (n :: ns)
          getSuccessful fc rig opts False env ty topty
             (map (searchName fc rig opts env nfty topty) visns)
   where
-    visible : Context -> List (List String) -> Name ->
+    visible : Context -> List Namespace -> Name ->
               Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam

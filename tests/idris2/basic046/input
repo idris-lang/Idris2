@@ -1,0 +1,5 @@
+distrL "begin" [0..2]
+distrR "end" [0..2]
+insert
+
+:q

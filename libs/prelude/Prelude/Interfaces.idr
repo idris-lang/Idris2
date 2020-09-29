@@ -2,6 +2,7 @@ module Prelude.Interfaces
 
 import Builtin
 import Prelude.Basics
+import Prelude.EqOrd
 import Prelude.Num
 import Prelude.Ops
 
@@ -32,6 +33,33 @@ interface Semigroup ty where
 public export
 interface Semigroup ty => Monoid ty where
   neutral : ty
+
+public export
+Semigroup () where
+  _ <+> _ = ()
+
+public export
+Monoid () where
+  neutral = ()
+
+public export
+Semigroup Ordering where
+  LT <+> _ = LT
+  GT <+> _ = GT
+  EQ <+> o =  o
+
+public export
+Monoid Ordering where
+  neutral = EQ
+
+public export
+Semigroup b => Semigroup (a -> b) where
+  (f <+> g) x = f x <+> g x
+
+public export
+Monoid b => Monoid (a -> b) where
+  neutral _ = neutral
+
 
 export
 shiftL : Int -> Int -> Int

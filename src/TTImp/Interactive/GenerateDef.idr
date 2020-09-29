@@ -3,6 +3,7 @@ module TTImp.Interactive.GenerateDef
 -- Attempt to generate a complete definition from a type
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Metadata
 import Core.Normalise
@@ -56,7 +57,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
     = do c <- uniqueRHS c
-         Right clause <- checkClause linear Private False n [] (MkNested []) [] c
+         Right clause <- checkClause linear Private PartialOK False n [] (MkNested []) [] c
             | Left err => noResult -- TODO: impossible clause, do something
                                    -- appropriate
 

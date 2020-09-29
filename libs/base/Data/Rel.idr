@@ -31,6 +31,7 @@ All (t :: ts) p = (x : t) -> All ts (p x)
 ||| ```
 ||| Which is the type of a pair of natural numbers along with a proof that the first
 ||| is smaller or equal than the second.
+public export
 Ex : (ts : Vect n Type) -> (p : Rel ts) -> Type
 Ex [] p = p
 Ex (t :: ts) p = (x : t ** Ex ts (p x))

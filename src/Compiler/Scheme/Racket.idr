@@ -7,6 +7,7 @@ import Compiler.Scheme.Common
 
 import Core.Options
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.TT
@@ -250,11 +251,13 @@ useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC appdir fc [] args ret = throw (NoForeignCC fc)
 useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC appdir fc ccs args ret
+           Just ("scheme,racket", [sfn]) =>
+               do body <- schemeCall fc sfn (map fst args) ret
+                  pure ("", body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)

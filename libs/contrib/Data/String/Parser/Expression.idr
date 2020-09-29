@@ -116,6 +116,6 @@ buildExpressionParser a operators simpleExpr =
           rassocP = mkRassocP amLeft amNon rassocOp termP
           lassocP = mkLassocP amRight amNon lassocOp termP
           nassocP = mkNassocP amRight amLeft amNon nassocOp termP
-          in
+      in
           do x <- termP
              rassocP x <|> lassocP x <|> nassocP x <|> pure x <?> "operator"

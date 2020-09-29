@@ -1,12 +1,13 @@
-1/1: Building Lambda (Lambda.idr)
+1/2: Building NoRegression (NoRegression.idr)
+2/2: Building Lambda (Lambda.idr)
 Error: While processing right hand side of term. When unifying Term ?g (TyFunc ?tyA (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat)))))))) and Term Empty (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat))))))).
 Mismatch between: TyFunc TyNat TyNat and TyNat.
 
-Lambda.idr:60:3--86:9
- 60 |   Func
- 61 |       (Func
- 62 |            (Func
- 63 |                 (Func
- 64 |                      (Func
- 65 |                           (Func
+Lambda.idr:62:3--88:9
+ 62 |   Func
+ 63 |       (Func
+ 64 |            (Func
+ 65 |                 (Func
+ 66 |                      (Func
+ 67 |                           (Func
 

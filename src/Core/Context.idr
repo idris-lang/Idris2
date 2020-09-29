@@ -19,7 +19,6 @@ import Data.NameMap
 import Data.StringMap
 
 import System
-import System.Clock
 import System.Directory
 
 %default covering
@@ -288,6 +287,12 @@ export
 refersToRuntime : GlobalDef -> NameMap Bool
 refersToRuntime def = maybe empty id (refersToRuntimeM def)
 
+export
+findSetTotal : List DefFlag -> Maybe TotalReq
+findSetTotal [] = Nothing
+findSetTotal (SetTotal t :: _) = Just t
+findSetTotal (_ :: xs) = findSetTotal xs
+
 -- Label for array references
 export
 data Arr : Type where
@@ -330,7 +335,7 @@ record Context where
     -- This only matters during evaluation and type checking, to control
     -- access in a program - in all other cases, we'll assume everything is
     -- visible
-    visibleNS : List (List String)
+    visibleNS : List Namespace
     allPublic : Bool -- treat everything as public. This is only intended
                      -- for checking partially evaluated definitions
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
@@ -356,7 +361,7 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [["_PE"]] False False empty)
+         pure (MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty)
 
 export
 initCtxt : Core Context
@@ -523,10 +528,6 @@ lookupCtxtName n ctxt
                       | Nothing => pure []
                  lookupPossibles [] ps
   where
-    matches : Name -> Name -> Bool
-    matches (NS ns _) (NS cns _) = ns `isPrefixOf` cns
-    matches (NS _ _) _ = True -- no in library name, so root doesn't match
-    matches _ _ = True -- no prefix, so root must match, so good
 
     resn : (Name, Int, GlobalDef) -> Int
     resn (_, i, _) = i
@@ -873,8 +874,8 @@ record Defs where
   constructor MkDefs
   gamma : Context
   mutData : List Name -- Currently declared but undefined data types
-  currentNS : List String -- namespace for current definitions
-  nestedNS : List (List String) -- other nested namespaces we can look in
+  currentNS : Namespace -- namespace for current definitions
+  nestedNS : List Namespace -- other nested namespaces we can look in
   options : Options
   toSave : NameMap ()
   nextTag : Int
@@ -902,11 +903,11 @@ record Defs where
   saveTransforms : List (Name, Transform)
   namedirectives : NameMap (List String)
   ifaceHash : Int
-  importHashes : List (List String, Int)
+  importHashes : List (Namespace, Int)
      -- ^ interface hashes of imported modules
-  imported : List (List String, Bool, List String)
+  imported : List (ModuleIdent, Bool, Namespace)
      -- ^ imported modules, whether to rexport, as namespace
-  allImported : List (String, (List String, Bool, List String))
+  allImported : List (String, (ModuleIdent, Bool, Namespace))
      -- ^ all imported filenames/namespaces, just to avoid loading something
      -- twice unnecessarily (this is a record of all the things we've
      -- called 'readFromTTC' with, in practice)
@@ -943,7 +944,7 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
-         pure (MkDefs gam [] ["Main"] [] defaults empty 100
+         pure (MkDefs gam [] mainNS [] defaults empty 100
                       empty empty empty [] [] empty []
                       empty 5381 [] [] [] [] [] empty empty empty empty [])
 
@@ -1254,24 +1255,23 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 
 -- private names are only visible in this namespace if their namespace
 -- is the current namespace (or an outer one)
--- that is: given that most recent namespace is first in the list,
--- the namespace of 'n' is a suffix of nspace
-visibleIn : (nspace : List String) -> Name -> Visibility -> Bool
-visibleIn nspace (NS ns n) Private = isSuffixOf ns nspace
+-- that is: the namespace of 'n' is a parent of nspace
+visibleIn : Namespace -> Name -> Visibility -> Bool
+visibleIn nspace (NS ns n) Private = isParentOf ns nspace
 -- Public and Export names are always visible
 visibleIn nspace n _ = True
 
 export
-visibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
+visibleInAny : List Namespace -> Name -> Visibility -> Bool
 visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 
-reducibleIn : (nspace : List String) -> Name -> Visibility -> Bool
-reducibleIn nspace (NS ns (UN n)) Export = isSuffixOf ns nspace
-reducibleIn nspace (NS ns (UN n)) Private = isSuffixOf ns nspace
+reducibleIn : Namespace -> Name -> Visibility -> Bool
+reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
+reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
 reducibleIn nspace n _ = True
 
 export
-reducibleInAny : (nspace : List (List String)) -> Name -> Visibility -> Bool
+reducibleInAny : List Namespace -> Name -> Visibility -> Bool
 reducibleInAny nss n vis = any (\ns => reducibleIn ns n vis) nss
 
 export
@@ -1663,7 +1663,7 @@ clearSavedHints
 -- Set the default namespace for new definitions
 export
 setNS : {auto c : Ref Ctxt Defs} ->
-        List String -> Core ()
+        Namespace -> Core ()
 setNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS = ns } defs)
@@ -1671,7 +1671,7 @@ setNS ns
 -- Set the nested namespaces we're allowed to look inside
 export
 setNestedNS : {auto c : Ref Ctxt Defs} ->
-              List (List String) -> Core ()
+              List Namespace -> Core ()
 setNestedNS ns
     = do defs <- get Ctxt
          put Ctxt (record { nestedNS = ns } defs)
@@ -1679,7 +1679,7 @@ setNestedNS ns
 -- Get the default namespace for new definitions
 export
 getNS : {auto c : Ref Ctxt Defs} ->
-        Core (List String)
+        Core Namespace
 getNS
     = do defs <- get Ctxt
          pure (currentNS defs)
@@ -1687,7 +1687,7 @@ getNS
 -- Get the nested namespaces we're allowed to look inside
 export
 getNestedNS : {auto c : Ref Ctxt Defs} ->
-              Core (List (List String))
+              Core (List Namespace)
 getNestedNS
     = do defs <- get Ctxt
          pure (nestedNS defs)
@@ -1698,14 +1698,14 @@ getNestedNS
 -- "import X as [current namespace]")
 export
 addImported : {auto c : Ref Ctxt Defs} ->
-              (List String, Bool, List String) -> Core ()
+              (ModuleIdent, Bool, Namespace) -> Core ()
 addImported mod
     = do defs <- get Ctxt
          put Ctxt (record { imported $= (mod ::) } defs)
 
 export
 getImported : {auto c : Ref Ctxt Defs} ->
-              Core (List (List String, Bool, List String))
+              Core (List (ModuleIdent, Bool, Namespace))
 getImported
     = do defs <- get Ctxt
          pure (imported defs)
@@ -1732,6 +1732,7 @@ getDirectives cg
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing
 
+export
 getNextTypeTag : {auto c : Ref Ctxt Defs} ->
                  Core Int
 getNextTypeTag
@@ -1739,126 +1740,16 @@ getNextTypeTag
          put Ctxt (record { nextTag $= (+1) } defs)
          pure (nextTag defs)
 
--- If a name appears more than once in an argument list, only the first is
--- considered a parameter
-dropReps : List (Maybe (Term vars)) -> List (Maybe (Term vars))
-dropReps [] = []
-dropReps {vars} (Just (Local fc r x p) :: xs)
-    = Just (Local fc r x p) :: assert_total (dropReps (map toNothing xs))
-  where
-    toNothing : Maybe (Term vars) -> Maybe (Term vars)
-    toNothing tm@(Just (Local _ _ v' _))
-        = if x == v' then Nothing else tm
-    toNothing tm = tm
-dropReps (x :: xs) = x :: dropReps xs
-
-updateParams : Maybe (List (Maybe (Term vars))) ->
-                  -- arguments to the type constructor which could be
-                  -- parameters
-                  -- Nothing, as an argument, means this argument can't
-                  -- be a parameter position
-               List (Term vars) ->
-                  -- arguments to an application
-               List (Maybe (Term vars))
-updateParams Nothing args = dropReps $ map couldBeParam args
-  where
-    couldBeParam : Term vars -> Maybe (Term vars)
-    couldBeParam (Local fc r v p) = Just (Local fc r v p)
-    couldBeParam _ = Nothing
-updateParams (Just args) args' = dropReps $ zipWith mergeArg args args'
-  where
-    mergeArg : Maybe (Term vars) -> Term vars -> Maybe (Term vars)
-    mergeArg (Just (Local fc r x p)) (Local _ _ y _)
-        = if x == y then Just (Local fc r x p) else Nothing
-    mergeArg _ _ = Nothing
-
-getPs : {vars : _} ->
-        Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
-        Maybe (List (Maybe (Term vars)))
-getPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
-      = let scPs = getPs (Prelude.map (Prelude.map (Prelude.map weaken)) acc) tyn sc in
-            map (map shrink) scPs
-  where
-    shrink : Maybe (Term (x :: vars)) -> Maybe (Term vars)
-    shrink Nothing = Nothing
-    shrink (Just tm) = shrinkTerm tm (DropCons SubRefl)
-getPs acc tyn tm
-    = case getFnArgs tm of
-           (Ref _ _ n, args) =>
-              if n == tyn
-                 then Just (updateParams acc args)
-                 else acc
-           _ => acc
-
-toPos : Maybe (List (Maybe a)) -> List Nat
-toPos Nothing = []
-toPos (Just ns) = justPos 0 ns
-  where
-    justPos : Nat -> List (Maybe a) -> List Nat
-    justPos i [] = []
-    justPos i (Just x :: xs) = i :: justPos (1 + i) xs
-    justPos i (Nothing :: xs) = justPos (1 + i) xs
-
-getConPs : {vars : _} ->
-           Maybe (List (Maybe (Term vars))) -> Name -> Term vars -> List Nat
-getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
-    = let bacc = getPs acc tyn ty in
-          getConPs (map (map (map weaken)) bacc) tyn sc
-getConPs acc tyn tm = toPos (getPs acc tyn tm)
-
-combinePos : Eq a => List (List a) -> List a
-combinePos [] = []
-combinePos (xs :: xss) = filter (\x => all (elem x) xss) xs
-
-paramPos : Name -> (dcons : List ClosedTerm) ->
-           List Nat
-paramPos tyn dcons = combinePos (map (getConPs Nothing tyn) dcons)
-
-export
-addData : {auto c : Ref Ctxt Defs} ->
-					List Name -> Visibility -> Int -> DataDef -> Core Int
-addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
-    = do defs <- get Ctxt
-         tag <- getNextTypeTag
-         let tydef = newDef dfc tyn top vars tycon vis
-                            (TCon tag arity
-                                  (paramPos (Resolved tidx) (map type datacons))
-                                  (allDet arity)
-                                  defaultFlags [] (map name datacons) Nothing)
-         (idx, gam') <- addCtxt tyn tydef (gamma defs)
-         gam'' <- addDataConstructors 0 datacons gam'
-         put Ctxt (record { gamma = gam'' } defs)
-         pure idx
-  where
-    allDet : Nat -> List Nat
-    allDet Z = []
-    allDet (S k) = [0..k]
-
-    conVisibility : Visibility -> Visibility
-    conVisibility Export = Private
-    conVisibility x = x
-
-    addDataConstructors : (tag : Int) -> List Constructor ->
-                          Context -> Core Context
-    addDataConstructors tag [] gam = pure gam
-    addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)
-             (idx, gam') <- addCtxt n condef gam
-             -- Check 'n' is undefined
-             Nothing <- lookupCtxtExact n gam
-                 | Just gdef => throw (AlreadyDefined fc n)
-             addDataConstructors (tag + 1) cs gam'
-
 -- Add a new nested namespace to the current namespace for new definitions
 -- e.g. extendNS ["Data"] when namespace is "Prelude.List" leads to
 -- current namespace of "Prelude.List.Data"
 -- Inner namespaces go first, for ease of name lookup
 export
 extendNS : {auto c : Ref Ctxt Defs} ->
-           List String -> Core ()
+           Namespace -> Core ()
 extendNS ns
     = do defs <- get Ctxt
-         put Ctxt (record { currentNS $= ((reverse ns) ++) } defs)
+         put Ctxt (record { currentNS $= (<.> ns) } defs)
 
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
@@ -1888,14 +1779,14 @@ inCurrentNS n = pure n
 
 export
 setVisible : {auto c : Ref Ctxt Defs} ->
-             (nspace : List String) -> Core ()
+             Namespace -> Core ()
 setVisible nspace
     = do defs <- get Ctxt
          put Ctxt (record { gamma->visibleNS $= (nspace ::) } defs)
 
 export
 getVisible : {auto c : Ref Ctxt Defs} ->
-             Core (List (List String))
+             Core (List Namespace)
 getVisible
     = do defs <- get Ctxt
          pure (visibleNS (gamma defs))
@@ -1921,21 +1812,18 @@ isAllPublic
 -- the namespace itself, and any namespace it's nested inside)
 export
 isVisible : {auto c : Ref Ctxt Defs} ->
-            (nspace : List String) -> Core Bool
+            Namespace -> Core Bool
 isVisible nspace
     = do defs <- get Ctxt
          pure (any visible (allParents (currentNS defs) ++
                             nestedNS defs ++
                             visibleNS (gamma defs)))
-  where
-    allParents : List String -> List (List String)
-    allParents [] = []
-    allParents (n :: ns) = (n :: ns) :: allParents ns
 
-    -- Visible if any visible namespace is a suffix of the namespace we're
+  where
+    -- Visible if any visible namespace is a parent of the namespace we're
     -- asking about
-    visible : List String -> Bool
-    visible visns = isSuffixOf visns nspace
+    visible : Namespace -> Bool
+    visible visns = isParentOf visns nspace
 
 -- Get the next entry id in the context (this is for recording where to go
 -- back to when backtracking in the elaborator)
@@ -2314,156 +2202,3 @@ recordWarning : {auto c : Ref Ctxt Defs} ->
 recordWarning w
     = do defs <- get Ctxt
          put Ctxt (record { warnings $= (w ::) } defs)
-
--- Log message with a term, translating back to human readable names first
-export
-logTerm : {vars : _} ->
-          {auto c : Ref Ctxt Defs} ->
-          String -> Nat -> Lazy String -> Term vars -> Core ()
-logTerm str n msg tm
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do tm' <- toFullNames tm
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
-            else pure ()
-export
-log' : {auto c : Ref Ctxt Defs} ->
-       LogLevel -> Lazy String -> Core ()
-log' lvl msg
-    = do opts <- getSession
-         if keepLog lvl (logLevel opts)
-            then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
-
-export
-log : {auto c : Ref Ctxt Defs} ->
-      String -> Nat -> Lazy String -> Core ()
-log str n msg
-    = do let lvl = mkLogLevel str n
-         log' lvl msg
-
-export
-logC : {auto c : Ref Ctxt Defs} ->
-       String -> Nat -> Core String -> Core ()
-logC str n cmsg
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do msg <- cmsg
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
-
-export
-logTimeOver : Integer -> Core String -> Core a -> Core a
-logTimeOver nsecs str act
-    = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
-         let t = seconds clock * nano + nanoseconds clock
-         res <- act
-         clock <- coreLift (clockTime Process)
-         let t' = seconds clock * nano + nanoseconds clock
-         let time = t' - t
-         when (time > nsecs) $
-           assert_total $ -- We're not dividing by 0
-              do str' <- str
-                 coreLift $ putStrLn $ "TIMING " ++ str' ++ ": " ++
-                          show (time `div` nano) ++ "." ++
-                          addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                          "s"
-         pure res
-  where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
-
-export
-logTimeWhen : {auto c : Ref Ctxt Defs} ->
-              Bool -> Lazy String -> Core a -> Core a
-logTimeWhen p str act
-    = if p
-         then do clock <- coreLift (clockTime Process)
-                 let nano = 1000000000
-                 let t = seconds clock * nano + nanoseconds clock
-                 res <- act
-                 clock <- coreLift (clockTime Process)
-                 let t' = seconds clock * nano + nanoseconds clock
-                 let time = t' - t
-                 assert_total $ -- We're not dividing by 0
-                    coreLift $ putStrLn $ "TIMING " ++ str ++ ": " ++
-                             show (time `div` nano) ++ "." ++
-                             addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                             "s"
-                 pure res
-         else act
-  where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
-
-logTimeRecord' : {auto c : Ref Ctxt Defs} ->
-                 String -> Core a -> Core a
-logTimeRecord' key act
-    = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
-         let t = seconds clock * nano + nanoseconds clock
-         res <- act
-         clock <- coreLift (clockTime Process)
-         let t' = seconds clock * nano + nanoseconds clock
-         let time = t' - t
-         defs <- get Ctxt
-         let tot = case lookup key (timings defs) of
-                        Nothing => 0
-                        Just (_, t) => t
-         put Ctxt (record { timings $= insert key (False, tot + time) } defs)
-         pure res
-
--- for ad-hoc profiling, record the time the action takes and add it
--- to the time for the given category
-export
-logTimeRecord : {auto c : Ref Ctxt Defs} ->
-                String -> Core a -> Core a
-logTimeRecord key act
-    = do defs <- get Ctxt
-         -- Only record if we're not currently recording that key
-         case lookup key (timings defs) of
-              Just (True, t) => act
-              Just (False, t)
-                => do put Ctxt (record { timings $= insert key (True, t) } defs)
-                      logTimeRecord' key act
-              Nothing
-                => logTimeRecord' key act
-
-export
-showTimeRecord : {auto c : Ref Ctxt Defs} ->
-                 Core ()
-showTimeRecord
-    = do defs <- get Ctxt
-         traverse_ showTimeLog (toList (timings defs))
-  where
-    addZeros : List Char -> String
-    addZeros [] = "000"
-    addZeros [x] = "00" ++ cast x
-    addZeros [x,y] = "0" ++ cast x ++ cast y
-    addZeros str = pack str
-
-    showTimeLog : (String, (Bool, Integer)) -> Core ()
-    showTimeLog (key, (_, time))
-        = do coreLift $ putStr (key ++ ": ")
-             let nano = 1000000000
-             assert_total $ -- We're not dividing by 0
-                    coreLift $ putStrLn $ show (time `div` nano) ++ "." ++
-                               addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
-                               "s"
-
-export
-logTime : {auto c : Ref Ctxt Defs} ->
-          Lazy String -> Core a -> Core a
-logTime str act
-    = do opts <- getSession
-         logTimeWhen (logTimings opts) str act

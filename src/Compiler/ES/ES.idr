@@ -56,7 +56,7 @@ addConstToPreamble name def =
     addToPreamble name newName v
 
 requireSafe : String -> String
-requireSafe = pack . map (\c => case c of 
+requireSafe = pack . map (\c => case c of
                                      '@' => '_'
                                      '/' => '_'
                                      '-' => '_'
@@ -87,7 +87,7 @@ keywordSafe "var" = "var_"
 keywordSafe s = s
 
 jsName : Name -> String
-jsName (NS ns n) = showSep "_" (reverse ns) ++ "_" ++ jsName n
+jsName (NS ns n) = showNSWithSep "_" ns ++ "_" ++ jsName n
 jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n
@@ -416,7 +416,6 @@ mutual
 static_preamble : List String
 static_preamble =
   [ "class IdrisError extends Error { }"
-  , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
   , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
   , "function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}"
   ]
