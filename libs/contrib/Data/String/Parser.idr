@@ -1,6 +1,6 @@
 ||| A simple parser combinator library for strings. Inspired by attoparsec zepto.
 module Data.String.Parser
-import Control.Monad.Identity
+import public Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.Strings
@@ -209,22 +209,28 @@ covering
 takeWhile : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile f = pack <$> many (satisfy f)
 
+||| Similar to `takeWhile` but fails if the resulting string is empty.
+export
+covering
+takeWhile1 : Monad m => (Char -> Bool) -> ParseT m String
+takeWhile1 f = pack <$> some (satisfy f)
+
 ||| Parses one or more space characters
 export
 covering
 spaces : Monad m => ParseT m ()
-spaces = skip (many space) <?> "white space"
+spaces = skip (some space) <?> "white space"
 
 ||| Discards brackets around a matching parser
 export
 parens : Monad m => ParseT m a -> ParseT m a
 parens p = char '(' *> p <* char ')'
 
-||| Discards whitespace after a matching parser
+||| Discards optional whitespace after a matching parser
 export
 covering
 lexeme : Monad m => ParseT m a -> ParseT m a
-lexeme p = p <* spaces
+lexeme p = p <* option () spaces
 
 ||| Matches a specific string, then skips following whitespace
 export
