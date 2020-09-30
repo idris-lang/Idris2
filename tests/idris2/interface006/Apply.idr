@@ -2,8 +2,6 @@ module Apply
 
 -- These are not Biapplicatives.  Those are in Data.Biapplicative
 
-import Bifunctor
-
 infixl 4 <<$>>, <<&>>, <<.>>, <<., .>>, <<..>>
 
 ||| Primarily used to make the definitions of bilift2 and bilift3 pretty

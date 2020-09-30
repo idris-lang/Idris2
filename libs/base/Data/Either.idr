@@ -95,11 +95,6 @@ mirror (Right x) = Left x
 -- Bifunctor
 
 export
-bimap : (a -> c) -> (b -> d) -> Either a b -> Either c d
-bimap l r (Left a) = Left (l a)
-bimap l r (Right b) = Right (r b)
-
-export
 pushInto : c -> Either a b -> Either (c, a) (c, b)
 pushInto c = bimap (\ a => (c, a)) (\ b => (c, b))
   -- ^ not using sections to keep it backwards compatible

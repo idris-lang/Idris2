@@ -7,11 +7,9 @@ import TTImp.TTImp
 import Data.List
 import Data.Strings
 
-%default covering
+import Utils.String
 
-lowerFirst : String -> Bool
-lowerFirst "" = False
-lowerFirst str = assert_total (isLower (prim__strHead str))
+%default covering
 
 export
 getUnique : List String -> String -> String

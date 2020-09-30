@@ -202,7 +202,7 @@ export
 reservedSymbols : List String
 reservedSymbols
     = symbols ++
-      ["%", "\\", ":", "=", "|", "|||", "<-", "->", "=>", "?", "!",
+      ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
        "&", "**", "..", "~"]
 
 fromBinLit : String -> Integer

@@ -7,11 +7,15 @@ import        Parser.Lexer.Source
 import        TTImp.TTImp
 
 import public Text.Parser
+import        Data.Either
 import        Data.List
 import        Data.List.Views
 import        Data.List1
 import        Data.Maybe
 import        Data.Strings
+import Utils.String
+
+import Idris.Parser.Let
 
 %default covering
 
@@ -47,9 +51,6 @@ plhs = MkParseOpts False False
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure
-
-boundToFC : String -> WithBounds t -> FC
-boundToFC fname b = MkFC fname (start b) (end b)
 
 atom : FileName -> Rule PTerm
 atom fname
@@ -533,63 +534,31 @@ mutual
            = PLam (boundToFC fname pat) rig Explicit pat.val ty
                   (bindAll rest scope)
 
-  letBinder : FileName -> IndentInfo ->
-              Rule (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause)
-  letBinder fname indents
-      = do b <- bounds (do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
-                           (rigc, pat) <- pure s.val
-                           ty <- option (PImplicit (boundToFC fname s))
-                                        (do symbol ":"
-                                            typeExpr (pnoeq pdef) fname indents)
-                           symbol "="
-                           val <- expr pnowith fname indents
-                           alts <- block (patAlt fname)
-                           rig <- getMult rigc
-                           pure (rig, pat, ty, val, alts))
-           (rig, pat, ty, val, alts) <- the (SourceEmptyRule (RigCount, PTerm, PTerm, PTerm, List PClause)) (pure b.val)
-           pure (start b, end b, rig, pat, ty, val, alts)
+  letBlock : FileName -> IndentInfo -> Rule (WithBounds (Either LetBinder LetDecl))
+  letBlock fname indents = bounds (letBinder <||> letDecl) where
 
-  buildLets : FileName ->
-              List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
-              PTerm -> PTerm
-  buildLets fname [] sc = sc
-  buildLets fname ((start, end, rig, pat, ty, val, alts) :: rest) sc
-      = let fc = MkFC fname start end in
-            PLet fc rig pat ty val
-                 (buildLets fname rest sc) alts
+    letBinder : Rule LetBinder
+    letBinder = do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
+                   (rigc, pat) <- pure s.val
+                   ty <- option (PImplicit (boundToFC fname s))
+                                (symbol ":" *> typeExpr (pnoeq pdef) fname indents)
+                   (symbol "=" <|> symbol ":=")
+                   val <- expr pnowith fname indents
+                   alts <- block (patAlt fname)
+                   rig <- getMult rigc
+                   pure (MkLetBinder rig pat ty val alts)
 
-  buildDoLets : FileName ->
-                List (FilePos, FilePos, RigCount, PTerm, PTerm, PTerm, List PClause) ->
-                List PDo
-  buildDoLets fname [] = []
-  buildDoLets fname ((start, end, rig, PRef fc' (UN n), ty, val, []) :: rest)
-      = let fc = MkFC fname start end in
-            if lowerFirst n
-               then DoLet fc (UN n) rig ty val :: buildDoLets fname rest
-               else DoLetPat fc (PRef fc' (UN n)) ty val []
-                         :: buildDoLets fname rest
-  buildDoLets fname ((start, end, rig, pat, ty, val, alts) :: rest)
-      = let fc = MkFC fname start end in
-            DoLetPat fc pat ty val alts :: buildDoLets fname rest
+    letDecl : Rule LetDecl
+    letDecl = collectDefs . concat <$> nonEmptyBlock (try . topDecl fname)
 
   let_ : FileName -> IndentInfo -> Rule PTerm
   let_ fname indents
-      = do b <- bounds (do keyword "let"
-                           res <- nonEmptyBlock (letBinder fname)
-                           commitKeyword indents "in"
-                           scope <- typeExpr pdef fname indents
-                           pure (res, scope))
-           (res, scope) <- pure b.val
-           pure (buildLets fname res scope)
-
-    <|> do b <- bounds (do keyword "let"
-                           commit
-                           ds <- nonEmptyBlock (topDecl fname)
-                           commitKeyword indents "in"
-                           scope <- typeExpr pdef fname indents
-                           pure (ds, scope))
-           (ds, scope) <- pure b.val
-           pure (PLocal (boundToFC fname b) (collectDefs (concat ds)) scope)
+      = do keyword "let"
+           commit
+           res <- nonEmptyBlock (letBlock fname)
+           commitKeyword indents "in"
+           scope <- typeExpr pdef fname indents
+           pure (mkLets fname res scope)
 
   case_ : FileName -> IndentInfo -> Rule PTerm
   case_ fname indents
@@ -695,10 +664,6 @@ mutual
                                      ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
-  lowerFirst : String -> Bool
-  lowerFirst "" = False
-  lowerFirst str = assert_total (isLower (prim__strHead str))
-
   validPatternVar : Name -> SourceEmptyRule ()
   validPatternVar (UN n)
       = if lowerFirst n then pure ()
@@ -718,12 +683,10 @@ mutual
            (n, val) <- pure b.val
            pure [DoBind (boundToFC fname b) n val]
     <|> do keyword "let"
-           res <- block (letBinder fname)
+           commit
+           res <- nonEmptyBlock (letBlock fname)
            atEnd indents
-           pure (buildDoLets fname res)
-    <|> do b <- bounds (keyword "let" *> block (topDecl fname))
-           atEnd indents
-           pure [DoLetLocal (boundToFC fname b) (concat b.val)]
+           pure (mkDoLets fname res)
     <|> do b <- bounds (keyword "rewrite" *> expr pdef fname indents)
            atEnd indents
            pure [DoRewrite (boundToFC fname b) b.val]
@@ -831,7 +794,7 @@ mutual
                             symbol "("
                             wval <- bracketedExpr fname flags indents
                             ws <- nonEmptyBlock (clause (S withArgs) fname)
-                            pure (flags, wval, ws))
+                            pure (flags, wval, forget ws))
             (flags, wval, ws) <- pure b.val
             pure (MkWithClause (boundToFC fname (mergeBounds start b)) lhs wval flags.val ws)
      <|> do end <- bounds (keyword "impossible")
@@ -1177,10 +1140,6 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-getRight : Either a b -> Maybe b
-getRight (Left _) = Nothing
-getRight (Right v) = Just v
-
 constraints : FileName -> IndentInfo -> SourceEmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
@@ -1427,16 +1386,9 @@ topDecl fname indents
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
-    = let (cs', rest) = spanMap isClause ds in
-          PDef annot (cs ++ cs') :: assert_total (collectDefs rest)
+    = let (cs', rest) = spanBy isClause ds in
+          PDef annot (cs ++ concat cs') :: assert_total (collectDefs rest)
   where
-    spanMap : (a -> Maybe (List b)) -> List a -> (List b, List a)
-    spanMap f [] = ([], [])
-    spanMap f (x :: xs) = case f x of
-                               Nothing => ([], x :: xs)
-                               Just y => case spanMap f xs of
-                                              (ys, zs) => (y ++ ys, zs)
-
     isClause : PDecl -> Maybe (List PClause)
     isClause (PDef annot cs)
         = Just cs

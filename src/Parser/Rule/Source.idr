@@ -5,6 +5,7 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
+import Data.List1
 import Data.Strings
 
 %default total
@@ -431,15 +432,15 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List ty)
+nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List1 ty)
 nonEmptyBlock item
     = do symbol "{"
          commit
          res <- blockEntry AnyIndent item
          ps <- blockEntries (snd res) item
          symbol "}"
-         pure (fst res :: ps)
+         pure (fst res ::: ps)
   <|> do col <- column
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
-         pure (fst res :: ps)
+         pure (fst res ::: ps)

@@ -166,7 +166,7 @@ export
 succInjective : (0 left, right : Nat) -> S left = S right -> left = right
 succInjective _ _ Refl = Refl
 
-export
+export total
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
@@ -177,11 +177,6 @@ public export
 mod' : Nat -> Nat -> Nat -> Nat
 mod' Z        centre right = centre
 mod' (S fuel) centre right =
-      if lte centre right then
-        centre
-      else
-        mod' fuel (minus centre (S right)) right
-
 
 public export
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
