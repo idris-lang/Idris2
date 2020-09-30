@@ -170,13 +170,17 @@ export total
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
-||| Auxiliary function: 
+||| Auxiliary function:
 ||| mod' fuel a b = a `mod` (S b)
 ||| assuming we have enough fuel
 public export
 mod' : Nat -> Nat -> Nat -> Nat
 mod' Z        centre right = centre
 mod' (S fuel) centre right =
+      if lte centre right then
+        centre
+      else
+        mod' fuel (minus centre (S right)) right
 
 public export
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
