@@ -686,8 +686,8 @@ In this interface, only ``m`` needs to be known to find an implementation of
 this interface, and ``s`` can then be determined from the implementation. This
 is declared with the ``| m`` after the interface declaration. We call ``m`` a
 *determining parameter* of the ``MonadState`` interface, because it is the
-parameter used to find an implementation.
-
+parameter used to find an implementation. This is similar to the concept of
+*functional dependencies* `in Haskell <https://wiki.haskell.org/Functional_dependencies>`_.
 
 .. [#ConorRoss] Conor McBride and Ross Paterson. 2008. Applicative programming
        with effects. J. Funct. Program. 18, 1 (January 2008),
