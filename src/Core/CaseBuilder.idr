@@ -14,6 +14,8 @@ import Data.List
 
 import Decidable.Equality
 
+import Text.PrettyPrint.Prettyprinter
+
 %default covering
 
 public export
@@ -32,6 +34,16 @@ data ArgType : List Name -> Type where
      Unknown : ArgType vars
          -- arg's type is not yet known due to a previously stuck argument
 
+HasNames (ArgType vars) where
+
+  full gam (Known c ty) = Known c <$> full gam ty
+  full gam (Stuck ty) = Stuck <$> full gam ty
+  full gam Unknown = pure Unknown
+
+  resolved gam (Known c ty) = Known c <$> resolved gam ty
+  resolved gam (Stuck ty) = Stuck <$> resolved gam ty
+  resolved gam Unknown = pure Unknown
+
 {ns : _} -> Show (ArgType ns) where
   show (Known c t) = "Known " ++ show c ++ " " ++ show t
   show (Stuck t) = "Stuck " ++ show t
@@ -48,6 +60,17 @@ record PatInfo (pvar : Name) (vars : List Name) where
 
 {vars : _} -> Show (PatInfo n vars) where
   show pi = show (pat pi) ++ " : " ++ show (argType pi)
+
+HasNames (PatInfo n vars) where
+  full gam (MkInfo pat loc argType)
+     = do pat <- full gam pat
+          argType <- full gam argType
+          pure $ MkInfo pat loc argType
+
+  resolved gam (MkInfo pat loc argType)
+     = do pat <- resolved gam pat
+          argType <- resolved gam argType
+          pure $ MkInfo pat loc argType
 
 {-
 NamedPats is a list of patterns on the LHS of a clause. Each entry in
@@ -139,6 +162,13 @@ dropPat : {idx : Nat} ->
 dropPat First (x :: xs) = xs
 dropPat (Later p) (x :: xs) = x :: dropPat p xs
 
+HasNames (NamedPats vars todo) where
+  full gam [] = pure []
+  full gam (x::xs) = [| (::) (full gam x) (full gam xs) |]
+
+  resolved gam [] = pure []
+  resolved gam (x::xs) = [| (::) (resolved gam x) (resolved gam xs) |]
+
 {vars : _} -> {todo : _} -> Show (NamedPats vars todo) where
   show xs = "[" ++ showAll xs ++ "]"
     where
@@ -149,6 +179,15 @@ dropPat (Later p) (x :: xs) = x :: dropPat p xs
       showAll {ts = t :: _ } (x :: xs)
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
                      ++ ", " ++ showAll xs
+
+{vars : _} -> {todo : _} -> Pretty (NamedPats vars todo) where
+  pretty xs = hsep $ prettyAll xs
+    where
+      prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc ann)
+      prettyAll [] = []
+      prettyAll {ts = t :: _ } (x :: xs)
+          = parens (pretty t <++> pretty "=" <++> pretty (pat x))
+          :: prettyAll xs
 
 Weaken ArgType where
   weaken (Known c ty) = Known c (weaken ty)
@@ -193,6 +232,18 @@ getNPs (MkPatClause _ lhs pid rhs) = lhs
 {vars : _} -> {todo : _} -> Show (PatClause vars todo) where
   show (MkPatClause _ ps pid rhs)
      = show ps ++ " => " ++ show rhs
+
+{vars : _} -> {todo : _} -> Pretty (PatClause vars todo) where
+
+  pretty (MkPatClause _ ps _ rhs)
+     = pretty ps <++> "=>" <++> pretty rhs
+
+HasNames (PatClause vars todo) where
+  full gam (MkPatClause ns nps i rhs)
+     = [| MkPatClause (traverse (full gam) ns) (full gam nps) (pure i) (full gam rhs) |]
+
+  resolved gam (MkPatClause ns nps i rhs)
+     = [| MkPatClause (traverse (resolved gam) ns) (resolved gam nps) (pure i) (resolved gam rhs) |]
 
 substInClause : {a, vars, todo : _} ->
                 {auto c : Ref Ctxt Defs} ->
@@ -902,7 +953,13 @@ patCompile fc fn phase ty [] def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
          pats <- mkPatClausesFrom 0 ns (p :: ps)
-         log "compile.casetree" 5 $ "Pattern clauses " ++ show pats
+         -- low verbosity level: pretty print fully resolved names
+         logC "compile.casetree" 5 $ do
+           pats <- traverse toFullNames pats
+           pure $ "Pattern clauses:\n"
+                ++ show (indent 2 $ vcat $ pretty {ann = ()} <$> pats)
+         -- higher verbosity: dump the raw data structure
+         log "compile.casetree" 10 $ show pats
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
@@ -947,12 +1004,11 @@ simpleCase : {auto c : Ref Ctxt Defs} ->
              (clauses : List (ClosedTerm, ClosedTerm)) ->
              Core (args ** CaseTree args)
 simpleCase fc phase fn ty def clauses
-    = do logC "compile.casetree" 2 $
-                do cs <- traverse (\c =>
-                                do lhs <- toFullNames (fst c)
-                                   rhs <- toFullNames (snd c)
-                                   pure ("Clause " ++ show lhs ++ " = " ++ show rhs ++ "\n")) clauses
-                   pure (concat cs)
+    = do logC "compile.casetree" 5 $
+                do cs <- traverse (\ (c,d) => [| (,) (toFullNames c) (toFullNames d) |]) clauses
+                   pure $ "Clauses:\n" ++ show (
+                     indent {ann = ()} 2 $ vcat $ flip map cs $ \ (lrhs) =>
+                       pretty {ann = ()} (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
          ps <- traverse (toPatClause fc fn) clauses
          defs <- get Ctxt
          patCompile fc fn phase ty ps def

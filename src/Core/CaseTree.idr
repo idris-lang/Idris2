@@ -6,7 +6,7 @@ import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
-import Text.PrettyPrint.Prettyprinter.Doc
+import Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -139,6 +139,20 @@ Show Pat where
   show (PDelay _ _ _ p) = "(Delay " ++ show p ++ ")"
   show (PLoc _ n) = show n
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
+
+export
+Pretty Pat where
+  prettyPrec d (PAs _ n p) = pretty n <++> pretty "@" <+> parens (pretty p)
+  prettyPrec d (PCon _ n _ _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PTyCon _ n _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PConst _ c) = pretty c
+  prettyPrec d (PArrow _ _ p q) =
+    parenthesise (d > Open) $ pretty p <++> pretty "->" <++> pretty q
+  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty n
+  prettyPrec d (PUnmatchable _ tm) = pretty "." <+> parens (pretty tm)
 
 mutual
   insertCaseNames : SizeOf outer ->
