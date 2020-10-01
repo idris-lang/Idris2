@@ -641,8 +641,7 @@ checkApp rig elabinfo nest env fc (IImplicitApp fc' fn nm arg) expargs impargs e
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs impargs exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in
-        let prims = mapMaybe id
-                     [!fromIntegerName, !fromStringName, !fromCharName]
+        prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
         logC "elab" 10

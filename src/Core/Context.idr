@@ -2181,6 +2181,10 @@ fromCharName
          pure $ fromCharName (primnames (options defs))
 
 export
+getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
+getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
+
+export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
               LogLevel -> Core ()
 addLogLevel l
