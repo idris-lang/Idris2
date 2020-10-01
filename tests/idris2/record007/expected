@@ -1,3 +1,0 @@
-1/1: Building Fld (Fld.idr)
-Main> Main> MkThree {n = 3} {prf = Refl {a = Nat} {x = 3}}
-Main> Bye for now!

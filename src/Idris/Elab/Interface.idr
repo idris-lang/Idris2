@@ -139,8 +139,8 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
                               (map (IBindVar fc) (map bindName allmeths))
          let argns = getExplicitArgs 0 ty
          -- eta expand the RHS so that we put implicits in the right place
-         let fnclause = PatClause fc (IImplicitApp fc (IVar fc cn)
-                                                   (Just (UN "__con"))
+         let fnclause = PatClause fc (INamedApp fc (IVar fc cn)
+                                                   (UN "__con")
                                                    conapp)
                                   (mkLam argns
                                     (apply (IVar fc (methName n))
@@ -156,8 +156,8 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
         = IPi (getFC pty) erased Implicit (Just n) pty (bindPs ps ty)
 
     applyCon : Name -> (Name, RawImp)
-    applyCon n = (n, IImplicitApp fc (IVar fc n)
-                             (Just (UN "__con")) (IVar fc (UN "__con")))
+    applyCon n = (n, INamedApp fc (IVar fc n)
+                               (UN "__con") (IVar fc (UN "__con")))
 
     getExplicitArgs : Int -> RawImp -> List Name
     getExplicitArgs i (IPi _ _ Explicit n _ sc)
@@ -214,7 +214,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
     impsBind : RawImp -> List String -> RawImp
     impsBind fn [] = fn
     impsBind fn (n :: ns)
-        = impsBind (IImplicitApp fc fn Nothing (IBindVar fc n)) ns
+        = impsBind (IAutoApp fc fn (IBindVar fc n)) ns
 
 
 getSig : ImpDecl -> Maybe (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
@@ -399,7 +399,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         applyParams : RawImp -> List Name -> RawImp
         applyParams tm [] = tm
         applyParams tm (UN n :: ns)
-            = applyParams (IImplicitApp fc tm (Just (UN n)) (IBindVar fc n)) ns
+            = applyParams (INamedApp fc tm (UN n) (IBindVar fc n)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
         changeNameTerm : Name -> RawImp -> RawImp
@@ -407,8 +407,10 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
             = if n == n' then IVar fc dn else IVar fc n'
         changeNameTerm dn (IApp fc f arg)
             = IApp fc (changeNameTerm dn f) arg
-        changeNameTerm dn (IImplicitApp fc f x arg)
-            = IImplicitApp fc (changeNameTerm dn f) x arg
+        changeNameTerm dn (IAutoApp fc f arg)
+            = IAutoApp fc (changeNameTerm dn f) arg
+        changeNameTerm dn (INamedApp fc f x arg)
+            = INamedApp fc (changeNameTerm dn f) x arg
         changeNameTerm dn tm = tm
 
         changeName : Name -> ImpClause -> ImpClause

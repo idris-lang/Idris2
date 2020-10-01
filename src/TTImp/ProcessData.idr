@@ -74,7 +74,8 @@ updateNS orig ns tm = updateNSApp tm
              then IVar fc ns
              else IVar fc n
     updateNSApp (IApp fc f arg) = IApp fc (updateNSApp f) arg
-    updateNSApp (IImplicitApp fc f n arg) = IImplicitApp fc (updateNSApp f) n arg
+    updateNSApp (IAutoApp fc f arg) = IAutoApp fc (updateNSApp f) arg
+    updateNSApp (INamedApp fc f n arg) = INamedApp fc (updateNSApp f) n arg
     updateNSApp t = t
 
 checkCon : {vars : _} ->

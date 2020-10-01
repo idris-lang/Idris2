@@ -97,8 +97,10 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     buildAlt f [] = f
     buildAlt f ((fc', Nothing, a) :: as)
         = buildAlt (IApp fc' f a) as
-    buildAlt f ((fc', Just i, a) :: as)
-        = buildAlt (IImplicitApp fc' f i a) as
+    buildAlt f ((fc', Just Nothing, a) :: as)
+        = buildAlt (IAutoApp fc' f a) as
+    buildAlt f ((fc', Just (Just i), a) :: as)
+        = buildAlt (INamedApp fc' f i a) as
 
     isPrimName : List Name -> Name -> Bool
     isPrimName [] fn = False
@@ -144,9 +146,12 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig
                       ((fc, Nothing, a) :: args) f exp
-expandAmbigName mode nest env orig args (IImplicitApp fc f n a) exp
+expandAmbigName mode nest env orig args (INamedApp fc f n a) exp
     = expandAmbigName mode nest env orig
-                      ((fc, Just n, a) :: args) f exp
+                      ((fc, Just (Just n), a) :: args) f exp
+expandAmbigName mode nest env orig args (IAutoApp fc f a) exp
+    = expandAmbigName mode nest env orig
+                      ((fc, Just Nothing, a) :: args) f exp
 expandAmbigName elabmode nest env orig args tm exp
     = do log "elab.ambiguous" 10 $ "No ambiguity " ++ show orig
          pure orig
@@ -315,7 +320,8 @@ checkAmbigDepth fc info
 getName : RawImp -> Maybe Name
 getName (IVar _ n) = Just n
 getName (IApp _ f _) = getName f
-getName (IImplicitApp _ f _ _) = getName f
+getName (INamedApp _ f _ _) = getName f
+getName (IAutoApp _ f _) = getName f
 getName _ = Nothing
 
 export

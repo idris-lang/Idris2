@@ -17,9 +17,15 @@ Command-line options changes:
 
 Compiler changes:
 
-* Added syntax for record instantiation:
+* Added new syntax for named applications and bind-all-explicits:
 
-     `record < Constructor or _ > {<field1> = <expr1>, <field2> = <expr2>, ..., <fieldN> = <exprN>}`
+     `f {x [= t], x [= t], ...}`
+     `f {x [= t], x [= t], ..., _}`
+     `f {}`
+
+* Added new syntax for record updates:
+
+     `{x := t, x $= t, ...}`
 
 * Added primitives to the parsing library used in the compiler to get more precise
   boundaries to the AST nodes `FC`.

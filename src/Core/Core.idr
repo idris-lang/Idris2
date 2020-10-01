@@ -93,10 +93,9 @@ data Error : Type where
      RecordTypeNeeded : {vars : _} ->
                         FC -> Env Term vars -> Error
      NotRecordField : FC -> String -> Maybe Name -> Error
-     NotCoveredField : FC -> String -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
-     InvalidImplicits : {vars : _} ->
+     InvalidArgs : {vars : _} ->
                         FC -> Env Term vars -> List (Maybe Name) -> Term vars -> Error
      TryWithImplicits : {vars : _} ->
                         FC -> Env Term vars -> List (Name, Term vars) -> Error
@@ -239,14 +238,12 @@ Show Error where
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
       = show fc ++ ":Record type " ++ show ty ++ " has no field " ++ fld
-  show (NotCoveredField fc fieldname)
-      = show fc ++ ":Field not covered " ++ fieldname
   show (NotRecordType fc ty)
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
       = show fc ++ ":Field update " ++ showSep "->" flds ++ " not compatible with other updates"
-  show (InvalidImplicits fc env ns tm)
-     = show fc ++ ":" ++ show ns ++ " are not valid implicit arguments in " ++ show tm
+  show (InvalidArgs fc env ns tm)
+     = show fc ++ ":" ++ show ns ++ " are not valid arguments in " ++ show tm
   show (TryWithImplicits fc env imps)
      = show fc ++ ":Need to bind implicits "
           ++ showSep "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
@@ -349,10 +346,9 @@ getErrorLoc (AllFailed ((_, x) :: _)) = getErrorLoc x
 getErrorLoc (AllFailed []) = Nothing
 getErrorLoc (RecordTypeNeeded loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
-getErrorLoc (NotCoveredField loc _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
-getErrorLoc (InvalidImplicits loc _ _ _) = Just loc
+getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
 getErrorLoc (CantSolveGoal loc _ _) = Just loc

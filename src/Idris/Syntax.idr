@@ -47,10 +47,10 @@ mutual
        PCase : FC -> PTerm -> List PClause -> PTerm
        PLocal : FC -> List PDecl -> (scope : PTerm) -> PTerm
        PUpdate : FC -> List PFieldUpdate -> PTerm
-       PInstance : FC -> Maybe Name -> List PFieldUpdate -> PTerm
        PApp : FC -> PTerm -> PTerm -> PTerm
        PWithApp : FC -> PTerm -> PTerm -> PTerm
-       PImplicitApp : FC -> PTerm -> (argn : Maybe Name) -> PTerm -> PTerm
+       PNamedApp : FC -> PTerm -> Name -> PTerm -> PTerm
+       PAutoApp : FC -> PTerm -> PTerm -> PTerm
 
        PDelayed : FC -> LazyReason -> PTerm -> PTerm
        PDelay : FC -> PTerm -> PTerm
@@ -115,10 +115,10 @@ mutual
   getPTermLoc (PCase fc _ _) = fc
   getPTermLoc (PLocal fc _ _) = fc
   getPTermLoc (PUpdate fc _) = fc
-  getPTermLoc (PInstance fc _ _) = fc
   getPTermLoc (PApp fc _ _) = fc
   getPTermLoc (PWithApp fc _ _) = fc
-  getPTermLoc (PImplicitApp fc _ _ _) = fc
+  getPTermLoc (PAutoApp fc _ _) = fc
+  getPTermLoc (PNamedApp fc _ _ _) = fc
   getPTermLoc (PDelayed fc _ _) = fc
   getPTermLoc (PDelay fc _) = fc
   getPTermLoc (PForce fc _) = fc
@@ -531,11 +531,9 @@ mutual
         = "let { << definitions >>  } in " ++ showPrec d sc
     showPrec d (PUpdate _ fs)
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
-    showPrec d (PInstance _ n fs)
-        = "record " ++ fromMaybe "_" (showPrec d <$> n) ++ " { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
-    showPrec d (PImplicitApp _ f Nothing a)
+    showPrec d (PAutoApp _ f a)
         = showPrec d f ++ " @{" ++ showPrec d a ++ "}"
     showPrec d (PDelayed _ LInf ty)
         = showCon d "Inf" $ showArg ty
@@ -545,11 +543,11 @@ mutual
         = showCon d "Delay" $ showArg tm
     showPrec d (PForce _ tm)
         = showCon d "Force" $ showArg tm
-    showPrec d (PImplicitApp _ f (Just n) (PRef _ a))
+    showPrec d (PNamedApp _ f n (PRef _ a))
         = if n == a
              then showPrec d f ++ " {" ++ showPrec d n ++ "}"
              else showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
-    showPrec d (PImplicitApp _ f (Just n) a)
+    showPrec d (PNamedApp _ f n a)
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
@@ -796,9 +794,6 @@ mapPTermM f = goPTerm where
     goPTerm (PUpdate fc xs) =
       PUpdate fc <$> goPFieldUpdates xs
       >>= f
-    goPTerm (PInstance fc n xs) =
-      PInstance fc n <$> goPFieldUpdates xs
-      >>= f
     goPTerm (PApp fc x y) =
       PApp fc <$> goPTerm x
               <*> goPTerm y
@@ -807,10 +802,14 @@ mapPTermM f = goPTerm where
       PWithApp fc <$> goPTerm x
                   <*> goPTerm y
       >>= f
-    goPTerm (PImplicitApp fc x argn y) =
-      PImplicitApp fc <$> goPTerm x
-                      <*> pure argn
-                      <*> goPTerm y
+    goPTerm (PAutoApp fc x y) =
+      PAutoApp fc <$> goPTerm x
+                         <*> goPTerm y
+      >>= f
+    goPTerm (PNamedApp fc x n y) =
+      PNamedApp fc <$> goPTerm x
+                   <*> pure n
+                   <*> goPTerm y
       >>= f
     goPTerm (PDelayed fc x y) =
       PDelayed fc x <$> goPTerm y

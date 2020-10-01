@@ -187,14 +187,14 @@ mutual
   desugarB side ps (PUpdate fc fs)
       = desugarB side ps (PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc)
                             (PApp fc (PUpdate fc fs) (PRef fc (MN "rec" 0))))
-  desugarB side ps (PInstance fc n fs)
-      = pure $ IInstance fc n !(traverse (desugarUpdate side ps) fs)
   desugarB side ps (PApp fc x y)
       = pure $ IApp fc !(desugarB side ps x) !(desugarB side ps y)
+  desugarB side ps (PAutoApp fc x y)
+      = pure $ IAutoApp fc !(desugarB side ps x) !(desugarB side ps y)
   desugarB side ps (PWithApp fc x y)
       = pure $ IWithApp fc !(desugarB side ps x) !(desugarB side ps y)
-  desugarB side ps (PImplicitApp fc x argn y)
-      = pure $ IImplicitApp fc !(desugarB side ps x) argn !(desugarB side ps y)
+  desugarB side ps (PNamedApp fc x argn y)
+      = pure $ INamedApp fc !(desugarB side ps x) argn !(desugarB side ps y)
   desugarB side ps (PDelayed fc r ty)
       = pure $ IDelayed fc r !(desugarB side ps ty)
   desugarB side ps (PDelay fc tm)
@@ -669,7 +669,8 @@ mutual
       getFn : RawImp -> Core Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f _) = getFn f
-      getFn (IImplicitApp _ f _ _) = getFn f
+      getFn (IAutoApp _ f _) = getFn f
+      getFn (INamedApp _ f _ _) = getFn f
       getFn tm = throw (InternalError (show tm ++ " is not a function application"))
 
       toIDef : ImpClause -> Core ImpDecl

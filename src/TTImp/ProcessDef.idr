@@ -126,19 +126,29 @@ recoverable defs x y = pure False
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
-recoverableErr defs (CantSolveEq fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
-recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-recoverableErr defs (CyclicMeta _ _ _ _) = pure True
-recoverableErr defs (AllFailed errs)
-    = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ err)
-    = recoverableErr defs err
-recoverableErr defs _ = pure False
+recoverableErr defs err@(CantConvert fc env l r)
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         recoverable defs !(nf defs env l)
+                          !(nf defs env r)
+recoverableErr defs err@(CantSolveEq fc env l r)
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         recoverable defs !(nf defs env l)
+                          !(nf defs env r)
+recoverableErr defs err@(BadDotPattern _ _ ErasedArg _ _)
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         pure True
+recoverableErr defs err@(CyclicMeta _ _ _ _)
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         pure True
+recoverableErr defs err@(AllFailed errs)
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         anyM (recoverableErr defs) (map snd errs)
+recoverableErr defs err@(WhenUnifying _ _ _ _ err')
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         recoverableErr defs err'
+recoverableErr defs err
+    = do log "declare.def.impossible" 5 $ show !(normaliseErr err)
+         pure False
 
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
@@ -802,23 +812,32 @@ processDef opts nest env fc n_in cs_in
                    log "declare.def.impossible" 3 $ "Checking for impossibility: " ++ show itm
                    autoimp <- isUnboundImplicits
                    setUnboundImplicits True
+                   log "declare.def.impossible" 3 $ "unelab #1: " ++ show itm
                    (_, lhstm) <- bindNames False itm
+                   log "declare.def.impossible" 3 $ "unelab #2: " ++ show lhstm
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
                                     (IBindHere fc PATTERN lhstm) Nothing
+                   log "declare.def.impossible" 3 $ "unelab #3: " ++ show !(toFullNames lhstm)
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
+                   log "declare.def.impossible" 3 $ "unelab #4: " ++ show !(toFullNames lhs)
                    if !(hasEmptyPat defs [] lhs)
                       then do put Ctxt ctxt
+                              log "declare.def.impossible" 5 $ "Impossible due to incompatible patterns"
                               pure Nothing
                       else do empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
+                              log "declare.def.impossible" 5 $ "Possible case: compatible patterns"
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
                            if not !(recoverableErr defs err)
-                              then pure Nothing
-                              else pure (Just tm))
+                              
+                              then do log "declare.def.impossible" 5 $ "Impossible due to unrecoverable error"
+                                      pure Nothing
+                              else do log "declare.def.impossible" 5 $ "Possible case: recoverable error"
+                                      pure (Just tm))
       where
         closeEnv : Defs -> NF [] -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)

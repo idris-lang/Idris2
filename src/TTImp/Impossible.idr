@@ -7,8 +7,10 @@ import Core.TT
 import Core.Value
 
 import TTImp.TTImp
+import TTImp.Elab.App
 
 import Data.List
+import Data.List1
 
 %default covering
 
@@ -61,69 +63,57 @@ mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
                 {auto q : Ref QVar Int} ->
                 Term [] -> NF [] ->
-                (expargs : List RawImp) -> (impargs : List (Maybe Name, RawImp)) ->
+                (expargs : List RawImp) ->
+                (autoargs : List RawImp) ->
+                (namedargs : List (Name, RawImp)) ->
                 Core ClosedTerm
-  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exp) imp
-     = do e' <- mkTerm e (Just ty) [] []
+  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
+     = do e' <- mkTerm e (Just ty) [] [] []
           defs <- get Ctxt
           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
-                      exp imp
-  processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exp imp
+                      exps autos named
+  processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
-          case useImp [] imp of
+          case findNamed x named of
             Nothing => do e' <- nextVar fc
                           processArgs (App fc fn e')
                                       !(sc defs (toClosure defaultOpts [] e'))
-                                      exp imp
-            Just (e, impargs') =>
-               do e' <- mkTerm e (Just ty) [] []
+                                      exps autos named
+            Just ((_, e) ::: named') =>
+               do e' <- mkTerm e (Just ty) [] [] []
                   processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
-                              exp impargs'
-    where
-      useImp : List (Maybe Name, RawImp) -> List (Maybe Name, RawImp) ->
-               Maybe (RawImp, List (Maybe Name, RawImp))
-      useImp acc [] = Nothing
-      useImp acc ((Just x', xtm) :: rest)
-          = if x == x'
-               then Just (xtm, reverse acc ++ rest)
-               else useImp ((Just x', xtm) :: acc) rest
-      useImp acc (ximp :: rest)
-          = useImp (ximp :: acc) rest
-  processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exp imp
+                              exps autos named'
+  processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
-          case useAutoImp [] imp of
-            Nothing => do e' <- nextVar fc
-                          processArgs (App fc fn e')
-                                      !(sc defs (toClosure defaultOpts [] e'))
-                                      exp imp
-            Just (e, impargs') =>
-               do e' <- mkTerm e (Just ty) [] []
+          case findNamed x named of
+            Nothing => case autos of
+                            (e :: autos') =>
+                              do e' <- mkTerm e (Just ty) [] [] []
+                                 processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                                             exps autos' named
+                            _ =>
+                              do e' <- nextVar fc
+                                 processArgs (App fc fn e')
+                                             !(sc defs (toClosure defaultOpts [] e'))
+                                             exps [] named
+            Just ((_, e) ::: named') =>
+               do e' <- mkTerm e (Just ty) [] [] []
                   processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
-                              exp impargs'
-    where
-      useAutoImp : List (Maybe Name, RawImp) -> List (Maybe Name, RawImp) ->
-                   Maybe (RawImp, List (Maybe Name, RawImp))
-      useAutoImp acc [] = Nothing
-      useAutoImp acc ((Nothing, xtm) :: rest)
-          = Just (xtm, reverse acc ++ rest)
-      useAutoImp acc ((Just x', xtm) :: rest)
-          = if x == x'
-               then Just (xtm, reverse acc ++ rest)
-               else useAutoImp ((Just x', xtm) :: acc) rest
-      useAutoImp acc (ximp :: rest)
-          = useAutoImp (ximp :: acc) rest
-  processArgs fn ty [] [] = pure fn
-  processArgs fn ty exp imp
+                              exps autos named'
+  processArgs fn ty [] [] [] = pure fn
+  processArgs fn ty exps autos named
      = throw (GenericMsg (getLoc fn)
                 ("Badly formed impossible clause "
-                     ++ show (fn, exp, imp)))
+                     ++ show (fn, exps, autos, named)))
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto q : Ref QVar Int} ->
              FC -> Name -> Maybe (NF []) ->
-             (expargs : List RawImp) -> (impargs : List (Maybe Name, RawImp)) ->
+             (expargs : List RawImp) ->
+             (autoargs : List RawImp) ->
+             (namedargs : List (Name, RawImp)) ->
              Core ClosedTerm
-  buildApp fc n mty exp imp
+  buildApp fc n mty exps autos named
       = do defs <- get Ctxt
            fi <- fromIntegerName
            si <- fromStringName
@@ -136,21 +126,25 @@ mutual
               | [] => throw (UndefinedName fc n)
               | ts => throw (AmbiguousName fc (map fst ts))
            tynf <- nf defs [] ty
-           processArgs (Ref fc Func n') tynf exp imp
+           processArgs (Ref fc Func n') tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
            RawImp -> Maybe (NF []) ->
-           (expargs : List RawImp) -> (impargs : List (Maybe Name, RawImp)) ->
+           (expargs : List RawImp) ->
+           (autoargs : List RawImp) ->
+           (namedargs : List (Name, RawImp)) ->
            Core ClosedTerm
-  mkTerm (IVar fc n) mty exp imp
-     = buildApp fc n mty exp imp
-  mkTerm (IApp fc fn arg) mty exp imp
-     = mkTerm fn mty (arg :: exp) imp
-  mkTerm (IImplicitApp fc fn nm arg) mty exp imp
-     = mkTerm fn mty exp ((nm, arg) :: imp)
-  mkTerm (IPrimVal fc c) _ _ _ = pure (PrimVal fc c)
-  mkTerm tm _ _ _ = nextVar (getFC tm)
+  mkTerm (IVar fc n) mty exps autos named
+     = buildApp fc n mty exps autos named
+  mkTerm (IApp fc fn arg) mty exps autos named
+     = mkTerm fn mty (arg :: exps) autos named
+  mkTerm (IAutoApp fc fn arg) mty exps autos named
+     = mkTerm fn mty exps (arg :: autos) named
+  mkTerm (INamedApp fc fn nm arg) mty exps autos named
+     = mkTerm fn mty exps autos ((nm, arg) :: named)
+  mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
+  mkTerm tm _ _ _ _ = nextVar (getFC tm)
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
 -- so that when we build the case tree for checking coverage, we take into
@@ -161,7 +155,7 @@ getImpossibleTerm : {vars : _} ->
                     Env Term vars -> NestedNames vars -> RawImp -> Core ClosedTerm
 getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)
-         mkTerm (applyEnv tm) Nothing [] []
+         mkTerm (applyEnv tm) Nothing [] [] []
   where
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp
@@ -182,6 +176,7 @@ getImpossibleTerm env nest tm
     -- the name to the proper one from the nested names map
     applyEnv : RawImp -> RawImp
     applyEnv (IApp fc fn arg) = IApp fc (applyEnv fn) arg
-    applyEnv (IImplicitApp fc fn n arg)
-        = IImplicitApp fc (applyEnv fn) n arg
+    applyEnv (IAutoApp fc fn arg) = IAutoApp fc (applyEnv fn) arg
+    applyEnv (INamedApp fc fn n arg)
+        = INamedApp fc (applyEnv fn) n arg
     applyEnv tm = apply (expandNest tm) (addEnv (getFC tm) env)

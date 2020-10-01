@@ -214,22 +214,20 @@ mutual
           let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> go startPrec sc
       go d (PUpdate _ fs) =
         parenthesise (d > appPrec) $ group $ record_ <++> braces (vsep $ punctuate comma (prettyUpdate <$> fs))
-      go d (PInstance _ n fs) =
-        parenthesise (d > appPrec) $ group $ record_ <++> pretty n <++> braces (vsep $ punctuate comma (prettyUpdate <$> fs))
       go d (PApp _ f a) = parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> go appPrec a
       go d (PWithApp _ f a) = go d f <++> pipe <++> go d a
       go d (PDelayed _ LInf ty) = parenthesise (d > appPrec) $ "Inf" <++> go appPrec ty
       go d (PDelayed _ _ ty) = parenthesise (d > appPrec) $ "Lazy" <++> go appPrec ty
       go d (PDelay _ tm) = parenthesise (d > appPrec) $ "Delay" <++> go appPrec tm
       go d (PForce _ tm) = parenthesise (d > appPrec) $ "Force" <++> go appPrec tm
-      go d (PImplicitApp _ f Nothing a) =
+      go d (PAutoApp _ f a) =
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> "@" <+> braces (go startPrec a)
-      go d (PImplicitApp _ f (Just n) (PRef _ a)) =
+      go d (PNamedApp _ f n (PRef _ a)) =
         parenthesise (d > appPrec) $ group $
           if n == a
              then go leftAppPrec f <++> braces (pretty n)
              else go leftAppPrec f <++> braces (pretty n <++> equals <++> pretty a)
-      go d (PImplicitApp _ f (Just n) a) =
+      go d (PNamedApp _ f n a) =
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> braces (pretty n <++> equals <++> go d a)
       go d (PSearch _ _) = pragma "%search"
       go d (PQuote _ tm) = parenthesise (d > appPrec) $ "`" <+> parens (go startPrec tm)

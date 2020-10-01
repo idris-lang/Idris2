@@ -32,7 +32,8 @@ used idx _ = False
 
 data IArg
    = Exp FC RawImp
-   | Imp FC (Maybe Name) RawImp
+   | Auto FC RawImp
+   | Named FC Name RawImp
 
 data UnelabMode
      = Full
@@ -113,7 +114,7 @@ mutual
     where
       getFnArgs : RawImp -> List IArg -> (RawImp, List IArg)
       getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
-      getFnArgs (IImplicitApp fc f n arg) args = getFnArgs f (Imp fc n arg :: args)
+      getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
       getFnArgs tm args = (tm, args)
 
   -- Turn a term back into an unannotated TTImp. Returns the type of the
@@ -187,7 +188,7 @@ mutual
                                 glueBack defs env sc')
                 NBind _ x (Pi _ rig p ty) sc
                   => do sc' <- sc defs (toClosure defaultOpts env arg)
-                        pure (IImplicitApp fc fn' (Just x) arg',
+                        pure (INamedApp fc fn' x arg',
                                 glueBack defs env sc')
                 _ => pure (IApp fc fn' arg', gErased fc)
   unelabTy' umode env (As fc s p tm)

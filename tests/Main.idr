@@ -42,7 +42,7 @@ idrisTests
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047",
+       "basic046", "basic047", "basic048",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -102,7 +102,7 @@ idrisTests
        "real001", "real002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007",
+       "record006",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",

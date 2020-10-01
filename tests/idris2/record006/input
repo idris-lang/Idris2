@@ -1,5 +1,3 @@
-:t myDog
-:t mySuperDog
-:t other
-:m
+:set showimplicits
+three
 :q

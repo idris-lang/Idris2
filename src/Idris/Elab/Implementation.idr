@@ -74,8 +74,8 @@ addDefaults fc impName allms defs body
                     -- other methods.
                     -- (See test idris2/interface014 for an example!)
                     let mupdates
-                            = map (\n => (n, IImplicitApp fc (IVar fc n)
-                                                          (Just (UN "__con"))
+                            = map (\n => (n, INamedApp fc (IVar fc n)
+                                                          (UN "__con")
                                                           (IVar fc impName))) allms
                         cs' = map (substNamesClause [] mupdates) cs in
                         extendBody ms ns
@@ -266,11 +266,11 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     impsApply : RawImp -> List (Name, RawImp) -> RawImp
     impsApply fn [] = fn
     impsApply fn ((n, arg) :: ns)
-        = impsApply (IImplicitApp fc fn (Just n) arg) ns
+        = impsApply (INamedApp fc fn n arg) ns
 
     autoImpsApply : RawImp -> List RawImp -> RawImp
     autoImpsApply f [] = f
-    autoImpsApply f (x :: xs) = autoImpsApply (IImplicitApp (getFC f) f Nothing x) xs
+    autoImpsApply f (x :: xs) = autoImpsApply (IAutoApp (getFC f) f x) xs
 
     mkLam : List (Name, RigCount, PiInfo RawImp) -> RawImp -> RawImp
     mkLam [] tm = tm
@@ -282,11 +282,11 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     applyTo fc tm ((x, c, Explicit) :: xs)
         = applyTo fc (IApp fc tm (IVar fc x)) xs
     applyTo fc tm ((x, c, AutoImplicit) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
+        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
     applyTo fc tm ((x, c, Implicit) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
+        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
     applyTo fc tm ((x, c, DefImplicit _) :: xs)
-        = applyTo fc (IImplicitApp fc tm (Just x) (IVar fc x)) xs
+        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
 
     -- When applying the method in the field for the record, eta expand
     -- the expected arguments based on the field type, so that implicits get
@@ -425,9 +425,12 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     updateApp ns (IApp fc f arg)
         = do f' <- updateApp ns f
              pure (IApp fc f' arg)
-    updateApp ns (IImplicitApp fc f x arg)
+    updateApp ns (IAutoApp fc f arg)
         = do f' <- updateApp ns f
-             pure (IImplicitApp fc f' x arg)
+             pure (IAutoApp fc f' arg)
+    updateApp ns (INamedApp fc f x arg)
+        = do f' <- updateApp ns f
+             pure (INamedApp fc f' x arg)
     updateApp ns tm
         = throw (GenericMsg (getFC tm) "Invalid method definition")
 
@@ -460,9 +463,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
         = do log "elab.implementation" 3 $
                      "Adding transform for " ++ show top ++ " : " ++ show ty ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
-             let lhs = IImplicitApp fc (IVar fc top)
-                                       (Just (UN "__con"))
-                                       (IVar fc iname)
+             let lhs = INamedApp fc (IVar fc top)
+                                    (UN "__con")
+                                    (IVar fc iname)
              let Just mname = lookup (dropNS top) ns
                  | Nothing => pure ()
              let rhs = IVar fc mname
