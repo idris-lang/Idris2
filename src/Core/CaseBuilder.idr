@@ -1040,7 +1040,7 @@ simpleCase : {auto c : Ref Ctxt Defs} ->
              Core (args ** CaseTree args)
 simpleCase fc phase fn ty def clauses
     = do logC "compile.casetree" 5 $
-                do cs <- traverse (\ (c,d) => [| (,) (toFullNames c) (toFullNames d) |]) clauses
+                do cs <- traverse (\ (c,d) => [| MkPair (toFullNames c) (toFullNames d) |]) clauses
                    pure $ "Clauses:\n" ++ show (
                      indent {ann = ()} 2 $ vcat $ flip map cs $ \ (lrhs) =>
                        pretty {ann = ()} (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
