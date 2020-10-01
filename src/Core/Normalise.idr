@@ -291,10 +291,12 @@ parameters (defs : Defs, topopts : EvalOpts)
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
     -- Primitive type matching, in typecase
-    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag [] sc)
-         = if UN (show c) == nm
-              then evalTree env loc opts fc stk sc
-              else pure NoMatch
+    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
+         = case args of -- can't just test for it in the `if` for typing reasons
+             [] => if UN (show c) == nm
+                   then evalTree env loc opts fc stk sc
+                   else pure NoMatch
+             _ => pure NoMatch
     -- Type of type matching, in typecase
     tryAlt env loc opts fc stk (NType _) (ConCase (UN "Type") tag [] sc)
          = evalTree env loc opts fc stk sc
