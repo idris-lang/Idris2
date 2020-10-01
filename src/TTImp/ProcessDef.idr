@@ -833,7 +833,6 @@ processDef opts nest env fc n_in cs_in
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
                            if not !(recoverableErr defs err)
-                              
                               then do log "declare.def.impossible" 5 $ "Impossible due to unrecoverable error"
                                       pure Nothing
                               else do log "declare.def.impossible" 5 $ "Possible case: recoverable error"

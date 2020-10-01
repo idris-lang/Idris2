@@ -165,7 +165,7 @@ mutual
                              option (NamedArg (UN x.val) $ PRef (boundToFC fname x) (UN x.val))
                               $ do tm <- symbol "=" *> expr pdef fname indents
                                    pure (NamedArg (UN x.val) tm)
-               matchAny <- option [] (if isCons list then 
+               matchAny <- option [] (if isCons list then
                                          do symbol ","
                                             x <- bounds (symbol "_")
                                             pure [NamedArg (UN "_") (PImplicit (boundToFC fname x))]
@@ -175,7 +175,7 @@ mutual
                                   then [NamedArg (UN "_") (PImplicit (boundToFC fname (mergeBounds start end)))]
                                   else matchAny
                pure $ matchAny ++ list
-                    
+
         <|> do symbol "@{"
                commit
                tm <- expr pdef fname indents
@@ -866,7 +866,7 @@ simpleCon fname ret indents
          atEnd indents
          (cdoc, cname, params) <- pure b.val
          let cfc = boundToFC fname b
-         fromMaybe (fatalError "Named arguments not allowed in ADT constructors") 
+         fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
                    (pure . MkPTy cfc cname cdoc <$> mkDataConType cfc ret (concat params))
 
 simpleData : FileName -> WithBounds t -> Name -> IndentInfo -> Rule PDataDecl

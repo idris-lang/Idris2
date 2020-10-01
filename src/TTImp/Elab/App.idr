@@ -578,7 +578,7 @@ mutual
                argdata expargs autoargs namedargs kr expty
       = let argRig = rig |*| rigb in
             case findNamed x namedargs of
-                 Just ((_, arg) ::: namedargs) => 
+                 Just ((_, arg) ::: namedargs) =>
                     checkRestApp rig argRig elabinfo nest env fc
                                  tm x aty sc argdata arg expargs autoargs namedargs kr expty
                  Nothing =>
