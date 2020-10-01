@@ -903,6 +903,41 @@ mutual
   mixture fc fn {a} {todo} phase NoClauses err
       = pure err
 
+export
+mkPat : {auto c : Ref Ctxt Defs} -> List Pat -> ClosedTerm -> ClosedTerm -> Core Pat
+mkPat args orig (Ref fc Bound n) = pure $ PLoc fc n
+mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
+mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
+mkPat args orig (Ref fc Func n)
+  = do let prims = mapMaybe id [!fromIntegerName, !fromStringName, !fromCharName]
+       mtm <- normalisePrims (const True) isPConst prims n args orig []
+       case mtm of
+         Just tm => mkPat [] tm tm
+         Nothing => pure $ PUnmatchable (getLoc orig) orig
+mkPat args orig (Bind fc x (Pi _ _ _ s) t)
+    = let t' = subst (Erased fc False) t in
+      pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
+mkPat args orig (App fc fn arg)
+    = do parg <- mkPat [] arg arg
+         mkPat (parg :: args) orig fn
+mkPat args orig (As fc _ (Ref _ Bound n) ptm)
+    = pure $ PAs fc n !(mkPat [] ptm ptm)
+mkPat args orig (As fc _ _ ptm)
+    = mkPat [] orig ptm
+mkPat args orig (TDelay fc r ty p)
+    = pure $ PDelay fc r !(mkPat [] orig ty) !(mkPat [] orig p)
+mkPat args orig (PrimVal fc c)
+    = pure $ if constTag c == 0
+         then PConst fc c
+         else PTyCon fc (UN (show c)) 0 []
+mkPat args orig (TType fc) = pure $ PTyCon fc (UN "Type") 0 []
+mkPat args orig tm = pure $ PUnmatchable (getLoc orig) orig
+
+export
+argToPat : {auto c : Ref Ctxt Defs} -> ClosedTerm -> Core Pat
+argToPat tm = mkPat [] tm tm
+
+
 mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (args : List Name) -> ClosedTerm ->
@@ -991,7 +1026,7 @@ toPatClause fc n (lhs, rhs)
                     (np, _) <- getPosition n (gamma defs)
                     (fnp, _) <- getPosition fn (gamma defs)
                     if np == fnp
-                       then pure (map argToPat args, rhs)
+                       then pure (!(traverse argToPat args), rhs)
                        else throw (GenericMsg ffc ("Wrong function name in pattern LHS " ++ show (n, fn)))
            (f, args) => throw (GenericMsg fc "Not a function name in pattern LHS")
 
