@@ -39,6 +39,8 @@ modules = Control.ANSI,
           Data.Nat.Factor,
           Data.Nat.Fib,
           Data.Nat.Order.Strict,
+          Data.Nat.Order.Properties,
+          Data.Nat.Properties,
 
           Data.SortedMap,
           Data.SortedSet,
