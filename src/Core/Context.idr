@@ -675,6 +675,37 @@ HasNames (Term vars) where
       = pure (TForce fc r !(resolved gam y))
   resolved gam tm = pure tm
 
+export
+HasNames Pat where
+
+  full gam (PAs fc n p)
+     = [| PAs (pure fc) (full gam n) (full gam p) |]
+  full gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (full gam n) (pure i) (pure ar) (traverse (full gam) ps) |]
+  full gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (full gam n) (pure ar) (traverse (full gam) ps) |]
+  full gam p@(PConst _ _) = pure p
+  full gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (full gam x) (full gam p) (full gam q) |]
+  full gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (full gam p) (full gam q) |]
+  full gam (PLoc fc n) = PLoc fc <$> full gam n
+  full gam (PUnmatchable fc t) = PUnmatchable fc <$> full gam t
+
+  resolved gam (PAs fc n p)
+     = [| PAs (pure fc) (resolved gam n) (resolved gam p) |]
+  resolved gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (resolved gam n) (pure i) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (resolved gam n) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam p@(PConst _ _) = pure p
+  resolved gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (resolved gam x) (resolved gam p) (resolved gam q) |]
+  resolved gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (resolved gam p) (resolved gam q) |]
+  resolved gam (PLoc fc n) = PLoc fc <$> resolved gam n
+  resolved gam (PUnmatchable fc t) = PUnmatchable fc <$> resolved gam t
+
 mutual
   export
   HasNames (CaseTree vars) where
@@ -2148,6 +2179,10 @@ fromCharName : {auto c : Ref Ctxt Defs} ->
 fromCharName
     = do defs <- get Ctxt
          pure $ fromCharName (primnames (options defs))
+
+export
+getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
+getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
