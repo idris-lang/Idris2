@@ -12,7 +12,7 @@
 ||| This harness works from the assumption that each individual golden test comprises of a directory with the following structure:
 |||
 ||| + `run` a *shell* script that runs the test
-||| + `expected` a file containting the expected output of `run.sh`
+||| + `expected` a file containting the expected output of `run`
 |||
 ||| During testing, the test harness will generate an artefact named `output` and use the following command to compare them as they are:
 |||
