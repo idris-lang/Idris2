@@ -293,8 +293,10 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
                    then pure lhs_bound
                    else implicitsAs defs vars lhs_bound
 
-         log "declare.def.lhs" 5 $ "Checking LHS of " ++ show !(getFullName (Resolved n)) ++
-                 " " ++ show lhs
+         logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
+-- todo: add Pretty RawImp instance
+--         logC "declare.def.lhs" 5 $ do pure $ show $ indent {ann = ()} 2 $ pretty lhs
+         log "declare.def.lhs" 10 $ show lhs
          logEnv "declare.def.lhs" 5 "In env" env
          let lhsMode = if trans
                           then InTransform

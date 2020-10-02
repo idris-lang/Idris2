@@ -176,6 +176,10 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+public export
+(>>) : (Monad m) => m a -> m b -> m b
+a >> b = a >>= \_ => b
+
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
 guard : Alternative f => Bool -> f ()
