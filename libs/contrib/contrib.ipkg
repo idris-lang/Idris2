@@ -13,7 +13,8 @@ modules = Control.ANSI,
           Control.Algebra.Implementations,
 
           Data.Bool.Algebra,
-
+          Data.Bool.Decidable,
+          
           Data.Linear.Array,
 
           Data.List.Algebra,
