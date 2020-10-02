@@ -6,7 +6,7 @@ import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
-import Text.PrettyPrint.Prettyprinter.Doc
+import Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -57,6 +57,11 @@ data Pat : Type where
      -- TODO: Matching on lazy types
      PLoc : FC -> Name -> Pat
      PUnmatchable : FC -> Term [] -> Pat
+
+export
+isPConst : Pat -> Maybe Constant
+isPConst (PConst _ c) = Just c
+isPConst _ = Nothing
 
 mutual
   export
@@ -140,6 +145,20 @@ Show Pat where
   show (PLoc _ n) = show n
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
 
+export
+Pretty Pat where
+  prettyPrec d (PAs _ n p) = pretty n <++> pretty "@" <+> parens (pretty p)
+  prettyPrec d (PCon _ n _ _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PTyCon _ n _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PConst _ c) = pretty c
+  prettyPrec d (PArrow _ _ p q) =
+    parenthesise (d > Open) $ pretty p <++> pretty "->" <++> pretty q
+  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty n
+  prettyPrec d (PUnmatchable _ tm) = pretty "." <+> parens (pretty tm)
+
 mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
@@ -208,35 +227,6 @@ addRefs at ns = getNames (addRefs False at) ns
 export
 getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames addMetas empty
-
-export
-mkPat' : List Pat -> ClosedTerm -> ClosedTerm -> Pat
-mkPat' args orig (Ref fc Bound n) = PLoc fc n
-mkPat' args orig (Ref fc (DataCon t a) n) = PCon fc n t a args
-mkPat' args orig (Ref fc (TyCon t a) n) = PTyCon fc n a args
-mkPat' args orig (Bind fc x (Pi _ _ _ s) t)
-    = let t' = subst (Erased fc False) t in
-          PArrow fc x (mkPat' [] s s) (mkPat' [] t' t')
-mkPat' args orig (App fc fn arg)
-    = let parg = mkPat' [] arg arg in
-                 mkPat' (parg :: args) orig fn
-mkPat' args orig (As fc _ (Ref _ Bound n) ptm)
-    = PAs fc n (mkPat' [] ptm ptm)
-mkPat' args orig (As fc _ _ ptm)
-    = mkPat' [] orig ptm
-mkPat' args orig (TDelay fc r ty p)
-    = PDelay fc r (mkPat' [] orig ty) (mkPat' [] orig p)
-mkPat' args orig (PrimVal fc c)
-    = if constTag c == 0
-         then PConst fc c
-         else PTyCon fc (UN (show c)) 0 []
-mkPat' args orig (TType fc) = PTyCon fc (UN "Type") 0 []
-mkPat' args orig tm = PUnmatchable (getLoc orig) orig
-
-export
-argToPat : ClosedTerm -> Pat
-argToPat tm
-    = mkPat' [] tm tm
 
 export
 mkTerm : (vars : List Name) -> Pat -> Term vars

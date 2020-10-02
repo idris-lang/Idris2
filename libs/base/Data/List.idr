@@ -450,6 +450,11 @@ mapMaybe f (x::xs) =
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
 
+||| Extract all of the values contained in a List of Maybes
+public export
+catMaybes : List (Maybe a) -> List a
+catMaybes = mapMaybe id
+
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------

@@ -367,6 +367,11 @@ mutual
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
 
+export
+isIPrimVal : RawImp -> Maybe Constant
+isIPrimVal (IPrimVal _ c) = Just c
+isIPrimVal _ = Nothing
+
 -- REPL commands for TTImp interaction
 public export
 data ImpREPL : Type where

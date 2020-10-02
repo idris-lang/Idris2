@@ -291,10 +291,12 @@ parameters (defs : Defs, topopts : EvalOpts)
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
     -- Primitive type matching, in typecase
-    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag [] sc)
-         = if UN (show c) == nm
-              then evalTree env loc opts fc stk sc
-              else pure NoMatch
+    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
+         = case args of -- can't just test for it in the `if` for typing reasons
+             [] => if UN (show c) == nm
+                   then evalTree env loc opts fc stk sc
+                   else pure NoMatch
+             _ => pure NoMatch
     -- Type of type matching, in typecase
     tryAlt env loc opts fc stk (NType _) (ConCase (UN "Type") tag [] sc)
          = evalTree env loc opts fc stk sc
@@ -1324,3 +1326,35 @@ normaliseErr (InLHS fc n err)
 normaliseErr (InRHS fc n err)
     = pure $ InRHS fc n !(normaliseErr err)
 normaliseErr err = pure err
+
+
+-- If the term is an application of a primitive conversion (fromInteger etc)
+-- and it's applied to a constant, fully normalise the term.
+export
+normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
+                 -- size heuristic for when to unfold
+                 (Constant -> Bool) ->
+                 -- view to check whether an argument is a constant
+                 (arg -> Maybe Constant) ->
+                 -- list of primitives
+                 List Name ->
+                 -- view of the potential redex
+                 (n : Name) ->          -- function name
+                 (args : List arg) ->   -- arguments from inside out (arg1, ..., argk)
+                 -- actual term to evaluate if needed
+                 (tm : Term vs) ->      -- original term (n arg1 ... argk)
+                 Env Term vs ->         -- evaluation environment
+                 -- output only evaluated if primitive
+                 Core (Maybe (Term vs))
+normalisePrims boundSafe viewConstant prims n args tm env
+   = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
+              | _ => pure Nothing
+        let (mc :: _) = reverse args -- with at least one argument
+              | _ => pure Nothing
+        let (Just c) = viewConstant mc -- that is a constant
+              | _ => pure Nothing
+        let True = boundSafe c -- that we should expand
+              | _ => pure Nothing
+        defs <- get Ctxt
+        tm <- normalise defs env tm
+        pure (Just tm)
