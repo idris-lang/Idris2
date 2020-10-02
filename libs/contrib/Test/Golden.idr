@@ -103,12 +103,15 @@ normalize str =
 ||| Run the specified Golden test with the supplied options.
 |||
 ||| See the module documentation for more information.
+|||
+||| @currdir absolute or relative path to root test directory.
+||| @testpath the directory that contains the test.
 export
-runTest : Options -> String -> IO Bool
-runTest opts testPath
+runTest : Options -> (currdir, testPath : String) -> IO Bool
+runTest opts currdir testPath
     = do changeDir testPath
          isSuccess <- runTest'
-         changeDir "../.."
+         changeDir currdir
          pure isSuccess
     where
         getAnswer : IO Bool
