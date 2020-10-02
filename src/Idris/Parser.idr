@@ -216,7 +216,6 @@ mutual
                             (PRef (boundToFC fname loc) (UN x))
                             ty
                             rest.val))
-              <|> pure ty
 
   nestedDpair : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
   nestedDpair fname start indents
