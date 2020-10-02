@@ -11,12 +11,18 @@
 |||
 ||| This harness works from the assumption that each individual golden test comprises of a directory with the following structure:
 |||
-||| + `run.sh` a *shell* script that runs the test
-||| + `expected` the expected output of `run.sh`
+||| + `run` a *shell* script that runs the test
+||| + `expected` a file containting the expected output of `run.sh`
 |||
-||| During testing, the test harness will generate an artefact named `output` and use `git diff` to examine the two files.
-||| This assumes that the expected has been checked into `git`.
-||| If `git diff` failes then the runner will simply present the expected and 'given' files.
+||| During testing, the test harness will generate an artefact named `output` and use the following command to compare them as they are:
+|||
+||| ```sh
+|||  git diff --no-index --exit-code --word-diff=color expected output
+||| ```
+|||
+||| If `git` fails then the runner will simply present the expected and 'given' files side-by-side.
+|||
+||| Of note, it is helpful if `output` was added to a local `.gitignore` instance to ensure that it is not mistakenly versioned.
 |||
 ||| # Options
 |||
@@ -26,15 +32,19 @@
 ||| + `onlyNames` the list of tests to run relative to the generated executable.
 ||| + `interactive` Should we update the expected file or not.
 |||
+||| We provide an options parser (`options`) that will take the command line arguments and constructs this for you.
+|||
 ||| # Usage
 |||
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable> [--interactive] [--only [NAMES]]
+|||runtests <path to executable under test> [--interactive] [--only [NAMES]]
 |||```
 |||
-||| assuming that the test runner is compiler to an executable named `runtests`.
+||| assuming that the test runner is compiled to an executable named `runtests`.
+|||
+|||
 module Test.Golden
 
 import Data.Maybe
@@ -186,7 +196,7 @@ firstExists : List String -> IO (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 
-||| Find the first occurance of an executable on `PATH`.
+||| Find the first occurrence of an executable on `PATH`.
 export
 pathLookup : List String -> IO (Maybe String)
 pathLookup names = do
@@ -195,3 +205,5 @@ pathLookup names = do
   let candidates = [p ++ "/" ++ x | p <- pathList,
                                     x <- names]
   firstExists candidates
+
+-- [ EOF ]
