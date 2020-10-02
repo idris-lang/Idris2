@@ -33,7 +33,7 @@ fuelLemma numer predDenom fuel enough recurse =
       -- a bunch of inequational reasoning to show we have enough fuel
       -- on the recursive call
       denom_lte_numer : denom `LTE` numer
-      denom_lte_numer = notlteIsLT numer predDenom recurse
+      denom_lte_numer = Properties.notlteIsLT numer predDenom recurse
       numer'_lt_numer : numer' `LT` numer
       numer'_lt_numer = (minusPosLT denom numer 
                           (LTESucc LTEZero)
@@ -100,7 +100,7 @@ bound_mod'' : (fuel, numer, predDenom : Nat) -> (numer `LTE` fuel)
 bound_mod'' 0        0     predDenom LTEZero = LTEZero
 bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDenom) of 
   (True  ** numer_lte_predn)  => rewrite numer_lte_predn in 
-                                 lteIsLTE _ _ numer_lte_predn
+                                 Properties.lteIsLTE _ _ numer_lte_predn
   (False ** numer_gte_n    )  => rewrite numer_gte_n in
                                  bound_mod'' fuel (numer `minus` (S predDenom)) predDenom
                                                   (fuelLemma numer predDenom fuel enough numer_gte_n)
@@ -128,7 +128,7 @@ divisionTheorem'  numer predDenom (S fuel) enough with (@@(Data.Nat.lte numer pr
          numer' : Nat
          numer' = numer `minus` denom
          denom_lte_numer : denom `LTE` numer
-         denom_lte_numer = notlteIsLT numer predDenom prf
+         denom_lte_numer = Properties.notlteIsLT numer predDenom prf
          enough' : numer' `LTE` fuel 
          enough' = fuelLemma numer predDenom fuel enough prf
          
@@ -242,7 +242,7 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
       ~~ (1 + 0)*n ...(Refl)
       <~ (1 + k)*n ...(multLteMonotoneLeft (1+0) (1+k) n $ 
                        LTESucc LTEZero)
-      <~ predn     ...(lteIsLTE _ _ skn_lte_predn)
+      <~ predn     ...(Properties.lteIsLTE _ _ skn_lte_predn)
     (False ** prf) => 
       rewrite prf in 
       let skn_minus_n_eq_kn : ((1 + k)*n `minus` n = k*n)

@@ -9,8 +9,36 @@ import Data.Nat.Order.Strict
 import Decidable.Equality
 import Decidable.Order
 import Decidable.Order.Strict
+import Data.Bool.Decidable
+
 
 %default total
+export
+LTESuccInjectiveMonotone : (m, n : Nat) -> Reflects (m `LTE` n) b -> Reflects (S m `LTE` S n) b
+LTESuccInjectiveMonotone m n (RTrue      m_lte_n) = RTrue  $ LTESucc m_lte_n
+LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case 
+                                                               LTESucc m_lte_n => not_m_lte_n m_lte_n
+                                                               
+export
+lteReflection : (a, b : Nat) -> Reflects (a `LTE` b) (a `lte` b)
+lteReflection 0 b = RTrue LTEZero
+lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
+lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
+
+-- For example:
+export
+lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
+lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
+export
+notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
+notlteIsLT a b prf = notLTImpliesGTE
+                       \prf' =>
+                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf 
+                                 $ lteReflection (S a) (S b)) prf'
+  
+
+
 
 -- The converse to lteIsLTE:
 export
@@ -22,7 +50,7 @@ LteIslte  a b a_lt_b with (the (x : Bool ** a `lte` b = x) (a `lte` b ** Refl))
    $ CalcWith {leq = LTE} $
    |~ 1 + a
    <~ 1 + b  ...(plusLteMonotoneLeft 1 a b a_lt_b)
-   <~ a      ...(notlteIsLT _ _ prf)
+   <~ a      ...(Properties.notlteIsLT _ _ prf)
 
 -- The converse to lteIsLTE:
 export
@@ -34,7 +62,7 @@ GTIsnotlte  a b b_lt_a with (the (x : Bool ** a `lte` b = x) (a `lte` b ** Refl)
    $ CalcWith {leq = LTE} $
    |~ 1 + b
    <~ a  ...(b_lt_a)
-   <~ b  ...(lteIsLTE _ _ prf)
+   <~ b  ...(Properties.lteIsLTE _ _ prf)
 
 ||| Subtracting a number gives a smaller number
 export

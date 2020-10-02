@@ -121,10 +121,14 @@ lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
 
 export
+notLTEImpliesGT : {a, b : Nat} -> Not (a `LTE` b) -> a `GT` b
+notLTEImpliesGT {a = 0  }           not_z_lte_b    = absurd $ not_z_lte_b LTEZero
+notLTEImpliesGT {a = S a} {b = 0  } notLTE = LTESucc LTEZero
+notLTEImpliesGT {a = S a} {b = S k} notLTE = LTESucc (notLTEImpliesGT (notLTE . LTESucc))
+
+export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
-notLTImpliesGTE {b = Z} _ = LTEZero
-notLTImpliesGTE {a = Z} {b = S k} notLt = absurd (notLt (LTESucc LTEZero))
-notLTImpliesGTE {a = S k} {b = S j} notLt = LTESucc (notLTImpliesGTE (notLt . LTESucc))
+notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
 
 public export
 lte : Nat -> Nat -> Bool
@@ -630,18 +634,6 @@ export
 sucMinR : (l : Nat) -> minimum l (S l) = l
 sucMinR Z = Refl
 sucMinR (S l) = cong S $ sucMinR l
-
--- Proofs on lte -----------------------
-
-lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
-lteIsLTE 0 b prf = LTEZero
-lteIsLTE (S a) 0 prf impossible
-lteIsLTE (S a) (S b) prf = LTESucc (lteIsLTE a b prf)
-
-notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
-notlteIsLT  0    b     prf impossible
-notlteIsLT (S a) 0     prf = LTESucc LTEZero
-notlteIsLT (S a) (S b) prf = LTESucc (notlteIsLT a b prf)
 
 -- Algebra -----------------------------
 
