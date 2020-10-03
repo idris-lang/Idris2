@@ -296,7 +296,7 @@ mutual
       = do let ap = sugarApp (PAutoApp fc fn arg)
            mkApp ap rest
   mkApp fn ((fc, Just (Just n), arg) :: rest)
-      = do imp <- showImplicits --TODO rename to showNamed
+      = do imp <- showImplicits
            if imp
               then do let ap = PNamedApp fc fn n arg
                       mkApp ap rest

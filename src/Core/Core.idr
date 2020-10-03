@@ -96,7 +96,7 @@ data Error : Type where
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
      InvalidArgs : {vars : _} ->
-                        FC -> Env Term vars -> List (Maybe Name) -> Term vars -> Error
+                        FC -> Env Term vars -> List Name -> Term vars -> Error
      TryWithImplicits : {vars : _} ->
                         FC -> Env Term vars -> List (Name, Term vars) -> Error
      BadUnboundImplicit : {vars : _} ->

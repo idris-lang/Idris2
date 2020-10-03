@@ -12,7 +12,6 @@ import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
-import TTImp.Elab.Record
 import TTImp.TTImp
 
 import Data.List
@@ -468,6 +467,14 @@ mutual
   findInfExpBinder : List (Name, RawImp) -> Maybe RawImp
   findInfExpBinder = lookup (UN "_")
 
+  isImplicitAs : RawImp -> Bool
+  isImplicitAs (IAs _ UseLeft _ (Implicit _ _)) = True
+  isImplicitAs _ = False
+
+  isInfExpBinder : Name -> Bool
+  isInfExpBinder (UN "_") = True
+  isInfExpBinder _ = False
+
   -- Check an application of 'fntm', with type 'fnty' to the given list
   -- of explicit and implicit arguments.
   -- Returns the checked term and its (weakly) normalised type
@@ -498,7 +505,7 @@ mutual
                        tm x aty sc argdata arg expargs' autoargs namedargs kr expty
   checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                argdata [] autoargs namedargs kr expty with (findNamed x namedargs)
-   -- Explicit Pi, we found a compatible named argument
+   -- We found a compatible named argument
    checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                 argdata [] autoargs namedargs kr expty | Just ((_, arg) ::: namedargs')
     = do let argRig = rig |*| rigb
@@ -507,13 +514,20 @@ mutual
    checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                 argdata [] autoargs namedargs kr expty | Nothing
     = case findInfExpBinder namedargs of
-           Just arg =>
+           Just arg => -- Bind-all-explicit pattern is present - implicitly bind
              do let argRig = rig |*| rigb
                 checkRestApp rig argRig elabinfo nest env fc
                              tm x aty sc argdata arg [] autoargs namedargs kr expty
            _ =>
              do defs <- get Ctxt
-                checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
+                if all isImplicitAs (autoargs
+                                      ++ map snd (filter (not . isInfExpBinder . fst) namedargs))
+                                                                    -- Only non-user implicit `as` bindings added by
+                                                                    -- the compiler are allowed here
+                   then -- We are done
+                        checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
+                   else -- Some user defined binding is present while we are out of explicit arguments, that's an error
+                        throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
   -- Function type is delayed, so force the term and continue
   checkAppWith rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
       = checkAppWith rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
@@ -533,6 +547,7 @@ mutual
                         -- that we can resolve the implicits
                         else handle (checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in))
                                (\err => makeImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in))
+  -- Same for auto
   checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
                argdata [] [] [] kr (Just expty_in)
       = do let argRig = rig |*| rigb
@@ -542,6 +557,7 @@ mutual
                 NBind tfc' x' (Pi _ rigb' AutoImplicit aty') sc'
                    => checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
                 _ => makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in)
+  -- Same for default
   checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb (DefImplicit aval) aty) sc)
                argdata [] [] [] kr (Just expty_in)
       = do let argRig = rigMult rig rigb
@@ -590,19 +606,7 @@ mutual
                Just ((_, arg) ::: namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
                                   tm x aty sc argdata arg expargs autoargs namedargs' kr expty
-
-  checkAppWith rig elabinfo nest env fc tm ty argdata [] [] [] kr expty
-      = do defs <- get Ctxt
-           checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
-  checkAppWith rig elabinfo nest env fc tm ty argdata [] autoargs namedargs kr expty
-      = case filter notInferable (autoargs ++ map snd namedargs) of
-             [] => checkAppWith rig elabinfo nest env fc tm ty argdata [] [] [] kr expty
-             is => throw (InvalidArgs fc env (map (const Nothing) autoargs ++ map (Just . fst) namedargs) tm)
-    where
-      notInferable : RawImp -> Bool
-      notInferable (Implicit _ _) = False
-      notInferable (IAs _ _ _ i) = notInferable i
-      notInferable _ = True
+  -- Invent a function type if we have extra explicit arguments but type is further unknown
   checkAppWith {vars} rig elabinfo nest env fc tm ty (n, argpos) (arg :: expargs) autoargs namedargs kr expty
       = -- Invent a function type,  and hope that we'll know enough to solve it
         -- later when we unify with expty
@@ -630,6 +634,13 @@ mutual
                          ctm <- newConstant fc rig env (fst res) cty cs
                          pure (ctm, gnf env retTy)
            pure res
+  -- Only non-user implicit `as` bindings are allowed to be present as arguments at this stage
+  checkAppWith rig elabinfo nest env fc tm ty argdata [] autoargs namedargs kr expty
+      = do defs <- get Ctxt
+           if all isImplicitAs (autoargs ++ map snd (filter (not . isInfExpBinder . fst) namedargs))
+              then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
+              else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
+
 
 export
 checkApp : {vars : _} ->
