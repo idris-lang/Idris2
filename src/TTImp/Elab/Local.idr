@@ -34,10 +34,9 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
     = do est <- get EST
          let f = defining est
          defs <- get Ctxt
-         vis <- case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
-                        Just gdef => do log "elab.local" 8 $ "Defining def: " ++ !(prettyName gdef.fullname)
-                                        pure $ visibility gdef
-                        Nothing => pure Public
+         let vis = case !(lookupCtxtExact (Resolved (defining est)) (gamma defs)) of
+                        Just gdef => visibility gdef
+                        Nothing => Public
          -- If the parent function is public, the nested definitions need
          -- to be public too
          let nestdecls =
@@ -45,11 +44,9 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                   then map setPublic nestdecls_in
                   else nestdecls_in
          let defNames = definedInBlock emptyNS nestdecls
-         log "elab.local" 8 $ "Nested names: " ++ show !(traverse prettyName defNames)
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
-         --log "elab.local" 8 $ "Visible applied unique: " ++ show !(traverse prettyName names')
          let nest' = record { names $= (names' ++) } nest
          let env' = dropLinear env
          -- We don't want to keep rechecking delayed elaborators in the

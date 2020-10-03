@@ -1,15 +1,15 @@
 1/1: Building Fld (Fld.idr)
-Error: While processing right hand side of r2_shouldNotTypecheck3. Ambiguous elaboration. Possible results:
+Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR
-    Main.R1.MkR Type
+    Main.R1.MkR (Main.OrdinaryDog.MkDog ?name ?_ ?_)
 
-Fld.idr:61:26--61:29
+Fld.idr:70:26--70:29
     |
- 61 | r2_shouldNotTypecheck3 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
+ 70 | r2_shouldNotTypecheck1 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
     |                          ^^^
 
 Main> Main.myDog : OrdinaryDog
 Main> Main.mySuperDog : SuperDog
 Main> Main.other : Other String
-Main> 1 hole: Main.r2_shouldNotTypecheck3
+Main> 1 hole: Main.r2_shouldNotTypecheck1
 Main> Bye for now!

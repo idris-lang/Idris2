@@ -233,7 +233,7 @@ Show Error where
       = show fc ++ ":Ambiguity too deep in " ++ show n ++ " " ++ show ns
   show (AllFailed ts) = "No successful elaboration: " ++ assert_total (show ts)
   show (RecordTypeNeeded fc env)
-      = show fc ++ ":Can't infer type of record"
+      = show fc ++ ":Can't infer type of record to update"
   show (NotRecordField fc fld Nothing)
       = show fc ++ ":" ++ fld ++ " is not part of a record type"
   show (NotRecordField fc fld (Just ty))
@@ -493,10 +493,12 @@ traverse' f [] acc = pure (reverse acc)
 traverse' f (x :: xs) acc
     = traverse' f xs (!(f x) :: acc)
 
+%inline
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+%inline
 export
 for : List a -> (a -> Core b) -> Core (List b)
 for = flip traverse
@@ -510,6 +512,7 @@ traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
 
+%inline
 export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
@@ -522,6 +525,7 @@ traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
 
+%inline
 export
 sequence : List (Core a) -> Core (List a)
 sequence (x :: xs)

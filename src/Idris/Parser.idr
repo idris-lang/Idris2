@@ -631,14 +631,14 @@ mutual
       = do b <- bounds (do kw <- option False (keyword "record" *> pure True) -- TODO deprecated
                            symbol "{"
                            commit
-                           fs <- sepBy1 (symbol ",") (field kw fname indents True)
+                           fs <- sepBy1 (symbol ",") (field kw fname indents)
                            symbol "}"
                            pure fs)
            pure (PUpdate (boundToFC fname b) b.val)
 
-  field : Bool -> FileName -> IndentInfo -> Bool -> Rule PFieldUpdate
-  field kw fname indents allowNS
-      = do path <- parseFieldName allowNS
+  field : Bool -> FileName -> IndentInfo -> Rule PFieldUpdate
+  field kw fname indents
+      = do path <- map fieldName <$> [| name :: many recFieldCompat |]
            upd <- (ifThenElse kw (symbol "=") (symbol ":=") *> pure PSetField)
                       <|>
                   (symbol "$=" *> pure PSetFieldApp)
@@ -653,10 +653,6 @@ mutual
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
       recFieldCompat = dotIdent <|> (symbol "->" *> name)
-
-      parseFieldName : Bool -> Rule (List String)
-      parseFieldName True  = map fieldName <$> [| name :: many recFieldCompat |]
-      parseFieldName False = map fieldName <$> [| name :: pure [] |]
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents

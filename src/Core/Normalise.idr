@@ -1294,6 +1294,7 @@ replace : {auto c : Ref Ctxt Defs} ->
           Core (Term vars)
 replace = replace' 0
 
+||| For printing purposes
 export
 normaliseErr : {auto c : Ref Ctxt Defs} ->
                Error -> Core Error

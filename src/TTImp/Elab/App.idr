@@ -513,26 +513,6 @@ mutual
            _ =>
              do defs <- get Ctxt
                 checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
-   -- checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
-               -- argdata expargs autoargs namedargs kr expty with (findNamed x namedargs)
-   -- checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
-   --              argdata expargs autoargs namedargs kr expty | Just ((_, arg) ::: namedargs')
-   -- -- Explicit Pi and we found a compatible named argument
-   --   = do let argRig = rig |*| rigb
-   --        checkRestApp rig argRig elabinfo nest env fc
-   --                     tm x aty sc argdata arg expargs autoargs namedargs' kr expty
-   -- checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
-   --             argdata expargs autoargs namedargs kr expty | Nothing
-   -- -- Explicit Pi, we try to use provided (unnamed) explicit argument
-   --   = case expargs of
-   --          arg :: expargs =>
-   --            do let argRig = rig |*| rigb
-   --               checkRestApp rig argRig elabinfo nest env fc
-   --                            tm x aty sc argdata arg expargs autoargs namedargs kr expty
-   -- -- Explicit Pi, no proper argument found, throw an error
-   --          _ =>
-   --            do defs <- get Ctxt
-   --               checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
   -- Function type is delayed, so force the term and continue
   checkAppWith rig elabinfo nest env fc tm (NDelayed dfc r ty@(NBind _ _ (Pi _ _ _ _) sc)) argdata expargs autoargs namedargs kr expty
       = checkAppWith rig elabinfo nest env fc (TForce dfc r tm) ty argdata expargs autoargs namedargs kr expty
@@ -573,21 +553,22 @@ mutual
                          else makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] [] kr (Just expty_in)
                 _ => makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] [] kr (Just expty_in)
 
-  -- Check next auto implicit argument
+  -- Check next unnamed auto implicit argument
   checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
-               argdata expargs autoargs namedargs kr expty
+               argdata expargs (arg :: autoargs') namedargs kr expty
+      = checkRestApp rig (rig |*| rigb) elabinfo nest env fc
+                         tm x aty sc argdata arg expargs autoargs' namedargs kr expty
+  -- Check next named auto implicit argument
+  checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
+               argdata expargs [] namedargs kr expty
       = let argRig = rig |*| rigb in
             case findNamed x namedargs of
-                 Just ((_, arg) ::: namedargs) =>
+                 Just ((_, arg) ::: namedargs') =>
                     checkRestApp rig argRig elabinfo nest env fc
-                                 tm x aty sc argdata arg expargs autoargs namedargs kr expty
+                                 tm x aty sc argdata arg expargs [] namedargs' kr expty
                  Nothing =>
-                    case autoargs of
-                         arg :: autoargs =>
-                           checkRestApp rig argRig elabinfo nest env fc
-                                        tm x aty sc argdata arg expargs autoargs namedargs kr expty
-                         [] => makeAutoImplicit rig argRig elabinfo nest env fc tm
-                                                x aty sc argdata expargs [] namedargs kr expty
+                         makeAutoImplicit rig argRig elabinfo nest env fc tm
+                                              x aty sc argdata expargs [] namedargs kr expty
   -- Check next implicit argument
   checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb Implicit aty) sc)
                argdata expargs autoargs namedargs kr expty
@@ -595,9 +576,9 @@ mutual
             case findNamed x namedargs of
                Nothing => makeImplicit rig argRig elabinfo nest env fc tm
                                        x aty sc argdata expargs autoargs namedargs kr expty
-               Just ((_, arg) ::: namedargs) =>
+               Just ((_, arg) ::: namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
-                                  tm x aty sc argdata arg expargs autoargs namedargs kr expty
+                                  tm x aty sc argdata arg expargs autoargs namedargs' kr expty
   -- Check next default argument
   checkAppWith rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb (DefImplicit arg) aty) sc)
                argdata expargs autoargs namedargs kr expty
@@ -605,9 +586,9 @@ mutual
             case findNamed x namedargs of
                Nothing => makeDefImplicit rig argRig elabinfo nest env fc tm
                                           x arg aty sc argdata expargs autoargs namedargs kr expty
-               Just ((_, arg) ::: namedargs) =>
+               Just ((_, arg) ::: namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
-                                  tm x aty sc argdata arg expargs autoargs namedargs kr expty
+                                  tm x aty sc argdata arg expargs autoargs namedargs' kr expty
 
   checkAppWith rig elabinfo nest env fc tm ty argdata [] [] [] kr expty
       = do defs <- get Ctxt

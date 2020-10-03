@@ -59,6 +59,12 @@ nextVar fc
          put QVar (i + 1)
          pure (Ref fc Bound (MN "imp" i))
 
+badClause : Term [] -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
+badClause fn exps autos named
+   = throw (GenericMsg (getLoc fn)
+            ("Badly formed impossible clause "
+               ++ show (fn, exps, autos, named)))
+
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
                 {auto q : Ref QVar Int} ->
@@ -67,11 +73,20 @@ mutual
                 (autoargs : List RawImp) ->
                 (namedargs : List (Name, RawImp)) ->
                 Core ClosedTerm
+  -- unnamed takes priority
   processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
      = do e' <- mkTerm e (Just ty) [] [] []
           defs <- get Ctxt
           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
                       exps autos named
+  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
+     = do defs <- get Ctxt
+          case findNamed x named of
+            Just ((_, e) ::: named') =>
+               do e' <- mkTerm e (Just ty) [] [] []
+                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                              [] autos named'
+            Nothing => badClause fn [] autos named
   processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
@@ -85,26 +100,25 @@ mutual
                               exps autos named'
   processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
-          case findNamed x named of
-            Nothing => case autos of
-                            (e :: autos') =>
-                              do e' <- mkTerm e (Just ty) [] [] []
-                                 processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
-                                             exps autos' named
-                            _ =>
-                              do e' <- nextVar fc
-                                 processArgs (App fc fn e')
-                                             !(sc defs (toClosure defaultOpts [] e'))
-                                             exps [] named
-            Just ((_, e) ::: named') =>
-               do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
-                              exps autos named'
+          case autos of
+               (e :: autos') => -- unnamed takes priority
+                   do e' <- mkTerm e (Just ty) [] [] []
+                      processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                                  exps autos' named
+               [] =>
+                  case findNamed x named of
+                     Nothing =>
+                        do e' <- nextVar fc
+                           processArgs (App fc fn e')
+                                       !(sc defs (toClosure defaultOpts [] e'))
+                                       exps [] named
+                     Just ((_, e) ::: named') =>
+                        do e' <- mkTerm e (Just ty) [] [] []
+                           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                                       exps [] named'
   processArgs fn ty [] [] [] = pure fn
   processArgs fn ty exps autos named
-     = throw (GenericMsg (getLoc fn)
-                ("Badly formed impossible clause "
-                     ++ show (fn, exps, autos, named)))
+     = badClause fn exps autos named
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto q : Ref QVar Int} ->
