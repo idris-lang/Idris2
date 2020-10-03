@@ -819,24 +819,24 @@ processDef opts nest env fc n_in cs_in
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
                                     (IBindHere fc PATTERN lhstm) Nothing
-                   log "declare.def.impossible" 5 $ "Post elab: " ++ show !(toFullNames lhstm)
+                   logC "declare.def.impossible" 5 $ ("Post elab: " ++) . show <$> toFullNames lhstm
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
-                   log "declare.def.impossible" 5 $ "Normalised: " ++ show !(toFullNames lhs)
+                   logC "declare.def.impossible" 5 $ ("Normalised: " ++) . show <$> toFullNames lhs
                    if !(hasEmptyPat defs [] lhs)
                       then do put Ctxt ctxt
-                              log "declare.def.impossible" 3 $ "Impossible due to incompatible patterns"
+                              log "declare.def.impossible" 3 "Impossible due to incompatible patterns"
                               pure Nothing
                       else do empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
-                              log "declare.def.impossible" 3 $ "Possible case: compatible patterns"
+                              log "declare.def.impossible" 3 "Possible case: compatible patterns"
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
                            if not !(recoverableErr defs err)
-                              then do log "declare.def.impossible" 3 $ "Impossible due to unrecoverable error"
+                              then do log "declare.def.impossible" 3 "Impossible due to unrecoverable error"
                                       pure Nothing
-                              else do log "declare.def.impossible" 3 $ "Possible case: recoverable error"
+                              else do log "declare.def.impossible" 3 "Possible case: recoverable error"
                                       pure (Just tm))
       where
         closeEnv : Defs -> NF [] -> Core ClosedTerm
