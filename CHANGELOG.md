@@ -17,7 +17,7 @@ Command-line options changes:
 
 Compiler changes:
 
-* Added new syntax for named applications and bind-all-explicits:
+* Added new syntax for named applications and the bind-all-explicits pattern:
 
      `f {x [= t], x [= t], ...}`
      `f {x [= t], x [= t], ..., _}`

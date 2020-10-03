@@ -457,23 +457,23 @@ mutual
              checkAppWith rig elabinfo nest env fc
                           fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
-  public export
+  export
   findNamed : Name -> List (Name, RawImp) -> Maybe (List1 (Name, RawImp))
   findNamed n l = case partition ((== n) . fst) l of
                        (x :: xs, ys) => Just (x ::: (xs ++ ys))
                        _ => Nothing
 
-  public export
-  findInfExpBinder : List (Name, RawImp) -> Maybe RawImp
-  findInfExpBinder = lookup (UN "_")
+  export
+  findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
+  findBindAllExpPattern = lookup (UN "_")
 
   isImplicitAs : RawImp -> Bool
   isImplicitAs (IAs _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
-  isInfExpBinder : Name -> Bool
-  isInfExpBinder (UN "_") = True
-  isInfExpBinder _ = False
+  isBindAllExpPattern : Name -> Bool
+  isBindAllExpPattern (UN "_") = True
+  isBindAllExpPattern _ = False
 
   -- Check an application of 'fntm', with type 'fnty' to the given list
   -- of explicit and implicit arguments.
@@ -513,7 +513,7 @@ mutual
                       tm x aty sc argdata arg [] autoargs namedargs' kr expty
    checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                 argdata [] autoargs namedargs kr expty | Nothing
-    = case findInfExpBinder namedargs of
+    = case findBindAllExpPattern namedargs of
            Just arg => -- Bind-all-explicit pattern is present - implicitly bind
              do let argRig = rig |*| rigb
                 checkRestApp rig argRig elabinfo nest env fc
@@ -521,7 +521,7 @@ mutual
            _ =>
              do defs <- get Ctxt
                 if all isImplicitAs (autoargs
-                                      ++ map snd (filter (not . isInfExpBinder . fst) namedargs))
+                                      ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
                                                                     -- Only non-user implicit `as` bindings added by
                                                                     -- the compiler are allowed here
                    then -- We are done
@@ -637,7 +637,7 @@ mutual
   -- Only non-user implicit `as` bindings are allowed to be present as arguments at this stage
   checkAppWith rig elabinfo nest env fc tm ty argdata [] autoargs namedargs kr expty
       = do defs <- get Ctxt
-           if all isImplicitAs (autoargs ++ map snd (filter (not . isInfExpBinder . fst) namedargs))
+           if all isImplicitAs (autoargs ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
               then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
               else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
 
