@@ -28,7 +28,7 @@ table' =
 
 mutual
   term : Parser Nat
-  term = lexeme (natural <|> expr)
+  term = (natural <|> expr) <* spaces0
          <?> "simple expression"
 
   expr : Parser Nat
@@ -36,7 +36,7 @@ mutual
 
 mutual
   term' : Parser Integer
-  term' = lexeme (integer <|> expr')
+  term' = (integer <|> expr') <* spaces0
           <?> "simple expression"
 
   expr' : Parser Integer

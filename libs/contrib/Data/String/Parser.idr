@@ -157,12 +157,12 @@ eos = P $ \s => pure $ if s.pos == s.maxPos
 ||| Succeeds if the next char is `c`
 export
 char : Applicative m => Char -> ParseT m ()
-char c = skip $ satisfy (== c)
+char c = skip $ satisfy (== c) <?> "char " ++ show c
 
 ||| Parses a space character
 export
 space : Applicative m => ParseT m Char
-space = satisfy isSpace
+space = satisfy isSpace <?> "space"
 
 mutual
     ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
@@ -219,18 +219,24 @@ takeWhile1 f = pack <$> some (satisfy f)
 export
 covering
 spaces : Monad m => ParseT m ()
-spaces = skip (some space) <?> "white space"
+spaces = skip (some space) <?> "whitespaces"
+
+||| Always succeeds, parses zero or more space characters.
+export
+covering
+spaces0 : Monad m => ParseT m ()
+spaces0 = skip (many space)
 
 ||| Discards brackets around a matching parser
 export
 parens : Monad m => ParseT m a -> ParseT m a
 parens p = char '(' *> p <* char ')'
 
-||| Discards optional whitespace after a matching parser
+||| Discards whitespace after a matching parser
 export
 covering
 lexeme : Monad m => ParseT m a -> ParseT m a
-lexeme p = p <* option () spaces
+lexeme p = p <* spaces
 
 ||| Matches a specific string, then skips following whitespace
 export
@@ -259,11 +265,11 @@ digit = do x <- satisfy isDigit
              , ('9', 9)
              ]
 
-fromDigits : Num a => ((Fin 10) -> a) -> List (Fin 10) -> a
+fromDigits : Num a => (Fin 10 -> a) -> List (Fin 10) -> a
 fromDigits f xs = foldl addDigit 0 xs
 where
-  addDigit : a -> (Fin 10) -> a
-  addDigit num d = 10*num + (f d)
+  addDigit : a -> Fin 10 -> a
+  addDigit num d = 10*num + f d
 
 intFromDigits : List (Fin 10) -> Integer
 intFromDigits = fromDigits finToInteger
