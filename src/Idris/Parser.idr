@@ -598,9 +598,25 @@ mutual
            pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
 
   if_ : FileName -> IndentInfo -> Rule PTerm
-  if_ fname indents
-      = do b <- bounds (do keyword "if"
-                           x <- expr pdef fname indents
+  if_ fname indents = do
+    keyword "if"
+    ifThenElse' fname indents <|> ifMulti fname
+
+  ifMulti : FileName -> Rule PTerm
+  ifMulti fname
+      = do b <- bounds (nonEmptyBlock $ \indents => do
+                         symbol "|"
+                         pred <- opExpr pdef fname indents
+                         symbol "=>"
+                         mustContinue indents Nothing
+                         rhs <- expr pdef fname indents
+                         atEnd indents
+                         pure (pred,rhs))
+           pure (PIfMultiWay (boundToFC fname b) b.val)
+
+  ifThenElse' : FileName -> IndentInfo -> Rule PTerm
+  ifThenElse' fname indents
+      = do b <- bounds (do x <- expr pdef fname indents
                            commitKeyword indents "then"
                            t <- expr pdef fname indents
                            commitKeyword indents "else"

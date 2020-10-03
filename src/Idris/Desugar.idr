@@ -29,6 +29,7 @@ import Utils.Shunting
 
 import Control.Monad.State
 import Data.List
+import Data.List1
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -44,6 +45,7 @@ import Data.List
 -- * Replacing !-notation
 -- * Dependent pair notation
 -- * Idiom brackets
+-- * Turning Multi-way If into cases
 
 %default covering
 
@@ -321,6 +323,25 @@ mutual
       = pure $ ICase fc !(desugarB side ps x) (IVar fc (UN "Bool"))
                    [PatClause fc (IVar fc (UN "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN "False")) !(desugar side ps e)]
+  desugarB side ps mw@(PIfMultiWay fc alts)
+      = makeMCases alts
+    where
+      -- If the alternative is _ we don't continue casing.
+      makeMCases : List1 (PTerm,PTerm) -> Core RawImp
+      makeMCases ((p,v) ::: []) = do
+        Implicit fc True <- desugarB side ps p
+          | g => pure $ ICase fc g (IVar fc (UN "Bool"))
+                        [PatClause fc (IVar fc (UN "True")) !(desugar side ps v)]
+        desugar side ps v
+      makeMCases ((p,v) ::: (x :: xs)) = do
+        Implicit fc True <- desugarB side ps p
+          | g => pure $ ICase fc g (IVar fc (UN "Bool"))
+                   [PatClause fc (IVar fc (UN "True")) !(desugar side ps v),
+                    PatClause fc (IVar fc (UN "False")) !(makeMCases (x ::: xs))]
+        -- TODO We've determined here that there's a catchall case, so we need
+        -- to warn that more cases won't be considered. How best to do that?
+        -- recordWarning $ UnreachableIf fc ?dsfdfs ?sdfsd -- mw (x :: xs)
+        desugar side ps v
   desugarB side ps (PComprehension fc ret conds)
       = desugarB side ps (PDoBlock fc Nothing (map guard conds ++ [toPure ret]))
     where

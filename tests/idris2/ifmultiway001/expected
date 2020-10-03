@@ -1,0 +1,12 @@
+1/1: Building IfMultiWay (IfMultiWay.idr)
+Error: partialTest2 is not covering.
+
+IfMultiWay.idr:75:1--77:13
+ 75 | total -- Should not be accepted as total. It's an error so test this last.
+ 76 | partialTest2 : Int -> Char
+ 77 | partialTest2 i = if | i + 3 == 7 => '7'
+
+Calls non covering function Main.case block in case block in case block in partialTest2
+1/1: Building BadIndent (BadIndent.idr)
+Error: Parse error at line 4:13:
+Expected end of input (next tokens: [symbol |, identifier i, symbol ==, literal 0, symbol =>, character '0', symbol |, identifier i, symbol <, literal 0])

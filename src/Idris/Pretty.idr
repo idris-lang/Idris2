@@ -257,6 +257,7 @@ mutual
       go d (PIfThenElse _ x t e) =
         parenthesise (d > appPrec) $ group $ align $ hang 2 $ vsep
           [keyword "if" <++> go startPrec x, keyword "then" <++> go startPrec t, keyword "else" <++> go startPrec e]
+      go d (PIfMultiWay _ alts) = pretty "TODO MultiWay"
       go d (PComprehension _ ret es) =
           group $ brackets (go startPrec (dePure ret) <++> pipe <++> vsep (punctuate comma (prettyDo . deGuard <$> es)))
         where

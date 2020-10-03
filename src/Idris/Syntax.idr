@@ -13,6 +13,8 @@ import TTImp.TTImp
 
 import Data.ANameMap
 import Data.List
+import Data.List1
+
 import Data.NameMap
 import Data.StringMap
 import Text.PrettyPrint.Prettyprinter
@@ -87,6 +89,7 @@ mutual
        PDPair : FC -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
        PIfThenElse : FC -> PTerm -> PTerm -> PTerm -> PTerm
+       PIfMultiWay : FC -> List1 (PTerm,PTerm) -> PTerm
        PComprehension : FC -> PTerm -> List PDo -> PTerm
        PRewrite : FC -> PTerm -> PTerm -> PTerm
        -- A list range  [x,y..z]
@@ -146,6 +149,7 @@ mutual
   getPTermLoc (PDPair fc _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
   getPTermLoc (PIfThenElse fc _ _ _) = fc
+  getPTermLoc (PIfMultiWay fc _) = fc
   getPTermLoc (PComprehension fc _ _) = fc
   getPTermLoc (PRewrite fc _ _) = fc
   getPTermLoc (PRange fc _ _ _) = fc
@@ -576,8 +580,10 @@ mutual
     showPrec d (PDPair _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
                                  " ** " ++ showPrec d r ++ ")"
     showPrec _ (PUnit _) = "()"
+
     showPrec d (PIfThenElse _ x t e) = "if " ++ showPrec d x ++ " then " ++ showPrec d t ++
                                  " else " ++ showPrec d e
+    showPrec d (PIfMultiWay _ alts) = "TODO: me"
     showPrec d (PComprehension _ ret es)
         = "[" ++ showPrec d (dePure ret) ++ " | " ++
                  showSep ", " (map (showDo . deGuard) es) ++ "]"
@@ -885,6 +891,10 @@ mapPTermM f = goPTerm where
       PIfThenElse fc <$> goPTerm x
                      <*> goPTerm y
                      <*> goPTerm z
+      >>= f
+    goPTerm (PIfMultiWay fc alts) =
+      PIfMultiWay fc <$> traverseList1
+        (\(x,y) => MkPair <$> goPTerm x <*> goPTerm y) alts
       >>= f
     goPTerm (PComprehension fc x xs) =
       PComprehension fc <$> goPTerm x

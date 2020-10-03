@@ -1254,6 +1254,38 @@ we get a default value:
     *UsefulTypes> lookup_default 4 [3,4,5,6] (-1)
     -1 : Integer
 
+Multi-way ``if`` expressions
+----------------------------
+
+Too many nested ``if`` can make code hard to read so Idris provides an
+alternative notation for reducing nesting and making choices easier to
+follow.
+
+The following function ``iffy`` would become quite messy if we want to
+include more choices of what to do with ``i``. It's also a lot of effort to
+insert choices at arbitrary points without repetitive indentation changes.
+Multi-way Ifs solve this in ``okay`` by allowing you to state your choices
+and what to do about them in turn, we're also able to insert a case for ``i
+== 0`` with ease:
+
+.. code-block:: idris
+
+    iffy : Int -> Char
+    iffy i = if i + 3 == 7 then '7'
+               else if i < 0 then 'N'
+                 else 'X'
+
+    okay : Int -> Char
+    okay i = if | i + 3 == 7  => '7'
+                | i == 0 => '0'
+                | i < 0 => 'N'
+                | _ => 'X'
+
+For this to be accepted as total we require the catch-all case ``_ = ...`` as
+the last entry but this isn't required otherwise. This makes it slightly more
+flexible than ``if`` which always requires the ``then`` branch. More on
+totality below.
+
 Totality
 ========
 
