@@ -134,6 +134,7 @@ chezTests
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
       "chez025", "chez026", "chez027", "chez028", "chez029", "chez030",
       "chez031",
+      "perf001",
       "reg001"]
 
 nodeTests : List String
