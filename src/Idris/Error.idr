@@ -59,8 +59,8 @@ ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
 ploc EmptyFC = pure emptyDoc
 ploc fc@(MkFC fn s e) = do
-    let (sr, sc) = bimap (fromInteger . cast) s
-    let (er, ec) = bimap (fromInteger . cast) e
+    let (sr, sc) = mapHom (fromInteger . cast) s
+    let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
     let head = annotate FileCtxt (pretty fc)
     source <- lines <$> getCurrentElabSource
@@ -72,8 +72,6 @@ ploc fc@(MkFC fn s e) = do
          pure $ vsep [emptyDoc, head, firstRow, annotate FileCtxt (space <+> pretty (sr + 1)) <++> align (vsep [line, emph]), emptyDoc]
        else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
   where
-    bimap : (a -> b) -> (a, a) -> (b, b)
-    bimap f (x, y) = (f x, f y)
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
@@ -88,10 +86,10 @@ ploc2 : {auto o : Ref ROpts REPLOpts} ->
 ploc2 fc EmptyFC = ploc fc
 ploc2 EmptyFC fc = ploc fc
 ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
-    do let (sr1, sc1) = bimap (fromInteger . cast) s1
-       let (sr2, sc2) = bimap (fromInteger . cast) s2
-       let (er1, ec1) = bimap (fromInteger . cast) e1
-       let (er2, ec2) = bimap (fromInteger . cast) e2
+    do let (sr1, sc1) = mapHom (fromInteger . cast) s1
+       let (sr2, sc2) = mapHom (fromInteger . cast) s2
+       let (er1, ec1) = mapHom (fromInteger . cast) e1
+       let (er2, ec2) = mapHom (fromInteger . cast) e2
        if (er2 > the Nat (er1 + 5))
           then pure $ !(ploc (MkFC fn1 s1 e1)) <+> line <+> !(ploc (MkFC fn2 s2 e2))
           else do let nsize = length $ show (er2 + 1)
@@ -134,8 +132,6 @@ ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
                          pure $ vsep $ [emptyDoc, head, firstRow] ++ top ++ [fileCtxt (space <+> pretty (sr2 + 1)) <++> align (vsep [line, emph]), emptyDoc]
                        (_, _, _) => pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr1 (pretty <$> extractRange sr1 er2 source)) <+> line
   where
-    bimap : (a -> b) -> (a, a) -> (b, b)
-    bimap f (x, y) = (f x, f y)
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String

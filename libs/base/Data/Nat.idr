@@ -166,11 +166,11 @@ export
 succInjective : (0 left, right : Nat) -> S left = S right -> left = right
 succInjective _ _ Refl = Refl
 
-export
+export total
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
-export partial
+public export total
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 modNatNZ left Z         p = void (p Refl)
 modNatNZ left (S right) _ = mod' left left right

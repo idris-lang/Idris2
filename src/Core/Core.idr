@@ -462,6 +462,14 @@ export
 (<*>) : Core (a -> b) -> Core a -> Core b
 (<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
 
+export
+(*>) : Core a -> Core b -> Core b
+(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
+
+export
+(<*) : Core a -> Core b -> Core a
+(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
+
 export %inline
 when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f

@@ -17,6 +17,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.List1
+import Data.Maybe
 
 %default covering
 
@@ -653,8 +654,7 @@ checkApp rig elabinfo nest env fc (INamedApp fc' fn nm arg) expargs autoargs nam
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
    = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
         nty <- getNF nty_in
-        let prims = mapMaybe id
-                     [!fromIntegerName, !fromStringName, !fromCharName]
+        prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
         logC "elab" 10
@@ -676,17 +676,6 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         normalisePrims prims env
            !(checkAppWith rig elabinfo nest env fc ntm nty (Just fn, arglen) expargs autoargs namedargs False exp)
   where
-    isPrimName : List Name -> Name -> Bool
-    isPrimName [] fn = False
-    isPrimName (p :: ps) fn
-        = dropNS fn == p || isPrimName ps fn
-
-    boundSafe : Constant -> ElabMode -> Bool
-    boundSafe _ (InLHS _) = True -- always need to expand on LHS
-    boundSafe (BI x) _ = abs x < 100 -- only do this for relatively small bounds.
-                           -- Once it gets too big, we might be making the term
-                           -- bigger than it would have been without evaluating!
-    boundSafe _ _ = True
 
     -- If the term is an application of a primitive conversion (fromInteger etc)
     -- and it's applied to a constant, fully normalise the term.
@@ -695,16 +684,20 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
                      (Term vs, Glued vs) ->
                      Core (Term vs, Glued vs)
     normalisePrims prims env res
-        = if isPrimName prims !(getFullName n)
-             then case reverse expargs of
-                       (IPrimVal _ c :: _) =>
-                          if boundSafe c (elabMode elabinfo)
-                             then do defs <- get Ctxt
-                                     tm <- normalise defs env (fst res)
-                                     pure (tm, snd res)
-                             else pure res
-                       _ => pure res
-             else pure res
+        = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
+                                            isIPrimVal
+                                            prims n expargs (fst res) env
+             pure (fromMaybe (fst res) tm, snd res)
+
+      where
+
+        boundSafe : Constant -> ElabMode -> Bool
+        boundSafe _ (InLHS _) = True -- always need to expand on LHS
+        boundSafe (BI x) _ = abs x < 100 -- only do this for relatively small bounds.
+                           -- Once it gets too big, we might be making the term
+                           -- bigger than it would have been without evaluating!
+        boundSafe _ _ = True
+
 
     updateElabInfo : List Name -> ElabMode -> Name ->
                      List RawImp -> ElabInfo -> Core ElabInfo
@@ -712,7 +705,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     -- as an expression because we'll normalise the function away and match on
     -- the result
     updateElabInfo prims (InLHS _) n [IPrimVal fc c] elabinfo =
-        do if isPrimName prims !(getFullName n)
+        do if elem (dropNS !(getFullName n)) prims
               then pure (record { elabMode = InExpr } elabinfo)
               else pure elabinfo
     updateElabInfo _ _ _ _ info = pure info

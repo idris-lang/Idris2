@@ -129,10 +129,8 @@ mutual
              Core ClosedTerm
   buildApp fc n mty exps autos named
       = do defs <- get Ctxt
-           fi <- fromIntegerName
-           si <- fromStringName
-           ci <- fromCharName
-           when (Just n `elem` [fi, si,ci]) $
+           prims <- getPrimitiveNames
+           when (n `elem` prims) $
                throw (InternalError "Can't deal with constants here yet")
 
            tys <- lookupTyName n (gamma defs)

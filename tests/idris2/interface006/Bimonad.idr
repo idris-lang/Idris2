@@ -1,6 +1,5 @@
 module Bimonad
 
-import Bifunctor
 import Biapplicative
 
 infixl 4 >>==

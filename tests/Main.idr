@@ -50,7 +50,7 @@ idrisTests
        -- Documentation strings
        "docs001", "docs002",
        -- Evaluator
-       "evaluator001", "evaluator002",
+       "evaluator001", "evaluator002", "evaluator003",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
@@ -145,6 +145,7 @@ nodeTests
     , "reg001"
     , "syntax001"
     , "tailrec001"
+    , "idiom001"
     ]
 
 ideModeTests : List String
