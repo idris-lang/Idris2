@@ -177,3 +177,8 @@ public export
 replaceNamesExpS : List (Name, ImperativeExp) -> ImperativeStatement -> ImperativeStatement
 replaceNamesExpS reps x =
   replaceExpS (rep reps) x
+
+public export
+replaceNamesExp : List (Name, ImperativeExp) -> ImperativeExp -> ImperativeExp
+replaceNamesExp reps x =
+  replaceExp (rep reps) x
