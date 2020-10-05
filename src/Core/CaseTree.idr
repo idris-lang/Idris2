@@ -6,6 +6,8 @@ import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
+import Text.PrettyPrint.Prettyprinter
+
 %default covering
 
 mutual
@@ -56,12 +58,17 @@ data Pat : Type where
      PLoc : FC -> Name -> Pat
      PUnmatchable : FC -> Term [] -> Pat
 
+export
+isPConst : Pat -> Maybe Constant
+isPConst (PConst _ c) = Just c
+isPConst _ = Nothing
+
 mutual
   export
   {vars : _} -> Show (CaseTree vars) where
     show (Case {name} idx prf ty alts)
-        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of { " ++
-                showSep " | " (assert_total (map show alts)) ++ " }"
+        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of\n { " ++
+                showSep "\n | " (assert_total (map show alts)) ++ "\n }"
     show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
     show (Unmatched msg) = "Error: " ++ show msg
     show Impossible = "Impossible"
@@ -69,14 +76,40 @@ mutual
   export
   {vars : _} -> Show (CaseAlt vars) where
     show (ConCase n tag args sc)
-        = show n ++ " " ++ showSep " " (map show args) ++ " => " ++
+        = showSep " " (map show (n :: args)) ++ " => " ++
           show sc
     show (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ show sc
     show (ConstCase c sc)
-        = show c ++ " => " ++ show sc
+        = "Constant " ++ show c ++ " => " ++ show sc
     show (DefaultCase sc)
         = "_ => " ++ show sc
+
+mutual
+  export
+  {vars : _} -> Pretty (CaseTree vars) where
+    pretty (Case {name} idx prf ty alts)
+      = "case" <++> pretty name <++> ":" <++> pretty ty <++> "of"
+         <+> nest 2 (hardline
+         <+> vsep (assert_total (map pretty alts)))
+    pretty (STerm i tm) = pretty tm
+    pretty (Unmatched msg) = pretty "Error:" <++> pretty msg
+    pretty Impossible = pretty "Impossible"
+
+  export
+  {vars : _} -> Pretty (CaseAlt vars) where
+    pretty (ConCase n tag args sc)
+      = hsep (map pretty (n :: args)) <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (DelayCase _ arg sc) =
+        pretty "Delay" <++> pretty arg <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (ConstCase c sc) =
+        pretty c <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (DefaultCase sc) =
+        pretty "_ =>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
 
 mutual
   export
@@ -111,6 +144,20 @@ Show Pat where
   show (PDelay _ _ _ p) = "(Delay " ++ show p ++ ")"
   show (PLoc _ n) = show n
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
+
+export
+Pretty Pat where
+  prettyPrec d (PAs _ n p) = pretty n <++> pretty "@" <+> parens (pretty p)
+  prettyPrec d (PCon _ n _ _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PTyCon _ n _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PConst _ c) = pretty c
+  prettyPrec d (PArrow _ _ p q) =
+    parenthesise (d > Open) $ pretty p <++> pretty "->" <++> pretty q
+  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty n
+  prettyPrec d (PUnmatchable _ tm) = pretty "." <+> parens (pretty tm)
 
 mutual
   insertCaseNames : SizeOf outer ->
@@ -180,35 +227,6 @@ addRefs at ns = getNames (addRefs False at) ns
 export
 getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames addMetas empty
-
-export
-mkPat' : List Pat -> ClosedTerm -> ClosedTerm -> Pat
-mkPat' args orig (Ref fc Bound n) = PLoc fc n
-mkPat' args orig (Ref fc (DataCon t a) n) = PCon fc n t a args
-mkPat' args orig (Ref fc (TyCon t a) n) = PTyCon fc n a args
-mkPat' args orig (Bind fc x (Pi _ _ _ s) t)
-    = let t' = subst (Erased fc False) t in
-          PArrow fc x (mkPat' [] s s) (mkPat' [] t' t')
-mkPat' args orig (App fc fn arg)
-    = let parg = mkPat' [] arg arg in
-                 mkPat' (parg :: args) orig fn
-mkPat' args orig (As fc _ (Ref _ Bound n) ptm)
-    = PAs fc n (mkPat' [] ptm ptm)
-mkPat' args orig (As fc _ _ ptm)
-    = mkPat' [] orig ptm
-mkPat' args orig (TDelay fc r ty p)
-    = PDelay fc r (mkPat' [] orig ty) (mkPat' [] orig p)
-mkPat' args orig (PrimVal fc c)
-    = if constTag c == 0
-         then PConst fc c
-         else PTyCon fc (UN (show c)) 0 []
-mkPat' args orig (TType fc) = PTyCon fc (UN "Type") 0 []
-mkPat' args orig tm = PUnmatchable (getLoc orig) orig
-
-export
-argToPat : ClosedTerm -> Pat
-argToPat tm
-    = mkPat' [] tm tm
 
 export
 mkTerm : (vars : List Name) -> Pat -> Term vars

@@ -66,7 +66,7 @@
   (cast-num (string->number (destroy-prefix x))))
 
 (define-macro (cast-string-int x)
-  `(floor (cast-string-double ,x)))
+  `(exact-floor (cast-string-double ,x)))
 
 (define (from-idris-list xs)
   (if (= (vector-ref xs 0) 0)

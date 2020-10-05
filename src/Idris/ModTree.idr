@@ -2,6 +2,7 @@ module Idris.ModTree
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Directory
 import Core.Metadata
@@ -30,7 +31,7 @@ import Utils.Either
 
 record ModTree where
   constructor MkModTree
-  nspace : List String
+  nspace : ModuleIdent
   sourceFile : Maybe String
   deps : List ModTree
 
@@ -49,25 +50,23 @@ public export
 record BuildMod where
   constructor MkBuildMod
   buildFile : String
-  buildNS : List String
-  imports : List (List String)
+  buildNS : ModuleIdent
+  imports : List ModuleIdent
 
 export
 Show BuildMod where
-  show t = buildFile t ++ " [" ++ showSep ", " (map showNS (imports t)) ++ "]"
-    where
-      showNS : List String -> String
-      showNS ns = showSep "." (reverse ns)
+  show t = buildFile t ++ " [" ++ showSep ", " (map show (imports t)) ++ "]"
 
 data AllMods : Type where
 
 mkModTree : {auto c : Ref Ctxt Defs} ->
-            {auto a : Ref AllMods (List (List String, ModTree))} ->
+            {auto a : Ref AllMods (List (ModuleIdent, ModTree))} ->
             FC ->
-            (done : List (List String)) -> -- if 'mod' is here we have a cycle
-            (mod : List String) ->
+            (done : List ModuleIdent) -> -- if 'mod' is here we have a cycle
+            (modFP : Maybe FileName) -> -- Sometimes we know already know what the file name is
+            (mod : ModuleIdent) ->      -- Otherwise we'll compute it from the module name
             Core ModTree
-mkModTree loc done mod
+mkModTree loc done modFP mod
   = if mod `elem` done
        then throw (CyclicImports (done ++ [mod]))
        else
@@ -77,10 +76,10 @@ mkModTree loc done mod
                     -- If we've seen it before, reuse what we found
                     case lookup mod all of
                          Nothing =>
-                           do file <- nsToSource loc mod
+                           do file <- maybe (nsToSource loc mod) pure modFP
                               modInfo <- readHeader file
                               let imps = map path (imports modInfo)
-                              ms <- traverse (mkModTree loc (mod :: done)) imps
+                              ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                               let mt = MkModTree mod (Just file) ms
                               all <- get AllMods
                               put AllMods ((mod, mt) :: all)
@@ -133,7 +132,7 @@ getBuildMods loc done fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
-              do t <- mkModTree {a} loc [] fname_ns
+              do t <- mkModTree {a} loc [] (Just fname) fname_ns
                  dm <- newRef DoneMod empty
                  o <- newRef BuildOrder []
                  mkBuildMods {d=dm} {o} t
@@ -180,11 +179,9 @@ buildMod loc num len mod
         m <- newRef MD initMetadata
         put Syn initSyntax
 
-        let showMod : Doc IdrisAnn = concatWith (surround dot) (pretty <$> reverse mod.buildNS)
-
         if needsBuilding
            then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> showMod <++> parens (pretty src)
+                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
                    [] <- process {u} {m} msg src
                       | errs => do emitWarnings
                                    traverse emitError errs

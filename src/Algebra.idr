@@ -9,3 +9,7 @@ import public Algebra.Preorder
 public export
 RigCount : Type
 RigCount = ZeroOneOmega
+
+export
+showCount : RigCount -> String
+showCount = elimSemi "0 " "1 " (const "")

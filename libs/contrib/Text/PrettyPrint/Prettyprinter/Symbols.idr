@@ -93,6 +93,10 @@ parens : Doc ann -> Doc ann
 parens = enclose lparen rparen
 
 export
+parenthesise : Bool -> Doc ann -> Doc ann
+parenthesise b = if b then parens else id
+
+export
 angles : Doc ann -> Doc ann
 angles = enclose langle rangle
 

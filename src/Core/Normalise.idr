@@ -2,6 +2,7 @@ module Core.Normalise
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Options
@@ -290,10 +291,12 @@ parameters (defs : Defs, topopts : EvalOpts)
               then evalConAlt env loc opts fc stk args args' sc
               else pure NoMatch
     -- Primitive type matching, in typecase
-    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase (UN x) tag [] sc)
-         = if show c == x
-              then evalTree env loc opts fc stk sc
-              else pure NoMatch
+    tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
+         = case args of -- can't just test for it in the `if` for typing reasons
+             [] => if UN (show c) == nm
+                   then evalTree env loc opts fc stk sc
+                   else pure NoMatch
+             _ => pure NoMatch
     -- Type of type matching, in typecase
     tryAlt env loc opts fc stk (NType _) (ConCase (UN "Type") tag [] sc)
          = evalTree env loc opts fc stk sc
@@ -332,11 +335,16 @@ parameters (defs : Defs, topopts : EvalOpts)
               LocalEnv free args -> EvalOpts -> FC ->
               Stack free -> NF free -> List (CaseAlt args) ->
               Core (CaseResult (NF free))
-    findAlt env loc opts fc stk val [] = pure GotStuck
+    findAlt env loc opts fc stk val [] = do
+      log "eval.casetree.stuck" 2 "Ran out of alternatives"
+      pure GotStuck
     findAlt env loc opts fc stk val (x :: xs)
          = do Result val <- tryAlt env loc opts fc stk val x
                    | NoMatch => findAlt env loc opts fc stk val xs
-                   | GotStuck => pure GotStuck
+                   | GotStuck => do
+                       logC "eval.casetree.stuck" 5 $
+                         pure $ "Got stuck matching " ++ show val ++ " against " ++ show !(toFullNames x)
+                       pure GotStuck
               pure (Result val)
 
     evalTree : {auto c : Ref Ctxt Defs} ->
@@ -344,8 +352,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                EvalOpts -> FC ->
                Stack free -> CaseTree args ->
                Core (CaseResult (NF free))
-    evalTree env loc opts fc stk (Case idx x _ alts)
+    evalTree env loc opts fc stk (Case {name} idx x _ alts)
       = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
+           -- we have not defined quote yet (it depends on eval itself) so we show the NF
+           -- i.e. only the top-level constructor.
+           log "eval.casetree" 5 $ "Evaluated " ++ show name ++ " to " ++ show xval
            let loc' = updateLocal idx (varExtend x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
@@ -724,6 +735,36 @@ normaliseScope : {auto c : Ref Ctxt Defs} ->
 normaliseScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
 normaliseScope defs env tm = normalise defs env tm
+
+export
+etaContract : {auto _ : Ref Ctxt Defs} ->
+              {vars : _} -> Term vars -> Core (Term vars)
+etaContract tm = do
+  defs <- get Ctxt
+  logTerm "eval.eta" 5 "Attempting to eta contract subterms of" tm
+  nf <- normalise defs (mkEnv EmptyFC _) tm
+  logTerm "eval.eta" 5 "Evaluated to" nf
+  res <- mapTermM act tm
+  logTerm "eval.eta" 5 "Result of eta-contraction" res
+  pure res
+
+   where
+
+    act : {vars : _} -> Term vars -> Core (Term vars)
+    act tm = do
+      logTerm "eval.eta" 10 "  Considering" tm
+      case tm of
+        (Bind _ x (Lam _ _ _ _) (App _ fn (Local _ _ Z _))) => do
+          logTerm "eval.eta" 10 "  Shrinking candidate" fn
+          let shrunk = shrinkTerm fn (DropCons SubRefl)
+          case shrunk of
+            Nothing => do
+              log "eval.eta" 10 "  Failure!"
+              pure tm
+            Just tm' => do
+              logTerm "eval.eta" 10 "  Success!" tm'
+              pure tm'
+        _ => pure tm
 
 public export
 interface Convert (tm : List Name -> Type) where
@@ -1285,3 +1326,35 @@ normaliseErr (InLHS fc n err)
 normaliseErr (InRHS fc n err)
     = pure $ InRHS fc n !(normaliseErr err)
 normaliseErr err = pure err
+
+
+-- If the term is an application of a primitive conversion (fromInteger etc)
+-- and it's applied to a constant, fully normalise the term.
+export
+normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
+                 -- size heuristic for when to unfold
+                 (Constant -> Bool) ->
+                 -- view to check whether an argument is a constant
+                 (arg -> Maybe Constant) ->
+                 -- list of primitives
+                 List Name ->
+                 -- view of the potential redex
+                 (n : Name) ->          -- function name
+                 (args : List arg) ->   -- arguments from inside out (arg1, ..., argk)
+                 -- actual term to evaluate if needed
+                 (tm : Term vs) ->      -- original term (n arg1 ... argk)
+                 Env Term vs ->         -- evaluation environment
+                 -- output only evaluated if primitive
+                 Core (Maybe (Term vs))
+normalisePrims boundSafe viewConstant prims n args tm env
+   = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
+              | _ => pure Nothing
+        let (mc :: _) = reverse args -- with at least one argument
+              | _ => pure Nothing
+        let (Just c) = viewConstant mc -- that is a constant
+              | _ => pure Nothing
+        let True = boundSafe c -- that we should expand
+              | _ => pure Nothing
+        defs <- get Ctxt
+        tm <- normalise defs env tm
+        pure (Just tm)

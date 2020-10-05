@@ -1,15 +1,20 @@
 module Core.Name
 
 import Data.List
+import Data.Strings
 import Decidable.Equality
 import Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Util
 
+import public Core.Name.Namespace
+
 %default total
 
+||| Name helps us track a name's structure as well as its origin:
+||| was it user-provided or machine-manufactured? For what reason?
 public export
 data Name : Type where
-     NS : List String -> Name -> Name -- in a namespace
+     NS : Namespace -> Name -> Name -- in a namespace
      UN : String -> Name -- user defined name
      MN : String -> Int -> Name -- machine generated name
      PV : Name -> Int -> Name -- pattern variable name; int is the resolved function id
@@ -19,22 +24,32 @@ data Name : Type where
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
 
+export
+mkNamespacedName : Maybe Namespace -> String -> Name
+mkNamespacedName Nothing nm = UN nm
+mkNamespacedName (Just ns) nm = NS ns (UN nm)
+
+||| `matches a b` checks that the name `a` matches `b` assuming
+||| the name roots are already known to be matching.
+||| For instance, both `reverse` and `List.reverse` match the fully
+||| qualified name `Data.List.reverse`.
+export
+matches : Name -> Name -> Bool
+matches (NS ns _) (NS cns _) = isApproximationOf ns cns
+matches (NS _ _) _
+  -- gallais: I don't understand this case but that's what was there.
+  = True -- no in library name, so root doesn't match
+matches _ _ = True -- no prefix, so root must match, so good
+
 -- Update a name imported with 'import as', for creating an alias
 export
-asName : List String -> -- Initial module name
-         List String -> -- 'as' module name
+asName : ModuleIdent -> -- Initial module name
+         Namespace -> -- 'as' module name
          Name -> -- identifier
          Name
-asName mod ns (DN s n) = DN s (asName mod ns n)
-asName mod ns (NS oldns n)
-    = NS (updateNS mod oldns) n
-  where
-    updateNS : List String -> List String -> List String
-    updateNS mod (m :: ms)
-        = if mod == m :: ms
-             then ns
-             else m :: updateNS mod ms
-    updateNS mod [] = []
+asName old new (DN s n) = DN s (asName old new n)
+asName old new (NS ns n)
+    = NS (replace old new ns) n
 asName _ _ n = n
 
 export
@@ -77,14 +92,8 @@ dropAllNS (NS _ n) = dropAllNS n
 dropAllNS n = n
 
 export
-showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
-
-export
 Show Name where
-  show (NS ns n) = showSep "." (reverse ns) ++ "." ++ show n
+  show (NS ns n) = show ns ++ "." ++ show n
   show (UN x) = x
   show (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
   show (PV n d) = "{P:" ++ show n ++ ":" ++ show d ++ "}"
@@ -97,7 +106,7 @@ Show Name where
 
 export
 Pretty Name where
-  pretty (NS ns n) = concatWith (surround dot) (pretty <$> reverse ns) <+> dot <+> pretty n
+  pretty (NS ns n) = pretty ns <+> dot <+> pretty n
   pretty (UN x) = pretty x
   pretty (MN x y) = braces (pretty x <+> colon <+> pretty y)
   pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
@@ -170,6 +179,7 @@ Ord Name where
     compare (Resolved x) (Resolved y) = compare x y
 
     compare x y = compare (nameTag x) (nameTag y)
+
 
 export
 nameEq : (x : Name) -> (y : Name) -> Maybe (x = y)

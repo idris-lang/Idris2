@@ -30,6 +30,15 @@ TTC FC where
                      pure (MkFC f s e)
              1 => pure EmptyFC
              _ => corrupt "FC"
+export
+TTC Namespace where
+  toBuf b = toBuf b . unsafeUnfoldNamespace
+  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+
+export
+TTC ModuleIdent where
+  toBuf b = toBuf b . unsafeUnfoldModuleIdent
+  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
 
 export
 TTC Name where

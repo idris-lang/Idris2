@@ -15,43 +15,41 @@ interface Monad m => MonadState stateType (m : Type -> Type) | m where
 public export
 record StateT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor ST
-  runStateT : stateType -> m (a, stateType)
+  runStateT' : stateType -> m (stateType, a)
 
 public export
 implementation Functor f => Functor (StateT stateType f) where
-    map f (ST g) = ST (\st => map (mapFst f) (g st)) where
-       mapFst : (a -> x) -> (a, s) -> (x, s)
-       mapFst fn (a, b) = (fn a, b)
+    map f (ST g) = ST (\st => map (map f) (g st)) where
 
 public export
 implementation Monad f => Applicative (StateT stateType f) where
-    pure x = ST (\st => pure (x, st))
+    pure x = ST (\st => pure (st, x))
 
     (ST f) <*> (ST a)
         = ST (\st =>
-                do (g, r) <- f st
-                   (b, t) <- a r
-                   pure (g b, t))
+                do (r, g) <- f st
+                   (t, b) <- a r
+                   pure (t, g b))
 
 public export
 implementation Monad m => Monad (StateT stateType m) where
     (ST f) >>= k
         = ST (\st =>
-                do (v, st') <- f st
+                do (st', v) <- f st
                    let ST kv = k v
                    kv st')
 
 public export
 implementation Monad m => MonadState stateType (StateT stateType m) where
     get   = ST (\x => pure (x, x))
-    put x = ST (\y => pure ((), x))
+    put x = ST (\y => pure (x, ()))
 
 public export
 implementation MonadTrans (StateT stateType) where
     lift x
         = ST (\st =>
                 do r <- x
-                   pure (r, st))
+                   pure (st, r))
 
 public export
 implementation (Monad f, Alternative f) => Alternative (StateT st f) where
@@ -60,7 +58,7 @@ implementation (Monad f, Alternative f) => Alternative (StateT st f) where
 
 public export
 implementation HasIO m => HasIO (StateT stateType m) where
-  liftIO io = ST $ \s => liftIO $ io_bind io $ \a => pure (a, s)
+  liftIO io = ST $ \s => liftIO $ io_bind io $ \a => pure (s, a)
 
 ||| Apply a function to modify the context of this computation
 public export
@@ -76,22 +74,28 @@ gets f
     = do s <- get
          pure (f s)
 
+||| Unwrap and apply a StateT monad computation.
+public export
+%inline
+runStateT : stateType -> StateT stateType m a -> m (stateType, a)
+runStateT s act = runStateT' act s
+
 ||| The State monad. See the MonadState interface
 public export
 State : (stateType : Type) -> (ty : Type) -> Type
 State = \s, a => StateT s Identity a
 
-||| Unwrap a State monad computation.
+||| Unwrap and apply a State monad computation.
 public export
-runState : StateT stateType Identity a -> stateType -> (a, stateType)
-runState act = runIdentity . runStateT act
+runState : stateType -> StateT stateType Identity a -> (stateType, a)
+runState s act = runIdentity (runStateT s act)
 
-||| Unwrap a State monad computation, but discard the final state.
+||| Unwrap and apply a State monad computation, but discard the final state.
 public export
-evalState : State stateType a -> stateType -> a
-evalState m = fst . runState m
+evalState : stateType -> State stateType a -> a
+evalState s = snd . runState s
 
-||| Unwrap a State monad computation, but discard the resulting value.
+||| Unwrap and apply a State monad computation, but discard the resulting value.
 public export
-execState : State stateType a -> stateType -> stateType
-execState m = snd . runState m
+execState : stateType -> State stateType a -> stateType
+execState s = fst . runState s

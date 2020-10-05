@@ -1,6 +1,8 @@
 module TTImp.ProcessData
 
 import Core.Context
+import Core.Context.Data
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Hash

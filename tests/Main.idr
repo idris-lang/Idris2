@@ -32,7 +32,7 @@ ttimpTests
 
 idrisTests : List String
 idrisTests
-    = -- Fundamental language feturea
+    = -- Fundamental language features
       ["basic001", "basic002", "basic003", "basic004", "basic005",
        "basic006", "basic007", "basic008", "basic009", "basic010",
        "basic011", "basic012", "basic013", "basic014", "basic015",
@@ -42,16 +42,19 @@ idrisTests
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
+       "basic046", "basic047",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
        "coverage009", "coverage010",
        -- Documentation strings
        "docs001", "docs002",
+       -- Evaluator
+       "evaluator001", "evaluator002", "evaluator003",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012",
+       "error011", "error012", "error013",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
@@ -65,8 +68,10 @@ idrisTests
        "interface005", "interface006", "interface007", "interface008",
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
+       "interface017",
        -- Miscellaneous REPL
-       "interpreter001", "interpreter002", "interpreter003",
+       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
+       "interpreter005",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
@@ -90,6 +95,8 @@ idrisTests
        "perror006",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005",
+       -- Positivity checking
+       "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
@@ -108,7 +115,7 @@ idrisTests
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009",
+       "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
        "with001", "with002",
        -- with-disambiguation
@@ -127,6 +134,8 @@ chezTests
       "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
       "chez025", "chez026", "chez027", "chez028", "chez029", "chez030",
+      "chez031",
+      "perf001",
       "reg001"]
 
 nodeTests : List String
@@ -137,11 +146,12 @@ nodeTests
     , "reg001"
     , "syntax001"
     , "tailrec001"
+    , "idiom001"
     ]
 
 ideModeTests : List String
 ideModeTests
-  =  [ "ideMode001", "ideMode002", "ideMode003" ]
+  =  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004" ]
 
 preludeTests : List String
 preludeTests
@@ -274,7 +284,7 @@ firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 pathLookup : List String -> IO (Maybe String)
 pathLookup names = do
   path <- getEnv "PATH"
-  let pathList = List1.toList $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+  let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
   let candidates = [p ++ "/" ++ x | p <- pathList,
                                     x <- names]
   firstExists candidates
@@ -320,7 +330,7 @@ main
               | _ => do print args
                         putStrLn usage
          let filteredNonCGTests =
-              filterTests opts $ concat $ the (List (List String))
+              filterTests opts $ concat $
                  [ testPaths "ttimp" ttimpTests
                  , testPaths "idris2" idrisTests
                  , testPaths "typedd-book" typeddTests

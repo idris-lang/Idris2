@@ -79,7 +79,7 @@ mutual
 
        -- Syntactic sugar
 
-       PDoBlock : FC -> Maybe (List String) -> List PDo -> PTerm
+       PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
        PList : FC -> List PTerm -> PTerm
@@ -310,7 +310,7 @@ mutual
        -- TODO: POpen (for opening named interfaces)
        PMutual : FC -> List PDecl -> PDecl
        PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl
-       PNamespace : FC -> List String -> List PDecl -> PDecl
+       PNamespace : FC -> Namespace -> List PDecl -> PDecl
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
@@ -416,7 +416,7 @@ data REPLCmd : Type where
      PrintDef : Name -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
-     ImportMod : List String -> REPLCmd
+     ImportMod : ModuleIdent -> REPLCmd
      Edit : REPLCmd
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
@@ -431,7 +431,7 @@ data REPLCmd : Type where
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
-     Browse : List String -> REPLCmd
+     Browse : Namespace -> REPLCmd
      SetLog : LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
@@ -446,23 +446,17 @@ record Import where
   constructor MkImport
   loc : FC
   reexport : Bool
-  path : List String
-  nameAs : List String
+  path : ModuleIdent
+  nameAs : Namespace
 
 public export
 record Module where
   constructor MkModule
   headerloc : FC
-  moduleNS : List String
+  moduleNS : ModuleIdent
   imports : List Import
   documentation : String
   decls : List PDecl
-
-showCount : RigCount -> String
-showCount = elimSemi
-                ("0 ")
-                ("1 ")
-                (const "")
 
 mutual
   showAlt : PClause -> String
@@ -494,11 +488,11 @@ mutual
     showPrec d (PPi _ rig Explicit Nothing arg ret)
         = showPrec d arg ++ " -> " ++ showPrec d ret
     showPrec d (PPi _ rig Explicit (Just n) arg ret)
-        = "(" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ ") -> " ++ showPrec d ret
+        = "(" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ ") -> " ++ showPrec d ret
     showPrec d (PPi _ rig Implicit Nothing arg ret) -- shouldn't happen
-        = "{" ++ Syntax.showCount rig ++ "_ : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
+        = "{" ++ showCount rig ++ "_ : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PPi _ rig Implicit (Just n) arg ret)
-        = "{" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
+        = "{" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PPi _ top AutoImplicit Nothing arg ret)
         = showPrec d arg ++ " => " ++ showPrec d ret
     showPrec d (PPi _ rig AutoImplicit (Just n) arg ret)
@@ -508,13 +502,13 @@ mutual
     showPrec d (PPi _ rig (DefImplicit t) (Just n) arg ret)
         = "{default " ++ showPrec App t ++ " " ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d arg ++ "} -> " ++ showPrec d ret
     showPrec d (PLam _ rig _ n (PImplicit _) sc)
-        = "\\" ++ Syntax.showCount rig ++ showPrec d n ++ " => " ++ showPrec d sc
+        = "\\" ++ showCount rig ++ showPrec d n ++ " => " ++ showPrec d sc
     showPrec d (PLam _ rig _ n ty sc)
-        = "\\" ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " => " ++ showPrec d sc
+        = "\\" ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " => " ++ showPrec d sc
     showPrec d (PLet _ rig n (PImplicit _) val sc alts)
-        = "let " ++ Syntax.showCount rig ++ showPrec d n ++ " = " ++ showPrec d val ++ " in " ++ showPrec d sc
+        = "let " ++ showCount rig ++ showPrec d n ++ " = " ++ showPrec d val ++ " in " ++ showPrec d sc
     showPrec d (PLet _ rig n ty val sc alts)
-        = "let " ++ Syntax.showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " = "
+        = "let " ++ showCount rig ++ showPrec d n ++ " : " ++ showPrec d ty ++ " = "
                  ++ showPrec d val ++ concatMap showAlt alts ++
                  " in " ++ showPrec d sc
       where

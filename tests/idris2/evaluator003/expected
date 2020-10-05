@@ -1,0 +1,10 @@
+1/1: Building Issue705 (Issue705.idr)
+Main> "good"
+Main> "bad"
+Main> "bad"
+Main> "good"
+Main> "bad"
+Main> "good"
+Main> "bad"
+Main> 
+Bye for now!

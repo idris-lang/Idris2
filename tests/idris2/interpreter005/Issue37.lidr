@@ -1,0 +1,2 @@
+> test : String
+> test = "LIDR"

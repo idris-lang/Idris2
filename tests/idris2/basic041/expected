@@ -1,1 +1,8 @@
 1/1: Building QDo (QDo.idr)
+Error: While processing right hand side of test. Undefined name B.A.>>=. 
+
+QDo.idr:19:10--19:11
+    |
+ 19 |          5
+    |          ^
+

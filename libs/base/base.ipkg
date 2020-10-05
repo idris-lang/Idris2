@@ -40,8 +40,10 @@ modules = Control.App,
           Data.So,
           Data.Stream,
           Data.Strings,
+          Data.These,
           Data.Vect,
           Data.Vect.Elem,
+          Data.Vect.Quantifiers,
 
           Debug.Trace,
 

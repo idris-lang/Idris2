@@ -24,7 +24,7 @@ data FastDerivation : (x : a) -> (y : b) -> Type where
 public export 
 Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
 Calc (|~ x) = Refl
-Calc ((~~) {z=_} {y=_} der (_ ** Refl)) = Calc der
+Calc ((~~) {y=_} der (_ ** Refl)) = Calc der
 
 {- -- requires import Data.Nat
 0

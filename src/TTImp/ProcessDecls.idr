@@ -1,6 +1,7 @@
 module TTImp.ProcessDecls
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -47,7 +48,7 @@ process eopts nest env (IRecord fc ns vis rec)
 process eopts nest env (INamespace fc ns decls)
     = do defs <- get Ctxt
          let cns = currentNS defs
-         extendNS (reverse ns)
+         extendNS ns
          traverse_ (processDecl eopts nest env) decls
          defs <- get Ctxt
          put Ctxt (record { currentNS = cns } defs)
@@ -94,11 +95,6 @@ checkTotalityOK n
                          NotTerminating p => pure (Just (NotTotal fc n p))
                          _ => pure Nothing)
                    (pure . Just) err
-
-    findSetTotal : List DefFlag -> Maybe TotalReq
-    findSetTotal [] = Nothing
-    findSetTotal (SetTotal t :: _) = Just t
-    findSetTotal (_ :: xs) = findSetTotal xs
 
 -- Check totality of all the names added in the file, and return a list of
 -- totality errors.

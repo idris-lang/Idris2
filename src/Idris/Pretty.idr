@@ -149,8 +149,6 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
-      parenthesise : Bool -> Doc IdrisAnn -> Doc IdrisAnn
-      parenthesise b = if b then parens else id
 
       go : Prec -> PTerm -> Doc IdrisAnn
       go d (PRef _ n) = pretty n

@@ -1,6 +1,7 @@
 module TTImp.Elab.RunElab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -31,8 +32,8 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
-              NS ["Reflection", "Language"] (UN n)
-                 => elabCon defs n args
+              NS ns (UN n)
+                 => if ns == reflectionNS then elabCon defs n args else failWith defs
               _ => failWith defs
   where
     failWith : Defs -> Core a
@@ -179,9 +180,9 @@ checkRunElab : {vars : _} ->
 checkRunElab rig elabinfo nest env fc script exp
     = do expected <- mkExpected exp
          defs <- get Ctxt
-         when (not (isExtension ElabReflection defs)) $
+         unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
-         let n = NS ["Reflection", "Language"] (UN "Elab")
+         let n = NS reflectionNS (UN "Elab")
          let ttn = reflectiontt "TT"
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays 0 $

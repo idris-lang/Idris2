@@ -2,6 +2,7 @@ module Core.Unify
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -1359,10 +1360,6 @@ Eq SolveMode where
   LastChance == LastChance = True
   _ == _ = False
 
-
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
 
 retry : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref UST UState} ->

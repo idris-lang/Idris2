@@ -1,0 +1,3 @@
+000018(:protocol-version 2 0)
+000021(:return (:ok "\"Test\"" ()) 32)
+Alas the file is done, aborting

@@ -159,18 +159,18 @@ maximum (S n) (S m) = S (maximum n m)
 -- Proofs on S
 
 export
-eqSucc : (left, right : Nat) -> left = right -> S left = S right
+eqSucc : (0 left, right : Nat) -> left = right -> S left = S right
 eqSucc _ _ Refl = Refl
 
 export
 succInjective : (0 left, right : Nat) -> S left = S right -> left = right
 succInjective _ _ Refl = Refl
 
-export
+export total
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
-export partial
+public export total
 modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 modNatNZ left Z         p = void (p Refl)
 modNatNZ left (S right) _ = mod' left left right
@@ -187,11 +187,13 @@ export partial
 modNat : Nat -> Nat -> Nat
 modNat left (S right) = modNatNZ left (S right) SIsNotZ
 
-export partial
+-- 'public' to allow type-level division
+public export total
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
   where
+    public export
     div' : Nat -> Nat -> Nat -> Nat
     div' Z        centre right = Z
     div' (S left) centre right =

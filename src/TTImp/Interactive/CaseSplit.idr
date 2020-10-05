@@ -1,6 +1,7 @@
 module TTImp.Interactive.CaseSplit
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata

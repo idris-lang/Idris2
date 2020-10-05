@@ -105,11 +105,7 @@ doBind ns (IQuote fc tm)
 doBind ns (IUnquote fc tm)
     = IUnquote fc (doBind ns tm)
 doBind ns (IAlternative fc u alts)
-    = IAlternative fc (doBindAlt u) (map (doBind ns) alts)
-  where
-    doBindAlt : AltType -> AltType
-    doBindAlt (UniqueDefault t) = UniqueDefault (doBind ns t)
-    doBindAlt u = u
+    = IAlternative fc (mapAltType (doBind ns) u) (map (doBind ns) alts)
 doBind ns tm = tm
 
 export

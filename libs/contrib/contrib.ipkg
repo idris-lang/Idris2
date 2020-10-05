@@ -13,7 +13,8 @@ modules = Control.ANSI,
           Control.Algebra.Implementations,
 
           Data.Bool.Algebra,
-
+          Data.Bool.Decidable,
+          
           Data.Linear.Array,
 
           Data.List.Algebra,
@@ -24,6 +25,8 @@ modules = Control.ANSI,
           Data.List.Palindrome,
 
           Data.Fin.Extra,
+
+          Data.Fun.Extra,
 
           Data.Logic.Propositional,
 
@@ -46,9 +49,14 @@ modules = Control.ANSI,
 
           Data.Vect.Sort,
 
+          Data.Void,
+
           Data.HVect,
 
           Debug.Buffer,
+
+          Decidable.Order.Strict,
+          Decidable.Decidable.Extra,
 
           Language.JSON,
           Language.JSON.Data,
