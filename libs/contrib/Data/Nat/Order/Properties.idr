@@ -38,31 +38,26 @@ notlteIsLT a b prf = notLTImpliesGTE
                                  $ lteReflection (S a) (S b)) prf'
   
 
-
-
 -- The converse to lteIsLTE:
 export
 LteIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
-                          -- DYI Syntax.PreorderReasoning from contrib
-LteIslte  a b a_lt_b with (the (x : Bool ** a `lte` b = x) (a `lte` b ** Refl))
- LteIslte a b a_lt_b | (True  ** prf) = prf
- LteIslte a b a_lt_b | (False ** prf) = void $ irreflexive {spo = Data.Nat.LT} a 
-   $ CalcWith {leq = LTE} $
-   |~ 1 + a
-   <~ 1 + b  ...(plusLteMonotoneLeft 1 a b a_lt_b)
-   <~ a      ...(Properties.notlteIsLT _ _ prf)
+LteIslte  a b a_lt_b = let u = reflect {c = True} (lteReflection a b) a_lt_b in ?hole
+
+-- The converse to lteIsLTE with negation
+export
+notLteIsnotlte : (a, b : Nat) -> Not (a `LTE` b) -> a `lte` b = False
+notLteIsnotlte a b not_a_lte_b = reflect {c = False} (lteReflection a b) not_a_lte_b
 
 -- The converse to lteIsLTE:
 export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
-                          -- DYI Syntax.PreorderReasoning from contrib
-GTIsnotlte  a b b_lt_a with (the (x : Bool ** a `lte` b = x) (a `lte` b ** Refl))
- GTIsnotlte a b b_lt_a | (False ** prf) = prf
- GTIsnotlte a b b_lt_a | (True  ** prf) = void $ irreflexive {spo = Data.Nat.LT} b 
-   $ CalcWith {leq = LTE} $
-   |~ 1 + b
-   <~ a  ...(b_lt_a)
-   <~ b  ...(Properties.lteIsLTE _ _ prf)
+GTIsnotlte a b b_lt_a = 
+  let not_a_lte_b : Not (a `LTE` b)
+      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $ 
+        |~ 1 + a
+        <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
+        <~ a     ...(b_lt_a)
+  in notLteIsnotlte a b not_a_lte_b
 
 ||| Subtracting a number gives a smaller number
 export
