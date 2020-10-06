@@ -41,12 +41,12 @@ notlteIsLT a b prf = notLTImpliesGTE
 -- The converse to lteIsLTE:
 export
 LteIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
-LteIslte  a b a_lt_b = let u = reflect {c = True} (lteReflection a b) a_lt_b in ?hole
+LteIslte  a b a_lt_b = reflect (lteReflection a b) a_lt_b
 
 -- The converse to lteIsLTE with negation
 export
 notLteIsnotlte : (a, b : Nat) -> Not (a `LTE` b) -> a `lte` b = False
-notLteIsnotlte a b not_a_lte_b = reflect {c = False} (lteReflection a b) not_a_lte_b
+notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 
 -- The converse to lteIsLTE:
 export
