@@ -25,7 +25,7 @@ remember {b = False} = RFalse
 
 public export
 reflect : {c : Bool} -> Reflects p b -> (if c then p else Not p) -> b = c
-reflect {c = True } (RTrue  x ) _  = Refl
+reflect {c = True } (RTrue   x)  _ = Refl
 reflect {c = True } (RFalse nx)  x = absurd $ nx x
 reflect {c = False} (RTrue   x) nx = absurd $ nx x
-reflect {c = False} (RFalse nx) _  = Refl
+reflect {c = False} (RFalse nx)  _ = Refl
