@@ -34,10 +34,14 @@ modules = Control.ANSI,
 
           Data.Nat.Algebra,
           Data.Nat.Ack,
+          Data.Nat.Division,
           Data.Nat.Equational,
           Data.Nat.Fact,
           Data.Nat.Factor,
           Data.Nat.Fib,
+          Data.Nat.Order.Strict,
+          Data.Nat.Order.Properties,
+          Data.Nat.Properties,
 
           Data.SortedMap,
           Data.SortedSet,
@@ -85,4 +89,5 @@ modules = Control.ANSI,
           System.Random,
           System.Path,
           Syntax.WithProof,
-          Syntax.PreorderReasoning
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic
