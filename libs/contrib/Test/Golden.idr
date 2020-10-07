@@ -14,7 +14,8 @@
 ||| + `run` a *shell* script that runs the test
 ||| + `expected` a file containting the expected output of `run`
 |||
-||| During testing, the test harness will generate an artefact named `output` and use the following command to compare them as they are:
+||| During testing, the test harness will generate an artefact named `output` and display both outputs if there is a failure.
+||| During an interactive session the following command is used to compare them as they are:
 |||
 ||| ```sh
 |||  git diff --no-index --exit-code --word-diff=color expected output
@@ -31,6 +32,7 @@
 ||| + `idris2` the path of the executable we are testing.
 ||| + `onlyNames` the list of tests to run relative to the generated executable.
 ||| + `interactive` Should we update the expected file or not.
+||| + `timing` Should we display time taken for each test.
 |||
 ||| We provide an options parser (`options`) that will take the command line arguments and constructs this for you.
 |||
@@ -39,7 +41,7 @@
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable under test> [--interactive] [--only [NAMES]]
+|||runtests <path to executable under test> [--timing] [--interactive] [--only [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -53,6 +55,7 @@ import Data.List1
 import Data.Strings
 
 import System
+import System.Clock
 import System.Directory
 import System.File
 import System.Info
@@ -65,21 +68,23 @@ public export
 record Options where
   constructor MkOptions
   ||| Name of the idris2 executable
-  idris2      : String
+  exeUnderTest : String
   ||| Should we only run some specific cases?
-  onlyNames   : List String
+  onlyNames    : List String
   ||| Should we run the test suite interactively?
-  interactive : Bool
+  interactive  : Bool
+  ||| Should we time and display the tests
+  timing       : Bool
 
 export
-usage : String
-usage = "Usage: runtests <path> [--interactive] [--only [NAMES]]"
+usage : String -> String
+usage exe = unwords ["Usage:", exe, "runtests <path> [--timing] [--interactive] [--only [NAMES]]"]
 
 ||| Process the command line options.
 export
 options : List String -> Maybe Options
 options args = case args of
-    (_ :: idris2 :: rest) => go rest (MkOptions idris2 [] False)
+    (_ :: exeUnderTest :: rest) => go rest (MkOptions exeUnderTest [] False False)
     _ => Nothing
 
   where
@@ -87,12 +92,14 @@ options args = case args of
     go : List String -> Options -> Maybe Options
     go rest opts = case rest of
       []                      => pure opts
+      ("--timing" :: xs)      => go xs (record { timing = True} opts)
       ("--interactive" :: xs) => go xs (record { interactive = True } opts)
       ("--only" :: xs)        => pure $ record { onlyNames = xs } opts
       _ => Nothing
 
 -- [ Core ]
 
+export
 fail : String -> IO ()
 fail err
     = do putStrLn err
@@ -136,9 +143,9 @@ runTest opts currdir testPath
         printExpectedVsOutput : String -> String -> IO ()
         printExpectedVsOutput exp out = do
           putStrLn "Expected:"
-          printLn exp
+          putStrLn exp
           putStrLn "Given:"
-          printLn out
+          putStrLn out
 
         mayOverwrite : Maybe String -> String -> IO ()
         mayOverwrite mexp out = do
@@ -157,10 +164,17 @@ runTest opts currdir testPath
           when b $ do Right _ <- writeFile "expected" out
                           | Left err => print err
                       pure ()
+
+        printTiming : Bool -> Clock type -> String -> IO ()
+        printTiming True  clock msg = putStrLn (unwords [msg, show clock])
+        printTiming False _     msg = putStrLn msg
+
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
-                 system $ "sh ./run " ++ idris2 opts ++ " | tr -d '\\r' > output"
+                 start <- clockTime Thread
+                 system $ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
+                 end <- clockTime Thread
                  Right out <- readFile "output"
                      | Left err => do print err
                                       pure False
@@ -173,10 +187,11 @@ runTest opts currdir testPath
                      | Left err => do print err
                                       pure False
                  let result = normalize out == normalize exp
+                 let time = timeDifference end start
                  if result
-                    then putStrLn "success"
+                    then printTiming (timing opts) time "success"
                     else do
-                      putStrLn "FAILURE"
+                      printTiming (timing opts) time "FAILURE"
                       if interactive opts
                          then mayOverwrite (Just exp) out
                          else printExpectedVsOutput exp out
