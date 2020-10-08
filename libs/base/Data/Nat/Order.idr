@@ -21,7 +21,11 @@ LTEIsReflexive Z      = LTEZero
 LTEIsReflexive (S n)  = LTESucc (LTEIsReflexive n)
 
 public export
-implementation Preorder Nat LTE where
+[NatLTE] ComparisonRelation Nat where
+  cmp = LTE
+
+public export
+implementation Preorder Nat using NatLTE where
   transitive = LTEIsTransitive
   reflexive  = LTEIsReflexive
 
@@ -34,7 +38,7 @@ LTEIsAntisymmetric (S n) (S m) (LTESucc mLTEn) (LTESucc nLTEm) with (LTEIsAntisy
 
 
 public export
-implementation Poset Nat LTE where
+implementation Poset Nat where
   antisymmetric = LTEIsAntisymmetric
 
 public export
@@ -76,9 +80,10 @@ shift : (m : Nat) -> (n : Nat) -> LTE m n -> LTE (S m) (S n)
 shift m n mLTEn = LTESucc mLTEn
 
 public export
-implementation Ordered Nat LTE where
+implementation Ordered Nat where
   order Z      n = Left LTEZero
   order m      Z = Right LTEZero
-  order (S k) (S j) with (order {to=LTE} k j)
+  order (S k) (S j) with (order k j)
     order (S k) (S j) | Left  prf = Left  (shift k j prf)
     order (S k) (S j) | Right prf = Right (shift j k prf)
+

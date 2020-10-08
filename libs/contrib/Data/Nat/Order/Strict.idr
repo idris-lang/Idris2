@@ -12,12 +12,16 @@ irreflexiveLTE : (a : Nat) -> Not (a `LT` a)
 irreflexiveLTE 0     z_lt_z impossible
 irreflexiveLTE (S a) (LTESucc a_lt_a) = irreflexiveLTE a a_lt_a
 
+public export
+[NatLT] StrictComparison Nat where
+  scmp = LT
+
 export
-StrictPreorder Nat LT where
+StrictPreorder Nat using NatLT where
   irreflexive = irreflexiveLTE
-  transitive a b c a_lt_b b_lt_c = transitive {po = LTE} (S a) b c
+  transitive a b c a_lt_b b_lt_c = Order.transitive (S a) b c
                                              a_lt_b
-                                             (transitive {po = LTE} b (S b) c
+                                             (Order.transitive b (S b) c
                                                 (lteSuccRight (reflexive b))
                                                 b_lt_c)
 
@@ -32,5 +36,5 @@ decLT (S a) (S b) = case decLT a b of
   DecGT b_lt_a => DecGT (LTESucc b_lt_a)
 
 public export
-StrictOrdered Nat LT where
+StrictOrdered Nat where
   order = decLT

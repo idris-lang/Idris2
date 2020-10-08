@@ -17,54 +17,69 @@ import Data.Rel
 --------------------------------------------------------------------------------
 
 public export
-interface Preorder t (po : t -> t -> Type) where
-  total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
-  total reflexive : (a : t) -> po a a
+interface ComparisonRelation t where
+  constructor CompareWith
+  cmp : t -> t -> Type
 
 public export
-interface (Preorder t po) => Poset t (po : t -> t -> Type) where
-  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
+interface ComparisonRelation t => Preorder t where
+  constructor MkPreorder
+  total transitive : (a : t) -> (b : t) -> (c : t) -> a `cmp` b -> b `cmp` c -> a `cmp` c
+  total reflexive : (a : t) -> a `cmp` a
 
 public export
-interface (Poset t to) => Ordered t (to : t -> t -> Type) where
-  total order : (a : t) -> (b : t) -> Either (to a b) (to b a)
+interface (Preorder t) => Poset t where
+  constructor MkPoset
+  total antisymmetric : (a : t) -> (b : t) -> a `cmp` b -> b `cmp` a -> a = b
 
 public export
-interface (Preorder t eq) => Equivalence t (eq : t -> t -> Type) where
-  total symmetric : (a : t) -> (b : t) -> eq a b -> eq b a
+interface (Poset t) => Ordered t where
+  constructor MkOrdered
+  total order : (a : t) -> (b : t) -> Either (a `cmp` b) (b `cmp` a)
 
 public export
-interface (Equivalence t eq) => Congruence t (f : t -> t) (eq : t -> t -> Type) where
+interface (Preorder t) => Equivalence t where
+  constructor MkEquivalence
+  total symmetric : (a : t) -> (b : t) -> a `cmp` b -> b `cmp` a
+
+public export
+interface (Equivalence t) => Congruence t (f : t -> t) where
+  constructor MkCongruence
   total congruent : (a : t) ->
                     (b : t) ->
-                    eq a b ->
-                    eq (f a) (f b)
+                       a  `cmp`    b ->
+                    (f a) `cmp` (f b)
 
 public export
-minimum : (Ordered t to) => t -> t -> t
-minimum {to} x y with (order {to} x y)
-  minimum {to} x y | Left _ = x
-  minimum {to} x y | Right _ = y
+minimum : (Ordered t) => t -> t -> t
+minimum   x y with (order x y)
+  minimum x y | Left  _ = x
+  minimum x y | Right _ = y
 
 public export
-maximum : (Ordered t to) => t -> t -> t
-maximum {to} x y with (order {to} x y)
-  maximum {to} x y | Left _ = y
-  maximum {to} x y | Right _ = x
+maximum : (Ordered t) => t -> t -> t
+maximum x y with (order x y)
+  maximum x y | Left  _ = y
+  maximum x y | Right _ = x
 
 --------------------------------------------------------------------------------
 -- Syntactic equivalence (=)
 --------------------------------------------------------------------------------
 
 public export
-implementation Preorder t Equal where
+[EqualCmp] ComparisonRelation t where
+  cmp = Equal
+
+public export
+[EqualPreorder] Preorder t using EqualCmp where
   transitive a b c l r = trans l r
   reflexive a = Refl
 
 public export
-implementation Equivalence t Equal where
+[EqualEquivalence] Equivalence t using EqualPreorder where
   symmetric a b prf = sym prf
 
 public export
-implementation Congruence t f Equal where
+[EqualCongruence] Congruence t f using EqualEquivalence where
   congruent a b eq = cong f eq
+

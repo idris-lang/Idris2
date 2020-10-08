@@ -227,15 +227,15 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
   let n : Nat
       n = S predn
       n_lte_skn : n `LTE` (1 + k)*n
-      n_lte_skn = CalcWith {leq = LTE} $ 
+      n_lte_skn = CalcWith $ 
         |~ n
         ~~ n  + 0     ...(sym $ plusZeroRightNeutral n)
         ~~ (1 + 0)*n ...(Refl)
         <~ (1 + k)*n   ...(multLteMonotoneLeft (1+0) (1+k) n $ 
                            plusLteMonotoneLeft 1 0 k LTEZero)
   in case @@(Data.Nat.lte ((1 + k)*n) predn) of
-    (True  ** skn_lte_predn) => absurd $ irreflexive {spo = Data.Nat.LT} predn 
-                                       $ CalcWith {leq = LTE} $
+    (True  ** skn_lte_predn) => absurd $ irreflexive predn 
+                                       $ CalcWith $
       |~ 1 + predn
       ~~ n         ...(Refl)
       ~~ n + 0     ...(sym $ plusZeroRightNeutral n)
@@ -275,7 +275,7 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
   let n : Nat
       n = S predn
       lhsarg_geq_predn : ((1 + k)*n + a) `GT` predn
-      lhsarg_geq_predn = CalcWith {leq = LTE} $
+      lhsarg_geq_predn = CalcWith $
         |~ n
         ~~ (1+0)*n     ...(sym $ plusZeroRightNeutral n)
         <~ (1+k)*n     ...(multLteMonotoneLeft 1 (1+k) n $
@@ -303,7 +303,7 @@ addMultipleMod : (a, b, n : Nat) -> (n_neq_z1, n_neq_z2 : Not (n = 0))
               -> snd (divmodNatNZ (a*n + b) n n_neq_z1) = snd (divmodNatNZ b n n_neq_z2)
 addMultipleMod a b 0           n_neq_z1  n_neq_z2 = void (n_neq_z1 Refl)
 addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 = 
-  addMultipleMod' (a*n + b) b predn b a (reflexive {po = LTE} _) (reflexive {po = LTE} _)
+  addMultipleMod' (a*n + b) b predn b a (reflexive $ the Nat _) (reflexive $ the Nat _)
 
 modBelowDenom : (r, n : Nat) -> (n_neq_z : Not (n = 0))
              -> (r `LT` n) 

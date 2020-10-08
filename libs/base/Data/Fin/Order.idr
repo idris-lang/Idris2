@@ -13,12 +13,15 @@ using (k : Nat)
   data FinLTE : Fin k -> Fin k -> Type where
     FromNatPrf : {m : Fin k} -> {n : Fin k} -> LTE (finToNat m) (finToNat n) -> FinLTE m n
 
-  implementation Preorder (Fin k) FinLTE where
+  [finLTE] ComparisonRelation (Fin k) where
+    cmp = FinLTE
+
+  implementation Preorder (Fin k) using finLTE where
     transitive m n o (FromNatPrf p1) (FromNatPrf p2) =
       FromNatPrf (LTEIsTransitive (finToNat m) (finToNat n) (finToNat o) p1 p2)
     reflexive n = FromNatPrf (LTEIsReflexive (finToNat n))
 
-  implementation Poset (Fin k) FinLTE where
+  implementation Poset (Fin k) where
     antisymmetric m n (FromNatPrf p1) (FromNatPrf p2) =
       finToNatInjective m n (LTEIsAntisymmetric (finToNat m) (finToNat n) p1 p2)
 
@@ -27,7 +30,7 @@ using (k : Nat)
       decide m n | Yes prf    = Yes (FromNatPrf prf)
       decide m n | No  disprf = No (\ (FromNatPrf prf) => disprf prf)
 
-  implementation Ordered (Fin k) FinLTE where
+  implementation Ordered (Fin k) where
     order m n =
       either (Left . FromNatPrf)
              (Right . FromNatPrf)

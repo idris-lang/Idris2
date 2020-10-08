@@ -53,7 +53,7 @@ export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
 GTIsnotlte a b b_lt_a = 
   let not_a_lte_b : Not (a `LTE` b)
-      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $ 
+      not_a_lte_b = \a_lte_b => irreflexive a $ CalcWith $ 
         |~ 1 + a
         <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
         <~ a     ...(b_lt_a)
@@ -79,7 +79,7 @@ minusPosLT (S a) (S b) z_lt_sa          a_lte_b = LTESucc (minusLTE a b)
 export
 multLteMonotoneRight : (l, a, b : Nat) -> a `LTE` b -> l*a `LTE` l*b
 multLteMonotoneRight  0    a b _ = LTEZero
-multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
+multLteMonotoneRight (S k) a b a_lte_b = CalcWith $
   |~ (1 + k) * a
   ~~ a +  k*a    ...(Refl)
   <~ b +  k*a    ...(plusLteMonotoneRight (k*a) a b a_lte_b)
