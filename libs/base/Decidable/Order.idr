@@ -23,28 +23,23 @@ interface ComparisonRelation t where
 
 public export
 interface ComparisonRelation t => Preorder t where
-  constructor MkPreorder
   total transitive : (a : t) -> (b : t) -> (c : t) -> a `cmp` b -> b `cmp` c -> a `cmp` c
   total reflexive : (a : t) -> a `cmp` a
 
 public export
 interface (Preorder t) => Poset t where
-  constructor MkPoset
   total antisymmetric : (a : t) -> (b : t) -> a `cmp` b -> b `cmp` a -> a = b
 
 public export
 interface (Poset t) => Ordered t where
-  constructor MkOrdered
   total order : (a : t) -> (b : t) -> Either (a `cmp` b) (b `cmp` a)
 
 public export
 interface (Preorder t) => Equivalence t where
-  constructor MkEquivalence
   total symmetric : (a : t) -> (b : t) -> a `cmp` b -> b `cmp` a
 
 public export
 interface (Equivalence t) => Congruence t (f : t -> t) where
-  constructor MkCongruence
   total congruent : (a : t) ->
                     (b : t) ->
                        a  `cmp`    b ->
