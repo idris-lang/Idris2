@@ -19,6 +19,8 @@ Compiler changes:
 
 * Added primitives to the parsing library used in the compiler to get more precise
   boundaries to the AST nodes `FC`.
+* New experimental ``refc`` code generator, which generates C with reference
+  counting.
 
 REPL/IDE mode changes:
 
