@@ -1,9 +1,8 @@
 include ../../config.mk
 
-TARGET = libidris2_support
+TARGET = libidris2_refc
 
 LIBTARGET = $(TARGET).a
-DYLIBTARGET = $(TARGET)$(SHLIB_SUFFIX)
 
 CFLAGS += -O2
 
@@ -23,15 +22,11 @@ all: build
 
 .PHONY: build
 
-build: $(LIBTARGET) $(DYLIBTARGET)
+build: $(LIBTARGET)
 
 $(LIBTARGET): $(OBJS)
 	$(AR) rc $@ $^
 	$(RANLIB) $@
-
-$(DYLIBTARGET): $(OBJS)
-	$(CC) -shared -o $@ $^ $(LDFLAGS)
-
 
 -include $(DEPS)
 
@@ -42,7 +37,7 @@ $(DYLIBTARGET): $(OBJS)
 .PHONY: clean
 
 clean:
-	$(RM) $(OBJS) $(DYLIBTARGET) $(LIBTARGET)
+	$(RM) $(OBJS) $(LIBTARGET)
 
 cleandep: clean
 	$(RM) $(DEPS)
@@ -51,5 +46,5 @@ cleandep: clean
 .PHONY: install
 
 install: build
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
-	install $(LIBTARGET) $(DYLIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/lib
+	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
+	install $(LIBTARGET) *.h ${PREFIX}/idris2-${IDRIS2_VERSION}/refc
