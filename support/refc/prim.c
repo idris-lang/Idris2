@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "prim.h"
 
 Value *Prelude_IO_prim__getChar(Value *world)
@@ -91,6 +92,14 @@ Value *sysOS(void)
     return (Value *)makeString("Other");
 #endif
 }
+
+Value* idris2_crash(Value* msg) {
+    Value_String* str = (Value_String*)msg;
+    printf("ERROR: %s\n", str->str);
+    exit(-1);
+}
+
+
 //
 //
 //

@@ -16,6 +16,7 @@ Value *writeIORef(Value *, Value *, Value *, Value *);
 // Sys
 
 Value *sysOS(void);
+Value* idris2_crash(Value* msg);
 
 // Array
 
