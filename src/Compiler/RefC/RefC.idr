@@ -5,22 +5,35 @@ import Compiler.CompileExpr
 import Compiler.LambdaLift
 import Compiler.ANF
 import Compiler.Inline
+
 import Core.Context
 import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
+
+import Data.IORef
 import Data.List
 import Data.NameMap
+import Data.Nat
+import Data.Strings
 import Data.Vect
+
 import System
 import System.Info
 import System.File
-import Utils.Hex
-import Data.Nat
-import Data.Strings
-import Data.IORef
 
+import Idris.Version
+import Utils.Hex
+import Utils.Path
+
+findCC : IO String
+findCC
+    = do Just cc <- getEnv "IDRIS2_CC"
+              | Nothing => do Just cc <- getEnv "CC"
+                                   | Nothing => pure "cc"
+                              pure cc
+         pure cc
 
 toString : List Char -> String
 toString [] = ""
@@ -1073,36 +1086,70 @@ footer = do
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c _ tm
-    = do coreLift $ system "false"
+    = do coreLift $ putStrLn "Execute expression not yet implemented for refc"
+         coreLift $ system "false"
          pure ()
 
 export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
            -> (tmpDir : String)
-           -> (execDir : String)
+           -> (outputDir : String)
            -> ClosedTerm
            -> (outfile : String)
            -> Core (Maybe String)
-compileExpr ANF c _ _ tm outfile = do
-  let outn = "build/code/" ++ outfile ++ ".c"
-  cdata <- getCompileData ANF tm
-  let defs = anf cdata
-  newRef ArgCounter 0
-  newRef FunctionDefinitions []
-  newRef TemporaryVariableTracker []
-  newRef OutfileText []
-  newRef ExternalLibs []
-  newRef IndentLevel 0
-  traverse (\(n, d) => createCFunctions n d) defs
-  header -- added after the definition traversal in order to add all encountered function defintions
-  footer
-  fileContent <- get OutfileText
-  let code = fastAppend (map (++ "\n") fileContent)
+compileExpr ANF c _ outputDir tm outfile =
+  do let outn = outputDir </> outfile ++ ".c"
+     let outobj = outputDir </> outfile ++ ".o"
+     let outexec = outputDir </> outfile
 
-  coreLift (writeFile outn code)
-  coreLift $ putStrLn $ "File written to " ++ outn
-  pure (Just outn)
+     coreLift $ mkdirAll outputDir
+     cdata <- getCompileData ANF tm
+     let defs = anf cdata
+     newRef ArgCounter 0
+     newRef FunctionDefinitions []
+     newRef TemporaryVariableTracker []
+     newRef OutfileText []
+     newRef ExternalLibs []
+     newRef IndentLevel 0
+     traverse (\(n, d) => createCFunctions n d) defs
+     header -- added after the definition traversal in order to add all encountered function defintions
+     footer
+     fileContent <- get OutfileText
+     let code = fastAppend (map (++ "\n") fileContent)
+
+     coreLift (writeFile outn code)
+     coreLift $ putStrLn $ "Generated C file " ++ outn
+
+     cc <- coreLift findCC
+     dirs <- getDirs
+
+     let runccobj = cc ++ " -c " ++ outn ++ " -o " ++ outobj ++ " " ++
+                       "-I" ++ fullprefix_dir dirs "refc " ++
+                       "-I" ++ fullprefix_dir dirs "include"
+
+     let runcc = cc ++ " " ++ outobj ++ " -o " ++ outexec ++ " " ++
+                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
+                       "-lidris2_refc " ++
+                       "-L" ++ fullprefix_dir dirs "refc " ++
+                       clibdirs (lib_dirs dirs)
+
+     coreLift $ putStrLn runccobj
+     ok <- coreLift $ system runccobj
+     if ok == 0
+        then do coreLift $ putStrLn runcc
+                ok <- coreLift $ system runcc
+                if ok == 0
+                   then pure (Just outexec)
+                   else pure Nothing
+        else pure Nothing
+  where
+    fullprefix_dir : Dirs -> String -> String
+    fullprefix_dir dirs sub
+        = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
+
+    clibdirs : List String -> String
+    clibdirs ds = concat (map (\d => "-L" ++ d ++ " ") ds)
 compileExpr _ _ _ _ _ _ = pure Nothing
 
 export
