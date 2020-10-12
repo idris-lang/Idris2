@@ -393,11 +393,11 @@ displayIDEResult outf i (NamesInFiles dat)
      $ SExpList !(traverse
                    (\(name, fc)
                      => pure $ SExpList [ StringAtom !(render $ pretty name)
-                                        , StringAtom fc.file
-                                        , IntegerAtom $ cast fc.startPos.fst
-                                        , IntegerAtom $ cast fc.startPos.snd
-                                        , IntegerAtom $ cast fc.endPos.fst
-                                        , IntegerAtom $ cast fc.endPos.snd]
+                                        , StringAtom (file fc)
+                                        , IntegerAtom $ cast (fst (startPos fc))
+                                        , IntegerAtom $ cast (snd (startPos fc))
+                                        , IntegerAtom $ cast (fst (endPos fc))
+                                        , IntegerAtom $ cast (snd (endPos fc))]
                    )
                    dat
                  )
