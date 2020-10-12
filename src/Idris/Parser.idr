@@ -171,7 +171,7 @@ mutual
                                             pure [NamedArg (UN "_") (PImplicit (boundToFC fname x))]
                                       else fail "non-empty list required")
                end <- bounds (symbol "}")
-               matchAny <- pure $ if list.isNil
+               matchAny <- pure $ if isNil list
                                   then [NamedArg (UN "_") (PImplicit (boundToFC fname (mergeBounds start end)))]
                                   else matchAny
                pure $ matchAny ++ list
