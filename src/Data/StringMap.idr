@@ -294,6 +294,13 @@ mergeLeft : StringMap v -> StringMap v -> StringMap v
 mergeLeft x y = mergeWith const x y
 
 export
+adjust : String -> (v -> v) -> StringMap v -> StringMap v
+adjust k f m =
+  case lookup k m of
+    Nothing => m
+    Just v => insert k (f v) m
+
+export
 Show v => Show (StringMap v) where
   show m = show $ map {b=String} (\(k,v) => k ++ "->" ++ show v) $ toList m
 
