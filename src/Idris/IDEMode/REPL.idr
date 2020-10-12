@@ -142,6 +142,7 @@ data IDEResult
   | NameList (List Name)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
+  | NamesInFiles (List (Name, FC))
 
 replWrap : Core REPLResult -> Core IDEResult
 replWrap m = pure $ REPL !m
@@ -159,6 +160,14 @@ process (LoadFile fname_in _)
                           Nothing => fname_in
                           Just f' => f'
          replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
+process (NameAt name Nothing)
+    = do defs <- get Ctxt
+         glob <- lookupCtxtName (UN name) (gamma defs)
+         let dat = map (\(name, _, gdef) => (name, gdef.location)) glob
+         pure (NamesInFiles dat)
+process (NameAt n (Just _))
+    = do todoCmd "name-at <name> <line> <column>"
+         pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (TypeOf n Nothing)
     = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
 process (TypeOf n (Just (l, c)))
@@ -379,6 +388,19 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
                     Just k  => show k
                     Nothing => "auto"
     in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
+displayIDEResult outf i (NamesInFiles dat)
+  = printIDEResult outf i
+     $ SExpList !(traverse
+                   (\(name, fc)
+                     => pure $ SExpList [ StringAtom !(render $ pretty name)
+                                        , StringAtom fc.file
+                                        , IntegerAtom $ cast fc.startPos.fst
+                                        , IntegerAtom $ cast fc.startPos.snd
+                                        , IntegerAtom $ cast fc.endPos.fst
+                                        , IntegerAtom $ cast fc.endPos.snd]
+                   )
+                   dat
+                 )
 displayIDEResult outf i  _ = pure ()
 
 
