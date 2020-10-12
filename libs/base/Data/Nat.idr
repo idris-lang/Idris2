@@ -121,10 +121,14 @@ lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
 
 export
+notLTEImpliesGT : {a, b : Nat} -> Not (a `LTE` b) -> a `GT` b
+notLTEImpliesGT {a = 0  }           not_z_lte_b    = absurd $ not_z_lte_b LTEZero
+notLTEImpliesGT {a = S a} {b = 0  } notLTE = LTESucc LTEZero
+notLTEImpliesGT {a = S a} {b = S k} notLTE = LTESucc (notLTEImpliesGT (notLTE . LTESucc))
+
+export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
-notLTImpliesGTE {b = Z} _ = LTEZero
-notLTImpliesGTE {a = Z} {b = S k} notLt = absurd (notLt (LTESucc LTEZero))
-notLTImpliesGTE {a = S k} {b = S j} notLt = LTESucc (notLTImpliesGTE (notLt . LTESucc))
+notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
 
 public export
 lte : Nat -> Nat -> Bool
@@ -170,37 +174,44 @@ export total
 SIsNotZ : (S x = Z) -> Void
 SIsNotZ Refl impossible
 
-public export total
-modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
-modNatNZ left Z         p = void (p Refl)
-modNatNZ left (S right) _ = mod' left left right
-  where
-    mod' : Nat -> Nat -> Nat -> Nat
-    mod' Z        centre right = centre
-    mod' (S left) centre right =
+||| Auxiliary function:
+||| mod' fuel a b = a `mod` (S b)
+||| assuming we have enough fuel
+public export
+mod' : Nat -> Nat -> Nat -> Nat
+mod' Z        centre right = centre
+mod' (S fuel) centre right =
       if lte centre right then
         centre
       else
-        mod' left (minus centre (S right)) right
+        mod' fuel (minus centre (S right)) right
+
+public export
+modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
+modNatNZ left Z         p = void (p Refl)
+modNatNZ left (S right) _ = mod' left left right
 
 export partial
 modNat : Nat -> Nat -> Nat
 modNat left (S right) = modNatNZ left (S right) SIsNotZ
 
+||| Auxiliary function:
+||| div' fuel a b = a `div` (S b)
+||| assuming we have enough fuel
+public export
+div' : Nat -> Nat -> Nat -> Nat
+div' Z        centre right = Z
+div' (S fuel) centre right =
+  if lte centre right then
+    Z
+  else
+    S (div' fuel (minus centre (S right)) right)
+
 -- 'public' to allow type-level division
-public export total
+public export
 divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
 divNatNZ left Z         p = void (p Refl)
 divNatNZ left (S right) _ = div' left left right
-  where
-    public export
-    div' : Nat -> Nat -> Nat -> Nat
-    div' Z        centre right = Z
-    div' (S left) centre right =
-      if lte centre right then
-        Z
-      else
-        S (div' left (minus centre (S right)) right)
 
 export partial
 divNat : Nat -> Nat -> Nat
@@ -215,6 +226,23 @@ divCeilNZ x y p = case (modNatNZ x y p) of
 export partial
 divCeil : Nat -> Nat -> Nat
 divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
+
+
+public export
+divmod' : Nat -> Nat -> Nat -> (Nat, Nat)
+divmod' Z        centre right = (Z, centre)
+divmod' (S fuel) centre right =
+  if lte centre right then
+    (Z, centre)
+  else
+    let qr = divmod' fuel (minus centre (S right)) right
+    in (S (fst qr), snd qr)
+
+public export
+divmodNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> (Nat, Nat)
+divmodNatNZ left Z         p = void (p Refl)
+divmodNatNZ left (S right) _ = divmod' left left right
+
 
 public export
 Integral Nat where
@@ -321,10 +349,26 @@ plusLeftLeftRightZero left right p =
     rewrite plusZeroRightNeutral left in
       p
 
+export
 plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
 plusLteMonotoneRight p  Z     r     LTEZero    = rewrite plusCommutative r p in
                                                  lteAddRight p
 plusLteMonotoneRight p (S q) (S r) (LTESucc l) = LTESucc $ plusLteMonotoneRight p q r l
+
+export
+plusLteMonotoneLeft : (p, q, r : Nat) -> q `LTE` r -> (p + q) `LTE` (p + r)
+plusLteMonotoneLeft p q r p_lt_q
+   = rewrite plusCommutative p q in
+     rewrite plusCommutative p r in
+     plusLteMonotoneRight p q r p_lt_q
+
+zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
+zeroPlusLeftZero 0 0 Refl = Refl
+zeroPlusLeftZero (S k) b _ impossible
+
+zeroPlusRightZero : (a,b : Nat) -> (0 = a + b) -> b = 0
+zeroPlusRightZero 0 0 Refl = Refl
+zeroPlusRightZero (S k) b _ impossible
 
 -- Proofs on *
 
@@ -478,6 +522,11 @@ multDistributesOverMinusRight left centre right =
     rewrite multCommutative centre left in
     rewrite multCommutative right left in
             Refl
+
+export
+zeroMultEitherZero : (a,b : Nat) -> a*b = 0 -> Either (a = 0) (b = 0)
+zeroMultEitherZero 0 b prf = Left Refl
+zeroMultEitherZero (S a) b prf = Right $ zeroPlusLeftZero b (a * b) (sym prf)
 
 -- power proofs
 
