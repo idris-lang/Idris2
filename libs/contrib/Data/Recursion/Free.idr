@@ -1,9 +1,14 @@
-||| Code corresponding to McBride's paper:
+||| Module partially based on McBride's paper:
 ||| Turing-Completeness Totally Free
 |||
 ||| It gives us a type to describe computation using general recursion
 ||| and functions to run these computations for a while or to completion
 ||| if we are able to prove them total.
+|||
+||| The content of the Erased section is new. Instead of producing the
+||| domain/evaluation pair by computing a Dybjer-Setzer code we build a
+||| specialised structure that allows us to make the domain proof runtime
+||| irrelevant.
 
 module Data.Recursion.Free
 
@@ -73,7 +78,7 @@ Monad (General a b) where
   (>>=) = bind
 
 ------------------------------------------------------------------------
--- Fuel-based (partial) evaluation of a general program
+-- Fuel-based (partial) evaluation
 
 ||| Check whehther we are ready to return a value
 public export
@@ -113,25 +118,116 @@ lazy : PiG a b -> (i : a) -> Late (b i)
 lazy f i = late f (f i)
 
 ------------------------------------------------------------------------
--- Domain and total evaluation function for a general program
+-- Domain as a Dybjer-Setzer code and total evaluation function
 
-||| Compute, as a code for an inductive-recursive type, the domain of a
-||| function defined by general recursion.
-public export
-Domain : PiG a b -> (i : a) -> Code b (b i)
-Domain f i = monadMorphism callInDom (f i) where
+namespace DybjerSetzer
 
-  callInDom : (i : a) -> Code b (b i)
-  callInDom i = Branch () (const i) $ \ t => Yield (t ())
+  ||| Compute, as a Dybjer-Setzer code for an inductive-recursive type, the domain
+  ||| of a function defined by general recursion.
+  public export
+  Domain : PiG a b -> (i : a) -> Code b (b i)
+  Domain f i = monadMorphism ask (f i) where
 
-||| If a given input is in the domain of the function then we may evaluate
-||| it fully on that input and obtain a pure return value.
-public export
-evaluate : (f : PiG a b) -> (i : a) -> Mu (Domain f) i -> b i
-evaluate f i inDom = Decode inDom
+    ask : (i : a) -> Code b (b i)
+    ask i = Branch () (const i) $ \ t => Yield (t ())
 
-||| If every input value is in the domain then the function is total.
-public export
-totally : (f : PiG a b) -> ((i : a) -> Mu (Domain f) i) ->
-          (i : a) -> b i
-totally f allInDomain i = evaluate f i (allInDomain i)
+  ||| If a given input is in the domain of the function then we may evaluate
+  ||| it fully on that input and obtain a pure return value.
+  public export
+  evaluate : (f : PiG a b) -> (i : a) -> Mu (Domain f) i -> b i
+  evaluate f i inDom = Decode inDom
+
+  ||| If every input value is in the domain then the function is total.
+  public export
+  totally : (f : PiG a b) -> ((i : a) -> Mu (Domain f) i) ->
+            (i : a) -> b i
+  totally f allInDomain i = evaluate f i (allInDomain i)
+
+------------------------------------------------------------------------
+-- Runtime irrelevant domain and total evaluation function
+
+namespace Erased
+
+
+  ||| What it means to describe a terminating computation
+  ||| @ f is the function used to answer questions put to the oracle
+  ||| @ d is the description of the computation
+  public export
+  data Layer : (f : PiG a b) -> (d : General a b (b i)) -> Type
+
+  ||| The domain of a function (i.e. the set of inputs for which it terminates)
+  ||| as a predicate on inputs
+  ||| @ f is the function whose domain is being described
+  ||| @ i is the input that is purported to be in the domain
+  Domain : (f : PiG a b) -> (i : a) -> Type
+
+  ||| Fully evaluate a computation known to be terminating.
+  ||| Because of the careful design of the inductive family Layer, we can make
+  ||| the proof runtime irrelevant.
+  evaluateLayer : (f : PiG a b) -> (d : General a b (b i)) -> (0 _ : Layer f d) -> b i
+
+  ||| Fully evaluate a function call for an input known to be in its domain.
+  evaluate : (f : PiG a b) -> (i : a) -> (0 _ : Domain f i) -> b i
+
+  -- In a classic Dybjer-Setzer situation this is computed by induction over the
+  -- index of type `General a b (b i)` and the fixpoint called `Domain` is the
+  -- one thing defined as an inductive type.
+  -- Here we have to flip the script because Idris will only trust inductive data
+  -- as a legitimate source of termination metric for a recursive function. This
+  -- makes our definition of `evaluateLayer` obviously terminating.
+  data Layer : PiG a b -> General a b (b i) -> Type where
+    ||| A computation returning a value is trivially terminating
+    MkTell : {0 a : Type} -> {0 b : a -> Type} -> {0 f : PiG a b} -> {0 i : a} ->
+             (o : b i) -> Layer f (Tell o)
+
+    ||| Performing a call to the oracle is termnating if the input is in its
+    ||| domain and if the rest of the computation is also finite.
+    MkAsk  : {0 a : Type} -> {0 b : a -> Type} -> {0 f : PiG a b} -> {0 i : a} ->
+             (j : a) -> (jprf : Domain f j) ->
+             (k : b j -> General a b (b i)) -> Layer f (k (evaluate f j jprf)) ->
+             Layer f (Ask j k)
+
+  -- Domain is simply defined as the top layer leading to a terminating
+  -- computation with the function used as its own oracle.
+  Domain f i = Layer f (f i)
+
+  ||| A view that gives us a pattern-matching friendly presentation of the
+  ||| @ d computation known to be terminating
+  ||| @ l proof that it is
+  ||| This may seem like a useless definition but the function `view`
+  ||| demonstrates a very important use case: even if the proof is runtime
+  ||| irrelevant, we can manufacture a satisfying view of it.
+  data View : {d : General a b (b i)} -> (l : Layer f d) -> Type where
+    TView : {0 b : a -> Type} -> {0 f : PiG a b} -> (o : b i) -> View (MkTell {b} {f} o)
+    AView : {0 f : PiG a b} ->
+            (j : a) -> (0 jprf : Domain f j) ->
+            (k : b j -> General a b (b i)) -> (0 kprf : Layer f (k (evaluate f j jprf))) ->
+            View (MkAsk j jprf k kprf)
+
+  ||| Function computing the view by pattern-matching on the computation and
+  ||| inverting the proof. Note that the proof is runtime irrelevant even though
+  ||| the resulting view is not: this is possible because the relevant constructor
+  ||| is uniquely determined by the shape of `d`.
+  view : (d : General a b (b i)) -> (0 l : Layer f d) -> View l
+  view (Tell o)  (MkTell o)            = TView o
+  view (Ask j k) (MkAsk j jprf k kprf) = AView j jprf k kprf
+
+  -- Just like `Domain` is defined in terms of `Layer`, the evaluation of a
+  -- function call for an input in its domain can be reduced to the evaluation
+  -- of a layer.
+  evaluate f i l = evaluateLayer f (f i) l
+
+  -- The view defined earlier allows us to pattern on the runtime irrelevant
+  -- proof that the layer describes a terminating computation and therefore
+  -- define `evaluateLayer` in a way that is purely structural.
+  -- This becomes obvious if one spells out the (forced) pattern corresponding
+  -- to `d` in each branch of the case.
+  evaluateLayer f d l = case view d l of
+    TView o => o
+    AView j jprf k kprf => evaluateLayer f (k (evaluate f j jprf)) kprf
+
+  ||| If a function's domain is total then it is a pure function.
+  public export
+  totally : (f : PiG a b) -> (0 _ : (i : a) -> Domain f i) ->
+            (i : a) -> b i
+  totally f dom i = evaluate f i (dom i)
