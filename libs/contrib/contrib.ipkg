@@ -14,7 +14,15 @@ modules = Control.ANSI,
 
           Data.Bool.Algebra,
           Data.Bool.Decidable,
-          
+
+          Data.Fin.Extra,
+
+          Data.Fun.Extra,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.Late,
+
           Data.Linear.Array,
 
           Data.List.Algebra,
@@ -24,10 +32,6 @@ modules = Control.ANSI,
           Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-
-          Data.Fin.Extra,
-
-          Data.Fun.Extra,
 
           Data.Logic.Propositional,
 
@@ -43,6 +47,8 @@ modules = Control.ANSI,
           Data.Nat.Order.Strict,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
+
+          Data.Recursion.Free,
 
           Data.SortedMap,
           Data.SortedSet,
