@@ -712,14 +712,37 @@ process (Exec ctm)
     = execExp ctm
 process Help
     = pure RequestedHelp
-process (ProofSearch n_in)
-    = do defs <- get Ctxt
-         [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName replFC n_in)
-              | ns => throw (AmbiguousName replFC (map fst ns))
-         tm <- search replFC top False 1000 n ty []
-         itm <- resugar [] !(normaliseHoles defs [] tm)
-         pure $ ProofFound itm
+process (ProofSearch (PType fc))
+    = do let ty = gType fc
+         logGlue "repl.ps" 2 "tst" [] ty
+         pure Done
+process (ProofSearch pterm)
+    = do ttimp <- desugar AnyExpr [] pterm 
+         logRaw "repl.ps" 2 "tst" ttimp
+         log "repl.ps" 2 (show (getFn ttimp))
+         let ty = gType (getFC ttimp)
+         logGlue "repl.ps" 2 "gType" [] ty
+         let n = (UN "[input]")
+         inidx <- resolveName n 
+         -- (tm1, gl1) <- check top (initElabInfo InType) (MkNested []) [] ttimp Nothing
+         -- logTermNF "repl.ps" 2 "tst" [] tm1
+         -- logGlue "repl.ps" 2 "tst" [] gl1
+         (tm, gl) <- elabTerm inidx InType [] (MkNested [])
+                                  [] ttimp Nothing
+         logTermNF "repl.ps" 2 "tst" [] tm
+         logGlue "repl.ps" 2 "tst" [] gl
+
+         addNameType replFC n [] tm
+         searchResults <- exprSearchN replFC 3 n []
+         pure $ log $ show searchResults
+
+         tm' <- search replFC top False 1000 n tm []
+         defs <- get Ctxt
+         fnms <- toFullNames !(normaliseAll defs [] tm')
+         itm <- resugar [] fnms
+         logTermNF "repl.ps" 2 "tst" [] fnms
+         pure $ ProofFound $ itm
+
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
