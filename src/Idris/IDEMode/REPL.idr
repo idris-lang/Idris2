@@ -84,6 +84,7 @@ initIDESocketFile h p = do
                   pure (Left ("Failed to listen on socket with error: " ++ show res))
                else
                  do putStrLn (show p)
+                    fflush stdout
                     res <- accept sock
                     case res of
                       Left err =>
