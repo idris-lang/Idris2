@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 Issue735.idr < input
+$1 --exec main --cg ${IDRIS2_TESTS_CG} Issue735.idr
+
+rm -rf build
