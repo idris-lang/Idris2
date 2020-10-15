@@ -1,7 +1,9 @@
 ||| Core features required to perform Golden file testing.
 |||
-||| We provide the core functionality to run a *single* golden file test.
-||| This allows the developer freedom to design the rest of the test harness.
+||| We provide the core functionality to run a *single* golden file test, or
+||| a whole test tree.
+||| This allows the developer freedom to use as is or design the rest of the
+||| test harness to their liking.
 |||
 ||| This was originally used as part of Idris2's own test suite and
 ||| the core functionality is useful for the many and not the few.
@@ -9,32 +11,41 @@
 |||
 ||| # Test Structure
 |||
-||| This harness works from the assumption that each individual golden test comprises of a directory with the following structure:
+||| This harness works from the assumption that each individual golden test
+||| comprises of a directory with the following structure:
 |||
-||| + `run` a *shell* script that runs the test
+||| + `run` a *shell* script that runs the test. We expect it to:
+|||   * Use `$1` as the variable standing for the idris executable to be tested
+|||   * Clean up after itself (e.g. by running `rm -rf build/`)
+|||
 ||| + `expected` a file containting the expected output of `run`
 |||
-||| During testing, the test harness will generate an artefact named `output` and display both outputs if there is a failure.
-||| During an interactive session the following command is used to compare them as they are:
+||| During testing, the test harness will generate an artefact named `output` and
+||| display both outputs if there is a failure.
+||| During an interactive session the following command is used to compare them as
+||| they are:
 |||
 ||| ```sh
 |||  git diff --no-index --exit-code --word-diff=color expected output
 ||| ```
 |||
-||| If `git` fails then the runner will simply present the expected and 'given' files side-by-side.
+||| If `git` fails then the runner will simply present the expected and 'given'
+||| files side-by-side.
 |||
-||| Of note, it is helpful if `output` was added to a local `.gitignore` instance to ensure that it is not mistakenly versioned.
+||| Of note, it is helpful if `output` was added to a local `.gitignore` instance
+||| to ensure that it is not mistakenly versioned.
 |||
 ||| # Options
 |||
-||| The test harness has several options that must be set:
+||| The test harness has several options that may be set:
 |||
-||| + `idris2` the path of the executable we are testing.
-||| + `onlyNames` the list of tests to run relative to the generated executable.
-||| + `interactive` Should we update the expected file or not.
-||| + `timing` Should we display time taken for each test.
+||| + `idris2`       The path of the executable we are testing.
+||| + `onlyNames`    The list of tests to run relative to the generated executable.
+||| + `interactive`  Whether to offer to update the expected file or not.
+||| + `timing`       Whether to display time taken for each test.
 |||
-||| We provide an options parser (`options`) that will take the command line arguments and constructs this for you.
+||| We provide an options parser (`options`) that will take the command line arguments
+||| and constructs this for you.
 |||
 ||| # Usage
 |||
@@ -45,8 +56,7 @@
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
-|||
-|||
+
 module Test.Golden
 
 import Data.Maybe
@@ -198,19 +208,6 @@ runTest opts currdir testPath
 
                  pure result
 
-||| Check if a file exists for reading.
-export
-exists : String -> IO Bool
-exists f
-    = do Right ok <- openFile f Read
-             | Left err => pure False
-         closeFile ok
-         pure True
-
-firstExists : List String -> IO (Maybe String)
-firstExists [] = pure Nothing
-firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
-
 ||| Find the first occurrence of an executable on `PATH`.
 export
 pathLookup : List String -> IO (Maybe String)
@@ -220,5 +217,65 @@ pathLookup names = do
   let candidates = [p ++ "/" ++ x | p <- pathList,
                                     x <- names]
   firstExists candidates
+
+
+||| Some test may involve Idris' backends and have requirements.
+||| We define here the ones supported by Idris
+public export
+data Requirement = Chez | Node
+
+export
+Show Requirement where
+  show Chez = "Chez"
+  show Node = "node"
+
+export
+checkRequirement : Requirement -> IO (Maybe String)
+checkRequirement req
+  = do let (envvar, paths) = requirement req
+       Just exec <- getEnv envvar | Nothing => pathLookup paths
+       pure (Just exec)
+
+  where
+
+    requirement : Requirement -> (String, List String)
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
+    requirement Node = ("NODE", ["node"])
+
+||| A test pool is characterised by
+|||  + a list of requirement
+|||  + and a list of directory paths
+public export
+record TestPool where
+  constructor MkTestPool
+  constraints : List Requirement
+  testCases : List String
+
+||| Only keep the tests that have been asked for
+export
+filterTests : Options -> List String -> List String
+filterTests opts = case onlyNames opts of
+  [] => id
+  xs => filter (\ name => any (`isInfixOf` name) xs)
+
+||| A runner for a test pool
+export
+runner : Options -> (currdir : String) -> TestPool -> IO (List Bool)
+runner opts currdir pool
+  = do -- check that we indeed want to run some of these tests
+       let tests = filterTests opts (testCases pool)
+       let (_ :: _) = tests
+             | [] => pure []
+       -- if so make sure the constraints are satisfied
+       cs <- for (constraints pool) $ \ req => do
+          mfp <- checkRequirement req
+          putStrLn $ case mfp of
+            Nothing => show req ++ " not found"
+            Just fp => "Found " ++ show req ++ " at " ++ fp
+          pure mfp
+       let Just _ = the (Maybe (List String)) (sequence cs)
+             | Nothing => pure []
+       -- if so run them all!
+       traverse (runTest opts currdir) tests
 
 -- [ EOF ]
