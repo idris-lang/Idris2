@@ -50,11 +50,11 @@ idrisTests
        -- Documentation strings
        "docs001", "docs002",
        -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003",
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012", "error013",
+       "error011", "error012", "error013", "error014",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
