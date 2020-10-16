@@ -11,6 +11,8 @@ on:
 
 env:
   SCHEME: scheme
+  IDRIS2_TESTS_CG: chez
+
 jobs:
   build:
     runs-on: ubuntu-latest

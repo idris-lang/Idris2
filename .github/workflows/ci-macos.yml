@@ -10,6 +10,8 @@ on:
       - master
 env:
   SCHEME: chez
+  IDRIS2_TESTS_CG: chez
+
 jobs:
   build:
     runs-on: macos-latest
