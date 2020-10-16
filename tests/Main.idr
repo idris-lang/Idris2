@@ -158,6 +158,8 @@ record Options where
   constructor MkOptions
   ||| Name of the idris2 executable
   idris2      : String
+  ||| Name of the codegenerator to use for `exec`
+  codegen     : Maybe String
   ||| Should we only run some specific cases?
   onlyNames   : List String
   ||| Should we run the test suite interactively?
@@ -168,7 +170,7 @@ usage = "Usage: runtests <idris2 path> [--interactive] [--only [NAMES]]"
 
 options : List String -> Maybe Options
 options args = case args of
-    (_ :: idris2 :: rest) => go rest (MkOptions idris2 [] False)
+    (_ :: idris2 :: rest) => go rest (MkOptions idris2 Nothing [] False)
     _ => Nothing
 
   where
@@ -177,6 +179,7 @@ options args = case args of
     go rest opts = case rest of
       []                      => pure opts
       ("--interactive" :: xs) => go xs (record { interactive = True } opts)
+      ("--cg" :: cg :: xs)    => go xs (record { codegen = Just cg } opts)
       ("--only" :: xs)        => pure $ record { onlyNames = xs } opts
       _ => Nothing
 
@@ -240,7 +243,10 @@ runTest opts testPath
         runTest' : IO Bool
         runTest'
             = do putStr $ testPath ++ ": "
-                 system $ "sh ./run " ++ idris2 opts ++ " | tr -d '\\r' > output"
+                 let cg = case codegen opts of
+                            Nothing => ""
+                            Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
+                 system $ cg ++ "sh ./run " ++ idris2 opts ++ " | tr -d '\\r' > output"
                  Right out <- readFile "output"
                      | Left err => do print err
                                       pure False
@@ -292,6 +298,19 @@ findNode
     = do Just chez <- getEnv "NODE" | Nothing => pathLookup ["node"]
          pure $ Just chez
 
+findRacket : IO (Maybe String)
+findRacket
+  = do Just racket <- getEnv "RACKET" | Nothing => pathLookup ["racket"]
+       pure $ Just racket
+
+findCG : IO (Maybe String)
+findCG
+  = do Nothing <- getEnv "IDRIS2_CG" | p => pure p
+       Nothing <- findChez   | p => pure (Just "chez")
+       Nothing <- findNode   | p => pure (Just "node")
+       Nothing <- findRacket | p => pure (Just "racket")
+       pure Nothing
+
 runChezTests : Options -> List String -> IO (List Bool)
 runChezTests opts tests
     = do chexec <- findChez
@@ -322,6 +341,9 @@ main
          let (Just opts) = options args
               | _ => do print args
                         putStrLn usage
+         opts <- case codegen opts of
+                   Nothing => pure $ record { codegen = !findCG } opts
+                   Just _ => pure opts
          let filteredNonCGTests =
               filterTests opts $ concat $ the (List (List String))
                  [ testPaths "ttimp" ttimpTests
