@@ -1,10 +1,2 @@
-bits8WideningNoEffect
-bits16WideningNoEffect
-bits32WideningNoEffect
-narrowFromInteger
-narrowFromInt
-narrowFromBits64
-narrowFromBits32
-narrowFromBits16
-negativeNumberCast
+:exec main
 :q
