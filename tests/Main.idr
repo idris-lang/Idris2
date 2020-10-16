@@ -52,11 +52,11 @@ idrisTests = MkTestPool []
        -- Documentation strings
        "docs001", "docs002",
        -- Evaluator
-       "evaluator001", "evaluator002",
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Error messages
        "error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012", "error013",
+       "error011", "error012", "error013", "error014",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Interactive editing support
@@ -137,6 +137,7 @@ chezTests = MkTestPool [Chez]
       "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
       "chez025", "chez026", "chez027", "chez028", "chez029", "chez030",
       "chez031",
+      "perf001",
       "reg001"]
 
 nodeTests : TestPool
@@ -159,26 +160,15 @@ preludeTests = MkTestPool []
   [ "reg001" ]
 
 main : IO ()
-main
-    = do args <- getArgs
-         let (Just opts) = options args
-              | _ => do print args
-                        putStrLn (usage "runtests")
-         let tests =
-                 [ testPaths "ttimp" ttimpTests
-                 , testPaths "idris2" idrisTests
-                 , testPaths "typedd-book" typeddTests
-                 , testPaths "ideMode" ideModeTests
-                 , testPaths "prelude" preludeTests
-                 , testPaths "chez" chezTests
-                 , testPaths "node" nodeTests
-                 ]
-         res <- concat <$> traverse (runner opts "../..") tests
-         putStrLn (show (length (filter id res)) ++ "/" ++ show (length res)
-                       ++ " tests successful")
-         if (any not res)
-            then exitWith (ExitFailure 1)
-            else exitWith ExitSuccess
-    where
-         testPaths : String -> TestPool -> TestPool
-         testPaths dir = record { testCases $= map ((dir ++ "/") ++) }
+main = runner
+  [ testPaths "ttimp" ttimpTests
+  , testPaths "idris2" idrisTests
+  , testPaths "typedd-book" typeddTests
+  , testPaths "ideMode" ideModeTests
+  , testPaths "prelude" preludeTests
+  , testPaths "chez" chezTests
+  , testPaths "node" nodeTests
+  ] where
+
+    testPaths : String -> TestPool -> TestPool
+    testPaths dir = record { testCases $= map ((dir ++ "/") ++) }

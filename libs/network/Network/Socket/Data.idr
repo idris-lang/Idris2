@@ -110,14 +110,27 @@ Show SocketFamily where
   show AF_INET   = "AF_INET"
   show AF_INET6  = "AF_INET6"
 
+-- This is a bit of a hack to get the OS-dependent magic constants out of C and
+-- into Idris without having to faff around on the preprocessor on the Idris
+-- side.
+%foreign "C:idrnet_af_unspec,libidris2_support"
+prim__idrnet_af_unspec : PrimIO Int
+
+%foreign "C:idrnet_af_unix,libidris2_support"
+prim__idrnet_af_unix : PrimIO Int
+
+%foreign "C:idrnet_af_inet,libidris2_support"
+prim__idrnet_af_inet : PrimIO Int
+
+%foreign "C:idrnet_af_inet6,libidris2_support"
+prim__idrnet_af_inet6 : PrimIO Int
+
 export
 ToCode SocketFamily where
-  -- Don't know how to read a constant value from C code in idris2...
-  -- gotta to hardcode those for now
-  toCode AF_UNSPEC = 0 -- unsafePerformIO (cMacro "#AF_UNSPEC" Int)
-  toCode AF_UNIX   = 1
-  toCode AF_INET   = 2
-  toCode AF_INET6  = 10
+  toCode AF_UNSPEC = unsafePerformIO $ primIO $ prim__idrnet_af_unspec
+  toCode AF_UNIX   = unsafePerformIO $ primIO $ prim__idrnet_af_unix
+  toCode AF_INET   = unsafePerformIO $ primIO $ prim__idrnet_af_inet
+  toCode AF_INET6  = unsafePerformIO $ primIO $ prim__idrnet_af_inet6
 
 export
 getSocketFamily : Int -> Maybe SocketFamily

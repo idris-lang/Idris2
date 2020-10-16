@@ -361,7 +361,7 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure (MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty)
+         pure $ MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty
 
 export
 initCtxt : Core Context
@@ -674,6 +674,37 @@ HasNames (Term vars) where
   resolved gam (TForce fc r y)
       = pure (TForce fc r !(resolved gam y))
   resolved gam tm = pure tm
+
+export
+HasNames Pat where
+
+  full gam (PAs fc n p)
+     = [| PAs (pure fc) (full gam n) (full gam p) |]
+  full gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (full gam n) (pure i) (pure ar) (traverse (full gam) ps) |]
+  full gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (full gam n) (pure ar) (traverse (full gam) ps) |]
+  full gam p@(PConst _ _) = pure p
+  full gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (full gam x) (full gam p) (full gam q) |]
+  full gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (full gam p) (full gam q) |]
+  full gam (PLoc fc n) = PLoc fc <$> full gam n
+  full gam (PUnmatchable fc t) = PUnmatchable fc <$> full gam t
+
+  resolved gam (PAs fc n p)
+     = [| PAs (pure fc) (resolved gam n) (resolved gam p) |]
+  resolved gam (PCon fc n i ar ps)
+     = [| PCon (pure fc) (resolved gam n) (pure i) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam (PTyCon fc n ar ps)
+     = [| PTyCon (pure fc) (resolved gam n) (pure ar) (traverse (resolved gam) ps) |]
+  resolved gam p@(PConst _ _) = pure p
+  resolved gam (PArrow fc x p q)
+     = [| PArrow (pure fc) (resolved gam x) (resolved gam p) (resolved gam q) |]
+  resolved gam (PDelay fc laz p q)
+     = [| PDelay (pure fc) (pure laz) (resolved gam p) (resolved gam q) |]
+  resolved gam (PLoc fc n) = PLoc fc <$> resolved gam n
+  resolved gam (PUnmatchable fc t) = PUnmatchable fc <$> resolved gam t
 
 mutual
   export
@@ -1268,6 +1299,8 @@ visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 reducibleIn : Namespace -> Name -> Visibility -> Bool
 reducibleIn nspace (NS ns (UN n)) Export = isParentOf ns nspace
 reducibleIn nspace (NS ns (UN n)) Private = isParentOf ns nspace
+reducibleIn nspace (NS ns (RF n)) Export = isParentOf ns nspace
+reducibleIn nspace (NS ns (RF n)) Private = isParentOf ns nspace
 reducibleIn nspace n _ = True
 
 export
@@ -1775,6 +1808,9 @@ inCurrentNS n@(MN _ _)
 inCurrentNS n@(DN _ _)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
+inCurrentNS n@(RF _)
+    = do defs <- get Ctxt
+         pure (NS (currentNS defs) n)
 inCurrentNS n = pure n
 
 export
@@ -1982,6 +2018,12 @@ setUnboundImplicits a
          put Ctxt (record { options->elabDirectives->unboundImplicits = a } defs)
 
 export
+setPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Bool -> Core ()
+setPrefixRecordProjections b = do
+  defs <- get Ctxt
+  put Ctxt (record { options->elabDirectives->prefixRecordProjections = b } defs)
+
+export
 setDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
                            TotalReq -> Core ()
 setDefaultTotalityOption tot
@@ -2015,6 +2057,11 @@ isUnboundImplicits : {auto c : Ref Ctxt Defs} ->
 isUnboundImplicits
     = do defs <- get Ctxt
          pure (unboundImplicits (elabDirectives (options defs)))
+
+export
+isPrefixRecordProjections : {auto c : Ref Ctxt Defs} -> Core Bool
+isPrefixRecordProjections =
+  prefixRecordProjections . elabDirectives . options <$> get Ctxt
 
 export
 getDefaultTotalityOption : {auto c : Ref Ctxt Defs} ->
@@ -2148,6 +2195,10 @@ fromCharName : {auto c : Ref Ctxt Defs} ->
 fromCharName
     = do defs <- get Ctxt
          pure $ fromCharName (primnames (options defs))
+
+export
+getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
+getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->

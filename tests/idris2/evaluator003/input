@@ -1,0 +1,8 @@
+bad String "good"
+bad String "ungood"
+bad Char 'd'
+bad Char 'c'
+bad (List Int) [1,2]
+bad (List Nat) [1,2]
+bad () ()
+:q

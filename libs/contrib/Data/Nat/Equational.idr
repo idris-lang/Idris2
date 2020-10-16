@@ -38,6 +38,12 @@ plusLteRight c aLTEb =
     rewrite plusCommutative b c in
     plusLteLeft c aLTEb
 
+||| Only 0 is lte 0
+||| Useful when the argument is an open term
+export
+lteZeroIsZero : a `LTE` 0 -> a = 0
+lteZeroIsZero LTEZero = Refl
+
 ||| Subtract a number from both sides of an inequality.
 ||| Due to partial nature of subtraction, we require an inequality of special form.
 export

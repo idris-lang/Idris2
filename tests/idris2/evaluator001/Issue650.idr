@@ -2,6 +2,7 @@
 
 isNat : Type -> Bool
 isNat Nat = True
+isNat (List Char) = False
 isNat Int = False
 isNat _ = False
 

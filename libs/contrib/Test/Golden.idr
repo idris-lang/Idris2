@@ -16,6 +16,7 @@
 |||
 ||| + `run` a *shell* script that runs the test. We expect it to:
 |||   * Use `$1` as the variable standing for the idris executable to be tested
+|||   * May use `${IDRIS2_TESTS_CG}` to pick a codegen that ought to work
 |||   * Clean up after itself (e.g. by running `rm -rf build/`)
 |||
 ||| + `expected` a file containting the expected output of `run`
@@ -79,6 +80,8 @@ record Options where
   constructor MkOptions
   ||| Name of the idris2 executable
   exeUnderTest : String
+  ||| Which codegen should we use?
+  codegen      : Maybe String
   ||| Should we only run some specific cases?
   onlyNames    : List String
   ||| Should we run the test suite interactively?
@@ -88,13 +91,13 @@ record Options where
 
 export
 usage : String -> String
-usage exe = unwords ["Usage:", exe, "runtests <path> [--timing] [--interactive] [--only [NAMES]]"]
+usage exe = unwords ["Usage:", exe, "runtests <path> [--timing] [--interactive] [--cg CODEGEN] [--only [NAMES]]"]
 
 ||| Process the command line options.
 export
 options : List String -> Maybe Options
 options args = case args of
-    (_ :: exeUnderTest :: rest) => go rest (MkOptions exeUnderTest [] False False)
+    (_ :: exeUnderTest :: rest) => go rest (MkOptions exeUnderTest Nothing [] False False)
     _ => Nothing
 
   where
@@ -104,6 +107,7 @@ options args = case args of
       []                      => pure opts
       ("--timing" :: xs)      => go xs (record { timing = True} opts)
       ("--interactive" :: xs) => go xs (record { interactive = True } opts)
+      ("--cg" :: cg :: xs)    => go xs (record { codegen = Just cg } opts)
       ("--only" :: xs)        => pure $ record { onlyNames = xs } opts
       _ => Nothing
 
@@ -183,7 +187,10 @@ runTest opts currdir testPath
         runTest'
             = do putStr $ testPath ++ ": "
                  start <- clockTime Thread
-                 system $ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
+                 let cg = case codegen opts of
+                            Nothing => ""
+                            Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
+                 system $ cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
                  end <- clockTime Thread
                  Right out <- readFile "output"
                      | Left err => do print err
@@ -222,12 +229,13 @@ pathLookup names = do
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = Chez | Node
+data Requirement = Chez | Node | Racket
 
 export
 Show Requirement where
   show Chez = "Chez"
   show Node = "node"
+  show Racket = "racket"
 
 export
 checkRequirement : Requirement -> IO (Maybe String)
@@ -237,10 +245,19 @@ checkRequirement req
        pure (Just exec)
 
   where
-
     requirement : Requirement -> (String, List String)
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
     requirement Node = ("NODE", ["node"])
+    requirement Racket = ("RACKET", ["racket"])
+
+export
+findCG : IO (Maybe String)
+findCG
+  = do Nothing <- getEnv "IDRIS2_TESTS_CG" | p => pure p
+       Nothing <- checkRequirement Chez    | p => pure (Just "chez")
+       Nothing <- checkRequirement Node    | p => pure (Just "node")
+       Nothing <- checkRequirement Racket  | p => pure (Just "racket")
+       pure Nothing
 
 ||| A test pool is characterised by
 |||  + a list of requirement
@@ -260,8 +277,8 @@ filterTests opts = case onlyNames opts of
 
 ||| A runner for a test pool
 export
-runner : Options -> (currdir : String) -> TestPool -> IO (List Bool)
-runner opts currdir pool
+poolRunner : Options -> (currdir : String) -> TestPool -> IO (List Bool)
+poolRunner opts currdir pool
   = do -- check that we indeed want to run some of these tests
        let tests = filterTests opts (testCases pool)
        let (_ :: _) = tests
@@ -277,5 +294,29 @@ runner opts currdir pool
              | Nothing => pure []
        -- if so run them all!
        traverse (runTest opts currdir) tests
+
+
+||| A runner for a whole test suite
+export
+runner : List TestPool -> IO ()
+runner tests
+    = do args <- getArgs
+         let (Just opts) = options args
+              | _ => do print args
+                        putStrLn (usage "runtests")
+         -- if no CG has been set, find a sensible default based on what is available
+         opts <- case codegen opts of
+                   Nothing => pure $ record { codegen = !findCG } opts
+                   Just _ => pure opts
+         -- grab the current directory
+         Just pwd <- currentDir
+            | Nothing => putStrLn "FATAL: Could not get current working directory"
+         -- run the tests
+         res <- concat <$> traverse (poolRunner opts pwd) tests
+         putStrLn (show (length (filter id res)) ++ "/" ++ show (length res)
+                       ++ " tests successful")
+         if (any not res)
+            then exitWith (ExitFailure 1)
+            else exitWith ExitSuccess
 
 -- [ EOF ]

@@ -1,0 +1,5 @@
+fromNatty (Natty 0)
+fromNatty (Natty 3)
+fromNatty Nat
+fromNatty (Natty (2 + 7))
+:q

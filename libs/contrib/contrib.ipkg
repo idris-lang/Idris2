@@ -13,6 +13,15 @@ modules = Control.ANSI,
           Control.Algebra.Implementations,
 
           Data.Bool.Algebra,
+          Data.Bool.Decidable,
+
+          Data.Fin.Extra,
+
+          Data.Fun.Extra,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.Late,
 
           Data.Linear.Array,
 
@@ -20,12 +29,9 @@ modules = Control.ANSI,
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,
+          Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-
-          Data.Fin.Extra,
-
-          Data.Fun.Extra,
 
           Data.Logic.Propositional,
 
@@ -33,16 +39,23 @@ modules = Control.ANSI,
 
           Data.Nat.Algebra,
           Data.Nat.Ack,
+          Data.Nat.Division,
           Data.Nat.Equational,
           Data.Nat.Fact,
           Data.Nat.Factor,
           Data.Nat.Fib,
+          Data.Nat.Order.Strict,
+          Data.Nat.Order.Properties,
+          Data.Nat.Properties,
+
+          Data.Recursion.Free,
 
           Data.SortedMap,
           Data.SortedSet,
           Data.Stream.Extra,
           Data.String.Extra,
           Data.String.Interpolation,
+          Data.String.Iterator,
           Data.String.Parser,
           Data.String.Parser.Expression,
 
@@ -86,4 +99,5 @@ modules = Control.ANSI,
           System.Random,
           System.Path,
           Syntax.WithProof,
-          Syntax.PreorderReasoning
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic
