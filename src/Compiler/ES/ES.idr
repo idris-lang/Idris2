@@ -258,6 +258,7 @@ jsOp DoubleATan [x] = pure $ "Math.atan(" ++ x ++ ")"
 jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
+
 jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
@@ -269,6 +270,16 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+
+jsOp (Cast Bits8Type IntType) [x] = pure x
+jsOp (Cast Bits16Type IntType) [x] = pure x
+jsOp (Cast Bits32Type IntType) [x] = pure x
+jsOp (Cast Bits64Type IntType) [x] = pure x
+
+jsOp (Cast Bits8Type IntegerType) [x] = pure x
+jsOp (Cast Bits16Type IntegerType) [x] = pure x
+jsOp (Cast Bits32Type IntegerType) [x] = pure x
+jsOp (Cast Bits64Type IntegerType) [x] = pure x
 
 jsOp (Cast IntType Bits8Type) [x] = boundedUInt 8 x
 jsOp (Cast IntType Bits16Type) [x] = boundedUInt 16 x
