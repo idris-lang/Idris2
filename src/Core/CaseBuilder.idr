@@ -605,8 +605,10 @@ groupCons fc fn pvars cs
          = if a == length pargs
               then addConG n t pargs pats pid rhs acc
               else throw (CaseCompile cfc fn (NotFullyApplied n))
-    addGroup (PTyCon _ n a pargs) pprf pats pid rhs acc
-         = addConG n 0 pargs pats pid rhs acc
+    addGroup (PTyCon cfc n a pargs) pprf pats pid rhs acc
+         = if a == length pargs
+           then addConG n 0 pargs pats pid rhs acc
+           else throw (CaseCompile cfc fn (NotFullyApplied n))
     addGroup (PArrow _ _ s t) pprf pats pid rhs acc
          = addConG (UN "->") 0 [s, t] pats pid rhs acc
     -- Go inside the delay; we'll flag the case as needing to force its
