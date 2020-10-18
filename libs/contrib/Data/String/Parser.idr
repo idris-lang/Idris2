@@ -215,17 +215,11 @@ covering
 takeWhile1 : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile1 f = pack <$> some (satisfy f)
 
-||| Parses one or more space characters
+||| Parses zero or more space characters
 export
 covering
 spaces : Monad m => ParseT m ()
-spaces = skip (some space) <?> "whitespaces"
-
-||| Always succeeds, parses zero or more space characters.
-export
-covering
-spaces0 : Monad m => ParseT m ()
-spaces0 = skip (many space)
+spaces = skip (many space) <?> "whitespaces"
 
 ||| Discards brackets around a matching parser
 export
