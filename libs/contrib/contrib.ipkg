@@ -80,6 +80,8 @@ modules = Control.ANSI,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
 
+          Test.Golden,
+
           Text.Token,
           Text.Quantity,
           Text.Parser,
