@@ -219,7 +219,13 @@ takeWhile1 f = pack <$> some (satisfy f)
 export
 covering
 spaces : Monad m => ParseT m ()
-spaces = skip (many space) <?> "whitespaces"
+spaces = skip (many space)
+
+||| Parses one or more space characters
+export
+covering
+spaces1 : Monad m => ParseT m ()
+spaces1 = skip (some space) <?> "whitespaces"
 
 ||| Discards brackets around a matching parser
 export
