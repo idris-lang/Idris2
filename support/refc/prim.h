@@ -2,7 +2,8 @@
 #define __PRIM_H__
 
 #include "cBackend.h"
-#include <sys/utsname.h>
+
+
 
 // Value * Prelude_IO_prim__putStr(Value *, Value *);
 Value *Prelude_IO_prim__getChar(Value *);
