@@ -351,17 +351,12 @@ getNewVarThatWillNotBeFreedAtEndOfBlock = do
 maxLineLengthForComment : Nat
 maxLineLengthForComment = 60
 
-repeat : {ty:Type} -> (x:ty) -> Nat -> List ty
-repeat x Z = []
-repeat x (S k) = x :: (repeat x k)
-
-
 lJust : (line:String) -> (fillPos:Nat) -> (filler:Char) -> String
 lJust line fillPos filler =
     case isLTE (length line) fillPos of
         (Yes prf) =>
             let missing = minus fillPos (length line)
-                fillBlock = pack (repeat filler missing)
+                fillBlock = pack (replicate missing filler)
             in
             line ++ fillBlock
         (No _) => line
@@ -384,7 +379,7 @@ decreaseIndentation = do
 indentation : {auto il : Ref IndentLevel Nat} -> Core String
 indentation = do
     iLevel <- get IndentLevel
-    pure $ pack $ repeat ' '  (4 * iLevel)
+    pure $ pack $ replicate (4 * iLevel) ' '
 
 
 emit : {auto oft : Ref OutfileText (List String)} -> {auto il : Ref IndentLevel Nat} -> FC -> String -> Core ()
@@ -797,14 +792,14 @@ mutual
 
 readCCPart : Char -> String -> (String, String)
 readCCPart b x =
-  let (cc, def) = break (== b) x
-  in (cc, drop 1 def)
-where
-    drop : Int -> String -> String
-    drop headLength s =
-        let len = cast (length s)
-            subStrLen = len - headLength in
-        strSubstr headLength subStrLen s
+    let (cc, def) = break (== b) x
+    in (cc, drop 1 def)
+  where
+      drop : Int -> String -> String
+      drop headLength s =
+          let len = cast (length s)
+              subStrLen = len - headLength in
+          strSubstr headLength subStrLen s
 
 extractFFILocation : (lang:String) -> List String -> Maybe (String, String)
 extractFFILocation targetLang [] = Nothing
@@ -814,22 +809,16 @@ extractFFILocation targetLang (def :: defs) =
         True => Just (readCCPart ',' pos)
         False => extractFFILocation targetLang defs
 
-
-addCommaToList : List String -> Core $ List String
-addCommaToList [] = pure []
-addCommaToList (x :: xs) = pure $  ("  " ++ x) :: !(addCommaToList' xs)
-where
-    addCommaToList' : List String -> Core $ List String
-    addCommaToList' [] = pure $ []
-    addCommaToList' (x :: xs) = pure $ (", " ++ x) :: !(addCommaToList' xs)
-
+addCommaToList : List String -> List String
+addCommaToList [] = []
+addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
 
 functionDefSignature : {auto c : Ref Ctxt Defs} -> Name -> (args:List Int) -> Core String
 functionDefSignature n [] = do
     let fn = (cName !(getFullName n))
     pure $  "\n\nValue *"  ++ fn ++ "(void)"
 functionDefSignature n args = do
-    argsStringList <- addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args)
+    let argsStringList = addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args)
     let fn = (cName !(getFullName n))
     pure $  "\n\nValue *"  ++ fn ++ "\n(\n" ++ (showSep "\n" (argsStringList)) ++ "\n)"
 
@@ -837,31 +826,31 @@ functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
 functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
-getArgsNrList : {ty:Type} -> List ty -> Nat -> Core $ List Nat
+getArgsNrList : {0 ty:Type} -> List ty -> Nat -> Core $ List Nat
 getArgsNrList [] _ = pure []
 getArgsNrList (x :: xs) k = pure $ k :: !(getArgsNrList xs (S k))
 
 
 cTypeOfCFType : CFType -> Core $ String
-cTypeOfCFType CFUnit          = pure $ ("void")
-cTypeOfCFType CFInt           = pure $ ("int")
-cTypeOfCFType CFUnsigned8     = pure $ ("uint8_t")
-cTypeOfCFType CFUnsigned16    = pure $ ("uint16_t")
-cTypeOfCFType CFUnsigned32    = pure $ ("uint32_t")
-cTypeOfCFType CFUnsigned64    = pure $ ("uint64_t")
-cTypeOfCFType CFString        = pure $ ("char *")
-cTypeOfCFType CFDouble        = pure $ ("double")
-cTypeOfCFType CFChar          = pure $ ("char")
-cTypeOfCFType CFPtr           = pure $ ("void *")
-cTypeOfCFType CFGCPtr         = pure $ ("void *")
-cTypeOfCFType CFBuffer        = pure $ ("void *")
-cTypeOfCFType CFWorld         = pure $ ("void *")
-cTypeOfCFType (CFFun x y)     = pure $ ("void *")
-cTypeOfCFType (CFIORes x)     = pure $ ("void *")
-cTypeOfCFType (CFStruct x ys) = pure $ ("void *")
-cTypeOfCFType (CFUser x ys)   = pure $ ("void *")
+cTypeOfCFType CFUnit          = pure $ "void"
+cTypeOfCFType CFInt           = pure $ "int"
+cTypeOfCFType CFUnsigned8     = pure $ "uint8_t"
+cTypeOfCFType CFUnsigned16    = pure $ "uint16_t"
+cTypeOfCFType CFUnsigned32    = pure $ "uint32_t"
+cTypeOfCFType CFUnsigned64    = pure $ "uint64_t"
+cTypeOfCFType CFString        = pure $ "char *"
+cTypeOfCFType CFDouble        = pure $ "double"
+cTypeOfCFType CFChar          = pure $ "char"
+cTypeOfCFType CFPtr           = pure $ "void *"
+cTypeOfCFType CFGCPtr         = pure $ "void *"
+cTypeOfCFType CFBuffer        = pure $ "void *"
+cTypeOfCFType CFWorld         = pure $ "void *"
+cTypeOfCFType (CFFun x y)     = pure $ "void *"
+cTypeOfCFType (CFIORes x)     = pure $ "void *"
+cTypeOfCFType (CFStruct x ys) = pure $ "void *"
+cTypeOfCFType (CFUser x ys)   = pure $ "void *"
 
-varNamesFromList : {ty:Type} -> List ty -> Nat -> Core $ List String
+varNamesFromList : {0 ty : Type} -> List ty -> Nat -> Core (List String)
 varNamesFromList [] _ = pure []
 varNamesFromList (x :: xs) k = pure $ ("var_" ++ show k) :: !(varNamesFromList xs (S k))
 
@@ -926,7 +915,7 @@ packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = "makeCustomUser(" ++ varName ++ ")"
 
-discardLastArgument : {ty:Type} -> List ty -> List ty
+discardLastArgument : {0 ty:Type} -> List ty -> List ty
 discardLastArgument [] = []
 discardLastArgument (x :: []) = []
 discardLastArgument (x :: y :: ys) = x :: (discardLastArgument (y :: ys))
@@ -967,7 +956,7 @@ createCFunctions n (MkAFun args anf) = do
     increaseIndentation
     emit EmptyFC $ "("
     increaseIndentation
-    commaSepArglist <- addCommaToList (map (\a => "arglist->args["++ show a ++"]") argsNrs)
+    let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") argsNrs)
     traverse (emit EmptyFC) commaSepArglist
     decreaseIndentation
     emit EmptyFC ");"
@@ -991,7 +980,7 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
       (Just (fctName, lib)) => do
           addExternalLib lib
           otherDefs <- get FunctionDefinitions
-          let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (repeat "Value *" (length fargs)) ++ ");"
+          let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
           put FunctionDefinitions ((fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs)
           typeVarNameArgList <- createFFIArgList fargs
@@ -1003,7 +992,7 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           increaseIndentation
           emit EmptyFC $ "("
           increaseIndentation
-          commaSepArglist <- addCommaToList (map (\a => "arglist->args["++ show a ++"]") !(getArgsNrList fargs Z))
+          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") !(getArgsNrList fargs Z))
           traverse (emit EmptyFC) commaSepArglist
           decreaseIndentation
           emit EmptyFC ");"
