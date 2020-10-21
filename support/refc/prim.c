@@ -188,20 +188,6 @@ Value *voidElim(Value *erased1, Value *erased2)
     return NULL;
 }
 
-Value *schemeCall(
-    Value *v1, Value *_schemeFuncName, Value *_schemArgs, Value *_world)
-{
-    Value_String *schemeFuncName = (Value_String *)_schemeFuncName;
-    if (!strcmp("blodwen-thread", schemeFuncName->str))
-    {
-        fprintf(stderr, "Multithreading not supported\n");
-        exit(-1);
-    }
-    printf("Scheme Call %s not supported\n", schemeFuncName->str);
-
-    exit(-1);
-}
-
 // Threads
 
 // %foreign "scheme:blodwen-mutex"

@@ -247,9 +247,7 @@ cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = plainOp (show fn) (toList args)
 
 
-
-data ExtPrim = SchemeCall
-             | NewIORef | ReadIORef | WriteIORef
+data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
              | VoidElim
@@ -260,7 +258,6 @@ data ExtPrim = SchemeCall
 
 export
 Show ExtPrim where
-  show SchemeCall = "schemeCall"
   show NewIORef = "newIORef"
   show ReadIORef = "readIORef"
   show WriteIORef = "writeIORef"
@@ -279,8 +276,7 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__newIORef", NewIORef),
+    = cond [(n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),
             (n == UN "prim__newArray", NewArray),

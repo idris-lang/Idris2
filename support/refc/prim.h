@@ -31,10 +31,7 @@ Value *PrimIO_prim__nullAnyPtr(Value *);
 Value *onCollect(Value *, Value *, Value *, Value *);
 Value *onCollectAny(Value *, Value *, Value *, Value *);
 
-// Scheme Calls intercept
-
 Value *voidElim(Value *, Value *);
-Value *schemeCall(Value *, Value *, Value *, Value *);
 
 // Threads
 Value *System_Concurrency_Raw_prim__mutexRelease(Value *, Value *);
