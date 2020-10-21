@@ -17,7 +17,7 @@ git checkout tags/v$1
 rm -rf .git
 rm -rf .github
 rm .git*
-rm .travis*
+rm -f .travis*
 rm -rf Release
 find . -type f -name '.gitignore' -exec rm -f {} \;
 

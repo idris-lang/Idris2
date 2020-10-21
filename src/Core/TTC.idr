@@ -751,6 +751,7 @@ TTC CG where
   toBuf b (Other s) = do tag 4; toBuf b s
   toBuf b Node = tag 5
   toBuf b Javascript = tag 6
+  toBuf b RefC = tag 7
 
   fromBuf b
       = case !getTag of
@@ -761,6 +762,7 @@ TTC CG where
                      pure (Other s)
              5 => pure Node
              6 => pure Javascript
+             7 => pure RefC
              _ => corrupt "CG"
 
 export
