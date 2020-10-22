@@ -23,6 +23,7 @@ public export
 data IDECommand
      = Interpret String
      | LoadFile String (Maybe Integer)
+     | DefLoc String
      | TypeOf String (Maybe (Integer, Integer))
      | CaseSplit Integer Integer String
      | AddClause Integer String
@@ -66,6 +67,8 @@ getIDECommand (SExpList [SymbolAtom "load-file", StringAtom fname])
     = Just $ LoadFile fname Nothing
 getIDECommand (SExpList [SymbolAtom "load-file", StringAtom fname, IntegerAtom l])
     = Just $ LoadFile fname (Just l)
+getIDECommand (SExpList [SymbolAtom "def-loc", StringAtom n])
+    = Just $ DefLoc n
 getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n])
     = Just $ TypeOf n Nothing
 getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n,
@@ -144,6 +147,7 @@ putIDECommand : IDECommand -> SExp
 putIDECommand (Interpret cmd)                 = (SExpList [SymbolAtom "interpret", StringAtom cmd])
 putIDECommand (LoadFile fname Nothing)        = (SExpList [SymbolAtom "load-file", StringAtom fname])
 putIDECommand (LoadFile fname (Just line))    = (SExpList [SymbolAtom "load-file", StringAtom fname, IntegerAtom line])
+putIDECommand (DefLoc cmd)                    = (SExpList [SymbolAtom "def-loc", StringAtom cmd])
 putIDECommand (TypeOf cmd Nothing)            = (SExpList [SymbolAtom "type-of", StringAtom cmd])
 putIDECommand (TypeOf cmd (Just (line, col))) = (SExpList [SymbolAtom "type-of", StringAtom cmd, IntegerAtom line, IntegerAtom col])
 putIDECommand (CaseSplit line col n)          = (SExpList [SymbolAtom "case-split", IntegerAtom line, IntegerAtom col, StringAtom n])

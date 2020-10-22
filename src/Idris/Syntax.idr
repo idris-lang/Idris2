@@ -408,6 +408,7 @@ data EditCmd : Type where
      MakeLemma : Bool -> Int -> Name -> EditCmd
      MakeCase : Bool -> Int -> Name -> EditCmd
      MakeWith : Bool -> Int -> Name -> EditCmd
+     PrintLoc : Name -> EditCmd -- get the file location of definition
 
 public export
 data REPLCmd : Type where
