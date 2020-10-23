@@ -17,11 +17,11 @@ prim__usleep : Int -> PrimIO ()
 
 export
 sleep : HasIO io => Int -> io ()
-sleep sec = primIO (prim__sleep sec)
+sleep = primIO . prim__sleep
 
 export
-usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
-usleep sec = primIO (prim__usleep sec)
+usleep : HasIO io => Int -> io ()
+usleep = primIO . prim__usleep
 
 -- This one is going to vary for different back ends. Probably needs a
 -- better convention. Will revisit...
