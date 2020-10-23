@@ -211,7 +211,11 @@
 (define (blodwen-condition-signal c)
   (channel-put c 'ready))
 
+(define (blodwen-future work) (future work))
+(define (blodwen-await-future ty f) (touch f))
+
 (define (blodwen-sleep s) (sleep s))
+(define (blodwen-usleep us) (sleep (* 0.000001 us)))
 
 (define (blodwen-time) (current-seconds))
 

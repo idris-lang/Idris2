@@ -156,6 +156,9 @@ mutual
       = do p' <- schExp chezExtPrim chezString 0 p
            c' <- schExp chezExtPrim chezString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  chezExtPrim i MakeFuture [_, work]
+      = do work' <- schExp chezExtPrim chezString 0 work
+           pure $ "(blodwen-future " ++ work' ++ ")"
   chezExtPrim i prim args
       = schExtCommon chezExtPrim chezString i prim args
 

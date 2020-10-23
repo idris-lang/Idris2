@@ -42,6 +42,7 @@ schHeader : String -> String
 schHeader libs
   = "#lang racket/base\n" ++
     "; @generated\n" ++
+    "(require racket/future)\n" ++ -- for parallelism/concurrency
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system
     "(require rnrs/bytevectors-6)\n" ++ -- for buffers
@@ -95,6 +96,9 @@ mutual
       = do p' <- schExp racketPrim racketString 0 p
            c' <- schExp racketPrim racketString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  racketPrim i MakeFuture [_, work]
+      = do work' <- schExp racketPrim racketString 0 work
+           pure $ mkWorld $ "(blodwen-future " ++ work' ++ ")"
   racketPrim i prim args
       = schExtCommon racketPrim racketString i prim args
 

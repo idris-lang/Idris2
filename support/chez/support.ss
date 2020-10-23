@@ -217,6 +217,23 @@
 (define (blodwen-condition-signal c) (condition-signal c))
 (define (blodwen-condition-broadcast c) (condition-broadcast c))
 
+(define-record future-internal (result ready mutex signal))
+(define (blodwen-future work)
+  (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
+    (fork-thread (lambda ()
+      (let ([result (work)])
+        (with-mutex (future-internal-mutex future)
+          (set-future-internal-result! future result)
+          (set-future-internal-ready! future #t)
+          (condition-broadcast (future-internal-signal future))))))
+    future))
+(define (blodwen-await-future ty future)
+  (let ([mutex (future-internal-mutex future)])
+    (with-mutex mutex
+      (if (not (future-internal-ready future))
+          (condition-wait (future-internal-signal future) mutex))
+      (future-internal-result future))))
+
 (define (blodwen-sleep s) (sleep (make-time 'time-duration 0 s)))
 (define (blodwen-usleep s)
   (let ((sec (div s 1000000))

@@ -1,0 +1,2 @@
+$1 --no-banner --no-color --console-width 0 --cg chez Constant.idr        --exec constant
+$1 --no-banner --no-color --console-width 0 --cg chez MultiHelloWorld.idr --exec simpleIO
