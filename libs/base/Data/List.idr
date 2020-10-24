@@ -256,7 +256,7 @@ splitOn a = split (== a)
 
 public export
 replaceBy : (a -> Bool) -> a -> List a -> List a
-replaceBy p b as = map (\c => if p c then b else c) as
+replaceBy p b l = map (\c => if p c then b else c) l
 
 ||| Replaces all occurences of the first argument with the second argument in a list.
 |||
