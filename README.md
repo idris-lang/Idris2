@@ -9,7 +9,7 @@ Idris 2
 [![](https://github.com/idris-lang/Idris2/workflows/API/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"API")
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
-with first class types.
+with first-class types.
 
 For full installation instructions, see [INSTALL.md](INSTALL.md).  Briefly, if
 you have Chez Scheme installed, with the executable name `chez`, type:
@@ -22,8 +22,8 @@ is often one of `scheme`, `chezscheme` or `chezscheme9.5` (depending on the
 version). On a modern desktop machine, this process (including tests)
 should take less than 5 minutes.
 
-Idris 2 is mostly backwards compatible with Idris 1, with some minor
-exceptions. The most notable user visible differences, which might cause Idris
+Idris 2 is mostly backward compatible with Idris 1, with some minor
+exceptions. The most notable user-visible differences, which might cause Idris
 1 programs to fail to type check, are:
 
 + Unbound implicit arguments are always erased, so it is a type error to
@@ -37,7 +37,7 @@ exceptions. The most notable user visible differences, which might cause Idris
 + The `cong` function now takes its congruence explicitly as its first argument.
 + Minor differences in the meaning of export modifiers `private`, `export`,
   and `public export`, which now refer to visibility of names from other
-  *namespaces* rather than visibility from other *files*.
+  *namespaces* rather than the visibility from other *files*.
 + Module names must match the filename in which they are defined (unless
   the module's name is "Main").
 + Anything which uses a `%language` pragma in Idris 1 is likely to be different.
@@ -62,16 +62,16 @@ Summary of new features:
 
 + A core language based on "Quantitative Type Theory" which allows explicit
   annotation of erased types, and linear types.
-+ `let` bindings are now more expressive, and can be used to define pattern
++ `let` bindings are now more expressive, and can be used to define pattern-
   matching functions locally.
-+ Names which are in scope in a type are also always in scope in the body of
++ Names that are in scope in a type are also always in scope in the body of
   the corresponding definition.
 + Better inference. Holes are global to a source file, rather than local to
   a definition, meaning that some holes can be left in function types to be
   inferred by the type checker. This also gives better inference for the types
-  of `case` expressions, and means fewer annotations are needed in interface
+  of `case` expressions and means fewer annotations are needed in interface
   declarations.
-+ Better type checker implementation which minimises the need for compile
++ Better type checker implementation which minimizes the need for compile-
   time evaluation.
 + New Chez Scheme based back end which both compiles and runs faster than the
   default Idris 1 back end. (Also, optionally, Racket and Gambit can be used
@@ -80,8 +80,8 @@ Summary of new features:
 
 A significant change in the implementation is that there is an intermediate
 language `TTImp`, which is essentially a desugared Idris, and is cleanly
-separated from the high level language which means it is potentially usable
-as a core language for other high level syntaxes.
+separated from the high-level language which means it is potentially usable
+as a core language for other high-level syntaxes.
 
 Javascript
 ====================
@@ -91,7 +91,7 @@ Things still missing
 ====================
 
 + Disambiguation via 'with'
-+ Cumulativity (so we currently have Type : Type! Bear that in mind when you
++ "Cumulativity" (so we currently have Type : Type! Bear that in mind when you
   think you've proved something :))
 + 'rewrite' doesn't yet work on dependent types
 + Parts of the ide-mode, particularly syntax highlighting
