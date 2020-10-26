@@ -142,7 +142,7 @@ data IDEResult
   | NameList (List Name)
   | Term String   -- should be a PTerm + metadata, or SExp.
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
-  | NamesInFiles (List (Name, FC))
+  | NameLocList (List (Name, FC))
 
 replWrap : Core REPLResult -> Core IDEResult
 replWrap m = pure $ REPL !m
@@ -164,7 +164,7 @@ process (NameAt name Nothing)
     = do defs <- get Ctxt
          glob <- lookupCtxtName (UN name) (gamma defs)
          let dat = map (\(name, _, gdef) => (name, gdef.location)) glob
-         pure (NamesInFiles dat)
+         pure (NameLocList dat)
 process (NameAt n (Just _))
     = do todoCmd "name-at <name> <line> <column>"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
@@ -388,7 +388,7 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
                     Just k  => show k
                     Nothing => "auto"
     in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
-displayIDEResult outf i (NamesInFiles dat)
+displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i
      $ SExpList !(traverse
                    (\(name, fc)
