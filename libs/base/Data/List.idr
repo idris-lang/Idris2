@@ -175,12 +175,19 @@ union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
 public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 
@@ -283,6 +290,15 @@ intersectBy eq xs ys = [x | x <- xs, any (eq x) ys]
 export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
+
+export
+intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy eq [] = []
+intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
+
+export
+intersectAll : Eq a => List (List a) -> List a
+intersectAll = intersectAllBy (==)
 
 ||| Combine two lists elementwise using some function.
 |||
@@ -632,3 +648,8 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+lengthMap : (xs : List a) -> length (map f xs) = length xs
+lengthMap [] = Refl
+lengthMap (x :: xs) = cong S (lengthMap xs)

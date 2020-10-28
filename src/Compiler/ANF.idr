@@ -156,12 +156,12 @@ letBind fc args f
         = ALet fc i t (doBind (ALocal i :: vs) xs)
     doBind vs ((var, _) :: xs) = doBind (var :: vs) xs
 
-toVect : (n : Nat) -> List a -> Maybe (Vect n a)
-toVect Z [] = Just []
-toVect (S k) (x :: xs)
-    = do xs' <- toVect k xs
+toVect' : (n : Nat) -> List a -> Maybe (Vect n a)
+toVect' Z [] = Just []
+toVect' (S k) (x :: xs)
+    = do xs' <- toVect' k xs
          pure (x :: xs')
-toVect _ _ = Nothing
+toVect' _ _ = Nothing
 
 mlet : {auto v : Ref Next Int} ->
        FC -> ANF -> (AVar -> ANF) -> Core ANF
@@ -201,7 +201,7 @@ mutual
   anf vs (LOp {arity} fc op args)
       = do args' <- traverse (anf vs) (toList args)
            letBind fc args'
-                (\args => case toVect arity args of
+                (\args => case toVect' arity args of
                                Nothing => ACrash fc "Can't happen (AOp)"
                                Just argsv => AOp fc op argsv)
   anf vs (LExtPrim fc p args)
