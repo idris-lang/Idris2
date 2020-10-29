@@ -148,6 +148,8 @@ namespace DybjerSetzer
 
 namespace Erased
 
+  ------------------------------------------------------------------------
+  -- Domain and evaluation functions
 
   ||| What it means to describe a terminating computation
   ||| @ f is the function used to answer questions put to the oracle
@@ -208,6 +210,7 @@ namespace Erased
   ||| inverting the proof. Note that the proof is runtime irrelevant even though
   ||| the resulting view is not: this is possible because the relevant constructor
   ||| is uniquely determined by the shape of `d`.
+  public export
   view : (d : General a b (b i)) -> (0 l : Layer f d) -> View l
   view (Tell o)  (MkTell o)            = TView o
   view (Ask j k) (MkAsk j jprf k kprf) = AView j jprf k kprf
@@ -231,3 +234,52 @@ namespace Erased
   totally : (f : PiG a b) -> (0 _ : (i : a) -> Domain f i) ->
             (i : a) -> b i
   totally f dom i = evaluate f i (dom i)
+
+  ------------------------------------------------------------------------
+  -- Proofs
+
+  ||| Domain is a singleton type
+  export
+  irrelevantDomain : (f : PiG a b) -> (i : a) -> (p, q : Domain f i) -> p === q
+
+  ||| Layer is a singleton type
+  irrelevantLayer
+    : (f : PiG a b) -> (d : General a b (b i)) -> (l, m : Layer f d) -> l === m
+
+  irrelevantDomain f i p q = irrelevantLayer f (f i) p q
+
+  irrelevantLayer f (Tell o)
+    (MkTell o) (MkTell o) = Refl
+  irrelevantLayer f (Ask j k)
+    (MkAsk j jprf1 k kprf1) (MkAsk j jprf2 k kprf2)
+    with (irrelevantDomain f j jprf1 jprf2)
+      irrelevantLayer f (Ask j k)
+        (MkAsk j jprf k kprf1) (MkAsk j jprf k kprf2)
+        | Refl = cong (MkAsk j jprf k)
+               $ irrelevantLayer f (k (evaluate f j jprf)) kprf1 kprf2
+
+  ||| The result of `evaluateLayer` does not depend on the specific proof that
+  ||| `i` is in the domain of the layer of computation at hand.
+  export
+  evaluateLayerIrrelevance
+    : (f : PiG a b) -> (d : General a b (b i)) -> (0 p, q : Layer f d) ->
+      evaluateLayer f d p === evaluateLayer f d q
+  evaluateLayerIrrelevance f d p q
+    = rewrite irrelevantLayer f d p q in Refl
+
+  ||| The result of `evaluate` does not depend on the specific proof that `i`
+  ||| is in the domain of the function at hand.
+  export
+  evaluateIrrelevance
+    : (f : PiG a b) -> (i : a) -> (0 p, q : Domain f i) ->
+      evaluate f i p === evaluate f i q
+  evaluateIrrelevance f i p q
+    = evaluateLayerIrrelevance f (f i) p q
+
+  ||| The result computed by a total function is independent from the proof
+  ||| that it is total.
+  export
+  totallyIrrelevance
+    : (f : PiG a b) -> (0 p, q : (i : a) -> Domain f i) ->
+      (i : a) -> totally f p i === totally f q i
+  totallyIrrelevance f p q i = evaluateIrrelevance f i (p i) (q i)
