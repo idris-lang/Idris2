@@ -48,6 +48,7 @@ data IDECommand
      | ElaborateTerm     String -- then change String to Term, as in idris1
      | PrintDefinition String
      | ReplCompletions String
+     | EnableSyntax Bool
      | Version
      | GetOptions
 
@@ -135,6 +136,8 @@ getIDECommand (SExpList [SymbolAtom "print-definition", StringAtom n])
     = Just $ PrintDefinition n
 getIDECommand (SExpList [SymbolAtom "repl-completions", StringAtom n])
     = Just $ ReplCompletions n
+getIDECommand (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
+    = Just $ EnableSyntax b
 getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
 getIDECommand _ = Nothing
@@ -177,6 +180,7 @@ putIDECommand (ElaborateTerm     tm)          = (SExpList [SymbolAtom "elaborate
 putIDECommand (PrintDefinition n)             = (SExpList [SymbolAtom "print-definition", StringAtom n])
 putIDECommand (ReplCompletions n)             = (SExpList [SymbolAtom "repl-completions", StringAtom n])
 putIDECommand (Directive n)             = (SExpList [SymbolAtom "directive", StringAtom n])
+putIDECommand (EnableSyntax b)                = (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
 putIDECommand GetOptions                      = (SExpList [SymbolAtom "get-options"])
 putIDECommand Version                         = SymbolAtom "version"
 

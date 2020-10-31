@@ -1,1 +1,3 @@
 00001e((:load-file "LocType.idr") 1)
+((:enable-syntax :False) 2)
+((:load-file "LocType.idr") 3)
