@@ -32,7 +32,7 @@ is a very convenient way to bootstrap.
 Can Idris 2 generate Javascript? What about plug-in code generators?
 ====================================================================
 
-Yes! A `JavaScript code generator <https://idris2.readthedocs.io/en/latest/backends/javascript.html/>`_
+Yes! A `JavaScript code generator <https://idris2.readthedocs.io/en/latest/backends/javascript.html>`_
 is built in, and can target either the browser or NodeJS.
 
 Like Idris 1, Idris 2 
