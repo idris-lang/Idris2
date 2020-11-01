@@ -157,7 +157,7 @@ putIDECommand (ExprSearch line n exprs mode)  = (SExpList [SymbolAtom "proof-sea
   getMode : Bool -> SExp
   getMode True  = SymbolAtom "all"
   getMode False = SymbolAtom "other"
-putIDECommand ExprSearchNext                  = SymbolAtom "proof-search--next"
+putIDECommand ExprSearchNext                  = SymbolAtom "proof-search-next"
 putIDECommand (GenerateDef line n)            = (SExpList [SymbolAtom "generate-def", IntegerAtom line, StringAtom n])
 putIDECommand GenerateDefNext                 = SymbolAtom "generate-def-next"
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
