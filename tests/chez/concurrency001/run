@@ -1,4 +1,5 @@
 $1 --no-banner --no-color --console-width 0 --cg chez Futures.idr -p contrib --exec constant
 $1 --no-banner --no-color --console-width 0 --cg chez Futures.idr -p contrib --exec simpleIO
+$1 --no-banner --no-color --console-width 0 --cg chez Futures.idr -p contrib --exec erasureAndNonbindTest
 
 rm -r build
