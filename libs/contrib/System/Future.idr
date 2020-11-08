@@ -17,8 +17,8 @@ fork : Lazy a -> Future a
 fork = prim__makeFuture
 
 export
-forkIO : IO a -> IO (Future a)
-forkIO a = io_pure $ fork $ unsafePerformIO a
+forkIO : HasIO io => IO a -> io (Future a)
+forkIO a = primIO $ prim__io_pure $ fork $ unsafePerformIO a
 
 export
 await : Future a -> a
