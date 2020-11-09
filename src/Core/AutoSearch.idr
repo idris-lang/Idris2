@@ -165,7 +165,10 @@ exactlyOne {vars} fc env top target all
                        commit
                        pure res
               [] => throw (CantSolveGoal fc [] top)
-              rs => throw (AmbiguousSearch fc env !(quote !(get Ctxt) env target)
+              rs => do log "auto" 5 $ "Search: found multiple solutions "
+                       traverse (logTerm "auto" 5 "   ") 
+                                (map fst rs )
+                       throw (AmbiguousSearch fc env !(quote !(get Ctxt) env target)
                              !(traverse normRes rs))
   where
     normRes : (Term vars, Defs, UState) -> Core (Term vars)
