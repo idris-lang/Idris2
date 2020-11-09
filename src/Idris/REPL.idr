@@ -229,7 +229,6 @@ data EditResult : Type where
   MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
   MadeWith : Maybe String -> List String -> EditResult
   MadeCase : Maybe String -> List String -> EditResult
-  LocsFound : List FC -> EditResult -- result from PrintLoc command
 
 updateFile : {auto r : Ref ROpts REPLOpts} ->
              (List String -> List String) -> Core EditResult
@@ -352,12 +351,6 @@ processEdit : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
               EditCmd -> Core EditResult
-processEdit (PrintLoc fn) 
-    = do defs <- get Ctxt
-         case !(lookupCtxtName fn (gamma defs)) of
-              [] => throw (UndefinedName replFC fn)
-              ts => 
-                  pure (LocsFound $ map (location . snd . snd) ts)
 processEdit (TypeAt line col name)
     = do defs <- get Ctxt
          glob <- lookupCtxtName name (gamma defs)

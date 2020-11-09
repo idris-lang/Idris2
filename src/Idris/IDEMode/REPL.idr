@@ -160,8 +160,6 @@ process (LoadFile fname_in _)
                           Nothing => fname_in
                           Just f' => f'
          replWrap $ Idris.REPL.process (Load fname) >>= outputSyntaxHighlighting fname
-process (DefLoc n)
-    = replWrap $ Idris.REPL.process (Editing (PrintLoc (UN n)))
 process (TypeOf n Nothing)
     = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
 process (TypeOf n (Just (l, c)))
@@ -362,16 +360,6 @@ displayIDEResult outf i (REPL $ Edited (DisplayEdit xs))
   = printIDEResult outf i $ StringAtom $ show xs
 displayIDEResult outf i (REPL $ Edited (EditError x))
   = printIDEError outf i x
-displayIDEResult outf i (REPL $ Edited (LocsFound locs))
-  = printIDEResult outf i $ SExpList (map fcToSExp locs)
-  where 
-    addOne : (Int, Int) -> (Int, Int)
-    addOne (l, c) = (l + 1, c + 1)
-    fcToSExp : FC -> SExp
-    fcToSExp fc = 
-      SExpList [toSExp (file fc),
-                toSExp (addOne (startPos fc)),
-                toSExp (addOne (endPos fc))]
 displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
   = printIDEResult outf i
   $ StringAtom $ (relit lit $ show name ++ " : " ++ show pty ++ "\n") ++ pappstr
