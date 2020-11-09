@@ -336,8 +336,11 @@ record Context where
     -- access in a program - in all other cases, we'll assume everything is
     -- visible
     visibleNS : List Namespace
-    allPublic : Bool -- treat everything as public. This is only intended
+    allPublic : Bool -- treat everything as public. This is intended
                      -- for checking partially evaluated definitions
+                     -- or for use outside of the main compilation
+                     -- process (e.g. when implementing interactive
+                     -- features such as case splitting).
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
 
