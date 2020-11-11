@@ -761,6 +761,15 @@ HasNames (Env Term vars) where
       = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
 
 export
+HasNames Clause where
+  full gam (MkClause env lhs rhs)
+     = pure $ MkClause !(full gam env) !(full gam lhs) !(full gam rhs)
+
+  resolved gam (MkClause env lhs rhs)
+    = [| MkClause (resolved gam env) (resolved gam lhs) (resolved gam rhs) |]
+
+
+export
 HasNames Def where
   full gam (PMDef r args ct rt pats)
       = pure $ PMDef r args !(full gam ct) !(full gam rt)
