@@ -127,8 +127,16 @@ export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
 recoverableErr defs (CantConvert fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
+  = do l <- nf defs env l
+       r <- nf defs env r
+       log "coverage.recover" 10 $ unlines
+         [ "Recovering from CantConvert?"
+         , "Checking:"
+         , "  " ++ show l
+         , "  " ++ show r
+         ]
+       recoverable defs l r
+
 recoverableErr defs (CantSolveEq fc env l r)
     = recoverable defs !(nf defs env l)
                        !(nf defs env r)
@@ -811,9 +819,11 @@ processDef opts nest env fc n_in cs_in
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
                    if !(hasEmptyPat defs [] lhs)
-                      then do put Ctxt ctxt
+                      then do log "declare.def.impossible" 5 "No empty pat"
+                              put Ctxt ctxt
                               pure Nothing
-                      else do empty <- clearDefs ctxt
+                      else do log "declare.def.impossible" 5 "Some empty pat"
+                              empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
                               pure (Just rtm))
