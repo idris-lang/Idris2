@@ -107,20 +107,32 @@ recoverable : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike the above, any mismatch will do
+
+-- TYPE CONSTRUCTORS
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+-- Type constructor vs. primitive type
+recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _ _) _ = pure True
+
+-- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
     = pure True -- both functions; recoverable
-recoverable defs (NTCon _ _ _ _ _) _ = pure True
-recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
-recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+
+-- OTHERWISE: no
 recoverable defs x y = pure False
 
 export
