@@ -17,10 +17,6 @@ fork : Lazy a -> Future a
 fork = prim__makeFuture
 
 export
-forkIO : HasIO io => IO a -> io (Future a)
-forkIO a = primIO $ prim__io_pure $ fork $ unsafePerformIO a
-
-export
 await : Future a -> a
 await f = prim__awaitFuture f
 
@@ -37,3 +33,11 @@ public export
 Monad Future where
   join = map await
   v >>= func = join . fork $ func (await v)
+
+export
+performFutureIO : HasIO io => Future (IO a) -> io (Future a)
+performFutureIO = primIO . prim__io_pure . map unsafePerformIO
+
+export
+forkIO : HasIO io => IO a -> io (Future a)
+forkIO a = performFutureIO $ fork a
