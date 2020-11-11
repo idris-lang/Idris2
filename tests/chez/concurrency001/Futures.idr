@@ -45,3 +45,14 @@ erasureAndNonbindTest = do
   let _ = nonbind
   let n = nonbind
   macsleep 2000 -- Even if not explicitly awaited, we should let threads finish before exiting
+
+map : IO ()
+map = do
+  future1 <- forkIO $ do
+    macsleep 1000
+    putStrLn "#2"
+  let future3 = map (const "#3") future1
+  future2 <- forkIO $ do
+    putStrLn "#1"
+  pure $ await future2
+  putStrLn (await future3)
