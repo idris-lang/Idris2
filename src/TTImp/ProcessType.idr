@@ -23,14 +23,6 @@ import Data.NameMap
 
 %default covering
 
-getRetTy : Defs -> NF [] -> Core Name
-getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-getRetTy defs (NTCon _ n _ _ _) = pure n
-getRetTy defs ty
-    = throw (GenericMsg (getLoc ty)
-             "Can only add hints for concrete return types")
-
 processFnOpt : {auto c : Ref Ctxt Defs} ->
                FC -> Name -> FnOpt -> Core ()
 processFnOpt fc ndef Inline
@@ -43,6 +35,15 @@ processFnOpt fc ndef (Hint d)
               | Nothing => throw (UndefinedName fc ndef)
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
+  where
+    getRetTy : Defs -> NF [] -> Core Name
+    getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
+        = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+    getRetTy defs (NTCon _ n _ _ _) = pure n
+    getRetTy defs ty
+        = throw (GenericMsg (getLoc ty)
+                 "Can only add hints for concrete return types")
+
 processFnOpt fc ndef (GlobalHint a)
     = addGlobalHint ndef a
 processFnOpt fc ndef ExternFn
