@@ -55,9 +55,14 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
          ust <- get UST
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
-         traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
+         let nestdecls' = map (updateName nest') nestdecls
+         traverse (processDecl [] nest' env') nestdecls'
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
+         [] <- anyHints nestdecls'
+         | hints => do res <- check rig elabinfo nest' env scope expty
+                       removeHintFor hints
+                       pure res
          check rig elabinfo nest' env scope expty
   where
     -- For the local definitions, don't allow access to linear things
@@ -122,6 +127,36 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
         = INamespace fc ps (map setPublic decls)
     setPublic d = d
 
+    getRetTy : Defs -> NF [] -> Core Name
+    getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
+        = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+    getRetTy defs (NTCon _ n _ _ _) = pure n
+    getRetTy defs ty
+        = throw (GenericMsg (getLoc ty)
+                 "Can only add hints for concrete return types")
+            
+    getName : ImpTy -> Name
+    getName (MkImpTy _ n _) = n
+    
+    getType : ImpTy -> RawImp
+    getType (MkImpTy _ _ ty) = ty
+    
+    -- find all local definition annotated with hints
+    anyHints : List ImpDecl  -> Core (List (Name , Name))
+    anyHints [] = pure []
+    anyHints (IClaim _ _ _ opts ty :: decls) 
+      = do defs <- get Ctxt
+           if (Hint True) `elem` opts
+             then do let n = getName ty
+                     Just fullTy <- lookupTyExact n (gamma defs)                     
+                     | Nothing => do -- should never happen, a hint should've been added
+                                     -- when we processDecl-ed the nested declarations
+                                     log "auto" 1 "Invariant invalidated in TTImp.Elab.Local"
+                                     anyHints decls 
+                     retTy <- getRetTy defs !(nf defs [] fullTy)
+                     pure ((retTy , getName ty) :: !(anyHints decls))
+             else anyHints decls
+    anyHints (_ :: decls) = anyHints decls
 getLocalTerm : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                FC -> Env Term vars -> Term vars -> List Name ->
