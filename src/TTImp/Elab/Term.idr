@@ -269,7 +269,8 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 --         {auto m : Ref MD Metadata} ->
 --         {auto u : Ref UST UState} ->
 --         {auto e : Ref EST (EState vars)} ->
---         RigCount -> ElabInfo -> Env Term vars -> RawImp ->
+--         RigCount -> ElabInfo -> 
+--         NestedNames vars -> Env Term vars -> RawImp ->
 --         Maybe (Glued vars) ->
 --         Core (Term vars, Glued vars)
 -- If we've just inserted an implicit coercion (in practice, that's either
