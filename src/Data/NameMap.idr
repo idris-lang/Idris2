@@ -271,11 +271,19 @@ export
 values : NameMap v -> List v
 values = map snd . toList
 
+treeMapWithKey : (Key -> a -> b) -> Tree n a -> Tree n b
+treeMapWithKey f (Leaf k v) = Leaf k (f k v)
+treeMapWithKey f (Branch2 t1 k t2) = Branch2 (treeMapWithKey f t1) k (treeMapWithKey f t2)
+treeMapWithKey f (Branch3 t1 k1 t2 k2 t3) 
+    = Branch3 (treeMapWithKey f t1) k1 (treeMapWithKey f t2) k2 (treeMapWithKey f t3)
+
+export
+mapWithKey : (Name -> a -> b) -> NameMap a -> NameMap b
+mapWithKey f Empty = Empty
+mapWithKey f (M n t) = M _ (treeMapWithKey f t)
+
 treeMap : (a -> b) -> Tree n a -> Tree n b
-treeMap f (Leaf k v) = Leaf k (f v)
-treeMap f (Branch2 t1 k t2) = Branch2 (treeMap f t1) k (treeMap f t2)
-treeMap f (Branch3 t1 k1 t2 k2 t3)
-    = Branch3 (treeMap f t1) k1 (treeMap f t2) k2 (treeMap f t3)
+treeMap f tree = treeMapWithKey (\ _ => f) tree
 
 export
 implementation Functor NameMap where
