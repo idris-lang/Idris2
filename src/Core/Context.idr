@@ -1615,7 +1615,8 @@ setExternal fc tyn u
 
 export
 addHintFor : {auto c : Ref Ctxt Defs} ->
-					   FC -> Name -> Name -> Bool -> Bool -> Core ()
+             FC -> Name -> Name -> Bool -> Bool -> 
+             Core ()
 addHintFor fc tyn_in hintn_in direct loading
     = do defs <- get Ctxt
          tyn <- toFullNames tyn_in
@@ -1635,6 +1636,25 @@ addHintFor fc tyn_in hintn_in direct loading
                      (record { typeHints $= insert tyn ((hintn, direct) :: hs),
                                saveTypeHints $= ((tyn, hintn, direct) :: )
                              } defs)
+
+||| Remove a list of names from the `typeHints` and `saveTypeHInts` lists
+-- We use a list of names so that we only have to traverse the list of hints once.
+export
+removeHintFor : {auto c : Ref Ctxt Defs} ->
+  (typeHint : List (Name , Name)) -> Core ()
+removeHintFor typeHints
+  = do defs <- get Ctxt
+       -- hints are indexed by full names
+       tyhints <- traverse (\(ty,n) => pure (ty , !(toResolvedNames n))) typeHints
+       
+       put Ctxt $
+         record {typeHints $= mapWithKey \ty,hs => 
+                 case lookup ty tyhints of
+                   Nothing => hs
+                   Just n => delete (n, True) hs
+                ,saveTypeHints $= filter \(ty,n,b) => not ((ty,n) `elem` tyhints)
+                } defs
+       pure ()
 
 export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
