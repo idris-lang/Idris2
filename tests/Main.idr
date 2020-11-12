@@ -48,7 +48,7 @@ idrisTests = MkTestPool []
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
-       "coverage009", "coverage010",
+       "coverage009", "coverage010", "coverage011",
        -- Documentation strings
        "docs001", "docs002",
        -- Evaluator

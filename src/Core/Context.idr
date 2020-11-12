@@ -336,8 +336,11 @@ record Context where
     -- access in a program - in all other cases, we'll assume everything is
     -- visible
     visibleNS : List Namespace
-    allPublic : Bool -- treat everything as public. This is only intended
+    allPublic : Bool -- treat everything as public. This is intended
                      -- for checking partially evaluated definitions
+                     -- or for use outside of the main compilation
+                     -- process (e.g. when implementing interactive
+                     -- features such as case splitting).
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
 
@@ -756,6 +759,15 @@ HasNames (Env Term vars) where
   resolved gam [] = pure []
   resolved gam (b :: bs)
       = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
+
+export
+HasNames Clause where
+  full gam (MkClause env lhs rhs)
+     = pure $ MkClause !(full gam env) !(full gam lhs) !(full gam rhs)
+
+  resolved gam (MkClause env lhs rhs)
+    = [| MkClause (resolved gam env) (resolved gam lhs) (resolved gam rhs) |]
+
 
 export
 HasNames Def where
