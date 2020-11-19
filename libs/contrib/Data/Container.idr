@@ -193,3 +193,4 @@ namespace Comonad
       let (_, (shp ** chld)) = fromPair {c = Const a} layer in
       let b = toConst (alg (MkCofree m)) in
       toPair (b, (shp ** \ p => chld p))
+-- Eta-expanded to force Inf --^
