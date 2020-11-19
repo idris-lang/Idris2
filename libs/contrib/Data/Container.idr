@@ -171,3 +171,25 @@ namespace Final
   unfoldr next seed =
     let (shp ** chld) = next seed in
     MkM (shp ** \ p => unfoldr next (chld p))
+
+
+namespace Comonad
+
+  public export
+  record Cofree (c : Container) (x : Type) where
+    constructor MkCofree
+    runCofree : M (Pair (Const x) c)
+
+  export
+  extract : Cofree c x -> x
+  extract (MkCofree (MkM m)) = fst (fst m)
+
+  export
+  extend : (Cofree c a -> b) -> Cofree c a -> Cofree c b
+  extend alg = MkCofree . unfoldr next . runCofree where
+
+    next : M (Pair (Const a) c) -> Extension (Pair (Const b) c) (M (Pair (Const a) c))
+    next m@(MkM layer) =
+      let (_, (shp ** chld)) = fromPair {c = Const a} layer in
+      let b = toConst (alg (MkCofree m)) in
+      toPair (b, (shp ** \ p => chld p))
