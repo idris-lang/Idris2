@@ -145,18 +145,19 @@ namespace Initial
 namespace Monad
 
   public export
-  Free : Container -> Type -> Type
-  Free c x = W (Sum c (Const x))
+  record Free (c : Container) (x : Type) where
+    constructor MkFree
+    runFree : W (Sum c (Const x))
 
   export
   pure : x -> Free c x
-  pure x = MkW (toSum {d = Const _} (Right (toConst x)))
+  pure x = MkFree $ MkW (toSum {d = Const _} (Right (toConst x)))
 
   export
   (>>=) : Free c x -> (x -> Free c y) -> Free c y
-  (>>=) mx k =
+  (>>=) (MkFree mx) k =
     let alg : Either (Extension c (Free c y)) (Extension (Const x) (Free c y)) -> Free c y
-            := either (\ v => MkW (Left (fst v) ** snd v)) (k . fromConst)
+            := either (\ v => MkFree $ MkW (Left (fst v) ** runFree . snd v)) (k . fromConst)
     in foldr (alg . fromSum {d = Const _}) mx
 
 namespace Final
