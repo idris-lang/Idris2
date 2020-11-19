@@ -142,6 +142,23 @@ namespace Initial
   para : (Extension c (x, W c) -> x) -> W c -> x
   para alg (MkW (shp ** chld)) = alg (shp ** \ p => let w = chld p in (para alg w, w))
 
+namespace Monad
+
+  public export
+  Free : Container -> Type -> Type
+  Free c x = W (Sum c (Const x))
+
+  export
+  pure : x -> Free c x
+  pure x = MkW (toSum {d = Const _} (Right (toConst x)))
+
+  export
+  (>>=) : Free c x -> (x -> Free c y) -> Free c y
+  (>>=) mx k =
+    let alg : Either (Extension c (Free c y)) (Extension (Const x) (Free c y)) -> Free c y
+            := either (\ v => MkW (Left (fst v) ** snd v)) (k . fromConst)
+    in foldr (alg . fromSum {d = Const _}) mx
+
 namespace Final
 
   public export
