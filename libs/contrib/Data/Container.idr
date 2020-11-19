@@ -155,7 +155,7 @@ namespace Initial
   export
   map : Morphism c d -> W c -> W d
   map f (MkW (MkExtension shp chld)) = MkW $ Extension f (MkExtension shp (\ p => map f (chld p)))
-  --  Container.map inlined because of ---------^
+  --  Container.map inlined because of -------------------^
   --  termination checking
 
   export
