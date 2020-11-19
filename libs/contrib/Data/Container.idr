@@ -29,12 +29,14 @@ namespace Container
     Position : Shape -> Type
 
   public export
-  Extension : Container -> Type -> Type
-  Extension c x = (s : Shape c ** Position c s -> x)
+  record Extension (c : Container) (x : Type) where
+    constructor MkExtension
+    shape    : Shape c
+    payloads : Position c shape -> x
 
   ||| The image of a container by @Extension@ is a functor
   public export
-  Functor (Extension c) where map f (s ** p) = (s ** f . p)
+  Functor (Extension c) where map f (MkExtension s p) = MkExtension s (f . p)
 
 -- Morphisms of the category of containers
 namespace Morphism
@@ -47,7 +49,8 @@ namespace Morphism
 
   public export
   Extension : Morphism c d -> Extension c x -> Extension d x
-  Extension phi (s ** p) = (shapeMorphism phi s ** p . positionMorphism phi)
+  Extension phi (MkExtension s p)
+    = MkExtension (shapeMorphism phi s) (p . positionMorphism phi)
 
 ------------------------------------------------------------------------
 -- Combinators to build containers
@@ -61,11 +64,11 @@ namespace Combinators
 
   export
   toConst : k -> Extension (Const k) x
-  toConst v = (v ** absurd)
+  toConst v = MkExtension v absurd
 
   export
   fromConst : Extension (Const k) x -> k
-  fromConst (v ** _) = v
+  fromConst (MkExtension v _) = v
 
   -- Identity
   public export
@@ -74,24 +77,28 @@ namespace Combinators
 
   export
   toIdentity : x -> Extension Identity x
-  toIdentity v = (() ** const v)
+  toIdentity v = MkExtension () (const v)
 
   export
   fromIdentity : Extension Identity x -> x
-  fromIdentity (() ** chld) = chld ()
+  fromIdentity (MkExtension () chld) = chld ()
 
   -- Composition
   public export
   Compose : (d, c : Container) -> Container
-  Compose d c = MkContainer (Extension d (Shape c)) (\ (shp ** chld) => (p : Position d shp ** Position c (chld p)))
+  Compose d c = MkContainer
+    (Extension d (Shape c))
+    (\ (MkExtension shp chld) => (p : Position d shp ** Position c (chld p)))
 
   export
   toCompose : (Extension d . Extension c) x -> Extension (Compose d c) x
-  toCompose (shp1 ** chld) = ((shp1 ** \ p => fst (chld p)) ** \ (p ** q) => snd (chld p) q)
+  toCompose (MkExtension shp1 chld)
+    = MkExtension (MkExtension shp1 (shape . chld)) (\ (p ** q) => payloads (chld p) q)
 
   export
   fromCompose : Extension (Compose d c) x -> (Extension d . Extension c) x
-  fromCompose ((shp1 ** shp2) ** chld) = (shp1 ** \ p => (shp2 p ** \ q => chld (p ** q)))
+  fromCompose (MkExtension (MkExtension shp1 shp2) chld)
+    = MkExtension shp1 (\ p => MkExtension (shp2 p) (\ q => chld (p ** q)))
 
   -- Direct sum
   public export
@@ -100,13 +107,13 @@ namespace Combinators
 
   export
   toSum : Either (Extension c x) (Extension d x) -> Extension (Sum c d) x
-  toSum (Left (shp ** chld)) = (Left shp ** chld)
-  toSum (Right (shp ** chld)) = (Right shp ** chld)
+  toSum (Left (MkExtension shp chld)) = MkExtension (Left shp) chld
+  toSum (Right (MkExtension shp chld)) = MkExtension (Right shp) chld
 
   export
   fromSum : Extension (Sum c d) x -> Either (Extension c x) (Extension d x)
-  fromSum (Left shp ** chld) = Left (shp ** chld)
-  fromSum (Right shp ** chld) = Right (shp ** chld)
+  fromSum (MkExtension (Left shp) chld) = Left (MkExtension shp chld)
+  fromSum (MkExtension (Right shp) chld) = Right (MkExtension shp chld)
 
   -- Pairing
   public export
@@ -115,11 +122,13 @@ namespace Combinators
 
   export
   toPair : (Extension c x, Extension d x) -> Extension (Pair c d) x
-  toPair ((shp1 ** chld1), (shp2 ** chld2)) = ((shp1, shp2) ** either chld1 chld2)
+  toPair (MkExtension shp1 chld1, MkExtension shp2 chld2)
+    = MkExtension (shp1, shp2) (either chld1 chld2)
 
   export
   fromPair : Extension (Pair c d) x -> (Extension c x, Extension d x)
-  fromPair ((shp1, shp2) ** chld) = ((shp1 ** chld . Left), (shp2 ** chld . Right))
+  fromPair (MkExtension (shp1, shp2) chld)
+    = (MkExtension shp1 (chld . Left), MkExtension shp2 (chld . Right))
 
   -- Branching over a Type
   public export
@@ -128,11 +137,11 @@ namespace Combinators
 
   export
   toExponential : (k -> Extension c x) -> Extension (Exponential k c) x
-  toExponential f = (fst . f ** \ (v ** p) => snd (f v) p)
+  toExponential f = MkExtension (shape . f) (\ (v ** p) => payloads (f v) p)
 
   export
   fromExponential : Extension (Exponential k c) x -> (k -> Extension c x)
-  fromExponential (shp ** chld) k = (shp k ** \ p => chld (k ** p))
+  fromExponential (MkExtension  shp chld) k = MkExtension (shp k) (\ p => chld (k ** p))
 
 ------------------------------------------------------------------------
 -- Taking various fixpoints of containers
@@ -145,17 +154,17 @@ namespace Initial
 
   export
   map : Morphism c d -> W c -> W d
-  map f (MkW (shp ** chld)) = MkW $ Extension f (shp ** \ p => map f (chld p))
+  map f (MkW (MkExtension shp chld)) = MkW $ Extension f (MkExtension shp (\ p => map f (chld p)))
   --  Container.map inlined because of ---------^
   --  termination checking
 
   export
   foldr : (Extension c x -> x) -> W c -> x
-  foldr alg (MkW (shp ** chld)) = alg (shp ** \ p => foldr alg (chld p))
+  foldr alg (MkW (MkExtension shp chld)) = alg (MkExtension shp (\ p => foldr alg (chld p)))
 
   export
   para : (Extension c (x, W c) -> x) -> W c -> x
-  para alg (MkW (shp ** chld)) = alg (shp ** \ p => let w = chld p in (para alg w, w))
+  para alg (MkW (MkExtension shp chld)) = alg (MkExtension shp (\ p => let w = chld p in (para alg w, w)))
 
 namespace Monad
 
@@ -168,14 +177,15 @@ namespace Monad
 
   export
   pure : x -> Free c x
-  pure x = MkFree $ MkW (toSum {d = Const _} (Right (toConst x)))
+  pure x = MkFree $ MkW (toSum (Right (toConst x)))
 
   export
   (>>=) : Free c x -> (x -> Free c y) -> Free c y
   (>>=) (MkFree mx) k =
     let alg : Either (Extension c (Free c y)) (Extension (Const x) (Free c y)) -> Free c y
-            := either (\ v => MkFree $ MkW (Left (fst v) ** runFree . snd v)) (k . fromConst)
-    in foldr (alg . fromSum {d = Const _}) mx
+            := either (MkFree . MkW . toSum {c} {d = Const _} . Left . map runFree)
+                      (k . fromConst)
+    in foldr (alg . fromSum) mx
 
   export
   join : Free c (Free c x) -> Free c x
@@ -190,8 +200,8 @@ namespace Final
   export
   unfoldr : (s -> Extension c s) -> s -> M c
   unfoldr next seed =
-    let (shp ** chld) = next seed in
-    MkM (shp ** \ p => unfoldr next (chld p))
+    let (MkExtension shp chld) = next seed in
+    MkM (MkExtension shp (\ p => unfoldr next (chld p)))
 
 namespace Comonad
 
@@ -204,7 +214,7 @@ namespace Comonad
 
   export
   extract : Cofree c x -> x
-  extract (MkCofree (MkM m)) = fst (fst m)
+  extract (MkCofree (MkM m)) = fst (shape m)
 
   export
   extend : (Cofree c a -> b) -> Cofree c a -> Cofree c b
@@ -212,10 +222,10 @@ namespace Comonad
 
     next : M (Pair (Const a) c) -> Extension (Pair (Const b) c) (M (Pair (Const a) c))
     next m@(MkM layer) =
-      let (_, (shp ** chld)) = fromPair {c = Const a} layer in
+      let (_, (MkExtension shp chld)) = fromPair {c = Const a} layer in
       let b = toConst (alg (MkCofree m)) in
-      toPair (b, (shp ** \ p => chld p))
--- Eta-expanded to force Inf --^
+      toPair (b, MkExtension shp (\ p => chld p))
+-- Eta-expanded to force Inf ------^
 
   export
   duplicate : Cofree c a -> Cofree c (Cofree c a)
@@ -233,18 +243,18 @@ namespace Derivative
     (\ (s ** p) => (p' : Position c s ** Not (p === p')))
 
   export
-  hole : (v : Extension (Derivative c) x) -> Position c (fst (fst v))
-  hole ((shp ** p) ** _) = p
+  hole : (v : Extension (Derivative c) x) -> Position c (fst (shape v))
+  hole (MkExtension (shp ** p) _) = p
 
   export
-  unplug : (v : Extension c x) -> Position c (fst v) -> (Extension (Derivative c) x, x)
-  unplug (shp ** chld) p = (((shp ** p) ** chld . fst), chld p)
+  unplug : (v : Extension c x) -> Position c (shape v) -> (Extension (Derivative c) x, x)
+  unplug (MkExtension shp chld) p = (MkExtension (shp ** p) (chld . fst), chld p)
 
   export
-  plug : (v : Extension (Derivative c) x) -> DecEq (Position c (fst (fst v))) => x -> Extension c x
-  plug ((shp ** p) ** chld) x = (shp ** \ p' => case decEq p p' of
+  plug : (v : Extension (Derivative c) x) -> DecEq (Position c (fst (shape v))) => x -> Extension c x
+  plug (MkExtension (shp ** p) chld) x = MkExtension shp $ \ p' => case decEq p p' of
     Yes eq => x
-    No neq => chld (p' ** neq))
+    No neq => chld (p' ** neq)
 
   export
   toConst : Extension (Const Void) x -> Extension (Derivative (Const k)) x
@@ -256,45 +266,45 @@ namespace Derivative
 
   export
   toIdentity : Extension (Derivative Identity) x
-  toIdentity = ((() ** ()) ** \ (() ** eq) => absurd (eq Refl))
+  toIdentity = MkExtension (() ** ()) (\ (() ** eq) => absurd (eq Refl))
 
   export
   toSum : Extension (Sum (Derivative c) (Derivative d)) x ->
           Extension (Derivative (Sum c d)) x
   toSum v = case fromSum {c = Derivative c} {d = Derivative d} v of
-    Left ((shp ** p) ** chld) => ((Left shp ** p) ** chld)
-    Right ((shp ** p) ** chld) => ((Right shp ** p) ** chld)
+    Left (MkExtension (shp ** p) chld) => MkExtension (Left shp ** p) chld
+    Right (MkExtension (shp ** p) chld) => MkExtension (Right shp ** p) chld
 
   export
   fromSum : Extension (Derivative (Sum c d)) x ->
             Extension (Sum (Derivative c) (Derivative d)) x
-  fromSum ((shp ** p) ** chld) = toSum {c = Derivative c} {d = Derivative d} $ case shp of
-    Left shp => Left ((shp ** p) ** chld)
-    Right shp => Right ((shp ** p) ** chld)
+  fromSum (MkExtension (shp ** p) chld) = toSum {c = Derivative c} {d = Derivative d} $ case shp of
+    Left shp => Left (MkExtension (shp ** p) chld)
+    Right shp => Right (MkExtension (shp ** p) chld)
 
   export
   toPair : Extension (Sum (Pair (Derivative c) d) (Pair c (Derivative d))) x ->
            Extension (Derivative (Pair c d)) x
   toPair v = case fromSum {c = Pair (Derivative c) d} {d = Pair c (Derivative d)} v of
-    Left p => let (((shp1 ** p1) ** chld1), (shp2 ** chld2)) = fromPair {c = Derivative c} p in
-              (((shp1, shp2) ** Left p1) ** \ (p' ** neq) => case p' of
+    Left p => let (MkExtension (shp1 ** p1) chld1, MkExtension shp2 chld2) = fromPair {c = Derivative c} p in
+              MkExtension ((shp1, shp2) ** Left p1) $ \ (p' ** neq) => case p' of
                   Left p1' => chld1 (p1' ** (neq . cong Left))
-                  Right p2' => chld2 p2')
-    Right p => let ((shp1 ** chld1), ((shp2 ** p2) ** chld2)) = fromPair {c} {d = Derivative d} p in
-               (((shp1, shp2) ** Right p2) ** \ (p' ** neq) => case p' of
+                  Right p2' => chld2 p2'
+    Right p => let (MkExtension shp1 chld1, MkExtension (shp2 ** p2) chld2) = fromPair {c} {d = Derivative d} p in
+               MkExtension ((shp1, shp2) ** Right p2) $ \ (p' ** neq) => case p' of
                   Left p1' => chld1 p1'
-                  Right p2' => chld2 (p2' ** (neq . cong Right)))
+                  Right p2' => chld2 (p2' ** (neq . cong Right))
 
   export
   fromPair : Extension (Derivative (Pair c d)) x ->
              Extension (Sum (Pair (Derivative c) d) (Pair c (Derivative d))) x
-  fromPair (((shp1, shp2) ** p) ** chld) = case p of
+  fromPair (MkExtension ((shp1, shp2) ** p) chld) = case p of
     Left p1 => toSum {c = Pair (Derivative c) d} {d = Pair c (Derivative d)}
-                     (Left (((shp1 ** p1), shp2) ** either
+                     (Left (MkExtension ((shp1 ** p1), shp2) $ either
                          (\ p1' => chld (Left (DPair.fst p1') ** DPair.snd p1' . leftInjective))
                          (\ p2 => chld (Right p2 ** absurd))))
     Right p2 => toSum {c = Pair (Derivative c) d} {d = Pair c (Derivative d)}
-                     (Right ((shp1, (shp2 ** p2)) ** either
+                     (Right (MkExtension (shp1, (shp2 ** p2)) $ either
                          (\ p1 => chld (Left p1 ** absurd))
                          (\ p2' => chld (Right (DPair.fst p2') ** DPair.snd p2' . rightInjective))))
 
