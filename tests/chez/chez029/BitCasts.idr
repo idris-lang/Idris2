@@ -1,6 +1,6 @@
 -- Tests to check that casting between integer types works as expected
 -- 
--- This tests in `idris2/basic043`, `chez/chez028` and `node/node022` are the
+-- The tests in `idris2/basic043`, `chez/chez029` and `node/node022` are the
 -- same and should all have the same output.
 
 --
@@ -93,3 +93,19 @@ negativeNumberCast = [
     show $ cast {to = Bits32} (-19),
     show $ cast {to = Bits64} (-19)
 ]
+
+--
+-- Run via code generator
+--
+
+main : IO ()
+main = do
+    printLn bits8WideningNoEffect
+    printLn bits16WideningNoEffect
+    printLn bits32WideningNoEffect
+    printLn narrowFromInteger
+    printLn narrowFromInt
+    printLn narrowFromBits64
+    printLn narrowFromBits32
+    printLn narrowFromBits16
+    printLn negativeNumberCast

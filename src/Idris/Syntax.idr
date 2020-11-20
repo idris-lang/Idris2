@@ -93,10 +93,10 @@ mutual
        PRange : FC -> PTerm -> Maybe PTerm -> PTerm -> PTerm
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
-       -- r.x.y, equivalent to (y (x r))
-       PPostfixProjs : FC -> PTerm -> List PTerm -> PTerm
-       -- (.x.y p q), equivalent to (\r => r.x.y p q)
-       PPostfixProjsSection : FC -> List PTerm -> List PTerm -> PTerm
+       -- r.x.y
+       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       -- .x.y
+       PPostfixAppPartial : FC -> List Name -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> LogLevel -> PTerm -> PTerm
@@ -150,8 +150,8 @@ mutual
   getPTermLoc (PRewrite fc _ _) = fc
   getPTermLoc (PRange fc _ _ _) = fc
   getPTermLoc (PRangeStream fc _ _) = fc
-  getPTermLoc (PPostfixProjs fc _ _) = fc
-  getPTermLoc (PPostfixProjsSection fc _ _) = fc
+  getPTermLoc (PPostfixApp fc _ _) = fc
+  getPTermLoc (PPostfixAppPartial fc _) = fc
   getPTermLoc (PUnifyLog fc _ _) = fc
   getPTermLoc (PWithUnambigNames fc _ _) = fc
 
@@ -237,6 +237,7 @@ mutual
        Overloadable : Name -> Directive
        Extension : LangExt -> Directive
        DefaultTotality : TotalReq -> Directive
+       PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
 
   public export
@@ -602,13 +603,10 @@ mutual
     showPrec d (PRangeStream _ start (Just next))
         = "[" ++ showPrec d start ++ ", " ++ showPrec d next ++ " .. ]"
     showPrec d (PUnifyLog _ _ tm) = showPrec d tm
-    showPrec d (PPostfixProjs fc rec fields)
+    showPrec d (PPostfixApp fc rec fields)
         = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
-    showPrec d (PPostfixProjsSection fc fields args)
-        = "("
-            ++ concatMap (\n => "." ++ show n) fields
-            ++ concatMap (\x => " " ++ showPrec App x) args
-            ++ ")"
+    showPrec d (PPostfixAppPartial fc fields)
+        = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
 
@@ -906,12 +904,11 @@ mapPTermM f = goPTerm where
     goPTerm (PUnifyLog fc k x) =
       PUnifyLog fc k <$> goPTerm x
       >>= f
-    goPTerm (PPostfixProjs fc rec fields) =
-      PPostfixProjs fc <$> goPTerm rec <*> pure fields
+    goPTerm (PPostfixApp fc rec fields) =
+      PPostfixApp fc <$> goPTerm rec <*> pure fields
       >>= f
-    goPTerm (PPostfixProjsSection fc fields args) =
-      PPostfixProjsSection fc fields <$> goPTerms args
-      >>= f
+    goPTerm (PPostfixAppPartial fc fields) =
+      f (PPostfixAppPartial fc fields)
     goPTerm (PWithUnambigNames fc ns rhs) =
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f

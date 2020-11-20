@@ -14,19 +14,24 @@ modules = Control.ANSI,
 
           Data.Bool.Algebra,
           Data.Bool.Decidable,
-          
+
+          Data.Fin.Extra,
+
+          Data.Fun.Extra,
+
+          Data.InductionRecursion.DybjerSetzer,
+
+          Data.Late,
+
           Data.Linear.Array,
 
           Data.List.Algebra,
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,
+          Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-
-          Data.Fin.Extra,
-
-          Data.Fun.Extra,
 
           Data.Logic.Propositional,
 
@@ -43,11 +48,14 @@ modules = Control.ANSI,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
 
+          Data.Recursion.Free,
+
           Data.SortedMap,
           Data.SortedSet,
           Data.Stream.Extra,
           Data.String.Extra,
           Data.String.Interpolation,
+          Data.String.Iterator,
           Data.String.Parser,
           Data.String.Parser.Expression,
 
@@ -71,6 +79,8 @@ modules = Control.ANSI,
           Language.JSON.String.Parser,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
+
+          Test.Golden,
 
           Text.Token,
           Text.Quantity,

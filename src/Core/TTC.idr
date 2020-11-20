@@ -47,9 +47,10 @@ TTC Name where
   toBuf b (MN x y) = do tag 2; toBuf b x; toBuf b y
   toBuf b (PV x y) = do tag 3; toBuf b x; toBuf b y
   toBuf b (DN x y) = do tag 4; toBuf b x; toBuf b y
-  toBuf b (Nested x y) = do tag 5; toBuf b x; toBuf b y
-  toBuf b (CaseBlock x y) = do tag 6; toBuf b x; toBuf b y
-  toBuf b (WithBlock x y) = do tag 7; toBuf b x; toBuf b y
+  toBuf b (RF x) = do tag 5; toBuf b x
+  toBuf b (Nested x y) = do tag 6; toBuf b x; toBuf b y
+  toBuf b (CaseBlock x y) = do tag 7; toBuf b x; toBuf b y
+  toBuf b (WithBlock x y) = do tag 8; toBuf b x; toBuf b y
   toBuf b (Resolved x)
       = throw (InternalError ("Can't write resolved name " ++ show x))
 
@@ -70,12 +71,14 @@ TTC Name where
                      y <- fromBuf b
                      pure (DN x y)
              5 => do x <- fromBuf b
-                     y <- fromBuf b
-                     pure (Nested x y)
+                     pure (RF x)
              6 => do x <- fromBuf b
                      y <- fromBuf b
-                     pure (CaseBlock x y)
+                     pure (Nested x y)
              7 => do x <- fromBuf b
+                     y <- fromBuf b
+                     pure (CaseBlock x y)
+             8 => do x <- fromBuf b
                      y <- fromBuf b
                      pure (WithBlock x y)
              _ => corrupt "Name"
@@ -748,6 +751,7 @@ TTC CG where
   toBuf b (Other s) = do tag 4; toBuf b s
   toBuf b Node = tag 5
   toBuf b Javascript = tag 6
+  toBuf b RefC = tag 7
 
   fromBuf b
       = case !getTag of
@@ -758,6 +762,7 @@ TTC CG where
                      pure (Other s)
              5 => pure Node
              6 => pure Javascript
+             7 => pure RefC
              _ => corrupt "CG"
 
 export

@@ -1,6 +1,6 @@
 ||| A simple parser combinator library for strings. Inspired by attoparsec zepto.
 module Data.String.Parser
-import Control.Monad.Identity
+import public Control.Monad.Identity
 import Control.Monad.Trans
 
 import Data.Strings
@@ -157,12 +157,12 @@ eos = P $ \s => pure $ if s.pos == s.maxPos
 ||| Succeeds if the next char is `c`
 export
 char : Applicative m => Char -> ParseT m ()
-char c = skip $ satisfy (== c)
+char c = skip $ satisfy (== c) <?> "char " ++ show c
 
 ||| Parses a space character
 export
 space : Applicative m => ParseT m Char
-space = satisfy isSpace
+space = satisfy isSpace <?> "space"
 
 mutual
     ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
@@ -209,11 +209,23 @@ covering
 takeWhile : Monad m => (Char -> Bool) -> ParseT m String
 takeWhile f = pack <$> many (satisfy f)
 
-||| Parses one or more space characters
+||| Similar to `takeWhile` but fails if the resulting string is empty.
+export
+covering
+takeWhile1 : Monad m => (Char -> Bool) -> ParseT m String
+takeWhile1 f = pack <$> some (satisfy f)
+
+||| Parses zero or more space characters
 export
 covering
 spaces : Monad m => ParseT m ()
-spaces = skip (many space) <?> "white space"
+spaces = skip (many space)
+
+||| Parses one or more space characters
+export
+covering
+spaces1 : Monad m => ParseT m ()
+spaces1 = skip (some space) <?> "whitespaces"
 
 ||| Discards brackets around a matching parser
 export
@@ -253,11 +265,11 @@ digit = do x <- satisfy isDigit
              , ('9', 9)
              ]
 
-fromDigits : Num a => ((Fin 10) -> a) -> List (Fin 10) -> a
+fromDigits : Num a => (Fin 10 -> a) -> List (Fin 10) -> a
 fromDigits f xs = foldl addDigit 0 xs
 where
-  addDigit : a -> (Fin 10) -> a
-  addDigit num d = 10*num + (f d)
+  addDigit : a -> Fin 10 -> a
+  addDigit num d = 10*num + f d
 
 intFromDigits : List (Fin 10) -> Integer
 intFromDigits = fromDigits finToInteger

@@ -73,6 +73,28 @@ addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core Strin
 addSupportToPreamble name code =
   addToPreamble name name code
 
+addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
+addStringIteratorToPreamble =
+  do
+    let defs = "
+function __prim_stringIteratorNew(str) {
+  return str[Symbol.iterator]();
+}
+function __prim_stringIteratorNext(str, it) {
+  const char = it.next();
+  if (char.done) {
+    return {h: 0}; // EOF
+  } else {
+    return {
+      h: 1, // Character
+      a1: char.value,
+      a2: it
+    };
+  }
+}"
+    let name = "stringIterator"
+    let newName = esName name
+    addToPreamble name newName defs
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -92,6 +114,7 @@ jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n
 jsName (DN _ n) = jsName n
+jsName (RF n) = "rf__" ++ jsIdent n
 jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
 jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
 jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
@@ -235,6 +258,7 @@ jsOp DoubleATan [x] = pure $ "Math.atan(" ++ x ++ ")"
 jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
+
 jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
@@ -246,6 +270,16 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+
+jsOp (Cast Bits8Type IntType) [x] = pure x
+jsOp (Cast Bits16Type IntType) [x] = pure x
+jsOp (Cast Bits32Type IntType) [x] = pure x
+jsOp (Cast Bits64Type IntType) [x] = pure x
+
+jsOp (Cast Bits8Type IntegerType) [x] = pure x
+jsOp (Cast Bits16Type IntegerType) [x] = pure x
+jsOp (Cast Bits32Type IntegerType) [x] = pure x
+jsOp (Cast Bits64Type IntegerType) [x] = pure x
 
 jsOp (Cast IntType Bits8Type) [x] = boundedUInt 8 x
 jsOp (Cast IntType Bits16Type) [x] = boundedUInt 16 x
@@ -311,6 +345,13 @@ makeForeign n x =
           lib_code <- readDataFile ("js/" ++ lib ++ ".js")
           addSupportToPreamble lib lib_code
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
+      "stringIterator" =>
+        do
+          addStringIteratorToPreamble
+          case def of
+            "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
+            "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
 
 
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
