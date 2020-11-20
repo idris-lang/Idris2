@@ -308,4 +308,52 @@ namespace Derivative
                          (\ p1 => chld (Left p1 ** absurd))
                          (\ p2' => chld (Right (DPair.fst p2') ** DPair.snd p2' . rightInjective))))
 
--- TODO: compose
+
+  export
+  fromCompose : Extension (Derivative (Compose c d)) x ->
+                Extension (Pair (Derivative d) (Compose (Derivative c) d)) x
+  fromCompose (MkExtension (MkExtension shp1 shp2 ** p1 ** p2) chld)
+    = toPair (left, right) where
+
+      left : Extension (Derivative d) x
+      left = MkExtension (shp2 p1 ** p2)
+           $ \ (p2' ** neqp2) => chld ((p1 ** p2') ** neqp2 . mkDPairInjectiveSnd)
+
+      right : Extension (Compose (Derivative c) d) x
+      right = toCompose
+            $ MkExtension (shp1 ** p1)
+            $ \ (p1' ** neqp1) => MkExtension (shp2 p1')
+                                 $ \ p2' => chld ((p1' ** p2') ** (neqp1 . cong fst))
+
+  export
+  toCompose : ((s : _) -> DecEq (Position c s)) -> ((s : _) -> DecEq (Position d s)) ->
+              Extension (Pair (Derivative d) (Compose (Derivative c) d)) x ->
+              Extension (Derivative (Compose c d)) x
+  toCompose dec1 dec2 v with (fromPair {c = Derivative d} {d = Compose (Derivative c) d} v)
+    toCompose dec1 dec2 v | (MkExtension (shp2 ** p2) chld2, w) with (fromCompose w)
+      toCompose dec1 dec2 v
+        | (MkExtension (shp2 ** p2) chld2, w)
+        | (MkExtension (shp1 ** p1) chld1)
+        = MkExtension (MkExtension shp1 (\ p1' => shp2' p1' (decEq @{dec1 shp1} p1 p1')) **
+                      (p1 ** (p2' (decEq @{dec1 shp1} p1 p1))))
+        $ \ ((p1' ** p2'') ** neq) => chld2' p1' p2'' neq
+
+         where
+          shp2' : (p1' : Position c shp1) -> Dec (p1 === p1') -> Shape d
+          shp2' p1' (Yes eq) = shp2
+          shp2' p1' (No neq) = shape (chld1 (p1' ** neq))
+
+          p2' : (eq : Dec (p1 === p1)) -> Position d (shp2' p1 eq)
+          p2' (Yes Refl) = p2
+          p2' (No neq)   = absurd (neq Refl)
+
+          chld2' : (p1' : Position c shp1) ->
+                   (p2'' : Position d (shp2' p1' (decEq @{dec1 shp1} p1 p1'))) ->
+                   (neq : Not (MkDPair p1 (p2' (decEq @{dec1 shp1} p1 p1)) = MkDPair p1' p2'')) -> x
+          chld2' p1' p2'' neq with (decEq @{dec1 shp1} p1 p1')
+            chld2' p1' p2'' neq | No neq1 = payloads (chld1 (p1' ** neq1)) p2''
+            chld2' _ p2'' neq | Yes Refl with (decEq @{dec1 shp1} p1 p1)
+              chld2' _ p2'' neq | Yes Refl | No argh = absurd (argh Refl)
+              chld2' _ p2'' neq | Yes Refl | Yes Refl with (decEq @{dec2 shp2} p2 p2'')
+                chld2' _ p2'' neq | Yes Refl | Yes Refl | No neq2 = chld2 (p2'' ** neq2)
+                chld2' _ _ neq | Yes Refl | Yes Refl | Yes Refl = absurd (neq Refl)

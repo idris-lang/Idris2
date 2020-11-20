@@ -165,6 +165,16 @@ public export
 trans : forall a, b, c . (0 l : a = b) -> (0 r : b = c) -> a = c
 trans Refl Refl = Refl
 
+||| Injectivity of MkDPair (first components)
+export
+mkDPairInjectiveFst : MkDPair a pa === MkDPair b qb -> a === b
+mkDPairInjectiveFst Refl = Refl
+
+||| Injectivity of MkDPair (snd components)
+export
+mkDPairInjectiveSnd : MkDPair a pa === MkDPair a qa -> pa === qa
+mkDPairInjectiveSnd Refl = Refl
+
 ||| Subvert the type checker.  This function is abstract, so it will not reduce
 ||| in the type checker.  Use it with care - it can result in segfaults or
 ||| worse!
