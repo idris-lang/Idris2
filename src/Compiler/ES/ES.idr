@@ -308,7 +308,7 @@ jsOp (Cast Bits64Type Bits16Type) [x] = boundedUInt 16 x
 jsOp (Cast Bits64Type Bits32Type) [x] = boundedUInt 32 x
 
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
-jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
+jsOp (Cast ty ty2) [x] = jsCrashExp $ jsString $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 
@@ -377,6 +377,7 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
+jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
