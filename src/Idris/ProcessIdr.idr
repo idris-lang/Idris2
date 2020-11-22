@@ -340,3 +340,34 @@ process buildmsg file
                            pure []
                       else do pure errs)
                (\err => pure [err])
+
+Show PClause where
+  show (MkPatClause _ lhs rhs _) = show lhs ++ " => " ++ show rhs
+  show (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
+  show (MkImpossible _ lhs) = show lhs ++ " impossible"
+
+Show PTypeDecl where
+  show (MkPTy fc name doc pt) = "%ptypedecl" ++ show fc ++ show name ++ show pt
+
+Show PDataDecl where
+  show (MkPData fc name pt opts typecls) = "%pdatadecl" ++ show fc ++ show name ++ show pt ++ "{ " ++ showSep " ; " (map show typecls) ++ " }"
+  show (MkPLater fc name pt) = "%pdatalater" ++ show fc ++ show name ++ show pt
+      
+Show PDecl where
+  show (PClaim fc rig vis fopt tydecl) = "%pclaim" ++ show fc ++ show tydecl
+  show (PDef fc cls) = "%pdef" ++ show fc ++ "{ " ++ showSep " ; " (map show cls) ++ " }"
+  show (PData fc name vis datadecl) = "%pdata" ++ show fc
+  show _ = "something else"
+  
+
+parseProg : FileName -> Core ()
+parseProg fname =
+    do Right scode <- coreLift (readFile fname)
+             | Left err => coreLift $ putStrLn (show err) 
+       Right mod <- pure $ runParser Nothing scode (do p <- prog fname; eoi; pure p)
+             | Left err => coreLift $ putStrLn (show err)
+       coreLift $ for_ (decls mod) (putStrLn . show)
+       pure ()
+
+parseCore : FileName -> IO ()
+parseCore fname = coreRun (parseProg fname) (\x => pure ()) (\x => pure ())
