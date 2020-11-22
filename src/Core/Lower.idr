@@ -82,7 +82,7 @@ peel {liftedVars} n closedTy = do
    in pure $ rewrite sym rest_is_liftedVars in
              ty)
 
-partial
+partial export
 lower : {vars' : _} -> {auto c : Ref Ctxt Defs} -> FC -> Term [] -> Term vars' -> (env' : Env Term vars') -> (envDepth : Nat) 
      -> Core (Term vars', Term vars') 
 %unbound_implicits off     

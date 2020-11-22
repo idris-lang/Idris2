@@ -379,7 +379,7 @@ searchName fc rigc defaults trying depth def top env target ((n, ndepth), ndef)
                         TCon tag arity _ _ _ _ _ _ => TyCon tag arity
                         _ => Func
 
-         (ty', ntm) <- Core.lower fc ty (Ref fc namety n) env ndepth
+         (ty', ntm) <- Core.Lower.lower fc ty (Ref fc namety n) env ndepth
          nty <- nf defs env ty'
 
          log "auto" 5 $ "   resulting in: " ++ show ntm
