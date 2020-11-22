@@ -310,7 +310,7 @@ addTypeHint : {auto c : Ref Ctxt Defs} ->
 addTypeHint fc (tyn, hintn, d)
    = do logC "ttc.read" 10 (pure (show !(getFullName hintn) ++ " for " ++
                             show !(getFullName tyn)))
-        addHintFor fc tyn hintn d True
+        addHintFor fc tyn hintn d 0 True
 
 addAutoHint : {auto c : Ref Ctxt Defs} ->
               (Name, Bool) -> Core ()

@@ -1,5 +1,6 @@
 module Data.List.Equalities
 
+import Data.Nat
 import Data.List
 
 %default total
@@ -76,31 +77,51 @@ lengthSnoc : (x : _) -> (xs : List a) -> length (snoc xs x) = S (length xs)
 lengthSnoc x [] = Refl
 lengthSnoc x (_ :: xs) = cong S (lengthSnoc x xs)
 
+||| Prepending lists of equal length is injective
+export
+prependSameLengthInjective 
+   : (xs1, ys, xs2, zs : List a) -> (0 eqLength : length xs1 = length xs2)
+  -> (0 eqAppend : xs1 ++ ys = xs2 ++ zs) -> (xs1 = xs2, ys = zs)
+prependSameLengthInjective []          ws [] _           eqLength Refl = (Refl, Refl)
+prependSameLengthInjective []          ys (x :: xs)   zs Refl     eqAppend impossible
+prependSameLengthInjective (x1 :: xs1) ys []          zs Refl     eqAppend impossible
+prependSameLengthInjective (x1 :: xs1) ys (x2 :: xs2) zs eqLength eqAppend 
+                                                     with (prependSameLengthInjective xs1 ys xs2 zs
+                                                           (succInjective _ _ eqLength)
+                                                           (snd $ consInjective eqAppend))
+ prependSameLengthInjective (x :: xs ) ws (x  :: xs ) ws Refl     Refl | (Refl, Refl) = (Refl, Refl)
+
 ||| Appending the same list at left is injective.
 export
 appendSameLeftInjective : (xs, ys, zs : List a) -> zs ++ xs = zs ++ ys -> xs = ys
-appendSameLeftInjective xs ys []      = id
-appendSameLeftInjective xs ys (_::zs) = appendSameLeftInjective xs ys zs . snd . consInjective
+appendSameLeftInjective xs ys zs prf = snd (prependSameLengthInjective zs xs zs ys Refl prf)
+
 
 ||| Appending the same list at right is injective.
 export
 appendSameRightInjective : (xs, ys, zs : List a) -> xs ++ zs = ys ++ zs -> xs = ys
-appendSameRightInjective xs ys [] = rewrite appendNilRightNeutral xs in
-                                    rewrite appendNilRightNeutral ys in
-                                    id
-appendSameRightInjective xs ys (z::zs) = rewrite appendAssociative xs [z] zs in
-                                         rewrite appendAssociative ys [z] zs in
-                                         fst . snocInjective . appendSameRightInjective (xs ++ [z]) (ys ++ [z]) zs
+appendSameRightInjective xs ys zs prf = 
+  let step1 : ((length xs + length zs) = (length ys + length zs))
+            = rewrite sym $ lengthDistributesOverAppend xs zs in
+              rewrite sym $ lengthDistributesOverAppend ys zs in
+              cong length prf
+      step2 : (length xs = length ys)
+            = plusRightCancel (length xs) (length ys) (length zs) step1 
+  in fst $ prependSameLengthInjective xs zs ys zs step2 prf
 
 ||| List cannot be equal to itself prepended with some non-empty list.
 export
 appendNonEmptyLeftNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = xs ++ zs)
-appendNonEmptyLeftNotEq []      (_::_)  Refl impossible
-appendNonEmptyLeftNotEq (z::zs) (_::xs) prf = appendNonEmptyLeftNotEq zs (xs ++ [z]) @{SnocNonEmpty xs z}
-                                                rewrite sym $ appendAssociative xs [z] zs in snd $ consInjective prf
+appendNonEmptyLeftNotEq zs (x :: xs) @{IsNonEmpty} assumption = 
+  case the ([] === (x :: xs)) $
+         appendSameRightInjective [] (x :: xs) zs assumption of
+    Refl impossible
 
 ||| List cannot be equal to itself appended with some non-empty list.
 export
 appendNonEmptyRightNotEq : (zs, xs : List a) -> NonEmpty xs => Not (zs = zs ++ xs)
-appendNonEmptyRightNotEq []      (_::_)  Refl impossible
-appendNonEmptyRightNotEq (_::zs) (x::xs) prf = appendNonEmptyRightNotEq zs (x::xs) $ snd $ consInjective prf
+appendNonEmptyRightNotEq zs (x :: xs) @{_} assumption = 
+  case the ([] === (x :: xs)) $
+           appendSameLeftInjective [] (x :: xs) zs 
+                                   rewrite appendNilRightNeutral zs in assumption of
+    Refl impossible

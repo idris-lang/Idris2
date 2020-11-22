@@ -740,7 +740,8 @@ searchType fc rig opts env topty _ ty
                 do defs <- get Ctxt
                    if length args == ar
                      then do sd <- getSearchData fc False n
-                             let allHints = concat (map snd (hintGroups sd))
+                             -- TODO: take depth argument into account
+                             let allHints = concat (map (map fst . snd) (hintGroups sd))
                              -- Solutions is either:
                              -- First try the locals,
                              -- Then try the hints in order

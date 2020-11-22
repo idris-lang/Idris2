@@ -15,6 +15,7 @@ import Utils.Binary
 import Data.IntMap
 import Data.IOArray
 import Data.List
+import Data.Maybe
 import Data.NameMap
 import Data.StringMap
 
@@ -922,7 +923,7 @@ record Defs where
   options : Options
   toSave : NameMap ()
   nextTag : Int
-  typeHints : NameMap (List (Name, Bool))
+  typeHints : NameMap (List (Name, Bool, Nat))
      -- ^ a mapping from type names to hints (and a flag setting whether it's
      -- a "direct" hint). Direct hints are searched first (as part of a group)
      -- the indirect hints. Indirect hints, in practice, are used to find
@@ -976,6 +977,23 @@ record Defs where
 -- Label for context references
 export
 data Ctxt : Type where
+
+-- DIY logging for this module to avoid circular dependency on Core.Context.Log
+private
+diylog' : {auto c : Ref Ctxt Defs} -> LogLevel -> Lazy String -> Core ()
+diylog' lvl msg
+    = do defs <- get Ctxt
+         
+         let opts = session (options defs)
+         if keepLog lvl (logLevel opts)
+            then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+            else pure ()
+
+private
+diylog : {auto c : Ref Ctxt Defs} -> String -> Nat -> Lazy String -> Core ()
+diylog str n msg
+    = do let lvl = mkLogLevel str n
+         diylog' lvl msg
 
 
 export
@@ -1493,7 +1511,7 @@ public export
 record SearchData where
   constructor MkSearchData
   detArgs : List Nat -- determining argument positions
-  hintGroups : List (Bool, List Name)
+  hintGroups : List (Bool, List (Name, Nat))
        -- names of functions to use as hints, and whether ambiguity is allowed
     {- In proof search, for every group of names
         * If exactly one succeeds, use it
@@ -1520,15 +1538,25 @@ getSearchData fc defaults target
          let hs = case lookup !(toFullNames target) (typeHints defs) of
                        Just hs => hs
                        Nothing => []
+         diylog "auto" 10 $ "All hints found for: " 
+                      ++ (show target) ++ "[" ++ (show !(toFullNames target)) ++ "]\n   "
+                      ++ (show hs)
          if defaults
-            then let defns = map fst (filter isDefault
+            then let defns = map (\(n,_) => (n,Z)) (filter isDefault
                                              (toList (autoHints defs))) in
                      pure (MkSearchData [] [(False, defns)])
-            else let opens = map fst (toList (openHints defs))
-                     autos = map fst (filter (not . isDefault)
+            else let opens = map (\(n,_) => (n,Z)) (toList (openHints defs))
+                     autos = map (\(n,_) => (n,Z)) (filter (not . isDefault)
                                              (toList (autoHints defs)))
-                     tyhs = map fst (filter direct hs)
-                     chasers = map fst (filter (not . direct) hs) in
+                     tyhs = map (\(n,_,depth) => (n,depth)) (filter direct hs)
+                     chasers = map (\(n,_,depth) => (n,depth)) (filter (not . direct) hs) in
+                     do 
+                     diylog "auto" 10 $ "Search data:\n" 
+                                   ++ "\n   Opens: " ++ (show opens)
+                                   ++ "\n   Autos: " ++ (show autos)
+                                   ++ "\n   Direct: " ++ (show tyhs)
+                                   ++ "\n   Chasers: " ++ (show chasers)
+                                    
                      pure (MkSearchData dets (filter (isCons . snd)
                                [(False, opens),
                                 (False, autos),
@@ -1538,8 +1566,8 @@ getSearchData fc defaults target
     isDefault : (Name, Bool) -> Bool
     isDefault = snd
 
-    direct : (Name, Bool) -> Bool
-    direct = snd
+    direct : (Name, Bool, Nat) -> Bool
+    direct (_,isDirect,_) = isDirect
 
 export
 setMutWith : {auto c : Ref Ctxt Defs} ->
@@ -1627,9 +1655,9 @@ setExternal fc tyn u
 
 export
 addHintFor : {auto c : Ref Ctxt Defs} ->
-             FC -> Name -> Name -> Bool -> Bool -> 
+             FC -> Name -> Name -> Bool -> (depth : Nat) -> Bool -> 
              Core ()
-addHintFor fc tyn_in hintn_in direct loading
+addHintFor fc tyn_in hintn_in direct depth loading
     = do defs <- get Ctxt
          tyn <- toFullNames tyn_in
           -- ^ We have to index by full name because of the order we load -
@@ -1637,36 +1665,87 @@ addHintFor fc tyn_in hintn_in direct loading
           -- Revisit if this turns out to be a bottleneck (it seems unlikely)
          hintn <- toResolvedNames hintn_in
 
-         let hs = case lookup tyn (typeHints defs) of
-                       Just hs => hs
-                       Nothing => []
+         let hs = maybe [] id $ lookup tyn (typeHints defs) 
+
          if loading
             then put Ctxt
-                     (record { typeHints $= insert tyn ((hintn, direct) :: hs)
+                     (record { typeHints $= insert tyn ((hintn, direct, depth) :: hs)
                              } defs)
             else put Ctxt
-                     (record { typeHints $= insert tyn ((hintn, direct) :: hs),
+                     (record { typeHints $= insert tyn ((hintn, direct, depth) :: hs),
                                saveTypeHints $= ((tyn, hintn, direct) :: )
                              } defs)
+         {- -- uncomment to print which hints were added
+         defs' <- get Ctxt
+         let hs' = maybe [] id $ lookup tyn (typeHints defs') 
+         diylog "auto" 10 $ "Added hint " ++ (show hintn_in) ++ " [" ++ (show hintn) ++ "]"
+                       ++ "\n   before: " ++ (show hs)
+                       ++ "\n   after:  " ++ (show hs')
+         -}
+         
+namespace Data.List
+  -- Should probably go into the stdlib, or use a more standard function
+  public export
+  replaceWhen : (a -> Maybe b) -> (a -> b -> a) -> List a -> List a
+  replaceWhen pred f = map (\x => maybe x (f x) (pred x))
+  
+export
+updateHintDepth : {auto c : Ref Ctxt Defs} ->
+                  List (Name, Name, Nat) -> Core ()
+updateHintDepth newData = do
+  -- This isn't a good way to do this since we probably don't need to look at all types.
+
+  -- hints are indexed by full names
+  _ <- flip Core.Core.traverse newData \(ty,n,depth) => do
+    defs <- get Ctxt
+    tyn <- toFullNames ty
+    nn  <- toResolvedNames n
+      
+    let hs = maybe [] id $ lookup tyn (typeHints defs) 
+    
+    put Ctxt $
+      record {typeHints $= insert tyn $ replaceWhen 
+                             -- Stopping once we find the name is an easy optimisation
+                             -- but I'm not sure it makes a difference.
+                             (\(n,_,_) => toMaybe (nn == n) ())
+                             (\(n,d,oldDepth),() => (n,d,depth))
+                             hs
+           } defs
+           
+  {- -- Uncomment for debugging info         
+  defs' <- get Ctxt
+  traverse \(tyn,_,_) => do
+    let hs  = maybe [] id $ lookup tyn (typeHints defs )
+    let hs' = maybe [] id $ lookup tyn (typeHints defs') 
+    diylog "auto" 10 $ "Hints for " ++ (show tyn) 
+                  ++ "\n   before: " ++ (show hs)
+                  ++ "\n   after:  " ++ (show hs')
+   tyhints
+  -}
+  pure ()
+      
 
 ||| Remove a list of names from the `typeHints` and `saveTypeHInts` lists
 -- We use a list of names so that we only have to traverse the list of hints once.
 export
 removeHintFor : {auto c : Ref Ctxt Defs} ->
-  (typeHint : List (Name , Name)) -> Core ()
+  (typeHints : List (Name , Name)) -> Core ()
 removeHintFor typeHints
-  = do defs <- get Ctxt
-       -- hints are indexed by full names
-       tyhints <- traverse (\(ty,n) => pure (ty , !(toResolvedNames n))) typeHints
-       
-       put Ctxt $
-         record {typeHints $= mapWithKey \ty,hs => 
-                 case lookup ty tyhints of
-                   Nothing => hs
-                   Just n => delete (n, True) hs
-                ,saveTypeHints $= filter \(ty,n,b) => not ((ty,n) `elem` tyhints)
-                } defs
-       pure ()
+  = do -- hints are indexed by full names
+       _ <- flip Core.Core.traverse typeHints \(ty,n) => do         
+         defs <- get Ctxt
+         diylog "auto" 10 $ "Removing hints: " ++ (show typeHints)
+         tyn <- toFullNames ty
+         nn  <- toResolvedNames n
+
+         let hs  = maybe [] id $ Data.NameMap.lookup tyn (Defs.typeHints defs)
+
+         put Ctxt $
+           record {typeHints $= insert tyn $ filter (\(m, _) => nn /= m) hs
+                  ,saveTypeHints $= filter \(ty,n,b) => n /= nn
+                  } defs
+         pure ()
+       pure ()  
 
 export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->

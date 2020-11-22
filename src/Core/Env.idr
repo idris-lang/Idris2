@@ -2,6 +2,9 @@ module Core.Env
 
 import Core.TT
 import Data.List
+import Data.List.Equalities -- Is it ok to depend on contrib?
+import Data.Nat
+
 
 %default total
 
@@ -300,3 +303,90 @@ allVarsNoLet : {vars : _} -> Env Term vars -> List (Var vars)
 allVarsNoLet [] = []
 allVarsNoLet (Let _ _ _ _ :: vs) = map weaken (allVars vs)
 allVarsNoLet (v :: vs) = MkVar First :: map weaken (allVars vs)
+
+namespace Data.List
+  public export
+  specTakeDrop
+        : (n : Nat) -> (xs : List a)
+        -> (0 wf : n `LTE` length xs)
+        -> (xs = (take n xs) ++
+                 (drop n xs)
+           ,HasLength n (take n xs))
+        
+  specTakeDrop 0     xs        wf =  (Refl, Z)
+  specTakeDrop (S k) []        _ impossible
+  specTakeDrop (S k) (x :: xs) (LTESucc wf) = 
+      -- would've been clearer with a pattern-match
+      -- but we don't have eta on dependent pairs :(
+     let (xs_eq_h_t, length_head_n) = specTakeDrop k xs wf in
+         (cong (x ::) xs_eq_h_t
+         ,S length_head_n)
+  
+  export 
+  concatRightCancel  : (xs1, ys1, xs2, ys2 : List a)
+             -> length xs1 = length xs2
+             -> (xs1 ++ ys1 = xs2 ++ ys2)
+             ->  xs1 = xs2
+  concatRightCancel xs1 ys1 xs2 ys2 pf1 pf2 = fst $ prependSameLengthInjective
+                    xs1 ys1 xs2 ys2 pf1 pf2 
+  export    
+  concatLeftCancel : (xs1, ys1, xs2, ys2 : List a)
+             -> length xs1 = length xs2
+             -> (xs1 ++ ys1 = xs2 ++ ys2)
+             ->  ys1 = ys2
+  concatLeftCancel xs1 ys1 xs2 ys2 pf1 pf2 = snd $ prependSameLengthInjective
+                   xs1 ys1 xs2 ys2 pf1 pf2
+
+
+export
+lengthInvariant : (env : Env term var) -> length env = length var
+lengthInvariant [] = Refl
+lengthInvariant (_ :: env) = cong S $ lengthInvariant env
+
+||| drop innermost n values in environment
+export
+dropEnv : (n : Nat) 
+     -> Env Term vars 
+     -> Env Term (drop n vars)
+dropEnv 0     env  = env
+dropEnv (S n) []   = []
+dropEnv (S n) (b :: env) = dropEnv n env
+
+||| take innermost n values in environment (note return type)
+||| It's partial because of the call to weakenSubstEnv
+export partial
+takeEnv : {vars : _} -> (n : Nat) 
+     -> Env Term vars 
+     -> SubstEnv (take n vars) vars
+takeEnv                    0      env = []
+takeEnv                    (S n)  []  = []
+takeEnv {vars = x :: vars'} (S n) (b :: env) = 
+  let Vars : List Name
+      Vars = x :: vars' in
+  let tm 
+        : Term Vars
+        = let var : FC -> Term Vars
+              var fc = Local fc Nothing _ First in
+          (case b of
+             Lam  fc rigc y   ty => var fc
+             Let  fc rigc val ty => weaken val
+             Pi   fc rigc inf ty => var fc
+             PVar fc rigc inf ty => var fc
+             PLet fc rigc val ty => weaken {n=x} val
+             PVTy fc rigc     ty => var fc
+          )
+      substRest 
+        : SubstEnv (take n vars') Vars
+        = weakenSubstEnv $ takeEnv n env
+  in tm :: substRest
+
+export
+listFromSubstEnv : SubstEnv drop vars -> List (Term vars)
+listFromSubstEnv [] = []
+listFromSubstEnv (tm :: env) = tm :: listFromSubstEnv env
+
+export
+reflectLength : HasLength n xs -> length xs = n
+reflectLength Z     = Refl
+reflectLength (S n) = rewrite reflectLength n in
+                      Refl

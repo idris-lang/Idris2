@@ -510,6 +510,11 @@ namespace SizeOf
   take : {n : Nat} -> {0 xs : Stream a} -> SizeOf (take n xs)
   take = MkSizeOf n (take n xs)
 
+  export
+  sizeSucHomo : (n : SizeOf xs) -> size (suc n) = S (size n)
+  sizeSucHomo (MkSizeOf n p) = Refl
+
+
 namespace SizedView
 
   public export
@@ -988,7 +993,7 @@ renameVarList : CompatibleVars xs ys -> Var xs -> Var ys
 renameVarList prf (MkVar p) = renameLocalRef prf p
 
 export
-renameVars : CompatibleVars xs ys -> Term xs -> Term ys
+renameVars : (0 compat : CompatibleVars xs ys) -> Term xs -> Term ys
 renameVars compat tm = believe_me tm -- no names in term, so it's identity
 -- This is how we would define it:
 -- renameVars CompatPre tm = tm
@@ -1294,6 +1299,15 @@ namespace SubstEnv
   export
   substs : SubstEnv drop vars -> Term (drop ++ vars) -> Term vars
   substs env tm = substEnv zero env tm
+  
+  export
+  weakenSubstEnv : SubstEnv drop vars -> SubstEnv drop (x :: vars)
+  weakenSubstEnv [] = []
+  weakenSubstEnv (tm :: env) = weaken tm :: weakenSubstEnv env
+  
+  export
+  substSimul : SubstEnv drop vars -> Term drop -> Term vars
+  substSimul env tm = substs env (embed tm)
 
   export
   subst : Term vars -> Term (x :: vars) -> Term vars

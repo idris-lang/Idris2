@@ -70,6 +70,7 @@ getNameType rigc env fc x
                            (throw (LinearMisuse fc !(getFullName x) lhs rhs))
 
 -- Get the type of a variable, looking it up in the nested names first.
+export
 getVarType : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->

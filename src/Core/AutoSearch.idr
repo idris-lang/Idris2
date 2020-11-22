@@ -4,6 +4,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
+import Core.Lower
 import Core.Normalise
 import Core.TT
 import Core.Unify
@@ -273,7 +274,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                  Core (Term vars)
     findDirect defs p f ty target
         = do (args, appTy) <- mkArgs fc rigc env ty
-             logNF "auto" 10 "Trying" env ty
+             logNF "auto" 10 "Trying local variable" env ty
              logNF "auto" 10 "For target" env target
              ures <- unify inTerm fc env target appTy
              let [] = constraints ures
@@ -362,37 +363,43 @@ searchName : {vars : _} ->
              (depth : Nat) ->
              (defining : Name) -> (topTy : ClosedTerm) ->
              Env Term vars -> (target : NF vars) ->
-             (Name, GlobalDef) ->
+             ((Name, Nat), GlobalDef) ->
              Core (Term vars)
-searchName fc rigc defaults trying depth def top env target (n, ndef)
+searchName fc rigc defaults trying depth def top env target ((n, ndepth), ndef)
     = do defs <- get Ctxt
          when (not (visibleInAny (!getNS :: !getNestedNS)
                                  (fullname ndef) (visibility ndef))) $
             throw (CantSolveGoal fc [] top)
          when (BlockedHint `elem` flags ndef) $
             throw (CantSolveGoal fc [] top)
-
          let ty = type ndef
          let namety : NameType
                  = case definition ndef of
                         DCon tag arity _ => DataCon tag arity
                         TCon tag arity _ _ _ _ _ _ => TyCon tag arity
                         _ => Func
-         nty <- nf defs env (embed ty)
-         logNF "auto" 10 ("Searching Name " ++ show n) env nty
+
+         (ty', ntm) <- Core.lower fc ty (Ref fc namety n) env ndepth
+         nty <- nf defs env ty'
+
+         log "auto" 5 $ "   resulting in: " ++ show ntm
+          
+         logNF "auto" 10 ("Searching Name " ++ show n 
+                          ++ if ndepth > 0 then " lowered by " ++ show ndepth else "") env nty
          (args, appTy) <- mkArgs fc rigc env nty
+    
          ures <- unify inTerm fc env target appTy
          let [] = constraints ures
              | _ => throw (CantSolveGoal fc [] top)
          ispair <- isPairNF env nty defs
-         let candidate = apply fc (Ref fc namety n) (map metaApp args)
+         let candidate = apply fc ntm (map metaApp args)
          logTermNF "auto" 10 "Candidate " env candidate
          -- Work right to left, because later arguments may solve earlier
          -- dependencies by unification
          traverse (searchIfHole fc defaults trying ispair depth def top env)
                   (impLast args)
          pure candidate
-
+    
 searchNames : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -400,7 +407,7 @@ searchNames : {vars : _} ->
               (defaults : Bool) -> List (Term vars) ->
               (depth : Nat) ->
               (defining : Name) -> (topTy : ClosedTerm) ->
-              Env Term vars -> Bool -> List Name ->
+              Env Term vars -> Bool -> List (Name, Nat) ->
               (target : NF vars) -> Core (Term vars)
 searchNames fc rigc defaults trying depth defining topty env ambig [] target
     = throw (CantSolveGoal fc [] topty)
@@ -414,12 +421,12 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
             else exactlyOne fc env topty target elabs
   where
     visible : Context ->
-              List Namespace -> Name -> Core (Maybe (Name, GlobalDef))
-    visible gam nspace n
+              List Namespace -> (Name, Nat) -> Core (Maybe ((Name,Nat), GlobalDef))
+    visible gam nspace (n, ndepth)
         = do Just def <- lookupCtxtExact n gam
                   | Nothing => pure Nothing
              if visibleInAny nspace n (visibility def)
-                then pure $ Just (n, def)
+                then pure $ Just ((n, ndepth), def)
                 else pure $ Nothing
 
 concreteDets : {vars : _} ->
@@ -552,15 +559,19 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
     -- Take the earliest error message (that's when we look inside pairs,
     -- typically, and it's best to be more precise)
     tryGroups : Maybe Error ->
-                NF vars -> List (Bool, List Name) -> Core (Term vars)
+                NF vars -> List (Bool, List (Name, Nat)) -> Core (Term vars)
     tryGroups (Just err) nty [] = throw err
     tryGroups Nothing nty [] = throw (CantSolveGoal fc [] top)
     tryGroups merr nty ((ambigok, g) :: gs)
         = handleUnify
              (do logC "auto" 5
-                        (do gn <- traverse getFullName g
+                        (do gn <- traverse (getFullName . fst) g
+                            let gd = map snd g
                             pure ("Search: Trying " ++ show (length gn) ++
-                                           " names " ++ show gn))
+                                           " names " ++ show gn ++
+                                            if any (> 0) gd
+                                            then " of depths " ++ show gd
+                                            else ""))
                  logNF "auto" 5 "For target" env nty
                  searchNames fc rigc defaults (target :: trying) depth def top env ambigok g nty)
              (\err => if ambig err then throw err

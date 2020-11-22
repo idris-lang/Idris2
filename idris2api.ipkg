@@ -45,6 +45,7 @@ modules =
     Core.Hash,
     Core.InitPrimitives,
     Core.LinearCheck,
+    Core.Lower,
     Core.Metadata,
     Core.Name,
     Core.Name.Namespace,

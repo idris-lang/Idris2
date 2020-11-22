@@ -361,6 +361,6 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          let connames = map conName cons
          when (not (NoHints `elem` opts)) $
-              traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
+              traverse_ (\x => addHintFor fc (Resolved tidx) x True 0 False) connames
 
          traverse_ updateErasable (Resolved tidx :: connames)

@@ -34,7 +34,10 @@ processFnOpt fc ndef (Hint d)
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
          target <- getRetTy defs !(nf defs [] ty)
-         addHintFor fc target ndef d False
+         -- We really should be adding a hint with the depth of the current
+         -- environment, but we don't have that information right now.
+         -- We'll update to the correct depth in TTImp.Elab.Local
+         addHintFor fc target ndef d 0 False
   where
     getRetTy : Defs -> NF [] -> Core Name
     getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)

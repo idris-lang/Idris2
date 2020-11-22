@@ -116,7 +116,7 @@ getDocsFor fc n
              sd <- getSearchData fc False n
              idocs <- case hintGroups sd of
                            [] => pure []
-                           ((_, tophs) :: _) => traverse getImplDoc tophs
+                           ((_, tophs) :: _) => traverse (getImplDoc . fst) tophs
              let insts = case mapMaybe id idocs of
                               [] => ""
                               docs => "\nImplementations:\n" ++ concat docs
