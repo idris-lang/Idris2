@@ -6,6 +6,8 @@ import Control.Monad.Trans
 import Data.Strings
 import Data.Fin
 import Data.List
+import Data.List1
+import Data.Vect
 
 %default total
 
@@ -121,6 +123,17 @@ export
 optional : Functor m => ParseT m a -> ParseT m (Maybe a)
 optional = optionMap Nothing Just
 
+||| Succeeds if and only if the argument parser fails.
+|||
+||| In Parsec, this combinator is called `notFollowedBy`.
+export
+requireFailure : Functor m => ParseT m a -> ParseT m ()
+requireFailure (P runParser) = P $ \s => reverseResult s <$> runParser s
+where
+  reverseResult : State -> Result a -> Result ()
+  reverseResult s (Fail _ _) = OK () s
+  reverseResult s (OK _ _)   = Fail (pos s) "Purposefully changed OK to Fail"
+
 ||| Fail with some error message
 export
 fail : Applicative m => String -> ParseT m a
@@ -138,12 +151,12 @@ satisfy f = P $ \s => pure $ if s.pos < s.maxPos
 
 ||| Succeeds if the string `str` follows.
 export
-string : Applicative m => String -> ParseT m ()
+string : Applicative m => String -> ParseT m String
 string str = P $ \s => pure $ let len = strLength str in
                               if s.pos+len <= s.maxPos
                                   then let head = strSubstr s.pos len s.input in
                                        if head == str
-                                         then OK () (S s.input (s.pos + len) s.maxPos)
+                                         then OK str (S s.input (s.pos + len) s.maxPos)
                                          else Fail s.pos ("string " ++ show str)
                                   else Fail s.pos ("string " ++ show str)
 
@@ -156,13 +169,25 @@ eos = P $ \s => pure $ if s.pos == s.maxPos
 
 ||| Succeeds if the next char is `c`
 export
-char : Applicative m => Char -> ParseT m ()
-char c = skip $ satisfy (== c) <?> "char " ++ show c
+char : Applicative m => Char -> ParseT m Char
+char c = satisfy (== c) <?> "char " ++ show c
 
 ||| Parses a space character
 export
 space : Applicative m => ParseT m Char
 space = satisfy isSpace <?> "space"
+
+||| Parses a letter or digit (a character between \'0\' and \'9\').
+||| Returns the parsed character.
+export
+alphaNum : Applicative m => ParseT m Char
+alphaNum = satisfy isAlphaNum <?> "letter or digit"
+
+||| Parses a letter (an upper case or lower case character). Returns the
+||| parsed character.
+export
+letter : Applicative m => ParseT m Char
+letter = satisfy isAlpha <?> "letter"
 
 mutual
     ||| Succeeds if `p` succeeds, will continue to match `p` until it fails
@@ -290,3 +315,47 @@ integer : Monad m => ParseT m Integer
 integer = do minus <- succeeds (char '-')
              x <- some digit
              pure $ if minus then (intFromDigits x)*(-1) else intFromDigits x
+
+
+||| Parse repeated instances of at least one `p`, separated by `s`,
+||| returning a list of successes.
+|||
+||| @ p the parser for items
+||| @ s the parser for separators
+export
+covering
+sepBy1 : Monad m => (p : ParseT m a)
+                 -> (s : ParseT m b)
+                 -> ParseT m (List1 a)
+sepBy1 p s = [| p ::: many (s *> p) |]
+
+||| Parse zero or more `p`s, separated by `s`s, returning a list of
+||| successes.
+|||
+||| @ p the parser for items
+||| @ s the parser for separators
+export
+covering
+sepBy : Monad m => (p : ParseT m a)
+                -> (s : ParseT m b)
+                -> ParseT m (List a)
+sepBy p s = optionMap [] forget (p `sepBy1` s)
+
+||| Parses /one/ or more occurrences of `p` separated by `comma`.
+export
+covering
+commaSep1 : Monad m => ParseT m a -> ParseT m (List1 a)
+commaSep1 p = p `sepBy1` (char ',')
+
+||| Parses /zero/ or more occurrences of `p` separated by `comma`.
+export
+covering
+commaSep : Monad m => ParseT m a -> ParseT m (List a)
+commaSep p = p `sepBy` (char ',')
+
+||| Run the specified parser precisely `n` times, returning a vector
+||| of successes.
+export
+ntimes : Monad m => (n : Nat) -> ParseT m a -> ParseT m (Vect n a)
+ntimes    Z  p = pure Vect.Nil
+ntimes (S n) p = [| p :: (ntimes n p) |]
