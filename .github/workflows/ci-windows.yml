@@ -14,6 +14,7 @@ env:
   SCHEME: scheme
   IDRIS2_TESTS_CG: chez
   CC: gcc
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
