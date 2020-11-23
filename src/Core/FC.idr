@@ -79,6 +79,17 @@ export
 toplevelFC : FC
 toplevelFC = MkFC "(toplevel)" (0, 0) (0, 0)
 
+------------------------------------------------------------------------
+-- Basic operations
+export
+mergeFC : FC -> FC -> Maybe FC
+mergeFC (MkFC fname1 start1 end1) (MkFC fname2 start2 end2) = 
+  if fname1 == fname2
+  then Just $ MkFC fname1 (min start1 start2) (max end1 end2)
+  else Nothing
+mergeFC _ _ = Nothing
+
+
 %name FC fc
 
 ------------------------------------------------------------------------

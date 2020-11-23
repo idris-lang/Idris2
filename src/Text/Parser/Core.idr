@@ -38,6 +38,7 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
            Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
            Grammar tok (c1 && c2) ty
      Bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
+     -- In case we don't want the position information of a token to stick around, use WeakBounds instead of Bounds
      WeakBounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
 
 ||| Sequence two grammars. If either consumes some input, the sequence is

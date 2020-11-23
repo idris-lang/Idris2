@@ -17,19 +17,19 @@ export
 location : {token : _} -> EmptyRule token (Int, Int)
 location
     = do tok <- weakBounds peek
-         pure (tok.startLine, tok.startCol)
+         pure $ start tok
 
 export
 endLocation : {token : _} -> EmptyRule token (Int, Int)
 endLocation
     = do tok <- weakBounds peek
-         pure (tok.endLine, tok.endCol)
+         pure $ end tok
 
 export
 position : {token : _} -> EmptyRule token ((Int, Int), (Int, Int))
 position
     = do tok <- weakBounds peek
-         pure ((tok.startLine, tok.startCol), (tok.endLine, tok.endCol))
+         pure (start tok, end tok)
 
 
 export
