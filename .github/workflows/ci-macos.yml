@@ -11,6 +11,7 @@ on:
 env:
   SCHEME: chez
   IDRIS2_TESTS_CG: chez
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
