@@ -38,8 +38,6 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
            Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
            Grammar tok (c1 && c2) ty
      Bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
-     -- In case we don't want the position information of a token to stick around, use WeakBounds instead of Bounds
-     WeakBounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume some input. If the first one consumes input, the
@@ -86,7 +84,6 @@ Functor (Grammar tok c) where
   map f (SeqEmpty act next)
       = SeqEmpty act (\val => map f (next val))
   map {c} f (Bounds act) = rewrite sym $ orFalseNeutral c in SeqEmpty (Bounds act) (Empty . f) -- Bounds (map f act)
-  map {c} f (WeakBounds act) = rewrite sym $ orFalseNeutral c in SeqEmpty (Bounds act) (Empty . f) -- Bounds (map f act)
   -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
   -- so a sequence must be used.
   map {c = False} f p = SeqEmpty p (Empty . f)
@@ -155,7 +152,6 @@ mapToken f (SeqEat act next) = SeqEat (mapToken f act) (\x => mapToken f (next x
 mapToken f (SeqEmpty act next) = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
 mapToken f (Bounds act) = Bounds (mapToken f act)
-mapToken f (WeakBounds act) = Bounds (mapToken f act)
 
 ||| Always succeed with the given value.
 export %inline
@@ -211,10 +207,6 @@ mustWork = MustWork
 export %inline
 bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
 bounds = Bounds
-
-export %inline
-weakBounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
-weakBounds = WeakBounds
 
 data ParseResult : Type -> Type -> Type where
      Failure : (committed : Bool) -> (fatal : Bool) ->
@@ -278,10 +270,7 @@ mutual
       = case assert_total (doParse com act xs) of
              Failure com fatal msg ts => Failure com fatal msg ts
              Res com v xs => Res com (const v <$> v) xs
-  doParse com (WeakBounds act) xs
-      = case assert_total (doParse com act xs) of
-             Failure com fatal msg ts => Failure com fatal msg ts
-             Res com v xs => Res com (removeIrrelevance $ const v <$> v) xs
+
 public export
 data ParsingError tok = Error String (List (WithBounds tok))
 
