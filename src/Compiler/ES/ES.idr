@@ -109,7 +109,7 @@ keywordSafe "var" = "var_"
 keywordSafe s = s
 
 jsName : Name -> String
-jsName (NS ns n) = showNSWithSep "_" ns ++ "_" ++ jsName n
+jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
 jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n

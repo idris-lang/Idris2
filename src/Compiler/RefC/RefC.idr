@@ -87,7 +87,7 @@ cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
 cName : Name -> String
-cName (NS ns n) = showNSWithSep "_" ns ++ "_" ++ cName n
+cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
 cName (UN n) = cCleanString n
 cName (MN n i) = cCleanString n ++ "_" ++ cCleanString (show i)
 cName (PV n d) = "pat__" ++ cName n
