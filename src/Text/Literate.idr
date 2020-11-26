@@ -64,11 +64,11 @@ rawTokens delims ls =
 ||| Merge the tokens into a single source file.
 reduce : List (WithBounds Token) -> List String -> String
 reduce [] acc = fastAppend (reverse acc)
-reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc = reduce rest (blank_content::acc)
-  where
-    -- Preserve the original document's line count.
-    blank_content : String
-    blank_content = fastAppend (replicate (length (lines x)) "\n")
+reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc = 
+  -- newline will always be tokenized as a single token
+  if x == "\n"
+  then reduce rest ("\n"::acc)
+  else reduce rest acc
 
 reduce (MkBounded (CodeLine m src) _ _ _ _ _ :: rest) acc =
     if m == trim src
@@ -83,7 +83,8 @@ reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc with (lines src) --
   reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: ys) with (snocList ys)
     reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
     reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
-        reduce rest ("\n" :: unlines srcs :: acc)
+        -- the "\n" counts for the open deliminator; the closing deliminator should always be followed by a (Any "\n"), so we don't add a newline
+        reduce rest (unlines srcs :: "\n" :: acc)
 
 -- [ NOTE ] 1 & 2 shouldn't happen as code blocks are well formed i.e. have two deliminators.
 

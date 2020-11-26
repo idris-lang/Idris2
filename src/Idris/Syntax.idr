@@ -334,6 +334,12 @@ mutual
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
 
+  export
+  isPDef : PDecl -> Maybe (FC, List PClause)
+  isPDef (PDef annot cs) = Just (annot, cs)
+  isPDef _ = Nothing
+
+
 definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where

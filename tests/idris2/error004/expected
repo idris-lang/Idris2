@@ -16,8 +16,8 @@ Error2.idr:13:38--13:45
     |                                      ^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2.idr:11:1--15:6
-    Show implementation at Error2.idr:7:1--11:5
+    Show implementation at Error2.idr:11:1--13:45
+    Show implementation at Error2.idr:7:1--9:45
 Error: While processing right hand side of wrong. Multiple solutions found in search of:
     Show (Vect 1 Integer)
 
@@ -27,5 +27,5 @@ Error2.idr:16:9--16:34
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2.idr:11:1--15:6
-    Show implementation at Error2.idr:7:1--11:5
+    Show implementation at Error2.idr:11:1--13:45
+    Show implementation at Error2.idr:7:1--9:45
