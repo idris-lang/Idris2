@@ -13,11 +13,9 @@ interface Uninhabited t where
   uninhabited : t -> Void
 
 ||| The eliminator for the `Void` type.
-%extern prim__void : (0 _ : Void) -> a
-
-export
+%extern
+public export
 void : (0 x : Void) -> a
-void = prim__void
 
 export
 Uninhabited Void where
@@ -38,3 +36,4 @@ Uninhabited (True = False) where
 public export
 Uninhabited (False = True) where
   uninhabited Refl impossible
+
