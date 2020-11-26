@@ -377,7 +377,8 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
-jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
+jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
+jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
