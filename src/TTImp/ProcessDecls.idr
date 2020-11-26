@@ -72,14 +72,22 @@ checkTotalityOK n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
+         let fc = location gdef
+
+         -- #524: need to check positivity even if we're not in a total context
+         -- because a definition coming later may need to know it is positive
+         case definition gdef of
+           (TCon _ _ _ _ _ _ _ _) => ignore $ checkPositive fc n
+           _ => pure ()
+
+         -- Once that is done, we build up errors if necessary
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
-         let fc = location gdef
          log "totality" 3 $ show n ++ " must be: " ++ show treq
          case treq of
-              PartialOK => pure Nothing
-              CoveringOnly => checkCovering fc (isCovering tot)
-              Total => checkTotality fc
+            PartialOK => pure Nothing
+            CoveringOnly => checkCovering fc (isCovering tot)
+            Total => checkTotality fc
   where
     checkCovering : FC -> Covering -> Core (Maybe Error)
     checkCovering fc IsCovering = pure Nothing
