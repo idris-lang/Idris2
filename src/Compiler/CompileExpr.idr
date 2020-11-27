@@ -173,6 +173,8 @@ natHack = magic
          (\ fc, [k] => CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k])
     , MagicCRef typesNS "natToInteger" 1
          (\ _, _, [k] => k)
+    , MagicCRef typesNS "integerToNat" 1
+         (\ fc, fc', [k] => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k])
     , MagicCRef typesNS "plus" 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef typesNS "mult" 2

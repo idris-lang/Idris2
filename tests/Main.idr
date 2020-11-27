@@ -44,7 +44,7 @@ idrisTests = MkTestPool []
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047", "basic048", "basic049",
+       "basic046", "basic047", "basic048",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -91,7 +91,7 @@ idrisTests = MkTestPool []
        "params001",
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
-       "perf001", "perf002", "perf003", "perf004", "perf005",
+       "perf001", "perf002", "perf003", "perf004", "perf005", "perf006",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006",
