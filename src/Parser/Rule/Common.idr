@@ -16,20 +16,20 @@ EmptyRule token ty = Grammar token False ty
 export
 location : {token : _} -> EmptyRule token (Int, Int)
 location
-    = do tok <- bounds peek
-         pure (tok.startLine, tok.startCol)
+    = do tok <- removeIrrelevance <$> bounds peek
+         pure $ start tok
 
 export
 endLocation : {token : _} -> EmptyRule token (Int, Int)
 endLocation
-    = do tok <- bounds peek
-         pure (tok.endLine, tok.endCol)
+    = do tok <- removeIrrelevance <$> bounds peek
+         pure $ end tok
 
 export
 position : {token : _} -> EmptyRule token ((Int, Int), (Int, Int))
 position
-    = do tok <- bounds peek
-         pure ((tok.startLine, tok.startCol), (tok.endLine, tok.endCol))
+    = do tok <- removeIrrelevance <$> bounds peek
+         pure (start tok, end tok)
 
 
 export

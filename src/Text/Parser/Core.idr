@@ -240,7 +240,7 @@ mutual
   doParse com (NextIs err f) [] = Failure com False "End of input" []
   doParse com (NextIs err f) (x :: xs)
         = if f x
-             then Res com x (x :: xs)
+             then Res com (removeIrrelevance x) (x :: xs)
              else Failure com False err (x :: xs)
   doParse com (Alt {c1} {c2} x y) xs
       = case doParse False x xs of

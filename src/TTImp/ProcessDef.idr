@@ -107,28 +107,48 @@ recoverable : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike the above, any mismatch will do
+
+-- TYPE CONSTRUCTORS
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+-- Type constructor vs. primitive type
+recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _ _) _ = pure True
+
+-- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
     = pure True -- both functions; recoverable
-recoverable defs (NTCon _ _ _ _ _) _ = pure True
-recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
-recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+
+-- OTHERWISE: no
 recoverable defs x y = pure False
 
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
 recoverableErr defs (CantConvert fc env l r)
-    = recoverable defs !(nf defs env l)
-                       !(nf defs env r)
+  = do l <- nf defs env l
+       r <- nf defs env r
+       log "coverage.recover" 10 $ unlines
+         [ "Recovering from CantConvert?"
+         , "Checking:"
+         , "  " ++ show l
+         , "  " ++ show r
+         ]
+       recoverable defs l r
+
 recoverableErr defs (CantSolveEq fc env l r)
     = recoverable defs !(nf defs env l)
                        !(nf defs env r)
@@ -811,9 +831,11 @@ processDef opts nest env fc n_in cs_in
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
                    if !(hasEmptyPat defs [] lhs)
-                      then do put Ctxt ctxt
+                      then do log "declare.def.impossible" 5 "No empty pat"
+                              put Ctxt ctxt
                               pure Nothing
-                      else do empty <- clearDefs ctxt
+                      else do log "declare.def.impossible" 5 "Some empty pat"
+                              empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
                               pure (Just rtm))

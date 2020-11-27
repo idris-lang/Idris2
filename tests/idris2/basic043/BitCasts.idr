@@ -1,6 +1,6 @@
 -- Tests to check that casting between integer types works as expected
 -- 
--- This tests in `idris2/basic043`, `chez/chez028` and `node/node022` are the
+-- The tests in `idris2/basic043`, `chez/chez029` and `node/node022` are the
 -- same and should all have the same output.
 
 --

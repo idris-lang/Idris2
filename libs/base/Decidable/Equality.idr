@@ -84,12 +84,6 @@ DecEq t => DecEq (Maybe t) where
 -- Either
 --------------------------------------------------------------------------------
 
-Uninhabited (Left x = Right y) where
-  uninhabited Refl impossible
-
-Uninhabited (Right x = Left y) where
-  uninhabited Refl impossible
-
 export
 (DecEq t, DecEq s) => DecEq (Either t s) where
   decEq (Left x) (Left y) with (decEq x y)

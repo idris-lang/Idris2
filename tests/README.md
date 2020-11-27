@@ -11,3 +11,5 @@ Examples:
 - `make test only=chez` will run all Chez Scheme tests.
 - `make test only=ttimp/basic` will run all basic tests for `TTImp`.
 - `make test only=idris2/basic001` will run a specific test.
+
+Templates for common test instances can be found in the `templates` folder.
