@@ -255,8 +255,8 @@ splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
 public export
-replaceBy : (a -> Bool) -> a -> List a -> List a
-replaceBy p b l = map (\c => if p c then b else c) l
+replaceWhen : (a -> Bool) -> a -> List a -> List a
+replaceWhen p b l = map (\c => if p c then b else c) l
 
 ||| Replaces all occurences of the first argument with the second argument in a list.
 |||
@@ -266,7 +266,7 @@ replaceBy p b l = map (\c => if p c then b else c) l
 |||
 public export
 replaceOn : Eq a => a -> a -> List a -> List a
-replaceOn a = replaceBy (== a)
+replaceOn a = replaceWhen (== a)
 
 public export
 reverseOnto : List a -> List a -> List a
