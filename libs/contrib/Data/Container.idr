@@ -181,11 +181,11 @@ namespace Monad
 
   export
   (>>=) : Free c x -> (x -> Free c y) -> Free c y
-  (>>=) (MkFree mx) k =
-    let alg : Either (Extension c (Free c y)) (Extension (Const x) (Free c y)) -> Free c y
-            := either (MkFree . MkW . toSum {c} {d = Const _} . Left . map runFree)
-                      (k . fromConst)
-    in foldr (alg . fromSum) mx
+  (>>=) (MkFree mx) k = foldr (alg . fromSum {c} {d = Const x}) mx where
+
+    alg : Either (Extension c (Free c y)) (Extension (Const x) (Free c y)) -> Free c y
+    alg  = either (MkFree . MkW . toSum {c} {d = Const y} . Left . map (runFree {c}))
+                  (k . fromConst {k = x})
 
   export
   join : Free c (Free c x) -> Free c x
@@ -312,7 +312,7 @@ namespace Derivative
   export
   fromCompose : Extension (Derivative (Compose c d)) x ->
                 Extension (Pair (Derivative d) (Compose (Derivative c) d)) x
-  fromCompose (MkExtension (MkExtension shp1 shp2 ** p1 ** p2) chld)
+  fromCompose (MkExtension (MkExtension shp1 shp2 ** (p1 ** p2)) chld)
     = toPair (left, right) where
 
       left : Extension (Derivative d) x
