@@ -1,0 +1,79 @@
+data Nat : Type where
+     Z : Nat
+     S : Nat -> Nat
+
+plus : Nat -> Nat -> Nat
+plus Z y = y
+plus (S k) y = S (plus k y)
+
+data Vect : Nat -> Type -> Type where
+     Nil  : Vect Z a
+     Cons : a -> Vect k a -> Vect (S k) a
+
+append : Vect n a -> Vect m a -> Vect (plus n m) a
+append Nil ys = ys
+append (Cons x xs) ys = Cons x (append xs ys)
+
+data Fin : Nat -> Type where
+     FZ : Fin (S $k)
+     FS : Fin $k -> Fin (S $k)
+
+lookup : Fin $k -> Vect $k $ty -> $ty
+lookup FZ (Cons $t $ts) = t;
+lookup (FS $i) (Cons $t $ts) = lookup i ts;
+
+-- As a larger example, we'll implement the well-typed interpreter.
+-- So we'll need to represent the types of our expression language:
+
+data Ty : Type where
+     Base : Type -> Ty
+     Arrow : Ty -> Ty -> Ty
+
+-- Ty can be translated to a host language type
+
+interpTy : Ty -> Type
+interpTy (Base $t) = t
+interpTy (Arrow $s $t) = (argTy : interpTy s) -> interpTy t
+
+data HasType : Fin $k -> Ty -> Vect $k Ty -> Type where
+     Stop : HasType FZ $t (Cons $t $gam)
+     Pop  : HasType $i $t $gam -> HasType (FS $i) $t (Cons $u $gam)
+
+-- Expressions in our language, indexed by their contexts and types:
+
+data Lang : Vect $k Ty -> Ty -> Type where
+     Var : HasType $i $t $gam -> Lang $gam $t
+     Val : (x : interpTy $a) -> Lang $gam $a
+     Lam : (scope : Lang (Cons $s $gam) $t) -> Lang $gam (Arrow $s $t)
+     App : Lang $gam (Arrow $s $t) -> Lang $gam $s -> Lang $gam $t;
+     Op  : (interpTy $a -> interpTy $b -> interpTy $c) ->
+           Lang $gam $a -> Lang $gam $b -> Lang $gam $c
+
+data Env : Vect $n Ty -> Type where
+     ENil : Env Nil
+     ECons : (x : interpTy $a) -> Env $xs -> Env (Cons $a $xs)
+
+-- Find a value in an environment
+lookupEnv : HasType $i $t $gam -> Env $gam -> interpTy $t
+lookupEnv Stop (ECons $x $xs) = x
+lookupEnv (Pop $var) (ECons $x $env) = lookupEnv var env
+
+interp : Env $gam -> Lang $gam $t -> interpTy $t
+interp $env (Var $i) = lookupEnv i env
+interp $env (Val $x) = x
+interp $env (App $f $a) = interp env f (interp env a)
+interp $env (Lam {s = $s} $scope) 
+   = \var => interp (ECons var env) scope
+interp $env (Op $fn $x $y) = fn (interp env x) (interp env y)
+
+testAdd : Lang $gam (Arrow (Base Nat) (Arrow (Base Nat) (Base Nat)))
+testAdd = Lam (Lam (Op plus (Var Stop) (Var (Pop Stop))))
+
+testAdd2 : Lang $gam (Base Nat)
+testAdd2 = App (App testAdd (Val (S (S Z)))) (Val (S (S (S Z))))
+
+test1 : Nat
+test1 = interp ENil testAdd (S (S Z)) (S (S Z))
+
+test2 : Nat
+test2 = interp ENil testAdd2
