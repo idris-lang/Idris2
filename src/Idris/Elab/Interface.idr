@@ -45,12 +45,13 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
     = let opts = if isNil dets
                     then [NoHints, UniqueSearch]
                     else [NoHints, UniqueSearch, SearchBy dets]
-          retty = apply (IVar fc n) (map (IVar fc) (map fst ps))
+          pNames = map fst ps
+          retty = apply (IVar fc n) (map (IVar fc) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy Explicit (map bhere constraints ++ map bname meths) retty
-          con = MkImpTy fc conName !(bindTypeNames [] (map fst ps ++ map fst meths ++ vars) conty) in
+          con = MkImpTy fc conName !(bindTypeNames [] (pNames ++ map fst meths ++ vars) conty) in
           pure $ IData fc vis (MkImpData fc n
-                                  !(bindTypeNames [] (map fst ps ++ map fst meths ++ vars)
+                                  !(bindTypeNames [] (pNames ++ map fst meths ++ vars)
                                                   (mkDataTy fc ps))
                                   opts [con])
   where
@@ -91,8 +92,9 @@ getMethDecl : {vars : _} ->
               (FC, RigCount, List FnOpt, n, (Bool, RawImp)) ->
               Core (n, RigCount, RawImp)
 getMethDecl {vars} env nest params mnames (fc, c, opts, n, (d, ty))
-    = do ty_imp <- bindTypeNames [] (map fst params ++ mnames ++ vars) ty
-         pure (n, c, stripParams (map fst params) ty_imp)
+    = do let paramNames = map fst params
+         ty_imp <- bindTypeNames [] (paramNames ++ mnames ++ vars) ty
+         pure (n, c, stripParams paramNames ty_imp)
   where
     -- We don't want the parameters to explicitly appear in the method
     -- type in the record for the interface (they are parameters of the
@@ -125,12 +127,14 @@ getMethToplevel : {vars : _} ->
                   Core (List ImpDecl)
 getMethToplevel {vars} env vis iname cname constraints allmeths params
                 (fc, c, opts, n, (d, ty))
-    = do let ity = apply (IVar fc iname) (map (IVar fc) (map fst params))
+    = do let paramNames = map fst params
+         let ity = apply (IVar fc iname) (map (IVar fc) paramNames)
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
          let ty_constr =
              bindPs params $ substNames vars (map applyCon allmeths) ty
          ty_imp <- bindTypeNames [] vars (bindIFace fc ity ty_constr)
+         logRaw "elab.interface" 10 ("Type of method " ++ show n) ty_imp
          cn <- inCurrentNS n
          let tydecl = IClaim fc c vis (if d then [Inline, Invertible]
                                             else [Inline])
@@ -299,9 +303,12 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
          let implParams = getImplParams ty
 
          updateIfaceSyn ns_iname conName
-                        implParams (map fst params) (map snd constraints)
+                        implParams paramNames (map snd constraints)
                         ns_meths ds
   where
+    paramNames : List Name
+    paramNames = map fst params
+
     nameCons : Int -> List (Maybe Name, RawImp) -> List (Name, RawImp)
     nameCons i [] = []
     nameCons i ((_, ty) :: rest)
@@ -366,14 +373,13 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                           Just (r, _, _, t) => pure (r, t)
                           Nothing => throw (GenericMsg fc ("No method named " ++ show n ++ " in interface " ++ show iname))
 
-             let ity = apply (IVar fc iname) (map (IVar fc) (map fst params))
+             let ity = apply (IVar fc iname) (map (IVar fc) paramNames)
 
              -- Substitute the method names with their top level function
              -- name, so they don't get implicitly bound in the name
              methNameMap <- traverse (\n =>
                                 do cn <- inCurrentNS n
-                                   pure (n, applyParams (IVar fc cn)
-                                                     (map fst params)))
+                                   pure (n, applyParams (IVar fc cn) paramNames))
                                (map fst tydecls)
              let dty = substNames vars methNameMap dty
 
@@ -423,7 +429,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
              chints <- traverse (getConstraintHint fc env vis iname conName
                                                  (map fst nconstraints)
                                                  meth_names
-                                                 (map fst params)) nconstraints
+                                                 paramNames) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
              traverse (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n

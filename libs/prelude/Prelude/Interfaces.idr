@@ -200,7 +200,7 @@ when False f = pure ()
 ||| function, into a single result.
 ||| @ t The type of the 'Foldable' parameterised type.
 public export
-interface Foldable (t : Type -> Type) where
+interface Foldable t where
   ||| Successively combine the elements in a parameterised type using the
   ||| provided function, starting with the element that is in the final position
   ||| i.e. the right-most position.
@@ -328,7 +328,7 @@ choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
 choiceMap f = foldr (\e, a => f e <|> a) empty
 
 public export
-interface (Functor t, Foldable t) => Traversable (t : Type -> Type) where
+interface (Functor t, Foldable t) => Traversable t where
   ||| Map each element of a structure to a computation, evaluate those
   ||| computations and combine the results.
   traverse : Applicative f => (a -> f b) -> t a -> f (t b)
@@ -342,4 +342,3 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
-

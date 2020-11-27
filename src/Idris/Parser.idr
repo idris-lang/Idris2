@@ -401,11 +401,8 @@ mutual
 
   multiplicity : SourceEmptyRule (Maybe Integer)
   multiplicity
-      = do c <- intLit
-           pure (Just c)
---     <|> do symbol "&"
---            pure (Just 2) -- Borrowing, not implemented
-    <|> pure Nothing
+      = optional $ intLit
+--     <|> 2 <$ symbol "&" Borrowing, not implemented
 
   getMult : Maybe Integer -> SourceEmptyRule RigCount
   getMult (Just 0) = pure erased
@@ -1392,9 +1389,9 @@ collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
           cs' = cs ++ concat (map snd csWithFC)
-          annot' = foldr 
+          annot' = foldr
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
-                   annot 
+                   annot
                    (map fst csWithFC)
       in
           PDef annot' cs' :: assert_total (collectDefs rest)
