@@ -24,6 +24,13 @@ data Nat =
 
 %name Nat k, j, i
 
+-- This is used in the compiler as an efficient substitute for integerToNat.
+prim__integerToNat : Integer -> Nat
+prim__integerToNat i
+  = if intToBool (prim__lte_Integer 0 i)
+      then believe_me i
+      else Z
+
 public export
 integerToNat : Integer -> Nat
 integerToNat x

@@ -174,7 +174,7 @@ natHack = magic
     , MagicCRef typesNS "natToInteger" 1
          (\ _, _, [k] => k)
     , MagicCRef typesNS "integerToNat" 1
-         (\ _, _, [k] => k)
+         (\ fc, fc', [k] => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k])
     , MagicCRef typesNS "plus" 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef typesNS "mult" 2
