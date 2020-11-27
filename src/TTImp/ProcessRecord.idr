@@ -1,6 +1,7 @@
 module TTImp.ProcessRecord
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -46,16 +47,21 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
+
          -- Go into new namespace, if there is one, for getters
          case newns of
               Nothing =>
-                      elabGetters conName 0 [] [] conty -- make projections
+                   do elabGetters conName 0 [] RF [] conty -- make postfix projections
+                      when !isPrefixRecordProjections $
+                        elabGetters conName 0 [] UN [] conty -- make prefix projections
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
-                      extendNS [ns]
+                      extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters conName 0 [] [] conty -- make projections
+                      elabGetters conName 0 [] RF [] conty -- make postfix projections
+                      when !isPrefixRecordProjections $
+                        elabGetters conName 0 [] UN [] conty -- make prefix projections
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
@@ -106,8 +112,8 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
              processDecl [] nest env (IData fc vis dt)
 
     countExp : Term vs -> Nat
-    countExp (Bind _ n (Pi c Explicit _) sc) = S (countExp sc)
-    countExp (Bind _ n (Pi c _ _) sc) = countExp sc
+    countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)
+    countExp (Bind _ _ (Pi _ _ _ _) sc) = countExp sc
     countExp _ = 0
 
     -- Generate getters from the elaborated record constructor type
@@ -121,17 +127,18 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                   List (Name, RawImp) -> -- names to update in types
                     -- (for dependent records, where a field's type may depend
                     -- on an earlier projection)
+                  (mkProjName : String -> Name) ->
                   Env Term vs -> Term vs ->
                   Core ()
-    elabGetters con done upds tyenv (Bind bfc n b@(Pi rc imp ty_chk) sc)
+    elabGetters con done upds mkProjName tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds (b :: tyenv) sc
+                              upds mkProjName (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
-                   projNameNS <- inCurrentNS (UN fldNameStr)
+                   projNameNS <- inCurrentNS (mkProjName fldNameStr)
 
                    ty <- unelab tyenv ty_chk
                    let ty' = substNames vars upds ty
@@ -172,9 +179,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    elabGetters con
                                (if imp == Explicit
                                    then S done else done)
-                               upds' (b :: tyenv) sc
+                               upds' mkProjName (b :: tyenv) sc
 
-    elabGetters con done upds _ _ = pure ()
+    elabGetters con done upds _ _ _ = pure ()
 
 export
 processRecord : {vars : _} ->

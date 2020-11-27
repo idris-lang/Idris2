@@ -1,7 +1,7 @@
 1/1: Building Dup (Dup.idr)
 Error: Main.Test is already defined.
 
-Dup.idr:13:1--15:1
+Dup.idr:13:1--14:18
  13 | private
  14 | data Test = A | B
 

@@ -1,6 +1,7 @@
 module TTImp.ProcessParams
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.TT
 import Core.Unify
@@ -21,8 +22,8 @@ extend : {extvs : _} ->
          NestedNames extvs ->
          Term extvs ->
          (vars' ** (SubVars vs vars', Env Term vars', NestedNames vars'))
-extend env p nest (Bind fc n (Pi c e ty) sc)
-    = extend (Pi c e ty :: env) (DropCons p) (weaken nest) sc
+extend env p nest (Bind fc n b@(Pi _ _ _ _) sc)
+    = extend (b :: env) (DropCons p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 
 export

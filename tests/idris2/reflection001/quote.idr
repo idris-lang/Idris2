@@ -26,3 +26,12 @@ bad val
 
 names : List Name
 names = [ `{{ names }}, `{{ Prelude.(+) }} ]
+
+noExtension : Elab ()
+noExtension = fail "Should not print this message"
+
+%runElab noExtension
+
+%language ElabReflection
+
+%runElab noExtension

@@ -1,6 +1,7 @@
 module Core.AutoSearch
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Normalise
@@ -44,13 +45,13 @@ mkArgs : {vars : _} ->
          FC -> RigCount ->
          Env Term vars -> NF vars ->
          Core (List (ArgInfo vars), NF vars)
-mkArgs fc rigc env (NBind nfc x (Pi c p ty) sc)
+mkArgs fc rigc env (NBind nfc x (Pi fc' c p ty) sc)
     = do defs <- get Ctxt
          empty <- clearDefs defs
          nm <- genName "sa"
          argTy <- quote empty env ty
          let argRig = rigMult rigc c
-         (idx, arg) <- newMeta fc argRig env nm argTy
+         (idx, arg) <- newMeta fc' argRig env nm argTy
                                (Hole (length env) (holeInit False)) False
          setInvertible fc (Resolved idx)
          (rest, restTy) <- mkArgs fc rigc env
@@ -175,17 +176,18 @@ exactlyOne {vars} fc env top target all
 -- because something is apparently available now, it will be available by the
 -- time we get to linearity checking.
 -- It's also fine to use anything if we're working at multiplicity 0
-getAllEnv : {vars : _} ->
-            FC -> RigCount -> (done : List Name) ->
-            Env Term vars -> List (Term (done ++ vars), Term (done ++ vars))
-getAllEnv fc rigc done [] = []
-getAllEnv {vars = v :: vs} fc rigc done (b :: env)
-   = let rest = getAllEnv fc rigc (done ++ [v]) env in
+getAllEnv : FC -> RigCount ->
+            SizeOf done ->
+            Env Term vars ->
+            List (Term (done ++ vars), Term (done ++ vars))
+getAllEnv fc rigc p [] = []
+getAllEnv {vars = v :: vs} {done} fc rigc p (b :: env)
+   = let rest = getAllEnv fc rigc (sucR p) env in
          if multiplicity b == top || isErased rigc
-            then let MkVar p = weakenVar {name=v} {inner=v :: vs} done First in
-                     (Local fc Nothing _ p,
+            then let MkVar var = weakenVar p (MkVar First) in
+                     (Local (binderLoc b) Nothing _ var,
                        rewrite appendAssociative done [v] vs in
-                          weakenNs (done ++ [v]) (binderType b)) ::
+                          weakenNs (sucR p) (binderType b)) ::
                                rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
 
@@ -225,7 +227,7 @@ usableLocal loc defaults env (NApp _ (NLocal _ _ _) args)
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) args)
          pure (allTrue us)
-usableLocal loc defaults env (NBind fc x (Pi _ _ _) sc)
+usableLocal loc defaults env (NBind fc x (Pi _ _ _ _) sc)
     = do defs <- get Ctxt
          usableLocal loc defaults env
                 !(sc defs (toClosure defaultOpts env (Erased fc False)))
@@ -253,7 +255,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     clearEnvType : {idx : Nat} -> (0 p : IsVar name idx vs) ->
                    FC -> Env Term vs -> Env Term vs
     clearEnvType First fc (b :: env)
-        = Lam (multiplicity b) Explicit (Erased fc False) :: env
+        = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc False) :: env
     clearEnvType (Later p) fc (b :: env) = b :: clearEnvType p fc env
 
     clearEnv : Term vars -> Env Term vars -> Env Term vars
@@ -338,14 +340,14 @@ searchLocal : {vars : _} ->
 searchLocal fc rig defaults trying depth def top env target
     = let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                              top env t target)
-                      (getAllEnv fc rig [] env) in
+                      (getAllEnv fc rig zero env) in
           exactlyOne fc env top target elabs
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool
 isPairNF env (NTCon _ n _ _ _) defs
     = isPairType n
-isPairNF env (NBind fc b (Pi _ _ _) sc) defs
+isPairNF env (NBind fc b (Pi _ _ _ _) sc) defs
     = isPairNF env !(sc defs (toClosure defaultOpts env (Erased fc False))) defs
 isPairNF _ _ _ = pure False
 
@@ -409,7 +411,7 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
             else exactlyOne fc env topty target elabs
   where
     visible : Context ->
-              List (List String) -> Name -> Core (Maybe (Name, GlobalDef))
+              List Namespace -> Name -> Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam
                   | Nothing => pure Nothing
@@ -507,14 +509,14 @@ abandonIfCycle env tm (ty :: tys)
             else abandonIfCycle env tm tys
 
 -- Declared at the top
-searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x (Pi c p ty) sc)
-    = pure (Bind nfc x (Lam c p ty)
+searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x b@(Pi fc' c p ty) sc)
+    = pure (Bind nfc x (Lam fc' c p ty)
              !(searchType fc rigc defaults [] depth def checkdets top
-                          (Pi c p ty :: env) sc))
-searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x (Let c val ty) sc)
-    = pure (Bind nfc x (Let c val ty)
+                          (b :: env) sc))
+searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x b@(Let fc' c val ty) sc)
+    = pure (Bind nfc x b
              !(searchType fc rigc defaults [] depth def checkdets top
-                          (Let c val ty :: env) sc))
+                          (b :: env) sc))
 searchType {vars} fc rigc defaults trying depth def checkdets top env target
     = do defs <- get Ctxt
          abandonIfCycle env target trying

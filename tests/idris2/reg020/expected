@@ -1,5 +1,6 @@
 1/1: Building matchlits (matchlits.idr)
 Main> Main.test1 : Int -> Int
+test1 5 = 5
 test1 256 = 42
 test1 64 = 43
 test1 1234567890 = 44

@@ -211,7 +211,7 @@ cCall fc cfn fnWrapName clib args ret
          let body = setBoxes ++ "\n" ++ call
 
          pure $ case ret of -- XXX
-                     CFIORes _ => (handleRet retType body, wrapDeclarations) 
+                     CFIORes _ => (handleRet retType body, wrapDeclarations)
                      _ => (body, wrapDeclarations)
   where
     mkNs : Int -> List CFType -> List (Maybe String)
@@ -291,11 +291,11 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
-useCC fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC fc [] args ret = throw (NoForeignCC fc)
 useCC fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC fc ccs args ret
+           Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
@@ -387,7 +387,7 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++ 
+         let cmd = gsc ++
                    " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
                    (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd

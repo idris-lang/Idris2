@@ -149,8 +149,6 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
-      parenthesise : Bool -> Doc IdrisAnn -> Doc IdrisAnn
-      parenthesise b = if b then parens else id
 
       go : Prec -> PTerm -> Doc IdrisAnn
       go d (PRef _ n) = pretty n
@@ -279,10 +277,10 @@ mutual
       go d (PRangeStream _ start (Just next)) =
         brackets (go startPrec start <+> comma <++> go startPrec next <++> pretty "..")
       go d (PUnifyLog _ lvl tm) = go d tm
-      go d (PPostfixProjs fc rec fields) =
-        parenthesise (d > appPrec) $ go startPrec rec <++> dot <+> concatWith (surround dot) (go startPrec <$> fields)
-      go d (PPostfixProjsSection fc fields args) =
-        parens (dot <+> concatWith (surround dot) (go startPrec <$> fields) <+> fillSep (go appPrec <$> args))
+      go d (PPostfixApp fc rec fields) =
+        parenthesise (d > appPrec) $ go startPrec rec <++> dot <+> concatWith (surround dot) (map pretty fields)
+      go d (PPostfixAppPartial fc fields) =
+        parens (dot <+> concatWith (surround dot) (map pretty fields))
       go d (PWithUnambigNames fc ns rhs) = parenthesise (d > appPrec) $ group $ with_ <++> pretty ns <+> line <+> go startPrec rhs
 
 export

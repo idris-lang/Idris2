@@ -13,18 +13,18 @@ infix  1  ...
 |||```
 |||and we can think of the `...( justification )` as ASCII art for a thought bubble.
 public export
-(...) : (x : a) -> (y ~=~ x) -> (z : a ** y ~=~ z)
-(...) x pf = (x ** pf)
+data Step : a -> b -> Type where
+  (...) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
 
 public export
 data FastDerivation : (x : a) -> (y : b) -> Type where
-  (|~) : (x : a) -> FastDerivation x x
-  (~~) : FastDerivation x y -> (step : (z : c ** y ~=~ z)) -> FastDerivation x (fst step)
+  (|~) : (0 x : a) -> FastDerivation x x
+  (~~) : FastDerivation x y -> {0 z : a} -> (step : Step y z) -> FastDerivation x z
   
 public export 
 Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
 Calc (|~ x) = Refl
-Calc ((~~) {z=_} {y=_} der (_ ** Refl)) = Calc der
+Calc ((~~) {y=_} der (_ ... Refl)) = Calc der
 
 {- -- requires import Data.Nat
 0

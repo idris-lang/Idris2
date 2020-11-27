@@ -5,10 +5,12 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 
+import Data.Maybe
 import Data.List
 import Data.Strings
 import Parser.Lexer.Source
 import Parser.Source
+import Parser.Support
 import Text.Lexer
 import Text.Parser
 import Utils.Either
@@ -26,7 +28,7 @@ ideTokens : TokenMap Token
 ideTokens =
     map (\x => (exact x, Symbol)) symbols ++
     [(digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (stripQuotes x)),
+     (stringLit, \x => StringLit (fromMaybe "" (escape (stripQuotes x)))),
      (identAllowDashes, \x => Ident x),
      (space, Comment)]
 

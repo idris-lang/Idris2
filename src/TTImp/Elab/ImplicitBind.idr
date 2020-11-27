@@ -3,6 +3,7 @@ module TTImp.Elab.ImplicitBind
 -- variables or unbound implicits as type variables)
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -194,11 +195,11 @@ swapVars (TType fc) = TType fc
 -- when hitting any non-implicit binder
 push : {vs : _} ->
        FC -> (n : Name) -> Binder (Term vs) -> Term (n :: vs) -> Term vs
-push ofc n b tm@(Bind fc (PV x i) (Pi c Implicit ty) sc) -- only push past 'PV's
+push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past 'PV's
     = case shrinkTerm ty (DropCons SubRefl) of
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
-           Just ty' => Bind fc (PV x i) (Pi c Implicit ty')
+           Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
                             (push ofc n (map weaken b) (swapVars {vs = []} sc))
 push ofc n b tm = Bind ofc n b tm
 
@@ -212,10 +213,10 @@ liftImps (PI _) (tm, TType fc) = (liftImps' tm, TType fc)
   where
     liftImps' : {vars : _} ->
                 Term vars -> Term vars
-    liftImps' (Bind fc (PV n i) (Pi c Implicit ty) sc)
-        = Bind fc (PV n i) (Pi c Implicit ty) (liftImps' sc)
-    liftImps' (Bind fc n (Pi c p ty) sc)
-        = push fc n (Pi c p ty) (liftImps' sc)
+    liftImps' (Bind fc (PV n i) b@(Pi _ _ Implicit _) sc)
+        = Bind fc (PV n i) b (liftImps' sc)
+    liftImps' (Bind fc n b@(Pi _ _ _ _) sc)
+        = push fc n b (liftImps' sc)
     liftImps' tm = tm
 liftImps _ x = x
 
@@ -238,8 +239,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
     tidyName (Nested n inner) = tidyName inner
     tidyName n = n
 
-    getBinds : {new : _} ->
-               (imps : List (Name, Name, ImplBinding vs)) ->
+    getBinds : (imps : List (Name, Name, ImplBinding vs)) ->
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
                (Term (new ++ vs), Term (new ++ vs))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
@@ -248,29 +248,31 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
               bty' = refsToLocals bs bty in
               case mode of
                    PI c =>
-                      (Bind fc _ (Pi c Implicit bty') tm',
+                      (Bind fc _ (Pi fc c Implicit bty') tm',
                        TType fc)
                    _ =>
-                      (Bind fc _ (PVar c (map (weakenNs new) p) bty') tm',
-                       Bind fc _ (PVTy c bty') ty')
+                      (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
+                       Bind fc _ (PVTy fc c bty') ty')
     getBinds ((n, metan, AsBinding c _ _ bty bpat) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
               bty' = refsToLocals bs bty
               bpat' = refsToLocals bs bpat in
-              (Bind fc _ (PLet c bpat' bty') tm',
-               Bind fc _ (PLet c bpat' bty') ty')
+              (Bind fc _ (PLet fc c bpat' bty') tm',
+               Bind fc _ (PLet fc c bpat' bty') ty')
 
-normaliseHolesScope : {vars : _} ->
+normaliseHolesScope : {auto c : Ref Ctxt Defs} ->
+                      {vars : _} ->
                       Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normaliseHolesScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b
                   !(normaliseHolesScope defs
                    -- use Lam because we don't want it reducing in the scope
-                   (Lam (multiplicity b) Explicit (binderType b) :: env) sc)
+                   (Lam fc (multiplicity b) Explicit (binderType b) :: env) sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export
-bindImplicits : {vars : _} ->
+bindImplicits : {auto c : Ref Ctxt Defs} ->
+                {vars : _} ->
                 FC -> BindMode ->
                 Defs -> Env Term vars ->
                 List (Name, ImplBinding vars) ->

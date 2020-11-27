@@ -1,6 +1,8 @@
 
 module Lambda
 
+import NoRegression
+
 %default total
 
 data Ty = TyFunc Ty Ty | TyNat

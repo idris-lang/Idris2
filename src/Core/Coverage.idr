@@ -2,6 +2,7 @@ module Core.Coverage
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.TT
@@ -10,6 +11,8 @@ import Core.Value
 import Data.Bool.Extra
 import Data.List
 import Data.NameMap
+
+import Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -119,8 +122,11 @@ isEmpty : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Defs -> Env Term vars -> NF vars -> Core Bool
 isEmpty defs env (NTCon fc n t a args)
-     = case !(lookupDefExact n (gamma defs)) of
-            Just (TCon _ _ _ _ flags _ cons _)
+  = do Just nty <- lookupDefExact n (gamma defs)
+         | _ => pure False
+       log "coverage.empty" 10 $ "Checking type: " ++ show nty
+       case nty of
+            TCon _ _ _ _ flags _ cons _
                  => if not (external flags)
                        then allM (conflict defs env (NTCon fc n t a args)) cons
                        else pure False
@@ -130,11 +136,12 @@ isEmpty defs env _ = pure False
 -- Need this to get a NF from a Term; the names are free in any case
 freeEnv : FC -> (vs : List Name) -> Env Term vs
 freeEnv fc [] = []
-freeEnv fc (n :: ns) = PVar top Explicit (Erased fc False) :: freeEnv fc ns
+freeEnv fc (n :: ns) = PVar fc top Explicit (Erased fc False) :: freeEnv fc ns
 
 -- Given a normalised type, get all the possible constructors for that
 -- type family, with their type, name, tag, and arity
-getCons : {vars : _} ->
+getCons : {auto c : Ref Ctxt Defs} ->
+          {vars : _} ->
           Defs -> NF vars -> Core (List (NF [], Name, Int, Nat))
 getCons defs (NTCon _ tn _ _ _)
     = case !(lookupDefExact tn (gamma defs)) of
@@ -168,7 +175,7 @@ mkAlt : {vars : _} ->
         FC -> CaseTree vars -> (Name, Int, Nat) -> CaseAlt vars
 mkAlt fc sc (cn, t, ar)
     = ConCase cn t (map (MN "m") (take ar [0..]))
-              (weakenNs _ (emptyRHS fc sc))
+              (weakenNs (map take) (emptyRHS fc sc))
 
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
 altMatch _ (DefaultCase _) = True
@@ -179,7 +186,8 @@ altMatch _ _ = False
 
 -- Given a type and a list of case alternatives, return the
 -- well-typed alternatives which were *not* in the list
-getMissingAlts : {vars : _} ->
+getMissingAlts : {auto c : Ref Ctxt Defs} ->
+                 {vars : _} ->
                  FC -> Defs -> NF vars -> List (CaseAlt vars) ->
                  Core (List (CaseAlt vars))
 -- If it's a primitive other than WorldVal, there's too many to reasonably
@@ -230,12 +238,10 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (getName v, t)
 
-weakenNs : {vars : _} ->
-           (args : List Name) -> KnownVars vars a -> KnownVars (args ++ vars) a
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
-weakenNs {vars} args ((MkVar p, t) :: xs)
-  = (insertVarNames _ {outer = []} {ns=args} {inner=vars} p, t)
-         :: weakenNs args xs
+weakenNs args ((v, t) :: xs)
+  = (weakenNs args v, t) :: weakenNs args xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
@@ -269,7 +275,8 @@ tagIsNot ts (DefaultCase _) = False
 -- Replace a default case with explicit branches for the constructors.
 -- This is easier than checking whether a default is needed when traversing
 -- the tree (just one constructor lookup up front).
-replaceDefaults : {vars : _} ->
+replaceDefaults : {auto c : Ref Ctxt Defs} ->
+                  {vars : _} ->
                   FC -> Defs -> NF vars -> List (CaseAlt vars) ->
                   Core (List (CaseAlt vars))
 -- Leave it alone if it's a primitive type though, since we need the catch
@@ -298,7 +305,8 @@ replaceDefaults fc defs nfty cs
 -- when we reach a leaf we know what patterns were used to get there,
 -- and return those patterns.
 -- The returned patterns are those arising from the *missing* cases
-buildArgs : {vars : _} ->
+buildArgs : {auto c : Ref Ctxt Defs} ->
+            {vars : _} ->
             FC -> Defs ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
@@ -323,17 +331,19 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt : KnownVars vars (List Int) ->
                   CaseAlt vars -> Core (List (List ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
-        = do let con = Ref fc (DataCon t (length args)) n
+        = do let l = mkSizeOf args
+             let con = Ref fc (DataCon t (size l)) n
              let ps' = map (substName var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs args ((MkVar el, t) :: known))
-                               (weakenNs args not') ps' sc
+             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
+                               (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let ps' = map (substName var (TDelay fc LUnknown
+        = let l = mkSizeOf [t, a] in
+          let ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs [t,a] known) (weakenNs [t,a] not')
+              buildArgs fc defs (weakenNs l known) (weakenNs l not')
                                 ps' sc
     buildArgAlt not' (ConstCase c sc)
         = do let ps' = map (substName var (PrimVal fc c)) ps
@@ -478,7 +488,15 @@ export
 checkMatched : {auto c : Ref Ctxt Defs} ->
                List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
 checkMatched cs ulhs
-    = tryClauses cs !(eraseApps ulhs)
+    = do logTerm "coverage" 5 "Checking coverage for" ulhs
+         logC "coverage" 10 $ pure $ "(raw term: " ++ show !(toFullNames ulhs) ++ ")"
+         ulhs <- eraseApps ulhs
+         logTerm "coverage" 5 "Erased to" ulhs
+         logC "coverage" 5 $ do
+            cs <- traverse toFullNames cs
+            pure $ "Against clauses:\n" ++
+                   (show $ indent {ann = ()} 2 $ vcat $ map (pretty . show) cs)
+         tryClauses cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs

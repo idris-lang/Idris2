@@ -35,8 +35,20 @@ Functor WithBounds where
   map f (MkBounded val ir sl sc el ec) = MkBounded (f val) ir sl sc el ec
 
 export
+Foldable WithBounds where
+  foldr c n b = c b.val n
+
+export
+Traversable WithBounds where
+  traverse f (MkBounded v a b c d e) = (\ v => MkBounded v a b c d e) <$> f v
+
+export
 irrelevantBounds : ty -> WithBounds ty
 irrelevantBounds x = MkBounded x True (-1) (-1) (-1) (-1)
+
+export
+removeIrrelevance : WithBounds ty -> WithBounds ty
+removeIrrelevance (MkBounded val ir sl sc el ec) = MkBounded val True sl sc el ec
 
 export
 mergeBounds : WithBounds ty -> WithBounds ty' -> WithBounds ty'

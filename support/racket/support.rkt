@@ -1,8 +1,8 @@
 (define (blodwen-os)
-  (cond
-    [(eq? (system-type 'os) 'unix) "unix"]
-    [(eq? (system-type 'os) 'osx) "darwin"]
-    [(eq? (system-type 'os) 'windows) "windows"]
+  (case (system-type 'os)
+    [(unix) "unix"]
+    [(osx) "darwin"]
+    [(windows) "windows"]
     [else "unknown"]))
 
 (define blodwen-read-args (lambda (desc)
@@ -45,7 +45,7 @@
       (else x))))
 (define cast-string-int
   (lambda (x)
-    (floor (cast-num (string->number (destroy-prefix x))))))
+    (exact-floor (cast-num (string->number (destroy-prefix x))))))
 (define cast-int-char
   (lambda (x)
     (if (and (>= x 0)
@@ -55,6 +55,17 @@
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+(define (to-idris-list-rev acc xs)
+  (if (null? xs)
+    acc
+    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
+(define (string-concat xs) (apply string-append (from-idris-list xs)))
+(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
+(define (string-pack xs) (list->string (from-idris-list xs)))
 (define string-cons (lambda (x y) (string-append (string x) y)))
 (define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
@@ -65,6 +76,14 @@
           (x (max 0 len))
           (end (min l (+ b x))))
           (substring s b end)))
+
+(define (blodwen-string-iterator-new s)
+  0)
+
+(define (blodwen-string-iterator-next s ofs)
+  (if (>= ofs (string-length s))
+      (vector 0)  ; EOF
+      (vector 1 (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)
@@ -86,7 +105,7 @@
             (if (eof-object? str)
                 ""
                 str))
-        void))
+        (void)))
 
 (define (blodwen-get-char p)
     (if (port? p)
@@ -94,7 +113,7 @@
             (if (eof-object? chr)
                 #\nul
                 chr))
-        void))
+        (void)))
 
 ;; Buffers
 

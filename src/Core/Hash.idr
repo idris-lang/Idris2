@@ -4,7 +4,10 @@ import Core.CaseTree
 import Core.TT
 
 import Data.List
+import Data.List1
+import Data.List.Lazy
 import Data.Strings
+import Data.String.Iterator
 
 %default covering
 
@@ -45,21 +48,21 @@ Hashable a => Hashable (List a) where
   hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
 
 export
+Hashable a => Hashable (List1 a) where
+  hashWithSalt h (x ::: xs) = hashWithSalt (h * 33 + hash x) xs
+
+export
 Hashable a => Hashable (Maybe a) where
   hashWithSalt h Nothing = abs h
   hashWithSalt h (Just x) = hashWithSalt h x
 
 export
 Hashable String where
-  hashWithSalt h str = hashChars h 0 (cast (length str)) str
-    where
-      hashChars : Int -> Int -> Int -> String -> Int
-      hashChars h p len str
-          = assert_total $
-              if p == len
-                 then h
-                 else hashChars (h * 33 + cast (strIndex str p))
-                                (p + 1) len str
+  hashWithSalt h = String.Iterator.foldl hashWithSalt h
+
+export
+Hashable Namespace where
+  hashWithSalt h ns = hashWithSalt h (unsafeUnfoldNamespace ns)
 
 export
 Hashable Name where
@@ -85,17 +88,17 @@ Hashable t => Hashable (PiInfo t) where
 
 export
 Hashable ty => Hashable (Binder ty) where
-  hashWithSalt h (Lam c p ty)
+  hashWithSalt h (Lam _ c p ty)
       = h `hashWithSalt` 0 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (Let c val ty)
+  hashWithSalt h (Let _ c val ty)
       = h `hashWithSalt` 1 `hashWithSalt` c `hashWithSalt` val `hashWithSalt` ty
-  hashWithSalt h (Pi c p ty)
+  hashWithSalt h (Pi _ c p ty)
       = h `hashWithSalt` 2 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (PVar c p ty)
+  hashWithSalt h (PVar _ c p ty)
       = h `hashWithSalt` 3 `hashWithSalt` c `hashWithSalt` p `hashWithSalt` ty
-  hashWithSalt h (PLet c val ty)
+  hashWithSalt h (PLet _ c val ty)
       = h `hashWithSalt` 4 `hashWithSalt` c `hashWithSalt` val `hashWithSalt` ty
-  hashWithSalt h (PVTy c ty)
+  hashWithSalt h (PVTy _ c ty)
       = h `hashWithSalt` 5 `hashWithSalt` c `hashWithSalt` ty
 
 Hashable (Var vars) where
@@ -171,5 +174,3 @@ mutual
         = h `hashWithSalt` 3 `hashWithSalt` (show x) `hashWithSalt` y
     hashWithSalt h (DefaultCase x)
         = h `hashWithSalt` 4 `hashWithSalt` x
-
-

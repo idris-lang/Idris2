@@ -56,7 +56,7 @@ addConstToPreamble name def =
     addToPreamble name newName v
 
 requireSafe : String -> String
-requireSafe = pack . map (\c => case c of 
+requireSafe = pack . map (\c => case c of
                                      '@' => '_'
                                      '/' => '_'
                                      '-' => '_'
@@ -73,6 +73,28 @@ addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core Strin
 addSupportToPreamble name code =
   addToPreamble name name code
 
+addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
+addStringIteratorToPreamble =
+  do
+    let defs = "
+function __prim_stringIteratorNew(str) {
+  return str[Symbol.iterator]();
+}
+function __prim_stringIteratorNext(str, it) {
+  const char = it.next();
+  if (char.done) {
+    return {h: 0}; // EOF
+  } else {
+    return {
+      h: 1, // Character
+      a1: char.value,
+      a2: it
+    };
+  }
+}"
+    let name = "stringIterator"
+    let newName = esName name
+    addToPreamble name newName defs
 
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
@@ -87,11 +109,12 @@ keywordSafe "var" = "var_"
 keywordSafe s = s
 
 jsName : Name -> String
-jsName (NS ns n) = showSep "_" (reverse ns) ++ "_" ++ jsName n
+jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
 jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n
 jsName (DN _ n) = jsName n
+jsName (RF n) = "rf__" ++ jsIdent n
 jsName (Nested (i, x) n) = "n__" ++ show i ++ "_" ++ show x ++ "_" ++ jsName n
 jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
 jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
@@ -235,6 +258,7 @@ jsOp DoubleATan [x] = pure $ "Math.atan(" ++ x ++ ")"
 jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
+
 jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
@@ -246,6 +270,16 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+
+jsOp (Cast Bits8Type IntType) [x] = pure x
+jsOp (Cast Bits16Type IntType) [x] = pure x
+jsOp (Cast Bits32Type IntType) [x] = pure x
+jsOp (Cast Bits64Type IntType) [x] = pure x
+
+jsOp (Cast Bits8Type IntegerType) [x] = pure x
+jsOp (Cast Bits16Type IntegerType) [x] = pure x
+jsOp (Cast Bits32Type IntegerType) [x] = pure x
+jsOp (Cast Bits64Type IntegerType) [x] = pure x
 
 jsOp (Cast IntType Bits8Type) [x] = boundedUInt 8 x
 jsOp (Cast IntType Bits16Type) [x] = boundedUInt 16 x
@@ -274,7 +308,7 @@ jsOp (Cast Bits64Type Bits16Type) [x] = boundedUInt 16 x
 jsOp (Cast Bits64Type Bits32Type) [x] = boundedUInt 32 x
 
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
-jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
+jsOp (Cast ty ty2) [x] = jsCrashExp $ jsString $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 
@@ -311,6 +345,13 @@ makeForeign n x =
           lib_code <- readDataFile ("js/" ++ lib ++ ".js")
           addSupportToPreamble lib lib_code
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
+      "stringIterator" =>
+        do
+          addStringIteratorToPreamble
+          case def of
+            "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
+            "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
 
 
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
@@ -336,10 +377,8 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
-jsPrim  (NS _ (UN "prim__schemeCall"))[_, fn, args, _] =
-  case fn of
-    "'string-append'" => pure $ "''.concat(...__prim_idris2js_FArgList("++ args ++"))"
-    o => throw (InternalError $ "schemeCall not implemented " ++ show o)
+jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
+jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
@@ -384,7 +423,7 @@ mutual
   imperative2es indent (FunDecl fc n args body) =
     pure $ nSpaces indent ++ "function " ++ jsName n ++ "(" ++ showSep ", " (map jsName args) ++ "){//"++ show fc ++"\n" ++
            !(imperative2es (indent+1) body) ++ "\n" ++ nSpaces indent ++ "}\n"
-  imperative2es indent (ForeignDecl n path) =
+  imperative2es indent (ForeignDecl fc n path args ret) =
     pure $ !(foreignDecl n path) ++ "\n"
   imperative2es indent (ReturnStatement x) =
     pure $ nSpaces indent ++ "return " ++ !(impExp2es x) ++ ";"
@@ -420,7 +459,6 @@ mutual
 static_preamble : List String
 static_preamble =
   [ "class IdrisError extends Error { }"
-  , "function __prim_idris2js_FArgList(x){if(x.h === 0){return []}else{return x.a2.concat(__prim_idris2js_FArgList(x.a3))}}"
   , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
   , "function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}"
   ]

@@ -13,6 +13,7 @@ module TTImp.Interactive.ExprSearch
 import Core.AutoSearch
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.LinearCheck
 import Core.Metadata
@@ -168,19 +169,19 @@ search : {auto c : Ref Ctxt Defs} ->
          SearchOpts -> ClosedTerm ->
          Name -> Core (Search (ClosedTerm, ExprDefs))
 
-getAllEnv : {vars : _} ->
-            FC -> (done : List Name) ->
+getAllEnv : {vars : _} -> FC ->
+            SizeOf done ->
             Env Term vars ->
             List (Term (done ++ vars), Term (done ++ vars))
 getAllEnv fc done [] = []
-getAllEnv {vars = v :: vs} fc done (b :: env)
-   = let rest = getAllEnv fc (done ++ [v]) env
-         MkVar p = weakenVar done {inner = v :: vs} First
+getAllEnv {vars = v :: vs} {done} fc p (b :: env)
+   = let rest = getAllEnv fc (sucR p) env
+         MkVar var = weakenVar p (MkVar First)
          usable = usableName v in
          if usable
-            then (Local fc Nothing _ p,
+            then (Local fc Nothing _ var,
                      rewrite appendAssociative done [v] vs in
-                        weakenNs (done ++ [v]) (binderType b)) ::
+                        weakenNs (sucR p) (binderType b)) ::
                              rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
   where
@@ -378,7 +379,7 @@ searchNames fc rig opts env ty topty (n :: ns)
          getSuccessful fc rig opts False env ty topty
             (map (searchName fc rig opts env nfty topty) visns)
   where
-    visible : Context -> List (List String) -> Name ->
+    visible : Context -> List Namespace -> Name ->
               Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam
@@ -547,7 +548,7 @@ searchLocal fc rig opts env ty topty
     = -- Reverse the environment so we try the patterns left to right.
       -- This heuristic is just so arguments appear the same order in
       -- recursive calls
-      searchLocalWith fc False rig opts env (reverse (getAllEnv fc [] env))
+      searchLocalWith fc False rig opts env (reverse (getAllEnv fc zero env))
                       ty topty
 
 makeHelper : {vars : _} ->
@@ -570,14 +571,14 @@ makeHelper fc rig opts env letty targetty (Result (locapp, ds) next)
          intn <- genVarName "cval"
          helpern_in <- genCaseName "search"
          helpern <- inCurrentNS helpern_in
-         let env' = Lam top Explicit letty :: env
+         let env' = Lam fc top Explicit letty :: env
          scopeMeta <- metaVar fc top env' helpern
                              (weaken {n = intn} targetty)
          let scope = toApp scopeMeta
          updateDef helpern (const (Just None))
          -- Apply the intermediate result to the helper function we're
          -- about to generate.
-         let def = App fc (Bind fc intn (Lam top Explicit letty) scope)
+         let def = App fc (Bind fc intn (Lam fc top Explicit letty) scope)
                           locapp
 
          logTermNF "interaction.search" 10 "Binding def" env def
@@ -631,7 +632,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
                                             topty]
   where
     matchable : Defs -> NF vars -> Core Bool
-    matchable defs (NBind fc x (Pi _ _ _) sc)
+    matchable defs (NBind fc x (Pi _ _ _ _) sc)
         = matchable defs !(sc defs (toClosure defaultOpts env
                                               (Erased fc False)))
     matchable defs (NTCon _ _ _ _ _) = pure True
@@ -639,7 +640,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
 
     applyLocal : Defs -> Term vars ->
                  NF vars -> Term vars -> Core (Search (Term vars, ExprDefs))
-    applyLocal defs tm locty@(NBind _ x (Pi _ _ _) sc) targetty
+    applyLocal defs tm locty@(NBind _ x (Pi fc' _ _ _) sc) targetty
         = -- If the local has a function type, and the return type is
           -- something we can pattern match on (so, NTCon) then apply it,
           -- let bind the result, and try to generate a definition for
@@ -649,7 +650,7 @@ tryIntermediateWith fc rig opts env ((p, pty) :: rest) ty topty
                                                 (Erased fc False)))
                  | False => noResult
              intnty <- genVarName "cty"
-             letty <- metaVar fc erased env intnty (TType fc)
+             letty <- metaVar fc' erased env intnty (TType fc)
              let opts' = record { inUnwrap = True } opts
              locsearch <- searchLocalWith fc True rig opts' env [(p, pty)]
                                           letty topty
@@ -667,7 +668,7 @@ tryIntermediate : {vars : _} ->
                   Env Term vars -> Term vars -> ClosedTerm ->
                   Core (Search (Term vars, ExprDefs))
 tryIntermediate fc rig opts env ty topty
-    = tryIntermediateWith fc rig opts env (reverse (getAllEnv fc [] env))
+    = tryIntermediateWith fc rig opts env (reverse (getAllEnv fc zero env))
                           ty topty
 
 -- Try making a recursive call and unpacking the result. Only do this if
@@ -700,7 +701,7 @@ tryIntermediateRec fc rig opts env ty topty (Just rd)
          makeHelper fc rig opts' env letty ty recsearch
   where
     isSingleCon : Defs -> NF [] -> Core Bool
-    isSingleCon defs (NBind fc x (Pi _ _ _) sc)
+    isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
         = isSingleCon defs !(sc defs (toClosure defaultOpts []
                                               (Erased fc False)))
     isSingleCon defs (NTCon _ n _ _ _)
@@ -716,23 +717,23 @@ searchType : {vars : _} ->
              FC -> RigCount -> SearchOpts -> Env Term vars ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
-searchType fc rig opts env topty (S k) (Bind bfc n (Pi c info ty) sc)
-    = do let env' : Env Term (n :: _) = Pi c info ty :: env
+searchType fc rig opts env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
+    = do let env' : Env Term (n :: _) = b :: env
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts env' topty k sc
-         pure (map (\ (sc, ds) => (Bind bfc n (Lam c info ty) sc, ds)) scVal)
-searchType {vars} fc rig opts env topty Z (Bind bfc n (Pi c info ty) sc)
+         pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
+searchType {vars} fc rig opts env topty Z (Bind bfc n b@(Pi fc' c info ty) sc)
     = -- try a local before creating a lambda...
       getSuccessful fc rig opts False env ty topty
-           [searchLocal fc rig opts env (Bind bfc n (Pi c info ty) sc) topty,
+           [searchLocal fc rig opts env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
                 let n' = UN !(getArgName defs n [] vars !(nf defs env ty))
-                let env' : Env Term (n' :: _) = Pi c info ty :: env
+                let env' : Env Term (n' :: _) = b :: env
                 let sc' = renameTop n' sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts env' topty Z sc'
                 pure (map (\ (sc, ds) =>
-                             (Bind bfc n' (Lam c info ty) sc, ds)) scVal))]
+                             (Bind bfc n' (Lam fc' c info ty) sc, ds)) scVal))]
 searchType fc rig opts env topty _ ty
     = case getFnArgs ty of
            (Ref rfc (TyCon t ar) n, args) =>
@@ -828,8 +829,8 @@ getLHSData defs (Just tm)
     = pure $ getLHS !(toFullNames !(normaliseHoles defs [] tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
-    getLHS (Bind _ _ (PVar _ _ _) sc) = getLHS sc
-    getLHS (Bind _ _ (PLet _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PLet _ _ _ _) sc) = getLHS sc
     getLHS sc
         = case getFn sc of
                Ref _ _ n => Just (MkRecData n sc)

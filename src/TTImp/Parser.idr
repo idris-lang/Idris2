@@ -504,7 +504,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -517,10 +517,6 @@ mutual
       getFn (IApp _ f a) = getFn f
       getFn (IImplicitApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
-
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
 
   clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)
   clause withArgs fname indents
@@ -642,19 +638,17 @@ recordDecl fname indents
                    IRecord fc Nothing vis
                            (MkImpRecord fc n params dc (concat flds)))
 
-namespaceDecl : Rule (List String)
+namespaceDecl : Rule Namespace
 namespaceDecl
     = do keyword "namespace"
          commit
-         ns <- namespacedIdent
-         pure (List1.toList ns)
+         namespaceId
 
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
-         ps <- optional namespacedIdent
-         let topic = fromMaybe [] $ map List1.toList ps
+         topic <- ((::) <$> unqualifiedName <*> many aDotIdent)
          lvl <- intLit
          atEnd indents
          pure (ILog (topic, integerToNat lvl))
@@ -689,7 +683,7 @@ topDecl fname indents
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
          end <- location
-         pure (INamespace (MkFC fname start end) ns ds)
+         pure (INamespace (MkFC fname start end) ns (forget ds))
   <|> do start <- location
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
@@ -729,7 +723,7 @@ export
 prog : FileName -> Rule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
-         pure (collectDefs ds)
+         pure (collectDefs $ forget ds)
 
 -- TTImp REPL commands
 export

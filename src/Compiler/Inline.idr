@@ -4,10 +4,12 @@ import Compiler.CompileExpr
 
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.FC
 import Core.TT
 
 import Data.LengthMatch
+import Data.Maybe
 import Data.NameMap
 import Data.List
 import Data.Vect
@@ -57,8 +59,7 @@ genName n
          put LVar (i + 1)
          pure (MN n i)
 
-refToLocal : {vars : _} ->
-             Name -> (x : Name) -> CExp vars -> CExp (x :: vars)
+refToLocal : Name -> (x : Name) -> CExp vars -> CExp (x :: vars)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 largest : Ord a => a -> List a -> a
@@ -97,7 +98,7 @@ mutual
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
   usedCon n (MkConAlt _ _ args sc)
-      = let MkVar n' = weakenNs args (MkVar n) in
+      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
             used n' sc
 
   usedConst : {free : _} ->
@@ -117,7 +118,7 @@ mutual
   evalLocal {vars = x :: xs} fc rec stk (v :: env) First
       = case stk of
              [] => pure v
-             _ => eval rec env stk (weakenNs xs v)
+             _ => eval rec env stk (weakenNs (mkSizeOf xs) v)
   evalLocal {vars = x :: xs} fc rec stk (_ :: env) (Later p)
       = evalLocal fc rec stk env p
 
@@ -146,24 +147,25 @@ mutual
   -- in case they duplicate work. We should fix that, to decide more accurately
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
-  eval rec env (_ :: _ :: act :: cont :: world :: stk)
-               (CRef fc (NS ["PrimIO"] (UN "io_bind")))
-      = do xn <- genName "act"
-           sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
-           pure $ unload stk $
-                CLet fc xn False (CApp fc act [world])
-                     (refToLocal xn xn sc)
   eval rec env stk (CRef fc n)
-      = do defs <- get Ctxt
-           Just gdef <- lookupCtxtExact n (gamma defs)
-                | Nothing => pure (unload stk (CRef fc n))
-           let Just def = compexpr gdef
-                | Nothing => pure (unload stk (CRef fc n))
-           let arity = getArity def
-           if (Inline `elem` flags gdef) && (not (n `elem` rec))
-              then do ap <- tryApply (n :: rec) stk env def
-                      pure $ maybe (unloadApp arity stk (CRef fc n)) id ap
-              else pure $ unloadApp arity stk (CRef fc n)
+      = case (n == NS primIONS (UN "io_bind"), stk) of
+          (True, _ :: _ :: act :: cont :: world :: stk) =>
+                 do xn <- genName "act"
+                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    pure $ unload stk $
+                             CLet fc xn False (CApp fc act [world])
+                                              (refToLocal xn xn sc)
+          (_,_) =>
+             do defs <- get Ctxt
+                Just gdef <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure (unload stk (CRef fc n))
+                let Just def = compexpr gdef
+                  | Nothing => pure (unload stk (CRef fc n))
+                let arity = getArity def
+                if (Inline `elem` flags gdef) && (not (n `elem` rec))
+                   then do ap <- tryApply (n :: rec) stk env def
+                           pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
+                   else pure $ unloadApp arity stk (CRef fc n)
   eval {vars} {free} rec env [] (CLam fc x sc)
       = do xn <- genName "lamv"
            sc' <- eval rec (CRef fc xn :: env) [] sc
@@ -357,6 +359,7 @@ fixArity (MkFun args exp) = pure $ MkFun args !(fixArityTm exp [])
 fixArity (MkError exp) = pure $ MkError !(fixArityTm exp [])
 fixArity d = pure d
 
+-- TODO: get rid of this `done` by making the return `args'` runtime irrelevant?
 getLams : {done : _} ->
           Int -> SubstCEnv done args -> CExp (done ++ args) ->
           (args' ** (SubstCEnv args' args, CExp (args' ++ args)))
@@ -383,7 +386,7 @@ mergeLambdas args (CLam fc x sc)
     = let (args' ** (env, exp')) = getLams 0 [] (CLam fc x sc)
           expNs = substs env exp'
           newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals {later = args} {vars=[]} (mkBounds newArgs)
+          expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)
                              (rewrite appendNilRightNeutral args in expNs) in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)

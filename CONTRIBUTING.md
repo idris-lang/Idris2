@@ -27,6 +27,7 @@ beyond work on the language core, are (in no particular order):
     to lex!
 * An alternative, high performance, back end. OCaml seems worth a try.
 * JS and Node back ends would be nice.
+* A Jupyter kernel for Idris, to allow for more industry standard literate programming.
 
 The default Prelude describes the rationale for what gets included and what
 doesn't. Mostly what is there is copied from Idris 1, but it's not impossible

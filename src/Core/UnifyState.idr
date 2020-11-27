@@ -2,6 +2,7 @@ module Core.UnifyState
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.FC
@@ -124,6 +125,7 @@ genMVName : {auto c : Ref Ctxt Defs} ->
             Name -> Core Name
 genMVName (UN str) = genName str
 genMVName (MN str _) = genName str
+genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -300,10 +302,6 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
   where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
     mkVar : (wkns : List Name) ->
             IsVar name (length wkns) (wkns ++ name :: vars ++ done)
     mkVar [] = First
@@ -331,10 +329,6 @@ mkConstantAppArgsSub {done} {vars = x :: xs}
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
   where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
     mkVar : (wkns : List Name) ->
             IsVar name (length wkns) (wkns ++ name :: vars ++ done)
     mkVar [] = First
@@ -362,10 +356,6 @@ mkConstantAppArgsOthers {done} {vars = x :: xs}
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
   where
-    isLet : Binder (Term vars) -> Bool
-    isLet (Let _ _ _) = True
-    isLet _ = False
-
     mkVar : (wkns : List Name) ->
             IsVar name (length wkns) (wkns ++ name :: vars ++ done)
     mkVar [] = First
@@ -448,7 +438,7 @@ mkConstant fc [] tm = tm
 --     = mkConstant fc env (Bind fc x (Let c val ty) tm)
 mkConstant {vars = x :: _} fc (b :: env) tm
     = let ty = binderType b in
-          mkConstant fc env (Bind fc x (Lam (multiplicity b) Explicit ty) tm)
+          mkConstant fc env (Bind fc x (Lam fc (multiplicity b) Explicit ty) tm)
 
 -- Given a term and a type, add a new guarded constant to the global context
 -- by applying the term to the current environment

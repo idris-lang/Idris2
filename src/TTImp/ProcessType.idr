@@ -1,6 +1,7 @@
 module TTImp.ProcessType
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Hash
@@ -23,7 +24,7 @@ import Data.NameMap
 %default covering
 
 getRetTy : Defs -> NF [] -> Core Name
-getRetTy defs (NBind fc _ (Pi _ _ _) sc)
+getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
     = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
 getRetTy defs ty
@@ -76,7 +77,7 @@ processFnOpt fc ndef (SpecArgs ns)
 
     -- Collect the argument names which the dynamic args depend on
     collectDDeps : NF [] -> Core (List Name)
-    collectDDeps (NBind tfc x (Pi _ _ nty) sc)
+    collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
              sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
@@ -100,7 +101,7 @@ processFnOpt fc ndef (SpecArgs ns)
 
       getDeps : Bool -> NF [] -> NameMap Bool ->
                 Core (NameMap Bool)
-      getDeps inparam (NBind _ x (Pi _ _ pty) sc) ns
+      getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do ns' <- getDeps inparam pty ns
                defs <- get Ctxt
                sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -146,7 +147,7 @@ processFnOpt fc ndef (SpecArgs ns)
                                -- We're assuming  it's a short list, so just use
                                -- List and don't worry about duplicates.
                   List (Name, Nat) -> NF [] -> Core (List Nat)
-    collectSpec acc ddeps ps (NBind tfc x (Pi _ _ nty) sc)
+    collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
              sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
@@ -165,7 +166,7 @@ processFnOpt fc ndef (SpecArgs ns)
     collectSpec acc ddeps ps _ = pure acc
 
     getNamePos : Nat -> NF [] -> Core (List (Name, Nat))
-    getNamePos i (NBind tfc x (Pi _ _ _) sc)
+    getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc False)))
              pure ((x, i) :: ns')
@@ -212,7 +213,8 @@ initDef n env ty (_ :: opts) = initDef n env ty opts
 -- Find the inferrable argument positions in a type. This is useful for
 -- generalising partially evaluated definitions and (potentially) in interactive
 -- editing
-findInferrable : Defs -> NF [] -> Core (List Nat)
+findInferrable : {auto c : Ref Ctxt Defs} ->
+                 Defs -> NF [] -> Core (List Nat)
 findInferrable defs ty = fi 0 0 [] [] ty
   where
     mutual
@@ -238,7 +240,7 @@ findInferrable defs ty = fi 0 0 [] [] ty
       findInfs acc pos (n :: ns) = findInf !(findInfs acc pos ns) pos n
 
     fi : Nat -> Int -> List (Name, Nat) -> List Nat -> NF [] -> Core (List Nat)
-    fi pos i args acc (NBind fc x (Pi _ _ aty) sc)
+    fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
              sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound argn))
              acc' <- findInf acc args aty
@@ -293,7 +295,11 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          when (not (InCase `elem` eopts)) $ setLinearCheck idx True
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
-         traverse (processFnOpt fc (Resolved idx)) opts
+         let name = Resolved idx
+         traverse (processFnOpt fc name) opts
+         -- If no function-specific totality pragma has been used, attach the default totality
+         unless (any isTotalityReq opts) $
+           setFlag fc name (SetTotal !getDefaultTotalityOption)
 
          -- Add to the interactive editing metadata
          addTyDecl fc (Resolved idx) env ty -- for definition generation

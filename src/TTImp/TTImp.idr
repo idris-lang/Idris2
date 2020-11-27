@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.Options
 import Core.Options.Log
 import Core.TT
 import Core.TTC
@@ -202,6 +203,11 @@ mutual
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
 
+  public export
+  isTotalityReq : FnOpt -> Bool
+  isTotalityReq (Totality _) = True
+  isTotalityReq _ = False
+
   export
   Show FnOpt where
     show Inline = "%inline"
@@ -332,7 +338,7 @@ mutual
        IRecord : FC ->
                  Maybe String -> -- nested namespace
                  Visibility -> ImpRecord -> ImpDecl
-       INamespace : FC -> List String -> List ImpDecl -> ImpDecl
+       INamespace : FC -> Namespace -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
        IRunElabDecl : FC -> RawImp -> ImpDecl
        IPragma : ({vars : _} ->
@@ -361,6 +367,11 @@ mutual
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
 
+export
+isIPrimVal : RawImp -> Maybe Constant
+isIPrimVal (IPrimVal _ c) = Just c
+isIPrimVal _ = Nothing
+
 -- REPL commands for TTImp interaction
 public export
 data ImpREPL : Type where
@@ -373,6 +384,11 @@ data ImpREPL : Type where
      CheckTotal : Name -> ImpREPL
      DebugInfo : Name -> ImpREPL
      Quit : ImpREPL
+
+export
+mapAltType : (RawImp -> RawImp) -> AltType -> AltType
+mapAltType f (UniqueDefault x) = UniqueDefault (f x)
+mapAltType _ u = u
 
 export
 lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
@@ -464,7 +480,8 @@ findImplicits tm = []
 -- IBindVar anywhere else in the pattern) so that they will be available on the
 -- rhs
 export
-implicitsAs : Defs -> List Name -> RawImp -> Core RawImp
+implicitsAs : {auto c : Ref Ctxt Defs} ->
+              Defs -> List Name -> RawImp -> Core RawImp
 implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
   where
     setAs : List (Maybe Name) -> RawImp -> Core RawImp
@@ -496,15 +513,15 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
         updateNs n [] = Nothing
 
         findImps : List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
-        findImps ns (NBind fc x (Pi _ Explicit _) sc)
+        findImps ns (NBind fc x (Pi _ _ Explicit _) sc)
             = findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
         -- if the implicit was given, skip it
-        findImps ns (NBind fc x (Pi _ AutoImplicit _) sc)
+        findImps ns (NBind fc x (Pi _ _ AutoImplicit _) sc)
             = case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
                    Just ns' => findImps ns' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-        findImps ns (NBind fc x (Pi _ p _) sc)
+        findImps ns (NBind fc x (Pi _ _ p _) sc)
             = if Just x `elem` ns
                  then findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
                  else pure $ (x, forgetDef p) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
@@ -527,7 +544,7 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
     setAs is tm = pure tm
 
 export
-definedInBlock : List String -> -- namespace to resolve names
+definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
     concatMap (defName ns) decls
@@ -538,31 +555,47 @@ definedInBlock ns decls =
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
 
-    expandNS : List String -> Name -> Name
-    expandNS [] n = n
-    expandNS ns (UN n) = NS ns (UN n)
-    expandNS ns n@(MN _ _) = NS ns n
-    expandNS ns n@(DN _ _) = NS ns n
-    expandNS ns n = n
+    expandNS : Namespace -> Name -> Name
+    expandNS ns n
+       = if ns == emptyNS then n else case n of
+           UN _ => NS ns n
+           MN _ _ => NS ns n
+           DN _ _ => NS ns n
+           RF _ => NS ns n
+           _ => n
 
-    defName : List String -> ImpDecl -> List Name
+    defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
         = expandNS ns n :: map (expandNS ns) (map getName cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (INamespace _ n nds) = concatMap (defName (n ++ ns)) nds
+    defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ fldns _ (MkImpRecord _ n _ con flds))
         = expandNS ns con :: all
       where
-        fldns' : List String
-        fldns' = maybe ns (\f => f :: ns) fldns
+        fldns' : Namespace
+        fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
+
+        toRF : Name -> Name
+        toRF (UN n) = RF n
+        toRF n = n
 
         fnsUN : List Name
         fnsUN = map getFieldName flds
 
+        fnsRF : List Name
+        fnsRF = map toRF fnsUN
+
+        -- Depending on %prefix_record_projections,
+        -- the record may or may not produce prefix projections (fnsUN).
+        --
+        -- However, since definedInBlock is pure, we can't check that flag
+        -- (and it would also be wrong if %prefix_record_projections appears
+        -- inside the parameter block)
+        -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') fnsUN
+        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
     defName _ _ = []
 
@@ -998,3 +1031,16 @@ mutual
                8 => do n <- fromBuf b
                        pure (ILog n)
                _ => corrupt "ImpDecl"
+
+
+-- Log message with a RawImp
+export
+logRaw : {auto c : Ref Ctxt Defs} ->
+         String -> Nat -> Lazy String -> RawImp -> Core ()
+logRaw str n msg tm
+    = do opts <- getSession
+         let lvl = mkLogLevel str n
+         if keepLog lvl (logLevel opts)
+            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+                                          ++ ": " ++ show tm
+            else pure ()

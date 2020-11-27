@@ -6,11 +6,13 @@ import Compiler.Scheme.Gambit
 import Compiler.ES.Node
 import Compiler.ES.Javascript
 import Compiler.Common
+import Compiler.RefC.RefC
 
 import Core.AutoSearch
 import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.InitPrimitives
 import Core.LinearCheck
@@ -188,6 +190,7 @@ findCG
               Gambit => pure codegenGambit
               Node => pure codegenNode
               Javascript => pure codegenJavascript
+              RefC => pure codegenRefC
               Other s => case !(getCodegen s) of
                             Just cg => pure cg
                             Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
@@ -628,17 +631,18 @@ process (Eval itm)
                  -- foreign argument lists. TODO: once the new FFI is fully
                  -- up and running we won't need this. Also, if we add
                  -- 'with' disambiguation we can use that instead.
-                 catch (do hide replFC (NS ["PrimIO"] (UN "::"))
-                           hide replFC (NS ["PrimIO"] (UN "Nil")))
+                 catch (do hide replFC (NS primIONS (UN "::"))
+                           hide replFC (NS primIONS (UN "Nil")))
                        (\err => pure ())
                  (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
                                        [] ttimp Nothing
+                 logTerm "repl.eval" 10 "Elaborated input" tm
                  defs <- get Ctxt
                  opts <- get ROpts
                  let norm = nfun (evalMode opts)
                  ntm <- norm defs [] tm
+                 logTermNF "repl.eval" 5 "Normalised" [] ntm
                  itm <- resugar [] ntm
-                 logTermNF "" 5 "Normalised" [] ntm
                  if showTypes opts
                     then do ty <- getTerm gty
                             ity <- resugar [] !(norm defs [] ty)
@@ -686,9 +690,9 @@ process (Load f)
          -- Clear the context and load again
          loadMainFile f
 process (ImportMod m)
-    = do catch (do addImport (MkImport emptyFC False m m)
-                   pure $ ModuleLoaded (showSep "." (reverse m)))
-               (\err => pure $ ErrorLoadingModule (showSep "." (reverse m)) err)
+    = do catch (do addImport (MkImport emptyFC False m (miAsNamespace m))
+                   pure $ ModuleLoaded (show m))
+               (\err => pure $ ErrorLoadingModule (show m) err)
 process (CD dir)
     = do setWorkingDir dir
          workDir <- getWorkingDir
@@ -702,7 +706,7 @@ process Edit
               Nothing => pure NoFileLoaded
               Just f =>
                 do let line = maybe "" (\i => " +" ++ show (i + 1)) (errorLine opts)
-                   coreLift $ system (editor opts ++ " " ++ f ++ line)
+                   coreLift $ system (editor opts ++ " \"" ++ f ++ "\"" ++ line)
                    loadMainFile f
 process (Compile ctm outfile)
     = compileExp ctm outfile
@@ -888,7 +892,7 @@ mutual
   repl
       = do ns <- getNS
            opts <- get ROpts
-           coreLift (putStr (prompt (evalMode opts) ++ showSep "." (reverse ns) ++ "> "))
+           coreLift (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
            inp <- coreLift getLine
            end <- coreLift $ fEOF stdin
            if end

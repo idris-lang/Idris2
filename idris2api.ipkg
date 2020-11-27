@@ -21,6 +21,8 @@ modules =
     Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC.RefC,
+
     Compiler.Scheme.Chez,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
@@ -32,6 +34,8 @@ modules =
     Core.CaseTree,
     Core.CompileExpr,
     Core.Context,
+    Core.Context.Data,
+    Core.Context.Log,
     Core.Core,
     Core.Coverage,
     Core.Directory,
@@ -43,6 +47,7 @@ modules =
     Core.LinearCheck,
     Core.Metadata,
     Core.Name,
+    Core.Name.Namespace,
     Core.Normalise,
     Core.Options,
     Core.Options.Log,
@@ -62,7 +67,6 @@ modules =
     Data.NameMap,
     Data.StringMap,
     Data.StringTrie,
-    Data.These,
 
     Data.Bool.Extra,
 
@@ -78,6 +82,7 @@ modules =
     Idris.ModTree,
     Idris.Package,
     Idris.Parser,
+    Idris.Parser.Let,
     Idris.Pretty,
     Idris.ProcessIdr,
     Idris.REPL,

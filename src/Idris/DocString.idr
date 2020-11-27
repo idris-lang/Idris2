@@ -33,12 +33,12 @@ addDocString n_in doc
 export
 addDocStringNS : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 List String -> Name -> String ->
+                 Namespace -> Name -> String ->
                  Core ()
 addDocStringNS ns n_in doc
     = do n <- inCurrentNS n_in
          let n' = case n of
-                       NS old root => NS (ns ++ old) root
+                       NS old root => NS (old <.> ns) root
                        root => NS ns root
          syn <- get Syn
          put Syn (record { docstrings $= addName n' doc,
@@ -166,12 +166,12 @@ summarise n -- n is fully qualified
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
                   maybe "" (\d => "\n\t" ++ d) doc)
-         
+
 -- Display all the exported names in the given namespace
 export
 getContents : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              List String -> Core (List String)
+              Namespace -> Core (List String)
 getContents ns
    = -- Get all the names, filter by any that match the given namespace
      -- and are visible, then display with their type

@@ -65,3 +65,11 @@ Ord k => Monoid (SortedSet k) where
 export
 keySet : SortedMap k v -> SortedSet k
 keySet = SetWrapper . map (const ())
+
+export
+singleton : Ord k => k -> SortedSet k
+singleton k = insert k empty
+
+export
+null : SortedSet k -> Bool
+null (SetWrapper m) = SortedMap.null m

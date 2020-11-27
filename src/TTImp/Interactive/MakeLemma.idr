@@ -34,7 +34,7 @@ bindable p tm
            _ => False
 
 bindableArg : Nat -> Term vars -> Bool
-bindableArg p (Bind _ _ (Pi _ _ ty) sc)
+bindableArg p (Bind _ _ (Pi _ _ _ ty) sc)
    = bindable p ty || bindableArg (1 + p) sc
 bindableArg p _ = False
 
@@ -42,11 +42,11 @@ getArgs : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Env Term vars -> Nat -> Term vars ->
           Core (List (Name, Maybe Name, PiInfo RawImp, RigCount, RawImp), RawImp)
-getArgs {vars} env (S k) (Bind _ x (Pi c p ty) sc)
+getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
          ty' <- unelab env !(normalise defs env ty)
          let x' = UN !(uniqueName defs (map nameRoot vars) (nameRoot x))
-         (sc', ty) <- getArgs (Pi c p ty :: env) k (renameTop x' sc)
+         (sc', ty) <- getArgs (b :: env) k (renameTop x' sc)
          -- Don't need to use the name if it's not used in the scope type
          let mn = if c == top
                        then case shrinkTerm sc (DropCons SubRefl) of
@@ -88,5 +88,3 @@ makeLemma : {auto m : Ref MD Metadata} ->
 makeLemma loc n nlocs ty
     = do (args, ret) <- getArgs [] nlocs ty
          pure (mkType loc args ret, mkApp loc n args)
-
-

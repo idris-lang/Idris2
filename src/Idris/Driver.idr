@@ -2,6 +2,7 @@ module Idris.Driver
 
 import Compiler.Common
 
+import Core.Context.Log
 import Core.Core
 import Core.InitPrimitives
 import Core.Metadata
@@ -182,7 +183,8 @@ stMain cgs opts
                                   displayErrors res
                                   pure res
 
-                 doRepl <- postOptions result opts
+                 doRepl <- catch (postOptions result opts)
+                                 (\err => emitError err *> pure False)
                  if doRepl then
                    if ide || ideSocket then
                      if not ideSocket

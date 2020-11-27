@@ -7,11 +7,9 @@ import TTImp.TTImp
 import Data.List
 import Data.Strings
 
-%default covering
+import Utils.String
 
-lowerFirst : String -> Bool
-lowerFirst "" = False
-lowerFirst str = assert_total (isLower (prim__strHead str))
+%default covering
 
 export
 getUnique : List String -> String -> String
@@ -167,7 +165,7 @@ mutual
       = ICase fc (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
                  (map (substNamesClause' bvar bound ps) xs)
   substNames' bvar bound ps (ILocal fc xs y)
-      = let bound' = definedInBlock [] xs ++ bound in
+      = let bound' = definedInBlock emptyNS xs ++ bound in
             ILocal fc (map (substNamesDecl' bvar bound ps) xs)
                       (substNames' bvar bound' ps y)
   substNames' bvar bound ps (IApp fc fn arg)

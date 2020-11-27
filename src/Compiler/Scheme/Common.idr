@@ -31,11 +31,12 @@ schString s = concatMap okchar (unpack s)
 
 export
 schName : Name -> String
-schName (NS ns n) = showSep "-" ns ++ "-" ++ schName n
+schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
 schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
+schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
 schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -198,8 +199,7 @@ schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg +
 
 ||| Extended primitives for the scheme backend, outside the standard set of primFn
 public export
-data ExtPrim = SchemeCall
-             | NewIORef | ReadIORef | WriteIORef
+data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
              | VoidElim
@@ -210,7 +210,6 @@ data ExtPrim = SchemeCall
 
 export
 Show ExtPrim where
-  show SchemeCall = "SchemeCall"
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
   show WriteIORef = "WriteIORef"
@@ -229,8 +228,7 @@ Show ExtPrim where
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__newIORef", NewIORef),
+    = cond [(n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),
             (n == UN "prim__newArray", NewArray),
@@ -238,7 +236,8 @@ toPrim pn@(NS _ n)
             (n == UN "prim__arraySet", ArraySet),
             (n == UN "prim__getField", GetField),
             (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim),
+            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN "prim__void", VoidElim),
             (n == UN "prim__os", SysOS),
             (n == UN "prim__codegen", SysCodegen),
             (n == UN "prim__onCollect", OnCollect),
@@ -445,12 +444,6 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
   -- overridden)
   export
   schExtCommon : Int -> ExtPrim -> List NamedCExp -> Core String
-  schExtCommon i SchemeCall [ret, NmPrimVal fc (Str fn), args, world]
-     = pure $ mkWorld ("(apply " ++ fn ++" "
-                  ++ !(readArgs i args) ++ ")")
-  schExtCommon i SchemeCall [ret, fn, args, world]
-       = pure $ mkWorld ("(apply (eval (string->symbol " ++ !(schExp i fn) ++")) "
-                    ++ !(readArgs i args) ++ ")")
   schExtCommon i NewIORef [_, val, world]
       = pure $ mkWorld $ "(box " ++ !(schExp i val) ++ ")"
   schExtCommon i ReadIORef [_, ref, world]

@@ -2,6 +2,7 @@ module TTImp.Elab.Local
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -42,7 +43,7 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
-         let defNames = definedInBlock [] nestdecls
+         let defNames = definedInBlock emptyNS nestdecls
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115

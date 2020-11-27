@@ -50,10 +50,6 @@ import Data.List
 public export
 data Side = LHS | AnyExpr
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
-
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
             SyntaxInfo -> Core ()
@@ -118,6 +114,8 @@ bindBangs ((n, fc, btm) :: bs) tm
                                 (Implicit fc False) tm)
 
 idiomise : FC -> RawImp -> RawImp
+idiomise fc (IAlternative afc u alts)
+  = IAlternative afc (mapAltType (idiomise afc) u) (idiomise afc <$> alts)
 idiomise fc (IApp afc f a)
     = IApp fc (IApp fc (IVar fc (UN "<*>"))
                     (idiomise afc f))
@@ -125,16 +123,16 @@ idiomise fc (IApp afc f a)
 idiomise fc fn = IApp fc (IVar fc (UN "pure")) fn
 
 pairname : Name
-pairname = NS ["Builtin"] (UN "Pair")
+pairname = NS builtinNS (UN "Pair")
 
 mkpairname : Name
-mkpairname = NS ["Builtin"] (UN "MkPair")
+mkpairname = NS builtinNS (UN "MkPair")
 
 dpairname : Name
-dpairname = NS ["DPair", "Builtin"] (UN "DPair")
+dpairname = NS dpairNS (UN "DPair")
 
 mkdpairname : Name
-mkdpairname = NS ["DPair", "Builtin"] (UN "MkDPair")
+mkdpairname = NS dpairNS (UN "MkDPair")
 
 data Bang : Type where
 
@@ -283,7 +281,10 @@ mutual
            pure (IVar fc bn)
   desugarB side ps (PIdiom fc term)
       = do itm <- desugarB side ps term
-           pure (idiomise fc itm)
+           logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
+           let val = idiomise fc itm
+           logRaw "desugar.idiom" 10 "Desugared to" val
+           pure val
   desugarB side ps (PList fc args)
       = expandList side ps fc args
   desugarB side ps (PPair fc l r)
@@ -350,43 +351,12 @@ mutual
                 desugarB side ps (PApp fc (PApp fc (PRef fc (UN "rangeFromThen")) start) n)
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
-
-  desugarB side ps (PPostfixProjs fc rec projs)
-      = do
-        let isPRef = \case
-              PRef _ _ => True
-              _ => False
-        defs <- get Ctxt
-        when (not (isExtension PostfixProjections defs) && not (all isPRef projs)) $
-          throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
-
-        desugarB side ps $ foldl (\x, proj => PApp fc proj x) rec projs
-
-  desugarB side ps (PPostfixProjsSection fc projs args)
-      = do
-        let isPRef = \case
-              PRef _ _ => True
-              _ => False
-        defs <- get Ctxt
-
-        when (not (isExtension PostfixProjections defs)) $ do
-          when (not (all isPRef projs)) $
-            throw (GenericMsg fc "complex postfix projections require %language PostfixProjections")
-
-          case args of
-            [] => pure ()
-            _  => throw $ GenericMsg fc "postfix projection sections require %language PostfixProjections"
-
-        desugarB side ps $
+  desugarB side ps (PPostfixApp fc rec projs)
+      = desugarB side ps $ foldl (\x, proj => PApp fc (PRef fc proj) x) rec projs
+  desugarB side ps (PPostfixAppPartial fc projs)
+      = desugarB side ps $
           PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
-            foldl
-              (\r, arg => PApp fc r arg)
-              (foldl
-                (\r, proj => PApp fc proj r)
-                (PRef fc (MN "paRoot" 0))
-                projs)
-              args
-
+            foldl (\r, proj => PApp fc (PRef fc proj) r) (PRef fc (MN "paRoot" 0)) projs
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
 
@@ -412,7 +382,7 @@ mutual
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
 
-  addNS : Maybe (List String) -> Name -> Name
+  addNS : Maybe Namespace -> Name -> Name
   addNS (Just ns) n@(NS _ _) = n
   addNS (Just ns) n = NS ns n
   addNS _ n = n
@@ -421,7 +391,7 @@ mutual
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {auto m : Ref MD Metadata} ->
-             Side -> List Name -> FC -> Maybe (List String) -> List PDo -> Core RawImp
+             Side -> List Name -> FC -> Maybe Namespace -> List PDo -> Core RawImp
   expandDo side ps fc ns [] = throw (GenericMsg fc "Do block cannot be empty")
   expandDo side ps _ _ [DoExp fc tm] = desugar side ps tm
   expandDo side ps fc ns [e]
@@ -576,7 +546,7 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  {auto m : Ref MD Metadata} ->
-                 List Name -> List String -> PField ->
+                 List Name -> Namespace -> PField ->
                  Core IField
   desugarField ps ns (MkField fc doc rig p n ty)
       = do addDocStringNS ns n doc
@@ -799,13 +769,14 @@ mutual
 
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
+           let recName = nameRoot tn
            fields' <- traverse (desugarField (ps ++ map fname fields ++
-                                              map fst params) [nameRoot tn])
+                                              map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
            let conname = maybe (mkConName tn) id conname_in
            let _ = the Name conname
-           pure [IRecord fc (Just (nameRoot tn))
+           pure [IRecord fc (Just recName)
                          vis (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
@@ -855,6 +826,8 @@ mutual
              UnboundImplicits a => do
                setUnboundImplicits a
                pure [IPragma (\nest, env => setUnboundImplicits a)]
+             PrefixRecordProjections b => do
+               pure [IPragma (\nest, env => setPrefixRecordProjections b)]
              AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
              PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]
@@ -867,8 +840,7 @@ mutual
              StartExpr tm => pure [IPragma (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
              Overloadable n => pure [IPragma (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma (\nest, env => setExtension e)]
-             DefaultTotality tot => do setDefaultTotalityOption tot
-                                       pure []
+             DefaultTotality tot => pure [IPragma (\_, _ => setDefaultTotalityOption tot)]
 
   export
   desugar : {auto s : Ref Syn SyntaxInfo} ->

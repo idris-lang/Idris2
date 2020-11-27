@@ -1,6 +1,7 @@
 module TTImp.Elab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.LinearCheck
@@ -23,8 +24,8 @@ import Data.NameMap
 
 findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
-findPLetRenames (Bind fc n (PLet c (Local _ _ idx p) ty) sc)
-    = case nameAt idx p of
+findPLetRenames (Bind fc n (PLet _ c (Local _ _ idx p) ty) sc)
+    = case nameAt p of
            x@(MN _ _) => (x, (c, n)) :: findPLetRenames sc
            _ => findPLetRenames sc
 findPLetRenames (Bind fc n _ sc) = findPLetRenames sc
@@ -33,7 +34,7 @@ findPLetRenames tm = []
 doPLetRenames : {vars : _} ->
                 List (Name, (RigCount, Name)) ->
                 List Name -> Term vars -> Term vars
-doPLetRenames ns drops (Bind fc n b@(PLet _ _ _) sc)
+doPLetRenames ns drops (Bind fc n b@(PLet _ _ _ _) sc)
     = if n `elem` drops
          then subst (Erased fc False) (doPLetRenames ns drops sc)
          else Bind fc n b (doPLetRenames ns drops sc)

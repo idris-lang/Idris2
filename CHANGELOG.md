@@ -1,6 +1,10 @@
 Changes since Idris 2 v0.2.1
 ----------------------------
 
+Library changes:
+
+* Added `Data.HVect` in `contrib`, for heterogeneous vectors.
+
 Command-line options changes:
 
 * Added `--color` and `--no-color` options for colored terminal output.
@@ -15,6 +19,8 @@ Compiler changes:
 
 * Added primitives to the parsing library used in the compiler to get more precise
   boundaries to the AST nodes `FC`.
+* New experimental ``refc`` code generator, which generates C with reference
+  counting.
 
 REPL/IDE mode changes:
 
