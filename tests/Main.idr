@@ -159,6 +159,10 @@ preludeTests : TestPool
 preludeTests = MkTestPool []
   [ "reg001" ]
 
+templateTests : TestPool
+templateTests = MkTestPool []
+  [ "simple-test", "ttimp", "with-ipkg" ]
+
 main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
@@ -168,6 +172,7 @@ main = runner
   , testPaths "prelude" preludeTests
   , testPaths "chez" chezTests
   , testPaths "node" nodeTests
+  , testPaths "templates" templateTests
   ] where
 
     testPaths : String -> TestPool -> TestPool
