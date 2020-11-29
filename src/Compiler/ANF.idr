@@ -72,7 +72,7 @@ mutual
     show (AApp fc c arg)
         = show c ++ " @ (" ++ show arg ++ ")"
     show (ALet fc x val sc)
-        = "%let v" ++ show x ++ " = " ++ show val ++ " in " ++ show sc
+        = "%let v" ++ show x ++ " = (" ++ show val ++ ") in (" ++ show sc ++ ")"
     show (ACon fc n t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AOp fc op args)
@@ -81,10 +81,10 @@ mutual
         = "%extprim " ++ show p ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def
+             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
     show (AConstCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def
+             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
     show (APrimVal _ x) = show x
     show (AErased _) = "___"
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
