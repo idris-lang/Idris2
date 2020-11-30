@@ -61,6 +61,7 @@ import Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import System
 import System.File
+import System.Readline
 
 %default covering
 
@@ -892,22 +893,26 @@ mutual
   repl
       = do ns <- getNS
            opts <- get ROpts
-           coreLift (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
-           inp <- coreLift getLine
-           end <- coreLift $ fEOF stdin
-           if end
-             then do
+           inp <- coreLift $ readline $ prompt (evalMode opts) ++ show ns ++ "> "
+           case inp of
+             Nothing => do
                -- start a new line in REPL mode (not relevant in IDE mode)
                coreLift $ putStrLn ""
                iputStrLn $ pretty "Bye for now!"
-              else do res <- interpret inp
-                      handleResult res
+             Just inp' => do
+               res <- interpret inp'
+               maybeAddHistory inp'
+               handleResult res
 
     where
       prompt : REPLEval -> String
       prompt EvalTC = "[tc] "
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
+
+  maybeAddHistory : String -> Core ()
+  maybeAddHistory "" = pure ()
+  maybeAddHistory s = coreLift $ addHistory s
 
   export
   handleMissing' : MissedResult -> String

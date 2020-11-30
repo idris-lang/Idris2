@@ -5,6 +5,10 @@ PREFIX ?= $(HOME)/.idris2
 # For Windows targets. Set to 1 to support Windows 7.
 OLD_WIN ?= 0
 
+# Set to 1 to enable line editing and history functions in the Idris2 REPL,
+# and in System.Readline
+READLINE ?= 0
+
 ##################################################################
 
 RANLIB ?= ranlib

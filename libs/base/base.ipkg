@@ -62,4 +62,5 @@ modules = Control.App,
           System.File,
           System.FFI,
           System.Info,
+          System.Readline,
           System.REPL

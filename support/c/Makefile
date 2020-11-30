@@ -18,6 +18,10 @@ endif
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 
+ifeq ($(READLINE), 1)
+	LDFLAGS += -lreadline
+	CFLAGS += -DREADLINE
+endif
 
 all: build
 
