@@ -500,9 +500,9 @@ export
 data QVar : Type where
 
 public export
-interface Quote (tm : List Name -> Type) where
+interface Quote tm where
     quote : {auto c : Ref Ctxt Defs} ->
-            {vars : _} ->
+            {vars : List Name} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteGen : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
@@ -767,9 +767,9 @@ etaContract tm = do
         _ => pure tm
 
 public export
-interface Convert (tm : List Name -> Type) where
+interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : _} ->
+            {vars : List Name} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convGen : {auto c : Ref Ctxt Defs} ->

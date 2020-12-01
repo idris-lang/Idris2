@@ -678,28 +678,33 @@ mutual
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
   desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
       = do addDocString tn doc
+           let paramNames = map fst params
+
            let cons = concatMap expandConstraint cons_in
-           cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ map fst params)
+           cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ paramNames)
                                                          (snd ntm)
                                           pure (fst ntm, tm')) cons
-           params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
-                                            pure (fst ntm, tm')) params
+           params' <- traverse (\ (nm, (rig, tm)) =>
+                         do tm' <- desugar AnyExpr ps tm
+                            pure (nm, (rig, tm')))
+                      params
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn body)
            let bnames = ifThenElse !isUnboundImplicits
                           (concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
+                                      (ps ++ mnames ++ paramNames) [])
                                   (map Builtin.snd cons') ++
                            concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
-                                  (map Builtin.snd params'))
+                                      (ps ++ mnames ++ paramNames) [])
+                                  (map (snd . snd) params'))
                           []
-           let paramsb = map (\ ntm => (Builtin.fst ntm,
-                                        doBind bnames (Builtin.snd ntm))) params'
-           let consb = map (\ ntm => (Builtin.fst ntm,
-                                      doBind bnames (Builtin.snd ntm))) cons'
+           let paramsb = map (\ (nm, (rig, tm)) =>
+                                 let tm' = doBind bnames tm in
+                                 (nm, (rig, tm')))
+                         params'
+           let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
-           body' <- traverse (desugarDecl (ps ++ mnames ++ map fst params)) body
+           body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
            pure [IPragma (\nest, env =>
                              elabInterface fc vis env nest consb
                                            tn paramsb det conname

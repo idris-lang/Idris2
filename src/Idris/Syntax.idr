@@ -283,7 +283,7 @@ mutual
                     (constraints : List (Maybe Name, PTerm)) ->
                     Name ->
                     (doc : String) ->
-                    (params : List (Name, PTerm)) ->
+                    (params : List (Name, (RigCount, PTerm))) ->
                     (det : List Name) ->
                     (conName : Maybe Name) ->
                     List PDecl ->
@@ -966,11 +966,11 @@ mapPTermM f = goPTerm where
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
     goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
-    goPDecl (PInterface fc v mnts n doc nts ns mn ps) =
+    goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
                       <*> pure doc
-                      <*> goPairedPTerms nts
+                      <*> go3TupledPTerms nrts
                       <*> pure ns
                       <*> pure mn
                       <*> goPDecls ps
