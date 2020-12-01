@@ -83,9 +83,7 @@ addDefaults fc impName params allms defs body
                     -- be substituted for the actual parameters because they are going
                     -- to be referring to unbound variables otherwise.
                     -- (See test idris2/interface018 for an example!)
-                    let mupdates
-                            = params
-                            ++ map specialiseMeth allms
+                    let mupdates = params ++ map specialiseMeth allms
                         cs' = map (substNamesClause [] mupdates) cs in
                         extendBody ms ns
                              (IDef fc n (map (substLocClause fc) cs') :: body)
@@ -149,11 +147,12 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
          logTerm "elab.implementation" 3 ("Found interface " ++ show cn) ity
          log "elab.implementation" 3 $
-                 " with params: " ++ show (params cdata)
-                 ++ " and parents: " ++ show (parents cdata)
-                 ++ " using implicits: " ++ show impsp
-                 ++ " and methods: " ++ show (methods cdata) ++ "\n"
-                 ++ "Constructor: " ++ show (iconstructor cdata) ++ "\n"
+                 "\n  with params: " ++ show (params cdata)
+                 ++ "\n  specialised to: " ++ show ps
+                 ++ "\n  and parents: " ++ show (parents cdata)
+                 ++ "\n  using implicits: " ++ show impsp
+                 ++ "\n  and methods: " ++ show (methods cdata) ++ "\n"
+                 ++ "\nConstructor: " ++ show (iconstructor cdata) ++ "\n"
          logTerm "elab.implementation" 3 "Constructor type: " conty
          log "elab.implementation" 5 $ "Making implementation " ++ show impName
 

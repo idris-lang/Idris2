@@ -386,12 +386,12 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                      $ substNames vars methNameMap dty
 
              dty_imp <- bindTypeNames [] (map fst tydecls ++ vars) dty
-             log "elab.interface" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
+             log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
              let dtydecl = IClaim fc rig vis [] (MkImpTy fc dn dty_imp)
              processDecl [] nest env dtydecl
 
              let cs' = map (changeName dn) cs
-             log "elab.interface" 5 $ "Default method body " ++ show cs'
+             log "elab.interface.default" 5 $ "Default method body " ++ show cs'
 
              processDecl [] nest env (IDef fc dn cs')
              -- Reset the original context, we don't need to keep the definition
