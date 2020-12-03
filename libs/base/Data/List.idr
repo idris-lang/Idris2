@@ -58,7 +58,7 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 |||
 ||| @ ok a proof that the index is within bounds
 public export
-index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index : (n : Nat) -> (xs : List a) -> {auto 0 ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
 
