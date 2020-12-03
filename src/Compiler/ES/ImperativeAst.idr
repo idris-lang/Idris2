@@ -15,7 +15,7 @@ mutual
                      | IEPrimFnExt Name (List ImperativeExp)
                      | IEConstructorHead ImperativeExp
                      | IEConstructorTag (Either Int String)
-                     | IEConstructorArg Int ImperativeExp
+                     | IEConstructorArg Int ImperativeExp -- constructor arg index starts at 1
                      | IEConstructor (Either Int String) (List ImperativeExp)
                      | IEDelay ImperativeExp
                      | IEForce ImperativeExp
@@ -81,64 +81,104 @@ mutual
 
 mutual
   public export
-  replaceNamesExp : List (Name, ImperativeExp) -> ImperativeExp -> ImperativeExp
-  replaceNamesExp reps (IEVar n) =
-    case lookup n reps of
-      Nothing => IEVar n
-      Just e => e
-  replaceNamesExp reps (IELambda args body) =
-    IELambda args $ replaceNamesExpS reps body
-  replaceNamesExp reps (IEApp f args) =
-    IEApp (replaceNamesExp reps f) (replaceNamesExp reps <$> args)
-  replaceNamesExp reps (IEConstant c) =
-    IEConstant c
-  replaceNamesExp reps (IEPrimFn f args) =
-    IEPrimFn f (replaceNamesExp reps <$> args)
-  replaceNamesExp reps (IEPrimFnExt f args) =
-    IEPrimFnExt f (replaceNamesExp reps <$> args)
-  replaceNamesExp reps (IEConstructorHead e) =
-    IEConstructorHead $ replaceNamesExp reps e
-  replaceNamesExp reps (IEConstructorTag i) =
-    IEConstructorTag i
-  replaceNamesExp reps (IEConstructorArg i e) =
-    IEConstructorArg i (replaceNamesExp reps e)
-  replaceNamesExp reps (IEConstructor t args) =
-    IEConstructor t (replaceNamesExp reps <$> args)
-  replaceNamesExp reps (IEDelay e) =
-    IEDelay $ replaceNamesExp reps e
-  replaceNamesExp reps (IEForce e) =
-    IEForce $ replaceNamesExp reps e
-  replaceNamesExp reps IENull =
-    IENull
+  replaceExp : (ImperativeExp -> Maybe ImperativeExp) -> ImperativeExp -> ImperativeExp
+  replaceExp rep x@(IEVar n) =
+    case rep x of
+      Just z => z
+      Nothing => x
+  replaceExp rep x@(IELambda args body) =
+    case rep x of
+      Just z => z
+      Nothing => IELambda args $ replaceExpS rep body
+  replaceExp rep x@(IEApp f args) =
+    case rep x of
+      Just z => z
+      Nothing => IEApp (replaceExp rep f) (replaceExp rep <$> args)
+  replaceExp rep x@(IEConstant c) =
+    case rep x of
+      Just z => z
+      Nothing => x
+  replaceExp rep x@(IEPrimFn f args) =
+    case rep x of
+      Just z => z
+      Nothing => IEPrimFn f (replaceExp rep <$> args)
+  replaceExp rep x@(IEPrimFnExt f args) =
+    case rep x of
+      Just z => z
+      Nothing => IEPrimFnExt f (replaceExp rep <$> args)
+  replaceExp rep x@(IEConstructorHead e) =
+    case rep x of
+      Just z => z
+      Nothing => IEConstructorHead $ replaceExp rep e
+  replaceExp rep x@(IEConstructorTag i) =
+    case rep x of
+      Just z => z
+      Nothing => x
+  replaceExp rep x@(IEConstructorArg i e) =
+    case rep x of
+      Just z => z
+      Nothing => IEConstructorArg i (replaceExp rep e)
+  replaceExp rep x@(IEConstructor t args) =
+    case rep x of
+      Just z => z
+      Nothing => IEConstructor t (replaceExp rep <$> args)
+  replaceExp rep x@(IEDelay e) =
+    case rep x of
+      Just z => z
+      Nothing => IEDelay $ replaceExp rep e
+  replaceExp rep x@(IEForce e) =
+    case rep x of
+      Just z => z
+      Nothing => IEForce $ replaceExp rep e
+  replaceExp rep x@IENull =
+    case rep x of
+      Just z => z
+      Nothing => x
 
   public export
-  replaceNamesExpS : List (Name, ImperativeExp) -> ImperativeStatement -> ImperativeStatement
-  replaceNamesExpS reps DoNothing =
+  replaceExpS : (ImperativeExp -> Maybe ImperativeExp) -> ImperativeStatement -> ImperativeStatement
+  replaceExpS rep DoNothing =
     DoNothing
-  replaceNamesExpS reps (SeqStatement x y) =
-    SeqStatement (replaceNamesExpS reps x) (replaceNamesExpS reps y)
-  replaceNamesExpS reps (FunDecl fc n args body) =
-    FunDecl fc n args $ replaceNamesExpS reps body
-  replaceNamesExpS reps decl@(ForeignDecl fc n path args ret) =
+  replaceExpS rep (SeqStatement x y) =
+    SeqStatement (replaceExpS rep x) (replaceExpS rep y)
+  replaceExpS rep (FunDecl fc n args body) =
+    FunDecl fc n args $ replaceExpS rep body
+  replaceExpS reps decl@(ForeignDecl fc n path args ret) =
     decl
-  replaceNamesExpS reps (ReturnStatement e) =
-    ReturnStatement $ replaceNamesExp reps e
-  replaceNamesExpS reps (SwitchStatement s alts def) =
-    let s_    = replaceNamesExp reps s
-        alts_ = (\(e,b) => (replaceNamesExp reps e, replaceNamesExpS reps b)) <$> alts
-        def_  = replaceNamesExpS reps <$> def
+  replaceExpS rep (ReturnStatement e) =
+    ReturnStatement $ replaceExp rep e
+  replaceExpS rep (SwitchStatement s alts def) =
+    let s_    = replaceExp rep s
+        alts_ = (\(e,b) => (replaceExp rep e, replaceExpS rep b)) <$> alts
+        def_  = replaceExpS rep <$> def
     in SwitchStatement s_ alts_ def_
-  replaceNamesExpS reps (LetDecl n v) =
-    LetDecl n $ replaceNamesExp reps <$> v
-  replaceNamesExpS reps (ConstDecl n v) =
-    ConstDecl n $ replaceNamesExp reps v
-  replaceNamesExpS reps (MutateStatement n v) =
-    MutateStatement n $ replaceNamesExp reps v
-  replaceNamesExpS reps (ErrorStatement s) =
+  replaceExpS rep (LetDecl n v) =
+    LetDecl n $ replaceExp rep <$> v
+  replaceExpS rep (ConstDecl n v) =
+    ConstDecl n $ replaceExp rep v
+  replaceExpS rep (MutateStatement n v) =
+    MutateStatement n $ replaceExp rep v
+  replaceExpS rep (ErrorStatement s) =
     ErrorStatement s
-  replaceNamesExpS reps (EvalExpStatement x) =
-    EvalExpStatement $ replaceNamesExp reps x
-  replaceNamesExpS reps (CommentStatement x) =
+  replaceExpS rep (EvalExpStatement x) =
+    EvalExpStatement $ replaceExp rep x
+  replaceExpS rep (CommentStatement x) =
     CommentStatement x
-  replaceNamesExpS reps (ForEverLoop x) =
-    ForEverLoop $ replaceNamesExpS reps x
+  replaceExpS rep (ForEverLoop x) =
+    ForEverLoop $ replaceExpS rep x
+
+
+rep : List (Name, ImperativeExp) -> ImperativeExp -> Maybe ImperativeExp
+rep reps (IEVar n) =
+  lookup n reps
+rep _ _ = Nothing
+
+public export
+replaceNamesExpS : List (Name, ImperativeExp) -> ImperativeStatement -> ImperativeStatement
+replaceNamesExpS reps x =
+  replaceExpS (rep reps) x
+
+public export
+replaceNamesExp : List (Name, ImperativeExp) -> ImperativeExp -> ImperativeExp
+replaceNamesExp reps x =
+  replaceExp (rep reps) x
