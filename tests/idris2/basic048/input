@@ -1,5 +1,2 @@
-:t myDog
-:t mySuperDog
-:t other
-:m
+function' 1
 :q

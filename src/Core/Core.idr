@@ -438,6 +438,10 @@ export %inline
 (<$>) : (a -> b) -> Core a -> Core b
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
+export %inline
+ignore : Core a -> Core ()
+ignore = map (\ _ => ())
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b

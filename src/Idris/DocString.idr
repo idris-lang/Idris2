@@ -188,5 +188,5 @@ getContents ns
              pure (visibility def /= Private)
 
     inNS : Name -> Bool
-    inNS (NS xns (UN _)) = xns == ns
+    inNS (NS xns (UN _)) = ns `isParentOf` xns
     inNS _ = False

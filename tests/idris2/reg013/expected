@@ -20,7 +20,7 @@ UnboundImplicits.idr:14:25--14:26
  14 | interface Foo (a : Vect n Nat) where
     |                         ^
 
-Error: While processing type of Functor implementation at UnboundImplicits.idr:17:1--18:1. Undefined name n. 
+Error: While processing type of Functor implementation at UnboundImplicits.idr:17:1--17:38. Undefined name n. 
 
 UnboundImplicits.idr:17:30--17:31
     |

@@ -217,9 +217,9 @@ compileToImperative c tm =
     cdata <- getCompileData Cases tm
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
-    s <- newRef Imps (MkImpSt 0)
+    newRef Imps (MkImpSt 0)
     lst_defs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     let defs = concat lst_defs
-    let defs_optim = tailRecOptim defs
+    defs_optim <- tailRecOptim defs
     (s, main) <- impExp False ctm
     pure $ (defs_optim, s <+> EvalExpStatement main)

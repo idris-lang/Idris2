@@ -1,7 +1,7 @@
 1/1: Building partial (partial.idr)
 Error: foo is not covering.
 
-partial.idr:11:1--13:1
+partial.idr:11:1--12:19
  11 | Foo (Maybe Int) where
  12 |   foo Nothing = ()
 

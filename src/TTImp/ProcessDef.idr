@@ -107,48 +107,58 @@ recoverable : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Defs -> NF vars -> NF vars -> Core Bool
 -- Unlike the above, any mismatch will do
+
+-- TYPE CONSTRUCTORS
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+-- Type constructor vs. primitive type
+recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _ _) _ = pure True
+
+-- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
          else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
     = pure True -- both functions; recoverable
-recoverable defs (NTCon _ _ _ _ _) _ = pure True
-recoverable defs (NDCon _ _ _ _ _) _ = pure True
+
+-- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
-recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+
+-- OTHERWISE: no
 recoverable defs x y = pure False
 
 export
 recoverableErr : {auto c : Ref Ctxt Defs} ->
                  Defs -> Error -> Core Bool
-recoverableErr defs err@(CantConvert fc env l r)
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
-recoverableErr defs err@(CantSolveEq fc env l r)
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         recoverable defs !(nf defs env l)
-                          !(nf defs env r)
-recoverableErr defs err@(BadDotPattern _ _ ErasedArg _ _)
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         pure True
-recoverableErr defs err@(CyclicMeta _ _ _ _)
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         pure True
-recoverableErr defs err@(AllFailed errs)
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs err@(WhenUnifying _ _ _ _ err')
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         recoverableErr defs err'
-recoverableErr defs err
-    = do logC "declare.def.impossible" 8 (show <$> normaliseErr err)
-         pure False
+recoverableErr defs (CantConvert fc env l r)
+  = do l <- nf defs env l
+       r <- nf defs env r
+       log "coverage.recover" 10 $ unlines
+         [ "Recovering from CantConvert?"
+         , "Checking:"
+         , "  " ++ show l
+         , "  " ++ show r
+         ]
+       recoverable defs l r
+
+recoverableErr defs (CantSolveEq fc env l r)
+    = recoverable defs !(nf defs env l)
+                       !(nf defs env r)
+recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
+recoverableErr defs (CyclicMeta _ _ _ _) = pure True
+recoverableErr defs (AllFailed errs)
+    = anyM (recoverableErr defs) (map snd errs)
+recoverableErr defs (WhenUnifying _ _ _ _ err)
+    = recoverableErr defs err
+recoverableErr defs _ = pure False
 
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
@@ -815,29 +825,24 @@ processDef opts nest env fc n_in cs_in
                    autoimp <- isUnboundImplicits
                    setUnboundImplicits True
                    (_, lhstm) <- bindNames False itm
-                   log "declare.def.impossible" 5 $ "Pre elab: " ++ show lhstm
                    setUnboundImplicits autoimp
                    (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
                                     (IBindHere fc PATTERN lhstm) Nothing
-                   logC "declare.def.impossible" 5 $ ("Post elab: " ++) . show <$> toFullNames lhstm
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs [] lhstm
-                   logC "declare.def.impossible" 5 $ ("Normalised: " ++) . show <$> toFullNames lhs
                    if !(hasEmptyPat defs [] lhs)
-                      then do put Ctxt ctxt
-                              log "declare.def.impossible" 3 "Impossible due to incompatible patterns"
+                      then do log "declare.def.impossible" 5 "No empty pat"
+                              put Ctxt ctxt
                               pure Nothing
-                      else do empty <- clearDefs ctxt
+                      else do log "declare.def.impossible" 5 "Some empty pat"
+                              empty <- clearDefs ctxt
                               rtm <- closeEnv empty !(nf empty [] lhs)
                               put Ctxt ctxt
-                              log "declare.def.impossible" 3 "Possible case: compatible patterns"
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
                            if not !(recoverableErr defs err)
-                              then do log "declare.def.impossible" 3 "Impossible due to unrecoverable error"
-                                      pure Nothing
-                              else do log "declare.def.impossible" 3 "Possible case: recoverable error"
-                                      pure (Just tm))
+                              then pure Nothing
+                              else pure (Just tm))
       where
         closeEnv : Defs -> NF [] -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)

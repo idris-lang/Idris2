@@ -31,7 +31,7 @@ schString s = concatMap okchar (unpack s)
 
 export
 schName : Name -> String
-schName (NS ns n) = showNSWithSep "-" ns ++ "-" ++ schName n
+schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
 schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
@@ -236,7 +236,8 @@ toPrim pn@(NS _ n)
             (n == UN "prim__arraySet", ArraySet),
             (n == UN "prim__getField", GetField),
             (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim),
+            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN "prim__void", VoidElim),
             (n == UN "prim__os", SysOS),
             (n == UN "prim__codegen", SysCodegen),
             (n == UN "prim__onCollect", OnCollect),

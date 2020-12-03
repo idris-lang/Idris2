@@ -47,6 +47,10 @@ irrelevantBounds : ty -> WithBounds ty
 irrelevantBounds x = MkBounded x True (-1) (-1) (-1) (-1)
 
 export
+removeIrrelevance : WithBounds ty -> WithBounds ty
+removeIrrelevance (MkBounded val ir sl sc el ec) = MkBounded val True sl sc el ec
+
+export
 mergeBounds : WithBounds ty -> WithBounds ty' -> WithBounds ty'
 mergeBounds (MkBounded _ True _ _ _ _) (MkBounded val True _ _ _ _) = irrelevantBounds val
 mergeBounds (MkBounded _ True _ _ _ _) b2 = b2

@@ -109,7 +109,7 @@ keywordSafe "var" = "var_"
 keywordSafe s = s
 
 jsName : Name -> String
-jsName (NS ns n) = showNSWithSep "_" ns ++ "_" ++ jsName n
+jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
 jsName (UN n) = keywordSafe $ jsIdent n
 jsName (MN n i) = jsIdent n ++ "_" ++ show i
 jsName (PV n d) = "pat__" ++ jsName n
@@ -258,6 +258,7 @@ jsOp DoubleATan [x] = pure $ "Math.atan(" ++ x ++ ")"
 jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
+
 jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
@@ -269,6 +270,16 @@ jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
 jsOp (Cast IntType IntegerType) [x] = pure x
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+
+jsOp (Cast Bits8Type IntType) [x] = pure x
+jsOp (Cast Bits16Type IntType) [x] = pure x
+jsOp (Cast Bits32Type IntType) [x] = pure x
+jsOp (Cast Bits64Type IntType) [x] = pure x
+
+jsOp (Cast Bits8Type IntegerType) [x] = pure x
+jsOp (Cast Bits16Type IntegerType) [x] = pure x
+jsOp (Cast Bits32Type IntegerType) [x] = pure x
+jsOp (Cast Bits64Type IntegerType) [x] = pure x
 
 jsOp (Cast IntType Bits8Type) [x] = boundedUInt 8 x
 jsOp (Cast IntType Bits16Type) [x] = boundedUInt 16 x
@@ -297,7 +308,7 @@ jsOp (Cast Bits64Type Bits16Type) [x] = boundedUInt 16 x
 jsOp (Cast Bits64Type Bits32Type) [x] = boundedUInt 32 x
 
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
-jsOp (Cast ty ty2) [x] = jsCrashExp $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
+jsOp (Cast ty ty2) [x] = jsCrashExp $ jsString $ "invalid cast: + " ++ show ty ++ " + ' -> ' + " ++ show ty2
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 
@@ -366,6 +377,8 @@ jsPrim (NS _ (UN "prim__os")) [] =
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
     sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
     pure sysos
+jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
+jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String
