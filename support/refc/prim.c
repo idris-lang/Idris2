@@ -86,6 +86,12 @@ Value *sysOS(void)
     return (Value *)makeString("Linux");
 #elif __FreeBSD__
     return (Value *)makeString("FreeBSD");
+#elif __OpenBSD__
+    return (Value *)makeString("OpenBSD");
+#elif __NetBSD__
+    return (Value *)makeString("NetBSD");
+#elif __DragonFly__
+    return (Value *)makeString("DragonFly");
 #elif __unix || __unix__
     return (Value *)makeString("Unix");
 #else
