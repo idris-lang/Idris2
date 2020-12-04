@@ -4,13 +4,26 @@ data Vect : Nat -> Type -> Type where
      (::) : a -> Vect k a -> Vect (S k) a
 ```
 
-```idris
+<!-- idris
 %name Vect xs, ys, zs
-```
+-->
 
 ```idris
 dupAll : Vect n a -> Vect n (a, a)
 dupAll xs = zipHere xs xs
   where
     zipHere : forall n . Vect n a -> Vect n b -> Vect n (a, b)
+```
+
+
+<!-- idris
+
+data Foobar = MkFoo
+
+-->
+
+
+```idris
+showFooBar : Foobar -> String
+showFooBar MkFoo = "MkFoo"
 ```
