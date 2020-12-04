@@ -30,13 +30,22 @@ styleCMark = MkLitStyle
               [".md", ".markdown"]
 
 export
+styleTeX : LiterateStyle
+styleTeX = MkLitStyle
+              [("\\begin{code}", "\\end{code}"), ("\\begin{hidden}", "\\end{hidden}")]
+              Nil
+              [".tex", ".ltx"]
+
+export
 isLitFile : String -> Maybe LiterateStyle
 isLitFile fname =
     case isStyle styleBird of
       Just s => Just s
       Nothing => case isStyle styleOrg of
                      Just s => Just s
-                     Nothing => isStyle styleCMark
+                     Nothing => case isStyle styleCMark of
+                                     Just s => Just s
+                                     Nothing => isStyle styleTeX
 
   where
    hasSuffix : String -> Bool
@@ -57,7 +66,9 @@ isLitLine str =
                     (Just l, s) => (Just l, s)
                     otherwise => case isLiterateLine styleCMark str of
                                    (Just l, s) => (Just l, s)
-                                   otherwise => (Nothing, str)
+                                   otherwise => case isLiterateLine styleTeX str of
+                                                   (Just l, s) => (Just l, s)
+                                                   otherwise => (Nothing, str)
 
 export
 unlit : Maybe LiterateStyle -> String -> Either LiterateError String

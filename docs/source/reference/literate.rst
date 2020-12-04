@@ -83,7 +83,7 @@ Each of the following markup is recognised regardless of case:
     #+end_src
 
 CommonMark
-************
+**********
 
 We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark style literate files.
 
@@ -122,3 +122,37 @@ We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark styl
            -> List a
            -> List b
         map f _ = Nil
+
+LaTeX
+*****
+
+We treat files with an extension of ``.tex`` and ``.ltx`` as LaTeX style literate files.
+
++ We treat environments named ``code`` as visible code blocks::
+
+    \begin{code}
+    data Nat = Z | S Nat
+    \end{code}
+
+
++ We treat environments named ``hidden`` as invisible code blocks::
+
+    \begin{hidden}
+    data Nat = Z | S Nat
+    \end{hidden}
+
++ Code lines are not supported.
+
++ Specifications can be given using user defined environments.
+
+We do not provide definitions for these code blocks and ask the user to define them.
+With one such example using ``fancyverbatim`` and ``comment`` packages as::
+
+    \usepackage{fancyvrb}
+    \DefineVerbatimEnvironment
+      {code}{Verbatim}
+      {}
+
+    \usepackage{comment}
+
+    \excludecomment{hidden}
