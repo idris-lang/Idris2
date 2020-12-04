@@ -1390,13 +1390,14 @@ topDecl fname indents
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
-    = let (cs', rest) = spanBy isClause ds in
-          PDef annot (cs ++ concat cs') :: assert_total (collectDefs rest)
-  where
-    isClause : PDecl -> Maybe (List PClause)
-    isClause (PDef annot cs)
-        = Just cs
-    isClause _ = Nothing
+    = let (csWithFC, rest) = spanBy isPDef ds
+          cs' = cs ++ concat (map snd csWithFC)
+          annot' = foldr 
+                   (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
+                   annot 
+                   (map fst csWithFC)
+      in
+          PDef annot' cs' :: assert_total (collectDefs rest)
 collectDefs (PNamespace annot ns nds :: ds)
     = PNamespace annot ns (collectDefs nds) :: collectDefs ds
 collectDefs (PMutual annot nds :: ds)

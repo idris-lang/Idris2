@@ -61,4 +61,5 @@ or via the `IDRIS2_CG` environment variable.
    racket
    gambit
    javascript
+   refc
    custom

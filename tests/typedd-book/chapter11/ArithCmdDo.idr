@@ -2,7 +2,7 @@ import Data.Primitives.Views
 import Data.Strings
 import System
 
--- %default total
+%default total
 
 export
 data Command : Type -> Type where

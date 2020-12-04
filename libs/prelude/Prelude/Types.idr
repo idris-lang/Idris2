@@ -24,6 +24,13 @@ data Nat =
 
 %name Nat k, j, i
 
+-- This is used in the compiler as an efficient substitute for integerToNat.
+prim__integerToNat : Integer -> Nat
+prim__integerToNat i
+  = if intToBool (prim__lte_Integer 0 i)
+      then believe_me i
+      else Z
+
 public export
 integerToNat : Integer -> Nat
 integerToNat x
@@ -194,6 +201,9 @@ data Dec : Type -> Type where
   ||| @ contra a demonstration that prop would be a contradiction
   No  : (contra : prop -> Void) -> Dec prop
 
+export Uninhabited (Yes p === No q) where uninhabited eq impossible
+export Uninhabited (No p === Yes q) where uninhabited eq impossible
+
 ------------
 -- EITHER --
 ------------
@@ -206,6 +216,9 @@ data Either : (a : Type) -> (b : Type) -> Type where
 
   ||| The other possibility, conventionally used to represent success.
   Right : forall a, b. (1 x : b) -> Either a b
+
+export Uninhabited (Left p === Right q) where uninhabited eq impossible
+export Uninhabited (Right p === Left q) where uninhabited eq impossible
 
 ||| Simply-typed eliminator for Either.
 ||| @ f the action to take on Left

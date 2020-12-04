@@ -21,6 +21,8 @@ modules =
     Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC.RefC,
+
     Compiler.Scheme.Chez,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
