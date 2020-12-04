@@ -1,0 +1,36 @@
+\documentclass{article}
+
+\usepackage{fancyvrb}
+
+\usepackage{comment}
+
+\DefineVerbatimEnvironment
+  {code}{Verbatim}
+  {} % Add fancy options here if you like.
+
+\excludecomment{hidden}
+
+\begin{hidden}
+module LitTeX
+
+%default total
+\end{hidden}
+
+\begin{document}
+
+\begin{code}
+data V a = Empty | Extend a (V a)
+\end{code}
+
+\begin{code}
+isCons : V a -> Bool
+isCons Empty = False
+isCons (Extend _ _) = True
+\end{code}
+
+\begin{hidden}
+namespace Hidden
+  data U a = Empty | Extend a (U a)
+\end{hidden}
+
+\end{document}
