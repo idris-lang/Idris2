@@ -97,7 +97,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
         apply f [] = f
         apply f ((n, arg, Explicit) :: xs) = apply (IApp         (getFC f) f          arg) xs
-        apply f ((n, arg, _       ) :: xs) = apply (IImplicitApp (getFC f) f (Just n) arg) xs
+        apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
     elabAsData : Name -> Core ()
     elabAsData cname
@@ -167,7 +167,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    let lhs = IApp fc (IVar fc projNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
-                                    else IImplicitApp fc lhs_exp (Just (UN fldNameStr))
+                                    else INamedApp fc lhs_exp (UN fldNameStr)
                                              (IBindVar fc fldNameStr))
                    let rhs = IVar fc (UN fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs

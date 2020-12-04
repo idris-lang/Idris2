@@ -6,6 +6,6 @@ Vect2.yaff:25:1--26:1:{pat 0 {b:27} : Type} => {pat 0 {a:26} : Type} => ($resolv
 Yaffle> Bye for now!
 Processing as TTImp
 Vect3.yaff:25:1--26:1:Not a valid impossible pattern:
-	Vect3.yaff:25:9--25:11:When unifying: $resolved184 and ($resolved192 ?Main.{n:21}_[] ?Main.{b:19}_[])
-	Vect3.yaff:25:9--25:11:Type mismatch: $resolved184 and ($resolved192 ?Main.{n:21}_[] ?Main.{b:19}_[])
+	Vect3.yaff:25:9--25:11:When unifying: Main.Nat and (Main.Vect ?Main.{n:21}_[] ?Main.{b:19}_[])
+	Vect3.yaff:25:9--25:11:Type mismatch: Main.Nat and (Main.Vect ?Main.{n:21}_[] ?Main.{b:19}_[])
 Yaffle> Bye for now!

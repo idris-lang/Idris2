@@ -155,8 +155,10 @@ mutual
       applyExpImp start end f [] = f
       applyExpImp start end f (Left exp :: args)
           = applyExpImp start end (IApp (MkFC fname start end) f exp) args
-      applyExpImp start end f (Right (n, imp) :: args)
-          = applyExpImp start end (IImplicitApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Just n, imp) :: args)
+          = applyExpImp start end (INamedApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Nothing, imp) :: args)
+          = applyExpImp start end (IAutoApp (MkFC fname start end) f imp) args
 
   argExpr : FileName -> IndentInfo ->
             Rule (Either RawImp (Maybe Name, RawImp))
@@ -515,7 +517,8 @@ mutual
       getFn : RawImp -> SourceEmptyRule Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f a) = getFn f
-      getFn (IImplicitApp _ f _ a) = getFn f
+      getFn (IAutoApp _ f a) = getFn f
+      getFn (INamedApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
 
   clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)

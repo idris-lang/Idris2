@@ -238,13 +238,17 @@ mutual
       = do arg' <- toPTerm argPrec arg
            app <- toPTermApp fn [(fc, Nothing, arg')]
            bracket p appPrec app
+  toPTerm p (IAutoApp fc fn arg)
+      = do arg' <- toPTerm argPrec arg
+           app <- toPTermApp fn [(fc, Just Nothing, arg')]
+           bracket p appPrec app
   toPTerm p (IWithApp fc fn arg)
       = do arg' <- toPTerm startPrec arg
            fn' <- toPTerm startPrec fn
            bracket p appPrec (PWithApp fc fn' arg')
-  toPTerm p (IImplicitApp fc fn n arg)
+  toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
-           app <- toPTermApp fn [(fc, Just n, arg')]
+           app <- toPTermApp fn [(fc, Just (Just n), arg')]
            imp <- showImplicits
            if imp
               then bracket p startPrec app
@@ -288,10 +292,13 @@ mutual
   mkApp fn ((fc, Nothing, arg) :: rest)
       = do let ap = sugarApp (PApp fc fn arg)
            mkApp ap rest
-  mkApp fn ((fc, Just n, arg) :: rest)
+  mkApp fn ((fc, Just Nothing, arg) :: rest)
+      = do let ap = sugarApp (PAutoApp fc fn arg)
+           mkApp ap rest
+  mkApp fn ((fc, Just (Just n), arg) :: rest)
       = do imp <- showImplicits
            if imp
-              then do let ap = PImplicitApp fc fn n arg
+              then do let ap = PNamedApp fc fn n arg
                       mkApp ap rest
               else mkApp fn rest
 
@@ -302,9 +309,9 @@ mutual
   toPTermApp (IApp fc f a) args
       = do a' <- toPTerm argPrec a
            toPTermApp f ((fc, Nothing, a') :: args)
-  toPTermApp (IImplicitApp fc f n a) args
+  toPTermApp (INamedApp fc f n a) args
       = do a' <- toPTerm startPrec a
-           toPTermApp f ((fc, Just n, a') :: args)
+           toPTermApp f ((fc, Just (Just n), a') :: args)
   toPTermApp fn@(IVar fc n) args
       = do defs <- get Ctxt
            case !(lookupCtxtExact n (gamma defs)) of

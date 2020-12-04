@@ -95,8 +95,8 @@ data Error : Type where
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
-     InvalidImplicits : {vars : _} ->
-                        FC -> Env Term vars -> List (Maybe Name) -> Term vars -> Error
+     InvalidArgs : {vars : _} ->
+                        FC -> Env Term vars -> List Name -> Term vars -> Error
      TryWithImplicits : {vars : _} ->
                         FC -> Env Term vars -> List (Name, Term vars) -> Error
      BadUnboundImplicit : {vars : _} ->
@@ -242,8 +242,8 @@ Show Error where
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
       = show fc ++ ":Field update " ++ showSep "->" flds ++ " not compatible with other updates"
-  show (InvalidImplicits fc env ns tm)
-     = show fc ++ ":" ++ show ns ++ " are not valid implicit arguments in " ++ show tm
+  show (InvalidArgs fc env ns tm)
+     = show fc ++ ":" ++ show ns ++ " are not valid arguments in " ++ show tm
   show (TryWithImplicits fc env imps)
      = show fc ++ ":Need to bind implicits "
           ++ showSep "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
@@ -348,7 +348,7 @@ getErrorLoc (RecordTypeNeeded loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
-getErrorLoc (InvalidImplicits loc _ _ _) = Just loc
+getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
 getErrorLoc (CantSolveGoal loc _ _) = Just loc
@@ -505,9 +505,15 @@ traverse' f [] acc = pure (reverse acc)
 traverse' f (x :: xs) acc
     = traverse' f xs (!(f x) :: acc)
 
+%inline
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
+
+%inline
+export
+for : List a -> (a -> Core b) -> Core (List b)
+for = flip traverse
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
@@ -518,6 +524,7 @@ traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
 
+%inline
 export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
@@ -529,6 +536,16 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
+
+%inline
+export
+sequence : List (Core a) -> Core (List a)
+sequence (x :: xs)
+   = do
+        x' <- x
+        xs' <- sequence xs
+        pure (x' :: xs')
+sequence [] = pure []
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()

@@ -1296,25 +1296,26 @@ replace : {auto c : Ref Ctxt Defs} ->
           Core (Term vars)
 replace = replace' 0
 
+||| For printing purposes
 export
 normaliseErr : {auto c : Ref Ctxt Defs} ->
                Error -> Core Error
 normaliseErr (CantConvert fc env l r)
     = do defs <- get Ctxt
-         pure $ CantConvert fc env !(normaliseHoles defs env l)
-                                   !(normaliseHoles defs env r)
+         pure $ CantConvert fc env !(normaliseHoles defs env l >>= toFullNames)
+                                   !(normaliseHoles defs env r >>= toFullNames)
 normaliseErr (CantSolveEq fc env l r)
     = do defs <- get Ctxt
-         pure $ CantSolveEq fc env !(normaliseHoles defs env l)
-                                   !(normaliseHoles defs env r)
+         pure $ CantSolveEq fc env !(normaliseHoles defs env l >>= toFullNames)
+                                   !(normaliseHoles defs env r >>= toFullNames)
 normaliseErr (WhenUnifying fc env l r err)
     = do defs <- get Ctxt
-         pure $ WhenUnifying fc env !(normaliseHoles defs env l)
-                                    !(normaliseHoles defs env r)
+         pure $ WhenUnifying fc env !(normaliseHoles defs env l >>= toFullNames)
+                                    !(normaliseHoles defs env r >>= toFullNames)
                                     !(normaliseErr err)
 normaliseErr (CantSolveGoal fc env g)
     = do defs <- get Ctxt
-         pure $ CantSolveGoal fc env !(normaliseHoles defs env g)
+         pure $ CantSolveGoal fc env !(normaliseHoles defs env g >>= toFullNames)
 normaliseErr (AllFailed errs)
     = pure $ AllFailed !(traverse (\x => pure (fst x, !(normaliseErr (snd x)))) errs)
 normaliseErr (InType fc n err)

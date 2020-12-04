@@ -405,7 +405,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
         = applyTo defs (IApp fc ty (Implicit fc False))
                !(sc defs (toClosure defaultOpts [] (Erased fc False)))
     applyTo defs ty (NBind _ x (Pi _ _ _ _) sc)
-        = applyTo defs (IImplicitApp fc ty (Just x) (Implicit fc False))
+        = applyTo defs (INamedApp fc ty x (Implicit fc False))
                !(sc defs (toClosure defaultOpts [] (Erased fc False)))
     applyTo defs ty _ = pure ty
 

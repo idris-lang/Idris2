@@ -11,6 +11,7 @@ import Core.TTC
 import Core.Value
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -68,7 +69,8 @@ mutual
        IUpdate : FC -> List IFieldUpdate -> RawImp -> RawImp
 
        IApp : FC -> RawImp -> RawImp -> RawImp
-       IImplicitApp : FC -> RawImp -> Maybe Name -> RawImp -> RawImp
+       IAutoApp : FC -> RawImp -> RawImp -> RawImp
+       INamedApp : FC -> RawImp -> Name -> RawImp -> RawImp
        IWithApp : FC -> RawImp -> RawImp -> RawImp
 
        ISearch : FC -> (depth : Nat) -> RawImp
@@ -144,11 +146,12 @@ mutual
                ++ " " ++ show args ++ ") " ++ show sc ++ ")"
       show (IUpdate _ flds rec)
          = "(%record " ++ showSep ", " (map show flds) ++ " " ++ show rec ++ ")"
-
       show (IApp fc f a)
          = "(" ++ show f ++ " " ++ show a ++ ")"
-      show (IImplicitApp fc f n a)
+      show (INamedApp fc f n a)
          = "(" ++ show f ++ " [" ++ show n ++ " = " ++ show a ++ "])"
+      show (IAutoApp fc f a)
+         = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
       show (ISearch fc d)
@@ -396,9 +399,12 @@ lhsInCurrentNS : {auto c : Ref Ctxt Defs} ->
 lhsInCurrentNS nest (IApp loc f a)
     = do f' <- lhsInCurrentNS nest f
          pure (IApp loc f' a)
-lhsInCurrentNS nest (IImplicitApp loc f n a)
+lhsInCurrentNS nest (IAutoApp loc f a)
     = do f' <- lhsInCurrentNS nest f
-         pure (IImplicitApp loc f' n a)
+         pure (IAutoApp loc f' a)
+lhsInCurrentNS nest (INamedApp loc f n a)
+    = do f' <- lhsInCurrentNS nest f
+         pure (INamedApp loc f' n a)
 lhsInCurrentNS nest (IWithApp loc f a)
     = do f' <- lhsInCurrentNS nest f
          pure (IWithApp loc f' a)
@@ -422,7 +428,9 @@ findIBinds (ILam fc rig p n aty sc)
     = findIBinds aty ++ findIBinds sc
 findIBinds (IApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IImplicitApp fc fn n av)
+findIBinds (IAutoApp fc fn av)
+    = findIBinds fn ++ findIBinds av
+findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
@@ -456,7 +464,9 @@ findImplicits (ILam fc rig p n aty sc)
     = findImplicits aty ++ findImplicits sc
 findImplicits (IApp fc fn av)
     = findImplicits fn ++ findImplicits av
-findImplicits (IImplicitApp fc fn n av)
+findImplicits (IAutoApp _ fn av)
+    = findImplicits fn ++ findImplicits av
+findImplicits (INamedApp _ fn _ av)
     = findImplicits fn ++ findImplicits av
 findImplicits (IWithApp fc fn av)
     = findImplicits fn ++ findImplicits av
@@ -488,9 +498,12 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
     setAs is (IApp loc f a)
         = do f' <- setAs is f
              pure $ IApp loc f' a
-    setAs is (IImplicitApp loc f n a)
-        = do f' <- setAs (n :: is) f
-             pure $ IImplicitApp loc f' n a
+    setAs is (IAutoApp loc f a)
+        = do f' <- setAs (Nothing :: is) f
+             pure $ IAutoApp loc f' a
+    setAs is (INamedApp loc f n a)
+        = do f' <- setAs (Just n :: is) f
+             pure $ INamedApp loc f' n a
     setAs is (IWithApp loc f a)
         = do f' <- setAs is f
              pure $ IWithApp loc f' a
@@ -531,14 +544,14 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
         impAs loc' [] tm = tm
         impAs loc' ((UN n, AutoImplicit) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just (UN n)) (IBindVar loc' n)
+                 INamedApp loc' tm (UN n) (IBindVar loc' n)
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just n)
+                 INamedApp loc' tm n
                      (IAs loc' UseLeft n (Implicit loc' True))
         impAs loc' ((n, DefImplicit t) :: ns) tm
             = impAs loc' ns $
-                 IImplicitApp loc' tm (Just n)
+                 INamedApp loc' tm n
                      (IAs loc' UseLeft n (Implicit loc' True))
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
     setAs is tm = pure tm
@@ -610,7 +623,8 @@ getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x
 getFC (IApp x _ _) = x
-getFC (IImplicitApp x _ _ _) = x
+getFC (INamedApp x _ _ _) = x
+getFC (IAutoApp x _ _) = x
 getFC (IWithApp x _ _) = x
 getFC (ISearch x _) = x
 getFC (IAlternative x _ _) = x
@@ -644,7 +658,8 @@ export
 getFn : RawImp -> RawImp
 getFn (IApp _ f arg) = getFn f
 getFn (IWithApp _ f arg) = getFn f
-getFn (IImplicitApp _ f _ _) = getFn f
+getFn (INamedApp _ f _ _) = getFn f
+getFn (IAutoApp _ f _) = getFn f
 getFn (IAs _ _ _ f) = getFn f
 getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
@@ -674,7 +689,7 @@ mutual
         = do tag 6; toBuf b fc; toBuf b fs; toBuf b rec
     toBuf b (IApp fc fn arg)
         = do tag 7; toBuf b fc; toBuf b fn; toBuf b arg
-    toBuf b (IImplicitApp fc fn y arg)
+    toBuf b (INamedApp fc fn y arg)
         = do tag 8; toBuf b fc; toBuf b fn; toBuf b y; toBuf b arg
     toBuf b (IWithApp fc fn arg)
         = do tag 9; toBuf b fc; toBuf b fn; toBuf b arg
@@ -727,6 +742,8 @@ mutual
         = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
         = do tag 30; toBuf b ns; toBuf b rhs
+    toBuf b (IAutoApp fc fn arg)
+        = do tag 31; toBuf b fc; toBuf b fn; toBuf b arg
 
     fromBuf b
         = case !getTag of
@@ -760,7 +777,7 @@ mutual
                        pure (IApp fc fn arg)
                8 => do fc <- fromBuf b; fn <- fromBuf b
                        y <- fromBuf b; arg <- fromBuf b
-                       pure (IImplicitApp fc fn y arg)
+                       pure (INamedApp fc fn y arg)
                9 => do fc <- fromBuf b; fn <- fromBuf b
                        arg <- fromBuf b
                        pure (IWithApp fc fn arg)
@@ -817,6 +834,9 @@ mutual
                         ns <- fromBuf b
                         rhs <- fromBuf b
                         pure (IWithUnambigNames fc ns rhs)
+               31 => do fc <- fromBuf b; fn <- fromBuf b
+                        arg <- fromBuf b
+                        pure (IAutoApp fc fn arg)
                _ => corrupt "RawImp"
 
   export

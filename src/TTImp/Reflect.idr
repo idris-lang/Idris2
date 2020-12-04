@@ -131,12 +131,17 @@ mutual
                           f' <- reify defs !(evalClosure defs f)
                           a' <- reify defs !(evalClosure defs a)
                           pure (IApp fc' f' a')
-               (NS _ (UN "IImplicitApp"), [fc, f, m, a])
+               (NS _ (UN "INamedApp"), [fc, f, m, a])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           f' <- reify defs !(evalClosure defs f)
                           m' <- reify defs !(evalClosure defs m)
                           a' <- reify defs !(evalClosure defs a)
-                          pure (IImplicitApp fc' f' m' a')
+                          pure (INamedApp fc' f' m' a')
+               (NS _ (UN "IAutoApp"), [fc, f, a])
+                    => do fc' <- reify defs !(evalClosure defs fc)
+                          f' <- reify defs !(evalClosure defs f)
+                          a' <- reify defs !(evalClosure defs a)
+                          pure (IAutoApp fc' f' a')
                (NS _ (UN "IWithApp"), [fc, f, a])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           f' <- reify defs !(evalClosure defs f)
@@ -481,12 +486,17 @@ mutual
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
              appCon fc defs (reflectionttimp "IApp") [fc', f', a']
-    reflect fc defs lhs env (IImplicitApp tfc f m a)
+    reflect fc defs lhs env (IAutoApp tfc f a)
+        = do fc' <- reflect fc defs lhs env tfc
+             f' <- reflect fc defs lhs env f
+             a' <- reflect fc defs lhs env a
+             appCon fc defs (reflectionttimp "IAutoApp") [fc', f', a']
+    reflect fc defs lhs env (INamedApp tfc f m a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              m' <- reflect fc defs lhs env m
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "IImplicitApp") [fc', f', m', a']
+             appCon fc defs (reflectionttimp "INamedApp") [fc', f', m', a']
     reflect fc defs lhs env (IWithApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f

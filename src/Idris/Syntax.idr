@@ -13,6 +13,7 @@ import TTImp.TTImp
 
 import Data.ANameMap
 import Data.List
+import Data.Maybe
 import Data.NameMap
 import Data.StringMap
 import Text.PrettyPrint.Prettyprinter
@@ -48,7 +49,8 @@ mutual
        PUpdate : FC -> List PFieldUpdate -> PTerm
        PApp : FC -> PTerm -> PTerm -> PTerm
        PWithApp : FC -> PTerm -> PTerm -> PTerm
-       PImplicitApp : FC -> PTerm -> (argn : Maybe Name) -> PTerm -> PTerm
+       PNamedApp : FC -> PTerm -> Name -> PTerm -> PTerm
+       PAutoApp : FC -> PTerm -> PTerm -> PTerm
 
        PDelayed : FC -> LazyReason -> PTerm -> PTerm
        PDelay : FC -> PTerm -> PTerm
@@ -115,7 +117,8 @@ mutual
   getPTermLoc (PUpdate fc _) = fc
   getPTermLoc (PApp fc _ _) = fc
   getPTermLoc (PWithApp fc _ _) = fc
-  getPTermLoc (PImplicitApp fc _ _ _) = fc
+  getPTermLoc (PAutoApp fc _ _) = fc
+  getPTermLoc (PNamedApp fc _ _ _) = fc
   getPTermLoc (PDelayed fc _ _) = fc
   getPTermLoc (PDelay fc _) = fc
   getPTermLoc (PForce fc _) = fc
@@ -537,7 +540,7 @@ mutual
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
-    showPrec d (PImplicitApp _ f Nothing a)
+    showPrec d (PAutoApp _ f a)
         = showPrec d f ++ " @{" ++ showPrec d a ++ "}"
     showPrec d (PDelayed _ LInf ty)
         = showCon d "Inf" $ showArg ty
@@ -547,11 +550,11 @@ mutual
         = showCon d "Delay" $ showArg tm
     showPrec d (PForce _ tm)
         = showCon d "Force" $ showArg tm
-    showPrec d (PImplicitApp _ f (Just n) (PRef _ a))
+    showPrec d (PNamedApp _ f n (PRef _ a))
         = if n == a
              then showPrec d f ++ " {" ++ showPrec d n ++ "}"
              else showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
-    showPrec d (PImplicitApp _ f (Just n) a)
+    showPrec d (PNamedApp _ f n a)
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
@@ -803,10 +806,14 @@ mapPTermM f = goPTerm where
       PWithApp fc <$> goPTerm x
                   <*> goPTerm y
       >>= f
-    goPTerm (PImplicitApp fc x argn y) =
-      PImplicitApp fc <$> goPTerm x
-                      <*> pure argn
-                      <*> goPTerm y
+    goPTerm (PAutoApp fc x y) =
+      PAutoApp fc <$> goPTerm x
+                         <*> goPTerm y
+      >>= f
+    goPTerm (PNamedApp fc x n y) =
+      PNamedApp fc <$> goPTerm x
+                   <*> pure n
+                   <*> goPTerm y
       >>= f
     goPTerm (PDelayed fc x y) =
       PDelayed fc x <$> goPTerm y
