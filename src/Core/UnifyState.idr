@@ -89,8 +89,7 @@ record UState where
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
                 -- 'Nat' is the priority (lowest first)
-                -- The 'Int' is the resolved name. Delays can't be nested,
-                -- so we just process them in order.
+                -- The 'Int' is the resolved name.
   logging : Bool
 
 export

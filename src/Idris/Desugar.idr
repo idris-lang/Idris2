@@ -703,7 +703,8 @@ mutual
                                       doBind bnames (Builtin.snd ntm))) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ map fst params)) body
-           pure [IPragma (\nest, env =>
+           pure [IPragma (maybe [tn] (\n => [tn, n]) conname)
+                         (\nest, env =>
                              elabInterface fc vis env nest consb
                                            tn paramsb det conname
                                            (concat body'))]
@@ -746,7 +747,8 @@ mutual
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
                                     pure (Just (concat b'))) body
-           pure [IPragma (\nest, env =>
+           pure [IPragma (maybe [] (\n => [n]) impname)
+                         (\nest, env =>
                              elabImplementation fc vis opts pass env nest isb consb
                                                 tn paramsb impname nusing
                                                 body')]
@@ -823,27 +825,27 @@ mutual
            pure [IRunElabDecl fc tm']
   desugarDecl ps (PDirective fc d)
       = case d of
-             Hide n => pure [IPragma (\nest, env => hide fc n)]
+             Hide n => pure [IPragma [] (\nest, env => hide fc n)]
              Logging i => pure [ILog (topics i, verbosity i)]
-             LazyOn a => pure [IPragma (\nest, env => lazyActive a)]
+             LazyOn a => pure [IPragma [] (\nest, env => lazyActive a)]
              UnboundImplicits a => do
                setUnboundImplicits a
-               pure [IPragma (\nest, env => setUnboundImplicits a)]
+               pure [IPragma [] (\nest, env => setUnboundImplicits a)]
              PrefixRecordProjections b => do
-               pure [IPragma (\nest, env => setPrefixRecordProjections b)]
-             AmbigDepth n => pure [IPragma (\nest, env => setAmbigLimit n)]
-             AutoImplicitDepth n => pure [IPragma (\nest, env => setAutoImplicitLimit n)]
-             PairNames ty f s => pure [IPragma (\nest, env => setPair fc ty f s)]
-             RewriteName eq rw => pure [IPragma (\nest, env => setRewrite fc eq rw)]
-             PrimInteger n => pure [IPragma (\nest, env => setFromInteger n)]
-             PrimString n => pure [IPragma (\nest, env => setFromString n)]
-             PrimChar n => pure [IPragma (\nest, env => setFromChar n)]
-             CGAction cg dir => pure [IPragma (\nest, env => addDirective cg dir)]
-             Names n ns => pure [IPragma (\nest, env => addNameDirective fc n ns)]
-             StartExpr tm => pure [IPragma (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
-             Overloadable n => pure [IPragma (\nest, env => setNameFlag fc n Overloadable)]
-             Extension e => pure [IPragma (\nest, env => setExtension e)]
-             DefaultTotality tot => pure [IPragma (\_, _ => setDefaultTotalityOption tot)]
+               pure [IPragma [] (\nest, env => setPrefixRecordProjections b)]
+             AmbigDepth n => pure [IPragma [] (\nest, env => setAmbigLimit n)]
+             AutoImplicitDepth n => pure [IPragma [] (\nest, env => setAutoImplicitLimit n)]
+             PairNames ty f s => pure [IPragma [] (\nest, env => setPair fc ty f s)]
+             RewriteName eq rw => pure [IPragma [] (\nest, env => setRewrite fc eq rw)]
+             PrimInteger n => pure [IPragma [] (\nest, env => setFromInteger n)]
+             PrimString n => pure [IPragma [] (\nest, env => setFromString n)]
+             PrimChar n => pure [IPragma [] (\nest, env => setFromChar n)]
+             CGAction cg dir => pure [IPragma [] (\nest, env => addDirective cg dir)]
+             Names n ns => pure [IPragma [] (\nest, env => addNameDirective fc n ns)]
+             StartExpr tm => pure [IPragma [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!
+             Overloadable n => pure [IPragma [] (\nest, env => setNameFlag fc n Overloadable)]
+             Extension e => pure [IPragma [] (\nest, env => setExtension e)]
+             DefaultTotality tot => pure [IPragma [] (\_, _ => setDefaultTotalityOption tot)]
 
   export
   desugar : {auto s : Ref Syn SyntaxInfo} ->

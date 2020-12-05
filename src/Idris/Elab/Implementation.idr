@@ -117,7 +117,11 @@ elabImplementation : {vars : _} ->
 -- TODO: Refactor all these steps into separate functions
 elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nusing mbody
     = do let impName_in = maybe (mkImpl fc iname ps) id impln
-         impName <- inCurrentNS impName_in
+         -- If we're in a nested block, update the name
+         let impName_nest = case lookup impName_in (names nest) of
+                                 Just (Just n', _) => n'
+                                 _ => impName_in
+         impName <- inCurrentNS impName_nest
          -- The interface name might be qualified, so check if it's an
          -- alias for something
          syn <- get Syn
@@ -224,7 +228,13 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                -- Make sure we don't use this name to solve parent constraints
                -- when elaborating the record, or we'll end up in a cycle!
                setFlag fc impName BlockedHint
-               traverse (processDecl [] nest env) [impFn]
+
+               -- Update nested names so we elaborate the body in the right
+               -- environment
+               names' <- traverse applyEnv (impName :: mtops)
+               let nest' = record { names $= (names' ++) } nest
+
+               traverse (processDecl [] nest' env) [impFn]
                unsetFlag fc impName BlockedHint
 
                setFlag fc impName TCInline
@@ -237,8 +247,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                -- 5. Elaborate the method bodies
                let upds = map methNameUpdate fns
                body' <- traverse (updateBody upds) body
+
                log "elab.implementation" 10 $ "Implementation body: " ++ show body'
-               traverse (processDecl [] nest env) body'
+               traverse (processDecl [] nest' env) body'
 
                -- 6. Add transformation rules for top level methods
                traverse (addTransform impName upds) (methods cdata)
@@ -251,6 +262,14 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
                setOpenHints hs
                pure ()) mbody
   where
+    applyEnv : Name ->
+               Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
+    applyEnv n
+        = do n' <- resolveName n
+             pure (Resolved n', (Nothing, reverse (allVars env),
+                      \fn, nt => applyToFull fc
+                                     (Ref fc nt (Resolved n')) env))
+
     -- For the method fields in the record, get the arguments we need to abstract
     -- over
     getFieldArgs : Term vs -> List (Name, List (Name, RigCount, PiInfo RawImp))
