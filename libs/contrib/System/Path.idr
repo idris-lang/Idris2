@@ -29,8 +29,7 @@ pathSeparator = if isWindows then ';' else ':'
 
 ||| Windows path prefix.
 public export
-data Volume
-  = 
+data Volume = 
   ||| Windows Uniform Naming Convention, consisting of server name and share
   ||| directory.
   |||
@@ -43,8 +42,7 @@ data Volume
 
 ||| A single body in path.
 public export
-data Body
-  = 
+data Body =
   ||| Represents ".".
   CurDir |
   ||| Represents "..".
