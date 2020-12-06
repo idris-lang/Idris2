@@ -256,7 +256,7 @@ parsePath =
 ||| - Any characters in the body in allowed, e.g., glob like "/root/*";
 ||| - Verbatim prefix(`\\?\`) that disables the forward slash is ignored (for
 |||   Windows only).
-||| - Repeated separators are ignored, therefore, "a/b" and "a//b" both  have "a"
+||| - Repeated separators are ignored, therefore, "a/b" and "a//b" both have "a"
 |||   and "b" as bodies.
 ||| - "." in the body are removed, unless they are at the beginning of the path.
 |||   For example, "a/./b", "a/b/", "a/b/." and "a/b" will have "a" and "b" as
@@ -343,9 +343,9 @@ splitFileName name =
 ||| - On Unix, a path is absolute if it starts with the root, so `isAbsolute` and
 |||   `hasRoot` are equivalent.
 |||
-||| - On Windows, a path is absolute if it strats with a disk and has root with
-|||   the root or it starts with UNC. For example, `c:\\windows` is absolute, 
-|||   while `c:temp` and `\temp` are not.
+||| - On Windows, a path is absolute if it starts with a disk and has root or
+|||   starts with UNC. For example, `c:\\windows` is absolute, while `c:temp`
+|||   and `\temp` are not.
 export
 isAbsolute : String -> Bool
 isAbsolute path = isAbsolute' (parse path)
