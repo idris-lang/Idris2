@@ -298,15 +298,33 @@ append' left right =
   else 
     record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
 
+splitPath' : Path -> List Path
+splitPath' path =
+  case splitRoot path of
+    (Just root, other) => root :: iterateBody (path.body) (path.hasTrailSep)
+    (Nothing, other) => iterateBody (path.body) (path.hasTrailSep)
+  where
+    splitRoot : Path -> (Maybe Path, Path)
+    splitRoot path@(MkPath Nothing False _ _) = (Nothing, path)
+    splitRoot (MkPath vol root xs trailSep) =
+      (Just $ MkPath vol root [] False, MkPath Nothing False xs trailSep)
+
+    iterateBody : List Body -> (trailSep : Bool) -> List Path
+    iterateBody [] _ = []
+    iterateBody [x] trailSep = [MkPath Nothing False [x] trailSep]
+    iterateBody (x::y::xs) trailSep =
+      (MkPath Nothing False [x] False) :: iterateBody (y::xs) trailSep
+
 splitParent' : Path -> Maybe (Path, Path)
-splitParent' path with (path.body)
-  splitParent' path | [] = Nothing
-  splitParent' path | (x::xs) = 
-    let
-      parent = record { body = init (x::xs), hasTrailSep = False } path
-      child = MkPath Nothing False [last (x::xs)] path.hasTrailSep 
-    in
-      Just (parent, child)
+splitParent' path =
+  case path.body of
+    [] => Nothing
+    (x::xs) => 
+      let
+        parent = record { body = init (x::xs), hasTrailSep = False } path
+        child = MkPath Nothing False [last (x::xs)] path.hasTrailSep 
+      in
+        Just (parent, child)
 
 parent' : Path -> Maybe Path
 parent' path = map fst (splitParent' path) 
@@ -386,17 +404,11 @@ joinPath xs = foldl (</>) "" xs
 |||
 ||| ```idris example
 ||| splitPath "/usr/local/etc" == ["/", "usr", "local", "etc"]
-||| splitPath "/tmp/Foo.idr" == ["/", "tmp", "Foo.idr"]
+||| splitPath "tmp/Foo.idr" == ["tmp", "Foo.idr"]
 ||| ```
 export
 splitPath : String -> List String
-splitPath path = assert_total $ map show $ reverse $ iterate (parse path)
-  where
-    iterate : Path -> List Path
-    iterate path =
-      case splitParent' path of
-        Just (parent, child) => child :: iterate parent
-        Nothing => []
+splitPath path = map show $ splitPath' (parse path)
 
 ||| Split the path into parent and child.
 |||
