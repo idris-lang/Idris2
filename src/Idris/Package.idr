@@ -40,6 +40,7 @@ import IdrisPaths
 
 %default covering
 
+public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
@@ -67,6 +68,7 @@ record PkgDesc where
   preclean : Maybe (FC, String) -- Script to run before cleaning
   postclean : Maybe (FC, String) -- Script to run after cleaning
 
+export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
              "Version: " ++ version pkg ++ "\n" ++
