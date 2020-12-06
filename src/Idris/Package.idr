@@ -496,6 +496,17 @@ runRepl fname = do
             displayErrors errs
   repl {u} {s}
 
+export
+parsePkgFile : {auto c : Ref Ctxt Defs} ->
+               String -> Core PkgDesc
+parsePkgFile file = do
+  Right (pname, fs) <- coreLift $ parseFile file
+                                          (do desc <- parsePkgDesc file
+                                              eoi
+                                              pure desc)
+                     | Left (FileFail err) => throw (FileErr file err)
+                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+  addFields fs (initPkgDesc pname)
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
