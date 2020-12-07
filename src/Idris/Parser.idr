@@ -742,6 +742,7 @@ mutual
     <|> implicitPi fname indents
     <|> explicitPi fname indents
     <|> lam fname indents
+    <|> lambdaCase fname indents
 
   typeExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   typeExpr q fname indents
