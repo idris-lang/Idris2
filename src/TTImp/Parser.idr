@@ -647,14 +647,20 @@ namespaceDecl
          commit
          namespaceId
 
+logLevel : Rule (Maybe (List String, Nat))
+logLevel
+  = (Nothing <$ exactIdent "off")
+    <|> do topic <- option [] ((::) <$> unqualifiedName <*> many aDotIdent)
+           lvl <- intLit
+           pure (Just (topic, fromInteger lvl))
+
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
-         topic <- ((::) <$> unqualifiedName <*> many aDotIdent)
-         lvl <- intLit
+         lvl <- logLevel
          atEnd indents
-         pure (ILog (topic, integerToNat lvl))
+         pure (ILog lvl)
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit

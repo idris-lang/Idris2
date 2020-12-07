@@ -951,6 +951,13 @@ totalityOpt
   <|> (keyword "total" *> pure Total)
   <|> (keyword "covering" *> pure CoveringOnly)
 
+logLevel : Rule (Maybe LogLevel)
+logLevel
+  = (Nothing <$ exactIdent "off")
+    <|> do topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
+           lvl <- intLit
+           pure (Just (mkLogLevel' topic (fromInteger lvl)))
+
 directive : FileName -> IndentInfo -> Rule Directive
 directive fname indents
     = do pragma "hide"
@@ -962,10 +969,9 @@ directive fname indents
 --          atEnd indents
 --          pure (Hide True n)
   <|> do pragma "logging"
-         topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
-         lvl <- intLit
+         lvl <- logLevel
          atEnd indents
-         pure (Logging (mkLogLevel' topic (fromInteger lvl)))
+         pure (Logging lvl)
   <|> do pragma "auto_lazy"
          b <- onoff
          atEnd indents
@@ -1401,9 +1407,9 @@ collectDefs [] = []
 collectDefs (PDef annot cs :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
           cs' = cs ++ concat (map snd csWithFC)
-          annot' = foldr 
+          annot' = foldr
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
-                   annot 
+                   annot
                    (map fst csWithFC)
       in
           PDef annot' cs' :: assert_total (collectDefs rest)
@@ -1768,7 +1774,7 @@ compileArgsCmd parseCmd command doc
       tm <- expr pdef "(interactive)" init
       pure (command tm n)
 
-loggingArgCmd : ParseCmd -> (LogLevel -> REPLCmd) -> String -> CommandDefinition
+loggingArgCmd : ParseCmd -> (Maybe LogLevel -> REPLCmd) -> String -> CommandDefinition
 loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, parse) where
 
   names : List String
@@ -1778,9 +1784,8 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
-    lvl <- intLit
-    pure (command (mkLogLevel' topic (fromInteger lvl)))
+    lvl <- logLevel
+    pure (command lvl)
 
 parserCommandsForHelp : CommandTable
 parserCommandsForHelp =
