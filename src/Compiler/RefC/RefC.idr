@@ -29,11 +29,11 @@ import Utils.Path
 
 findCC : IO String
 findCC
-    = do Just cc <- getEnv "IDRIS2_CC"
-              | Nothing => do Just cc <- getEnv "CC"
-                                   | Nothing => pure "cc"
-                              pure cc
-         pure cc
+    = do Nothing <- getEnv "IDRIS2_CC"
+           | Just cc => pure cc
+         Nothing <- getEnv "CC"
+           | Just cc => pure cc
+         pure "cc"
 
 toString : List Char -> String
 toString [] = ""
@@ -1123,14 +1123,13 @@ compileExpr ANF c _ outputDir tm outfile =
                        clibdirs (lib_dirs dirs)
 
      coreLift $ putStrLn runccobj
-     ok <- coreLift $ system runccobj
-     if ok == 0
-        then do coreLift $ putStrLn runcc
-                ok <- coreLift $ system runcc
-                if ok == 0
-                   then pure (Just outexec)
-                   else pure Nothing
-        else pure Nothing
+     0 <- coreLift $ system runccobj
+       | _ => pure Nothing
+     coreLift $ putStrLn runcc
+     0 <- coreLift $ system runcc
+       | _ => pure Nothing
+     pure (Just outexec)
+
   where
     fullprefix_dir : Dirs -> String -> String
     fullprefix_dir dirs sub
