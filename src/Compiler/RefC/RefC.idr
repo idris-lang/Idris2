@@ -35,15 +35,6 @@ findCC
            | Just cc => pure cc
          pure "cc"
 
-toString : List Char -> String
-toString [] = ""
-toString (c :: cx) = cast c ++ toString cx
-
-natMinus : (a,b:Nat) -> Nat
-natMinus a b = case isLTE b a of
-    (Yes prf) => minus a b
-    (No _) => 0
-
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
 showcCleanStringChar '-' = ("__" ++)
@@ -75,9 +66,10 @@ showcCleanStringChar c
   where
     pad : String -> String
     pad str
-        = case isLTE (length str) 4 of
-               Yes _ => toString (List.replicate (natMinus 4 (length str)) '0') ++ str
-               No _ => str
+        = let n = length str in
+          case isLTE n 4 of
+             Yes _ => fastPack (List.replicate (minus 4 n) '0') ++ str
+             No _ => str
 
 showcCleanString : List Char -> String -> String
 showcCleanString [] = id
