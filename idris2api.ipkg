@@ -71,6 +71,7 @@ modules =
     Data.Bool.Extra,
 
     Data.List.Extra,
+    Data.DList,
 
     IdrisPaths,
 
