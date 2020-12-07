@@ -116,11 +116,29 @@ public export
 lookup : Eq a => a -> List (a, b) -> Maybe b
 lookup = lookupBy (==)
 
-||| Check if something is a member of a list using a custom comparison.
+||| Search for an item using a user-provided test
+||| @ p the equality test
+||| @ e the item to search for
+||| @ xs the vector to search in
+|||
+||| ```idris example
+||| elemBy (==) 2 [1,2,3,4]
+||| ```
 public export
 elemBy : (a -> a -> Bool) -> a -> List a -> Bool
 elemBy p e []      = False
 elemBy p e (x::xs) = p e x || elemBy p e xs
+
+||| Use the default Boolean equality on elements to search for an item
+||| @ x what to search for
+||| @ xs where to search
+|||
+||| ```idris example
+||| elem 3 [1,2,3,4]
+||| ```
+public export
+elem : Eq elem => (x : elem) -> (xs : Vect len elem) -> Bool
+elem = elemBy (==)
 
 public export
 nubBy : (a -> a -> Bool) -> List a -> List a
