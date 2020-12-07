@@ -88,7 +88,8 @@ cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName _ = "UNKNOWNNAME"
+cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
+-- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar '\DEL' = "127"
@@ -153,7 +154,6 @@ where
     showCString (c ::cs) = (showCChar c) . showCString cs
 
 
-
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt32("++ show x ++")" -- (constant #:type 'i32 #:val " ++ show x ++ ")"
 cConstant (BI x) = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
@@ -176,7 +176,8 @@ cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant _ = "UNKNOWN"
+cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
+-- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -284,7 +285,7 @@ toPrim pn@(NS _ n)
             (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
-toPrim pn = Unknown pn
+toPrim pn = Unknown pn -- todo: crash rather than generate garbage?
 
 
 varName : AVar -> String
