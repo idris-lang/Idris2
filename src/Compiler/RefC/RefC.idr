@@ -799,9 +799,9 @@ functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
 functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
-getArgsNrList : {0 ty:Type} -> List ty -> Nat -> Core $ List Nat
-getArgsNrList [] _ = pure []
-getArgsNrList (x :: xs) k = pure $ k :: !(getArgsNrList xs (S k))
+getArgsNrList : List ty -> Nat -> List Nat
+getArgsNrList [] _ = []
+getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 
 cTypeOfCFType : CFType -> Core $ String
@@ -823,17 +823,15 @@ cTypeOfCFType (CFIORes x)     = pure $ "void *"
 cTypeOfCFType (CFStruct x ys) = pure $ "void *"
 cTypeOfCFType (CFUser x ys)   = pure $ "void *"
 
-varNamesFromList : {0 ty : Type} -> List ty -> Nat -> Core (List String)
-varNamesFromList [] _ = pure []
-varNamesFromList (x :: xs) k = pure $ ("var_" ++ show k) :: !(varNamesFromList xs (S k))
+varNamesFromList : List ty -> Nat -> List String
+varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
 
 createFFIArgList : List CFType
                 -> Core $ List (String, String, CFType)
 createFFIArgList cftypeList = do
     sList <- traverse cTypeOfCFType cftypeList
-    varList <- varNamesFromList cftypeList 1
-    let z = zip3 sList varList cftypeList
-    pure z
+    let varList = varNamesFromList cftypeList 1
+    pure $ zip3 sList varList cftypeList
 
 emitFDef : {auto oft : Ref OutfileText (List String)}
         -> {auto il : Ref IndentLevel Nat}
@@ -888,12 +886,9 @@ packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = "makeCustomUser(" ++ varName ++ ")"
 
-discardLastArgument : {0 ty:Type} -> List ty -> List ty
+discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
-discardLastArgument (x :: []) = []
-discardLastArgument (x :: y :: ys) = x :: (discardLastArgument (y :: ys))
-
-
+discardLastArgument xs@(_ :: _) = init xs
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
@@ -911,7 +906,7 @@ createCFunctions n (MkAFun args anf) = do
     otherDefs <- get FunctionDefinitions
     put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
     newTemporaryVariableLevel
-    argsNrs <- getArgsNrList args Z
+    let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
@@ -964,7 +959,7 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           increaseIndentation
           emit EmptyFC $ "("
           increaseIndentation
-          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") !(getArgsNrList fargs Z))
+          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") (getArgsNrList fargs Z))
           traverse (emit EmptyFC) commaSepArglist
           decreaseIndentation
           emit EmptyFC ");"
