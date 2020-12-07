@@ -225,7 +225,7 @@ mutual
   public export
   data Directive : Type where
        Hide : Name -> Directive
-       Logging : LogLevel -> Directive
+       Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
        UnboundImplicits : Bool -> Directive
        AmbigDepth : Nat -> Directive
@@ -442,7 +442,7 @@ data REPLCmd : Type where
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
      Browse : Namespace -> REPLCmd
-     SetLog : LogLevel -> REPLCmd
+     SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd

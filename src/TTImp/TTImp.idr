@@ -347,7 +347,7 @@ mutual
        IPragma : ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
-       ILog : (List String, Nat) -> ImpDecl
+       ILog : Maybe (List String, Nat) -> ImpDecl
 
   export
   Show ImpDecl where
@@ -366,7 +366,8 @@ mutual
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
     show (IPragma _) = "[externally defined pragma]"
-    show (ILog (topic, lvl)) = "%logging " ++ case topic of
+    show (ILog Nothing) = "%logging off"
+    show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
 
