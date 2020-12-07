@@ -235,10 +235,7 @@ parsePath =
     root <- optional (some bodySeparator)
     body <- sepBy (some bodySeparator) parseBody
     trailSep <- optional (some bodySeparator)
-    let body = filter (\case
-                        Normal s => ltrim s /= ""
-                        _ => True
-                      ) body
+    let body = filter (\case Normal s => ltrim s /= ""; _ => True) body
     let body = case body of
                 [] => []
                 (x::xs) => x :: delete CurDir xs
@@ -439,27 +436,38 @@ parents path = map show $ List.iterate parent' (parse path)
 ||| Determine whether the base is one of the parents of target.
 |||
 ||| Trailing separator is ignored.
+|||
+||| ```idris example
+||| "/etc" `isBaseOf` "/etc/kernel"
+||| ```
 export
-isRelativeTo : (base : String) -> (target : String) -> Bool
-isRelativeTo base target = (parse base) `elem` (List.iterate parent' (parse target))
+isBaseOf : (base : String) -> (target : String) -> Bool
+isBaseOf base target =
+  let 
+    MkPath baseVol baseRoot baseBody _ = parse base
+    MkPath targetVol targetRoot targetBody _ = parse target
+  in
+       baseVol == targetVol
+    && baseRoot == targetRoot
+    && (baseBody `isPrefixOf` targetBody)
 
 ||| Return a path that, when appends to base, yields target.
 |||
-||| Returns Nothing if the base is not relative to the target.
+||| Returns Nothing if the base is not a prefix of the target.
 export
-relativeTo : (base : String) -> (target : String) -> Maybe String
-relativeTo base target =
+dropBase : (base : String) -> (target : String) -> Maybe String
+dropBase base target =
   do
     let MkPath baseVol baseRoot baseBody _ = parse base
     let MkPath targetVol targetRoot targetBody targetTrialSep = parse target
     if baseVol == targetVol && baseRoot == targetRoot then Just () else Nothing
-    body <- stripBody baseBody targetBody
+    body <- dropBody baseBody targetBody
     pure $ show $ MkPath Nothing False body targetTrialSep
   where
-    stripBody : (base : List Body) -> (path : List Body) -> Maybe (List Body)
-    stripBody [] ys = Just ys
-    stripBody xs [] = Nothing
-    stripBody (x::xs) (y::ys) = if x == y then stripBody xs ys else Nothing
+    dropBody : (base : List Body) -> (target : List Body) -> Maybe (List Body)
+    dropBody [] ys = Just ys
+    dropBody xs [] = Nothing
+    dropBody (x::xs) (y::ys) = if x == y then dropBody xs ys else Nothing
 
 ||| Returns the last body of the path.
 |||

@@ -93,13 +93,14 @@ pathToNS wdir sdir fname =
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
-    case relativeTo base fname of
+    case Path.dropBase base fname of
       Nothing => throw (UserError (
           "Source file " 
         ++ show fname 
         ++ " is not in the source directory " 
         ++ show (wdir </> sdir)))
-      Just relPath => pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ dropExtension relPath
+      Just relPath => 
+        pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
