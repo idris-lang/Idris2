@@ -411,7 +411,7 @@ makeArglist missing xs = do
     emit EmptyFC $  "Value_Arglist *"
                  ++ arglist
                  ++ " = newArglist(" ++ show missing
-                 ++ "," ++ show ((length xs) + missing)
+                 ++ "," ++ show (length xs + missing)
                  ++ ");"
     pushArgToArglist arglist xs 0
     pure arglist
@@ -434,9 +434,9 @@ fillConstructorArgs : {auto oft : Ref OutfileText (List String)}
                    -> Nat
                    -> Core ()
 fillConstructorArgs _ [] _ = pure ()
-fillConstructorArgs constructor (v :: vars) k = do
-    emit EmptyFC $ constructor ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
-    fillConstructorArgs constructor vars (S k)
+fillConstructorArgs cons (v :: vars) k = do
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
+    fillConstructorArgs cons vars (S k)
 
 
 showTag : Maybe Int -> String
