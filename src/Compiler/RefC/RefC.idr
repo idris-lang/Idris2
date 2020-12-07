@@ -307,20 +307,13 @@ getNextCounter = do
 registerVariableForAutomaticFreeing : {auto t : Ref TemporaryVariableTracker (List (List String))}
                                    -> String
                                    -> Core ()
-registerVariableForAutomaticFreeing var = do
-    lists <- get TemporaryVariableTracker
-    case lists of
-        [] => do
-            put TemporaryVariableTracker ([[var]])
-            pure ()
-        (l :: ls) => do
-                put TemporaryVariableTracker ((var :: l) :: ls)
-                pure ()
+registerVariableForAutomaticFreeing var
+  = update TemporaryVariableTracker $ \case
+      [] => [[var]]
+      (l :: ls) => ((var :: l) :: ls)
 
 newTemporaryVariableLevel : {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core ()
-newTemporaryVariableLevel = do
-    lists <- get TemporaryVariableTracker
-    put TemporaryVariableTracker ([] :: lists)
+newTemporaryVariableLevel = update TemporaryVariableTracker ([] ::)
 
 
 getNewVar : {auto a : Ref ArgCounter Nat} -> {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core String
@@ -351,19 +344,10 @@ lJust line fillPos filler =
         (No _) => line
 
 increaseIndentation : {auto il : Ref IndentLevel Nat} -> Core ()
-increaseIndentation = do
-    iLevel <- get IndentLevel
-    put IndentLevel (S iLevel)
-    pure ()
+increaseIndentation = update IndentLevel S
 
 decreaseIndentation : {auto il : Ref IndentLevel Nat} -> Core ()
-decreaseIndentation = do
-    iLevel <- get IndentLevel
-    case iLevel of
-        Z => pure ()
-        (S k) => do
-            put IndentLevel k
-            pure ()
+decreaseIndentation = update IndentLevel pred
 
 indentation : {auto il : Ref IndentLevel Nat} -> Core String
 indentation = do
