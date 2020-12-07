@@ -335,9 +335,10 @@ maxLineLengthForComment = 60
 
 lJust : (line:String) -> (fillPos:Nat) -> (filler:Char) -> String
 lJust line fillPos filler =
-    case isLTE (length line) fillPos of
+    let n = length line in
+    case isLTE n fillPos of
         (Yes prf) =>
-            let missing = minus fillPos (length line)
+            let missing = minus fillPos n
                 fillBlock = pack (replicate missing filler)
             in
             line ++ fillBlock
