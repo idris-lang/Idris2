@@ -681,6 +681,47 @@ Examples:
     dontCare {} = plusCommutative {}
     --dontCare _ _ _ _ _ = plusCommutative _ _
 
+Last rule worth noting is the case of named applications with repeated argument names, e.g:
+
+.. code-block:: idris
+
+    data WeirdPair : Type -> Type -> Type where
+      MkWeirdPair : (x : a) -> (x : b) -> WeirdPair a b
+
+    weirdSnd : WeirdPair a b -> b
+    --weirdSnd $ MkWeirdPair {x, x} = x
+    --                        ^
+    -- Error: "Non linear pattern variable"
+    -- But that one is okay:
+    weirdSnd $ MkWeirdPair {x = _, x} = x
+
+In this example the name ``x`` is given repeatedly to the ``Pi`` types of the data constructor ``MkWeirdPair``.
+In order to deconstruct the ``WeirdPair a b`` in ``weirdSnd``, while writing the left-hand side of the pattern-matching clause
+in a named manner (via the new syntax), we have to rename the first occurrence of ``x`` to any fresh name or the ``_`` as we did.
+Then the definition type checks normally.
+
+In general, duplicate names are bound sequentially on the left-hand side and must be renamed for the pattern expression to be valid.
+
+The situation is similar on the right-hand side of pattern-matching clauses:
+
+.. code-block:: idris
+
+   0 TypeOf : a -> Type
+   TypeOf _ = a
+
+   weirdId : {0 a : Type} -> (1 a : a) -> TypeOf a
+   weirdId a = a
+
+   zero : Nat
+   -- zero = weirdId { a = Z }
+   --                      ^
+   -- Error: "Mismatch between: Nat and Type"
+   -- But this works:
+   zero = weirdId { a = Nat, a = Z }
+
+Named arguments should be passed sequentially in the order they were defined in the ``Pi`` types,
+regardless of their (imp)explicitness.
+
 Better inference
 ----------------
 
