@@ -137,7 +137,7 @@ elemBy p e (x::xs) = p e x || elemBy p e xs
 ||| elem 3 [1,2,3,4]
 ||| ```
 public export
-elem : Eq elem => (x : elem) -> (xs : Vect len elem) -> Bool
+elem : Eq elem => (x : elem) -> (xs : List elem) -> Bool
 elem = elemBy (==)
 
 public export
