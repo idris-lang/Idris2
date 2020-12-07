@@ -383,7 +383,6 @@ freeTmpVars = do
         (vars :: varss) => do
             traverse (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
             put TemporaryVariableTracker varss
-            pure ()
         [] => pure ()
 
 
@@ -943,7 +942,6 @@ createCFunctions n (MkAFun args anf) = do
 
 createCFunctions n (MkACon tag arity) = do
   emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
-  pure ()
 
 
 createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
@@ -1046,7 +1044,6 @@ footer = do
     emit EmptyFC "   trampoline(mainExprVal);"
     emit EmptyFC "   return 0; // bye bye"
     emit EmptyFC "}"
-    pure ()
 
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
