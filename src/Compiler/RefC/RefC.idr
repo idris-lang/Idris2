@@ -14,6 +14,7 @@ import Core.TT
 
 import Data.IORef
 import Data.List
+import Data.DList
 import Data.NameMap
 import Data.Nat
 import Data.Strings
@@ -295,9 +296,18 @@ varName (ANull)    = "NULL"
 data ArgCounter : Type where
 data FunctionDefinitions : Type where
 data TemporaryVariableTracker : Type where
-data OutfileText : Type where
 data IndentLevel : Type where
 data ExternalLibs : Type where
+
+------------------------------------------------------------------------
+-- Output generation: using a difference list for efficient append
+
+data OutfileText : Type where
+
+Output : Type
+Output = DList String
+
+------------------------------------------------------------------------
 
 getNextCounter : {auto a : Ref ArgCounter Nat} -> Core Nat
 getNextCounter = do
@@ -356,26 +366,24 @@ indentation = do
     iLevel <- get IndentLevel
     pure $ pack $ replicate (4 * iLevel) ' '
 
-
-emit : {auto oft : Ref OutfileText (List String)} -> {auto il : Ref IndentLevel Nat} -> FC -> String -> Core ()
+emit
+  : {auto oft : Ref OutfileText Output} ->
+    {auto il : Ref IndentLevel Nat} ->
+    FC -> String -> Core ()
 emit EmptyFC line = do
-    lines <- get OutfileText
     indent <- indentation
-    put OutfileText (lines ++ [indent ++ line])
-    pure ()
-emit fc line' = do
+    update OutfileText (flip snoc (indent ++ line))
+emit fc line = do
     let comment = "// " ++ show fc
-    lines <- get OutfileText
     indent <- indentation
-    let line = line'
-    case isLTE (length (indent ++ line)) maxLineLengthForComment of
-        (Yes _) => put OutfileText (lines ++ [ (lJust (indent ++ line) maxLineLengthForComment ' ') ++ " " ++ comment]        )
-        (No _)  => put OutfileText (lines ++ [indent ++ line, ((lJust ""   maxLineLengthForComment ' ') ++ " " ++ comment)] )
-    pure ()
+    let indentedLine = indent ++ line
+    update OutfileText $ case isLTE (length indentedLine) maxLineLengthForComment of
+        (Yes _) => flip snoc (lJust indentedLine maxLineLengthForComment ' ' ++ " " ++ comment)
+        (No _)  => flip appendR [indentedLine, (lJust ""   maxLineLengthForComment ' ' ++ " " ++ comment)]
 
 
 freeTmpVars : {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText (List String)}
+           -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> Core $ ()
 freeTmpVars = do
@@ -401,7 +409,7 @@ addExternalLib extLib = do
 
 makeArglist : {auto a : Ref ArgCounter Nat}
            -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText (List String)}
+           -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> Nat
            -> List AVar
@@ -428,7 +436,7 @@ where
                     ++ " newReference(" ++ varName arg ++");"
         pushArgToArglist arglist args (S k)
 
-fillConstructorArgs : {auto oft : Ref OutfileText (List String)}
+fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
                    -> String
                    -> List AVar
@@ -495,7 +503,7 @@ record ReturnStatement where
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
                     -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                    -> {auto oft : Ref OutfileText (List String)}
+                    -> {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
                     -> String
                     -> List AConAlt
@@ -518,7 +526,7 @@ mutual
 
     conBlocks : {auto a : Ref ArgCounter Nat}
              -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-             -> {auto oft : Ref OutfileText (List String)}
+             -> {auto oft : Ref OutfileText Output}
              -> {auto il : Ref IndentLevel Nat}
              -> (scrutinee:String)
              -> List AConAlt
@@ -550,7 +558,7 @@ mutual
 
     constBlockSwitch : {auto a : Ref ArgCounter Nat}
                        -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                       -> {auto oft : Ref OutfileText (List String)}
+                       -> {auto oft : Ref OutfileText Output}
                        -> {auto il : Ref IndentLevel Nat}
                        -> (alts:List AConstAlt)
                        -> (retValVar:String)
@@ -575,7 +583,7 @@ mutual
 
     constDefaultBlock : {auto a : Ref ArgCounter Nat}
                      -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                     -> {auto oft : Ref OutfileText (List String)}
+                     -> {auto oft : Ref OutfileText Output}
                      -> {auto il : Ref IndentLevel Nat}
                      -> (def:Maybe ANF)
                      -> (retValVar:String)
@@ -597,7 +605,7 @@ mutual
     makeNonIntSwitchStatementConst :
                     {auto a : Ref ArgCounter Nat}
                  -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                 -> {auto oft : Ref OutfileText (List String)}
+                 -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
                  -> List AConstAlt
                  -> (k:Int)
@@ -631,7 +639,7 @@ mutual
 
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                      -> {auto oft : Ref OutfileText (List String)}
+                      -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> ANF
                       -> Core ReturnStatement
@@ -834,7 +842,7 @@ createFFIArgList cftypeList = do
     let varList = varNamesFromList cftypeList 1
     pure $ zip3 sList varList cftypeList
 
-emitFDef : {auto oft : Ref OutfileText (List String)}
+emitFDef : {auto oft : Ref OutfileText Output}
         -> {auto il : Ref IndentLevel Nat}
         -> (funcName:Name)
         -> (arglist:List (String, String, CFType))
@@ -895,7 +903,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                -> {auto oft : Ref OutfileText (List String)}
+                -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto e : Ref ExternalLibs (List String)}
                 -> Name
@@ -1014,7 +1022,7 @@ createCFunctions n (MkAError exp) = do
 
 
 header : {auto f : Ref FunctionDefinitions (List String)}
-      -> {auto o : Ref OutfileText (List String)}
+      -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto e : Ref ExternalLibs (List String)}
       -> Core ()
@@ -1026,11 +1034,9 @@ header = do
     let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
     traverse (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
     fns <- get FunctionDefinitions
-    outText <- get OutfileText
-    put OutfileText (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns ++ outText)
-    pure ()
+    update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
 
-footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText (List String)} -> Core ()
+footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText Output} -> Core ()
 footer = do
     emit EmptyFC ""
     emit EmptyFC " // main function"
@@ -1067,14 +1073,14 @@ compileExpr ANF c _ outputDir tm outfile =
      newRef ArgCounter 0
      newRef FunctionDefinitions []
      newRef TemporaryVariableTracker []
-     newRef OutfileText []
+     newRef OutfileText DList.Nil
      newRef ExternalLibs []
      newRef IndentLevel 0
      traverse (\(n, d) => createCFunctions n d) defs
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") fileContent)
+     let code = fastAppend (map (++ "\n") (reify fileContent))
 
      coreLift (writeFile outn code)
      coreLift $ putStrLn $ "Generated C file " ++ outn
