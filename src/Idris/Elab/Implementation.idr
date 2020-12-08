@@ -62,7 +62,7 @@ addDefaults fc impName params allms defs body
           extendBody [] missing body
   where
     specialiseMeth : Name -> (Name, RawImp)
-    specialiseMeth n = (n, IImplicitApp fc (IVar fc n) (Just (UN "__con")) (IVar fc impName))
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN "__con") (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
