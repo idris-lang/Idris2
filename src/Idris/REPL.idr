@@ -48,6 +48,7 @@ import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
 import TTImp.Interactive.MakeLemma
 import TTImp.TTImp
+import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
 import Data.List
@@ -607,6 +608,15 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
+equivTypes : (ty1 : ClosedTerm) -> (ty2 : ClosedTerm) -> Bool
+equivTypes ty1 ty2 = eqTerm ty1 ty2 
+  where
+  --  equivImplicits : ClosedTerm -> ClosedTerm -> Bool
+  --  equivImplicits ty1 ty2 = 
+  --    let imp1 = findImplicits ty1
+  --        imp2 = findImplicits ty2
+  --        sorted1 = sortBy
+
 ||| Process a single `REPLCmd`
 |||
 ||| Returns `REPLResult` for display by the higher level shell which
@@ -714,85 +724,39 @@ process (Exec ctm)
 process Help
     = pure RequestedHelp
 process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
-    = do log "repl.ps" 2 $ "piInfo " ++ (show piInfo) ++ "  argTy " ++ (show argTy) ++ "  retTy " ++ (show retTy)
-         defs <- get Ctxt
+    = do defs <- get Ctxt
          let context = gamma defs
-         allDefs <- map catMaybes $ traverse (flip lookupCtxtExact context) $ !(allNames context)
-         log "repl.ps" 2 $ "Defs: " ++ (show $ length allDefs)
+         log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
 
-         ttimpSearchTerm <- desugar AnyExpr [] searchTerm
-
-         let n = (UN "[input]")
-         inidx <- resolveName n 
-         (tm, _) <- elabTerm inidx InType [] (MkNested [])
-                                  [] ttimpSearchTerm Nothing
-         logTermNF "repl.ps" 2 "tm" [] tm
-
-         let filteredDefs = (flip filter) allDefs (\def => def.type == tm)
-         log "repl.ps" 2 $ "filtered count: " ++ (show $ length filteredDefs)
-
+         --
+         rawTy <- desugar AnyExpr [] searchTerm
+         log "repl.ps" 2 $ show $ findImplicits rawTy
+         let bound = piBindNames replFC [] rawTy
+         log "repl.ps" 2 $ show bound
+         log "repl.ps" 2 $ show $ findImplicits bound
+         (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
+         logTermNF "repl.ps" 2 "checked term" [] ty
+         tmnf <- normaliseHoles defs [] ty
+         ty' <- toResolvedNames tmnf
+         allDefs <- do names <- allNames context
+                       defs <- pure $ catMaybes !(traverse (flip lookupCtxtExact context) names)
+                       traverse (resolved context) defs
+         let filteredDefs = (flip filter) allDefs (\def => def.type `equivTypes` ty')
+         log "repl.ps" 2 $ (show ty')
          doc <- traverse (getDocsFor replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
-process (ProofSearch pterm)
-    = do log "repl.ps" 2 (show pterm)
-         ttimp <- desugar AnyExpr [] pterm 
-         logRaw "repl.ps" 2 "ttimp from desugar" ttimp
-         log "repl.ps" 2 (show (getFn ttimp))
-         -- let ty = gType (getFC ttimp)
-         -- logGlue "repl.ps" 2 "gType" [] ty
-         let n = (UN "[input]")
-         inidx <- resolveName n 
-         newRef EST (initEState 0 [])
-         (tm1, gl1) <- checkImp top (initElabInfo InType) (MkNested []) [] ttimp Nothing
-         logTermNF "repl.ps" 2 "checkImp generated type" [] tm1
-         -- logGlue "repl.ps" 2 "tst" [] gl1
-         (tm, gl) <- elabTerm inidx InType [] (MkNested [])
-                                  [] ttimp Nothing
-         logTermNF "repl.ps" 2 "tm" [] tm
-         -- logGlue "repl.ps" 2 "glue term" [] gl
+         --
 
-         -- addNameType replFC n [] tm
-         -- searchResults <- exprSearchN replFC 3 n []
-         -- pure $ log $ show searchResults
-
-         ty <- checkTerm inidx InType [] (MkNested []) []
-                             (IBindHere replFC (PI erased) ttimp)
-                             (gType replFC)
-         logTerm "repl.ps" 2 "check term result" ty
-         logTermNF "repl.ps" 2 ("Type of " ++ show n) [] (abstractFullEnvType replFC [] ty)
-
-
-         log "repl.pl" 2 ""
-         log "repl.ps" 2 "--- AutoSearch ------"
-
-         tm' <- search replFC top False 1000 n ty [] -- ty or tm?
-         defs <- get Ctxt
-         fnms <- toFullNames !(normaliseAll defs [] tm')
-         itm <- resugar [] fnms
-         logTermNF "repl.ps" 2 "full names from tm'" [] fnms
-
-         log "repl.pl" 2 ""
-         log "repl.ps" 2 "--- Editing Search ------"
-
-         searchty <- normalise defs [] ty -- ty or tm?
-         logTerm "repl.ps" 2 "Normalised type" searchty
-         arity <- getArity defs [] ty -- ty or tm?
-         log "repl.ps" 2 $ "arity : " ++ (show arity)
-         let results = searchType replFC top (initSearchOpts True 1000) [] ty 0 searchty -- replaced arity with 0 -- ty or tm?
-         Just ((resTm, exprDefs), results2) <- nextResult results
-           | Nothing => pure Done
-         logTerm "repl.ps" 2 "1st search result" resTm
-
-         Just ((resTm2, exprDefs2), results3) <- nextResult results2
-           | Nothing => pure Done
-         logTerm "repl.ps" 2 "2nd search result" resTm2
-
-         Just ((resTm3, exprDefs3), results4) <- nextResult results3
-           | Nothing => pure Done
-         logTerm "repl.ps" 2 "3rd search result" resTm3
-
-         pure $ ProofFound $ itm
-
+--          allDefs <- map catMaybes $ traverse (flip lookupCtxtExact context) $ !(allNames context)
+-- 
+--          allDefsSugared <- traverse (\def => pure (!(resugar [] def.type), def)) allDefs
+-- 
+--          let filteredDefsSugared = (flip filter) allDefsSugared (\(ty, def) => (show searchTerm) `isInfixOf` (show ty))
+-- 
+--          doc <- traverse (getDocsFor replFC) $ (.fullname . snd) <$> filteredDefsSugared
+--          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+process (ProofSearch _)
+    = do pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
