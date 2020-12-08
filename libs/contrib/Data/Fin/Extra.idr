@@ -5,6 +5,10 @@ import Data.Nat
 
 %default total
 
+-------------------------------
+--- `finToNat`'s properties ---
+-------------------------------
+
 ||| Proof that an element **n** of Fin **m** , when converted to Nat is smaller than the bound **m**.
 export
 elemSmallerThanBound : (n : Fin m) -> LT (finToNat n) m
@@ -23,17 +27,9 @@ finToNatWeakenNeutral : {m : Nat} -> {n : Fin m} -> finToNat (weaken n) = finToN
 finToNatWeakenNeutral {n=FZ} = Refl
 finToNatWeakenNeutral {m=S (S _)} {n=FS _} = cong S finToNatWeakenNeutral
 
--- ||| Proof that it's possible to strengthen a weakened element of Fin **m**.
--- export
--- strengthenWeakenNeutral : {m : Nat} -> (n : Fin m) -> strengthen (weaken n) = Right n
--- strengthenWeakenNeutral {m=S _} FZ = Refl
--- strengthenWeakenNeutral {m=S (S _)} (FS k) = rewrite strengthenWeakenNeutral k in Refl
-
-||| Proof that it's not possible to strengthen the last element of Fin **n**.
-export
-strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Left (Fin.last {n})
-strengthenLastIsLeft {n=Z} = Refl
-strengthenLastIsLeft {n=S k} = rewrite strengthenLastIsLeft {n=k} in Refl
+-------------------------------------------------
+--- Inversion function and related properties ---
+-------------------------------------------------
 
 ||| Enumerate elements of Fin **n** backwards.
 export
@@ -60,6 +56,22 @@ invLastIsFZ : {n : Nat} -> invFin (Fin.last {n}) = FZ
 invLastIsFZ {n=Z} = Refl
 invLastIsFZ {n=S k} = rewrite invLastIsFZ {n=k} in Refl
 
+--------------------------------
+--- Strengthening properties ---
+--------------------------------
+
+||| Proof that it's possible to strengthen a weakened element of Fin **m**.
+export
+strengthenWeakenNeutral : {m : Nat} -> (n : Fin m) -> strengthen (weaken n) = Right n
+strengthenWeakenNeutral {m=S _} FZ = Refl
+strengthenWeakenNeutral {m=S (S _)} (FS k) = rewrite strengthenWeakenNeutral k in Refl
+
+||| Proof that it's not possible to strengthen the last element of Fin **n**.
+export
+strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Left (Fin.last {n})
+strengthenLastIsLeft {n=Z} = Refl
+strengthenLastIsLeft {n=S k} = rewrite strengthenLastIsLeft {n=k} in Refl
+
 -- ||| Proof that it's possible to strengthen an inverse of a succesive element of Fin **n**.
 -- export
 -- strengthenNotLastIsRight : (m : Fin (S n)) -> strengthen (invFin (FS m)) = Right (invFin m)
@@ -73,6 +85,10 @@ strengthen' {n = S k} FZ = Right (FZ ** Refl)
 strengthen' {n = S k} (FS m) = case strengthen' m of
     Left eq => Left $ cong FS eq
     Right (m' ** eq) => Right (FS m' ** cong S eq)
+
+-----------------------------------
+--- Division-related properties ---
+-----------------------------------
 
 ||| A view of Nat as a quotient of some number and a finite remainder.
 public export
@@ -98,6 +114,9 @@ divMod {ok=_} (S n) (S d) =
             rewrite sym $ plusSuccRightSucc (q * S d) (finToNat r') in
                 cong S $ trans (sym $ cong (plus (q * S d)) eq') eq
 
+-------------------
+--- Conversions ---
+-------------------
 
 ||| Total function to convert a nat to a Fin, given a proof
 ||| that it is less than the bound.
