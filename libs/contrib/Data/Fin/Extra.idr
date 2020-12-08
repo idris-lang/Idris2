@@ -143,3 +143,49 @@ natToFinToNat :
   -> finToNat (natToFinLTE n lte) = n
 natToFinToNat 0 (LTESucc lte) = Refl
 natToFinToNat (S k) (LTESucc lte) = rewrite natToFinToNat k lte in Refl
+
+-------------------------------------------------
+--- Splitting operations and their properties ---
+-------------------------------------------------
+
+export
+splitSumFin : {a : Nat} -> Fin (a + b) -> Either (Fin a) (Fin b)
+splitSumFin {a=Z}   x      = Right x
+splitSumFin {a=S k} FZ     = Left FZ
+splitSumFin {a=S k} (FS x) = mapFst FS $ splitSumFin x
+
+export
+splitProdFin : {a, b : Nat} -> Fin (a * b) -> (Fin a, Fin b)
+splitProdFin {a=S _} x = case splitSumFin x of
+  Left  y => (FZ, y)
+  Right y => mapFst FS $ splitProdFin y
+
+--- Properties ---
+
+export
+splitSumFin_correctness : {a, b : Nat} -> (x : Fin $ a + b) ->
+                          case splitSumFin {a} {b} x of
+                            Left  l => x = weakenN b l
+                            Right r => x = shift a r
+splitSumFin_correctness {a=Z}   x  = Refl
+splitSumFin_correctness {a=S k} FZ = Refl
+splitSumFin_correctness {a=S k} (FS x) with (splitSumFin_correctness x)
+  splitSumFin_correctness {a=S k} (FS x) | subcorr with (splitSumFin x)
+    splitSumFin_correctness {a=S k} (FS x) | subcorr | Left  y = rewrite subcorr in Refl
+    splitSumFin_correctness {a=S k} (FS x) | subcorr | Right y = rewrite subcorr in Refl
+
+export
+splitProdFin_correctness : {a, b : Nat} -> (x : Fin $ a * b) ->
+                           let (o, i) = splitProdFin {a} {b} x in
+                           finToNat x = finToNat o * b + finToNat i
+splitProdFin_correctness {a=S _} x with (splitSumFin_correctness x)
+  splitProdFin_correctness x | sumcorr with (splitSumFin x)
+    splitProdFin_correctness x | sumcorr | Left y = rewrite sumcorr in finToNatWeakenNNeutral _ _
+    splitProdFin_correctness x | sumcorr | Right y with (splitProdFin_correctness y)
+      splitProdFin_correctness x | sumcorr | Right y | subcorr with (splitProdFin y)
+        splitProdFin_correctness x | sumcorr | Right y | subcorr | (o, i) =
+          rewrite sumcorr in
+          rewrite finToNatShift b y in
+          rewrite subcorr in
+          rewrite plusAssociative b (finToNat o * b) (finToNat i) in
+          Refl
