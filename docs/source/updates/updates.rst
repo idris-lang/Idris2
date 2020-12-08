@@ -814,7 +814,7 @@ Another novelty - new update syntax (previous one still functional):
     mapSetMap three@(MkThree x y z) f y' g = {x $= f, y := y', z $= g} three
 
 The ``record`` keyword has been discarded for brevity, symbol ``:=`` replaces ``=``
-  in order to not introduce any ambiguity.
+in order to not introduce any ambiguity.
 
 Generate definition
 -------------------
