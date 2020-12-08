@@ -169,7 +169,7 @@ unc = do count (exactly 2) $ match $ PTPunct '\\'
          server <- match PTText
          bodySeparator
          share <- match PTText
-         Core.pure $ UNC server share
+         pure $ UNC server share
 
 -- Example: \\?\server\share
 verbatimUnc : Grammar PathToken True Volume
@@ -177,7 +177,7 @@ verbatimUnc = do verbatim
                  server <- match PTText
                  bodySeparator
                  share <- match PTText
-                 Core.pure $ UNC server share
+                 pure $ UNC server share
 
 -- Example: C:
 disk : Grammar PathToken True Volume

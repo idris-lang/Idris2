@@ -27,7 +27,7 @@ collectDefs : List ImpDecl -> List ImpDecl
 %hide Prelude.pure
 %hide Core.Core.pure
 
-%hide Lexer.Core.(<|>)
+%hide Lexer.(<|>)
 %hide Prelude.(<|>)
 
 atom : FileName -> Rule RawImp
