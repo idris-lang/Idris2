@@ -27,6 +27,16 @@ finToNatWeakenNeutral : {m : Nat} -> {n : Fin m} -> finToNat (weaken n) = finToN
 finToNatWeakenNeutral {n=FZ} = Refl
 finToNatWeakenNeutral {m=S (S _)} {n=FS _} = cong S finToNatWeakenNeutral
 
+export
+finToNatWeakenNNeutral : (k : Nat) -> (a : Fin n) -> finToNat (weakenN k a) = finToNat a
+finToNatWeakenNNeutral k FZ     = Refl
+finToNatWeakenNNeutral k (FS x) = rewrite finToNatWeakenNNeutral k x in Refl
+
+export
+finToNatShift : (k : Nat) -> (a : Fin n) -> finToNat (shift k a) = k + finToNat a
+finToNatShift Z     a = Refl
+finToNatShift (S k) a = rewrite finToNatShift k a in Refl
+
 -------------------------------------------------
 --- Inversion function and related properties ---
 -------------------------------------------------
