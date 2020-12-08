@@ -2,7 +2,7 @@ module Data.Fin
 
 import public Data.Maybe
 import Data.Nat
-import Decidable.Equality
+import Decidable.Equality.Core
 
 %default total
 

@@ -59,7 +59,7 @@ process eopts nest env (IRunElabDecl fc tm)
 process eopts nest env (IPragma act)
     = act nest env
 process eopts nest env (ILog lvl)
-    = addLogLevel (uncurry unsafeMkLogLevel lvl)
+    = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
 
 TTImp.Elab.Check.processDecl = process
 

@@ -2214,10 +2214,12 @@ getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCh
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
-              LogLevel -> Core ()
-addLogLevel l
+              Maybe LogLevel -> Core ()
+addLogLevel lvl
     = do defs <- get Ctxt
-         put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
+         case lvl of
+           Nothing => put Ctxt (record { options->session->logLevel = defaultLogLevel } defs)
+           Just l  => put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->

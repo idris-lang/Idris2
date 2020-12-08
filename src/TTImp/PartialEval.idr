@@ -149,7 +149,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
-             mkRHSargs sc' (IImplicitApp fc app (Just x) (IVar fc (UN a))) as ds
+             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -159,7 +159,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (IImplicitApp fc app (Just x) tm') as ds
+             mkRHSargs sc' (INamedApp fc app x tm') as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -169,7 +169,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
 
     getRawArgs : List (Maybe Name, RawImp) -> RawImp -> List (Maybe Name, RawImp)
     getRawArgs args (IApp _ f arg) = getRawArgs ((Nothing, arg) :: args) f
-    getRawArgs args (IImplicitApp _ f (Just n) arg)
+    getRawArgs args (INamedApp _ f n arg)
         = getRawArgs ((Just n, arg) :: args) f
     getRawArgs args tm = args
 
@@ -177,7 +177,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     reapply f [] = f
     reapply f ((Nothing, arg) :: args) = reapply (IApp fc f arg) args
     reapply f ((Just t, arg) :: args)
-        = reapply (IImplicitApp fc f (Just t) arg) args
+        = reapply (INamedApp fc f t arg) args
 
     dropArgs : Name -> RawImp -> RawImp
     dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [] tm))
@@ -301,7 +301,8 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
     updateApp : Name -> RawImp -> RawImp
     updateApp n (IApp fc f a) = IApp fc (updateApp n f) a
-    updateApp n (IImplicitApp fc f m a) = IImplicitApp fc (updateApp n f) m a
+    updateApp n (IAutoApp fc f a) = IAutoApp fc (updateApp n f) a
+    updateApp n (INamedApp fc f m a) = INamedApp fc (updateApp n f) m a
     updateApp n f = IVar fc n
 
     unelabDef : (vs ** (Env Term vs, Term vs, Term vs)) ->

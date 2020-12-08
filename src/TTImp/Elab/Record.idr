@@ -15,6 +15,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -39,7 +40,7 @@ applyImp f [] = f
 applyImp f ((Nothing, arg) :: xs)
     = applyImp (IApp (getFC f) f arg) xs
 applyImp f ((Just n, arg) :: xs)
-    = applyImp (IImplicitApp (getFC f) f (Just n) arg) xs
+    = applyImp (INamedApp (getFC f) f n arg) xs
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)

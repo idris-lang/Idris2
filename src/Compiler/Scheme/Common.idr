@@ -206,6 +206,7 @@ data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
+             | MakeFuture
              | Unknown Name
 
 export
@@ -223,6 +224,7 @@ Show ExtPrim where
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
   show OnCollectAny = "OnCollectAny"
+  show MakeFuture = "MakeFuture"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
@@ -241,7 +243,8 @@ toPrim pn@(NS _ n)
             (n == UN "prim__os", SysOS),
             (n == UN "prim__codegen", SysCodegen),
             (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+            (n == UN "prim__onCollectAny", OnCollectAny),
+            (n == UN "prim__makeFuture", MakeFuture)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn

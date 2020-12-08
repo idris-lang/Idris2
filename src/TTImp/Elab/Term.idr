@@ -125,7 +125,7 @@ checkTerm rig elabinfo nest env (IVar fc n) exp
     = -- It may actually turn out to be an application, if the expected
       -- type is expecting an implicit argument, so check it as an
       -- application with no arguments
-      checkApp rig elabinfo nest env fc (IVar fc n) [] [] exp
+      checkApp rig elabinfo nest env fc (IVar fc n) [] [] [] exp
 checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
     = do n <- case p of
                    Explicit => genVarName "arg"
@@ -153,11 +153,13 @@ checkTerm rig elabinfo nest env (ICaseLocal fc uname iname args scope) exp
 checkTerm rig elabinfo nest env (IUpdate fc upds rec) exp
     = checkUpdate rig elabinfo nest env fc upds rec exp
 checkTerm rig elabinfo nest env (IApp fc fn arg) exp
-    = checkApp rig elabinfo nest env fc fn [arg] [] exp
+    = checkApp rig elabinfo nest env fc fn [arg] [] []  exp
+checkTerm rig elabinfo nest env (IAutoApp fc fn arg) exp
+    = checkApp rig elabinfo nest env fc fn [] [arg] []  exp
 checkTerm rig elabinfo nest env (IWithApp fc fn arg) exp
     = throw (GenericMsg fc "with application not implemented yet")
-checkTerm rig elabinfo nest env (IImplicitApp fc fn nm arg) exp
-    = checkApp rig elabinfo nest env fc fn [] [(nm, arg)] exp
+checkTerm rig elabinfo nest env (INamedApp fc fn nm arg) exp
+    = checkApp rig elabinfo nest env fc fn [] [] [(nm, arg)] exp
 checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
     = do est <- get EST
          nm <- genName "search"

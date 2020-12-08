@@ -48,7 +48,7 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
           pNames = map fst ps
           retty = apply (IVar fc n) (map (IVar fc) pNames)
           conty = mkTy Implicit (map jname ps) $
-                  mkTy Explicit (map bhere constraints ++ map bname meths) retty
+                  mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
           con = MkImpTy fc conName !(bindTypeNames [] (pNames ++ map fst meths ++ vars) conty) in
           pure $ IData fc vis (MkImpData fc n
                                   !(bindTypeNames [] (pNames ++ map fst meths ++ vars)
@@ -106,13 +106,9 @@ getMethDecl {vars} env nest params mnames (fc, c, opts, n, (d, ty))
              else IPi fc r p mn arg (stripParams ps ret)
     stripParams ps ty = ty
 
--- bind the auto implicit for the interface - put it after all the other
--- implicits
+-- bind the auto implicit for the interface - put it first, as it may be needed
+-- in other method variables, including implicit variables
 bindIFace : FC -> RawImp -> RawImp -> RawImp
-bindIFace _ ity (IPi fc rig Implicit n ty sc)
-       = IPi fc rig Implicit n ty (bindIFace fc ity sc)
-bindIFace _ ity (IPi fc rig AutoImplicit n ty sc)
-       = IPi fc rig AutoImplicit n ty (bindIFace fc ity sc)
 bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN "__con")) ity sc
 
 -- Get the top level function for implementing a method
@@ -132,20 +128,18 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
          let ty_constr =
-             bindPs params $ substNames vars (map applyCon allmeths) ty
-         ty_imp <- bindTypeNames [] vars (bindIFace fc ity ty_constr)
-         logRaw "elab.interface" 10 ("Type of method " ++ show n) ty_imp
+             substNames vars (map applyCon allmeths) ty
+         ty_imp <- bindTypeNames [] vars (bindPs params $ bindIFace fc ity ty_constr)
          cn <- inCurrentNS n
          let tydecl = IClaim fc c vis (if d then [Inline, Invertible]
                                             else [Inline])
                                       (MkImpTy fc cn ty_imp)
          let conapp = apply (IVar fc cname)
-                         (map (const (Implicit fc True)) constraints ++
-                          map (IBindVar fc) (map bindName allmeths))
+                              (map (IBindVar fc) (map bindName allmeths))
          let argns = getExplicitArgs 0 ty
          -- eta expand the RHS so that we put implicits in the right place
-         let fnclause = PatClause fc (IImplicitApp fc (IVar fc cn)
-                                                   (Just (UN "__con"))
+         let fnclause = PatClause fc (INamedApp fc (IVar fc cn)
+                                                   (UN "__con")
                                                    conapp)
                                   (mkLam argns
                                     (apply (IVar fc (methName n))
@@ -161,8 +155,8 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
         = IPi (getFC pty) rig Implicit (Just n) pty (bindPs ps ty)
 
     applyCon : Name -> (Name, RawImp)
-    applyCon n = (n, IImplicitApp fc (IVar fc n)
-                             (Just (UN "__con")) (IVar fc (UN "__con")))
+    applyCon n = (n, INamedApp fc (IVar fc n)
+                               (UN "__con") (IVar fc (UN "__con")))
 
     getExplicitArgs : Int -> RawImp -> List Name
     getExplicitArgs i (IPi _ _ Explicit n _ sc)
@@ -201,9 +195,8 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
                           (UN ("__" ++ show iname ++ "_" ++ show con))
          let tydecl = IClaim fc top vis [Inline, Hint False]
                           (MkImpTy fc hintname ty_imp)
-         let conapp = apply (IVar fc cname)
-                        (map (IBindVar fc) (map bindName constraints) ++
-                         map (const (Implicit fc True)) meths)
+         let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
+                              (map (const (Implicit fc True)) meths)
          let fnclause = PatClause fc (IApp fc (IVar fc hintname) conapp)
                                   (IVar fc (constName cn))
          let fndef = IDef fc hintname [fnclause]
@@ -216,6 +209,12 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
 
     constName : Name -> Name
     constName n = UN (bindName n)
+
+    impsBind : RawImp -> List String -> RawImp
+    impsBind fn [] = fn
+    impsBind fn (n :: ns)
+        = impsBind (IAutoApp fc fn (IBindVar fc n)) ns
+
 
 getSig : ImpDecl -> Maybe (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
 getSig (IClaim _ c _ opts (MkImpTy fc n ty))
@@ -409,7 +408,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         applyParams : RawImp -> List Name -> RawImp
         applyParams tm [] = tm
         applyParams tm (UN n :: ns)
-            = applyParams (IImplicitApp fc tm (Just (UN n)) (IBindVar fc n)) ns
+            = applyParams (INamedApp fc tm (UN n) (IBindVar fc n)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
         changeNameTerm : Name -> RawImp -> RawImp
@@ -417,8 +416,10 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
             = if n == n' then IVar fc dn else IVar fc n'
         changeNameTerm dn (IApp fc f arg)
             = IApp fc (changeNameTerm dn f) arg
-        changeNameTerm dn (IImplicitApp fc f x arg)
-            = IImplicitApp fc (changeNameTerm dn f) x arg
+        changeNameTerm dn (IAutoApp fc f arg)
+            = IAutoApp fc (changeNameTerm dn f) arg
+        changeNameTerm dn (INamedApp fc f x arg)
+            = INamedApp fc (changeNameTerm dn f) x arg
         changeNameTerm dn tm = tm
 
         changeName : Name -> ImpClause -> ImpClause
