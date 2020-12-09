@@ -149,32 +149,28 @@ natToFinToNat (S k) (LTESucc lte) = rewrite natToFinToNat k lte in Refl
 ----------------------------------------
 
 public export
-(+) : Fin a -> Fin b -> Fin (a + b)
-(+) FZ     y = rewrite plusCommutative a b in weakenN a y
-(+) (FS x) y = FS $ x + y
+(+) : {a : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a + b)
+(+) FZ y = rewrite plusCommutative a b in weakenN a y
+(+) (FS x) y {a=S _} = FS $ x + y
 
 public export
-(*) : Fin a -> Fin b -> Fin (a * b)
-(*) FZ     FZ       = FZ
-(*) FZ     (FS _)   = FZ
-(*) (FS x) FZ       = FZ
-(*) (FS x) y@(FS _) = y + x * y
+(*) : {a, b : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a * b)
+(*) FZ _ = FZ
+(*) (FS x) y {a=S i} = y + x * y
 
 --- Properties ---
 
 export
-finToNat_plus_linearity : (x : Fin a) -> (y : Fin b) -> finToNat (x + y) = finToNat x + finToNat y
-finToNat_plus_linearity FZ     _ = rewrite plusCommutative a b in finToNatWeakenNNeutral _ _
-finToNat_plus_linearity (FS x) y = rewrite finToNat_plus_linearity x y in Refl
+finToNat_plus_linearity : {a : Nat} -> (x : Fin $ S a) -> (y : Fin $ S b) -> finToNat (x + y) = finToNat x + finToNat y
+finToNat_plus_linearity FZ     _         = rewrite plusCommutative a b in finToNatWeakenNNeutral _ _
+finToNat_plus_linearity (FS x) y {a=S _} = rewrite finToNat_plus_linearity x y in Refl
 
 export
-finToNat_mult_linearity : (x : Fin a) -> (y : Fin b) -> finToNat (x * y) = finToNat x * finToNat y
-finToNat_mult_linearity FZ     FZ       = Refl
-finToNat_mult_linearity FZ     (FS _)   = Refl
-finToNat_mult_linearity (FS x) FZ       = rewrite multZeroRightZero $ finToNat x in Refl
-finToNat_mult_linearity (FS x) y@(FS _) = rewrite finToNat_plus_linearity y (x * y) in
-                                          rewrite finToNat_mult_linearity x y in
-                                          Refl
+finToNat_mult_linearity : {a, b : Nat} -> (x : Fin $ S a) -> (y : Fin $ S b) -> finToNat (x * y) = finToNat x * finToNat y
+finToNat_mult_linearity FZ _ = Refl
+finToNat_mult_linearity (FS x) y {a=S i} = rewrite finToNat_plus_linearity y (x * y) in
+                                           rewrite finToNat_mult_linearity x y in
+                                           Refl
 
 -------------------------------------------------
 --- Splitting operations and their properties ---
