@@ -54,6 +54,7 @@ import TTImp.ProcessDecls
 import Data.List
 import Data.Maybe
 import Data.NameMap
+import Data.ANameMap
 import Data.Stream
 import Data.Strings
 import Text.PrettyPrint.Prettyprinter
@@ -608,14 +609,43 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-equivTypes : (ty1 : ClosedTerm) -> (ty2 : ClosedTerm) -> Bool
-equivTypes ty1 ty2 = eqTerm ty1 ty2 
+eqPastImplicits : Term vars -> Term vars' -> Bool
+eqPastImplicits (Bind _ _ (Pi _ _ Implicit _) scope) y = eqPastImplicits scope y
+eqPastImplicits (Bind _ _ (Pi _ _ AutoImplicit _) scope) y = eqPastImplicits scope y
+eqPastImplicits (Bind _ _ (Pi _ _ (DefImplicit _) _) scope) y = eqPastImplicits scope y
+eqPastImplicits x (Bind _ _ (Pi _ _ Implicit _) scope) = eqPastImplicits x scope
+eqPastImplicits x (Bind _ _ (Pi _ _ AutoImplicit _) scope) = eqPastImplicits x scope
+eqPastImplicits x (Bind _ _ (Pi _ _ (DefImplicit _) _) scope) = eqPastImplicits x scope
+eqPastImplicits x y = eqTerm x y
+
+maybeGetDocsFor : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  FC -> Name -> Core (List String)
+maybeGetDocsFor fc n
+    = do syn <- get Syn
+         defs <- get Ctxt
+         all@(_ :: _) <- lookupCtxtName n (gamma defs)
+             | _ => throw (UndefinedName fc n)
+         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
+                                     (map fst all)
+             | [] => typeSummary defs
+         getDocsFor fc n 
   where
-  --  equivImplicits : ClosedTerm -> ClosedTerm -> Bool
-  --  equivImplicits ty1 ty2 = 
-  --    let imp1 = findImplicits ty1
-  --        imp2 = findImplicits ty2
-  --        sorted1 = sortBy
+    typeSummary : Defs -> Core (List String)
+    typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
+                            | Nothing => pure []
+                          ty <- normaliseHoles defs [] (type def)
+                          pure [(nameRoot n) ++ " : " ++ (show !(resugar [] ty))]
+
+equivTypes : {auto c : Ref Ctxt Defs}
+          -> (ty1 : ClosedTerm) 
+          -> (ty2 : ClosedTerm) 
+          -> Core Bool
+equivTypes ty1 ty2 = do defs <- get Ctxt
+                        True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
+                          | False => pure False
+                        newRef UST initUState
+                        coreLift $ coreRun (unify inTerm replFC [] ty1 ty2) (\_ => pure False) (\case (MkUnifyResult [] False [] NoLazy) => pure True; _ => pure False)
 
 ||| Process a single `REPLCmd`
 |||
@@ -728,7 +758,6 @@ process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
          let context = gamma defs
          log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
 
-         --
          rawTy <- desugar AnyExpr [] searchTerm
          log "repl.ps" 2 $ show $ findImplicits rawTy
          let bound = piBindNames replFC [] rawTy
@@ -738,23 +767,15 @@ process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
          logTermNF "repl.ps" 2 "checked term" [] ty
          tmnf <- normaliseHoles defs [] ty
          ty' <- toResolvedNames tmnf
-         allDefs <- do names <- allNames context
-                       defs <- pure $ catMaybes !(traverse (flip lookupCtxtExact context) names)
-                       traverse (resolved context) defs
-         let filteredDefs = (flip filter) allDefs (\def => def.type `equivTypes` ty')
+         filteredDefs <- do names   <- allNames context
+                            defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact context) names)
+                            allDefs <- traverse (resolved context) defs
+                            (flip filterM) allDefs (\def => equivTypes def.type ty')
+         -- let filteredDefs = (flip filter) allDefs (\def => def.type `equivTypes` ty')
          log "repl.ps" 2 $ (show ty')
-         doc <- traverse (getDocsFor replFC) $ (.fullname) <$> filteredDefs
+         doc <- traverse (maybeGetDocsFor replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
-         --
 
---          allDefs <- map catMaybes $ traverse (flip lookupCtxtExact context) $ !(allNames context)
--- 
---          allDefsSugared <- traverse (\def => pure (!(resugar [] def.type), def)) allDefs
--- 
---          let filteredDefsSugared = (flip filter) allDefsSugared (\(ty, def) => (show searchTerm) `isInfixOf` (show ty))
--- 
---          doc <- traverse (getDocsFor replFC) $ (.fullname . snd) <$> filteredDefsSugared
---          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
 process (ProofSearch _)
     = do pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
