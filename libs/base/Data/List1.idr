@@ -117,6 +117,7 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  null _ = False
 
 export
 Show a => Show (List1 a) where
