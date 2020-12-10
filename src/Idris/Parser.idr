@@ -116,7 +116,7 @@ mutual
   appExpr q fname indents
       = case_ fname indents
     <|> doBlock fname indents
-    <|> lambdaCase fname indents
+    <|> lam fname indents
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
@@ -537,17 +537,37 @@ mutual
   lam : FileName -> IndentInfo -> Rule PTerm
   lam fname indents
       = do symbol "\\"
-           binders <- bindList fname indents
-           symbol "=>"
-           mustContinue indents Nothing
-           scope <- expr pdef fname indents
-           pure (bindAll binders scope)
+           commit
+           switch <- optional (bounds $ keyword "case")
+           case switch of
+             Nothing => continueLam
+             Just r  => continueLamCase r
+
      where
+
        bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
        bindAll [] scope = scope
        bindAll ((rig, pat, ty) :: rest) scope
            = PLam (boundToFC fname pat) rig Explicit pat.val ty
                   (bindAll rest scope)
+
+       continueLam : Rule PTerm
+       continueLam = do
+           binders <- bindList fname indents
+           symbol "=>"
+           mustContinue indents Nothing
+           scope <- expr pdef fname indents
+           pure (bindAll binders scope)
+
+       continueLamCase : WithBounds () -> Rule PTerm
+       continueLamCase endCase = do
+           b <- bounds (forget <$> nonEmptyBlock (caseAlt fname))
+           pure
+            (let fc = boundToFC fname b
+                 fcCase = boundToFC fname endCase
+                 n = MN "lcase" 0 in
+              PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
+                PCase fc (PRef fcCase n) b.val)
 
   letBlock : FileName -> IndentInfo -> Rule (WithBounds (Either LetBinder LetDecl))
   letBlock fname indents = bounds (letBinder <||> letDecl) where
@@ -584,20 +604,6 @@ mutual
                            pure (scr, alts))
            (scr, alts) <- pure b.val
            pure (PCase (boundToFC fname b) scr alts)
-
-  lambdaCase : FileName -> IndentInfo -> Rule PTerm
-  lambdaCase fname indents
-      = do b <- bounds (do endCase <- bounds (symbol "\\" *> keyword "case")
-                           commit
-                           alts <- block (caseAlt fname)
-                           pure (endCase, alts))
-           (endCase, alts) <- pure b.val
-           pure $
-            (let fc = boundToFC fname b
-                 fcCase = boundToFC fname endCase
-                 n = MN "lcase" 0 in
-              PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
-                PCase fc (PRef fcCase n) alts)
 
   caseAlt : FileName -> IndentInfo -> Rule PClause
   caseAlt fname indents
@@ -742,7 +748,6 @@ mutual
     <|> implicitPi fname indents
     <|> explicitPi fname indents
     <|> lam fname indents
-    <|> lambdaCase fname indents
 
   typeExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   typeExpr q fname indents
