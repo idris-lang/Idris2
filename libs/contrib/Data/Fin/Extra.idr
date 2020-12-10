@@ -96,6 +96,17 @@ strengthen' {n = S k} (FS m) = case strengthen' m of
     Left eq => Left $ cong FS eq
     Right (m' ** eq) => Right (FS m' ** cong S eq)
 
+----------------------------
+--- Weakening properties ---
+----------------------------
+
+export
+weakenNZero_preserves : {a : Nat} -> (x : Fin a) -> weakenN 0 x = rewrite plusZeroRightNeutral a in x
+weakenNZero_preserves {a=S i} FZ = rewrite plusZeroRightNeutral i in Refl
+weakenNZero_preserves {a=S i} (FS x) = rewrite weakenNZero_preserves x in
+                                       rewrite plusZeroRightNeutral i in
+                                       Refl
+
 -----------------------------------
 --- Division-related properties ---
 -----------------------------------
@@ -172,6 +183,66 @@ finToNat_mult_linearity (FS x) y {a=S i} = rewrite finToNat_plus_linearity y (x 
                                            rewrite finToNat_mult_linearity x y in
                                            Refl
 
+export
+plusSuccRightSucc : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> FS (left + right) = rewrite plusSuccRightSucc a b in left + FS right
+plusSuccRightSucc FZ     right         = rewrite plusCommutative a b in Refl
+plusSuccRightSucc (FS x) right {a=S i} = rewrite plusSuccRightSucc x right in
+                                         rewrite plusSuccRightSucc i b in
+                                         Refl
+
+export
+shiftAsPlus : {a, b : Nat} -> (x : Fin $ S a) -> shift b x = rewrite sym $ plusSuccRightSucc b a in last {n=b} + x
+shiftAsPlus {b=Z}   x = rewrite weakenNZero_preserves x in Refl
+shiftAsPlus {b=S k} x = rewrite shiftAsPlus {b=k} x in
+                        rewrite plusSuccRightSucc k a in
+                        Refl
+
+export
+weakenNAsPlusFZ : {a, b : Nat} -> (x : Fin $ S b) -> weakenN a x = x + the (Fin $ S a) FZ
+weakenNAsPlusFZ FZ = rewrite plusCommutative a b in Refl
+weakenNAsPlusFZ (FS x) {b=S j} = rewrite weakenNAsPlusFZ {a} x in Refl
+
+export
+weakenNOfPlus : {a, b : Nat} -> (n : Nat) -> (x : Fin $ S a) -> (y : Fin $ S b) ->
+                weakenN n (x + y) = rewrite sym $ plusAssociative a b n in
+                                    rewrite plusCommutative b n in
+                                    rewrite plusAssociative a n b in
+                                    weakenN n x + y
+weakenNOfPlus n FZ FZ = rewrite sym $ plusAssociative b a n in
+                        rewrite plusCommutative a n in
+                        rewrite plusAssociative b n a in
+                        Refl
+weakenNOfPlus n FZ (FS y) {b=S j} = rewrite sym $ weakenNOfPlus {a} n FZ y in
+                                    rewrite plusCommutative j a in
+                                    rewrite sym $ plusAssociative a j n in
+                                    rewrite plusAssociative j a n in
+                                    rewrite plusCommutative j a in
+                                    rewrite plusAssociative a j n in
+                                    Refl
+weakenNOfPlus n (FS x) y {a=S i} = rewrite weakenNOfPlus n x y in
+                                   rewrite sym $ plusAssociative i n b in
+                                   rewrite plusCommutative n b in
+                                   rewrite plusAssociative i b n in
+                                   Refl
+
+export
+plusCommutative : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> left + right = rewrite plusCommutative a b in right + left
+plusCommutative FZ     right = rewrite plusCommutative a b in weakenNAsPlusFZ {a} right
+plusCommutative (FS x) right {a=S i} = rewrite sym $ plusSuccRightSucc right x in
+                                       rewrite plusCommutative x right in
+                                       rewrite plusCommutative b i in
+                                       Refl
+
+export
+plusAssociative : {a, b, c : Nat} -> (left : Fin $ S a) -> (centre : Fin $ S b) -> (right : Fin $ S c) ->
+                  left + (centre + right) = rewrite plusAssociative a b c in (left + centre) + right
+plusAssociative FZ centre right = rewrite weakenNOfPlus {a=b} {b=c} a centre right in
+                                  rewrite plusCommutative b a in
+                                  Refl
+plusAssociative (FS x) centre right {a=S i} = rewrite plusAssociative x centre right in
+                                              rewrite plusAssociative i b c in
+                                              Refl
+
 -------------------------------------------------
 --- Splitting operations and their properties ---
 -------------------------------------------------
@@ -203,17 +274,22 @@ splitSumFin_correctness {a=S k} (FS x) with (splitSumFin_correctness x)
     splitSumFin_correctness {a=S k} (FS x) | subcorr | Right y = rewrite subcorr in Refl
 
 export
-splitProdFin_correctness : {a, b : Nat} -> (x : Fin $ a * b) ->
-                           let (o, i) = splitProdFin {a} {b} x in
-                           finToNat x = finToNat o * b + finToNat i
-splitProdFin_correctness {a=S _} x with (splitSumFin_correctness x)
-  splitProdFin_correctness x | sumcorr with (splitSumFin x)
-    splitProdFin_correctness x | sumcorr | Left y = rewrite sumcorr in finToNatWeakenNNeutral _ _
-    splitProdFin_correctness x | sumcorr | Right y with (splitProdFin_correctness y)
-      splitProdFin_correctness x | sumcorr | Right y | subcorr with (splitProdFin y)
-        splitProdFin_correctness x | sumcorr | Right y | subcorr | (o, i) =
-          rewrite sumcorr in
-          rewrite finToNatShift b y in
-          rewrite subcorr in
-          rewrite plusAssociative b (finToNat o * b) (finToNat i) in
-          Refl
+splitProdFin_correctness : {a, b : Nat} -> (x : Fin $ S a * S b) ->
+                           let (o, i) = splitProdFin {a=S a} {b=S b} x in
+                           x = i + o * last {n=S b}
+splitProdFin_correctness x with (splitSumFin_correctness {a=S b} x)
+  splitProdFin_correctness x | sumcorr with (splitSumFin {a=S b} x)
+    splitProdFin_correctness x | sumcorr | Left  y = rewrite sumcorr in weakenNAsPlusFZ {a=mult a (S b)} y
+    splitProdFin_correctness x | sumcorr | Right y with (a)
+      splitProdFin_correctness x | sumcorr | Right y | S i with (splitProdFin_correctness y)
+        splitProdFin_correctness x | sumcorr | Right y | S i | subcorr with (splitProdFin {a=S i} {b=S b} y)
+          splitProdFin_correctness x | sumcorr | Right y | S i | subcorr | (oo, ii) =
+            rewrite sumcorr in
+            rewrite subcorr in
+            rewrite sym $ plusSuccRightSucc ii $ last {n=b} + (oo * FS (last {n=b})) in
+            rewrite shiftAsPlus {b} $ ii + (oo * FS (last {n=b})) in
+            rewrite plusAssociative (last {n=b}) ii $ (oo * FS (last {n=b})) in
+            rewrite plusCommutative (last {n=b}) ii in
+            rewrite plusAssociative ii (last {n=b}) $ (oo * FS (last {n=b})) in
+            rewrite plusSuccRightSucc b $ b + i * S b in
+            Refl
