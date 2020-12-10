@@ -274,7 +274,8 @@ public export
 Foldable (Either e) where
   foldr f acc (Left _) = acc
   foldr f acc (Right x) = f x acc
-  null _ = False
+  null (Left _) = True
+  null (Right _) = False
 
 public export
 Traversable (Either e) where
