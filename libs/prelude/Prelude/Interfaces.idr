@@ -217,6 +217,9 @@ interface Foldable (t : Type -> Type) where
   foldl : (func : acc -> elem -> acc) -> (init : acc) -> (input : t elem) -> acc
   foldl f z t = foldr (flip (.) . flip f) id t z
 
+  ||| Test whether the structure is empty.
+  null : t elem -> Bool
+
 ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
 ||| Consequently, the final value is wrapped in the same `Monad`.
 public export
