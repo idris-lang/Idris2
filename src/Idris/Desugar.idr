@@ -26,6 +26,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Utils.Shunting
+import Utils.String
 
 import Control.Monad.State
 import Data.List
@@ -149,10 +150,15 @@ mutual
             pure $ IPi fc rig !(traverse (desugar side ps') p)
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
-  desugarB side ps (PLam fc rig p (PRef _ n@(UN _)) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
+  desugarB side ps (PLam fc rig p pat@(PRef _ n@(UN nm)) argTy scope)
+      =  if lowerFirst nm || nm == "_"
+           then pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
                                     !(desugar side (n :: ps) scope)
+           else pure $ ILam fc rig !(traverse (desugar side ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                     [!(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
