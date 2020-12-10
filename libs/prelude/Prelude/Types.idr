@@ -180,6 +180,8 @@ public export
 Foldable Maybe where
   foldr _ z Nothing  = z
   foldr f z (Just x) = f x z
+  null Nothing = True
+  null (Just _) = False
 
 public export
 Traversable Maybe where
@@ -272,6 +274,8 @@ public export
 Foldable (Either e) where
   foldr f acc (Left _) = acc
   foldr f acc (Right x) = f x acc
+  null (Left _) = True
+  null (Right _) = False
 
 public export
 Traversable (Either e) where
@@ -340,6 +344,9 @@ Foldable List where
 
   foldl f q [] = q
   foldl f q (x::xs) = foldl f (f q x) xs
+
+  null [] = True
+  null (_::_) = False
 
 public export
 Applicative List where
