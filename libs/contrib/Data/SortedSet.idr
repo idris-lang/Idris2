@@ -34,6 +34,8 @@ export
 Foldable SortedSet where
   foldr f e xs = foldr f e (Data.SortedSet.toList xs)
 
+  null (SetWrapper m) = null m
+
 ||| Set union. Inserts all elements of x into y
 export
 union : (x, y : SortedSet k) -> SortedSet k
@@ -69,7 +71,3 @@ keySet = SetWrapper . map (const ())
 export
 singleton : Ord k => k -> SortedSet k
 singleton k = insert k empty
-
-export
-null : SortedSet k -> Bool
-null (SetWrapper m) = SortedMap.null m
