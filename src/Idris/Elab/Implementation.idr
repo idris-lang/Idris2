@@ -51,13 +51,18 @@ bindImpls fc [] ty = ty
 bindImpls fc ((n, r, ty) :: rest) sc
     = IPi fc r Implicit (Just n) ty (bindImpls fc rest sc)
 
-addDefaults : FC -> Name -> List Name -> List (Name, List ImpClause) ->
+addDefaults : FC -> Name ->
+              (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
+              (allMethods : List Name) ->
+              (defaults : List (Name, List ImpClause)) ->
               List ImpDecl ->
               (List ImpDecl, List Name) -- Updated body, list of missing methods
-addDefaults fc impName allms defs body
+addDefaults fc impName params allms defs body
     = let missing = dropGot allms body in
           extendBody [] missing body
   where
+    specialiseMeth : Name -> (Name, RawImp)
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN "__con") (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
@@ -73,10 +78,12 @@ addDefaults fc impName allms defs body
                     -- That is, default method implementations could depend on
                     -- other methods.
                     -- (See test idris2/interface014 for an example!)
-                    let mupdates
-                            = map (\n => (n, INamedApp fc (IVar fc n)
-                                                          (UN "__con")
-                                                          (IVar fc impName))) allms
+
+                    -- Similarly if any parameters appear in the clauses, they should
+                    -- be substituted for the actual parameters because they are going
+                    -- to be referring to unbound variables otherwise.
+                    -- (See test idris2/interface018 for an example!)
+                    let mupdates = params ++ map specialiseMeth allms
                         cs' = map (substNamesClause [] mupdates) cs in
                         extendBody ms ns
                              (IDef fc n (map (substLocClause fc) cs') :: body)
@@ -140,11 +147,12 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
          logTerm "elab.implementation" 3 ("Found interface " ++ show cn) ity
          log "elab.implementation" 3 $
-                 " with params: " ++ show (params cdata)
-                 ++ " and parents: " ++ show (parents cdata)
-                 ++ " using implicits: " ++ show impsp
-                 ++ " and methods: " ++ show (methods cdata) ++ "\n"
-                 ++ "Constructor: " ++ show (iconstructor cdata) ++ "\n"
+                 "\n  with params: " ++ show (params cdata)
+                 ++ "\n  specialised to: " ++ show ps
+                 ++ "\n  and parents: " ++ show (parents cdata)
+                 ++ "\n  using implicits: " ++ show impsp
+                 ++ "\n  and methods: " ++ show (methods cdata) ++ "\n"
+                 ++ "\nConstructor: " ++ show (iconstructor cdata) ++ "\n"
          logTerm "elab.implementation" 3 "Constructor type: " conty
          log "elab.implementation" 5 $ "Making implementation " ++ show impName
 
@@ -180,7 +188,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
                -- 1.5. Lookup default definitions and add them to to body
                let (body, missing)
-                     = addDefaults fc impName (map (dropNS . fst) (methods cdata))
+                     = addDefaults fc impName
+                                      (zip (params cdata) ps)
+                                      (map (dropNS . fst) (methods cdata))
                                       (defaults cdata) body_in
 
                log "elab.implementation" 5 $ "Added defaults: body is " ++ show body

@@ -5,7 +5,7 @@ import public Control.Monad.Trans
 
 ||| A computation which runs in a context and produces an output
 public export
-interface Monad m => MonadState stateType (m : Type -> Type) | m where
+interface Monad m => MonadState stateType m | m where
     ||| Get the context
     get : m stateType
     ||| Write a new context/output

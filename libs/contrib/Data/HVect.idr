@@ -99,8 +99,8 @@ public export
     decEq (x :: xs) (y :: ys) | No contra = No (contra . consInjective1)
 
 public export
-interface Shows (k : Nat) (ts : Vect k Type) where
-  shows : HVect ts -> Vect k String
+interface Shows k ts where
+  shows : HVect {k} ts -> Vect k String
 
 public export
 Shows Z [] where

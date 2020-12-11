@@ -486,8 +486,8 @@ unless = when . not
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export
-interface Catchable (m : Type -> Type) t | m where
-    throw : t -> m a
+interface Catchable m t | m where
+    throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
 export
