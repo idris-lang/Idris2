@@ -12,7 +12,7 @@ main = do
     threadID <- fork $ do
         sleep 1
         putStrLn "Hello"
-        conditionBroadcast cond
+        conditionSignal cond
 
     mutexAcquire mutex
     conditionWait cond mutex

@@ -236,51 +236,34 @@
 
 ;; Condition Variables
 
-(struct condition (waiters-box mutex))
-
 (define (blodwen-make-condition)
-  (condition (box '()) (blodwen-make-mutex)))
+  (make-async-channel))
 
-(define (blodwen-condition-wait condition mutex)
+(define (blodwen-condition-wait ach mutex)
   ;; Pre-condition: this threads holds `mutex'.
-  (blodwen-mutex-acquire (condition-mutex condition))
-  (let* [(waiters-box (condition-waiters-box condition))
-         (waiters (unbox waiters-box))
-         (my-sema (make-semaphore 0))]
-    (set-box! waiters-box (cons my-sema waiters))
-    (blodwen-mutex-release (condition-mutex condition))
+  (let [(sema (make-semaphore 0))]
+    (async-channel-put ach sema)
     (blodwen-mutex-release mutex)
-    (sync my-sema)
+    (sync sema)
     (blodwen-mutex-acquire mutex)))
 
-(define (blodwen-condition-wait-timeout condition mutex timeout)
+(define (blodwen-condition-wait-timeout ach mutex timeout)
   ;; Pre-condition: this threads holds `mutex'.
-  (blodwen-mutex-acquire (condition-mutex condition))
-  (let* [(waiters-box (condition-waiters-box condition))
-         (waiters (unbox waiters-box))
-         (my-sema (make-semaphore 0))]
-    (set-box! waiters-box (cons my-sema waiters))
-    (blodwen-mutex-release (condition-mutex condition))
+  (let [(sema (make-semaphore 0))]
+    (async-channel-put ach sema)
     (blodwen-mutex-release mutex)
-    (sync/timeout (/ timeout 1000000) my-sema)
+    (sync/timeout (/ timeout 1000000) sema)
     (blodwen-mutex-acquire mutex)))
 
-(define (blodwen-condition-signal condition)
-  (blodwen-mutex-acquire (condition-mutex condition))
-  (let* [(waiters-box (condition-waiters-box condition))
-         (waiters (unbox waiters-box))]
-    (when (not (null? waiters))
-      (semaphore-post (car waiters))
-      (set-box! waiters-box (cdr waiters))))
-  (blodwen-mutex-release (condition-mutex condition)))
+(define (blodwen-condition-signal ach)
+  (let [(sema (async-channel-try-get ach))]
+    (when sema (semaphore-post sema))))
 
-(define (blodwen-condition-broadcast condition)
-  (blodwen-mutex-acquire (condition-mutex condition))
-  (let* [(waiters-box (condition-waiters-box condition))
-           (waiters (unbox waiters-box))]
-    (for-each semaphore-post waiters)
-    (set-box! waiters-box '()))
-  (blodwen-mutex-release (condition-mutex condition)))
+(define (blodwen-condition-broadcast ach)
+  (define (loop)
+    (let [(sema (async-channel-try-get ach))]
+      (when sema ((semaphore-post) (loop)))))
+  (loop))
 
 
 (define (blodwen-sleep s) (sleep s))
