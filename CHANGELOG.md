@@ -7,11 +7,11 @@ Library changes:
 
   - Renamed `System.Concurrency.Raw` to `System.Concurrency`.
 
-  - Added an implementation of semaphores with support in both the Chez Scheme and Racket RTS’es.
+  - Added semaphores supported by both the Chez Scheme and Racket RTS’es.
 
-  - Fixed the implementation of mutexes with semaphores in the Racket RTS.
-
-  - Marked `conditionBroadcast` as only being supported by the Chez Scheme RTS.
+  - Fixed mutexes in the Racket RTS; formerly, lock and unlock were swapped.
+  
+  - Marked condition variables as only being supported by the Chez Scheme RTS. Removed the implementation of condition variables from the Racket RTS; formerly, condition-signal was synchronous, and the condition variables had memory, meaning that past condition-signal operations would unblock future condition-wait operations.
 
   - Modified the implementation of `fork` in the Chez Scheme RTS, which now returns a semaphore instead of a thread object. This allows the main thread to wait for the child thread to finish (see next bullet).
 

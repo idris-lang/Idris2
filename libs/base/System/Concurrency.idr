@@ -62,13 +62,13 @@ mutexRelease m = primIO (prim__mutexRelease m)
 export
 data Condition : Type where [external]
 
-%foreign "scheme:blodwen-make-condition"
+%foreign "scheme,chez:blodwen-make-condition"
 prim__makeCondition : PrimIO Condition
-%foreign "scheme:blodwen-condition-wait"
+%foreign "scheme,chez:blodwen-condition-wait"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
-%foreign "scheme:blodwen-condition-wait-timeout"
+%foreign "scheme,chez:blodwen-condition-wait-timeout"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
-%foreign "scheme:blodwen-condition-signal"
+%foreign "scheme,chez:blodwen-condition-signal"
 prim__conditionSignal : Condition -> PrimIO ()
 %foreign "scheme,chez:blodwen-condition-broadcast"
 prim__conditionBroadcast : Condition -> PrimIO ()
@@ -107,7 +107,7 @@ conditionBroadcast : Condition -> IO ()
 conditionBroadcast c = primIO (prim__conditionBroadcast c)
 
 
---- Semaphores
+-- Semaphores
 
 export
 data Semaphore : Type where [external]
@@ -135,3 +135,34 @@ semaphorePost sema = primIO (prim__semaphorePost sema)
 export
 semaphoreWait : Semaphore -> IO ()
 semaphoreWait sema = primIO (prim__semaphoreWait sema)
+
+
+-- Channels
+
+export
+data Channel : Type -> Type where [external]
+
+%foreign "scheme:blodwen-make-channel"
+prim__makeChannel : PrimIO (Channel a)
+%foreign "scheme:blodwen-channel-get"
+prim__channelGet : Channel a -> PrimIO a
+%foreign "scheme:blodwen-channel-put"
+prim__channelPut : Channel a -> a -> PrimIO ()
+
+||| Creates and returns a new channel. The channel can be used with channelGet
+||| to receive a value through the channel. The channel can be used with
+||| channelPut to send a value through the channel.
+export
+makeChannel : IO (Channel a)
+makeChannel = primIO prim__makeChannel
+
+||| Blocks until a sender is ready to provide a value through `chan`. The result
+||| is the sent value.
+export
+channelGet : Channel a -> IO a
+channelGet chan = primIO (prim__channelGet chan)
+
+||| Blocks until a receiver is ready to accept the value `val` through `chan`.
+export
+channelPut : Channel a -> a -> IO ()
+channelPut chan val = primIO (prim__channelPut chan val)

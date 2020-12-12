@@ -236,6 +236,35 @@
       (set-box! sema-box (- (unbox sema-box) 1))
       )))
 
+;; Channels
+
+(define-record channel (box mutex semaphore-get semaphore-put))
+
+(define (blodwen-make-channel ty)
+  (make-channel
+   (box '())
+   (make-mutex)
+   (blodwen-make-semaphore 0)
+   (blodwen-make-semaphore 0)))
+
+(define (blodwen-channel-get ty chan)
+  (blodwen-semaphore-post (channel-semaphore-get chan))
+  (blodwen-semaphore-wait (channel-semaphore-put chan))
+  (with-mutex (channel-mutex chan)
+    (let* [(chan-box (channel-box chan))
+           (chan-msg-queue (unbox chan-box))]
+      (set-box! chan-box (cdr chan-msg-queue))
+      (car chan-msg-queue)
+      )))
+
+(define (blodwen-channel-put ty chan val)
+  (with-mutex (channel-mutex chan)
+    (let* [(chan-box (channel-box chan))
+           (chan-msg-queue (unbox chan-box))]
+      (set-box! chan-box (append chan-msg-queue (list val)))))
+  (blodwen-semaphore-post (channel-semaphore-put chan))
+  (blodwen-semaphore-wait (channel-semaphore-get chan)))
+
 ;; Mutex
 
 (define (blodwen-make-mutex)

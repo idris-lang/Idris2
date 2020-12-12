@@ -208,6 +208,15 @@
 (define (blodwen-semaphore-wait sema)
   (semaphore-wait sema))
 
+;; Channels
+
+(define (blodwen-make-channel ty)
+  (make-channel))
+(define (blodwen-channel-get ty chan)
+  (channel-get chan))
+(define (blodwen-channel-put ty chan val)
+  (channel-put chan val))
+
 ;; Mutex
 
 (define (blodwen-make-mutex)
@@ -222,7 +231,7 @@
 ;; Condition Variables
 
 (define (blodwen-make-condition)
-  (make-channel))
+  (make-async-channel))
 (define (blodwen-condition-wait chan mutex)
   (blodwen-mutex-acquire mutex) ;; consistency with interface for posix condition variables
   (sync chan)
@@ -232,7 +241,7 @@
   (sync/timeout (/ timeout 1000000) chan)
   (blodwen-mutex-release mutex))
 (define (blodwen-condition-signal chan)
-  (channel-put chan 'ready))
+  (async-channel-put chan 'ready))
 
 ;; TODO: implement condition-broadcast, which would require adding an explicit queue
 
