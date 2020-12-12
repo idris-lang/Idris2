@@ -15,7 +15,6 @@ main = do
         putStrLn "Goodbye"
         mutexRelease mutex
 
-    sleep 1
     putStrLn "Hello"
     conditionSignal cond
 

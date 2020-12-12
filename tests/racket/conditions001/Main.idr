@@ -10,7 +10,6 @@ main = do
     cond <- makeCondition
 
     threadID <- fork $ do
-        sleep 1
         putStrLn "Hello"
         conditionSignal cond
 

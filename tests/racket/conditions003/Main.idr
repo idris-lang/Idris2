@@ -9,20 +9,20 @@ main = do
     mutex <- makeMutex
     cond <- makeCondition
 
-    threadID <- fork $ do
+    thread1 <- fork $ do
         mutexAcquire mutex
         conditionWait cond mutex
         putStrLn "Goodbye"
         mutexRelease mutex
 
-    threadID <- fork $ do
+    thread2 <- fork $ do
         mutexAcquire mutex
         conditionWait cond mutex
         putStrLn "Goodbye"
         mutexRelease mutex
 
-    sleep 1
     putStrLn "Hello"
     conditionBroadcast cond
 
-    threadWait threadID
+    threadWait thread1
+    threadWait thread2

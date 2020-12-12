@@ -151,12 +151,8 @@ chezTests = MkTestPool [Chez]
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
     [ "forkjoin001"
-    , "semaphores001"
-    , "semaphores002"
-    , "conditions001"
-    , "conditions002"
-    , "conditions003"
-    , "conditions004"
+    , "semaphores001", "semaphores002"
+    -- , "conditions001", "conditions002", "conditions003", "conditions004"
     ]
 
 nodeTests : TestPool
@@ -177,7 +173,7 @@ ideModeTests = MkTestPool []
 
 preludeTests : TestPool
 preludeTests = MkTestPool []
-  [ "reg001" 
+  [ "reg001"
   ]
 
 templateTests : TestPool

@@ -260,10 +260,10 @@
     (when sema (semaphore-post sema))))
 
 (define (blodwen-condition-broadcast ach)
-  (define (loop)
-    (let [(sema (async-channel-try-get ach))]
-      (when sema ((semaphore-post) (loop)))))
-  (loop))
+  (letrec [(loop (lambda ()
+                   (let [(sema (async-channel-try-get ach))]
+                     (when sema ((semaphore-post sema) (loop))))))]
+    loop))
 
 
 (define (blodwen-sleep s) (sleep s))
