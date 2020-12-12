@@ -203,10 +203,35 @@
 (define (blodwen-set-thread-data a)
   (blodwen-thread-data a))
 
+(define (blodwen-get-thread-id) (get-thread-id))
+
+;; Semaphore
+
+(define-record semaphore (box mutex condition))
+
+(define (blodwen-make-semaphore init)
+  (make-semaphore (box init) (make-mutex) (make-condition)))
+
+(define (blodwen-semaphore-post sema)
+  (with-mutex (semaphore-mutex sema)
+    (set-box! (semaphore-box sema) (+ (unbox (semaphore-box sema)) 1))
+    (condition-broadcast (semaphore-condition sema))
+    ))
+
+(define (blodwen-semaphore-wait sema)
+  (with-mutex (semaphore-mutex sema)
+    (rec loop (lambda ()
+                (if (= (unbox (semaphore-box sema)) 0)
+                    ((condition-wait (semaphore-condition sema) (semaphore-mutex sema)) (loop)))
+                ))
+    (set-box! (semaphore-box sema) (- (unbox (semaphore-box sema)) 1))
+    ))
+
+;; Mutex
+
 (define (blodwen-mutex) (make-mutex))
-(define (blodwen-lock m) (mutex-acquire m))
-(define (blodwen-unlock m) (mutex-release m))
-(define (blodwen-thisthread) (get-thread-id))
+(define (blodwen-mutex-acquire m) (mutex-acquire m))
+(define (blodwen-mutex-release m) (mutex-release m))
 
 (define (blodwen-condition) (make-condition))
 (define (blodwen-condition-wait c m) (condition-wait c m))

@@ -194,22 +194,21 @@
 (define (blodwen-set-thread-data a)
   (thread-cell-set! blodwen-thread-data a))
 
-(define (blodwen-mutex) (make-semaphore 1))
-(define (blodwen-lock m) (semaphore-post m))
-(define (blodwen-unlock m) (semaphore-wait m))
-(define (blodwen-thisthread) (current-thread))
+(define (blodwen-get-thread-id) (current-thread))
 
-(define (blodwen-condition) (make-channel))
-(define (blodwen-condition-wait c m)
-  (blodwen-unlock m) ;; consistency with interface for posix condition variables
-  (sync c)
-  (blodwen-lock m))
-(define (blodwen-condition-wait-timeout c m t)
-  (blodwen-unlock m) ;; consistency with interface for posix condition variables
-  (sync/timeout (/ t 1000000) c)
-  (blodwen-lock m))
-(define (blodwen-condition-signal c)
-  (channel-put c 'ready))
+;; Semaphores
+
+(define (blodwen-make-semaphore init) (make-semaphore init))
+(define (blodwen-semaphore-post sema) (semaphore-post sema))
+(define (blodwen-semaphore-wait sema) (semaphore-wait sema))
+
+;; Mutex
+
+;; ...
+
+;; Conditional Variables
+
+;; ...
 
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
