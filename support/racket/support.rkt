@@ -250,7 +250,19 @@
     (set-box! waiters-box (cons my-sema waiters))
     (blodwen-mutex-release (condition-mutex condition))
     (blodwen-mutex-release mutex)
-    (semaphore-wait my-sema)
+    (sync my-sema)
+    (blodwen-mutex-acquire mutex)))
+
+(define (blodwen-condition-wait-timeout condition mutex timeout)
+  ;; Pre-condition: this threads holds `mutex'.
+  (blodwen-mutex-acquire (condition-mutex condition))
+  (let* [(waiters-box (condition-waiters-box condition))
+         (waiters (unbox waiters-box))
+         (my-sema (make-semaphore 0))]
+    (set-box! waiters-box (cons my-sema waiters))
+    (blodwen-mutex-release (condition-mutex condition))
+    (blodwen-mutex-release mutex)
+    (sync/timeout (/ timeout 1000000) my-sema)
     (blodwen-mutex-acquire mutex)))
 
 (define (blodwen-condition-signal condition)
