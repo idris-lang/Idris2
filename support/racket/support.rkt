@@ -203,8 +203,10 @@
 
 (define (blodwen-make-semaphore init)
   (make-semaphore init))
+
 (define (blodwen-semaphore-post sema)
   (semaphore-post sema))
+
 (define (blodwen-semaphore-wait sema)
   (semaphore-wait sema))
 
@@ -212,8 +214,10 @@
 
 (define (blodwen-make-channel ty)
   (make-channel))
+
 (define (blodwen-channel-get ty chan)
   (channel-get chan))
+
 (define (blodwen-channel-put ty chan val)
   (channel-put chan val))
 
@@ -221,29 +225,50 @@
 
 (define (blodwen-make-mutex)
   (make-semaphore 1))
+
 (define (blodwen-mutex-acquire sema)
   (semaphore-wait sema))
+
 (define (blodwen-mutex-release sema)
   (if (semaphore-try-wait? sema)
-      (semaphore-post sema)
-      (blodwen-error-quit "Exception in mutexRelease: thread does not own mutex")))
+      (blodwen-error-quit "Exception in mutexRelease: thread does not own mutex")
+      (semaphore-post sema)))
 
 ;; Condition Variables
 
-(define (blodwen-make-condition)
-  (make-async-channel))
-(define (blodwen-condition-wait chan mutex)
-  (blodwen-mutex-acquire mutex) ;; consistency with interface for posix condition variables
-  (sync chan)
-  (blodwen-mutex-release mutex))
-(define (blodwen-condition-wait-timeout chan mutex timeout)
-  (blodwen-mutex-acquire mutex) ;; consistency with interface for posix condition variables
-  (sync/timeout (/ timeout 1000000) chan)
-  (blodwen-mutex-release mutex))
-(define (blodwen-condition-signal chan)
-  (async-channel-put chan 'ready))
+(struct condition (waiters-box mutex))
 
-;; TODO: implement condition-broadcast, which would require adding an explicit queue
+(define (blodwen-make-condition)
+  (condition (box '()) (blodwen-make-mutex)))
+
+(define (blodwen-condition-wait condition mutex)
+  ;; Pre-condition: this threads holds `mutex'.
+  (blodwen-mutex-acquire (condition-mutex condition))
+  (let* [(waiters-box (condition-waiters-box condition))
+         (waiters (unbox waiters-box))
+         (my-sema (make-semaphore 0))]
+    (set-box! waiters-box (cons my-sema waiters))
+    (blodwen-mutex-release (condition-mutex condition))
+    (blodwen-mutex-release mutex)
+    (semaphore-wait my-sema)
+    (blodwen-mutex-acquire mutex)))
+
+(define (blodwen-condition-signal condition)
+  (blodwen-mutex-acquire (condition-mutex condition))
+  (let* [(waiters-box (condition-waiters-box condition))
+         (waiters (unbox waiters-box))]
+    (when (not (null? waiters))
+      (semaphore-post (car waiters))
+      (set-box! waiters-box (cdr waiters))))
+  (blodwen-mutex-release (condition-mutex condition)))
+
+(define (blodwen-condition-broadcast condition)
+  (blodwen-mutex-acquire (condition-mutex condition))
+  (let* [(waiters-box (condition-waiters-box condition))
+           (waiters (unbox waiters-box))]
+    (for-each semaphore-post waiters)
+    (set-box! waiters-box '()))
+  (blodwen-mutex-release (condition-mutex condition)))
 
 
 (define (blodwen-sleep s) (sleep s))

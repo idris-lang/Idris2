@@ -62,15 +62,15 @@ mutexRelease m = primIO (prim__mutexRelease m)
 export
 data Condition : Type where [external]
 
-%foreign "scheme,chez:blodwen-make-condition"
+%foreign "scheme:blodwen-make-condition"
 prim__makeCondition : PrimIO Condition
-%foreign "scheme,chez:blodwen-condition-wait"
+%foreign "scheme:blodwen-condition-wait"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
-%foreign "scheme,chez:blodwen-condition-wait-timeout"
+%foreign "scheme:blodwen-condition-wait-timeout"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
-%foreign "scheme,chez:blodwen-condition-signal"
+%foreign "scheme:blodwen-condition-signal"
 prim__conditionSignal : Condition -> PrimIO ()
-%foreign "scheme,chez:blodwen-condition-broadcast"
+%foreign "scheme:blodwen-condition-broadcast"
 prim__conditionBroadcast : Condition -> PrimIO ()
 
 

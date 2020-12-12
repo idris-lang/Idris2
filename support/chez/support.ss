@@ -201,7 +201,7 @@
     ))
 
 (define (blodwen-thread-wait handle)
-  (blodwen-semaphore-wait handle))
+  (blodwen-semaphore-wait (thread-handle-semaphore handle)))
 
 ;; Thread mailboxes
 
