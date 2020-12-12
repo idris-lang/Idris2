@@ -3,6 +3,24 @@ Changes since Idris 2 v0.2.1
 
 Library changes:
 
+* Overhaul of the concurrency primitives:
+
+  - Renamed `System.Concurrency.Raw` to `System.Concurrency`.
+
+  - Added an implementation of semaphores with support in both the Chez Scheme and Racket RTS’es.
+
+  - Fixed the implementation of mutexes with semaphores in the Racket RTS.
+
+  - Marked `conditionBroadcast` as only being supported by the Chez Scheme RTS.
+
+  - Modified the implementation of `fork` in the Chez Scheme RTS, which now returns a semaphore instead of a thread object. This allows the main thread to wait for the child thread to finish (see next bullet).
+
+  - Added `Prelude.IO.threadWait` which waits for a thread, identified by a `ThreadID`, to finish.
+
+  - Removed `threadID` and `blodwen-thisthread` (see Issue #841).
+  
+  - Renamed `blodwen-lock` and `blodwen-unlock` to `blodwen-mutex-acquire` and `blodwen-mutex-release` for consistency, as these functions are referred to with acquire and release both in Chez Scheme and in the Idris2 concurrency module.
+
 * Added `Data.HVect` in `contrib`, for heterogeneous vectors.
 
 Command-line options changes:

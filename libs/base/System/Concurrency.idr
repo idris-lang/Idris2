@@ -1,4 +1,4 @@
-module System.Concurrency.Raw
+module System.Concurrency
 
 -- At the moment this is pretty fundamentally tied to the Scheme RTS.
 -- Given that different back ends will have entirely different threading
@@ -8,19 +8,10 @@ module System.Concurrency.Raw
 
 -- Thread mailboxes
 
-%foreign "scheme:blodwen-get-thread-id"
-prim__threadID : PrimIO ThreadID
 %foreign "scheme:blodwen-set-thread-data"
 prim__setThreadData : {a : Type} -> a -> PrimIO ()
 %foreign "scheme:blodwen-get-thread-data"
 prim__getThreadData : (a : Type) -> PrimIO a
-
-
--- Mutexes
-
-export
-threadID : IO ThreadID
-threadID = primIO prim__threadID
 
 export
 setThreadData : {a : Type} -> a -> IO ()
@@ -30,14 +21,17 @@ export
 getThreadData : (a : Type) -> IO a
 getThreadData a = primIO (prim__getThreadData a)
 
+
+-- Mutexes
+
 export
 data Mutex : Type where [external]
 
-%foreign "scheme,chez:blodwen-mutex"
+%foreign "scheme:blodwen-make-mutex"
 prim__makeMutex : PrimIO Mutex
-%foreign "scheme,chez:blodwen-lock"
+%foreign "scheme:blodwen-mutex-acquire"
 prim__mutexAcquire : Mutex -> PrimIO ()
-%foreign "scheme,chez:blodwen-unlock"
+%foreign "scheme:blodwen-mutex-release"
 prim__mutexRelease : Mutex -> PrimIO ()
 
 ||| Creates and returns a new mutex.
@@ -68,13 +62,13 @@ mutexRelease m = primIO (prim__mutexRelease m)
 export
 data Condition : Type where [external]
 
-%foreign "scheme,chez:blodwen-condition"
+%foreign "scheme:blodwen-make-condition"
 prim__makeCondition : PrimIO Condition
-%foreign "scheme,chez:blodwen-condition-wait"
+%foreign "scheme:blodwen-condition-wait"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
-%foreign "scheme,chez:blodwen-condition-wait-timeout"
+%foreign "scheme:blodwen-condition-wait-timeout"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
-%foreign "scheme,chez:blodwen-condition-signal"
+%foreign "scheme:blodwen-condition-signal"
 prim__conditionSignal : Condition -> PrimIO ()
 %foreign "scheme,chez:blodwen-condition-broadcast"
 prim__conditionBroadcast : Condition -> PrimIO ()

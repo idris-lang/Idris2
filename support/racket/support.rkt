@@ -183,10 +183,15 @@
 
 ;; Threads
 
-(define blodwen-thread-data (make-thread-cell #f))
+(define (blodwen-thread proc)
+  (thread (lambda () (proc (vector 0)))))
 
-(define (blodwen-thread p)
-    (thread (lambda () (p (vector 0)))))
+(define (blodwen-thread-wait handle)
+  (thread-wait handle))
+
+;; Thread mailboxes
+
+(define blodwen-thread-data (make-thread-cell #f))
 
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
@@ -194,21 +199,43 @@
 (define (blodwen-set-thread-data a)
   (thread-cell-set! blodwen-thread-data a))
 
-(define (blodwen-get-thread-id) (current-thread))
-
 ;; Semaphores
 
-(define (blodwen-make-semaphore init) (make-semaphore init))
-(define (blodwen-semaphore-post sema) (semaphore-post sema))
-(define (blodwen-semaphore-wait sema) (semaphore-wait sema))
+(define (blodwen-make-semaphore init)
+  (make-semaphore init))
+(define (blodwen-semaphore-post sema)
+  (semaphore-post sema))
+(define (blodwen-semaphore-wait sema)
+  (semaphore-wait sema))
 
 ;; Mutex
 
-;; ...
+(define (blodwen-make-mutex)
+  (make-semaphore 1))
+(define (blodwen-mutex-acquire sema)
+  (semaphore-wait sema))
+(define (blodwen-mutex-release sema)
+  (if (semaphore-try-wait? sema)
+      (semaphore-post sema)
+      (blodwen-error-quit "Exception in mutexRelease: thread does not own mutex")))
 
-;; Conditional Variables
+;; Condition Variables
 
-;; ...
+(define (blodwen-make-condition)
+  (make-channel))
+(define (blodwen-condition-wait chan mutex)
+  (blodwen-mutex-acquire mutex) ;; consistency with interface for posix condition variables
+  (sync chan)
+  (blodwen-mutex-release mutex))
+(define (blodwen-condition-wait-timeout chan mutex timeout)
+  (blodwen-mutex-acquire mutex) ;; consistency with interface for posix condition variables
+  (sync/timeout (/ timeout 1000000) chan)
+  (blodwen-mutex-release mutex))
+(define (blodwen-condition-signal chan)
+  (channel-put chan 'ready))
+
+;; TODO: implement condition-broadcast, which would require adding an explicit queue
+
 
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
