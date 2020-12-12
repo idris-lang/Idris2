@@ -29,6 +29,9 @@ make sure you run `./configure --threads` to build multithreading support in.
 **NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use `gmake` command instead
 of `make` in the following steps.
 
+**NOTE**: If you're running macOS on Apple Silicon (arm64) you may need to run
+"`arch -x86_64 make ...`" instead of `make` in the following steps.
+
 ### 1: Set the PREFIX
 
 - Change the `PREFIX` in `config.mk`. The default is to install in
