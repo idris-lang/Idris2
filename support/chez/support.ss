@@ -236,7 +236,28 @@
       (set-box! sema-box (- (unbox sema-box) 1))
       )))
 
-;; Channels
+;; Barrier
+
+(define-record barrier (count-box num-threads mutex cond))
+
+(define (blodwen-make-barrier num-threads)
+  (make-barrier (box 0) num-threads (make-mutex) (make-condition)))
+
+(define (blodwen-barrier-wait barrier)
+  (let [(count-box (barrier-count-box barrier))
+        (num-threads (barrier-num-threads barrier))
+        (mutex (barrier-mutex barrier))
+        (condition (barrier-cond barrier))]
+    (with-mutex mutex
+    (let* [(count-old (unbox count-box))
+           (count-new (+ count-old 1))]
+      (set-box! count-box count-new)
+      (if (= count-new num-threads)
+          (condition-broadcast condition)
+          (condition-wait condition mutex))
+      ))))
+
+;; Channel
 
 (define-record channel (box mutex semaphore-get semaphore-put))
 

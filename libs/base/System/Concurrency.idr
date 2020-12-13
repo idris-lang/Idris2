@@ -137,6 +137,29 @@ semaphoreWait : Semaphore -> IO ()
 semaphoreWait sema = primIO (prim__semaphoreWait sema)
 
 
+-- Barriers
+
+||| A barrier enables multiple threads to synchronize the beginning of some
+||| computation.
+export
+data Barrier : Type where [external]
+
+%foreign "scheme:blodwen-make-barrier"
+prim__makeBarrier : Int -> PrimIO Barrier
+%foreign "scheme:blodwen-barrier-wait"
+prim__barrierWait : Barrier -> PrimIO ()
+
+||| Creates a new barrier that can block a given number of threads.
+export
+makeBarrier : Int -> IO Barrier
+makeBarrier numThreads = primIO (prim__makeBarrier numThreads)
+
+||| Blocks the current thread until all threads have rendezvoused here.
+export
+barrierWait : Barrier -> IO ()
+barrierWait barrier = primIO (prim__barrierWait barrier)
+
+
 -- Channels
 
 export

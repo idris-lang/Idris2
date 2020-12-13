@@ -210,6 +210,26 @@
 (define (blodwen-semaphore-wait sema)
   (semaphore-wait sema))
 
+;; Barriers
+
+(struct barrier (count-box num-threads mutex semaphore))
+
+(define (blodwen-make-barrier num-threads)
+  (barrier (box 0) num-threads (blodwen-make-mutex) (make-semaphore 0)))
+
+(define (blodwen-barrier-wait barrier)
+  (blodwen-mutex-acquire (barrier-mutex barrier))
+  (let* [(count-box (barrier-count-box barrier))
+         (count-old (unbox count-box))
+         (count-new (+ count-old 1))
+         (sema (barrier-semaphore barrier))]
+    (set-box! count-box count-new)
+    (blodwen-mutex-release (barrier-mutex barrier))
+    (when (= count-new (barrier-num-threads barrier)) (semaphore-post sema))
+    (semaphore-wait sema)
+    (semaphore-post sema)
+    ))
+
 ;; Channels
 
 (define (blodwen-make-channel ty)
