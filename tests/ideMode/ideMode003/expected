@@ -1,4 +1,5 @@
 000018(:protocol-version 2 0)
+000038(:write-string "1/1: Building LocType (LocType.idr)" 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 7 23) (:end 7 24)) ((:name "x") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "a")))))) 1)
 0000d9(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 7 38) (:end 7 40)) ((:name "ys") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "(Main.Vect m a)")))))) 1)
 0000df(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 7 35) (:end 7 37)) ((:name "xs") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "(Main.Vect {k:384} a)")))))) 1)
