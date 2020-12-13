@@ -14,11 +14,11 @@ prim__setThreadData : {a : Type} -> a -> PrimIO ()
 prim__getThreadData : (a : Type) -> PrimIO a
 
 export
-setThreadData : {a : Type} -> a -> IO ()
+setThreadData : HasIO io => {a : Type} -> a -> io ()
 setThreadData val = primIO (prim__setThreadData val)
 
 export
-getThreadData : (a : Type) -> IO a
+getThreadData : HasIO io => (a : Type) -> io a
 getThreadData a = primIO (prim__getThreadData a)
 
 
@@ -36,7 +36,7 @@ prim__mutexRelease : Mutex -> PrimIO ()
 
 ||| Creates and returns a new mutex.
 export
-makeMutex : IO Mutex
+makeMutex : HasIO io => io Mutex
 makeMutex = primIO prim__makeMutex
 
 ||| Acquires the mutex identified by `mutex`. The thread blocks until the mutex
@@ -47,13 +47,13 @@ makeMutex = primIO prim__makeMutex
 ||| In this case, an equal number of mutex-release calls is necessary to release
 ||| the mutex.
 export
-mutexAcquire : Mutex -> IO ()
+mutexAcquire : HasIO io => Mutex -> io ()
 mutexAcquire m = primIO (prim__mutexAcquire m)
 
 ||| Releases the mutex identified by `mutex`. Unpredictable behavior results if
 ||| the mutex is not owned by the calling thread.
 export
-mutexRelease : Mutex -> IO ()
+mutexRelease : HasIO io => Mutex -> io ()
 mutexRelease m = primIO (prim__mutexRelease m)
 
 
@@ -76,7 +76,7 @@ prim__conditionBroadcast : Condition -> PrimIO ()
 
 ||| Creates and returns a new condition variable.
 export
-makeCondition : IO Condition
+makeCondition : HasIO io => io Condition
 makeCondition = primIO prim__makeCondition
 
 ||| Waits up to the specified timeout for the condition identified by the
@@ -86,24 +86,24 @@ makeCondition = primIO prim__makeCondition
 ||| later released from the condition variable by one of the procedures
 ||| described below, the mutex is reacquired and `conditionWait` returns.
 export
-conditionWait : Condition -> Mutex -> IO ()
+conditionWait : HasIO io => Condition -> Mutex -> io ()
 conditionWait cond mutex = primIO (prim__conditionWait cond mutex)
 
 ||| Variant of `conditionWait` with a timeout in microseconds.
 ||| When the timeout expires, the thread is released, `mutex` is reacquired, and
 ||| `conditionWaitTimeout` returns.
 export
-conditionWaitTimeout : Condition -> Mutex -> Int -> IO ()
+conditionWaitTimeout : HasIO io => Condition -> Mutex -> Int -> io ()
 conditionWaitTimeout cond mutex timeout = primIO (prim__conditionWaitTimeout cond mutex timeout)
 
 ||| Releases one of the threads waiting for the condition identified by `cond`.
 export
-conditionSignal : Condition -> IO ()
+conditionSignal : HasIO io => Condition -> io ()
 conditionSignal c = primIO (prim__conditionSignal c)
 
 ||| Releases all of the threads waiting for the condition identified by `cond`.
 export
-conditionBroadcast : Condition -> IO ()
+conditionBroadcast : HasIO io => Condition -> io ()
 conditionBroadcast c = primIO (prim__conditionBroadcast c)
 
 
@@ -122,18 +122,18 @@ prim__semaphoreWait : Semaphore -> PrimIO ()
 
 ||| Creates and returns a new semaphore with the counter initially set to `init`.
 export
-makeSemaphore : Int -> IO Semaphore
+makeSemaphore : HasIO io => Int -> io Semaphore
 makeSemaphore init = primIO (prim__makeSemaphore init)
 
 ||| Increments the semaphore's internal counter.
 export
-semaphorePost : Semaphore -> IO ()
+semaphorePost : HasIO io => Semaphore -> io ()
 semaphorePost sema = primIO (prim__semaphorePost sema)
 
 ||| Blocks until the internal counter for semaphore sema is non-zero. When the
 ||| counter is non-zero, it is decremented and `semaphoreWait` returns.
 export
-semaphoreWait : Semaphore -> IO ()
+semaphoreWait : HasIO io => Semaphore -> io ()
 semaphoreWait sema = primIO (prim__semaphoreWait sema)
 
 
@@ -151,12 +151,12 @@ prim__barrierWait : Barrier -> PrimIO ()
 
 ||| Creates a new barrier that can block a given number of threads.
 export
-makeBarrier : Int -> IO Barrier
+makeBarrier : HasIO io => Int -> io Barrier
 makeBarrier numThreads = primIO (prim__makeBarrier numThreads)
 
 ||| Blocks the current thread until all threads have rendezvoused here.
 export
-barrierWait : Barrier -> IO ()
+barrierWait : HasIO io => Barrier -> io ()
 barrierWait barrier = primIO (prim__barrierWait barrier)
 
 
@@ -176,16 +176,16 @@ prim__channelPut : Channel a -> a -> PrimIO ()
 ||| to receive a value through the channel. The channel can be used with
 ||| channelPut to send a value through the channel.
 export
-makeChannel : IO (Channel a)
+makeChannel : HasIO io => io (Channel a)
 makeChannel = primIO prim__makeChannel
 
 ||| Blocks until a sender is ready to provide a value through `chan`. The result
 ||| is the sent value.
 export
-channelGet : Channel a -> IO a
+channelGet : HasIO io => Channel a -> io a
 channelGet chan = primIO (prim__channelGet chan)
 
 ||| Blocks until a receiver is ready to accept the value `val` through `chan`.
 export
-channelPut : Channel a -> a -> IO ()
+channelPut : HasIO io => Channel a -> a -> io ()
 channelPut chan val = primIO (prim__channelPut chan val)
