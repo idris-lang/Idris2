@@ -20,6 +20,9 @@ Library changes:
   - Added semaphores to `System.Concurrency`, supported by both the Chez Scheme
     and Racket RTS'es.
 
+  - Added barriers to `System.Concurrency`, supported by both the Chez Scheme
+    and Racket RTS'es.
+
   - Added synchronous channels to `System.Concurrency`, supported by both the Chez
     Scheme and Racket RTS'es.
 
