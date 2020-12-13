@@ -183,6 +183,7 @@ believe_me : a -> b
 believe_me = prim__believe_me _ _
 
 ||| Assert to the usage checker that the given function uses its argument linearly.
+public export
 assert_linear : (1 f : a -> b) -> (1 val : a) -> b
 assert_linear = believe_me id
   where
