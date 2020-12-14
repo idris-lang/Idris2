@@ -721,7 +721,7 @@ mutual
       expandConstraint (Nothing, p)
           = map (\x => (Nothing, x)) (pairToCons p)
 
-  desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impname nusing body)
+  desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
            is' <- traverse (\ (n,c,tm) => do tm' <- desugar AnyExpr ps tm
                                              pure (n, c, tm')) is
@@ -747,11 +747,20 @@ mutual
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
                                     pure (Just (concat b'))) body
-           pure [IPragma (maybe [] (\n => [n]) impname)
+           -- calculate the name of the interface, if it's not explicitly
+           -- given.
+           let impname = maybe (mkImplName fc tn paramsb) id impln
+
+           pure [IPragma [impname]
                          (\nest, env =>
                              elabImplementation fc vis opts pass env nest isb consb
-                                                tn paramsb impname nusing
+                                                tn paramsb (isNamed impln)
+                                                impname nusing
                                                 body')]
+    where
+      isNamed : Maybe a -> Bool
+      isNamed Nothing = False
+      isNamed (Just _) = True
 
   desugarDecl ps (PRecord fc doc vis tn params conname_in fields)
       = do addDocString tn doc

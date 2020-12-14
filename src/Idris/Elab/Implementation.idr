@@ -34,8 +34,9 @@ replaceSep = pack . map toForward . unpack
     toForward '\\' = '/'
     toForward x = x
 
-mkImpl : FC -> Name -> List RawImp -> Name
-mkImpl fc n ps
+export
+mkImplName : FC -> Name -> List RawImp -> Name
+mkImplName fc n ps
     = DN (show n ++ " implementation at " ++ replaceSep (show fc))
          (UN ("__Impl_" ++ show n ++ "_" ++
           showSep "_" (map show ps)))
@@ -110,13 +111,14 @@ elabImplementation : {vars : _} ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
-                     (implName : Maybe Name) ->
+                     (namedimpl : Bool) ->
+                     (implName : Name) ->
                      (nusing : List Name) ->
                      Maybe (List ImpDecl) ->
                      Core ()
 -- TODO: Refactor all these steps into separate functions
-elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nusing mbody
-    = do let impName_in = maybe (mkImpl fc iname ps) id impln
+elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named impName_in nusing mbody
+    = do -- let impName_in = maybe (mkImplName fc iname ps) id impln
          -- If we're in a nested block, update the name
          let impName_nest = case lookup impName_in (names nest) of
                                  Just (Just n', _) => n'
@@ -157,8 +159,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
          -- given when using named implementations
          --    (cs : Constraints) -> Impl params
          -- Don't make it a hint if it's a named implementation
-         let opts = maybe ([Inline, Hint True])
-                          (const ([Inline])) impln
+         let opts = if named
+                       then [Inline]
+                       else [Inline, Hint True]
 
          let initTy = bindImpls fc is $ bindConstraints fc AutoImplicit cons
                          (apply (IVar fc iname) ps)
@@ -223,7 +226,9 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
 
                -- If it's a named implementation, add it as a global hint while
                -- elaborating the record and bodies
-               maybe (pure ()) (\x => addOpenHint impName) impln
+               if named
+                  then addOpenHint impName
+                  else pure ()
 
                -- Make sure we don't use this name to solve parent constraints
                -- when elaborating the record, or we'll end up in a cycle!
@@ -334,7 +339,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps impln nu
     methName n
         = DN (show n)
              (UN (show n ++ "_" ++ show iname ++ "_" ++
-                     maybe "" show impln ++ "_" ++
+                     (if named then show impName_in else "") ++
                      showSep "_" (map show ps)))
 
     applyCon : Name -> Name -> Core (Name, RawImp)

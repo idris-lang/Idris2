@@ -198,7 +198,7 @@ mutual
                    est <- get EST
                    lim <- getAutoImplicitLimit
                    metaval <- searchVar fc argRig lim (Resolved (defining est))
-                                        env nm metaty
+                                        env nest nm metaty
                    let fntm = App fc tm metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
                    checkAppWith rig elabinfo nest env fc
