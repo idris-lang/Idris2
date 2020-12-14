@@ -12,13 +12,13 @@ import Decidable.Equality
 %default total
 
 public export
-interface StrictPreorder t (spo : t -> t -> Type) where
+interface StrictPreorder t spo where
   transitive : (a, b, c : t) -> a `spo` b -> b `spo` c -> a `spo` c
   irreflexive : (a : t) -> Not (a `spo` a)
-  
+
 public export
 asymmetric : StrictPreorder t spo => (a, b : t) -> a `spo` b -> Not (b `spo` a)
-asymmetric a b aLTb bLTa = irreflexive a $ 
+asymmetric a b aLTb bLTa = irreflexive a $
                            Strict.transitive a b a aLTb bLTa
 
 public export
@@ -35,10 +35,10 @@ public export
 
 [MkPoset] {antisym : (a,b : t) -> a `leq` b -> b `leq` a -> a = b} -> Preorder t leq => Poset t leq where
   antisymmetric = antisym
-           
+
 %hint
 public export
-InferPoset : {t : Type} -> {spo : t -> t -> Type} -> StrictPreorder t spo => Poset t (EqOr spo) 
+InferPoset : {t : Type} -> {spo : t -> t -> Type} -> StrictPreorder t spo => Poset t (EqOr spo)
 InferPoset {t} {spo} = MkPoset @{MkPreorder} {antisym = antisym}
   where
     antisym : (a,b : t) -> EqOr spo a b -> EqOr spo b a -> a = b
@@ -51,11 +51,11 @@ public export
 data DecOrdering : {lt : t -> t -> Type} -> (a,b : t) -> Type where
   DecLT : forall lt . (a `lt` b) -> DecOrdering {lt = lt} a b
   DecEQ : forall lt . (a  =   b) -> DecOrdering {lt = lt} a b
-  DecGT : forall lt . (b `lt` a) -> DecOrdering {lt = lt} a b 
+  DecGT : forall lt . (b `lt` a) -> DecOrdering {lt = lt} a b
 
 public export
-interface StrictPreorder t spo => StrictOrdered t (spo : t -> t -> Type) where
-  order : (a,b : t) -> DecOrdering {lt = spo} a b 
+interface StrictPreorder t spo => StrictOrdered t spo where
+  order : (a,b : t) -> DecOrdering {lt = spo} a b
 
 [MkOrdered] {ord : (a,b : t) -> Either (a `leq` b) (b `leq` a)} -> Poset t leq => Ordered t leq where
   order = ord
@@ -76,9 +76,8 @@ public export
 (tot : StrictOrdered t lt) => (pre : StrictPreorder t lt) => DecEq t where
   decEq x y = case order @{tot} x y of
     DecEQ x_eq_y => Yes x_eq_y
-    DecLT xlty => No $ \x_eq_y => absurd $ irreflexive @{pre} y 
+    DecLT xlty => No $ \x_eq_y => absurd $ irreflexive @{pre} y
                                          $ replace {p = \u => u `lt` y} x_eq_y xlty
-    -- Similarly                                         
+    -- Similarly
     DecGT yltx => No $ \x_eq_y => absurd $ irreflexive @{pre} y
                                          $ replace {p = \u => y `lt` u} x_eq_y yltx
-    

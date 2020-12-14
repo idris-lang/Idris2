@@ -40,6 +40,7 @@ import IdrisPaths
 
 %default covering
 
+public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
@@ -67,6 +68,7 @@ record PkgDesc where
   preclean : Maybe (FC, String) -- Script to run before cleaning
   postclean : Maybe (FC, String) -- Script to run after cleaning
 
+export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
              "Version: " ++ version pkg ++ "\n" ++
@@ -496,6 +498,17 @@ runRepl fname = do
             displayErrors errs
   repl {u} {s}
 
+export
+parsePkgFile : {auto c : Ref Ctxt Defs} ->
+               String -> Core PkgDesc
+parsePkgFile file = do
+  Right (pname, fs) <- coreLift $ parseFile file
+                                          (do desc <- parsePkgDesc file
+                                              eoi
+                                              pure desc)
+                     | Left (FileFail err) => throw (FileErr file err)
+                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+  addFields fs (initPkgDesc pname)
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->

@@ -44,7 +44,8 @@ idrisTests = MkTestPool []
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047", "basic048", "basic049",
+       "basic046", "basic047", "basic048", "basic049", "basic050",
+       "basic051",
        -- Coverage checking
        "coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
@@ -70,7 +71,7 @@ idrisTests = MkTestPool []
        "interface005", "interface006", "interface007", "interface008",
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
-       "interface017",
+       "interface017", "interface018",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005",
@@ -114,7 +115,7 @@ idrisTests = MkTestPool []
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
-       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034",
+       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",

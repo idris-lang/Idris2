@@ -202,12 +202,14 @@ mutual
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
-                        ++ bound in
+                     ++ findIBindVars lhs
+                     ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs wval flags cs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
-                        ++ bound in
+                     ++ findIBindVars lhs
+                     ++ bound in
             WithClause fc (substNames' bvar [] [] lhs)
                           (substNames' bvar bound' ps wval) flags cs
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)

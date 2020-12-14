@@ -20,6 +20,7 @@ foldl1 f (x::xs) = foldl f x xs
 -- If you need to unpack strings at compile time, use Prelude.unpack.
 %foreign
   "scheme:string-unpack"
+  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
 export
 fastUnpack : String -> List Char
 

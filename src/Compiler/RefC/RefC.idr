@@ -14,6 +14,7 @@ import Core.TT
 
 import Data.IORef
 import Data.List
+import Data.DList
 import Data.NameMap
 import Data.Nat
 import Data.Strings
@@ -29,20 +30,11 @@ import Utils.Path
 
 findCC : IO String
 findCC
-    = do Just cc <- getEnv "IDRIS2_CC"
-              | Nothing => do Just cc <- getEnv "CC"
-                                   | Nothing => pure "cc"
-                              pure cc
-         pure cc
-
-toString : List Char -> String
-toString [] = ""
-toString (c :: cx) = cast c ++ toString cx
-
-natMinus : (a,b:Nat) -> Nat
-natMinus a b = case isLTE b a of
-    (Yes prf) => minus a b
-    (No _) => 0
+    = do Nothing <- getEnv "IDRIS2_CC"
+           | Just cc => pure cc
+         Nothing <- getEnv "CC"
+           | Just cc => pure cc
+         pure "cc"
 
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
@@ -75,9 +67,10 @@ showcCleanStringChar c
   where
     pad : String -> String
     pad str
-        = case isLTE (length str) 4 of
-               Yes _ => toString (List.replicate (natMinus 4 (length str)) '0') ++ str
-               No _ => str
+        = let n = length str in
+          case isLTE n 4 of
+             Yes _ => fastPack (List.replicate (minus 4 n) '0') ++ str
+             No _ => str
 
 showcCleanString : List Char -> String -> String
 showcCleanString [] = id
@@ -96,7 +89,8 @@ cName (Nested i n) = "n__" ++ cCleanString (show i) ++ "_" ++ cName n
 cName (CaseBlock x y) = "case__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (WithBlock x y) = "with__" ++ cCleanString (show x) ++ "_" ++ cCleanString (show y)
 cName (Resolved i) = "fn__" ++ cCleanString (show i)
-cName _ = "UNKNOWNNAME"
+cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C backend " ++ show n)
+-- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
 escapeChar '\DEL' = "127"
@@ -161,7 +155,6 @@ where
     showCString (c ::cs) = (showCChar c) . showCString cs
 
 
-
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt32("++ show x ++")" -- (constant #:type 'i32 #:val " ++ show x ++ ")"
 cConstant (BI x) = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
@@ -184,7 +177,8 @@ cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
 cConstant Bits64Type = "Bits64"
-cConstant _ = "UNKNOWN"
+cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C backend: " ++ show n)
+-- not really total but this way this internal error does not contaminate everything else
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -292,7 +286,7 @@ toPrim pn@(NS _ n)
             (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
-toPrim pn = Unknown pn
+toPrim pn = Unknown pn -- todo: crash rather than generate garbage?
 
 
 varName : AVar -> String
@@ -302,9 +296,18 @@ varName (ANull)    = "NULL"
 data ArgCounter : Type where
 data FunctionDefinitions : Type where
 data TemporaryVariableTracker : Type where
-data OutfileText : Type where
 data IndentLevel : Type where
 data ExternalLibs : Type where
+
+------------------------------------------------------------------------
+-- Output generation: using a difference list for efficient append
+
+data OutfileText : Type where
+
+Output : Type
+Output = DList String
+
+------------------------------------------------------------------------
 
 getNextCounter : {auto a : Ref ArgCounter Nat} -> Core Nat
 getNextCounter = do
@@ -315,20 +318,13 @@ getNextCounter = do
 registerVariableForAutomaticFreeing : {auto t : Ref TemporaryVariableTracker (List (List String))}
                                    -> String
                                    -> Core ()
-registerVariableForAutomaticFreeing var = do
-    lists <- get TemporaryVariableTracker
-    case lists of
-        [] => do
-            put TemporaryVariableTracker ([[var]])
-            pure ()
-        (l :: ls) => do
-                put TemporaryVariableTracker ((var :: l) :: ls)
-                pure ()
+registerVariableForAutomaticFreeing var
+  = update TemporaryVariableTracker $ \case
+      [] => [[var]]
+      (l :: ls) => ((var :: l) :: ls)
 
 newTemporaryVariableLevel : {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core ()
-newTemporaryVariableLevel = do
-    lists <- get TemporaryVariableTracker
-    put TemporaryVariableTracker ([] :: lists)
+newTemporaryVariableLevel = update TemporaryVariableTracker ([] ::)
 
 
 getNewVar : {auto a : Ref ArgCounter Nat} -> {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core String
@@ -350,54 +346,44 @@ maxLineLengthForComment = 60
 
 lJust : (line:String) -> (fillPos:Nat) -> (filler:Char) -> String
 lJust line fillPos filler =
-    case isLTE (length line) fillPos of
+    let n = length line in
+    case isLTE n fillPos of
         (Yes prf) =>
-            let missing = minus fillPos (length line)
+            let missing = minus fillPos n
                 fillBlock = pack (replicate missing filler)
             in
             line ++ fillBlock
         (No _) => line
 
 increaseIndentation : {auto il : Ref IndentLevel Nat} -> Core ()
-increaseIndentation = do
-    iLevel <- get IndentLevel
-    put IndentLevel (S iLevel)
-    pure ()
+increaseIndentation = update IndentLevel S
 
 decreaseIndentation : {auto il : Ref IndentLevel Nat} -> Core ()
-decreaseIndentation = do
-    iLevel <- get IndentLevel
-    case iLevel of
-        Z => pure ()
-        (S k) => do
-            put IndentLevel k
-            pure ()
+decreaseIndentation = update IndentLevel pred
 
 indentation : {auto il : Ref IndentLevel Nat} -> Core String
 indentation = do
     iLevel <- get IndentLevel
     pure $ pack $ replicate (4 * iLevel) ' '
 
-
-emit : {auto oft : Ref OutfileText (List String)} -> {auto il : Ref IndentLevel Nat} -> FC -> String -> Core ()
+emit
+  : {auto oft : Ref OutfileText Output} ->
+    {auto il : Ref IndentLevel Nat} ->
+    FC -> String -> Core ()
 emit EmptyFC line = do
-    lines <- get OutfileText
     indent <- indentation
-    put OutfileText (lines ++ [indent ++ line])
-    pure ()
-emit fc line' = do
+    update OutfileText (flip snoc (indent ++ line))
+emit fc line = do
     let comment = "// " ++ show fc
-    lines <- get OutfileText
     indent <- indentation
-    let line = line'
-    case isLTE (length (indent ++ line)) maxLineLengthForComment of
-        (Yes _) => put OutfileText (lines ++ [ (lJust (indent ++ line) maxLineLengthForComment ' ') ++ " " ++ comment]        )
-        (No _)  => put OutfileText (lines ++ [indent ++ line, ((lJust ""   maxLineLengthForComment ' ') ++ " " ++ comment)] )
-    pure ()
+    let indentedLine = indent ++ line
+    update OutfileText $ case isLTE (length indentedLine) maxLineLengthForComment of
+        (Yes _) => flip snoc (lJust indentedLine maxLineLengthForComment ' ' ++ " " ++ comment)
+        (No _)  => flip appendR [indentedLine, (lJust ""   maxLineLengthForComment ' ' ++ " " ++ comment)]
 
 
 freeTmpVars : {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText (List String)}
+           -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> Core $ ()
 freeTmpVars = do
@@ -406,7 +392,6 @@ freeTmpVars = do
         (vars :: varss) => do
             traverse (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
             put TemporaryVariableTracker varss
-            pure ()
         [] => pure ()
 
 
@@ -424,7 +409,7 @@ addExternalLib extLib = do
 
 makeArglist : {auto a : Ref ArgCounter Nat}
            -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText (List String)}
+           -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> Nat
            -> List AVar
@@ -435,7 +420,7 @@ makeArglist missing xs = do
     emit EmptyFC $  "Value_Arglist *"
                  ++ arglist
                  ++ " = newArglist(" ++ show missing
-                 ++ "," ++ show ((length xs) + missing)
+                 ++ "," ++ show (length xs + missing)
                  ++ ");"
     pushArgToArglist arglist xs 0
     pure arglist
@@ -451,16 +436,16 @@ where
                     ++ " newReference(" ++ varName arg ++");"
         pushArgToArglist arglist args (S k)
 
-fillConstructorArgs : {auto oft : Ref OutfileText (List String)}
+fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
                    -> String
                    -> List AVar
                    -> Nat
                    -> Core ()
 fillConstructorArgs _ [] _ = pure ()
-fillConstructorArgs constructor (v :: vars) k = do
-    emit EmptyFC $ constructor ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
-    fillConstructorArgs constructor vars (S k)
+fillConstructorArgs cons (v :: vars) k = do
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
+    fillConstructorArgs cons vars (S k)
 
 
 showTag : Maybe Int -> String
@@ -518,7 +503,7 @@ record ReturnStatement where
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
                     -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                    -> {auto oft : Ref OutfileText (List String)}
+                    -> {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
                     -> String
                     -> List AConAlt
@@ -541,7 +526,7 @@ mutual
 
     conBlocks : {auto a : Ref ArgCounter Nat}
              -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-             -> {auto oft : Ref OutfileText (List String)}
+             -> {auto oft : Ref OutfileText Output}
              -> {auto il : Ref IndentLevel Nat}
              -> (scrutinee:String)
              -> List AConAlt
@@ -573,7 +558,7 @@ mutual
 
     constBlockSwitch : {auto a : Ref ArgCounter Nat}
                        -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                       -> {auto oft : Ref OutfileText (List String)}
+                       -> {auto oft : Ref OutfileText Output}
                        -> {auto il : Ref IndentLevel Nat}
                        -> (alts:List AConstAlt)
                        -> (retValVar:String)
@@ -598,7 +583,7 @@ mutual
 
     constDefaultBlock : {auto a : Ref ArgCounter Nat}
                      -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                     -> {auto oft : Ref OutfileText (List String)}
+                     -> {auto oft : Ref OutfileText Output}
                      -> {auto il : Ref IndentLevel Nat}
                      -> (def:Maybe ANF)
                      -> (retValVar:String)
@@ -620,7 +605,7 @@ mutual
     makeNonIntSwitchStatementConst :
                     {auto a : Ref ArgCounter Nat}
                  -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                 -> {auto oft : Ref OutfileText (List String)}
+                 -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
                  -> List AConstAlt
                  -> (k:Int)
@@ -654,7 +639,7 @@ mutual
 
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                      -> {auto oft : Ref OutfileText (List String)}
+                      -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> ANF
                       -> Core ReturnStatement
@@ -823,9 +808,9 @@ functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
 functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
-getArgsNrList : {0 ty:Type} -> List ty -> Nat -> Core $ List Nat
-getArgsNrList [] _ = pure []
-getArgsNrList (x :: xs) k = pure $ k :: !(getArgsNrList xs (S k))
+getArgsNrList : List ty -> Nat -> List Nat
+getArgsNrList [] _ = []
+getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 
 cTypeOfCFType : CFType -> Core $ String
@@ -847,19 +832,17 @@ cTypeOfCFType (CFIORes x)     = pure $ "void *"
 cTypeOfCFType (CFStruct x ys) = pure $ "void *"
 cTypeOfCFType (CFUser x ys)   = pure $ "void *"
 
-varNamesFromList : {0 ty : Type} -> List ty -> Nat -> Core (List String)
-varNamesFromList [] _ = pure []
-varNamesFromList (x :: xs) k = pure $ ("var_" ++ show k) :: !(varNamesFromList xs (S k))
+varNamesFromList : List ty -> Nat -> List String
+varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
 
 createFFIArgList : List CFType
                 -> Core $ List (String, String, CFType)
 createFFIArgList cftypeList = do
     sList <- traverse cTypeOfCFType cftypeList
-    varList <- varNamesFromList cftypeList 1
-    let z = zip3 sList varList cftypeList
-    pure z
+    let varList = varNamesFromList cftypeList 1
+    pure $ zip3 sList varList cftypeList
 
-emitFDef : {auto oft : Ref OutfileText (List String)}
+emitFDef : {auto oft : Ref OutfileText Output}
         -> {auto il : Ref IndentLevel Nat}
         -> (funcName:Name)
         -> (arglist:List (String, String, CFType))
@@ -912,18 +895,15 @@ packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = "makeCustomUser(" ++ varName ++ ")"
 
-discardLastArgument : {0 ty:Type} -> List ty -> List ty
+discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
-discardLastArgument (x :: []) = []
-discardLastArgument (x :: y :: ys) = x :: (discardLastArgument (y :: ys))
-
-
+discardLastArgument xs@(_ :: _) = init xs
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                -> {auto oft : Ref OutfileText (List String)}
+                -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto e : Ref ExternalLibs (List String)}
                 -> Name
@@ -935,7 +915,7 @@ createCFunctions n (MkAFun args anf) = do
     otherDefs <- get FunctionDefinitions
     put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
     newTemporaryVariableLevel
-    argsNrs <- getArgsNrList args Z
+    let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
@@ -966,7 +946,6 @@ createCFunctions n (MkAFun args anf) = do
 
 createCFunctions n (MkACon tag arity) = do
   emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
-  pure ()
 
 
 createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
@@ -989,7 +968,7 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           increaseIndentation
           emit EmptyFC $ "("
           increaseIndentation
-          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") !(getArgsNrList fargs Z))
+          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") (getArgsNrList fargs Z))
           traverse (emit EmptyFC) commaSepArglist
           decreaseIndentation
           emit EmptyFC ");"
@@ -1043,7 +1022,7 @@ createCFunctions n (MkAError exp) = do
 
 
 header : {auto f : Ref FunctionDefinitions (List String)}
-      -> {auto o : Ref OutfileText (List String)}
+      -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto e : Ref ExternalLibs (List String)}
       -> Core ()
@@ -1055,11 +1034,9 @@ header = do
     let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
     traverse (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
     fns <- get FunctionDefinitions
-    outText <- get OutfileText
-    put OutfileText (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns ++ outText)
-    pure ()
+    update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
 
-footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText (List String)} -> Core ()
+footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText Output} -> Core ()
 footer = do
     emit EmptyFC ""
     emit EmptyFC " // main function"
@@ -1069,7 +1046,6 @@ footer = do
     emit EmptyFC "   trampoline(mainExprVal);"
     emit EmptyFC "   return 0; // bye bye"
     emit EmptyFC "}"
-    pure ()
 
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
@@ -1097,14 +1073,14 @@ compileExpr ANF c _ outputDir tm outfile =
      newRef ArgCounter 0
      newRef FunctionDefinitions []
      newRef TemporaryVariableTracker []
-     newRef OutfileText []
+     newRef OutfileText DList.Nil
      newRef ExternalLibs []
      newRef IndentLevel 0
      traverse (\(n, d) => createCFunctions n d) defs
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") fileContent)
+     let code = fastAppend (map (++ "\n") (reify fileContent))
 
      coreLift (writeFile outn code)
      coreLift $ putStrLn $ "Generated C file " ++ outn
@@ -1123,14 +1099,13 @@ compileExpr ANF c _ outputDir tm outfile =
                        clibdirs (lib_dirs dirs)
 
      coreLift $ putStrLn runccobj
-     ok <- coreLift $ system runccobj
-     if ok == 0
-        then do coreLift $ putStrLn runcc
-                ok <- coreLift $ system runcc
-                if ok == 0
-                   then pure (Just outexec)
-                   else pure Nothing
-        else pure Nothing
+     0 <- coreLift $ system runccobj
+       | _ => pure Nothing
+     coreLift $ putStrLn runcc
+     0 <- coreLift $ system runcc
+       | _ => pure Nothing
+     pure (Just outexec)
+
   where
     fullprefix_dir : Dirs -> String -> String
     fullprefix_dir dirs sub

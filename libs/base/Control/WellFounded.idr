@@ -9,7 +9,7 @@ data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
            Accessible rel x
 
 public export
-interface WellFounded (rel : a -> a -> Type) where
+interface WellFounded a rel where
   wellFounded : (x : a) -> Accessible rel x
 
 export
@@ -27,13 +27,13 @@ accInd step z (Access f) =
   step z $ \y, lt => accInd step y (f y lt)
 
 export
-wfRec : WellFounded rel =>
+wfRec : WellFounded a rel =>
         (step : (x : a) -> ((y : a) -> rel y x -> b) -> b) ->
         a -> b
 wfRec step x = accRec step x (wellFounded {rel} x)
 
 export
-wfInd : WellFounded rel => {0 P : a -> Type} ->
+wfInd : WellFounded a rel => {0 P : a -> Type} ->
         (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
         (myz : a) -> P myz
 wfInd step myz = accInd step myz (wellFounded {rel} myz)

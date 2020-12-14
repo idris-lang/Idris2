@@ -486,8 +486,8 @@ unless = when . not
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export
-interface Catchable (m : Type -> Type) t | m where
-    throw : t -> m a
+interface Catchable m t | m where
+    throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
 export
@@ -634,6 +634,12 @@ get x {ref = MkRef io} = coreLift (readIORef io)
 export %inline
 put : (x : label) -> {auto ref : Ref x a} -> a -> Core ()
 put x {ref = MkRef io} val = coreLift (writeIORef io val)
+
+export %inline
+update : (x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
+update x f
+  = do v <- get x
+       put x (f v)
 
 export
 cond : List (Lazy Bool, Lazy a) -> a -> a

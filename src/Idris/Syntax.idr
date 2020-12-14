@@ -225,7 +225,7 @@ mutual
   public export
   data Directive : Type where
        Hide : Name -> Directive
-       Logging : LogLevel -> Directive
+       Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
        UnboundImplicits : Bool -> Directive
        AmbigDepth : Nat -> Directive
@@ -286,7 +286,7 @@ mutual
                     (constraints : List (Maybe Name, PTerm)) ->
                     Name ->
                     (doc : String) ->
-                    (params : List (Name, PTerm)) ->
+                    (params : List (Name, (RigCount, PTerm))) ->
                     (det : List Name) ->
                     (conName : Maybe Name) ->
                     List PDecl ->
@@ -442,7 +442,7 @@ data REPLCmd : Type where
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
      Browse : Namespace -> REPLCmd
-     SetLog : LogLevel -> REPLCmd
+     SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
@@ -973,11 +973,11 @@ mapPTermM f = goPTerm where
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
     goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
-    goPDecl (PInterface fc v mnts n doc nts ns mn ps) =
+    goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
                       <*> pure doc
-                      <*> goPairedPTerms nts
+                      <*> go3TupledPTerms nrts
                       <*> pure ns
                       <*> pure mn
                       <*> goPDecls ps

@@ -651,8 +651,8 @@ eqTerm (TType _) (TType _) = True
 eqTerm _ _ = False
 
 public export
-interface Weaken (tm : List Name -> Type) where
-  weaken : tm vars -> tm (n :: vars)
+interface Weaken tm where
+  weaken : {0 vars : List Name} -> tm vars -> tm (n :: vars)
   weakenNs : SizeOf ns -> tm vars -> tm (ns ++ vars)
 
   weakenNs p t = case sizedView p of

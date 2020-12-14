@@ -8,7 +8,7 @@ infixl 4 >>==
 ||| @p the action of the first Bifunctor component on pairs of objects
 ||| @q the action of the second Bifunctor component on pairs of objects
 interface (Biapplicative p, Biapplicative q) =>
-      Bimonad (p : Type -> Type -> Type) (q : Type -> Type -> Type) where
+      Bimonad (0 p : Type -> Type -> Type) (0 q : Type -> Type -> Type) where
 
   bijoin : (p (p a b) (q a b), q (p a b) (q a b)) -> (p a b, q a b)
   bijoin p = p >>== (id, id)

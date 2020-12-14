@@ -116,7 +116,7 @@ defaultLogLevel = singleton [] 0
 
 export
 insertLogLevel : LogLevel -> LogLevels -> LogLevels
-insertLogLevel (MkLogLevel ps n) = insertWith ps (maybe n (max n))
+insertLogLevel (MkLogLevel ps n) = insert ps n
 
 ----------------------------------------------------------------------------------
 -- CHECKING WHETHER TO LOG
