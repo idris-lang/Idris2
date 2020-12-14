@@ -109,7 +109,7 @@ data FileError = GenericFileError Int -- errno
                | PermissionDenied
                | FileExists
 
-returnError : HasIO io => io (Either FileError a)
+returnError : HasMonadIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim__fileErrno
          case err of
@@ -129,7 +129,7 @@ Show FileError where
   show PermissionDenied = "Permission Denied"
   show FileExists = "File Exists"
 
-ok : HasIO io => a -> io (Either FileError a)
+ok : HasMonadIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
 public export
@@ -149,7 +149,7 @@ stderr : File
 stderr = FHandle prim__stderr
 
 export
-openFile : HasIO io => String -> Mode -> io (Either FileError File)
+openFile : HasMonadIO io => String -> Mode -> io (Either FileError File)
 openFile f m
     = do res <- primIO (prim__open f (modeStr m))
          if prim__nullAnyPtr res /= 0
@@ -157,12 +157,12 @@ openFile f m
             else ok (FHandle res)
 
 export
-closeFile : HasIO io => File -> io ()
+closeFile : HasMonadIO io => File -> io ()
 closeFile (FHandle f) = primIO (prim__close f)
 
 ||| Check if a file exists for reading.
 export
-exists : HasIO io => String -> io Bool
+exists : HasMonadIO io => String -> io Bool
 exists f
     = do Right ok <- openFile f Read
              | Left err => pure False
@@ -171,18 +171,18 @@ exists f
 
 ||| Pick the first existing file
 export
-firstExists : HasIO io => List String -> io (Maybe String)
+firstExists : HasMonadIO io => List String -> io (Maybe String)
 firstExists [] = pure Nothing
 firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
 
 export
-fileError : HasIO io => File -> io Bool
+fileError : HasMonadIO io => File -> io Bool
 fileError (FHandle f)
     = do x <- primIO $ prim__error f
          pure (x /= 0)
 
 export
-fGetLine : HasIO io => (h : File) -> io (Either FileError String)
+fGetLine : HasMonadIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
     = do res <- primIO (prim__readLine f)
          if prim__nullPtr res /= 0
@@ -190,7 +190,7 @@ fGetLine (FHandle f)
             else ok (prim__getString res)
 
 export
-fGetChars : HasIO io => (h : File) -> Int -> io (Either FileError String)
+fGetChars : HasMonadIO io => (h : File) -> Int -> io (Either FileError String)
 fGetChars (FHandle f) max
     = do res <- primIO (prim__readChars max f)
          if prim__nullPtr res /= 0
@@ -198,7 +198,7 @@ fGetChars (FHandle f) max
             else ok (prim__getString res)
 
 export
-fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
+fGetChar : HasMonadIO io => (h : File) -> io (Either FileError Char)
 fGetChar (FHandle h)
     = do c <- primIO (prim__readChar h)
          ferr <- primIO (prim__error h)
@@ -207,7 +207,7 @@ fGetChar (FHandle h)
             else ok (cast c)
 
 export
-fPutStr : HasIO io => (h : File) -> String -> io (Either FileError ())
+fPutStr : HasMonadIO io => (h : File) -> String -> io (Either FileError ())
 fPutStr (FHandle f) str
     = do res <- primIO (prim__writeLine f str)
          if res == 0
@@ -215,23 +215,23 @@ fPutStr (FHandle f) str
             else ok ()
 
 export
-fPutStrLn : HasIO io => (h : File) -> String -> io (Either FileError ())
+fPutStrLn : HasMonadIO io => (h : File) -> String -> io (Either FileError ())
 fPutStrLn f str = fPutStr f (str ++ "\n")
 
 export
-fEOF : HasIO io => (h : File) -> io Bool
+fEOF : HasMonadIO io => (h : File) -> io Bool
 fEOF (FHandle f)
     = do res <- primIO (prim__eof f)
          pure (res /= 0)
 
 export
-fflush : HasIO io => (h : File) -> io ()
+fflush : HasMonadIO io => (h : File) -> io ()
 fflush (FHandle f)
     = do primIO (prim__flush f)
          pure ()
 
 export
-popen : HasIO io => String -> Mode -> io (Either FileError File)
+popen : HasMonadIO io => String -> Mode -> io (Either FileError File)
 popen f m = do
     ptr <- primIO (prim__popen f (modeStr m))
     if prim__nullAnyPtr ptr /= 0
@@ -239,11 +239,11 @@ popen f m = do
         else pure (Right (FHandle ptr))
 
 export
-pclose : HasIO io => File -> io ()
+pclose : HasMonadIO io => File -> io ()
 pclose (FHandle h) = primIO (prim__pclose h)
 
 export
-fileAccessTime : HasIO io => (h : File) -> io (Either FileError Int)
+fileAccessTime : HasMonadIO io => (h : File) -> io (Either FileError Int)
 fileAccessTime (FHandle f)
     = do res <- primIO (prim__fileAccessTime f)
          if res > 0
@@ -251,7 +251,7 @@ fileAccessTime (FHandle f)
             else returnError
 
 export
-fileModifiedTime : HasIO io => (h : File) -> io (Either FileError Int)
+fileModifiedTime : HasMonadIO io => (h : File) -> io (Either FileError Int)
 fileModifiedTime (FHandle f)
     = do res <- primIO (prim__fileModifiedTime f)
          if res > 0
@@ -259,7 +259,7 @@ fileModifiedTime (FHandle f)
             else returnError
 
 export
-fileStatusTime : HasIO io => (h : File) -> io (Either FileError Int)
+fileStatusTime : HasMonadIO io => (h : File) -> io (Either FileError Int)
 fileStatusTime (FHandle f)
     = do res <- primIO (prim__fileStatusTime f)
          if res > 0
@@ -267,7 +267,7 @@ fileStatusTime (FHandle f)
             else returnError
 
 export
-removeFile : HasIO io => String -> io (Either FileError ())
+removeFile : HasMonadIO io => String -> io (Either FileError ())
 removeFile fname
     = do res <- primIO (prim__removeFile fname)
          if res == 0
@@ -275,7 +275,7 @@ removeFile fname
             else returnError
 
 export
-fileSize : HasIO io => (h : File) -> io (Either FileError Int)
+fileSize : HasMonadIO io => (h : File) -> io (Either FileError Int)
 fileSize (FHandle f)
     = do res <- primIO (prim__fileSize f)
          if res >= 0
@@ -283,13 +283,13 @@ fileSize (FHandle f)
             else returnError
 
 export
-fPoll : HasIO io => File -> io Bool
+fPoll : HasMonadIO io => File -> io Bool
 fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
 export
-readFile : HasIO io => String -> io (Either FileError String)
+readFile : HasMonadIO io => String -> io (Either FileError String)
 readFile file
   = do Right h <- openFile file Read
           | Left err => returnError
@@ -311,7 +311,7 @@ readFile file
 
 ||| Write a string to a file
 export
-writeFile : HasIO io =>
+writeFile : HasMonadIO io =>
             (filepath : String) -> (contents : String) ->
             io (Either FileError ())
 writeFile fn contents = do
@@ -347,7 +347,7 @@ mkMode p
     getMs = sum . map getM
 
 export
-chmodRaw : HasIO io => String -> Int -> io (Either FileError ())
+chmodRaw : HasMonadIO io => String -> Int -> io (Either FileError ())
 chmodRaw fname p
     = do ok <- primIO $ prim__chmod fname p
          if ok == 0
@@ -355,5 +355,5 @@ chmodRaw fname p
             else returnError
 
 export
-chmod : HasIO io => String -> Permissions -> io (Either FileError ())
+chmod : HasMonadIO io => String -> Permissions -> io (Either FileError ())
 chmod fname p = chmodRaw fname (mkMode p)

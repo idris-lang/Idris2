@@ -69,11 +69,11 @@ prim__idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 
 export
-getErrno : HasIO io => io SocketError
+getErrno : HasMonadIO io => io SocketError
 getErrno = primIO $ prim__idrnet_errno
 
 export
-nullPtr : HasIO io => AnyPtr -> io Bool
+nullPtr : HasMonadIO io => AnyPtr -> io Bool
 nullPtr p = do 0 <- primIO  $ prim__idrnet_isNull p
                | _ => pure True
                pure False

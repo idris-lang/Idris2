@@ -20,7 +20,7 @@ data Buffer : Type where [external]
 prim__bufferSize : Buffer -> Int
 
 export
-rawSize : HasIO io => Buffer -> io Int
+rawSize : HasMonadIO io => Buffer -> io Int
 rawSize buf = pure (prim__bufferSize buf)
 
 %foreign "scheme:blodwen-new-buffer"
@@ -28,7 +28,7 @@ rawSize buf = pure (prim__bufferSize buf)
 prim__newBuffer : Int -> PrimIO Buffer
 
 export
-newBuffer : HasIO io => Int -> io (Maybe Buffer)
+newBuffer : HasMonadIO io => Int -> io (Maybe Buffer)
 newBuffer size
     = do buf <- primIO (prim__newBuffer size)
          pure $ Just buf
@@ -38,7 +38,7 @@ newBuffer size
 
 -- might be needed if we do this in C...
 export
-freeBuffer : HasIO io => Buffer -> io ()
+freeBuffer : HasMonadIO io => Buffer -> io ()
 freeBuffer buf = pure ()
 
 %foreign "scheme:blodwen-buffer-setbyte"
@@ -51,12 +51,12 @@ prim__setBits8 : Buffer -> Int -> Bits8 -> PrimIO ()
 
 -- Assumes val is in the range 0-255
 export
-setByte : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
+setByte : HasMonadIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setByte buf loc val
     = primIO (prim__setByte buf loc val)
 
 export
-setBits8 : HasIO io => Buffer -> (loc : Int) -> (val : Bits8) -> io ()
+setBits8 : HasMonadIO io => Buffer -> (loc : Int) -> (val : Bits8) -> io ()
 setBits8 buf loc val
     = primIO (prim__setBits8 buf loc val)
 
@@ -69,12 +69,12 @@ prim__getByte : Buffer -> Int -> PrimIO Int
 prim__getBits8 : Buffer -> Int -> PrimIO Bits8
 
 export
-getByte : HasIO io => Buffer -> (loc : Int) -> io Int
+getByte : HasMonadIO io => Buffer -> (loc : Int) -> io Int
 getByte buf loc
     = primIO (prim__getByte buf loc)
 
 export
-getBits8 : HasIO io => Buffer -> (loc : Int) -> io Bits8
+getBits8 : HasMonadIO io => Buffer -> (loc : Int) -> io Bits8
 getBits8 buf loc
     = primIO (prim__getBits8 buf loc)
 
@@ -83,7 +83,7 @@ getBits8 buf loc
 prim__setBits16 : Buffer -> Int -> Bits16 -> PrimIO ()
 
 export
-setBits16 : HasIO io => Buffer -> (loc : Int) -> (val : Bits16) -> io ()
+setBits16 : HasMonadIO io => Buffer -> (loc : Int) -> (val : Bits16) -> io ()
 setBits16 buf loc val
     = primIO (prim__setBits16 buf loc val)
 
@@ -92,7 +92,7 @@ setBits16 buf loc val
 prim__getBits16 : Buffer -> Int -> PrimIO Bits16
 
 export
-getBits16 : HasIO io => Buffer -> (loc : Int) -> io Bits16
+getBits16 : HasMonadIO io => Buffer -> (loc : Int) -> io Bits16
 getBits16 buf loc
     = primIO (prim__getBits16 buf loc)
 
@@ -101,7 +101,7 @@ getBits16 buf loc
 prim__setBits32 : Buffer -> Int -> Bits32 -> PrimIO ()
 
 export
-setBits32 : HasIO io => Buffer -> (loc : Int) -> (val : Bits32) -> io ()
+setBits32 : HasMonadIO io => Buffer -> (loc : Int) -> (val : Bits32) -> io ()
 setBits32 buf loc val
     = primIO (prim__setBits32 buf loc val)
 
@@ -110,7 +110,7 @@ setBits32 buf loc val
 prim__getBits32 : Buffer -> Int -> PrimIO Bits32
 
 export
-getBits32 : HasIO io => Buffer -> (loc : Int) -> io Bits32
+getBits32 : HasMonadIO io => Buffer -> (loc : Int) -> io Bits32
 getBits32 buf loc
     = primIO (prim__getBits32 buf loc)
 
@@ -118,7 +118,7 @@ getBits32 buf loc
 prim__setBits64 : Buffer -> Int -> Bits64 -> PrimIO ()
 
 export
-setBits64 : HasIO io => Buffer -> (loc : Int) -> (val : Bits64) -> io ()
+setBits64 : HasMonadIO io => Buffer -> (loc : Int) -> (val : Bits64) -> io ()
 setBits64 buf loc val
     = primIO (prim__setBits64 buf loc val)
 
@@ -126,7 +126,7 @@ setBits64 buf loc val
 prim__getBits64 : Buffer -> Int -> PrimIO Bits64
 
 export
-getBits64 : HasIO io => Buffer -> (loc : Int) -> io Bits64
+getBits64 : HasMonadIO io => Buffer -> (loc : Int) -> io Bits64
 getBits64 buf loc
     = primIO (prim__getBits64 buf loc)
 
@@ -135,7 +135,7 @@ getBits64 buf loc
 prim__setInt32 : Buffer -> Int -> Int -> PrimIO ()
 
 export
-setInt32 : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
+setInt32 : HasMonadIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setInt32 buf loc val
     = primIO (prim__setInt32 buf loc val)
 
@@ -144,7 +144,7 @@ setInt32 buf loc val
 prim__getInt32 : Buffer -> Int -> PrimIO Int
 
 export
-getInt32 : HasIO io => Buffer -> (loc : Int) -> io Int
+getInt32 : HasMonadIO io => Buffer -> (loc : Int) -> io Int
 getInt32 buf loc
     = primIO (prim__getInt32 buf loc)
 
@@ -153,7 +153,7 @@ getInt32 buf loc
 prim__setInt : Buffer -> Int -> Int -> PrimIO ()
 
 export
-setInt : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
+setInt : HasMonadIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setInt buf loc val
     = primIO (prim__setInt buf loc val)
 
@@ -162,7 +162,7 @@ setInt buf loc val
 prim__getInt : Buffer -> Int -> PrimIO Int
 
 export
-getInt : HasIO io => Buffer -> (loc : Int) -> io Int
+getInt : HasMonadIO io => Buffer -> (loc : Int) -> io Int
 getInt buf loc
     = primIO (prim__getInt buf loc)
 
@@ -171,7 +171,7 @@ getInt buf loc
 prim__setDouble : Buffer -> Int -> Double -> PrimIO ()
 
 export
-setDouble : HasIO io => Buffer -> (loc : Int) -> (val : Double) -> io ()
+setDouble : HasMonadIO io => Buffer -> (loc : Int) -> (val : Double) -> io ()
 setDouble buf loc val
     = primIO (prim__setDouble buf loc val)
 
@@ -180,7 +180,7 @@ setDouble buf loc val
 prim__getDouble : Buffer -> Int -> PrimIO Double
 
 export
-getDouble : HasIO io => Buffer -> (loc : Int) -> io Double
+getDouble : HasMonadIO io => Buffer -> (loc : Int) -> io Double
 getDouble buf loc
     = primIO (prim__getDouble buf loc)
 
@@ -194,7 +194,7 @@ stringByteLength : String -> Int
 prim__setString : Buffer -> Int -> String -> PrimIO ()
 
 export
-setString : HasIO io => Buffer -> (loc : Int) -> (val : String) -> io ()
+setString : HasMonadIO io => Buffer -> (loc : Int) -> (val : String) -> io ()
 setString buf loc val
     = primIO (prim__setString buf loc val)
 
@@ -203,14 +203,14 @@ setString buf loc val
 prim__getString : Buffer -> Int -> Int -> PrimIO String
 
 export
-getString : HasIO io => Buffer -> (loc : Int) -> (len : Int) -> io String
+getString : HasMonadIO io => Buffer -> (loc : Int) -> (len : Int) -> io String
 getString buf loc len
     = primIO (prim__getString buf loc len)
 
 
 
 export
-bufferData : HasIO io => Buffer -> io (List Int)
+bufferData : HasMonadIO io => Buffer -> io (List Int)
 bufferData buf
     = do len <- rawSize buf
          unpackTo [] len
@@ -227,7 +227,7 @@ bufferData buf
 prim__copyData : Buffer -> Int -> Int -> Buffer -> Int -> PrimIO ()
 
 export
-copyData : HasIO io => (src : Buffer) -> (start, len : Int) ->
+copyData : HasMonadIO io => (src : Buffer) -> (start, len : Int) ->
            (dest : Buffer) -> (loc : Int) -> io ()
 copyData src start len dest loc
     = primIO (prim__copyData src start len dest loc)
@@ -241,7 +241,7 @@ prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
 export
-readBufferData : HasIO io => File -> Buffer ->
+readBufferData : HasMonadIO io => File -> Buffer ->
                  (loc : Int) -> -- position in buffer to start adding
                  (maxbytes : Int) -> -- maximums size to read, which must not
                                      -- exceed buffer length
@@ -253,7 +253,7 @@ readBufferData (FHandle h) buf loc max
             else pure (Left FileReadError)
 
 export
-writeBufferData : HasIO io => File -> Buffer ->
+writeBufferData : HasMonadIO io => File -> Buffer ->
                   (loc : Int) -> -- position in buffer to write from
                   (maxbytes : Int) -> -- maximums size to write, which must not
                                       -- exceed buffer length
@@ -265,7 +265,7 @@ writeBufferData (FHandle h) buf loc max
             else pure (Left FileWriteError)
 
 export
-writeBufferToFile : HasIO io => String -> Buffer -> Int -> io (Either FileError ())
+writeBufferToFile : HasMonadIO io => String -> Buffer -> Int -> io (Either FileError ())
 writeBufferToFile fn buf max
     = do Right f <- openFile fn WriteTruncate
              | Left err => pure (Left err)
@@ -275,7 +275,7 @@ writeBufferToFile fn buf max
          pure (Right ok)
 
 export
-createBufferFromFile : HasIO io => String -> io (Either FileError Buffer)
+createBufferFromFile : HasMonadIO io => String -> io (Either FileError Buffer)
 createBufferFromFile fn
     = do Right f <- openFile fn Read
              | Left err => pure (Left err)
@@ -289,7 +289,7 @@ createBufferFromFile fn
          pure (Right buf)
 
 export
-resizeBuffer : HasIO io => Buffer -> Int -> io (Maybe Buffer)
+resizeBuffer : HasMonadIO io => Buffer -> Int -> io (Maybe Buffer)
 resizeBuffer old newsize
     = do Just buf <- newBuffer newsize
               | Nothing => pure Nothing
@@ -304,7 +304,7 @@ resizeBuffer old newsize
 ||| Create a buffer containing the concatenated content from a
 ||| list of buffers.
 export
-concatBuffers : HasIO io => List Buffer -> io (Maybe Buffer)
+concatBuffers : HasMonadIO io => List Buffer -> io (Maybe Buffer)
 concatBuffers xs
     = do let sizes = map prim__bufferSize xs
          let (totalSize, revCumulative) = foldl scanSize (0,[]) sizes
@@ -319,7 +319,7 @@ concatBuffers xs
 
 ||| Split a buffer into two at a position.
 export
-splitBuffer : HasIO io => Buffer -> Int -> io (Maybe (Buffer, Buffer))
+splitBuffer : HasMonadIO io => Buffer -> Int -> io (Maybe (Buffer, Buffer))
 splitBuffer buf pos = do size <- rawSize buf
                          if pos > 0 && pos < size
                              then do Just first <- newBuffer pos

@@ -13,7 +13,7 @@ support fn = "C:" ++ fn ++ ", libidris2_support"
          "node:support:fileErrno,support_system_directory"
 prim__fileErrno : PrimIO Int
 
-returnError : HasIO io => io (Either FileError a)
+returnError : HasMonadIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim__fileErrno
          case err of
@@ -24,7 +24,7 @@ returnError
               4 => pure $ Left FileExists
               _ => pure $ Left (GenericFileError (err-5))
 
-ok : HasIO io => a -> io (Either FileError a)
+ok : HasMonadIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
 %foreign support "idris2_currentDirectory"
@@ -56,7 +56,7 @@ data Directory : Type where
      MkDir : DirPtr -> Directory
 
 export
-createDir : HasIO io => String -> io (Either FileError ())
+createDir : HasMonadIO io => String -> io (Either FileError ())
 createDir dir
     = do res <- primIO (prim__createDir dir)
          if res == 0
@@ -64,13 +64,13 @@ createDir dir
             else returnError
 
 export
-changeDir : HasIO io => String -> io Bool
+changeDir : HasMonadIO io => String -> io Bool
 changeDir dir
     = do ok <- primIO (prim__changeDir dir)
          pure (ok == 0)
 
 export
-currentDir : HasIO io => io (Maybe String)
+currentDir : HasMonadIO io => io (Maybe String)
 currentDir
     = do res <- primIO prim__currentDir
          if prim__nullPtr res /= 0
@@ -78,7 +78,7 @@ currentDir
             else pure (Just (prim__getString res))
 
 export
-openDir : HasIO io => String -> io (Either FileError Directory)
+openDir : HasMonadIO io => String -> io (Either FileError Directory)
 openDir d
     = do res <- primIO (prim__openDir d)
          if prim__nullAnyPtr res /= 0
@@ -86,15 +86,15 @@ openDir d
             else ok (MkDir res)
 
 export
-closeDir : HasIO io => Directory -> io ()
+closeDir : HasMonadIO io => Directory -> io ()
 closeDir (MkDir d) = primIO (prim__closeDir d)
 
 export
-removeDir : HasIO io => String -> io ()
+removeDir : HasMonadIO io => String -> io ()
 removeDir dirName = primIO (prim__removeDir dirName)
 
 export
-dirEntry : HasIO io => Directory -> io (Either FileError String)
+dirEntry : HasMonadIO io => Directory -> io (Either FileError String)
 dirEntry (MkDir d)
     = do res <- primIO (prim__dirEntry d)
          if prim__nullPtr res /= 0

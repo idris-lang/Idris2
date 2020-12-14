@@ -31,7 +31,7 @@ group n xs = worker [] xs
         worker acc ys = worker ((take n ys)::acc) (drop n ys)
 
 export
-dumpBuffer : HasIO io => Buffer -> io String
+dumpBuffer : HasMonadIO io => Buffer -> io String
 dumpBuffer buf = do
     size <- liftIO $ rawSize buf
     dat <- liftIO $ bufferData buf
@@ -40,5 +40,5 @@ dumpBuffer buf = do
     pure $ hex ++ "\n\ntotal size = " ++ show size
 
 export
-printBuffer : HasIO io => Buffer -> io ()
+printBuffer : HasMonadIO io => Buffer -> io ()
 printBuffer buf = putStrLn $ !(dumpBuffer buf)

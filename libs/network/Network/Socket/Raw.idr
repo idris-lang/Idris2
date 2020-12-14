@@ -27,39 +27,39 @@ data SockaddrPtr = SAPtr AnyPtr
 
 ||| Put a value in a buffer
 export
-sock_poke : HasIO io => BufPtr -> Int -> Int -> io ()
+sock_poke : HasMonadIO io => BufPtr -> Int -> Int -> io ()
 sock_poke (BPtr ptr) offset val = primIO $ prim__idrnet_poke ptr offset val
 
 ||| Take a value from a buffer
 export
-sock_peek : HasIO io => BufPtr -> Int -> io Int
+sock_peek : HasMonadIO io => BufPtr -> Int -> io Int
 sock_peek (BPtr ptr) offset = primIO $ prim__idrnet_peek ptr offset
 
 ||| Frees a given pointer
 export
-sock_free : HasIO io => BufPtr -> io ()
+sock_free : HasMonadIO io => BufPtr -> io ()
 sock_free (BPtr ptr) = primIO $ prim__idrnet_free ptr
 
 export
-sockaddr_free : HasIO io => SockaddrPtr -> io ()
+sockaddr_free : HasMonadIO io => SockaddrPtr -> io ()
 sockaddr_free (SAPtr ptr) = primIO $ prim__idrnet_free ptr
 
 ||| Allocates an amount of memory given by the ByteLength parameter.
 |||
 ||| Used to allocate a mutable pointer to be given to the Recv functions.
 export
-sock_alloc : HasIO io => ByteLength -> io BufPtr
+sock_alloc : HasMonadIO io => ByteLength -> io BufPtr
 sock_alloc bl = map BPtr $ primIO $ prim__idrnet_malloc bl
 
 ||| Retrieves the port the given socket is bound to
 export
-getSockPort : HasIO io => Socket -> io Port
+getSockPort : HasMonadIO io => Socket -> io Port
 getSockPort sock = primIO $ prim__idrnet_sockaddr_port $ descriptor sock
 
 
 ||| Retrieves a socket address from a sockaddr pointer
 export
-getSockAddr : HasIO io => SockaddrPtr -> io SocketAddress
+getSockAddr : HasMonadIO io => SockaddrPtr -> io SocketAddress
 getSockAddr (SAPtr ptr) = do
   addr_family_int <- primIO $ prim__idrnet_sockaddr_family ptr
 
@@ -73,12 +73,12 @@ getSockAddr (SAPtr ptr) = do
     Just AF_UNSPEC => pure InvalidAddress)
 
 export
-freeRecvStruct : HasIO io => RecvStructPtr -> io ()
+freeRecvStruct : HasMonadIO io => RecvStructPtr -> io ()
 freeRecvStruct (RSPtr p) = primIO $ prim__idrnet_free_recv_struct p
 
 ||| Utility to extract data.
 export
-freeRecvfromStruct : HasIO io => RecvfromStructPtr -> io ()
+freeRecvfromStruct : HasMonadIO io => RecvfromStructPtr -> io ()
 freeRecvfromStruct (RFPtr p) = primIO $ prim__idrnet_free_recvfrom_struct p
 
 ||| Sends the data in a given memory location
@@ -90,7 +90,7 @@ freeRecvfromStruct (RFPtr p) = primIO $ prim__idrnet_free_recvfrom_struct p
 ||| @ptr  The location containing the data to send.
 ||| @len  How much of the data to send.
 export
-sendBuf : HasIO io
+sendBuf : HasMonadIO io
        => (sock : Socket)
        -> (ptr  : BufPtr)
        -> (len  : ByteLength)
@@ -111,7 +111,7 @@ sendBuf sock (BPtr ptr) len = do
 ||| @ptr  The location containing the data to receive.
 ||| @len  How much of the data to receive.
 export
-recvBuf : HasIO io
+recvBuf : HasMonadIO io
        => (sock : Socket)
        -> (ptr  : BufPtr)
        -> (len  : ByteLength)
@@ -134,7 +134,7 @@ recvBuf sock (BPtr ptr) len = do
 ||| @ptr  A Pointer to the buffer containing the message.
 ||| @len  The size of the message.
 export
-sendToBuf : HasIO io
+sendToBuf : HasMonadIO io
          => (sock : Socket)
          -> (addr : SocketAddress)
          -> (port : Port)
@@ -151,19 +151,19 @@ sendToBuf sock addr p (BPtr dat) len = do
 
 ||| Utility function to get the payload of the sent message as a `String`.
 export
-foreignGetRecvfromPayload : HasIO io => RecvfromStructPtr -> io String
+foreignGetRecvfromPayload : HasMonadIO io => RecvfromStructPtr -> io String
 foreignGetRecvfromPayload (RFPtr p) = primIO $ prim__idrnet_get_recvfrom_payload p
 
 ||| Utility function to return senders socket address.
 export
-foreignGetRecvfromAddr : HasIO io => RecvfromStructPtr -> io SocketAddress
+foreignGetRecvfromAddr : HasMonadIO io => RecvfromStructPtr -> io SocketAddress
 foreignGetRecvfromAddr (RFPtr p) = do
   sockaddr_ptr <- map SAPtr $ primIO $ prim__idrnet_get_recvfrom_sockaddr p
   getSockAddr sockaddr_ptr
 
 ||| Utility function to return sender's IPV4 port.
 export
-foreignGetRecvfromPort : HasIO io => RecvfromStructPtr -> io Port
+foreignGetRecvfromPort : HasMonadIO io => RecvfromStructPtr -> io Port
 foreignGetRecvfromPort (RFPtr p) = do
   sockaddr_ptr <- primIO $ prim__idrnet_get_recvfrom_sockaddr p
   port         <- primIO $ prim__idrnet_sockaddr_ipv4_port sockaddr_ptr
@@ -181,7 +181,7 @@ foreignGetRecvfromPort (RFPtr p) = do
 ||| @len  Size of the expected message.
 |||
 export
-recvFromBuf : HasIO io
+recvFromBuf : HasMonadIO io
            => (sock : Socket)
            -> (ptr  : BufPtr)
            -> (len  : ByteLength)

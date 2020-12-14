@@ -13,14 +13,14 @@ data IORef : Type -> Type where
      MkRef : Mut a -> IORef a
 
 export
-newIORef : HasIO io => a -> io (IORef a)
+newIORef : HasMonadIO io => a -> io (IORef a)
 newIORef val
     = do m <- primIO (prim__newIORef val)
          pure (MkRef m)
 
 %inline
 export
-readIORef : HasIO io => IORef a -> io a
+readIORef : HasMonadIO io => IORef a -> io a
 readIORef (MkRef m) = primIO (prim__readIORef m)
 
 %inline
@@ -29,8 +29,7 @@ writeIORef : HasIO io => IORef a -> (1 val : a) -> io ()
 writeIORef (MkRef m) val = primIO (prim__writeIORef m val)
 
 export
-modifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
+modifyIORef : HasMonadIO io => IORef a -> (a -> a) -> io ()
 modifyIORef ref f
     = do val <- readIORef ref
          writeIORef ref (f val)
-

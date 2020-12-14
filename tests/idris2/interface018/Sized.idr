@@ -17,9 +17,9 @@ data ForeignPtr : Type -> Type where
 public export
 interface Storable (0 a : Type) (n : Nat) | a where
   constructor MkStorable
-  peekByteOff : HasIO io => ForeignPtr a -> Int -> io a
+  peekByteOff : HasMonadIO io => ForeignPtr a -> Int -> io a
 
-  peekElemOff : HasIO io => ForeignPtr a -> Int -> io a
+  peekElemOff : HasMonadIO io => ForeignPtr a -> Int -> io a
   peekElemOff fp off = peekByteOff fp (off * cast n)
 
 Storable Bits8 8 where

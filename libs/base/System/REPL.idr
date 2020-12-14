@@ -8,7 +8,7 @@ import System.File
 ||| @ onInput the function to run on reading input, returning a String to
 ||| output and a new state. Returns Nothing if the repl should exit
 export
-replWith : HasIO io =>
+replWith : HasMonadIO io =>
            (state : a) -> (prompt : String) ->
            (onInput : a -> String -> Maybe (String, a)) -> io ()
 replWith acc prompt fn
@@ -29,9 +29,7 @@ replWith acc prompt fn
 ||| @ onInput the function to run on reading input, returning a String to
 ||| output
 export
-repl : HasIO io =>
+repl : HasMonadIO io =>
        (prompt : String) -> (onInput : String -> String) -> io ()
 repl prompt fn
    = replWith () prompt (\x, s => Just (fn s, ()))
-
-

@@ -6,12 +6,12 @@ import Data.List
 
 public export
 interface Random a where
-  randomIO : HasIO io => io a
+  randomIO : HasMonadIO io => io a
 
   -- Takes a range (lo, hi), and returns a random value uniformly
   -- distributed in the closed interval [lo, hi]. It is unspecified what
   -- happens if lo > hi.
-  randomRIO : HasIO io => (a, a) -> io a
+  randomRIO : HasMonadIO io => (a, a) -> io a
 
 %foreign "scheme:blodwen-random"
 prim__randomInt : Int -> PrimIO Int

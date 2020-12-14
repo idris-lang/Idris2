@@ -10,7 +10,7 @@ interface Ref m r | m where
   writeRef : r a -> a -> m ()
 
 export
-HasIO io => Ref io IORef where
+HasMonadIO io => Ref io IORef where
   newRef = newIORef
   readRef = readIORef
   writeRef = writeIORef
