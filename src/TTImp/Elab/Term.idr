@@ -164,14 +164,14 @@ checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
     = do est <- get EST
          nm <- genName "search"
          expty <- getTerm gexpty
-         sval <- searchVar fc rig depth (Resolved (defining est)) env nm expty
+         sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm expty
          pure (sval, gexpty)
 checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
     = do est <- get EST
          nmty <- genName "searchTy"
          ty <- metaVar fc erased env nmty (TType fc)
          nm <- genName "search"
-         sval <- searchVar fc rig depth (Resolved (defining est)) env nm ty
+         sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm ty
          pure (sval, gnf env ty)
 checkTerm rig elabinfo nest env (IAlternative fc uniq alts) exp
     = checkAlternative rig elabinfo nest env fc uniq alts exp

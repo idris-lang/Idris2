@@ -344,7 +344,10 @@ mutual
        INamespace : FC -> Namespace -> List ImpDecl -> ImpDecl
        ITransform : FC -> Name -> RawImp -> RawImp -> ImpDecl
        IRunElabDecl : FC -> RawImp -> ImpDecl
-       IPragma : ({vars : _} ->
+       IPragma : List Name -> -- pragmas might define names that wouldn't
+                       -- otherwise be spotted in 'definedInBlock' so they
+                       -- can be flagged here.
+                 ({vars : _} ->
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
@@ -365,7 +368,7 @@ mutual
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
-    show (IPragma _) = "[externally defined pragma]"
+    show (IPragma _ _) = "[externally defined pragma]"
     show (ILog Nothing) = "%logging off"
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
@@ -611,6 +614,7 @@ definedInBlock ns decls =
         all : List Name
         all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
+    defName ns (IPragma pns _) = map (expandNS ns) pns
     defName _ _ = []
 
 export
@@ -1019,7 +1023,7 @@ mutual
         = do tag 6; toBuf b fc; toBuf b n; toBuf b lhs; toBuf b rhs
     toBuf b (IRunElabDecl fc tm)
         = do tag 7; toBuf b fc; toBuf b tm
-    toBuf b (IPragma f) = throw (InternalError "Can't write Pragma")
+    toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
 

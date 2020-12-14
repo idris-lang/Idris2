@@ -89,8 +89,7 @@ record UState where
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
                 -- 'Nat' is the priority (lowest first)
-                -- The 'Int' is the resolved name. Delays can't be nested,
-                -- so we just process them in order.
+                -- The 'Int' is the resolved name.
   logging : Bool
 
 export
@@ -480,7 +479,7 @@ newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
          log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
-         logTermNF "unify.search" 10 "New search type" env ty
+         logTermNF "unify.search" 10 "New search type" [] hty
          idx <- addDef n hole
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)

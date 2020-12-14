@@ -407,10 +407,60 @@ searchVar : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             FC -> RigCount -> Nat -> Name ->
-            Env Term vars -> Name -> Term vars -> Core (Term vars)
-searchVar fc rig depth def env n ty
-    = do (_, tm) <- newSearch fc rig depth def env n ty
-         pure tm
+            Env Term vars -> NestedNames vars -> Name -> Term vars -> Core (Term vars)
+searchVar fc rig depth def env nest n ty
+    = do defs <- get Ctxt
+         (vars' ** (bind, env')) <- envHints (keys (localHints defs)) env
+         -- Initial the search with an environment which binds the applied
+         -- local hints
+         (_, tm) <- newSearch fc rig depth def env' n
+                              (weakenNs (mkSizeOf vars') ty)
+         pure (bind tm)
+  where
+    useVars : {vars : _} ->
+              List (Term vars) -> Term vars -> Term vars
+    useVars [] sc = sc
+    useVars (a :: as) (Bind bfc n (Pi fc c _ ty) sc)
+         = Bind bfc n (Let fc c a ty) (useVars (map weaken as) sc)
+    useVars as (Bind bfc n (Let fc c v ty) sc)
+         = Bind bfc n (Let fc c v ty) (useVars (map weaken as) sc)
+    useVars _ sc = sc -- Can't happen?
+
+    find : Name -> List (Name, (Maybe Name, b)) -> Maybe (Maybe Name, b)
+    find x [] = Nothing
+    find x ((n, t) :: xs)
+       = if x == n
+            then Just t
+            else case t of
+                      (Nothing, _) => find x xs
+                      (Just n', _) => if x == n'
+                                         then Just t
+                                         else find x xs
+
+    envHints : List Name -> Env Term vars ->
+               Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
+    envHints [] env = pure ([] ** (id, env))
+    envHints (n :: ns) env
+        = do (vs ** (f, env')) <- envHints ns env
+             let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)
+                 | Nothing => pure (vs ** (f, env'))
+             let n' = maybe n id nestn
+             defs <- get Ctxt
+             Just ndef <- lookupCtxtExact n' (gamma defs)
+                 | Nothing => pure (vs ** (f, env'))
+             let nt = case definition ndef of
+                           PMDef _ _ _ _ _ => Func
+                           DCon t a _ => DataCon t a
+                           TCon t a _ _ _ _ _ _ => TyCon t a
+                           _ => Func
+             let app = tmf fc nt
+             let tyenv = useVars (getArgs app) (embed (type ndef))
+             let binder = Let fc top (weakenNs (mkSizeOf vs) app)
+                                     (weakenNs (mkSizeOf vs) tyenv)
+             varn <- toFullNames n'
+             pure ((varn :: vs) **
+                    (\t => f (Bind fc varn binder t),
+                       binder :: env'))
 
 -- Elaboration info (passed to recursive calls)
 public export

@@ -936,6 +936,8 @@ record Defs where
   openHints : NameMap ()
      -- ^ currently open global hints; just for the rest of this module (not exported)
      -- and prioritised
+  localHints : NameMap ()
+     -- ^ Hints defined in the current environment
   saveTypeHints : List (Name, Name, Bool)
      -- We don't look up anything in here, it's merely for saving out to TTC.
      -- We save the hints in the 'GlobalDef' itself for faster lookup.
@@ -988,7 +990,7 @@ initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
          pure (MkDefs gam [] mainNS [] defaults empty 100
-                      empty empty empty [] [] empty []
+                      empty empty empty empty [] [] empty []
                       empty 5381 [] [] [] [] [] empty empty empty empty [])
 
 -- Reset the context, except for the options
@@ -1657,6 +1659,14 @@ addGlobalHint hintn_in isdef
 
          put Ctxt (record { autoHints $= insert hintn isdef,
                             saveAutoHints $= ((hintn, isdef) ::) } defs)
+
+export
+addLocalHint : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+addLocalHint hintn_in
+    = do defs <- get Ctxt
+         hintn <- toResolvedNames hintn_in
+         put Ctxt (record { localHints $= insert hintn () } defs)
 
 export
 addOpenHint : {auto c : Ref Ctxt Defs} -> Name -> Core ()

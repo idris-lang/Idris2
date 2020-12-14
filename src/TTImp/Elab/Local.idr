@@ -15,6 +15,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.TTImp
 
+import Data.NameMap
 import Data.List
 
 %default covering
@@ -55,10 +56,18 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
          ust <- get UST
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
+         defs <- get Ctxt
+         -- store the local hints, so we can reset them after we've elaborated
+         -- everything
+         let oldhints = localHints defs
          traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
-         check rig elabinfo nest' env scope expty
+         defs <- get Ctxt
+         res <- check rig elabinfo nest' env scope expty
+         defs <- get Ctxt
+         put Ctxt (record { localHints = oldhints } defs)
+         pure res
   where
     -- For the local definitions, don't allow access to linear things
     -- unless they're explicitly passed.
