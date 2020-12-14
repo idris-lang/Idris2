@@ -645,7 +645,7 @@ equivTypes ty1 ty2 = do defs <- get Ctxt
                         True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
                           | False => pure False
                         newRef UST initUState
-                        coreLift $ coreRun (unify inTerm replFC [] ty1 ty2) (\_ => pure False) (\case (MkUnifyResult [] False [] NoLazy) => pure True; _ => pure False)
+                        coreLift $ coreRun (unify inTerm replFC [] ty1 ty2) (\_ => pure False) (\case (MkUnifyResult _ _ _ NoLazy) => pure True; _ => pure False)
 
 ||| Process a single `REPLCmd`
 |||
@@ -754,24 +754,22 @@ process (Exec ctm)
 process Help
     = pure RequestedHelp
 process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
-    = do defs <- get Ctxt
+    = do defs <- branch
          let context = gamma defs
          log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
 
          rawTy <- desugar AnyExpr [] searchTerm
-         log "repl.ps" 2 $ show $ findImplicits rawTy
          let bound = piBindNames replFC [] rawTy
          log "repl.ps" 2 $ show bound
-         log "repl.ps" 2 $ show $ findImplicits bound
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          logTermNF "repl.ps" 2 "checked term" [] ty
-         tmnf <- normaliseHoles defs [] ty
-         ty' <- toResolvedNames tmnf
+         ty' <- toResolvedNames ty
          filteredDefs <- do names   <- allNames context
                             defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact context) names)
                             allDefs <- traverse (resolved context) defs
                             (flip filterM) allDefs (\def => equivTypes def.type ty')
-         -- let filteredDefs = (flip filter) allDefs (\def => def.type `equivTypes` ty')
+
+         put Ctxt defs
          log "repl.ps" 2 $ (show ty')
          doc <- traverse (maybeGetDocsFor replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
