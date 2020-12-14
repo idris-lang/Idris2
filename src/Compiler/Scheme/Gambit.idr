@@ -38,6 +38,13 @@ findGSC =
   do env <- getEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
 
+findGSCBackend : IO String
+findGSCBackend =
+  do env <- getEnv "GAMBIT_GSC_BACKEND"
+     pure $ case env of
+              Nothing => ""
+              Just e => " -cc " ++ e
+
 schHeader : String
 schHeader = "; @generated\n
          (declare (block)
@@ -387,9 +394,15 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++
-                   " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+         gscBackend <- coreLift findGSCBackend
+         ds <- getDirectives Gambit
+         let gscCompileOpts =
+             case find (== "C") ds of
+                 Nothing => gscBackend ++ " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
+                   (showSep " " libsfile) ++ "\""
+                 Just _ => " -c"
+         let cmd =
+             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)

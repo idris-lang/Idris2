@@ -407,6 +407,9 @@ public export
 implementation Foldable (Vect n) where
   foldr f e xs = foldrImpl f e id xs
 
+  null [] = True
+  null _ = False
+
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------

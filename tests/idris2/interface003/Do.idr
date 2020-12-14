@@ -1,5 +1,5 @@
 public export
-interface Do (m : Type) where
+interface Do (0 m : Type) where
   Next : (a : Type) -> (b : Type) -> m -> Type
   bind : (x : m) -> Next a b x
 
@@ -9,4 +9,3 @@ public export
 Monad m => Do (m a) where
   Next a b x = (a -> m b) -> m b
   bind x = ?foo
-

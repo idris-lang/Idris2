@@ -2,6 +2,7 @@ module Data.List
 
 import Data.Nat
 import Data.List1
+import Data.Fin
 
 public export
 isNil : List a -> Bool
@@ -58,9 +59,14 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 |||
 ||| @ ok a proof that the index is within bounds
 public export
-index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index : (n : Nat) -> (xs : List a) -> {auto 0 ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
+
+public export
+index' : (xs : List a) -> Fin (length xs) -> a
+index' (x::_)  FZ     = x
+index' (_::xs) (FS i) = index' xs i
 
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate

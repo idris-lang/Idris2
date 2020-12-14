@@ -112,6 +112,8 @@ Foldable m => Foldable (EitherT e m) where
   foldr f acc (MkEitherT e)
     = foldr (\x,xs => either (const acc) (`f` xs) x) acc e
 
+  null (MkEitherT e) = null e
+
 public export
 Traversable m => Traversable (EitherT e m) where
   traverse f (MkEitherT x)

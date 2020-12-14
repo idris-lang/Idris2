@@ -500,9 +500,9 @@ export
 data QVar : Type where
 
 public export
-interface Quote (tm : List Name -> Type) where
+interface Quote tm where
     quote : {auto c : Ref Ctxt Defs} ->
-            {vars : _} ->
+            {vars : List Name} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteGen : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
@@ -767,9 +767,9 @@ etaContract tm = do
         _ => pure tm
 
 public export
-interface Convert (tm : List Name -> Type) where
+interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : _} ->
+            {vars : List Name} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convGen : {auto c : Ref Ctxt Defs} ->
@@ -1296,25 +1296,26 @@ replace : {auto c : Ref Ctxt Defs} ->
           Core (Term vars)
 replace = replace' 0
 
+||| For printing purposes
 export
 normaliseErr : {auto c : Ref Ctxt Defs} ->
                Error -> Core Error
 normaliseErr (CantConvert fc env l r)
     = do defs <- get Ctxt
-         pure $ CantConvert fc env !(normaliseHoles defs env l)
-                                   !(normaliseHoles defs env r)
+         pure $ CantConvert fc env !(normaliseHoles defs env l >>= toFullNames)
+                                   !(normaliseHoles defs env r >>= toFullNames)
 normaliseErr (CantSolveEq fc env l r)
     = do defs <- get Ctxt
-         pure $ CantSolveEq fc env !(normaliseHoles defs env l)
-                                   !(normaliseHoles defs env r)
+         pure $ CantSolveEq fc env !(normaliseHoles defs env l >>= toFullNames)
+                                   !(normaliseHoles defs env r >>= toFullNames)
 normaliseErr (WhenUnifying fc env l r err)
     = do defs <- get Ctxt
-         pure $ WhenUnifying fc env !(normaliseHoles defs env l)
-                                    !(normaliseHoles defs env r)
+         pure $ WhenUnifying fc env !(normaliseHoles defs env l >>= toFullNames)
+                                    !(normaliseHoles defs env r >>= toFullNames)
                                     !(normaliseErr err)
 normaliseErr (CantSolveGoal fc env g)
     = do defs <- get Ctxt
-         pure $ CantSolveGoal fc env !(normaliseHoles defs env g)
+         pure $ CantSolveGoal fc env !(normaliseHoles defs env g >>= toFullNames)
 normaliseErr (AllFailed errs)
     = pure $ AllFailed !(traverse (\x => pure (fst x, !(normaliseErr (snd x)))) errs)
 normaliseErr (InType fc n err)

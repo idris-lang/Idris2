@@ -26,6 +26,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Utils.Shunting
+import Utils.String
 
 import Control.Monad.State
 import Data.List
@@ -149,10 +150,15 @@ mutual
             pure $ IPi fc rig !(traverse (desugar side ps') p)
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
-  desugarB side ps (PLam fc rig p (PRef _ n@(UN _)) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
+  desugarB side ps (PLam fc rig p pat@(PRef _ n@(UN nm)) argTy scope)
+      =  if lowerFirst nm || nm == "_"
+           then pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
                                     !(desugar side (n :: ps) scope)
+           else pure $ ILam fc rig !(traverse (desugar side ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                     [!(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
@@ -189,10 +195,12 @@ mutual
                             (PApp fc (PUpdate fc fs) (PRef fc (MN "rec" 0))))
   desugarB side ps (PApp fc x y)
       = pure $ IApp fc !(desugarB side ps x) !(desugarB side ps y)
+  desugarB side ps (PAutoApp fc x y)
+      = pure $ IAutoApp fc !(desugarB side ps x) !(desugarB side ps y)
   desugarB side ps (PWithApp fc x y)
       = pure $ IWithApp fc !(desugarB side ps x) !(desugarB side ps y)
-  desugarB side ps (PImplicitApp fc x argn y)
-      = pure $ IImplicitApp fc !(desugarB side ps x) argn !(desugarB side ps y)
+  desugarB side ps (PNamedApp fc x argn y)
+      = pure $ INamedApp fc !(desugarB side ps x) argn !(desugarB side ps y)
   desugarB side ps (PDelayed fc r ty)
       = pure $ IDelayed fc r !(desugarB side ps ty)
   desugarB side ps (PDelay fc tm)
@@ -636,7 +644,8 @@ mutual
       getFn : RawImp -> Core Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f _) = getFn f
-      getFn (IImplicitApp _ f _ _) = getFn f
+      getFn (IAutoApp _ f _) = getFn f
+      getFn (INamedApp _ f _ _) = getFn f
       getFn tm = throw (InternalError (show tm ++ " is not a function application"))
 
       toIDef : ImpClause -> Core ImpDecl
@@ -678,28 +687,33 @@ mutual
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
   desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
       = do addDocString tn doc
+           let paramNames = map fst params
+
            let cons = concatMap expandConstraint cons_in
-           cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ map fst params)
+           cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ paramNames)
                                                          (snd ntm)
                                           pure (fst ntm, tm')) cons
-           params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
-                                            pure (fst ntm, tm')) params
+           params' <- traverse (\ (nm, (rig, tm)) =>
+                         do tm' <- desugar AnyExpr ps tm
+                            pure (nm, (rig, tm')))
+                      params
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn body)
            let bnames = ifThenElse !isUnboundImplicits
                           (concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
+                                      (ps ++ mnames ++ paramNames) [])
                                   (map Builtin.snd cons') ++
                            concatMap (findBindableNames True
-                                      (ps ++ mnames ++ map fst params) [])
-                                  (map Builtin.snd params'))
+                                      (ps ++ mnames ++ paramNames) [])
+                                  (map (snd . snd) params'))
                           []
-           let paramsb = map (\ ntm => (Builtin.fst ntm,
-                                        doBind bnames (Builtin.snd ntm))) params'
-           let consb = map (\ ntm => (Builtin.fst ntm,
-                                      doBind bnames (Builtin.snd ntm))) cons'
+           let paramsb = map (\ (nm, (rig, tm)) =>
+                                 let tm' = doBind bnames tm in
+                                 (nm, (rig, tm')))
+                         params'
+           let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
-           body' <- traverse (desugarDecl (ps ++ mnames ++ map fst params)) body
+           body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
            pure [IPragma (\nest, env =>
                              elabInterface fc vis env nest consb
                                            tn paramsb det conname
@@ -821,7 +835,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide n => pure [IPragma (\nest, env => hide fc n)]
-             Logging i => pure [ILog (topics i, verbosity i)]
+             Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma (\nest, env => lazyActive a)]
              UnboundImplicits a => do
                setUnboundImplicits a

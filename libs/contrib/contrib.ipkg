@@ -98,6 +98,7 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Render.String,
           Text.PrettyPrint.Prettyprinter.Render.Terminal,
 
+          System.Future,
           System.Random,
           System.Path,
           Syntax.WithProof,

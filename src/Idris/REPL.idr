@@ -532,7 +532,7 @@ data REPLResult : Type where
   CheckedTotal : List (Name, Totality) -> REPLResult
   FoundHoles : List HoleData -> REPLResult
   OptionsSet : List REPLOpt -> REPLResult
-  LogLevelSet : LogLevel -> REPLResult
+  LogLevelSet : Maybe LogLevel -> REPLResult
   ConsoleWidthSet : Maybe Nat -> REPLResult
   ColorSet : Bool -> REPLResult
   VersionIs : Version -> REPLResult
@@ -1019,7 +1019,8 @@ mutual
   displayResult (FoundHoles xs) = do
     let holes = concatWith (surround (pretty ", ")) (pretty . name <$> xs)
     printResult (pretty (length xs) <++> pretty "holes" <+> colon <++> holes)
-  displayResult (LogLevelSet k) = printResult (reflow "Set loglevel to" <++> pretty k)
+  displayResult (LogLevelSet Nothing) = printResult (reflow "Logging turned off")
+  displayResult (LogLevelSet (Just k)) = printResult (reflow "Set log level to" <++> pretty k)
   displayResult (ConsoleWidthSet (Just k)) = printResult (reflow "Set consolewidth to" <++> pretty k)
   displayResult (ConsoleWidthSet Nothing) = printResult (reflow "Set consolewidth to auto")
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))

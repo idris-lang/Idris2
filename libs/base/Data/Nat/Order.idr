@@ -62,7 +62,7 @@ decideLTE (S x)   (S y) with (decEq (S x) (S y))
   decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
 
 public export
-implementation Decidable [Nat,Nat] LTE where
+implementation Decidable 2 [Nat,Nat] LTE where
   decide = decideLTE
 
 public export

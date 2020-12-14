@@ -19,3 +19,6 @@ Foldable Tree where
   foldr f acc (Node left e right) = let leftfold = foldr f acc left
                                         rightfold = foldr f leftfold right in
                                         f e rightfold
+
+  null Empty = True
+  null _ = False

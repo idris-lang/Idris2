@@ -177,6 +177,50 @@ interface declaration, it elaborates the interface header but none of the
 method types on the first pass, and elaborates the method types and any
 default definitions on the second pass.
 
+Quantities for Parameters
+=========================
+
+By default parameters that are not explicitly ascribed a type in an ``interface``
+declaration are assigned the quantity ``0``. This means that the parameter is not
+available to use at runtime in the methods' definitions.
+
+For instance, ``Show a`` gives rise to a ``0``-quantified type variable ``a`` in
+the type of the ``show`` method:
+
+::
+
+     Main> :set showimplicits
+     Main> :t show
+     Prelude.show : {0 a : Type} -> Show a => a -> String
+
+However some use cases require that some of the parameters are available at runtime.
+We may for instance want to declare an interface for ``Storable`` types. The constraint
+``Storable a size`` means that we can store values of type ``a`` in a ``Buffer`` in
+exactly ``size`` bytes.
+
+If the user provides a method to read a value for such a type ``a`` at a given offset,
+then we can read the ``k``th element stored in the buffer by computing the appropriate
+offset from ``k`` and ``size``. This is demonstrated by providing a default implementation
+for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and the parameter
+``size``.
+
+.. code-block:: idris
+
+    data ForeignPtr : Type -> Type where
+      MkFP : Buffer -> ForeignPtr a
+
+    interface Storable (0 a : Type) (size : Nat) | a where
+      peekByteOff : HasIO io => ForeignPtr a -> Int -> io a
+
+      peekElemOff : HasIO io => ForeignPtr a -> Int -> io a
+      peekElemOff fp k = peekByteOff fp (k * cast size)
+
+
+Note that ``a`` is explicitly marked as runtime irrelevant so that it is erased by the
+compiler. Equivalently we could have written ``interface Sotrable a (size : Nat)``.
+The meaning of ``| a`` is explained in :ref:`DeterminingParameters`.
+
+
 Functors and Applicatives
 =========================
 
@@ -189,8 +233,9 @@ prelude:
 
 .. code-block:: idris
 
-    interface Functor (f : Type -> Type) where
+    interface Functor (0 f : Type -> Type) where
         map : (m : a -> b) -> f a -> f b
+
 
 A functor allows a function to be applied across a structure, for
 example to apply a function to every element in a ``List``:
@@ -213,7 +258,7 @@ abstracts the notion of function application:
 
     infixl 2 <*>
 
-    interface Functor f => Applicative (f : Type -> Type) where
+    interface Functor f => Applicative (0 f : Type -> Type) where
         pure  : a -> f a
         (<*>) : f (a -> b) -> f a -> f b
 
@@ -410,7 +455,7 @@ has an implementation of both ``Monad`` and ``Alternative``:
 
 .. code-block:: idris
 
-    interface Applicative f => Alternative (f : Type -> Type) where
+    interface Applicative f => Alternative (0 f : Type -> Type) where
         empty : f a
         (<|>) : f a -> f a -> f a
 
@@ -670,6 +715,8 @@ do this with a ``using`` clause in the implementation as follows:
 The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
 
+.. _DeterminingParameters:
+
 Determining Parameters
 ======================
 
@@ -678,7 +725,7 @@ parameters used to find an implementation are restricted. For example:
 
 .. code-block:: idris
 
-    interface Monad m => MonadState s (m : Type -> Type) | m where
+    interface Monad m => MonadState s (0 m : Type -> Type) | m where
       get : m s
       put : s -> m ()
 

@@ -120,9 +120,9 @@ solvedHole : Int -> UnifyResult
 solvedHole n = MkUnifyResult [] True [n] NoLazy
 
 public export
-interface Unify (tm : List Name -> Type) where
+interface Unify tm where
   -- Unify returns a list of ids referring to newly added constraints
-  unifyD : {vars : _} ->
+  unifyD : {vars : List Name} ->
            Ref Ctxt Defs ->
            Ref UST UState ->
            UnifyInfo ->

@@ -17,6 +17,16 @@ Command-line options changes:
 
 Compiler changes:
 
+* Added new syntax for named applications and the bind-all-explicits pattern:
+
+     `f {x [= t], x [= t], ...}`
+     `f {x [= t], x [= t], ..., _}`
+     `f {}`
+
+* Added new syntax for record updates:
+
+     `{x := t, x $= t, ...}`
+
 * Added primitives to the parsing library used in the compiler to get more precise
   boundaries to the AST nodes `FC`.
 * New experimental ``refc`` code generator, which generates C with reference

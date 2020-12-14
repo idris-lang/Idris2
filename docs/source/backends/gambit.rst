@@ -66,3 +66,23 @@ Gambit Directives
   .. code-block::
 
     $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
+
+* ``--directive C``
+
+  Compile to C.
+
+Gambit Environment Configurations
+=================================
+
+* ``GAMBIT_GSC_BACKEND``
+
+  The ``GAMBIT_GSC_BACKEND`` variable controls which C compiler Gambit will use during compilation. E.g. to use clang:
+
+  ::
+
+    $ export GAMBIT_GSC_BACKEND=clang
+
+  Gambit after version v4.9.3 supports the ``-cc`` option, which configures
+  the compiler backend Gambit will use to build the binary. Currently to
+  get this functionality Gambit needs to be built from source, since it is
+  not yet available in a released version.

@@ -1,5 +1,5 @@
 public export
-interface Do (m : Type) where
+interface Do (0 m : Type) where
   Next : m -> Type
   bind : (x : m) -> Next x
 
