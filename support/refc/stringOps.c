@@ -14,14 +14,16 @@ Value *head(Value *str)
     return (Value *)c;
 }
 
-Value *tail(Value *str)
+Value *tail(Value *input)
 {
-    Value_Char *c = (Value_Char *)newValue();
-    c->header.tag = CHAR_TAG;
-    Value_String *s = (Value_String *)str;
+    Value_String *tailStr = (Value_String *)newValue();
+    tailStr->header.tag = STRING_TAG;
+    Value_String *s = (Value_String *)input;
     int l = strlen(s->str);
-    c->c = s->str[l - 1];
-    return (Value *)c;
+    tailStr->str = malloc(l);
+    memset(tailStr->str, 0, l);
+    memcpy(tailStr->str, s->str + 1, l - 1);
+    return (Value *)tailStr;
 }
 
 Value *reverse(Value *str)
