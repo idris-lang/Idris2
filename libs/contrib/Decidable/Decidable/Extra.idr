@@ -1,11 +1,15 @@
 module Decidable.Decidable.Extra
 
 import Data.Rel
+import Data.Rel.Extra
 import Data.Fun
 import Data.Vect
 import Data.HVect
 import Data.Fun.Extra
 import Decidable.Decidable
+
+%default total
+
 
 public export
 NotNot : {n : Nat} -> {ts : Vect n Type} -> (r : Rel ts) -> Rel ts
@@ -47,3 +51,21 @@ doubleNegationExists {ts} {r} @{dec} nnxs =
       witnessing   : uncurry              r  witness
       witnessing   = doubleNegationElimination @{dec} witness witnessingnn
   in introduceWitness witness witnessing
+
+
+||| Convert a decision about a decidable property into one about its negation.
+public export
+negateDec : (1 dec : Dec a) -> Dec (Not a)
+negateDec (Yes pf) = No ($ pf)
+negateDec (No npf) = Yes npf
+
+
+[DecidableComplement] {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
+  Decidable n ts (complement {ts} r) where
+    decide {ts = []} = negateDec $ decide @{posDec}
+    decide {ts = (t :: ts)} =
+      \x =>
+        let
+          pd = DecidablePartialApplication {x = x} @{posDec}
+          inst = DecidableComplement @{pd}
+        in decide @{inst}
