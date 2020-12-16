@@ -174,11 +174,13 @@ interface Applicative m => Monad m where
   (>>=) x f = join (f <$> x)
   join x = x >>= id
 
-%allow_overloads (>>=)
-
 public export
-(>>) : (Monad m) => m a -> m b -> m b
+(>>) : Monad m => m a -> m b -> m b
 a >> b = a >>= \_ => b
+
+%allow_overloads join
+%allow_overloads (>>=)
+%allow_overloads (>>)
 
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
@@ -190,6 +192,10 @@ public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
 when True f = f
 when False f = pure ()
+
+public export
+unless : Applicative f => Bool -> Lazy (f ()) -> f ()
+unless = when . not
 
 ---------------------------
 -- FOLDABLE, TRAVERSABLE --

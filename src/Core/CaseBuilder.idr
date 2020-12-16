@@ -801,7 +801,7 @@ mutual
            let clauses' = map (shuffleVars next) clauses
            let ps = partition phase clauses'
            maybe (pure (Unmatched "No clauses"))
-                 Core.pure
+                 pure
                 !(mixture fc fn phase ps err)
   match {todo = []} fc fn phase [] err
        = maybe (pure (Unmatched "No patterns"))

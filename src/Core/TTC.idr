@@ -33,12 +33,12 @@ TTC FC where
 export
 TTC Namespace where
   toBuf b = toBuf b . unsafeUnfoldNamespace
-  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+  fromBuf = map unsafeFoldNamespace . fromBuf
 
 export
 TTC ModuleIdent where
   toBuf b = toBuf b . unsafeUnfoldModuleIdent
-  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
+  fromBuf = map unsafeFoldModuleIdent . fromBuf
 
 export
 TTC Name where

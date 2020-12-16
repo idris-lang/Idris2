@@ -388,7 +388,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                               alts')
 checkAlternative rig elabinfo nest env fc uniq alts mexpected
     = do checkAmbigDepth fc elabinfo
-         alts' <- maybe (Core.pure [])
+         alts' <- maybe (pure [])
                         (\exp => pruneByType env !(getNF exp) alts) mexpected
          case alts' of
            [alt] => checkImp rig elabinfo nest env alt mexpected

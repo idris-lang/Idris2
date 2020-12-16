@@ -20,6 +20,7 @@ import Data.List
 import Data.NameMap
 
 %default covering
+%ambiguity_depth 5
 
 -- Make a hole for an unbound implicit in the outer environment
 export

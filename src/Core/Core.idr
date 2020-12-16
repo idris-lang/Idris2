@@ -6,6 +6,9 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
+
+import public Control.Monad.Syntax
+
 import Parser.Source
 import Text.PrettyPrint.Prettyprinter
 import Text.PrettyPrint.Prettyprinter.Util
@@ -389,7 +392,7 @@ export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 
--- Core is a wrapper around IO that is specialised for efficiency.
+||| Core is a wrapper around IO.
 export
 record Core t where
   constructor MkCore
@@ -414,74 +417,35 @@ wrapError fe (MkCore prog)
                              Right val => pure (Right val)))
 
 -- This would be better if we restrict it to a limited set of IO operations
-export
-%inline
+export %inline
 coreLift : IO a -> Core a
 coreLift op = MkCore (do op' <- op
-                         pure (Right op'))
-
-{- Monad, Applicative, Traversable are specialised by hand for Core.
-In theory, this shouldn't be necessary, but it turns out that Idris 1 doesn't
-specialise interfaces under 'case' expressions, and this has a significant
-impact on both compile time and run time.
-
-Of course it would be a good idea to fix this in Idris, but it's not an urgent
-thing on the road to self hosting, and we can make sure this isn't a problem
-in the next version (i.e., in this project...)! -}
-
--- Functor (specialised)
-export %inline
-map : (a -> b) -> Core a -> Core b
-map f (MkCore a) = MkCore (map (map f) a)
+                         pure $ Right op')
 
 export %inline
-(<$>) : (a -> b) -> Core a -> Core b
-(<$>) f (MkCore a) = MkCore (map (map f) a)
+unliftCore : Core a -> IO (Either Error a)
+unliftCore (MkCore act) = act
 
-export %inline
-ignore : Core a -> Core ()
-ignore = map (\ _ => ())
+public export %inline
+Functor Core where
+  map f (MkCore a) = MkCore (map (map f) a)
 
--- Monad (specialised)
-export %inline
-(>>=) : Core a -> (a -> Core b) -> Core b
-(>>=) (MkCore act) f
-    = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+public export %inline
+Applicative Core where
+  pure x = MkCore (pure (pure x))
+  (<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
 
--- Flipped bind
-infixr 1 =<<
-export %inline
-(=<<) : (a -> Core b) -> Core a -> Core b
-(=<<) = flip (>>=)
+public export %inline
+Monad Core where
+  (>>=) (MkCore act) f =
+    MkCore (act >>= (\x =>
+      case x of
+        Left  err => pure    $ Left err
+        Right val => runCore $ f val))
 
--- Applicative (specialised)
-export %inline
-pure : a -> Core a
-pure x = MkCore (pure (pure x))
-
-export
-(<*>) : Core (a -> b) -> Core a -> Core b
-(<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
-
-export
-(*>) : Core a -> Core b -> Core b
-(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
-
-export
-(<*) : Core a -> Core b -> Core a
-(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
-
-export %inline
-when : Bool -> Lazy (Core ()) -> Core ()
-when True f = f
-when False f = pure ()
-
-export %inline
-unless : Bool -> Lazy (Core ()) -> Core ()
-unless = when . not
+public export %inline
+HasIO Core where
+  liftIO = assert_linear coreLift
 
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
@@ -499,7 +463,19 @@ Catchable Core Error where
                          Right val => pure (Right val))
   throw = coreFail
 
--- Traversable (specialised)
+{- Traversable is specialised by hand for Core.
+
+This isn't necessary anymore, but it turns out that Idris 1 doesn't specialise
+interfaces under 'case' expressions, and this has a significant impact on both
+compile time and run time.
+
+Addendum: Compile-time and run-time difference is neglible between inlined
+implementations and specialized implementations.
+
+TODO: Despecialize Traversable
+
+-}
+
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
 traverse' f [] acc = pure (reverse acc)
 traverse' f (x :: xs) acc
@@ -513,7 +489,7 @@ traverse f xs = traverse' f xs []
 %inline
 export
 for : List a -> (a -> Core b) -> Core (List b)
-for = flip traverse
+for = flip Core.traverse
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)

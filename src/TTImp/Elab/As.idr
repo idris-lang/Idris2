@@ -18,6 +18,7 @@ import Data.List
 import Data.NameMap
 
 %default covering
+%ambiguity_depth 5
 
 export
 checkAs : {vars : _} ->

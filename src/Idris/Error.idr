@@ -27,6 +27,7 @@ import System.File
 import Utils.String
 
 %default covering
+%ambiguity_depth 5
 
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn

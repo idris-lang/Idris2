@@ -2,7 +2,7 @@ module Control.Monad.Syntax
 
 %default total
 
-infixr 1 =<<, <=<, >=>
+infixr 1 =<<, <<, <=<, >=>
 
 ||| Left-to-right Kleisli composition of monads.
 public export
@@ -18,4 +18,9 @@ public export
 ||| Right-to-left monadic bind, flipped version of `>>=`.
 (=<<) : Monad m => (a -> m b) -> m a -> m b
 (=<<) = flip (>>=)
+
+public export
+||| Flipped version of `>>`.
+(<<) : Monad m => m b -> m a -> m b
+(<<) = flip (>>)
 

@@ -453,7 +453,7 @@ clean pkg opts -- `opts` is not used but might be in the future
                                   in
                                 insertWith (reverse ks) (maybe [v] (v::)) trie) empty toClean
          foldWithKeysC (deleteFolder builddir)
-                       (\ks => map concat . traverse (deleteBin builddir ks))
+                       (\ks => map concat . Core.traverse (deleteBin builddir ks))
                        pkgTrie
          deleteFolder builddir []
          maybe (pure ()) (\e => delete (outputdir </> e))
@@ -649,4 +649,4 @@ findIpkg fname
     dropHead str (x :: xs)
         = if x == str then xs else x :: xs
     loadDependencies : List String -> Core ()
-    loadDependencies = traverse_ addPkgDir
+    loadDependencies = Core.traverse_ addPkgDir

@@ -48,9 +48,7 @@ plhs : ParseOpts
 plhs = MkParseOpts False False
 
 %hide Prelude.(>>=)
-%hide Core.Core.(>>=)
 %hide Prelude.pure
-%hide Core.Core.pure
 
 atom : FileName -> Rule PTerm
 atom fname

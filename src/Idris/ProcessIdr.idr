@@ -235,7 +235,7 @@ processMod : {auto c : Ref Ctxt Defs} ->
              (sourcecode : String) ->
              Core (Maybe (List Error))
 processMod srcf ttcf msg sourcecode
-    = catch (do
+    = assert_total $ catch (do -- TODO: Check totality
         setCurrentElabSource sourcecode
         -- Just read the header to start with (this is to get the imports and
         -- see if we can avoid rebuilding if none have changed)
