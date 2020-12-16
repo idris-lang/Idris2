@@ -5,7 +5,7 @@ This manual has been prepared using ReStructured Text and the [Sphinx Documentat
 
 ## Dependencies
 
-To build the manual the following dependencies must be met. We assume that you have standard build automation tools already install i.e. `make`.
+To build the manual, the following dependencies must be met. We assume that you have standard build automation tools already installed i.e. `make`.
 
 ### Sphinx-Doc
 
@@ -30,7 +30,7 @@ pip install sphinx_rtd_theme
 
 ### LaTeX
 
-LaTeX can be install either using your systems package manager or direct from TeXLive.
+LaTeX can be installed either using your systems package manager or directly from TeXLive.
 
 
 ## Build Instructions
