@@ -97,3 +97,19 @@ divMod {ok=_} (S n) (S d) =
         Right (r' ** eq') => Fraction {ok=ok} (S n) (S d) q (FS r') $
             rewrite sym $ plusSuccRightSucc (q * S d) (finToNat r') in
                 cong S $ trans (sym $ cong (plus (q * S d)) eq') eq
+
+
+||| Total function to convert a nat to a Fin, given a proof
+||| that it is less than the bound.
+public export
+natToFinLTE : (n : Nat) -> LT n m -> Fin m
+natToFinLTE n = weakenLTE (last {n})
+
+||| Converting from a Nat to a Fin and back is the identity.
+public export
+natToFinToNat :
+  (n : Nat)
+  -> (lte : LT n m)
+  -> finToNat (natToFinLTE n lte) = n
+natToFinToNat 0 (LTESucc lte) = Refl
+natToFinToNat (S k) (LTESucc lte) = rewrite natToFinToNat k lte in Refl
