@@ -97,7 +97,7 @@ State = \s, a => StateT s Identity a
 
 ||| Unwrap and apply a State monad computation.
 public export
-runState : stateType -> StateT stateType Identity a -> (stateType, a)
+runState : stateType -> State stateType a -> (stateType, a)
 runState s act = runIdentity (runStateT s act)
 
 ||| Unwrap and apply a State monad computation, but discard the final state.
