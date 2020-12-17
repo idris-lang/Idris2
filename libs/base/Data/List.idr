@@ -83,7 +83,7 @@ iterate f x  = x :: case f x of
 public export
 iterateN : Nat -> (a -> a) -> a -> List a
 iterateN Z     _ _ = []
-iterateN (S n) f x = x :: iterateN n f x
+iterateN (S n) f x = x :: iterateN n f (f x)
 
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
