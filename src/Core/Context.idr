@@ -1051,6 +1051,10 @@ initDefs
            , warnings = []
            }
 
+export
+resetElab : Options -> Options
+resetElab = record { elabDirectives = defaultElab }
+
 -- Reset the context, except for the options
 export
 clearCtxt : {auto c : Ref Ctxt Defs} ->
@@ -1059,9 +1063,6 @@ clearCtxt
     = do defs <- get Ctxt
          put Ctxt (record { options = resetElab (options defs),
                             timings = timings defs } !initDefs)
-  where
-    resetElab : Options -> Options
-    resetElab = record { elabDirectives = defaultElab }
 
 -- Get the canonical name of something that might have been aliased via
 -- import as

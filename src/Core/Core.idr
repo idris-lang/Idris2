@@ -389,8 +389,8 @@ export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 
--- Core is a wrapper around IO that is specialised for efficiency.
-export
+||| Core is a wrapper around IO that is specialised for efficiency.
+public export
 record Core t where
   constructor MkCore
   runCore : IO (Either Error t)
@@ -419,6 +419,11 @@ export
 coreLift : IO a -> Core a
 coreLift op = MkCore (do op' <- op
                          pure (Right op'))
+
+export
+%inline
+coreUnlift : Core a -> IO (Either Error a)
+coreUnlift (MkCore a) = a
 
 {- Monad, Applicative, Traversable are specialised by hand for Core.
 In theory, this shouldn't be necessary, but it turns out that Idris 1 doesn't

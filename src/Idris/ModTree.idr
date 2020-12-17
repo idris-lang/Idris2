@@ -19,9 +19,11 @@ import Idris.REPLCommon
 import Idris.Syntax
 import Idris.Pretty
 
+import Data.Either
 import Data.List
 import Data.StringMap
 
+import System.Future
 import System.Directory
 import System.File
 
@@ -148,61 +150,75 @@ fnameModified fname
          coreLift $ closeFile f
          pure (cast t)
 
-buildMod : {auto c : Ref Ctxt Defs} ->
+||| Build from source if any of the dependencies, or the associated source
+||| file, have a modification time which is newer than the module's ttc file
+buildMod : {auto parentC : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            FC -> Nat -> Nat -> BuildMod ->
-           Core (List Error)
--- Build from source if any of the dependencies, or the associated source
--- file, have a modification time which is newer than the module's ttc
--- file
-buildMod loc num len mod
-   = do clearCtxt; addPrimitives
-        lazyActive True; setUnboundImplicits True
-        let src = buildFile mod
-        mttc <- getTTCFileName src "ttc"
-        -- We'd expect any errors in nsToPath to have been caught by now
-        -- since the imports have been built! But we still have to check.
-        depFilesE <- traverse (nsToPath loc) (imports mod)
-        let (ferrs, depFiles) = partitionEithers depFilesE
-        ttcTime <- catch (do t <- fnameModified mttc
-                             pure (Just t))
-                         (\err => pure Nothing)
-        srcTime <- fnameModified src
-        depTimes <- traverse (\f => do t <- fnameModified f
-                                       pure (f, t)) depFiles
-        let needsBuilding =
-               case ttcTime of
-                    Nothing => True
-                    Just t => any (\x => x > t) (srcTime :: map snd depTimes)
-        u <- newRef UST initUState
-        m <- newRef MD initMetadata
-        put Syn initSyntax
+           IO (Future (Either Error (List Error)))
+buildMod loc num len mod = forkIO $ coreUnlift $ do
+  parentDefs <- get Ctxt
 
-        if needsBuilding
-           then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
-                   [] <- process {u} {m} msg src
-                      | errs => do emitWarnings
-                                   traverse emitError errs
-                                   pure (ferrs ++ errs)
-                   emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
-           else do emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
+  newC <- newRef Ctxt (record { options = resetElab (options parentDefs),
+                                timings = timings parentDefs} !initDefs)
+
+  addPrimitives {c=newC}
+  lazyActive True {c=newC}; setUnboundImplicits True {c=newC}
+  let src = buildFile mod
+  mttc <- getTTCFileName src "ttc" {c=newC}
+  -- We'd expect any errors in nsToPath to have been caught by now
+  -- since the imports have been built! But we still have to check.
+  depFilesE <- traverse (nsToPath loc {c=newC}) (imports mod)
+  let (ferrs, depFiles) = partitionEithers depFilesE
+  ttcTime <- catch (do t <- fnameModified mttc
+                       pure (Just t))
+                   (\err => pure Nothing)
+  srcTime <- fnameModified src
+  depTimes <- traverse (\f => do t <- fnameModified f
+                                 pure (f, t)) depFiles
+  let needsBuilding =
+    case ttcTime of
+         Nothing => True
+         Just t  => any (\x => x > t) (srcTime :: map snd depTimes)
+  u <- newRef UST initUState
+  m <- newRef MD initMetadata
+  put Syn initSyntax
+
+  if needsBuilding
+    then do
+      let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+>
+        colon <++> pretty "Building" <++> pretty mod.buildNS <++>
+        parens (pretty src)
+      [] <- process {u} {m} {c=newC} msg src
+            | errs => do emitWarnings {c=newC}
+                         traverse (emitError {c=newC}) errs
+                         pure (ferrs ++ errs)
+      final parentC newC ferrs
+    else final parentC newC ferrs
+  where
+    final : (parentC, newC : Ref Ctxt Defs) -> List Error -> Core (List Error)
+    final parentC newC ferrs = do
+      emitWarnings {c=newC}
+      traverse_ (emitError {c=newC}) ferrs
+      newDefs <- get Ctxt {ref=newC}
+      -- TODO: Merge Contexts
+      put Ctxt newDefs {ref=parentC}
+      pure ferrs
 
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
-            FC -> Nat -> Nat -> List BuildMod ->
-            Core (List Error)
+            FC -> Nat -> Nat -> List (List BuildMod) ->
+            IO (List Error)
 buildMods fc num len [] = pure []
-buildMods fc num len (m :: ms)
-    = case !(buildMod fc num len m) of
-           [] => buildMods fc (1 + num) len ms
-           errs => pure errs
+buildMods fc num len (m :: ms) = do
+  futureBuilt <- traverse (buildMod fc num len) m
+  let built = await <$> futureBuilt
+  let result = lefts built ++ (concat $ rights built)
+  case result of
+    []   => buildMods fc (length m + num) len ms
+    errs => pure errs
 
 export
 buildDeps : {auto c : Ref Ctxt Defs} ->
@@ -214,7 +230,7 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             Core (List Error)
 buildDeps fname
     = do mods <- getBuildMods toplevelFC [] fname
-         ok <- buildMods toplevelFC 1 (length mods) mods
+         ok <- coreLift $ buildMods toplevelFC 1 (length mods) $ pure <$> mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
@@ -251,9 +267,25 @@ buildAll allFiles
     = do mods <- getAllBuildMods toplevelFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
-         buildMods toplevelFC 1 (length mods') mods'
+         coreLift $ buildMods toplevelFC 1 (length mods') $ groupMods mods'
   where
     dropLater : List BuildMod -> List BuildMod
     dropLater [] = []
     dropLater (b :: bs)
         = b :: dropLater (filter (\x => buildFile x /= buildFile b) bs)
+
+    groupMods' : List ModuleIdent -> List BuildMod -> List (List BuildMod)
+    groupMods' acc [] = []
+    groupMods' acc missing = newBatch :: groupMods' (acc ++ (buildNS <$> newBatch)) newMissing
+      where
+        criteria : BuildMod -> Bool
+        criteria m = null $ imports m `intersect` (buildNS <$> missing)
+
+        newBatch : List BuildMod
+        newBatch = filter (criteria) missing
+
+        newMissing : List BuildMod
+        newMissing = filter (not . criteria) missing
+
+    groupMods : List BuildMod -> List (List BuildMod)
+    groupMods = groupMods' empty
