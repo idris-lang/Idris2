@@ -57,11 +57,13 @@ boundedFiniteEx {n = S n1} (S bound') (LTESucc lte) (No npf) ddec with (boundedF
 
 ||| Given a decidable predicate on Fin n,
 ||| it's decidable whether any numbers in Fin n satisfy it.
+public export
 finiteDecEx :
   {n : Nat}
   -> {p : Fin n -> Type}
   -> ((x : Fin n) -> Dec (p x))
   -> Dec (x : Fin n ** p x)
+public export
 finiteDecEx {n = 0} dec = No $ \ pr => absurd (fst pr)
 finiteDecEx {n = (S n1)} dec
   with (boundedFiniteEx (finToNat last) (elemSmallerThanBound (last {n = n1})) (dec _) dec)
@@ -75,6 +77,7 @@ finiteDecEx {n = (S n1)} dec
 
 ||| Given a decidable predicate on Fin n,
 ||| it's decidable whether all numbers in Fin n satisfy it.
+public export
 finiteDecAll :
   {n : Nat}
   -> {p : Fin n -> Type}
