@@ -60,6 +60,8 @@ negateDec (Yes pf) = No ($ pf)
 negateDec (No npf) = Yes npf
 
 
+||| If a relation is decidable, then so is its complement
+public export
 [DecidableComplement] {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
   Decidable n ts (complement {ts} r) where
     decide {ts = []} = negateDec $ decide @{posDec}
