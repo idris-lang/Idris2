@@ -3,6 +3,8 @@ module Data.Fin.Extra
 import Data.Fin
 import Data.Nat
 
+import Syntax.WithProof
+
 %default total
 
 -------------------------------
@@ -106,6 +108,13 @@ weakenNZero_preserves {a=S i} FZ = rewrite plusZeroRightNeutral i in Refl
 weakenNZero_preserves {a=S i} (FS x) = rewrite weakenNZero_preserves x in
                                        rewrite plusZeroRightNeutral i in
                                        Refl
+
+export
+shift_FS_linear : (a : Nat) -> {0 b : Nat} -> (0 x : Fin b) -> shift a (FS x) = rewrite sym $ plusSuccRightSucc a b in FS (shift a x)
+shift_FS_linear Z     x = Refl
+shift_FS_linear (S k) x = rewrite shift_FS_linear k x in
+                          rewrite plusSuccRightSucc k b in
+                          Refl
 
 -----------------------------------
 --- Division-related properties ---
@@ -247,49 +256,68 @@ plusAssociative (FS x) centre right {a=S i} = rewrite plusAssociative x centre r
 --- Splitting operations and their properties ---
 -------------------------------------------------
 
-export
-splitSumFin : {a : Nat} -> Fin (a + b) -> Either (Fin a) (Fin b)
-splitSumFin {a=Z}   x      = Right x
-splitSumFin {a=S k} FZ     = Left FZ
-splitSumFin {a=S k} (FS x) = mapFst FS $ splitSumFin x
+public export
+indexSum : {a : Nat} -> Either (Fin a) (Fin b) -> Fin (a + b)
+indexSum $ Left  l = weakenN b l
+indexSum $ Right r = shift a r
 
-export
-splitProdFin : {a, b : Nat} -> Fin (a * b) -> (Fin a, Fin b)
-splitProdFin {a=S _} x = case splitSumFin x of
+public export
+splitSum : {a : Nat} -> Fin (a + b) -> Either (Fin a) (Fin b)
+splitSum {a=Z}   x      = Right x
+splitSum {a=S k} FZ     = Left FZ
+splitSum {a=S k} (FS x) = mapFst FS $ splitSum x
+
+public export
+indexProd : {b : Nat} -> Fin a -> Fin b -> Fin (a * b)
+indexProd FZ     = weakenN $ mult (pred a) b
+indexProd (FS x) = shift b . indexProd x
+
+public export
+splitProd : {a, b : Nat} -> Fin (a * b) -> (Fin a, Fin b)
+splitProd {a=S _} x = case splitSum x of
   Left  y => (FZ, y)
-  Right y => mapFst FS $ splitProdFin y
+  Right y => mapFst FS $ splitProd y
 
 --- Properties ---
 
-export
-splitSumFin_correctness : {a, b : Nat} -> (x : Fin $ a + b) ->
-                          case splitSumFin {a} {b} x of
-                            Left  l => x = weakenN b l
-                            Right r => x = shift a r
-splitSumFin_correctness {a=Z}   x  = Refl
-splitSumFin_correctness {a=S k} FZ = Refl
-splitSumFin_correctness {a=S k} (FS x) with (splitSumFin_correctness x)
-  splitSumFin_correctness {a=S k} (FS x) | subcorr with (splitSumFin x)
-    splitSumFin_correctness {a=S k} (FS x) | subcorr | Left  y = rewrite subcorr in Refl
-    splitSumFin_correctness {a=S k} (FS x) | subcorr | Right y = rewrite subcorr in Refl
+splitSum_of_weakenN : (l : Fin a) -> Left l = splitSum {b} (weakenN b l)
+splitSum_of_weakenN FZ = Refl
+splitSum_of_weakenN (FS x) = cong (mapFst FS) $ splitSum_of_weakenN {b} x
+
+splitSum_of_shift : {a : Nat} -> (r : Fin b) -> Right r = splitSum {a} (shift a r)
+splitSum_of_shift {a=Z}   r = Refl
+splitSum_of_shift {a=S k} r = cong (mapFst FS) $ splitSum_of_shift {a=k} r
 
 export
-splitProdFin_correctness : {a, b : Nat} -> (x : Fin $ S a * S b) ->
-                           let (o, i) = splitProdFin {a=S a} {b=S b} x in
-                           x = i + o * last {n=S b}
-splitProdFin_correctness x with (splitSumFin_correctness {a=S b} x)
-  splitProdFin_correctness x | sumcorr with (splitSumFin {a=S b} x)
-    splitProdFin_correctness x | sumcorr | Left  y = rewrite sumcorr in weakenNAsPlusFZ {a=mult a (S b)} y
-    splitProdFin_correctness x | sumcorr | Right y with (a)
-      splitProdFin_correctness x | sumcorr | Right y | S i with (splitProdFin_correctness y)
-        splitProdFin_correctness x | sumcorr | Right y | S i | subcorr with (splitProdFin {a=S i} {b=S b} y)
-          splitProdFin_correctness x | sumcorr | Right y | S i | subcorr | (oo, ii) =
-            rewrite sumcorr in
-            rewrite subcorr in
-            rewrite sym $ plusSuccRightSucc ii $ last {n=b} + (oo * FS (last {n=b})) in
-            rewrite shiftAsPlus {b} $ ii + (oo * FS (last {n=b})) in
-            rewrite plusAssociative (last {n=b}) ii $ (oo * FS (last {n=b})) in
-            rewrite plusCommutative (last {n=b}) ii in
-            rewrite plusAssociative ii (last {n=b}) $ (oo * FS (last {n=b})) in
-            rewrite plusSuccRightSucc b $ b + i * S b in
-            Refl
+split_of_index_sum_inverse : {a : Nat} -> (e : Either (Fin a) (Fin b)) -> e = splitSum (indexSum e)
+split_of_index_sum_inverse (Left l) = splitSum_of_weakenN l
+split_of_index_sum_inverse (Right r) = splitSum_of_shift r
+
+export
+index_of_split_sum_inverse : {a, b : Nat} -> (f : Fin (a + b)) -> f = indexSum (splitSum {a} {b} f)
+index_of_split_sum_inverse {a=Z}   f  = Refl
+index_of_split_sum_inverse {a=S k} FZ = Refl
+index_of_split_sum_inverse {a=S k} (FS x) with (index_of_split_sum_inverse {a=k} {b} x)
+  index_of_split_sum_inverse {a=S _} (FS x) | sub with (splitSum x)
+    index_of_split_sum_inverse {a=S _} (FS _) | sub | Left  _ = rewrite sub in Refl
+    index_of_split_sum_inverse {a=S _} (FS _) | sub | Right _ = rewrite sub in Refl
+
+export
+split_of_index_prod_inverse : {a : Nat} -> (x : Fin a) -> (y : Fin b) -> (x, y) = splitProd (indexProd x y)
+split_of_index_prod_inverse {a=S k} FZ     y = rewrite sym $ splitSum_of_weakenN {b=mult k b} y in Refl
+split_of_index_prod_inverse {a=S k} (FS x) y = rewrite sym $ splitSum_of_shift {a=b} $ indexProd x y in
+                                               cong (mapFst FS) $ split_of_index_prod_inverse x y
+
+export
+index_of_split_prod_inverse : {a, b : Nat} -> (f : Fin (a * b)) -> f = uncurry (indexProd {a} {b}) (splitProd {a} {b} f)
+index_of_split_prod_inverse {a=S k} f with (@@ splitSum f)
+  index_of_split_prod_inverse f | (Left l ** prf) = rewrite prf in
+                                                    rewrite sym $ cong indexSum prf in
+                                                    index_of_split_sum_inverse f
+  index_of_split_prod_inverse f | (Right r ** prf) = rewrite prf in
+                                                     rewrite index_of_split_sum_inverse {a=b} {b=mult k b} f in
+                                                     rewrite cong indexSum prf in
+                                                     rewrite indexProd_of_mapFst_FS {a=k} {b} $ splitProd r in
+                                                     cong (shift b) $ index_of_split_prod_inverse r where
+    indexProd_of_mapFst_FS : {b : Nat} -> (x : (Fin a, Fin b)) -> uncurry (indexProd {b}) (mapFst FS x) = shift b (uncurry (indexProd {b}) x)
+    indexProd_of_mapFst_FS (x, y) = Refl
