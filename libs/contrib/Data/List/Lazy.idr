@@ -29,6 +29,9 @@ Foldable LazyList where
   foldl op acc [] = acc
   foldl op acc (x :: xs) = foldl op (acc `op` x) xs
 
+  null []     = True
+  null (_::_) = False
+
 public export
 Functor LazyList where
   map f [] = []
@@ -74,6 +77,13 @@ iterate f x = x :: case f x of
   Nothing => []
   Just y  => iterate f y
 
+covering
+public export
+unfoldr : (b -> Maybe (a, b)) -> b -> LazyList a
+unfoldr f c = case f c of
+  Nothing     => []
+  Just (a, n) => a :: unfoldr f n
+
 public export
 iterateN : Nat -> (a -> a) -> a -> LazyList a
 iterateN Z     _ _ = []
@@ -83,6 +93,18 @@ public export
 replicate : (n : Nat) -> (x : a) -> LazyList a
 replicate Z     _ = []
 replicate (S n) x = x :: replicate n x
+
+--- Functions acquiring parts of list ---
+
+public export
+head' : LazyList a -> Maybe a
+head' []     = Nothing
+head' (x::_) = Just x
+
+export
+tail' : LazyList a -> Maybe (LazyList a)
+tail' []      = Nothing
+tail' (_::xs) = Just xs
 
 --- Functions for acquiring different types of sublists ---
 
@@ -111,3 +133,10 @@ public export
 filter : (a -> Bool) -> LazyList a -> LazyList a
 filter p []      = []
 filter p (x::xs) = if p x then x :: filter p xs else filter p xs
+
+public export
+mapMaybe : (a -> Maybe b) -> LazyList a -> LazyList b
+mapMaybe f []      = []
+mapMaybe f (x::xs) = case f x of
+  Nothing => mapMaybe f xs
+  Just y  => y :: mapMaybe f xs
