@@ -5,8 +5,6 @@
 # Uses scheme to bootstrap the build of idris2
 stdenv.mkDerivation rec {
   pname = "idris2";
-  version = "0.2.1";
-
   src = ./.;
 
   strictDeps = true;
@@ -29,7 +27,7 @@ stdenv.mkDerivation rec {
   #       without having to recompile idris2 every time.
   postInstall = let
     includedLibs = [ "base" "contrib" "network" "prelude" ];
-    name = "${pname}-${version}";
+    name = "${pname}";
     packagePaths = builtins.map (l: "$out/${name}/" + l) includedLibs;
     additionalIdris2Paths = builtins.concatStringsSep ":" packagePaths;
   in ''
