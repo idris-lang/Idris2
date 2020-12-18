@@ -193,6 +193,16 @@ finToNat_mult_linearity (FS x) y {a=S i} = rewrite finToNat_plus_linearity y (x 
                                            Refl
 
 export
+plus_preserves_last : (a, b : Nat) -> Fin.last {n=a} + Fin.last {n=b} = Fin.last
+plus_preserves_last Z     b = rewrite weakenNZero_preserves $ Fin.last {n=b} in Refl
+plus_preserves_last (S k) b = rewrite plus_preserves_last k b in Refl
+
+export
+mult_preserves_last : (a, b : Nat) -> Fin.last {n=a} * Fin.last {n=b} = Fin.last
+mult_preserves_last Z     b = Refl
+mult_preserves_last (S k) b = rewrite mult_preserves_last k b in plus_preserves_last _ _
+
+export
 plusSuccRightSucc : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> FS (left + right) = rewrite plusSuccRightSucc a b in left + FS right
 plusSuccRightSucc FZ     right         = rewrite plusCommutative a b in Refl
 plusSuccRightSucc (FS x) right {a=S i} = rewrite plusSuccRightSucc x right in
@@ -279,6 +289,24 @@ splitProd {a=S _} x = case splitSum x of
   Right y => mapFst FS $ splitProd y
 
 --- Properties ---
+
+export
+indexSum_preserves_last : (a, b : Nat) -> indexSum {a} (Right $ Fin.last {n=b}) = rewrite sym $ plusSuccRightSucc a b in Fin.last {n=a+b}
+indexSum_preserves_last Z     b = Refl
+indexSum_preserves_last (S k) b = rewrite indexSum_preserves_last k b in
+                                  rewrite plusSuccRightSucc k b in
+                                  Refl
+
+export
+indexProd_preserves_last : (a, b : Nat) -> indexProd (Fin.last {n=a}) (Fin.last {n=b}) = Fin.last
+indexProd_preserves_last Z b = rewrite weakenNZero_preserves $ Fin.last {n=b} in
+                               rewrite plusZeroRightNeutral b in
+                               Refl
+indexProd_preserves_last (S k) b = rewrite indexProd_preserves_last k b in
+                                   rewrite shiftAsPlus {b} $ last {n=pred $ S k * S b} in
+                                   rewrite plus_preserves_last b $ pred $ S k * S b in
+                                   rewrite sym $ plusSuccRightSucc b $ pred $ S k * S b in
+                                   Refl
 
 splitSum_of_weakenN : (l : Fin a) -> Left l = splitSum {b} (weakenN b l)
 splitSum_of_weakenN FZ = Refl
