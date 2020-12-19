@@ -10,6 +10,22 @@ data LazyList : Type -> Type where
   Nil : LazyList a
   (::) : (x : a) -> (xs : Lazy (LazyList a)) -> LazyList a
 
+--- Truly lazy functions ---
+
+public export
+foldrLazy : (func : elem -> Lazy acc -> acc) -> (init : Lazy acc) -> (input : LazyList elem) -> acc
+foldrLazy _  init [] = init
+foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
+
+public export
+(++) : LazyList a -> Lazy (LazyList a) -> LazyList a
+(++) = flip $ foldrLazy (::)
+
+-- Specialized variant of `concatMap` with both `t` and `m` being `LazyList`.
+public export
+bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
+bindLazy f = foldrLazy ((++) . f) []
+
 --- Interface implementations ---
 
 public export
@@ -68,7 +84,7 @@ Functor LazyList where
 public export
 Applicative LazyList where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = bindLazy (\f => map f vs) fs
 
 public export
 Alternative LazyList where
@@ -77,7 +93,7 @@ Alternative LazyList where
 
 public export
 Monad LazyList where
-  m >>= f = concatMap f m
+  m >>= f = bindLazy f m
 
 -- There is no Traversable instance for lazy lists.
 -- The result of a traversal will be a non-lazy list in general
