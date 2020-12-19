@@ -77,6 +77,19 @@ negateDec : (1 dec : Dec a) -> Dec (Not a)
 negateDec (Yes pf) = No ($ pf)
 negateDec (No npf) = Yes npf
 
+||| We can turn (Not (Exists Not)) into Forall for decidable types
+notExistsNotForall :
+  {p : a -> Type}
+  -> ((x : a) -> Dec (p x))
+  -> Dec (x : a ** Not (p x))
+  -> Dec ((x : a) -> p x)
+notExistsNotForall dec decEx =
+  case decEx of
+    Yes (x ** nx) => No $ \ f => nx $ f x
+    No notNot => Yes $ \x => case (dec x) of
+      Yes px => px
+      No nx => void $ notNot $ (x ** nx)
+
 
 ||| If a relation is decidable, then so is its complement
 public export
