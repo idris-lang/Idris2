@@ -53,6 +53,24 @@ doubleNegationExists {ts} {r} @{dec} nnxs =
   in introduceWitness witness witnessing
 
 
+
+
+decideTransform :
+  {n : Nat}
+  -> {ts : Vect n Type}
+  -> {r : Rel ts}
+  -> {t : Type -> Type}
+  -> (tDec : {a : Type} -> Dec a -> Dec (t a))
+  -> (posDec : Decidable n ts r)
+  -> All ts (chain {ts} Dec (chain {ts} t r))
+decideTransform {t = t} tDec posDec =
+  curryAll $ \xs =>
+    replace {p = id} (chainUncurry (chain t r) Dec xs) $
+      replace {p = Dec} (chainUncurry r t xs) $
+        tDec $ replace {p = id} (sym $ chainUncurry r Dec xs) $
+          uncurryAll (decide @{posDec}) xs
+
+
 ||| Convert a decision about a decidable property into one about its negation.
 public export
 negateDec : (1 dec : Dec a) -> Dec (Not a)
@@ -62,12 +80,6 @@ negateDec (No npf) = Yes npf
 
 ||| If a relation is decidable, then so is its complement
 public export
-[DecidableComplement] {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
+[DecidableComplement] {n : Nat} -> {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
   Decidable n ts (complement {ts} r) where
-    decide {ts = []} = negateDec $ decide @{posDec}
-    decide {ts = (t :: ts)} =
-      \x =>
-        let
-          pd = DecidablePartialApplication {x = x} @{posDec}
-          inst = DecidableComplement @{pd}
-        in decide @{inst}
+    decide = decideTransform negateDec posDec
