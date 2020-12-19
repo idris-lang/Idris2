@@ -1,10 +1,9 @@
-module Data.Rel.Extra
+module Data.Rel.Complement
 
 import Data.Rel
 import Data.Fun
 import Data.Fun.Extra
 import Data.HVect
-import Data.Iff
 
 %default total
 

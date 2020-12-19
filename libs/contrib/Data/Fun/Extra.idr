@@ -125,5 +125,5 @@ chainUncurry :
   -> (f : r -> r')
   -> (elems : HVect ts)
   -> f (uncurry g elems)  = uncurry (chain {ts} f g) elems
-chainUncurry p t []   =  Refl
-chainUncurry p t (x :: xs)  = rewrite chainUncurry (p x) t xs in Refl
+chainUncurry g f []   =  Refl
+chainUncurry g f (x :: xs)  = rewrite chainUncurry (g x) f xs in Refl

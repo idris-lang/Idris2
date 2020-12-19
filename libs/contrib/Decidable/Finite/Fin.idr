@@ -30,8 +30,4 @@ public export
 finiteDecAll : {n : Nat} -> {0 p : Fin n -> Type} ->
   (pdec : (k : Fin n) -> Dec (p k)) ->
   Dec ((k : Fin n) -> p k)
-finiteDecAll dec  = case finiteDecEx (\ x => negateDec $ dec x) of
-    Yes ex => No $ \f => snd ex $ f $ fst ex
-    No nex => Yes $ \x => case dec x of
-      Yes pf => pf
-      No npf => void $ nex (x ** npf)
+finiteDecAll pdec  = notExistsNotForall pdec $ finiteDecEx (\ x => negateDec (pdec x))

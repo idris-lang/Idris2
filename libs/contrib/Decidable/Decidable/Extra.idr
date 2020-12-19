@@ -78,8 +78,9 @@ negateDec (Yes pf) = No ($ pf)
 negateDec (No npf) = Yes npf
 
 ||| We can turn (Not (Exists Not)) into Forall for decidable types
+public export
 notExistsNotForall :
-  {p : a -> Type}
+  {0 p : a -> Type}
   -> ((x : a) -> Dec (p x))
   -> Dec (x : a ** Not (p x))
   -> Dec ((x : a) -> p x)
