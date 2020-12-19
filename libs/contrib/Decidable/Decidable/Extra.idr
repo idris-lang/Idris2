@@ -1,7 +1,7 @@
 module Decidable.Decidable.Extra
 
 import Data.Rel
-import Data.Rel.Extra
+import Data.Rel.Complement
 import Data.Fun
 import Data.Vect
 import Data.HVect
