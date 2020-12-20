@@ -20,10 +20,19 @@ Value *tail(Value *input)
     tailStr->header.tag = STRING_TAG;
     Value_String *s = (Value_String *)input;
     int l = strlen(s->str);
-    tailStr->str = malloc(l);
-    memset(tailStr->str, 0, l);
-    memcpy(tailStr->str, s->str + 1, l - 1);
-    return (Value *)tailStr;
+    if(l != 0)
+    {
+        tailStr->str = malloc(l);
+        memset(tailStr->str, 0, l);
+        memcpy(tailStr->str, s->str + 1, l - 1);
+        return (Value *)tailStr;
+    }
+    else
+    {
+        tailStr->str = malloc(1);
+        tailStr->str[0] = '\0';
+        return (Value *)tailStr;
+    }
 }
 
 Value *reverse(Value *str)
