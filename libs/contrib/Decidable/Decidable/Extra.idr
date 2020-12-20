@@ -62,7 +62,7 @@ decideTransform :
   -> {t : Type -> Type}
   -> (tDec : {a : Type} -> Dec a -> Dec (t a))
   -> (posDec : Decidable n ts r)
-  -> All ts (chain {ts} Dec (chain {ts} t r))
+  -> IsDecidable n ts (chain {ts} t r)
 decideTransform {t = t} tDec posDec =
   curryAll $ \xs =>
     replace {p = id} (chainUncurry (chain t r) Dec xs) $
