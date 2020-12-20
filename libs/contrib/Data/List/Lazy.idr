@@ -10,22 +10,16 @@ data LazyList : Type -> Type where
   Nil : LazyList a
   (::) : (x : a) -> (xs : Lazy (LazyList a)) -> LazyList a
 
+||| Convert any foldable structure to a lazy list.
+toLazyList : Foldable t => t a -> LazyList a
+toLazyList = foldrLazy (::) []
+
 --- Truly lazy functions ---
 
 public export
 (++) : LazyList a -> Lazy (LazyList a) -> LazyList a
 []      ++ ys = ys
 (x::xs) ++ ys = x :: (xs ++ ys)
-
-public export
-foldrLazy : (func : elem -> Lazy acc -> acc) -> (init : acc) -> (input : LazyList elem) -> acc
-foldrLazy _  init [] = init
-foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
-
--- Specialized variant of `concatMap` with both `t` and `m` being `LazyList`.
-public export
-bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
-bindLazy f = foldrLazy ((++) . f) []
 
 --- Interface implementations ---
 
@@ -71,11 +65,19 @@ Foldable LazyList where
   foldr op nil [] = nil
   foldr op nil (x :: xs) = x `op` foldr op nil xs
 
+  foldrLazy _  init [] = init
+  foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
+
   foldl op acc [] = acc
   foldl op acc (x :: xs) = foldl op (acc `op` x) xs
 
   null []     = True
   null (_::_) = False
+
+-- Specialized variant of `concatMap` with both `t` and `m` being `LazyList`.
+public export
+bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
+bindLazy f = foldrLazy ((++) . f) []
 
 public export
 Functor LazyList where

@@ -34,6 +34,8 @@ export
 Foldable SortedSet where
   foldr f e xs = foldr f e (Data.SortedSet.toList xs)
 
+  foldrLazy f e = foldrLazy f e . toList
+
   null (SetWrapper m) = null m
 
 ||| Set union. Inserts all elements of x into y

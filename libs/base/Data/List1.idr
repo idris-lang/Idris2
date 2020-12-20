@@ -119,6 +119,7 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  foldrLazy c n (x ::: xs) = c x (foldrLazy c n xs)
   null _ = False
 
 export

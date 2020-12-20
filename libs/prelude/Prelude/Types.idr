@@ -185,6 +185,10 @@ public export
 Foldable Maybe where
   foldr _ z Nothing  = z
   foldr f z (Just x) = f x z
+
+  foldrLazy _ z Nothing  = z
+  foldrLazy f z (Just x) = f x z
+
   null Nothing = True
   null (Just _) = False
 
@@ -279,6 +283,10 @@ public export
 Foldable (Either e) where
   foldr f acc (Left _) = acc
   foldr f acc (Right x) = f x acc
+
+  foldrLazy f acc (Left _) = acc
+  foldrLazy f acc (Right x) = f x acc
+
   null (Left _) = True
   null (Right _) = False
 
@@ -346,6 +354,9 @@ public export
 Foldable List where
   foldr c n [] = n
   foldr c n (x::xs) = c x (foldr c n xs)
+
+  foldrLazy c n [] = n
+  foldrLazy c n (x::xs) = c x (foldrLazy c n xs)
 
   foldl f q [] = q
   foldl f q (x::xs) = foldl f (f q x) xs

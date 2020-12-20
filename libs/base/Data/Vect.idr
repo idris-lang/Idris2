@@ -418,6 +418,9 @@ public export
 implementation Foldable (Vect n) where
   foldr f e xs = foldrImpl f e id xs
 
+  foldrLazy op init [] = init
+  foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
+
   null [] = True
   null _ = False
 

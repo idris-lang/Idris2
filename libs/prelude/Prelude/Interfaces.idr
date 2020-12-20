@@ -209,6 +209,12 @@ interface Foldable t where
   ||| @ input The parameterised type
   foldr : (func : elem -> acc -> acc) -> (init : acc) -> (input : t elem) -> acc
 
+  ||| Variant of the `foldr` operation which uses folding function that is lazy
+  ||| on its accumulator argument.
+  ||| This allows easy short-cutting when folding function may not depend on its
+  ||| accumulator argument depending on the first argument.
+  foldrLazy : (func : elem -> Lazy acc -> acc) -> (init : acc) -> (input : t elem) -> acc
+
   ||| The same as `foldr` but begins the folding from the element at the initial
   ||| position in the data structure i.e. the left-most position.
   ||| @ func  The function used to 'fold' an element into the accumulated result
@@ -219,8 +225,8 @@ interface Foldable t where
 
   ||| Test whether the structure is empty.
   ||| @ acc The accumulator value which is specified to be lazy
-  null : t elem -> Lazy Bool
-  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
+  null : t elem -> Bool
+  null = foldrLazy (\_,_ => False) True
 
 ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
 ||| Consequently, the final value is wrapped in the same `Monad`.
@@ -244,31 +250,45 @@ public export
 concatMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
 concatMap f = foldr ((<+>) . f) neutral
 
+||| The conjunction of all elements of a structure containing boolean
+||| values.  `and` short-circuits from left to right, evaluating until either an
+||| element is `False` or no elements remain.
+public export
+and : Foldable t => t Bool -> Bool
+and = foldrLazy (&&) True
+
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
 ||| element is `False` or no elements remain.
 public export
-and : Foldable t => t (Lazy Bool) -> Bool
-and = foldl (&&) True
+and' : Foldable t => t (Lazy Bool) -> Bool
+and' = foldl (&&) True
+
+||| The disjunction of all elements of a structure containing boolean
+||| values.  `or` short-circuits from left to right, evaluating either until an
+||| element is `True` or no elements remain.
+public export
+or : Foldable t => t Bool -> Bool
+or = foldrLazy (||) False
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
 public export
-or : Foldable t => t (Lazy Bool) -> Bool
-or = foldl (||) False
+or' : Foldable t => t (Lazy Bool) -> Bool
+or' = foldl (||) False
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
 public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
-any p = foldl (\x,y => x || p y) False
+any p = foldrLazy ((||) . p) False
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
-all p = foldl (\x,y => x && p y)  True
+all p = foldrLazy ((&&) . p) True
 
 ||| Add together all the elements of a structure.
 public export

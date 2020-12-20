@@ -284,6 +284,8 @@ export
 implementation Foldable (SortedMap k) where
   foldr f z = foldr f z . values
 
+  foldrLazy f z = foldrLazy f z . values
+
   null Empty = True
   null (M _ _) = False
 

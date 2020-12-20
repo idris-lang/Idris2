@@ -107,6 +107,9 @@ Foldable m => Foldable (EitherT e m) where
   foldr f acc (MkEitherT e)
     = foldr (\x,xs => either (const xs) (`f` xs) x) acc e
 
+  foldrLazy f acc (MkEitherT e)
+    = foldrLazy (\x,xs => either (const xs) (`f` xs) x) acc e
+
   null (MkEitherT e) = null e
 
 public export
