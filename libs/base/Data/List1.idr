@@ -120,6 +120,10 @@ Foldable List1 where
   null _ = False
 
 export
+Traversable List1 where
+  traverse f (x ::: xs) = [| f x ::: traverse f xs |]
+
+export
 Show a => Show (List1 a) where
   show = show . forget
 
