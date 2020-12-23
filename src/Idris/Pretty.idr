@@ -290,7 +290,7 @@ render doc = do
   color <- getColor
   opts <- case consoleWidth of
                Nothing => do cols <- coreLift getTermCols
-                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
+                             pure $ MkLayoutOptions (if cols == 0 then Unbounded else AvailablePerLine cols 1)
                Just 0 => pure $ MkLayoutOptions Unbounded
                Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
   let layout = layoutPretty opts doc
@@ -302,7 +302,7 @@ renderWithoutColor doc = do
   consoleWidth <- getConsoleWidth
   opts <- case consoleWidth of
                Nothing => do cols <- coreLift getTermCols
-                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
+                             pure $ MkLayoutOptions (if cols == 0 then Unbounded else AvailablePerLine cols 1)
                Just 0 => pure $ MkLayoutOptions Unbounded
                Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
   let layout = layoutPretty opts doc
