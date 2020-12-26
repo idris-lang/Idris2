@@ -55,20 +55,6 @@ addConstToPreamble name def =
     let v = "const " ++ newName ++ " = (" ++ def ++ ");"
     addToPreamble name newName v
 
-requireSafe : String -> String
-requireSafe = pack . map (\c => case c of
-                                     '@' => '_'
-                                     '/' => '_'
-                                     '-' => '_'
-                                     _ => c
-                         ) . unpack
-addRequireToPreamble : {auto c : Ref ESs ESSt} -> String -> Core String
-addRequireToPreamble name =
-  do
-    let newName = "__require_" ++ requireSafe name
-    let v = "const " ++ newName ++ " = require(" ++ jsString name ++ ");"
-    addToPreamble name newName v
-
 addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addSupportToPreamble name code =
   addToPreamble name name code
@@ -333,11 +319,6 @@ makeForeign n x =
     let (ty, def) = readCCPart x
     case ty of
       "lambda" => pure $ "const " ++ jsName n ++ " = (" ++ def ++ ")\n"
-      "lambdaRequire" =>
-        do
-          let (libs, def_) = readCCPart def
-          traverseList1 addRequireToPreamble (split (==',') libs)
-          pure $ "const " ++ jsName n ++ " = (" ++ def_ ++ ")\n"
       "support" =>
         do
           let (name, lib_) = break (== ',') def
@@ -354,7 +335,7 @@ makeForeign n x =
             _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
 
 
-      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
+      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"support\"")
 
 foreignDecl : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
@@ -373,9 +354,8 @@ jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ "(" ++ x ++ "[" ++ p ++ "
 jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ "(" ++ x ++ "[" ++ p ++ "] = " ++ v ++ ")"
 jsPrim (NS _ (UN "prim__os")) [] =
   do
-    os <- addRequireToPreamble "os"
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
-    sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
+    sysos <- addConstToPreamble "sysos" (oscalc ++ "(require('os').platform())")
     pure sysos
 jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
 jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
