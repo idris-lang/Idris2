@@ -32,14 +32,14 @@ Monad IO where
 
 public export
 interface Monad io => HasIO io where
-  liftIO : (1 _ : IO a) -> io a
+  liftIO : IO a -> io a
 
 public export %inline
 HasIO IO where
   liftIO x = x
 
 export %inline
-primIO : HasIO io => (1 fn : (1 x : %World) -> IORes a) -> io a
+primIO : HasIO io => (fn : (1 x : %World) -> IORes a) -> io a
 primIO op = liftIO (fromPrim op)
 
 %extern

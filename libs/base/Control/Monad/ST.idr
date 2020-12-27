@@ -23,7 +23,7 @@ mutual
 
   export
   Applicative (ST s) where
-    pure = MkST . pure
+    pure x = MkST (pure x)
     (<*>) f a = pure $ !f !a
 
   export

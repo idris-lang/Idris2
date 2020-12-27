@@ -16,13 +16,12 @@ Not x = x -> Void
 ||| @ a the type to assign
 ||| @ x the element to get the type
 public export %inline
-the : (0 a : Type) -> (1 x : a) -> a
+the : (0 a : Type) -> (x : a) -> a
 the _ x = x
 
 ||| Identity function.
 public export %inline
-id : (1 x : a) -> a           -- Hopefully linearity annotation won't
-                              -- break equality proofs involving id
+id : (x : a) -> a
 id x = x
 
 ||| Function that duplicates its input
@@ -72,13 +71,13 @@ public export
 
 ||| Equality is a congruence.
 public export
-cong : (0 f : t -> u) -> (1 p : a = b) -> f a = f b
+cong : (0 f : t -> u) -> (p : a = b) -> f a = f b
 cong f Refl = Refl
 
 ||| Two-holed congruence.
 export
 -- These are natural in equational reasoning.
-cong2 : (0 f : t1 -> t2 -> u) -> (1 p1 : a = b) -> (1 p2 : c = d) -> f a c = f b d
+cong2 : (0 f : t1 -> t2 -> u) -> (p1 : a = b) -> (p2 : c = d) -> f a c = f b d
 cong2 f Refl Refl = Refl
 
 --------------
@@ -91,25 +90,25 @@ data Bool = True | False
 
 ||| Boolean NOT.
 public export
-not : (1 b : Bool) -> Bool
+not : (b : Bool) -> Bool
 not True = False
 not False = True
 
 ||| Boolean AND only evaluates the second argument if the first is `True`.
 public export
-(&&) : (1 b : Bool) -> Lazy Bool -> Bool
+(&&) : (b : Bool) -> Lazy Bool -> Bool
 (&&) True x = x
 (&&) False x = False
 
 ||| Boolean OR only evaluates the second argument if the first is `False`.
 public export
-(||) : (1 b : Bool) -> Lazy Bool -> Bool
+(||) : (b : Bool) -> Lazy Bool -> Bool
 (||) True x = True
 (||) False x = x
 
 ||| Non-dependent if-then-else
 public export
-ifThenElse : (1 b : Bool) -> Lazy a -> Lazy a -> a
+ifThenElse : (b : Bool) -> Lazy a -> Lazy a -> a
 ifThenElse True l r = l
 ifThenElse False l r = r
 

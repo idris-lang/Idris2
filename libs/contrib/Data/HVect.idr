@@ -21,7 +21,7 @@ data HVect : Vect k Type -> Type where
 ||| 1
 ||| ```
 public export
-index : (1 i : Fin k) -> (1 _ : HVect ts) -> index i ts
+index : (i : Fin k) -> HVect ts -> index i ts
 index FZ (x :: xs) = x
 index (FS j) (x :: xs) = index j xs
 
@@ -32,7 +32,7 @@ index (FS j) (x :: xs) = index j xs
 ||| ["string"]
 ||| ```
 public export
-deleteAt : (1 i : Fin (S l)) -> (1 _ : HVect ts) -> HVect (deleteAt i ts)
+deleteAt : (i : Fin (S l)) -> HVect ts -> HVect (deleteAt i ts)
 deleteAt FZ (x :: xs) = xs
 deleteAt (FS FZ) (x :: (y :: xs)) = x :: xs
 deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
@@ -44,7 +44,7 @@ deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
 ||| ["firstString", "string"]
 ||| ```
 public export
-replaceAt : (1 i : Fin k) -> t -> (1 _ : HVect ts) -> HVect (replaceAt i t ts)
+replaceAt : (i : Fin k) -> t -> HVect ts -> HVect (replaceAt i t ts)
 replaceAt FZ y (x :: xs) = y :: xs
 replaceAt (FS j) y (x :: xs) = x :: replaceAt j y xs
 
@@ -55,7 +55,7 @@ replaceAt (FS j) y (x :: xs) = x :: replaceAt j y xs
 ||| [True, "string"]
 ||| ```
 public export
-updateAt : (1 i : Fin k) -> (index i ts -> t) -> (1 _ : HVect ts) -> HVect (replaceAt i t ts)
+updateAt : (i : Fin k) -> (index i ts -> t) -> HVect ts -> HVect (replaceAt i t ts)
 updateAt FZ f (x :: xs) = f x :: xs
 updateAt (FS j) f (x :: xs) = x :: updateAt j f xs
 
@@ -66,7 +66,7 @@ updateAt (FS j) f (x :: xs) = x :: updateAt j f xs
 ||| [1, "string"]
 ||| ```
 public export
-(++) : (1 _ : HVect ts) -> HVect us -> HVect (ts ++ us)
+(++) : HVect ts -> HVect us -> HVect (ts ++ us)
 (++) [] ys = ys
 (++) (x :: xs) ys = x :: (xs ++ ys)
 
@@ -79,11 +79,11 @@ public export
   (x :: xs) == (y :: ys) = x == y && xs == ys
 
 public export
-consInjective1 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (1 _ : x :: xs = y :: ys) -> x = y
+consInjective1 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (x :: xs = y :: ys) -> x = y
 consInjective1 Refl = Refl
 
 public export
-consInjective2 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (1 _ : x :: xs = y :: ys) -> xs = ys
+consInjective2 : {0 xs, ys: HVect ts} -> {0 x, y: a} -> (x :: xs = y :: ys) -> xs = ys
 consInjective2 Refl = Refl
 
 public export

@@ -109,7 +109,7 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
          logGlue "elab.binder" 5 "Inferred lambda type" env lamty
          maybe (pure ())
                (logGlueNF "elab.binder" 5 "Expected lambda type" env) expTy
-         checkExpP rig True elabinfo env fc
+         checkExp rig elabinfo env fc
                   (Bind fc n (Lam fc rigb info' tyv) scopev)
                   lamty expTy
 
@@ -143,7 +143,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
     = do let rig = the RigCount $ if isErased rig_in then erased else linear
          let solvemode = case elabMode elabinfo of
                               InLHS _ => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
          expty <- getTerm expty_in
          exptynf <- getTyNF env expty
@@ -155,7 +155,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
-                    convertP True fc elabinfo env (gnf env tyv) (gnf env pty)
+                    convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
@@ -163,7 +163,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                                 (Just (gnf env' (renameTop n psc))))
                     logTermNF "elab.binder" 10 "Lambda type" env exptynf
                     logGlueNF "elab.binder" 10 "Got scope type" env' scopet
-                    checkExpP rig True elabinfo env fc
+                    checkExp rig elabinfo env fc
                              (Bind fc n (Lam fc' rigb info' tyv) scopev)
                              (gnf env
                                   (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))

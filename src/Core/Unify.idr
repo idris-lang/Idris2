@@ -31,34 +31,23 @@ public export
 record UnifyInfo where
   constructor MkUnifyInfo
   atTop : Bool
-  precise : Bool -- False == generalise to RigW in Pi
   umode : UnifyMode
 
 export
 inTerm : UnifyInfo
-inTerm = MkUnifyInfo True True InTerm
+inTerm = MkUnifyInfo True InTerm
 
 export
 inLHS : UnifyInfo
-inLHS = MkUnifyInfo True True InLHS
-
-export
-inTermP : Bool -> UnifyInfo
-inTermP p = MkUnifyInfo True p InTerm
+inLHS = MkUnifyInfo True InLHS
 
 export
 inMatch : UnifyInfo
-inMatch = MkUnifyInfo True True InMatch
+inMatch = MkUnifyInfo True InMatch
 
 export
 inSearch : UnifyInfo
-inSearch = MkUnifyInfo True True InSearch
-
-lam : UnifyInfo -> UnifyInfo
-lam = record { precise = True }
-
-inLam : UnifyInfo -> Bool
-inLam = precise
+inSearch = MkUnifyInfo True InSearch
 
 lower : UnifyInfo -> UnifyInfo
 lower = record { atTop = False }
@@ -71,7 +60,7 @@ Eq UnifyMode where
    _ == _ = False
 
 Eq UnifyInfo where
-  x == y = atTop x == atTop y && precise x == precise y && umode x == umode y
+  x == y = atTop x == atTop y && umode x == umode y
 
 Show UnifyMode where
   show InLHS = "InLHS"
@@ -567,12 +556,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
         -- since this is the most general thing to do if it's unknown.
         updateIVarsB ivs (Pi fc rig p t)
             = do p' <- updateIVarsPi ivs p
-                 if isLinear rig
-                    then do t' <- updateIVars ivs t
-                            pure $ if inLam mode || precise
-                               then (Pi fc linear p' t')
-                               else (Pi fc top p' t')
-                    else Just (Pi fc rig p' !(updateIVars ivs t))
+                 Just (Pi fc rig p' !(updateIVars ivs t))
         updateIVarsB ivs (PVar fc c p t)
             = do p' <- updateIVarsPi ivs p
                  Just (PVar fc c p' !(updateIVars ivs t))
@@ -967,7 +951,7 @@ mutual
                                      (NApp yfc (NLocal yr y yp) [])
   -- Locally bound things, in a term (not LHS). Since we have to unify
   -- for *all* possible values, we can safely unify the arguments.
-  unifyBothApps mode@(MkUnifyInfo p t InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
+  unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
            then unifyArgs mode loc env xargs yargs
            else postpone True loc mode "Postponing local app"
@@ -1020,11 +1004,11 @@ mutual
                                                (NApp xfc fx xargs')
            else unifyApp False mode loc env xfc fx xargs'
                                         (NApp yfc (NMeta yn yi yargs) yargs')
-  unifyBothApps mode@(MkUnifyInfo p t InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
+  unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
            then unifyArgs mode loc env xargs yargs
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
-  unifyBothApps mode@(MkUnifyInfo p t InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
+  unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
            then do logC "unify.application" 5
                           (do defs <- get Ctxt
@@ -1035,11 +1019,6 @@ mutual
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
-
-  -- Comparing multiplicities when converting pi binders
-  subRig : RigCount -> RigCount -> Bool
-  subRig x y = (isLinear x && isRigOther y) || -- we can pass a linear function if a general one is expected
-               x == y -- otherwise, the multiplicities need to match up
 
   unifyBothBinders: {auto c : Ref Ctxt Defs} ->
                     {auto u : Ref UST UState} ->
@@ -1052,7 +1031,7 @@ mutual
                     Core UnifyResult
   unifyBothBinders mode loc env xfc x (Pi fcx cx ix tx) scx yfc y (Pi fcy cy iy ty) scy
       = do defs <- get Ctxt
-           if not (subRig cx cy)
+           if cx /= cy
              then convertError loc env
                     (NBind xfc x (Pi fcx cx ix tx) scx)
                     (NBind yfc y (Pi fcy cy iy ty) scy)
@@ -1092,7 +1071,7 @@ mutual
                             pure (union ct cs')
   unifyBothBinders mode loc env xfc x (Lam fcx cx ix tx) scx yfc y (Lam fcy cy iy ty) scy
       = do defs <- get Ctxt
-           if not (subRig cx cy)
+           if cx /= cy
              then convertError loc env
                     (NBind xfc x (Lam fcx cx ix tx) scx)
                     (NBind yfc y (Lam fcy cy iy ty) scy)
@@ -1110,7 +1089,7 @@ mutual
                   tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
                   tmx <- quote empty env tscx
                   tmy <- quote empty env tscy
-                  cs' <- unify (lower (lam mode)) loc env' (refsToLocals (Add x xn None) tmx)
+                  cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
                                                            (refsToLocals (Add x xn None) tmy)
                   pure (union ct cs')
 

@@ -95,7 +95,7 @@ Applicative io => Applicative (L io) where
 
 export
 (Applicative m, LinearBind m) => Monad (L m) where
-  (>>=) = Bind
+  (>>=) a k = Bind a k
 
 -- prioritise this one for concrete LIO, so we get the most useful
 -- linearity annotations.

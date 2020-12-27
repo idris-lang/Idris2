@@ -1017,17 +1017,12 @@ mutual
           else pure False
   chkConvHead q defs env _ _ = pure False
 
-  -- Comparing multiplicities when converting pi binders
-  subRig : RigCount -> RigCount -> Bool
-  subRig x y = (isLinear x && isRigOther y) ||
-               x == y
-
   convBinders : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
                 Ref QVar Int -> Defs -> Env Term vars ->
                 Binder (NF vars) -> Binder (NF vars) -> Core Bool
   convBinders q defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
-      = if not (subRig cx cy)
+      = if cx /= cy
            then pure False
            else convGen q defs env tx ty
   convBinders q defs env (Lam _ cx ix tx) (Lam _ cy iy ty)

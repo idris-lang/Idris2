@@ -25,7 +25,7 @@ readIORef (MkRef m) = primIO (prim__readIORef m)
 
 %inline
 export
-writeIORef : HasIO io => IORef a -> (1 val : a) -> io ()
+writeIORef : HasIO io => IORef a -> (val : a) -> io ()
 writeIORef (MkRef m) val = primIO (prim__writeIORef m val)
 
 export
