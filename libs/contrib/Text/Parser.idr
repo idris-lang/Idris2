@@ -3,6 +3,7 @@ module Text.Parser
 import Data.Bool
 import Data.List
 import Data.Nat
+import Data.Vect
 
 import public Text.Parser.Core
 import public Text.Quantity
@@ -107,6 +108,16 @@ mutual
   count (Qty (S min) Nothing) p = count1 (atLeast min) p
   count (Qty (S min) (Just Z)) _ = fail "Quantity out of order"
   count (Qty (S min) (Just (S max))) p = count1 (between min max) p
+
+||| Parse `p` `n` times, returning the vector of values.
+export
+countExactly : (n : Nat) ->
+               (p : Grammar tok True a) ->
+               Grammar tok (isSucc n) (Vect n a)
+countExactly Z p = Empty []
+countExactly (S k) p = do x <- p
+                          seq (countExactly k p)
+                              (\ xs => pure (x :: xs))
 
 mutual
   ||| Parse one or more instances of `p` until `end` succeeds, returning the
