@@ -79,7 +79,7 @@ init (x::y::ys) = x :: init (y::ys)
 
 ||| Extract the first `n` elements of a Vect.
 public export
-take : (1 n  : Nat)
+take : (n  : Nat)
     -> (  xs : Vect (n + m) type)
     -> Vect n type
 take 0 xs = Nil
