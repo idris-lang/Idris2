@@ -1,0 +1,40 @@
+name: Ubuntu
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+
+env:
+  SCHEME: scheme
+  IDRIS2_TESTS_CG: chez
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install build dependencies
+        run: |
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+      - name: Install stable version
+        run: |
+          mkdir ../stable
+          cd ../stable
+          wget https://www.idris-lang.org/idris2-src/idris2-latest.tgz
+          tar -xf idris2-latest.tgz
+          cd Idris2*
+          make bootstrap SCHEME=chez
+          make install
+      - name: Build current from stable
+        run: make all && make install
+        shell: bash
+      - name: Build and test self-hosted
+        run: make clean && make all && make test INTERACTIVE=''
+        shell: bash
