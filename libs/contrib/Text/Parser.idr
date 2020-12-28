@@ -115,9 +115,7 @@ countExactly : (n : Nat) ->
                (p : Grammar tok True a) ->
                Grammar tok (isSucc n) (Vect n a)
 countExactly Z p = Empty []
-countExactly (S k) p = do x <- p
-                          seq (countExactly k p)
-                              (\ xs => pure (x :: xs))
+countExactly (S k) p = [| p :: countExactly k p |]
 
 mutual
   ||| Parse one or more instances of `p` until `end` succeeds, returning the
