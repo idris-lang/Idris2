@@ -1,5 +1,7 @@
 module Idris.IDEMode.CaseSplit
 
+import Compat.Data.Bifunctor
+
 import Core.Context
 import Core.Env
 import Core.Metadata

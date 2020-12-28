@@ -1,5 +1,7 @@
 module Idris.Error
 
+import Compat.Data.Bifunctor
+
 import Core.CaseTree
 import Core.Core
 import Core.Context

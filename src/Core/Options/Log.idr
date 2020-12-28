@@ -6,7 +6,7 @@ import Data.Maybe
 import Data.StringMap
 import Data.StringTrie
 import Data.Strings
-import Data.These
+import Compat.Data.These
 import Text.PrettyPrint.Prettyprinter
 
 %default total

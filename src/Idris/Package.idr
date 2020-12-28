@@ -1,5 +1,7 @@
 module Idris.Package
 
+import Compat.Data.These
+
 import Compiler.Common
 
 import Core.Context
@@ -15,7 +17,6 @@ import Data.So
 import Data.StringMap
 import Data.Strings
 import Data.StringTrie
-import Data.These
 
 import Parser.Package
 import System

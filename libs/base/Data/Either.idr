@@ -1,5 +1,6 @@
 module Data.Either
 
+import Data.Bifunctor
 import Data.List1
 
 %default total

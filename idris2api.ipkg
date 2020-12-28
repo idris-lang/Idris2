@@ -6,6 +6,12 @@ modules =
     Algebra.Semiring,
     Algebra.ZeroOneOmega,
 
+    -- Compatibility libraries; things in the Idris 2 libraries we use, but
+    -- not necessarily available in the version being used for building
+    -- Idris 2 itself
+    Compat.Data.Bifunctor,
+    Compat.Data.These,
+
     Compiler.ANF,
     Compiler.Common,
     Compiler.CompileExpr,

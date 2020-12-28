@@ -1,5 +1,7 @@
 module Idris.Parser.Let
 
+import Compat.Data.Bifunctor
+
 import Idris.Syntax
 import Text.Bounded
 

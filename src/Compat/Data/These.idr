@@ -1,6 +1,6 @@
-module Data.These
+module Compat.Data.These
 
-import Data.Bifunctor
+import Compat.Data.Bifunctor
 
 %default total
 

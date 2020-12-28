@@ -12,6 +12,7 @@ modules = Control.App,
           Control.Monad.Trans,
           Control.WellFounded,
 
+          Data.Bifunctor,
           Data.Bool,
           Data.Bool.Xor,
           Data.Buffer,
