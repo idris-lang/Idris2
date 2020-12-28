@@ -121,14 +121,6 @@ modules =
 
     Text.Bounded,
     Text.Literate,
-    Text.Quantity,
-    Text.Token,
-
-    Text.Lexer,
-    Text.Lexer.Core,
-
-    Text.Parser,
-    Text.Parser.Core,
 
     TTImp.BindImplicits,
     TTImp.Elab,
