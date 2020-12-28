@@ -1,5 +1,7 @@
 module Core.Hash
 
+import Compat.Data.String.Iterator
+
 import Core.CaseTree
 import Core.TT
 
@@ -7,7 +9,6 @@ import Data.List
 import Data.List1
 import Data.List.Lazy
 import Data.Strings
-import Data.String.Iterator
 
 %default covering
 

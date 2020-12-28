@@ -10,6 +10,7 @@ modules =
     -- not necessarily available in the version being used for building
     -- Idris 2 itself
     Compat.Data.Bifunctor,
+    Compat.Data.String.Iterator,
     Compat.Data.These,
 
     Compiler.ANF,
