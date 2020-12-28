@@ -61,14 +61,14 @@ decideTransform :
   -> {r : Rel ts}
   -> {t : Type -> Type}
   -> (tDec : {a : Type} -> Dec a -> Dec (t a))
-  -> (posDec : Decidable n ts r)
+  -> (posDec : IsDecidable n ts r)
   -> IsDecidable n ts (chain {ts} t r)
 decideTransform {t = t} tDec posDec =
   curryAll $ \xs =>
     replace {p = id} (chainUncurry (chain t r) Dec xs) $
       replace {p = Dec} (chainUncurry r t xs) $
         tDec $ replace {p = id} (sym $ chainUncurry r Dec xs) $
-          uncurryAll (decide @{posDec}) xs
+          uncurryAll posDec xs
 
 
 ||| Convert a decision about a decidable property into one about its negation.
@@ -96,4 +96,4 @@ notExistsNotForall dec decEx =
 public export
 [DecidableComplement] {n : Nat} -> {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
   Decidable n ts (complement {ts} r) where
-    decide = decideTransform negateDec posDec
+    decide = decideTransform negateDec (decide @{posDec})
