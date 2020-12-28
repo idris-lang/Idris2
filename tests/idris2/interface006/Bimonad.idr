@@ -1,6 +1,7 @@
 module Bimonad
 
 import Biapplicative
+import Data.Bifunctor
 
 infixl 4 >>==
 

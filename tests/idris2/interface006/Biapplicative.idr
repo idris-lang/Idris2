@@ -1,6 +1,7 @@
 module Biapplicative
 
 import Apply
+import Data.Bifunctor
 
 infixl 4 <<*>>, <<*, *>>, <<**>>
 

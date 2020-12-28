@@ -1,5 +1,7 @@
 module Apply
 
+import Data.Bifunctor
+
 -- These are not Biapplicatives.  Those are in Data.Biapplicative
 
 infixl 4 <<$>>, <<&>>, <<.>>, <<., .>>, <<..>>
