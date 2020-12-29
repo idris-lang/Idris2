@@ -401,7 +401,7 @@ tail (x :: xs) = xs
 ||| @ n how many elements to take
 ||| @ xs the stream
 public export
-take : (1 n : Nat) -> (xs : Stream a) -> List a
+take : (n : Nat) -> (xs : Stream a) -> List a
 take Z xs = []
 take (S k) (x :: xs) = x :: take k xs
 
