@@ -265,20 +265,6 @@ zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
 zipWith f []      []      = []
 zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 
-||| Linear version
-public export
-lzipWith : (f : a -> b -> c) -> Vect n a -> Vect n b -> Vect n c
-lzipWith _ [] [] = []
-lzipWith f (x::xs) (y::ys) = f x y :: lzipWith f xs ys
-
-||| Extensional correctness lemma
-export
-lzipWithSpec : (f : a -> b -> c)
-         -> (xs : Vect n a) -> (ys : Vect n b)
-         -> lzipWith f xs ys = zipWith f xs ys
-lzipWithSpec _ [] [] = Refl
-lzipWithSpec f (_::xs) (_::ys) = rewrite lzipWithSpec f xs ys in Refl
-
 ||| Combine three equal-length vectors into a vector with some function
 |||
 ||| ```idris example
@@ -828,21 +814,7 @@ range {len=S _} = FZ :: map FS range
 public export
 transpose : {n : _} -> (array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
 transpose []        = replicate _ []                 -- = [| [] |]
-transpose (x :: xs) = lzipWith (::) x (transpose xs) -- = [| x :: xs |]
-
-||| A recursive (non-linear) implementation of transpose
-||| Easier for inductive reasoning
-public export
-transpose' : {n : Nat} -> (xss : Vect m (Vect n x)) -> Vect n (Vect m x)
-transpose' []          = replicate _ []
-transpose' (xs :: xss) = zipWith (::) xs (transpose' xss)
-
-||| Extensional correctness lemma
-export
-transposeSpec : {n : Nat} -> (xss : Vect m (Vect n x)) -> transpose xss = transpose' xss
-transposeSpec [] = Refl
-transposeSpec (y :: xs) = rewrite transposeSpec xs in
-                          lzipWithSpec (::) _ _
+transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable
