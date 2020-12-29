@@ -29,7 +29,7 @@ jobs:
           wget https://www.idris-lang.org/idris2-src/idris2-0.2.2.tgz
           tar zxvf idris2-0.2.2.tgz
           cd Idris2-0.2.2
-          make bootstrap && make install
+          make bootstrap-build && make install
           cd ..
       - name: Build from previous version
         run: make all
