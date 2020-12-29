@@ -22,7 +22,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-        echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build from bootstrap
         run: make bootstrap && make install && idris2 --clean idris2api.ipkg && make install-api
         shell: bash
