@@ -11,7 +11,6 @@ on:
 env:
   SCHEME: chez
   IDRIS2_TESTS_CG: chez
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
@@ -23,7 +22,7 @@ jobs:
         run: |
           brew install chezscheme
           brew install coreutils
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build and test Idris 2 from bootstrap
         run: make bootstrap && make install
         shell: bash

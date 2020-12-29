@@ -11,7 +11,6 @@ on:
 
 env:
   IDRIS2_TESTS_CG: racket
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:

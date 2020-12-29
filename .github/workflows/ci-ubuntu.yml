@@ -12,7 +12,6 @@ on:
 env:
   SCHEME: scheme
   IDRIS2_TESTS_CG: chez
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
@@ -23,7 +22,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build from bootstrap
         run: make bootstrap && make install
         shell: bash
