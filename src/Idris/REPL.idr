@@ -643,9 +643,10 @@ process (Eval itm)
                  ntm <- norm defs [] tm
                  logTermNF "repl.eval" 5 "Normalised" [] ntm
                  itm <- resugar [] ntm
+                 ty <- getTerm gty
+                 addDef (UN "it") (newDef emptyFC (UN "it") top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
                  if showTypes opts
-                    then do ty <- getTerm gty
-                            ity <- resugar [] !(norm defs [] ty)
+                    then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
   where
