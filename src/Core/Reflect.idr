@@ -196,9 +196,9 @@ Reify a => Reify (List1 a) where
 
 export
 Reflect a => Reflect (List1 a) where
-  reflect fc defs lhs env (x ::: xs)
-      = do x' <- reflect fc defs lhs env x
-           xs' <- reflect fc defs lhs env xs
+  reflect fc defs lhs env xxs
+      = do x' <- reflect fc defs lhs env (head xxs)
+           xs' <- reflect fc defs lhs env (tail xxs)
            appCon fc defs (NS (mkNamespace "Data.List1") (UN ":::")) [Erased fc False, x', xs']
 
 export
