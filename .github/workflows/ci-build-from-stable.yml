@@ -26,7 +26,7 @@ jobs:
           wget https://www.idris-lang.org/idris2-src/idris2-latest.tgz
           tar -xf idris2-latest.tgz
           cd Idris2*
-          make bootstrap SCHEME=chez
+          make bootstrap SCHEME=scheme
           make install
           rm -rf ./Idris2*
       - name: Checkout
