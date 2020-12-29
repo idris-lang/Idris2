@@ -670,6 +670,14 @@ revAppend (v :: vs) ns
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
 
+||| List reverse applied twice yields the identity function.
+export
+reverseInvolutory : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutory [] = Refl
+reverseInvolutory (x :: xs) = rewrite revOnto [x] xs in
+                                rewrite sym (revAppend (reverse xs) [x]) in
+                                  cong (x ::) $ reverseInvolutory xs
+
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
 dropFusion  Z     m    l      = Refl
