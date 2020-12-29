@@ -86,6 +86,10 @@ natToInteger (S k) = 1 + natToInteger k
 -----------
 
 public export
+Bifunctor Pair where
+  bimap f g (x, y) = (f x, g y)
+
+public export
 Functor (Pair a) where
   map f (x, y) = (x, f y)
 
@@ -232,6 +236,12 @@ public export
 Functor (Either e) where
   map f (Left x) = Left x
   map f (Right x) = Right (f x)
+
+%inline
+public export
+Bifunctor Either where
+  bimap f _ (Left x) = Left (f x)
+  bimap _ g (Right y) = Right (g y)
 
 %inline
 public export

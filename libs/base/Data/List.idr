@@ -175,12 +175,19 @@ union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
 public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 
@@ -284,6 +291,15 @@ export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
 
+export
+intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy eq [] = []
+intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
+
+export
+intersectAll : Eq a => List (List a) -> List a
+intersectAll = intersectAllBy (==)
+
 ||| Combine two lists elementwise using some function.
 |||
 ||| If the lists are different lengths, the result is truncated to the
@@ -345,7 +361,7 @@ public export
 last : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 last [] impossible
 last [x] = x
-last (x::y::ys) = last (y::ys)
+last (x::y::ys) = List.last (y::ys)
 
 ||| Return all but the last element of a non-empty list.
 ||| @ ok proof the list is non-empty
@@ -433,6 +449,11 @@ mapMaybe f (x::xs) =
   case f x of
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
+
+||| Extract all of the values contained in a List of Maybes
+public export
+catMaybes : List (Maybe a) -> List a
+catMaybes = mapMaybe id
 
 --------------------------------------------------------------------------------
 -- Special folds
@@ -632,3 +653,8 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+lengthMap : (xs : List a) -> length (map f xs) = length xs
+lengthMap [] = Refl
+lengthMap (x :: xs) = cong S (lengthMap xs)

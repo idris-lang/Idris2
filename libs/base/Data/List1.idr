@@ -8,6 +8,17 @@ record List1 a where
   head : a
   tail : List a
 
+infixl 7 :::
+
+-- For compatibility
+export
+(:::) : a -> List a -> List1 a
+(:::) x xs = x :: xs
+
+export
+forget : List1 a -> List a
+forget (x :: xs) = x :: xs
+
 public export
 toList : (1 xs : List1 a) -> List a
 toList (x :: xs) = x :: xs
@@ -39,6 +50,26 @@ lappend : (1 xs : List a) -> (1 ys : List1 a) -> List1 a
 lappend [] ys = ys
 lappend (x :: xs) ys = append (x :: xs) ys
 
+public export
+singleton : (x : a) -> List1 a
+singleton x = x :: []
+
+export
+last : List1 a -> a
+last (x :: xs) = loop x xs where
+
+  loop : a -> List a -> a
+  loop x [] = x
+  loop _ (x :: xs) = loop x xs
+
+public export
+cons : (x : a) -> (xs : List1 a) -> List1 a
+cons x xs = x :: forget xs
+
+export
+snoc : (xs : List1 a) -> (x : a) -> List1 a
+snoc xs x = append xs (singleton x)
+
 export
 Functor List1 where
   map f (x :: xs) = f x :: map f xs
@@ -46,6 +77,10 @@ Functor List1 where
 export
 Foldable List1 where
   foldr c n (x :: xs) = c x (foldr c n xs)
+
+export
+Traversable List1 where
+  traverse f (x :: xs) = [| f x ::: traverse f xs |]
 
 export
 Show a => Show (List1 a) where

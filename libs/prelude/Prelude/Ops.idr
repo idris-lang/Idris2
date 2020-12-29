@@ -17,7 +17,7 @@ infixr 7 ::, ++
 infixl 1 >>=
 infixr 2 <|>
 infixl 3 <*>, *>, <*
-infixr 4 <$>
+infixr 4 <$>, $>, <$
 infixl 6 <+>
 
 -- Utility operators

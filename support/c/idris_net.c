@@ -76,6 +76,23 @@ int idrnet_socket(int domain, int type, int protocol) {
     return socket(domain, type, protocol);
 }
 
+// Get the address family constants out of C and into Idris
+int idrnet_af_unspec() {
+    return AF_UNSPEC;
+}
+
+int idrnet_af_unix() {
+    return AF_UNIX;
+}
+
+int idrnet_af_inet() {
+    return AF_INET;
+}
+
+int idrnet_af_inet6() {
+    return AF_INET6;
+}
+
 // We call this from quite a few functions. Given a textual host and an int port,
 // populates a struct addrinfo.
 int idrnet_getaddrinfo(struct addrinfo** address_res, char* host, int port,
