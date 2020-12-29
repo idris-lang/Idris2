@@ -1,3 +1,9 @@
+Changes since Idris 2 v0.2.1
+----------------------------
+
+* Library compatibility fixes to allow this version to be able to build
+  the next version.
+
 Changes since Idris 2 v0.2.0
 ----------------------------
 
