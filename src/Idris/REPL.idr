@@ -800,6 +800,9 @@ process (Editing cmd)
 process (CGDirective str)
     = do setSession (record { directives $= (str::) } !getSession)
          pure Done
+process (RunShellCommand cmd)
+    = do coreLift (system cmd)
+         pure Done
 process Quit
     = pure Exited
 process NOP
@@ -838,7 +841,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
 parseRepl inp
-    = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD)] inp of
+    = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD), (":!", RunShellCommand)] inp of
            Nothing => runParser Nothing inp (parseEmptyCmd <|> parseCmd)
            Just cmd => Right $ Just cmd
   where

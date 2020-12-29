@@ -93,10 +93,13 @@ Pretty LogLevel where
 export
 parseLogLevel : String -> Maybe LogLevel
 parseLogLevel str = do
-  (c, n) <- case split (== ':') str of
-             n ::: [] => pure (MkLogLevel [], n)
-             ps ::: [n] => pure (mkLogLevel ps, n)
-             _ => Nothing
+  (c, n) <- let nns = split (== ':') str
+                n = head nns
+                ns = tail nns in
+                case ns of
+                     [] => pure (MkLogLevel [], n)
+                     [ns] => pure (mkLogLevel n, ns)
+                     _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
 

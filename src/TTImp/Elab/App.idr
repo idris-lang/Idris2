@@ -458,9 +458,9 @@ mutual
                           fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
   export
-  findNamed : Name -> List (Name, RawImp) -> Maybe (List1 (Name, RawImp))
+  findNamed : Name -> List (Name, RawImp) -> Maybe ((Name, RawImp), List (Name, RawImp))
   findNamed n l = case partition ((== n) . fst) l of
-                       (x :: xs, ys) => Just (x ::: (xs ++ ys))
+                       (x :: xs, ys) => Just (x, (xs ++ ys))
                        _ => Nothing
 
   export
@@ -507,7 +507,7 @@ mutual
                argdata [] autoargs namedargs kr expty with (findNamed x namedargs)
    -- We found a compatible named argument
    checkAppWith rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
-                argdata [] autoargs namedargs kr expty | Just ((_, arg) ::: namedargs')
+                argdata [] autoargs namedargs kr expty | Just ((_, arg), namedargs')
     = do let argRig = rig |*| rigb
          checkRestApp rig argRig elabinfo nest env fc
                       tm x aty sc argdata arg [] autoargs namedargs' kr expty
@@ -580,7 +580,7 @@ mutual
                argdata expargs [] namedargs kr expty
       = let argRig = rig |*| rigb in
             case findNamed x namedargs of
-                 Just ((_, arg) ::: namedargs') =>
+                 Just ((_, arg), namedargs') =>
                     checkRestApp rig argRig elabinfo nest env fc
                                  tm x aty sc argdata arg expargs [] namedargs' kr expty
                  Nothing =>
@@ -593,7 +593,7 @@ mutual
             case findNamed x namedargs of
                Nothing => makeImplicit rig argRig elabinfo nest env fc tm
                                        x aty sc argdata expargs autoargs namedargs kr expty
-               Just ((_, arg) ::: namedargs') =>
+               Just ((_, arg), namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
                                   tm x aty sc argdata arg expargs autoargs namedargs' kr expty
   -- Check next default argument
@@ -603,7 +603,7 @@ mutual
             case findNamed x namedargs of
                Nothing => makeDefImplicit rig argRig elabinfo nest env fc tm
                                           x arg aty sc argdata expargs autoargs namedargs kr expty
-               Just ((_, arg) ::: namedargs') =>
+               Just ((_, arg), namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
                                   tm x aty sc argdata arg expargs autoargs namedargs' kr expty
   -- Invent a function type if we have extra explicit arguments but type is further unknown
