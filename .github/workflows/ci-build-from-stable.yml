@@ -28,6 +28,7 @@ jobs:
           cd Idris2*
           make bootstrap SCHEME=scheme
           make install
+          cd ..
           rm -rf ./Idris2*
       - name: Checkout
         uses: actions/checkout@v2
