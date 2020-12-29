@@ -37,7 +37,7 @@ of `make` in the following steps.
 - Change the `PREFIX` in `config.mk`. The default is to install in
   `$HOME/.idris2`
 
-If you have an existing Idris 2, go to the alternative Step 2. Otherwise, read on...
+If you have an existing Idris 2, go to Step 3. Otherwise, read on...
 
 Make sure that:
 
@@ -69,7 +69,7 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have an earlier version of this Idris 2 installed
+If you have an earlier version of Idris 2 installed
 
 - `make all`
 - `make install`
