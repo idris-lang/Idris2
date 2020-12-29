@@ -35,7 +35,7 @@ Can Idris 2 generate Javascript? What about plug-in code generators?
 Yes! A `JavaScript code generator <https://idris2.readthedocs.io/en/latest/backends/javascript.html>`_
 is built in, and can target either the browser or NodeJS.
 
-Like Idris 1, Idris 2 
+Like Idris 1, Idris 2
 `supports plug-in code generation <https://idris2.readthedocs.io/en/latest/backends/custom.html>`_
 to allow you to write a back end for the platform of your choice.
 
@@ -54,6 +54,15 @@ Also, being implemented in Idris, we've been able to take advantage of the
 type system to remove some significant sources of bugs!
 
 You can find more details in Section :ref:`updates-index`.
+
+How do I get command history in the Idris2 REPL?
+================================================
+
+The Idris2 repl does not support readline in the interest of
+keeping dependencies minimal. A useful work around is to
+install `rlwrap <https://linux.die.net/man/1/rlwrap>`_, this
+utility provides command history simply by invoking the Idris2
+repl as an argument to the utility ``rlwrap idris2``.
 
 Where can I find more answers?
 ==============================

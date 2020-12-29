@@ -26,9 +26,8 @@ available (though not yet updated for Idris 2).
 Editing at the REPL
 ===================
 
-.. pull-quote::
-  Readline functionality in REPL:
-  the Idris2 repl does not support readline in the interest of
+.. note::
+  The Idris2 repl does not support readline in the interest of
   keeping dependencies minimal. Unfortunately this precludes some
   niceties such as line editing, persistent history and completion.
   A useful work around is to install `rlwrap <https://linux.die.net/man/1/rlwrap>`_,
