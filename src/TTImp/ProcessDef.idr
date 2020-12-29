@@ -540,9 +540,9 @@ nameListEq (x :: xs) (y :: ys) with (nameEq x y)
   nameListEq (x :: xs) (y :: ys) | Nothing = Nothing
 nameListEq _ _ = Nothing
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
+myifThenElse : Bool -> Lazy a -> Lazy a -> a
+myifThenElse True t e = t
+myifThenElse False t e = e
 
 -- Calculate references for the given name, and recursively if they haven't
 -- been calculated already
@@ -562,10 +562,10 @@ calcRefs rt at fn
          let metas = CaseTree.getMetas tree
          traverse_ addToSave (keys metas)
          let refs_all = addRefs at metas tree
-         refs <- ifThenElse rt
+         refs <- myifThenElse rt
                     (dropErased (keys refs_all) refs_all)
                     (pure refs_all)
-         ifThenElse rt
+         myifThenElse rt
             (addDef fn (record { refersToRuntimeM = Just refs } gdef))
             (addDef fn (record { refersToM = Just refs } gdef))
          traverse_ (calcRefs rt at) (keys refs)

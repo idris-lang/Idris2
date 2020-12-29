@@ -26,6 +26,8 @@ modules =
     Compiler.Scheme.Gambit,
     Compiler.Scheme.Common,
 
+    Control.Monad.State,
+
     Core.AutoSearch,
     Core.Binary,
     Core.CaseBuilder,

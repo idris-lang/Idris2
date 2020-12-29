@@ -957,9 +957,9 @@ mutual
             atEnd indents
             pure (MkImpossible (MkFC fname start end) lhs)
 
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
+  myifThenElse : Bool -> Lazy t -> Lazy t -> t
+  myifThenElse True t e = t
+  myifThenElse False t e = e
 
   clause : Nat -> FileName -> IndentInfo -> Rule PClause
   clause withArgs fname indents
@@ -969,7 +969,7 @@ mutual
            extra <- many parseWithArg
            -- Can't have the dependent 'if' here since we won't be able
            -- to infer the termination status of the rule
-           ifThenElse (withArgs /= length extra)
+           myifThenElse (withArgs /= length extra)
               (fatalError "Wrong number of 'with' arguments")
               (parseRHS withArgs fname start col indents (applyArgs lhs extra))
     where

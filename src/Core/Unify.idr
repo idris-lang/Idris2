@@ -1352,9 +1352,9 @@ Eq SolveMode where
   _ == _ = False
 
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
+myifThenElse : Bool -> Lazy a -> Lazy a -> a
+myifThenElse True t e = t
+myifThenElse False t e = e
 
 retry : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref UST UState} ->
@@ -1375,10 +1375,10 @@ retry mode c
                                log 5 $ if withLazy
                                           then "(lazy allowed)"
                                           else "(no lazy)"
-                               cs <- ifThenElse withLazy
+                               cs <- myifThenElse withLazy
                                         (unifyWithLazy mode loc env x y)
                                         (unify (lower mode) loc env x y)
-                               case constraints cs of
+                               case UnifyResult.constraints cs of
                                  [] => do log 5 $ "Success " ++ show (addLazy cs)
                                           deleteConstraint c
                                           pure cs

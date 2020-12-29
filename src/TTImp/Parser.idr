@@ -517,16 +517,16 @@ mutual
       getFn (IImplicitApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
 
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
+  myifThenElse : Bool -> Lazy t -> Lazy t -> t
+  myifThenElse True t e = t
+  myifThenElse False t e = e
 
   clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)
   clause withArgs fname indents
       = do start <- location
            lhs <- expr fname indents
            extra <- many parseWithArg
-           ifThenElse (withArgs /= length extra)
+           myifThenElse (withArgs /= length extra)
               (fatalError "Wrong number of 'with' arguments")
               (parseRHS withArgs fname indents start (applyArgs lhs extra))
     where

@@ -50,9 +50,9 @@ import Data.List
 public export
 data Side = LHS | AnyExpr
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
+myifThenElse : Bool -> Lazy a -> Lazy a -> a
+myifThenElse True t e = t
+myifThenElse False t e = e
 
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
@@ -684,7 +684,7 @@ mutual
            params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
                                             pure (fst ntm, tm')) params
            -- Look for implicitly bindable names in the parameters
-           let pnames = ifThenElse !isUnboundImplicits
+           let pnames = myifThenElse !isUnboundImplicits
                           (concatMap (findBindableNames True
                                          (ps ++ map Builtin.fst params) [])
                                        (map Builtin.snd params'))
@@ -716,7 +716,7 @@ mutual
                                             pure (fst ntm, tm')) params
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn body)
-           let bnames = ifThenElse !isUnboundImplicits
+           let bnames = myifThenElse !isUnboundImplicits
                           (concatMap (findBindableNames True
                                       (ps ++ mnames ++ map fst params) [])
                                   (map Builtin.snd cons') ++
