@@ -120,13 +120,24 @@ export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
 
+public export
+data StrM : String -> Type where
+    StrNil : StrM ""
+    StrCons : (x : Char) -> (xs : String) -> StrM (strCons x xs)
+
+public export -- primitives, so assert_total and believe_me needed
+strM : (x : String) -> StrM x
+strM "" = StrNil
+strM x
+    = assert_total $ believe_me $
+        StrCons (prim__strHead x) (prim__strTail x)
+
 export
 ltrim : String -> String
-ltrim xs = pack (ltrimChars (unpack xs))
-  where
-    ltrimChars : List Char -> List Char
-    ltrimChars [] = []
-    ltrimChars (x :: xs) = if isSpace x then ltrimChars xs else (x :: xs)
+ltrim xs with (strM xs)
+  ltrim "" | StrNil = ""
+  ltrim (prim__strCons x xs) | (StrCons _ _) 
+    = if isSpace x then ltrim xs else strCons x xs
 
 export
 trim : String -> String
@@ -210,18 +221,6 @@ isSuffixOf a b = isSuffixOf (unpack a) (unpack b)
 export
 isInfixOf : String -> String -> Bool
 isInfixOf a b = isInfixOf (unpack a) (unpack b)
-
-public export
-data StrM : String -> Type where
-    StrNil : StrM ""
-    StrCons : (x : Char) -> (xs : String) -> StrM (strCons x xs)
-
-public export -- primitives, so assert_total and believe_me needed
-strM : (x : String) -> StrM x
-strM "" = StrNil
-strM x
-    = assert_total $ believe_me $
-        StrCons (prim__strHead x) (prim__strTail x)
 
 parseNumWithoutSign : List Char -> Integer -> Maybe Integer
 parseNumWithoutSign []        acc = Just acc
