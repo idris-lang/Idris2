@@ -3,14 +3,14 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Nat
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Vect
 import Decidable.Equality
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Algebra
 

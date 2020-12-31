@@ -14,9 +14,9 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
-import Data.StringMap
+import Libraries.Data.StringMap
 
 %default covering
 

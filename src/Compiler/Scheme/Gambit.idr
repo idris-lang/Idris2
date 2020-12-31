@@ -10,12 +10,12 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
 

@@ -11,7 +11,7 @@ import Core.UnifyState
 import Core.Value
 import Core.TT
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 
 %default covering

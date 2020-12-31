@@ -5,7 +5,7 @@ import Core.Env
 import Core.Normalise
 import Core.TT
 
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default total
 

@@ -10,12 +10,12 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
-import Utils.Binary
+import Libraries.Utils.Binary
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 %default covering
 

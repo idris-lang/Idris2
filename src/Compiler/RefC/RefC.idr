@@ -14,8 +14,8 @@ import Core.TT
 
 import Data.IORef
 import Data.List
-import Data.DList
-import Data.NameMap
+import Libraries.Data.DList
+import Libraries.Data.NameMap
 import Data.Nat
 import Data.Strings
 import Data.Vect
@@ -26,8 +26,8 @@ import System.File
 
 import Idris.Env
 import Idris.Version
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 findCC : IO String
 findCC

@@ -8,11 +8,11 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
 

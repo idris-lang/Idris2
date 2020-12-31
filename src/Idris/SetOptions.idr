@@ -5,7 +5,7 @@ import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
-import Utils.Path
+import Libraries.Utils.Path
 
 import Idris.CommandLine
 import Idris.REPL

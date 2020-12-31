@@ -1,7 +1,7 @@
 module Compiler.ES.RemoveUnused
 
-import Data.SortedSet
-import Data.SortedMap
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Data.Vect
 import Data.List
 

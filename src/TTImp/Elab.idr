@@ -16,9 +16,9 @@ import TTImp.Elab.Term
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

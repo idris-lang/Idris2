@@ -13,7 +13,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
 
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

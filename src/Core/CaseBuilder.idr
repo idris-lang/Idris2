@@ -9,12 +9,12 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
-import Data.LengthMatch
+import Libraries.Data.LengthMatch
 import Data.List
 
 import Decidable.Equality
 
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
 

@@ -4,7 +4,7 @@ import Core.Core
 import Core.Context
 import Core.TT
 import Core.Value
-import Utils.String
+import Libraries.Utils.String
 
 import Data.Vect
 

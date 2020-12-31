@@ -8,9 +8,9 @@ import Core.Context.Log
 import Core.FC
 import Core.TT
 
-import Data.LengthMatch
+import Libraries.Data.LengthMatch
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.List
 import Data.Vect
 

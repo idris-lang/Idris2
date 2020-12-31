@@ -21,9 +21,9 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

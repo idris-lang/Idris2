@@ -7,14 +7,14 @@ import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
-import Utils.Path
+import Libraries.Utils.Path
 
 import System
 import System.File
 
 import Data.Maybe
 import Data.Strings
-import Data.String.Extra
+import Libraries.Data.String.Extra
 
 
 ||| Compile a TT expression to Javascript

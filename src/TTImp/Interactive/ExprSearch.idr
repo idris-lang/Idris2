@@ -28,7 +28,7 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 

@@ -3,8 +3,8 @@ module Compiler.ES.TailRec
 import Data.Maybe
 import Data.List
 import Data.Strings
-import Data.SortedSet
-import Data.SortedMap
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Core.Name
 import Core.Context
 import Compiler.ES.ImperativeAst

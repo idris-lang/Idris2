@@ -17,7 +17,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
