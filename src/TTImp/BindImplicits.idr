@@ -140,7 +140,7 @@ getUsing n ((t, Nothing, ty) :: us) -- autoimplicit binder
 
 getUsings : List Name -> List (Int, Maybe Name, RawImp) ->
             List (Int, (RigCount, PiInfo RawImp, Maybe Name, RawImp))
-getUsings = concatMap getUsing
+getUsings ns u = concatMap (flip getUsing u) ns
 
 bindUsings : List (RigCount, PiInfo RawImp, Maybe Name, RawImp) -> RawImp -> RawImp
 bindUsings [] tm = tm
