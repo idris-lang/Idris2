@@ -88,6 +88,11 @@ natToInteger (S k) = 1 + natToInteger k
                          -- integer (+) may be non-linear in second
                          -- argument
 
+||| Counts the number of elements that satify a predicate.
+public export
+count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
+count predicate = foldr (\v => if predicate v then S else id) Z
+
 -----------
 -- PAIRS --
 -----------
