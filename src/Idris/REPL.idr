@@ -613,7 +613,7 @@ docsOrType : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              FC -> Name -> Core (List String)
 docsOrType fc n
-    = do syn <- get Syn
+    = do syn  <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
              | _ => throw (UndefinedName fc n)
@@ -749,7 +749,7 @@ process (Exec ctm)
     = execExp ctm
 process Help
     = pure RequestedHelp
-process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
+process (TypeSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
     = do defs <- branch
          let ctxt = gamma defs
          log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
@@ -770,7 +770,7 @@ process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
          doc <- traverse (docsOrType replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
 
-process (ProofSearch _)
+process (TypeSearch _)
     = pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
     = do defs <- get Ctxt

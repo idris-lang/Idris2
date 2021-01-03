@@ -431,7 +431,7 @@ data REPLCmd : Type where
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
-     ProofSearch : PTerm -> REPLCmd
+     TypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
