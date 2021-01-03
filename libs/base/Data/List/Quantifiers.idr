@@ -3,6 +3,8 @@ module Data.List.Quantifiers
 import Data.List
 import Data.List.Elem
 
+%default total
+
 ||| A proof that some element of a list satisfies some property
 |||
 ||| @ p the property to be satisfied

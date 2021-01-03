@@ -82,7 +82,7 @@ mutual
   processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
-            Just ((_, e) ::: named') =>
+            Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
                   processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
                               [] autos named'
@@ -94,7 +94,7 @@ mutual
                           processArgs (App fc fn e')
                                       !(sc defs (toClosure defaultOpts [] e'))
                                       exps autos named
-            Just ((_, e) ::: named') =>
+            Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
                   processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
                               exps autos named'
@@ -112,7 +112,7 @@ mutual
                            processArgs (App fc fn e')
                                        !(sc defs (toClosure defaultOpts [] e'))
                                        exps [] named
-                     Just ((_, e) ::: named') =>
+                     Just ((_, e), named') =>
                         do e' <- mkTerm e (Just ty) [] [] []
                            processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
                                        exps [] named'

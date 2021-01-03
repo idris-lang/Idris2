@@ -447,6 +447,7 @@ data REPLCmd : Type where
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
+     RunShellCommand : String -> REPLCmd
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd

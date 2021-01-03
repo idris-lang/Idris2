@@ -195,11 +195,11 @@ export partial
 idris_crash : String -> a
 idris_crash = prim__crash _
 
-public export
+public export %inline
 delay : a -> Lazy a
 delay x = Delay x
 
-public export
+public export %inline
 force : Lazy a -> a
 force x = Force x
 

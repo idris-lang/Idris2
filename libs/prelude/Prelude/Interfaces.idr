@@ -218,7 +218,9 @@ interface Foldable t where
   foldl f z t = foldr (flip (.) . flip f) id t z
 
   ||| Test whether the structure is empty.
-  null : t elem -> Bool
+  ||| @ acc The accumulator value which is specified to be lazy
+  null : t elem -> Lazy Bool
+  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
 
 ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
 ||| Consequently, the final value is wrapped in the same `Monad`.

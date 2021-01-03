@@ -80,6 +80,16 @@ public export
 runStateT : stateType -> StateT stateType m a -> m (stateType, a)
 runStateT s act = runStateT' act s
 
+||| Unwrap and apply a StateT monad computation, but discard the final state.
+public export
+evalStateT : Functor m => stateType -> StateT stateType m a -> m a
+evalStateT s = map snd . runStateT s
+
+||| Unwrap and apply a StateT monad computation, but discard the resulting value.
+public export
+execStateT : Functor m => stateType -> StateT stateType m a -> m stateType
+execStateT s = map fst . runStateT s
+
 ||| The State monad. See the MonadState interface
 public export
 State : (stateType : Type) -> (ty : Type) -> Type
@@ -87,7 +97,7 @@ State = \s, a => StateT s Identity a
 
 ||| Unwrap and apply a State monad computation.
 public export
-runState : stateType -> StateT stateType Identity a -> (stateType, a)
+runState : stateType -> State stateType a -> (stateType, a)
 runState s act = runIdentity (runStateT s act)
 
 ||| Unwrap and apply a State monad computation, but discard the final state.

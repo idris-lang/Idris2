@@ -2,6 +2,8 @@ module Data.Stream
 
 import Data.List
 
+%default total
+
 ||| The first element of an infinite stream
 public export
 head : Stream a -> a
@@ -25,6 +27,10 @@ repeat x = x :: repeat x
 public export
 iterate : (f : a -> a) -> (x : a) -> Stream a
 iterate f x = x :: iterate f (f x)
+
+public export
+unfoldr : (b -> (a, b)) -> b -> Stream a
+unfoldr f c = let (a, n) = f c in a :: unfoldr f n
 
 ||| Get the nth element of a stream
 public export

@@ -4,6 +4,8 @@ import Data.Nat
 import Data.List1
 import Data.Fin
 
+%default total
+
 public export
 isNil : List a -> Bool
 isNil [] = True
@@ -71,11 +73,24 @@ index' (_::xs) (FS i) = index' xs i
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
 ||| @ x the initial value that will be the head of the list
+covering
 public export
 iterate : (f : a -> Maybe a) -> (x : a) -> List a
 iterate f x  = x :: case f x of
   Nothing => []
   Just y => iterate f y
+
+covering
+public export
+unfoldr : (b -> Maybe (a, b)) -> b -> List a
+unfoldr f c = case f c of
+  Nothing     => []
+  Just (a, n) => a :: unfoldr f n
+
+public export
+iterateN : Nat -> (a -> a) -> a -> List a
+iterateN Z     _ _ = []
+iterateN (S n) f x = x :: iterateN n f (f x)
 
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
