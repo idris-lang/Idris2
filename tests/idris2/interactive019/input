@@ -1,0 +1,4 @@
+:s Char -> String
+:s a -> b -> a
+:s Char -> Char
+:q
