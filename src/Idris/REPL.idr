@@ -645,7 +645,11 @@ equivTypes ty1 ty2 = do defs <- get Ctxt
                         True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
                           | False => pure False
                         newRef UST initUState
-                        coreLift $ coreRun (unify inTerm replFC [] ty1 ty2) (\_ => pure False) (\case (MkUnifyResult _ _ _ NoLazy) => pure True; _ => pure False)
+                        catch (do res <- unify inTerm replFC [] ty1 ty2
+                                  case res of
+                                       (MkUnifyResult _ _ _ NoLazy) => pure True
+                                       _ => pure False)
+                              (\err => pure False)
 
 ||| Process a single `REPLCmd`
 |||
