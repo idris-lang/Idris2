@@ -609,19 +609,10 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-eqPastImplicits : Term vars -> Term vars' -> Bool
-eqPastImplicits (Bind _ _ (Pi _ _ Implicit _) scope) y = eqPastImplicits scope y
-eqPastImplicits (Bind _ _ (Pi _ _ AutoImplicit _) scope) y = eqPastImplicits scope y
-eqPastImplicits (Bind _ _ (Pi _ _ (DefImplicit _) _) scope) y = eqPastImplicits scope y
-eqPastImplicits x (Bind _ _ (Pi _ _ Implicit _) scope) = eqPastImplicits x scope
-eqPastImplicits x (Bind _ _ (Pi _ _ AutoImplicit _) scope) = eqPastImplicits x scope
-eqPastImplicits x (Bind _ _ (Pi _ _ (DefImplicit _) _) scope) = eqPastImplicits x scope
-eqPastImplicits x y = eqTerm x y
-
-maybeGetDocsFor : {auto c : Ref Ctxt Defs} ->
-                  {auto s : Ref Syn SyntaxInfo} ->
-                  FC -> Name -> Core (List String)
-maybeGetDocsFor fc n
+docsOrType : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             FC -> Name -> Core (List String)
+docsOrType fc n
     = do syn <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
@@ -760,7 +751,7 @@ process Help
     = pure RequestedHelp
 process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
     = do defs <- branch
-         let context = gamma defs
+         let ctxt = gamma defs
          log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
 
          rawTy <- desugar AnyExpr [] searchTerm
@@ -769,18 +760,18 @@ process (ProofSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          logTermNF "repl.ps" 2 "checked term" [] ty
          ty' <- toResolvedNames ty
-         filteredDefs <- do names   <- allNames context
-                            defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact context) names)
-                            allDefs <- traverse (resolved context) defs
+         filteredDefs <- do names   <- allNames ctxt
+                            defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact ctxt) names)
+                            allDefs <- traverse (resolved ctxt) defs
                             (flip filterM) allDefs (\def => equivTypes def.type ty')
 
          put Ctxt defs
          log "repl.ps" 2 $ (show ty')
-         doc <- traverse (maybeGetDocsFor replFC) $ (.fullname) <$> filteredDefs
+         doc <- traverse (docsOrType replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
 
 process (ProofSearch _)
-    = do pure $ REPLError $ reflow "Could not parse input as a type signature."
+    = pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
