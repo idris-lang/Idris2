@@ -752,13 +752,9 @@ process Help
 process (TypeSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
     = do defs <- branch
          let ctxt = gamma defs
-         log "repl.ps" 2 $ "original pi term: " ++ (show searchTerm)
-
          rawTy <- desugar AnyExpr [] searchTerm
          let bound = piBindNames replFC [] rawTy
-         log "repl.ps" 2 $ show bound
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
-         logTermNF "repl.ps" 2 "checked term" [] ty
          ty' <- toResolvedNames ty
          filteredDefs <- do names   <- allNames ctxt
                             defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact ctxt) names)
@@ -766,10 +762,8 @@ process (TypeSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
                             (flip filterM) allDefs (\def => equivTypes def.type ty')
 
          put Ctxt defs
-         log "repl.ps" 2 $ (show ty')
          doc <- traverse (docsOrType replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
-
 process (TypeSearch _)
     = pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
