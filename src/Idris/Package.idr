@@ -28,6 +28,7 @@ import Libraries.Utils.String
 import Libraries.Utils.Path
 
 import Idris.CommandLine
+import Idris.DocString
 import Idris.ModTree
 import Idris.ProcessIdr
 import Idris.REPL
@@ -409,6 +410,126 @@ check pkg opts =
     runScript (postbuild pkg)
     pure []
 
+htmlEscape : String -> String
+htmlEscape s = fastAppend $ reverse $ go [] s
+  where
+    isSafe : Char -> Bool
+    isSafe '"' = False
+    isSafe '<' = False
+    isSafe '>' = False
+    isSafe '&' = False
+    isSafe '\'' = False
+    isSafe c = (c >= ' ' && c <= '~')
+
+    htmlQuote : Char -> String
+    htmlQuote '"' = "&quot;"
+    htmlQuote '<' = "&lt;"
+    htmlQuote '>' = "&gt;"
+    htmlQuote '&' = "&amp;"
+    htmlQuote '\'' = "&apos;"
+    htmlQuote c = "&#" ++ (show $ ord c) ++ ";"
+
+    go : List String -> String -> List String
+    go acc "" = acc
+    go acc s =
+      case span isSafe s of
+           (safe, "") => safe::acc
+           (safe, rest) => let c = assert_total (strIndex rest 0)
+                               escaped = htmlQuote c in
+                               go (escaped::safe::acc) (assert_total $ strTail rest)
+
+htmlPreamble : String -> String -> String -> String
+htmlPreamble title root class = "
+<!DOCTYPE html>
+<html lang=\"en\">
+  <head>
+    <meta charset=\"utf-8\">
+    <title>" ++ htmlEscape title ++ "</title>
+    <link rel=\"stylesheet\" href=\"" ++ root ++ "styles.css\">
+  </head>
+  <body class=\"" ++ class ++ "\">
+    <header>
+      <strong>Idris2Doc</strong> : " ++ htmlEscape title ++ "
+      <nav>
+        <a href=\"" ++ root ++ "index.html\">Index</a>
+      </nav>
+    </header>
+    <div class=\"container\">
+"
+
+htmlFooter : String
+htmlFooter = "</div><footer>Produced by Idris2 version " ++ (showVersion True version) ++ "</footer></body></html>"
+
+makeDoc : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
+          PkgDesc ->
+          List CLOpt ->
+          Core (List Error)
+makeDoc pkg opts =
+    do [] <- prepareCompilation pkg opts
+         | errs => pure errs
+
+       defs <- get Ctxt
+       let build = build_dir (dirs (options defs))
+       let docBase = build </> "docs"
+       let docDir = docBase </> "docs"
+       coreLift $ mkdirAll docDir
+       u <- newRef UST initUState
+
+       [] <- concat <$> for (modules pkg) (\(mod, filename) => do
+           let outputFileName = (show mod) ++ ".html"
+           Right outFile <- coreLift $ openFile (docDir </> outputFileName) WriteTruncate
+             | Left err => pure [InternalError $ ("error opening file \"" ++ (docDir </> outputFileName) ++ "\": " ++ (show err))]
+           let writeHtml = \s => (coreLift $ fPutStrLn outFile s)
+           addImport (MkImport emptyFC False mod (miAsNamespace mod))
+           defs <- get Ctxt
+           names <- allNames (gamma defs)
+           let allNs = filter (inNS (miAsNamespace mod)) names
+           allNs <- filterM (visible defs) allNs
+
+           writeHtml $ htmlPreamble (show mod) "../" "namespace"
+           writeHtml ("<h1>" ++ show mod ++ "</h1>")
+           writeHtml ("<dl class=\"decls\">")
+           for (sort allNs) (\n => do
+               writeHtml ("<dt id=\"" ++ (htmlEscape $ show n) ++ "\">")
+               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show n) ++ "</span> : TODO:TYPE HERE")
+               writeHtml ("</dt><dd><pre>")
+               doc <- getDocsFor emptyFC n
+               writeHtml (unlines doc)
+               writeHtml ("</pre></dd>")
+             )
+           writeHtml ("</dl>")
+           writeHtml htmlFooter
+           pure $ the (List Error) []
+         )
+         | errs => pure errs
+
+       Right outFile <- coreLift $ openFile (docBase </> "index.html") WriteTruncate
+         | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "index.html") ++ "\": " ++ (show err))]
+       let writeHtml = \s => (coreLift $ fPutStrLn outFile s)
+       writeHtml $ htmlPreamble (name pkg) "" "index"
+       writeHtml ("<h1>Package " ++ name pkg ++ " - Namespaces</h1>")
+       writeHtml "<ul class=\"names\">"
+       for (modules pkg) (\(mod, filename) => do
+         writeHtml ("<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>")
+         )
+       writeHtml "</ul>"
+       writeHtml htmlFooter
+
+       runScript (postbuild pkg)
+       pure []
+  where
+    visible : Defs -> Name -> Core Bool
+    visible defs n
+        = do Just def <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure False
+             pure (visibility def /= Private)
+
+    inNS : Namespace -> Name -> Bool
+    inNS ns (NS xns (UN _)) = ns `isParentOf` xns
+    inNS _ _ = False
+
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)
 bitraverseC f g (This a)   = [| This (f a) |]
@@ -549,6 +670,8 @@ processPackage opts (cmd, file)
              setOutputDir (outputdir pkg)
              case cmd of
                   Build => do [] <- build pkg opts
+                                 | errs => coreLift (exitWith (ExitFailure 1))
+                  MkDoc => do [] <- makeDoc pkg opts
                                  | errs => coreLift (exitWith (ExitFailure 1))
                               pure ()
                   Install => do [] <- build pkg opts
