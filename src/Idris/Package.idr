@@ -419,6 +419,9 @@ htmlEscape s = fastAppend $ reverse $ go [] s
     isSafe '>' = False
     isSafe '&' = False
     isSafe '\'' = False
+    isSafe '\t' = True
+    isSafe '\n' = True
+    isSafe '\r' = True
     isSafe c = (c >= ' ' && c <= '~')
 
     htmlQuote : Char -> String
@@ -496,7 +499,7 @@ makeDoc pkg opts =
                writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show n) ++ "</span> : TODO:TYPE HERE")
                writeHtml ("</dt><dd><pre>")
                doc <- getDocsFor emptyFC n
-               writeHtml (unlines doc)
+               writeHtml (unlines $ map htmlEscape doc)
                writeHtml ("</pre></dd>")
              )
            writeHtml ("</dl>")
