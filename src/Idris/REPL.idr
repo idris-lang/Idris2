@@ -626,7 +626,7 @@ docsOrType fc n
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure []
                           ty <- normaliseHoles defs [] (type def)
-                          pure [(nameRoot n) ++ " : " ++ (show !(resugar [] ty))]
+                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
 
 equivTypes : {auto c : Ref Ctxt Defs}
           -> (ty1 : ClosedTerm) 
@@ -749,7 +749,7 @@ process (Exec ctm)
     = execExp ctm
 process Help
     = pure RequestedHelp
-process (TypeSearch searchTerm@(PPi fc rc piInfo _ argTy retTy))
+process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))
     = do defs <- branch
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
