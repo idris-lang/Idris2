@@ -710,7 +710,6 @@ tryIntermediateRec fc rig opts env ty topty (Just rd)
              pure True
     isSingleCon _ _ = pure False
 
-export
 searchType : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
