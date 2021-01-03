@@ -609,10 +609,10 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-docsOrType : {auto c : Ref Ctxt Defs} ->
-             {auto s : Ref Syn SyntaxInfo} ->
-             FC -> Name -> Core (List String)
-docsOrType fc n
+docsOrSignature : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  FC -> Name -> Core (List String)
+docsOrSignature fc n
     = do syn  <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
@@ -628,10 +628,10 @@ docsOrType fc n
                           ty <- normaliseHoles defs [] (type def)
                           pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
 
-equivTypes : {auto c : Ref Ctxt Defs}
-          -> (ty1 : ClosedTerm) 
-          -> (ty2 : ClosedTerm) 
-          -> Core Bool
+equivTypes : {auto c : Ref Ctxt Defs} ->
+             (ty1 : ClosedTerm) ->
+             (ty2 : ClosedTerm) ->
+             Core Bool
 equivTypes ty1 ty2 = do defs <- get Ctxt
                         True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
                           | False => pure False
@@ -762,7 +762,7 @@ process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))
                             (flip filterM) allDefs (\def => equivTypes def.type ty')
 
          put Ctxt defs
-         doc <- traverse (docsOrType replFC) $ (.fullname) <$> filteredDefs
+         doc <- traverse (docsOrSignature replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
 process (TypeSearch _)
     = pure $ REPLError $ reflow "Could not parse input as a type signature."
