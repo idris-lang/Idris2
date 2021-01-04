@@ -1,6 +1,7 @@
 module Idris.Pretty
 
 import Data.List
+import Data.Maybe
 import Data.Strings
 import Libraries.Control.ANSI.SGR
 import public Libraries.Text.PrettyPrint.Prettyprinter
@@ -197,9 +198,28 @@ mutual
           prettyBindings ((rig, n, (PImplicit _)) :: ns) = prettyRig rig <+> go startPrec n <+> comma <+> line <+> prettyBindings ns
           prettyBindings ((rig, n, ty) :: ns) = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
       go d (PLet _ rig n (PImplicit _) val sc alts) =
-        parenthesise (d > startPrec) $ group $ align $
-          let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
-            <+> in_ <++> (group $ align $ hang 2 $ go startPrec sc)
+          -- Hide uninformative lets
+          -- (Those that look like 'let x = x in ...')
+          -- Makes printing the types of names bound in where clauses a lot
+          -- more readable
+          fromMaybe fullLet $ do
+            nName   <- getPRefName n
+            valName <- getPRefName val
+            guard (show nName == show valName)
+            pure continuation
+        where
+          continuation : Doc IdrisAnn
+          continuation = go startPrec sc
+
+          fullLet : Doc IdrisAnn
+          fullLet = parenthesise (d > startPrec) $ group $ align $
+            let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
+              <+> in_ <++> (group $ align $ hang 2 $ continuation)
+
+          getPRefName : PTerm -> Maybe Name
+          getPRefName (PRef _ n) = Just n
+          getPRefName _ = Nothing
+
       go d (PLet _ rig n ty val sc alts) =
         parenthesise (d > startPrec) $ group $ align $
           let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <++> equals <+> line <+> go startPrec val) <+> hardline
