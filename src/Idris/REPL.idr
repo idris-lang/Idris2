@@ -368,7 +368,7 @@ processEdit (TypeAt line col name)
                     pure $ Just (vsep tys)
 
          -- Lookup the name locally (The name at the specified position)
-         localResult <- findTypeAt (\p, _ => within (line-1, col-1) p)
+         localResult <- findTypeAt $ anyAt $ within (line-1, col-1)
 
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
