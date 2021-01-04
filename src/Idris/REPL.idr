@@ -371,11 +371,11 @@ processEdit (TypeAt line col name)
          localResult <- findTypeAt (\p, _ => within (line-1, col-1) p)
 
          case (globalResult, localResult) of
-              (Nothing, Nothing) => throw (UndefinedName replFC name)
-              (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
-              (Nothing, Just (n, _, type)) => pure $ DisplayEdit $
+              -- Give precedence to the local name, as it shadows the others
+              (_, Just (n, _, type)) => pure $ DisplayEdit $
                 pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
-              (Just _, Just _) => pure $ DisplayEdit emptyDoc -- ? Why () This means there is a global name and a type at (line,col)
+              (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
+              (Nothing, Nothing) => throw (UndefinedName replFC name)
 
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
