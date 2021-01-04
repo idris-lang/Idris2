@@ -146,10 +146,12 @@ endif
 
 install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
 	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
+	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
 	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js

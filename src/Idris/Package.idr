@@ -504,6 +504,7 @@ makeDoc pkg opts =
              )
            writeHtml ("</dl>")
            writeHtml htmlFooter
+           coreLift $ closeFile outFile
            pure $ the (List Error) []
          )
          | errs => pure errs
@@ -519,6 +520,13 @@ makeDoc pkg opts =
          )
        writeHtml "</ul>"
        writeHtml htmlFooter
+       coreLift $ closeFile outFile
+
+       css <- readDataFile "docs/styles.css"
+       Right outFile <- coreLift $ openFile (docBase </> "styles.css") WriteTruncate
+         | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "styles.css") ++ "\": " ++ (show err))]
+       coreLift $ fPutStr outFile css
+       coreLift $ closeFile outFile
 
        runScript (postbuild pkg)
        pure []
