@@ -101,6 +101,10 @@ getVarType rigc nest env fc x
                                 logTerm "elab" 5 ("Type of " ++ show n') tyenv
                                 logTerm "elab" 5 ("Expands to") tm
                                 log "elab" 5 $ "Arg length " ++ show arglen
+
+                                -- Add the type to the metadata
+                                addNameType fc x env tyenv
+
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
