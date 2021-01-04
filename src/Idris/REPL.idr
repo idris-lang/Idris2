@@ -357,18 +357,26 @@ processEdit : {auto c : Ref Ctxt Defs} ->
               EditCmd -> Core EditResult
 processEdit (TypeAt line col name)
     = do defs <- get Ctxt
-         glob <- lookupCtxtName name (gamma defs)
-         res <- the (Core (Doc IdrisAnn)) $ case glob of
-                     [] => pure emptyDoc
-                     ts => do tys <- traverse (displayType defs) ts
-                              pure (vsep tys)
-         Just (n, num, t) <- findTypeAt (\p, n => within (line-1, col-1) p)
-            | Nothing => case res of
-                              Empty => throw (UndefinedName (MkFC "(interactive)" (0,0) (0,0)) name)
-                              _     => pure (DisplayEdit res)
-         case res of
-            Empty => pure (DisplayEdit $ pretty (nameRoot n) <++> colon <++> !(displayTerm defs t))
-            _     => pure (DisplayEdit emptyDoc)  -- ? Why () This means there is a global name and a type at (line,col)
+
+         -- Lookup the name globally
+         globals <- lookupCtxtName name (gamma defs)
+
+         -- Get the Doc for the result
+         globalResult <- the (Core $ Maybe $ Doc IdrisAnn) $ case globals of
+           [] => pure Nothing
+           ts => do tys <- traverse (displayType defs) ts
+                    pure $ Just (vsep tys)
+
+         -- Lookup the name locally (The name at the specified position)
+         localResult <- findTypeAt (\p, _ => within (line-1, col-1) p)
+
+         case (globalResult, localResult) of
+              (Nothing, Nothing) => throw (UndefinedName replFC name)
+              (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
+              (Nothing, Just (n, _, type)) => pure $ DisplayEdit $
+                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+              (Just _, Just _) => pure $ DisplayEdit emptyDoc -- ? Why () This means there is a global name and a type at (line,col)
+
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
                        then within (line-1, col-1)
