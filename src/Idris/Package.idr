@@ -530,7 +530,7 @@ makeDoc pkg opts =
              pure (visibility def /= Private)
 
     inNS : Namespace -> Name -> Bool
-    inNS ns (NS xns (UN _)) = ns `isParentOf` xns
+    inNS ns (NS xns (UN _)) = ns == xns
     inNS _ _ = False
 
 -- Data.These.bitraverse hand specialised for Core
