@@ -672,11 +672,11 @@ revAppend (v :: vs) ns
 
 ||| List reverse applied twice yields the identity function.
 export
-reverseInvolutory : (xs : List a) -> reverse (reverse xs) = xs
-reverseInvolutory [] = Refl
-reverseInvolutory (x :: xs) = rewrite revOnto [x] xs in
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive [] = Refl
+reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
                                 rewrite sym (revAppend (reverse xs) [x]) in
-                                  cong (x ::) $ reverseInvolutory xs
+                                  cong (x ::) $ reverseInvolutive xs
 
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l
