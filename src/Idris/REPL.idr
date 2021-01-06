@@ -757,7 +757,7 @@ process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <- do names   <- allNames ctxt
-                            defs    <- pure $ catMaybes !(traverse (flip lookupCtxtExact ctxt) names)
+                            defs    <- catMaybes <$> (traverse (flip lookupCtxtExact ctxt) names)
                             allDefs <- traverse (resolved ctxt) defs
                             (flip filterM) allDefs (\def => equivTypes def.type ty')
 
