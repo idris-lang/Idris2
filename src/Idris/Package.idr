@@ -5,6 +5,7 @@ import Compiler.Common
 import Core.Context
 import Core.Core
 import Core.Directory
+import Core.Env
 import Core.Metadata
 import Core.Options
 import Core.Unify
@@ -34,6 +35,7 @@ import Idris.ProcessIdr
 import Idris.REPL
 import Idris.REPL.Common
 import Idris.REPL.Opts
+import Idris.Resugar
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
@@ -485,20 +487,25 @@ makeDoc pkg opts =
            Right outFile <- coreLift $ openFile (docDir </> outputFileName) WriteTruncate
              | Left err => pure [InternalError $ ("error opening file \"" ++ (docDir </> outputFileName) ++ "\": " ++ (show err))]
            let writeHtml = \s => (coreLift $ fPutStrLn outFile s)
-           addImport (MkImport emptyFC False mod (miAsNamespace mod))
+           let ns = miAsNamespace mod
+           addImport (MkImport emptyFC False mod ns)
            defs <- get Ctxt
            names <- allNames (gamma defs)
-           let allNs = filter (inNS (miAsNamespace mod)) names
+           let allNs = filter (inNS ns) names
            allNs <- filterM (visible defs) allNs
 
            writeHtml $ htmlPreamble (show mod) "../" "namespace"
            writeHtml ("<h1>" ++ show mod ++ "</h1>")
            writeHtml ("<dl class=\"decls\">")
-           for (sort allNs) (\n => do
-               writeHtml ("<dt id=\"" ++ (htmlEscape $ show n) ++ "\">")
-               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show n) ++ "</span> : TODO:TYPE HERE")
+           for (sort allNs) (\name => do
+               Just gdef <- lookupCtxtExact name (gamma defs)
+                 | Nothing => writeHtml ("ERROR: lookup failed: " ++ show name)
+               typeTm <- resugar [] !(normaliseHoles defs [] (type gdef))
+               let pname = stripNS ns name
+               writeHtml ("<dt id=\"" ++ (htmlEscape $ show name) ++ "\">")
+               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ (show typeTm) ++ "</span>")
                writeHtml ("</dt><dd><pre>")
-               doc <- getDocsFor emptyFC n
+               doc <- getDocsFor emptyFC name
                writeHtml (unlines $ map htmlEscape doc)
                writeHtml ("</pre></dd>")
              )
@@ -540,6 +547,11 @@ makeDoc pkg opts =
     inNS : Namespace -> Name -> Bool
     inNS ns (NS xns (UN _)) = ns == xns
     inNS _ _ = False
+
+    stripNS : Namespace -> Name -> Name
+    stripNS ns full@(NS xns n) = if ns == xns then n
+                                              else full
+    stripNS _ x = x
 
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)
