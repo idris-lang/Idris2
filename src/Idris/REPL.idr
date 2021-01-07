@@ -7,6 +7,7 @@ import Compiler.ES.Node
 import Compiler.ES.Javascript
 import Compiler.Common
 import Compiler.RefC.RefC
+import Compiler.Inline
 
 import Core.AutoSearch
 import Core.CaseTree
@@ -538,6 +539,22 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
+prepareExp :
+    {auto c : Ref Ctxt Defs} ->
+    {auto u : Ref UST UState} ->
+    {auto s : Ref Syn SyntaxInfo} ->
+    {auto m : Ref MD Metadata} ->
+    {auto o : Ref ROpts REPLOpts} ->
+    PTerm -> Core ClosedTerm
+prepareExp ctm
+    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
+         inidx <- resolveName (UN "[input]")
+         (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
+                                 [] ttimp Nothing
+         tm_erased <- linearCheck replFC linear True [] tm
+         compileAndInlineAll
+         pure tm_erased
+
 export
 execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
@@ -546,11 +563,7 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
-    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
-         inidx <- resolveName (UN "[input]")
-         (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
-                                 [] ttimp Nothing
-         tm_erased <- linearCheck replFC linear True [] tm
+    = do tm_erased <- prepareExp ctm
          execute !findCG tm_erased
          pure $ Executed ctm
 
@@ -577,11 +590,7 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do inidx <- resolveName (UN "[input]")
-         ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
-         (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                               [] ttimp Nothing
-         tm_erased <- linearCheck replFC linear True [] tm
+    = do tm_erased <- prepareExp ctm
          ok <- compile !findCG tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
@@ -644,7 +653,9 @@ process (Eval itm)
                  logTermNF "repl.eval" 5 "Normalised" [] ntm
                  itm <- resugar [] ntm
                  ty <- getTerm gty
-                 addDef (UN "it") (newDef emptyFC (UN "it") top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
+                 let itName = UN "it"
+                 addDef itName (newDef replFC itName top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
+                 addToSave itName
                  if showTypes opts
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))

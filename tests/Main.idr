@@ -75,7 +75,7 @@ idrisTests = MkTestPool []
        "interface021",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006",
+       "interpreter005", "interpreter006", "interpreter007",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
