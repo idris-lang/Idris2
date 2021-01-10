@@ -190,11 +190,11 @@ mutual
 
   public export
   data PTypeDecl : Type where
-       MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
+       MkPTy : FC -> (nameFC : FC) -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
   export
   getPTypeDeclLoc : PTypeDecl -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
+  getPTypeDeclLoc (MkPTy fc _ _ _ _) = fc
 
   public export
   data PDataDecl : Type where
@@ -347,13 +347,13 @@ definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where
     getName : PTypeDecl -> Name
-    getName (MkPTy _ n _ _) = n
+    getName (MkPTy _ _ n _ _) = n
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ n _ _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
 definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -1003,7 +1003,7 @@ mapPTermM f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
-    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
+    goPTypeDecl (MkPTy fc nameFC n d t) = MkPTy fc nameFC n d <$> goPTerm t
 
     goPDataDecl : PDataDecl -> Core PDataDecl
     goPDataDecl (MkPData fc n t opts tdecls) =

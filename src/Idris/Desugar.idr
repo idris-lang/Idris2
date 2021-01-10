@@ -502,9 +502,10 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 List Name -> PTypeDecl -> Core ImpTy
-  desugarType ps (MkPTy fc n d ty)
+  desugarType ps (MkPTy fc nameFC n d ty)
       = do addDocString n d
            syn <- get Syn
+           -- TODO: Change MkImpTy, the nameFC is being dropped here.
            pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
