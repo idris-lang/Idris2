@@ -557,7 +557,7 @@ getItDecls
     = do opts <- get ROpts
          case evalResultName opts of
             Nothing => pure []
-            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
+            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
 
 prepareExp :
     {auto c : Ref Ctxt Defs} ->

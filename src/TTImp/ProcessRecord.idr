@@ -103,7 +103,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
     elabAsData cname
         = do let conty = mkTy paramTelescope $
                          mkTy (map farg fields) recTy
-             let con = MkImpTy fc cname !(bindTypeNames [] (map fst params ++
+             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames [] (map fst params ++
                                            map fname fields ++ vars) conty)
              let dt = MkImpData fc tn !(bindTypeNames [] (map fst params ++
                                            map fname fields ++ vars)
@@ -154,7 +154,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    processDecl [] nest env
                        (IClaim fc (if isErased rc
                                       then erased
-                                      else top) (projVis vis) [Inline] (MkImpTy fc projNameNS projTy))
+                                      else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC projNameNS projTy))
 
                    -- Define the LHS and RHS
                    let lhs_exp

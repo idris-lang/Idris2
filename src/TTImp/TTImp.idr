@@ -242,11 +242,11 @@ mutual
 
   public export
   data ImpTy : Type where
-       MkImpTy : FC -> (n : Name) -> (ty : RawImp) -> ImpTy
+       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp) -> ImpTy
 
   export
   Show ImpTy where
-    show (MkImpTy fc n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
+    show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
   public export
   data DataOpt : Type where
@@ -587,7 +587,7 @@ definedInBlock ns decls =
     concatMap (defName ns) decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ n _) = n
+    getName (MkImpTy _ _ n _) = n
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
@@ -909,11 +909,11 @@ mutual
 
   export
   TTC ImpTy where
-    toBuf b (MkImpTy fc n ty)
-        = do toBuf b fc; toBuf b n; toBuf b ty
+    toBuf b (MkImpTy fc nameFC n ty)
+        = do toBuf b fc; toBuf b nameFC; toBuf b n; toBuf b ty
     fromBuf b
-        = do fc <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
-             pure (MkImpTy fc n ty)
+        = do fc <- fromBuf b; nameFC <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
+             pure (MkImpTy fc nameFC n ty)
 
   export
   TTC ImpClause where

@@ -49,7 +49,7 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
           retty = apply (IVar fc n) (map (IVar fc) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
-          con = MkImpTy fc conName !(bindTypeNames [] (pNames ++ map fst meths ++ vars) conty) in
+          con = MkImpTy EmptyFC EmptyFC conName !(bindTypeNames [] (pNames ++ map fst meths ++ vars) conty) in
           pure $ IData fc vis (MkImpData fc n
                                   !(bindTypeNames [] (pNames ++ map fst meths ++ vars)
                                                   (mkDataTy fc ps))
@@ -133,7 +133,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
          cn <- inCurrentNS n
          let tydecl = IClaim fc c vis (if d then [Inline, Invertible]
                                             else [Inline])
-                                      (MkImpTy fc cn ty_imp)
+                                      (MkImpTy EmptyFC EmptyFC cn ty_imp)
          let conapp = apply (IVar fc cname)
                               (map (IBindVar fc) (map bindName allmeths))
          let argns = getExplicitArgs 0 ty
@@ -193,8 +193,9 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          ty_imp <- bindTypeNames [] (meths ++ vars) fty
          let hintname = DN ("Constraint " ++ show con)
                           (UN ("__" ++ show iname ++ "_" ++ show con))
+
          let tydecl = IClaim fc top vis [Inline, Hint False]
-                          (MkImpTy fc hintname ty_imp)
+                          (MkImpTy EmptyFC EmptyFC hintname ty_imp)
          let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
                               (map (const (Implicit fc True)) meths)
          let fnclause = PatClause fc (IApp fc (IVar fc hintname) conapp)
@@ -217,7 +218,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
 
 
 getSig : ImpDecl -> Maybe (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
-getSig (IClaim _ c _ opts (MkImpTy fc n ty))
+getSig (IClaim _ c _ opts (MkImpTy fc _ n ty))
     = Just (fc, c, opts, n, (False, namePis 0 ty))
 getSig (IData _ _ (MkImpLater fc n ty))
     = Just (fc, erased, [Invertible], n, (True, namePis 0 ty))
@@ -386,7 +387,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
 
              dty_imp <- bindTypeNames [] (map fst tydecls ++ vars) dty
              log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
-             let dtydecl = IClaim fc rig vis [] (MkImpTy fc dn dty_imp)
+
+             let dtydecl = IClaim fc rig vis [] (MkImpTy EmptyFC EmptyFC dn dty_imp)
+
              processDecl [] nest env dtydecl
 
              let cs' = map (changeName dn) cs

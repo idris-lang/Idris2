@@ -217,8 +217,8 @@ mutual
 
   substNamesTy' : Bool -> List Name -> List (Name, RawImp) ->
                   ImpTy -> ImpTy
-  substNamesTy' bvar bound ps (MkImpTy fc n ty)
-      = MkImpTy fc n (substNames' bvar bound ps ty)
+  substNamesTy' bvar bound ps (MkImpTy fc nameFC n ty)
+      = MkImpTy fc nameFC n (substNames' bvar bound ps ty)
 
   substNamesData' : Bool -> List Name -> List (Name, RawImp) ->
                     ImpData -> ImpData
@@ -313,8 +313,8 @@ mutual
       = ImpossibleClause fc' (substLoc fc' lhs)
 
   substLocTy : FC -> ImpTy -> ImpTy
-  substLocTy fc' (MkImpTy fc n ty)
-      = MkImpTy fc' n (substLoc fc' ty)
+  substLocTy fc' (MkImpTy fc nameFC n ty)
+      = MkImpTy fc' fc' n (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)

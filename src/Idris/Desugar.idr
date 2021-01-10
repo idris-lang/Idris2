@@ -505,8 +505,7 @@ mutual
   desugarType ps (MkPTy fc nameFC n d ty)
       = do addDocString n d
            syn <- get Syn
-           -- TODO: Change MkImpTy, the nameFC is being dropped here.
-           pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
+           pure $ MkImpTy fc nameFC n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
   desugarClause : {auto s : Ref Syn SyntaxInfo} ->

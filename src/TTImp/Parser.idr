@@ -480,11 +480,12 @@ tyDecl : FileName -> IndentInfo -> Rule ImpTy
 tyDecl fname indents
     = do start <- location
          n <- name
+         nameEnd <- location
          symbol ":"
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) n ty)
+         pure (MkImpTy (MkFC fname start end) (MkFC fname start nameEnd) n ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->

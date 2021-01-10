@@ -107,7 +107,7 @@ mutual
 
   public export
   data ITy : Type where
-       MkTy : FC -> (n : Name) -> (ty : TTImp) -> ITy
+       MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
 
   public export
   data DataOpt : Type where

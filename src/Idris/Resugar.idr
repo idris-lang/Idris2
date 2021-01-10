@@ -356,9 +356,8 @@ mutual
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy -> Core PTypeDecl
-  toPTypeDecl (MkImpTy fc n ty)
-      -- TODO: Put the MkImpTy's nameFC back into MkPTy
-      = pure (MkPTy fc EmptyFC n "" !(toPTerm startPrec ty))
+  toPTypeDecl (MkImpTy fc nameFC n ty)
+      = pure (MkPTy fc nameFC n "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
