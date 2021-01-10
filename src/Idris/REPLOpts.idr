@@ -31,6 +31,7 @@ record REPLOpts where
   currentElabSource : String
   psResult : Maybe (Name, Core (Search RawImp)) -- last proof search continuation (and name)
   gdResult : Maybe (Int, Core (Search (FC, List ImpClause))) -- last generate def continuation (and line number)
+  evalResultName : Maybe Name
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
   -- better to stick it now.
   extraCodegens : List (String, Codegen)
@@ -41,7 +42,7 @@ export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
     = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
-                 Nothing outmode "" Nothing Nothing cgs Nothing True
+                 Nothing outmode "" Nothing Nothing Nothing cgs Nothing True
   where
     litStyle : Maybe String -> Maybe LiterateStyle
     litStyle Nothing = Nothing
