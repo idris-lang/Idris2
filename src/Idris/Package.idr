@@ -417,6 +417,12 @@ foldWithKeysC {a} {b} fk fv = go []
                              (StringMap.toList sm))
                    nd
 
+Semigroup () where
+  _ <+> _ = ()
+
+Monoid () where
+  neutral = ()
+
 clean : {auto c : Ref Ctxt Defs} ->
         {auto o : Ref ROpts REPLOpts} ->
         PkgDesc ->
