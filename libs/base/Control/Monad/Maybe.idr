@@ -88,16 +88,17 @@ public export
 Show (m (Maybe a)) => Show (MaybeT m a) where
   showPrec d (MkMaybeT x) = showCon d "MkMaybeT" $ showArg x
 
--- Corresponds to the Semigroup instance of Maybe
---
--- Note: This could also be implemented with only an Applicative
--- prerequisite: MkMaybeT x <+> MkMaybeT y = MkMaybeT $ [| x <+> y |]
---
--- However, the monadic version only runs the second argument
--- if the first fails, whish seems to be more efficient.
+||| Corresponds to the Semigroup instance of Maybe
+||| 
+||| Note: This could also be implemented with only an Applicative
+||| prerequisite: `MkMaybeT x <+> MkMaybeT y = MkMaybeT $ [| x <+> y |]`
+||| However, the monadic version is more efficient for long-running effects,
+||| only evaluating the second argument if the first returns `Nothing`.
 public export
 Monad m => Semigroup (MaybeT m a) where
-  MkMaybeT x <+> MkMaybeT y = MkMaybeT $ [| x <+> y |]
+  MkMaybeT x <+> MkMaybeT y = MkMaybeT $ do
+    r@(Just _) <- x | Nothing => y
+    pure r
 
 public export
 Monad m => Monoid (MaybeT m a) where
@@ -128,7 +129,7 @@ public export
 Monad m => Monad (MaybeT m) where
   MkMaybeT x >>= k = MkMaybeT $ x >>= maybe (pure Nothing) (runMaybeT . k)
 
--- See note about Monad prerequisite on Semigroup instance.
+||| See note about Monad prerequisite on Semigroup instance.
 public export
 Monad m => Alternative (MaybeT m) where
   empty = nothing
