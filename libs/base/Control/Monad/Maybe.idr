@@ -73,9 +73,6 @@ nothing = MkMaybeT $ pure Nothing
 -- Interface Implementations
 -------------------------------------------------
 
-on : (b -> b -> c) -> (a -> b) -> a -> a -> c
-on f g x y = g x `f` g y
-
 public export
 Eq (m (Maybe a)) => Eq (MaybeT m a) where
  (==) = (==) `on` runMaybeT
@@ -152,4 +149,3 @@ public export
 MonadState s m => MonadState s (MaybeT m) where
   get = lift get
   put = lift . put
-

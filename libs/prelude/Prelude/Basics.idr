@@ -40,6 +40,24 @@ public export %inline
 (.) : (b -> c) -> (a -> b) -> a -> c
 (.) f g = \x => f (g x)
 
+||| Binary function composition. This can be useful for instance
+||| when implementing interfaces for wrapper types:
+|||
+||| ```idris example
+||| record Id a where
+|||   constructor MkId
+|||   runId : a
+||| 
+||| Eq a => Eq (Id a) where
+|||   (==) = (==) `on` runId
+||| 
+||| Ord a => Ord (Id a) where
+|||   compare = compare `on` runId
+||| ```
+public export
+on : (b -> b -> c) -> (a -> b) -> a -> a -> c
+on f g x y = g x `f` g y
+
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip
 public export
