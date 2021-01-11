@@ -340,7 +340,7 @@ mutual
            keyword "let"
            rigc <- multiplicity
            rig <- getMult rigc
-           n <- name
+           n <- bounds name
            symbol "="
            commit
            val <- expr fname indents
@@ -349,7 +349,7 @@ mutual
            scope <- typeExpr fname indents
            end <- location
            pure (let fc = MkFC fname start end in
-                     ILet fc rig n (Implicit fc False) val scope)
+                     ILet fc (boundToFC fname n) rig n.val (Implicit fc False) val scope)
     <|> do start <- location
            keyword "let"
            ds <- block (topDecl fname)

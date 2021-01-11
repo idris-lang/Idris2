@@ -172,9 +172,9 @@ mutual
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
                  ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
-  desugarB side ps (PLet fc rig (PRef _ n) nTy nVal scope [])
-      = pure $ ILet fc rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
-                             !(desugar side (n :: ps) scope)
+  desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
+      = pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
+                                    !(desugar side (n :: ps) scope)
   desugarB side ps (PLet fc rig pat nTy nVal scope alts)
       = pure $ ICase fc !(desugarB side ps nVal) !(desugarB side ps nTy)
                         !(traverse (desugarClause ps True)
@@ -441,7 +441,7 @@ mutual
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
            rest' <- expandDo side ps topfc ns rest
-           let bind = ILet fc rig n ty' tm' rest'
+           let bind = ILet fc EmptyFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)

@@ -52,7 +52,7 @@ mutual
              (argTy : RawImp) -> (retTy : RawImp) -> RawImp
        ILam : FC -> RigCount -> PiInfo RawImp -> Maybe Name ->
               (argTy : RawImp) -> (lamTy : RawImp) -> RawImp
-       ILet : FC -> RigCount -> Name ->
+       ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp) -> (nVal : RawImp) ->
               (scope : RawImp) -> RawImp
        ICase : FC -> RawImp -> (ty : RawImp) ->
@@ -134,7 +134,7 @@ mutual
       show (ILam fc c p n arg sc)
          = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
            showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
-      show (ILet fc c n ty val sc)
+      show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
       show (ICase _ scr scrty alts)
@@ -642,7 +642,7 @@ getFC : RawImp -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
-getFC (ILet x _ _ _ _ _) = x
+getFC (ILet x _ _ _ _ _ _) = x
 getFC (ICase x _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
@@ -701,8 +701,8 @@ mutual
     toBuf b (ILam fc r p n argTy scope)
         = do tag 2; toBuf b fc; toBuf b r; toBuf b p; toBuf b n;
              toBuf b argTy; toBuf b scope
-    toBuf b (ILet fc r n nTy nVal scope)
-        = do tag 3; toBuf b fc; toBuf b r; toBuf b n;
+    toBuf b (ILet fc lhsFC r n nTy nVal scope)
+        = do tag 3; toBuf b fc; toBuf b lhsFC; toBuf b r; toBuf b n;
              toBuf b nTy; toBuf b nVal; toBuf b scope
     toBuf b (ICase fc y ty xs)
         = do tag 4; toBuf b fc; toBuf b y; toBuf b ty; toBuf b xs
@@ -784,10 +784,11 @@ mutual
                        argTy <- fromBuf b; scope <- fromBuf b
                        pure (ILam fc r p n argTy scope)
                3 => do fc <- fromBuf b;
+                       lhsFC <- fromBuf b;
                        r <- fromBuf b; n <- fromBuf b
                        nTy <- fromBuf b; nVal <- fromBuf b
                        scope <- fromBuf b
-                       pure (ILet fc r n nTy nVal scope)
+                       pure (ILet fc lhsFC r n nTy nVal scope)
                4 => do fc <- fromBuf b; y <- fromBuf b;
                        ty <- fromBuf b; xs <- fromBuf b
                        pure (ICase fc y ty xs)

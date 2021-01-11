@@ -102,14 +102,15 @@ mutual
                           aty' <- reify defs !(evalClosure defs aty)
                           lty' <- reify defs !(evalClosure defs lty)
                           pure (ILam fc' c' p' mn' aty' lty')
-               (NS _ (UN "ILet"), [fc, c, n, ty, val, sc])
+               (NS _ (UN "ILet"), [fc, lhsFC, c, n, ty, val, sc])
                     => do fc' <- reify defs !(evalClosure defs fc)
+                          lhsFC' <- reify defs !(evalClosure defs lhsFC)
                           c' <- reify defs !(evalClosure defs c)
                           n' <- reify defs !(evalClosure defs n)
                           ty' <- reify defs !(evalClosure defs ty)
                           val' <- reify defs !(evalClosure defs val)
                           sc' <- reify defs !(evalClosure defs sc)
-                          pure (ILet fc' c' n' ty' val' sc')
+                          pure (ILet fc' lhsFC' c' n' ty' val' sc')
                (NS _ (UN "ICase"), [fc, sc, ty, cs])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           sc' <- reify defs !(evalClosure defs sc)
@@ -456,14 +457,15 @@ mutual
              aty' <- reflect fc defs lhs env aty
              rty' <- reflect fc defs lhs env rty
              appCon fc defs (reflectionttimp "ILam") [fc', c', p', mn', aty', rty']
-    reflect fc defs lhs env (ILet tfc c n aty aval sc)
+    reflect fc defs lhs env (ILet tfc lhsFC c n aty aval sc)
         = do fc' <- reflect fc defs lhs env tfc
+             lhsFC' <- reflect fc defs lhs env lhsFC
              c' <- reflect fc defs lhs env c
              n' <- reflect fc defs lhs env n
              aty' <- reflect fc defs lhs env aty
              aval' <- reflect fc defs lhs env aval
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "ILet") [fc', c', n', aty', aval', sc']
+             appCon fc defs (reflectionttimp "ILet") [fc', lhsFC', c', n', aty', aval', sc']
     reflect fc defs lhs env (ICase tfc sc ty cs)
         = do fc' <- reflect fc defs lhs env tfc
              sc' <- reflect fc defs lhs env sc

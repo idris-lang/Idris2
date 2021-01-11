@@ -246,7 +246,7 @@ mutual
   unelabBinder umode fc env x (Let fc' rig val ty) sctm sc scty
       = do (val', vty) <- unelabTy umode env val
            (ty', _) <- unelabTy umode env ty
-           pure (ILet fc rig x ty' val' sc,
+           pure (ILet fc EmptyFC rig x ty' val' sc,
                     gnf env (Bind fc x (Let fc' rig val ty) scty))
   unelabBinder umode fc env x (Pi _ rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode env ty
@@ -270,7 +270,7 @@ mutual
   unelabBinder umode fc env x (PLet fc' rig val ty) sctm sc scty
       = do (val', vty) <- unelabTy umode env val
            (ty', _) <- unelabTy umode env ty
-           pure (ILet fc rig x ty' val' sc,
+           pure (ILet fc EmptyFC rig x ty' val' sc,
                     gnf env (Bind fc x (PLet fc' rig val ty) scty))
   unelabBinder umode fc env x (PVTy _ rig ty) sctm sc scty
       = do (ty', _) <- unelabTy umode env ty

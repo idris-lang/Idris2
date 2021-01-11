@@ -199,13 +199,13 @@ mutual
            sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
            bracket p startPrec (PLam fc rig pt' (PRef fc n) arg' sc')
-  toPTerm p (ILet fc rig n ty val sc)
+  toPTerm p (ILet fc lhsFC rig n ty val sc)
       = do imp <- showImplicits
            ty' <- if imp then toPTerm startPrec ty
                          else pure (PImplicit fc)
            val' <- toPTerm startPrec val
            sc' <- toPTerm startPrec sc
-           bracket p startPrec (PLet fc rig (PRef fc n)
+           bracket p startPrec (PLet fc rig (PRef lhsFC n)
                                      ty' val' sc' [])
   toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc

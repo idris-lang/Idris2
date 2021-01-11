@@ -27,7 +27,7 @@ mutual
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
        ILam : FC -> Count -> PiInfo TTImp -> Maybe Name ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-       ILet : FC -> Count -> Name ->
+       ILet : FC -> (lhsFC : FC) -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
        ICase : FC -> TTImp -> (ty : TTImp) ->

@@ -187,12 +187,11 @@ checkLet : {vars : _} ->
            {auto e : Ref EST (EState vars)} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
-           FC ->
-           RigCount -> (n : Name) ->
+           FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->
            (nTy : RawImp) -> (nVal : RawImp) -> (scope : RawImp) ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
-checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
+checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
     = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
@@ -231,6 +230,10 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          -- No need to 'checkExp' here - we've already checked scopet
          -- against the expected type when checking the scope, so just
          -- build the term directly
+
+         -- Add the lhs of the let to metadata
+         addNameType lhsFC n env tyv
+
          pure (Bind fc n (Let fc rigb valv tyv) scopev,
                gnf env (Bind fc n (Let fc rigb valv tyv) scopet))
   where
