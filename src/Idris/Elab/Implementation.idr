@@ -381,7 +381,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
              let mty_in = substNames vars upds' mty_in
-             let (upds, mty_in) = runState [] (renameIBinds impsp (findImplicits mty_in) mty_in)
+             let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type

@@ -149,6 +149,22 @@ public export
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
+||| Add an element at the end of the vector.
+||| The main use case for it is to get the expected type signature
+||| `Vect n a -> a -> Vect (S n) a` instead of
+||| `Vect n a -> a -> Vect (n + 1) a` which you get by using `++ [x]`
+|||
+||| Snoc gets its name by reversing `cons`, indicating we are
+||| tacking on the element at the end rather than the begining.
+||| `append` would also be a suitable name.
+|||
+||| @ xs The vector to be appended
+||| @ v The value to append
+public export
+snoc : (xs : Vect n a) -> (v : a) -> Vect (S n) a
+snoc [] v = [v]
+snoc (x :: xs) v = x :: snoc xs v
+
 ||| Repeate some value some number of times.
 |||
 ||| @ len the number of times to repeat it
