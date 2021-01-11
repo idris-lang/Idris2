@@ -115,9 +115,9 @@ pure1 : (1 x : a) -> L io {use=1} a
 pure1 = Pure1
 
 export
-(LinearBind io, HasIO io) => HasIO (L io) where
-  liftIO p = Action (liftIO p)
+(LinearBind io, HasLinearIO io) => HasLinearIO (L io) where
+  liftIO1 p = Action (liftIO1 p)
 
 public export
 LinearIO : (Type -> Type) -> Type
-LinearIO io = (LinearBind io, HasIO io)
+LinearIO io = (LinearBind io, HasLinearIO io)
