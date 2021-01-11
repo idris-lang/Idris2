@@ -126,7 +126,7 @@ mutual
   prettyDo (DoBind _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
     prettyTerm l <++> pretty "<-" <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
-  prettyDo (DoLet _ l rig _ tm) =
+  prettyDo (DoLet _ _ l rig _ tm) =
     let_ <++> prettyRig rig <+> pretty l <++> equals <++> prettyTerm tm
   prettyDo (DoLetPat _ l _ tm alts) =
     let_ <++> prettyTerm l <++> equals <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)

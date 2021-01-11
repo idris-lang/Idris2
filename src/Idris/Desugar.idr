@@ -436,12 +436,12 @@ mutual
                                (Implicit fc False)
                                (PatClause fc bpat rest'
                                   :: alts')))
-  expandDo side ps topfc ns (DoLet fc n rig ty tm :: rest)
+  expandDo side ps topfc ns (DoLet fc lhsFC n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
            rest' <- expandDo side ps topfc ns rest
-           let bind = ILet fc EmptyFC rig n ty' tm' rest'
+           let bind = ILet fc lhsFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
