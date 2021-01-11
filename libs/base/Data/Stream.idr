@@ -4,11 +4,6 @@ import Data.List
 
 %default total
 
-||| The first element of an infinite stream
-public export
-head : Stream a -> a
-head (x::xs) = x
-
 ||| Drop the first n elements from the stream
 ||| @ n how many elements to drop
 public export
