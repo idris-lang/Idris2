@@ -111,7 +111,7 @@ bindBangs : List (Name, FC, RawImp) -> RawImp -> RawImp
 bindBangs [] tm = tm
 bindBangs ((n, fc, btm) :: bs) tm
     = bindBangs bs $ IApp fc (IApp fc (IVar fc (UN ">>=")) btm)
-                          (ILam fc top Explicit (Just n)
+                          (ILam EmptyFC top Explicit (Just n)
                                 (Implicit fc False) tm)
 
 idiomise : FC -> RawImp -> RawImp
@@ -155,7 +155,7 @@ mutual
            then pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
                                     !(desugar side (n :: ps) scope)
-           else pure $ ILam fc rig !(traverse (desugar side ps) p)
+           else pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
@@ -168,7 +168,7 @@ mutual
                            Nothing !(desugarB side ps argTy)
                                    !(desugar side ps scope)
   desugarB side ps (PLam fc rig p pat argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
+      = pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
