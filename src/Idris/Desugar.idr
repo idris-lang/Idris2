@@ -157,7 +157,7 @@ mutual
                                     !(desugar side (n :: ps) scope)
            else pure $ ILam fc rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
-                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar side ps) p)
@@ -170,7 +170,7 @@ mutual
   desugarB side ps (PLam fc rig p pat argTy scope)
       = pure $ ILam fc rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
-                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
       = pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
