@@ -14,7 +14,7 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
   Nil  : Vect Z elem
   ||| A non-empty vector of length `S len`, consisting of a head element and
   ||| the rest of the list, of length `len`.
-  (::) : (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
+  (::) : (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
 
 -- Hints for interactive editing
 %name Vect xs,ys,zs,ws
@@ -79,7 +79,7 @@ init (x::y::ys) = x :: init (y::ys)
 
 ||| Extract the first `n` elements of a Vect.
 public export
-take : (1 n  : Nat)
+take : (n  : Nat)
     -> (  xs : Vect (n + m) type)
     -> Vect n type
 take 0 xs = Nil
@@ -101,7 +101,7 @@ index (FS k) (_::xs) = index k xs
 ||| insertAt 1 8 [1,2,3,4]
 ||| ```
 public export
-insertAt : (1 idx : Fin (S len)) -> (1 x : elem) -> (1 xs : Vect len elem) -> Vect (S len) elem
+insertAt : (idx : Fin (S len)) -> (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
 insertAt FZ     y xs      = y :: xs
 insertAt (FS k) y (x::xs) = x :: insertAt k y xs
 
@@ -145,7 +145,7 @@ updateAt (FS k) f (x::xs) = x :: updateAt k f xs
 ||| [1,2,3,4] ++ [5,6]
 ||| ```
 public export
-(++) : (1 xs : Vect m elem) -> (1 ys : Vect n elem) -> Vect (m + n) elem
+(++) : (xs : Vect m elem) -> (ys : Vect n elem) -> Vect (m + n) elem
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
@@ -207,9 +207,9 @@ merge = mergeBy compare
 ||| reverse [1,2,3,4]
 ||| ```
 public export
-reverse : (1 xs : Vect len elem) -> Vect len elem
+reverse : (xs : Vect len elem) -> Vect len elem
 reverse xs = go [] xs
-  where go : (1 _ : Vect n elem) -> (1 _ : Vect m elem) -> Vect (n+m) elem
+  where go : Vect n elem -> Vect m elem -> Vect (n+m) elem
         go {n}         acc []        = rewrite plusZeroRightNeutral n in acc
         go {n} {m=S m} acc (x :: xs) = rewrite sym $ plusSuccRightSucc n m
                                        in go (x::acc) xs
@@ -244,7 +244,7 @@ toVect (S k) (x :: xs)
 toVect _ _ = Nothing
 
 public export
-fromList' : (1 xs : Vect len elem) -> (1 l : List elem) -> Vect (length l + len) elem
+fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
 fromList' {len} ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
@@ -258,7 +258,7 @@ fromList' {len} ys (x::xs) =
 ||| fromList [1,2,3,4]
 ||| ```
 public export
-fromList : (1 l : List elem) -> Vect (length l) elem
+fromList : (xs : List elem) -> Vect (length xs) elem
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
@@ -281,23 +281,6 @@ zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
 zipWith f []      []      = []
 zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 
-||| Linear version
-public export
-lzipWith : (f : (1 _ : a) -> (1 _ : b) -> c)
-      -> (1 _ : Vect n a)
-      -> (1 _ : Vect n b)
-      -> Vect n c
-lzipWith _ [] [] = []
-lzipWith f (x::xs) (y::ys) = f x y :: lzipWith f xs ys
-
-||| Extensional correctness lemma
-export
-lzipWithSpec : (f : (1 _ : a) -> (1 _ : b) -> c)
-         -> (xs : Vect n a) -> (ys : Vect n b)
-         -> lzipWith f xs ys = zipWith f xs ys
-lzipWithSpec _ [] [] = Refl
-lzipWithSpec f (_::xs) (_::ys) = rewrite lzipWithSpec f xs ys in Refl
-
 ||| Combine three equal-length vectors into a vector with some function
 |||
 ||| ```idris example
@@ -314,7 +297,7 @@ zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
 ||| zip (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip : (1 xs : Vect n a) -> (1 ys : Vect n b) -> Vect n (a, b)
+zip : (xs : Vect n a) -> (ys : Vect n b) -> Vect n (a, b)
 zip []      []      = []
 zip (x::xs) (y::ys) = (x, y) :: zip xs ys
 
@@ -324,7 +307,7 @@ zip (x::xs) (y::ys) = (x, y) :: zip xs ys
 ||| zip3 (fromList [1,2,3,4]) (fromList [1,2,3,4]) (fromList [1,2,3,4])
 ||| ```
 public export
-zip3 : (1 xs : Vect n a) -> (1 ys : Vect n b) -> (1 zs : Vect n c) -> Vect n (a, b, c)
+zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
 zip3 []      []      []      = []
 zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 
@@ -334,7 +317,7 @@ zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 ||| unzip (fromList [(1,2), (1,2)])
 ||| ```
 public export
-unzip : (1 xs : Vect n (a, b)) -> (Vect n a, Vect n b)
+unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
 unzip []           = ([], [])
 unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
                      in (l::lefts, r::rights)
@@ -345,7 +328,7 @@ unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
 ||| unzip3 (fromList [(1,2,3), (1,2,3)])
 ||| ```
 public export
-unzip3 : (1 xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
+unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
 unzip3 []            = ([], [], [])
 unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
                        in (l::lefts, c::centers, r::rights)
@@ -436,7 +419,7 @@ implementation Foldable (Vect n) where
 ||| concat [[1,2,3], [4,5,6]]
 ||| ```
 public export
-concat : (1 xss : Vect m (Vect n elem)) -> Vect (m * n) elem
+concat : (xss : Vect m (Vect n elem)) -> Vect (m * n) elem
 concat []      = []
 concat (v::vs) = v ++ Vect.concat vs
 
@@ -810,7 +793,7 @@ vectToMaybe (x::xs) = Just x
 ||| catMaybes [Just 1, Just 2, Nothing, Nothing, Just 5]
 ||| ```
 public export
-catMaybes : (1 xs : Vect n (Maybe elem)) -> (p ** Vect p elem)
+catMaybes : (xs : Vect n (Maybe elem)) -> (p ** Vect p elem)
 catMaybes []             = (_ ** [])
 catMaybes (Nothing::xs)  = catMaybes xs
 catMaybes ((Just j)::xs) =
@@ -845,23 +828,9 @@ range {len=S _} = FZ :: map FS range
 ||| transpose [[1,2], [3,4], [5,6], [7,8]]
 ||| ```
 public export
-transpose : {n : _} -> (1 array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
+transpose : {n : _} -> (array : Vect m (Vect n elem)) -> Vect n (Vect m elem)
 transpose []        = replicate _ []                 -- = [| [] |]
-transpose (x :: xs) = lzipWith (::) x (transpose xs) -- = [| x :: xs |]
-
-||| A recursive (non-linear) implementation of transpose
-||| Easier for inductive reasoning
-public export
-transpose' : {n : Nat} -> (xss : Vect m (Vect n x)) -> Vect n (Vect m x)
-transpose' []          = replicate _ []
-transpose' (xs :: xss) = zipWith (::) xs (transpose' xss)
-
-||| Extensional correctness lemma
-export
-transposeSpec : {n : Nat} -> (xss : Vect m (Vect n x)) -> transpose xss = transpose' xss
-transposeSpec [] = Refl
-transposeSpec (y :: xs) = rewrite transposeSpec xs in
-                          lzipWithSpec (::) _ _
+transpose (x :: xs) = zipWith (::) x (transpose xs) -- = [| x :: xs |]
 
 --------------------------------------------------------------------------------
 -- Applicative/Monad/Traversable

@@ -46,7 +46,7 @@ checkDelay rig elabinfo nest env fc tm mexpected
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
          -- Can only check if we know the expected type already because we
          -- need to infer the delay reason

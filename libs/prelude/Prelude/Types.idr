@@ -43,21 +43,21 @@ integerToNat x
 ||| @ x the number to case-split on
 ||| @ y the other numberpublic export
 public export
-plus : (1 x : Nat) -> (1 y : Nat) -> Nat
+plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
 ||| Subtract natural numbers.  If the second number is larger than the first,
 ||| return 0.
 public export
-minus : (1 left : Nat) -> Nat -> Nat
+minus : (left : Nat) -> Nat -> Nat
 minus Z        right     = Z
 minus left     Z         = left
 minus (S left) (S right) = minus left right
 
 ||| Multiply natural numbers.
 public export
-mult : (1 x : Nat) -> Nat -> Nat
+mult : (x : Nat) -> Nat -> Nat
 mult Z y = Z
 mult (S k) y = plus y (mult k y)
 
@@ -119,7 +119,7 @@ data Maybe : (ty : Type) -> Type where
   Nothing : Maybe ty
 
   ||| A value of type `ty` is stored
-  Just : (1 x : ty) -> Maybe ty
+  Just : (x : ty) -> Maybe ty
 
 public export
 Uninhabited (Nothing = Just x) where
@@ -219,10 +219,10 @@ export Uninhabited (No p === Yes q) where uninhabited eq impossible
 public export
 data Either : (a : Type) -> (b : Type) -> Type where
   ||| One possibility of the sum, conventionally used to represent errors.
-  Left : forall a, b. (1 x : a) -> Either a b
+  Left : forall a, b. (x : a) -> Either a b
 
   ||| The other possibility, conventionally used to represent success.
-  Right : forall a, b. (1 x : b) -> Either a b
+  Right : forall a, b. (x : b) -> Either a b
 
 export Uninhabited (Left p === Right q) where uninhabited eq impossible
 export Uninhabited (Right p === Left q) where uninhabited eq impossible
@@ -320,7 +320,7 @@ Ord a => Ord (List a) where
 
 namespace List
   public export
-  (++) : (1 xs, ys : List a) -> List a
+  (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
@@ -406,7 +406,7 @@ tail (x :: xs) = xs
 ||| @ n how many elements to take
 ||| @ xs the stream
 public export
-take : (1 n : Nat) -> (xs : Stream a) -> List a
+take : (n : Nat) -> (xs : Stream a) -> List a
 take Z xs = []
 take (S k) (x :: xs) = x :: take k xs
 
@@ -416,7 +416,7 @@ take (S k) (x :: xs) = x :: take k xs
 
 namespace Strings
   public export
-  (++) : (1 x : String) -> (1 y : String) -> String
+  (++) : (x : String) -> (y : String) -> String
   x ++ y = prim__strAppend x y
 
   ||| Returns the length of the string.

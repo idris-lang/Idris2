@@ -8,7 +8,7 @@ module Data.List.Lazy
 public export
 data LazyList : Type -> Type where
   Nil : LazyList a
-  (::) : (1 x : a) -> (1 xs : Lazy (LazyList a)) -> LazyList a
+  (::) : (x : a) -> (xs : Lazy (LazyList a)) -> LazyList a
 
 --- Interface implementations ---
 

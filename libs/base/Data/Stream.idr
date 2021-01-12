@@ -119,6 +119,6 @@ Monad Stream where
 -- Properties
 --------------------------------------------------------------------------------
 
-lengthTake : (1 n : Nat) -> (xs : Stream a) -> length (take n xs) = n
+lengthTake : (n : Nat) -> (xs : Stream a) -> length (take n xs) = n
 lengthTake Z _ = Refl
 lengthTake (S n) (x :: xs) = cong S (lengthTake n xs)

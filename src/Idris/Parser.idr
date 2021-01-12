@@ -846,14 +846,14 @@ mutual
 mkTyConType : FC -> List Name -> PTerm
 mkTyConType fc [] = PType fc
 mkTyConType fc (x :: xs)
-   = PPi fc linear Explicit Nothing (PType fc) (mkTyConType fc xs)
+   = PPi fc top Explicit Nothing (PType fc) (mkTyConType fc xs)
 
 mkDataConType : FC -> PTerm -> List ArgType -> Maybe PTerm
 mkDataConType fc ret [] = Just ret
 mkDataConType fc ret (UnnamedExpArg x :: xs)
-    = PPi fc linear Explicit Nothing x <$> mkDataConType fc ret xs
+    = PPi fc top Explicit Nothing x <$> mkDataConType fc ret xs
 mkDataConType fc ret (UnnamedAutoArg x :: xs)
-    = PPi fc linear AutoImplicit Nothing x <$> mkDataConType fc ret xs
+    = PPi fc top AutoImplicit Nothing x <$> mkDataConType fc ret xs
 mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
     = Nothing
 
@@ -1274,8 +1274,7 @@ fieldDecl fname indents
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p
         = do b <- bounds (do m <- multiplicity
-                             rigin <- getMult m
-                             let rig = if isErased rigin then erased else linear
+                             rig <- getMult m
                              ns <- sepBy1 (symbol ",") name
                              symbol ":"
                              ty <- expr pdef fname indents

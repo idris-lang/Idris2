@@ -15,7 +15,7 @@ Command-line options changes:
   provided.  An explicit `0` has the effect of simulating a terminal with
   unbounded width.
 
-Compiler changes:
+Language and compiler changes:
 
 * Added new syntax for named applications and the bind-all-explicits pattern:
 
@@ -31,6 +31,14 @@ Compiler changes:
   boundaries to the AST nodes `FC`.
 * New experimental ``refc`` code generator, which generates C with reference
   counting.
+* `%hint` annotations one local definitions (in `let` or `where` blocks) now
+  work, meaning that local definitions can be searched in auto implicit search.
+* Local implementations of interfaces now work.
+* Removed multiplicity subtyping, as this appears to be unsound and causes more
+  problems than it solves. Unfortunately, this means you sometimes now need to
+  write linear versions of functions as special cases. (Though note that the 1
+  multiplicity is still considered experimental, so hopefully this will change
+  for the better in the future!)
 
 REPL/IDE mode changes:
 

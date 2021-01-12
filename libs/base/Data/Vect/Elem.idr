@@ -34,13 +34,13 @@ isElem x (y::xs) with (decEq x y)
     isElem x (y::xs) | (No xneqy) | (No xninxs) = No (neitherHereNorThere xneqy xninxs)
 
 public export
-replaceElem : (xs : Vect k t) -> (1 _ : Elem x xs) -> (y : t) -> (ys : Vect k t ** Elem y ys)
+replaceElem : (xs : Vect k t) -> Elem x xs -> (y : t) -> (ys : Vect k t ** Elem y ys)
 replaceElem (x::xs) Here y = (y :: xs ** Here)
 replaceElem (x::xs) (There xinxs) y with (replaceElem xs xinxs y)
   replaceElem (x::xs) (There xinxs) y | (ys ** yinys) = (x :: ys ** There yinys)
 
 public export
-replaceByElem : (xs : Vect k t) -> (1 _ : Elem x xs) -> t -> Vect k t
+replaceByElem : (xs : Vect k t) -> Elem x xs -> t -> Vect k t
 replaceByElem (x::xs)  Here         y = y :: xs
 replaceByElem (x::xs) (There xinxs) y = x :: replaceByElem xs xinxs y
 
@@ -55,13 +55,13 @@ mapElem (There e) = There (mapElem e)
 ||| @xs The vector to be removed from
 ||| @p A proof that the element to be removed is in the vector
 public export
-dropElem : {k : _} -> (xs : Vect (S k) t) -> (1 _ : Elem x xs) -> Vect k t
+dropElem : {k : _} -> (xs : Vect (S k) t) -> Elem x xs -> Vect k t
 dropElem           (x::ys)  Here         = ys
 dropElem {k = S k} (x::ys) (There later) = x :: dropElem ys later
 
 ||| Erase the indices, returning the bounded numeric position of the element
 public export
-elemToFin : {0 xs : Vect n a} -> (1 _ : Elem x xs) -> Fin n
+elemToFin : {0 xs : Vect n a} -> Elem x xs -> Fin n
 elemToFin  Here     = FZ
 elemToFin (There p) = FS (elemToFin p)
 

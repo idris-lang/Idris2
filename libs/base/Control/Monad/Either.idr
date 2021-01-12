@@ -19,7 +19,7 @@ import Control.Monad.State
 
 public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
-  MkEitherT : (1 _ : m (Either e a)) -> EitherT e m a
+  MkEitherT : m (Either e a) -> EitherT e m a
 
 export
 %inline
