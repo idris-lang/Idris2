@@ -27,6 +27,9 @@ idris2docs_venv
 /tests/**/*.dll
 /tests/build/exec
 
+/benchmark/**/build
+/benchmark/*.csv
+
 /src/IdrisPaths.idr
 
 /bootstrap/bin/
