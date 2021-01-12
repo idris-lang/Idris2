@@ -168,17 +168,23 @@ natToFinToNat (S k) (LTESucc lte) = rewrite natToFinToNat k lte in Refl
 --- Result-type changing arithmetics ---
 ----------------------------------------
 
+||| Addition of `Fin`s as bounded naturals.
+||| The resulting type has the smallest possible bound which is illustated by relations with the `last` function.
 public export
 (+) : {a : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a + b)
 (+) FZ y = rewrite plusCommutative a b in weakenN a y
 (+) (FS x) y {a=S _} = FS $ x + y
 
+||| Multiplication of `Fin`s as bounded naturals.
+||| The resulting type has the smallest possible bound which is illustated by relations with the `last` function.
 public export
 (*) : {a, b : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a * b)
 (*) FZ _ = FZ
 (*) (FS x) y {a=S i} = y + x * y
 
 --- Properties ---
+
+-- Relations of `+` and `*` to `finToNat` and same operations of `Nat`s
 
 export
 finToNat_plus_linearity : {a : Nat} -> (x : Fin $ S a) -> (y : Fin $ S b) -> finToNat (x + y) = finToNat x + finToNat y
@@ -192,6 +198,8 @@ finToNat_mult_linearity (FS x) y {a=S i} = rewrite finToNat_plus_linearity y (x 
                                            rewrite finToNat_mult_linearity x y in
                                            Refl
 
+-- Relations to `Fin`'s `last`
+
 export
 plus_preserves_last : (a, b : Nat) -> Fin.last {n=a} + Fin.last {n=b} = Fin.last
 plus_preserves_last Z     b = rewrite weakenNZero_preserves $ Fin.last {n=b} in Refl
@@ -202,12 +210,16 @@ mult_preserves_last : (a, b : Nat) -> Fin.last {n=a} * Fin.last {n=b} = Fin.last
 mult_preserves_last Z     b = Refl
 mult_preserves_last (S k) b = rewrite mult_preserves_last k b in plus_preserves_last _ _
 
+-- General addition properties
+
 export
 plusSuccRightSucc : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> FS (left + right) = rewrite plusSuccRightSucc a b in left + FS right
 plusSuccRightSucc FZ     right         = rewrite plusCommutative a b in Refl
 plusSuccRightSucc (FS x) right {a=S i} = rewrite plusSuccRightSucc x right in
                                          rewrite plusSuccRightSucc i b in
                                          Refl
+
+-- Relations to `Fin`-specific `shift` and `weaken`
 
 export
 shiftAsPlus : {a, b : Nat} -> (x : Fin $ S a) -> shift b x = rewrite sym $ plusSuccRightSucc b a in last {n=b} + x
@@ -244,6 +256,8 @@ weakenNOfPlus n (FS x) y {a=S i} = rewrite weakenNOfPlus n x y in
                                    rewrite plusAssociative i b n in
                                    Refl
 
+-- General addition properties (continued)
+
 export
 plusCommutative : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> left + right = rewrite plusCommutative a b in right + left
 plusCommutative FZ     right = rewrite plusCommutative a b in weakenNAsPlusFZ {a} right
@@ -266,22 +280,34 @@ plusAssociative (FS x) centre right {a=S i} = rewrite plusAssociative x centre r
 --- Splitting operations and their properties ---
 -------------------------------------------------
 
+||| Converts `Fin`s that are used as indexes of parts to an index of a sum.
+|||
+||| For example, if you have a `Vect` that is a concatenation of two `Vect`s and
+||| you have an index either in the first or the second of the original `Vect`s,
+||| using this function you can get an index in the concatenated one.
 public export
 indexSum : {a : Nat} -> Either (Fin a) (Fin b) -> Fin (a + b)
 indexSum $ Left  l = weakenN b l
 indexSum $ Right r = shift a r
 
+||| Extracts an index of the first or the second part from the index of a sum.
+|||
+||| For example, if you have a `Vect` that is a concatenation of the `Vect`s and
+||| you have an index of this `Vect`, you have get an index of either left or right
+||| original `Vect` using this function.
 public export
 splitSum : {a : Nat} -> Fin (a + b) -> Either (Fin a) (Fin b)
 splitSum {a=Z}   x      = Right x
 splitSum {a=S k} FZ     = Left FZ
 splitSum {a=S k} (FS x) = mapFst FS $ splitSum x
 
+||| Calculates the index of a square matrix of size `a * b` by indices of each side.
 public export
 indexProd : {b : Nat} -> Fin a -> Fin b -> Fin (a * b)
 indexProd FZ     = weakenN $ mult (pred a) b
 indexProd (FS x) = shift b . indexProd x
 
+||| Splits the index of a square matrix of size `a * b` to indices of each side.
 public export
 splitProd : {a, b : Nat} -> Fin (a * b) -> (Fin a, Fin b)
 splitProd {a=S _} x = case splitSum x of
