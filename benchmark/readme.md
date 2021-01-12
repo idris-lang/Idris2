@@ -29,4 +29,4 @@ Usage: bench.sh [OPTION]...
         (default is `bench-results_$BACKEND[_fast]`)
    -h   shows this message
 
-e.g. `bench -fbc refc -o myrefcoutput`
+e.g. `./bench.sh -fbc refc -o myrefcoutput`
