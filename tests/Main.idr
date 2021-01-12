@@ -111,7 +111,8 @@ idrisTestsRegression = MkTestPool []
        "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
-       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035"]
+       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
+       "reg036"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool []
@@ -144,6 +145,13 @@ idrisTests = MkTestPool []
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009",
+       -- Miscellaneous regressions
+       "reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
+       "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
+       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
+       "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
+       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
+       "reg036",
        -- Totality checking
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
