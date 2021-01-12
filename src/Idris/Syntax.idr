@@ -570,7 +570,7 @@ mutual
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
-    showPrec d (PQuoteName _ n) = "`{{" ++ showPrec d n ++ "}}"
+    showPrec d (PQuoteName _ n) = "`{" ++ showPrec d n ++ "}"
     showPrec d (PQuoteDecl _ tm) = "`[ <<declaration>> ]"
     showPrec d (PUnquote _ tm) = "~(" ++ showPrec d tm ++ ")"
     showPrec d (PRunElab _ tm) = "%runElab " ++ showPrec d tm
