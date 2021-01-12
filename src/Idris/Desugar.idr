@@ -416,11 +416,11 @@ mutual
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                           (ILam fc top Explicit Nothing
                                 ty rest')
-  expandDo side ps topfc ns (DoBind fc n tm :: rest)
+  expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc ns rest
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
-                     (ILam fc top Explicit (Just n)
+                     (ILam nameFC top Explicit (Just n)
                            (Implicit fc False) rest')
   expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat

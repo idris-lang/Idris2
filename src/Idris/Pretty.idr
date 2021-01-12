@@ -123,7 +123,7 @@ mutual
 
   prettyDo : PDo -> Doc IdrisAnn
   prettyDo (DoExp _ tm) = prettyTerm tm
-  prettyDo (DoBind _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
+  prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
     prettyTerm l <++> pretty "<-" <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
   prettyDo (DoLet _ _ l rig _ tm) =

@@ -166,7 +166,7 @@ mutual
   public export
   data PDo : Type where
        DoExp : FC -> PTerm -> PDo
-       DoBind : FC -> Name -> PTerm -> PDo
+       DoBind : FC -> (nameFC : FC) -> Name -> PTerm -> PDo
        DoBindPat : FC -> PTerm -> PTerm -> List PClause -> PDo
        DoLet : FC -> (lhs : FC) -> Name -> RigCount -> PTerm -> PTerm -> PDo
        DoLetPat : FC -> PTerm -> PTerm -> PTerm -> List PClause -> PDo
@@ -176,7 +176,7 @@ mutual
   export
   getLoc : PDo -> FC
   getLoc (DoExp fc _) = fc
-  getLoc (DoBind fc _ _) = fc
+  getLoc (DoBind fc _ _ _) = fc
   getLoc (DoBindPat fc _ _ _) = fc
   getLoc (DoLet fc _ _ _ _ _) = fc
   getLoc (DoLetPat fc _ _ _ _) = fc
@@ -477,7 +477,7 @@ mutual
 
   showDo : PDo -> String
   showDo (DoExp _ tm) = show tm
-  showDo (DoBind _ n tm) = show n ++ " <- " ++ show tm
+  showDo (DoBind _ _ n tm) = show n ++ " <- " ++ show tm
   showDo (DoBindPat _ l tm alts)
       = show l ++ " <- " ++ show tm ++ concatMap showAlt alts
   showDo (DoLet _ _ l rig _ tm) = "let " ++ show l ++ " = " ++ show tm
@@ -933,7 +933,7 @@ mapPTermM f = goPTerm where
 
     goPDo : PDo -> Core PDo
     goPDo (DoExp fc t) = DoExp fc <$> goPTerm t
-    goPDo (DoBind fc n t) = DoBind fc n <$> goPTerm t
+    goPDo (DoBind fc nameFC n t) = DoBind fc nameFC n <$> goPTerm t
     goPDo (DoBindPat fc t u cls) =
       DoBindPat fc <$> goPTerm t
                    <*> goPTerm u

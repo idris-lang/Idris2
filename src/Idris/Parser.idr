@@ -691,16 +691,16 @@ mutual
 
   doAct : FileName -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do n <- name
+      = do b <- bounds (do n <- bounds name
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail
-                           validPatternVar n
+                           validPatternVar n.val
                            symbol "<-"
                            val <- expr pdef fname indents
                            pure (n, val))
            atEnd indents
            (n, val) <- pure b.val
-           pure [DoBind (boundToFC fname b) n val]
+           pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val val]
     <|> do keyword "let"
            commit
            res <- nonEmptyBlock (letBlock fname)
