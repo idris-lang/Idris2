@@ -109,7 +109,7 @@ Show Volume where
   show (UNC server share) = "\\\\" ++ server ++ "\\" ++ share
   show (Disk disk) = Strings.singleton disk ++ ":"
 
-||| Display the path in the format of this platform.
+||| Displays the path in the format of this platform.
 export
 Show Path where
   show path = 
@@ -245,7 +245,7 @@ parsePath =
                 (x::xs) => x :: delete CurDir xs
     pure $ MkPath vol (isJust root) body (isJust trailSep)
 
-||| Parse a String into Path.
+||| Parses a String into Path.
 |||
 ||| The string is parsed as much as possible from left to right, and the invalid 
 ||| parts on the right is ignored.
@@ -390,7 +390,7 @@ export
 (</>) : (left : String) -> (right : String) -> String
 (</>) left right = show $ append' (parse left) (parse right)
 
-||| Join path components into one.
+||| Joins path components into one.
 |||
 ||| ```idris example
 ||| joinPath ["/usr", "local/etc"] == "/usr/local/etc"
@@ -399,7 +399,7 @@ export
 joinPath : List String -> String
 joinPath xs = foldl (</>) "" xs
 
-||| Split path into components.
+||| Splits path into components.
 |||
 ||| ```idris example
 ||| splitPath "/usr/local/etc" == ["/", "usr", "local", "etc"]
@@ -409,7 +409,7 @@ export
 splitPath : String -> List String
 splitPath = map show . splitPath' . parse
 
-||| Split the path into parent and child.
+||| Splits the path into parent and child.
 |||
 ||| ```idris example
 ||| splitParent "/usr/local/etc" == Just ("/usr/local", "etc")
@@ -421,14 +421,14 @@ splitParent path =
     (parent, child) <- splitParent' (parse path)
     pure (show parent, show child)
 
-||| Return the path without its final component, if there is one.
+||| Returns the path without its final component, if there is one.
 |||
 ||| Returns Nothing if the path terminates by a root or volume.
 export
 parent : String -> Maybe String
 parent = map show . parent' . parse 
 
-||| Return the list of all parents of the path, longest first, self included.
+||| Returns the list of all parents of the path, longest first, self included.
 |||
 ||| ```idris example
 ||| parents "/etc/kernel" == ["/etc/kernel", "/etc", "/"]
@@ -437,7 +437,7 @@ export
 parents : String -> List String
 parents = map show . List.iterate parent' . parse
 
-||| Determine whether the base is one of the parents of target.
+||| Determines whether the base is one of the parents of target.
 |||
 ||| Trailing separator is ignored.
 |||
@@ -455,7 +455,7 @@ isBaseOf base target =
     && baseRoot == targetRoot
     && (baseBody `isPrefixOf` targetBody)
 
-||| Return a path that, when appended to base, yields target.
+||| Returns a path that, when appended to base, yields target.
 |||
 ||| Returns Nothing if the base is not a prefix of the target.
 export
@@ -483,7 +483,7 @@ export
 fileName : String -> Maybe String
 fileName  = fileName' . parse
 
-||| Extract the file name in the path without extension.
+||| Extracts the file name in the path without extension.
 |||
 ||| The stem is:
 |||
@@ -495,7 +495,7 @@ export
 fileStem : String -> Maybe String
 fileStem path = pure $ fst $ splitFileName !(fileName path)
 
-||| Extract the extension of the file name in the path.
+||| Extracts the extension of the file name in the path.
 |||
 ||| The extension is:
 |||
@@ -507,7 +507,7 @@ export
 extension : String -> Maybe String
 extension path = pure $ snd $ splitFileName !(fileName path)
 
-||| Update the file name in the path.
+||| Updates the file name in the path.
 |||
 ||| If there is no file name, it appends the name to the path;
 ||| otherwise, it appends the name to the parent of the path.
@@ -515,7 +515,7 @@ export
 setFileName : (name : String) -> String -> String
 setFileName name path = show $ setFileName' name (parse path)
 
-||| Append a extension to the path.
+||| Appends a extension to the path.
 |||
 ||| If there is no file name, the path will not change;
 ||| if the path has no extension, the extension will be appended;
@@ -539,7 +539,7 @@ export
           show $ setFileName' (stem ++ ext) path'
       Nothing => path
 
-||| Drop the extension of the path.
+||| Drops the extension of the path.
 export
 dropExtension : String -> String
 dropExtension path = path <.> ""
