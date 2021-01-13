@@ -322,7 +322,7 @@ splitParent' path =
         Just (parent, child)
 
 parent' : Path -> Maybe Path
-parent' path = map fst (splitParent' path) 
+parent' = map fst . splitParent'
 
 fileName' : Path -> Maybe String
 fileName' path =
@@ -362,7 +362,7 @@ splitFileName name =
 |||   and `\temp` are not.
 export
 isAbsolute : String -> Bool
-isAbsolute path = isAbsolute' (parse path)
+isAbsolute = isAbsolute' . parse
 
 ||| Returns true if the path is relative.
 export
@@ -403,7 +403,7 @@ joinPath xs = foldl (</>) "" xs
 ||| ```
 export
 splitPath : String -> List String
-splitPath path = map show $ splitPath' (parse path)
+splitPath = map show . splitPath' . parse
 
 ||| Split the path into parent and child.
 |||
@@ -422,7 +422,7 @@ splitParent path =
 ||| Returns Nothing if the path terminates by a root or volume.
 export
 parent : String -> Maybe String
-parent path = map show $ parent' (parse path)
+parent = map show . parent' . parse 
 
 ||| Return the list of all parents of the path, longest first, self included.
 |||
@@ -431,7 +431,7 @@ parent path = map show $ parent' (parse path)
 ||| ```
 export
 parents : String -> List String
-parents path = map show $ List.iterate parent' (parse path)
+parents = map show . List.iterate parent' . parse
 
 ||| Determine whether the base is one of the parents of target.
 |||
@@ -451,7 +451,7 @@ isBaseOf base target =
     && baseRoot == targetRoot
     && (baseBody `isPrefixOf` targetBody)
 
-||| Return a path that, when appends to base, yields target.
+||| Return a path that, when appended to base, yields target.
 |||
 ||| Returns Nothing if the base is not a prefix of the target.
 export
@@ -477,7 +477,7 @@ dropBase base target =
 ||| if it's "..", returns Nothing.
 export
 fileName : String -> Maybe String
-fileName path = fileName' (parse path)
+fileName  = fileName' . parse
 
 ||| Extract the file name in the path without extension.
 |||
