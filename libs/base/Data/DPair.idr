@@ -16,10 +16,10 @@ namespace Exists
   ||| @type The type of the type-level value in the proof.
   ||| @this The dependent type that requires an instance of `type`.
   public export
-  data Exists : (this : type -> Type) -> Type where
-    Evidence : (0 value : type)
-            -> (prf : this value)
-            -> Exists this
+  record Exists {0 type : _} this where
+    constructor Evidence
+    0 value : type
+    prf : this value
 
   ||| Return the type-level value (evidence) required by the dependent type.
   |||
@@ -60,13 +60,10 @@ namespace Subset
   ||| @type The type-level value's type.
   ||| @pred The dependent type that requires an instance of `type`.
   public export
-  data Subset : (type : Type)
-             -> (pred : type -> Type)
-             -> Type
-    where
-      Element : (value : type)
-             -> (0 prf : pred value)
-             -> Subset type pred
+  record Subset type pred where
+    constructor Element
+    value : type
+    0 prf : pred value
 
   ||| Return the type-level value (evidence) required by the dependent type.
   |||
