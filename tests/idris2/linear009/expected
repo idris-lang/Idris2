@@ -7,7 +7,7 @@ Main>  0 m : Nat
  1 zs : Vect (S k) a
    ys : Vect m a
  0 n : Nat
--------------------------------------
+------------------------------
 foo : Vect (S (S (plus k m))) a
 Main>  0 m : Nat
  0 a : Type
@@ -16,7 +16,7 @@ Main>  0 m : Nat
  1 zs : Vect k a
  0 xs : Vect (S k) a
  0 n : Nat
--------------------------------------
+------------------------------
 bar : Vect (S (plus k m)) a
 Main>  0 m : Nat
  0 a : Type
@@ -26,6 +26,6 @@ Main>  0 m : Nat
  0 xs : Vect (S k) a
  0 n : Nat
  1 ts : Vect k a
--------------------------------------
+------------------------------
 baz : Vect (S (plus k m)) a
 Main> Bye for now!

@@ -8,3 +8,4 @@ readme = "README.md"
 
 modules = Top.Dummy
 sourcedir = "src"
+opts = "--no-color --console-width 0"

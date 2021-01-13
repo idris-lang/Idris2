@@ -1,13 +1,18 @@
 1/3: Building Nat (Nat.idr)
 2/3: Building Mult (Mult.idr)
 3/3: Building Test (Test.idr)
-Test.idr:5:9--5:12:While processing type of thing at Test.idr:5:1--5:19:
-Undefined name Nat at:
-5	thing : Nat -> Nat
-	        ^^^
+Error: While processing type of thing. Undefined name Nat. 
 
-Test.idr:6:1--8:1:No type declaration for Test.thing at:
-6	thing x = mult x (plus x x)
-7	
+Test.idr:5:9--5:12
+   |
+ 5 | thing : Nat -> Nat
+   |         ^^^
+
+Error: No type declaration for Test.thing.
+
+Test.idr:6:1--6:28
+   |
+ 6 | thing x = mult x (plus x x)
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Test> Bye for now!

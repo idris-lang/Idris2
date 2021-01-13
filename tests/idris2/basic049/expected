@@ -1,0 +1,15 @@
+1/1: Building Fld (Fld.idr)
+Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
+    Main.R2.MkR
+    Main.R1.MkR Type
+
+Fld.idr:72:26--72:29
+    |
+ 72 | r2_shouldNotTypecheck1 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
+    |                          ^^^
+
+Main> Main.myDog : OrdinaryDog
+Main> Main.mySuperDog : SuperDog
+Main> Main.other : Other String
+Main> 1 hole: Main.r2_shouldNotTypecheck1
+Main> Bye for now!

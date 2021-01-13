@@ -6,6 +6,7 @@ import Compiler.Inline
 import Compiler.Scheme.Common
 
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.Options
@@ -30,7 +31,7 @@ import System.Info
 pathLookup : IO String
 pathLookup
     = do path <- getEnv "PATH"
-         let pathList = List1.toList $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
          e <- firstExists candidates
@@ -155,6 +156,9 @@ mutual
       = do p' <- schExp chezExtPrim chezString 0 p
            c' <- schExp chezExtPrim chezString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  chezExtPrim i MakeFuture [_, work]
+      = do work' <- schExp chezExtPrim chezString 0 work
+           pure $ "(blodwen-make-future " ++ work' ++ ")"
   chezExtPrim i prim args
       = schExtCommon chezExtPrim chezString i prim args
 
@@ -167,7 +171,10 @@ data Structs : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
-cftySpec fc CFUnsigned = pure "unsigned"
+cftySpec fc CFUnsigned8 = pure "unsigned-8"
+cftySpec fc CFUnsigned16 = pure "unsigned-16"
+cftySpec fc CFUnsigned32 = pure "unsigned-32"
+cftySpec fc CFUnsigned64 = pure "unsigned-64"
 cftySpec fc CFString = pure "string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
@@ -266,11 +273,13 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC appdir fc [] args ret = throw (NoForeignCC fc)
 useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC appdir fc ccs args ret
+           Just ("scheme,chez", [sfn]) =>
+               do body <- schemeCall fc sfn (map fst args) ret
+                  pure ("", body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -341,7 +350,7 @@ startChez appdir target = unlines
     , "        ;;                    "
     , "esac                          "
     , ""
-    , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
+    , "export LD_LIBRARY_PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
 
@@ -382,8 +391,9 @@ compileToSS c appdir tm outfile
          main <- schExp chezExtPrim chezString 0 ctm
          chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
+         extraRuntime <- getExtraRuntime ds
          let scm = schHeader chez (map snd libs) ++
-                   support ++ code ++
+                   support ++ extraRuntime ++ code ++
                    concat (map fst fgndefs) ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
                    main ++ schFooter

@@ -1,6 +1,12 @@
 module Core.FC
 
+import Text.Bounded
+import Text.PrettyPrint.Prettyprinter
+
 %default total
+
+------------------------------------------------------------------------
+-- Types
 
 public export
 FilePos : Type
@@ -18,11 +24,8 @@ public export
 data FC = MkFC FileName FilePos FilePos
         | EmptyFC
 
-export
-Eq FC where
-  (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
-  (==) EmptyFC EmptyFC = True
-  (==) _ _ = False
+------------------------------------------------------------------------
+-- Projections
 
 export
 file : FC -> FileName
@@ -38,6 +41,16 @@ export
 endPos : FC -> FilePos
 endPos (MkFC _ _ e) = e
 endPos EmptyFC = (0, 0)
+
+------------------------------------------------------------------------
+-- Smart constructor
+
+export
+boundToFC : FileName -> WithBounds t -> FC
+boundToFC fname b = MkFC fname (start b) (end b)
+
+------------------------------------------------------------------------
+-- Predicates
 
 -- Return whether a given file position is within the file context (assuming we're
 -- in the right file)
@@ -55,6 +68,9 @@ onLine x (MkFC _ start end)
    = x >= fst start && x <= fst end
 onLine _ _ = False
 
+------------------------------------------------------------------------
+-- Constant values
+
 export
 emptyFC : FC
 emptyFC = EmptyFC
@@ -63,7 +79,27 @@ export
 toplevelFC : FC
 toplevelFC = MkFC "(toplevel)" (0, 0) (0, 0)
 
+------------------------------------------------------------------------
+-- Basic operations
+export
+mergeFC : FC -> FC -> Maybe FC
+mergeFC (MkFC fname1 start1 end1) (MkFC fname2 start2 end2) = 
+  if fname1 == fname2
+  then Just $ MkFC fname1 (min start1 start2) (max end1 end2)
+  else Nothing
+mergeFC _ _ = Nothing
+
+
 %name FC fc
+
+------------------------------------------------------------------------
+-- Instances
+
+export
+Eq FC where
+  (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
+  (==) EmptyFC EmptyFC = True
+  (==) _ _ = False
 
 export
 Show FC where
@@ -71,4 +107,11 @@ Show FC where
              showPos (startPos loc) ++ "--" ++
              showPos (endPos loc)
 
-
+export
+Pretty FC where
+  pretty loc = pretty (file loc) <+> colon
+                 <+> prettyPos (startPos loc) <+> pretty "--"
+                 <+> prettyPos (endPos loc)
+    where
+      prettyPos : FilePos -> Doc ann
+      prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)

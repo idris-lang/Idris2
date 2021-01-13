@@ -1,6 +1,8 @@
 1/1: Building void (void.idr)
-void.idr:18:19--18:20:While processing left hand side of Calc at void.idr:18:1--20:1:
-Can't match on ?y [no locals in scope] (Non linear pattern variable) at
-18	Calc {y} ((~~) {z=y} {y=y} der (MkDPair y Refl)) = Calc der
-	                  ^
+Error: While processing left hand side of Calc. Can't match on ?y [no locals in scope] (Non linear pattern variable).
+
+void.idr:18:19--18:20
+    |
+ 18 | Calc {y} ((~~) {z=y} {y=y} der (MkDPair y Refl)) = Calc der
+    |                   ^
 

@@ -1,6 +1,8 @@
 module TTImp.ProcessData
 
 import Core.Context
+import Core.Context.Data
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Hash
@@ -37,7 +39,7 @@ processDataOpt fc ndef NoNewtype
 checkRetType : {auto c : Ref Ctxt Defs} ->
                Env Term vars -> NF vars ->
                (NF vars -> Core ()) -> Core ()
-checkRetType env (NBind fc x (Pi _ _ ty) sc) chk
+checkRetType env (NBind fc x (Pi _ _ _ ty) sc) chk
     = do defs <- get Ctxt
          checkRetType env !(sc defs (toClosure defaultOpts env (Erased fc False))) chk
 checkRetType env nf chk = chk nf
@@ -72,7 +74,8 @@ updateNS orig ns tm = updateNSApp tm
              then IVar fc ns
              else IVar fc n
     updateNSApp (IApp fc f arg) = IApp fc (updateNSApp f) arg
-    updateNSApp (IImplicitApp fc f n arg) = IImplicitApp fc (updateNSApp f) n arg
+    updateNSApp (IAutoApp fc f arg) = IAutoApp fc (updateNSApp f) arg
+    updateNSApp (INamedApp fc f n arg) = INamedApp fc (updateNSApp f) n arg
     updateNSApp t = t
 
 checkCon : {vars : _} ->
@@ -85,8 +88,8 @@ checkCon : {vars : _} ->
 checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
     = do cn <- inCurrentNS cn_in
          let ty_raw = updateNS tn_in tn ty_raw
-         log 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
-         log 10 $ "Updated " ++ show (tn_in, tn)
+         log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
+         log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
 
          defs <- get Ctxt
          -- Check 'cn' is undefined
@@ -101,11 +104,11 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
          -- Check 'ty' returns something in the right family
          checkFamily fc cn tn env !(nf defs env ty)
          let fullty = abstractEnvType fc env ty
-         logTermNF 5 ("Constructor " ++ show cn) [] fullty
+         logTermNF "declare.data.constructor" 5 ("Constructor " ++ show cn) [] fullty
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave cn
-         log 10 $ "Saving from " ++ show cn ++ ": " ++ show (keys (getMetas ty))
+         log "declare.data.constructor" 10 $ "Saving from " ++ show cn ++ ": " ++ show (keys (getMetas ty))
 
          case vis of
               Public => do addHashWithNames cn
@@ -126,7 +129,7 @@ getIndexPats tm
          getPats defs ret
   where
     getRetType : Defs -> NF [] -> Core (NF [])
-    getRetType defs (NBind fc _ (Pi _ _ _) sc)
+    getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
         = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              getRetType defs sc'
     getRetType defs t = pure t
@@ -201,7 +204,7 @@ getDetags fc tys
 -- If exactly one argument is unerased, return its position
 getRelevantArg : Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
                  Core (Maybe (Bool, Nat))
-getRelevantArg defs i rel world (NBind fc _ (Pi rig _ val) sc)
+getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
                               !(sc defs (toClosure defaultOpts [] (Erased fc False))))
                  (case val of
@@ -261,7 +264,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc))
          let fullty = abstractEnvType dfc env ty
-         logTermNF 5 ("data " ++ show n) [] fullty
+         logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
          checkIsType fc n env !(nf defs env ty)
          arity <- getArity defs [] fullty
@@ -275,7 +278,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
-         log 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
+         log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          case vis of
               Private => pure ()
@@ -286,7 +289,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
     = do n <- inCurrentNS n_in
          ty_raw <- bindTypeNames [] vars ty_raw
 
-         log 1 $ "Processing " ++ show n
+         log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
          (ty, _) <-
              wrapErrorC eopts (InCon fc n) $
@@ -307,12 +310,12 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
                          TCon _ _ _ _ _ mw [] _ =>
                             do ok <- convert defs [] fullty (type ndef)
                                if ok then pure mw
-                                     else do logTermNF 1 "Previous" [] (type ndef)
-                                             logTermNF 1 "Now" [] fullty
+                                     else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
+                                             logTermNF "declare.data" 1 "Now" [] fullty
                                              throw (AlreadyDefined fc n)
                          _ => throw (AlreadyDefined fc n)
 
-         logTermNF 5 ("data " ++ show n) [] fullty
+         logTermNF "declare.data" 5 ("data " ++ show n) [] fullty
 
          checkIsType fc n env !(nf defs env ty)
          arity <- getArity defs [] fullty
@@ -344,7 +347,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          -- point it was declared, and every data type undefined right now
          defs <- get Ctxt
          let mutWith = nub (mw ++ mutData defs)
-         log 3 $ show n ++ " defined in a mutual block with " ++ show mw
+         log "declare.data" 3 $ show n ++ " defined in a mutual block with " ++ show mw
          setMutWith fc (Resolved tidx) mw
 
          traverse_ (processDataOpt fc (Resolved tidx)) opts
@@ -355,7 +358,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
-         log 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
+         log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          let connames = map conName cons
          when (not (NoHints `elem` opts)) $

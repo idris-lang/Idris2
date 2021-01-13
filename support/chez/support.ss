@@ -23,6 +23,13 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
@@ -39,21 +46,33 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
+(define exact-floor
+  (lambda (x)
+    (inexact->exact (floor x))))
 (define cast-string-int
   (lambda (x)
-    (floor (cast-num (string->number (destroy-prefix x))))))
+    (exact-floor (cast-num (string->number (destroy-prefix x))))))
 (define cast-int-char
   (lambda (x)
     (if (and (>= x 0)
              (<= x #x10ffff))
         (integer->char x)
         0)))
-(define exact-floor
-  (lambda (x)
-    (inexact->exact (floor x))))
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
+
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+(define (string-pack xs) (apply string (from-idris-list xs)))
+(define (to-idris-list-rev acc xs)
+  (if (null? xs)
+    acc
+    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
+(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
+(define (string-concat xs) (apply string-append (from-idris-list xs)))
 (define string-cons (lambda (x y) (string-append (string x) y)))
 (define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
@@ -66,6 +85,14 @@
           (if (> b l)
               ""
               (substring s b end))))
+
+(define (blodwen-string-iterator-new s)
+  0)
+
+(define (blodwen-string-iterator-next s ofs)
+  (if (>= ofs (string-length s))
+      (vector 0)  ; EOF
+      (vector 1 (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)
@@ -189,6 +216,23 @@
   (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
 (define (blodwen-condition-signal c) (condition-signal c))
 (define (blodwen-condition-broadcast c) (condition-broadcast c))
+
+(define-record future-internal (result ready mutex signal))
+(define (blodwen-make-future work)
+  (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
+    (fork-thread (lambda ()
+      (let ([result (work)])
+        (with-mutex (future-internal-mutex future)
+          (set-future-internal-result! future result)
+          (set-future-internal-ready! future #t)
+          (condition-broadcast (future-internal-signal future))))))
+    future))
+(define (blodwen-await-future ty future)
+  (let ([mutex (future-internal-mutex future)])
+    (with-mutex mutex
+      (if (not (future-internal-ready future))
+          (condition-wait (future-internal-signal future) mutex))
+      (future-internal-result future))))
 
 (define (blodwen-sleep s) (sleep (make-time 'time-duration 0 s)))
 (define (blodwen-usleep s)

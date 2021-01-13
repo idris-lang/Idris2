@@ -36,7 +36,8 @@ mutual
        IUpdate : FC -> List IFieldUpdate -> TTImp -> TTImp
 
        IApp : FC -> TTImp -> TTImp -> TTImp
-       IImplicitApp : FC -> TTImp -> Maybe Name -> TTImp -> TTImp
+       INamedApp : FC -> TTImp -> Name -> TTImp -> TTImp
+       IAutoApp : FC -> TTImp -> TTImp -> TTImp
        IWithApp : FC -> TTImp -> TTImp -> TTImp
 
        ISearch : FC -> (depth : Nat) -> TTImp
@@ -97,10 +98,10 @@ mutual
        GlobalHint : Bool -> FnOpt
        ExternFn : FnOpt
        -- Defined externally, list calling conventions
-       ForeignFn : List String -> FnOpt
+       ForeignFn : List TTImp -> FnOpt
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt
-       Totalty : TotalReq -> FnOpt
+       Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
 

@@ -4,34 +4,11 @@ import Data.Maybe
 import Data.Either
 import Data.Nat
 import Data.List
+import Data.List1
+
+import public Decidable.Equality.Core as Decidable.Equality
 
 %default total
-
---------------------------------------------------------------------------------
--- Decidable equality
---------------------------------------------------------------------------------
-
-||| Decision procedures for propositional equality
-public export
-interface DecEq t where
-  ||| Decide whether two elements of `t` are propositionally equal
-  decEq : (x1 : t) -> (x2 : t) -> Dec (x1 = x2)
-
---------------------------------------------------------------------------------
--- Utility lemmas
---------------------------------------------------------------------------------
-
-||| The negation of equality is symmetric (follows from symmetry of equality)
-export
-negEqSym : forall a, b . (a = b -> Void) -> (b = a -> Void)
-negEqSym p h = p (sym h)
-
-||| Everything is decidably equal to itself
-export
-decEqSelfIsYes : DecEq a => {x : a} -> decEq x x = Yes Refl
-decEqSelfIsYes {x} with (decEq x x)
-  decEqSelfIsYes {x} | Yes Refl = Refl
-  decEqSelfIsYes {x} | No contra = absurd $ contra Refl
 
 --------------------------------------------------------------------------------
 --- Unit
@@ -83,12 +60,6 @@ DecEq t => DecEq (Maybe t) where
 -- Either
 --------------------------------------------------------------------------------
 
-Uninhabited (Left x = Right y) where
-  uninhabited Refl impossible
-
-Uninhabited (Right x = Left y) where
-  uninhabited Refl impossible
-
 export
 (DecEq t, DecEq s) => DecEq (Either t s) where
   decEq (Left x) (Left y) with (decEq x y)
@@ -133,6 +104,20 @@ DecEq a => DecEq (List a) where
       decEq (x :: xs) (x :: xs) | (Yes Refl) | (Yes Refl) = Yes Refl
       decEq (x :: xs) (x :: ys) | (Yes Refl) | (No contra) =
         No $ contra . snd . consInjective
+
+
+--------------------------------------------------------------------------------
+-- List1
+--------------------------------------------------------------------------------
+
+export
+DecEq a => DecEq (List1 a) where
+
+  decEq (x ::: xs) (y ::: ys) with (decEq x y)
+    decEq (x ::: xs) (y ::: ys) | No contra = No (contra . fst . consInjective)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy with (decEq xs ys)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy | No contra = No (contra . snd . consInjective)
+    decEq (x ::: xs) (y ::: ys) | Yes eqxy | Yes eqxsys = Yes (cong2 (:::) eqxy eqxsys)
 
 -- TODO: Other prelude data types
 

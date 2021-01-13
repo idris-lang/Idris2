@@ -11,7 +11,7 @@ bindings, but nevertheless they demonstrate some of the trickier problems in
 creating bindings to a C library, in that they need to handle memory allocation
 of ``String``.
 
-You can find the example in full in the Idris 2 source repository, 
+You can find the example in full in the Idris 2 source repository,
 in `samples/FFI-readline
 <https://github.com/edwinb/Idris2/tree/master/samples/FFI-readline>`_. As a
 minimal example, this can be used as a starting point for other C library
@@ -63,7 +63,7 @@ so needs to return a ``PrimIO``:
 .. code-block:: idris
 
     %foreign (rlib "readline")
-    prim_readline : String -> PrimIO String
+    prim__readline : String -> PrimIO String
 
 Then, we can write an ``IO`` wrapper:
 
@@ -84,9 +84,9 @@ pointer (see Section :ref:`sect-ffi-string`):
 .. code-block:: idris
 
     %foreign (rlib "readline")
-    prim_readline : String -> PrimIO (Ptr String)
+    prim__readline : String -> PrimIO (Ptr String)
 
-We also need to provide a way to check whether the returned ``Ptr String`` is 
+We also need to provide a way to check whether the returned ``Ptr String`` is
 ``NULL``. To do so, we'll write some glue code to convert back and forth
 between ``Ptr String`` and ``String``, in a file ``idris_readline.c`` and a
 corresponding header ``idris_readline.h``. In ``idris_readline.h`` we have:
@@ -118,22 +118,22 @@ Correspondingly, in ``idris_readline.c``:
         return NULL;
     }
 
-Now, we can use ``prim_readline`` as follows, with a safe API, checking
+Now, we can use ``prim__readline`` as follows, with a safe API, checking
 whether the result it returns is ``NULL`` or a concrete ``String``:
 
 .. code-block:: idris
 
     %foreign (rlib "isNullString")
-    prim_isNullString : Ptr String -> Int
+    prim__isNullString : Ptr String -> Int
 
     export
     isNullString : Ptr String -> Bool
-    isNullString str = if prim_isNullString str == 0 then False else True
+    isNullString str = if prim__isNullString str == 0 then False else True
 
     export
     readline : String -> IO (Maybe String)
     readline s
-        = do mstr <- primIO $ prim_readline s
+        = do mstr <- primIO $ prim__readline s
              if isNullString mstr
                 then pure $ Nothing
                 else pure $ Just (getString mstr)
@@ -146,11 +146,11 @@ provide a binding to ``add_history`` as follows:
 .. code-block:: idris
 
     %foreign (rlib "add_history")
-    prim_add_history : String -> PrimIO ()
+    prim__add_history : String -> PrimIO ()
 
     export
     addHistory : String -> IO ()
-    addHistory s = primIO $ prim_add_history s
+    addHistory s = primIO $ prim__add_history s
 
 In this case, since Idris is in control of the ``String``, we know it's not
 going to be ``NULL``, so we can add it directly.
@@ -161,7 +161,7 @@ history for non-empty inputs, can be written as follows:
 .. code-block:: idris
 
     echoLoop : IO ()
-    echoLoop 
+    echoLoop
         = do Just x <- readline "> "
                   | Nothing => putStrLn "EOF"
              putStrLn ("Read: " ++ x)
@@ -217,12 +217,12 @@ the Readline library expects ``NULL`` when there are no more completions:
 .. code-block:: idris
 
     %foreign (rlib "idrisrl_setCompletion")
-    prim_setCompletion : (String -> Int -> PrimIO (Ptr String)) -> PrimIO ()
+    prim__setCompletion : (String -> Int -> PrimIO (Ptr String)) -> PrimIO ()
 
     export
     setCompletionFn : (String -> Int -> IO (Maybe String)) -> IO ()
     setCompletionFn fn
-        = primIO $ prim_setCompletion $ \s, i => toPrim $
+        = primIO $ prim__setCompletion $ \s, i => toPrim $
               do mstr <- fn s i
                  case mstr of
                       Nothing => pure nullString // need to return a Ptr String to readline!
@@ -264,9 +264,9 @@ parts of our program are responsible for allocating and freeing strings.
 When Idris calls a foreign function that returns a string, it copies the
 string to the Idris heap and frees it immediately. But, if the foreign
 library also frees the string, it ends up being freed twice. This is what's
-happening here: the callback passed to ``prim_setCompletion`` frees the string
+happening here: the callback passed to ``prim__setCompletion`` frees the string
 and puts it onto the Idris heap, but Readline also frees the string returned
-by ``prim_setCompletion`` once it has processed it. We can solve this
+by ``prim__setCompletion`` once it has processed it. We can solve this
 problem by writing a wrapper for the completion function which reallocates
 the string, and using that in ``idrisrl_setCompletion`` instead.
 

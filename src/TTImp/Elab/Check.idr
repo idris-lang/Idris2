@@ -4,6 +4,7 @@ module TTImp.Elab.Check
 -- reading and writing elaboration state
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -406,10 +407,60 @@ searchVar : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             FC -> RigCount -> Nat -> Name ->
-            Env Term vars -> Name -> Term vars -> Core (Term vars)
-searchVar fc rig depth def env n ty
-    = do (_, tm) <- newSearch fc rig depth def env n ty
-         pure tm
+            Env Term vars -> NestedNames vars -> Name -> Term vars -> Core (Term vars)
+searchVar fc rig depth def env nest n ty
+    = do defs <- get Ctxt
+         (vars' ** (bind, env')) <- envHints (keys (localHints defs)) env
+         -- Initial the search with an environment which binds the applied
+         -- local hints
+         (_, tm) <- newSearch fc rig depth def env' n
+                              (weakenNs (mkSizeOf vars') ty)
+         pure (bind tm)
+  where
+    useVars : {vars : _} ->
+              List (Term vars) -> Term vars -> Term vars
+    useVars [] sc = sc
+    useVars (a :: as) (Bind bfc n (Pi fc c _ ty) sc)
+         = Bind bfc n (Let fc c a ty) (useVars (map weaken as) sc)
+    useVars as (Bind bfc n (Let fc c v ty) sc)
+         = Bind bfc n (Let fc c v ty) (useVars (map weaken as) sc)
+    useVars _ sc = sc -- Can't happen?
+
+    find : Name -> List (Name, (Maybe Name, b)) -> Maybe (Maybe Name, b)
+    find x [] = Nothing
+    find x ((n, t) :: xs)
+       = if x == n
+            then Just t
+            else case t of
+                      (Nothing, _) => find x xs
+                      (Just n', _) => if x == n'
+                                         then Just t
+                                         else find x xs
+
+    envHints : List Name -> Env Term vars ->
+               Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
+    envHints [] env = pure ([] ** (id, env))
+    envHints (n :: ns) env
+        = do (vs ** (f, env')) <- envHints ns env
+             let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)
+                 | Nothing => pure (vs ** (f, env'))
+             let n' = maybe n id nestn
+             defs <- get Ctxt
+             Just ndef <- lookupCtxtExact n' (gamma defs)
+                 | Nothing => pure (vs ** (f, env'))
+             let nt = case definition ndef of
+                           PMDef _ _ _ _ _ => Func
+                           DCon t a _ => DataCon t a
+                           TCon t a _ _ _ _ _ _ => TyCon t a
+                           _ => Func
+             let app = tmf fc nt
+             let tyenv = useVars (getArgs app) (embed (type ndef))
+             let binder = Let fc top (weakenNs (mkSizeOf vs) app)
+                                     (weakenNs (mkSizeOf vs) tyenv)
+             varn <- toFullNames n'
+             pure ((varn :: vs) **
+                    (\t => f (Bind fc varn binder t),
+                       binder :: env'))
 
 -- Elaboration info (passed to recursive calls)
 public export
@@ -492,8 +543,9 @@ successful allowCons ((tm, elab) :: elabs)
          md <- get MD
          defs <- branch
          catch (do -- Run the elaborator
-                   logC 5 $ do tm' <- maybe (pure (UN "__"))
-                                            toFullNames tm
+                   logC "elab" 5 $
+                            do tm' <- maybe (pure (UN "__"))
+                                             toFullNames tm
                                pure ("Running " ++ show tm')
                    res <- elab
                    -- Record post-elaborator state
@@ -511,7 +563,8 @@ successful allowCons ((tm, elab) :: elabs)
                    put EST est
                    put MD md
                    put Ctxt defs
-                   logC 5 $ do tm' <- maybe (pure (UN "__"))
+                   logC "elab" 5 $
+                            do tm' <- maybe (pure (UN "__"))
                                             toFullNames tm
                                pure ("Success " ++ show tm' ++
                                      " (" ++ show ncons' ++ " - "
@@ -644,19 +697,19 @@ convertWithLazy
           {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
-          (withLazy : Bool) -> (precise : Bool) ->
+          (withLazy : Bool) ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
-convertWithLazy withLazy prec fc elabinfo env x y
+convertWithLazy withLazy fc elabinfo env x y
     = let umode : UnifyInfo
                 = case elabMode elabinfo of
                        InLHS _ => inLHS
-                       _ => inTermP prec in
+                       _ => inTerm in
           catch
             (do let lazy = !isLazyActive && withLazy
-                logGlueNF 5 ("Unifying " ++ show withLazy ++ " "
+                logGlueNF "elab.unify" 5 ("Unifying " ++ show withLazy ++ " "
                              ++ show (elabMode elabinfo)) env x
-                logGlueNF 5 "....with" env y
+                logGlueNF "elab.unify" 5 "....with" env y
                 vs <- if isFromTerm x && isFromTerm y
                          then do xtm <- getTerm x
                                  ytm <- getTerm y
@@ -692,17 +745,7 @@ convert : {vars : _} ->
           {auto e : Ref EST (EState vars)} ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
-convert = convertWithLazy False False
-
-export
-convertP : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto u : Ref UST UState} ->
-           {auto e : Ref EST (EState vars)} ->
-           (precise : Bool) ->
-           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
-           Core UnifyResult
-convertP = convertWithLazy False
+convert = convertWithLazy False
 
 -- Check whether the type we got for the given type matches the expected
 -- type.
@@ -714,35 +757,35 @@ checkExpP : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
-            RigCount -> (precise : Bool) -> ElabInfo -> Env Term vars -> FC ->
+            RigCount -> ElabInfo -> Env Term vars -> FC ->
             (term : Term vars) ->
             (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
             Core (Term vars, Glued vars)
-checkExpP rig prec elabinfo env fc tm got (Just exp)
-    = do vs <- convertWithLazy True prec fc elabinfo env got exp
+checkExpP rig elabinfo env fc tm got (Just exp)
+    = do vs <- convertWithLazy True fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
-                         NoLazy => do logTerm 5 "Solved" tm
+                         NoLazy => do logTerm "elab" 5 "Solved" tm
                                       pure (tm, got)
-                         AddForce r => do logTerm 5 "Force" tm
-                                          logGlue 5 "Got" env got
-                                          logGlue 5 "Exp" env exp
+                         AddForce r => do logTerm "elab" 5 "Force" tm
+                                          logGlue "elab" 5 "Got" env got
+                                          logGlue "elab" 5 "Exp" env exp
                                           pure (TForce fc r tm, exp)
                          AddDelay r => do ty <- getTerm got
-                                          logTerm 5 "Delay" tm
+                                          logTerm "elab" 5 "Delay" tm
                                           pure (TDelay fc r ty tm, exp)
-              cs => do logTerm 5 "Not solved" tm
+              cs => do logTerm "elab" 5 "Not solved" tm
                        defs <- get Ctxt
                        empty <- clearDefs defs
                        cty <- getTerm exp
                        ctm <- newConstant fc rig env tm cty cs
-                       dumpConstraints 5 False
+                       dumpConstraints "elab" 5 False
                        case addLazy vs of
                             NoLazy => pure (ctm, got)
                             AddForce r => pure (TForce fc r tm, exp)
                             AddDelay r => do ty <- getTerm got
                                              pure (TDelay fc r ty tm, exp)
-checkExpP rig prec elabinfo env fc tm got Nothing = pure (tm, got)
+checkExpP rig elabinfo env fc tm got Nothing = pure (tm, got)
 
 export
 checkExp : {vars : _} ->
@@ -753,4 +796,4 @@ checkExp : {vars : _} ->
            (term : Term vars) ->
            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
-checkExp rig elabinfo = checkExpP rig (preciseInf elabinfo) elabinfo
+checkExp rig elabinfo = checkExpP rig elabinfo

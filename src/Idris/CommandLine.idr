@@ -73,8 +73,12 @@ data CLOpt
   Quiet |
    ||| Run Idris 2 in verbose mode (cancels quiet if it's the default)
   Verbose |
+   ||| Set the console width for REPL output
+  ConsoleWidth (Maybe Nat) |
+   ||| Whether to use color in the console output
+  Color Bool |
    ||| Set the log level globally
-  Logging Nat |
+  Logging LogLevel |
    ||| Add a package as a dependency
   PkgPath String |
    ||| Build or install a given package, depending on PkgCommand
@@ -125,18 +129,27 @@ ideSocketModeAddress (_ :: rest) = ideSocketModeAddress rest
 formatSocketAddress : (String, Int) -> String
 formatSocketAddress (host, port) = host ++ ":" ++ show port
 
-data OptType = Required String | Optional String | RequiredNat String
+data OptType
+  = Required String
+   | Optional String
+   | RequiredNat String
+   | AutoNat String
+   | RequiredLogLevel String
 
 Show OptType where
   show (Required a) = "<" ++ a ++ ">"
   show (RequiredNat a) = "<" ++ a ++ ">"
+  show (RequiredLogLevel a) = "<" ++ a ++ ">"
   show (Optional a) = "[" ++ a ++ "]"
+  show (AutoNat a) = "<" ++ a ++ ">"
 
 ActType : List OptType -> Type
 ActType [] = List CLOpt
 ActType (Required a :: as) = String -> ActType as
 ActType (RequiredNat a :: as) = Nat -> ActType as
+ActType (RequiredLogLevel a :: as) = LogLevel -> ActType as
 ActType (Optional a :: as) = Maybe String -> ActType as
+ActType (AutoNat a :: as) = Maybe Nat -> ActType as
 
 record OptDesc where
   constructor MkOpt
@@ -214,9 +227,15 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Suppress the banner"),
            MkOpt ["--quiet", "-q"] [] [Quiet]
               (Just "Quiet mode; display fewer messages"),
+           MkOpt ["--console-width"] [AutoNat "console width"] (\l => [ConsoleWidth l])
+              (Just "Width for console output (0 for unbounded) (auto by default)"),
+           MkOpt ["--color", "--colour"] [] ([Color True])
+              (Just "Forces colored console output (enabled by default)"),
+           MkOpt ["--no-color", "--no-colour"] [] ([Color False])
+              (Just "Disables colored console output"),
            MkOpt ["--verbose"] [] [Verbose]
               (Just "Verbose mode (default)"),
-           MkOpt ["--log"] [RequiredNat "log level"] (\l => [Logging l])
+           MkOpt ["--log"] [RequiredLogLevel "log level"] (\l => [Logging l])
               (Just "Global log level (0 by default)"),
 
            optSeparator,
@@ -283,16 +302,32 @@ checkNat n = toMaybe (n >= 0) (integerToNat n)
 processArgs : String -> (args : List OptType) -> List String -> ActType args ->
               Either String (List CLOpt, List String)
 processArgs flag [] xs f = Right (f, xs)
+-- Missing required arguments
 processArgs flag (opt@(Required _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredNat _) :: as) [] f =
+  Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+processArgs flag (opt@(RequiredLogLevel _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (Optional a :: as) [] f =
   processArgs flag as [] (f Nothing)
-processArgs flag (opt@(RequiredNat _) :: as) [] f =
+processArgs flag (opt@(AutoNat _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
+-- Happy cases
 processArgs flag (RequiredNat a :: as) (x :: xs) f =
   do arg <- maybeToEither ("Expected Nat argument " ++ show x ++ " for flag " ++ flag)
                           (parseInteger x >>= checkNat)
      processArgs flag as xs (f arg)
+processArgs flag (RequiredLogLevel a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected LogLevel argument " ++ show x ++ " for flag " ++ flag)
+                          (parseLogLevel x)
+     processArgs flag as xs (f arg)
+processArgs flag (AutoNat a :: as) ("auto" :: xs) f =
+  processArgs flag as xs (f Nothing)
+processArgs flag (AutoNat a :: as) (x :: xs) f =
+  do arg <- maybeToEither ("Expected Nat or \"auto\" argument " ++ show x ++ " for flag " ++ flag)
+                          (parseInteger x >>= checkNat)
+     processArgs flag as xs (f (Just arg))
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
 processArgs flag (Optional a :: as) (x :: xs) f =

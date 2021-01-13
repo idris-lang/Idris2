@@ -1,15 +1,18 @@
 1/1: Building Dots1 (Dots1.idr)
 1/1: Building Dots2 (Dots2.idr)
-Dots2.idr:2:7--2:8:While processing left hand side of foo at Dots2.idr:2:1--4:1:
-Can't match on ?x [no locals in scope] (Non linear pattern variable) at
-2	foo x x = x + x
-	      ^
+Error: While processing left hand side of foo. Can't match on ?x [no locals in scope] (Non linear pattern variable).
+
+Dots2.idr:2:7--2:8
+   |
+ 2 | foo x x = x + x
+   |       ^
 
 1/1: Building Dots3 (Dots3.idr)
-Dots3.idr:5:29--5:30:While processing left hand side of addBaz at Dots3.idr:5:1--6:1:
-Pattern variable z unifies with:
-	?y [no locals in scope]
-at:
-5	addBaz (x + y) (AddThings x z) = x + y
-	                            ^
+Error: While processing left hand side of addBaz. Pattern variable z unifies with: ?y [no locals in scope].
 
+Dots3.idr:5:13--5:30
+   |
+ 5 | addBaz (x + y) (AddThings x z) = x + y
+   |             ^               ^
+
+Suggestion: Use the same name for both pattern variables, since they unify.

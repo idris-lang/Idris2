@@ -1,6 +1,5 @@
 1/1: Building Total (Total.idr)
 Main> Main.lookup: All cases covered
-Main> Main.lookup':
-lookup' FZ _
+Main> Main.lookup': lookup' FZ _
 Main> Main.lookup'': Calls non covering function Main.lookup'
 Main> Bye for now!

@@ -31,11 +31,12 @@ schString s = concatMap okchar (unpack s)
 
 export
 schName : Name -> String
-schName (NS ns n) = showSep "-" ns ++ "-" ++ schName n
+schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
 schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
+schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
 schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -158,10 +159,32 @@ schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
 
+schOp (Cast IntType Bits8Type) [x] = op "integer->bits8" [x]
+schOp (Cast IntType Bits16Type) [x] = op "integer->bits16" [x]
+schOp (Cast IntType Bits32Type) [x] = op "integer->bits32" [x]
+schOp (Cast IntType Bits64Type) [x] = op "integer->bits64" [x]
+
 schOp (Cast IntegerType Bits8Type) [x] = op "integer->bits8" [x]
 schOp (Cast IntegerType Bits16Type) [x] = op "integer->bits16" [x]
 schOp (Cast IntegerType Bits32Type) [x] = op "integer->bits32" [x]
 schOp (Cast IntegerType Bits64Type) [x] = op "integer->bits64" [x]
+
+schOp (Cast Bits8Type Bits16Type) [x] = x
+schOp (Cast Bits8Type Bits32Type) [x] = x
+schOp (Cast Bits8Type Bits64Type) [x] = x
+
+schOp (Cast Bits16Type Bits8Type) [x] = op "bits16->bits8" [x]
+schOp (Cast Bits16Type Bits32Type) [x] = x
+schOp (Cast Bits16Type Bits64Type) [x] = x
+
+schOp (Cast Bits32Type Bits8Type) [x] = op "bits32->bits8" [x]
+schOp (Cast Bits32Type Bits16Type) [x] = op "bits32->bits16" [x]
+schOp (Cast Bits32Type Bits64Type) [x] = x
+
+schOp (Cast Bits64Type Bits8Type) [x] = op "bits64->bits8" [x]
+schOp (Cast Bits64Type Bits16Type) [x] = op "bits64->bits16" [x]
+schOp (Cast Bits64Type Bits32Type) [x] = op "bits64->bits32" [x]
+
 
 schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
 schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
@@ -176,19 +199,18 @@ schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg +
 
 ||| Extended primitives for the scheme backend, outside the standard set of primFn
 public export
-data ExtPrim = SchemeCall
-             | NewIORef | ReadIORef | WriteIORef
+data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
              | VoidElim
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
+             | MakeFuture
              | Unknown Name
 
 export
 Show ExtPrim where
-  show SchemeCall = "SchemeCall"
   show NewIORef = "NewIORef"
   show ReadIORef = "ReadIORef"
   show WriteIORef = "WriteIORef"
@@ -202,13 +224,13 @@ Show ExtPrim where
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
   show OnCollectAny = "OnCollectAny"
+  show MakeFuture = "MakeFuture"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
 toPrim : Name -> ExtPrim
 toPrim pn@(NS _ n)
-    = cond [(n == UN "prim__schemeCall", SchemeCall),
-            (n == UN "prim__newIORef", NewIORef),
+    = cond [(n == UN "prim__newIORef", NewIORef),
             (n == UN "prim__readIORef", ReadIORef),
             (n == UN "prim__writeIORef", WriteIORef),
             (n == UN "prim__newArray", NewArray),
@@ -216,11 +238,13 @@ toPrim pn@(NS _ n)
             (n == UN "prim__arraySet", ArraySet),
             (n == UN "prim__getField", GetField),
             (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim),
+            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN "prim__void", VoidElim),
             (n == UN "prim__os", SysOS),
             (n == UN "prim__codegen", SysCodegen),
             (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+            (n == UN "prim__onCollectAny", OnCollectAny),
+            (n == UN "prim__makeFuture", MakeFuture)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn
@@ -423,12 +447,6 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
   -- overridden)
   export
   schExtCommon : Int -> ExtPrim -> List NamedCExp -> Core String
-  schExtCommon i SchemeCall [ret, NmPrimVal fc (Str fn), args, world]
-     = pure $ mkWorld ("(apply " ++ fn ++" "
-                  ++ !(readArgs i args) ++ ")")
-  schExtCommon i SchemeCall [ret, fn, args, world]
-       = pure $ mkWorld ("(apply (eval (string->symbol " ++ !(schExp i fn) ++")) "
-                    ++ !(readArgs i args) ++ ")")
   schExtCommon i NewIORef [_, val, world]
       = pure $ mkWorld $ "(box " ++ !(schExp i val) ++ ")"
   schExtCommon i ReadIORef [_, ref, world]

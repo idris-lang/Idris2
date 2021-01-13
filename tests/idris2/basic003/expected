@@ -1,11 +1,13 @@
 1/1: Building Ambig1 (Ambig1.idr)
 Main> Bye for now!
 1/1: Building Ambig2 (Ambig2.idr)
-Ambig2.idr:26:21--26:27:While processing right hand side of keepUnique at Ambig2.idr:26:1--28:1:
-Ambiguous elaboration at:
-26	keepUnique {b} xs = toList (fromList xs)
-	                    ^^^^^^
-Possible correct results:
-	Main.Set.toList ?arg
-	Main.Vect.toList ?arg
+Error: While processing right hand side of keepUnique. Ambiguous elaboration. Possible results:
+    Main.Set.toList ?arg
+    Main.Vect.toList ?arg
+
+Ambig2.idr:26:21--26:27
+    |
+ 26 | keepUnique {b} xs = toList (fromList xs)
+    |                     ^^^^^^
+
 Main> Bye for now!

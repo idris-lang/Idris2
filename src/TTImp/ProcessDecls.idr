@@ -1,6 +1,7 @@
 module TTImp.ProcessDecls
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -47,7 +48,7 @@ process eopts nest env (IRecord fc ns vis rec)
 process eopts nest env (INamespace fc ns decls)
     = do defs <- get Ctxt
          let cns = currentNS defs
-         extendNS (reverse ns)
+         extendNS ns
          traverse_ (processDecl eopts nest env) decls
          defs <- get Ctxt
          put Ctxt (record { currentNS = cns } defs)
@@ -55,10 +56,10 @@ process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)
     = processRunElab eopts nest env fc tm
-process eopts nest env (IPragma act)
+process eopts nest env (IPragma _ act)
     = act nest env
-process eopts nest env (ILog n)
-    = setLogLevel n
+process eopts nest env (ILog lvl)
+    = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
 
 TTImp.Elab.Check.processDecl = process
 
@@ -71,14 +72,22 @@ checkTotalityOK n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
+         let fc = location gdef
+
+         -- #524: need to check positivity even if we're not in a total context
+         -- because a definition coming later may need to know it is positive
+         case definition gdef of
+           (TCon _ _ _ _ _ _ _ _) => ignore $ checkPositive fc n
+           _ => pure ()
+
+         -- Once that is done, we build up errors if necessary
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
-         let fc = location gdef
-         log 3 $ show n ++ " must be: " ++ show treq
+         log "totality" 3 $ show n ++ " must be: " ++ show treq
          case treq of
-              PartialOK => pure Nothing
-              CoveringOnly => checkCovering fc (isCovering tot)
-              Total => checkTotality fc
+            PartialOK => pure Nothing
+            CoveringOnly => checkCovering fc (isCovering tot)
+            Total => checkTotality fc
   where
     checkCovering : FC -> Covering -> Core (Maybe Error)
     checkCovering fc IsCovering = pure Nothing
@@ -94,11 +103,6 @@ checkTotalityOK n
                          NotTerminating p => pure (Just (NotTotal fc n p))
                          _ => pure Nothing)
                    (pure . Just) err
-
-    findSetTotal : List DefFlag -> Maybe TotalReq
-    findSetTotal [] = Nothing
-    findSetTotal (SetTotal t :: _) = Just t
-    findSetTotal (_ :: xs) = findSetTotal xs
 
 -- Check totality of all the names added in the file, and return a list of
 -- totality errors.

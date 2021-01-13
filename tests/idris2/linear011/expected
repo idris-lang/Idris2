@@ -4,14 +4,14 @@ Main>  0 io : Type -> Type
    port : Int
    addr : Maybe SocketAddress
    ok : Int
--------------------------------------
+------------------------------
 foo1 : Socket Bound
 Main>  0 io : Type -> Type
    sock : Socket
    port : Int
    addr : Maybe SocketAddress
    ok : Int
--------------------------------------
+------------------------------
 foo2 : Socket Closed
 Main> 
 Bye for now!

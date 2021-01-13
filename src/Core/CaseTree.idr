@@ -6,6 +6,8 @@ import Data.Bool.Extra
 import Data.List
 import Data.NameMap
 
+import Text.PrettyPrint.Prettyprinter
+
 %default covering
 
 mutual
@@ -14,7 +16,7 @@ mutual
   public export
   data CaseTree : List Name -> Type where
        ||| case x return scTy of { p1 => e1 ; ... }
-       Case : {name, vars : _} ->
+       Case : {name : _} ->
               (idx : Nat) ->
               (0 p : IsVar name idx vars) ->
               (scTy : Term vars) -> List (CaseAlt vars) ->
@@ -56,12 +58,17 @@ data Pat : Type where
      PLoc : FC -> Name -> Pat
      PUnmatchable : FC -> Term [] -> Pat
 
+export
+isPConst : Pat -> Maybe Constant
+isPConst (PConst _ c) = Just c
+isPConst _ = Nothing
+
 mutual
   export
   {vars : _} -> Show (CaseTree vars) where
     show (Case {name} idx prf ty alts)
-        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of { " ++
-                showSep " | " (assert_total (map show alts)) ++ " }"
+        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of\n { " ++
+                showSep "\n | " (assert_total (map show alts)) ++ "\n }"
     show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
     show (Unmatched msg) = "Error: " ++ show msg
     show Impossible = "Impossible"
@@ -69,21 +76,47 @@ mutual
   export
   {vars : _} -> Show (CaseAlt vars) where
     show (ConCase n tag args sc)
-        = show n ++ " " ++ showSep " " (map show args) ++ " => " ++
+        = showSep " " (map show (n :: args)) ++ " => " ++
           show sc
     show (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ show sc
     show (ConstCase c sc)
-        = show c ++ " => " ++ show sc
+        = "Constant " ++ show c ++ " => " ++ show sc
     show (DefaultCase sc)
         = "_ => " ++ show sc
 
 mutual
   export
+  {vars : _} -> Pretty (CaseTree vars) where
+    pretty (Case {name} idx prf ty alts)
+      = "case" <++> pretty name <++> ":" <++> pretty ty <++> "of"
+         <+> nest 2 (hardline
+         <+> vsep (assert_total (map pretty alts)))
+    pretty (STerm i tm) = pretty tm
+    pretty (Unmatched msg) = pretty "Error:" <++> pretty msg
+    pretty Impossible = pretty "Impossible"
+
+  export
+  {vars : _} -> Pretty (CaseAlt vars) where
+    pretty (ConCase n tag args sc)
+      = hsep (map pretty (n :: args)) <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (DelayCase _ arg sc) =
+        pretty "Delay" <++> pretty arg <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (ConstCase c sc) =
+        pretty c <++> pretty "=>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+    pretty (DefaultCase sc) =
+        pretty "_ =>"
+        <+> Union (spaces 1 <+> pretty sc) (nest 2 (hardline <+> pretty sc))
+
+mutual
+  export
   eqTree : CaseTree vs -> CaseTree vs' -> Bool
   eqTree (Case i _ _ alts) (Case i' _ _ alts')
-      = i == i
-       && length alts == length alts
+      = i == i'
+       && length alts == length alts'
        && allTrue (zipWith eqAlt alts alts')
   eqTree (STerm _ t) (STerm _ t') = eqTerm t t'
   eqTree (Unmatched _) (Unmatched _) = True
@@ -112,39 +145,54 @@ Show Pat where
   show (PLoc _ n) = show n
   show (PUnmatchable _ tm) = ".(" ++ show tm ++ ")"
 
-mutual
-  insertCaseNames : {outer, inner : _} ->
-                    (ns : List Name) -> CaseTree (outer ++ inner) ->
-                    CaseTree (outer ++ (ns ++ inner))
-  insertCaseNames {inner} {outer} ns (Case idx prf scTy alts)
-      = let MkNVar prf' = insertNVarNames {outer} {inner} {ns} _ prf in
-            Case _ prf' (insertNames {outer} ns scTy)
-                (map (insertCaseAltNames {outer} {inner} ns) alts)
-  insertCaseNames {outer} ns (STerm i x) = STerm i (insertNames {outer} ns x)
-  insertCaseNames ns (Unmatched msg) = Unmatched msg
-  insertCaseNames ns Impossible = Impossible
+export
+Pretty Pat where
+  prettyPrec d (PAs _ n p) = pretty n <++> pretty "@" <+> parens (pretty p)
+  prettyPrec d (PCon _ n _ _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PTyCon _ n _ args) =
+    parenthesise (d > Open) $ hsep (pretty n :: map (prettyPrec App) args)
+  prettyPrec d (PConst _ c) = pretty c
+  prettyPrec d (PArrow _ _ p q) =
+    parenthesise (d > Open) $ pretty p <++> pretty "->" <++> pretty q
+  prettyPrec d (PDelay _ _ _ p) = parens (pretty "Delay" <++> pretty p)
+  prettyPrec d (PLoc _ n) = pretty n
+  prettyPrec d (PUnmatchable _ tm) = pretty "." <+> parens (pretty tm)
 
-  insertCaseAltNames : {outer, inner : _} ->
-                       (ns : List Name) ->
+mutual
+  insertCaseNames : SizeOf outer ->
+                    SizeOf ns ->
+                    CaseTree (outer ++ inner) ->
+                    CaseTree (outer ++ (ns ++ inner))
+  insertCaseNames outer ns (Case idx prf scTy alts)
+      = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
+            Case _ prf' (insertNames outer ns scTy)
+                (map (insertCaseAltNames outer ns) alts)
+  insertCaseNames outer ns (STerm i x) = STerm i (insertNames outer ns x)
+  insertCaseNames _ _ (Unmatched msg) = Unmatched msg
+  insertCaseNames _ _ Impossible = Impossible
+
+  insertCaseAltNames : SizeOf outer ->
+                       SizeOf ns ->
                        CaseAlt (outer ++ inner) ->
                        CaseAlt (outer ++ (ns ++ inner))
-  insertCaseAltNames {outer} {inner} ns (ConCase x tag args ct)
+  insertCaseAltNames p q (ConCase x tag args ct)
       = ConCase x tag args
            (rewrite appendAssociative args outer (ns ++ inner) in
-                    insertCaseNames {outer = args ++ outer} {inner} ns
+                    insertCaseNames (mkSizeOf args + p) q {inner}
                         (rewrite sym (appendAssociative args outer inner) in
                                  ct))
-  insertCaseAltNames {outer} {inner} ns (DelayCase tyn valn ct)
+  insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
-                  (insertCaseNames {outer = tyn :: valn :: outer} {inner} ns ct)
-  insertCaseAltNames ns (ConstCase x ct)
-      = ConstCase x (insertCaseNames ns ct)
-  insertCaseAltNames ns (DefaultCase ct)
-      = DefaultCase (insertCaseNames ns ct)
+                  (insertCaseNames (suc (suc outer)) ns ct)
+  insertCaseAltNames outer ns (ConstCase x ct)
+      = ConstCase x (insertCaseNames outer ns ct)
+  insertCaseAltNames outer ns (DefaultCase ct)
+      = DefaultCase (insertCaseNames outer ns ct)
 
 export
 Weaken CaseTree where
-  weakenNs ns t = insertCaseNames {outer = []} ns t
+  weakenNs ns t = insertCaseNames zero ns t
 
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->
            NameMap Bool -> CaseTree vars -> NameMap Bool
@@ -181,35 +229,6 @@ getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames addMetas empty
 
 export
-mkPat' : List Pat -> ClosedTerm -> ClosedTerm -> Pat
-mkPat' args orig (Ref fc Bound n) = PLoc fc n
-mkPat' args orig (Ref fc (DataCon t a) n) = PCon fc n t a args
-mkPat' args orig (Ref fc (TyCon t a) n) = PTyCon fc n a args
-mkPat' args orig (Bind fc x (Pi _ _ s) t)
-    = let t' = subst (Erased fc False) t in
-          PArrow fc x (mkPat' [] s s) (mkPat' [] t' t')
-mkPat' args orig (App fc fn arg)
-    = let parg = mkPat' [] arg arg in
-                 mkPat' (parg :: args) orig fn
-mkPat' args orig (As fc _ (Ref _ Bound n) ptm)
-    = PAs fc n (mkPat' [] ptm ptm)
-mkPat' args orig (As fc _ _ ptm)
-    = mkPat' [] orig ptm
-mkPat' args orig (TDelay fc r ty p)
-    = PDelay fc r (mkPat' [] orig ty) (mkPat' [] orig p)
-mkPat' args orig (PrimVal fc c)
-    = if constTag c == 0
-         then PConst fc c
-         else PTyCon fc (UN (show c)) 0 []
-mkPat' args orig (TType fc) = PTyCon fc (UN "Type") 0 []
-mkPat' args orig tm = PUnmatchable (getLoc orig) orig
-
-export
-argToPat : ClosedTerm -> Pat
-argToPat tm
-    = mkPat' [] tm tm
-
-export
 mkTerm : (vars : List Name) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
@@ -220,7 +239,7 @@ mkTerm vars (PTyCon fc x arity xs)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)
@@ -228,5 +247,3 @@ mkTerm vars (PLoc fc n)
            Just (MkVar prf) => Local fc Nothing _ prf
            _ => Ref fc Bound n
 mkTerm vars (PUnmatchable fc tm) = embed tm
-
-

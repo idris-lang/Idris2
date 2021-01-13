@@ -2,8 +2,6 @@ module Apply
 
 -- These are not Biapplicatives.  Those are in Data.Biapplicative
 
-import Bifunctor
-
 infixl 4 <<$>>, <<&>>, <<.>>, <<., .>>, <<..>>
 
 ||| Primarily used to make the definitions of bilift2 and bilift3 pretty
@@ -28,7 +26,7 @@ export
 ||| Biapplys (not to be confused with Biapplicatives)
 ||| @p The action of the Biapply on pairs of objects
 public export
-interface Bifunctor p => Biapply (p : Type -> Type -> Type) where
+interface Bifunctor p => Biapply (0 p : Type -> Type -> Type) where
 
   ||| Applys a Bifunctor of functions to another Bifunctor of the same type
   |||

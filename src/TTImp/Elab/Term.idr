@@ -46,23 +46,23 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
     -- If we can decide whether we need implicit lambdas without looking
     -- at the normal form, do so
     bindLamTm : RawImp -> Term vs -> Core (Maybe RawImp)
-    bindLamTm tm@(ILam _ _ Implicit _ _ _) (Bind fc n (Pi _ Implicit _) sc)
+    bindLamTm tm@(ILam _ _ Implicit _ _ _) (Bind fc n (Pi _ _ Implicit _) sc)
         = pure (Just tm)
-    bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ AutoImplicit _) sc)
+    bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ _ AutoImplicit _) sc)
         = pure (Just tm)
-    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ (DefImplicit _) _) sc)
+    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ _ (DefImplicit _) _) sc)
         = pure (Just tm)
-    bindLamTm tm (Bind fc n (Pi c Implicit ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c Implicit ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
              pure $ Just (ILam fc c Implicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi c AutoImplicit ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c AutoImplicit ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
              pure $ Just (ILam fc c AutoImplicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi c (DefImplicit _) ty) sc)
+    bindLamTm tm (Bind fc n (Pi _ c (DefImplicit _) ty) sc)
         = do n' <- genVarName (nameRoot n)
              Just sc' <- bindLamTm tm sc
                  | Nothing => pure Nothing
@@ -72,27 +72,27 @@ insertImpLam {vars} env tm (Just ty) = bindLam tm ty
         = case getFn exp of
                Ref _ Func _ => pure Nothing -- might still be implicit
                TForce _ _ _ => pure Nothing
-               Bind _ _ (Lam _ _ _) _ => pure Nothing
+               Bind _ _ (Lam _ _ _ _) _ => pure Nothing
                _ => pure $ Just tm
 
     bindLamNF : RawImp -> NF vars -> Core RawImp
-    bindLamNF tm@(ILam _ _ Implicit _ _ _) (NBind fc n (Pi _ Implicit _) sc)
+    bindLamNF tm@(ILam _ _ Implicit _ _ _) (NBind fc n (Pi _ _ Implicit _) sc)
         = pure tm
-    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (NBind fc n (Pi _ AutoImplicit _) sc)
+    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (NBind fc n (Pi _ _ AutoImplicit _) sc)
         = pure tm
-    bindLamNF tm (NBind fc n (Pi c Implicit ty) sc)
+    bindLamNF tm (NBind fc n (Pi fc' c Implicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c Implicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi c AutoImplicit ty) sc)
+    bindLamNF tm (NBind fc n (Pi fc' c AutoImplicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c AutoImplicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi c (DefImplicit _) ty) sc)
+    bindLamNF tm (NBind fc n (Pi _ c (DefImplicit _) ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
              sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
@@ -125,7 +125,7 @@ checkTerm rig elabinfo nest env (IVar fc n) exp
     = -- It may actually turn out to be an application, if the expected
       -- type is expecting an implicit argument, so check it as an
       -- application with no arguments
-      checkApp rig elabinfo nest env fc (IVar fc n) [] [] exp
+      checkApp rig elabinfo nest env fc (IVar fc n) [] [] [] exp
 checkTerm rig elabinfo nest env (IPi fc r p Nothing argTy retTy) exp
     = do n <- case p of
                    Explicit => genVarName "arg"
@@ -153,23 +153,25 @@ checkTerm rig elabinfo nest env (ICaseLocal fc uname iname args scope) exp
 checkTerm rig elabinfo nest env (IUpdate fc upds rec) exp
     = checkUpdate rig elabinfo nest env fc upds rec exp
 checkTerm rig elabinfo nest env (IApp fc fn arg) exp
-    = checkApp rig elabinfo nest env fc fn [arg] [] exp
+    = checkApp rig elabinfo nest env fc fn [arg] [] []  exp
+checkTerm rig elabinfo nest env (IAutoApp fc fn arg) exp
+    = checkApp rig elabinfo nest env fc fn [] [arg] []  exp
 checkTerm rig elabinfo nest env (IWithApp fc fn arg) exp
     = throw (GenericMsg fc "with application not implemented yet")
-checkTerm rig elabinfo nest env (IImplicitApp fc fn nm arg) exp
-    = checkApp rig elabinfo nest env fc fn [] [(nm, arg)] exp
+checkTerm rig elabinfo nest env (INamedApp fc fn nm arg) exp
+    = checkApp rig elabinfo nest env fc fn [] [] [(nm, arg)] exp
 checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
     = do est <- get EST
          nm <- genName "search"
          expty <- getTerm gexpty
-         sval <- searchVar fc rig depth (Resolved (defining est)) env nm expty
+         sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm expty
          pure (sval, gexpty)
 checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
     = do est <- get EST
          nmty <- genName "searchTy"
          ty <- metaVar fc erased env nmty (TType fc)
          nm <- genName "search"
-         sval <- searchVar fc rig depth (Resolved (defining est)) env nm ty
+         sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm ty
          pure (sval, gnf env ty)
 checkTerm rig elabinfo nest env (IAlternative fc uniq alts) exp
     = checkAlternative rig elabinfo nest env fc uniq alts exp
@@ -209,13 +211,8 @@ checkTerm rig elabinfo nest env (IType fc) exp
 
 checkTerm rig elabinfo nest env (IHole fc str) exp
     = checkHole rig elabinfo nest env fc str exp
-checkTerm rig elabinfo nest env (IUnifyLog fc n tm) exp
-    = do opts <- getSession
-         let lvl = logLevel opts
-         setLogLevel n
-         r <- check rig elabinfo nest env tm exp
-         setLogLevel lvl
-         pure r
+checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
+    = withLogLevel lvl $ check rig elabinfo nest env tm exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
          expty <- getTerm gexpty
@@ -308,4 +305,3 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
 --            Core (Term vars, Glued vars)
 TTImp.Elab.Check.checkImp rigc elabinfo nest env tm exp
     = checkTerm rigc elabinfo nest env tm exp
-

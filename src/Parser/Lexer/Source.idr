@@ -6,10 +6,15 @@ import Data.List1
 import Data.List
 import Data.Strings
 import Data.String.Extra
+import public Text.Bounded
+import Text.PrettyPrint.Prettyprinter
+import Text.PrettyPrint.Prettyprinter.Util
 
 import Utils.Hex
 import Utils.Octal
 import Utils.String
+
+import Core.Name
 
 %default total
 
@@ -23,8 +28,8 @@ data Token
   -- Identifiers
   | HoleIdent String
   | Ident String
-  | DotSepIdent (List1 String)  -- ident.ident
-  | DotIdent String             -- .ident
+  | DotSepIdent Namespace String -- ident.ident
+  | DotIdent String               -- .ident
   | Symbol String
   -- Comments
   | Comment String
@@ -46,7 +51,7 @@ Show Token where
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
-  show (DotSepIdent xs) = "namespaced identifier " ++ dotSep (List1.toList $ reverse xs)
+  show (DotSepIdent ns n) = "namespaced identifier " ++ show ns ++ "." ++ show n
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
@@ -58,6 +63,29 @@ Show Token where
   show (Keyword x) = x
   show (Pragma x) = "pragma " ++ x
   show (Unrecognised x) = "Unrecognised " ++ x
+
+export
+Pretty Token where
+  -- Literals
+  pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
+  pretty (DoubleLit x) = pretty "double" <++> pretty x
+  pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  -- Identifiers
+  pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
+  pretty (Ident x) = pretty "identifier" <++> pretty x
+  pretty (DotSepIdent ns n) = reflow "namespaced identifier" <++> pretty ns <+> dot <+> pretty n
+  pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
+  pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Comments
+  pretty (Comment _) = pretty "comment"
+  pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
+  -- Special
+  pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
+  pretty EndInput = reflow "end of input"
+  pretty (Keyword x) = pretty x
+  pretty (Pragma x) = pretty "pragma" <++> pretty x
+  pretty (Unrecognised x) = pretty "Unrecognised" <++> pretty x
 
 mutual
   ||| The mutually defined functions represent different states in a
@@ -97,10 +125,11 @@ mutual
   ||| comment unless the series of uninterrupted dashes is ended with
   ||| a closing brace in which case it is a closing delimiter.
   doubleDash : (k : Nat) -> Lexer
-  doubleDash k = many (is '-') <+> choice {t = List} -- absorb all dashes
-    [ is '}' <+> toEndComment k                      -- closing delimiter
-    , many (isNot '\n') <+> toEndComment (S k)       -- line comment
-    ]
+  doubleDash k = with Prelude.(::)
+      many (is '-') <+> choice            -- absorb all dashes
+        [ is '}' <+> toEndComment k                      -- closing delimiter
+        , many (isNot '\n') <+> toEndComment (S k)       -- line comment
+        ]
 
 blockComment : Lexer
 blockComment = is '{' <+> is '-' <+> toEndComment 1
@@ -174,8 +203,22 @@ export
 reservedSymbols : List String
 reservedSymbols
     = symbols ++
-      ["%", "\\", ":", "=", "|", "|||", "<-", "->", "=>", "?", "!",
+      ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
        "&", "**", "..", "~"]
+
+fromBinLit : String -> Integer
+fromBinLit str
+    = if length str <= 2
+         then 0
+         else let num = assert_total (strTail (strTail str)) in
+                fromBin . reverse . map castBin . unpack $ num
+    where
+      castBin : Char -> Integer
+      castBin '1' = 1; castBin _ = 0 -- This can only be '1' and '0' once lexed
+      fromBin : List Integer -> Integer
+      fromBin [] = 0
+      fromBin (0 :: xs) = 2 * fromBin xs
+      fromBin (1 :: xs) = 1 + (2 * fromBin xs)
 
 fromHexLit : String -> Integer
 fromHexLit str
@@ -204,6 +247,7 @@ rawTokens =
      (holeIdent, \x => HoleIdent (assert_total (strTail x)))] ++
     map (\x => (exact x, Symbol)) symbols ++
     [(doubleLit, \x => DoubleLit (cast x)),
+     (binLit, \x => IntegerLit (fromBinLit x)),
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
@@ -221,26 +265,26 @@ rawTokens =
     parseIdent x = if x `elem` keywords then Keyword x
                    else Ident x
     parseNamespace : String -> Token
-    parseNamespace ns = case List1.reverse . split (== '.') $ ns of
-                             [ident] => parseIdent ident
-                             ns      => DotSepIdent ns
+    parseNamespace ns = case mkNamespacedIdent ns of
+                             (Nothing, ident) => parseIdent ident
+                             (Just ns, n)     => DotSepIdent ns n
 
 export
-lexTo : (TokenData Token -> Bool) ->
-        String -> Either (Int, Int, String) (List (TokenData Token))
+lexTo : (WithBounds Token -> Bool) ->
+        String -> Either (Int, Int, String) (List (WithBounds Token))
 lexTo pred str
     = case lexTo pred rawTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkToken l c l c EndInput])
+                                      [MkBounded EndInput False l c l c])
            (_, fail) => Left fail
     where
-      notComment : TokenData Token -> Bool
-      notComment t = case tok t of
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
                           Comment _ => False
                           _ => True
 
 export
-lex : String -> Either (Int, Int, String) (List (TokenData Token))
+lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex = lexTo (const False)

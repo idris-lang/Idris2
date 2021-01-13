@@ -106,6 +106,10 @@ interface Eq ty => Ord ty where
   min : ty -> ty -> ty
   min x y = if (x < y) then x else y
 
+export
+comparing : Ord a => (b -> a) -> b -> b -> Ordering
+comparing p x y = compare (p x) (p y)
+
 public export
 Ord Void where
   compare _ _ impossible

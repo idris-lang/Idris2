@@ -1,4 +1,4 @@
-$1 --no-banner Cycle1.idr
-$1 --no-banner Loop.idr
+$1 --no-color --console-width 0 --no-banner Cycle1.idr
+$1 --no-color --console-width 0 --no-banner Loop.idr
 
 rm -rf build

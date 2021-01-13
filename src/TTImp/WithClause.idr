@@ -1,6 +1,7 @@
 module TTImp.WithClause
 
 import Core.Context
+import Core.Context.Log
 import Core.TT
 import TTImp.BindImplicits
 import TTImp.TTImp
@@ -20,7 +21,7 @@ mutual
   getMatch lhs (Implicit _ _) tm = pure []
 
   getMatch lhs (IVar _ (NS ns n)) (IVar loc (NS ns' n'))
-      = if n == n' && isSuffixOf ns' ns then pure [] else matchFail loc
+      = if n == n' && isParentOf ns' ns then pure [] else matchFail loc
   getMatch lhs (IVar _ (NS ns n)) (IVar loc n')
       = if n == n' then pure [] else matchFail loc
   getMatch lhs (IVar _ n) (IVar loc n')
@@ -39,7 +40,9 @@ mutual
   -- TODO: Lam, Let, Case, Local, Update
   getMatch lhs (IApp _ f a) (IApp loc f' a')
       = matchAll lhs [(f, f'), (a, a')]
-  getMatch lhs (IImplicitApp _ f n a) (IImplicitApp loc f' n' a')
+  getMatch lhs (IAutoApp _ f a) (IAutoApp loc f' a')
+      = matchAll lhs [(f, f'), (a, a')]
+  getMatch lhs (INamedApp _ f n a) (INamedApp loc f' n' a')
       = if n == n'
            then matchAll lhs [(f, f'), (a, a')]
            else matchFail loc
@@ -48,14 +51,20 @@ mutual
   -- On LHS: If there's an implicit in the parent, but not the clause, add the
   -- implicit to the clause. This will propagate the implicit through to the
   -- body
-  getMatch True (IImplicitApp fc f n a) f'
+  getMatch True (INamedApp fc f n a) f'
+      = matchAll True [(f, f'), (a, a)]
+  getMatch True (IAutoApp fc f a) f'
       = matchAll True [(f, f'), (a, a)]
   -- On RHS: Rely on unification to fill in the implicit
-  getMatch False (IImplicitApp fc f n a) f'
+  getMatch False (INamedApp fc f n a) f'
+      = getMatch False f f
+  getMatch False (IAutoApp fc f a) f'
       = getMatch False f f
   -- Can't have an implicit in the clause if there wasn't a matching
   -- implicit in the parent
-  getMatch lhs f (IImplicitApp fc f' n a)
+  getMatch lhs f (INamedApp fc f' n a)
+      = matchFail fc
+  getMatch lhs f (IAutoApp fc f' a)
       = matchFail fc
   -- Alternatives are okay as long as the alternatives correspond, and
   -- one of them is okay
@@ -134,13 +143,13 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
 
          let (warg :: rest) = reverse wrest
              | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
-         log 5 $ show lhs ++ " against " ++ show mlhs ++
+         log "with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
-         log 5 $ "Matches: " ++ show ms
+         log "with" 5 $ "Matches: " ++ show ms
          let newlhs = apply (IVar ploc wname)
                             (map (getArgMatch ploc False warg ms) wargnames ++ rest)
-         log 5 $ "New LHS: " ++ show newlhs
+         log "with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
     dropWithArgs : Nat -> RawImp ->
@@ -171,13 +180,13 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm []
         = throw (GenericMsg fc "Badly formed 'with' application")
     updateWith fc tm (arg :: args)
-        = do log 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
+        = do log "with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
-             log 10 $ "Result: " ++ show ms
+             log "with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar fc wname)
                                 (map (getArgMatch fc True arg ms) wargnames)
-             log 10 $ "With args for RHS: " ++ show wargnames
-             log 10 $ "New RHS: " ++ show newrhs
+             log "with" 10 $ "With args for RHS: " ++ show wargnames
+             log "with" 10 $ "New RHS: " ++ show newrhs
              pure (withApply fc newrhs args)
 
     mutual
@@ -196,8 +205,10 @@ withRHS fc drop wname wargnames tm toplhs
           = pure $ IUpdate fc upds !(wrhs tm) -- TODO!
       wrhs (IApp fc f a)
           = pure $ IApp fc !(wrhs f) !(wrhs a)
-      wrhs (IImplicitApp fc f n a)
-          = pure $ IImplicitApp fc !(wrhs f) n !(wrhs a)
+      wrhs (IAutoApp fc f a)
+          = pure $ IAutoApp fc !(wrhs f) !(wrhs a)
+      wrhs (INamedApp fc f n a)
+          = pure $ INamedApp fc !(wrhs f) n !(wrhs a)
       wrhs (IWithApp fc f a) = updateWith fc f [a]
       wrhs (IRewrite fc rule tm) = pure $ IRewrite fc !(wrhs rule) !(wrhs tm)
       wrhs (IDelayed fc r tm) = pure $ IDelayed fc r !(wrhs tm)

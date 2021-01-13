@@ -4,7 +4,7 @@
 
 typedef struct {
     int size;
-    uint8_t data[0];
+    uint8_t data[];
 } Buffer;
 
 void* idris2_newBuffer(int bytes) {
@@ -46,13 +46,17 @@ void idris2_setBufferByte(void* buffer, int loc, int byte) {
     }
 }
 
-void idris2_setBufferInt(void* buffer, int loc, int val) {
+void idris2_setBufferInt(void* buffer, int loc, int64_t val) {
     Buffer* b = buffer;
     if (loc >= 0 && loc+3 < b->size) {
-        b->data[loc] = val & 0xff;
-        b->data[loc+1] = (val >> 8) & 0xff;
+        b->data[loc  ] =  val        & 0xff;
+        b->data[loc+1] = (val >>  8) & 0xff;
         b->data[loc+2] = (val >> 16) & 0xff;
         b->data[loc+3] = (val >> 24) & 0xff;
+        b->data[loc+4] = (val >> 32) & 0xff;
+        b->data[loc+5] = (val >> 40) & 0xff;
+        b->data[loc+6] = (val >> 48) & 0xff;
+        b->data[loc+7] = (val >> 56) & 0xff;
     }
 }
 
@@ -77,7 +81,7 @@ void idris2_setBufferString(void* buffer, int loc, char* str) {
     }
 }
 
-int idris2_getBufferByte(void* buffer, int loc) {
+uint8_t idris2_getBufferByte(void* buffer, int loc) {
     Buffer* b = buffer;
     if (loc >= 0 && loc < b->size) {
         return b->data[loc];
@@ -86,13 +90,14 @@ int idris2_getBufferByte(void* buffer, int loc) {
     }
 }
 
-int idris2_getBufferInt(void* buffer, int loc) {
+int64_t idris2_getBufferInt(void* buffer, int loc) {
     Buffer* b = buffer;
-    if (loc >= 0 && loc+3 < b->size) {
-        return b->data[loc] +
-               (b->data[loc+1] << 8) +
-               (b->data[loc+2] << 16) +
-               (b->data[loc+3] << 24);
+    if (loc >= 0 && loc+7 < b->size) {
+        int64_t result = 0;
+        for (size_t i=0; i<8; i++) {
+            result |= b->data[loc + i] << (8 * i);
+        }
+        return result;
     } else {
         return 0;
     }
@@ -124,10 +129,10 @@ char* idris2_getBufferString(void* buffer, int loc, int len) {
     return rs;
 }
 
-int idris2_readBufferData(FILE* h, char* buffer, int loc, int max) {
+size_t idris2_readBufferData(FILE* h, char* buffer, size_t loc, size_t max) {
     return fread(buffer+loc, sizeof(uint8_t), (size_t)max, h);
 }
 
-int idris2_writeBufferData(FILE* h, char* buffer, int loc, int len) {
+size_t idris2_writeBufferData(FILE* h, const char* buffer, size_t loc, size_t len) {
     return fwrite(buffer+loc, sizeof(uint8_t), len, h);
 }

@@ -1,6 +1,7 @@
 module TTImp.Elab.Case
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -63,7 +64,7 @@ toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
 
 -- When we abstract over the evironment, pi needs to be explicit
 explicitPi : Env Term vs -> Env Term vs
-explicitPi (Pi c _ ty :: env) = Pi c Explicit ty :: explicitPi env
+explicitPi (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: explicitPi env
 explicitPi (b :: env) = b :: explicitPi env
 explicitPi [] = []
 
@@ -80,7 +81,7 @@ updateMults (MkVar p :: us) env = updateMults us (toRig0 p env)
 findImpsIn : {vars : _} ->
              FC -> Env Term vars -> List (Name, Term vars) -> Term vars ->
              Core ()
-findImpsIn fc env ns (Bind _ n b@(Pi _ Implicit ty) sc)
+findImpsIn fc env ns (Bind _ n b@(Pi _ _ Implicit ty) sc)
     = findImpsIn fc (b :: env)
                  ((n, weaken ty) :: map (\x => (fst x, weaken (snd x))) ns)
                  sc
@@ -103,9 +104,9 @@ merge (v :: vs) xs
 extendNeeded : {vs : _} ->
                Binder (Term vs) ->
                Env Term vs -> List (Var vs) -> List (Var vs)
-extendNeeded (Let c ty val) env needed
+extendNeeded (Let _ _ ty val) env needed
     = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
-extendNeeded (PLet c ty val) env needed
+extendNeeded (PLet _ _ ty val) env needed
     = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
 extendNeeded b env needed
     = merge (findUsedLocs env (binderType b)) needed
@@ -117,14 +118,10 @@ isNeeded x (MkVar {i} _ :: xs) = x == i || isNeeded x xs
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
 findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
-    = if n' == n && notLet b
+    = if n' == n && not (isLet b)
          then Just (MkVar First)
          else do MkVar p <- findScrutinee bs (IVar loc' n)
                  Just (MkVar (Later p))
-  where
-    notLet : Binder t -> Bool
-    notLet (Let _ _ _) = False
-    notLet _ = True
 findScrutinee _ _ = Nothing
 
 getNestData : (Name, (Maybe Name, List (Var vars), a)) ->
@@ -175,7 +172,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          est <- get EST
          fullImps <- getToBind fc (elabMode elabinfo)
                                (implicitMode elabinfo) env []
-         log 5 $ "Doing a case under unbound implicits " ++ show fullImps
+         log "elab.case" 5 $ "Doing a case under unbound implicits " ++ show fullImps
 
          scrn <- genVarName "scr"
          casen <- genCaseName !(prettyName !(toFullNames (Resolved (defining est))))
@@ -205,12 +202,12 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                                          fullImps caseretty_in (TType fc)
          let casefnty
                = abstractFullEnvType fc (allow splitOn (explicitPi env))
-                            (maybe (Bind fc scrn (Pi caseRig Explicit scrty)
+                            (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)
 
-         logEnv 10 "Case env" env
-         logTermNF 2 ("Case function type: " ++ show casen) [] casefnty
+         logEnv "elab.case" 10 "Case env" env
+         logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
 
          -- If we've had to add implicits to the case type (because there
          -- were unbound implicits) then we're in a bit of a mess. Easiest
@@ -239,9 +236,9 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                            splitOn
 
          let alts' = map (updateClause casen splitOn nest env) alts
-         log 2 $ "Nested: " ++ show (map getNestData (names nest))
-         log 2 $ "Generated alts: " ++ show alts'
-         logTermNF 2 "Case application" env appTm
+         log "elab.case" 2 $ "Nested: " ++ show (map getNestData (names nest))
+         log "elab.case" 2 $ "Generated alts: " ++ show alts'
+         logTermNF "elab.case" 2 "Case application" env appTm
 
          -- Start with empty nested names, since we've extended the rhs with
          -- ICaseLocal so they'll get rebuilt with the right environment
@@ -369,12 +366,12 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
                              _ => pure scrty_in
            (scrtyv, scrtyt) <- check erased elabinfo nest env scrty_exp
                                      (Just (gType fc))
-           logTerm 10 "Expected scrutinee type" scrtyv
+           logTerm "elab.case" 10 "Expected scrutinee type" scrtyv
            -- Try checking at the given multiplicity; if that doesn't work,
            -- try checking at Rig1 (meaning that we're using a linear variable
            -- so the scrutinee should be linear)
            let chrig = if isErased rig then erased else top
-           log 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
+           log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
 
            (scrtm_in, gscrty, caseRig) <- handle
               (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
@@ -390,7 +387,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
                             e => throw e)
 
            scrty <- getTerm gscrty
-           logTermNF 5 "Scrutinee type" env scrty
+           logTermNF "elab.case" 5 "Scrutinee type" env scrty
            defs <- get Ctxt
            checkConcrete !(nf defs env scrty)
            caseBlock rig elabinfo fc nest env scr scrtm_in scrty caseRig alts exp
@@ -404,17 +401,17 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
     checkConcrete _ = pure ()
 
     applyTo : Defs -> RawImp -> NF [] -> Core RawImp
-    applyTo defs ty (NBind fc _ (Pi _ Explicit _) sc)
+    applyTo defs ty (NBind fc _ (Pi _ _ Explicit _) sc)
         = applyTo defs (IApp fc ty (Implicit fc False))
                !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-    applyTo defs ty (NBind _ x (Pi _ _ _) sc)
-        = applyTo defs (IImplicitApp fc ty (Just x) (Implicit fc False))
+    applyTo defs ty (NBind _ x (Pi _ _ _ _) sc)
+        = applyTo defs (INamedApp fc ty x (Implicit fc False))
                !(sc defs (toClosure defaultOpts [] (Erased fc False)))
     applyTo defs ty _ = pure ty
 
     -- Get the name and type of the family the scrutinee is in
     getRetTy : Defs -> NF [] -> Core (Maybe (Name, NF []))
-    getRetTy defs (NBind fc _ (Pi _ _ _) sc)
+    getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
         = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc False)))
     getRetTy defs (NTCon _ n _ arity _)
         = do Just ty <- lookupTyExact n (gamma defs)

@@ -7,11 +7,9 @@ import TTImp.TTImp
 import Data.List
 import Data.Strings
 
-%default covering
+import Utils.String
 
-lowerFirst : String -> Bool
-lowerFirst "" = False
-lowerFirst str = assert_total (isLower (prim__strHead str))
+%default covering
 
 export
 getUnique : List String -> String -> String
@@ -40,7 +38,9 @@ findBindableNames arg env used (ILam fc rig p mn aty sc)
       findBindableNames True env' used sc
 findBindableNames arg env used (IApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IImplicitApp fc fn n av)
+findBindableNames arg env used (INamedApp fc fn n av)
+    = findBindableNames False env used fn ++ findBindableNames True env used av
+findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
@@ -82,7 +82,9 @@ findAllNames env (ILam fc rig p mn aty sc)
       findAllNames env' aty ++ findAllNames env' sc
 findAllNames env (IApp fc fn av)
     = findAllNames env fn ++ findAllNames env av
-findAllNames env (IImplicitApp fc fn n av)
+findAllNames env (INamedApp fc fn n av)
+    = findAllNames env fn ++ findAllNames env av
+findAllNames env (IAutoApp fc fn av)
     = findAllNames env fn ++ findAllNames env av
 findAllNames env (IWithApp fc fn av)
     = findAllNames env fn ++ findAllNames env av
@@ -116,7 +118,9 @@ findIBindVars (ILam fc rig p mn aty sc)
     = findIBindVars aty ++ findIBindVars sc
 findIBindVars (IApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
-findIBindVars (IImplicitApp fc fn n av)
+findIBindVars (INamedApp fc fn n av)
+    = findIBindVars fn ++ findIBindVars av
+findIBindVars (IAutoApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
 findIBindVars (IWithApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
@@ -167,13 +171,15 @@ mutual
       = ICase fc (substNames' bvar bound ps y) (substNames' bvar bound ps ty)
                  (map (substNamesClause' bvar bound ps) xs)
   substNames' bvar bound ps (ILocal fc xs y)
-      = let bound' = definedInBlock [] xs ++ bound in
+      = let bound' = definedInBlock emptyNS xs ++ bound in
             ILocal fc (map (substNamesDecl' bvar bound ps) xs)
                       (substNames' bvar bound' ps y)
   substNames' bvar bound ps (IApp fc fn arg)
       = IApp fc (substNames' bvar bound ps fn) (substNames' bvar bound ps arg)
-  substNames' bvar bound ps (IImplicitApp fc fn y arg)
-      = IImplicitApp fc (substNames' bvar bound ps fn) y (substNames' bvar bound ps arg)
+  substNames' bvar bound ps (INamedApp fc fn y arg)
+      = INamedApp fc (substNames' bvar bound ps fn) y (substNames' bvar bound ps arg)
+  substNames' bvar bound ps (IAutoApp fc fn arg)
+      = IAutoApp fc (substNames' bvar bound ps fn) (substNames' bvar bound ps arg)
   substNames' bvar bound ps (IWithApp fc fn arg)
       = IWithApp fc (substNames' bvar bound ps fn) (substNames' bvar bound ps arg)
   substNames' bvar bound ps (IAlternative fc y xs)
@@ -196,12 +202,14 @@ mutual
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
-                        ++ bound in
+                     ++ findIBindVars lhs
+                     ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs wval flags cs)
       = let bound' = map UN (map snd (findBindableNames True bound [] lhs))
-                        ++ bound in
+                     ++ findIBindVars lhs
+                     ++ bound in
             WithClause fc (substNames' bvar [] [] lhs)
                           (substNames' bvar bound' ps wval) flags cs
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
@@ -269,8 +277,10 @@ mutual
                    (substLoc fc' y)
   substLoc fc' (IApp fc fn arg)
       = IApp fc' (substLoc fc' fn) (substLoc fc' arg)
-  substLoc fc' (IImplicitApp fc fn y arg)
-      = IImplicitApp fc' (substLoc fc' fn) y (substLoc fc' arg)
+  substLoc fc' (INamedApp fc fn y arg)
+      = INamedApp fc' (substLoc fc' fn) y (substLoc fc' arg)
+  substLoc fc' (IAutoApp fc fn arg)
+      = IAutoApp fc' (substLoc fc' fn) (substLoc fc' arg)
   substLoc fc' (IWithApp fc fn arg)
       = IWithApp fc' (substLoc fc' fn) (substLoc fc' arg)
   substLoc fc' (IAlternative fc y xs)

@@ -42,8 +42,10 @@ mutual
       = pure $ IUpdate fc !(traverse getUnquoteUpdate ds) !(getUnquote sc)
   getUnquote (IApp fc f a)
       = pure $ IApp fc !(getUnquote f) !(getUnquote a)
-  getUnquote (IImplicitApp fc f n a)
-      = pure $ IImplicitApp fc !(getUnquote f) n !(getUnquote a)
+  getUnquote (IAutoApp fc f a)
+      = pure $ IAutoApp fc !(getUnquote f) !(getUnquote a)
+  getUnquote (INamedApp fc f n a)
+      = pure $ INamedApp fc !(getUnquote f) n !(getUnquote a)
   getUnquote (IWithApp fc f a)
       = pure $ IWithApp fc !(getUnquote f) !(getUnquote a)
   getUnquote (IAlternative fc at as)
@@ -72,7 +74,7 @@ mutual
            put Unq ((qv, fc, tm) :: unqs)
            pure (IUnquote fc (IVar fc qv)) -- turned into just qv when reflecting
   getUnquote tm = pure tm
-  
+
   getUnquoteClause : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
@@ -127,10 +129,10 @@ mutual
                    {auto u : Ref UST UState} ->
                    ImpData ->
                    Core ImpData
-  getUnquoteData (MkImpData fc n tc opts cs) 
+  getUnquoteData (MkImpData fc n tc opts cs)
       = pure $ MkImpData fc n !(getUnquote tc) opts
                          !(traverse getUnquoteTy cs)
-  getUnquoteData (MkImpLater fc n tc) 
+  getUnquoteData (MkImpLater fc n tc)
       = pure $ MkImpLater fc n !(getUnquote tc)
 
   getUnquoteDecl : {auto c : Ref Ctxt Defs} ->
@@ -145,7 +147,7 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc !(traverse unqPair ps) 
+      = pure $ IParameters fc !(traverse unqPair ps)
                            !(traverse getUnquoteDecl ds)
     where
       unqPair : (Name, RawImp) -> Core (Name, RawImp)
@@ -172,11 +174,11 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
     = do defs <- get Ctxt
          Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
               | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
-         (escv, escty) <- check rig elabinfo nest env esctm 
-                                (Just (gnf env (Ref fc (TyCon 0 0) 
+         (escv, escty) <- check rig elabinfo nest env esctm
+                                (Just (gnf env (Ref fc (TyCon 0 0)
                                            (Resolved idx))))
          sc <- bindUnqs qs rig elabinfo nest env tm
-         pure (Bind fc qvar (Let (rigMult top rig) escv !(getTerm escty))
+         pure (Bind fc qvar (Let fc (rigMult top rig) escv !(getTerm escty))
                     (refToLocal qvar qvar sc))
 
 onLHS : ElabMode -> Bool

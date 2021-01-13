@@ -1,3 +1,58 @@
+Changes since Idris 2 v0.2.1
+----------------------------
+
+Library changes:
+
+* Added `Data.HVect` in `contrib`, for heterogeneous vectors.
+* Various other library functions added throughout `base` and `contrib`
+
+Command-line options changes:
+
+* Added `--color` and `--no-color` options for colored terminal output.
+  Color is enabled by default.
+* Added `--console-width <auto|n>` option for printing margins.  By default the
+  `auto` option is selected, the result is that the compiler detects the current
+  terminal width and sets it as the option value, otherwise a user value can be
+  provided.  An explicit `0` has the effect of simulating a terminal with
+  unbounded width.
+
+Language and compiler changes:
+
+* Removed multiplicity subtyping, as this is unsound and unfortunately causes
+  more problems than it solves. This means you sometimes now need to write
+  linear versions of functions as special cases. (Though note that the 1
+  multiplicity is still considered experimental, so hopefully this will change
+  for the better in the future!)
+* Added new syntax for named applications of explicit arguments:
+
+     `f {x [= t], x [= t], ...}`
+     `f {x [= t], x [= t], ..., _}`
+
+* Added syntax for binding all explicit arguments (in the left hand side);
+
+     `f {}`
+
+* Added new syntax for record updates (without the need for the `record`
+  keyword):
+
+     `{x := t, x $= t, ...}`
+
+* Local implementations of interfaces (in `let` or `where` blocks) now work,
+  along with `%hint` annotations on local definitions, meaning that local
+  definitions can be searched in auto implicit search.
+  + Note, though, that there are still some known limitations (with both local
+    hints and local implementations) which will be resolved in the next version.
+* New experimental ``refc`` code generator, which generates C with reference
+  counting.
+* Added primitives to the parsing library used in the compiler to get more precise
+  boundaries to the AST nodes `FC`.
+
+REPL/IDE mode changes:
+
+* Added `:color (on|off)` option for colored terminal output.
+* Added `:consolewidth (auto|n)` option for printing margins.  Mirrors the
+  command line option.
+
 Changes since Idris 2 v0.2.0
 ----------------------------
 

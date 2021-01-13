@@ -21,7 +21,7 @@ SourceEmptyRule = EmptyRule Token
 export
 eoi : SourceEmptyRule ()
 eoi
-    = do nextIs "Expected end of input" (isEOI . tok)
+    = do nextIs "Expected end of input" (isEOI . val)
          pure ()
   where
     isEOI : Token -> Bool
@@ -32,7 +32,7 @@ export
 constant : Rule Constant
 constant
     = terminal "Expected constant"
-               (\x => case tok x of
+               (\x => case x.val of
                            CharLit c => case getCharLit c of
                                              Nothing => Nothing
                                              Just c' => Just (Ch c')
@@ -54,7 +54,7 @@ constant
 
 documentation' : Rule String
 documentation' = terminal "Expected documentation comment"
-                          (\x => case tok x of
+                          (\x => case x.val of
                                       DocComment d => Just d
                                       _ => Nothing)
 
@@ -66,31 +66,44 @@ export
 intLit : Rule Integer
 intLit
     = terminal "Expected integer literal"
-               (\x => case tok x of
+               (\x => case x.val of
                            IntegerLit i => Just i
+                           _ => Nothing)
+
+export
+onOffLit : Rule Bool
+onOffLit
+    = terminal "Expected on or off"
+               (\x => case x.val of
+                           Ident "on" => Just True
+                           Ident "off" => Just False
                            _ => Nothing)
 
 export
 strLit : Rule String
 strLit
     = terminal "Expected string literal"
-               (\x => case tok x of
+               (\x => case x.val of
                            StringLit s => Just s
                            _ => Nothing)
 
 export
-dotIdent : Rule Name
-dotIdent
-    = terminal "Expected dot+identifier"
-               (\x => case tok x of
-                           DotIdent s => Just (UN s)
+aDotIdent : Rule String
+aDotIdent = terminal "Expected dot+identifier"
+               (\x => case x.val of
+                           DotIdent s => Just s
                            _ => Nothing)
+
+
+export
+postfixProj : Rule Name
+postfixProj = RF <$> aDotIdent
 
 export
 symbol : String -> Rule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case tok x of
+               (\x => case x.val of
                            Symbol s => if s == req then Just ()
                                                    else Nothing
                            _ => Nothing)
@@ -99,7 +112,7 @@ export
 keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case tok x of
+               (\x => case x.val of
                            Keyword s => if s == req then Just ()
                                                     else Nothing
                            _ => Nothing)
@@ -108,7 +121,7 @@ export
 exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req)
-               (\x => case tok x of
+               (\x => case x.val of
                            Ident s => if s == req then Just ()
                                       else Nothing
                            _ => Nothing)
@@ -117,7 +130,7 @@ export
 pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
-    (\x => case tok x of
+    (\x => case x.val of
       Pragma s =>
         if s == n
           then Just ()
@@ -128,7 +141,7 @@ export
 operator : Rule Name
 operator
     = terminal "Expected operator"
-               (\x => case tok x of
+               (\x => case x.val of
                            Symbol s =>
                                 if s `elem` reservedSymbols
                                    then Nothing
@@ -138,26 +151,30 @@ operator
 identPart : Rule String
 identPart
     = terminal "Expected name"
-               (\x => case tok x of
+               (\x => case x.val of
                            Ident str => Just str
                            _ => Nothing)
 
 export
-namespacedIdent : Rule (List1 String)
+namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
     = terminal "Expected namespaced name"
-        (\x => case tok x of
-            DotSepIdent ns => Just ns
-            Ident i => Just [i]
+        (\x => case x.val of
+            DotSepIdent ns n => Just (Just ns, n)
+            Ident i => Just (Nothing, i)
             _ => Nothing)
 
 export
-moduleIdent : Rule (List1 String)
+namespaceId : Rule Namespace
+namespaceId = map (uncurry mkNestedNamespace) namespacedIdent
+
+export
+moduleIdent : Rule ModuleIdent
 moduleIdent
     = terminal "Expected module identifier"
-        (\x => case tok x of
-            DotSepIdent ns => Just ns
-            Ident i => Just [i]
+        (\x => case x.val of
+            DotSepIdent ns n => Just (mkModuleIdent (Just ns) n)
+            Ident i => Just (mkModuleIdent Nothing i)
             _ => Nothing)
 
 export
@@ -168,7 +185,7 @@ export
 holeName : Rule String
 holeName
     = terminal "Expected hole name"
-               (\x => case tok x of
+               (\x => case x.val of
                            HoleIdent str => Just str
                            _ => Nothing)
 
@@ -180,31 +197,32 @@ reservedNames
 export
 name : Rule Name
 name = opNonNS <|> do
-  ns <- namespacedIdent
-  opNS ns <|> nameNS ns
+  nsx <- namespacedIdent
+  -- writing (ns, x) <- namespacedIdent leads to an unsoled constraint.
+  -- I tried to write a minimised test case but could not reproduce the error
+  -- on a simplified example.
+  let ns = fst nsx
+  let x = snd nsx
+  opNS (mkNestedNamespace ns x) <|> nameNS ns x
  where
   reserved : String -> Bool
   reserved n = n `elem` reservedNames
 
-  nameNS : List1 String -> SourceEmptyRule Name
-  nameNS [x] =
+  nameNS : Maybe Namespace -> String -> SourceEmptyRule Name
+  nameNS ns x =
     if reserved x
       then fail $ "can't use reserved name " ++ x
-      else pure $ UN x
-  nameNS (x :: xs) =
-    if reserved x
-      then fail $ "can't use reserved name " ++ x
-      else pure $ NS xs (UN x)
+      else pure $ mkNamespacedName ns x
 
   opNonNS : Rule Name
-  opNonNS = symbol "(" *> operator <* symbol ")"
+  opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 
-  opNS : List1 String -> Rule Name
+  opNS : Namespace -> Rule Name
   opNS ns = do
     symbol ".("
-    n <- operator
+    n <- (operator <|> postfixProj)
     symbol ")"
-    pure (NS (toList ns) n)
+    pure (NS ns n)
 
 export
 IndentInfo : Type
@@ -286,7 +304,7 @@ export
 atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
 atEnd indent
     = eoi
-  <|> do nextIs "Expected end of block" (isTerminator . tok)
+  <|> do nextIs "Expected end of block" (isTerminator . val)
          pure ()
   <|> do col <- Common.column
          if (col <= indent)
@@ -414,15 +432,15 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List ty)
+nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List1 ty)
 nonEmptyBlock item
     = do symbol "{"
          commit
          res <- blockEntry AnyIndent item
          ps <- blockEntries (snd res) item
          symbol "}"
-         pure (fst res :: ps)
+         pure (fst res ::: ps)
   <|> do col <- column
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
-         pure (fst res :: ps)
+         pure (fst res ::: ps)

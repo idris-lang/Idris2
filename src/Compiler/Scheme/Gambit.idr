@@ -38,6 +38,13 @@ findGSC =
   do env <- getEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
 
+findGSCBackend : IO String
+findGSCBackend =
+  do env <- getEnv "GAMBIT_GSC_BACKEND"
+     pure $ case env of
+              Nothing => ""
+              Just e => " -cc " ++ e
+
 schHeader : String
 schHeader = "; @generated\n
          (declare (block)
@@ -142,7 +149,10 @@ cType fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
-cftySpec fc CFUnsigned = pure "unsigned-int"
+cftySpec fc CFUnsigned8 = pure "unsigned-char"
+cftySpec fc CFUnsigned16 = pure "unsigned-short"
+cftySpec fc CFUnsigned32 = pure "unsigned-int"
+cftySpec fc CFUnsigned64 = pure "unsigned-long"
 cftySpec fc CFString = pure "UTF-8-string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
@@ -208,7 +218,7 @@ cCall fc cfn fnWrapName clib args ret
          let body = setBoxes ++ "\n" ++ call
 
          pure $ case ret of -- XXX
-                     CFIORes _ => (handleRet retType body, wrapDeclarations) 
+                     CFIORes _ => (handleRet retType body, wrapDeclarations)
                      _ => (body, wrapDeclarations)
   where
     mkNs : Int -> List CFType -> List (Maybe String)
@@ -288,11 +298,11 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
-useCC fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC fc [] args ret = throw (NoForeignCC fc)
 useCC fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC fc ccs args ret
+           Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
@@ -368,8 +378,10 @@ compileToSCM c tm outfile
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp gambitPrim gambitString 0 ctm
          support <- readDataFile "gambit/support.scm"
+         ds <- getDirectives Gambit
+         extraRuntime <- getExtraRuntime ds
          foreign <- readDataFile "gambit/foreign.scm"
-         let scm = showSep "\n" [schHeader, support, foreign, code, main]
+         let scm = showSep "\n" [schHeader, support, extraRuntime, foreign, code, main]
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          pure $ mapMaybe fst fgndefs
@@ -382,9 +394,15 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++ 
-                   " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+         gscBackend <- coreLift findGSCBackend
+         ds <- getDirectives Gambit
+         let gscCompileOpts =
+             case find (== "C") ds of
+                 Nothing => gscBackend ++ " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
+                   (showSep " " libsfile) ++ "\""
+                 Just _ => " -c"
+         let cmd =
+             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)

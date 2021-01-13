@@ -2,6 +2,7 @@ module Core.Unify
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -30,34 +31,23 @@ public export
 record UnifyInfo where
   constructor MkUnifyInfo
   atTop : Bool
-  precise : Bool -- False == generalise to RigW in Pi
   umode : UnifyMode
 
 export
 inTerm : UnifyInfo
-inTerm = MkUnifyInfo True True InTerm
+inTerm = MkUnifyInfo True InTerm
 
 export
 inLHS : UnifyInfo
-inLHS = MkUnifyInfo True True InLHS
-
-export
-inTermP : Bool -> UnifyInfo
-inTermP p = MkUnifyInfo True p InTerm
+inLHS = MkUnifyInfo True InLHS
 
 export
 inMatch : UnifyInfo
-inMatch = MkUnifyInfo True True InMatch
+inMatch = MkUnifyInfo True InMatch
 
 export
 inSearch : UnifyInfo
-inSearch = MkUnifyInfo True True InSearch
-
-lam : UnifyInfo -> UnifyInfo
-lam = record { precise = True }
-
-inLam : UnifyInfo -> Bool
-inLam = precise
+inSearch = MkUnifyInfo True InSearch
 
 lower : UnifyInfo -> UnifyInfo
 lower = record { atTop = False }
@@ -70,7 +60,7 @@ Eq UnifyMode where
    _ == _ = False
 
 Eq UnifyInfo where
-  x == y = atTop x == atTop y && precise x == precise y && umode x == umode y
+  x == y = atTop x == atTop y && umode x == umode y
 
 Show UnifyMode where
   show InLHS = "InLHS"
@@ -119,9 +109,9 @@ solvedHole : Int -> UnifyResult
 solvedHole n = MkUnifyResult [] True [n] NoLazy
 
 public export
-interface Unify (tm : List Name -> Type) where
+interface Unify tm where
   -- Unify returns a list of ids referring to newly added constraints
-  unifyD : {vars : _} ->
+  unifyD : {vars : List Name} ->
            Ref Ctxt Defs ->
            Ref UST UState ->
            UnifyInfo ->
@@ -225,7 +215,7 @@ postpone : {vars : _} ->
 postpone blockedMetas loc mode logstr env x y
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         logC 10 $
+         logC "unify.postpone" 10 $
               do xq <- quote defs env x
                  yq <- quote defs env y
                  pure (logstr ++ ": " ++ show !(toFullNames xq) ++
@@ -248,10 +238,11 @@ postpone blockedMetas loc mode logstr env x y
          c <- addConstraint (MkConstraint loc (atTop mode) blocked env
                                           xtm
                                           ytm)
-         log 10 $ show c ++ " NEW CONSTRAINT " ++ show loc ++
+         log "unify.postpone" 10 $
+                 show c ++ " NEW CONSTRAINT " ++ show loc ++
                  " blocked on " ++ show metas
-         logTerm 10 "X" xtm
-         logTerm 10 "Y" ytm
+         logTerm "unify.postpone" 10 "X" xtm
+         logTerm "unify.postpone" 10 "Y" ytm
          pure (constrain c)
   where
     checkDefined : Defs -> NF vars -> Core ()
@@ -481,7 +472,7 @@ instantiate : {auto c : Ref Ctxt Defs} ->
               Term newvars -> -- shrunk environment
               Core ()
 instantiate {newvars} loc mode env mname mref num mdef locs otm tm
-    = do logTerm 5 ("Instantiating in " ++ show newvars) tm
+    = do logTerm "unify.instantiate" 5 ("Instantiating in " ++ show newvars) tm
 --          let Hole _ _ = definition mdef
 --              | def => ufail {a=()} loc (show mname ++ " already resolved as " ++ show def)
          case fullname mdef of
@@ -490,14 +481,14 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          let ty = type mdef -- assume all pi binders we need are there since
                             -- it was built from an environment, so no need
                             -- to normalise
-         logTerm 5 ("Type: " ++ show mname) ty
-         log 5 ("With locs: " ++ show locs)
-         log 5 ("From vars: " ++ show newvars)
+         logTerm "unify.instantiate" 5 ("Type: " ++ show mname) ty
+         log "unify.instantiate" 5 ("With locs: " ++ show locs)
+         log "unify.instantiate" 5 ("From vars: " ++ show newvars)
 
          defs <- get Ctxt
          rhs <- mkDef locs INil tm ty
 
-         logTerm 5 "Definition" rhs
+         logTerm "unify.instantiate" 5 "Definition" rhs
          let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs)
          let newdef = record { definition =
                                  PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
@@ -515,7 +506,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple (Local _ _ _ _) = True
     isSimple (Ref _ _ _) = True
     isSimple (Meta _ _ _ _) = True
-    isSimple (Bind _ _ (Lam _ _ _) sc) = isSimple sc
+    isSimple (Bind _ _ (Lam _ _ _ _) sc) = isSimple sc
     isSimple (PrimVal _ _) = True
     isSimple (TType _) = True
     isSimple _ = False
@@ -557,25 +548,20 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
 
         updateIVarsB : {vs, newvars : _} ->
                        IVars vs newvars -> Binder (Term newvars) -> Maybe (Binder (Term vs))
-        updateIVarsB ivs (Lam c p t)
+        updateIVarsB ivs (Lam fc c p t)
             = do p' <- updateIVarsPi ivs p
-                 Just (Lam c p' !(updateIVars ivs t))
-        updateIVarsB ivs (Let c v t) = Just (Let c !(updateIVars ivs v) !(updateIVars ivs t))
+                 Just (Lam fc c p' !(updateIVars ivs t))
+        updateIVarsB ivs (Let fc c v t) = Just (Let fc c !(updateIVars ivs v) !(updateIVars ivs t))
         -- Make 'pi' binders have multiplicity W when we infer a Rig1 metavariable,
         -- since this is the most general thing to do if it's unknown.
-        updateIVarsB ivs (Pi rig p t)
+        updateIVarsB ivs (Pi fc rig p t)
             = do p' <- updateIVarsPi ivs p
-                 if isLinear rig
-                    then do t' <- updateIVars ivs t
-                            pure $ if inLam mode || precise
-                               then (Pi linear p' t')
-                               else (Pi top p' t')
-                    else Just (Pi rig p' !(updateIVars ivs t))
-        updateIVarsB ivs (PVar c p t)
+                 Just (Pi fc rig p' !(updateIVars ivs t))
+        updateIVarsB ivs (PVar fc c p t)
             = do p' <- updateIVarsPi ivs p
-                 Just (PVar c p' !(updateIVars ivs t))
-        updateIVarsB ivs (PLet c v t) = Just (PLet c !(updateIVars ivs v) !(updateIVars ivs t))
-        updateIVarsB ivs (PVTy c t) = Just (PVTy c !(updateIVars ivs t))
+                 Just (PVar fc c p' !(updateIVars ivs t))
+        updateIVarsB ivs (PLet fc c v t) = Just (PLet fc c !(updateIVars ivs v) !(updateIVars ivs t))
+        updateIVarsB ivs (PVTy fc c t) = Just (PVTy fc c !(updateIVars ivs t))
     updateIVars ivs (App fc f a)
         = Just (App fc !(updateIVars ivs f) !(updateIVars ivs a))
     updateIVars ivs (As fc u a p)
@@ -594,10 +580,10 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
             List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
             Core (Term vs)
-    mkDef (v :: vs) vars soln (Bind bfc x (Pi c _ ty) sc)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ Bind bfc x (Lam c Explicit (Erased bfc False)) sc'
-    mkDef vs vars soln (Bind bfc x b@(Let c val ty) sc)
+            pure $ Bind bfc x (Lam fc c Explicit (Erased bfc False)) sc'
+    mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do sc' <- mkDef vs (ICons Nothing vars) soln sc
             let Just scs = shrinkTerm sc' (DropCons SubRefl)
                 | Nothing => pure $ Bind bfc x b sc'
@@ -659,7 +645,7 @@ mutual
 
   getArgTypes : Defs -> (fnType : NF vars) -> List (Closure vars) ->
                 Core (Maybe (List (NF vars)))
-  getArgTypes defs (NBind _ n (Pi _ _ ty) sc) (a :: as)
+  getArgTypes defs (NBind _ n (Pi _ _ _ ty) sc) (a :: as)
      = do Just scTys <- getArgTypes defs !(sc defs a) as
                | Nothing => pure Nothing
           pure (Just (ty :: scTys))
@@ -676,15 +662,15 @@ mutual
   headsConvert mode fc env (Just vs) (Just ns)
       = case (reverse vs, reverse ns) of
              (v :: _, n :: _) =>
-                do logNF 10 "Unifying head" env v
-                   logNF 10 ".........with" env n
+                do logNF "unify.head" 10 "Unifying head" env v
+                   logNF "unify.head" 10 ".........with" env n
                    res <- unify mode fc env v n
                    -- If there's constraints, we postpone the whole equation
                    -- so no need to record them
                    pure (isNil (constraints res ))
              _ => pure False
   headsConvert mode fc env _ _
-      = do log 10 "Nothing to convert"
+      = do log "unify.head" 10 "Nothing to convert"
            pure True
 
   unifyInvertible : {auto c : Ref Ctxt Defs} ->
@@ -719,17 +705,17 @@ mutual
                      (h :: hargs, f :: fargs) =>
                         tryUnify
                           (if not swap then
-                              do log 10 "Unifying invertible"
+                              do log "unify.invertible" 10 "Unifying invertible"
                                  ures <- unify mode fc env h f
-                                 log 10 $ "Constraints " ++ show (constraints ures)
+                                 log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
                                        (NApp fc (NMeta mname mref margs) (reverse hargs))
                                        (con (reverse fargs))
                                  pure (union ures uargs)
                              else
-                              do log 10 "Unifying invertible"
+                              do log "unify.invertible" 10 "Unifying invertible"
                                  ures <- unify mode fc env f h
-                                 log 10 $ "Constraints " ++ show (constraints ures)
+                                 log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
                                        (con (reverse fargs))
                                        (NApp fc (NMeta mname mref margs) (reverse hargs))
@@ -857,7 +843,8 @@ mutual
       = do defs <- get Ctxt
            empty <- clearDefs defs
            let args = margs ++ margs'
-           logC 10 (do args' <- traverse (evalArg empty) args
+           logC "unify.hole" 10
+                   (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
                        qtm <- quote empty env tmnf
                        pure $ "Unifying: " ++ show mname ++ " " ++ show qargs ++
@@ -914,7 +901,7 @@ mutual
   -- Postpone if a name application against an application, unless they are
   -- convertible
   unifyApp swap mode loc env fc (NRef nt n) args tm
-      = do log 10 $ "Name against app, unifyIfEq"
+      = do log "unify.application" 10 $ "Name against app, unifyIfEq"
            if not swap
               then unifyIfEq True loc mode env (NApp fc (NRef nt n) args) tm
               else unifyIfEq True loc mode env tm (NApp fc (NRef nt n) args)
@@ -964,14 +951,14 @@ mutual
                                      (NApp yfc (NLocal yr y yp) [])
   -- Locally bound things, in a term (not LHS). Since we have to unify
   -- for *all* possible values, we can safely unify the arguments.
-  unifyBothApps mode@(MkUnifyInfo p t InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
+  unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
            then unifyArgs mode loc env xargs yargs
            else postpone True loc mode "Postponing local app"
                          env (NApp xfc (NLocal xr x xp) xargs)
                              (NApp yfc (NLocal yr y yp) yargs)
   unifyBothApps mode loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
-      = do log 10 $ "Both local apps, unifyIfEq"
+      = do log "unify.application" 10 $ "Both local apps, unifyIfEq"
            unifyIfEq True loc mode env (NApp xfc (NLocal xr x xp) xargs)
                                        (NApp yfc (NLocal yr y yp) yargs)
   -- If they're both holes, solve the one with the bigger context
@@ -1017,13 +1004,14 @@ mutual
                                                (NApp xfc fx xargs')
            else unifyApp False mode loc env xfc fx xargs'
                                         (NApp yfc (NMeta yn yi yargs) yargs')
-  unifyBothApps mode@(MkUnifyInfo p t InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
+  unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
            then unifyArgs mode loc env xargs yargs
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
-  unifyBothApps mode@(MkUnifyInfo p t InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
+  unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
-           then do logC 5 (do defs <- get Ctxt
+           then do logC "unify.application" 5
+                          (do defs <- get Ctxt
                               xs <- traverse (quote defs env) xargs
                               ys <- traverse (quote defs env) yargs
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
@@ -1031,11 +1019,6 @@ mutual
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
-
-  -- Comparing multiplicities when converting pi binders
-  subRig : RigCount -> RigCount -> Bool
-  subRig x y = (isLinear x && isRigOther y) || -- we can pass a linear function if a general one is expected
-               x == y -- otherwise, the multiplicities need to match up
 
   unifyBothBinders: {auto c : Ref Ctxt Defs} ->
                     {auto u : Ref UST UState} ->
@@ -1046,56 +1029,59 @@ mutual
                     FC -> Name -> Binder (NF vars) ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     Core UnifyResult
-  unifyBothBinders mode loc env xfc x (Pi cx ix tx) scx yfc y (Pi cy iy ty) scy
+  unifyBothBinders mode loc env xfc x (Pi fcx cx ix tx) scx yfc y (Pi fcy cy iy ty) scy
       = do defs <- get Ctxt
-           if not (subRig cx cy)
+           if cx /= cy
              then convertError loc env
-                    (NBind xfc x (Pi cx ix tx) scx)
-                    (NBind yfc y (Pi cy iy ty) scy)
+                    (NBind xfc x (Pi fcx cx ix tx) scx)
+                    (NBind yfc y (Pi fcy cy iy ty) scy)
              else
                do empty <- clearDefs defs
                   tx' <- quote empty env tx
-                  logC 10 $ (do ty' <- quote empty env ty
+                  logC "unify.binder" 10 $
+                            (do ty' <- quote empty env ty
                                 pure ("Unifying arg types " ++ show tx' ++ " and " ++ show ty'))
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
                   let env' : Env Term (x :: _)
-                           = Pi cy Explicit tx' :: env
+                           = Pi fcy cy Explicit tx' :: env
                   case constraints ct of
                       [] => -- No constraints, check the scope
                          do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tmx <- quote empty env tscx
                             tmy <- quote empty env tscy
-                            unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
-                                                (refsToLocals (Add x xn None) tmy)
+                            unify (lower mode) loc env'
+                              (refsToLocals (Add x xn None) tmx)
+                              (refsToLocals (Add x xn None) tmy)
                       cs => -- Constraints, make new guarded constant
                          do txtm <- quote empty env tx
                             tytm <- quote empty env ty
                             c <- newConstant loc erased env
-                                   (Bind xfc x (Lam cy Explicit txtm) (Local xfc Nothing _ First))
-                                   (Bind xfc x (Pi cy Explicit txtm)
+                                   (Bind xfc x (Lam fcy cy Explicit txtm) (Local xfc Nothing _ First))
+                                   (Bind xfc x (Pi fcy cy Explicit txtm)
                                        (weaken tytm)) cs
                             tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                             tscy <- scy defs (toClosure defaultOpts env (App loc c (Ref loc Bound xn)))
                             tmx <- quote empty env tscx
                             tmy <- quote empty env tscy
-                            cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
-                                                       (refsToLocals (Add x xn None) tmy)
+                            cs' <- unify (lower mode) loc env'
+                                     (refsToLocals (Add x xn None) tmx)
+                                     (refsToLocals (Add x xn None) tmy)
                             pure (union ct cs')
-  unifyBothBinders mode loc env xfc x (Lam cx ix tx) scx yfc y (Lam cy iy ty) scy
+  unifyBothBinders mode loc env xfc x (Lam fcx cx ix tx) scx yfc y (Lam fcy cy iy ty) scy
       = do defs <- get Ctxt
-           if not (subRig cx cy)
+           if cx /= cy
              then convertError loc env
-                    (NBind xfc x (Lam cx ix tx) scx)
-                    (NBind yfc y (Lam cy iy ty) scy)
+                    (NBind xfc x (Lam fcx cx ix tx) scx)
+                    (NBind yfc y (Lam fcy cy iy ty) scy)
              else
                do empty <- clearDefs defs
                   tx' <- quote empty env tx
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
                   let env' : Env Term (x :: _)
-                           = Lam cx Explicit tx' :: env
+                           = Lam fcx cx Explicit tx' :: env
                   txtm <- quote empty env tx
                   tytm <- quote empty env ty
 
@@ -1103,8 +1089,8 @@ mutual
                   tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
                   tmx <- quote empty env tscx
                   tmy <- quote empty env tscy
-                  cs' <- unify (lower (lam mode)) loc env' (refsToLocals (Add x xn None) tmx)
-                                                   (refsToLocals (Add x xn None) tmy)
+                  cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
+                                                           (refsToLocals (Add x xn None) tmy)
                   pure (union ct cs')
 
   unifyBothBinders mode loc env xfc x bx scx yfc y by scy
@@ -1118,14 +1104,14 @@ mutual
   dumpArg env (MkClosure opts loc lenv tm)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           logTerm 0 "Term: " tm
+           logTerm "" 0 "Term: " tm
            nf <- evalClosure empty (MkClosure opts loc lenv tm)
-           logNF 0 "  " env nf
+           logNF "" 0 "  " env nf
   dumpArg env cl
       = do defs <- get Ctxt
            empty <- clearDefs defs
            nf <- evalClosure empty cl
-           logNF 0 "  " env nf
+           logNF "" 0 "  " env nf
 
   export
   unifyNoEta : {auto c : Ref Ctxt Defs} ->
@@ -1144,11 +1130,11 @@ mutual
                      -- may prove useful again...
                      {-
                      when (logging ust) $
-                        do log 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                           log 0 "ARGUMENTS:"
+                        do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
+                           log "" 0 "ARGUMENTS:"
                            defs <- get Ctxt
                            traverse_ (dumpArg env) xs
-                           log 0 "WITH:"
+                           log "" 0 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
                      unifyArgs mode loc env xs ys
@@ -1161,11 +1147,11 @@ mutual
                    -- see above
                    {-
                    when (logging ust) $
-                      do log 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                         log 0 "ARGUMENTS:"
+                      do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
+                         log "" 0 "ARGUMENTS:"
                          defs <- get Ctxt
                          traverse_ (dumpArg env) xs
-                         log 0 "WITH:"
+                         log "" 0 "WITH:"
                          traverse_ (dumpArg env) ys
                    -}
                    unifyArgs mode loc env xs ys
@@ -1193,7 +1179,7 @@ mutual
   unifyNoEta mode loc env y (NApp yfc hd args)
       = if umode mode /= InMatch
            then unifyApp True mode loc env yfc hd args y
-           else do log 10 $ "Unify if Eq due to something with app"
+           else do log "unify.noeta" 10 $ "Unify if Eq due to something with app"
                    unifyIfEq True loc mode env y (NApp yfc hd args)
   -- Only try stripping as patterns as a last resort
   unifyNoEta mode loc env x (NAs _ _ _ y) = unifyNoEta mode loc env x y
@@ -1201,7 +1187,7 @@ mutual
   unifyNoEta mode loc env x y
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           log 10 $ "Nothing else worked, unifyIfEq"
+           log "unify.noeta" 10 $ "Nothing else worked, unifyIfEq"
            unifyIfEq (isDelay x || isDelay y) loc mode env x y
     where
       -- If one of them is a delay, and they're not equal, we'd better
@@ -1224,9 +1210,9 @@ mutual
            pure (shrinkTerm ty (DropCons SubRefl))
   getEtaType env (App fc f _)
       = do fty <- getType env f
-           logGlue 10 "Function type" env fty
+           logGlue "unify.eta" 10 "Function type" env fty
            case !(getNF fty) of
-                NBind _ _ (Pi _ _ ty) sc =>
+                NBind _ _ (Pi _ _ _ ty) sc =>
                     do defs <- get Ctxt
                        empty <- clearDefs defs
                        pure (Just !(quote empty env ty))
@@ -1241,10 +1227,10 @@ mutual
   Unify NF where
     unifyD _ _ mode loc env (NBind xfc x bx scx) (NBind yfc y by scy)
         = unifyBothBinders mode loc env xfc x bx scx yfc y by scy
-    unifyD _ _ mode loc env tmx@(NBind xfc x (Lam cx ix tx) scx) tmy
+    unifyD _ _ mode loc env tmx@(NBind xfc x (Lam fcx cx ix tx) scx) tmy
         = do defs <- get Ctxt
-             logNF 10 "EtaR" env tmx
-             logNF 10 "...with" env tmy
+             logNF "unify" 10 "EtaR" env tmx
+             logNF "unify" 10 "...with" env tmy
              if isHoleApp tmy
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
@@ -1252,17 +1238,17 @@ mutual
                         case ety of
                              Just argty =>
                                do etay <- nf defs env
-                                             (Bind xfc x (Lam cx Explicit argty)
+                                             (Bind xfc x (Lam fcx cx Explicit argty)
                                                      (App xfc
                                                           (weaken !(quote empty env tmy))
                                                           (Local xfc Nothing 0 First)))
-                                  logNF 10 "Expand" env etay
+                                  logNF "unify" 10 "Expand" env etay
                                   unify mode loc env tmx etay
                              _ => unifyNoEta mode loc env tmx tmy
-    unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam cy iy ty) scy)
+    unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam fcy cy iy ty) scy)
         = do defs <- get Ctxt
-             logNF 10 "EtaL" env tmx
-             logNF 10 "...with" env tmy
+             logNF "unify" 10 "EtaL" env tmx
+             logNF "unify" 10 "...with" env tmy
              if isHoleApp tmx
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
@@ -1270,11 +1256,11 @@ mutual
                         case ety of
                              Just argty =>
                                do etax <- nf defs env
-                                             (Bind yfc y (Lam cy Explicit argty)
+                                             (Bind yfc y (Lam fcy cy Explicit argty)
                                                      (App yfc
                                                           (weaken !(quote empty env tmx))
                                                           (Local yfc Nothing 0 First)))
-                                  logNF 10 "Expand" env etax
+                                  logNF "unify" 10 "Expand" env etax
                                   unify (lower mode) loc env etax tmy
                              _ => unifyNoEta (lower mode) loc env tmx tmy
     unifyD _ _ mode loc env tmx tmy = unifyNoEta mode loc env tmx tmy
@@ -1301,7 +1287,8 @@ mutual
           = do defs <- get Ctxt
                empty <- clearDefs defs
                if !(convert empty env x y)
-                  then do log 10 $ "Skipped unification (equal already): "
+                  then do log "unify.equal" 10 $
+                                 "Skipped unification (equal already): "
                                  ++ show x ++ " and " ++ show y
                           pure success
                   else do xnf <- nf defs env x
@@ -1311,7 +1298,8 @@ mutual
           = do defs <- get Ctxt
                empty <- clearDefs defs
                if !(convert empty env x y)
-                  then do log 10 $ "Skipped unification (equal already): "
+                  then do log "unify.equal" 10 $
+                                 "Skipped unification (equal already): "
                                  ++ show x ++ " and " ++ show y
                           pure success
                   else do xnf <- nf defs env x
@@ -1352,10 +1340,6 @@ Eq SolveMode where
   _ == _ = False
 
 
-ifThenElse : Bool -> Lazy a -> Lazy a -> a
-ifThenElse True t e = t
-ifThenElse False t e = e
-
 retry : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref UST UState} ->
         UnifyInfo -> Int -> Core UnifyResult
@@ -1370,25 +1354,25 @@ retry mode c
                       -- only go if any of the blocked names are defined now
                       then
                         catch
-                           (do logTermNF 5 ("Retrying " ++ show c ++ " " ++ show (umode mode)) env x
-                               logTermNF 5 "....with" env y
-                               log 5 $ if withLazy
+                           (do logTermNF "unify.retry" 5 ("Retrying " ++ show c ++ " " ++ show (umode mode)) env x
+                               logTermNF "unify.retry" 5 "....with" env y
+                               log "unify.retry" 5 $ if withLazy
                                           then "(lazy allowed)"
                                           else "(no lazy)"
                                cs <- ifThenElse withLazy
                                         (unifyWithLazy mode loc env x y)
                                         (unify (lower mode) loc env x y)
                                case constraints cs of
-                                 [] => do log 5 $ "Success " ++ show (addLazy cs)
+                                 [] => do log "unify.retry" 5 $ "Success " ++ show (addLazy cs)
                                           deleteConstraint c
                                           pure cs
-                                 _ => do log 5 $ "Constraints " ++ show (addLazy cs)
+                                 _ => do log "unify.retry" 5 $ "Constraints " ++ show (addLazy cs)
                                          pure cs)
                           (\err => throw (WhenUnifying loc env x y err))
                       else
-                        do log 10 $ show c ++ " still blocked on " ++ show blocked
-                           logTermNF 10 "X" env x
-                           logTermNF 10 "Y" env y
+                        do log "unify.retry" 10 $ show c ++ " still blocked on " ++ show blocked
+                           logTermNF "unify.retry" 10 "X" env x
+                           logTermNF "unify.retry" 10 "Y" env y
                            pure (constrain c)
               Just (MkSeqConstraint loc env xs ys)
                   => do cs <- unifyArgs mode loc env xs ys
@@ -1436,17 +1420,17 @@ retryGuess mode smode (hid, (loc, hname))
                      (do tm <- search loc rig (smode == Defaults) depth defining
                                       (type def) []
                          let gdef = record { definition = PMDef defaultPI [] (STerm 0 tm) (STerm 0 tm) [] } def
-                         logTermNF 5 ("Solved " ++ show hname) [] tm
+                         logTermNF "unify.retry" 5 ("Solved " ++ show hname) [] tm
                          addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
                      (\err => case err of
                                 DeterminingArg _ n i _ _ =>
-                                    do logTerm 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
+                                    do logTerm "unify.retry" 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
                                                  (type def)
                                        setInvertible loc (Resolved i)
                                        pure False -- progress not made yet!
-                                _ => do logTermNF 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
+                                _ => do logTermNF "unify.retry" 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
                                                   [] (type def)
                                         case smode of
                                              LastChance =>
@@ -1463,11 +1447,11 @@ retryGuess mode smode (hid, (loc, hname))
                                            AddForce r => pure $ forceMeta r envb tm
                                            AddDelay r =>
                                               do ty <- getType [] tm
-                                                 logTerm 5 "Retry Delay" tm
+                                                 logTerm "unify.retry" 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                   let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
                                                                          [] (STerm 0 tm') (STerm 0 tm') [] } def
-                                  logTerm 5 ("Resolved " ++ show hname) tm'
+                                  logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm'
                                   addDef (Resolved hid) gdef
                                   removeGuess hid
                                   pure (holesSolved cs)
@@ -1476,7 +1460,7 @@ retryGuess mode smode (hid, (loc, hname))
                                            AddForce r => pure $ forceMeta r envb tm
                                            AddDelay r =>
                                               do ty <- getType [] tm
-                                                 logTerm 5 "Retry Delay (constrained)" tm
+                                                 logTerm "unify.retry" 5 "Retry Delay (constrained)" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                      let gdef = record { definition = Guess tm' envb newcs } def
                                      addDef (Resolved hid) gdef
@@ -1493,7 +1477,7 @@ retryGuess mode smode (hid, (loc, hname))
                          -- hole list
                          [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
                                                                          [] (STerm 0 tm) (STerm 0 tm) [] } def
-                                  logTerm 5 ("Resolved " ++ show hname) tm
+                                  logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm
                                   addDef (Resolved hid) gdef
                                   removeGuess hid
                                   pure (holesSolved csAll)
@@ -1595,8 +1579,8 @@ checkDots
 
     checkConstraint : (Name, DotReason, Constraint) -> Core ()
     checkConstraint (n, reason, MkConstraint fc wl blocked env x y)
-        = do logTermNF 10 "Dot" env y
-             logTermNF 10 "  =" env x
+        = do logTermNF "unify.constraint" 10 "Dot" env y
+             logTermNF "unify.constraint" 10 "  =" env x
              -- A dot is okay if the constraint is solvable *without solving
              -- any additional holes*
              ust <- get UST
@@ -1640,7 +1624,7 @@ checkDots
                            do defs <- get Ctxt
                               Just dty <- lookupTyExact n (gamma defs)
                                    | Nothing => throw (UndefinedName fc n)
-                              logTermNF 5 "Dot type" [] dty
+                              logTermNF "unify.constraint" 5 "Dot type" [] dty
                               -- Clear constraints so we don't report again
                               -- later
                               put UST (record { dotConstraints = [] } ust)

@@ -36,6 +36,13 @@
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
 (define integer->bits64 (lambda (x) (modulo x (expt 2 64))))
 
+(define bits16->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits32->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits8 (lambda (x) (modulo x (expt 2 8))))
+(define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
+(define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
+
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
@@ -59,7 +66,22 @@
   (cast-num (string->number (destroy-prefix x))))
 
 (define-macro (cast-string-int x)
-  `(floor (cast-string-double ,x)))
+  `(exact-floor (cast-string-double ,x)))
+
+(define (from-idris-list xs)
+  (if (= (vector-ref xs 0) 0)
+    '()
+    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
+
+(define-macro (string-pack xs)
+  `(apply string (from-idris-list ,xs)))
+(define (to-idris-list-rev acc xs)
+  (if (null? xs)
+    acc
+    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
+(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
+(define-macro (string-concat xs)
+  `(apply string-append (from-idris-list ,xs)))
 
 (define-macro (string-cons x y)
   `(string-append (string ,x) ,y))
@@ -75,6 +97,14 @@
     (substring s start end)))
 
 (define-macro (get-tag x) `(vector-ref ,x 0))
+
+(define (blodwen-string-iterator-new s)
+  0)
+
+(define (blodwen-string-iterator-next s ofs)
+  (if (>= ofs (string-length s))
+      (vector 0)  ; EOF
+      (vector 1 (string-ref s ofs) (+ ofs 1))))
 
 ;; These two are only used in this file
 (define-macro (either-left x) `(vector 0 ,x))

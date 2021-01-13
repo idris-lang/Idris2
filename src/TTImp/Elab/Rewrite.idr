@@ -1,6 +1,7 @@
 module TTImp.Elab.Rewrite
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.GetType
@@ -75,13 +76,13 @@ elabRewrite loc env expected rulety
          -- the metavariables might have been updated
          expnf <- nf defs env expected
 
-         logNF 5 "Rewriting" env lt
-         logNF 5 "Rewriting in" env expnf
+         logNF "elab.rewrite" 5 "Rewriting" env lt
+         logNF "elab.rewrite" 5 "Rewriting in" env expnf
          rwexp_sc <- replace defs env lt (Ref loc Bound parg) expnf
-         logTerm 5 "Rewritten to" rwexp_sc
+         logTerm "elab.rewrite" 5 "Rewritten to" rwexp_sc
 
          empty <- clearDefs defs
-         let pred = Bind loc parg (Lam top Explicit
+         let pred = Bind loc parg (Lam loc top Explicit
                           !(quote empty env lty))
                           (refsToLocals (Add parg parg None) rwexp_sc)
          gpredty <- getType env pred
@@ -111,14 +112,14 @@ checkRewrite {vars} rigc elabinfo nest env fc rule tm (Just expected)
         do (rulev, grulet) <- check erased elabinfo nest env rule Nothing
            rulet <- getTerm grulet
            expTy <- getTerm expected
-           when delayed $ log 5 "Retrying rewrite"
+           when delayed $ log "elab.rewrite" 5 "Retrying rewrite"
            (lemma, pred, predty) <- elabRewrite fc env expTy rulet
 
            rname <- genVarName "_"
            pname <- genVarName "_"
 
-           let pbind = Let erased pred predty
-           let rbind = Let erased (weaken rulev) (weaken rulet)
+           let pbind = Let fc erased pred predty
+           let rbind = Let fc erased (weaken rulev) (weaken rulet)
 
            let env' = rbind :: pbind :: env
 
@@ -135,9 +136,8 @@ checkRewrite {vars} rigc elabinfo nest env fc rule tm (Just expected)
                                                         IVar fc rname,
                                                         tm])
                                 (Just (gnf env'
-                                         (weakenNs [rname, pname] expTy)))
+                                         (weakenNs (mkSizeOf [rname, pname]) expTy)))
                          ))
            rwty <- getTerm grwty
            pure (Bind fc pname pbind (Bind fc rname rbind rwtm),
                  gnf env (Bind fc pname pbind (Bind fc rname rbind rwty))))
-

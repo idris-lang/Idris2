@@ -2,6 +2,7 @@ module Core.Options
 
 import Core.Core
 import Core.Name
+import public Core.Options.Log
 import Core.TT
 import Utils.Binary
 import Utils.Path
@@ -52,6 +53,7 @@ data CG = Chez
         | Gambit
         | Node
         | Javascript
+        | RefC
         | Other String
 
 export
@@ -61,6 +63,7 @@ Eq CG where
   Gambit == Gambit = True
   Node == Node = True
   Javascript == Javascript = True
+  RefC == RefC = True
   Other s == Other t = s == t
   _ == _ = False
 
@@ -71,6 +74,7 @@ Show CG where
   show Gambit = "gambit"
   show Node = "node"
   show Javascript = "javascript"
+  show RefC = "refc"
   show (Other s) = s
 
 public export
@@ -97,13 +101,11 @@ public export
 data LangExt
      = ElabReflection
      | Borrowing -- not yet implemented
-     | PostfixProjections
 
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
   Borrowing == Borrowing = True
-  PostfixProjections == PostfixProjections = True
   _ == _ = False
 
 -- Other options relevant to the current session (so not to be saved in a TTC)
@@ -115,6 +117,11 @@ record ElabDirectives where
   totality : TotalReq
   ambigLimit : Nat
   autoImplicitLimit : Nat
+  --
+  -- produce traditional (prefix) record projections,
+  -- in addition to postfix (dot) projections
+  -- default: yes
+  prefixRecordProjections : Bool
 
 public export
 record Session where
@@ -124,7 +131,7 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
-  logLevel : Nat
+  logLevel : LogLevels
   logTimings : Bool
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
@@ -160,6 +167,7 @@ availableCGs o
        ("racket", Racket),
        ("node", Node),
        ("javascript", Javascript),
+       ("refc", RefC),
        ("gambit", Gambit)] ++ additionalCGs o
 
 export
@@ -175,13 +183,13 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] 0
+defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
                                False False Nothing Nothing
                                Nothing Nothing
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 True
 
 export
 defaults : Options

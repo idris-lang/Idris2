@@ -2,6 +2,7 @@ module TTImp.Elab.Local
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -14,6 +15,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.TTImp
 
+import Data.NameMap
 import Data.List
 
 %default covering
@@ -42,7 +44,7 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
-         let defNames = definedInBlock [] nestdecls
+         let defNames = definedInBlock emptyNS nestdecls
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
@@ -54,10 +56,18 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
          ust <- get UST
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
+         defs <- get Ctxt
+         -- store the local hints, so we can reset them after we've elaborated
+         -- everything
+         let oldhints = localHints defs
          traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
-         check rig elabinfo nest' env scope expty
+         defs <- get Ctxt
+         res <- check rig elabinfo nest' env scope expty
+         defs <- get Ctxt
+         put Ctxt (record { localHints = oldhints } defs)
+         pure res
   where
     -- For the local definitions, don't allow access to linear things
     -- unless they're explicitly passed.
@@ -155,8 +165,8 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
                          TCon t a _ _ _ _ _ _ => Ref fc (TyCon t a) iname
                          _ => Ref fc Func iname
          (app, args) <- getLocalTerm fc env name args
-         log 5 $ "Updating case local " ++ show uname ++ " " ++ show args
-         logTermNF 5 "To" env app
+         log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
+         logTermNF "elab.local" 5 "To" env app
          let nest' = record { names $= ((uname, (Just iname, args,
                                                 (\fc, nt => app))) :: ) }
                             nest

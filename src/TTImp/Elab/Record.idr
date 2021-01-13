@@ -1,6 +1,7 @@
 module TTImp.Elab.Record
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -14,6 +15,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -38,7 +40,7 @@ applyImp f [] = f
 applyImp f ((Nothing, arg) :: xs)
     = applyImp (IApp (getFC f) f arg) xs
 applyImp f ((Just n, arg) :: xs)
-    = applyImp (IImplicitApp (getFC f) f (Just n) arg) xs
+    = applyImp (INamedApp (getFC f) f n arg) xs
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
@@ -66,7 +68,8 @@ findConName defs tyn
            Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
            _ => pure Nothing
 
-findFields : Defs -> Name ->
+findFields : {auto c : Ref Ctxt Defs} ->
+             Defs -> Name ->
              Core (Maybe (List (String, Maybe Name, Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
@@ -74,7 +77,7 @@ findFields defs con
            _ => pure Nothing
   where
     getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
-    getExpNames (NBind fc x (Pi _ p ty) sc)
+    getExpNames (NBind fc x (Pi _ _ p ty) sc)
         = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc False)))
              let imp = case p of
                             Explicit => Nothing
@@ -218,7 +221,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                                pure ty
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          delayOnFailure fc rig env recty needType 5 $
            \delayed =>
              do solveConstraints solvemode Normal
@@ -228,7 +231,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                 let recty' = if delayed
                                 then gnf env exp
                                 else recty
-                logGlueNF 5 (show delayed ++ " record type " ++ show rec) env recty'
+                logGlueNF "elab.record" 5 (show delayed ++ " record type " ++ show rec) env recty'
                 rcase <- recUpdate rig elabinfo fc nest env upds rec recty'
-                log 5 $ "Record update: " ++ show rcase
+                log "elab.record" 5 $ "Record update: " ++ show rcase
                 check rig elabinfo nest env rcase expected

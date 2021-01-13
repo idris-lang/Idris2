@@ -9,7 +9,7 @@ TARGETDIR = build/exec
 TARGET = ${TARGETDIR}/${NAME}
 
 MAJOR=0
-MINOR=2
+MINOR=3
 PATCH=0
 
 
@@ -48,7 +48,7 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean
+.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
 
 all: support ${TARGET} testbin libs
 
@@ -57,10 +57,13 @@ idris2-exec: ${TARGET}
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
 
-src/IdrisPaths.idr:
+# We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
+src/IdrisPaths.idr: FORCE
 	echo 'module IdrisPaths' > src/IdrisPaths.idr
 	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' >> src/IdrisPaths.idr
 	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
+
+FORCE:
 
 prelude:
 	${MAKE} -C libs/prelude IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
@@ -84,9 +87,11 @@ test:
 
 support:
 	@${MAKE} -C support/c
+	@${MAKE} -C support/refc
 
 support-clean:
 	@${MAKE} -C support/c clean
+	@${MAKE} -C support/refc clean
 
 clean-libs:
 	${MAKE} -C libs/prelude clean
@@ -126,6 +131,7 @@ install-support:
 	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
 	install support/js/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
 	@${MAKE} -C support/c install
+	@${MAKE} -C support/refc install
 
 install-libs:
 	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}

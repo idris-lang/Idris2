@@ -16,8 +16,8 @@ data IO : Type -> Type where
      MkIO : (1 fn : PrimIO a) -> IO a
 
 export
-prim_io_pure : a -> PrimIO a
-prim_io_pure x = \w => MkIORes x w
+prim__io_pure : a -> PrimIO a
+prim__io_pure x = \w => MkIORes x w
 
 %inline
 export
@@ -25,8 +25,8 @@ io_pure : a -> IO a
 io_pure x = MkIO (\w => MkIORes x w)
 
 export
-prim_io_bind : (1 act : PrimIO a) -> (1 k : a -> PrimIO b) -> PrimIO b
-prim_io_bind fn k w
+prim__io_bind : (1 act : PrimIO a) -> (1 k : a -> PrimIO b) -> PrimIO b
+prim__io_bind fn k w
     = let MkIORes x' w' = fn w in k x' w'
 
 -- There's a special case for inlining this is Compiler.Inline, because
@@ -62,15 +62,6 @@ data GCAnyPtr : Type where [external]
 public export
 data ThreadID : Type where [external]
 
-public export
-data FArgList : Type where
-     Nil : FArgList
-     (::) : {a : Type} -> (1 arg : a) -> (1 args : FArgList) -> FArgList
-
-export
-%extern prim__schemeCall : (ret : Type) -> String -> (1 args : FArgList) ->
-                           (1 x : %World) -> IORes ret
-
 export %inline
 fromPrim : (1 fn : (1 x : %World) -> IORes a) -> IO a
 fromPrim op = MkIO op
@@ -79,16 +70,20 @@ export %inline
 toPrim : (1 act : IO a) -> PrimIO a
 toPrim (MkIO fn) = fn
 
-export %inline
-schemeCall : (ret : Type) -> String -> (1 args : FArgList) -> IO ret
-schemeCall ret fn args = fromPrim (prim__schemeCall ret fn args)
-
-
 %foreign "C:idris2_isNull, libidris2_support"
          "javascript:lambda:x=>x===undefined||x===null?1n:0n"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 
+%foreign "C:idris2_getNull,libidris2_support"
+export
+prim__getNullAnyPtr : AnyPtr
+
+export
+prim__castPtr : AnyPtr -> Ptr t
+prim__castPtr = believe_me
+
+export
 prim__forgetPtr : Ptr t -> AnyPtr
 prim__forgetPtr = believe_me
 
@@ -103,7 +98,7 @@ unsafeDestroyWorld : (1 x : %World) -> a -> a
 unsafeDestroyWorld %MkWorld x = x
 
 export
-unsafePerformIO : (1 _ : IO a) -> a
+unsafePerformIO : IO a -> a
 unsafePerformIO (MkIO f)
     = unsafeCreateWorld (\w => case f w of
                                MkIORes res w' => unsafeDestroyWorld w' res)

@@ -1,6 +1,7 @@
 module TTImp.Elab
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.LinearCheck
@@ -23,8 +24,8 @@ import Data.NameMap
 
 findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
-findPLetRenames (Bind fc n (PLet c (Local _ _ idx p) ty) sc)
-    = case nameAt idx p of
+findPLetRenames (Bind fc n (PLet _ c (Local _ _ idx p) ty) sc)
+    = case nameAt p of
            x@(MN _ _) => (x, (c, n)) :: findPLetRenames sc
            _ => findPLetRenames sc
 findPLetRenames (Bind fc n _ sc) = findPLetRenames sc
@@ -33,7 +34,7 @@ findPLetRenames tm = []
 doPLetRenames : {vars : _} ->
                 List (Name, (RigCount, Name)) ->
                 List Name -> Term vars -> Term vars
-doPLetRenames ns drops (Bind fc n b@(PLet _ _ _) sc)
+doPLetRenames ns drops (Bind fc n b@(PLet _ _ _ _) sc)
     = if n `elem` drops
          then subst (Erased fc False) (doPLetRenames ns drops sc)
          else Bind fc n b (doPLetRenames ns drops sc)
@@ -126,9 +127,9 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          --   is most likely just to be able to display helpful errors
          let solvemode = case mode of
                               InLHS _ => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
-         logTerm 5 "Looking for delayed in " chktm
+         logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
          catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
                                      (delayedElab ust)))
@@ -143,14 +144,14 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          -- As long as we're not in a case block, finish off constraint solving
          when (not incase) $
            -- resolve any default hints
-           do log 5 "Resolving default hints"
+           do log "elab" 5 "Resolving default hints"
               solveConstraintsAfter constart solvemode Defaults
               -- perhaps resolving defaults helps...
               -- otherwise, this last go is most likely just to give us more
               -- helpful errors.
               solveConstraintsAfter constart solvemode LastChance
 
-         dumpConstraints 4 False
+         dumpConstraints "elab" 4 False
          defs <- get Ctxt
          chktm <- if inPE -- Need to fully normalise holes in partial evaluation
                           -- because the holes don't have types saved to ttc
@@ -193,7 +194,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
                  do let vs = findPLetRenames chktm
                     let ret = doPLetRenames vs [] chktm
                     pure (ret, gnf env (doPLetRenames vs [] !(getTerm chkty)))
-              _ => do dumpConstraints 2 False
+              _ => do dumpConstraints "elab" 2 False
                       pure (chktm, chkty)
   where
     addHoles : (acc : IntMap (FC, Name)) ->

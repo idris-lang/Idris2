@@ -1,2 +1,8 @@
-Exists.idr:1:1--3:1:DoesntExist not found
+Error: Module DoesntExist not found
+
+Exists.idr:1:1--1:19
+   |
+ 1 | import DoesntExist
+   | ^^^^^^^^^^^^^^^^^^
+
 Main> Bye for now!

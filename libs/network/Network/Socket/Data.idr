@@ -49,32 +49,32 @@ BACKLOG = 20
 
 -- Repeat to avoid a dependency cycle
 %foreign "C:idrnet_geteagain,libidris2_support"
-idrnet_geteagain : PrimIO Int
+prim__idrnet_geteagain : PrimIO Int
 
 export
 EAGAIN : Int
 EAGAIN =
   -- I'm sorry
   -- maybe
-  unsafePerformIO $ primIO $ idrnet_geteagain
+  unsafePerformIO $ primIO $ prim__idrnet_geteagain
 
 -- ---------------------------------------------------------------- [ Error Code ]
 
 -- repeat without export to avoid dependency cycles
 %foreign "C:idrnet_errno,libidris2_support"
-idrnet_errno : PrimIO Int
+prim__idrnet_errno : PrimIO Int
 
 %foreign "C:isNull,libidris2_support"
-idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
+prim__idrnet_isNull : (ptr : AnyPtr) -> PrimIO Int
 
 
 export
 getErrno : HasIO io => io SocketError
-getErrno = primIO $ idrnet_errno
+getErrno = primIO $ prim__idrnet_errno
 
 export
 nullPtr : HasIO io => AnyPtr -> io Bool
-nullPtr p = do 0 <- primIO  $ idrnet_isNull p
+nullPtr p = do 0 <- primIO  $ prim__idrnet_isNull p
                | _ => pure True
                pure False
 
@@ -110,14 +110,27 @@ Show SocketFamily where
   show AF_INET   = "AF_INET"
   show AF_INET6  = "AF_INET6"
 
+-- This is a bit of a hack to get the OS-dependent magic constants out of C and
+-- into Idris without having to faff around on the preprocessor on the Idris
+-- side.
+%foreign "C:idrnet_af_unspec,libidris2_support"
+prim__idrnet_af_unspec : PrimIO Int
+
+%foreign "C:idrnet_af_unix,libidris2_support"
+prim__idrnet_af_unix : PrimIO Int
+
+%foreign "C:idrnet_af_inet,libidris2_support"
+prim__idrnet_af_inet : PrimIO Int
+
+%foreign "C:idrnet_af_inet6,libidris2_support"
+prim__idrnet_af_inet6 : PrimIO Int
+
 export
 ToCode SocketFamily where
-  -- Don't know how to read a constant value from C code in idris2...
-  -- gotta to hardcode those for now
-  toCode AF_UNSPEC = 0 -- unsafePerformIO (cMacro "#AF_UNSPEC" Int)
-  toCode AF_UNIX   = 1
-  toCode AF_INET   = 2
-  toCode AF_INET6  = 10
+  toCode AF_UNSPEC = unsafePerformIO $ primIO $ prim__idrnet_af_unspec
+  toCode AF_UNIX   = unsafePerformIO $ primIO $ prim__idrnet_af_unix
+  toCode AF_INET   = unsafePerformIO $ primIO $ prim__idrnet_af_inet
+  toCode AF_INET6  = unsafePerformIO $ primIO $ prim__idrnet_af_inet6
 
 export
 getSocketFamily : Int -> Maybe SocketFamily
@@ -186,8 +199,8 @@ export
 parseIPv4 : String -> SocketAddress
 parseIPv4 str =
     case splitted of
-      (i1 :: i2 :: i3 :: i4 :: _) => IPv4Addr i1 i2 i3 i4
-      otherwise                   => InvalidAddress
+      (i1 ::: i2 :: i3 :: i4 :: _) => IPv4Addr i1 i2 i3 i4
+      _ => InvalidAddress
   where
     toInt' : String -> Integer
     toInt' = cast

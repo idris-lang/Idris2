@@ -11,6 +11,7 @@ import public Text.Parser
 import        Data.List
 import        Data.List.Views
 import        Data.List1
+import        Data.Maybe
 import        Data.Strings
 
 topDecl : FileName -> IndentInfo -> Rule ImpDecl
@@ -154,8 +155,10 @@ mutual
       applyExpImp start end f [] = f
       applyExpImp start end f (Left exp :: args)
           = applyExpImp start end (IApp (MkFC fname start end) f exp) args
-      applyExpImp start end f (Right (n, imp) :: args)
-          = applyExpImp start end (IImplicitApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Just n, imp) :: args)
+          = applyExpImp start end (INamedApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Nothing, imp) :: args)
+          = applyExpImp start end (IAutoApp (MkFC fname start end) f imp) args
 
   argExpr : FileName -> IndentInfo ->
             Rule (Either RawImp (Maybe Name, RawImp))
@@ -503,7 +506,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -514,12 +517,9 @@ mutual
       getFn : RawImp -> SourceEmptyRule Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f a) = getFn f
-      getFn (IImplicitApp _ f _ a) = getFn f
+      getFn (IAutoApp _ f a) = getFn f
+      getFn (INamedApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
-
-  ifThenElse : Bool -> Lazy t -> Lazy t -> t
-  ifThenElse True t e = t
-  ifThenElse False t e = e
 
   clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)
   clause withArgs fname indents
@@ -641,20 +641,26 @@ recordDecl fname indents
                    IRecord fc Nothing vis
                            (MkImpRecord fc n params dc (concat flds)))
 
-namespaceDecl : Rule (List String)
+namespaceDecl : Rule Namespace
 namespaceDecl
     = do keyword "namespace"
          commit
-         ns <- namespacedIdent
-         pure (List1.toList ns)
+         namespaceId
+
+logLevel : Rule (Maybe (List String, Nat))
+logLevel
+  = (Nothing <$ exactIdent "off")
+    <|> do topic <- option [] ((::) <$> unqualifiedName <*> many aDotIdent)
+           lvl <- intLit
+           pure (Just (topic, fromInteger lvl))
 
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
-         lvl <- intLit
+         lvl <- logLevel
          atEnd indents
-         pure (ILog (integerToNat lvl))
+         pure (ILog lvl)
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit
@@ -686,7 +692,7 @@ topDecl fname indents
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
          end <- location
-         pure (INamespace (MkFC fname start end) ns ds)
+         pure (INamespace (MkFC fname start end) ns (forget ds))
   <|> do start <- location
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
@@ -726,7 +732,7 @@ export
 prog : FileName -> Rule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
-         pure (collectDefs ds)
+         pure (collectDefs $ forget ds)
 
 -- TTImp REPL commands
 export

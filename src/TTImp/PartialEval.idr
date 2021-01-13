@@ -2,6 +2,7 @@ module TTImp.PartialEval
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Hash
@@ -37,9 +38,9 @@ unload ((fc, arg) :: args) fn = unload args (App fc fn arg)
 
 specialiseTy : {vars : _} ->
                Nat -> List (Nat, Term []) -> Term vars -> Term vars
-specialiseTy i specs (Bind fc x (Pi c p ty) sc)
+specialiseTy i specs (Bind fc x (Pi fc' c p ty) sc)
     = case lookup i specs of
-           Nothing => Bind fc x (Pi c Explicit ty) $ -- easier later if everything explicit
+           Nothing => Bind fc x (Pi fc' c Explicit ty) $ -- easier later if everything explicit
                         specialiseTy (1 + i) specs sc
            Just tm => specialiseTy (1 + i) specs (subst (embed tm) sc)
 specialiseTy i specs tm = tm
@@ -141,24 +142,24 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- the latter two correspond appropriately.
     mkRHSargs : NF [] -> RawImp -> List String -> List (Nat, ArgMode) ->
                 Core RawImp
-    mkRHSargs (NBind _ x (Pi _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
+    mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              mkRHSargs sc' (IApp fc app (IVar fc (UN a))) as ds
-    mkRHSargs (NBind _ x (Pi _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
+    mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
-             mkRHSargs sc' (IImplicitApp fc app (Just x) (IVar fc (UN a))) as ds
-    mkRHSargs (NBind _ x (Pi _ Explicit _) sc) app as ((_, Static tm) :: ds)
+             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN a))) as ds
+    mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
              mkRHSargs sc' (IApp fc app tm') as ds
-    mkRHSargs (NBind _ x (Pi _ _ _) sc) app as ((_, Static tm) :: ds)
+    mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (IImplicitApp fc app (Just x) tm') as ds
+             mkRHSargs sc' (INamedApp fc app x tm') as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -168,7 +169,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
 
     getRawArgs : List (Maybe Name, RawImp) -> RawImp -> List (Maybe Name, RawImp)
     getRawArgs args (IApp _ f arg) = getRawArgs ((Nothing, arg) :: args) f
-    getRawArgs args (IImplicitApp _ f (Just n) arg)
+    getRawArgs args (INamedApp _ f n arg)
         = getRawArgs ((Just n, arg) :: args) f
     getRawArgs args tm = args
 
@@ -176,7 +177,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     reapply f [] = f
     reapply f ((Nothing, arg) :: args) = reapply (IApp fc f arg) args
     reapply f ((Just t, arg) :: args)
-        = reapply (IImplicitApp fc f (Just t) arg) args
+        = reapply (INamedApp fc f t arg) args
 
     dropArgs : Name -> RawImp -> RawImp
     dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [] tm))
@@ -232,9 +233,10 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            let peapp = unload (dropSpec 0 staticargs stk) (Ref fc Func pename)
            Nothing <- lookupCtxtExact pename (gamma defs)
                | Just _ => -- already specialised
-                           do log 5 $ "Already specialised " ++ show pename
+                           do log "specialise" 5 $ "Already specialised " ++ show pename
                               pure peapp
-           logC 5 (do fnfull <- toFullNames fn
+           logC "specialise" 5 $
+                   do fnfull <- toFullNames fn
                       args' <- traverse (\ (i, arg) =>
                                    do arg' <- the (Core ArgMode) $ case arg of
                                                    Static a =>
@@ -243,9 +245,9 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                                       pure (show (i, arg'))) sargs
                       pure $ "Specialising " ++ show fnfull ++
                              " (" ++ show fn ++ ") by " ++
-                             showSep ", " args')
+                             showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
-           logTermNF 3 ("Specialised type " ++ show pename) [] sty
+           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [] sty
 
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
@@ -266,14 +268,15 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
            let PMDef pminfo pmargs ct tr pats = definition gdef
                | _ => pure (unload stk (Ref fc Func fn))
-           logC 5 (do inpats <- traverse unelabDef pats
+           logC "specialise" 5 $
+                   do inpats <- traverse unelabDef pats
                       pure $ "Attempting to specialise:\n" ++
-                             showSep "\n" (map showPat inpats))
+                             showSep "\n" (map showPat inpats)
 
            Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (unload stk (Ref fc Func fn))
-           log 5 $ "New patterns for " ++ show pename ++ ":\n" ++
+           log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
            processDecl [InPartialEval] (MkNested []) []
                        (IDef fc (Resolved peidx) newpats)
@@ -284,7 +287,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            -- if it fails, but I don't want the whole system to be dependent on
            -- the correctness of PE!
         (\err =>
-           do log 1 $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
+           do log "specialise" 1 $ "Partial evaluation of " ++ show !(toFullNames fn) ++ " failed" ++
                       "\n" ++ show err
               defs <- get Ctxt
               put Ctxt (record { peFailures $= insert pename () } defs)
@@ -298,7 +301,8 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
     updateApp : Name -> RawImp -> RawImp
     updateApp n (IApp fc f a) = IApp fc (updateApp n f) a
-    updateApp n (IImplicitApp fc f m a) = IImplicitApp fc (updateApp n f) m a
+    updateApp n (IAutoApp fc f a) = IAutoApp fc (updateApp n f) a
+    updateApp n (INamedApp fc f m a) = INamedApp fc (updateApp n f) m a
     updateApp n f = IVar fc n
 
     unelabDef : (vs ** (Env Term vs, Term vs, Term vs)) ->
@@ -362,7 +366,7 @@ specialise {vars} fc env gdef fn stk
                    | Nothing => pure Nothing
                let nhash = hash (mapMaybe getStatic (map snd sargs))
                               `hashWithSalt` fn -- add function name to hash to avoid namespace clashes
-               let pename = NS ["_PE"]
+               let pename = NS partialEvalNS
                             (UN ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex nhash))
                defs <- get Ctxt
                case lookup pename (peFailures defs) of
@@ -511,29 +515,29 @@ mutual
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (NF free) ->
                 Core (Binder (Term (bound ++ free)))
-  quoteBinder q defs bounds env (Lam r p ty)
+  quoteBinder q defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (Lam r p' ty')
-  quoteBinder q defs bounds env (Let r val ty)
+           pure (Lam fc r p' ty')
+  quoteBinder q defs bounds env (Let fc r val ty)
       = do val' <- quoteGenNF q defs bounds env val
            ty' <- quoteGenNF q defs bounds env ty
-           pure (Let r val' ty')
-  quoteBinder q defs bounds env (Pi r p ty)
+           pure (Let fc r val' ty')
+  quoteBinder q defs bounds env (Pi fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (Pi r p' ty')
-  quoteBinder q defs bounds env (PVar r p ty)
+           pure (Pi fc r p' ty')
+  quoteBinder q defs bounds env (PVar fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env ty
            p' <- quotePi q defs bounds env p
-           pure (PVar r p' ty')
-  quoteBinder q defs bounds env (PLet r val ty)
+           pure (PVar fc r p' ty')
+  quoteBinder q defs bounds env (PLet fc r val ty)
       = do val' <- quoteGenNF q defs bounds env val
            ty' <- quoteGenNF q defs bounds env ty
-           pure (PLet r val' ty')
-  quoteBinder q defs bounds env (PVTy r ty)
+           pure (PLet fc r val' ty')
+  quoteBinder q defs bounds env (PVTy fc r ty)
       = do ty' <- quoteGenNF q defs bounds env ty
-           pure (PVTy r ty')
+           pure (PVTy fc r ty')
 
   quoteGenNF : {bound, vars : _} ->
                {auto c : Ref Ctxt Defs} ->
@@ -573,7 +577,7 @@ mutual
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so
            -- a placeholder binder is fine
-           = Lam top Explicit (Erased fc False) :: extendEnv bs env
+           = Lam fc top Explicit (Erased fc False) :: extendEnv bs env
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgs q defs bound env args
@@ -645,5 +649,5 @@ applySpecialise env (Just ls) tmin -- specialising, evaluate RHS while looking
          nf <- nf defs env tm
          tm' <- evalRHS env nf
          tmfull <- toFullNames tm'
-         logTermNF 5 ("New RHS") env tmfull
+         logTermNF "specialise" 5 ("New RHS") env tmfull
          pure tmfull

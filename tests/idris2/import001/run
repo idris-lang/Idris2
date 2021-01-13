@@ -1,6 +1,6 @@
-$1 --no-banner --no-prelude Test.idr < input
+$1 --no-color --console-width 0 --no-banner --no-prelude Test.idr < input
 sleep 1
 touch Mult.idr
-$1 --no-banner --no-prelude Test.idr < input
+$1 --no-color --console-width 0 --no-banner --no-prelude Test.idr < input
 
 rm -rf build

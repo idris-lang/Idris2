@@ -7,17 +7,17 @@ infixl 8 +, -
 infixl 9 *, /
 
 -- Boolean operators
-infixr 4 &&
-infixr 5 ||
+infixr 5 &&
+infixr 4 ||
 
 -- List and String operators
 infixr 7 ::, ++
 
 -- Functor/Applicative/Monad/Algebra operators
-infixl 1 >>=
+infixl 1 >>=, >>
 infixr 2 <|>
 infixl 3 <*>, *>, <*
-infixr 4 <$>
+infixr 4 <$>, $>, <$
 infixl 6 <+>
 
 -- Utility operators

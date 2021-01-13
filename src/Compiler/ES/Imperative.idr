@@ -54,9 +54,6 @@ genName =
     pure $ MN "imp_gen" i
 
 mutual
-  ifThenElse : Bool -> a -> a -> a
-  ifThenElse True t e = t
-  ifThenElse False t e = e
 
   pairToReturn : (toReturn : Bool) -> (ImperativeStatement, ImperativeExp) ->
                      Core (ifThenElse toReturn ImperativeStatement  (ImperativeStatement, ImperativeExp))
@@ -159,8 +156,17 @@ mutual
     do
       (s1, v) <- impExp False val
       (s2, sc_) <- impExp False sc
-      let decl  = if isNameUsed x sc then ConstDecl x v else EvalExpStatement v
-      pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
+      if isNameUsed x sc
+        then do
+          x_ <- genName
+          let reps = [(x, IEVar x_)]
+          let s2_ = replaceNamesExpS reps s2
+          let sc__ = replaceNamesExp reps sc_
+          let decl = ConstDecl x_ v
+          pairToReturn toReturn (s1 <+> decl <+> s2_, sc__)
+        else do
+          let decl = EvalExpStatement v
+          pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
   impExp toReturn (NmErased fc) =
     expToReturn toReturn $ IENull
   impExp toReturn (NmCrash fc msg) =
@@ -200,7 +206,7 @@ getImp (n, fc, MkNmFun args exp) =
 getImp (n, fc, MkNmError exp) =
   throw $ (InternalError $ show exp)
 getImp (n, fc, MkNmForeign cs args ret) =
-  pure $ ForeignDecl n cs
+  pure $ ForeignDecl fc n cs args ret
 getImp (n, fc, MkNmCon _ _ _) =
   pure DoNothing
 
@@ -211,9 +217,9 @@ compileToImperative c tm =
     cdata <- getCompileData Cases tm
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
-    s <- newRef Imps (MkImpSt 0)
+    newRef Imps (MkImpSt 0)
     lst_defs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     let defs = concat lst_defs
-    let defs_optim = tailRecOptim defs
+    defs_optim <- tailRecOptim defs
     (s, main) <- impExp False ctm
     pure $ (defs_optim, s <+> EvalExpStatement main)

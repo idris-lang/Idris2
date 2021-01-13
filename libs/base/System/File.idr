@@ -22,16 +22,16 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 prim__open : String -> String -> PrimIO FilePtr
 
 %foreign support "idris2_closeFile"
-         "node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)"
+         "node:lambda:(fp) => require('fs').closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
          "node:lambda:x=>(x===1n?BigInt(1):BigInt(0))"
-prim_error : FilePtr -> PrimIO Int
+prim__error : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileErrno"
          "node:lambda:()=>-BigInt(process.__lasterr.errno)"
-prim_fileErrno : PrimIO Int
+prim__fileErrno : PrimIO Int
 
 %foreign support "idris2_readLine"
          "node:support:readLine,support_system_file"
@@ -43,7 +43,7 @@ prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 prim__readChar : FilePtr -> PrimIO Int
 
 %foreign support "idris2_writeLine"
-         "node:lambdaRequire:fs:(filePtr, line) => __require_fs.writeSync(filePtr.fd, line, undefined, 'utf-8')"
+         "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign support "idris2_eof"
@@ -61,7 +61,7 @@ prim__pclose : FilePtr -> PrimIO ()
 prim__removeFile : String -> PrimIO Int
 
 %foreign support "idris2_fileSize"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).size"
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileSize"
@@ -71,7 +71,7 @@ prim__fPoll : FilePtr -> PrimIO Int
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileModifiedTime"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileStatusTime"
@@ -111,7 +111,7 @@ data FileError = GenericFileError Int -- errno
 
 returnError : HasIO io => io (Either FileError a)
 returnError
-    = do err <- primIO prim_fileErrno
+    = do err <- primIO prim__fileErrno
          case err of
               0 => pure $ Left FileReadError
               1 => pure $ Left FileWriteError
@@ -160,10 +160,25 @@ export
 closeFile : HasIO io => File -> io ()
 closeFile (FHandle f) = primIO (prim__close f)
 
+||| Check if a file exists for reading.
+export
+exists : HasIO io => String -> io Bool
+exists f
+    = do Right ok <- openFile f Read
+             | Left err => pure False
+         closeFile ok
+         pure True
+
+||| Pick the first existing file
+export
+firstExists : HasIO io => List String -> io (Maybe String)
+firstExists [] = pure Nothing
+firstExists (x :: xs) = if !(exists x) then pure (Just x) else firstExists xs
+
 export
 fileError : HasIO io => File -> io Bool
 fileError (FHandle f)
-    = do x <- primIO $ prim_error f
+    = do x <- primIO $ prim__error f
          pure (x /= 0)
 
 export
@@ -186,7 +201,7 @@ export
 fGetChar : HasIO io => (h : File) -> io (Either FileError Char)
 fGetChar (FHandle h)
     = do c <- primIO (prim__readChar h)
-         ferr <- primIO (prim_error h)
+         ferr <- primIO (prim__error h)
          if (ferr /= 0)
             then returnError
             else ok (cast c)

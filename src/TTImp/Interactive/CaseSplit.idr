@@ -1,6 +1,7 @@
 module TTImp.Interactive.CaseSplit
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -66,14 +67,14 @@ findTyName : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              Defs -> Env Term vars -> Name -> Term vars ->
              Core (Maybe Name)
-findTyName defs env n (Bind _ x (PVar c p ty) sc)
+findTyName defs env n (Bind _ x b@(PVar _ c p ty) sc)
       -- Take the first one, which is the most recently bound
     = if n == x
          then do tynf <- nf defs env ty
                  case tynf of
                       NTCon _ tyn _ _ _ => pure $ Just tyn
                       _ => pure Nothing
-         else findTyName defs (PVar c p ty :: env) n sc
+         else findTyName defs (b :: env) n sc
 findTyName defs env n (Bind _ x b sc) = findTyName defs (b :: env) n sc
 findTyName _ _ _ _ = pure Nothing
 
@@ -108,11 +109,11 @@ findCons n lhs
                                            !(traverse toFullNames cons)))
 
 findAllVars : Term vars -> List Name
-findAllVars (Bind _ x (PVar c p ty) sc)
+findAllVars (Bind _ x (PVar _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (Let c p ty) sc)
+findAllVars (Bind _ x (Let _ _ _ _) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (PLet c p ty) sc)
+findAllVars (Bind _ x (PLet _ _ _ _) sc)
     = x :: findAllVars sc
 findAllVars _ = []
 
@@ -154,7 +155,7 @@ getArgName defs x bound allvars ty
     notBound x = not $ UN x `elem` bound
 
     findNames : NF vars -> Core (List String)
-    findNames (NBind _ x (Pi _ _ _) _)
+    findNames (NBind _ x (Pi _ _ _ _) _)
         = pure (filter notBound ["f", "g"])
     findNames (NTCon _ n _ _ _)
         = case !(lookupName n (NameMap.toList (namedirectives defs))) of
@@ -170,7 +171,7 @@ export
 getArgNames : {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
               Core (List String)
-getArgNames defs bound allvars env nf@(NBind fc x (Pi _ p ty) sc)
+getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
                     Explicit => pure [!(getArgName defs x bound allvars ty)]
                     _ => pure []
@@ -180,7 +181,7 @@ getArgNames defs bound allvars env val = pure []
 
 export
 explicitlyBound : Defs -> NF [] -> Core (List Name)
-explicitlyBound defs (NBind fc x (Pi _ _ _) sc)
+explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
     = pure $ x :: !(explicitlyBound defs
                     !(sc defs (toClosure defaultOpts [] (Erased fc False))))
 explicitlyBound defs _ = pure []
@@ -217,16 +218,20 @@ updateArg allvars var con (IVar fc n)
 updateArg allvars var con (IApp fc f a)
     = pure $ IApp fc !(updateArg allvars var con f)
                      !(updateArg allvars var con a)
-updateArg allvars var con (IImplicitApp fc f n a)
-    = pure $ IImplicitApp fc !(updateArg allvars var con f) n
-                             !(updateArg allvars var con a)
+updateArg allvars var con (IAutoApp fc f a)
+    = pure $ IAutoApp fc !(updateArg allvars var con f)
+                     !(updateArg allvars var con a)
+updateArg allvars var con (INamedApp fc f n a)
+    = pure $ INamedApp fc !(updateArg allvars var con f) n
+                          !(updateArg allvars var con a)
 updateArg allvars var con (IAs fc s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
 data ArgType
     = Explicit FC RawImp
-    | Implicit FC (Maybe Name) RawImp
+    | Auto     FC RawImp
+    | Named    FC Name RawImp
 
 update : {auto c : Ref Ctxt Defs} ->
          List Name -> -- all the variable names
@@ -234,19 +239,24 @@ update : {auto c : Ref Ctxt Defs} ->
          ArgType -> Core ArgType
 update allvars var con (Explicit fc arg)
     = pure $ Explicit fc !(updateArg allvars var con arg)
-update allvars var con (Implicit fc n arg)
-    = pure $ Implicit fc n !(updateArg allvars var con arg)
+update allvars var con (Auto fc arg)
+    = pure $ Auto fc !(updateArg allvars var con arg)
+update allvars var con (Named fc n arg)
+    = pure $ Named fc n !(updateArg allvars var con arg)
 
 getFnArgs : RawImp -> List ArgType -> (RawImp, List ArgType)
 getFnArgs (IApp fc tm a) args
     = getFnArgs tm (Explicit fc a :: args)
-getFnArgs (IImplicitApp fc tm n a) args
-    = getFnArgs tm (Implicit fc n a :: args)
+getFnArgs (IAutoApp fc tm a) args
+    = getFnArgs tm (Auto fc a :: args)
+getFnArgs (INamedApp fc tm n a) args
+    = getFnArgs tm (Named fc n a :: args)
 getFnArgs tm args = (tm, args)
 
 apply : RawImp -> List ArgType -> RawImp
 apply f (Explicit fc a :: args) = apply (IApp fc f a) args
-apply f (Implicit fc n a :: args) = apply (IImplicitApp fc f n a) args
+apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
+apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
 apply f [] = f
 
 -- Return a new LHS to check, replacing 'var' with an application of 'con'
@@ -294,11 +304,18 @@ findUpdates defs (IVar fc n) tm = recordUpdate fc n tm
 findUpdates defs (IApp _ f a) (IApp _ f' a')
     = do findUpdates defs f f'
          findUpdates defs a a'
-findUpdates defs (IImplicitApp _ f _ a) (IImplicitApp _ f' _ a')
+findUpdates defs (IAutoApp _ f a) (IAutoApp _ f' a')
     = do findUpdates defs f f'
          findUpdates defs a a'
-findUpdates defs (IImplicitApp _ f _ a) f' = findUpdates defs f f'
-findUpdates defs f (IImplicitApp _ f' _ a) = findUpdates defs f f'
+findUpdates defs (IAutoApp _ f a) f'
+    = findUpdates defs f f'
+findUpdates defs f (IAutoApp _ f' a)
+    = findUpdates defs f f'
+findUpdates defs (INamedApp _ f _ a) (INamedApp _ f' _ a')
+    = do findUpdates defs f f'
+         findUpdates defs a a'
+findUpdates defs (INamedApp _ f _ a) f' = findUpdates defs f f'
+findUpdates defs f (INamedApp _ f' _ a) = findUpdates defs f f'
 findUpdates defs (IAs _ _ _ f) f' = findUpdates defs f f'
 findUpdates defs f (IAs _ _ _ f') = findUpdates defs f f'
 findUpdates _ _ _ = pure ()
@@ -317,19 +334,27 @@ mkCase {c} {u} fn orig lhs_raw
          defs <- get Ctxt
          ust <- get UST
          catch
-           (do -- Use 'Rig0' since it might be a type level function, or it might
+           (do 
+               -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
+               -- then the current namespace (accessed by calling getNS) differs from the function
+               -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
+               setAllPublic True 
+               
+               -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
                                     fn (InLHS erased) [] (MkNested [])
                                     [] (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
+               -- Revert all public back to false
+               setAllPublic False 
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
                lhs' <- unelabNoSugar [] lhs
 
-               log 3 $ "Original LHS: " ++ show orig
-               log 3 $ "New LHS: " ++ show lhs'
+               log "interaction.casesplit" 3 $ "Original LHS: " ++ show orig
+               log "interaction.casesplit" 3 $ "New LHS: " ++ show lhs'
 
                pure (Valid lhs' !(getUpdates defs orig lhs')))
            (\err =>
@@ -345,8 +370,8 @@ mkCase {c} {u} fn orig lhs_raw
 
 substLets : {vars : _} ->
             Term vars -> Term vars
-substLets (Bind _ n (Let c val ty) sc) = substLets (subst val sc)
-substLets (Bind _ n (PLet c val ty) sc) = substLets (subst val sc)
+substLets (Bind _ n (Let _ c val ty) sc) = substLets (subst val sc)
+substLets (Bind _ n (PLet _ c val ty) sc) = substLets (subst val sc)
 substLets (Bind fc n b sc) = Bind fc n b (substLets sc)
 substLets tm = tm
 
@@ -365,7 +390,7 @@ getSplitsLHS : {auto m : Ref MD Metadata} ->
                Core (SplitResult (List ClauseUpdate))
 getSplitsLHS fc envlen lhs_in n
     = do let lhs = substLets lhs_in
-         logTerm 3 "Splitting" lhs_in
+         logTerm "interaction.casesplit" 3 "Splitting" lhs_in
          let usedns = findAllVars lhs_in
 
          defs <- get Ctxt

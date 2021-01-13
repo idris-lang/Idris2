@@ -7,6 +7,7 @@ import Compiler.Scheme.Common
 
 import Core.Options
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.TT
@@ -41,6 +42,7 @@ schHeader : String -> String
 schHeader libs
   = "#lang racket/base\n" ++
     "; @generated\n" ++
+    "(require racket/future)\n" ++ -- for parallelism/concurrency
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system
     "(require rnrs/bytevectors-6)\n" ++ -- for buffers
@@ -94,6 +96,9 @@ mutual
       = do p' <- schExp racketPrim racketString 0 p
            c' <- schExp racketPrim racketString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  racketPrim i MakeFuture [_, work]
+      = do work' <- schExp racketPrim racketString 0 work
+           pure $ mkWorld $ "(blodwen-make-future " ++ work' ++ ")"
   racketPrim i prim args
       = schExtCommon racketPrim racketString i prim args
 
@@ -109,7 +114,10 @@ data Done : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
-cftySpec fc CFUnsigned = pure "_uint"
+cftySpec fc CFUnsigned8 = pure "_uint8"
+cftySpec fc CFUnsigned16 = pure "_uint16"
+cftySpec fc CFUnsigned32 = pure "_uint32"
+cftySpec fc CFUnsigned64 = pure "_uint64"
 cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
@@ -247,11 +255,13 @@ useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret
-    = throw (GenericMsg fc "No recognised foreign calling convention")
+useCC appdir fc [] args ret = throw (NoForeignCC fc)
 useCC appdir fc (cc :: ccs) args ret
     = case parseCC cc of
            Nothing => useCC appdir fc ccs args ret
+           Just ("scheme,racket", [sfn]) =>
+               do body <- schemeCall fc sfn (map fst args) ret
+                  pure ("", body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -369,8 +379,10 @@ compileToRKT c appdir tm outfile
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp racketPrim racketString 0 ctm
          support <- readDataFile "racket/support.rkt"
+         ds <- getDirectives Racket
+         extraRuntime <- getExtraRuntime ds
          let scm = schHeader (concat (map fst fgndefs)) ++
-                   support ++ code ++
+                   support ++ extraRuntime ++ code ++
                    "(void " ++ main ++ ")\n" ++
                    schFooter
          Right () <- coreLift $ writeFile outfile scm

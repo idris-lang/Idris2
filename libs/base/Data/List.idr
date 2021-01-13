@@ -2,6 +2,9 @@ module Data.List
 
 import Data.Nat
 import Data.List1
+import Data.Fin
+
+%default total
 
 public export
 isNil : List a -> Bool
@@ -58,18 +61,36 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 |||
 ||| @ ok a proof that the index is within bounds
 public export
-index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index : (n : Nat) -> (xs : List a) -> {auto 0 ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
+
+public export
+index' : (xs : List a) -> Fin (length xs) -> a
+index' (x::_)  FZ     = x
+index' (_::xs) (FS i) = index' xs i
 
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
 ||| @ x the initial value that will be the head of the list
+covering
 public export
 iterate : (f : a -> Maybe a) -> (x : a) -> List a
 iterate f x  = x :: case f x of
   Nothing => []
   Just y => iterate f y
+
+covering
+public export
+unfoldr : (b -> Maybe (a, b)) -> b -> List a
+unfoldr f c = case f c of
+  Nothing     => []
+  Just (a, n) => a :: unfoldr f n
+
+public export
+iterateN : Nat -> (a -> a) -> a -> List a
+iterateN Z     _ _ = []
+iterateN (S n) f x = x :: iterateN n f (f x)
 
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
@@ -175,12 +196,19 @@ union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
 public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 
@@ -192,8 +220,8 @@ public export
 split : (a -> Bool) -> List a -> List1 (List a)
 split p xs =
   case break p xs of
-    (chunk, [])          => [chunk]
-    (chunk, (c :: rest)) => chunk :: toList (split p (assert_smaller xs rest))
+    (chunk, [])          => singleton chunk
+    (chunk, (c :: rest)) => cons chunk (split p (assert_smaller xs rest))
 
 public export
 splitAt : (n : Nat) -> (xs : List a) -> (List a, List a)
@@ -247,6 +275,10 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
+public export
+replaceWhen : (a -> Bool) -> a -> List a -> List a
+replaceWhen p b l = map (\c => if p c then b else c) l
+
 ||| Replaces all occurences of the first argument with the second argument in a list.
 |||
 ||| ```idris example
@@ -255,7 +287,7 @@ splitOn a = split (== a)
 |||
 public export
 replaceOn : Eq a => a -> a -> List a -> List a
-replaceOn a b l = map (\c => if c == a then b else c) l
+replaceOn a = replaceWhen (== a)
 
 public export
 reverseOnto : List a -> List a -> List a
@@ -283,6 +315,15 @@ intersectBy eq xs ys = [x | x <- xs, any (eq x) ys]
 export
 intersect : Eq a => List a -> List a -> List a
 intersect = intersectBy (==)
+
+export
+intersectAllBy : (a -> a -> Bool) -> List (List a) -> List a
+intersectAllBy eq [] = []
+intersectAllBy eq (xs :: xss) = filter (\x => all (elemBy eq x) xss) xs
+
+export
+intersectAll : Eq a => List (List a) -> List a
+intersectAll = intersectAllBy (==)
 
 ||| Combine two lists elementwise using some function.
 |||
@@ -345,7 +386,7 @@ public export
 last : (l : List a) -> {auto 0 ok : NonEmpty l} -> a
 last [] impossible
 last [x] = x
-last (x::y::ys) = last (y::ys)
+last (_::x::xs) = List.last (x::xs)
 
 ||| Return all but the last element of a non-empty list.
 ||| @ ok proof the list is non-empty
@@ -434,6 +475,11 @@ mapMaybe f (x::xs) =
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
 
+||| Extract all of the values contained in a List of Maybes
+public export
+catMaybes : List (Maybe a) -> List a
+catMaybes = mapMaybe id
+
 --------------------------------------------------------------------------------
 -- Special folds
 --------------------------------------------------------------------------------
@@ -451,19 +497,19 @@ public export
 foldr1 : (a -> a -> a) -> (l : List a)  -> {auto 0 ok : NonEmpty l} -> a
 foldr1 f [] impossible
 foldr1 f [x] = x
-foldr1 f (x::y::ys) = f x (foldr1 f (y::ys))
+foldr1 f (x::y::ys) = f x (List.foldr1 f (y::ys))
 
 ||| Foldl without seeding the accumulator. If the list is empty, return `Nothing`.
 public export
 foldl1' : (a -> a -> a) -> List a -> Maybe a
 foldl1' f [] = Nothing
-foldl1' f xs@(_::_) = Just (foldl1 f xs)
+foldl1' f xs@(_::_) = Just (List.foldl1 f xs)
 
 ||| Foldr without seeding the accumulator. If the list is empty, return `Nothing`.
 public export
 foldr1' : (a -> a -> a) -> List a -> Maybe a
 foldr1' f [] = Nothing
-foldr1' f xs@(_::_) = Just (foldr1 f xs)
+foldr1' f xs@(_::_) = Just (List.foldr1 f xs)
 
 --------------------------------------------------------------------------------
 -- Sorting
@@ -632,3 +678,8 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+lengthMap : (xs : List a) -> length (map f xs) = length xs
+lengthMap [] = Refl
+lengthMap (x :: xs) = cong S (lengthMap xs)

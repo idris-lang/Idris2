@@ -46,7 +46,7 @@ checkDelay rig elabinfo nest env fc tm mexpected
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
          -- Can only check if we know the expected type already because we
          -- need to infer the delay reason
@@ -61,7 +61,7 @@ checkDelay rig elabinfo nest env fc tm mexpected
                             ty <- getTerm gty
                             pure (TDelay fc r ty tm',
                                   glueBack defs env (NDelayed fc r tynf))
-                      ty => do logNF 5 "Expected delay type" env ty
+                      ty => do logNF "elab.delay" 5 "Expected delay type" env ty
                                throw (GenericMsg fc ("Can't infer delay type")))
   where
     delayError : Error -> Bool

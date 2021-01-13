@@ -1,8 +1,10 @@
 1/1: Building DLFail (DLFail.idr)
-DLFail.idr:3:20--3:29:While processing left hand side of describe_list_end at DLFail.idr:3:1--4:1:
-Can't match on ?xs ++ [?x] (Not a constructor application or primitive) at
-3	describe_list_end (xs ++ [x]) = "Non-empty, initial portion = " ++ show xs
-	                   ^^^^^^^^^
+Error: While processing left hand side of describe_list_end. Can't match on ?xs ++ [?x] (Not a constructor application or primitive).
+
+DLFail.idr:3:20--3:29
+   |
+ 3 | describe_list_end (xs ++ [x]) = "Non-empty, initial portion = " ++ show xs
+   |                    ^^^^^^^^^
 
 1/13: Building DataStore (DataStore.idr)
 2/13: Building DescribeList (DescribeList.idr)
