@@ -1,8 +1,8 @@
 1/1: Building refprims (refprims.idr)
 LOG 0: Name: Prelude.Types.List.++
-LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi Rig1 Explicit (Just xs) (Prelude.Types.List a) (%pi Rig1 Explicit (Just ys) (Prelude.Types.List a) (Prelude.Types.List a))))
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Types.List a) (%pi RigW Explicit (Just ys) (Prelude.Types.List a) (Prelude.Types.List a))))
 LOG 0: Name: Prelude.Types.Strings.++
-LOG 0: Type: (%pi Rig1 Explicit (Just x) String (%pi Rig1 Explicit (Just y) String String))
+LOG 0: Type: (%pi RigW Explicit (Just x) String (%pi RigW Explicit (Just y) String String))
 LOG 0: Resolved name: Prelude.Types.Nat
 LOG 0: Constructors: [Prelude.Types.Z, Prelude.Types.S]
 Error: While processing right hand side of dummy1. Error during reflection: Not really trying

@@ -52,7 +52,7 @@ data Pair : Type -> Type -> Type where
   ||| A pair of elements.
   ||| @ a the left element of the pair
   ||| @ b the right element of the pair
-  MkPair : {0 a, b : Type} -> (1 x : a) -> (1 y : b) -> Pair a b
+  MkPair : {0 a, b : Type} -> (x : a) -> (y : b) -> Pair a b
 
 ||| Return the first element of a pair.
 public export
@@ -69,11 +69,10 @@ snd (x, y) = y
 
 infix 5 #
 
-||| A pair type for use in operations on linear resources, which return a
-||| value and an updated resource
+||| A pair type where each component is linear
 public export
 data LPair : Type -> Type -> Type where
-     (#) : (x : a) -> (1 _ : b) -> LPair a b
+     (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
 
 namespace DPair
   ||| Dependent pairs aid in the construction of dependent types by providing
@@ -142,7 +141,7 @@ public export
 %inline
 public export
 rewrite__impl : {0 x, y : a} -> (0 p : _) ->
-                (0 rule : x = y) -> (1 val : p y) -> p x
+                (0 rule : x = y) -> (val : p y) -> p x
 rewrite__impl p Refl prf = prf
 
 %rewrite Equal rewrite__impl

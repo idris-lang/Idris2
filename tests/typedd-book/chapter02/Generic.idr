@@ -11,10 +11,10 @@ identity : ty -> ty
 identity x = x
 
 doubleNat : Nat -> Nat
-doubleNat x = x * x
+doubleNat x = x + x
 
 doubleInteger : Integer -> Integer
-doubleInteger x = x * x
+doubleInteger x = x + x
 
 double : Num ty => ty -> ty
-double x = x * x
+double x = x + x

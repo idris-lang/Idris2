@@ -1,9 +1,9 @@
 1/1: Building LCase (LCase.idr)
 Error: While processing right hand side of foo. There are 0 uses of linear name y. 
 
-LCase.idr:7:11--9:37
- 7 |     = let 1 test = the Nat $ case z of
- 8 |                         Z => Z
- 9 |                         (S k) => S z
+LCase.idr:11:11--13:41
+ 11 |     = let 1 test = the MyNat $ case z of
+ 12 |                         MyZ => MyZ
+ 13 |                         (MyS k) => MyS z
 
 Suggestion: linearly bounded variables must be used exactly once.

@@ -26,6 +26,14 @@ available (though not yet updated for Idris 2).
 Editing at the REPL
 ===================
 
+.. note::
+  The Idris2 repl does not support readline in the interest of
+  keeping dependencies minimal. Unfortunately this precludes some
+  niceties such as line editing, persistent history and completion.
+  A useful work around is to install `rlwrap <https://linux.die.net/man/1/rlwrap>`_,
+  this utility provides all the aforementioned features simply by
+  invoking the Idris2 repl as an argument to the utility ``rlwrap idris2``
+
 The REPL provides a number of commands, which we will describe
 shortly, which generate new program fragments based on the currently
 loaded module. These take the general form:
@@ -251,6 +259,6 @@ Corresponding commands are also available in the Emacs mode. Support
 for other editors can be added in a relatively straightforward manner
 by using ``idris2 -–client``.
 More sophisticated support can be added by using the IDE protocol (yet to
-be documented for Idris 2, but which mostly extends to protocol documented for 
+be documented for Idris 2, but which mostly extends to protocol documented for
 `Idris 1 <https://docs.idris-lang.org/en/latest/reference/ide-protocol.html>`_.
 

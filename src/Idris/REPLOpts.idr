@@ -37,6 +37,7 @@ record REPLOpts where
   extraCodegens : List (String, Codegen)
   consoleWidth : Maybe Nat -- Nothing is auto
   color : Bool
+  synHighlightOn : Bool
 
 litStyle : Maybe String -> Maybe LiterateStyle
 litStyle = join . map isLitFile
@@ -45,7 +46,7 @@ export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
     = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
-                 Nothing outmode "" Nothing Nothing cgs Nothing True
+                 Nothing outmode "" Nothing Nothing cgs Nothing True True
 
 export
 data ROpts : Type where
@@ -154,3 +155,13 @@ export
 setColor : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
 setColor b = do opts <- get ROpts
                 put ROpts (record { color = b } opts)
+
+export
+getSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Core Bool
+getSynHighlightOn = do opts <- get ROpts
+                       pure $ opts.synHighlightOn
+
+export
+setSynHighlightOn : {auto o : Ref ROpts REPLOpts} -> Bool -> Core ()
+setSynHighlightOn b = do opts <- get ROpts
+                         put ROpts (record { synHighlightOn = b } opts)

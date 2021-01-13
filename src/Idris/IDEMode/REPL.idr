@@ -229,6 +229,9 @@ process (PrintDefinition n)
 process (ReplCompletions n)
     = do todoCmd "repl-completions"
          pure $ NameList []
+process (EnableSyntax b)
+    = do setSynHighlightOn b
+         pure $ REPL $ Printed (reflow "Syntax highlight option changed to" <++> pretty b)
 process Version
     = replWrap $ Idris.REPL.process ShowVersion
 process (Metavariables _)
@@ -310,7 +313,7 @@ displayIDEResult outf i  (REPL $ Evaluated x (Just y))
   $ StringAtom $ show x ++ " : " ++ show y
 displayIDEResult outf i  (REPL $ Printed xs)
   = printIDEResultWithHighlight outf i
-  $ StringAtom $ show xs
+  $ StringAtom $ !(renderWithoutColor xs)
 displayIDEResult outf i  (REPL $ TermChecked x y)
   = printIDEResultWithHighlight outf i
   $ StringAtom $ show x ++ " : " ++ show y

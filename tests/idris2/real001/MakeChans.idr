@@ -43,11 +43,11 @@ sendUtils chan
             else close chan
 
 getUtilsChan : (1 chan : Client MakeUtils) ->
-               One IO (Client Utils, Client MakeUtils)
+               One IO (LPair (Client Utils) (Client MakeUtils))
 getUtilsChan chan
     = do chan <- send chan True
          cchan # chan <- recv chan
-         pure (cchan, chan)
+         pure (cchan # chan)
 
 closeUtilsChan : (1 chan : Client MakeUtils) ->
                  Any IO ()
@@ -60,9 +60,9 @@ doThings
     = do -- lift $ printLn "Starting"
          schan <- Channel.fork sendUtils
          res <- getUtilsChan schan
-         let (uchan1, schan) = res
+         let (uchan1 # schan) = res
          lift $ printLn "Got Chan 1"
-         (uchan2, schan) <- getUtilsChan schan
+         (uchan2 # schan) <- getUtilsChan schan
          lift $ printLn "Got Chan 2"
          closeUtilsChan schan
 

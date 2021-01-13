@@ -1,5 +1,5 @@
 1/1: Building Total (Total.idr)
-Main> Main.count is total
+Main> Main.streamCount is total
 Main> Main.badCount is possibly not terminating due to recursive path Main.badCount
 Main> Main.process is total
 Main> Main.badProcess is possibly not terminating due to recursive path Main.badProcess -> Main.badProcess -> Main.badProcess

@@ -37,15 +37,15 @@ prim__mutexAcquire : Mutex -> PrimIO ()
 prim__mutexRelease : Mutex -> PrimIO ()
 
 export
-makeMutex : IO Mutex
+makeMutex : HasIO io => io Mutex
 makeMutex = primIO prim__makeMutex
 
 export
-mutexAcquire : Mutex -> IO ()
+mutexAcquire : HasIO io => Mutex -> io ()
 mutexAcquire m = primIO (prim__mutexAcquire m)
 
 export
-mutexRelease : Mutex -> IO ()
+mutexRelease : HasIO io => Mutex -> io ()
 mutexRelease m = primIO (prim__mutexRelease m)
 
 export
@@ -63,22 +63,22 @@ prim__conditionSignal : Condition -> PrimIO ()
 prim__conditionBroadcast : Condition -> PrimIO ()
 
 export
-makeCondition : IO Condition
+makeCondition : HasIO io => io Condition
 makeCondition = primIO prim__makeCondition
 
 export
-conditionWait : Condition -> Mutex -> IO ()
+conditionWait : HasIO io => Condition -> Mutex -> io ()
 conditionWait c m = primIO (prim__conditionWait c m)
 
 ||| Timeout is in microseconds
 export
-conditionWaitTimeout : Condition -> Mutex -> Int -> IO ()
+conditionWaitTimeout : HasIO io => Condition -> Mutex -> Int -> io ()
 conditionWaitTimeout c m t = primIO (prim__conditionWaitTimeout c m t)
 
 export
-conditionSignal : Condition -> IO ()
+conditionSignal : HasIO io => Condition -> io ()
 conditionSignal c = primIO (prim__conditionSignal c)
 
 export
-conditionBroadcast : Condition -> IO ()
+conditionBroadcast : HasIO io => Condition -> io ()
 conditionBroadcast c = primIO (prim__conditionBroadcast c)
