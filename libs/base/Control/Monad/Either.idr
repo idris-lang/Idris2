@@ -110,7 +110,7 @@ Functor m => Functor (EitherT e m) where
 public export
 Foldable m => Foldable (EitherT e m) where
   foldr f acc (MkEitherT e)
-    = foldr (\x,xs => either (const acc) (`f` xs) x) acc e
+    = foldr (\x,xs => either (const xs) (`f` xs) x) acc e
 
   null (MkEitherT e) = null e
 
