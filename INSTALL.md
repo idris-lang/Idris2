@@ -69,7 +69,7 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have an earlier version of Idris 2 installed
+If you have an earlier version of Idris 2 (minimum version 0.2.2) installed:
 
 - `make all`
 - `make install`
