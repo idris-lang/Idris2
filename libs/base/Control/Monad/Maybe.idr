@@ -18,7 +18,7 @@ import Data.Maybe
 
 public export
 data MaybeT : (m : Type -> Type) -> (a : Type) -> Type where
-  MkMaybeT : (1 _ : m (Maybe a)) -> MaybeT m a
+  MkMaybeT : m (Maybe a) -> MaybeT m a
 
 export
 %inline
