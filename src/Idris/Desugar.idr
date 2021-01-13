@@ -430,9 +430,9 @@ mutual
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) exp')
-                    (ILam fc top Explicit (Just (MN "_" 0))
+                    (ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar fc (MN "_" 0))
+                          (ICase fc (IVar EmptyFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fc bpat rest'
                                   :: alts')))
