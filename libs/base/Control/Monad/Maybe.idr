@@ -108,7 +108,7 @@ Functor m => Functor (MaybeT m) where
 public export
 Foldable m => Foldable (MaybeT m) where
   foldr f acc (MkMaybeT e)
-    = foldr (\x,xs => maybe acc (`f` xs) x) acc e
+    = foldr (\x,xs => maybe xs (`f` xs) x) acc e
 
   null (MkMaybeT e) = null e
 
