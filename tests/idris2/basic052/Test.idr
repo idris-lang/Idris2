@@ -11,7 +11,7 @@ infixr 1 :->
 (:->) a b i j = a i j -> b i j
 
 justShowAll : Maybe (All (Matrix Integer :-> Matrix String))
-justShowAll = Just (\{x, y} => ?justShowAll_rhs)
+justShowAll = Just (\${x, y} => ?justShowAll_rhs)
 
 justShowAllImpl : Maybe (All (Matrix Integer :-> Matrix String))
-justShowAllImpl = Just (\{x, y} => map (map show))
+justShowAllImpl = Just (\${x, y} => map (map show))

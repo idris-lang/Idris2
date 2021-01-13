@@ -443,7 +443,7 @@ mutual
                              (symbol ":" *> opExpr pdef fname indents)
                     rig <- getMult rigc
                     pure [(rig, Explicit, pat, ty)])
-                <|> (do start <- symbol "{"
+                <|> (do start <- symbol "${"
                         ns <- sepBy1 (symbol ",") (do
                           rigc <- multiplicity
                           pat <- bounds (simpleExpr fname indents)

@@ -192,12 +192,12 @@ mutual
           getLamNames acc sc = (reverse acc, sc)
           prettyBindings : List (RigCount, PiInfo PTerm, PTerm, PTerm) -> Doc IdrisAnn
           prettyBindings [] = neutral
-          prettyBindings [(rig, Implicit, n, (PImplicit _))] = braces (prettyRig rig <+> go startPrec n)
-          prettyBindings [(rig, Implicit, n, ty)] = braces (prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty)
+          prettyBindings [(rig, Implicit, n, (PImplicit _))] = "$" <+> braces (prettyRig rig <+> go startPrec n)
+          prettyBindings [(rig, Implicit, n, ty)] = "$" <+> braces (prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty)
           prettyBindings [(rig, p, n, (PImplicit _))] = prettyRig rig <+> go startPrec n
           prettyBindings [(rig, p, n, ty)] = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty
-          prettyBindings ((rig, Implicit, n, (PImplicit _)) :: ns) = braces (prettyRig rig <+> go startPrec n) <+> comma <+> line <+> prettyBindings ns
-          prettyBindings ((rig, Implicit, n, ty) :: ns) = braces (prettyRig rig <+> go startPrec n) <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
+          prettyBindings ((rig, Implicit, n, (PImplicit _)) :: ns) = "$" <+> braces (prettyRig rig <+> go startPrec n) <+> comma <+> line <+> prettyBindings ns
+          prettyBindings ((rig, Implicit, n, ty) :: ns) = "$" <+> braces (prettyRig rig <+> go startPrec n) <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
           prettyBindings ((rig, p, n, (PImplicit _)) :: ns) = prettyRig rig <+> go startPrec n <+> comma <+> line <+> prettyBindings ns
           prettyBindings ((rig, p, n, ty) :: ns) = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
       go d (PLet _ rig n (PImplicit _) val sc alts) =
