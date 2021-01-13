@@ -28,6 +28,7 @@ data IdrisAnn
   | Meta
   | Keyword
   | Pragma
+  | Link Name
 
 export
 colorAnn : IdrisAnn -> AnsiStyle
@@ -39,6 +40,7 @@ colorAnn Code = color Magenta
 colorAnn Keyword = color Red
 colorAnn Pragma = color BrightMagenta
 colorAnn Meta = color Green
+colorAnn (Link _) = color White
 
 export
 error : Doc IdrisAnn -> Doc IdrisAnn
@@ -163,7 +165,7 @@ mutual
         else Chara '`' <+> pretty op <+> Chara '`'
 
       go : Prec -> PTerm -> Doc IdrisAnn
-      go d (PRef _ n) = pretty n
+      go d (PRef _ n) = annotate (Link n) $ pretty n
       go d (PPi _ rig Explicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal

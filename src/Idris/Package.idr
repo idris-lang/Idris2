@@ -31,6 +31,7 @@ import Libraries.Utils.Path
 import Idris.CommandLine
 import Idris.DocString
 import Idris.ModTree
+import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.REPL.Common
@@ -465,6 +466,72 @@ htmlPreamble title root class = "
 htmlFooter : String
 htmlFooter = "</div><footer>Produced by Idris2 version " ++ (showVersion True version) ++ "</footer></body></html>"
 
+removeAllExceptLink : IdrisAnn -> List IdrisAnn
+removeAllExceptLink x@(Link _) = [x]
+removeAllExceptLink _ = []
+
+getNS : Name -> String
+getNS (NS ns _) = show ns
+getNS _ = ""
+
+hasNS : Name -> Bool
+hasNS (NS _ _) = True
+hasNS _ = False
+
+tryCanonicalName : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core (Maybe Name)
+tryCanonicalName fc n with (hasNS n)
+  tryCanonicalName fc n | True
+      = do defs <- get Ctxt
+           case !(lookupCtxtName n (gamma defs)) of
+                [(n, _, _)] => pure $ Just n
+                _ => pure Nothing
+  tryCanonicalName fc n | False = pure Nothing
+
+packageInternal : {auto c : Ref Ctxt Defs} ->
+                  Name -> Core Bool
+packageInternal (NS ns _) =
+  do let mi = nsAsModuleIdent ns
+     catch ((const True) <$> nsToSource emptyFC mi) (\_ => pure False)
+packageInternal _ = pure False
+
+renderHtml : {auto c : Ref Ctxt Defs} ->
+             SimpleDocStream IdrisAnn ->
+             Core String
+renderHtml doc = go [] doc where
+  ignoreAnn : Nat -> SimpleDocStream IdrisAnn -> SimpleDocStream IdrisAnn
+  ignoreAnn 0 ds = ds
+  ignoreAnn n SEmpty = SEmpty
+  ignoreAnn n (SAnnPush _ rest) = ignoreAnn (S n) rest
+  ignoreAnn (S n) (SAnnPop rest) = ignoreAnn n rest
+  ignoreAnn n (SChar _ rest) = ignoreAnn n rest
+  ignoreAnn n (SText _ _ rest) = ignoreAnn n rest
+  ignoreAnn n (SLine _ rest) = ignoreAnn n rest
+
+  go : List String -> SimpleDocStream IdrisAnn -> Core String
+  go _ SEmpty = pure neutral
+  go t (SChar c rest) = pure $ (htmlEscape $ singleton c) <+> !(go t rest)
+  go ts (SText l t rest) = pure $ (htmlEscape t) <+> !(go ts rest)
+  go t (SLine l rest) = pure $ (htmlEscape $ singleton '\n' <+> textSpaces l) <+> !(go t rest)
+  go ts (SAnnPush (Link n) rest) =
+    do Just cName <- tryCanonicalName emptyFC n
+       | Nothing => pure $ "<span class=\"implicit\">" <+> !(go ("span"::ts) rest)
+
+       True <- packageInternal cName
+       | False => pure $ "<span class=\"type resolved\" title=\"" <+> (htmlEscape $ show cName) <+> "\">" <+> (htmlEscape $ nameRoot cName) <+> "</span>" <+> !(go ts (ignoreAnn 1 rest))
+       pure $ "<a class=\"type\" href=\"" ++ (htmlEscape $ getNS cName) ++ ".html#" ++ (htmlEscape $ show cName) ++ "\">" <+> (htmlEscape $ nameRoot cName) <+> "</a>" <+> !(go ts (ignoreAnn 1 rest))
+  go t (SAnnPush _ rest) = pure $ "<a href=\"#\" class=\"thisshouldneverhappen\">" <+> !(go ("a"::t) rest)
+  go (t::ts) (SAnnPop rest) = pure $ "</" ++ t ++ ">" <+> !(go ts rest)
+  go [] (SAnnPop rest) = pure $ "TAG INBALANCE" <+> !(go [] rest)
+
+docDocToHtml : {auto c : Ref Ctxt Defs} ->
+               Doc IdrisAnn ->
+               Core String
+docDocToHtml doc =
+  let altered = alterAnnotations removeAllExceptLink doc in
+  let ds = layoutPretty (MkLayoutOptions Unbounded) altered in
+      renderHtml ds
+
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
@@ -481,6 +548,7 @@ makeDoc pkg opts =
        let docDir = docBase </> "docs"
        coreLift $ mkdirAll docDir
        u <- newRef UST initUState
+       setPPrint (MkPPOpts False False True)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
            let outputFileName = (show mod) ++ ".html"
@@ -501,9 +569,11 @@ makeDoc pkg opts =
                Just gdef <- lookupCtxtExact name (gamma defs)
                  | Nothing => writeHtml ("ERROR: lookup failed: " ++ show name)
                typeTm <- resugar [] !(normaliseHoles defs [] (type gdef))
+               let typeDoc = prettyTerm typeTm
+               typeStr <- docDocToHtml typeDoc
                let pname = stripNS ns name
                writeHtml ("<dt id=\"" ++ (htmlEscape $ show name) ++ "\">")
-               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ (show typeTm) ++ "</span>")
+               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")
                writeHtml ("</dt><dd><pre>")
                doc <- getDocsFor emptyFC name
                writeHtml (unlines $ map htmlEscape doc)
