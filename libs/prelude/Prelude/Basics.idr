@@ -40,23 +40,24 @@ public export %inline
 (.) : (b -> c) -> (a -> b) -> a -> c
 (.) f g = \x => f (g x)
 
-||| Binary function composition. This can be useful for instance
-||| when implementing interfaces for wrapper types:
+||| `on b u x y` runs the binary function b on the results of applying
+||| unary function u to two arguments x and y. From the opposite perspective,
+||| it transforms two inputs and combines the outputs.
+||| 
+||| ```idris example
+||| ((+) `on` f) x y = f x + f y
+||| ```
+||| 
+||| Typical usage:
 |||
 ||| ```idris example
-||| record Id a where
-|||   constructor MkId
-|||   runId : a
-||| 
-||| Eq a => Eq (Id a) where
-|||   (==) = (==) `on` runId
-||| 
-||| Ord a => Ord (Id a) where
-|||   compare = compare `on` runId
+||| sortBy (compare `on` fst).
 ||| ```
 public export
 on : (b -> b -> c) -> (a -> b) -> a -> a -> c
 on f g x y = g x `f` g y
+
+infixl 0 `on`
 
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip
