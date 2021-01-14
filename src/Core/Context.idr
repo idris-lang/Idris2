@@ -364,7 +364,19 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure $ MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty
+         pure $ MkContext
+            { firstEntry = 0
+            , nextEntry = 0
+            , resolvedAs = empty
+            , possibles = empty
+            , content = aref
+            , branchDepth = 0
+            , staging = empty
+            , visibleNS = [partialEvalNS]
+            , allPublic = False
+            , inlineOnly = False
+            , hidden = empty
+            }
 
 export
 initCtxt : Core Context
@@ -588,9 +600,29 @@ export
 newDef : FC -> Name -> RigCount -> List Name ->
          ClosedTerm -> Visibility -> Def -> GlobalDef
 newDef fc n rig vars ty vis def
-    = MkGlobalDef fc n ty [] [] [] []
-                  rig vars vis unchecked [] Nothing Nothing False False False def
-                  Nothing Nothing []
+    = MkGlobalDef
+        { location = fc
+        , fullname = n
+        , type = ty
+        , eraseArgs = []
+        , safeErase = []
+        , specArgs = []
+        , inferrable = []
+        , multiplicity = rig
+        , vars = vars
+        , visibility = vis
+        , totality = unchecked
+        , flags = []
+        , refersToM = Nothing
+        , refersToRuntimeM = Nothing
+        , invertible = False
+        , noCycles = False
+        , linearChecked = False
+        , definition = def
+        , compexpr = Nothing
+        , namedcompexpr = Nothing
+        , sizeChange = []
+        }
 
 -- Rewrite rules, applied after type checking, for runtime code only
 -- LHS and RHS must have the same type, but we don't (currently) require that
@@ -989,9 +1021,35 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
-         pure (MkDefs gam [] mainNS [] defaults empty 100
-                      empty empty empty empty [] [] empty []
-                      empty 5381 [] [] [] [] [] empty empty empty empty [])
+         pure $ MkDefs
+           { gamma = gam
+           , mutData = []
+           , currentNS = mainNS
+           , nestedNS = []
+           , options = defaults
+           , toSave = empty
+           , nextTag = 100
+           , typeHints = empty
+           , autoHints = empty
+           , openHints = empty
+           , localHints = empty
+           , saveTypeHints = []
+           , saveAutoHints = []
+           , transforms = empty
+           , saveTransforms = []
+           , namedirectives = empty
+           , ifaceHash = 5381
+           , importHashes = []
+           , imported = []
+           , allImported = []
+           , cgdirectives = []
+           , toCompileCase = []
+           , toIR = empty
+           , userHoles = empty
+           , peFailures = empty
+           , timings = empty
+           , warnings = []
+           }
 
 -- Reset the context, except for the options
 export
@@ -1126,12 +1184,32 @@ addBuiltin : {arity : _} ->
              {auto x : Ref Ctxt Defs} ->
              Name -> ClosedTerm -> Totality ->
              PrimFn arity -> Core ()
-addBuiltin n ty tot op
-    = do addDef n (MkGlobalDef emptyFC n ty [] [] [] [] top [] Public tot
-                               [Inline] Nothing Nothing
-                               False False True (Builtin op)
-                               Nothing Nothing [])
-         pure ()
+addBuiltin n ty tot op =
+    do addDef n $ MkGlobalDef
+         { location = emptyFC
+         , fullname = n
+         , type = ty
+         , eraseArgs = []
+         , safeErase = []
+         , specArgs = []
+         , inferrable = []
+         , multiplicity = top
+         , vars = []
+         , visibility = Public
+         , totality = tot
+         , flags = [Inline]
+         , refersToM = Nothing
+         , refersToRuntimeM = Nothing
+         , invertible = False
+         , noCycles = False
+         , linearChecked = True
+         , definition = Builtin op
+         , compexpr = Nothing
+         , namedcompexpr = Nothing
+         , sizeChange = []
+         }
+
+       pure ()
 
 export
 updateDef : {auto c : Ref Ctxt Defs} ->

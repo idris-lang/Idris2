@@ -94,7 +94,18 @@ record UState where
 
 export
 initUState : UState
-initUState = MkUState empty empty empty empty empty [] 0 0 [] False
+initUState = MkUState
+  { holes = empty
+  , guesses = empty
+  , currentHoles = empty
+  , delayedHoles = empty
+  , constraints = empty
+  , dotConstraints = []
+  , nextName = 0
+  , nextConstraint = 0
+  , delayedElab = []
+  , logging = False
+  }
 
 export
 data UST : Type where

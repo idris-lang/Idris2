@@ -45,8 +45,23 @@ litStyle = join . map isLitFile
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
-    = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
-                 Nothing outmode "" Nothing Nothing cgs Nothing True True
+    = MkREPLOpts
+        { showTypes = False
+        , evalMode = NormaliseAll
+        , mainfile = fname
+        , literateStyle = litStyle fname
+        , source = ""
+        , editor = "vim"
+        , errorLine = Nothing
+        , idemode = outmode
+        , currentElabSource = ""
+        , psResult = Nothing
+        , gdResult = Nothing
+        , extraCodegens = cgs
+        , consoleWidth = Nothing
+        , color = True
+        , synHighlightOn = True
+        }
 
 export
 data ROpts : Type where

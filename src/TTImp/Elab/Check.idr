@@ -145,7 +145,20 @@ data EST : Type where
 export
 initEStateSub : {outer : _} ->
                 Int -> Env Term outer -> SubVars outer vars -> EState vars
-initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty empty
+initEStateSub n env sub = MkEState
+    { defining = n
+    , outerEnv = env
+    , subEnv = sub
+    , boundNames = []
+    , toBind = []
+    , bindIfUnsolved = []
+    , lhsPatVars = []
+    , allPatVars = []
+    , delayDepth = Z
+    , linearUsed = []
+    , saveHoles = empty
+    , unambiguousNames = empty
+    }
 
 export
 initEState : {vars : _} ->

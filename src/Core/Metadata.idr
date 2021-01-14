@@ -52,7 +52,13 @@ Show Metadata where
 
 export
 initMetadata : Metadata
-initMetadata = MkMetadata [] [] [] Nothing []
+initMetadata = MkMetadata
+  { lhsApps = []
+  , names = []
+  , tydecls = []
+  , currentLHS = Nothing
+  , holeLHS = []
+  }
 
 -- A label for metadata in the global state
 export
