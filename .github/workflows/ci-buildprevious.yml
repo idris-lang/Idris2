@@ -12,6 +12,7 @@ on:
 env:
   SCHEME: scheme
   IDRIS2_TESTS_CG: chez
+  IDRIS2_VERSION: 0.3.0
   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
@@ -26,9 +27,9 @@ jobs:
           echo "::add-path::$HOME/.idris2/bin"
       - name : Build previous version
         run: |
-          wget https://www.idris-lang.org/idris2-src/idris2-0.2.2.tgz
-          tar zxvf idris2-0.2.2.tgz
-          cd Idris2-0.2.2
+          wget https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz
+          tar zxvf idris2-$IDRIS2_VERSION.tgz
+          cd Idris2-$IDRIS2_VERSION
           make bootstrap-build && make install
           cd ..
       - name: Build from previous version
