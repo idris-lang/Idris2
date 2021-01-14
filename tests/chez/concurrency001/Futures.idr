@@ -11,10 +11,11 @@ constant = do
   let a = await $ fork "String"
   putStrLn a
 
--- Issue related to usleep in MacOS brew chez
-macsleep : (us : Int) -> So (us >= 0) => IO ()
-macsleep us =
-  if (os == "darwin")
+-- Issue in MacOS brew chez related to clock ( https://github.com/Homebrew/homebrew-core/pull/10159 )
+-- Windows seems to be really flaky with usleep
+extraSleep : (us : Int) -> So (us >= 0) => IO ()
+extraSleep us =
+  if (os == "darwin" || isWindows)
     then sleep (us `div` 10000)
     else usleep us
 
@@ -22,7 +23,7 @@ partial
 futureHelloWorld : (Int, String) -> IO (Future Unit)
 futureHelloWorld (us, n) with (choose (us >= 0))
   futureHelloWorld (us, n) | Left p = forkIO $ do
-    macsleep us
+    extraSleep us
     putStrLn $ "Hello " ++ n ++ "!"
 
 partial
@@ -40,16 +41,16 @@ erasureAndNonbindTest = do
   _ <- forkIO $ do
     putStrLn "This line is printed"
   notUsed <- forkIO $ do
-    macsleep 10000
+    extraSleep 10000
     putStrLn "This line is also printed"
   let _ = nonbind
   let n = nonbind
-  macsleep 20000 -- Even if not explicitly awaited, we should let threads finish before exiting
+  extraSleep 20000 -- Even if not explicitly awaited, we should let threads finish before exiting
 
 map : IO ()
 map = do
   future1 <- forkIO $ do
-    macsleep 10000
+    extraSleep 10000
     putStrLn "#2"
   let future3 = map (const "#3") future1
   future2 <- forkIO $ do
