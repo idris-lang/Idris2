@@ -671,7 +671,7 @@ checkApp rig elabinfo nest env fc (IAutoApp fc' fn arg) expargs autoargs namedar
 checkApp rig elabinfo nest env fc (INamedApp fc' fn nm arg) expargs autoargs namedargs exp
    = checkApp rig elabinfo nest env fc' fn expargs autoargs ((nm, arg) :: namedargs) exp
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
-   = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
+   = do (ntm, arglen, nty_in) <- getVarType rig nest env fc' n
         nty <- getNF nty_in
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
