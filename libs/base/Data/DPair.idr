@@ -18,35 +18,8 @@ namespace Exists
   public export
   record Exists {0 type : _} this where
     constructor Evidence
-    0 value : type
-    prf : this value
-
-  ||| Return the type-level value (evidence) required by the dependent type.
-  |||
-  ||| We need to be in the Erased setting for this to work.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
-  public export
-  0
-  fst : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Exists pred)
-     -> type
-  fst (Evidence value _) = value
-
-  ||| Return the dependently typed value.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
-  public export
-  snd : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Exists pred)
-     -> pred (Exists.fst prf)
-  snd (Evidence value prf) = prf
+    0 fst : type
+    snd : this fst
 
 namespace Subset
 
@@ -62,32 +35,5 @@ namespace Subset
   public export
   record Subset type pred where
     constructor Element
-    value : type
-    0 prf : pred value
-
-  ||| Return the type-level value (evidence) required by the dependent type.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
-  public export
-  fst : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Subset type pred)
-     -> type
-  fst (Element value prf) = value
-
-  ||| Return the dependently typed value.
-  |||
-  ||| We need to be in the erased setting for this to work.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
-  public export
-  0
-  snd : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 value : Subset type pred)
-     -> pred (Subset.fst value)
-  snd (Element value prf) = prf
+    fst : type
+    0 snd : pred fst
