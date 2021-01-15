@@ -1,6 +1,7 @@
 module TTImp.Elab.Binders
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -232,6 +233,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
          -- build the term directly
 
          -- Add the lhs of the let to metadata
+         log "metadata.names" 7 $ "checkLet is adding ↓"
          addNameType lhsFC n env tyv
 
          pure (Bind fc n (Let fc rigb valv tyv) scopev,

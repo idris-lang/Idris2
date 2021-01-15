@@ -308,6 +308,8 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
 
          -- Add to the interactive editing metadata
          addTyDecl fc (Resolved idx) env ty -- for definition generation
+
+         log "metadata.names" 7 $ "processType is adding ↓"
          addNameType nameFC (Resolved idx) env ty -- for looking up types
 
          traverse_ addToSave (keys (getMetas ty))

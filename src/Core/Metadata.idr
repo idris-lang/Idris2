@@ -2,6 +2,7 @@ module Core.Metadata
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.FC
@@ -117,6 +118,8 @@ addNameType : {vars : _} ->
 addNameType loc n env tm
     = do meta <- get MD
          n' <- getFullName n
+         log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + fst (startPos loc))
+
          put MD (record {
                       names $= ((loc, (n', 0, substEnv loc env tm)) ::)
                     } meta)

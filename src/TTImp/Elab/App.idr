@@ -46,7 +46,10 @@ getNameType rigc env fc x
               do rigSafe rigb rigc
                  let binder = getBinder lv env
                  let bty = binderType binder
+
+                 log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
+
                  when (isLinear rigb) $
                       do est <- get EST
                          put EST
@@ -103,6 +106,7 @@ getVarType rigc nest env fc x
                                 log "elab" 5 $ "Arg length " ++ show arglen
 
                                 -- Add the type to the metadata
+                                log "metadata.names" 7 $ "getVarType is adding ↓"
                                 addNameType fc x env tyenv
 
                                 pure (tm, arglen, gnf env tyenv)
