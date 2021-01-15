@@ -532,9 +532,13 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
         findImps : List (Maybe Name) -> List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
         -- don't add implicits coming after explicits that aren't given
         findImps ns es (NBind fc x (Pi _ _ Explicit _) sc)
-            = case updateNs x es of
-                   Nothing => pure [] -- explicit wasn't given
-                   Just es' => findImps ns es' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+            = case es of
+                   -- Explicits were skipped, therefore all explicits are given anyway
+                   Just (UN "_") :: _ => findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                   -- Explicits weren't skipped, so we need to check
+                   _ => case updateNs x es of
+                             Nothing => pure [] -- explicit wasn't given
+                             Just es' => findImps ns es' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
         -- if the implicit was given, skip it
         findImps ns es (NBind fc x (Pi _ _ AutoImplicit _) sc)
             = case updateNs x ns of
