@@ -2,6 +2,16 @@ module Data.DPair
 
 %default total
 
+namespace DPair
+
+  public export
+  curry : {0 p : a -> Type} -> ((x : a ** p x) -> c) -> (x : a) -> p x -> c
+  curry f x y = f (x ** y)
+
+  public export
+  uncurry : {0 p : a -> Type} -> ((x : a) -> p x -> c) -> (x : a ** p x) -> c
+  uncurry f s = f s.fst s.snd
+
 namespace Exists
 
   ||| A dependent pair in which the first field (witness) should be
@@ -21,6 +31,14 @@ namespace Exists
     0 fst : type
     snd : this fst
 
+  public export
+  curry : {0 p : a -> Type} -> (Exists {type=a} p -> c) -> ({0 x : a} -> p x -> c)
+  curry f = f . Evidence _
+
+  public export
+  uncurry : {0 p : a -> Type} -> ({0 x : a} -> p x -> c) -> Exists {type=a} p -> c
+  uncurry f ex = f ex.snd
+
 namespace Subset
 
   ||| A dependent pair in which the second field (evidence) should not
@@ -37,3 +55,11 @@ namespace Subset
     constructor Element
     fst : type
     0 snd : pred fst
+
+  public export
+  curry : {0 p : a -> Type} -> (Subset a p -> c) -> (x : a) -> (0 _ : p x) -> c
+  curry f x y = f $ Element x y
+
+  public export
+  uncurry : {0 p : a -> Type} -> ((x : a) -> (0 _ : p x) -> c) -> Subset a p -> c
+  uncurry f s = f s.fst s.snd
