@@ -351,9 +351,9 @@ TTC a => TTC (List a) where
 
 export
 TTC a => TTC (List1 a) where
-  toBuf b (x ::: xs)
-     = do toBuf b x
-          toBuf b xs
+  toBuf b xxs
+     = do toBuf b (head xxs)
+          toBuf b (tail xxs)
 
   fromBuf b = do
     x <- fromBuf b

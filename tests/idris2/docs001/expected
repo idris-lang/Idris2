@@ -1,4 +1,4 @@
-Main> Prelude.plus : (1 _ : Nat) -> (1 _ : Nat) -> Nat
+Main> Prelude.plus : Nat -> Nat -> Nat
 	 Add two natural numbers.
 	 @ x the number to case-split on
 	 @ y the other numberpublic export
@@ -10,15 +10,15 @@ Main> Prelude.Nat : Type
 Constructors:
 Z : Nat
 	 Zero.
-S : (1 _ : Nat) -> Nat
+S : Nat -> Nat
 	 Successor.
-Main> Prelude.List : (1 _ : Type) -> Type
+Main> Prelude.List : Type -> Type
 	 Generic lists.
 
 Constructors:
 Nil : List a
 	 Empty list
-:: : (1 _ : a) -> (1 _ : List a) -> List a
+:: : a -> List a -> List a
 Main> Prelude.Show : Type -> Type
 	 Things that have a canonical `String` representation.
 Parameters: ty

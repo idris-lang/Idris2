@@ -697,14 +697,14 @@ convertWithLazy
           {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto e : Ref EST (EState vars)} ->
-          (withLazy : Bool) -> (precise : Bool) ->
+          (withLazy : Bool) ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
-convertWithLazy withLazy prec fc elabinfo env x y
+convertWithLazy withLazy fc elabinfo env x y
     = let umode : UnifyInfo
                 = case elabMode elabinfo of
                        InLHS _ => inLHS
-                       _ => inTermP prec in
+                       _ => inTerm in
           catch
             (do let lazy = !isLazyActive && withLazy
                 logGlueNF "elab.unify" 5 ("Unifying " ++ show withLazy ++ " "
@@ -745,17 +745,7 @@ convert : {vars : _} ->
           {auto e : Ref EST (EState vars)} ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
-convert = convertWithLazy False False
-
-export
-convertP : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto u : Ref UST UState} ->
-           {auto e : Ref EST (EState vars)} ->
-           (precise : Bool) ->
-           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
-           Core UnifyResult
-convertP = convertWithLazy False
+convert = convertWithLazy False
 
 -- Check whether the type we got for the given type matches the expected
 -- type.
@@ -767,12 +757,12 @@ checkExpP : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             {auto e : Ref EST (EState vars)} ->
-            RigCount -> (precise : Bool) -> ElabInfo -> Env Term vars -> FC ->
+            RigCount -> ElabInfo -> Env Term vars -> FC ->
             (term : Term vars) ->
             (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
             Core (Term vars, Glued vars)
-checkExpP rig prec elabinfo env fc tm got (Just exp)
-    = do vs <- convertWithLazy True prec fc elabinfo env got exp
+checkExpP rig elabinfo env fc tm got (Just exp)
+    = do vs <- convertWithLazy True fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
                          NoLazy => do logTerm "elab" 5 "Solved" tm
@@ -795,7 +785,7 @@ checkExpP rig prec elabinfo env fc tm got (Just exp)
                             AddForce r => pure (TForce fc r tm, exp)
                             AddDelay r => do ty <- getTerm got
                                              pure (TDelay fc r ty tm, exp)
-checkExpP rig prec elabinfo env fc tm got Nothing = pure (tm, got)
+checkExpP rig elabinfo env fc tm got Nothing = pure (tm, got)
 
 export
 checkExp : {vars : _} ->
@@ -806,4 +796,4 @@ checkExp : {vars : _} ->
            (term : Term vars) ->
            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
-checkExp rig elabinfo = checkExpP rig (preciseInf elabinfo) elabinfo
+checkExp rig elabinfo = checkExpP rig elabinfo

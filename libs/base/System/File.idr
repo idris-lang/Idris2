@@ -22,7 +22,7 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 prim__open : String -> String -> PrimIO FilePtr
 
 %foreign support "idris2_closeFile"
-         "node:lambdaRequire:fs:(fp) => __require_fs.closeSync(fp.fd)"
+         "node:lambda:(fp) => require('fs').closeSync(fp.fd)"
 prim__close : FilePtr -> PrimIO ()
 
 %foreign support "idris2_fileError"
@@ -43,7 +43,7 @@ prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
 prim__readChar : FilePtr -> PrimIO Int
 
 %foreign support "idris2_writeLine"
-         "node:lambdaRequire:fs:(filePtr, line) => __require_fs.writeSync(filePtr.fd, line, undefined, 'utf-8')"
+         "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign support "idris2_eof"
@@ -61,7 +61,7 @@ prim__pclose : FilePtr -> PrimIO ()
 prim__removeFile : String -> PrimIO Int
 
 %foreign support "idris2_fileSize"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).size"
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileSize"
@@ -71,7 +71,7 @@ prim__fPoll : FilePtr -> PrimIO Int
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileModifiedTime"
-         "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).mtimeMs / 1000n"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileStatusTime"

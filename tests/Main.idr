@@ -72,13 +72,16 @@ idrisTests = MkTestPool []
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
+       "interface021",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005",
+       "interpreter005", "interpreter006",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- QTT and linearity related
-       "linear001", "linear002", "linear003", "linear004", "linear005",
+       "linear001", "linear002", "linear003",
+       -- "linear004" -- disabled due to requiring linearity subtyping
+       "linear005",
        "linear006", "linear007", "linear008", "linear009", "linear010",
        "linear011", "linear012",
        -- Literate
