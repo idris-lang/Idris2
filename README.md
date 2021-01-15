@@ -7,6 +7,7 @@ Idris 2
 [![](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20Racket/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu+Racket")
 [![](https://github.com/idris-lang/Idris2/workflows/macOS/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"macOS")
 [![](https://github.com/idris-lang/Idris2/workflows/API/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"API")
+[![](https://github.com/idris-lang/Idris2/workflows/Nix/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Nix")
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.

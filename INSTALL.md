@@ -69,7 +69,7 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have an earlier version of Idris 2 installed
+If you have an earlier version of Idris 2 (minimum version 0.2.2) installed:
 
 - `make all`
 - `make install`
@@ -120,3 +120,9 @@ If you are a [nix](https://nixos.org/features.html) user you can install Idris 2
 by running the following command:
 
     nix-env -i idris2
+    
+### Install from nix flakes
+
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
+
+    nix profile install github:idris-lang/Idris2
