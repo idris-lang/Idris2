@@ -5,7 +5,7 @@
 # Uses scheme to bootstrap the build of idris2
 stdenv.mkDerivation rec {
   pname = "idris2";
-  version = "0.2.1";
+  version = "0.3.0";
 
   src = ./.;
 
