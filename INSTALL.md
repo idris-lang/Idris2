@@ -120,3 +120,9 @@ If you are a [nix](https://nixos.org/features.html) user you can install Idris 2
 by running the following command:
 
     nix-env -i idris2
+    
+### Install from nix flakes
+
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
+
+    nix profile install github:idris-lang/Idris2
