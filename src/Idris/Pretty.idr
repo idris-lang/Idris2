@@ -207,7 +207,22 @@ mutual
             valName <- getPRefName val
             guard (show nName == show valName)
             pure continuation
+
+         -- Hide lets that bind to underscore
+         -- That is, 'let _ = x in ...'
+         -- Those end up polluting the types of let bound variables in some
+         -- occasions
+          <|> do
+            nName <- getPRefName n
+            guard (isUnderscoreName nName)
+            pure continuation
+
         where
+          isUnderscoreName : Name -> Bool
+          isUnderscoreName (UN "_") = True
+          isUnderscoreName (MN "_" _) = True
+          isUnderscoreName _ = False
+
           continuation : Doc IdrisAnn
           continuation = go startPrec sc
 
