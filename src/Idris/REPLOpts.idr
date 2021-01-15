@@ -7,6 +7,7 @@ import TTImp.Interactive.ExprSearch
 import TTImp.TTImp
 
 import Data.List
+import Data.List.Extra
 import Data.Strings
 import System.File
 
@@ -38,15 +39,29 @@ record REPLOpts where
   color : Bool
   synHighlightOn : Bool
 
+litStyle : Maybe String -> Maybe LiterateStyle
+litStyle = join . map isLitFile
+
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
-    = MkREPLOpts False NormaliseAll fname (litStyle fname) "" "vim"
-                 Nothing outmode "" Nothing Nothing cgs Nothing True True
-  where
-    litStyle : Maybe String -> Maybe LiterateStyle
-    litStyle Nothing = Nothing
-    litStyle (Just fn) = isLitFile fn
+    = MkREPLOpts
+        { showTypes = False
+        , evalMode = NormaliseAll
+        , mainfile = fname
+        , literateStyle = litStyle fname
+        , source = ""
+        , editor = "vim"
+        , errorLine = Nothing
+        , idemode = outmode
+        , currentElabSource = ""
+        , psResult = Nothing
+        , gdResult = Nothing
+        , extraCodegens = cgs
+        , consoleWidth = Nothing
+        , color = True
+        , synHighlightOn = True
+        }
 
 export
 data ROpts : Type where
@@ -74,10 +89,6 @@ setMainFile src
     = do opts <- get ROpts
          put ROpts (record { mainfile = src,
                              literateStyle = litStyle src } opts)
-  where
-    litStyle : Maybe String -> Maybe LiterateStyle
-    litStyle Nothing = Nothing
-    litStyle (Just fn) = isLitFile fn
 
 export
 resetProofState : {auto o : Ref ROpts REPLOpts} ->
@@ -106,12 +117,7 @@ getSourceLine : {auto o : Ref ROpts REPLOpts} ->
                 Int -> Core (Maybe String)
 getSourceLine l
     = do src <- getSource
-         pure $ findLine (integerToNat (cast (l-1))) (lines src)
-  where
-    findLine : Nat -> List String -> Maybe String
-    findLine Z (l :: ls) = Just l
-    findLine (S k) (l :: ls) = findLine k ls
-    findLine _ [] = Nothing
+         pure $ elemAt (lines src) (integerToNat (cast (l-1)))
 
 export
 getLitStyle : {auto o : Ref ROpts REPLOpts} ->

@@ -140,8 +140,7 @@ getUsing n ((t, Nothing, ty) :: us) -- autoimplicit binder
 
 getUsings : List Name -> List (Int, Maybe Name, RawImp) ->
             List (Int, (RigCount, PiInfo RawImp, Maybe Name, RawImp))
-getUsings [] u = []
-getUsings (n :: ns) u = getUsing n u ++ getUsings ns u
+getUsings ns u = concatMap (flip getUsing u) ns
 
 bindUsings : List (RigCount, PiInfo RawImp, Maybe Name, RawImp) -> RawImp -> RawImp
 bindUsings [] tm = tm
@@ -157,8 +156,7 @@ addUsing uimpls tm
           bindUsings (map snd bs) tm
   where
     tag : Int -> List a -> List (Int, a) -- to check uniqueness of resulting uimps
-    tag t [] = []
-    tag t (x :: xs) = (t, x) :: tag (t + 1) xs
+    tag t xs = zip (map (+t) [0..cast (length xs)]) xs
 
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->

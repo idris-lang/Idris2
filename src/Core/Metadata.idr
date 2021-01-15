@@ -52,7 +52,13 @@ Show Metadata where
 
 export
 initMetadata : Metadata
-initMetadata = MkMetadata [] [] [] Nothing []
+initMetadata = MkMetadata
+  { lhsApps = []
+  , names = []
+  , tydecls = []
+  , currentLHS = Nothing
+  , holeLHS = []
+  }
 
 -- A label for metadata in the global state
 export
@@ -153,11 +159,7 @@ withCurrentLHS n
                (currentLHS meta)
 
 findEntryWith : (FC -> a -> Bool) -> List (FC, a) -> Maybe (FC, a)
-findEntryWith p [] = Nothing
-findEntryWith p ((l, x) :: xs)
-    = if p l x
-         then Just (l, x)
-         else findEntryWith p xs
+findEntryWith = find . uncurry
 
 export
 findLHSAt : {auto m : Ref MD Metadata} ->

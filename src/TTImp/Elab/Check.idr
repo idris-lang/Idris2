@@ -145,7 +145,20 @@ data EST : Type where
 export
 initEStateSub : {outer : _} ->
                 Int -> Env Term outer -> SubVars outer vars -> EState vars
-initEStateSub n env sub = MkEState n env sub [] [] [] [] [] Z [] empty empty
+initEStateSub n env sub = MkEState
+    { defining = n
+    , outerEnv = env
+    , subEnv = sub
+    , boundNames = []
+    , toBind = []
+    , bindIfUnsolved = []
+    , lhsPatVars = []
+    , allPatVars = []
+    , delayDepth = Z
+    , linearUsed = []
+    , saveHoles = empty
+    , unambiguousNames = empty
+    }
 
 export
 initEState : {vars : _} ->
@@ -164,19 +177,12 @@ weakenedEState : {n, vars : _} ->
                  Core (Ref EST (EState (n :: vars)))
 weakenedEState {e}
     = do est <- get EST
-         eref <- newRef EST
-                    (MkEState (defining est)
-                              (outerEnv est)
-                              (DropCons (subEnv est))
-                              (map wknTms (boundNames est))
-                              (map wknTms (toBind est))
-                              (bindIfUnsolved est)
-                              (lhsPatVars est)
-                              (allPatVars est)
-                              (delayDepth est)
-                              (map weaken (linearUsed est))
-                              (saveHoles est)
-                              (unambiguousNames est))
+         eref <- newRef EST $
+                   record { subEnv $= DropCons
+                          , boundNames $= map wknTms
+                          , toBind $= map wknTms
+                          , linearUsed $= map weaken
+                          } est
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
@@ -197,19 +203,12 @@ strengthenedEState {n} {vars} c e fc env
          svs <- dropSub (subEnv est)
          bns <- traverse (strTms defs) (boundNames est)
          todo <- traverse (strTms defs) (toBind est)
+         pure $ record { subEnv = svs
+                       , boundNames = bns
+                       , toBind = todo
+                       , linearUsed $= mapMaybe dropTop
+                       } est
 
-         pure (MkEState (defining est)
-                        (outerEnv est)
-                        svs
-                        bns
-                        todo
-                        (bindIfUnsolved est)
-                        (lhsPatVars est)
-                        (allPatVars est)
-                        (delayDepth est)
-                        (mapMaybe dropTop (linearUsed est))
-                        (saveHoles est)
-                        (unambiguousNames est))
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
     dropSub (DropCons sub) = pure sub
@@ -296,14 +295,10 @@ updateEnv : {new : _} ->
                               Term vars', Term vars', SubVars new vars'))) ->
             EState vars -> EState vars
 updateEnv env sub bif st
-    = MkEState (defining st) env sub
-               (boundNames st) (toBind st) bif
-               (lhsPatVars st)
-               (allPatVars st)
-               (delayDepth st)
-               (linearUsed st)
-               (saveHoles st)
-               (unambiguousNames st)
+    = record { outerEnv = env
+             , subEnv = sub
+             , bindIfUnsolved = bif
+             } st
 
 export
 addBindIfUnsolved : {vars : _} ->
@@ -311,28 +306,11 @@ addBindIfUnsolved : {vars : _} ->
                     Env Term vars -> Term vars -> Term vars ->
                     EState vars -> EState vars
 addBindIfUnsolved hn r p env tm ty st
-    = MkEState (defining st)
-               (outerEnv st) (subEnv st)
-               (boundNames st) (toBind st)
-               ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) :: bindIfUnsolved st)
-               (lhsPatVars st)
-               (allPatVars st)
-               (delayDepth st)
-               (linearUsed st)
-               (saveHoles st)
-               (unambiguousNames st)
+    = record { bindIfUnsolved $=
+                ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
 
 clearBindIfUnsolved : EState vars -> EState vars
-clearBindIfUnsolved st
-    = MkEState (defining st)
-               (outerEnv st) (subEnv st)
-               (boundNames st) (toBind st) []
-               (lhsPatVars st)
-               (allPatVars st)
-               (delayDepth st)
-               (linearUsed st)
-               (saveHoles st)
-               (unambiguousNames st)
+clearBindIfUnsolved = record { bindIfUnsolved = [] }
 
 -- Clear the 'toBind' list, except for the names given
 export
