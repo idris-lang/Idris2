@@ -32,6 +32,17 @@ export
 withString : (str : String) -> ((it : StringIterator str) -> a) -> a
 withString str f = f (fromString str)
 
+||| Runs the action `f` on the slice `res` of the original string `str` represented by the
+||| iterator `it`
+%foreign
+  "scheme:blodwen-string-iterator-to-string"
+  "javascript:stringIterator:toString"
+export
+withIteratorString : (str : String)
+                  -> (1 it : StringIterator str)
+                  -> (f : (res : String) -> a)
+                  -> a
+
 -- We use a custom data type instead of Maybe (Char, StringIterator)
 -- to remove one level of pointer indirection
 -- in every iteration of something that's likely to be a hot loop,
