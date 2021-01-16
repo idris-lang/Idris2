@@ -192,9 +192,9 @@ weakenRes {whatever=True} com' (EmptyRes com val xs) = EmptyRes com' val xs
 weakenRes {whatever=False} com' (EmptyRes com val xs) = EmptyRes com' val xs
 weakenRes com' (NonEmptyRes {xs} com val more) = NonEmptyRes {xs} com' val more
 
-doParse : (commit : Bool) -> 
+doParse : (commit : Bool) ->
           (act : Grammar tok c ty) ->
-          (xs : List tok) -> 
+          (xs : List tok) ->
           ParseResult xs c ty
 -- doParse com xs act with (sizeAccessible xs)
 doParse com (Empty val) xs = EmptyRes com val xs
@@ -240,7 +240,7 @@ doParse com (SeqEmpty {c1} {c2} act next) xs
                      case assert_total (doParse com (next val) xs) of
                           Failure com' fatal msg ts => Failure com' fatal msg ts
                           EmptyRes com' val xs => EmptyRes com' val xs
-                          NonEmptyRes {xs=xs'} com' val more => 
+                          NonEmptyRes {xs=xs'} com' val more =>
                                            NonEmptyRes {xs=xs'} com' val more
                NonEmptyRes {x} {xs=ys} com val more =>
                      case (assert_total (doParse com (next val) more)) of

@@ -9,7 +9,7 @@ A = True
 
 mkFoo : Gnu -> Foo
 mkFoo gnu = A
-      
+
 gnat : {auto startHere : (a : Foo ** a = A)} -> Unit
 gnat = ()
 

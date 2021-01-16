@@ -21,7 +21,7 @@ import Data.Nat.Properties
 -- This is disgusting, but will do for now
 ||| Show that, if we have enough fuel, we have enough fuel for the
 ||| recursive call in `div'` and `mod'`.
-fuelLemma : (numer, predDenom, fuel : Nat) 
+fuelLemma : (numer, predDenom, fuel : Nat)
           -> (enough : numer `LTE` (S fuel))
           -> (recurse : Data.Nat.lte numer predDenom = False)
           -> (numer `minus` (S predDenom)) `LTE` fuel
@@ -35,7 +35,7 @@ fuelLemma numer predDenom fuel enough recurse =
       denom_lte_numer : denom `LTE` numer
       denom_lte_numer = Properties.notlteIsLT numer predDenom recurse
       numer'_lt_numer : numer' `LT` numer
-      numer'_lt_numer = (minusPosLT denom numer 
+      numer'_lt_numer = (minusPosLT denom numer
                           (LTESucc LTEZero)
                           denom_lte_numer)
       succenough : S numer' `LTE` S fuel
@@ -54,21 +54,21 @@ mod'' : (fuel, numer, denom : Nat) -> Nat
 mod'' fuel numer denom = snd (divmod' fuel numer denom)
 
 
-divmod'_eq_div'_mod' : (fuel, numer, denom : Nat) 
+divmod'_eq_div'_mod' : (fuel, numer, denom : Nat)
             -> (divmod' fuel numer denom) = (div' fuel numer denom, mod' fuel numer denom)
 divmod'_eq_div'_mod'   0       numer denom = Refl
-divmod'_eq_div'_mod'  (S fuel) numer denom with (Data.Nat.lte numer denom) 
+divmod'_eq_div'_mod'  (S fuel) numer denom with (Data.Nat.lte numer denom)
  divmod'_eq_div'_mod' (S fuel) numer denom | True  = Refl
- divmod'_eq_div'_mod' (S fuel) numer denom | False = 
-   rewrite divmod'_eq_div'_mod' fuel (numer `minus` (S denom)) denom in 
+ divmod'_eq_div'_mod' (S fuel) numer denom | False =
+   rewrite divmod'_eq_div'_mod' fuel (numer `minus` (S denom)) denom in
    Refl
 
-div''_eq_div' : (fuel, numer, denom : Nat) 
+div''_eq_div' : (fuel, numer, denom : Nat)
             -> div'' fuel numer denom = div' fuel numer denom
 div''_eq_div' fuel numer denom = cong fst $
                                        divmod'_eq_div'_mod' fuel numer denom
 
-mod''_eq_mod' : (fuel, numer, denom : Nat) 
+mod''_eq_mod' : (fuel, numer, denom : Nat)
             -> mod'' fuel numer denom = mod' fuel numer denom
 mod''_eq_mod' fuel numer denom = cong snd $
                                        divmod'_eq_div'_mod' fuel numer denom
@@ -77,34 +77,34 @@ export
 divmodNatNZeqDivMod : (numer, denom : Nat) -> (prf1, prf2, prf3 : Not (denom = 0))
             -> (divmodNatNZ numer denom prf1) = (divNatNZ numer denom prf2, modNatNZ numer denom prf3)
 divmodNatNZeqDivMod numer 0         prf1 prf2 prf3 = void $ prf1 Refl
-divmodNatNZeqDivMod numer (S denom) prf1 prf2 prf3 = divmod'_eq_div'_mod' numer numer denom 
+divmodNatNZeqDivMod numer (S denom) prf1 prf2 prf3 = divmod'_eq_div'_mod' numer numer denom
 
 export
 fstDivmodNatNZeqDiv : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = 0))
             -> (fst $ divmodNatNZ numer denom prf1) = divNatNZ numer denom prf2
-fstDivmodNatNZeqDiv numer denom prf1 prf2 = 
+fstDivmodNatNZeqDiv numer denom prf1 prf2 =
   rewrite divmodNatNZeqDivMod numer denom prf1 prf2 prf2 in
   Refl
 
 export
 sndDivmodNatNZeqMod : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = 0))
             -> (snd $ divmodNatNZ numer denom prf1) = modNatNZ numer denom prf2
-sndDivmodNatNZeqMod numer denom prf1 prf2 = 
+sndDivmodNatNZeqMod numer denom prf1 prf2 =
   rewrite divmodNatNZeqDivMod numer denom prf1 prf2 prf2 in
   Refl
 
 
 -----------------------------------------------------------------------------
-bound_mod'' : (fuel, numer, predDenom : Nat) -> (numer `LTE` fuel) 
+bound_mod'' : (fuel, numer, predDenom : Nat) -> (numer `LTE` fuel)
            -> (mod'' fuel numer predDenom) `LTE` predDenom
 bound_mod'' 0        0     predDenom LTEZero = LTEZero
-bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDenom) of 
-  (True  ** numer_lte_predn)  => rewrite numer_lte_predn in 
+bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDenom) of
+  (True  ** numer_lte_predn)  => rewrite numer_lte_predn in
                                  Properties.lteIsLTE _ _ numer_lte_predn
   (False ** numer_gte_n    )  => rewrite numer_gte_n in
                                  bound_mod'' fuel (numer `minus` (S predDenom)) predDenom
                                                   (fuelLemma numer predDenom fuel enough numer_gte_n)
-                                 
+
 export
 boundModNatNZ : (numer, denom : Nat) -> (denom_nz : Not (denom = 0))
               -> (modNatNZ numer denom denom_nz) `LT` denom
@@ -115,34 +115,34 @@ boundModNatNZ numer (S predDenom) denom_nz = LTESucc $
 divisionTheorem' : (numer, predDenom : Nat)
                 -> (fuel : Nat) -> (enough : numer `LTE` fuel)
                 -> numer = (mod'' fuel numer predDenom) + (div'' fuel numer predDenom) * (S predDenom)
- 
+
 divisionTheorem'  0     predDenom  0       LTEZero = Refl
 divisionTheorem'  numer predDenom (S fuel) enough with (@@(Data.Nat.lte numer predDenom))
  divisionTheorem' numer predDenom (S fuel) enough | (True ** prf)
    = rewrite prf in
      rewrite plusZeroRightNeutral numer in Refl
  divisionTheorem' numer predDenom (S fuel) enough | (False ** prf)
-   = rewrite prf in 
+   = rewrite prf in
      let denom  : Nat
          denom = S predDenom
          numer' : Nat
          numer' = numer `minus` denom
          denom_lte_numer : denom `LTE` numer
          denom_lte_numer = Properties.notlteIsLT numer predDenom prf
-         enough' : numer' `LTE` fuel 
+         enough' : numer' `LTE` fuel
          enough' = fuelLemma numer predDenom fuel enough prf
-         
-         inductionHypothesis : (numer' 
+
+         inductionHypothesis : (numer'
                              = (mod'' fuel numer' predDenom) +  (div'' fuel numer' predDenom) * denom)
          inductionHypothesis = divisionTheorem' numer' predDenom fuel enough'
      in sym $ Calc $
      |~ (mod'' fuel numer' predDenom) + (denom + (div'' fuel numer' predDenom) * denom)
      ~~ (mod'' fuel numer' predDenom) + ((div'' fuel numer' predDenom) * denom + denom)
-               ...(cong ((mod'' fuel numer' predDenom) +) $ plusCommutative 
+               ...(cong ((mod'' fuel numer' predDenom) +) $ plusCommutative
                                                             denom
                                                             ((div'' fuel numer' predDenom) * denom))
      ~~((mod'' fuel numer' predDenom) +  (div'' fuel numer' predDenom) * denom) + denom
-               ...(plusAssociative 
+               ...(plusAssociative
                      (mod'' fuel numer' predDenom)
                      ((div'' fuel numer' predDenom) * denom)
                      denom)
@@ -153,11 +153,11 @@ divisionTheorem'  numer predDenom (S fuel) enough with (@@(Data.Nat.lte numer pr
 
 export
 DivisionTheoremDivMod : (numer, denom : Nat)  -> (prf : Not (denom = Z))
-               -> numer = snd ( divmodNatNZ numer denom prf) 
-                       + (fst $ divmodNatNZ numer denom prf)*denom 
+               -> numer = snd ( divmodNatNZ numer denom prf)
+                       + (fst $ divmodNatNZ numer denom prf)*denom
 DivisionTheoremDivMod numer 0 prf = void (prf Refl)
 DivisionTheoremDivMod numer (S predDenom) prf
-  = divisionTheorem' numer predDenom numer (reflexive numer) 
+  = divisionTheorem' numer predDenom numer (reflexive numer)
 
 export
 DivisionTheorem : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = Z))
@@ -166,8 +166,8 @@ DivisionTheorem numer denom prf1 prf2
   = rewrite sym $ fstDivmodNatNZeqDiv numer denom prf1 prf2 in
     rewrite sym $ sndDivmodNatNZeqMod numer denom prf1 prf1 in
     DivisionTheoremDivMod numer denom prf1
-    
-            
+
+
 
 divmodZeroZero : (denom, fuel : Nat)
            -> divmod' fuel 0 denom = (0,0)
@@ -183,26 +183,26 @@ divZeroZero : (denom, fuel : Nat)
 divZeroZero denom fuel = rewrite divmodZeroZero denom fuel in Refl
 
 
-divmodFuelLemma : (numer, denom, fuel1, fuel2 : Nat) 
-            -> (enough1 : fuel1 `GTE` numer) 
+divmodFuelLemma : (numer, denom, fuel1, fuel2 : Nat)
+            -> (enough1 : fuel1 `GTE` numer)
             -> (enough2 : fuel2 `GTE` numer)
             -> divmod' fuel1 numer denom = divmod' fuel2 numer denom
-divmodFuelLemma  0 denom 0 fuel2 LTEZero enough2 = rewrite divmodZeroZero denom fuel2 in 
+divmodFuelLemma  0 denom 0 fuel2 LTEZero enough2 = rewrite divmodZeroZero denom fuel2 in
                                                 Refl
 divmodFuelLemma  0 denom (S fuel1) 0 enough1 LTEZero = Refl
 divmodFuelLemma  numer denom (S fuel1) (S fuel2) enough1 enough2 with (@@(Data.Nat.lte numer denom))
- divmodFuelLemma numer denom (S fuel1) (S fuel2) enough1 enough2 | (True  ** prf)  = 
+ divmodFuelLemma numer denom (S fuel1) (S fuel2) enough1 enough2 | (True  ** prf)  =
    rewrite prf in Refl
- divmodFuelLemma numer denom (S fuel1) (S fuel2) enough1 enough2 | (False ** prf) = 
-   rewrite prf in 
+ divmodFuelLemma numer denom (S fuel1) (S fuel2) enough1 enough2 | (False ** prf) =
+   rewrite prf in
    rewrite divmodFuelLemma (numer `minus` (S denom)) denom fuel1 fuel2
-             (fuelLemma numer denom fuel1 enough1 prf) 
+             (fuelLemma numer denom fuel1 enough1 prf)
              (fuelLemma numer denom fuel2 enough2 prf) in
    Refl
 
 
 multiplicationLemma : (q, predn, r : Nat) -> q * (S predn) + r `LTE` 0 -> (q = 0, r = 0)
-multiplicationLemma q predn r bound = 
+multiplicationLemma q predn r bound =
   let r_eq_z : (r = 0)
       r_eq_z = zeroPlusRightZero (q * (S predn)) r (sym $ lteZeroIsZero bound)
       qn_eq_z : (q * (S predn) = 0)
@@ -213,38 +213,38 @@ multiplicationLemma q predn r bound =
         Right spred_eq_z impossible
   in (q_eq_z, r_eq_z)
 
-multiplesModuloZero : (fuel, predn, k : Nat) 
+multiplesModuloZero : (fuel, predn, k : Nat)
        -> (enough : fuel `GTE` k * (S predn) )
        -> mod' fuel (k * (S predn)) predn = 0
-multiplesModuloZero 0        predn k enough = 
-  let (k_eq_z, _) = multiplicationLemma k predn 0 
-                    rewrite plusZeroRightNeutral (k * (S predn)) in 
+multiplesModuloZero 0        predn k enough =
+  let (k_eq_z, _) = multiplicationLemma k predn 0
+                    rewrite plusZeroRightNeutral (k * (S predn)) in
                     enough
-  in rewrite k_eq_z in 
+  in rewrite k_eq_z in
   Refl
 multiplesModuloZero  (S fuel) predn 0 enough = Refl
-multiplesModuloZero  (S fuel) predn (S k) enough = 
+multiplesModuloZero  (S fuel) predn (S k) enough =
   let n : Nat
       n = S predn
       n_lte_skn : n `LTE` (1 + k)*n
-      n_lte_skn = CalcWith {leq = LTE} $ 
+      n_lte_skn = CalcWith {leq = LTE} $
         |~ n
         ~~ n  + 0     ...(sym $ plusZeroRightNeutral n)
         ~~ (1 + 0)*n ...(Refl)
-        <~ (1 + k)*n   ...(multLteMonotoneLeft (1+0) (1+k) n $ 
+        <~ (1 + k)*n   ...(multLteMonotoneLeft (1+0) (1+k) n $
                            plusLteMonotoneLeft 1 0 k LTEZero)
   in case @@(Data.Nat.lte ((1 + k)*n) predn) of
-    (True  ** skn_lte_predn) => absurd $ irreflexive {spo = Data.Nat.LT} predn 
+    (True  ** skn_lte_predn) => absurd $ irreflexive {spo = Data.Nat.LT} predn
                                        $ CalcWith {leq = LTE} $
       |~ 1 + predn
       ~~ n         ...(Refl)
       ~~ n + 0     ...(sym $ plusZeroRightNeutral n)
       ~~ (1 + 0)*n ...(Refl)
-      <~ (1 + k)*n ...(multLteMonotoneLeft (1+0) (1+k) n $ 
+      <~ (1 + k)*n ...(multLteMonotoneLeft (1+0) (1+k) n $
                        LTESucc LTEZero)
       <~ predn     ...(Properties.lteIsLTE _ _ skn_lte_predn)
-    (False ** prf) => 
-      rewrite prf in 
+    (False ** prf) =>
+      rewrite prf in
       let skn_minus_n_eq_kn : ((1 + k)*n `minus` n = k*n)
           skn_minus_n_eq_kn = Calc $
             |~ ((1+k)*n `minus` n)
@@ -252,9 +252,9 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
             ~~ (n + k*n `minus` (n + 0)) ...(Refl)
             ~~ (k*n `minus` 0)           ...(plusMinusLeftCancel n (k*n) 0)
             ~~ k*n                       ...(minusZeroRight (k*n))
-      in rewrite skn_minus_n_eq_kn in 
+      in rewrite skn_minus_n_eq_kn in
       multiplesModuloZero fuel predn k $
-      (rewrite sym $ skn_minus_n_eq_kn in 
+      (rewrite sym $ skn_minus_n_eq_kn in
        fuelLemma ((1 + k)*n) predn fuel enough prf)
 
 -- We also want to show uniqueness of this decomposition
@@ -262,13 +262,13 @@ multiplesModuloZero  (S fuel) predn (S k) enough =
 addMultipleMod': (fuel1, fuel2, predn, a, b : Nat) -> (enough1 : fuel1 `GTE` b * (S predn) + a)
                                            -> (enough2 : fuel2 `GTE` a)
        -> mod'' fuel1 (b * (S predn) + a) predn = mod'' fuel2 a predn
-addMultipleMod' 0         fuel2 predn a b enough1 enough2 
+addMultipleMod' 0         fuel2 predn a b enough1 enough2
   = let (b_eq_z, a_eq_z) = multiplicationLemma b predn a enough1
     in rewrite a_eq_z in
        rewrite b_eq_z in
        rewrite modZeroZero predn fuel2 in
        Refl
-addMultipleMod' fuel1@(S _) fuel2 predn a 0 enough1 enough2 = 
+addMultipleMod' fuel1@(S _) fuel2 predn a 0 enough1 enough2 =
   rewrite divmodFuelLemma a predn fuel1 fuel2 enough1 enough2 in
   Refl
 addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
@@ -293,28 +293,28 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
         ~~ ((k*n + a) `minus` 0)             ...(plusMinusLeftCancel n (k*n + a) 0)
         ~~ k*n + a                           ...(minusZeroRight (k*n + a))
   in rewrite prf1 in
-     rewrite argsimplify in 
-     addMultipleMod' fuel1 fuel2 predn a k 
-       (rewrite sym argsimplify in 
+     rewrite argsimplify in
+     addMultipleMod' fuel1 fuel2 predn a k
+       (rewrite sym argsimplify in
         fuelLemma ((1+k)*n + a) predn fuel1 enough1 prf1)
        enough2
 
 addMultipleMod : (a, b, n : Nat) -> (n_neq_z1, n_neq_z2 : Not (n = 0))
               -> snd (divmodNatNZ (a*n + b) n n_neq_z1) = snd (divmodNatNZ b n n_neq_z2)
 addMultipleMod a b 0           n_neq_z1  n_neq_z2 = void (n_neq_z1 Refl)
-addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 = 
+addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 =
   addMultipleMod' (a*n + b) b predn b a (reflexive {po = LTE} _) (reflexive {po = LTE} _)
 
 modBelowDenom : (r, n : Nat) -> (n_neq_z : Not (n = 0))
-             -> (r `LT` n) 
+             -> (r `LT` n)
              -> snd (divmodNatNZ r n n_neq_z)  = r
 modBelowDenom 0 (S predn) n_neq_0 (LTESucc r_lte_predn) = Refl
-modBelowDenom r@(S _) (S predn) n_neq_0 (LTESucc r_lte_predn) = 
+modBelowDenom r@(S _) (S predn) n_neq_0 (LTESucc r_lte_predn) =
   rewrite LteIslte r predn r_lte_predn in
   Refl
 
 modInjective : (r1, r2, n : Nat) -> (n_neq_z1, n_neq_z2 : Not (n = 0))
-             -> (r1 `LT` n) 
+             -> (r1 `LT` n)
              -> (r2 `LT` n)
              -> snd (divmodNatNZ r1 n n_neq_z1)  = snd (divmodNatNZ r2 n n_neq_z2)
              -> r1 = r2
@@ -337,22 +337,22 @@ step1 x n n_nz q r r_lt_n x_eq_qnpr = Calc $
 step2 : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> fst (divmodNatNZ numer denom denom_nz) = q
-step2 x n n_nz q r r_lt_n x_eq_qnr = 
+step2 x n n_nz q r r_lt_n x_eq_qnr =
   let mod_eq_r : (snd (divmodNatNZ x n n_nz) = r)
       mod_eq_r = step1 x n n_nz q r r_lt_n x_eq_qnr
-      
+
       two_decompositions : (fst $ divmodNatNZ x n n_nz) * n + r = q * n + r
       two_decompositions = Calc $
         |~ (fst $ divmodNatNZ x n n_nz) * n + r
-        ~~ (fst $ divmodNatNZ x n n_nz) * n + (snd $ divmodNatNZ x n n_nz) 
-                                                       ...(cong (\ u => 
+        ~~ (fst $ divmodNatNZ x n n_nz) * n + (snd $ divmodNatNZ x n n_nz)
+                                                       ...(cong (\ u =>
                                                                 (fst $ divmodNatNZ x n n_nz)* n + u)
                                                                 $ sym mod_eq_r)
-        ~~ snd(divmodNatNZ x n n_nz) + fst (divmodNatNZ x n n_nz) * n   
+        ~~ snd(divmodNatNZ x n n_nz) + fst (divmodNatNZ x n n_nz) * n
                                                        ...(plusCommutative _ _)
         ~~ x                                           ...(sym $ DivisionTheoremDivMod x n n_nz)
         ~~ q*n + r                                     ...(x_eq_qnr)
-        
+
   in multRightCancel  (fst $ divmodNatNZ x n n_nz) q n n_nz
    $ plusRightCancel ((fst $ divmodNatNZ x n n_nz)* n) (q*n) r
    $ two_decompositions
@@ -361,12 +361,12 @@ export
 DivisionTheoremUniquenessDivMod : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> divmodNatNZ numer denom denom_nz = (q, r)
-DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf = 
+DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf =
   rewrite sym $ step1 numer denom denom_nz q r x prf in
   rewrite sym $ step2 numer denom denom_nz q r x prf in
   pair_eta _  -- Should idris be able to see this automatically? Maybe only with homogeneous equality?
   where
-    -- Should this go elsewhere? 
+    -- Should this go elsewhere?
     ||| extensionality law for simple pairs
     pair_eta : (x : (a,b)) -> x = (fst x, snd x)
     pair_eta (x,y) = Refl
@@ -375,9 +375,9 @@ export
 DivisionTheoremUniqueness : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> (divNatNZ numer denom denom_nz = q, modNatNZ numer denom denom_nz = r)
-DivisionTheoremUniqueness numer denom denom_nz q r x prf = 
+DivisionTheoremUniqueness numer denom denom_nz q r x prf =
   rewrite sym $ fstDivmodNatNZeqDiv numer denom denom_nz denom_nz in
   rewrite sym $ sndDivmodNatNZeqMod numer denom denom_nz denom_nz in
   rewrite DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf in
   (Refl, Refl)
- 
+

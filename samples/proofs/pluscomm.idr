@@ -12,6 +12,6 @@ plus_commutes_S k (S j)
 total
 plus_commutes : (n : Nat) -> (m : Nat) -> n + m = m + n
 plus_commutes Z m = plus_commutes_Z m
-plus_commutes (S k) m 
+plus_commutes (S k) m
     = rewrite plus_commutes k m in
               plus_commutes_S k m

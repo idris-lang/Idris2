@@ -38,7 +38,7 @@ parity (S Z) = Odd {n=Z}
 parity (S (S k)) with (parity k)
   parity (S (S (j + j)))     | Even = helpEven j (Even {n = S j})
   parity (S (S (S (j + j)))) | Odd  = helpOdd j (Odd {n = S j})
-        
+
 natToBin : Nat -> List Bool
 natToBin Z = Nil
 natToBin k with (parity k)

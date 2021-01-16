@@ -95,11 +95,11 @@ pathToNS wdir sdir fname =
   in
     case Path.dropBase base fname of
       Nothing => throw (UserError (
-          "Source file " 
-        ++ show fname 
-        ++ " is not in the source directory " 
+          "Source file "
+        ++ show fname
+        ++ " is not in the source directory "
         ++ show (wdir </> sdir)))
-      Just relPath => 
+      Just relPath =>
         pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
 
 dirExists : String -> IO Bool

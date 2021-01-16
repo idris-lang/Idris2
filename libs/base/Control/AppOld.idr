@@ -106,11 +106,11 @@ bindL (MkApp prog) k
 export
 lift : App e t -> App (eff :: e) t
 lift (MkApp p)
-    = MkApp (\env => 
+    = MkApp (\env =>
           case env of
                Ref r env' => p env'
                SkipP env' => p env'
-               SkipE env' => 
+               SkipE env' =>
                   do res <- p env'
                      case res of
                           Left err => pure (Left (Later err))
@@ -138,7 +138,7 @@ export
 export
 new : a -> App {l} (St a :: es) t -> App {l} es t
 new val (MkApp prog)
-    = MkApp $ \env => 
+    = MkApp $ \env =>
           do ref <- newIORef val
              prog (Ref ref env)
 
@@ -194,7 +194,7 @@ HasEff (Exc e) es => Exception e es where
                              Just err' =>
                                   let MkApp e' = handler err' in
                                       e' env
-                   Right ok => pure (Right ok) 
+                   Right ok => pure (Right ok)
 
 export
 handle : App (Exc err :: e) a ->
@@ -204,17 +204,17 @@ handle (MkApp prog) onok onerr
     = MkApp $ \env =>
           do res <- prog (SkipE env)
              case res of
-                  Left (First err) => 
+                  Left (First err) =>
                         let MkApp err' = onerr err in
                             err' env
-                  Left (Later p) => 
+                  Left (Later p) =>
                         -- different exception, so rethrow
                         pure (Left p)
-                  Right ok => 
+                  Right ok =>
                         let MkApp ok' = onok ok in
                             ok' env
 
-public export 
+public export
 interface PrimIO es where
   primIO : IO a -> App {l} es a
   -- Copies the environment, to make sure states are local to threads
@@ -236,7 +236,7 @@ copyEnv (SkipP env)
 
 export
 HasEff Sys es => PrimIO es where
-  primIO io 
+  primIO io
       = MkApp $ \env =>
             do res <- io
                pure (Right res)
@@ -253,7 +253,7 @@ Init = [Sys]
 
 export
 run : App Init a -> IO a
-run (MkApp prog) 
+run (MkApp prog)
     = do Right res <- prog (SkipP None)
                | Left err => absurd err
          pure res

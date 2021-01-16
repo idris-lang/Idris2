@@ -112,8 +112,8 @@ Show Volume where
 ||| Displays the path in the format of this platform.
 export
 Show Path where
-  show path = 
-    let 
+  show path =
+    let
       sep = Strings.singleton dirSeparator
       showVol = maybe "" show path.volume
       showRoot = if path.hasRoot then sep else ""
@@ -153,9 +153,9 @@ pathTokenMap = toTokenMap $
   ]
 
 lexPath : String -> List PathToken
-lexPath str = 
+lexPath str =
   let
-    (tokens, _, _, _) = lex pathTokenMap str 
+    (tokens, _, _, _) = lex pathTokenMap str
   in
     map TokenData.tok tokens
 
@@ -170,7 +170,7 @@ bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 -- Example: \\?\
 verbatim : Grammar PathToken True ()
 verbatim =
-  do 
+  do
     count (exactly 2) $ match $ PTPunct '\\'
     match $ PTPunct '?'
     match $ PTPunct '\\'
@@ -224,7 +224,7 @@ parseVolume =
 
 parseBody : Grammar PathToken True Body
 parseBody =
-  do 
+  do
     text <- match PTText
     the (Grammar _ False _) $
       case text of
@@ -247,7 +247,7 @@ parsePath =
 
 ||| Parses a String into Path.
 |||
-||| The string is parsed as much as possible from left to right, and the invalid 
+||| The string is parsed as much as possible from left to right, and the invalid
 ||| parts on the right is ignored.
 |||
 ||| Some kind of invalid paths are accepted. The relax rules:
@@ -294,7 +294,7 @@ append' left right =
     right
   else if hasRoot right then
     record { volume = left.volume } right
-  else 
+  else
     record { body = left.body ++ right.body, hasTrailSep = right.hasTrailSep } left
 
 splitPath' : Path -> List Path
@@ -318,10 +318,10 @@ splitParent' : Path -> Maybe (Path, Path)
 splitParent' path =
   case path.body of
     [] => Nothing
-    (x::xs) => 
+    (x::xs) =>
       let
         parent = record { body = init (x::xs), hasTrailSep = False } path
-        child = MkPath Nothing False [last (x::xs)] path.hasTrailSep 
+        child = MkPath Nothing False [last (x::xs)] path.hasTrailSep
       in
         Just (parent, child)
 
@@ -336,14 +336,14 @@ where
   findNormal ((Normal normal)::xs) = Just normal
   findNormal (CurDir::xs) = findNormal xs
   findNormal _ = Nothing
-    
+
 setFileName' : (name : String) -> Path -> Path
 setFileName' name path =
   if isJust (fileName' path) then
     append' (fromMaybe emptyPath $ parent' path) (parse name)
   else
     append' path (parse name)
-    
+
 splitFileName : String -> (String, String)
 splitFileName name =
   case break (== '.') $ reverse $ unpack name of
@@ -426,7 +426,7 @@ splitParent path =
 ||| Returns Nothing if the path terminates by a root or volume.
 export
 parent : String -> Maybe String
-parent = map show . parent' . parse 
+parent = map show . parent' . parse
 
 ||| Returns the list of all parents of the path, longest first, self included.
 |||
@@ -447,7 +447,7 @@ parents = map show . List.iterate parent' . parse
 export
 isBaseOf : (base : String) -> (target : String) -> Bool
 isBaseOf base target =
-  let 
+  let
     MkPath baseVol baseRoot baseBody _ = parse base
     MkPath targetVol targetRoot targetBody _ = parse target
   in
@@ -475,8 +475,8 @@ dropBase base target =
 
 ||| Returns the last body of the path.
 |||
-||| If the last body is a file, this is the file name; 
-||| if it's a directory, this is the directory name; 
+||| If the last body is a file, this is the file name;
+||| if it's a directory, this is the directory name;
 ||| if it's ".", it recurses on the previous body;
 ||| if it's "..", returns Nothing.
 export
@@ -528,13 +528,13 @@ setFileName name path = show $ setFileName' name (parse path)
 export
 (<.>) : String -> (extension : String) -> String
 (<.>) path ext =
-  let 
+  let
     path' = parse path
     ext = pack $ dropWhile (\char => char == '.' || isSpace char) (unpack ext)
     ext = if ext == "" then "" else "." ++ ext
   in
     case fileName' path' of
-      Just name => 
+      Just name =>
         let (stem, _) = splitFileName name in
           show $ setFileName' (stem ++ ext) path'
       Nothing => path

@@ -59,7 +59,7 @@ data QueueEntry : Type where
      Entry : (1 val : any) -> QueueEntry
 
 data Stack : Type -> Type where
-     Nil : Stack a 
+     Nil : Stack a
      (::) : (1 _ : a) -> (1 xs : Stack a) -> Stack a
 
 reverseOnto : (1 _ : Stack a) -> (1 _ : Stack a) -> Stack a

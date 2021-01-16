@@ -54,12 +54,12 @@ covering
 tryReplace : MatchVars vars vs -> Term vars -> Maybe (Term vs)
 tryReplace ms (Local _ _ idx p) = lookupMatch idx p ms
 tryReplace ms (Ref fc nt n) = pure (Ref fc nt n)
-tryReplace ms (Meta fc n i as) 
+tryReplace ms (Meta fc n i as)
     = do as' <- traverse (tryReplace ms) as
          pure (Meta fc n i as')
 tryReplace ms (Bind fc x b sc)
     = Nothing -- TODO: can't do this yet... need to be able to weaken ms
-              -- Rules are unlikely to have binders usually but we should 
+              -- Rules are unlikely to have binders usually but we should
               -- still support it eventually
 tryReplace ms (App fc f a)
     = do f' <- tryReplace ms f

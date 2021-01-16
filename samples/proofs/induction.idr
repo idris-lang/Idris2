@@ -1,4 +1,4 @@
-nat_induction : 
+nat_induction :
     (prop : Nat -> Type) ->                -- Property to show
     (prop Z) ->                            -- Base case
     ((k : Nat) -> prop k -> prop (S k)) -> -- Inductive step

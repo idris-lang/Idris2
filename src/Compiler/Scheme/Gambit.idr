@@ -235,7 +235,7 @@ cCall fc cfn fnWrapName clib args ret
     replaceChar old new = pack . replaceOn old new . unpack
 
     buildCWrapperDefs : CCallbackInfo -> CWrapperDefs
-    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) = 
+    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) =
       let box = schemeWrap ++ "-box"
           setBox = "\n (set-box! " ++ box ++ " " ++ callbackStr ++ ")"
           cWrapName = replaceChar '-' '_' schemeWrap
