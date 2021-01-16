@@ -7,4 +7,4 @@ module Data.Stream.Extra
 ||| @ stream the Stream to prepend the elements to
 public export
 startWith : Foldable t => (pfx : t a) -> (stream : Stream a) -> Stream a
-startWith pfx stream = foldr (\x, xs => x :: xs) stream pfx        
+startWith pfx stream = foldr (\x, xs => x :: xs) stream pfx

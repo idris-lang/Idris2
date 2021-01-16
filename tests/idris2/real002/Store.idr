@@ -12,7 +12,7 @@ interface StoreI e where
   login : (1 d : Store LoggedOut) -> (password : String) ->
           App1 e (Res Bool (\ok => Store (if ok then LoggedIn else LoggedOut)))
   logout : (1 d : Store LoggedIn) -> App1 e (Store LoggedOut)
-  readSecret : (1 d : Store LoggedIn) -> 
+  readSecret : (1 d : Store LoggedIn) ->
                App1 e (Res String (const (Store LoggedIn)))
   disconnect : (1 d : Store LoggedOut) -> App {l} e ()
 
@@ -31,7 +31,7 @@ Has [Console] e => StoreI e where
   disconnect (MkStore _)
       = putStrLn "Door destroyed"
 
-storeProg : Has [Console, StoreI] e => 
+storeProg : Has [Console, StoreI] e =>
             App e ()
 storeProg
     = app1 $ do
@@ -44,7 +44,7 @@ storeProg
          app $ putStrLn "Logged in"
          secret # s <- readSecret s
          app $ putStrLn ("Secret: " ++ secret)
-         s <- logout s 
+         s <- logout s
          app $ putStrLn "Logged out"
          app $ disconnect s
 

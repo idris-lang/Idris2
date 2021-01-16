@@ -13,5 +13,5 @@ parameters (Foo : Vect n Nat)
 
 interface Foo (a : Vect n Nat) where
   baz : Nat
-  
+
 implementation Functor (Vect n) where

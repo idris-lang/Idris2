@@ -20,7 +20,7 @@ invert {b = False} (RFalse nx) = nx
 
 public export
 remember : {b : Bool} -> {0 p : Type} -> (if b then p else Not p) -> Reflects p b
-remember {b = True } = RTrue 
+remember {b = True } = RTrue
 remember {b = False} = RFalse
 
 public export

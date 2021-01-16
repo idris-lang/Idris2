@@ -16,7 +16,7 @@ data Usage = None | Linear | Unrestricted
 
 -- Not sure about this, it is a horrible hack, but it makes the notation
 -- a bit nicer
-public export 
+public export
 fromInteger : (x : Integer) -> {auto _ : Either (x = 0) (x = 1)} -> Usage
 fromInteger 0 = None
 fromInteger 1 = Linear

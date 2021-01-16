@@ -334,12 +334,12 @@ mkCase {c} {u} fn orig lhs_raw
          defs <- get Ctxt
          ust <- get UST
          catch
-           (do 
+           (do
                -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
                -- then the current namespace (accessed by calling getNS) differs from the function
                -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
-               setAllPublic True 
-               
+               setAllPublic True
+
                -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
@@ -348,7 +348,7 @@ mkCase {c} {u} fn orig lhs_raw
                                     [] (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false
-               setAllPublic False 
+               setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
                lhs' <- unelabNoSugar [] lhs

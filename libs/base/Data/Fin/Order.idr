@@ -10,7 +10,7 @@ import Decidable.Decidable
 import Decidable.Order
 
 using (k : Nat)
-  
+
   public export
   data FinLTE : Fin k -> Fin k -> Type where
     FromNatPrf : {m, n : Fin k} -> LTE (finToNat m) (finToNat n) -> FinLTE m n
