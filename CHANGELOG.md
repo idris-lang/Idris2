@@ -1,3 +1,10 @@
+Changes since Idris 2 v0.3.0
+----------------------------
+
+REPL/IDE mode changes:
+
+* Added `:search` command, which searches for functions by type
+
 Changes since Idris 2 v0.2.1
 ----------------------------
 

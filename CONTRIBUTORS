@@ -1,34 +1,41 @@
 Thanks to the following for their help and contributions to Idris 2:
 
+Aaron Lebahn
 Abdelhakim Qbaich
 Alex Gryzlov
 Alex Silva
+alissa42
 Andre Kuhlenschmidt
 André Videla
 Andy Lok
 Anthony Lodi
 Arnaud Bailly
 Brian Wignall
+Bryn Keller
 Christian Rasmussen
 David Smith
+Denis Buzdalov
 Edwin Brady
 Fabián Heredia Montiel
+Felix Springer
 George Pollard
 GhiOm
 Guillaume Allais
 Ilya Rezvov
 Jan de Muijnck-Hughes
 Jeetu
+Joey Eremondi
 Johann Rudloff
 Kamil Shakirov
-Bryn Keller
 Kevin Boulain
 LuoChen
 Marc Petit-Huguenin
 MarcelineVQ
 Marshall Bowers
+Mathew Polzin
 Matthew Wilson
 Matus Tejiscak
+Michael Messer
 Michael Morgan
 Milan Kral
 Molly Miller
@@ -41,7 +48,12 @@ Rohit Grover
 Rui Barreiro
 Ruslan Feizerahmanov
 Simon Chatterjee
+tensorknower69
 then0rTh
 Theo Butler
+Thomas Dziedzic
 Tim Süberkrüb
 Timmy Jose
+
+Apologies to anyone we've missed - let us know and we'll correct it (or just
+send a PR with the correction).
