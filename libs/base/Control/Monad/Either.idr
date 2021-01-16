@@ -78,9 +78,6 @@ catchE et f
 -- Interface Implementations
 -------------------------------------------------
 
-on : (b -> b -> c) -> (a -> b) -> a -> a -> c
-on f g x y = g x `f` g y
-
 public export
 Eq (m (Either e a)) => Eq (EitherT e m a) where
  (==) = (==) `on` runEitherT

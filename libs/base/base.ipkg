@@ -6,6 +6,7 @@ modules = Control.App,
 
           Control.Monad.Either,
           Control.Monad.Identity,
+          Control.Monad.Maybe,
           Control.Monad.Reader,
           Control.Monad.ST,
           Control.Monad.State,
