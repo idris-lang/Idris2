@@ -3,7 +3,7 @@ import Data.Strings
 import Data.List
 
 main : IO ()
-main = do 
+main = do
     putStrLn "input file: "
     file<-getLine
     Right tocheck<-readFile file

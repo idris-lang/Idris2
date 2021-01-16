@@ -19,7 +19,7 @@ doSort (S k) = do Right dict<-readFile "words"
                   -- sort reversed list and get last word
                   putStrLn $ show $ mylast $ sort xs
                   doSort k
-        
+
 main : IO ()
 main = do max <- getLine
           doSort (integerToNat (cast max))
