@@ -3,8 +3,11 @@ package contrib
 modules = Control.ANSI,
           Control.ANSI.SGR,
           Control.ANSI.CSI,
+
           Control.Delayed,
+
           Control.Linear.LIO,
+
           Control.Monad.Algebra,
           Control.Monad.Syntax,
 
@@ -20,6 +23,7 @@ modules = Control.ANSI,
           Data.Fin.Extra,
 
           Data.Fun.Extra,
+          Data.Fun.Graph,
 
           Data.InductionRecursion.DybjerSetzer,
 
@@ -101,6 +105,7 @@ modules = Control.ANSI,
           System.Future,
           System.Random,
           System.Path,
+
           Syntax.WithProof,
           Syntax.PreorderReasoning,
           Syntax.PreorderReasoning.Generic
