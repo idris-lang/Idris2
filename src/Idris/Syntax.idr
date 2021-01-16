@@ -65,7 +65,7 @@ mutual
        PRunElab : FC -> PTerm -> PTerm
        PHole : FC -> (bracket : Bool) -> (holename : String) -> PTerm
        PType : FC -> PTerm
-       PAs : FC -> Name -> (pattern : PTerm) -> PTerm
+       PAs : FC -> (nameFC : FC) -> Name -> (pattern : PTerm) -> PTerm
        PDotted : FC -> PTerm -> PTerm
        PImplicit : FC -> PTerm
        PInfer : FC -> PTerm
@@ -131,7 +131,7 @@ mutual
   getPTermLoc (PRunElab fc _) = fc
   getPTermLoc (PHole fc _ _) = fc
   getPTermLoc (PType fc) = fc
-  getPTermLoc (PAs fc _ _) = fc
+  getPTermLoc (PAs fc _  _ _) = fc
   getPTermLoc (PDotted fc _) = fc
   getPTermLoc (PImplicit fc) = fc
   getPTermLoc (PInfer fc) = fc
@@ -566,7 +566,7 @@ mutual
     showPrec d (PPrimVal _ c) = showPrec d c
     showPrec _ (PHole _ _ n) = "?" ++ n
     showPrec _ (PType _) = "Type"
-    showPrec d (PAs _ n p) = showPrec d n ++ "@" ++ showPrec d p
+    showPrec d (PAs _ _ n p) = showPrec d n ++ "@" ++ showPrec d p
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
@@ -842,8 +842,8 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PHole _ _ _) = f t
     goPTerm t@(PType _) = f t
-    goPTerm (PAs fc x pat) =
-      PAs fc x <$> goPTerm pat
+    goPTerm (PAs fc nameFC x pat) =
+      PAs fc nameFC x <$> goPTerm pat
       >>= f
     goPTerm (PDotted fc x) =
       PDotted fc <$> goPTerm x

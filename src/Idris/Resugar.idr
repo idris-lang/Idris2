@@ -264,7 +264,7 @@ mutual
   toPTerm p (IType fc) = pure (PType fc)
   toPTerm p (IBindVar fc v) = pure (PRef fc (UN v))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
-  toPTerm p (IAs fc _ n pat) = pure (PAs fc n !(toPTerm argPrec pat))
+  toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
 
   toPTerm p (IDelayed fc r ty) = pure (PDelayed fc r !(toPTerm argPrec ty))

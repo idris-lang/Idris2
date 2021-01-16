@@ -224,7 +224,7 @@ updateArg allvars var con (IAutoApp fc f a)
 updateArg allvars var con (INamedApp fc f n a)
     = pure $ INamedApp fc !(updateArg allvars var con f) n
                           !(updateArg allvars var con a)
-updateArg allvars var con (IAs fc s n p)
+updateArg allvars var con (IAs fc nameFC s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
@@ -316,8 +316,8 @@ findUpdates defs (INamedApp _ f _ a) (INamedApp _ f' _ a')
          findUpdates defs a a'
 findUpdates defs (INamedApp _ f _ a) f' = findUpdates defs f f'
 findUpdates defs f (INamedApp _ f' _ a) = findUpdates defs f f'
-findUpdates defs (IAs _ _ _ f) f' = findUpdates defs f f'
-findUpdates defs f (IAs _ _ _ f') = findUpdates defs f f'
+findUpdates defs (IAs _ _ _ _ f) f' = findUpdates defs f f'
+findUpdates defs f (IAs _ _ _ _ f') = findUpdates defs f f'
 findUpdates _ _ _ = pure ()
 
 getUpdates : Defs -> RawImp -> RawImp -> Core (List (Name, RawImp))

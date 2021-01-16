@@ -50,7 +50,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> TTImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> TTImp -> TTImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> TTImp -> TTImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> TTImp -> TTImp

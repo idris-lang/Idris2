@@ -193,10 +193,11 @@ mutual
   as fname indents
       = do start <- location
            x <- unqualifiedName
+           nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
            end <- location
-           pure (IAs (MkFC fname start end) UseRight (UN x) pat)
+           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
 
   simpleExpr : FileName -> IndentInfo -> Rule RawImp
   simpleExpr fname indents

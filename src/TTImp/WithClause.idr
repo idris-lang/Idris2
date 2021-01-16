@@ -70,14 +70,14 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ (UN n) p) (IAs fc _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN n) p) (IAs fc _ _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
-  getMatch lhs (IAs _ _ (UN n) p) p'
+  getMatch lhs (IAs _ _ _ (UN n) p) p'
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, p') :: ms)
-  getMatch lhs (IAs _ _ _ p) p' = getMatch lhs p p'
-  getMatch lhs p (IAs _ _ _ p') = getMatch lhs p p'
+  getMatch lhs (IAs _ _ _ _ p) p' = getMatch lhs p p'
+  getMatch lhs p (IAs _ _ _ _ p') = getMatch lhs p p'
   getMatch lhs (IType _) (IType _) = pure []
   getMatch lhs (IPrimVal fc c) (IPrimVal fc' c') =
     if c == c'

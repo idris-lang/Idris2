@@ -84,7 +84,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> RawImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> RawImp -> RawImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> RawImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> RawImp -> RawImp
@@ -165,7 +165,7 @@ mutual
       show (IBindHere fc b sc)
          = "(%bindhere " ++ show sc ++ ")"
       show (IBindVar fc n) = "$" ++ n
-      show (IAs fc _ n tm) = show n ++ "@(" ++ show tm ++ ")"
+      show (IAs fc _ _ n tm) = show n ++ "@(" ++ show tm ++ ")"
       show (IMustUnify fc r tm) = ".(" ++ show tm ++ ")"
       show (IDelayed fc r tm) = "(%delayed " ++ show tm ++ ")"
       show (IDelay fc tm) = "(%delay " ++ show tm ++ ")"
@@ -438,9 +438,9 @@ findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ (UN n) pat)
+findIBinds (IAs fc _ _ (UN n) pat)
     = n :: findIBinds pat
-findIBinds (IAs fc _ n pat)
+findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)
     = findIBinds pat
@@ -474,7 +474,7 @@ findImplicits (INamedApp _ fn _ av)
     = findImplicits fn ++ findImplicits av
 findImplicits (IWithApp fc fn av)
     = findImplicits fn ++ findImplicits av
-findImplicits (IAs fc _ n pat)
+findImplicits (IAs fc _ _ n pat)
     = findImplicits pat
 findImplicits (IMustUnify fc r pat)
     = findImplicits pat
@@ -569,14 +569,17 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
         impAs loc' ((UN n, AutoImplicit) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm (UN n) (IBindVar loc' n)
+
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm n
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' ((n, DefImplicit t) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm n
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
     setAs is es tm = pure tm
 
@@ -670,7 +673,7 @@ getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
-getFC (IAs x _ _ _) = x
+getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
 
@@ -685,7 +688,7 @@ getFn (IApp _ f arg) = getFn f
 getFn (IWithApp _ f arg) = getFn f
 getFn (INamedApp _ f _ _) = getFn f
 getFn (IAutoApp _ f _) = getFn f
-getFn (IAs _ _ _ f) = getFn f
+getFn (IAs _ _ _ _ f) = getFn f
 getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
@@ -731,8 +734,9 @@ mutual
         = do tag 14; toBuf b fc; toBuf b m; toBuf b y
     toBuf b (IBindVar fc y)
         = do tag 15; toBuf b fc; toBuf b y
-    toBuf b (IAs fc s y pattern)
-        = do tag 16; toBuf b fc; toBuf b s; toBuf b y; toBuf b pattern
+    toBuf b (IAs fc nameFC s y pattern)
+        = do tag 16; toBuf b fc; toBuf b nameFC; toBuf b s; toBuf b y;
+             toBuf b pattern
     toBuf b (IMustUnify fc r pattern)
         -- No need to record 'r', it's for type errors only
         = do tag 17; toBuf b fc; toBuf b pattern
@@ -820,10 +824,10 @@ mutual
                         pure (IBindHere fc m y)
                15 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IBindVar fc y)
-               16 => do fc <- fromBuf b; side <- fromBuf b
-                        y <- fromBuf b
-                        pattern <- fromBuf b
-                        pure (IAs fc side y pattern)
+               16 => do fc <- fromBuf b; nameFC <- fromBuf b
+                        side <- fromBuf b;
+                        y <- fromBuf b; pattern <- fromBuf b
+                        pure (IAs fc nameFC side y pattern)
                17 => do fc <- fromBuf b
                         pattern <- fromBuf b
                         pure (IMustUnify fc UnknownDot pattern)

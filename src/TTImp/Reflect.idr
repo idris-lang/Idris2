@@ -171,12 +171,13 @@ mutual
                     => do fc' <- reify defs !(evalClosure defs fc)
                           n' <- reify defs !(evalClosure defs n)
                           pure (IBindVar fc' n')
-               (NS _ (UN "IAs"), [fc, s, n, t])
+               (NS _ (UN "IAs"), [fc, nameFC, s, n, t])
                     => do fc' <- reify defs !(evalClosure defs fc)
+                          nameFC' <- reify defs !(evalClosure defs nameFC)
                           s' <- reify defs !(evalClosure defs s)
                           n' <- reify defs !(evalClosure defs n)
                           t' <- reify defs !(evalClosure defs t)
-                          pure (IAs fc' s' n' t')
+                          pure (IAs fc' nameFC' s' n' t')
                (NS _ (UN "IMustUnify"), [fc, r, t])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           r' <- reify defs !(evalClosure defs r)
@@ -529,12 +530,13 @@ mutual
         = do fc' <- reflect fc defs lhs env tfc
              n' <- reflect fc defs lhs env n
              appCon fc defs (reflectionttimp "IBindVar") [fc', n']
-    reflect fc defs lhs env (IAs tfc s n t)
+    reflect fc defs lhs env (IAs tfc nameFC s n t)
         = do fc' <- reflect fc defs lhs env tfc
+             nameFC' <- reflect fc defs lhs env nameFC
              s' <- reflect fc defs lhs env s
              n' <- reflect fc defs lhs env n
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IAs") [fc', s', n', t']
+             appCon fc defs (reflectionttimp "IAs") [fc', nameFC', s', n', t']
     reflect fc defs lhs env (IMustUnify tfc r t)
         = do fc' <- reflect fc defs lhs env tfc
              r' <- reflect fc defs lhs env r

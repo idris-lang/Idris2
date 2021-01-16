@@ -197,7 +197,7 @@ mutual
            case p' of
                 IVar _ n =>
                     case umode of
-                         NoSugar _ => pure (IAs fc s n tm', ty)
+                         NoSugar _ => pure (IAs fc (getLoc p) s n tm', ty)
                          _ => pure (tm', ty)
                 _ => pure (tm', ty) -- Should never happen!
   unelabTy' umode env (TDelayed fc r tm)

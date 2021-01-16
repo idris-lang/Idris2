@@ -271,7 +271,7 @@ mutual
       go d (PPrimVal _ c) = pretty c
       go d (PHole _ _ n) = meta (pretty (strCons '?' n))
       go d (PType _) = pretty "Type"
-      go d (PAs _ n p) = pretty n <+> "@" <+> go d p
+      go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"

@@ -375,13 +375,13 @@ mutual
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do b <- bounds (do x <- unqualifiedName
+      = do b <- bounds (do x <- bounds unqualifiedName
                            symbol "@"
                            commit
                            expr <- simpleExpr fname indents
                            pure (x, expr))
            (x, expr) <- pure b.val
-           pure (PAs (boundToFC fname b) (UN x) expr)
+           pure (PAs (boundToFC fname b) (boundToFC fname x) (UN x.val) expr)
     <|> atom fname
     <|> binder fname indents
     <|> rewrite_ fname indents

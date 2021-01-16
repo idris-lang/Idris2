@@ -367,9 +367,9 @@ mutual
                  IMustUnify _ _ _ => tm
                  IBindVar _ _ => tm
                  Implicit _ _ => tm
-                 IAs _ _ _ (IBindVar _ _) => tm
-                 IAs _ _ _ (Implicit _ _) => tm
-                 IAs fc p t arg => IAs fc p t (IMustUnify fc ErasedArg tm)
+                 IAs _ _ _ _ (IBindVar _ _) => tm
+                 IAs _ _ _ _ (Implicit _ _) => tm
+                 IAs fc nameFC p t arg => IAs fc nameFC p t (IMustUnify fc ErasedArg tm)
                  _ => IMustUnify (getFC tm) ErasedArg tm
   dotErased _ _ _ _ _ tm = pure tm
 
@@ -476,7 +476,7 @@ mutual
   findBindAllExpPattern = lookup (UN "_")
 
   isImplicitAs : RawImp -> Bool
-  isImplicitAs (IAs _ UseLeft _ (Implicit _ _)) = True
+  isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool

@@ -44,7 +44,7 @@ applyImp f ((Just n, arg) :: xs)
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
-    = (mn, IAs loc UseRight (UN n) (Implicit loc True))
+    = (mn, IAs loc EmptyFC UseRight (UN n) (Implicit loc True))
 toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
 toLHS' loc (Constr mn con args)
     = let args' = map (\a => toLHS' loc (snd a)) args in
