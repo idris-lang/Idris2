@@ -83,6 +83,9 @@ testbin:
 	@${MAKE} -C tests testbin
 
 test:
+	@echo
+	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
+	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
 
 support:
