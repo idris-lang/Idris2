@@ -42,11 +42,11 @@ public export %inline
 ||| `on b u x y` runs the binary function b on the results of applying
 ||| unary function u to two arguments x and y. From the opposite perspective,
 ||| it transforms two inputs and combines the outputs.
-||| 
+|||
 ||| ```idris example
 ||| ((+) `on` f) x y = f x + f y
 ||| ```
-||| 
+|||
 ||| Typical usage:
 |||
 ||| ```idris example

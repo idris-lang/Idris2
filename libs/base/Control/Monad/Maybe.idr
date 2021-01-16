@@ -86,7 +86,7 @@ Show (m (Maybe a)) => Show (MaybeT m a) where
   showPrec d (MkMaybeT x) = showCon d "MkMaybeT" $ showArg x
 
 ||| Corresponds to the Semigroup instance of Maybe
-||| 
+|||
 ||| Note: This could also be implemented with only an Applicative
 ||| prerequisite: `MkMaybeT x <+> MkMaybeT y = MkMaybeT $ [| x <+> y |]`
 ||| However, the monadic version is more efficient for long-running effects,
