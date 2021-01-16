@@ -31,6 +31,8 @@ log' lvl msg
             then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
             else pure ()
 
+||| Log a message with the given log level. Use increasingly
+||| high log level numbers for more granular logging.
 export
 log : {auto c : Ref Ctxt Defs} ->
       String -> Nat -> Lazy String -> Core ()
