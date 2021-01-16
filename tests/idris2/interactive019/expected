@@ -1,5 +1,5 @@
 1/1: Building TypeSearch (TypeSearch.idr)
-Main> prim__cast_CharString : (1 _ : Char) -> String
+Main> prim__cast_CharString : Char -> String
 
 Main.sameSig : Char -> String
 
