@@ -19,6 +19,8 @@ import Data.NameMap
 import Data.Strings
 import Data.Vect
 
+import Idris.Env
+
 import System
 import System.Directory
 import System.File
@@ -29,18 +31,18 @@ import System.Info
 -- TODO Look for gsi-script, then gsi
 findGSI : IO String
 findGSI =
-  do env <- getEnv "GAMBIT_GSI"
+  do env <- idrisGetEnv "GAMBIT_GSI"
      pure $ fromMaybe "/usr/bin/env gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
-  do env <- getEnv "GAMBIT_GSC"
+  do env <- idrisGetEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
 
 findGSCBackend : IO String
 findGSCBackend =
-  do env <- getEnv "GAMBIT_GSC_BACKEND"
+  do env <- idrisGetEnv "GAMBIT_GSC_BACKEND"
      pure $ case env of
               Nothing => ""
               Just e => " -cc " ++ e

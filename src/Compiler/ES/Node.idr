@@ -1,5 +1,7 @@
 module Compiler.ES.Node
 
+import Idris.Env
+
 import Compiler.ES.ES
 
 import Compiler.Common
@@ -16,7 +18,7 @@ import Data.Maybe
 
 findNode : IO String
 findNode =
-  do env <- getEnv "NODE"
+  do env <- idrisGetEnv "NODE"
      pure $ fromMaybe "/usr/bin/env node" env
 
 ||| Compile a TT expression to Node
