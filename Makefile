@@ -150,12 +150,9 @@ bootstrap: bootstrap-build bootstrap-test
 
 bootstrap-build: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2_app/idris2.ss > bootstrap/idris2_app/idris2-boot.ss
-ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
-else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
-endif
+	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+	    bootstrap/idris2_app/idris2.ss \
+	    > bootstrap/idris2_app/idris2-boot.ss
 	sh ./bootstrap.sh
 
 # Bootstrapping using racket
@@ -163,12 +160,9 @@ bootstrap-racket: bootstrap-racket-build bootstrap-test
 
 bootstrap-racket-build: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	cp bootstrap/idris2_app/idris2.rkt bootstrap/idris2_app/idris2-boot.rkt
-ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
-else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
-endif
+	sed 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+	    bootstrap/idris2_app/idris2.rkt \
+	    > bootstrap/idris2_app/idris2-boot.rkt
 	sh ./bootstrap-rkt.sh
 
 bootstrap-test:
