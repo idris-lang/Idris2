@@ -21,6 +21,8 @@ import Data.NameMap
 import Data.Strings
 import Data.Vect
 
+import Idris.Env
+
 import System
 import System.Directory
 import System.File
@@ -30,7 +32,7 @@ import System.Info
 
 pathLookup : IO String
 pathLookup
-    = do path <- getEnv "PATH"
+    = do path <- idrisGetEnv "PATH"
          let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
@@ -39,7 +41,7 @@ pathLookup
 
 findChez : IO String
 findChez
-    = do Just chez <- getEnv "CHEZ" | Nothing => pathLookup
+    = do Just chez <- idrisGetEnv "CHEZ" | Nothing => pathLookup
          pure chez
 
 -- Given the chez compiler directives, return a list of pairs of:
