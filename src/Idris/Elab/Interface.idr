@@ -46,7 +46,7 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
                     then [NoHints, UniqueSearch]
                     else [NoHints, UniqueSearch, SearchBy dets]
           pNames = map fst ps
-          retty = apply (IVar fc n) (map (IVar fc) pNames)
+          retty = apply (IVar fc n) (map (IVar EmptyFC) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
           con = MkImpTy EmptyFC EmptyFC conName !(bindTypeNames [] (pNames ++ map fst meths ++ vars) conty) in
@@ -119,12 +119,12 @@ getMethToplevel : {vars : _} ->
                   (constraints : List (Maybe Name)) ->
                   (allmeths : List Name) ->
                   (params : List (Name, (RigCount, RawImp))) ->
-                  (FC, RigCount, List FnOpt, Name, (Bool, RawImp)) ->
+                  (FC, FC, RigCount, List FnOpt, Name, (Bool, RawImp)) ->
                   Core (List ImpDecl)
 getMethToplevel {vars} env vis iname cname constraints allmeths params
-                (fc, c, opts, n, (d, ty))
+                (fc, nameFC, c, opts, n, (d, ty))
     = do let paramNames = map fst params
-         let ity = apply (IVar fc iname) (map (IVar fc) paramNames)
+         let ity = apply (IVar fc iname) (map (IVar EmptyFC) paramNames)
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
          let ty_constr =
@@ -133,17 +133,17 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
          cn <- inCurrentNS n
          let tydecl = IClaim fc c vis (if d then [Inline, Invertible]
                                             else [Inline])
-                                      (MkImpTy EmptyFC EmptyFC cn ty_imp)
+                                      (MkImpTy fc nameFC cn ty_imp)
          let conapp = apply (IVar fc cname)
-                              (map (IBindVar fc) (map bindName allmeths))
+                              (map (IBindVar EmptyFC) (map bindName allmeths))
          let argns = getExplicitArgs 0 ty
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause fc (INamedApp fc (IVar fc cn)
                                                    (UN "__con")
                                                    conapp)
                                   (mkLam argns
-                                    (apply (IVar fc (methName n))
-                                           (map (IVar fc) argns)))
+                                    (apply (IVar EmptyFC (methName n))
+                                           (map (IVar EmptyFC) argns)))
          let fndef = IDef fc cn [fnclause]
          pure [tydecl, fndef]
   where
@@ -167,7 +167,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params
     mkLam : List Name -> RawImp -> RawImp
     mkLam [] tm = tm
     mkLam (x :: xs) tm
-       = ILam fc top Explicit (Just x) (Implicit fc False) (mkLam xs tm)
+       = ILam EmptyFC top Explicit (Just x) (Implicit fc False) (mkLam xs tm)
 
     bindName : Name -> String
     bindName (UN n) = "__bind_" ++ n
@@ -196,8 +196,10 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
 
          let tydecl = IClaim fc top vis [Inline, Hint False]
                           (MkImpTy EmptyFC EmptyFC hintname ty_imp)
+
          let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
                               (map (const (Implicit fc True)) meths)
+
          let fnclause = PatClause fc (IApp fc (IVar fc hintname) conapp)
                                   (IVar fc (constName cn))
          let fndef = IDef fc hintname [fnclause]
@@ -217,11 +219,11 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
         = impsBind (IAutoApp fc fn (IBindVar fc n)) ns
 
 
-getSig : ImpDecl -> Maybe (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
-getSig (IClaim _ c _ opts (MkImpTy fc _ n ty))
-    = Just (fc, c, opts, n, (False, namePis 0 ty))
+getSig : ImpDecl -> Maybe (FC, FC, RigCount, List FnOpt, Name, (Bool, RawImp))
+getSig (IClaim _ c _ opts (MkImpTy fc nameFC n ty))
+    = Just (fc, nameFC, c, opts, n, (False, namePis 0 ty))
 getSig (IData _ _ (MkImpLater fc n ty))
-    = Just (fc, erased, [Invertible], n, (True, namePis 0 ty))
+    = Just (fc, EmptyFC, erased, [Invertible], n, (True, namePis 0 ty))
 getSig _ = Nothing
 
 getDefault : ImpDecl -> Maybe (FC, List FnOpt, Name, List ImpClause)
@@ -285,12 +287,14 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
          let conName_in = maybe (mkCon fc fullIName) id mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
-         let meth_sigs = mapMaybe getSig body -- (FC, RigCount, List FnOpt, Name, (Bool, RawImp))
-         let meth_decls = map (\ (f, c, o, n, b, ty) => (n, c, o, b, ty)) meth_sigs
+         let meth_sigs = mapMaybe getSig body -- (FC, FC, RigCount, List FnOpt, Name, (Bool, RawImp))
+         let meth_decls = map (\ (f, f', c, o, n, b, ty) => (n, c, o, b, ty)) meth_sigs
          let meth_names = map fst meth_decls
          let defaults = mapMaybe getDefault body
 
-         elabAsData conName meth_names meth_sigs
+         let dropNameFC = map (\(fc, nameFC, rest) => (fc, rest))
+
+         elabAsData conName meth_names $ dropNameFC meth_sigs
          elabConstraintHints conName meth_names
          elabMethods conName meth_names meth_sigs
          ds <- traverse (elabDefault meth_decls) defaults
@@ -340,7 +344,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         notData (x, y) = (x, (False, y))
 
     elabMethods : (conName : Name) -> List Name ->
-                  List (FC, RigCount, List FnOpt, Name, (Bool, RawImp)) ->
+                  List (FC, FC, RigCount, List FnOpt, Name, (Bool, RawImp)) ->
                   Core ()
     elabMethods conName meth_names meth_sigs
         = do -- Methods have same visibility as data declaration

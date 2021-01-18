@@ -222,7 +222,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
                -- 3. Build the record for the implementation
                let mtops = map (Builtin.fst . snd) fns
                let con = iconstructor cdata
-               let ilhs = impsApply (IVar fc impName)
+               let ilhs = impsApply (IVar EmptyFC impName)
                                     (map (\x => (x, IBindVar fc (show x)))
                                               (map fst methImps))
                -- RHS is the constructor applied to a search for the necessary
@@ -310,18 +310,18 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
     mkLam : List (Name, RigCount, PiInfo RawImp) -> RawImp -> RawImp
     mkLam [] tm = tm
     mkLam ((x, c, p) :: xs) tm
-        = ILam fc c p (Just x) (Implicit fc False) (mkLam xs tm)
+        = ILam EmptyFC c p (Just x) (Implicit fc False) (mkLam xs tm)
 
-    applyTo : FC -> RawImp -> List (Name, RigCount, PiInfo RawImp) -> RawImp
-    applyTo fc tm [] = tm
-    applyTo fc tm ((x, c, Explicit) :: xs)
-        = applyTo fc (IApp fc tm (IVar fc x)) xs
-    applyTo fc tm ((x, c, AutoImplicit) :: xs)
-        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
-    applyTo fc tm ((x, c, Implicit) :: xs)
-        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
-    applyTo fc tm ((x, c, DefImplicit _) :: xs)
-        = applyTo fc (INamedApp fc tm x (IVar fc x)) xs
+    applyTo : RawImp -> List (Name, RigCount, PiInfo RawImp) -> RawImp
+    applyTo tm [] = tm
+    applyTo tm ((x, c, Explicit) :: xs)
+        = applyTo (IApp EmptyFC tm (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, AutoImplicit) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, Implicit) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
+    applyTo tm ((x, c, DefImplicit _) :: xs)
+        = applyTo (INamedApp EmptyFC tm x (IVar EmptyFC x)) xs
 
     -- When applying the method in the field for the record, eta expand
     -- the expected arguments based on the field type, so that implicits get
@@ -336,7 +336,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
               -- implicit arguments to the declaration
               mkLam argns
                     (impsApply
-                         (applyTo fc (IVar fc n) argns)
+                         (applyTo (IVar EmptyFC n) argns)
                          (map (\n => (n, IVar fc (UN (show n)))) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
@@ -421,6 +421,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
              let methupds' = if isNil ibinds then []
                              else [(n, impsApply (IVar fc n)
                                      (map (\x => (x, IBindVar fc (show x))) ibinds))]
+
              pure ((mn, n, upds, c, treq, mty), methupds')
 
     topMethTypes : List (Name, RawImp) ->
