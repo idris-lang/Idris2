@@ -14,6 +14,29 @@ public export %inline
 mapReaderT : (m a -> n b) -> ReaderT r m a -> ReaderT r n b
 mapReaderT f m = MkReaderT \st => f (runReaderT' m st)
 
+||| Unwrap and apply a ReaderT monad computation
+public export
+%inline
+runReaderT : stateType -> ReaderT stateType m a -> m a
+runReaderT s action = runReaderT' action s
+
+--------------------------------------------------------------------------------
+--          Reader
+--------------------------------------------------------------------------------
+
+||| The Reader monad. The ReaderT transformer applied to the Identity monad.
+public export
+Reader : (stateType : Type) -> (a : Type) -> Type
+Reader s a = ReaderT s Identity a
+
+||| Unwrap and apply a Reader monad computation
+public export %inline
+runReader : stateType -> Reader stateType a -> a
+runReader s = runIdentity . runReaderT s
+
+--------------------------------------------------------------------------------
+--          Implementations
+--------------------------------------------------------------------------------
 
 public export
 implementation Functor f => Functor (ReaderT stateType f) where
@@ -49,19 +72,3 @@ implementation (Monad f, Alternative f) => Alternative (ReaderT stateType f) whe
   empty = lift empty
 
   (MkReaderT f) <|> (MkReaderT g) = MkReaderT (\st => f st <|> g st)
-
-||| Unwrap and apply a ReaderT monad computation
-public export
-%inline
-runReaderT : stateType -> ReaderT stateType m a -> m a
-runReaderT s action = runReaderT' action s
-
-||| The Reader monad. The ReaderT transformer applied to the Identity monad.
-public export
-Reader : (stateType : Type) -> (a : Type) -> Type
-Reader s a = ReaderT s Identity a
-
-||| Unwrap and apply a Reader monad computation
-public export
-runReader : stateType -> Reader stateType a -> a
-runReader s = runIdentity . runReaderT s
