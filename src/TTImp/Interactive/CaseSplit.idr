@@ -411,9 +411,9 @@ export
 getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            (FC -> ClosedTerm -> Bool) -> Name ->
+            (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n
     = do Just (loc, envlen, lhs_in) <- findLHSAt p
               | Nothing => pure (SplitFail CantFindLHS)
-         getSplitsLHS loc envlen lhs_in n
+         getSplitsLHS (justFC loc) envlen lhs_in n

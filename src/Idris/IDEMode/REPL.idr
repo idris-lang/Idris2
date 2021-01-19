@@ -393,18 +393,24 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
                     Nothing => "auto"
     in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
 displayIDEResult outf i (NameLocList dat)
-  = printIDEResult outf i
-     $ SExpList !(traverse
-                   (\(name, fc)
-                     => pure $ SExpList [ StringAtom !(render $ pretty name)
-                                        , StringAtom (file fc)
-                                        , IntegerAtom $ cast (fst (startPos fc))
-                                        , IntegerAtom $ cast (snd (startPos fc))
-                                        , IntegerAtom $ cast (fst (endPos fc))
-                                        , IntegerAtom $ cast (snd (endPos fc))]
-                   )
-                   dat
-                 )
+  = printIDEResult outf i $ SExpList !(traverse constructSExp dat)
+  where
+    constructSExp : (Name, FC) -> Core SExp
+    constructSExp (name, EmptyFC) = pure $
+        SExpList [ StringAtom !(render $ pretty name)
+                 , StringAtom ""
+                 , IntegerAtom 0 , IntegerAtom 0
+                 , IntegerAtom 0 , IntegerAtom 0
+                 ]
+    constructSExp (name, MkFC fname (startLine, startCol) (endLine, endCol)) = pure $
+        SExpList [ StringAtom !(render $ pretty name)
+                 , StringAtom fname
+                 , IntegerAtom $ cast $ startLine
+                 , IntegerAtom $ cast $ startCol
+                 , IntegerAtom $ cast $ endLine
+                 , IntegerAtom $ cast $ endCol
+                 ]
+
 displayIDEResult outf i  _ = pure ()
 
 

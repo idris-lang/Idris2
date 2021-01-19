@@ -19,54 +19,61 @@ public export
 FileName : Type
 FileName = String
 
-||| A file context is a filename together with starting and ending positions
+||| A file context is a filename together with starting and ending positions.
+||| It's often carried by AST nodes that might have beeen created from a source
+||| file or by the compiler. That makes it useful to have the notion of
+||| `EmptyFC` as part of the type.
 public export
 data FC = MkFC FileName FilePos FilePos
         | EmptyFC
+
+||| A version of a file context that cannot be empty
+public export
+NonEmptyFC : Type
+NonEmptyFC = (FileName, FilePos, FilePos)
 
 ------------------------------------------------------------------------
 -- Projections
 
 export
-file : FC -> FileName
-file (MkFC fn _ _) = fn
-file EmptyFC = ""
+file : NonEmptyFC -> FileName
+file (fn, _, _) = fn
 
 export
-startPos : FC -> FilePos
-startPos (MkFC _ s _) = s
-startPos EmptyFC = (0, 0)
+startPos : NonEmptyFC -> FilePos
+startPos (_, s, _) = s
 
 export
-endPos : FC -> FilePos
-endPos (MkFC _ _ e) = e
-endPos EmptyFC = (0, 0)
+endPos : NonEmptyFC -> FilePos
+endPos (_, _, e) = e
 
 ------------------------------------------------------------------------
--- Smart constructor
+-- Smart constructors
 
 export
 boundToFC : FileName -> WithBounds t -> FC
 boundToFC fname b = MkFC fname (start b) (end b)
 
+export
+justFC : NonEmptyFC -> FC
+justFC (fname, start, end) = MkFC fname start end
+
 ------------------------------------------------------------------------
 -- Predicates
 
--- Return whether a given file position is within the file context (assuming we're
--- in the right file)
+--- Return whether a given file position is within the file context (assuming we're
+--- in the right file)
 export
-within : FilePos -> FC -> Bool
-within (x, y) (MkFC _ start end)
+within : FilePos -> NonEmptyFC -> Bool
+within (x, y) (_, start, end)
    = (x, y) >= start && (x, y) <= end
-within _ _ = False
 
 -- Return whether a given line is on the same line as the file context (assuming
 -- we're in the right file)
 export
-onLine : Int -> FC -> Bool
-onLine x (MkFC _ start end)
+onLine : Int -> NonEmptyFC -> Bool
+onLine x (_, start, end)
    = x >= fst start && x <= fst end
-onLine _ _ = False
 
 ------------------------------------------------------------------------
 -- Constant values
@@ -103,15 +110,17 @@ Eq FC where
 
 export
 Show FC where
-  show loc = file loc ++ ":" ++
-             showPos (startPos loc) ++ "--" ++
-             showPos (endPos loc)
+  show EmptyFC = "EmptyFC"
+  show (MkFC file startPos endPos) = file ++ ":" ++
+             showPos startPos ++ "--" ++
+             showPos endPos
 
 export
 Pretty FC where
-  pretty loc = pretty (file loc) <+> colon
-                 <+> prettyPos (startPos loc) <+> pretty "--"
-                 <+> prettyPos (endPos loc)
+  pretty EmptyFC = pretty "EmptyFC"
+  pretty (MkFC file startPos endPos) = pretty file <+> colon
+                 <+> prettyPos startPos <+> pretty "--"
+                 <+> prettyPos endPos
     where
       prettyPos : FilePos -> Doc ann
       prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)

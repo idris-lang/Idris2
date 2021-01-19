@@ -200,8 +200,8 @@ findCG
                             Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
                                           coreLift $ exitWith (ExitFailure 1)
 
-anyAt : (FC -> Bool) -> FC -> a -> Bool
-anyAt p loc y = p loc
+anyAt : (a -> Bool) -> a -> b -> Bool
+anyAt p loc _ = p loc
 
 printClause : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -448,7 +448,11 @@ processEdit (GenerateDef upd line name rej)
                     put ROpts (record { gdResult = Just (line, searchdef) } ropts)
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
-                    let l : Nat =  integerToNat (cast (snd (startPos fc)))
+
+                    let l : Nat = integerToNat $ cast $ case fc of
+                         (MkFC _ (_, col) _) => col
+                         _ => the Int 0
+
                     Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                     let (markM, srcLineUnlit) = isLitLine srcLine
@@ -461,7 +465,9 @@ processEdit (GenerateDef upd line name rej)
 processEdit GenerateDefNext
     = do Just (line, (fc, cs)) <- nextGenDef 0
               | Nothing => pure (EditError "No more results")
-         let l : Nat =  integerToNat (cast (snd (startPos fc)))
+         let l : Nat = integerToNat $ cast $ case fc of
+                (MkFC _ (_, col) _) => col
+                _ => the Int 0
          Just srcLine <- getSourceLine line
             | Nothing => pure (EditError "Source line not found")
          let (markM, srcLineUnlit) = isLitLine srcLine
