@@ -141,11 +141,6 @@ public export %inline
 asks : Applicative m => (r -> a) -> RWST r w s m a
 asks f = MkRWST \r,s,w => pure (f r,s,w)
 
-||| Constructor for computations in the reader monad (equivalent to `asks`).
-public export %inline
-reader : Applicative m => (r -> a) -> RWST r w s m a
-reader = asks
-
 ||| Fetch the value of the environment.
 public export %inline
 ask : Applicative m => RWST r w s m r
