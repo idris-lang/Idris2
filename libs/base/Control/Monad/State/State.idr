@@ -109,3 +109,10 @@ evalState s = snd . runState s
 public export
 execState : stateType -> State stateType a -> stateType
 execState s = fst . runState s
+
+
+||| Map both the return value and final state of a computation using
+||| the given function.
+public export %inline
+mapStateT : (m (s, a) -> n (s, b)) -> StateT s m a -> StateT s n b
+mapStateT f m = ST $ f . runStateT' m
