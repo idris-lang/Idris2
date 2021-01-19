@@ -24,5 +24,3 @@ data Command : Schema -> Type where
      Add : SchemaType schema -> Command schema
      Get : Integer -> Command schema
      Quit : Command schema
-
-

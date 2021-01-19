@@ -18,4 +18,3 @@ Functor (Test c d) where
 -- renamed)
 Functor (Test a b) where
   map = ?bar
-

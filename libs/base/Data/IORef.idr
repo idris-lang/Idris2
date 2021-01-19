@@ -38,4 +38,3 @@ modifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
 modifyIORef ref f
     = do val <- readIORef ref
          writeIORef ref (f val)
-

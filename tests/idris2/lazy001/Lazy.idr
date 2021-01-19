@@ -19,4 +19,3 @@ data Nat = Z | S Nat
 take : Nat -> Stream a -> List a
 take Z xs = Nil
 take (S k) (x :: xs) = List.(::) x (take k xs)
-

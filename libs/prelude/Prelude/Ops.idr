@@ -25,4 +25,3 @@ infixr 9 .
 infixr 0 $
 
 infixl 9 `div`, `mod`
-

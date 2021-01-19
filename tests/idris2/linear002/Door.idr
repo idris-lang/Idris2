@@ -40,4 +40,3 @@ doorProg
          Right d' <- openDoor d
             | Left d => deleteDoor d
          ?foo
-

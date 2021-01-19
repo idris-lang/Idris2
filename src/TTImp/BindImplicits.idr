@@ -188,4 +188,3 @@ piBindNames loc env tm
     piBind [] ty = ty
     piBind (n :: ns) ty
        = IPi loc erased Implicit (Just (UN n)) (Implicit loc False) (piBind ns ty)
-

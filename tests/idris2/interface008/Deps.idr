@@ -17,4 +17,3 @@ interface BadFinite t where
 implementation BadFinite (Fin k) where
   badcard = k
   badto = id
-

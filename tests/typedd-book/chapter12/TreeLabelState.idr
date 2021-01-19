@@ -23,4 +23,3 @@ treeLabelWith (Node left val right)
 
 treeLabel : Tree a -> Tree (Integer, a)
 treeLabel tree = evalState [1..] (treeLabelWith tree)
-
