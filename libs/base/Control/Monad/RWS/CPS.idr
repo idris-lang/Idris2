@@ -203,8 +203,8 @@ censor f m = MkRWST \r,s,w =>
 
 ||| Construct a state monad computation from a state transformer function.
 public export %inline
-state : Applicative m => (s -> (a, s)) -> RWST r w s m a
-state f = MkRWST \_,s,w => let (a,s') = f s in pure (a,s',w)
+state : Applicative m => (s -> (s, a)) -> RWST r w s m a
+state f = MkRWST \_,s,w => let (s',a) = f s in pure (a,s',w)
 
 ||| Get a specific component of the state, using a projection function
 ||| supplied.

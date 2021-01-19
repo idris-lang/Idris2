@@ -14,7 +14,6 @@ module Control.Monad.Error.Either
 -------------------------------------------------
 
 import Control.Monad.Trans
-import Control.Monad.State
 
 public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
@@ -143,8 +142,3 @@ MonadTrans (EitherT e) where
 public export
 HasIO m => HasIO (EitherT e m) where
   liftIO act = MkEitherT $ liftIO (io_bind act (pure . Right))
-
-public export
-MonadState s m => MonadState s (EitherT e m) where
-  get = lift get
-  put = lift . put

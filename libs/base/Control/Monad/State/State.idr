@@ -3,14 +3,6 @@ module Control.Monad.State.State
 import Control.Monad.Identity
 import Control.Monad.Trans
 
-||| A computation which runs in a context and produces an output
-public export
-interface Monad m => MonadState stateType m | m where
-    ||| Get the context
-    get : m stateType
-    ||| Write a new context/output
-    put : stateType -> m ()
-
 ||| The transformer on which the State monad is based
 public export
 record StateT (stateType : Type) (m : Type -> Type) (a : Type) where
@@ -40,11 +32,6 @@ implementation Monad m => Monad (StateT stateType m) where
                    kv st')
 
 public export
-implementation Monad m => MonadState stateType (StateT stateType m) where
-    get   = ST (\x => pure (x, x))
-    put x = ST (\y => pure (x, ()))
-
-public export
 implementation MonadTrans (StateT stateType) where
     lift x
         = ST (\st =>
@@ -59,20 +46,6 @@ implementation (Monad f, Alternative f) => Alternative (StateT st f) where
 public export
 implementation HasIO m => HasIO (StateT stateType m) where
   liftIO io = ST $ \s => liftIO $ io_bind io $ \a => pure (s, a)
-
-||| Apply a function to modify the context of this computation
-public export
-modify : MonadState stateType m => (stateType -> stateType) -> m ()
-modify f
-    = do s <- get
-         put (f s)
-
-||| Evaluate a function in the context held by this computation
-public export
-gets : MonadState stateType m => (stateType -> a) -> m a
-gets f
-    = do s <- get
-         pure (f s)
 
 ||| Unwrap and apply a StateT monad computation.
 public export

@@ -12,7 +12,6 @@ module Control.Monad.Maybe
 -------------------------------------------------
 
 import Control.Monad.Trans
-import Control.Monad.State
 import Data.Maybe
 
 public export
@@ -138,8 +137,3 @@ MonadTrans MaybeT where
 public export
 HasIO m => HasIO (MaybeT m) where
   liftIO act = MkMaybeT $ liftIO (io_bind act (pure . Just))
-
-public export
-MonadState s m => MonadState s (MaybeT m) where
-  get = lift get
-  put = lift . put
