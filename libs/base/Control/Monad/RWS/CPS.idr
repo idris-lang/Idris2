@@ -1,6 +1,6 @@
 ||| Note: The difference to a 'stricht' RWST implementation is
 ||| that accumulation of values does not happen in the
-||| Applicative and Monad instances but when invokint `Writer`-specific
+||| Applicative and Monad instances but when invoking `Writer`-specific
 ||| functions like `writer` or `listen`.
 module Control.Monad.RWS.CPS
 
@@ -39,10 +39,10 @@ execRWST m r s = (\(_,s',w) => (s',w)) <$> runRWST m r s
 
 ||| Map the inner computation using the given function.
 public export %inline
-mapRWST : (Monad n, Monoid w, Semigroup w')
+mapRWST : (Functor n, Monoid w, Semigroup w')
         => (m (a, s, w) -> n (b, s, w')) -> RWST r w s m a -> RWST r w' s n b
-mapRWST f m = MkRWST \r,s,w => do (a,s',w') <- f (runRWST m r s)
-                                  pure (a,s',w <+> w')
+mapRWST f m = MkRWST \r,s,w =>
+                (\(a,s',w') => (a,s',w <+> w')) <$> f (runRWST m r s)
 
 ||| `withRWST f m` executes action `m` with an initial environment
 ||| and state modified by applying `f`.
