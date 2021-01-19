@@ -1,15 +1,8 @@
 ||| The Error monad (also called the Exception monad).
 module Control.Monad.Error.Interface
 
--- module Control.Monad.Error.Class (
---     MonadError(..),
---     liftEither,
---     tryError,
---     withError,
---     handleError,
---     mapError,
---   ) where
--- 
+import Control.Monad.Error.Either
+
 ||| The strategy of combining computations that can throw exceptions
 ||| by bypassing bound functions
 ||| from the point an exception is thrown to the point that it is handled.
@@ -79,7 +72,6 @@ MonadError e (Either e) where
   Left  l `catchError` h = h l
   Right r `catchError` _ = Right r
 
--- {- | @since 2.2 -}
 -- instance Monad m => MonadError e (ExceptT e m) where
 --     throwError = ExceptT.throwE
 --     catchError = ExceptT.catchE
