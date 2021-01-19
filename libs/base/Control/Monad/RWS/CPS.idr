@@ -121,7 +121,7 @@ public export %inline
 
 public export %inline
 Monad m => Monad (RWST r w s m) where
-  m >>= k = MkRWST \r,s,w => do (a,s1,w1) <- unRWST m r s w 
+  m >>= k = MkRWST \r,s,w => do (a,s1,w1) <- unRWST m r s w
                                 unRWST (k a) r s1 w1
 
 public export %inline

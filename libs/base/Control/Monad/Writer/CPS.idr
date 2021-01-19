@@ -8,11 +8,11 @@ import Control.Monad.Identity
 import Control.Monad.Trans
 
 ||| A writer monad parameterized by:
-||| 
+|||
 |||   @w the output to accumulate.
-||| 
+|||
 |||   m@ The inner monad.
-||| 
+|||
 ||| The `pure` function produces the output `neutral`, while `>>=`
 ||| combines the outputs of the subcomputations using `<+>`.
 public export

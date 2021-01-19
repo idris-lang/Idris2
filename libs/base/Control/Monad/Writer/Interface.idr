@@ -9,13 +9,13 @@ import Control.Monad.Trans
 import Control.Monad.Writer.CPS as Writer
 
 ||| MonadWriter interface
-||| 
+|||
 ||| tell is like tell on the MUD's it shouts to monad
 ||| what you want to be heard. The monad carries this 'packet'
 ||| upwards, merging it if needed (hence the Monoid requirement).
-||| 
+|||
 ||| listen listens to a monad acting, and returns what the monad "said".
-||| 
+|||
 ||| pass lets you provide a writer transformer which changes internals of
 ||| the written object.
 public export
@@ -24,11 +24,11 @@ interface (Monoid w, Monad m) => MonadWriter w m | m where
   writer : (a,w) -> m a
   writer (a, w) = do tell w
                      pure a
-  
+
   ||| `tell w` is an action that produces the output `w`.
   tell : w -> m ()
   tell w = writer ((),w)
-  
+
   ||| `listen m` is an action that executes the action `m` and adds
   ||| its output to the value of the computation.
   listen : m a -> m (a, w)
@@ -73,7 +73,7 @@ MonadWriter w m => MonadWriter w (EitherT e m) where
   tell   = lift . tell
   listen = mapEitherT \m => do (e,w) <- listen m
                                pure $ map (\a => (a,w)) e
-                               
+
   pass   = mapEitherT \m => pass $ do Right (r,f) <- m
                                         | Left l => pure $ (Left l, id)
                                       pure (Right r, f)
@@ -84,7 +84,7 @@ MonadWriter w m => MonadWriter w (MaybeT m) where
   tell   = lift . tell
   listen = mapMaybeT \m => do (e,w) <- listen m
                               pure $ map (\a => (a,w)) e
-                               
+
   pass   = mapMaybeT \m => pass $ do Just (r,f) <- m
                                        | Nothing => pure $ (Nothing, id)
                                      pure (Just r, f)
