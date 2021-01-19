@@ -2,6 +2,7 @@
 module Control.Monad.Error.Interface
 
 import Control.Monad.Error.Either
+import Control.Monad.RWS.CPS
 import Control.Monad.Maybe
 import Control.Monad.Reader.Reader
 import Control.Monad.State.State
@@ -97,3 +98,9 @@ MonadError e m => MonadError e (StateT r m) where
   throwError = lift . throwError
   catchError (ST m) f =
     ST \s => catchError (m s) (runStateT s . f)
+
+public export
+(Monoid w, MonadError e m) => MonadError e (RWST r w s m) where
+  throwError = lift . throwError
+  catchError (MkRWST m) f =
+    MkRWST \r,w,s => catchError (m r w s) (\e => unRWST (f e) r w s)
