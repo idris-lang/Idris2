@@ -2,11 +2,12 @@
 module Control.Monad.Error.Interface
 
 import Control.Monad.Error.Either
-import Control.Monad.RWS.CPS
 import Control.Monad.Maybe
+import Control.Monad.RWS.CPS
 import Control.Monad.Reader.Reader
 import Control.Monad.State.State
 import Control.Monad.Trans
+import Control.Monad.Writer.CPS
 
 ||| The strategy of combining computations that can throw exceptions
 ||| by bypassing bound functions
@@ -100,7 +101,13 @@ MonadError e m => MonadError e (StateT r m) where
     ST \s => catchError (m s) (runStateT s . f)
 
 public export
-(Monoid w, MonadError e m) => MonadError e (RWST r w s m) where
+MonadError e m => MonadError e (RWST r w s m) where
   throwError = lift . throwError
   catchError (MkRWST m) f =
     MkRWST \r,w,s => catchError (m r w s) (\e => unRWST (f e) r w s)
+
+public export
+MonadError e m => MonadError e (WriterT w m) where
+  throwError = lift . throwError
+  catchError (MkWriterT m) f =
+    MkWriterT \w => catchError (m w) (\e => unWriterT (f e) w)

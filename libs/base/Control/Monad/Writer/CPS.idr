@@ -1,1 +1,152 @@
+||| Note: The difference to a 'stricht' Writer implementation is
+||| that accumulation of values does not happen in the
+||| Applicative and Monad instances but when invoking `Writer`-specific
+||| functions like `writer` or `listen`.
 module Control.Monad.Writer.CPS
+
+import Control.Monad.Identity
+import Control.Monad.Trans
+
+||| A writer monad parameterized by:
+||| 
+|||   @w the output to accumulate.
+||| 
+|||   m@ The inner monad.
+||| 
+||| The `pure` function produces the output `neutral`, while `>>=`
+||| combines the outputs of the subcomputations using `<+>`.
+public export
+record WriterT (w : Type) (m : Type -> Type) (a : Type) where
+  constructor MkWriterT
+  unWriterT : w -> m (a, w)
+
+||| Construct an writer computation from a (result,output) computation.
+||| (The inverse of `runWriterT`.)
+public export %inline
+writerT : (Functor m, Semigroup w) => m (a, w) -> WriterT w m a
+writerT f = MkWriterT $ \w => (\(a,w') => (a,w <+> w')) <$> f
+
+||| Unwrap a writer computation.
+||| (The inverse of 'writerT'.)
+public export %inline
+runWriterT : Monoid w => WriterT w m a -> m (a,w)
+runWriterT m = unWriterT m neutral
+
+||| Extract the output from a writer computation.
+public export %inline
+execWriterT : (Functor m, Monoid w) => WriterT w m a -> m w
+execWriterT = map snd . runWriterT
+
+||| Map both the return value and output of a computation using
+||| the given function.
+public export %inline
+mapWriterT :  (Functor n, Monoid w, Semigroup w')
+           => (m (a, w) -> n (b, w')) -> WriterT w m a -> WriterT w' n b
+mapWriterT f m = MkWriterT \w =>
+                  (\(a,w') => (a,w <+> w')) <$> f (runWriterT m)
+
+--------------------------------------------------------------------------------
+--          Writer Functions
+--------------------------------------------------------------------------------
+
+||| The `return` function produces the output `neutral`, while `>>=`
+||| combines the outputs of the subcomputations using `<+>`.
+public export
+Writer : Type -> Type -> Type
+Writer w = WriterT w Identity
+
+||| Unwrap a writer computation as a (result, output) pair.
+public export %inline
+runWriter : Monoid w => Writer w a -> (a, w)
+runWriter = runIdentity . runWriterT
+
+||| Extract the output from a writer computation.
+public export %inline
+execWriter : Monoid w => Writer w a -> w
+execWriter = runIdentity . execWriterT
+
+||| Map both the return value and output of a computation using
+||| the given function.
+public export %inline
+mapWriter :  (Monoid w, Semigroup w')
+          => ((a, w) -> (b, w')) -> Writer w a -> Writer w' b
+mapWriter f = mapWriterT (Id . f . runIdentity)
+
+--------------------------------------------------------------------------------
+--          Implementations
+--------------------------------------------------------------------------------
+
+public export %inline
+Functor m => Functor (WriterT w m) where
+  map f m = MkWriterT \w => (\(a,w') => (f a,w')) <$> unWriterT m w
+
+public export %inline
+Monad m => Applicative (WriterT w m) where
+  pure a = MkWriterT \w => pure (a,w)
+  MkWriterT mf <*> MkWriterT mx =
+    MkWriterT \w => do (f,w1) <- mf w
+                       (a,w2) <- mx w1
+                       pure (f a,w2)
+
+public export %inline
+(Monad m, Alternative m) => Alternative (WriterT w m) where
+  empty = MkWriterT \_ => empty
+  MkWriterT m <|> MkWriterT n = MkWriterT \w => m w <|> n w
+
+public export %inline
+Monad m => Monad (WriterT w m) where
+  m >>= k = MkWriterT \w => do (a,w1) <- unWriterT m w
+                               unWriterT (k a) w1
+
+public export %inline
+MonadTrans (WriterT w) where
+  lift m = MkWriterT \w => map (\a => (a,w)) m
+
+public export %inline
+HasIO m => HasIO (WriterT w m) where
+  liftIO = lift . liftIO
+
+--------------------------------------------------------------------------------
+--          Writer Operations
+--------------------------------------------------------------------------------
+
+||| Construct a writer computation from a (result, output) pair.
+public export %inline
+writer : (Semigroup w, Applicative m) => (a, w) -> WriterT w m a
+writer = writerT . pure
+
+||| `tell w` is an action that produces the output `w`.
+public export %inline
+tell : (Semigroup w, Applicative m) => w -> WriterT w m ()
+tell w' = writer ((), w')
+
+||| `listens f m` is an action that executes the action `m` and adds
+||| the result of applying `f` to the output to the value of the computation.
+public export %inline
+listens :  (Monoid w, Functor m)
+        => (w -> b) -> WriterT w m a -> WriterT w m (a, b)
+listens f m = MkWriterT \w =>
+                (\(a,w') => ((a,f w'),w <+> w')) <$> runWriterT m
+
+||| `listen m` is an action that executes the action `m` and adds its
+||| output to the value of the computation.
+public export %inline
+listen :  (Monoid w, Functor m) => WriterT w m a -> WriterT w m (a, w)
+listen = listens id
+
+||| `pass m` is an action that executes the action `m`, which returns
+||| a value and a function, and returns the value, applying the function
+||| to the output.
+public export %inline
+pass : (Monoid w, Semigroup w', Functor m)
+     => WriterT w m (a, w -> w') -> WriterT w' m a
+pass m = MkWriterT \w =>
+           (\((a,f),w') => (a,w <+> f w')) <$> runWriterT m
+
+||| `censor f m` is an action that executes the action `m` and
+||| applies the function `f` to its output, leaving the return value
+||| unchanged.
+public export %inline
+censor : (Monoid w, Functor m) => (w -> w) -> WriterT w m a -> WriterT w m a
+censor f m = MkWriterT \w =>
+               (\(a,w') => (a,w <+> f w')) <$> runWriterT m
