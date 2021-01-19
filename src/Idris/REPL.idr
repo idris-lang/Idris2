@@ -220,7 +220,7 @@ printClause l i (ImpossibleClause _ lhsraw)
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
 
 
-lookupDefTyName : Name -> Context ->
+lookupDefTyName : Name -> GlobalContext ->
                   Core (List (Name, Int, (Def, ClosedTerm)))
 lookupDefTyName = lookupNameBy (\g => (definition g, type g))
 

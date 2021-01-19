@@ -121,7 +121,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     conVisibility x = x
 
     addDataConstructors : (tag : Int) -> List Constructor ->
-                          Context -> Core Context
+                          GlobalContext -> Core GlobalContext
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (MkCon fc n a ty :: cs) gam
         = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)

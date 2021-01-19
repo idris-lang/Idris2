@@ -379,7 +379,7 @@ searchNames fc rig opts env ty topty (n :: ns)
          getSuccessful fc rig opts False env ty topty
             (map (searchName fc rig opts env nfty topty) visns)
   where
-    visible : Context -> List Namespace -> Name ->
+    visible : GlobalContext -> List Namespace -> Name ->
               Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam
@@ -813,7 +813,7 @@ search fc rig opts topty n_in
               _ => do log "interaction.search" 10 $ show n_in ++ " not found"
                       throw (UndefinedName fc n_in)
   where
-    lookupHoleName : Name -> Context ->
+    lookupHoleName : Name -> GlobalContext ->
                      Core (Maybe (Name, Int, GlobalDef))
     lookupHoleName n defs
         = case !(lookupCtxtExactI n defs) of

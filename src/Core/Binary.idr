@@ -61,13 +61,13 @@ record TTCFile extra where
 
 HasNames a => HasNames (List a) where
   full c ns = full_aux c [] ns
-    where full_aux : Context -> List a -> List a -> Core (List a)
+    where full_aux : GlobalContext -> List a -> List a -> Core (List a)
           full_aux c res [] = pure (reverse res)
           full_aux c res (n :: ns) = full_aux c (!(full c n):: res) ns
 
 
   resolved c ns = resolved_aux c [] ns
-    where resolved_aux : Context -> List a -> List a -> Core (List a)
+    where resolved_aux : GlobalContext -> List a -> List a -> Core (List a)
           resolved_aux c res [] = pure (reverse res)
           resolved_aux c res (n :: ns) = resolved_aux c (!(resolved c n) :: res) ns
 HasNames (Int, FC, Name) where
@@ -111,17 +111,17 @@ HasNames e => HasNames (TTCFile e) where
                          !(full gam trans)
                          !(full gam extra)
     where
-      fullPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
+      fullPair : GlobalContext -> Maybe PairNames -> Core (Maybe PairNames)
       fullPair gam Nothing = pure Nothing
       fullPair gam (Just (MkPairNs t f s))
           = pure $ Just $ MkPairNs !(full gam t) !(full gam f) !(full gam s)
 
-      fullRW : Context -> Maybe RewriteNames -> Core (Maybe RewriteNames)
+      fullRW : GlobalContext -> Maybe RewriteNames -> Core (Maybe RewriteNames)
       fullRW gam Nothing = pure Nothing
       fullRW gam (Just (MkRewriteNs e r))
           = pure $ Just $ MkRewriteNs !(full gam e) !(full gam r)
 
-      fullPrim : Context -> PrimNames -> Core PrimNames
+      fullPrim : GlobalContext -> PrimNames -> Core PrimNames
       fullPrim gam (MkPrimNs mi ms mc)
           = pure $ MkPrimNs !(full gam mi) !(full gam ms) !(full gam mc)
 
@@ -149,17 +149,17 @@ HasNames e => HasNames (TTCFile e) where
                          !(resolved gam trans)
                          !(resolved gam extra)
     where
-      resolvedPair : Context -> Maybe PairNames -> Core (Maybe PairNames)
+      resolvedPair : GlobalContext -> Maybe PairNames -> Core (Maybe PairNames)
       resolvedPair gam Nothing = pure Nothing
       resolvedPair gam (Just (MkPairNs t f s))
           = pure $ Just $ MkPairNs !(resolved gam t) !(resolved gam f) !(resolved gam s)
 
-      resolvedRW : Context -> Maybe RewriteNames -> Core (Maybe RewriteNames)
+      resolvedRW : GlobalContext -> Maybe RewriteNames -> Core (Maybe RewriteNames)
       resolvedRW gam Nothing = pure Nothing
       resolvedRW gam (Just (MkRewriteNs e r))
           = pure $ Just $ MkRewriteNs !(resolved gam e) !(resolved gam r)
 
-      resolvedPrim : Context -> PrimNames -> Core PrimNames
+      resolvedPrim : GlobalContext -> PrimNames -> Core PrimNames
       resolvedPrim gam (MkPrimNs mi ms mc)
           = pure $ MkPrimNs !(resolved gam mi) !(resolved gam ms) !(resolved gam mc)
 

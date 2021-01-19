@@ -314,8 +314,8 @@ data PossibleName : Type where
 -- point at locations in here, and if we have more than one the indices won't
 -- match up. So, this isn't polymorphic.
 export
-record Context where
-    constructor MkContext
+record GlobalContext where
+    constructor MkGlobalContext
     firstEntry : Int -- First entry in the current source file
     nextEntry : Int
     -- Map from full name to its position in the context
@@ -345,13 +345,13 @@ record Context where
     hidden : NameMap () -- Never return these
 
 export
-getContent : Context -> Ref Arr (IOArray ContextEntry)
+getContent : GlobalContext -> Ref Arr (IOArray ContextEntry)
 getContent = content
 
 -- Implemented later, once we can convert to and from full names
 -- Defined in Core.TTC
 export
-decode : Context -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
+decode : GlobalContext -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
 
 initSize : Int
 initSize = 10000
@@ -360,11 +360,11 @@ Grow : Int
 Grow = initSize
 
 export
-initCtxtS : Int -> Core Context
+initCtxtS : Int -> Core GlobalContext
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure $ MkContext
+         pure $ MkGlobalContext
             { firstEntry = 0
             , nextEntry = 0
             , resolvedAs = empty
@@ -379,7 +379,7 @@ initCtxtS s
             }
 
 export
-initCtxt : Core Context
+initCtxt : Core GlobalContext
 initCtxt = initCtxtS initSize
 
 addPossible : Name -> Int ->
@@ -403,7 +403,7 @@ addAlias alias full i ps
                    Just nis => insert nr (Alias alias full i :: nis) ps
 
 export
-newEntry : Name -> Context -> Core (Int, Context)
+newEntry : Name -> GlobalContext -> Core (Int, GlobalContext)
 newEntry n ctxt
     = do let idx = nextEntry ctxt
          let a = content ctxt
@@ -420,7 +420,7 @@ newEntry n ctxt
 -- array if it's out of bounds.
 -- Updates the context with the mapping from name to index
 export
-getPosition : Name -> Context -> Core (Int, Context)
+getPosition : Name -> GlobalContext -> Core (Int, GlobalContext)
 getPosition (Resolved idx) ctxt = pure (idx, ctxt)
 getPosition n ctxt
     = case lookup n (resolvedAs ctxt) of
@@ -428,13 +428,13 @@ getPosition n ctxt
               do pure (idx, ctxt)
            Nothing => newEntry n ctxt
 
-newAlias : Name -> Name -> Context -> Core Context
+newAlias : Name -> Name -> GlobalContext -> Core GlobalContext
 newAlias alias full ctxt
     = do (idx, ctxt) <- getPosition full ctxt
          pure $ record { possibles $= addAlias alias full idx } ctxt
 
 export
-getNameID : Name -> Context -> Maybe Int
+getNameID : Name -> GlobalContext -> Maybe Int
 getNameID (Resolved idx) ctxt = Just idx
 getNameID n ctxt = lookup n (resolvedAs ctxt)
 
@@ -442,7 +442,7 @@ getNameID n ctxt = lookup n (resolvedAs ctxt)
 -- there.
 -- If we're not at the top level, add it to the staging area
 export
-addCtxt : Name -> GlobalDef -> Context -> Core (Int, Context)
+addCtxt : Name -> GlobalDef -> GlobalContext -> Core (Int, GlobalContext)
 addCtxt n val ctxt_in
     = if branchDepth ctxt_in == 0
          then do (idx, ctxt) <- getPosition n ctxt_in
@@ -454,7 +454,7 @@ addCtxt n val ctxt_in
                  pure (idx, record { staging $= insert idx (Decoded val) } ctxt)
 
 export
-addEntry : Name -> ContextEntry -> Context -> Core (Int, Context)
+addEntry : Name -> ContextEntry -> GlobalContext -> Core (Int, GlobalContext)
 addEntry n entry ctxt_in
     = if branchDepth ctxt_in == 0
          then do (idx, ctxt) <- getPosition n ctxt_in
@@ -476,7 +476,7 @@ returnDef True idx def
            _ => Nothing
 
 export
-lookupCtxtExactI : Name -> Context -> Core (Maybe (Int, GlobalDef))
+lookupCtxtExactI : Name -> GlobalContext -> Core (Maybe (Int, GlobalDef))
 lookupCtxtExactI (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just val =>
@@ -493,7 +493,7 @@ lookupCtxtExactI n ctxt
          lookupCtxtExactI (Resolved idx) ctxt
 
 export
-lookupCtxtExact : Name -> Context -> Core (Maybe GlobalDef)
+lookupCtxtExact : Name -> GlobalContext -> Core (Maybe GlobalDef)
 lookupCtxtExact (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just res =>
@@ -516,7 +516,7 @@ lookupCtxtExact n ctxt
          pure (Just def)
 
 export
-lookupContextEntry : Name -> Context -> Core (Maybe (Int, ContextEntry))
+lookupContextEntry : Name -> GlobalContext -> Core (Maybe (Int, ContextEntry))
 lookupContextEntry (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just res => pure (Just (idx, res))
@@ -532,7 +532,7 @@ lookupContextEntry n ctxt
          lookupContextEntry (Resolved idx) ctxt
 
 export
-lookupCtxtName : Name -> Context -> Core (List (Name, Int, GlobalDef))
+lookupCtxtName : Name -> GlobalContext -> Core (List (Name, Int, GlobalDef))
 lookupCtxtName n ctxt
     = case userNameRoot n of
            Nothing => do Just (i, res) <- lookupCtxtExactI n ctxt
@@ -570,13 +570,13 @@ lookupCtxtName n ctxt
                       else lookupPossibles acc ps
               _ => lookupPossibles acc ps
 
-hideName : Name -> Context -> Context
+hideName : Name -> GlobalContext -> GlobalContext
 hideName n ctxt = record { hidden $= insert n () } ctxt
 
-branchCtxt : Context -> Core Context
+branchCtxt : GlobalContext -> Core GlobalContext
 branchCtxt ctxt = pure (record { branchDepth $= S } ctxt)
 
-commitCtxt : Context -> Core Context
+commitCtxt : GlobalContext -> Core GlobalContext
 commitCtxt ctxt
     = case branchDepth ctxt of
            Z => pure ctxt
@@ -645,8 +645,8 @@ getFnName (MkTransform _ _ app _)
 
 public export
 interface HasNames a where
-  full : Context -> a -> Core a
-  resolved : Context -> a -> Core a
+  full : GlobalContext -> a -> Core a
+  resolved : GlobalContext -> a -> Core a
 
 export
 HasNames Name where
@@ -941,13 +941,13 @@ HasNames Transform where
 
 -- Return all the currently defined names
 export
-allNames : Context -> Core (List Name)
+allNames : GlobalContext -> Core (List Name)
 allNames ctxt = traverse (full ctxt) $ map Resolved [1..nextEntry ctxt - 1]
 
 public export
 record Defs where
   constructor MkDefs
-  gamma : Context
+  gamma : GlobalContext
   mutData : List Name -- Currently declared but undefined data types
   currentNS : Namespace -- namespace for current definitions
   nestedNS : List Namespace -- other nested namespaces we can look in
@@ -1267,7 +1267,7 @@ setLinearCheck i chk
          pure ()
 
 export
-setCtxt : {auto c : Ref Ctxt Defs} -> Context -> Core ()
+setCtxt : {auto c : Ref Ctxt Defs} -> GlobalContext -> Core ()
 setCtxt gam
   = do defs <- get Ctxt
        put Ctxt (record { gamma = gam } defs)
@@ -1343,7 +1343,7 @@ addToSave n_in
 
 -- Specific lookup functions
 export
-lookupExactBy : (GlobalDef -> a) -> Name -> Context ->
+lookupExactBy : (GlobalDef -> a) -> Name -> GlobalContext ->
               Core (Maybe a)
 lookupExactBy fn n gam
   = do Just gdef <- lookupCtxtExact n gam
@@ -1351,30 +1351,30 @@ lookupExactBy fn n gam
        pure (Just (fn gdef))
 
 export
-lookupNameBy : (GlobalDef -> a) -> Name -> Context ->
+lookupNameBy : (GlobalDef -> a) -> Name -> GlobalContext ->
              Core (List (Name, Int, a))
 lookupNameBy fn n gam
   = do gdef <- lookupCtxtName n gam
        pure (map (\ (n, i, gd) => (n, i, fn gd)) gdef)
 
 export
-lookupDefExact : Name -> Context -> Core (Maybe Def)
+lookupDefExact : Name -> GlobalContext -> Core (Maybe Def)
 lookupDefExact = lookupExactBy definition
 
 export
-lookupDefName : Name -> Context -> Core (List (Name, Int, Def))
+lookupDefName : Name -> GlobalContext -> Core (List (Name, Int, Def))
 lookupDefName = lookupNameBy definition
 
 export
-lookupTyExact : Name -> Context -> Core (Maybe ClosedTerm)
+lookupTyExact : Name -> GlobalContext -> Core (Maybe ClosedTerm)
 lookupTyExact = lookupExactBy type
 
 export
-lookupTyName : Name -> Context -> Core (List (Name, Int, ClosedTerm))
+lookupTyName : Name -> GlobalContext -> Core (List (Name, Int, ClosedTerm))
 lookupTyName = lookupNameBy type
 
 export
-lookupDefTyExact : Name -> Context -> Core (Maybe (Def, ClosedTerm))
+lookupDefTyExact : Name -> GlobalContext -> Core (Maybe (Def, ClosedTerm))
 lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 
 -- private names are only visible in this namespace if their namespace

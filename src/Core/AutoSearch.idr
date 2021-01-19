@@ -476,7 +476,7 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
             then anyOne fc env topty elabs
             else exactlyOne fc env topty target elabs
   where
-    visible : Context ->
+    visible : GlobalContext ->
               List Namespace -> Name -> Core (Maybe (Name, GlobalDef))
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam

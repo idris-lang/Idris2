@@ -1024,7 +1024,7 @@ TTC Transform where
            rhs <- fromBuf b
            pure (MkTransform {vars} n env lhs rhs)
 
--- decode : Context -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
+-- decode : GlobalContext -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
 Core.Context.decode gam idx update (Coded bin)
     = do b <- newRef Bin bin
          def <- fromBuf b
