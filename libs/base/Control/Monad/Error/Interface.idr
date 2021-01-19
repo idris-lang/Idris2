@@ -2,6 +2,10 @@
 module Control.Monad.Error.Interface
 
 import Control.Monad.Error.Either
+import Control.Monad.Maybe
+import Control.Monad.Reader.Reader
+import Control.Monad.State.State
+import Control.Monad.Trans
 
 ||| The strategy of combining computations that can throw exceptions
 ||| by bypassing bound functions
@@ -72,74 +76,24 @@ MonadError e (Either e) where
   Left  l `catchError` h = h l
   Right r `catchError` _ = Right r
 
--- instance Monad m => MonadError e (ExceptT e m) where
---     throwError = ExceptT.throwE
---     catchError = ExceptT.catchE
--- 
--- -- ---------------------------------------------------------------------------
--- -- Instances for other mtl transformers
--- --
--- -- All of these instances need UndecidableInstances,
--- -- because they do not satisfy the coverage condition.
--- 
--- instance MonadError e m => MonadError e (IdentityT m) where
---     throwError = lift . throwError
---     catchError = Identity.liftCatch catchError
--- 
--- instance MonadError e m => MonadError e (MaybeT m) where
---     throwError = lift . throwError
---     catchError = Maybe.liftCatch catchError
--- 
--- instance MonadError e m => MonadError e (ReaderT r m) where
---     throwError = lift . throwError
---     catchError = Reader.liftCatch catchError
--- 
--- instance (Monoid w, MonadError e m) => MonadError e (LazyRWS.RWST r w s m) where
---     throwError = lift . throwError
---     catchError = LazyRWS.liftCatch catchError
--- 
--- instance (Monoid w, MonadError e m) => MonadError e (StrictRWS.RWST r w s m) where
---     throwError = lift . throwError
---     catchError = StrictRWS.liftCatch catchError
--- 
--- instance MonadError e m => MonadError e (LazyState.StateT s m) where
---     throwError = lift . throwError
---     catchError = LazyState.liftCatch catchError
--- 
--- instance MonadError e m => MonadError e (StrictState.StateT s m) where
---     throwError = lift . throwError
---     catchError = StrictState.liftCatch catchError
--- 
--- instance (Monoid w, MonadError e m) => MonadError e (LazyWriter.WriterT w m) where
---     throwError = lift . throwError
---     catchError = LazyWriter.liftCatch catchError
--- 
--- instance (Monoid w, MonadError e m) => MonadError e (StrictWriter.WriterT w m) where
---     throwError = lift . throwError
---     catchError = StrictWriter.liftCatch catchError
--- 
--- #if MIN_VERSION_transformers(0,5,6)
--- -- | @since 2.3
--- instance (Monoid w, MonadError e m) => MonadError e (CPSRWS.RWST r w s m) where
---     throwError = lift . throwError
---     catchError = CPSRWS.liftCatch catchError
--- 
--- -- | @since 2.3
--- instance (Monoid w, MonadError e m) => MonadError e (CPSWriter.WriterT w m) where
---     throwError = lift . throwError
---     catchError = CPSWriter.liftCatch catchError
--- #endif
--- 
--- #if MIN_VERSION_transformers(0,5,3)
--- -- | @since 2.3
--- instance
---   ( Monoid w
---   , MonadError e m
--- #if !MIN_VERSION_base(4,8,0)
---   , Functor m
--- #endif
---   ) => MonadError e (AccumT w m) where
---     throwError = lift . throwError
---     catchError = Accum.liftCatch catchError
--- #endif
--- 
+public export
+Monad m => MonadError e (EitherT e m) where
+  throwError = throwE
+  catchError = catchE
+
+public export
+MonadError e m => MonadError e (MaybeT m) where
+  throwError = lift . throwError
+  catchError (MkMaybeT m) f = MkMaybeT (catchError m (runMaybeT . f))
+
+public export
+MonadError e m => MonadError e (ReaderT r m) where
+  throwError = lift . throwError
+  catchError (MkReaderT m) f =
+    MkReaderT \e => catchError (m e) (runReaderT e . f)
+
+public export
+MonadError e m => MonadError e (StateT r m) where
+  throwError = lift . throwError
+  catchError (ST m) f =
+    ST \s => catchError (m s) (runStateT s . f)
