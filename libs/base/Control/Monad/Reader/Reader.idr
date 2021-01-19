@@ -9,6 +9,12 @@ record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor MkReaderT
   1 runReaderT' : stateType -> m a
 
+||| Transform the computation inside a @ReaderT@.
+public export %inline
+mapReaderT : (m a -> n b) -> ReaderT r m a -> ReaderT r n b
+mapReaderT f m = MkReaderT \st => f (runReaderT' m st)
+
+
 public export
 implementation Functor f => Functor (ReaderT stateType f) where
   map f (MkReaderT g) = MkReaderT (\st => map f (g st))
