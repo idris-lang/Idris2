@@ -19,40 +19,40 @@ public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
   MkEitherT : m (Either e a) -> EitherT e m a
 
-export
+public export
 %inline
 runEitherT : EitherT e m a -> m (Either e a)
 runEitherT (MkEitherT x) = x
 
-export
+public export
 eitherT : Monad m => (a -> m c) -> (b -> m c) -> EitherT a m b -> m c
 eitherT f g x = runEitherT x >>= either f g
 
 ||| map the underlying computation
 ||| The basic 'unwrap, apply, rewrap' of this transformer.
-export
+public export
 %inline
 mapEitherT : (m (Either e a) -> n (Either e' a')) -> EitherT e m a -> EitherT e' n a'
 mapEitherT f = MkEitherT . f . runEitherT
 
-export
+public export
 bimapEitherT : Functor m => (a -> c) -> (b -> d)
             -> EitherT a m b -> EitherT c m d
 bimapEitherT f g x = mapEitherT (map (either (Left . f) (Right . g))) x
 
 ||| Analogous to Left, aka throwE
-export
+public export
 %inline
 left : Applicative m => e -> EitherT e m a
 left = MkEitherT . pure . Left
 
 ||| Analogous to Right, aka pure for EitherT
-export
+public export
 %inline
 right : Applicative m => a -> EitherT e m a
 right = MkEitherT . pure . Right
 
-export
+public export
 swapEitherT : Functor m => EitherT e m a -> EitherT a m e
 swapEitherT = mapEitherT (map (either Right Left))
 
@@ -61,12 +61,12 @@ swapEitherT = mapEitherT (map (either Right Left))
 -------------------------------------------------
 
 ||| aka `left`
-export
+public export
 %inline
 throwE : Applicative m => e -> EitherT e m a
 throwE = MkEitherT . pure . Left
 
-export
+public export
 catchE : Monad m => EitherT e m a -> (e -> EitherT e' m a) -> EitherT e' m a
 catchE et f
   = MkEitherT $ runEitherT et >>= either (runEitherT . f) (pure . Right)
