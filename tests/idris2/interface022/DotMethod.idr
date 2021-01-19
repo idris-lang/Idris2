@@ -15,9 +15,13 @@ interface J i where
  (.jdot) : i -> Int
  (.jdot) _ = theInt (the (Proxy i) MkProxy)
 
+ val : i -> Int
+ val v = 10 + v .jdot
+
 J D where
   theInt _ = 0
 
 J E where
   theInt _ = 0
   (.jdot) _ = 1
+  val _ = 2
