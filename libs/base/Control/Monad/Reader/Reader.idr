@@ -3,15 +3,6 @@ module Control.Monad.Reader.Reader
 import Control.Monad.Identity
 import Control.Monad.Trans
 
-||| A computation which runs in a static context and produces an output
-public export
-interface Monad m => MonadReader stateType m | m where
-  ||| Get the context
-  ask : m stateType
-
-  ||| `local f c` runs the computation `c` in an environment modified by `f`.
-  local : MonadReader stateType m => (stateType -> stateType) -> m a -> m a
-
 ||| The transformer on which the Reader monad is based
 public export
 record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
@@ -44,12 +35,6 @@ implementation MonadTrans (ReaderT stateType) where
   lift x = MkReaderT (\_ => x)
 
 public export
-implementation Monad m => MonadReader stateType (ReaderT stateType m) where
-  ask = MkReaderT (\st => pure st)
-
-  local f (MkReaderT action) = MkReaderT (action . f)
-
-public export
 implementation HasIO m => HasIO (ReaderT stateType m) where
   liftIO f = MkReaderT (\_ => liftIO f)
 
@@ -58,11 +43,6 @@ implementation (Monad f, Alternative f) => Alternative (ReaderT stateType f) whe
   empty = lift empty
 
   (MkReaderT f) <|> (MkReaderT g) = MkReaderT (\st => f st <|> g st)
-
-||| Evaluate a function in the context held by this computation
-public export
-asks : MonadReader stateType m => (stateType -> a) -> m a
-asks f = ask >>= pure . f
 
 ||| Unwrap and apply a ReaderT monad computation
 public export

@@ -14,7 +14,6 @@ module Control.Monad.Error.Either
 -------------------------------------------------
 
 import Control.Monad.Trans
-import Control.Monad.Reader
 import Control.Monad.State
 
 public export
@@ -144,11 +143,6 @@ MonadTrans (EitherT e) where
 public export
 HasIO m => HasIO (EitherT e m) where
   liftIO act = MkEitherT $ liftIO (io_bind act (pure . Right))
-
-public export
-MonadReader r m => MonadReader r (EitherT e m) where
-  ask = lift ask
-  local f (MkEitherT x) = MkEitherT (local f x)
 
 public export
 MonadState s m => MonadState s (EitherT e m) where
