@@ -180,11 +180,8 @@ racketTests : TestPool
 racketTests = MkTestPool [Racket]
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
+    , "futures001"
     ]
-
-racketTests : TestPool
-racketTests = MkTestPool [Racket]
-    ["concurrency001"]
 
 nodeTests : TestPool
 nodeTests = MkTestPool [Node]
