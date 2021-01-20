@@ -90,7 +90,7 @@ execRWS m r s = let (_,s1,w) = runRWS m r s
 public export %inline
 mapRWS :  (Monoid w, Semigroup w')
        => ((a, s, w) -> (b, s, w')) -> RWS r w s a -> RWS r w' s b
-mapRWS f = mapRWST (Id . f . runIdentity)
+mapRWS f = mapRWST \(Id p) => Id (f p)
 
 ||| `withRWS f m` executes action `m` with an initial environment
 ||| and state modified by applying `f`.

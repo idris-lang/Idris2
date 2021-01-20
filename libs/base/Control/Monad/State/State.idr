@@ -59,7 +59,7 @@ execState s = fst . runState s
 ||| the given function.
 public export %inline
 mapState : ((s, a) -> (s, b)) -> State s a -> State s b
-mapState f = mapStateT (Id . f . runIdentity)
+mapState f = mapStateT \(Id p) => Id (f p)
 
 --------------------------------------------------------------------------------
 --          Implementations

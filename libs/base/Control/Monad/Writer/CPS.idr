@@ -70,7 +70,7 @@ execWriter = runIdentity . execWriterT
 public export %inline
 mapWriter :  (Monoid w, Semigroup w')
           => ((a, w) -> (b, w')) -> Writer w a -> Writer w' b
-mapWriter f = mapWriterT (Id . f . runIdentity)
+mapWriter f = mapWriterT \(Id p) => Id (f p)
 
 --------------------------------------------------------------------------------
 --          Implementations
