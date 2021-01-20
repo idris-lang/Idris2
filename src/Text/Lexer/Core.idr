@@ -171,12 +171,12 @@ tokenise pred line col acc tmap str
 export
 lex : TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lex tmap str
-    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (fastUnpack str) in
+    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (unpack str) in
           (ts, (l, c, fastPack str'))
 
 export
 lexTo : (WithBounds a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
-    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (fastUnpack str) in
+    = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
           (ts, (l, c, fastPack str'))

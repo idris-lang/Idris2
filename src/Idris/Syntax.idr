@@ -431,7 +431,7 @@ data REPLCmd : Type where
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
-     ProofSearch : Name -> REPLCmd
+     TypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
@@ -447,6 +447,7 @@ data REPLCmd : Type where
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
+     RunShellCommand : String -> REPLCmd
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd

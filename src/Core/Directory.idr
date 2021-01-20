@@ -88,15 +88,19 @@ nsToSource loc ns
 -- namespace for it
 export
 pathToNS : String -> Maybe String -> String -> Core ModuleIdent
-pathToNS wdir sdir fname
-    = let sdir = fromMaybe "" sdir
-          base = if isAbsolute fname then wdir </> sdir else sdir
-        in
-          case stripPrefix base fname of
-               Nothing => throw (UserError ("Source file " ++ show fname
-                                            ++ " is not in the source directory "
-                                            ++ show (wdir </> sdir)))
-               Just p => pure $ unsafeFoldModuleIdent $ map show $ reverse $ (parse (p <.> "")).body
+pathToNS wdir sdir fname =
+  let
+    sdir = fromMaybe "" sdir
+    base = if isAbsolute fname then wdir </> sdir else sdir
+  in
+    case Path.dropBase base fname of
+      Nothing => throw (UserError (
+          "Source file "
+        ++ show fname
+        ++ " is not in the source directory "
+        ++ show (wdir </> sdir)))
+      Just relPath =>
+        pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir

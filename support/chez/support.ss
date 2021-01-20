@@ -89,6 +89,9 @@
 (define (blodwen-string-iterator-new s)
   0)
 
+(define (blodwen-string-iterator-to-string _ s ofs f)
+  (f (substring s ofs (string-length s))))
+
 (define (blodwen-string-iterator-next s ofs)
   (if (>= ofs (string-length s))
       (vector 0)  ; EOF

@@ -24,6 +24,7 @@ data IDECommand
      = Interpret String
      | LoadFile String (Maybe Integer)
      | TypeOf String (Maybe (Integer, Integer))
+     | NameAt String (Maybe (Integer, Integer))
      | CaseSplit Integer Integer String
      | AddClause Integer String
      -- deprecated: | AddProofClause
@@ -48,6 +49,7 @@ data IDECommand
      | ElaborateTerm     String -- then change String to Term, as in idris1
      | PrintDefinition String
      | ReplCompletions String
+     | EnableSyntax Bool
      | Version
      | GetOptions
 
@@ -71,6 +73,11 @@ getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n])
 getIDECommand (SExpList [SymbolAtom "type-of", StringAtom n,
                          IntegerAtom l, IntegerAtom c])
     = Just $ TypeOf n (Just (l, c))
+getIDECommand (SExpList [SymbolAtom "name-at", StringAtom n])
+    = Just $ NameAt n Nothing
+getIDECommand (SExpList [SymbolAtom "name-at", StringAtom n,
+                         IntegerAtom l, IntegerAtom c])
+    = Just $ NameAt n (Just (l, c))
 getIDECommand (SExpList [SymbolAtom "case-split", IntegerAtom l, IntegerAtom c,
                          StringAtom n])
     = Just $ CaseSplit l c n
@@ -135,6 +142,8 @@ getIDECommand (SExpList [SymbolAtom "print-definition", StringAtom n])
     = Just $ PrintDefinition n
 getIDECommand (SExpList [SymbolAtom "repl-completions", StringAtom n])
     = Just $ ReplCompletions n
+getIDECommand (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
+    = Just $ EnableSyntax b
 getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
 getIDECommand _ = Nothing
@@ -146,6 +155,8 @@ putIDECommand (LoadFile fname Nothing)        = (SExpList [SymbolAtom "load-file
 putIDECommand (LoadFile fname (Just line))    = (SExpList [SymbolAtom "load-file", StringAtom fname, IntegerAtom line])
 putIDECommand (TypeOf cmd Nothing)            = (SExpList [SymbolAtom "type-of", StringAtom cmd])
 putIDECommand (TypeOf cmd (Just (line, col))) = (SExpList [SymbolAtom "type-of", StringAtom cmd, IntegerAtom line, IntegerAtom col])
+putIDECommand (NameAt cmd Nothing)            = (SExpList [SymbolAtom "name-at", StringAtom cmd])
+putIDECommand (NameAt cmd (Just (line, col))) = (SExpList [SymbolAtom "name-at", StringAtom cmd, IntegerAtom line, IntegerAtom col])
 putIDECommand (CaseSplit line col n)          = (SExpList [SymbolAtom "case-split", IntegerAtom line, IntegerAtom col, StringAtom n])
 putIDECommand (AddClause line n)              = (SExpList [SymbolAtom "add-clause", IntegerAtom line, StringAtom n])
 putIDECommand (AddMissing line n)             = (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom n])
@@ -154,7 +165,7 @@ putIDECommand (ExprSearch line n exprs mode)  = (SExpList [SymbolAtom "proof-sea
   getMode : Bool -> SExp
   getMode True  = SymbolAtom "all"
   getMode False = SymbolAtom "other"
-putIDECommand ExprSearchNext                  = SymbolAtom "proof-search--next"
+putIDECommand ExprSearchNext                  = SymbolAtom "proof-search-next"
 putIDECommand (GenerateDef line n)            = (SExpList [SymbolAtom "generate-def", IntegerAtom line, StringAtom n])
 putIDECommand GenerateDefNext                 = SymbolAtom "generate-def-next"
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
@@ -177,6 +188,7 @@ putIDECommand (ElaborateTerm     tm)          = (SExpList [SymbolAtom "elaborate
 putIDECommand (PrintDefinition n)             = (SExpList [SymbolAtom "print-definition", StringAtom n])
 putIDECommand (ReplCompletions n)             = (SExpList [SymbolAtom "repl-completions", StringAtom n])
 putIDECommand (Directive n)             = (SExpList [SymbolAtom "directive", StringAtom n])
+putIDECommand (EnableSyntax b)                = (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
 putIDECommand GetOptions                      = (SExpList [SymbolAtom "get-options"])
 putIDECommand Version                         = SymbolAtom "version"
 

@@ -64,7 +64,7 @@ rawTokens delims ls =
 ||| Merge the tokens into a single source file.
 reduce : List (WithBounds Token) -> List String -> String
 reduce [] acc = fastAppend (reverse acc)
-reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc = 
+reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc =
   -- newline will always be tokenized as a single token
   if x == "\n"
   then reduce rest ("\n"::acc)

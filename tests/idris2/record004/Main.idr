@@ -57,7 +57,7 @@ rect =
 -- such as variables or parenthesised expressions,
 -- have been renamed to simplerExpr,
 -- and an extra layer of syntax has been inserted.
--- 
+--
 --   simpleExpr ::= (.field)+               -- parses as PPostfixAppPartial
 --                | simplerExpr (.field)+   -- parses as PPostfixApp
 --                | simplerExpr             -- (parses as whatever it used to)

@@ -55,20 +55,6 @@ addConstToPreamble name def =
     let v = "const " ++ newName ++ " = (" ++ def ++ ");"
     addToPreamble name newName v
 
-requireSafe : String -> String
-requireSafe = pack . map (\c => case c of
-                                     '@' => '_'
-                                     '/' => '_'
-                                     '-' => '_'
-                                     _ => c
-                         ) . unpack
-addRequireToPreamble : {auto c : Ref ESs ESSt} -> String -> Core String
-addRequireToPreamble name =
-  do
-    let newName = "__require_" ++ requireSafe name
-    let v = "const " ++ newName ++ " = require(" ++ jsString name ++ ");"
-    addToPreamble name newName v
-
 addSupportToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addSupportToPreamble name code =
   addToPreamble name name code
@@ -78,19 +64,16 @@ addStringIteratorToPreamble =
   do
     let defs = "
 function __prim_stringIteratorNew(str) {
-  return str[Symbol.iterator]();
+  return 0;
+}
+function __prim_stringIteratorToString(_, str, it, f) {
+  return f(str.slice(it));
 }
 function __prim_stringIteratorNext(str, it) {
-  const char = it.next();
-  if (char.done) {
-    return {h: 0}; // EOF
-  } else {
-    return {
-      h: 1, // Character
-      a1: char.value,
-      a2: it
-    };
-  }
+  if (it >= str.length)
+    return {h: 0};
+  else
+    return {h: 1, a1: str.charAt(it), a2: it + 1};
 }"
     let name = "stringIterator"
     let newName = esName name
@@ -333,11 +316,6 @@ makeForeign n x =
     let (ty, def) = readCCPart x
     case ty of
       "lambda" => pure $ "const " ++ jsName n ++ " = (" ++ def ++ ")\n"
-      "lambdaRequire" =>
-        do
-          let (libs, def_) = readCCPart def
-          traverseList1 addRequireToPreamble (split (==',') libs)
-          pure $ "const " ++ jsName n ++ " = (" ++ def_ ++ ")\n"
       "support" =>
         do
           let (name, lib_) = break (== ',') def
@@ -351,10 +329,11 @@ makeForeign n x =
           case def of
             "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
             "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
-            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
+            "toString" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorToString;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\", \"toString\"")
 
 
-      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"lambdaRequire\", \"support\"")
+      _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"support\"")
 
 foreignDecl : {auto d : Ref Ctxt Defs} -> {auto c : Ref ESs ESSt} -> Name -> List String -> Core String
 foreignDecl n ccs =
@@ -373,9 +352,8 @@ jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ "(" ++ x ++ "[" ++ p ++ "
 jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ "(" ++ x ++ "[" ++ p ++ "] = " ++ v ++ ")"
 jsPrim (NS _ (UN "prim__os")) [] =
   do
-    os <- addRequireToPreamble "os"
     let oscalc = "(o => o === 'linux'?'unix':o==='win32'?'windows':o)"
-    sysos <- addConstToPreamble "sysos" (oscalc ++ "(" ++ os ++ ".platform())")
+    sysos <- addConstToPreamble "sysos" (oscalc ++ "(require('os').platform())")
     pure sysos
 jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
 jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"

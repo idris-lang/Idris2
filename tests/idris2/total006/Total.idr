@@ -1,5 +1,5 @@
-count : Nat -> Stream Nat
-count n = n :: count (S n)
+streamCount : Nat -> Stream Nat
+streamCount n = n :: streamCount (S n)
 
 badCount : Nat -> Stream Nat
 badCount n = n :: map S (badCount n)

@@ -21,6 +21,8 @@ import Data.Nat
 import Data.Strings
 import Data.Vect
 
+import Idris.Env
+
 import System
 import System.Directory
 import System.File
@@ -30,12 +32,12 @@ import System.Info
 
 findRacket : IO String
 findRacket =
-  do env <- getEnv "RACKET"
+  do env <- idrisGetEnv "RACKET"
      pure $ fromMaybe "/usr/bin/env racket" env
 
 findRacoExe : IO String
 findRacoExe =
-  do env <- getEnv "RACKET_RACO"
+  do env <- idrisGetEnv "RACKET_RACO"
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
 schHeader : String -> String

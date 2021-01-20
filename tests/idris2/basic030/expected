@@ -1,6 +1,6 @@
 1/1: Building arity (arity.idr)
-Error: While processing right hand side of foo. When unifying (1 _ : Nat) -> MyN and MyN.
-Mismatch between: (1 _ : Nat) -> MyN and MyN.
+Error: While processing right hand side of foo. When unifying Nat -> MyN and MyN.
+Mismatch between: Nat -> MyN and MyN.
 
 arity.idr:4:16--4:21
    |

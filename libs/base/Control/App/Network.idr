@@ -14,8 +14,8 @@ interface Has [Exception NetworkError] e => Network e where
   newSocket : (1 p : (1 s : Socket Ready) -> App e a) -> App e a
   done : (1 s : Socket Closed) -> App e ()
 
-bind : (1 sock : Socket Ready) -> 
-       (addr : Maybe SocketAddress) -> (port : Port) -> 
+bind : (1 sock : Socket Ready) ->
+       (addr : Maybe SocketAddress) -> (port : Port) ->
        Either NetworkError (Socket Bound)
 
 {-

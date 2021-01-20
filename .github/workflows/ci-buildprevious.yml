@@ -1,0 +1,36 @@
+name: Build From Previous Version
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+
+env:
+  SCHEME: scheme
+  IDRIS2_TESTS_CG: chez
+  IDRIS2_VERSION: 0.3.0
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install build dependencies
+        run: |
+          sudo apt-get install -y chezscheme
+          echo "::add-path::$HOME/.idris2/bin"
+      - name : Build previous version
+        run: |
+          wget https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz
+          tar zxvf idris2-$IDRIS2_VERSION.tgz
+          cd Idris2-$IDRIS2_VERSION
+          make bootstrap-build && make install
+          cd ..
+      - name: Build from previous version
+        run: make all

@@ -748,7 +748,7 @@ mutual
              appCon fc defs (reflectionttimp "ITransform") [w', x', y', z']
     reflect fc defs lhs env (IRunElabDecl w x)
         = throw (GenericMsg fc "Can't reflect a %runElab")
-    reflect fc defs lhs env (IPragma x)
+    reflect fc defs lhs env (IPragma _ x)
         = throw (GenericMsg fc "Can't reflect a pragma")
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x

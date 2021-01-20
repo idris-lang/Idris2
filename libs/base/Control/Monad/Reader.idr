@@ -16,7 +16,7 @@ interface Monad m => MonadReader stateType m | m where
 public export
 record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where
   constructor MkReaderT
-  runReaderT' : stateType -> m a
+  1 runReaderT' : stateType -> m a
 
 public export
 implementation Functor f => Functor (ReaderT stateType f) where

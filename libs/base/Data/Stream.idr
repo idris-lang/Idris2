@@ -2,10 +2,7 @@ module Data.Stream
 
 import Data.List
 
-||| The first element of an infinite stream
-public export
-head : Stream a -> a
-head (x::xs) = x
+%default total
 
 ||| Drop the first n elements from the stream
 ||| @ n how many elements to drop
@@ -25,6 +22,10 @@ repeat x = x :: repeat x
 public export
 iterate : (f : a -> a) -> (x : a) -> Stream a
 iterate f x = x :: iterate f (f x)
+
+public export
+unfoldr : (b -> (a, b)) -> b -> Stream a
+unfoldr f c = let (a, n) = f c in a :: unfoldr f n
 
 ||| Get the nth element of a stream
 public export
@@ -118,6 +119,6 @@ Monad Stream where
 -- Properties
 --------------------------------------------------------------------------------
 
-lengthTake : (1 n : Nat) -> (xs : Stream a) -> length (take n xs) = n
+lengthTake : (n : Nat) -> (xs : Stream a) -> length (take n xs) = n
 lengthTake Z _ = Refl
 lengthTake (S n) (x :: xs) = cong S (lengthTake n xs)

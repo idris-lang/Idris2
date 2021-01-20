@@ -19,7 +19,7 @@ import Control.Monad.State
 
 public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
-  MkEitherT : (1 _ : m (Either e a)) -> EitherT e m a
+  MkEitherT : m (Either e a) -> EitherT e m a
 
 export
 %inline
@@ -78,9 +78,6 @@ catchE et f
 -- Interface Implementations
 -------------------------------------------------
 
-on : (b -> b -> c) -> (a -> b) -> a -> a -> c
-on f g x y = g x `f` g y
-
 public export
 Eq (m (Either e a)) => Eq (EitherT e m a) where
  (==) = (==) `on` runEitherT
@@ -110,7 +107,7 @@ Functor m => Functor (EitherT e m) where
 public export
 Foldable m => Foldable (EitherT e m) where
   foldr f acc (MkEitherT e)
-    = foldr (\x,xs => either (const acc) (`f` xs) x) acc e
+    = foldr (\x,xs => either (const xs) (`f` xs) x) acc e
 
   null (MkEitherT e) = null e
 

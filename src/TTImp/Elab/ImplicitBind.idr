@@ -149,7 +149,7 @@ bindUnsolved {vars} fc elabmode _
              logTerm "elab" 5 ("Added unbound implicit") bindtm
              unify (case elabmode of
                          InLHS _ => inLHS
-                         _ => inTermP False)
+                         _ => inTerm)
                    fc env tm bindtm
              pure ()
 
@@ -317,11 +317,11 @@ getToBind fc elabmode NONE env excepts
 getToBind {vars} fc elabmode impmode env excepts
     = do solveConstraints (case elabmode of
                                 InLHS _ => inLHS
-                                _ => inTermP False) Normal
+                                _ => inTerm) Normal
          bindUnsolved fc elabmode impmode
          solveConstraints (case elabmode of
                                 InLHS _ => inLHS
-                                _ => inTermP False) Normal
+                                _ => inTerm) Normal
          defs <- get Ctxt
          est <- get EST
          let tob = reverse $ filter (\x => not (fst x `elem` excepts)) $
@@ -487,11 +487,11 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
                              nest env tm exp
          solveConstraints (case elabMode elabinfo of
                                 InLHS c => inLHS
-                                _ => inTermP False) Normal
+                                _ => inTerm) Normal
          solveConstraintsAfter constart
                           (case elabMode elabinfo of
                                 InLHS c => inLHS
-                                _ => inTermP False) Defaults
+                                _ => inTerm) Defaults
          ust <- get UST
          catch (retryDelayed (delayedElab ust))
                (\err =>

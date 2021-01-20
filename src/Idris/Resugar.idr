@@ -430,7 +430,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
-  toPDecl (IPragma _) = pure Nothing
+  toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
 
 export

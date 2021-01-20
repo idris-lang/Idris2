@@ -32,30 +32,35 @@ getRetTy defs ty
              "Can only add hints for concrete return types")
 
 processFnOpt : {auto c : Ref Ctxt Defs} ->
-               FC -> Name -> FnOpt -> Core ()
-processFnOpt fc ndef Inline
+               FC -> Nat -> Name -> FnOpt -> Core ()
+processFnOpt fc _ ndef Inline
     = setFlag fc ndef Inline
-processFnOpt fc ndef TCInline
+processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
-processFnOpt fc ndef (Hint d)
+processFnOpt fc Z ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
-processFnOpt fc ndef (GlobalHint a)
+processFnOpt fc _ ndef (Hint d)
+    = do log "elab" 5 $ "Adding local hint " ++ show !(toFullNames ndef)
+         addLocalHint ndef
+processFnOpt fc Z ndef (GlobalHint a)
     = addGlobalHint ndef a
-processFnOpt fc ndef ExternFn
+processFnOpt fc _ ndef (GlobalHint a)
+    = throw (GenericMsg fc "%globalhint is not valid in local definitions")
+processFnOpt fc _ ndef ExternFn
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
-processFnOpt fc ndef (ForeignFn _)
+processFnOpt fc _ ndef (ForeignFn _)
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
-processFnOpt fc ndef Invertible
+processFnOpt fc _ ndef Invertible
     = setFlag fc ndef Invertible
-processFnOpt fc ndef (Totality tot)
+processFnOpt fc _ ndef (Totality tot)
     = setFlag fc ndef (SetTotal tot)
-processFnOpt fc ndef Macro
+processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
-processFnOpt fc ndef (SpecArgs ns)
+processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
@@ -296,7 +301,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          let name = Resolved idx
-         traverse (processFnOpt fc name) opts
+         traverse (processFnOpt fc (length env) name) opts
          -- If no function-specific totality pragma has been used, attach the default totality
          unless (any isTotalityReq opts) $
            setFlag fc name (SetTotal !getDefaultTotalityOption)

@@ -30,9 +30,9 @@ contType m Once q a b = (1 x : a) -> Lin m q b
 contType m Many q a b = (x : a) -> Lin m q b
 
 public export
-(>>=) : {p : _} 
-     -> (1 f : Lin m p a) 
-     -> (1 k : contType m p q a b) 
+(>>=) : {p : _}
+     -> (1 f : Lin m p a)
+     -> (1 k : contType m p q a b)
      -> Lin m q b
 (>>=) {p=Once} = BindOnce
 (>>=) {p=Many} = BindMany
@@ -70,7 +70,7 @@ data Door : DoorState -> Type where
 interface Doored (m : Type -> Type) where
     newDoor    : One m (Door Closed)
     knock      : (1 d : Door t)      -> One m (Door t)
-    openDoor   : (1 d : Door Closed) 
+    openDoor   : (1 d : Door Closed)
              ->  One m (Res Bool (\ok => Door (if ok then Open else Closed)))
     closeDoor  : (1 d : Door Open)   -> One m (Door Closed)
     deleteDoor : (1 d : Door Closed) -> Any m ()

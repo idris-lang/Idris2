@@ -24,15 +24,16 @@ import System
 import System.Info
 import System.File
 
+import Idris.Env
 import Idris.Version
 import Utils.Hex
 import Utils.Path
 
 findCC : IO String
 findCC
-    = do Nothing <- getEnv "IDRIS2_CC"
+    = do Nothing <- idrisGetEnv "IDRIS2_CC"
            | Just cc => pure cc
-         Nothing <- getEnv "CC"
+         Nothing <- idrisGetEnv "CC"
            | Just cc => pure cc
          pure "cc"
 

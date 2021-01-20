@@ -29,8 +29,19 @@ fromString : (str : String) -> StringIterator str
 -- This function uses a linear string iterator
 -- so that backends can use mutating iterators.
 export
-withString : (str : String) -> ((1 it : StringIterator str) -> a) -> a
+withString : (str : String) -> ((it : StringIterator str) -> a) -> a
 withString str f = f (fromString str)
+
+||| Runs the action `f` on the slice `res` of the original string `str` represented by the
+||| iterator `it`
+%foreign
+  "scheme:blodwen-string-iterator-to-string"
+  "javascript:stringIterator:toString"
+export
+withIteratorString : (str : String)
+                  -> (1 it : StringIterator str)
+                  -> (f : (res : String) -> a)
+                  -> a
 
 -- We use a custom data type instead of Maybe (Char, StringIterator)
 -- to remove one level of pointer indirection
@@ -51,13 +62,13 @@ data UnconsResult : String -> Type where
   "scheme:blodwen-string-iterator-next"
   "javascript:stringIterator:next"
 export
-uncons : (str : String) -> (1 it : StringIterator str) -> UnconsResult str
+uncons : (str : String) -> (it : StringIterator str) -> UnconsResult str
 
 export
 foldl : (accTy -> Char -> accTy) -> accTy -> String -> accTy
 foldl op acc str = withString str (loop acc)
   where
-    loop : accTy -> (1 it : StringIterator str) -> accTy
+    loop : accTy -> (it : StringIterator str) -> accTy
     loop acc it =
       case uncons str it of
         EOF => acc
@@ -67,7 +78,7 @@ export
 unpack : String -> LazyList Char
 unpack str = withString str unpack'
   where
-    unpack' : (1 it : StringIterator str) -> LazyList Char
+    unpack' : (it : StringIterator str) -> LazyList Char
     unpack' it =
       case uncons str it of
         EOF => []
