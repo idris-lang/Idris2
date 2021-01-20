@@ -133,25 +133,6 @@ HasIO m => HasIO (RWST r w s m) where
   liftIO = lift . liftIO
 
 --------------------------------------------------------------------------------
---          Reader Operations
---------------------------------------------------------------------------------
-
-||| Retrieve a function of the current environment.
-public export %inline
-asks : Applicative m => (r -> a) -> RWST r w s m a
-asks f = MkRWST \r,s,w => pure (f r,s,w)
-
-||| Fetch the value of the environment.
-public export %inline
-ask : Applicative m => RWST r w s m r
-ask = asks id
-
-||| Execute a computation in a modified environment
-public export %inline
-local : (r -> r) -> RWST r w s m a -> RWST r w s m a
-local f m = MkRWST \r,s,w => unRWST m (f r) s w
-
---------------------------------------------------------------------------------
 --          Writer Operations
 --------------------------------------------------------------------------------
 

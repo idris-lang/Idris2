@@ -4,7 +4,7 @@ import Control.Monad.Maybe
 import Control.Monad.Error.Either
 import Control.Monad.Reader.Reader
 import Control.Monad.State.State
-import Control.Monad.RWS.CPS as RWS
+import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
@@ -21,7 +21,7 @@ interface Monad m => MonadReader stateType m | m where
 ||| Evaluate a function in the context held by this computation
 public export
 asks : MonadReader stateType m => (stateType -> a) -> m a
-asks f = ask >>= pure . f
+asks f = map f ask
 
 --------------------------------------------------------------------------------
 --          Implementations
@@ -35,8 +35,8 @@ Monad m => MonadReader stateType (ReaderT stateType m) where
 
 public export %inline
 Monad m => MonadReader r (RWST r w s m) where
-  ask   = RWS.ask
-  local = RWS.local
+  ask       = MkRWST \r,s,w => pure (r,s,w)
+  local f m = MkRWST \r,s,w => unRWST m (f r) s w
 
 public export %inline
 MonadReader r m => MonadReader r (EitherT e m) where
