@@ -1,0 +1,30 @@
+1/1: Building TypeAtLocalVars (TypeAtLocalVars.idr)
+Main> z : Type
+Main> f : Nat -> Int -> Bool -> () -> z
+Main> a : Nat
+Main> b : Int
+Main> c : Bool
+Main> d : ()
+Main> a' : Nat
+Main> a : Nat
+Main> b' : Int
+Main> b : Int
+Main> c' : Bool
+Main> c' : Bool
+Main> c : Bool
+Main> v1 : Vect a Nat
+Main> a : Nat
+Main> v1 : Vect a Nat
+Main> a' : Nat
+Main> b' : Int
+Main> c' : Bool
+Main> d' : ()
+Main> v1 : Vect a Nat
+Main> v2 : Vect x Nat
+Main> d' : ()
+Main> d' : ()
+Main> d : ()
+Main> v2 : Vect x Nat
+Main> x : Nat
+Main> v2 : Vect x Nat
+Main> Bye for now!
