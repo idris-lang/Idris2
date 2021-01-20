@@ -88,10 +88,10 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
            RawImp -> RawImp
     mkTy [] ret = ret
     mkTy ((n, c, imp, argty) :: args) ret
-        = IPi fc c imp n argty (mkTy args ret)
+        = IPi EmptyFC c imp n argty (mkTy args ret)
 
     recTy : RawImp
-    recTy = apply (IVar fc tn) (map (\(n, c, p, tm) => (n, IVar fc n, p)) params)
+    recTy = apply (IVar fc tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
       where
         ||| Apply argument to list of explicit or implicit named arguments
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
@@ -161,7 +161,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                           = apply (IVar fc con)
                                     (replicate done (Implicit fc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar fc fldNameStr]
+                                           then [IBindVar EmptyFC fldNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit fc True)))
                    let lhs = IApp fc (IVar fc projNameNS)
@@ -169,7 +169,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                     then lhs_exp
                                     else INamedApp fc lhs_exp (UN fldNameStr)
                                              (IBindVar fc fldNameStr))
-                   let rhs = IVar fc (UN fldNameStr)
+                   let rhs = IVar EmptyFC (UN fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef fc projNameNS [PatClause fc lhs rhs])
