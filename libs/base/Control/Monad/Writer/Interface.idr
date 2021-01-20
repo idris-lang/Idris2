@@ -4,9 +4,9 @@ import Control.Monad.Maybe
 import Control.Monad.Error.Either
 import Control.Monad.Reader.Reader
 import Control.Monad.State.State
-import Control.Monad.RWS.CPS as RWS
+import Control.Monad.RWS.CPS
 import Control.Monad.Trans
-import Control.Monad.Writer.CPS as Writer
+import Control.Monad.Writer.CPS
 
 ||| MonadWriter interface
 |||
@@ -68,10 +68,15 @@ public export %inline
 
 public export %inline
 (Monoid w, Monad m) => MonadWriter w (RWST r w s m) where
-  writer = RWS.writer
-  tell   = RWS.tell
-  listen = RWS.listen
-  pass   = RWS.pass
+  writer (a,w') = MkRWST \_,s,w => pure (a,s,w <+> w')
+
+  tell w' = writer ((), w')
+
+  listen m = MkRWST \r,s,w =>
+               (\(a,s',w') => ((a,w'),s',w <+> w')) <$> runRWST m r s
+
+  pass m = MkRWST \r,s,w =>
+             (\((a,f),s',w') => (a,s',w <+> f w')) <$> runRWST m r s
 
 public export %inline
 MonadWriter w m => MonadWriter w (EitherT e m) where
