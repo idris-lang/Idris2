@@ -22,8 +22,7 @@ public export
 interface (Monoid w, Monad m) => MonadWriter w m | m where
   ||| `writer (a,w)` embeds a simple writer action.
   writer : (a,w) -> m a
-  writer (a, w) = do tell w
-                     pure a
+  writer (a, w) = tell w $> a
 
   ||| `tell w` is an action that produces the output `w`.
   tell : w -> m ()
