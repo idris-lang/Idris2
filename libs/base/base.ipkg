@@ -46,6 +46,7 @@ modules = Control.App,
           Data.Vect.Elem,
           Data.Vect.Quantifiers,
 
+          Debug.Panic,
           Debug.Trace,
 
           Decidable.Decidable,
