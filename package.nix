@@ -1,5 +1,8 @@
-{ stdenv, fetchFromGitHub, makeWrapper
-, clang, chez
+{ stdenv
+, chez
+, clang
+, fetchFromGitHub
+, makeWrapper
 }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -21,9 +24,9 @@ stdenv.mkDerivation rec {
     ++ stdenv.lib.optional stdenv.isDarwin "OS=";
 
   # The name of the main executable of pkgs.chez is `scheme`
-  buildFlags = [ "bootstrap-build" "SCHEME=scheme" ];
+  buildFlags = [ "bootstrap" "SCHEME=scheme" ];
 
-  checkTarget = "bootstrap-test";
+  checkTarget = "test";
 
   # TODO: Move this into its own derivation, such that this can be changed
   #       without having to recompile idris2 every time.
