@@ -178,7 +178,7 @@ nodeTests : TestPool
 nodeTests = MkTestPool [Node]
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
-    , "node017", "node018", "node019", "node021", "node022"
+    , "node017", "node018", "node019", "node021", "node022", "node023"
     -- , "node14", "node020"
     , "reg001"
     , "syntax001"
