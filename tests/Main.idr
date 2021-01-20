@@ -197,7 +197,7 @@ nodeTests = MkTestPool [Node]
 
 ideModeTests : TestPool
 ideModeTests = MkTestPool []
-  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004" 
+  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004"
   ]
 
 preludeTests : TestPool
@@ -207,7 +207,7 @@ preludeTests = MkTestPool []
 
 templateTests : TestPool
 templateTests = MkTestPool []
-  [ "simple-test", "ttimp", "with-ipkg" 
+  [ "simple-test", "ttimp", "with-ipkg"
   ]
 
 main : IO ()
