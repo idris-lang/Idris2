@@ -131,34 +131,3 @@ MonadTrans (RWST r w s) where
 public export %inline
 HasIO m => HasIO (RWST r w s m) where
   liftIO = lift . liftIO
-
---------------------------------------------------------------------------------
---          Writer Operations
---------------------------------------------------------------------------------
-
-||| Construct a state monad computation from a state transformer function.
-public export %inline
-state : Applicative m => (s -> (s, a)) -> RWST r w s m a
-state f = MkRWST \_,s,w => let (s',a) = f s in pure (a,s',w)
-
-||| Get a specific component of the state, using a projection function
-||| supplied.
-public export %inline
-gets : Applicative m =>(s -> a) -> RWST r w s m a
-gets f = MkRWST \_,s,w => pure (f s,s,w)
-
-||| Fetch the current value of the state within the monad.
-public export %inline
-get : Applicative m =>RWST r w s m s
-get = gets id
-
-||| `put s` sets the state within the monad to `s`.
-public export %inline
-put : Applicative m => s -> RWST r w s m ()
-put s = MkRWST \_,_,w => pure ((),s,w)
-
-||| `modify f` is an action that updates the state to the result of
-||| applying `f` to the current state.
-public export %inline
-modify : Applicative m =>(s -> s) -> RWST r w s m ()
-modify f = MkRWST \_,s,w => pure ((),f s,w)

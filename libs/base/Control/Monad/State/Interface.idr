@@ -4,7 +4,7 @@ import Control.Monad.Maybe
 import Control.Monad.Error.Either
 import Control.Monad.Reader.Reader
 import Control.Monad.State.State
-import Control.Monad.RWS.CPS as RWS
+import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
@@ -61,9 +61,9 @@ MonadState s m => MonadState s (MaybeT m) where
 
 public export %inline
 Monad m => MonadState s (RWST r w s m) where
-  get = RWS.get
-  put = RWS.put
-  state = RWS.state
+  get     = MkRWST \_,s,w => pure (s,s,w)
+  put s   = MkRWST \_,_,w => pure ((),s,w)
+  state f = MkRWST \_,s,w => let (s',a) = f s in pure (a,s',w)
 
 public export %inline
 MonadState s m => MonadState s (ReaderT r m) where
