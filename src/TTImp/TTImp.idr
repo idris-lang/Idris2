@@ -498,6 +498,11 @@ implicitsAs : {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> RawImp -> Core RawImp
 implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
   where
+    -- Takes the function application expression which is the lhs of a clause
+    -- and decomposes it into the underlying function symbol and the variables
+    -- bound by appearing as arguments, and then passes this onto `findImps`.
+    -- More precisely, implicit and explicit arguments are recorded separately,
+    -- into `is` and `es` respectively.
     setAs : List (Maybe Name) -> List (Maybe Name) -> RawImp -> Core RawImp
     setAs is es (IApp loc f a)
         = do f' <- setAs is (Nothing :: es) f
@@ -529,6 +534,14 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
                          pure (x :: ns')
         updateNs n [] = Nothing
 
+        -- Finds the missing implicits which should be added to the lhs of the
+        -- original pattern clause.
+        --
+        -- The first argument, `ns`, specifies which implicit variables alredy
+        -- appear in the lhs, and therefore need not be added.
+        -- The second argument, `es`, specifies which *explicit* variables appear
+        -- in the lhs: this is used to determine when to stop searching for further
+        -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
         -- don't add implicits coming after explicits that aren't given
         findImps ns es (NBind fc x (Pi _ _ Explicit _) sc)
