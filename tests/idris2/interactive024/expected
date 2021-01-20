@@ -1,0 +1,6 @@
+1/1: Building TypeAtAsPatterns (TypeAtAsPatterns.idr)
+Main> x : Maybe Nat
+Main> y : Nat
+Main> x : Maybe Nat
+Main> y : Nat
+Main> Bye for now!
