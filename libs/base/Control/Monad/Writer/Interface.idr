@@ -41,23 +41,30 @@ interface (Monoid w, Monad m) => MonadWriter w m | m where
 ||| the result of applying @f@ to the output to the value of the computation.
 public export
 listens : MonadWriter w m => (w -> b) -> m a -> m (a, b)
-listens f m = do (a, w) <- listen m
-                 pure (a, f w)
+listens f = map (\(a,w) => (a,f w)) . listen
 
 ||| `censor f m` is an action that executes the action `m` and
 ||| applies the function `f` to its output, leaving the return value
 ||| unchanged.
 public export
 censor : MonadWriter w m => (w -> w) -> m a -> m a
-censor f m = pass $ do a <- m
-                       pure (a, f)
+censor f = pass . map (\a => (a,f))
+
+--------------------------------------------------------------------------------
+--          Implementations
+--------------------------------------------------------------------------------
 
 public export %inline
 (Monoid w, Monad m) => MonadWriter w (WriterT w m) where
-  writer = Writer.writer
-  tell   = Writer.tell
-  listen = Writer.listen
-  pass   = Writer.pass
+  writer   = writerT . pure
+
+  listen m = MkWriterT \w =>
+               (\(a,w') => ((a,w'),w <+> w')) <$> runWriterT m
+
+  tell w'  = writer ((), w')
+
+  pass m   = MkWriterT \w =>
+               (\((a,f),w') => (a,w <+> f w')) <$> runWriterT m
 
 public export %inline
 (Monoid w, Monad m) => MonadWriter w (RWST r w s m) where
