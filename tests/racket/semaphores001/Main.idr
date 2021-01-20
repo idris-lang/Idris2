@@ -1,6 +1,6 @@
 module Main
 
-import System.Concurrency.Raw
+import System.Concurrency
 
 main : IO ()
 main = do
