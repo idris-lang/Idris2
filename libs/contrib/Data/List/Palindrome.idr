@@ -22,8 +22,8 @@ palindromeReverse : (xs : List a) -> Palindrome xs -> reverse xs = xs
 palindromeReverse [] Empty = Refl
 palindromeReverse [_] Single = Refl
 palindromeReverse ([x] ++ ys ++ [x]) (Multi pf) =
-  rewrite reverseAppend ([x] ++ ys) [x] in
-    rewrite reverseAppend [x] ys in
+  rewrite sym $ revAppend ([x] ++ ys) [x] in
+    rewrite sym $ revAppend [x] ys in
       rewrite palindromeReverse ys pf in
         Refl
 
@@ -38,7 +38,7 @@ reversePalindromeEqualsLemma x x' xs prf = equateInnerAndOuter flipHeadX
     flipHeadX : reverse (xs ++ [x']) ++ [x] = x :: (xs ++ [x'])
     flipHeadX = rewrite (sym (reverseCons x (xs ++ [x']))) in prf
     flipLastX' : reverse (xs ++ [x']) = x :: xs -> (x' :: reverse xs) = (x :: xs)
-    flipLastX' prf = rewrite (sym $ reverseAppend xs [x']) in prf
+    flipLastX' prf = rewrite (revAppend xs [x']) in prf
     cancelOuter : (reverse (xs ++ [x'])) = x :: xs -> reverse xs = xs
     cancelOuter prf = snd (consInjective (flipLastX' prf))
     equateInnerAndOuter
