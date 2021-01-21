@@ -1,5 +1,6 @@
 module Data.String.Iterator
 
+import Control.Monad.Identity
 import public Data.List.Lazy
 
 %default total
@@ -29,7 +30,7 @@ fromString : (str : String) -> StringIterator str
 -- This function uses a linear string iterator
 -- so that backends can use mutating iterators.
 export
-withString : (str : String) -> ((it : StringIterator str) -> a) -> a
+withString : (str : String) -> ((1 it : StringIterator str) -> a) -> a
 withString str f = f (fromString str)
 
 ||| Runs the action `f` on the slice `res` of the original string `str` represented by the
@@ -62,13 +63,13 @@ data UnconsResult : String -> Type where
   "scheme:blodwen-string-iterator-next"
   "javascript:stringIterator:next"
 export
-uncons : (str : String) -> (it : StringIterator str) -> UnconsResult str
+uncons : (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 
 export
 foldl : (accTy -> Char -> accTy) -> accTy -> String -> accTy
 foldl op acc str = withString str (loop acc)
   where
-    loop : accTy -> (it : StringIterator str) -> accTy
+    loop : accTy -> (1 it : StringIterator str) -> accTy
     loop acc it =
       case uncons str it of
         EOF => acc
@@ -76,10 +77,15 @@ foldl op acc str = withString str (loop acc)
 
 export
 unpack : String -> LazyList Char
-unpack str = withString str unpack'
+unpack str = runIdentity $ withString str unpack'
   where
-    unpack' : (it : StringIterator str) -> LazyList Char
+    -- This is a Functor instance of Identity, but linear in second argument
+    %inline
+    mapId : forall a, b. (a -> b) -> (1 x : Identity a) -> Identity b
+    mapId f (Id x) = Id (f x)
+
+    unpack' : (1 it : StringIterator str) -> Identity (Lazy (LazyList Char))
     unpack' it =
       case uncons str it of
-        EOF => []
-        Character c it' => c :: Delay (unpack' $ assert_smaller it it')
+        EOF => pure []
+        Character c it' => mapId (c ::) (unpack' $ assert_smaller it it')
