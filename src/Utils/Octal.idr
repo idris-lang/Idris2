@@ -49,4 +49,3 @@ fromOctChars = fromOctChars' 1
 export
 fromOct : String -> Maybe Int
 fromOct = fromOctChars . unpack
-

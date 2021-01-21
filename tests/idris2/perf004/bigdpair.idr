@@ -28,4 +28,3 @@ eqBigs = Refl
 
 eqBigs' : bigEx' 800000 = bigEx' 800000
 eqBigs' = Refl
-

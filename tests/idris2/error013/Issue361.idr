@@ -8,5 +8,3 @@ main : IO ()
 main = printLn $ T == T
 
 %default covering
-
-

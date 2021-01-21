@@ -45,4 +45,3 @@ checkDot rig elabinfo nest env fc reason tm (Just gexpty)
              pure (metaval, gexpty)
         _ => throw (GenericMsg fc ("Dot pattern not valid here (Not LHS) "
                                    ++ show tm))
-

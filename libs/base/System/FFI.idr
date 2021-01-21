@@ -32,4 +32,3 @@ public export %inline
 setField : {s : _} -> Struct s fs -> (n : String) ->
            {auto fieldok : FieldType n ty fs} -> ty -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
-

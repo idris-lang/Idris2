@@ -14,4 +14,3 @@ plus_ind n m
                    (\k, k_rec => S k_rec) -- Inductive step plus_ind (S k) m
                                           -- where k_rec = plus_ind k m
                    n
-

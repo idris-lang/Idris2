@@ -380,4 +380,3 @@ DivisionTheoremUniqueness numer denom denom_nz q r x prf =
   rewrite sym $ sndDivmodNatNZeqMod numer denom denom_nz denom_nz in
   rewrite DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf in
   (Refl, Refl)
-

@@ -44,4 +44,3 @@ natToBin Z = Nil
 natToBin k with (parity k)
    natToBin (j + j)     | Even = False :: natToBin j
    natToBin (S (j + j)) | Odd  = True  :: natToBin j
-

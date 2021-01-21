@@ -30,4 +30,3 @@ c = MkFlexiString "hello"
 
 d : FlexiString {k = ASCII}
 d = MkFlexiString ['h', 'i']
-

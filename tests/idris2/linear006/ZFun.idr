@@ -11,4 +11,3 @@ baz = test foo -- fine!
 
 bar : Nat
 bar = test foo -- bad!
-

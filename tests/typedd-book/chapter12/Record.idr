@@ -7,4 +7,3 @@ record Album where
        constructor MkAlbum
        title : String
        tracks : List String
-

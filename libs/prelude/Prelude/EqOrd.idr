@@ -211,5 +211,3 @@ Ord a => Ord b => Ord (a, b) where
   compare (x1, y1) (x2, y2)
       = if x1 /= x2 then compare x1 x2
                     else compare y1 y2
-
-

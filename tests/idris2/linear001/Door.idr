@@ -41,4 +41,3 @@ doorProg
             | Left d => deleteDoor d
          d <- closeDoor d
          deleteDoor d
-

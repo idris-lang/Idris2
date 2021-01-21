@@ -170,4 +170,3 @@ lazyFilterRec pred (x :: xs) with (pred x)
         rewrite appendAssociative (reverse revSkipped) [y] (z :: zs) in
           rewrite sym (reverseOntoSpec [y] revSkipped) in
             filterHelper (y :: revSkipped) (z :: zs)
-

@@ -24,4 +24,3 @@ doSort (S k) = do let xs = sort $ randishInts 12000 $ natToInteger k
 main : IO ()
 main = do max <- getLine
           doSort (integerToNat (cast max))
-
