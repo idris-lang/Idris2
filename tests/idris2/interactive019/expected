@@ -5,6 +5,8 @@ Main.sameSig : Char -> String
 
 Data.Strings.singleton : Char -> String
 
+Totality: total
+
 Prelude.Types.cast : Char -> String
 
 Prelude.Show.show : Char -> String
