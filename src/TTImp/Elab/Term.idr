@@ -1,6 +1,6 @@
 module TTImp.Elab.Term
 
-import Data.StringMap
+import Libraries.Data.StringMap
 
 import Core.Context
 import Core.Core

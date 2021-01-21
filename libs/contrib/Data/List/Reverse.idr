@@ -5,6 +5,10 @@ import Data.Nat
 import Data.List
 import Data.List.Equalities
 
+-- Additional properties coming out of base's Data.List
+--  - revAppend (i.e. reverse xs ++ reverse ys = reverse (ys ++ xs)
+--  - reverseInvolutive (i.e. reverse (reverse xs) = xs)
+
 %default total
 
 export
@@ -30,17 +34,6 @@ export
 reverseCons : (x : a) -> (xs : List a) -> reverse (x::xs) = reverse xs `snoc` x
 reverseCons x xs = reverseOntoSpec [x] xs
 
-||| Reversing an append is appending reversals backwards.
-export
-reverseAppend : (xs, ys : List a) ->
-  reverse (xs ++ ys) = reverse ys ++ reverse xs
-reverseAppend [] ys = sym (appendNilRightNeutral (reverse ys))
-reverseAppend (x :: xs) ys =
-  rewrite reverseCons x (xs ++ ys) in
-    rewrite reverseAppend xs ys in
-      rewrite reverseCons x xs in
-        sym $ appendAssociative (reverse ys) (reverse xs) [x]
-
 ||| A slow recursive definition of reverse.
 public export
 0 slowReverse : List a -> List a
@@ -53,23 +46,13 @@ reverseEquiv : (xs : List a) -> slowReverse xs = reverse xs
 reverseEquiv [] = Refl
 reverseEquiv (x :: xs) =
   rewrite reverseEquiv xs in
-    rewrite reverseAppend [x] xs in
+    rewrite revAppend [x] xs in
       Refl
 
 ||| Reversing a singleton list is a no-op.
 export
 reverseSingletonId : (x : a) -> reverse [x] = [x]
 reverseSingletonId _ = Refl
-
-||| Reversing a reverse gives the original.
-export
-reverseReverseId : (xs : List a) -> reverse (reverse xs) = xs
-reverseReverseId [] = Refl
-reverseReverseId (x :: xs) =
-  rewrite reverseCons x xs in
-    rewrite reverseAppend (reverse xs) [x] in
-      rewrite reverseReverseId xs in
-        Refl
 
 ||| Reversing onto preserves list length.
 export
@@ -89,6 +72,6 @@ reverseLength xs = reverseOntoLength xs []
 export
 reverseEqual : (xs, ys : List a) -> reverse xs = reverse ys -> xs = ys
 reverseEqual xs ys prf =
-  rewrite sym $ reverseReverseId xs in
+  rewrite sym $ reverseInvolutive xs in
     rewrite prf in
-      reverseReverseId ys
+      reverseInvolutive ys

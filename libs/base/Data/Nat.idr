@@ -115,7 +115,7 @@ lteTransitive : LTE n m -> LTE m p -> LTE n p
 lteTransitive LTEZero y = LTEZero
 lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
 
-export
+public export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)

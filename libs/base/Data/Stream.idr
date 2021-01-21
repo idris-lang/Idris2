@@ -4,11 +4,6 @@ import Data.List
 
 %default total
 
-||| The first element of an infinite stream
-public export
-head : Stream a -> a
-head (x::xs) = x
-
 ||| Drop the first n elements from the stream
 ||| @ n how many elements to drop
 public export
@@ -124,6 +119,6 @@ Monad Stream where
 -- Properties
 --------------------------------------------------------------------------------
 
-lengthTake : (1 n : Nat) -> (xs : Stream a) -> length (take n xs) = n
+lengthTake : (n : Nat) -> (xs : Stream a) -> length (take n xs) = n
 lengthTake Z _ = Refl
 lengthTake (S n) (x :: xs) = cong S (lengthTake n xs)

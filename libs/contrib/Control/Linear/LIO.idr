@@ -16,7 +16,7 @@ data Usage = None | Linear | Unrestricted
 
 -- Not sure about this, it is a horrible hack, but it makes the notation
 -- a bit nicer
-public export 
+public export
 fromInteger : (x : Integer) -> {auto _ : Either (x = 0) (x = 1)} -> Usage
 fromInteger 0 = None
 fromInteger 1 = Linear
@@ -95,7 +95,7 @@ Applicative io => Applicative (L io) where
 
 export
 (Applicative m, LinearBind m) => Monad (L m) where
-  (>>=) = Bind
+  (>>=) a k = Bind a k
 
 -- prioritise this one for concrete LIO, so we get the most useful
 -- linearity annotations.
@@ -115,9 +115,9 @@ pure1 : (1 x : a) -> L io {use=1} a
 pure1 = Pure1
 
 export
-(LinearBind io, HasIO io) => HasIO (L io) where
-  liftIO p = Action (liftIO p)
+(LinearBind io, HasLinearIO io) => HasLinearIO (L io) where
+  liftIO1 p = Action (liftIO1 p)
 
 public export
 LinearIO : (Type -> Type) -> Type
-LinearIO io = (LinearBind io, HasIO io)
+LinearIO io = (LinearBind io, HasLinearIO io)

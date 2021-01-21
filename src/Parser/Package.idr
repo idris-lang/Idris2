@@ -2,12 +2,12 @@ module Parser.Package
 
 import public Parser.Lexer.Package
 import public Parser.Rule.Package
-import public Text.Lexer
-import public Text.Parser
+import public Libraries.Text.Lexer
+import public Libraries.Text.Parser
 import public Parser.Support
 
 import System.File
-import Utils.Either
+import Libraries.Utils.Either
 
 %default total
 

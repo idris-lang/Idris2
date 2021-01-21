@@ -18,4 +18,3 @@ public export
 ||| Right-to-left monadic bind, flipped version of `>>=`.
 (=<<) : Monad m => (a -> m b) -> m a -> m b
 (=<<) = flip (>>=)
-

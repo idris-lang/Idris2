@@ -30,11 +30,10 @@ expression.
 
 .. code-block:: idris
 
-    %foreign "node:lambdaRequire:fs:fp=>__require_fs.fstatSync(fp.fd, {bigint: true}).size"
+    %foreign "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: true}).size"
     prim__fileSize : FilePtr -> PrimIO Int
 
-``lambdaRequire`` also accepts a list of separated modules and assigns
-them the name ``__require_<module name>``.
+``require`` can be used to import javascript modules.
 
 For completion below an example of a foreign available only with ``browser`` codegen:
 

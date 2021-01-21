@@ -21,4 +21,3 @@ filterKeys test input with (storeView input)
        = if test value
             then key :: filterKeys test store | rec
             else filterKeys test store | rec
-

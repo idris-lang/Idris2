@@ -45,4 +45,3 @@ holetest1 x y = plus ?this y
 
 holetest2 : (1 x : Nat) -> (1 y : Nat) -> Nat
 holetest2 x y = plus x ?that
-

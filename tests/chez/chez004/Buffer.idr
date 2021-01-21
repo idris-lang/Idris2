@@ -61,4 +61,3 @@ main
 --              | Left err => do putStrLn "Buffer read fail"
 --                               closeFile f
 --          closeFile f
-

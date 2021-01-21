@@ -48,16 +48,18 @@ import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
 import TTImp.Interactive.MakeLemma
 import TTImp.TTImp
+import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.ANameMap
+import Libraries.Data.NameMap
 import Data.Stream
 import Data.Strings
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
-import Text.PrettyPrint.Prettyprinter.Render.Terminal
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import System
 import System.File
@@ -607,6 +609,38 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
+docsOrSignature : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  FC -> Name -> Core (List String)
+docsOrSignature fc n
+    = do syn  <- get Syn
+         defs <- get Ctxt
+         all@(_ :: _) <- lookupCtxtName n (gamma defs)
+             | _ => throw (UndefinedName fc n)
+         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
+                                     (map fst all)
+             | [] => typeSummary defs
+         getDocsFor fc n
+  where
+    typeSummary : Defs -> Core (List String)
+    typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
+                            | Nothing => pure []
+                          ty <- normaliseHoles defs [] (type def)
+                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
+
+equivTypes : {auto c : Ref Ctxt Defs} ->
+             (ty1 : ClosedTerm) ->
+             (ty2 : ClosedTerm) ->
+             Core Bool
+equivTypes ty1 ty2 = do defs <- get Ctxt
+                        True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
+                          | False => pure False
+                        newRef UST initUState
+                        catch (do res <- unify inTerm replFC [] ty1 ty2
+                                  case res of
+                                       (MkUnifyResult _ _ _ NoLazy) => pure True
+                                       _ => pure False)
+                              (\err => pure False)
 
 ||| Process a single `REPLCmd`
 |||
@@ -715,14 +749,23 @@ process (Exec ctm)
     = execExp ctm
 process Help
     = pure RequestedHelp
-process (ProofSearch n_in)
-    = do defs <- get Ctxt
-         [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName replFC n_in)
-              | ns => throw (AmbiguousName replFC (map fst ns))
-         tm <- search replFC top False 1000 n ty []
-         itm <- resugar [] !(normaliseHoles defs [] tm)
-         pure $ ProofFound itm
+process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))
+    = do defs <- branch
+         let ctxt = gamma defs
+         rawTy <- desugar AnyExpr [] searchTerm
+         let bound = piBindNames replFC [] rawTy
+         (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
+         ty' <- toResolvedNames ty
+         filteredDefs <- do names   <- allNames ctxt
+                            defs    <- catMaybes <$> (traverse (flip lookupCtxtExact ctxt) names)
+                            allDefs <- traverse (resolved ctxt) defs
+                            (flip filterM) allDefs (\def => equivTypes def.type ty')
+
+         put Ctxt defs
+         doc <- traverse (docsOrSignature replFC) $ (.fullname) <$> filteredDefs
+         pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
+process (TypeSearch _)
+    = pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of

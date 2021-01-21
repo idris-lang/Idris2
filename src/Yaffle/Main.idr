@@ -13,7 +13,7 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.UnifyState
-import Utils.Path
+import Libraries.Utils.Path
 
 import TTImp.Parser
 import TTImp.ProcessDecls

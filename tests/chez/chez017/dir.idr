@@ -12,4 +12,3 @@ main = do Right () <- createDir "testdir"
           printLn ok
           writeFile "test.txt" "hello\n"
           printLn !currentDir
-

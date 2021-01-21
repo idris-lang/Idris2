@@ -3,8 +3,8 @@ module Core.Name
 import Data.List
 import Data.Strings
 import Decidable.Equality
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Core.Name.Namespace
 

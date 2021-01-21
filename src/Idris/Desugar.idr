@@ -9,8 +9,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
-import Data.StringMap
-import Data.ANameMap
+import Libraries.Data.StringMap
+import Libraries.Data.ANameMap
 
 import Idris.DocString
 import Idris.Syntax
@@ -25,8 +25,8 @@ import TTImp.Parser
 import TTImp.TTImp
 import TTImp.Utils
 
-import Utils.Shunting
-import Utils.String
+import Libraries.Utils.Shunting
+import Libraries.Utils.String
 
 import Control.Monad.State
 import Data.List

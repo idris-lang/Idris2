@@ -10,6 +10,11 @@ case `uname -s` in
         ;;
 esac
 
+if test -z "${SCHEME}"; then
+    echo "SCHEME env var is not set" >&2
+    exit 1
+fi
+
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:`dirname "$DIR"`/"idris2_app""
 export PATH="`dirname "$DIR"`/"idris2_app":$PATH"
 ${SCHEME} --script "`dirname $DIR`"/"idris2_app/idris2-boot.so" "$@"

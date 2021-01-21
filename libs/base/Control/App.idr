@@ -213,21 +213,21 @@ get tag @{MkState r}
           MkAppRes (Right val)
 
 export
-put : (0 tag : _) -> State tag t e => (1 val : t) -> App {l} e ()
+put : (0 tag : _) -> State tag t e => (val : t) -> App {l} e ()
 put tag @{MkState r} val
     = MkApp $
           prim_app_bind (toPrimApp $ writeIORef r val) $ \val =>
           MkAppRes (Right ())
 
 export
-modify : (0 tag : _) -> State tag t e => (1 p : t -> t) -> App {l} e ()
+modify : (0 tag : _) -> State tag t e => (p : t -> t) -> App {l} e ()
 modify tag f
     = let (>>=) = bindL in
           do x <- get tag
              put tag (f x)
 
 export
-new : t -> (1 p : State tag t e => App {l} e a) -> App {l} e a
+new : t -> (p : State tag t e => App {l} e a) -> App {l} e a
 new val prog
     = MkApp $
          prim_app_bind (toPrimApp $ newIORef val) $ \ref =>

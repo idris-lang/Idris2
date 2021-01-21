@@ -21,9 +21,9 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -442,7 +442,11 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name
     methNameUpdate : (Name, Name, t) -> (Name, Name)
-    methNameUpdate (mn, fn, _) = (UN (nameRoot mn), fn)
+    methNameUpdate (UN mn, fn, _) = (UN mn, fn)
+    methNameUpdate (RF mn, fn, _) = (RF mn, fn)
+    methNameUpdate (NS _ mn, fn, p) = methNameUpdate (mn, fn, p)
+    methNameUpdate (mn, fn, p) = (UN (nameRoot mn), fn) -- probably impossible
+
 
     findMethName : List (Name, Name) -> FC -> Name -> Core Name
     findMethName ns fc n

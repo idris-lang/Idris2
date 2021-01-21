@@ -26,7 +26,7 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 import System.File
 

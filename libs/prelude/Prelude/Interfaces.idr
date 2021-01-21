@@ -228,6 +228,11 @@ public export
 foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
 foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 
+||| Maps each element to a value and combine them
+public export
+foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
+foldMap f = foldr ((<+>) . f) neutral
+
 ||| Combine each element of a structure into a monoid.
 public export
 concat : (Foldable t, Monoid a) => t a -> a

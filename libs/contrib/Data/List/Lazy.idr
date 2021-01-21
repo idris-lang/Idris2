@@ -8,9 +8,37 @@ module Data.List.Lazy
 public export
 data LazyList : Type -> Type where
   Nil : LazyList a
-  (::) : (1 x : a) -> (1 xs : Lazy (LazyList a)) -> LazyList a
+  (::) : (x : a) -> (xs : Lazy (LazyList a)) -> LazyList a
 
 --- Interface implementations ---
+
+public export
+Eq a => Eq (LazyList a) where
+  [] == [] = True
+  x :: xs == y :: ys = x == y && xs == ys
+  _ == _ = False
+
+public export
+Ord a => Ord (LazyList a) where
+  compare [] [] = EQ
+  compare [] (x :: xs) = LT
+  compare (x :: xs) [] = GT
+  compare (x :: xs) (y ::ys)
+     = case compare x y of
+            EQ => compare xs ys
+            c => c
+
+export
+Show a => Show (LazyList a) where
+  show []       = "[]"
+  show (h :: t) = "[" ++ show' "" h t ++ "]"
+    where
+      -- Idris didn't like the lazyness involved when using the
+      -- same implementation as for `List`, therefore, this was
+      -- adjusted to first force the head and tail of the list.
+      show' : String -> a -> LazyList a -> String
+      show' acc h Nil       = acc ++ show h
+      show' acc h (x :: xs) = show' (acc ++ show h ++ ", ") x xs
 
 public export
 Semigroup (LazyList a) where

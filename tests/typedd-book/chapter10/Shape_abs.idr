@@ -26,5 +26,3 @@ area : Shape -> Double
 area (Triangle base height) = 0.5 * rectangle_area base height
 area (Rectangle length height) = rectangle_area length height
 area (Circle radius) = pi * radius * radius
-
-

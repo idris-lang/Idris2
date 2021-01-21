@@ -21,7 +21,7 @@ import TTImp.Unelab
 import TTImp.TTImp
 import TTImp.Utils
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
 
@@ -324,7 +324,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
              log "elab.interface" 5 $ "Method declarations: " ++ show meths
 
              consts <- traverse (getMethDecl env nest params meth_names)
-                                (map (\c => (fc, linear, [], c))
+                                (map (\c => (fc, top, [], c))
                                    (map notData constraints))
              log "elab.interface" 5 $ "Constraints: " ++ show consts
 

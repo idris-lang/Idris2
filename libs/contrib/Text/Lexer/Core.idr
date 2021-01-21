@@ -208,4 +208,3 @@ lexTo : (TokenData a -> Bool) ->
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (fastUnpack str) in
           (ts, (l, c, pack str'))
-

@@ -16,15 +16,15 @@ import Parser.Source
 
 import Data.List
 import Data.List1
-import Data.List.Extra
+import Libraries.Data.List.Extra
 import Data.Maybe
 import Data.Stream
 import Data.Strings
-import Data.String.Extra
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.String.Extra
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import System.File
-import Utils.String
+import Libraries.Utils.String
 
 %default covering
 

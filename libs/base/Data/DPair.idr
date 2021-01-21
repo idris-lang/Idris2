@@ -2,6 +2,16 @@ module Data.DPair
 
 %default total
 
+namespace DPair
+
+  public export
+  curry : {0 p : a -> Type} -> ((x : a ** p x) -> c) -> (x : a) -> p x -> c
+  curry f x y = f (x ** y)
+
+  public export
+  uncurry : {0 p : a -> Type} -> ((x : a) -> p x -> c) -> (x : a ** p x) -> c
+  uncurry f s = f s.fst s.snd
+
 namespace Exists
 
   ||| A dependent pair in which the first field (witness) should be
@@ -16,37 +26,18 @@ namespace Exists
   ||| @type The type of the type-level value in the proof.
   ||| @this The dependent type that requires an instance of `type`.
   public export
-  data Exists : (this : type -> Type) -> Type where
-    Evidence : (0 value : type)
-            -> (prf : this value)
-            -> Exists this
+  record Exists {0 type : _} this where
+    constructor Evidence
+    0 fst : type
+    snd : this fst
 
-  ||| Return the type-level value (evidence) required by the dependent type.
-  |||
-  ||| We need to be in the Erased setting for this to work.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
   public export
-  0
-  fst : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Exists pred)
-     -> type
-  fst (Evidence value _) = value
+  curry : {0 p : a -> Type} -> (Exists {type=a} p -> c) -> ({0 x : a} -> p x -> c)
+  curry f = f . Evidence _
 
-  ||| Return the dependently typed value.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
   public export
-  snd : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Exists pred)
-     -> pred (Exists.fst prf)
-  snd (Evidence value prf) = prf
+  uncurry : {0 p : a -> Type} -> ({0 x : a} -> p x -> c) -> Exists {type=a} p -> c
+  uncurry f ex = f ex.snd
 
 namespace Subset
 
@@ -60,37 +51,15 @@ namespace Subset
   ||| @type The type-level value's type.
   ||| @pred The dependent type that requires an instance of `type`.
   public export
-  data Subset : (type : Type)
-             -> (pred : type -> Type)
-             -> Type
-    where
-      Element : (value : type)
-             -> (0 prf : pred value)
-             -> Subset type pred
+  record Subset type pred where
+    constructor Element
+    fst : type
+    0 snd : pred fst
 
-  ||| Return the type-level value (evidence) required by the dependent type.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
   public export
-  fst : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 prf  : Subset type pred)
-     -> type
-  fst (Element value prf) = value
+  curry : {0 p : a -> Type} -> (Subset a p -> c) -> (x : a) -> (0 _ : p x) -> c
+  curry f x y = f $ Element x y
 
-  ||| Return the dependently typed value.
-  |||
-  ||| We need to be in the erased setting for this to work.
-  |||
-  ||| @type The type-level value's type.
-  ||| @pred The dependent type that requires an instance of `type`.
-  ||| @prf  That there is a value that satisfies `prf`.
   public export
-  0
-  snd : {0 type : Type}
-     -> {0 pred : type -> Type}
-     -> (1 value : Subset type pred)
-     -> pred (Subset.fst value)
-  snd (Element value prf) = prf
+  uncurry : {0 p : a -> Type} -> ((x : a) -> (0 _ : p x) -> c) -> Subset a p -> c
+  uncurry f s = f s.fst s.snd

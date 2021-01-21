@@ -59,7 +59,7 @@ data PApp : List PEffect -> Type -> Type where
      Pure : (x : a) -> PApp es a
      Bind : PApp es a -> (a -> PApp es b) -> PApp es b
      BindL : Linear es =>
-             (1 act : PApp es a) -> 
+             (1 act : PApp es a) ->
              (1 k : a -> PApp es b) -> PApp es b
 
      New : a -> PApp (St a :: es) t -> PApp es t
@@ -67,8 +67,8 @@ data PApp : List PEffect -> Type -> Type where
      Put : HasPEff (St t) es => t -> PApp es ()
 
      Throw : HasPEff (Exc e) es => e -> PApp es a
-     Catch : HasPEff (Exc e) es => 
-             PApp es a -> 
+     Catch : HasPEff (Exc e) es =>
+             PApp es a ->
              (err : e -> PApp es a) -> PApp es a
      Handle : PApp (Exc e :: es) a ->
               (ok : a -> PApp es b) ->
@@ -85,7 +85,7 @@ Functor (PApp es) where
 export
 Applicative (PApp es) where
   pure = Pure
-  (<*>) f a 
+  (<*>) f a
       = Bind f $ \f' =>
         Bind a $ \a' => pure (f' a')
 
@@ -93,11 +93,11 @@ export
 Monad (PApp es) where
   (>>=) = Bind
 
-throwIn : Env es -> HasPEff (Exc e) es -> e -> 
+throwIn : Env es -> HasPEff (Exc e) es -> e ->
           IO (execTy (es ++ rest) a)
 throwIn (SkipE es) Here e = pure (Left e)
 throwIn (Ref r es) (There p) e = throwIn es p e
-throwIn (SkipE es) (There p) e 
+throwIn (SkipE es) (There p) e
     = do res <- throwIn es p e
          pure (Right res)
 throwIn (SkipP es) (There p) e = throwIn es p e
@@ -135,9 +135,9 @@ clearEnv (SkipP env) = clearEnv env
 
 exec : Env es -> PApp es t -> (t -> IO (execTy es a)) -> IO (execTy es a)
 exec env (Pure val) k = k val
-exec env (Bind act next) k 
+exec env (Bind act next) k
     = exec env act (\res => exec env (next res) k)
-exec env (BindL act next) k 
+exec env (BindL act next) k
     = exec env act (\res => exec env (next res) k)
 exec env (New val prog) k
     = do r <- newIORef val
@@ -150,11 +150,11 @@ exec env (Put @{p} val) k
     = do let ref = getState env p
          writeIORef ref val
          k ()
-exec env (Throw @{p} e) k 
-    = rewrite sym (appendNilRightNeutral es) in 
+exec env (Throw @{p} e) k
+    = rewrite sym (appendNilRightNeutral es) in
         throwIn env p e {rest = []}
 exec env (Handle prog ok err) k
-    = do res <- exec (SkipE env) prog 
+    = do res <- exec (SkipE env) prog
                      (\res => do res' <- exec env (ok res) k
                                  pure (Right res'))
          case res of
@@ -171,7 +171,7 @@ exec env (Fork proc) k
                   exec env proc (\u => clearEnv env)
                   pure ())
          k ()
-exec env (Prim io) k 
+exec env (Prim io) k
     = do op <- primIO io
          k op
 export

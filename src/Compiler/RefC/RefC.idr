@@ -14,8 +14,8 @@ import Core.TT
 
 import Data.IORef
 import Data.List
-import Data.DList
-import Data.NameMap
+import Libraries.Data.DList
+import Libraries.Data.NameMap
 import Data.Nat
 import Data.Strings
 import Data.Vect
@@ -24,15 +24,16 @@ import System
 import System.Info
 import System.File
 
+import Idris.Env
 import Idris.Version
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 findCC : IO String
 findCC
-    = do Nothing <- getEnv "IDRIS2_CC"
+    = do Nothing <- idrisGetEnv "IDRIS2_CC"
            | Just cc => pure cc
-         Nothing <- getEnv "CC"
+         Nothing <- idrisGetEnv "CC"
            | Just cc => pure cc
          pure "cc"
 

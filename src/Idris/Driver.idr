@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.Unify
 
 import Idris.CommandLine
+import Idris.Env
 import Idris.IDEMode.REPL
 import Idris.ModTree
 import Idris.Package
@@ -28,8 +29,8 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
-import Utils.Path
-import Utils.Term
+import Libraries.Utils.Path
+import Libraries.Utils.Term
 
 import Yaffle.Main
 
@@ -45,23 +46,23 @@ updateEnv : {auto c : Ref Ctxt Defs} ->
             Core ()
 updateEnv
     = do defs <- get Ctxt
-         bprefix <- coreLift $ getEnv "IDRIS2_PREFIX"
+         bprefix <- coreLift $ idrisGetEnv "IDRIS2_PREFIX"
          the (Core ()) $ case bprefix of
               Just p => setPrefix p
               Nothing => setPrefix yprefix
-         bpath <- coreLift $ getEnv "IDRIS2_PATH"
+         bpath <- coreLift $ idrisGetEnv "IDRIS2_PATH"
          the (Core ()) $ case bpath of
               Just path => do traverseList1_ addExtraDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         bdata <- coreLift $ getEnv "IDRIS2_DATA"
+         bdata <- coreLift $ idrisGetEnv "IDRIS2_DATA"
          the (Core ()) $ case bdata of
               Just path => do traverseList1_ addDataDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         blibs <- coreLift $ getEnv "IDRIS2_LIBS"
+         blibs <- coreLift $ idrisGetEnv "IDRIS2_LIBS"
          the (Core ()) $ case blibs of
               Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
-         cg <- coreLift $ getEnv "IDRIS2_CG"
+         cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
          the (Core ()) $ case cg of
               Just e => case getCG (options defs) e of
                              Just cg => setCG cg
@@ -87,7 +88,7 @@ updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
                  Core ()
 updateREPLOpts
     = do opts <- get ROpts
-         ed <- coreLift $ getEnv "EDITOR"
+         ed <- coreLift $ idrisGetEnv "EDITOR"
          the (Core ()) $ case ed of
               Just e => put ROpts (record { editor = e } opts)
               Nothing => pure ()

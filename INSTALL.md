@@ -69,7 +69,7 @@ If all is well, to install, type:
 
 ### 3: Installing with an existing Idris 2
 
-If you have an earlier version of Idris 2 installed
+If you have an earlier version of Idris 2 (minimum version 0.2.2) installed:
 
 - `make all`
 - `make install`
@@ -81,7 +81,7 @@ that everything has worked correctly. Assuming that `idris2` is in your
 `PATH`.
 
 - `make clean` -- to make sure you're building everything with the new version
-- `make all && make install`
+- `make all && make install` -- OR `make all IDRIS2_BOOT='idris2 --codegen racket' && make install` if using Racket.
 
 ### 5: Running tests
 
@@ -120,3 +120,9 @@ If you are a [nix](https://nixos.org/features.html) user you can install Idris 2
 by running the following command:
 
     nix-env -i idris2
+    
+### Install from nix flakes
+
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
+
+    nix profile install github:idris-lang/Idris2

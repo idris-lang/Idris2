@@ -5,14 +5,14 @@ import public Parser.Lexer.Common
 import Data.List1
 import Data.List
 import Data.Strings
-import Data.String.Extra
-import public Text.Bounded
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.String.Extra
+import public Libraries.Text.Bounded
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Utils.Hex
-import Utils.Octal
-import Utils.String
+import Libraries.Utils.Hex
+import Libraries.Utils.Octal
+import Libraries.Utils.String
 
 import Core.Name
 
