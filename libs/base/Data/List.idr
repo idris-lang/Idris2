@@ -362,8 +362,9 @@ zip3 = zipWith3 \x, y, z => (x, y, z)
 export
 unzipWith : (a -> (b, c)) -> List a -> (List b, List c)
 unzipWith f [] = ([], [])
-unzipWith f (x :: xs) with (unzipWith f xs)
-  unzipWith f (x :: xs) | (lefts, rights) = (fst (f x) :: lefts, snd (f x) :: rights)
+unzipWith f (x :: xs) = let (b, c) = f x
+                            (bs, cs) = unzipWith f xs in
+                            (b :: bs, c :: cs)
 
 ||| Split a list of pairs into two lists
 export
@@ -374,10 +375,9 @@ unzip = unzipWith id
 export
 unzipWith3 : (a -> (b, c, d)) -> List a -> (List b, List c, List d)
 unzipWith3 f [] = ([], [], [])
-unzipWith3 f (x :: xs) with (unzipWith3 f xs)
-  unzipWith3 f (x :: xs) | (lefts, centres, rights) =
-    let (l, c, r) = f x in
-        (l :: lefts, c :: centres, r :: rights)
+unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                             (bs, cs, ds) = unzipWith3 f xs in
+                             (b :: bs, c :: cs, d :: ds)
 
 ||| Split a list of triples into three lists
 export
