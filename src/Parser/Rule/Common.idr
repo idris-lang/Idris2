@@ -1,7 +1,7 @@
 module Parser.Rule.Common
 
-import public Text.Lexer
-import public Text.Parser
+import public Libraries.Text.Lexer
+import public Libraries.Text.Parser
 
 %default total
 

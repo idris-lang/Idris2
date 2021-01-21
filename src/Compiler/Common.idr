@@ -12,11 +12,11 @@ import Core.Directory
 import Core.Options
 import Core.TT
 import Core.TTC
-import Utils.Binary
+import Libraries.Utils.Binary
 
 import Data.IOArray
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 
 import System.Directory

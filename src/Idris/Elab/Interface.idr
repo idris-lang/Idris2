@@ -21,7 +21,7 @@ import TTImp.Unelab
 import TTImp.TTImp
 import TTImp.Utils
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
 

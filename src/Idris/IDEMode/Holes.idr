@@ -8,8 +8,8 @@ import Idris.Pretty
 
 import Idris.IDEMode.Commands
 
-import Data.String.Extra
-import Utils.Term
+import Libraries.Data.String.Extra
+import Libraries.Utils.Term
 
 %default covering
 

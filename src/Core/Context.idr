@@ -10,13 +10,13 @@ import        Core.Options
 import public Core.Options.Log
 import public Core.TT
 
-import Utils.Binary
+import Libraries.Utils.Binary
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 import System
 import System.Directory

@@ -20,7 +20,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

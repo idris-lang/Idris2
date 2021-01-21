@@ -12,9 +12,9 @@ import Core.Unify
 import Data.List
 import Data.Maybe
 import Data.So
-import Data.StringMap
+import Libraries.Data.StringMap
 import Data.Strings
-import Data.StringTrie
+import Libraries.Data.StringTrie
 import Data.These
 
 import Parser.Package
@@ -22,11 +22,11 @@ import System
 import System.Directory
 import System.File
 
-import Text.Parser
-import Text.PrettyPrint.Prettyprinter
-import Utils.Binary
-import Utils.String
-import Utils.Path
+import Libraries.Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Utils.Binary
+import Libraries.Utils.String
+import Libraries.Utils.Path
 
 import Idris.CommandLine
 import Idris.ModTree

@@ -6,14 +6,14 @@ import public Parser.Source
 import        Parser.Lexer.Source
 import        TTImp.TTImp
 
-import public Text.Parser
+import public Libraries.Text.Parser
 import        Data.Either
 import        Data.List
 import        Data.List.Views
 import        Data.List1
 import        Data.Maybe
 import        Data.Strings
-import Utils.String
+import Libraries.Utils.String
 
 import Idris.Parser.Let
 

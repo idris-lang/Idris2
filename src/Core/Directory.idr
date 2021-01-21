@@ -5,7 +5,7 @@ import Core.Core
 import Core.FC
 import Core.Name
 import Core.Options
-import Utils.Path
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Strings

@@ -10,10 +10,10 @@ import Core.Name
 import Core.Options
 import Core.TT
 
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Vect
 
-import Utils.Binary
+import Libraries.Utils.Binary
 
 %default covering
 

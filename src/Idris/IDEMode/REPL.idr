@@ -42,7 +42,7 @@ import TTImp.Elab
 import TTImp.TTImp
 import TTImp.ProcessDecls
 
-import Utils.Hex
+import Libraries.Utils.Hex
 
 import Data.List
 import System

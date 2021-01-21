@@ -11,7 +11,7 @@ import Core.TTC
 
 import Data.List
 import System.File
-import Utils.Binary
+import Libraries.Utils.Binary
 
 %default covering
 

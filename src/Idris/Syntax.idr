@@ -11,13 +11,13 @@ import public Core.TT
 
 import TTImp.TTImp
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.NameMap
-import Data.StringMap
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 %default covering
 

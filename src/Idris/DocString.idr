@@ -10,10 +10,10 @@ import Idris.Syntax
 
 import TTImp.TTImp
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 
 -- Add a doc string for a name in the current namespace

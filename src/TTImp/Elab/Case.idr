@@ -18,7 +18,7 @@ import TTImp.Utils
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

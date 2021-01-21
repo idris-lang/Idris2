@@ -29,8 +29,8 @@ import Data.Strings
 import System
 import System.Directory
 import System.File
-import Utils.Path
-import Utils.Term
+import Libraries.Utils.Path
+import Libraries.Utils.Term
 
 import Yaffle.Main
 

@@ -11,11 +11,11 @@ import Core.TT
 import public Core.UnifyState
 import Core.Value
 
-import Data.Bool.Extra
-import Data.IntMap
+import Libraries.Data.Bool.Extra
+import Libraries.Data.IntMap
 import Data.List
 import Data.List.Views
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

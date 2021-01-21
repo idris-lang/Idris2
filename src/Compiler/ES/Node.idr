@@ -9,7 +9,7 @@ import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
-import Utils.Path
+import Libraries.Utils.Path
 
 import System
 import System.File

@@ -7,7 +7,7 @@ import TTImp.TTImp
 import Data.List
 import Data.Strings
 
-import Utils.String
+import Libraries.Utils.String
 
 %default covering
 

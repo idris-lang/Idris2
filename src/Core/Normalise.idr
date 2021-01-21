@@ -10,7 +10,7 @@ import Core.Primitives
 import Core.TT
 import Core.Value
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
 import Data.Maybe
 import Data.Nat

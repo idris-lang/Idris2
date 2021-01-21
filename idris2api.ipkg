@@ -61,18 +61,6 @@ modules =
     Core.UnifyState,
     Core.Value,
 
-    Data.ANameMap,
-    Data.IntMap,
-    Data.LengthMatch,
-    Data.NameMap,
-    Data.StringMap,
-    Data.StringTrie,
-
-    Data.Bool.Extra,
-
-    Data.List.Extra,
-    Data.DList,
-
     IdrisPaths,
 
     Idris.CommandLine,
@@ -107,6 +95,51 @@ modules =
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
 
+    Libraries.Control.ANSI,
+    Libraries.Control.ANSI.CSI,
+    Libraries.Control.ANSI.SGR,
+    Libraries.Control.Delayed,
+
+    Libraries.Data.ANameMap,
+    Libraries.Data.Bool.Extra,
+    Libraries.Data.DList,
+    Libraries.Data.IntMap,
+    Libraries.Data.LengthMatch,
+    Libraries.Data.List.Extra,
+    Libraries.Data.List.Lazy,
+    Libraries.Data.NameMap,
+    Libraries.Data.SortedMap,
+    Libraries.Data.SortedSet,
+    Libraries.Data.String.Extra,
+    Libraries.Data.String.Iterator,
+    Libraries.Data.StringMap,
+    Libraries.Data.StringTrie,
+
+    Libraries.Text.Bounded,
+    Libraries.Text.Lexer,
+    Libraries.Text.Lexer.Core,
+    Libraries.Text.Literate,
+    Libraries.Text.Parser,
+    Libraries.Text.Parser.Core,
+    Libraries.Text.PrettyPrint.Prettyprinter,
+    Libraries.Text.PrettyPrint.Prettyprinter.Doc,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.String,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal,
+    Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+    Libraries.Text.PrettyPrint.Prettyprinter.Symbols,
+    Libraries.Text.PrettyPrint.Prettyprinter.Util,
+    Libraries.Text.Quantity,
+    Libraries.Text.Token,
+
+    Libraries.Utils.Binary,
+    Libraries.Utils.Either,
+    Libraries.Utils.Hex,
+    Libraries.Utils.Octal,
+    Libraries.Utils.Path,
+    Libraries.Utils.Shunting,
+    Libraries.Utils.String,
+    Libraries.Utils.Term,
+
     Parser.Package,
     Parser.Source,
     Parser.Support,
@@ -119,17 +152,6 @@ modules =
     Parser.Rule.Common,
     Parser.Rule.Package,
     Parser.Rule.Source,
-
-    Text.Bounded,
-    Text.Literate,
-    Text.Quantity,
-    Text.Token,
-
-    Text.Lexer,
-    Text.Lexer.Core,
-
-    Text.Parser,
-    Text.Parser.Core,
 
     TTImp.BindImplicits,
     TTImp.Elab,
@@ -175,18 +197,9 @@ modules =
     TTImp.Interactive.GenerateDef,
     TTImp.Interactive.MakeLemma,
 
-    Utils.Binary,
-    Utils.Either,
-    Utils.Hex,
-    Utils.Octal,
-    Utils.Path,
-    Utils.Shunting,
-    Utils.String,
-    Utils.Term,
-
     Yaffle.Main,
     Yaffle.REPL
 
-depends = contrib, network
+depends = network
 
 sourcedir = "src"

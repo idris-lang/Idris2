@@ -3,7 +3,7 @@ module Core.Context.Log
 import Core.Context
 import Core.Options
 
-import Data.StringMap
+import Libraries.Data.StringMap
 
 import System.Clock
 

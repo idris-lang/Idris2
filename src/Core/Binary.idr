@@ -10,9 +10,9 @@ import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 import System.File
 
@@ -21,7 +21,7 @@ import System.File
 -- (Otherwise we'd save out everything, not just the things in the current
 -- file).
 
-import public Utils.Binary
+import public Libraries.Utils.Binary
 
 import Data.Buffer
 

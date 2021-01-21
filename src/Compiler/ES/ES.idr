@@ -1,11 +1,11 @@
 module Compiler.ES.ES
 
 import Compiler.ES.Imperative
-import Utils.Hex
+import Libraries.Utils.Hex
 import Data.List1
 import Data.Strings
-import Data.SortedMap
-import Data.String.Extra
+import Libraries.Data.SortedMap
+import Libraries.Data.String.Extra
 
 import Core.Directory
 

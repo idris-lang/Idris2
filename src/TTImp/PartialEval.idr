@@ -15,10 +15,10 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Utils.Hex
+import Libraries.Utils.Hex
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 

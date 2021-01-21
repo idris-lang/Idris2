@@ -1,7 +1,7 @@
 module Core.FC
 
-import Text.Bounded
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.Bounded
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total
 

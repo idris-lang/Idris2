@@ -1,6 +1,6 @@
 module Parser.Unlit
 
-import public Text.Literate
+import public Libraries.Text.Literate
 import Data.Strings
 
 %default total

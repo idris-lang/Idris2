@@ -53,13 +53,13 @@ import TTImp.ProcessDecls
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
-import Data.ANameMap
+import Libraries.Data.ANameMap
+import Libraries.Data.NameMap
 import Data.Stream
 import Data.Strings
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
-import Text.PrettyPrint.Prettyprinter.Render.Terminal
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import System
 import System.File

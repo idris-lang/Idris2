@@ -5,9 +5,9 @@ import Core.TT
 
 import Data.List
 import Data.List1
-import Data.List.Lazy
+import Libraries.Data.List.Lazy
 import Data.Strings
-import Data.String.Iterator
+import Libraries.Data.String.Iterator
 
 %default covering
 

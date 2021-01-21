@@ -8,7 +8,7 @@ import Core.Context
 import Core.Name
 import Core.TT
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Vect
 
