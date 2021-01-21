@@ -358,6 +358,32 @@ export
 zip3 : List a -> List b -> List c -> List (a, b, c)
 zip3 = zipWith3 \x, y, z => (x, y, z)
 
+||| Split a list by applying a function into two lists
+export
+unzipWith : (a -> (b, c)) -> List a -> (List b, List c)
+unzipWith f [] = ([], [])
+unzipWith f (x :: xs) = let (b, c) = f x
+                            (bs, cs) = unzipWith f xs in
+                            (b :: bs, c :: cs)
+
+||| Split a list of pairs into two lists
+export
+unzip : List (a, b) -> (List a, List b)
+unzip = unzipWith id
+
+||| Split a list by applying a function into three lists
+export
+unzipWith3 : (a -> (b, c, d)) -> List a -> (List b, List c, List d)
+unzipWith3 f [] = ([], [], [])
+unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                             (bs, cs, ds) = unzipWith3 f xs in
+                             (b :: bs, c :: cs, d :: ds)
+
+||| Split a list of triples into three lists
+export
+unzip3 : List (a, b, c) -> (List a, List b, List c)
+unzip3 = unzipWith3 id
+
 public export
 data NonEmpty : (xs : List a) -> Type where
     IsNonEmpty : NonEmpty (x :: xs)
