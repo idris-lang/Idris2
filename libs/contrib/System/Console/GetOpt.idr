@@ -82,13 +82,6 @@ data OptKind a
 --          Printing Usage Info
 --------------------------------------------------------------------------------
 
--- @TODO: This will eventually be in base.
--- (see [#972](https://github.com/idris-lang/Idris2/pull/972))
-unzip3 : List (a,b,c) -> (List a, List b, List c)
-unzip3 []              = ([], ([], []))
-unzip3 ((a,b,c) :: xs) = let (as,bs,cs) = unzip3 xs
-                          in (a::as,b::bs,c::cs)
-
 fmtShort : ArgDescr a -> Char -> String
 fmtShort (NoArg  _   ) so = "-" ++ singleton so
 fmtShort (ReqArg _ ad) so = "-" ++ singleton so ++ " " ++ ad
