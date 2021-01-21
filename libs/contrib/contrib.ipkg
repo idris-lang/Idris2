@@ -102,6 +102,7 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Render.String,
           Text.PrettyPrint.Prettyprinter.Render.Terminal,
 
+          System.Console.GetOpt,
           System.Future,
           System.Random,
           System.Path,
