@@ -11,7 +11,7 @@ import Control.Monad.Trans
 |||
 |||   @w the output to accumulate.
 |||
-|||   m@ The inner monad.
+|||   @m The inner monad.
 |||
 ||| The `pure` function produces the output `neutral`, while `>>=`
 ||| combines the outputs of the subcomputations using `<+>`.
