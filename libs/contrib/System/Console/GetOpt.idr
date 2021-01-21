@@ -172,9 +172,6 @@ Functor Result where
 OptFun : Type -> Type
 OptFun a = List String -> List $ OptDescr a -> (OptKind a,List String)
 
-OptF : Type -> Type
-OptF a = List String -> ArgOrder a -> List $ OptDescr a -> (Result a,List String)
-
 longOpt : String -> OptFun a
 longOpt ls rs descs =
   let (opt,arg) = break ('=' ==) ls
