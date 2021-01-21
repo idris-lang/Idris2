@@ -1,4 +1,4 @@
-||| Note: The difference to a 'stricht' Writer implementation is
+||| Note: The difference to a 'strict' Writer implementation is
 ||| that accumulation of values does not happen in the
 ||| Applicative and Monad instances but when invoking `Writer`-specific
 ||| functions like `writer` or `listen`.

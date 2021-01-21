@@ -1,4 +1,4 @@
-||| Note: The difference to a 'stricht' RWST implementation is
+||| Note: The difference to a 'strict' RWST implementation is
 ||| that accumulation of values does not happen in the
 ||| Applicative and Monad instances but when invoking `Writer`-specific
 ||| functions like `writer` or `listen`.
