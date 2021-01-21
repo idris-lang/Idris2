@@ -1,4 +1,7 @@
 {
+  "Exclude": [
+    "\\.idr$"
+  ],
   "Disable": {
     "IndentSize": true,
     "Indentation": true
