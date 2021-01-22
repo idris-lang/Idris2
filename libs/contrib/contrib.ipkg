@@ -10,7 +10,6 @@ modules = Control.ANSI,
 
           Control.Monad.Algebra,
           Control.Monad.Syntax,
-          Control.Monad.Trans.Either,
 
           Control.Algebra,
           Control.Algebra.Laws,
