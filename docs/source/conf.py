@@ -1,6 +1,6 @@
 # Configuration file for the Sphinx documentation builder.
 #
-# Idris Manual documentation build configuration file, created by 
+# Idris Manual documentation build configuration file, created by
 # sphinx-quickstart on Apr 13, 2020.
 #
 # This file is execfile()d with the current directory set to its
