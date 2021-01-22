@@ -144,5 +144,3 @@ with any errors thrown by ``readFile``:
     readMain fname = handle (readFile fname)
            (\str => putStrLn $ "Success:\n" ++ show str)
            (\err : IOError => putStrLn $ "Error: " ++ show err)
-
-

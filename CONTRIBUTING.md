@@ -15,7 +15,7 @@ beyond work on the language core, are (in no particular order):
   - code colouring
   - it'd be nice if Ctrl-C didn't quit the whole system!
 * IDE mode improvements
-  - Syntax highlighting support for output 
+  - Syntax highlighting support for output
   - Several functions from the version 1 IDE protocol are not yet implemented,
     and I haven't confirmed it works in everything.
   - (Not really part of Idris 2, but an editing mode for vim would be lovely!)
