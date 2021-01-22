@@ -12,7 +12,7 @@ infixr 2 +++
 infixr 2 \|/
 
 public export
-interface Category arr => Arrow (arr : Type -> Type -> Type) where
+interface Category arr => Arrow (0 arr : Type -> Type -> Type) where
   arrow  : (a -> b) -> arr a b
   first  : arr a b -> arr (a, c) (b, c)
 
@@ -57,15 +57,15 @@ implementation Monad m => Arrow (Kleislimorphism m) where
                                                    pure (x, y)
 
 public export
-interface Arrow arr => ArrowZero (arr : Type -> Type -> Type) where
+interface Arrow arr => ArrowZero (0 arr : Type -> Type -> Type) where
   zeroArrow : arr a b
 
 public export
-interface ArrowZero arr => ArrowPlus (arr : Type -> Type -> Type) where
+interface ArrowZero arr => ArrowPlus (0 arr : Type -> Type -> Type) where
   (<++>) : arr a b -> arr a b -> arr a b
 
 public export
-interface Arrow arr => ArrowChoice (arr : Type -> Type -> Type) where
+interface Arrow arr => ArrowChoice (0 arr : Type -> Type -> Type) where
   left  : arr a b -> arr (Either a c) (Either b c)
 
   right : arr a b -> arr (Either c a) (Either c b)
@@ -90,7 +90,7 @@ implementation Monad m => ArrowChoice (Kleislimorphism m) where
   (Kleisli f) \|/ (Kleisli g) = Kleisli (either f g)
 
 public export
-interface Arrow arr => ArrowApply (arr : Type -> Type -> Type) where
+interface Arrow arr => ArrowApply (0 arr : Type -> Type -> Type) where
   app : arr (arr a b, a) b
 
 public export
@@ -120,5 +120,5 @@ implementation ArrowApply a => Monad (ArrowMonad a) where
     MkArrowMonad $ m >>> (arrow $ \x => (runArrowMonad (f x), ())) >>> app
 
 public export
-interface Arrow arr => ArrowLoop (arr : Type -> Type -> Type) where
+interface Arrow arr => ArrowLoop (0 arr : Type -> Type -> Type) where
   loop : arr (Pair a c) (Pair b c) -> arr a b
