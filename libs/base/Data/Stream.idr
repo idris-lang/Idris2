@@ -33,7 +33,7 @@ index : Nat -> Stream a -> a
 index Z     (x::xs) = x
 index (S k) (x::xs) = index k xs
 
-||| Combine two streams element-wise using a function.
+||| Combine two streams by applying a function element-wise
 |||
 ||| @ f the function to combine elements with
 ||| @ xs the first stream of elements
@@ -42,17 +42,17 @@ export
 zipWith : (f : a -> b -> c) -> (xs : Stream a) -> (ys : Stream b) -> Stream c
 zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 
-||| Combine three streams by applying a function element-wise along them
-export
-zipWith3 : (a -> b -> c -> d) -> Stream a -> Stream b -> Stream c -> Stream d
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
-
 ||| Create a stream of pairs from two streams
 export
 zip : Stream a -> Stream b -> Stream (a, b)
 zip = zipWith (\x,y => (x,y))
 
-||| Combine three streams into a stream of tuples elementwise
+||| Combine three streams by applying a function element-wise
+export
+zipWith3 : (a -> b -> c -> d) -> Stream a -> Stream b -> Stream c -> Stream d
+zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+
+||| Create a stream of triples from three streams
 export
 zip3 : Stream a -> Stream b -> Stream c -> Stream (a, b, c)
 zip3 = zipWith3 (\x,y,z => (x,y,z))
@@ -62,10 +62,20 @@ export
 unzip : Stream (a, b) -> (Stream a, Stream b)
 unzip xs = (map fst xs, map snd xs)
 
-||| Split a stream of three-element tuples into three streams
+||| Create a pair of streams by applying a function from a stream
+export
+unzipWith : (a -> (b, c)) -> Stream a -> (Stream b, Stream c)
+unzipWith f xs = unzip $ map f xs
+
+||| Create a triple of streams from a stream of triples
 export
 unzip3 : Stream (a, b, c) -> (Stream a, Stream b, Stream c)
 unzip3 xs = (map (\(x,_,_) => x) xs, map (\(_,x,_) => x) xs, map (\(_,_,x) => x) xs)
+
+||| Create a triple of streams by applying a function from a stream
+export
+unzipWith3 : (a -> (b, c, d)) -> Stream a -> (Stream b, Stream c, Stream d)
+unzipWith3 f xs = unzip3 $ map f xs
 
 ||| Return the diagonal elements of a stream of streams
 export
