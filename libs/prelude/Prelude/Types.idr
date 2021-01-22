@@ -388,6 +388,8 @@ namespace Stream
   data Stream : Type -> Type where
        (::) : a -> Inf (Stream a) -> Stream a
 
+%name Stream xs, ys, zs
+
 public export
 Functor Stream where
   map f (x :: xs) = f x :: map f xs
