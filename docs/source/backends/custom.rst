@@ -5,7 +5,7 @@ Building Idris 2 with new backends
 The way to extend Idris 2 with new backends is to use it as
 a library. The module ``Idris.Driver`` exports the function
 ``mainWithCodegens``, that takes a list of ``(String, Codegen)``,
-starting idris with these codegens in addition to the built-in ones. The first 
+starting idris with these codegens in addition to the built-in ones. The first
 codegen in the list will be set as the default codegen.
 
 Getting started

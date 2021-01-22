@@ -85,5 +85,3 @@ Rather than using ``State`` and ``Exception`` directly, however,
 we typically use interfaces to constrain the operations which are allowed
 in a list of errors. Internally, ``State`` is implemented via an
 ``IORef``, primarily for performance reasons.
-
-
