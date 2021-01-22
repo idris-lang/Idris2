@@ -41,7 +41,7 @@ while getopts ${optstring} arg; do
             chez|refc|racket|gambit)
               BACKEND="$2"
               export IDRIS2_CG=$BACKEND ;;
-            *)  
+            *)
               echo "$BACKEND is not a recognised backend! You can check the available backends using $0 -h"
               exit 1 ;;
         esac
@@ -49,7 +49,7 @@ while getopts ${optstring} arg; do
     # test speed flag
     f) FAST=true ;;
     # custom output file name
-    o) 
+    o)
       [[ ! -z "$2" ]] && FILENAME="$2"
 		  echo "-o option passed, with value $FILENAME"
 		  ;;
@@ -67,11 +67,11 @@ done
 
 #begin tests
 cwd=$(pwd)
-if [ $FILENAME != "bench-results" ]; 
-then 
+if [ $FILENAME != "bench-results" ];
+then
    echo here
-   output_path="$FILENAME.csv"; 
-else 
+   output_path="$FILENAME.csv";
+else
    output_path="$cwd/${FILENAME}_${BACKEND}"
    if [[ $FAST = true ]]; then output_path+="_fast"; fi
    output_path+=".csv"
