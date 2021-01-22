@@ -311,6 +311,14 @@ zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
 zip3 []      []      []      = []
 zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 
+||| Convert a vector by applying a function to a pair of vectors
+public export
+unzipWith : (a -> (b, c)) -> Vect n a -> (Vect n b, Vect n c)
+unzipWith f [] = ([], [])
+unzipWith f (x :: xs) = let (b, c) = f x
+                            (bs, cs) = unzipWith f xs in
+                            (b :: bs, c :: cs)
+
 ||| Convert a vector of pairs to a pair of vectors
 |||
 ||| ```idris example
@@ -318,9 +326,15 @@ zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
 ||| ```
 public export
 unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
-unzip []           = ([], [])
-unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
-                     in (l::lefts, r::rights)
+unzip = unzipWith id
+
+||| Convert a vector by applying a function to a triple of vectors
+public export
+unzipWith3 : (a -> (b, c, d)) -> Vect n a -> (Vect n b, Vect n c, Vect n d)
+unzipWith3 f [] = ([], [], [])
+unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                             (bs, cs, ds) = unzipWith3 f xs in
+                             (b :: bs, c :: cs, d :: ds)
 
 ||| Convert a vector of three-tuples to a triplet of vectors
 |||
@@ -329,9 +343,7 @@ unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
 ||| ```
 public export
 unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
-unzip3 []            = ([], [], [])
-unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
-                       in (l::lefts, c::centers, r::rights)
+unzip3 = unzipWith3 id
 
 --------------------------------------------------------------------------------
 -- Equality
