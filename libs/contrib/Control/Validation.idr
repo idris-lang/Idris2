@@ -12,7 +12,7 @@ module Control.Validation
 
 import Control.Monad.Identity
 import Control.Monad.Syntax
-import Control.Monad.Trans.Either
+import Control.Monad.Error.Either
 import Data.Nat
 import Data.Strings
 import Data.Vect
@@ -23,7 +23,7 @@ import Decidable.Equality
 
 public export
 Result : (Type -> Type) -> Type -> Type
-Result m = EitherT m String
+Result m = EitherT String m
 
 ||| Validators in this module come in two flavours: Structural Validators and
 ||| Property Validators. They are both wrappers around functions which take
@@ -95,7 +95,7 @@ withError e (MkValidator f) = MkValidator (replaceError e . f)
 ||| A validator which always fails with a given message.
 export
 fail : Applicative m => String -> ValidatorT m a b
-fail s = MkValidator $ \_ => fail s
+fail s = MkValidator $ \_ => left s
 
 infixl 2 >>>
 
@@ -125,14 +125,14 @@ export
 decide : Monad m => (t -> String) -> ((x : t) -> Dec (p x)) -> PropValidator m t p
 decide msg dec = MkPropValidator \x => case dec x of
     Yes prf => pure prf
-    No _ => fail (msg x)
+    No _ => left (msg x)
 
 ||| Given a function converting a into Maybe b, build a Validator of a
 ||| converting it into b.
 export
 fromMaybe : Monad m => (a -> String) -> (a -> Maybe b) -> ValidatorT m a b
 fromMaybe e f = MkValidator \a => case f a of
-    Nothing => fail $ e a
+    Nothing => left $ e a
     Just b => pure b
 
 ||| Verify whether a String represents a natural number.
@@ -167,8 +167,8 @@ length l = MkValidator (validateVector l)
     where
     validateVector : (l : Nat) -> List a -> Result m (Vect l a)
     validateVector Z [] = pure []
-    validateVector (S _) [] = fail "Missing list element."
-    validateVector Z (_ :: _) = fail "Excessive list element."
+    validateVector (S _) [] = left "Missing list element."
+    validateVector Z (_ :: _) = left "Excessive list element."
     validateVector (S k) (x :: xs) = do
         ys <- validateVector k xs
         pure (x :: ys)
@@ -178,7 +178,7 @@ export
 equal : (DecEq t, Monad m) => (a : t) -> PropValidator m t (\b => a = b)
 equal a = MkPropValidator \b => case decEq a b of
     Yes prf => pure prf
-    No _ => fail "Values are not equal."
+    No _ => left "Values are not equal."
 
 ||| Verify that a Nat is less than or equal to  certain bound.
 export
