@@ -37,4 +37,3 @@ cvec2 {n = n@(_)} $xs
     = case xs of
            Nil => n
            Cons $x $xs => n
-

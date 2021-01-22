@@ -30,7 +30,7 @@ fiftythousand = mult five tenthousand
 hundredthousand : Nat
 hundredthousand = mult ten tenthousand
 
-data IsSuc : Nat -> Type where 
+data IsSuc : Nat -> Type where
      Yes : IsSuc (S $k)
 
 nonZero : IsSuc Main.hundredthousand
