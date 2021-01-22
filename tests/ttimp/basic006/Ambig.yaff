@@ -31,7 +31,7 @@ namespace Vect
 data Maybe : Type -> Type where
      Nothing : Maybe $a
      Just : $a -> Maybe $a
-     
+
 testMaybe : Maybe (Vect ? Integer)
 testMaybe = Just (Cons 1 Nil)
 

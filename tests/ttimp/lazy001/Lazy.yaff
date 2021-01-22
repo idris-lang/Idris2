@@ -24,4 +24,3 @@ take (S $k) (Cons $x $xs) = Cons x (take k (Force xs))
 every2nd : Nat -> Stream $a -> List $a
 every2nd Z $xs = Nil
 every2nd (S $k) (Cons _ (Delay (Cons $x $xs))) = Cons x (every2nd k (Force xs))
-

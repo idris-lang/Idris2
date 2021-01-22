@@ -52,7 +52,7 @@ data Infer : Type where
      MkInfer : $a -> Infer
 
 long : Infer
-long 
+long
   = MkInfer (Vect.Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
        Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
        Cons 0 (Cons 0 (Cons 0 (Cons 0 (Cons 0 (
