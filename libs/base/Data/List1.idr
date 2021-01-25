@@ -158,7 +158,7 @@ zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
 
 export
 zip : List1 a -> List1 b -> List1 (a, b)
-zip = zipWith \x, y => (x, y)
+zip = zipWith (,)
 
 export
 zipWith3 : (a -> b -> c -> d) -> List1 a -> List1 b -> List1 c -> List1 d
@@ -172,7 +172,7 @@ zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) = f x y z ::: zipWith3' xs ys zs
 
 export
 zip3 : List1 a -> List1 b -> List1 c -> List1 (a, b, c)
-zip3 = zipWith3 \x, y, z => (x, y, z)
+zip3 = zipWith3 (,,)
 
 export
 unzipWith : (a -> (b, c)) -> List1 a -> (List1 b, List1 c)
