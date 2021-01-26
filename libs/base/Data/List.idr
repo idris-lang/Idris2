@@ -341,7 +341,7 @@ zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 ||| length of the shortest list.
 export
 zip : List a -> List b -> List (a, b)
-zip = zipWith \x, y => (x, y)
+zip = zipWith (,)
 
 export
 zipWith3 : (a -> b -> c -> d) -> List a -> List b -> List c -> List d
@@ -356,7 +356,7 @@ zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
 ||| length of the shortest list.
 export
 zip3 : List a -> List b -> List c -> List (a, b, c)
-zip3 = zipWith3 \x, y, z => (x, y, z)
+zip3 = zipWith3 (,,)
 
 ||| Split a list by applying a function into two lists
 export

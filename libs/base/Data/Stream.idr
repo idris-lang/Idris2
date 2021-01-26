@@ -45,7 +45,7 @@ zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
 ||| Create a stream of pairs from two streams
 export
 zip : Stream a -> Stream b -> Stream (a, b)
-zip = zipWith (\x,y => (x,y))
+zip = zipWith (,)
 
 ||| Combine three streams by applying a function element-wise
 export
@@ -55,7 +55,7 @@ zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
 ||| Create a stream of triples from three streams
 export
 zip3 : Stream a -> Stream b -> Stream c -> Stream (a, b, c)
-zip3 = zipWith3 (\x,y,z => (x,y,z))
+zip3 = zipWith3 (,,)
 
 ||| Create a pair of streams from a stream of pairs
 export
