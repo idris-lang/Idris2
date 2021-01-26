@@ -7,9 +7,9 @@ Data.Strings.singleton : Char -> String
 
 Totality: total
 
-Prelude.Types.cast : Char -> String
-
 Prelude.Show.show : Char -> String
+
+Prelude.Cast.cast : Char -> String
 Main> Prelude.const : a -> b -> a
 	 Constant function.  Ignores its second argument.
 
