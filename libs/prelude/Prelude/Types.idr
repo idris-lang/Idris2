@@ -416,7 +416,7 @@ take (S k) (x :: xs) = x :: take k xs
 -- STRINGS --
 -------------
 
-namespace Strings
+namespace String
   public export
   (++) : (x : String) -> (y : String) -> String
   x ++ y = prim__strAppend x y
