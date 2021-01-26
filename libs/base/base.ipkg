@@ -57,6 +57,7 @@ modules = Control.App,
           Data.Vect,
           Data.Vect.Elem,
           Data.Vect.Quantifiers,
+          Data.Zippable,
 
           Debug.Trace,
 

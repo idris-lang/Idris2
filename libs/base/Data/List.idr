@@ -3,6 +3,7 @@ module Data.List
 import Data.Nat
 import Data.List1
 import Data.Fin
+import public Data.Zippable
 
 %default total
 
@@ -325,64 +326,30 @@ export
 intersectAll : Eq a => List (List a) -> List a
 intersectAll = intersectAllBy (==)
 
-||| Combine two lists elementwise using some function.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zipWith : (a -> b -> c) -> List a -> List b -> List c
-zipWith _ [] _ = []
-zipWith _ _ [] = []
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-||| Combine two lists elementwise into pairs.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip : List a -> List b -> List (a, b)
-zip = zipWith (,)
+---------------------------
+-- Zippable --
+---------------------------
 
 export
-zipWith3 : (a -> b -> c -> d) -> List a -> List b -> List c -> List d
-zipWith3 _ [] _ _ = []
-zipWith3 _ _ [] _ = []
-zipWith3 _ _ _ [] = []
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+Zippable List where
+  zipWith _ [] _ = []
+  zipWith _ _ [] = []
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
-||| Combine three lists elementwise into tuples.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip3 : List a -> List b -> List c -> List (a, b, c)
-zip3 = zipWith3 (,,)
+  zipWith3 _ [] _ _ = []
+  zipWith3 _ _ [] _ = []
+  zipWith3 _ _ _ [] = []
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
 
-||| Split a list by applying a function into two lists
-export
-unzipWith : (a -> (b, c)) -> List a -> (List b, List c)
-unzipWith f [] = ([], [])
-unzipWith f (x :: xs) = let (b, c) = f x
-                            (bs, cs) = unzipWith f xs in
-                            (b :: bs, c :: cs)
+  unzipWith f [] = ([], [])
+  unzipWith f (x :: xs) = let (b, c) = f x
+                              (bs, cs) = unzipWith f xs in
+                              (b :: bs, c :: cs)
 
-||| Split a list of pairs into two lists
-export
-unzip : List (a, b) -> (List a, List b)
-unzip = unzipWith id
-
-||| Split a list by applying a function into three lists
-export
-unzipWith3 : (a -> (b, c, d)) -> List a -> (List b, List c, List d)
-unzipWith3 f [] = ([], [], [])
-unzipWith3 f (x :: xs) = let (b, c, d) = f x
-                             (bs, cs, ds) = unzipWith3 f xs in
-                             (b :: bs, c :: cs, d :: ds)
-
-||| Split a list of triples into three lists
-export
-unzip3 : List (a, b, c) -> (List a, List b, List c)
-unzip3 = unzipWith3 id
+  unzipWith3 f [] = ([], [], [])
+  unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                               (bs, cs, ds) = unzipWith3 f xs in
+                               (b :: bs, c :: cs, d :: ds)
 
 public export
 data NonEmpty : (xs : List a) -> Type where

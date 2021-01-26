@@ -3,6 +3,7 @@ module Data.Vect
 import Data.List
 import Data.Nat
 import public Data.Fin
+import public Data.Zippable
 
 import Decidable.Equality
 
@@ -17,7 +18,7 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
   (::) : (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
 
 -- Hints for interactive editing
-%name Vect xs,ys,zs,ws
+%name Vect xs, ys, zs, ws
 
 public export
 length : (xs : Vect len elem) -> Nat
@@ -262,88 +263,6 @@ fromList : (xs : List elem) -> Vect (length xs) elem
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
-
---------------------------------------------------------------------------------
--- Zips and unzips
---------------------------------------------------------------------------------
-
-||| Combine two equal-length vectors pairwise with some function.
-|||
-||| @ f the function to combine elements with
-||| @ xs the first vector of elements
-||| @ ys the second vector of elements
-|||
-||| ```idris example
-||| zipWith (+) (fromList [1,2,3,4]) (fromList [5,6,7,8])
-||| ```
-public export
-zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
-zipWith f []      []      = []
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-||| Combine three equal-length vectors into a vector with some function
-|||
-||| ```idris example
-||| zipWith3 (\x,y,z => x+y+z) (fromList [1,2,3,4]) (fromList [5,6,7,8]) (fromList [1,1,1,1])
-||| ```
-public export
-zipWith3 : (a -> b -> c -> d) -> (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n d
-zipWith3 f []      []      []      = []
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
-
-||| Combine two equal-length vectors pairwise
-|||
-||| ```idris example
-||| zip (fromList [1,2,3,4]) (fromList [1,2,3,4])
-||| ```
-public export
-zip : (xs : Vect n a) -> (ys : Vect n b) -> Vect n (a, b)
-zip []      []      = []
-zip (x::xs) (y::ys) = (x, y) :: zip xs ys
-
-||| Combine three equal-length vectors elementwise into a vector of tuples
-|||
-||| ```idris example
-||| zip3 (fromList [1,2,3,4]) (fromList [1,2,3,4]) (fromList [1,2,3,4])
-||| ```
-public export
-zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
-zip3 []      []      []      = []
-zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
-
-||| Convert a vector by applying a function to a pair of vectors
-public export
-unzipWith : (a -> (b, c)) -> Vect n a -> (Vect n b, Vect n c)
-unzipWith f [] = ([], [])
-unzipWith f (x :: xs) = let (b, c) = f x
-                            (bs, cs) = unzipWith f xs in
-                            (b :: bs, c :: cs)
-
-||| Convert a vector of pairs to a pair of vectors
-|||
-||| ```idris example
-||| unzip (fromList [(1,2), (1,2)])
-||| ```
-public export
-unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
-unzip = unzipWith id
-
-||| Convert a vector by applying a function to a triple of vectors
-public export
-unzipWith3 : (a -> (b, c, d)) -> Vect n a -> (Vect n b, Vect n c, Vect n d)
-unzipWith3 f [] = ([], [], [])
-unzipWith3 f (x :: xs) = let (b, c, d) = f x
-                             (bs, cs, ds) = unzipWith3 f xs in
-                             (b :: bs, c :: cs, d :: ds)
-
-||| Convert a vector of three-tuples to a triplet of vectors
-|||
-||| ```idris example
-||| unzip3 (fromList [(1,2,3), (1,2,3)])
-||| ```
-public export
-unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
-unzip3 = unzipWith3 id
 
 --------------------------------------------------------------------------------
 -- Equality
@@ -826,6 +745,28 @@ public export
 range : {len : Nat} -> Vect len (Fin len)
 range {len=Z}   = []
 range {len=S _} = FZ :: map FS range
+
+--------------------------------------------------------------------------------
+-- Zippable
+--------------------------------------------------------------------------------
+
+export
+Zippable (Vect k) where
+  zipWith _ [] [] = []
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
+
+  zipWith3 _ [] [] [] = []
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
+
+  unzipWith f [] = ([], [])
+  unzipWith f (x :: xs) = let (b, c) = f x
+                              (bs, cs) = unzipWith f xs in
+                              (b :: bs, c :: cs)
+
+  unzipWith3 f [] = ([], [], [])
+  unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                               (bs, cs, ds) = unzipWith3 f xs in
+                               (b :: bs, c :: cs, d :: ds)
 
 --------------------------------------------------------------------------------
 -- Matrix transposition

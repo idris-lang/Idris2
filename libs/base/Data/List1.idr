@@ -1,5 +1,7 @@
 module Data.List1
 
+import public Data.Zippable
+
 %default total
 
 infixr 7 :::
@@ -145,63 +147,41 @@ consInjective : the (List1 a) (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
 
 ------------------------------------------------------------------------
--- Zip/Unzip
+-- Zippable
 
 export
-zipWith : (a -> b -> c) -> List1 a -> List1 b -> List1 c
-zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
+Zippable List1 where
+  zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
   where
-    zipWith' : List a -> List b -> List c
-    zipWith' [] _ = []
-    zipWith' _ [] = []
-    zipWith' (x :: xs) (y :: ys) = f x y :: zipWith' xs ys
+      zipWith' : List a -> List b -> List c
+      zipWith' [] _ = []
+      zipWith' _ [] = []
+      zipWith' (x :: xs) (y :: ys) = f x y :: zipWith' xs ys
 
-export
-zip : List1 a -> List1 b -> List1 (a, b)
-zip = zipWith (,)
+  zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) = f x y z ::: zipWith3' xs ys zs
+    where
+      zipWith3' : List a -> List b -> List c -> List d
+      zipWith3' [] _ _ = []
+      zipWith3' _ [] _ = []
+      zipWith3' _ _ [] = []
+      zipWith3' (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3' xs ys zs
 
-export
-zipWith3 : (a -> b -> c -> d) -> List1 a -> List1 b -> List1 c -> List1 d
-zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) = f x y z ::: zipWith3' xs ys zs
-  where
-    zipWith3' : List a -> List b -> List c -> List d
-    zipWith3' [] _ _ = []
-    zipWith3' _ [] _ = []
-    zipWith3' _ _ [] = []
-    zipWith3' (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3' xs ys zs
-
-export
-zip3 : List1 a -> List1 b -> List1 c -> List1 (a, b, c)
-zip3 = zipWith3 (,,)
-
-export
-unzipWith : (a -> (b, c)) -> List1 a -> (List1 b, List1 c)
-unzipWith f (x ::: xs) = let (b, c) = f x
-                             (bs, cs) = unzipWith' xs in
-                             (b ::: bs, c ::: cs)
-  where
-    unzipWith' : List a -> (List b, List c)
-    unzipWith' [] = ([], [])
-    unzipWith' (x :: xs) = let (b, c) = f x
+  unzipWith f (x ::: xs) = let (b, c) = f x
                                (bs, cs) = unzipWith' xs in
-                               (b :: bs, c :: cs)
+                               (b ::: bs, c ::: cs)
+    where
+      unzipWith' : List a -> (List b, List c)
+      unzipWith' [] = ([], [])
+      unzipWith' (x :: xs) = let (b, c) = f x
+                                 (bs, cs) = unzipWith' xs in
+                                 (b :: bs, c :: cs)
 
-export
-unzip : List1 (a, b) -> (List1 a, List1 b)
-unzip = unzipWith id
-
-export
-unzipWith3 : (a -> (b, c, d)) -> List1 a -> (List1 b, List1 c, List1 d)
-unzipWith3 f (x ::: xs) = let (b, c, d) = f x
-                              (bs, cs, ds) = unzipWith3' xs in
-                              (b ::: bs, c ::: cs, d ::: ds)
-  where
-    unzipWith3' : List a -> (List b, List c, List d)
-    unzipWith3' [] = ([], [], [])
-    unzipWith3' (x :: xs) = let (b, c, d) = f x
+  unzipWith3 f (x ::: xs) = let (b, c, d) = f x
                                 (bs, cs, ds) = unzipWith3' xs in
-                                (b :: bs, c :: cs, d :: ds)
-
-export
-unzip3 : List1 (a, b, c) -> (List1 a, List1 b, List1 c)
-unzip3 = unzipWith3 id
+                                (b ::: bs, c ::: cs, d ::: ds)
+    where
+      unzipWith3' : List a -> (List b, List c, List d)
+      unzipWith3' [] = ([], [], [])
+      unzipWith3' (x :: xs) = let (b, c, d) = f x
+                                  (bs, cs, ds) = unzipWith3' xs in
+                                  (b :: bs, c :: cs, d :: ds)
