@@ -2,6 +2,8 @@ module Prelude.Basics
 
 import Builtin
 
+import Prelude.Ops
+
 %default total
 
 public export
@@ -38,6 +40,13 @@ const x = \value => x
 public export %inline
 (.) : (b -> c) -> (a -> b) -> a -> c
 (.) f g = \x => f (g x)
+
+||| Composition of a two-argument function with a single-argument one.
+||| `(.:)` is like `(.)` but the second argument and the result are two-argument functions.
+||| This operator is also known as "blackbird operator".
+public export %inline
+(.:) : (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.:) = (.) . (.)
 
 ||| `on b u x y` runs the binary function b on the results of applying
 ||| unary function u to two arguments x and y. From the opposite perspective,
