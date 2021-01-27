@@ -234,7 +234,7 @@ tailRecOptimGroup defs names =
         let fusion = FunDecl EmptyFC fusionName fusionArgs (makeTailOptimToBody fusionName fusionArgs fusionBody)
         let newFunctions = Prelude.concat $ map
                             (changeBodyToUseFusion fusionName)
-                            (ids `List.zip` (names `List.zip` d))
+                            (ids `zip` (names `zip` d))
         pure $ fusion <+> newFunctions
 
 
