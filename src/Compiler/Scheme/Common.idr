@@ -155,6 +155,7 @@ schOp (Cast IntegerType IntType) [x] = x
 schOp (Cast Bits8Type IntType) [x] = x
 schOp (Cast Bits16Type IntType) [x] = x
 schOp (Cast Bits32Type IntType) [x] = x
+schOp (Cast Bits64Type IntType) [x] = x
 schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
