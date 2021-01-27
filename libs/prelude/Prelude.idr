@@ -35,6 +35,7 @@ to be (division by zero, as a concrete example).
 import public Builtin
 import public PrimIO
 import public Prelude.Basics as Prelude
+import public Prelude.Cast as Prelude
 import public Prelude.EqOrd as Prelude
 import public Prelude.Interfaces as Prelude
 import public Prelude.IO as Prelude

@@ -39,7 +39,7 @@ testPair : MyDPair Nat (\n => Vect n Integer)
 testPair = MkMyDPair _ (Cons 1 (Cons 2 (Cons 3 Nil)))
 
 testDVect : DVect Integer
-testDVect = MkDVect 94 (Cons 1 (Cons 2 (Cons 3 Nil))) 
+testDVect = MkDVect 94 (Cons 1 (Cons 2 (Cons 3 Nil)))
 
 testPerson : Person
 testPerson = MkPerson "Wowbagger" 1337 10 (\x => S x)

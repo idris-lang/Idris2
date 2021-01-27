@@ -7,8 +7,8 @@ import Data.List
 import Data.List1
 import Data.Vect
 import Parser.Source
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
 import System

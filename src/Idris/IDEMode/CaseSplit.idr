@@ -19,7 +19,7 @@ import Idris.Resugar
 import Idris.Syntax
 
 import Data.List
-import Data.List.Extra
+import Libraries.Data.List.Extra
 import Data.Strings
 import System.File
 

@@ -2,7 +2,7 @@
 module Idris.IDEMode.TokenLine
 
 import Parser.Lexer.Source
-import Text.Lexer
+import Libraries.Text.Lexer
 
 %default total
 

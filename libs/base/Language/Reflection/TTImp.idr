@@ -153,6 +153,6 @@ mutual
        IParameters : FC -> List (Name, TTImp) ->
                      List Decl -> Decl
        IRecord : FC -> Visibility -> Record -> Decl
-       INamespace : FC -> List String -> List Decl -> Decl
+       INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        ILog : Nat -> Decl

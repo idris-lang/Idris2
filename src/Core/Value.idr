@@ -5,7 +5,7 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Data.IntMap
+import Libraries.Data.IntMap
 
 %default covering
 

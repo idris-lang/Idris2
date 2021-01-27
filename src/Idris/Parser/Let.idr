@@ -1,12 +1,12 @@
 module Idris.Parser.Let
 
 import Idris.Syntax
-import Text.Bounded
+import Libraries.Text.Bounded
 
 import Data.Either
 import Data.List1
 
-import Utils.String
+import Libraries.Utils.String
 
 %default total
 

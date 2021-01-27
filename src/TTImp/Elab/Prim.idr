@@ -27,4 +27,3 @@ checkPrim fc StringType = (PrimVal fc StringType, TType fc)
 checkPrim fc CharType = (PrimVal fc CharType, TType fc)
 checkPrim fc DoubleType = (PrimVal fc DoubleType, TType fc)
 checkPrim fc WorldType = (PrimVal fc WorldType, TType fc)
-

@@ -55,6 +55,34 @@ type system to remove some significant sources of bugs!
 
 You can find more details in Section :ref:`updates-index`.
 
+Why aren't there more linearity annotations in the library?
+===========================================================
+
+In theory, now that Idris 2 is based on Quantitative Type Theory (see
+Section :ref:`sect-multiplicities`, we can write more precise types in the
+Prelude and Base libraries which give more precise usage information. We have
+chosen not to do that (yet) however. Consider, for example, what would happen
+if we did::
+
+    id : (1 _ : a) -> a
+    id x = x
+
+This is definitely correct, because ``x`` is used exactly once. However, we
+also have::
+
+    map : (a -> b) -> List a -> List b
+
+We can't guarantee that the function passed to ``map`` is linear in its
+argument in general, and so we can no longer say ``map id xs`` since the
+multiplicity of ``id`` doesn't match the multiplicity of the function passed
+to ``map``.
+
+Eventually, we hope to extend the core language with multiplicity polymorphism
+which will help resolve these problems. Until then, we consider linearity an
+experimental new feature in the type system, and therefore we follow the general
+philosophy that if you don't want to use linearity, its presence mustn't
+impact the way you write programs.
+
 How do I get command history in the Idris2 REPL?
 ================================================
 
@@ -63,6 +91,9 @@ keeping dependencies minimal. A useful work around is to
 install `rlwrap <https://linux.die.net/man/1/rlwrap>`_, this
 utility provides command history simply by invoking the Idris2
 repl as an argument to the utility ``rlwrap idris2``.
+
+The goal, eventually, is to use the IDE mode as the basis of an implementation
+of a sophisticated REPL, developed independently from the Idris 2 core.
 
 Where can I find more answers?
 ==============================

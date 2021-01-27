@@ -1,9 +1,9 @@
 module Parser.Support
 
-import public Text.Lexer
-import public Text.Parser
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import public Libraries.Text.Lexer
+import public Libraries.Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
 import Data.List

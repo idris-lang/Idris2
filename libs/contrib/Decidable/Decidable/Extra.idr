@@ -73,7 +73,7 @@ decideTransform {t = t} tDec posDec =
 
 ||| Convert a decision about a decidable property into one about its negation.
 public export
-negateDec : (1 dec : Dec a) -> Dec (Not a)
+negateDec : (dec : Dec a) -> Dec (Not a)
 negateDec (Yes pf) = No ($ pf)
 negateDec (No npf) = Yes npf
 

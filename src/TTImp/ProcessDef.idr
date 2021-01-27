@@ -29,11 +29,11 @@ import TTImp.WithClause
 
 import Data.Either
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Maybe
 
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
 

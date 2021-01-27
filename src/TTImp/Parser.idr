@@ -7,7 +7,7 @@ import Core.TT
 import Parser.Source
 import TTImp.TTImp
 
-import public Text.Parser
+import public Libraries.Text.Parser
 import        Data.List
 import        Data.List.Views
 import        Data.List1

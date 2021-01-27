@@ -6,7 +6,7 @@ namespace Console
     putStr : String -> App e ()
     getStr : App e String
 
-  export 
+  export
   PrimIO e => Console e where
     putStr str = primIO $ putStr str
     getStr = primIO $ getLine
@@ -48,14 +48,14 @@ test
 
 addState : Has [Console, StateEx] e => App e ()
 addState
-    = do new "foo" $ 
+    = do new "foo" $
              do putStrLn "Here we go!"
                 str <- get
                 putStrLn str
 
 runTest : IO ()
-runTest 
+runTest
     = run $ do new (the Int 0) $
                handle (do test; addState) pure
-                      (\err : String => 
+                      (\err : String =>
                               putStrLn $ "Error: " ++ err)

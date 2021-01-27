@@ -11,15 +11,17 @@ import Core.Context.Log
 import Core.Directory
 import Core.Name
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Nat
 import Data.Strings
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -30,12 +32,12 @@ import System.Info
 
 findRacket : IO String
 findRacket =
-  do env <- getEnv "RACKET"
+  do env <- idrisGetEnv "RACKET"
      pure $ fromMaybe "/usr/bin/env racket" env
 
 findRacoExe : IO String
 findRacoExe =
-  do env <- getEnv "RACKET_RACO"
+  do env <- idrisGetEnv "RACKET_RACO"
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
 schHeader : String -> String

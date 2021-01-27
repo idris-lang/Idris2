@@ -32,15 +32,27 @@ Monad IO where
 
 public export
 interface Monad io => HasIO io where
-  liftIO : (1 _ : IO a) -> io a
+  liftIO : IO a -> io a
+
+public export
+interface Monad io => HasLinearIO io where
+  liftIO1 : (1 _ : IO a) -> io a
 
 public export %inline
-HasIO IO where
-  liftIO x = x
+HasLinearIO IO where
+  liftIO1 x = x
+
+public export %inline
+HasLinearIO io => HasIO io where
+  liftIO x = liftIO1 x
 
 export %inline
-primIO : HasIO io => (1 fn : (1 x : %World) -> IORes a) -> io a
+primIO : HasIO io => (fn : (1 x : %World) -> IORes a) -> io a
 primIO op = liftIO (fromPrim op)
+
+export %inline
+primIO1 : HasLinearIO io => (1 fn : (1 x : %World) -> IORes a) -> io a
+primIO1 op = liftIO1 (fromPrim op)
 
 %extern
 prim__onCollectAny : AnyPtr -> (AnyPtr -> PrimIO ()) -> PrimIO GCAnyPtr

@@ -1,13 +1,13 @@
 data Foo : Type where [noHints]
   A : Foo
   B : Foo
-  
+
 findA : {auto foo : Foo} -> String
 findA {foo = A} = "Found an A"
 findA {foo = _} = "Failed to find an A"
 
 Baz : String -> Type
-Baz s = s = "Found an A" 
+Baz s = s = "Found an A"
 
 baz : (s : String ** Baz s)
 baz = let %hint arg : Foo
@@ -17,14 +17,14 @@ baz = let %hint arg : Foo
 interface Gnu where
   constructor MkGnu
   hasFoo : Foo
-  
+
 findB : Gnu => String
 findB = case hasFoo of
   B => "Found a B"
   _ => "Failed to find a B"
 
 Bar : String -> Type
-Bar s = s = "Found a B" 
+Bar s = s = "Found a B"
 
 bar : (s : String ** Bar s)
 bar = let %hint arg : Gnu

@@ -26,4 +26,3 @@ safeStrHead4 : (s : String) -> {pr : NonEmpty (unpack s)} -> Char
 safeStrHead4 {pr=foo} s with (unpack s)
   safeStrHead4 {pr=bar} s | [] = absurd bar
   safeStrHead4 s | (c::_) = c
-

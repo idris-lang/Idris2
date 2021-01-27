@@ -3,6 +3,8 @@ module Data.Strings
 import Data.List
 import Data.List1
 
+%default total
+
 export
 singleton : Char -> String
 singleton c = strCons c ""
@@ -46,6 +48,7 @@ fastAppend = fastConcat
 ||| ```idris example
 ||| words' (unpack " A B C  D E   ")
 ||| ```
+covering
 words' : List Char -> List (List Char)
 words' s = case dropWhile isSpace s of
             [] => []
@@ -58,6 +61,7 @@ words' s = case dropWhile isSpace s of
 ||| words " A B C  D E   "
 ||| ```
 export
+covering
 words : String -> List String
 words s = map pack (words' (unpack s))
 
@@ -120,14 +124,45 @@ export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
 
+
+||| A view checking whether a string is empty
+||| and, if not, returning its head and tail
+public export
+data StrM : String -> Type where
+    StrNil : StrM ""
+    StrCons : (x : Char) -> (xs : String) -> StrM (strCons x xs)
+
+||| To each string we can associate its StrM view
+public export
+strM : (x : String) -> StrM x
+strM "" = StrNil
+strM x
+  -- Using primitives, so `assert_total` and `believe_me` needed
+    = assert_total $ believe_me $
+        StrCons (prim__strHead x) (prim__strTail x)
+
+||| A view of a string as a lazy linked list of characters
+public export
+data AsList : String -> Type where
+  Nil  : AsList ""
+  (::) : (c : Char) -> {str : String} -> Lazy (AsList str) -> AsList (strCons c str)
+
+||| To each string we can associate the lazy linked list of characters
+||| it corresponds to once unpacked.
+public export
+asList : (str : String) -> AsList str
+asList str with (strM str)
+  asList "" | StrNil = []
+  asList str@(strCons x xs) | StrCons _ _ = x :: asList (assert_smaller str xs)
+
+||| Trim whitespace on the left of the string
 export
 ltrim : String -> String
-ltrim xs = pack (ltrimChars (unpack xs))
-  where
-    ltrimChars : List Char -> List Char
-    ltrimChars [] = []
-    ltrimChars (x :: xs) = if isSpace x then ltrimChars xs else (x :: xs)
+ltrim str with (asList str)
+  ltrim ""  | [] = ""
+  ltrim str@_ | x :: xs = if isSpace x then ltrim _ | xs else str
 
+||| Trim whitespace on both sides of the string
 export
 trim : String -> String
 trim = ltrim . reverse . ltrim . reverse
@@ -211,18 +246,6 @@ export
 isInfixOf : String -> String -> Bool
 isInfixOf a b = isInfixOf (unpack a) (unpack b)
 
-public export
-data StrM : String -> Type where
-    StrNil : StrM ""
-    StrCons : (x : Char) -> (xs : String) -> StrM (strCons x xs)
-
-public export -- primitives, so assert_total and believe_me needed
-strM : (x : String) -> StrM x
-strM "" = StrNil
-strM x
-    = assert_total $ believe_me $
-        StrCons (prim__strHead x) (prim__strTail x)
-
 parseNumWithoutSign : List Char -> Integer -> Maybe Integer
 parseNumWithoutSign []        acc = Just acc
 parseNumWithoutSign (c :: cs) acc =
@@ -289,6 +312,7 @@ parseInteger s = parseIntTrimmed (trim s)
 ||| parseDouble {a=Int} " +123.123"
 ||| ```
 export -- it's a bit too slow at compile time
+covering
 parseDouble : String -> Maybe Double
 parseDouble = mkDouble . wfe . trim
   where

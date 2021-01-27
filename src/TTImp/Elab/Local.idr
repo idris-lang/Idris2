@@ -15,7 +15,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.TTImp
 
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering

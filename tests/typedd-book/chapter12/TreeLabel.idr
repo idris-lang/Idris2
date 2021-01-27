@@ -21,4 +21,3 @@ treeLabelWith lbls (Node left val right)
 
 treeLabel : Tree a -> Tree (Integer, a)
 treeLabel tree = snd (treeLabelWith [1..] tree)
-

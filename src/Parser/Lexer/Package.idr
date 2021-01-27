@@ -1,16 +1,16 @@
 module Parser.Lexer.Package
 
 import public Parser.Lexer.Common
-import public Text.Lexer
-import public Text.Parser
-import public Text.Bounded
-import Text.PrettyPrint.Prettyprinter
+import public Libraries.Text.Lexer
+import public Libraries.Text.Parser
+import public Libraries.Text.Bounded
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Data.List
 import Data.List1
 import Data.Strings
-import Data.String.Extra
-import Utils.String
+import Libraries.Data.String.Extra
+import Libraries.Utils.String
 
 import Core.Name.Namespace
 

@@ -58,6 +58,11 @@ data NotBothZero : (n, m : Nat) -> Type where
   LeftIsNotZero  : NotBothZero (S n) m
   RightIsNotZero : NotBothZero n     (S m)
 
+export
+Uninhabited (NotBothZero 0 0) where
+  uninhabited LeftIsNotZero impossible
+  uninhabited RightIsNotZero impossible
+
 public export
 data LTE  : (n, m : Nat) -> Type where
   LTEZero : LTE Z    right
@@ -115,7 +120,7 @@ lteTransitive : LTE n m -> LTE m p -> LTE n p
 lteTransitive LTEZero y = LTEZero
 lteTransitive (LTESucc x) (LTESucc y) = LTESucc (lteTransitive x y)
 
-export
+public export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)

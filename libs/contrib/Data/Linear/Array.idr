@@ -19,8 +19,8 @@ interface Array arr => MArray arr where
   -- Array is unchanged if the index is out of bounds
   write : (1 _ : arr t) -> Int -> t -> arr t
 
-  mread : (1 _ : arr t) -> Int -> LPair (Maybe t) (arr t)
-  msize : (1 _ : arr t) -> LPair Int (arr t)
+  mread : (1 _ : arr t) -> Int -> Res (Maybe t) (const (arr t))
+  msize : (1 _ : arr t) -> Res Int (const (arr t))
 
 export
 data IArray : Type -> Type where
@@ -57,16 +57,17 @@ Array IArray where
   size (MkIArray a) = max a
 
 export
-copyArray : MArray arr => (newsize : Int) -> (1 _ : arr t) -> (arr t, arr t)
+copyArray : MArray arr => (newsize : Int) -> (1 _ : arr t) ->
+            LPair (arr t) (arr t)
 copyArray newsize a
     = let size # a = msize a in
           newArray newsize $
             (\a' => copyContent (min (newsize - 1) (size - 1)) a a')
   where
-    copyContent : Int -> (1 _ : arr t) -> (1 _ : arr t) -> (arr t, arr t)
+    copyContent : Int -> (1 _ : arr t) -> (1 _ : arr t) -> LPair (arr t) (arr t)
     copyContent pos a a'
         = if pos < 0
-             then (a, a')
+             then a # a'
              else let val # a = mread a pos
                       1 a' = case val of
                                   Nothing => a'

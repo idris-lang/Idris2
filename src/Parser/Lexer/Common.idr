@@ -1,6 +1,6 @@
 module Parser.Lexer.Common
 
-import public Text.Lexer
+import public Libraries.Text.Lexer
 
 %default total
 

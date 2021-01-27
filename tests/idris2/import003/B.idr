@@ -1,4 +1,3 @@
 module B
 
 import A
-

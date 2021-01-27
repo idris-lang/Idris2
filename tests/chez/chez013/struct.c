@@ -29,4 +29,3 @@ namedpoint* mkNamedPoint(char* str, point* p) {
 void freeNamedPoint(namedpoint* np) {
     free(np);
 }
-

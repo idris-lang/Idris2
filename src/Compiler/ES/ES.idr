@@ -1,11 +1,11 @@
 module Compiler.ES.ES
 
 import Compiler.ES.Imperative
-import Utils.Hex
+import Libraries.Utils.Hex
 import Data.List1
 import Data.Strings
-import Data.SortedMap
-import Data.String.Extra
+import Libraries.Data.SortedMap
+import Libraries.Data.String.Extra
 
 import Core.Directory
 
@@ -64,19 +64,16 @@ addStringIteratorToPreamble =
   do
     let defs = "
 function __prim_stringIteratorNew(str) {
-  return str[Symbol.iterator]();
+  return 0;
+}
+function __prim_stringIteratorToString(_, str, it, f) {
+  return f(str.slice(it));
 }
 function __prim_stringIteratorNext(str, it) {
-  const char = it.next();
-  if (char.done) {
-    return {h: 0}; // EOF
-  } else {
-    return {
-      h: 1, // Character
-      a1: char.value,
-      a2: it
-    };
-  }
+  if (it >= str.length)
+    return {h: 0};
+  else
+    return {h: 1, a1: str.charAt(it), a2: it + 1};
 }"
     let name = "stringIterator"
     let newName = esName name
@@ -251,6 +248,8 @@ jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
 jsOp (Cast CharType IntegerType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
 jsOp (Cast DoubleType IntType) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
 jsOp (Cast DoubleType IntegerType) [x] = pure $ "BigInt(Math.floor(" ++ x ++ "))"
+jsOp (Cast IntType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
+jsOp (Cast IntegerType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
 jsOp (Cast StringType IntType) [x] = boundedInt 63 $ !(jsIntegerOfString x)
 jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
@@ -332,7 +331,8 @@ makeForeign n x =
           case def of
             "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
             "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
-            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
+            "toString" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorToString;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\", \"toString\"")
 
 
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"support\"")

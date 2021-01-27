@@ -2,6 +2,7 @@ module Idris.CommandLine
 
 import IdrisPaths
 
+import Idris.Env
 import Idris.Version
 
 import Core.Options
@@ -261,22 +262,25 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing -- do more elaborator checks (currently conversion in LinearCheck)
            ]
 
-optsUsage : (options : List OptDesc) -> String
-optsUsage options = let optsShow = map optShow options
-                        maxOpt = foldr (\(opt, _), acc => max acc (length opt)) 0 optsShow in
-                        concatMap (optUsage maxOpt) optsShow
+optShow : OptDesc -> (String, Maybe String)
+optShow (MkOpt [] _ _ _) = ("", Just "")
+optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
+                                              showSep " " (map show argdescs),
+                                              help)
   where
     showSep : String -> List String -> String
     showSep sep [] = ""
     showSep sep [x] = x
     showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
-    optShow : OptDesc -> (String, Maybe String)
-    optShow (MkOpt [] _ _ _) = ("", Just "")
-    optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                                  showSep " " (map show argdescs),
-                                                  help)
+firstColumnWidth : Nat
+firstColumnWidth = let maxOpt = foldr max 0 $ map (length . fst . optShow) options
+                       maxEnv = foldr max 0 $ map (length . .name) envs in
+                       max maxOpt maxEnv
 
+makeTextFromOptionsOrEnvs : List (String, Maybe String) -> String
+makeTextFromOptionsOrEnvs rows = concatMap (optUsage firstColumnWidth) rows
+  where
     optUsage : Nat -> (String, Maybe String) -> String
     optUsage maxOpt (optshow, help) = maybe ""  -- Don't show anything if there's no help string (that means
                                                 -- it's an internal option)
@@ -284,6 +288,12 @@ optsUsage options = let optsShow = map optShow options
                                              pack (List.replicate (minus (maxOpt + 2) (length optshow)) ' ') ++
                                              h ++ "\n")
                                       help
+
+optsUsage : String
+optsUsage = makeTextFromOptionsOrEnvs $ map optShow options
+
+envsUsage : String
+envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
@@ -294,7 +304,10 @@ usage : String
 usage = versionMsg ++ "\n" ++
         "Usage: idris2 [options] [input file]\n\n" ++
         "Available options:\n" ++
-        optsUsage options
+        optsUsage ++
+        "\n" ++
+        "Environment variables:\n" ++
+        envsUsage
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)

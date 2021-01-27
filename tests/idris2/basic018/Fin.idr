@@ -32,4 +32,3 @@ foo = 3
 
 bar : Fin 5
 bar = 8
-

@@ -15,11 +15,11 @@ data FieldType : String -> Type -> List (String, Type) -> Type where
      Later : FieldType n t ts -> FieldType n t (f :: ts)
 
 %extern
-prim__getField : {s : _} -> forall fs, ty . 
+prim__getField : {s : _} -> forall fs, ty .
                          Struct s fs -> (n : String) ->
                          FieldType n ty fs -> ty
 %extern
-prim__setField : {s : _} -> forall fs, ty . 
+prim__setField : {s : _} -> forall fs, ty .
                          Struct s fs -> (n : String) ->
                          FieldType n ty fs -> ty -> PrimIO ()
 
@@ -32,4 +32,3 @@ public export %inline
 setField : {s : _} -> Struct s fs -> (n : String) ->
            {auto fieldok : FieldType n ty fs} -> ty -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
-

@@ -1,4 +1,4 @@
 $1 --no-color --console-width 0 --check TestProto.idr
-$1 --no-color --console-width 0 --check MakeChans.idr
+#$1 --no-color --console-width 0 --check MakeChans.idr
 
 rm -rf build

@@ -3,7 +3,7 @@ import Data.Vect
 %unbound_implicits off
 
 append : forall n, m, a . Vect n a -> Vect m a -> Vect (n + m) a
-append [] ys = ys 
+append [] ys = ys
 append (x :: xs) ys = x :: append xs ys
 
 data Env : forall n . Vect n Type -> Type where
@@ -17,4 +17,3 @@ len : forall xs . Env xs -> Nat
 -- neither of these are fine
 len': Env xs -> Nat
 append' : Vect n a -> Vect m a -> Vect (n + m) a
-

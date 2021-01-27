@@ -43,21 +43,21 @@ integerToNat x
 ||| @ x the number to case-split on
 ||| @ y the other numberpublic export
 public export
-plus : (1 x : Nat) -> (1 y : Nat) -> Nat
+plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
 ||| Subtract natural numbers.  If the second number is larger than the first,
 ||| return 0.
 public export
-minus : (1 left : Nat) -> Nat -> Nat
+minus : (left : Nat) -> Nat -> Nat
 minus Z        right     = Z
 minus left     Z         = left
 minus (S left) (S right) = minus left right
 
 ||| Multiply natural numbers.
 public export
-mult : (1 x : Nat) -> Nat -> Nat
+mult : (x : Nat) -> Nat -> Nat
 mult Z y = Z
 mult (S k) y = plus y (mult k y)
 
@@ -119,7 +119,7 @@ data Maybe : (ty : Type) -> Type where
   Nothing : Maybe ty
 
   ||| A value of type `ty` is stored
-  Just : (1 x : ty) -> Maybe ty
+  Just : (x : ty) -> Maybe ty
 
 public export
 Uninhabited (Nothing = Just x) where
@@ -219,10 +219,10 @@ export Uninhabited (No p === Yes q) where uninhabited eq impossible
 public export
 data Either : (a : Type) -> (b : Type) -> Type where
   ||| One possibility of the sum, conventionally used to represent errors.
-  Left : forall a, b. (1 x : a) -> Either a b
+  Left : forall a, b. (x : a) -> Either a b
 
   ||| The other possibility, conventionally used to represent success.
-  Right : forall a, b. (1 x : b) -> Either a b
+  Right : forall a, b. (x : b) -> Either a b
 
 export Uninhabited (Left p === Right q) where uninhabited eq impossible
 export Uninhabited (Right p === Left q) where uninhabited eq impossible
@@ -320,7 +320,7 @@ Ord a => Ord (List a) where
 
 namespace List
   public export
-  (++) : (1 xs, ys : List a) -> List a
+  (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
@@ -388,6 +388,8 @@ namespace Stream
   data Stream : Type -> Type where
        (::) : a -> Inf (Stream a) -> Stream a
 
+%name Stream xs, ys, zs
+
 public export
 Functor Stream where
   map f (x :: xs) = f x :: map f xs
@@ -406,7 +408,7 @@ tail (x :: xs) = xs
 ||| @ n how many elements to take
 ||| @ xs the stream
 public export
-take : (1 n : Nat) -> (xs : Stream a) -> List a
+take : (n : Nat) -> (xs : Stream a) -> List a
 take Z xs = []
 take (S k) (x :: xs) = x :: take k xs
 
@@ -416,7 +418,7 @@ take (S k) (x :: xs) = x :: take k xs
 
 namespace Strings
   public export
-  (++) : (1 x : String) -> (1 y : String) -> String
+  (++) : (x : String) -> (y : String) -> String
   x ++ y = prim__strAppend x y
 
   ||| Returns the length of the string.
@@ -675,229 +677,6 @@ floor x = prim__doubleFloor x
 public export
 ceiling : Double -> Double
 ceiling x = prim__doubleCeiling x
-
------------
--- CASTS --
------------
-
--- Casts between primitives only here.  They might be lossy.
-
-||| Interface for transforming an instance of a data type to another type.
-public export
-interface Cast from to where
-  ||| Perform a (potentially lossy!) cast operation.
-  ||| @ orig The original type
-  cast : (orig : from) -> to
-
--- To String
-
-export
-Cast Int String where
-  cast = prim__cast_IntString
-
-export
-Cast Integer String where
-  cast = prim__cast_IntegerString
-
-export
-Cast Char String where
-  cast = prim__cast_CharString
-
-export
-Cast Double String where
-  cast = prim__cast_DoubleString
-
--- To Integer
-
-export
-Cast Int Integer where
-  cast = prim__cast_IntInteger
-
-export
-Cast Char Integer where
-  cast = prim__cast_CharInteger
-
-export
-Cast Double Integer where
-  cast = prim__cast_DoubleInteger
-
-export
-Cast String Integer where
-  cast = prim__cast_StringInteger
-
-export
-Cast Nat Integer where
-  cast = natToInteger
-
-export
-Cast Bits8 Integer where
-  cast = prim__cast_Bits8Integer
-
-export
-Cast Bits16 Integer where
-  cast = prim__cast_Bits16Integer
-
-export
-Cast Bits32 Integer where
-  cast = prim__cast_Bits32Integer
-
-export
-Cast Bits64 Integer where
-  cast = prim__cast_Bits64Integer
-
--- To Int
-
-export
-Cast Integer Int where
-  cast = prim__cast_IntegerInt
-
-export
-Cast Char Int where
-  cast = prim__cast_CharInt
-
-export
-Cast Double Int where
-  cast = prim__cast_DoubleInt
-
-export
-Cast String Int where
-  cast = prim__cast_StringInt
-
-export
-Cast Nat Int where
-  cast = fromInteger . natToInteger
-
-export
-Cast Bits8 Int where
-  cast = prim__cast_Bits8Int
-
-export
-Cast Bits16 Int where
-  cast = prim__cast_Bits16Int
-
-export
-Cast Bits32 Int where
-  cast = prim__cast_Bits32Int
-
-export
-Cast Bits64 Int where
-  cast = prim__cast_Bits64Int
-
--- To Char
-
-export
-Cast Int Char where
-  cast = prim__cast_IntChar
-
--- To Double
-
-export
-Cast Int Double where
-  cast = prim__cast_IntDouble
-
-export
-Cast Integer Double where
-  cast = prim__cast_IntegerDouble
-
-export
-Cast String Double where
-  cast = prim__cast_StringDouble
-
-export
-Cast Nat Double where
-  cast = prim__cast_IntegerDouble . natToInteger
-
-
--- To Bits8
-
-export
-Cast Int Bits8 where
-  cast = prim__cast_IntBits8
-
-export
-Cast Integer Bits8 where
-  cast = prim__cast_IntegerBits8
-
-export
-Cast Bits16 Bits8 where
-  cast = prim__cast_Bits16Bits8
-
-export
-Cast Bits32 Bits8 where
-  cast = prim__cast_Bits32Bits8
-
-export
-Cast Bits64 Bits8 where
-  cast = prim__cast_Bits64Bits8
-
-
--- To Bits16
-
-export
-Cast Int Bits16 where
-  cast = prim__cast_IntBits16
-
-export
-Cast Integer Bits16 where
-  cast = prim__cast_IntegerBits16
-
-export
-Cast Bits8 Bits16 where
-  cast = prim__cast_Bits8Bits16
-
-export
-Cast Bits32 Bits16 where
-  cast = prim__cast_Bits32Bits16
-
-export
-Cast Bits64 Bits16 where
-  cast = prim__cast_Bits64Bits16
-
-
--- To Bits32
-
-export
-Cast Int Bits32 where
-  cast = prim__cast_IntBits32
-
-export
-Cast Integer Bits32 where
-  cast = prim__cast_IntegerBits32
-
-export
-Cast Bits8 Bits32 where
-  cast = prim__cast_Bits8Bits32
-
-export
-Cast Bits16 Bits32 where
-  cast = prim__cast_Bits16Bits32
-
-export
-Cast Bits64 Bits32 where
-  cast = prim__cast_Bits64Bits32
-
--- To Bits64
-
-export
-Cast Int Bits64 where
-  cast = prim__cast_IntBits64
-
-export
-Cast Integer Bits64 where
-  cast = prim__cast_IntegerBits64
-
-export
-Cast Bits8 Bits64 where
-  cast = prim__cast_Bits8Bits64
-
-export
-Cast Bits16 Bits64 where
-  cast = prim__cast_Bits16Bits64
-
-export
-Cast Bits32 Bits64 where
-  cast = prim__cast_Bits32Bits64
-
 
 ------------
 -- RANGES --

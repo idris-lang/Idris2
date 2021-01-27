@@ -4,7 +4,7 @@ import Core.Core
 import Core.Context
 import Core.TT
 import Core.Value
-import Utils.String
+import Libraries.Utils.String
 
 import Data.Vect
 
@@ -375,18 +375,18 @@ believeMe [_, _, val] = Nothing
 
 constTy : Constant -> Constant -> Constant -> ClosedTerm
 constTy a b c
-    = let arr = linFnType emptyFC in
+    = let arr = fnType emptyFC in
     PrimVal emptyFC a `arr` (PrimVal emptyFC b `arr` PrimVal emptyFC c)
 
 constTy3 : Constant -> Constant -> Constant -> Constant -> ClosedTerm
 constTy3 a b c d
-    = let arr = linFnType emptyFC in
+    = let arr = fnType emptyFC in
     PrimVal emptyFC a `arr`
          (PrimVal emptyFC b `arr`
              (PrimVal emptyFC c `arr` PrimVal emptyFC d))
 
 predTy : Constant -> Constant -> ClosedTerm
-predTy a b = let arr = linFnType emptyFC in
+predTy a b = let arr = fnType emptyFC in
              PrimVal emptyFC a `arr` PrimVal emptyFC b
 
 arithTy : Constant -> ClosedTerm

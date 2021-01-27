@@ -64,7 +64,7 @@ interface Show ty where
 ||| Surround a `String` with parentheses depending on a condition.
 ||| @ b whether to add parentheses
 export
-showParens : (1 b : Bool) -> String -> String
+showParens : (b : Bool) -> String -> String
 showParens False s = s
 showParens True  s = "(" ++ s ++ ")"
 
