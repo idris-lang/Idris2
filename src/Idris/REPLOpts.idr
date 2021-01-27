@@ -32,6 +32,7 @@ record REPLOpts where
   currentElabSource : String
   psResult : Maybe (Name, Core (Search RawImp)) -- last proof search continuation (and name)
   gdResult : Maybe (Int, Core (Search (FC, List ImpClause))) -- last generate def continuation (and line number)
+  evalResultName : Maybe Name
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
   -- better to stick it now.
   extraCodegens : List (String, Codegen)
@@ -57,11 +58,16 @@ defaultOpts fname outmode cgs
         , currentElabSource = ""
         , psResult = Nothing
         , gdResult = Nothing
+        , evalResultName = Nothing
         , extraCodegens = cgs
         , consoleWidth = Nothing
         , color = True
         , synHighlightOn = True
         }
+  where
+    litStyle : Maybe String -> Maybe LiterateStyle
+    litStyle Nothing = Nothing
+    litStyle (Just fn) = isLitFile fn
 
 export
 data ROpts : Type where

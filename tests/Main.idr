@@ -124,7 +124,7 @@ idrisTests = MkTestPool []
        "import001", "import002", "import003", "import004", "import005",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006",
+       "interpreter005", "interpreter006", "interpreter007",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- Namespace blocks

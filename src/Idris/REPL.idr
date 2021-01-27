@@ -7,6 +7,7 @@ import Compiler.ES.Node
 import Compiler.ES.Javascript
 import Compiler.Common
 import Compiler.RefC.RefC
+import Compiler.Inline
 
 import Core.AutoSearch
 import Core.CaseTree
@@ -43,6 +44,7 @@ import Idris.Version
 
 import TTImp.Elab
 import TTImp.Elab.Check
+import TTImp.Elab.Local
 import TTImp.Interactive.CaseSplit
 import TTImp.Interactive.ExprSearch
 import TTImp.Interactive.GenerateDef
@@ -540,6 +542,44 @@ data REPLResult : Type where
   Exited : REPLResult
   Edited : EditResult -> REPLResult
 
+getItDecls :
+    {auto o : Ref ROpts REPLOpts} ->
+    Core (List ImpDecl)
+getItDecls
+    = do opts <- get ROpts
+         case evalResultName opts of
+            Nothing => pure []
+            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
+
+prepareExp :
+    {auto c : Ref Ctxt Defs} ->
+    {auto u : Ref UST UState} ->
+    {auto s : Ref Syn SyntaxInfo} ->
+    {auto m : Ref MD Metadata} ->
+    {auto o : Ref ROpts REPLOpts} ->
+    PTerm -> Core ClosedTerm
+prepareExp ctm
+    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
+         let ttimpWithIt = ILocal replFC !getItDecls ttimp
+         inidx <- resolveName (UN "[input]")
+         (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
+                                 [] ttimpWithIt Nothing
+         tm_erased <- linearCheck replFC linear True [] tm
+         compileAndInlineAll
+         pure tm_erased
+
+processLocal : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             {auto m : Ref MD Metadata} ->
+             {auto u : Ref UST UState} ->
+             {auto e : Ref EST (EState vars)} ->
+             List ElabOpt ->
+             NestedNames vars -> Env Term vars ->
+             List ImpDecl -> (scope : List ImpDecl) ->
+             Core ()
+processLocal {vars} eopts nest env nestdecls_in scope
+    = localHelper nest env nestdecls_in $ \nest' => traverse_ (processDecl eopts nest' env) scope
+
 export
 execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
@@ -548,11 +588,7 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
 execExp ctm
-    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
-         inidx <- resolveName (UN "[input]")
-         (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
-                                 [] ttimp Nothing
-         tm_erased <- linearCheck replFC linear True [] tm
+    = do tm_erased <- prepareExp ctm
          execute !findCG tm_erased
          pure $ Executed ctm
 
@@ -561,6 +597,7 @@ execDecls : {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto m : Ref MD Metadata} ->
+            {auto o : Ref ROpts REPLOpts} ->
             List PDecl -> Core REPLResult
 execDecls decls = do
   traverse_ execDecl decls
@@ -569,7 +606,9 @@ execDecls decls = do
     execDecl : PDecl -> Core ()
     execDecl decl = do
       i <- desugarDecl [] decl
-      traverse_ (processDecl [] (MkNested []) []) i
+      inidx <- resolveName (UN "[defs]")
+      newRef EST (initEStateSub inidx [] SubRefl)
+      processLocal [] (MkNested []) [] !getItDecls i
 
 export
 compileExp : {auto c : Ref Ctxt Defs} ->
@@ -579,11 +618,7 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do inidx <- resolveName (UN "[input]")
-         ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN "unsafePerformIO")) ctm)
-         (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                               [] ttimp Nothing
-         tm_erased <- linearCheck replFC linear True [] tm
+    = do tm_erased <- prepareExp ctm
          ok <- compile !findCG tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
@@ -597,7 +632,9 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                String -> Core REPLResult
 loadMainFile f
-    = do resetContext
+    = do opts <- get ROpts
+         put ROpts (record { evalResultName = Nothing } opts)
+         resetContext
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -660,6 +697,7 @@ process (Eval itm)
             Execute => do execExp itm; pure (Executed itm)
             _ =>
               do ttimp <- desugar AnyExpr [] itm
+                 let ttimpWithIt = ILocal replFC !getItDecls ttimp
                  inidx <- resolveName (UN "[input]")
                  -- a TMP HACK to prioritise list syntax for List: hide
                  -- foreign argument lists. TODO: once the new FFI is fully
@@ -669,7 +707,7 @@ process (Eval itm)
                            hide replFC (NS primIONS (UN "Nil")))
                        (\err => pure ())
                  (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
-                                       [] ttimp Nothing
+                                       [] ttimpWithIt Nothing
                  logTerm "repl.eval" 10 "Elaborated input" tm
                  defs <- get Ctxt
                  opts <- get ROpts
@@ -678,7 +716,10 @@ process (Eval itm)
                  logTermNF "repl.eval" 5 "Normalised" [] ntm
                  itm <- resugar [] ntm
                  ty <- getTerm gty
-                 addDef (UN "it") (newDef emptyFC (UN "it") top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
+                 evalResultName <- DN "it" <$> genName "evalResult"
+                 addDef evalResultName (newDef replFC evalResultName top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
+                 addToSave evalResultName
+                 put ROpts (record { evalResultName = Just evalResultName } opts)
                  if showTypes opts
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
@@ -692,6 +733,11 @@ process (Eval itm)
            REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
     nfun NormaliseAll = normaliseAll
     nfun _ = normalise
+process (Check (PRef fc (UN "it")))
+    = do opts <- get ROpts
+         case evalResultName opts of
+              Nothing => throw (UndefinedName fc (UN "it"))
+              Just n => process (Check (PRef fc n))
 process (Check (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
@@ -701,8 +747,9 @@ process (Check (PRef fc fn))
 process (Check itm)
     = do inidx <- resolveName (UN "[input]")
          ttimp <- desugar AnyExpr [] itm
+         let ttimpWithIt = ILocal replFC !getItDecls ttimp
          (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                                  [] ttimp Nothing
+                                  [] ttimpWithIt Nothing
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          ty <- getTerm gty
