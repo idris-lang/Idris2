@@ -222,7 +222,7 @@ Zippable Colist where
               , map (\(_,b,_) => b) xs
               , map (\(_,_,c) => c) xs
               )
-              
+
   unzipWith f = unzip . map f
 
   unzipWith3 f = unzip3 . map f
