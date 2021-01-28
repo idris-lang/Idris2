@@ -682,12 +682,15 @@ ceiling x = prim__doubleCeiling x
 -- RANGES --
 ------------
 
-public export
+-- These functions are here to support the range syntax:
+-- range expressions like `[a..b]` are desugared to `rangeFromXXX` calls.
+-- They are not exported, but similar functions are exported from
+-- `Data.Stream` instead.
+
+total
 countFrom : n -> (n -> n) -> Stream n
 countFrom start diff = start :: countFrom (diff start) diff
 
--- this and takeBefore are for range syntax, and not exported here since
--- they're partial. They are exported from Data.Stream instead.
 partial
 takeUntil : (n -> Bool) -> Stream n -> List n
 takeUntil p (x :: xs)
