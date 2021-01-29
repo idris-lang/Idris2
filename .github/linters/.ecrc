@@ -1,4 +1,5 @@
 {
+  "Exclude" : ["expected"],
   "Disable": {
     "IndentSize": true,
     "Indentation": true
