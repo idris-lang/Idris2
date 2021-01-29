@@ -89,11 +89,21 @@ isCons : Colist a -> Bool
 isCons [] = False
 isCons _  = True
 
-||| Append two `Colist`s.
+||| Concatenate two `Colist`s.
 public export
 append : Colist a -> Colist a -> Colist a
 append []        ys = ys
 append (x :: xs) ys = x :: append xs ys
+
+||| Append a `Colist` to a `List`.
+public export
+lappend : List a -> Colist a -> Colist a
+lappend xs = append (fromList xs)
+
+||| Append a `List` to a `Colist`.
+public export
+appendl : Colist a -> List a -> Colist a
+appendl xs = append xs . fromList
 
 ||| Try to extract the first element from a `Colist`.
 public export

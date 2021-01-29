@@ -96,10 +96,21 @@ public export
 cons : (x : a) -> (xs : Colist1 a) -> Colist1 a
 cons x xs = x ::: forget xs
 
-||| Append two `Colist1`s
+||| Concatenate two `Colist1`s
 public export
 append : Colist1 a -> Colist1 a -> Colist1 a
 append (h ::: t) ys = h ::: append t (forget ys)
+
+||| Append a `Colist1` to a `List`.
+public export
+lappend : List a -> Colist1 a -> Colist1 a
+lappend Nil       ys = ys
+lappend (x :: xs) ys = x ::: lappend xs (forget ys)
+
+||| Append a `List` to a `Colist1`.
+public export
+appendl : Colist1 a -> List a -> Colist1 a
+appendl (x ::: xs) ys = x ::: appendl xs ys
 
 ||| Extract the first element from a `Colist1`
 public export
