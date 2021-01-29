@@ -64,21 +64,14 @@ iterateMaybe : (f : a -> Maybe a) -> Maybe a -> Colist a
 iterateMaybe _ Nothing  = Nil
 iterateMaybe f (Just x) = x :: iterateMaybe f (f x)
 
-||| Generate an infinite `Colist` by repeatedly applying a function
-||| to a seed value.
-public export
-unfoldr : (f : s -> (s,a)) -> s -> Colist a
-unfoldr f s = let (s2,a) = f s
-               in a :: unfoldr f s2
-
 ||| Generate an `Colist` by repeatedly applying a function
 ||| to a seed value.
 ||| This stops with `Nil` once the function returns `Nothing`.
 public export
-unfoldrMaybe : (f : s -> Maybe (s,a)) -> s -> Colist a
-unfoldrMaybe f s = case f s of
-                        Just (s2,a) => a :: unfoldrMaybe f s2
-                        Nothing     => Nil
+unfold : (f : s -> Maybe (s,a)) -> s -> Colist a
+unfold f s = case f s of
+                  Just (s2,a) => a :: unfold f s2
+                  Nothing     => Nil
 
 --------------------------------------------------------------------------------
 --          Basic Functions

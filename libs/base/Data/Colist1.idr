@@ -75,12 +75,12 @@ public export
 iterateMaybe : (f : a -> Maybe a) -> a -> Colist1 a
 iterateMaybe f a  = a ::: iterateMaybe f (f a)
 
-||| Generate an infinite `Colist1` by repeatedly applying a function
+||| Generate a `Colist1` by repeatedly applying a function
 ||| to a seed value.
+||| This stops with `Nil` once the function returns `Nothing`.
 public export
-unfoldr : (f : s -> (s,a)) -> s -> Colist1 a
-unfoldr f s = let (s2,a) = f s
-               in a ::: unfoldr f s2
+unfold : (f : s -> Maybe (s,a)) -> s -> a -> Colist1 a
+unfold f s a = a ::: unfold f s
 
 --------------------------------------------------------------------------------
 --          Basic Functions
