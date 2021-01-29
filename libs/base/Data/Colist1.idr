@@ -58,11 +58,7 @@ replicate (S k) x = x ::: replicate k x
 ||| Produce a `Colist1` by repeating a sequence
 public export
 cycle : List1 a -> Colist1 a
-cycle (h ::: [])          = repeat h
-cycle (h ::: t@(y :: ys)) = h ::: run y ys
-  where run : a -> List a -> Colist a
-        run v []        = v :: run h t
-        run v (y :: ys) = v :: run y ys
+cycle (x ::: xs) = x ::: cycle (xs ++ [x])
 
 ||| Generate an infinite `Colist1` by repeatedly applying a function.
 public export
