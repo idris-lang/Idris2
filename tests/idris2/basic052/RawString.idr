@@ -1,7 +1,8 @@
 module RawString
 
 configTemplate : String
-configTemplate = """name: "foo"
+configTemplate =
+"""name: "foo"
 version: "bar"
 bzs: \'a\n\t\\'
 """
@@ -12,4 +13,5 @@ test =
     putStr configTemplate
     putStr """foo
 bar
-baz"""
+baz
+"""
