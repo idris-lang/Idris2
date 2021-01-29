@@ -41,6 +41,7 @@ constant
                            StringLit s => case escape s of
                                                Nothing => Nothing
                                                Just s' => Just (Str s')
+                           RawStringLit s => Just (Str s)
                            Ident "Char"    => Just CharType
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType

@@ -25,6 +25,7 @@ data Token
   | DoubleLit Double
   | IntegerLit Integer
   | StringLit String
+  | RawStringLit String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -48,6 +49,7 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   show (StringLit x) = "string " ++ show x
+  show (RawStringLit x) = "raw string " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -71,6 +73,7 @@ Pretty Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
   pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  pretty (RawStringLit x) = pretty "raw string" <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -150,6 +153,9 @@ doubleLit : Lexer
 doubleLit
     = digits <+> is '.' <+> digits <+> opt
            (is 'e' <+> opt (is '-' <|> is '+') <+> digits)
+
+rawStringLit : Lexer
+rawStringLit = quote (exact "\"\"\"") any
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -251,8 +257,9 @@ rawTokens =
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (stripQuotes x)),
-     (charLit, \x => CharLit (stripQuotes x)),
+     (rawStringLit, \x => RawStringLit (stripQuotes 3 x)),
+     (stringLit, \x => StringLit (stripQuotes 1 x)),
+     (charLit, \x => CharLit (stripQuotes 1 x)),
      (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),
      (identNormal, parseIdent),

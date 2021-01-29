@@ -45,7 +45,7 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051"]
+       "basic051", "basic052"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []

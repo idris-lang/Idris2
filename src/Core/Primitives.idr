@@ -37,7 +37,7 @@ castString [NPrimVal fc (B8 i)] = Just (NPrimVal fc (Str (show i)))
 castString [NPrimVal fc (B16 i)] = Just (NPrimVal fc (Str (show i)))
 castString [NPrimVal fc (B32 i)] = Just (NPrimVal fc (Str (show i)))
 castString [NPrimVal fc (B64 i)] = Just (NPrimVal fc (Str (show i)))
-castString [NPrimVal fc (Ch i)] = Just (NPrimVal fc (Str (stripQuotes (show i))))
+castString [NPrimVal fc (Ch i)] = Just (NPrimVal fc (Str (stripQuotes 1 (show i))))
 castString [NPrimVal fc (Db i)] = Just (NPrimVal fc (Str (show i)))
 castString _ = Nothing
 
