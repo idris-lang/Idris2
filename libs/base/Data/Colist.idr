@@ -58,7 +58,7 @@ iterate : (a -> a) -> a -> Colist a
 iterate f a = a :: iterate f (f a)
 
 ||| Generate a `Colist` by repeatedly applying a function.
-||| This stops with `Nil` once the function returns `Nothing`.
+||| This stops once the function returns `Nothing`.
 public export
 iterateMaybe : (f : a -> Maybe a) -> Maybe a -> Colist a
 iterateMaybe _ Nothing  = Nil
@@ -66,7 +66,7 @@ iterateMaybe f (Just x) = x :: iterateMaybe f (f x)
 
 ||| Generate an `Colist` by repeatedly applying a function
 ||| to a seed value.
-||| This stops with `Nil` once the function returns `Nothing`.
+||| This stops once the function returns `Nothing`.
 public export
 unfold : (f : s -> Maybe (s,a)) -> s -> Colist a
 unfold f s = case f s of
@@ -126,14 +126,14 @@ take 0     _         = Nil
 take (S k) []        = Nil
 take (S k) (x :: xs) = x :: take k xs
 
-||| Take elements from a `Colist` upto and including the
+||| Take elements from a `Colist` up to and including the
 ||| first element, for which `p` returns `True`.
 public export
 takeUntil : (p : a -> Bool) -> Colist a -> Colist a
 takeUntil _ []        = Nil
 takeUntil p (x :: xs) = if p x then [x] else x :: takeUntil p xs
 
-||| Take elements from a `Colist` upto (but not including) the
+||| Take elements from a `Colist` up to (but not including) the
 ||| first element, for which `p` returns `True`.
 public export
 takeBefore : (a -> Bool) -> Colist a -> Colist a
@@ -154,16 +154,16 @@ takeWhileJust []              = []
 takeWhileJust (Nothing :: _)  = []
 takeWhileJust (Just x  :: xs) = x :: takeWhileJust xs
 
-||| Drop up to n elements from the beginning of the `Colist`.
+||| Drop up to `n` elements from the beginning of the `Colist`.
 public export
 drop : (n : Nat) -> Colist a -> Colist a
 drop _ []            = Nil
 drop 0           xs  = xs
 drop (S k) (x :: xs) = drop k xs
 
-||| Try to extract the n-th element from a `Colist`.
+||| Try to extract the `n`-th element from a `Colist`.
 public export
-index : Nat -> Colist a -> Maybe a
+index : (n : Nat) -> Colist a -> Maybe a
 index _     []        = Nothing
 index 0     (x :: _)  = Just x
 index (S k) (_ :: xs) = index k xs
@@ -171,7 +171,7 @@ index (S k) (_ :: xs) = index k xs
 ||| Produce a `Colist` of left folds of prefixes of the given `Colist`.
 ||| @ f the combining function
 ||| @ acc the initial value
-||| @ xs the `Colist1` to process
+||| @ xs the `Colist` to process
 public export
 scanl : (f : a -> b -> a) -> (acc : a) -> (xs : Colist b) -> Colist a
 scanl _ acc Nil       = [acc]

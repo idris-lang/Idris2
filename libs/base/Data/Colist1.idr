@@ -26,14 +26,14 @@ public export
 fromStream : Stream a -> Colist1 a
 fromStream (x :: xs) = x ::: fromStream xs
 
-||| Try to convert a `Colist` to a `Colist1`. Returns `Nothing`
+||| Try to convert a `Colist` to a `Colist1`. Returns `Nothing` if
 ||| the given `Colist` is empty.
 public export
 fromColist : Colist a -> Maybe (Colist1 a)
 fromColist Nil       = Nothing
 fromColist (x :: xs) = Just (x ::: xs)
 
-||| Try to convert a list to a `Colist1`. Returns `Nothing`
+||| Try to convert a list to a `Colist1`. Returns `Nothing` if
 ||| the given list is empty.
 public export
 fromList : List a -> Maybe (Colist1 a)
@@ -73,7 +73,7 @@ iterateMaybe f a  = a ::: iterateMaybe f (f a)
 
 ||| Generate a `Colist1` by repeatedly applying a function
 ||| to a seed value.
-||| This stops with `Nil` once the function returns `Nothing`.
+||| This stops once the function returns `Nothing`.
 public export
 unfold : (f : s -> Maybe (s,a)) -> s -> a -> Colist1 a
 unfold f s a = a ::: unfold f s
@@ -127,19 +127,19 @@ take (S k) (x ::: xs) = x ::: take k xs
 ||| Take elements from a `Colist1` up to and including the
 ||| first element, for which `p` returns `True`.
 public export
-takeUntil : (a -> Bool) -> Colist1 a -> Colist1 a
+takeUntil : (p : a -> Bool) -> Colist1 a -> Colist1 a
 takeUntil p (x ::: xs) = if p x then singleton x else x ::: takeUntil p xs
 
 ||| Take elements from a `Colist1` up to (but not including) the
 ||| first element, for which `p` returns `True`.
 public export
-takeBefore : (a -> Bool) -> Colist1 a -> Colist a
+takeBefore : (p : a -> Bool) -> Colist1 a -> Colist a
 takeBefore p = takeBefore p . forget
 
-||| Take elements from a `Colist1` while the given predicate
+||| Take elements from a `Colist1` while the given predicate `p`
 ||| returns `True`.
 public export
-takeWhile : (a -> Bool) -> Colist1 a -> Colist a
+takeWhile : (p : a -> Bool) -> Colist1 a -> Colist a
 takeWhile p = takeWhile p . forget
 
 ||| Extract all values wrapped in `Just` from the beginning
@@ -148,14 +148,14 @@ public export
 takeWhileJust : Colist1 (Maybe a) -> Colist a
 takeWhileJust = takeWhileJust . forget
 
-||| Drop up to n elements from the beginning of the `Colist1`.
+||| Drop up to `n` elements from the beginning of the `Colist1`.
 public export
 drop : (n : Nat) -> Colist1 a -> Colist a
 drop n = drop n . forget
 
-||| Try to extract the n-th element from a `Colist1`.
+||| Try to extract the `n`-th element from a `Colist1`.
 public export
-index : Nat -> Colist1 a -> Maybe a
+index : (n : Nat) -> Colist1 a -> Maybe a
 index n = index n . forget
 
 ||| Produce a `Colist1` of left folds of prefixes of the given `Colist1`.
