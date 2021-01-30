@@ -1,1 +1,8 @@
 1/1: Building LocalHints (LocalHints.idr)
+Error: While processing right hand side of bug. Can't find an implementation for Gnu.
+
+LocalHints.idr:48:17--48:22
+    |
+ 48 |             in (findB ** Refl)
+    |                 ^^^^^
+
