@@ -32,12 +32,13 @@ getRetTy defs ty
              "Can only add hints for concrete return types")
 
 processFnOpt : {auto c : Ref Ctxt Defs} ->
-               FC -> Nat -> Name -> FnOpt -> Core ()
+               FC -> Bool -> -- ^ top level name?
+               Name -> FnOpt -> Core ()
 processFnOpt fc _ ndef Inline
     = setFlag fc ndef Inline
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
-processFnOpt fc Z ndef (Hint d)
+processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
@@ -46,7 +47,7 @@ processFnOpt fc Z ndef (Hint d)
 processFnOpt fc _ ndef (Hint d)
     = do log "elab" 5 $ "Adding local hint " ++ show !(toFullNames ndef)
          addLocalHint ndef
-processFnOpt fc Z ndef (GlobalHint a)
+processFnOpt fc True ndef (GlobalHint a)
     = addGlobalHint ndef a
 processFnOpt fc _ ndef (GlobalHint a)
     = throw (GenericMsg fc "%globalhint is not valid in local definitions")
@@ -301,7 +302,12 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          let name = Resolved idx
-         traverse (processFnOpt fc (length env) name) opts
+         let isNested : Name -> Bool
+             isNested (Nested _ _) = True
+             isNested (NS _ n) = isNested n
+             isNested _ = False
+         let nested = not (isNested n)
+         traverse (processFnOpt fc (not (isNested n)) name) opts
          -- If no function-specific totality pragma has been used, attach the default totality
          unless (any isTotalityReq opts) $
            setFlag fc name (SetTotal !getDefaultTotalityOption)
