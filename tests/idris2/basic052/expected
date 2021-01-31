@@ -1,11 +1,11 @@
 foo
- bar
-#baz
-###blabla
- 
+bar
+foo
+  bar
+"foo"
 
-name: "foo"
+  \bar
+
+name: #"foo"
 version: "bar"
-bzs: \'a\n\t\\'
-"#bar
-
+bzs: \#\'a\n\t\\'

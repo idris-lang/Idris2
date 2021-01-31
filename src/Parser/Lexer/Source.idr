@@ -24,8 +24,7 @@ data Token
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
-  | StringLit String
-  | RawStringLit String
+  | StringLit Nat String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -48,8 +47,7 @@ Show Token where
   show (CharLit x) = "character " ++ show x
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
-  show (StringLit x) = "string " ++ show x
-  show (RawStringLit x) = "raw string " ++ show x
+  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -72,8 +70,7 @@ Pretty Token where
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
-  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
-  pretty (RawStringLit x) = pretty "raw string" <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -154,14 +151,14 @@ doubleLit
     = digits <+> is '.' <+> digits <+> opt
            (is 'e' <+> opt (is '-' <|> is '+') <+> digits)
 
-rawStringLit0 : Lexer
-rawStringLit0 = surround (exact "r\"") (exact "\"") any
+stringLit1 : Lexer
+stringLit1 = surround (exact "#\"") (exact "\"#") any
 
-rawStringLit1 : Lexer
-rawStringLit1 = surround (exact "r#\"") (exact "\"#") any
+stringLit2 : Lexer
+stringLit2 = surround (exact "##\"") (exact "\"##") any
 
-rawStringLit2 : Lexer
-rawStringLit2 = surround (exact "r##\"") (exact "\"##") any
+stringLit3 : Lexer
+stringLit3 = surround (exact "###\"") (exact "\"###") any
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -263,10 +260,10 @@ rawTokens =
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
-     (rawStringLit0, \x => RawStringLit (stripSurrounds 2 1 x)),
-     (rawStringLit1, \x => RawStringLit (stripSurrounds 3 2 x)),
-     (rawStringLit2, \x => RawStringLit (stripSurrounds 4 3 x)),
-     (stringLit, \x => StringLit (stripQuotes x)),
+     (stringLit, \x => StringLit 0 (stripQuotes x)),
+     (stringLit1, \x => StringLit 1 (stripSurrounds 2 2 x)),
+     (stringLit2, \x => StringLit 2 (stripSurrounds 3 3 x)),
+     (stringLit3, \x => StringLit 3 (stripSurrounds 4 4 x)),
      (charLit, \x => CharLit (stripQuotes x)),
      (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),

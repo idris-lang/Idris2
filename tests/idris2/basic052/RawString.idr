@@ -1,22 +1,24 @@
 module RawString
 
-test1 : String
-test1 = r"foo
- bar
-#baz
-###blabla
- "
+withWrap : String
+withWrap = "foo
+bar"
 
-test2 : String
-test2 = r#"
-name: "foo"
-version: "bar"
-bzs: \'a\n\t\\'"#
+withIndent : String
+withIndent = "foo
+  bar"
+
+withEscape : String
+withEscape = #""foo"\#n
+  \bar"#
 
 test : IO ()
 test =
   do
-    putStrLn test1
-    putStrLn test2
-    putStrLn r##""#bar
-"##
+    putStrLn withWrap
+    putStrLn withIndent
+    putStrLn withEscape
+    putStrLn ##"
+name: #"foo"
+version: "bar"
+bzs: \#\'a\n\t\\'"##
