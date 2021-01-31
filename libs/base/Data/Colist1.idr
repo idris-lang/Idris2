@@ -7,7 +7,7 @@ import public Data.Zippable
 
 %default total
 
-||| A possibly finite, non-empty stream.
+||| A possibly finite, non-empty Stream.
 public export
 data Colist1 : (a : Type) -> Type where
   (:::) : a -> Colist a -> Colist1 a

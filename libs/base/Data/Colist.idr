@@ -6,7 +6,7 @@ import public Data.Zippable
 
 %default total
 
-||| A possibly finite stream.
+||| A possibly finite Stream.
 public export
 data Colist : (a : Type) -> Type where
   Nil : Colist a
