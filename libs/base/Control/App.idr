@@ -124,11 +124,19 @@ bindApp1 {u=Any} (MkApp1 fn)
                               MkApp1 res = k x' in
                               res w')
 
+||| When type is present in app "errors" list, app is allowed to perform I/O.
+public export
+data AppHasIO : Type where
+
+public export
+Uninhabited AppHasIO where
+  uninhabited _ impossible
+
 absurdWith1 : (1 w : b) -> OneOf e NoThrow -> any
 absurdWith1 w (First p) impossible
 
-absurdWithVoid : (1 w : b) -> OneOf [Void] t -> any
-absurdWithVoid w (First p) impossible
+absurdWithAppHasIO : (1 w : b) -> OneOf [AppHasIO] t -> any
+absurdWithAppHasIO w (First p) impossible
 
 absurdWith2 : (1 x : a) -> (1 w : b) -> OneOf e NoThrow -> any
 absurdWith2 x w (First p) impossible
@@ -293,7 +301,7 @@ lift (MkApp prog)
 
 public export
 Init : List Error
-Init = [Void]
+Init = [AppHasIO]
 
 export
 run : App {l} Init a -> IO a
@@ -310,7 +318,7 @@ noThrow : App Init a -> App Init {l=NoThrow} a
 noThrow (MkApp prog)
     = MkApp $ \w =>
               case prog w of
-                   MkAppRes (Left err) w => absurdWithVoid w err
+                   MkAppRes (Left err) w => absurdWithAppHasIO w err
                    MkAppRes (Right res) w => MkAppRes (Right res) w
 
 public export
@@ -322,7 +330,7 @@ interface PrimIO e where
   fork : (forall e' . PrimIO e' => App {l} e' ()) -> App e ()
 
 export
-HasErr Void e => PrimIO e where
+HasErr AppHasIO e => PrimIO e where
   primIO op =
         MkApp $ \w =>
             let MkAppRes r w = toPrimApp op w in
