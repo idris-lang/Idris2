@@ -154,8 +154,14 @@ doubleLit
     = digits <+> is '.' <+> digits <+> opt
            (is 'e' <+> opt (is '-' <|> is '+') <+> digits)
 
-rawStringLit : Lexer
-rawStringLit = quote (exact "\"\"\"") any
+rawStringLit0 : Lexer
+rawStringLit0 = surround (exact "r\"") (exact "\"") any
+
+rawStringLit1 : Lexer
+rawStringLit1 = surround (exact "r#\"") (exact "\"#") any
+
+rawStringLit2 : Lexer
+rawStringLit2 = surround (exact "r##\"") (exact "\"##") any
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -257,9 +263,11 @@ rawTokens =
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
-     (rawStringLit, \x => RawStringLit (stripQuotes 3 x)),
-     (stringLit, \x => StringLit (stripQuotes 1 x)),
-     (charLit, \x => CharLit (stripQuotes 1 x)),
+     (rawStringLit0, \x => RawStringLit (stripSurrounds 2 1 x)),
+     (rawStringLit1, \x => RawStringLit (stripSurrounds 3 2 x)),
+     (rawStringLit2, \x => RawStringLit (stripSurrounds 4 3 x)),
+     (stringLit, \x => StringLit (stripQuotes x)),
+     (charLit, \x => CharLit (stripQuotes x)),
      (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),
      (identNormal, parseIdent),

@@ -28,7 +28,7 @@ ideTokens : TokenMap Token
 ideTokens =
     map (\x => (exact x, Symbol)) symbols ++
     [(digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (fromMaybe "" (escape (stripQuotes 1 x)))),
+     (stringLit, \x => StringLit (fromMaybe "" (escape (stripQuotes x)))),
      (identAllowDashes, \x => Ident x),
      (space, Comment)]
 

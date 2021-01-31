@@ -60,7 +60,7 @@ rawTokens =
   , (identAllowDashes, DotSepIdent Nothing)
   , (separator, const Separator)
   , (spacesOrNewlines, const Space)
-  , (stringLit, \s => StringLit (stripQuotes 1 s))
+  , (stringLit, \s => StringLit (stripQuotes s))
   ]
 
 export

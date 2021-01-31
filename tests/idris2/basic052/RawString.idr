@@ -1,17 +1,22 @@
 module RawString
 
-configTemplate : String
-configTemplate =
-"""name: "foo"
+test1 : String
+test1 = r"foo
+ bar
+#baz
+###blabla
+ "
+
+test2 : String
+test2 = r#"
+name: "foo"
 version: "bar"
-bzs: \'a\n\t\\'
-"""
+bzs: \'a\n\t\\'"#
 
 test : IO ()
 test =
   do
-    putStr configTemplate
-    putStr """foo
-bar
-baz
-"""
+    putStrLn test1
+    putStrLn test2
+    putStrLn r##""#bar
+"##

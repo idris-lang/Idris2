@@ -1,6 +1,11 @@
+foo
+ bar
+#baz
+###blabla
+ 
+
 name: "foo"
 version: "bar"
 bzs: \'a\n\t\\'
-foo
-bar
-baz
+"#bar
+
