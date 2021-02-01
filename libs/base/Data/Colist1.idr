@@ -184,15 +184,6 @@ Applicative Colist1 where
 
   (f ::: fs) <*> (a ::: as) = f a ::: (fs <*> as)
 
-||| Alias for `join`
-public export
-diag : Colist1 (Colist1 a) -> Colist1 a
-diag ((x ::: _) ::: xss) = x ::: diag (map tail xss)
-
-public export
-Monad Colist1 where
-  join = diag
-
 public export
 Zippable Colist1 where
   zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith f xs ys

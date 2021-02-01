@@ -202,17 +202,6 @@ Applicative Colist where
   _  <*> [] = []
   f :: fs <*> a :: as = f a :: (fs <*> as)
 
-||| Alias for `join`.
-public export
-diag : Colist (Colist a) -> Colist a
-diag []                = []
-diag ([] :: _)         = []
-diag ((x :: _) :: xss) = x :: diag (fromMaybe [] . tail <$> xss)
-
-public export
-Monad Colist where
-  join = diag
-
 public export
 Zippable Colist where
   zipWith f as bs = [| f as bs |]
