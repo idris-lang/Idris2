@@ -19,12 +19,15 @@ import Core.Name
 %default total
 
 public export
+data StringLitKind = SimpleString | MultiLineString 
+
+public export
 data Token
   -- Literals
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
-  | StringLit Nat String
+  | StringLit StringLitKind Nat String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -42,12 +45,17 @@ data Token
   | Unrecognised String
 
 export
+Show StringLitKind where
+  show SimpleString = "simple string"
+  show MultiLineString = "multi-line string"
+
+export
 Show Token where
   -- Literals
   show (CharLit x) = "character " ++ show x
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
-  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
+  show (StringLit kind n x) = show kind ++ " " ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -65,12 +73,17 @@ Show Token where
   show (Unrecognised x) = "Unrecognised " ++ x
 
 export
+Pretty StringLitKind where
+  pretty SimpleString = pretty "simple string"
+  pretty MultiLineString = pretty "multi-line string"
+
+export
 Pretty Token where
   -- Literals
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
-  pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
+  pretty (StringLit kind n x) = pretty kind <++> (pretty $ String.Extra.replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -159,6 +172,18 @@ stringLit2 = surround (exact "##\"") (exact "\"##") any
 
 stringLit3 : Lexer
 stringLit3 = surround (exact "###\"") (exact "\"###") any
+
+multiLineLit : Lexer
+multiLineLit = surround (exact "\"\"\"") (exact "\"\"\"") any
+
+multiLineLit1 : Lexer
+multiLineLit1 = surround (exact "#\"\"\"") (exact "\"\"\"#") any
+
+multiLineLit2 : Lexer
+multiLineLit2 = surround (exact "##\"\"\"") (exact "\"\"\"##") any
+
+multiLineLit3 : Lexer
+multiLineLit3 = surround (exact "###\"\"\"") (exact "\"\"\"###") any
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -260,10 +285,14 @@ rawTokens =
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit 0 (stripQuotes x)),
-     (stringLit1, \x => StringLit 1 (stripSurrounds 2 2 x)),
-     (stringLit2, \x => StringLit 2 (stripSurrounds 3 3 x)),
-     (stringLit3, \x => StringLit 3 (stripSurrounds 4 4 x)),
+     (multiLineLit, \x => StringLit MultiLineString 0 (stripSurrounds 3 3 x)),
+     (multiLineLit1, \x => StringLit MultiLineString 1 (stripSurrounds 4 4 x)),
+     (multiLineLit2, \x => StringLit MultiLineString 2 (stripSurrounds 5 5 x)),
+     (multiLineLit3, \x => StringLit MultiLineString 3 (stripSurrounds 6 6 x)),
+     (stringLit, \x => StringLit SimpleString 0 (stripQuotes x)),
+     (stringLit1, \x => StringLit SimpleString 1 (stripSurrounds 2 2 x)),
+     (stringLit2, \x => StringLit SimpleString 2 (stripSurrounds 3 3 x)),
+     (stringLit3, \x => StringLit SimpleString 3 (stripSurrounds 4 4 x)),
      (charLit, \x => CharLit (stripQuotes x)),
      (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),

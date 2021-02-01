@@ -144,6 +144,7 @@ escape' escapeChars (x::xs)
     = assert_total $ if escapeChars `isPrefixOf` (x::xs)
          then case drop (length escapeChars) (x::xs) of
                    ('\\' :: xs) => pure $ '\\' :: !(escape' escapeChars xs)
+                   ('\n' :: xs) => pure !(escape' escapeChars xs)
                    ('&' :: xs) => pure !(escape' escapeChars xs)
                    ('a' :: xs) => pure $ '\a' :: !(escape' escapeChars xs)
                    ('b' :: xs) => pure $ '\b' :: !(escape' escapeChars xs)

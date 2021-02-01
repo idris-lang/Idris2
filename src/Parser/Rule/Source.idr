@@ -5,8 +5,10 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
+import Data.List
 import Data.List1
 import Data.Strings
+import Libraries.Data.String.Extra
 
 %default total
 
@@ -27,30 +29,6 @@ eoi
     isEOI : Token -> Bool
     isEOI EndInput = True
     isEOI _ = False
-
-export
-constant : Rule Constant
-constant
-    = terminal "Expected constant"
-               (\x => case x.val of
-                           CharLit c => case getCharLit c of
-                                             Nothing => Nothing
-                                             Just c' => Just (Ch c')
-                           DoubleLit d  => Just (Db d)
-                           IntegerLit i => Just (BI i)
-                           StringLit n s => case escape n s of
-                                               Nothing => Nothing
-                                               Just s' => Just (Str s')
-                           Ident "Char"    => Just CharType
-                           Ident "Double"  => Just DoubleType
-                           Ident "Int"     => Just IntType
-                           Ident "Integer" => Just IntegerType
-                           Ident "Bits8"   => Just Bits8Type
-                           Ident "Bits16"  => Just Bits16Type
-                           Ident "Bits32"  => Just Bits32Type
-                           Ident "Bits64"  => Just Bits64Type
-                           Ident "String"  => Just StringType
-                           _ => Nothing)
 
 documentation' : Rule String
 documentation' = terminal "Expected documentation comment"
@@ -84,7 +62,7 @@ strLit : Rule String
 strLit
     = terminal "Expected string literal"
                (\x => case x.val of
-                           StringLit 0 s => Just s
+                           StringLit SimpleString 0 s => Just s
                            _ => Nothing)
 
 export
@@ -188,6 +166,69 @@ holeName
                (\x => case x.val of
                            HoleIdent str => Just str
                            _ => Nothing)
+
+export
+multiLineString : Rule Constant
+multiLineString
+    = do 
+         (_, col) <- endLocation
+         hashtagAndStr <- multiLineLit
+         let hashtag = fst hashtagAndStr
+         let str = snd hashtagAndStr
+         let indent = col - (cast hashtag) - 3
+         commit
+         let (x::y::ys) = lines str
+           | _ => fatalError "The quotes of a multi-line string shouldn't be in the same line"
+         if isEmpty x
+            then if isEmpty $ last (y::ys)
+                    then case traverse (dropMargin indent) (init $ y::ys) of
+                              Right lines => case escape hashtag (join "\n" lines) of
+                                                  Just str' => the (SourceEmptyRule Constant) $ pure $ Str str'
+                                                  Nothing => fatalError "Failed to escape the multi-line string"
+                              Left err => fatalError err
+                    else fatalError "Expected only indenation spaces before the tail quote of the multi-line string"
+            else fatalError "Expected a line wrap after the head quote of the multi-line string"
+  where
+    multiLineLit : Rule (Nat, String)
+    multiLineLit = terminal "Expected multi-line string literal"
+                            (\x => case x.val of  
+                                        StringLit MultiLineString n str => Just (n, str)
+                                        _ => Nothing)
+
+    isEmpty : String -> Bool
+    isEmpty line = List.find (not . isSpace) (unpack line) == Nothing
+
+    dropMargin : (indent : Int) -> String -> Either String String
+    dropMargin indent line
+      = if isEmpty $ strSubstr 0 indent line
+           then Right $ strSubstr indent (strLength line) line
+           else Left $ "Expected at least " ++ show indent ++
+                  " indentation spaces as the tail quote do in the multi-line string"
+
+export
+constant : Rule Constant
+constant
+    = terminal "Expected constant"
+               (\x => case x.val of
+                           CharLit c => case getCharLit c of
+                                             Nothing => Nothing
+                                             Just c' => Just (Ch c')
+                           DoubleLit d  => Just (Db d)
+                           IntegerLit i => Just (BI i)
+                           StringLit SimpleString hashtag s => case escape hashtag s of
+                                               Nothing => Nothing
+                                               Just s' => Just (Str s')
+                           Ident "Char"    => Just CharType
+                           Ident "Double"  => Just DoubleType
+                           Ident "Int"     => Just IntType
+                           Ident "Integer" => Just IntegerType
+                           Ident "Bits8"   => Just Bits8Type
+                           Ident "Bits16"  => Just Bits16Type
+                           Ident "Bits32"  => Just Bits32Type
+                           Ident "Bits64"  => Just Bits64Type
+                           Ident "String"  => Just StringType
+                           _ => Nothing)
+  <|> multiLineString
 
 reservedNames : List String
 reservedNames

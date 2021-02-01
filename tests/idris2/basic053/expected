@@ -1,0 +1,22 @@
+[project]
+name: "project"
+version: "0.1.0"
+
+[deps]
+"semver" = 0.2
+a
+ b
+
+  c
+A very very very very very very very very very very very long string.
+A very very very very very 
+
+very very very very very 
+
+very long string.
+
+A very very very very very \nvery very very very very \n
+very long string.\n
+    "a"
+   b
+  c\n

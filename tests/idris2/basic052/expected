@@ -1,10 +1,12 @@
 foo
 bar
+foo bar
 foo
   bar
 "foo"
 
   \bar
+"foo"   \bar
 
 name: #"foo"
 version: "bar"

@@ -1,0 +1,12 @@
+1/1: Building MultiLineStringFirstLine (MultiLineStringFirstLine.idr)
+Error: Parse error at line 4:6:
+Expected a line wrap after the head quote of the multi-line string (next tokens: [end of input])
+1/1: Building MultiLineStringLastLine (MultiLineStringLastLine.idr)
+Error: Parse error at line 4:9:
+Expected only indenation spaces before the tail quote of the multi-line string (next tokens: [end of input])
+1/1: Building MultiLineStringSingleLine (MultiLineStringSingleLine.idr)
+Error: Parse error at line 3:1:
+The quotes of a multi-line string shouldn't be in the same line (next tokens: [end of input])
+1/1: Building MultiLineStringIndent (MultiLineStringIndent.idr)
+Error: Parse error at line 5:14:
+Expected at least 10 indentation spaces as the tail quote do in the multi-line string (next tokens: [end of input])

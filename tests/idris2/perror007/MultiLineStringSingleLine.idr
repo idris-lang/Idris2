@@ -1,0 +1,2 @@
+multiLine : String
+multiLine = """foo"""

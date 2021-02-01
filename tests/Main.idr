@@ -45,7 +45,7 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051", "basic052"]
+       "basic051", "basic052", "basic053"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -62,7 +62,7 @@ idrisTestsError = MkTestPool []
        "error011", "error012", "error013", "error014",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006"]
+       "perror006", "perror007"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool []

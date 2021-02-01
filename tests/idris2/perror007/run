@@ -1,0 +1,6 @@
+$1 --no-color --console-width 0 --no-banner --check MultiLineStringFirstLine.idr || true
+$1 --no-color --console-width 0 --no-banner --check MultiLineStringLastLine.idr || true
+$1 --no-color --console-width 0 --no-banner --check MultiLineStringSingleLine.idr || true
+$1 --no-color --console-width 0 --no-banner --check MultiLineStringIndent.idr || true
+
+rm -rf build
