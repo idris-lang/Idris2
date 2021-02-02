@@ -116,17 +116,14 @@ mutual
 getArgMatch : FC -> Bool -> RawImp -> List (String, RawImp) ->
               Maybe (PiInfo RawImp, Name) -> RawImp
 getArgMatch ploc search warg ms Nothing = warg
-getArgMatch ploc True warg ms (Just (AutoImplicit, UN n))
-    = case lookup n ms of
-           Nothing => ISearch ploc 500
-           Just tm => tm
-getArgMatch ploc True warg ms (Just (AutoImplicit, _))
-    = ISearch ploc 500
-getArgMatch ploc search warg ms (Just (_, UN n))
-    = case lookup n ms of
-           Nothing => Implicit ploc True
-           Just tm => tm
-getArgMatch ploc search warg ms _ = Implicit ploc True
+getArgMatch ploc True warg ms (Just (AutoImplicit, nm))
+    = case (isUN nm >>= \ n => lookup n ms) of
+        Just tm => tm
+        Nothing => IAs ploc UseLeft nm (ISearch ploc 500)
+getArgMatch ploc search warg ms (Just (_, nm))
+    = case (isUN nm >>= \ n => lookup n ms) of
+        Just tm => tm
+        Nothing => IAs ploc UseLeft nm (Implicit ploc True)
 
 export
 getNewLHS : {auto c : Ref Ctxt Defs} ->
