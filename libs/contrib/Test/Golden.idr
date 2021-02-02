@@ -255,7 +255,7 @@ findCG
        Nothing <- checkRequirement Chez    | p => pure (Just "chez")
        Nothing <- checkRequirement Node    | p => pure (Just "node")
        Nothing <- checkRequirement Racket  | p => pure (Just "racket")
-       Nothing <- checkRequirement C       | p => pure (Just "cc")
+       Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
 ||| A test pool is characterised by
