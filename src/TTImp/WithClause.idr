@@ -135,21 +135,27 @@ getNewLHS : {auto c : Ref Ctxt Defs} ->
             RawImp -> RawImp -> Core RawImp
 getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
     = do (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
          (_, lhs) <- bindNames False lhs_raw
          (_, mlhs) <- bindNames False mlhs_raw
          setUnboundImplicits autoimp
 
+         log "declare.def.clause.with" 20 $ "Parent LHS (with implicits): " ++ show lhs
+         log "declare.def.clause.with" 20 $ "Modified LHS (with implicits): " ++ show mlhs
+
          let (warg :: rest) = reverse wrest
              | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
-         log "with" 5 $ show lhs ++ " against " ++ show mlhs ++
+         log "declare.def.clause.with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
-         log "with" 5 $ "Matches: " ++ show ms
-         let newlhs = apply (IVar ploc wname)
-                            (map (getArgMatch ploc False warg ms) wargnames ++ rest)
-         log "with" 5 $ "New LHS: " ++ show newlhs
+         log "declare.def.clause.with" 5 $ "Matches: " ++ show ms
+         let params = map (getArgMatch ploc False warg ms) wargnames
+         log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
+
+         let newlhs = apply (IVar ploc wname) (params ++ rest)
+         log "declare.def.clause.with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
     dropWithArgs : Nat -> RawImp ->
@@ -180,13 +186,13 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm []
         = throw (GenericMsg fc "Badly formed 'with' application")
     updateWith fc tm (arg :: args)
-        = do log "with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
+        = do log "declare.def.clause.with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
-             log "with" 10 $ "Result: " ++ show ms
+             log "declare.def.clause.with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar fc wname)
                                 (map (getArgMatch fc True arg ms) wargnames)
-             log "with" 10 $ "With args for RHS: " ++ show wargnames
-             log "with" 10 $ "New RHS: " ++ show newrhs
+             log "declare.def.clause.with" 10 $ "With args for RHS: " ++ show wargnames
+             log "declare.def.clause.with" 10 $ "New RHS: " ++ show newrhs
              pure (withApply fc newrhs args)
 
     mutual
