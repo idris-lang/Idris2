@@ -1,0 +1,15 @@
+2+2
+it
+it
+"test"
+:t it
+:t it ++ it
+it
+1
+:let f : Integer -> Integer
+:let f x = x + it
+f 1
+f 1
+2
+the (it === 2) Refl
+:q

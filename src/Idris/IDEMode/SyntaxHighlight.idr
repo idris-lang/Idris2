@@ -123,7 +123,10 @@ outputSyntaxHighlighting : {auto m : Ref MD Metadata} ->
                            REPLResult ->
                            Core REPLResult
 outputSyntaxHighlighting fname loadResult = do
-  allNames <- filter (inFile fname) . names <$> get MD
---  decls <- filter (inFile fname) . tydecls <$> get MD
-  _ <- traverse outputNameSyntax allNames -- ++ decls)
+  opts <- get ROpts
+  when (opts.synHighlightOn) $ do
+    allNames <- filter (inFile fname) . names <$> get MD
+    --  decls <- filter (inFile fname) . tydecls <$> get MD
+    _ <- traverse outputNameSyntax allNames -- ++ decls)
+    pure ()
   pure loadResult

@@ -69,6 +69,7 @@ import System
 import System.Clock
 import System.Directory
 import System.File
+import System.Future
 import System.Info
 import System.Path
 
@@ -135,85 +136,80 @@ normalize str =
 |||
 ||| See the module documentation for more information.
 |||
-||| @currdir absolute or relative path to root test directory.
 ||| @testpath the directory that contains the test.
 export
-runTest : Options -> (currdir, testPath : String) -> IO Bool
-runTest opts currdir testPath
-    = do changeDir testPath
-         isSuccess <- runTest'
-         changeDir currdir
-         pure isSuccess
-    where
-        getAnswer : IO Bool
-        getAnswer = do
-          str <- getLine
-          case str of
-            "y" => pure True
-            "n" => pure False
-            _   => do putStrLn "Invalid Answer."
-                      getAnswer
+runTest : Options -> String -> IO (Future Bool)
+runTest opts testPath = forkIO $ do
+  start <- clockTime Thread
+  let cg = case codegen opts of
+         Nothing => ""
+         Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
+  system $ "cd " ++ testPath ++ " && " ++
+    cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
+  end <- clockTime Thread
 
-        printExpectedVsOutput : String -> String -> IO ()
-        printExpectedVsOutput exp out = do
-          putStrLn "Expected:"
-          putStrLn exp
-          putStrLn "Given:"
-          putStrLn out
+  Right out <- readFile $ testPath ++ "/output"
+    | Left err => do print err
+                     pure False
 
-        mayOverwrite : Maybe String -> String -> IO ()
-        mayOverwrite mexp out = do
-          the (IO ()) $ case mexp of
-            Nothing => putStr $ unlines
-              [ "Golden value missing. I computed the following result:"
-              , out
-              , "Accept new golden value? [yn]"
-              ]
-            Just exp => do
-              putStrLn "Golden value differs from actual value."
-              code <- system "git diff --no-index --exit-code --word-diff=color expected output"
-              when (code < 0) $ printExpectedVsOutput exp out
-              putStrLn "Accept actual value as new golden value? [yn]"
+  Right exp <- readFile $ testPath ++ "/expected"
+    | Left FileNotFound => do
+        if interactive opts
+          then mayOverwrite Nothing out
+          else print FileNotFound
+        pure False
+    | Left err => do print err
+                     pure False
+
+  let result = normalize out == normalize exp
+  let time = timeDifference end start
+
+  if result
+    then printTiming (timing opts) time $ testPath ++ ": success"
+    else do
+      printTiming (timing opts) time $ testPath ++ ": FAILURE"
+      if interactive opts
+        then mayOverwrite (Just exp) out
+        else putStrLn . unlines $ expVsOut exp out
+
+  pure result
+
+  where
+    getAnswer : IO Bool
+    getAnswer = do
+      str <- getLine
+      case str of
+        "y" => pure True
+        "n" => pure False
+        _   => do putStrLn "Invalid Answer."
+                  getAnswer
+
+    expVsOut : String -> String -> List String
+    expVsOut exp out = ["Expected:", exp, "Given:", out]
+
+    mayOverwrite : Maybe String -> String -> IO ()
+    mayOverwrite mexp out = do
+      case mexp of
+        Nothing => putStr $ unlines
+          [ "Golden value missing. I computed the following result:"
+          , out
+          , "Accept new golden value? [yn]"
+          ]
+        Just exp => do
+          code <- system $ "git diff --no-index --exit-code --word-diff=color " ++
+            testPath ++ "/expected " ++ testPath ++ "/output"
+          putStrLn . unlines $
+            ["Golden value differs from actual value."] ++
+            (if (code < 0) then expVsOut exp out else []) ++
+            ["Accept actual value as new golden value? [yn]"]
           b <- getAnswer
-          when b $ do Right _ <- writeFile "expected" out
-                          | Left err => print err
+          when b $ do Right _ <- writeFile (testPath ++ "/expected") out
+                        | Left err => print err
                       pure ()
 
-        printTiming : Bool -> Clock type -> String -> IO ()
-        printTiming True  clock msg = putStrLn (unwords [msg, show clock])
-        printTiming False _     msg = putStrLn msg
-
-        runTest' : IO Bool
-        runTest'
-            = do putStr $ testPath ++ ": "
-                 start <- clockTime Thread
-                 let cg = case codegen opts of
-                            Nothing => ""
-                            Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
-                 system $ cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
-                 end <- clockTime Thread
-                 Right out <- readFile "output"
-                     | Left err => do print err
-                                      pure False
-                 Right exp <- readFile "expected"
-                     | Left FileNotFound => do
-                         if interactive opts
-                           then mayOverwrite Nothing out
-                           else print FileNotFound
-                         pure False
-                     | Left err => do print err
-                                      pure False
-                 let result = normalize out == normalize exp
-                 let time = timeDifference end start
-                 if result
-                    then printTiming (timing opts) time "success"
-                    else do
-                      printTiming (timing opts) time "FAILURE"
-                      if interactive opts
-                         then mayOverwrite (Just exp) out
-                         else printExpectedVsOutput exp out
-
-                 pure result
+    printTiming : Bool -> Clock type -> String -> IO ()
+    printTiming True  clock msg = putStrLn (unwords [msg, show clock])
+    printTiming False _     msg = putStrLn msg
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
@@ -277,8 +273,8 @@ filterTests opts = case onlyNames opts of
 
 ||| A runner for a test pool
 export
-poolRunner : Options -> (currdir : String) -> TestPool -> IO (List Bool)
-poolRunner opts currdir pool
+poolRunner : Options -> TestPool -> IO (List Bool)
+poolRunner opts pool
   = do -- check that we indeed want to run some of these tests
        let tests = filterTests opts (testCases pool)
        let (_ :: _) = tests
@@ -293,8 +289,7 @@ poolRunner opts currdir pool
        let Just _ = the (Maybe (List String)) (sequence cs)
              | Nothing => pure []
        -- if so run them all!
-       traverse (runTest opts currdir) tests
-
+       map await <$> traverse (runTest opts) tests
 
 ||| A runner for a whole test suite
 export
@@ -308,11 +303,8 @@ runner tests
          opts <- case codegen opts of
                    Nothing => pure $ record { codegen = !findCG } opts
                    Just _ => pure opts
-         -- grab the current directory
-         Just pwd <- currentDir
-            | Nothing => putStrLn "FATAL: Could not get current working directory"
          -- run the tests
-         res <- concat <$> traverse (poolRunner opts pwd) tests
+         res <- concat <$> traverse (poolRunner opts) tests
          putStrLn (show (length (filter id res)) ++ "/" ++ show (length res)
                        ++ " tests successful")
          if (any not res)

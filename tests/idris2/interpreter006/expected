@@ -1,0 +1,13 @@
+Main> 4
+Main> 4
+Main> 4
+Main> "test"
+Main> it : String
+Main> it ++ it : String
+Main> "test"
+Main> 1
+Main> Main> Main> 2
+Main> 2
+Main> 2
+Main> Refl
+Main> Bye for now!

@@ -62,7 +62,7 @@ interp : Env $gam -> Lang $gam $t -> interpTy $t
 interp $env (Var $i) = lookupEnv i env
 interp $env (Val $x) = x
 interp $env (App $f $a) = interp env f (interp env a)
-interp $env (Lam {s = $s} $scope) 
+interp $env (Lam {s = $s} $scope)
    = \var => interp (ECons var env) scope
 interp $env (Op $fn $x $y) = fn (interp env x) (interp env y)
 

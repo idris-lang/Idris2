@@ -14,4 +14,3 @@ mfunc fn g (ma, mb)
 
 func2 : (a -> c) -> (b -> d) -> a -> b -> (c, d)
 func2 f g a b = MkPair (f a) (g b)
-

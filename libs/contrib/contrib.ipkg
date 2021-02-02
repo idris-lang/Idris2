@@ -3,14 +3,22 @@ package contrib
 modules = Control.ANSI,
           Control.ANSI.SGR,
           Control.ANSI.CSI,
+
           Control.Delayed,
+
           Control.Linear.LIO,
+
           Control.Monad.Algebra,
           Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,
           Control.Algebra.Implementations,
+
+          Control.Arrow,
+          Control.Category,
+
+          Control.Validation,
 
           Data.Bool.Algebra,
           Data.Bool.Decidable,
@@ -20,6 +28,7 @@ modules = Control.ANSI,
           Data.Fin.Extra,
 
           Data.Fun.Extra,
+          Data.Fun.Graph,
 
           Data.InductionRecursion.DybjerSetzer,
 
@@ -98,9 +107,11 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Render.String,
           Text.PrettyPrint.Prettyprinter.Render.Terminal,
 
+          System.Console.GetOpt,
           System.Future,
           System.Random,
           System.Path,
+
           Syntax.WithProof,
           Syntax.PreorderReasoning,
           Syntax.PreorderReasoning.Generic

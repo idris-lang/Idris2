@@ -6,7 +6,7 @@ There is an experimental code generator which compiles to an executable via C,
 using a reference counting garbage collector. This is intended as a lightweight
 (i.e. minimal dependencies) code generator that can be ported to multiple
 platforms, especially those with memory constraints.
-    
+
 Performance is not as good as the Scheme based code generators, partly because
 the reference counting has not yet had any optimisation, and partly because of
 the limitations of C. However, the main goal is portability: the generated

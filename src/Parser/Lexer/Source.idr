@@ -5,14 +5,14 @@ import public Parser.Lexer.Common
 import Data.List1
 import Data.List
 import Data.Strings
-import Data.String.Extra
-import public Text.Bounded
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.String.Extra
+import public Libraries.Text.Bounded
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Utils.Hex
-import Utils.Octal
-import Utils.String
+import Libraries.Utils.Hex
+import Libraries.Utils.Octal
+import Libraries.Utils.String
 
 import Core.Name
 
@@ -125,10 +125,11 @@ mutual
   ||| comment unless the series of uninterrupted dashes is ended with
   ||| a closing brace in which case it is a closing delimiter.
   doubleDash : (k : Nat) -> Lexer
-  doubleDash k = many (is '-') <+> choice            -- absorb all dashes
-    [ is '}' <+> toEndComment k                      -- closing delimiter
-    , many (isNot '\n') <+> toEndComment (S k)       -- line comment
-    ]
+  doubleDash k = with Prelude.(::)
+      many (is '-') <+> choice            -- absorb all dashes
+        [ is '}' <+> toEndComment k                      -- closing delimiter
+        , many (isNot '\n') <+> toEndComment (S k)       -- line comment
+        ]
 
 blockComment : Lexer
 blockComment = is '{' <+> is '-' <+> toEndComment 1
@@ -187,7 +188,7 @@ symbols
     = [".(", -- for things such as Foo.Bar.(+)
        "@{",
        "[|", "|]",
-       "(", ")", "{", "}}", "}", "[", "]", ",", ";", "_",
+       "(", ")", "{", "}", "[", "]", ",", ";", "_",
        "`(", "`{{", "`[", "`"]
 
 export

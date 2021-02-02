@@ -1,5 +1,6 @@
 module Data.String.Iterator
 
+import Control.Monad.Identity
 import public Data.List.Lazy
 
 %default total
@@ -31,6 +32,17 @@ fromString : (str : String) -> StringIterator str
 export
 withString : (str : String) -> ((1 it : StringIterator str) -> a) -> a
 withString str f = f (fromString str)
+
+||| Runs the action `f` on the slice `res` of the original string `str` represented by the
+||| iterator `it`
+%foreign
+  "scheme:blodwen-string-iterator-to-string"
+  "javascript:stringIterator:toString"
+export
+withIteratorString : (str : String)
+                  -> (1 it : StringIterator str)
+                  -> (f : (res : String) -> a)
+                  -> a
 
 -- We use a custom data type instead of Maybe (Char, StringIterator)
 -- to remove one level of pointer indirection
@@ -65,10 +77,15 @@ foldl op acc str = withString str (loop acc)
 
 export
 unpack : String -> LazyList Char
-unpack str = withString str unpack'
+unpack str = runIdentity $ withString str unpack'
   where
-    unpack' : (1 it : StringIterator str) -> LazyList Char
+    -- This is a Functor instance of Identity, but linear in second argument
+    %inline
+    mapId : forall a, b. (a -> b) -> (1 x : Identity a) -> Identity b
+    mapId f (Id x) = Id (f x)
+
+    unpack' : (1 it : StringIterator str) -> Identity (Lazy (LazyList Char))
     unpack' it =
       case uncons str it of
-        EOF => []
-        Character c it' => c :: Delay (unpack' $ assert_smaller it it')
+        EOF => pure []
+        Character c it' => mapId (c ::) (unpack' $ assert_smaller it it')

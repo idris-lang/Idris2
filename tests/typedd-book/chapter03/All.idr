@@ -5,4 +5,3 @@ import Vectors
 import WordLength
 import WordLength_vec
 import XOR
-

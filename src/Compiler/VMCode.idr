@@ -33,17 +33,17 @@ data VMInst : Type where
      MKCON : Reg -> (tag : Either Int Name) -> (args : List Reg) -> VMInst
      MKCLOSURE : Reg -> Name -> (missing : Nat) -> (args : List Reg) -> VMInst
      MKCONSTANT : Reg -> Constant -> VMInst
-     
+
      APPLY : Reg -> (f : Reg) -> (a : Reg) -> VMInst
      CALL : Reg -> (tailpos : Bool) -> Name -> (args : List Reg) -> VMInst
      OP : Reg -> PrimFn arity -> Vect arity Reg -> VMInst
      EXTPRIM : Reg -> Name -> List Reg -> VMInst
 
-     CASE : Reg -> -- scrutinee 
+     CASE : Reg -> -- scrutinee
             (alts : List (Either Int Name, List VMInst)) -> -- based on constructor tag
             (def : Maybe (List VMInst)) ->
             VMInst
-     CONSTCASE : Reg -> -- scrutinee 
+     CONSTCASE : Reg -> -- scrutinee
                  (alts : List (Constant, List VMInst)) ->
                  (def : Maybe (List VMInst)) ->
                  VMInst
@@ -70,7 +70,7 @@ Show VMInst where
   show (ASSIGN r v) = show r ++ " := " ++ show v
   show (MKCON r t args)
       = show r ++ " := MKCON " ++ show t ++ " (" ++
-                  showSep ", " (map show args) ++ ")"            
+                  showSep ", " (map show args) ++ ")"
   show (MKCLOSURE r n m args)
       = show r ++ " := MKCLOSURE " ++ show n ++ " " ++ show m ++ " (" ++
                   showSep ", " (map show args) ++ ")"

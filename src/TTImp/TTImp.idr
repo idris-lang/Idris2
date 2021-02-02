@@ -496,26 +496,31 @@ findImplicits tm = []
 export
 implicitsAs : {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> RawImp -> Core RawImp
-implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
+implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
   where
-    setAs : List (Maybe Name) -> RawImp -> Core RawImp
-    setAs is (IApp loc f a)
-        = do f' <- setAs is f
+    -- Takes the function application expression which is the lhs of a clause
+    -- and decomposes it into the underlying function symbol and the variables
+    -- bound by appearing as arguments, and then passes this onto `findImps`.
+    -- More precisely, implicit and explicit arguments are recorded separately,
+    -- into `is` and `es` respectively.
+    setAs : List (Maybe Name) -> List (Maybe Name) -> RawImp -> Core RawImp
+    setAs is es (IApp loc f a)
+        = do f' <- setAs is (Nothing :: es) f
              pure $ IApp loc f' a
-    setAs is (IAutoApp loc f a)
-        = do f' <- setAs (Nothing :: is) f
+    setAs is es (IAutoApp loc f a)
+        = do f' <- setAs (Nothing :: is) es f
              pure $ IAutoApp loc f' a
-    setAs is (INamedApp loc f n a)
-        = do f' <- setAs (Just n :: is) f
+    setAs is es (INamedApp loc f n a)
+        = do f' <- setAs (Just n :: is) (Just n :: es) f
              pure $ INamedApp loc f' n a
-    setAs is (IWithApp loc f a)
-        = do f' <- setAs is f
+    setAs is es (IWithApp loc f a)
+        = do f' <- setAs is es f
              pure $ IWithApp loc f' a
-    setAs is (IVar loc n)
+    setAs is es (IVar loc n)
         = case !(lookupTyExact n (gamma defs)) of
                Nothing => pure $ IVar loc n
                Just ty => pure $ impAs loc
-                                    !(findImps is !(nf defs [] ty)) (IVar loc n)
+                                    !(findImps is es !(nf defs [] ty)) (IVar loc n)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
@@ -529,20 +534,35 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
                          pure (x :: ns')
         updateNs n [] = Nothing
 
-        findImps : List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
-        findImps ns (NBind fc x (Pi _ _ Explicit _) sc)
-            = findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+        -- Finds the missing implicits which should be added to the lhs of the
+        -- original pattern clause.
+        --
+        -- The first argument, `ns`, specifies which implicit variables alredy
+        -- appear in the lhs, and therefore need not be added.
+        -- The second argument, `es`, specifies which *explicit* variables appear
+        -- in the lhs: this is used to determine when to stop searching for further
+        -- implicits to add.
+        findImps : List (Maybe Name) -> List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
+        -- don't add implicits coming after explicits that aren't given
+        findImps ns es (NBind fc x (Pi _ _ Explicit _) sc)
+            = case es of
+                   -- Explicits were skipped, therefore all explicits are given anyway
+                   Just (UN "_") :: _ => findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                   -- Explicits weren't skipped, so we need to check
+                   _ => case updateNs x es of
+                             Nothing => pure [] -- explicit wasn't given
+                             Just es' => findImps ns es' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
         -- if the implicit was given, skip it
-        findImps ns (NBind fc x (Pi _ _ AutoImplicit _) sc)
+        findImps ns es (NBind fc x (Pi _ _ AutoImplicit _) sc)
             = case updateNs x ns of
                    Nothing => -- didn't find explicit call
-                      pure $ (x, AutoImplicit) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-                   Just ns' => findImps ns' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-        findImps ns (NBind fc x (Pi _ _ p _) sc)
+                      pure $ (x, AutoImplicit) :: !(findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+                   Just ns' => findImps ns' es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+        findImps ns es (NBind fc x (Pi _ _ p _) sc)
             = if Just x `elem` ns
-                 then findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-                 else pure $ (x, forgetDef p) :: !(findImps ns !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-        findImps _ _ = pure []
+                 then findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                 else pure $ (x, forgetDef p) :: !(findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False))))
+        findImps _ _ _ = pure []
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
@@ -558,7 +578,7 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) tm
                  INamedApp loc' tm n
                      (IAs loc' UseLeft n (Implicit loc' True))
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
-    setAs is tm = pure tm
+    setAs is es tm = pure tm
 
 export
 definedInBlock : Namespace -> -- namespace to resolve names

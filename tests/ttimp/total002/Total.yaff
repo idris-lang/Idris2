@@ -47,4 +47,3 @@ pfoom (C0 EPS) = Z
 pfoom (C0 (C1 x)) = S (pfoom (C0 x))
 pfoom (C0 (C0 x)) = pfoom (C0 x)
 pfoom (C1 x) = S (foom x)
-

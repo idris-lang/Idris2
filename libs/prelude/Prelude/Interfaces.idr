@@ -218,13 +218,20 @@ interface Foldable t where
   foldl f z t = foldr (flip (.) . flip f) id t z
 
   ||| Test whether the structure is empty.
-  null : t elem -> Bool
+  ||| @ acc The accumulator value which is specified to be lazy
+  null : t elem -> Lazy Bool
+  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
 
 ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
 ||| Consequently, the final value is wrapped in the same `Monad`.
 public export
 foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
 foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+
+||| Maps each element to a value and combine them
+public export
+foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
+foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
 public export

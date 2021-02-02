@@ -1,6 +1,6 @@
 %default total
 
-partial 
+partial
 foo : Nat -> Nat
 foo Z = Z
 

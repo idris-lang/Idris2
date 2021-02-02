@@ -16,9 +16,9 @@ import Data.Bool.Decidable
 export
 LTESuccInjectiveMonotone : (m, n : Nat) -> Reflects (m `LTE` n) b -> Reflects (S m `LTE` S n) b
 LTESuccInjectiveMonotone m n (RTrue      m_lte_n) = RTrue  $ LTESucc m_lte_n
-LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case 
+LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case
                                                                LTESucc m_lte_n => not_m_lte_n m_lte_n
-                                                               
+
 export
 lteReflection : (a, b : Nat) -> Reflects (a `LTE` b) (a `lte` b)
 lteReflection 0 b = RTrue LTEZero
@@ -34,9 +34,9 @@ export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
 notlteIsLT a b prf = notLTImpliesGTE
                        \prf' =>
-                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf 
+                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
-  
+
 
 -- The converse to lteIsLTE:
 export
@@ -51,9 +51,9 @@ notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 -- The converse to lteIsLTE:
 export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
-GTIsnotlte a b b_lt_a = 
+GTIsnotlte a b b_lt_a =
   let not_a_lte_b : Not (a `LTE` b)
-      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $ 
+      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $
         |~ 1 + a
         <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
         <~ a     ...(b_lt_a)
@@ -89,7 +89,7 @@ multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
 
 export
 multLteMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> a*r `LTE` b*r
-multLteMonotoneLeft a b r a_lt_b = 
+multLteMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
   multLteMonotoneRight r a b a_lt_b

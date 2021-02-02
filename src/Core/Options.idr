@@ -4,8 +4,8 @@ import Core.Core
 import Core.Name
 import public Core.Options.Log
 import Core.TT
-import Utils.Binary
-import Utils.Path
+import Libraries.Utils.Binary
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe

@@ -11,10 +11,10 @@ import Data.Strings
 import Parser.Lexer.Source
 import Parser.Source
 import Parser.Support
-import Text.Lexer
-import Text.Parser
-import Utils.Either
-import Utils.String
+import Libraries.Text.Lexer
+import Libraries.Text.Parser
+import Libraries.Utils.Either
+import Libraries.Utils.String
 
 %default total
 

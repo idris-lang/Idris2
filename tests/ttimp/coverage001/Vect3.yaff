@@ -25,4 +25,3 @@ zip : Vect n a -> Vect n b -> Vect n (Pair a b)
 zip Nil Z impossible
 zip Nil Nil = Nil
 zip (Cons x xs) (Cons y ys) = Cons (MkPair x y) (zip xs ys)
-

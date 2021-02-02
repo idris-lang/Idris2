@@ -21,8 +21,7 @@ infixr 4 <$>, $>, <$
 infixl 6 <+>
 
 -- Utility operators
-infixr 9 .
+infixr 9 ., .:
 infixr 0 $
 
 infixl 9 `div`, `mod`
-

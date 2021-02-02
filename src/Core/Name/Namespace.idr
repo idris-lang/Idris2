@@ -4,8 +4,8 @@ import Data.List
 import Data.List1
 import Data.Strings
 import Decidable.Equality
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 %default total
 
@@ -49,9 +49,13 @@ nsAsModuleIdent (MkNS ns) = MkMI ns
 
 export
 mkNamespacedIdent : String -> (Maybe Namespace, String)
-mkNamespacedIdent str = case reverse (split (== '.') str) of
-  (name ::: []) => (Nothing, name)
-  (name ::: ns) => (Just (MkNS ns), name)
+mkNamespacedIdent str
+    = let nns = reverse (split (== '.') str)
+          name = head nns
+          ns = tail nns in
+          case ns of
+               [] => (Nothing, name)
+               _ => (Just (MkNS ns), name)
 
 export
 mkNestedNamespace : Maybe Namespace -> String -> Namespace

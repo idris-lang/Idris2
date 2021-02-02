@@ -1,6 +1,6 @@
 1/2: Building Test (Test.idr)
 2/2: Building As (As.idr)
-As> Prelude.id : (1 _ : a) -> a
+As> Prelude.id : a -> a
 As> Prelude.Uninhabited : Type -> Type
 As> Toast.pythag : Int -> List (Int, (Int, Int))
 As> Toast.Inside.fact : Nat -> Nat

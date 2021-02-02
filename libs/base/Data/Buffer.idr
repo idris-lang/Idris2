@@ -233,11 +233,11 @@ copyData src start len dest loc
     = primIO (prim__copyData src start len dest loc)
 
 %foreign "C:idris2_readBufferData,libidris2_support"
-         "node:lambdaRequire:fs:(f,b,l,m) => BigInt(__require_fs.readSync(f.fd,b,Number(l), Number(m)))"
+         "node:lambda:(f,b,l,m) => BigInt(require('fs').readSync(f.fd,b,Number(l), Number(m)))"
 prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
 %foreign "C:idris2_writeBufferData,libidris2_support"
-         "node:lambdaRequire:fs:(f,b,l,m) => BigInt(__require_fs.writeSync(f.fd,b,Number(l), Number(m)))"
+         "node:lambda:(f,b,l,m) => BigInt(require('fs').writeSync(f.fd,b,Number(l), Number(m)))"
 prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
 export

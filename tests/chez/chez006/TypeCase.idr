@@ -29,4 +29,3 @@ main = do printLn (foo Nat)
           printLn (foo (List Int))
           printLn (strangeId 42)
           printLn (strangeId (the Int 42))
-

@@ -1,9 +1,17 @@
+Changes since Idris 2 v0.3.0
+----------------------------
+
+REPL/IDE mode changes:
+
+* Added `:search` command, which searches for functions by type
+
 Changes since Idris 2 v0.2.1
 ----------------------------
 
 Library changes:
 
 * Added `Data.HVect` in `contrib`, for heterogeneous vectors.
+* Various other library functions added throughout `base` and `contrib`
 
 Command-line options changes:
 
@@ -15,22 +23,36 @@ Command-line options changes:
   provided.  An explicit `0` has the effect of simulating a terminal with
   unbounded width.
 
-Compiler changes:
+Language and compiler changes:
 
-* Added new syntax for named applications and the bind-all-explicits pattern:
+* Removed multiplicity subtyping, as this is unsound and unfortunately causes
+  more problems than it solves. This means you sometimes now need to write
+  linear versions of functions as special cases. (Though note that the 1
+  multiplicity is still considered experimental, so hopefully this will change
+  for the better in the future!)
+* Added new syntax for named applications of explicit arguments:
 
      `f {x [= t], x [= t], ...}`
      `f {x [= t], x [= t], ..., _}`
+
+* Added syntax for binding all explicit arguments (in the left hand side);
+
      `f {}`
 
-* Added new syntax for record updates:
+* Added new syntax for record updates (without the need for the `record`
+  keyword):
 
      `{x := t, x $= t, ...}`
 
-* Added primitives to the parsing library used in the compiler to get more precise
-  boundaries to the AST nodes `FC`.
+* Local implementations of interfaces (in `let` or `where` blocks) now work,
+  along with `%hint` annotations on local definitions, meaning that local
+  definitions can be searched in auto implicit search.
+  + Note, though, that there are still some known limitations (with both local
+    hints and local implementations) which will be resolved in the next version.
 * New experimental ``refc`` code generator, which generates C with reference
   counting.
+* Added primitives to the parsing library used in the compiler to get more precise
+  boundaries to the AST nodes `FC`.
 
 REPL/IDE mode changes:
 

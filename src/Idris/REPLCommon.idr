@@ -13,8 +13,8 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Render.Terminal
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 %default covering
 

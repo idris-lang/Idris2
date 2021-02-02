@@ -1,11 +1,15 @@
-lplus : (1 x : Nat) -> (1 y : Nat) -> Nat
-lplus Z y = y
-lplus (S k) y = S (lplus k y)
+data MyNat : Type where
+     MyZ : MyNat
+     MyS : (1 _ : MyNat) -> MyNat
 
-foo : (1 x : Nat) -> (1 y : Nat) -> Nat -> Nat
+lplus : (1 x : MyNat) -> (1 y : MyNat) -> MyNat
+lplus MyZ y = y
+lplus (MyS k) y = MyS (lplus k y)
+
+foo : (1 x : MyNat) -> (1 y : MyNat) -> MyNat -> MyNat
 foo x y z
-    = let 1 test = the Nat $ case z of
-                        Z => Z
-                        (S k) => S z
+    = let 1 test = the MyNat $ case z of
+                        MyZ => MyZ
+                        (MyS k) => MyS z
             in
           lplus test x

@@ -10,7 +10,7 @@ import Core.Value
 
 import Control.Monad.State
 
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering

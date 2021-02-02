@@ -1,11 +1,9 @@
 module Data.Stream
 
 import Data.List
+import public Data.Zippable
 
-||| The first element of an infinite stream
-public export
-head : Stream a -> a
-head (x::xs) = x
+%default total
 
 ||| Drop the first n elements from the stream
 ||| @ n how many elements to drop
@@ -26,45 +24,33 @@ public export
 iterate : (f : a -> a) -> (x : a) -> Stream a
 iterate f x = x :: iterate f (f x)
 
+public export
+unfoldr : (b -> (a, b)) -> b -> Stream a
+unfoldr f c = let (a, n) = f c in a :: unfoldr f n
+
 ||| Get the nth element of a stream
 public export
 index : Nat -> Stream a -> a
 index Z     (x::xs) = x
 index (S k) (x::xs) = index k xs
 
-||| Combine two streams element-wise using a function.
-|||
-||| @ f the function to combine elements with
-||| @ xs the first stream of elements
-||| @ ys the second stream of elements
-export
-zipWith : (f : a -> b -> c) -> (xs : Stream a) -> (ys : Stream b) -> Stream c
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+---------------------------
+-- Zippable --
+---------------------------
 
-||| Combine three streams by applying a function element-wise along them
 export
-zipWith3 : (a -> b -> c -> d) -> Stream a -> Stream b -> Stream c -> Stream d
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+Zippable Stream where
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
-||| Create a stream of pairs from two streams
-export
-zip : Stream a -> Stream b -> Stream (a, b)
-zip = zipWith (\x,y => (x,y))
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
 
-||| Combine three streams into a stream of tuples elementwise
-export
-zip3 : Stream a -> Stream b -> Stream c -> Stream (a, b, c)
-zip3 = zipWith3 (\x,y,z => (x,y,z))
+  unzipWith f xs = unzip (map f xs)
 
-||| Create a pair of streams from a stream of pairs
-export
-unzip : Stream (a, b) -> (Stream a, Stream b)
-unzip xs = (map fst xs, map snd xs)
+  unzip xs = (map fst xs, map snd xs)
 
-||| Split a stream of three-element tuples into three streams
-export
-unzip3 : Stream (a, b, c) -> (Stream a, Stream b, Stream c)
-unzip3 xs = (map (\(x,_,_) => x) xs, map (\(_,x,_) => x) xs, map (\(_,_,x) => x) xs)
+  unzipWith3 f xs = unzip3 (map f xs)
+
+  unzip3 xs = (map (\(x, _, _) => x) xs, map (\(_, x, _) => x) xs, map (\(_, _, x) => x) xs)
 
 ||| Return the diagonal elements of a stream of streams
 export
@@ -118,6 +104,6 @@ Monad Stream where
 -- Properties
 --------------------------------------------------------------------------------
 
-lengthTake : (1 n : Nat) -> (xs : Stream a) -> length (take n xs) = n
+lengthTake : (n : Nat) -> (xs : Stream a) -> length (take n xs) = n
 lengthTake Z _ = Refl
 lengthTake (S n) (x :: xs) = cong S (lengthTake n xs)

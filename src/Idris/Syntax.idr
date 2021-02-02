@@ -11,13 +11,13 @@ import public Core.TT
 
 import TTImp.TTImp
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.NameMap
-import Data.StringMap
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 %default covering
 
@@ -431,7 +431,7 @@ data REPLCmd : Type where
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
-     ProofSearch : Name -> REPLCmd
+     TypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
@@ -447,6 +447,7 @@ data REPLCmd : Type where
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
+     RunShellCommand : String -> REPLCmd
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd

@@ -1,11 +1,15 @@
 module Decidable.Decidable.Extra
 
 import Data.Rel
+import Data.Rel.Complement
 import Data.Fun
 import Data.Vect
 import Data.HVect
 import Data.Fun.Extra
 import Decidable.Decidable
+
+%default total
+
 
 public export
 NotNot : {n : Nat} -> {ts : Vect n Type} -> (r : Rel ts) -> Rel ts
@@ -47,3 +51,49 @@ doubleNegationExists {ts} {r} @{dec} nnxs =
       witnessing   : uncurry              r  witness
       witnessing   = doubleNegationElimination @{dec} witness witnessingnn
   in introduceWitness witness witnessing
+
+
+
+
+decideTransform :
+  {n : Nat}
+  -> {ts : Vect n Type}
+  -> {r : Rel ts}
+  -> {t : Type -> Type}
+  -> (tDec : {a : Type} -> Dec a -> Dec (t a))
+  -> (posDec : IsDecidable n ts r)
+  -> IsDecidable n ts (chain {ts} t r)
+decideTransform {t = t} tDec posDec =
+  curryAll $ \xs =>
+    replace {p = id} (chainUncurry (chain t r) Dec xs) $
+      replace {p = Dec} (chainUncurry r t xs) $
+        tDec $ replace {p = id} (sym $ chainUncurry r Dec xs) $
+          uncurryAll posDec xs
+
+
+||| Convert a decision about a decidable property into one about its negation.
+public export
+negateDec : (dec : Dec a) -> Dec (Not a)
+negateDec (Yes pf) = No ($ pf)
+negateDec (No npf) = Yes npf
+
+||| We can turn (Not (Exists Not)) into Forall for decidable types
+public export
+notExistsNotForall :
+  {0 p : a -> Type}
+  -> ((x : a) -> Dec (p x))
+  -> Dec (x : a ** Not (p x))
+  -> Dec ((x : a) -> p x)
+notExistsNotForall dec decEx =
+  case decEx of
+    Yes (x ** nx) => No $ \ f => nx $ f x
+    No notNot => Yes $ \x => case (dec x) of
+      Yes px => px
+      No nx => void $ notNot $ (x ** nx)
+
+
+||| If a relation is decidable, then so is its complement
+public export
+[DecidableComplement] {n : Nat} -> {ts : Vect n Type} -> {r : Rel ts} -> (posDec : Decidable n ts r) =>
+  Decidable n ts (complement {ts} r) where
+    decide = decideTransform negateDec (decide @{posDec})

@@ -7,8 +7,8 @@ import Data.List
 import Data.List1
 import Data.Vect
 import Parser.Source
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
 import System
@@ -517,7 +517,10 @@ for = flip traverse
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f (x ::: xs) = [| f x ::: traverse f xs |]
+traverseList1 f xxs
+    = let x = head xxs
+          xs = tail xxs in
+          [| f x ::: traverse f xs |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -549,9 +552,11 @@ sequence [] = pure []
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f (x ::: xs) = do
-  f x
-  traverse_ f xs
+traverseList1_ f xxs
+    = do let x = head xxs
+         let xs = tail xxs
+         f x
+         traverse_ f xs
 
 namespace PiInfo
   export

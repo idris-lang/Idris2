@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ $# -eq 0 ]
   then
     echo "No version number supplied"

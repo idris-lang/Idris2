@@ -13,7 +13,7 @@ import TTImp.Elab.Check
 import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
 
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -45,4 +45,3 @@ checkDot rig elabinfo nest env fc reason tm (Just gexpty)
              pure (metaval, gexpty)
         _ => throw (GenericMsg fc ("Dot pattern not valid here (Not LHS) "
                                    ++ show tm))
-

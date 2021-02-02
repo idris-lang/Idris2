@@ -14,9 +14,9 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
-import Data.StringMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -349,7 +349,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          delayOnFailure fc rig env expected ambiguous 5 $
              \delayed =>
                do solveConstraints solvemode Normal
@@ -399,7 +399,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
                                       InLHS c => inLHS
-                                      _ => inTermP False
+                                      _ => inTerm
                 delayOnFailure fc rig env expected ambiguous 5 $
                      \delayed =>
                        do defs <- get Ctxt

@@ -26,7 +26,7 @@ match all possible values of ``n``. In this case
 
    plusReducesR : (n : Nat) -> plus n Z = n
    plusReducesR Z = Refl
-   plusReducesR (S k) 
+   plusReducesR (S k)
        = let rec = plusReducesR k in
              rewrite sym rec in Refl
 
@@ -118,7 +118,7 @@ and these are also included in the prelude:
 Heterogeneous Equality
 ======================
 
-Also included in the prelude: 
+Also included in the prelude:
 
 .. code-block:: idris
 
@@ -130,6 +130,3 @@ Also included in the prelude:
    ||| @ y the right side
    (~=~) : (x : a) -> (y : b) -> Type
    (~=~) x y = (x = y)
-
-
-

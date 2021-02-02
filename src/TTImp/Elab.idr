@@ -16,9 +16,9 @@ import TTImp.Elab.Term
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -127,7 +127,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          --   is most likely just to be able to display helpful errors
          let solvemode = case mode of
                               InLHS _ => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          solveConstraints solvemode Normal
          logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST

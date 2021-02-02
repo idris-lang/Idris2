@@ -9,4 +9,3 @@ append xs ys
     = case xs of
            [] => ?bar_3
            (x :: zs) => ?bar_4
-
