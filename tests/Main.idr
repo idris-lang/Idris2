@@ -286,7 +286,8 @@ templateTests = MkTestPool "Test templates" [] Nothing
 -- available.
 baseLibraryTests : TestPool
 baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
-  [ "system_file001"
+  [ "control_app001"
+  , "system_file001"
   , "system_info_os001"
   , "data_bits001"
   , "system_info001"

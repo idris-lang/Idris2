@@ -263,17 +263,10 @@ new val prog
                 MkApp res = prog @{st} in
                 res
 
+||| An alias for `HasErr`.
 public export
-interface Exception err e where
-  ||| Throw an exception.
-  ||| @ ev Value of the exception.
-  throw : (ev : err) -> App e a
-  ||| Use with a given computation to do exception-catching.
-  ||| If any exception is raised then the handler is executed.
-  ||| @ act The computation to run.
-  ||| @ k   Handler to invoke if an exception is raised.
-  ||| @ ev  Value of the exception passed as an argument to the handler.
-  catch : (act : App e a) -> (k : (ev : err) -> App e a) -> App e a
+Exception : Error -> List Error -> Type
+Exception = HasErr
 
 findException : HasErr e es -> e -> OneOf es MayThrow
 findException Here err = First err
@@ -284,10 +277,11 @@ findError Here (First err) = Just err
 findError (There p) (Later q) = findError p q
 findError _ _ = Nothing
 
-export
-HasErr e es => Exception e es where
-  throw err = MkApp $ MkAppRes (Left (findException %search err))
-  catch (MkApp prog) handler
+throw : HasErr err es => err -> App es a
+throw err = MkApp $ MkAppRes (Left (findException %search err))
+
+catch : HasErr err es => App es a -> (err -> App es a) -> App es a
+catch (MkApp prog) handler
       = MkApp $
            prim_app_bind prog $ \res =>
               case res of
