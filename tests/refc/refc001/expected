@@ -1,0 +1,6 @@
+ header for libidris2_support needed
+Generated C file build/exec/refc001.c
+cc -c build/exec/refc001.c -o build/exec/refc001.o -I/home/gxa1/.idris2/idris2-0.2.1/refc -I/home/gxa1/.idris2/idris2-0.2.1/include
+cc build/exec/refc001.o -o build/exec/refc001 /home/gxa1/.idris2/idris2-0.2.1/lib/libidris2_support.a -lidris2_refc -L/home/gxa1/.idris2/idris2-0.2.1/refc -L/home/gxa1/.idris2/idris2-0.2.1/lib -L/home/gxa1/projects/idris2/tests/refc/refc001 
+
+Hello World!

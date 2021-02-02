@@ -142,6 +142,10 @@ chezTests = MkTestPool [Chez]
       "perf001",
       "reg001"]
 
+refcTests : TestPool
+refcTests = MkTestPool [C]
+  [ "refc001" ]
+
 nodeTests : TestPool
 nodeTests = MkTestPool [Node]
     [ "node001", "node002", "node003", "node004", "node005", "node006", "node007", "node008", "node009"
@@ -173,6 +177,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "chez" chezTests
+  , testPaths "refc" refcTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
   ] where

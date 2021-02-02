@@ -229,10 +229,11 @@ pathLookup names = do
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = Chez | Node | Racket
+data Requirement = C | Chez | Node | Racket
 
 export
 Show Requirement where
+  show C = "C"
   show Chez = "Chez"
   show Node = "node"
   show Racket = "racket"
@@ -246,6 +247,7 @@ checkRequirement req
 
   where
     requirement : Requirement -> (String, List String)
+    requirement C = ("CC", ["cc"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
