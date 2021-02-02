@@ -171,6 +171,10 @@ chezTests = MkTestPool [Chez]
       "perf001",
       "reg001"]
 
+refcTests : TestPool
+refcTests = MkTestPool [C]
+  [ "refc001" ]
+
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
     ["concurrency001"]
@@ -216,6 +220,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "chez" chezTests
+  , testPaths "refc" refcTests
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
