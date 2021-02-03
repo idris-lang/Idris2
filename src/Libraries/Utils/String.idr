@@ -9,8 +9,12 @@ dotSep [x] = x
 dotSep (x :: xs) = x ++ concat ["." ++ y | y <- xs]
 
 export
-stripQuotes : (str : String) -> String
-stripQuotes str = substr 1 (length str `minus` 2) str
+stripSurrounds : (lead : Nat) -> (tail : Nat) -> String -> String
+stripSurrounds lead tail str = substr lead (length str `minus` (lead + tail)) str
+
+export
+stripQuotes : String -> String
+stripQuotes = stripSurrounds 1 1
 
 export
 lowerFirst : String -> Bool
