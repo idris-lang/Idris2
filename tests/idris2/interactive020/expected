@@ -11,5 +11,4 @@ Issue835>    P2 : Nat -> Type
    x : Nat
 ------------------------------
 rhs3 : P2 x
-Issue835> 
-Bye for now!
+Issue835> Bye for now!
