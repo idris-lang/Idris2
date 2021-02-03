@@ -207,3 +207,12 @@ jobs:
       - name: Test API
         run: cd tests/idris2/api001 && ./run idris2
         shell: bash
+
+  sphinx-doc-check:
+    name: Sphinx
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ammaraskar/sphinx-action@master
+      with:
+        docs-folder: "docs/"
