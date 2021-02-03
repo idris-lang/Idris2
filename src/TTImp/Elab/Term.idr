@@ -279,11 +279,11 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 TTImp.Elab.Check.check rigc elabinfo nest env (ICoerced fc tm) exp
     = checkImp rigc elabinfo nest env tm exp
 -- Don't add implicits/coercions on local blocks or record updates
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet fc c n nty nval sc) exp
+TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet _ _ _ _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal fc ds sc) exp
+TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate fc fs rec) exp
+TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
     = do defs <- get Ctxt

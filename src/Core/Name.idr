@@ -70,6 +70,11 @@ isUserName (DN _ n) = isUserName n
 isUserName _ = True
 
 export
+isUN : Name -> Maybe String
+isUN (UN str) = Just str
+isUN _ = Nothing
+
+export
 nameRoot : Name -> String
 nameRoot (NS _ n) = nameRoot n
 nameRoot (UN n) = n
