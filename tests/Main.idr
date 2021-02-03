@@ -71,7 +71,7 @@ idrisTestsInteractive = MkTestPool []
        "interactive005", "interactive006", "interactive007", "interactive008",
        "interactive009", "interactive010", "interactive011", "interactive012",
        "interactive013", "interactive014", "interactive015", "interactive016",
-       "interactive017", "interactive018", "interactive019"]
+       "interactive017", "interactive018", "interactive019", "interactive020"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []

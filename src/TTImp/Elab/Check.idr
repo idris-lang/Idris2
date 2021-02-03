@@ -27,6 +27,11 @@ import Libraries.Data.StringMap
 public export
 data ElabMode = InType | InLHS RigCount | InExpr | InTransform
 
+export
+isLHS : ElabMode -> Maybe RigCount
+isLHS (InLHS w) = Just w
+isLHS _ = Nothing
+
 Show ElabMode where
   show InType = "InType"
   show (InLHS c) = "InLHS " ++ show c

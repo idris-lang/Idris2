@@ -5,8 +5,10 @@ import Core.Context.Log
 import Core.TT
 import TTImp.BindImplicits
 import TTImp.TTImp
+import TTImp.Elab.Check
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -113,17 +115,26 @@ mutual
 
 -- Get the arguments for the rewritten pattern clause of a with by looking
 -- up how the argument names matched
-getArgMatch : FC -> Bool -> RawImp -> List (String, RawImp) ->
-              Maybe (PiInfo RawImp, Name) -> RawImp
-getArgMatch ploc search warg ms Nothing = warg
-getArgMatch ploc True warg ms (Just (AutoImplicit, nm))
+getArgMatch : FC -> (side : ElabMode) -> (search : Bool) ->
+              (warg : RawImp) -> (matches : List (String, RawImp)) ->
+              (arg : Maybe (PiInfo RawImp, Name)) -> RawImp
+getArgMatch ploc mode search warg ms Nothing = warg
+getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
     = case (isUN nm >>= \ n => lookup n ms) of
         Just tm => tm
-        Nothing => IAs ploc UseLeft nm (ISearch ploc 500)
-getArgMatch ploc search warg ms (Just (_, nm))
+        Nothing =>
+          let arg = ISearch ploc 500 in
+          if isJust (isLHS mode)
+            then IAs ploc UseLeft nm arg
+             else arg
+getArgMatch ploc mode search warg ms (Just (_, nm))
     = case (isUN nm >>= \ n => lookup n ms) of
         Just tm => tm
-        Nothing => IAs ploc UseLeft nm (Implicit ploc True)
+        Nothing =>
+          let arg = Implicit ploc True in
+           if isJust (isLHS mode)
+             then IAs ploc UseLeft nm arg
+             else arg
 
 export
 getNewLHS : {auto c : Ref Ctxt Defs} ->
@@ -148,7 +159,7 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
          log "declare.def.clause.with" 5 $ "Matches: " ++ show ms
-         let params = map (getArgMatch ploc False warg ms) wargnames
+         let params = map (getArgMatch ploc (InLHS top) False warg ms) wargnames
          log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
 
          let newlhs = apply (IVar ploc wname) (params ++ rest)
@@ -187,7 +198,7 @@ withRHS fc drop wname wargnames tm toplhs
              ms <- getMatch False toplhs tm
              log "declare.def.clause.with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar fc wname)
-                                (map (getArgMatch fc True arg ms) wargnames)
+                                (map (getArgMatch fc InExpr True arg ms) wargnames)
              log "declare.def.clause.with" 10 $ "With args for RHS: " ++ show wargnames
              log "declare.def.clause.with" 10 $ "New RHS: " ++ show newrhs
              pure (withApply fc newrhs args)
