@@ -926,7 +926,7 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
--- Creates a chain of `App` nodes, each with it's own file context
+-- Creates a chain of `App` nodes, each with its own file context
 export
 applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
 applyWithFC fn [] = fn
