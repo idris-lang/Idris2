@@ -4,6 +4,7 @@ import public Parser.Lexer.Common
 
 import Data.List1
 import Data.List
+import Data.Maybe
 import Data.Strings
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
@@ -24,7 +25,7 @@ data Token
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
-  | StringLit String
+  | StringLit Nat String
   -- Identifiers
   | HoleIdent String
   | Ident String
@@ -47,7 +48,7 @@ Show Token where
   show (CharLit x) = "character " ++ show x
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
-  show (StringLit x) = "string " ++ show x
+  show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
   show (Ident x) = "identifier " ++ x
@@ -70,7 +71,7 @@ Pretty Token where
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
-  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
   pretty (Ident x) = pretty "identifier" <++> pretty x
@@ -151,6 +152,15 @@ doubleLit
     = digits <+> is '.' <+> digits <+> opt
            (is 'e' <+> opt (is '-' <|> is '+') <+> digits)
 
+stringLit1 : Lexer
+stringLit1 = surround (exact "#\"") (exact "\"#") any
+
+stringLit2 : Lexer
+stringLit2 = surround (exact "##\"") (exact "\"##") any
+
+stringLit3 : Lexer
+stringLit3 = surround (exact "###\"") (exact "\"###") any
+
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
 cgDirective : Lexer
@@ -188,7 +198,7 @@ symbols
     = [".(", -- for things such as Foo.Bar.(+)
        "@{",
        "[|", "|]",
-       "(", ")", "{", "}}", "}", "[", "]", ",", ";", "_",
+       "(", ")", "{", "}", "[", "]", ",", ";", "_",
        "`(", "`{{", "`[", "`"]
 
 export
@@ -225,18 +235,16 @@ fromHexLit str
   = if length str <= 2
        then 0
        else let num = assert_total (strTail (strTail str)) in
-             case fromHex (reverse num) of
-                  Nothing => 0 -- can't happen if the literal lexed correctly
-                  Just n => cast n
+             fromMaybe 0 (fromHex (reverse num))
+             --        ^-- can't happen if the literal was lexed correctly
 
 fromOctLit : String -> Integer
 fromOctLit str
   = if length str <= 2
        then 0
        else let num = assert_total (strTail (strTail str)) in
-             case fromOct (reverse num) of
-                  Nothing => 0 -- can't happen if the literal lexed correctly
-                  Just n => cast n
+             fromMaybe 0 (fromOct (reverse num))
+             --        ^-- can't happen if the literal lexed correctly
 
 rawTokens : TokenMap Token
 rawTokens =
@@ -251,7 +259,10 @@ rawTokens =
      (hexLit, \x => IntegerLit (fromHexLit x)),
      (octLit, \x => IntegerLit (fromOctLit x)),
      (digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (stripQuotes x)),
+     (stringLit, \x => StringLit 0 (stripQuotes x)),
+     (stringLit1, \x => StringLit 1 (stripSurrounds 2 2 x)),
+     (stringLit2, \x => StringLit 2 (stripSurrounds 3 3 x)),
+     (stringLit3, \x => StringLit 3 (stripSurrounds 4 4 x)),
      (charLit, \x => CharLit (stripQuotes x)),
      (dotIdent, \x => DotIdent (assert_total $ strTail x)),
      (namespacedIdent, parseNamespace),

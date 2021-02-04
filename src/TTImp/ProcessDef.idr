@@ -395,8 +395,8 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                (_, lhs) <- bindNames False lhs_raw
                setUnboundImplicits autoimp
 
-               log "declare.def.clause" 5 $ "Checking " ++ show lhs
-               logEnv "declare.def.clause" 5 "In env" env
+               log "declare.def.clause.impossible" 5 $ "Checking " ++ show lhs
+               logEnv "declare.def.clause.impossible" 5 "In env" env
                (lhstm, lhstyg) <-
                            elabTerm n (InLHS mult) opts nest env
                                       (IBindHere fc PATTERN lhs) Nothing
@@ -447,16 +447,16 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
-         logTerm "declare.def.clause" 5 "With value" wval
-         logTerm "declare.def.clause" 3 "Required type" reqty
+         logTerm "declare.def.clause.with" 5 "With value" wval
+         logTerm "declare.def.clause.with" 3 "Required type" reqty
          wvalTy <- getTerm gwvalTy
          defs <- get Ctxt
          wval <- normaliseHoles defs env' wval
          wvalTy <- normaliseHoles defs env' wvalTy
 
          let (wevars ** withSub) = keepOldEnv sub' (snd (findSubEnv env' wval))
-         logTerm "declare.def.clause" 5 "With value type" wvalTy
-         log "declare.def.clause" 5 $ "Using vars " ++ show wevars
+         logTerm "declare.def.clause.with" 5 "With value type" wvalTy
+         log "declare.def.clause.with" 5 $ "Using vars " ++ show wevars
 
          let Just wval = shrinkTerm wval withSub
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #1")
@@ -495,8 +495,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                  = map Just reqns ++
                    Nothing :: map Just notreqns
 
-         logTerm "declare.def.clause" 3 "With function type" wtype
-         log "declare.def.clause" 5 $ "Argument names " ++ show wargNames
+         logTerm "declare.def.clause.with" 3 "With function type" wtype
+         log "declare.def.clause.with" 5 $ "Argument names " ++ show wargNames
 
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
@@ -513,7 +513,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          -- Generate new clauses by rewriting the matched arguments
          cs' <- traverse (mkClauseWith 1 wname wargNames lhs) cs
-         log "declare.def.clause" 3 $ "With clauses: " ++ show cs'
+         log "declare.def.clause.with" 3 $ "With clauses: " ++ show cs'
 
          -- Elaborate the new definition here
          nestname <- applyEnv env wname
@@ -552,16 +552,19 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                    RawImp -> ImpClause ->
                    Core ImpClause
     mkClauseWith drop wname wargnames lhs (PatClause ploc patlhs rhs)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "PatClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
     mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "WithClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
              pure (WithClause ploc newlhs newrhs flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "ImpossibleClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
 
 nameListEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)

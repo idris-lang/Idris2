@@ -39,13 +39,16 @@ fromOctDigit '7' = Just 7
 fromOctDigit _ = Nothing
 
 export
-fromOctChars : List Char -> Maybe Int
+fromOctChars : List Char -> Maybe Integer
 fromOctChars = fromOctChars' 1
   where
-    fromOctChars' : Int -> List Char -> Maybe Int
+    fromOctChars' : Integer -> List Char -> Maybe Integer
     fromOctChars' _ [] = Just 0
-    fromOctChars' m (d :: ds) = pure $ !(fromOctDigit (toLower d)) * m + !(fromOctChars' (m*8) ds)
+    fromOctChars' m (d :: ds)
+      = do digit <- fromOctDigit (toLower d)
+           digits <- fromOctChars' (m*8) ds
+           pure $ cast digit * m + digits
 
 export
-fromOct : String -> Maybe Int
+fromOct : String -> Maybe Integer
 fromOct = fromOctChars . unpack

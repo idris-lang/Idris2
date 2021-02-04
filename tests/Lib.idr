@@ -225,10 +225,11 @@ pathLookup names = do
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = Chez | Node | Racket
+data Requirement = C | Chez | Node | Racket
 
 export
 Show Requirement where
+  show C = "C"
   show Chez = "Chez"
   show Node = "node"
   show Racket = "racket"
@@ -242,6 +243,7 @@ checkRequirement req
 
   where
     requirement : Requirement -> (String, List String)
+    requirement C = ("CC", ["cc"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
@@ -253,6 +255,7 @@ findCG
        Nothing <- checkRequirement Chez    | p => pure (Just "chez")
        Nothing <- checkRequirement Node    | p => pure (Just "node")
        Nothing <- checkRequirement Racket  | p => pure (Just "racket")
+       Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
 ||| A test pool is characterised by

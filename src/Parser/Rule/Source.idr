@@ -38,7 +38,7 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           StringLit s => case escape s of
+                           StringLit n s => case escape n s of
                                                Nothing => Nothing
                                                Just s' => Just (Str s')
                            Ident "Char"    => Just CharType
@@ -84,7 +84,7 @@ strLit : Rule String
 strLit
     = terminal "Expected string literal"
                (\x => case x.val of
-                           StringLit s => Just s
+                           StringLit 0 s => Just s
                            _ => Nothing)
 
 export

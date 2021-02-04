@@ -82,7 +82,7 @@ libs : prelude base contrib network
 testbin:
 	@${MAKE} -C tests testbin
 
-test:
+test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
 	@echo

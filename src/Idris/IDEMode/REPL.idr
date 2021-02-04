@@ -129,7 +129,7 @@ getInput f
                 do rest <- getFLine f
                    pure (pack x ++ rest)
               Just num =>
-                do inp <- getNChars f (integerToNat (cast num))
+                do inp <- getNChars f (integerToNat num)
                    pure (pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)

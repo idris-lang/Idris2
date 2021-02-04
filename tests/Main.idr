@@ -45,7 +45,7 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051"]
+       "basic051", "basic052", "basic053", "basic054"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -71,7 +71,7 @@ idrisTestsInteractive = MkTestPool []
        "interactive005", "interactive006", "interactive007", "interactive008",
        "interactive009", "interactive010", "interactive011", "interactive012",
        "interactive013", "interactive014", "interactive015", "interactive016",
-       "interactive017", "interactive018", "interactive019",
+       "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027"]
 
@@ -173,6 +173,10 @@ chezTests = MkTestPool [Chez]
       "perf001",
       "reg001"]
 
+refcTests : TestPool
+refcTests = MkTestPool [C]
+  [ "refc001" ]
+
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
     ["concurrency001"]
@@ -218,6 +222,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "chez" chezTests
+  , testPaths "refc" refcTests
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
