@@ -4,6 +4,7 @@ import public Parser.Lexer.Common
 
 import Data.List1
 import Data.List
+import Data.Maybe
 import Data.Strings
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
@@ -234,18 +235,16 @@ fromHexLit str
   = if length str <= 2
        then 0
        else let num = assert_total (strTail (strTail str)) in
-             case fromHex (reverse num) of
-                  Nothing => 0 -- can't happen if the literal lexed correctly
-                  Just n => cast n
+             fromMaybe 0 (fromHex (reverse num))
+             --        ^-- can't happen if the literal was lexed correctly
 
 fromOctLit : String -> Integer
 fromOctLit str
   = if length str <= 2
        then 0
        else let num = assert_total (strTail (strTail str)) in
-             case fromOct (reverse num) of
-                  Nothing => 0 -- can't happen if the literal lexed correctly
-                  Just n => cast n
+             fromMaybe 0 (fromOct (reverse num))
+             --        ^-- can't happen if the literal lexed correctly
 
 rawTokens : TokenMap Token
 rawTokens =

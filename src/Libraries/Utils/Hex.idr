@@ -66,13 +66,16 @@ fromHexDigit 'f' = Just 15
 fromHexDigit _ = Nothing
 
 export
-fromHexChars : List Char -> Maybe Int
+fromHexChars : List Char -> Maybe Integer
 fromHexChars = fromHexChars' 1
   where
-    fromHexChars' : Int -> List Char -> Maybe Int
+    fromHexChars' : Integer -> List Char -> Maybe Integer
     fromHexChars' _ [] = Just 0
-    fromHexChars' m (d :: ds) = pure $ !(fromHexDigit (toLower d)) * m + !(fromHexChars' (m*16) ds)
+    fromHexChars' m (d :: ds)
+      = do digit <- fromHexDigit (toLower d)
+           digits <- fromHexChars' (m*16) ds
+           pure $ cast digit * m + digits
 
 export
-fromHex : String -> Maybe Int
+fromHex : String -> Maybe Integer
 fromHex = fromHexChars . unpack
