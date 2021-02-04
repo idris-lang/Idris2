@@ -88,12 +88,9 @@ addLHS loc outerenvlen env tm
     = do meta <- get MD
          tm' <- toFullNames (bindEnv loc (toPat env) tm)
          -- Put the lhs on the metadata if it's not empty
-         case loc of
-              (MkFC fname start end) => put MD $
-                  record { lhsApps $= (((fname, start, end), outerenvlen, tm') ::) } meta
+         whenJust (isNonEmptyFC loc) $ \ neloc =>
+           put MD $ record { lhsApps $= ((neloc, outerenvlen, tm') ::) } meta
 
-              -- Do nothing if the file context is empty
-              EmptyFC => pure ()
   where
     toPat : Env Term vs -> Env Term vs
     toPat (Lam fc c p ty :: bs) = PVar fc c p ty :: toPat bs
@@ -124,12 +121,9 @@ addNameType loc n env tm
          n' <- getFullName n
 
          -- Add the name to the metadata if the file context is not empty
-         case loc of
-              (MkFC fname start end) => do
-                  put MD $ record { names $= (((fname, start, end), (n', 0, substEnv loc env tm)) ::) } meta
-                  log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + fst start)
-              EmptyFC => pure ()
-
+         whenJust (isNonEmptyFC loc) $ \ neloc => do
+           put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
+           log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
 export
 addTyDecl : {vars : _} ->
@@ -141,14 +135,8 @@ addTyDecl loc n env tm
          n' <- getFullName n
 
          -- Add the type declaration to the metadata if the file context is not empty
-         case loc of
-              (MkFC fname start end) => put MD $
-                  record { tydecls $= ( ((fname, start, end),
-                                         (n', length env, bindEnv loc env tm))
-                                      ::)
-                         } meta
-              EmptyFC => pure ()
-
+         whenJust (isNonEmptyFC loc) $ \ neloc =>
+           put MD $ record { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
 
 export
 setHoleLHS : {auto m : Ref MD Metadata} ->

@@ -35,6 +35,12 @@ NonEmptyFC = (FileName, FilePos, FilePos)
 ------------------------------------------------------------------------
 -- Projections
 
+||| A view checking whether an arbitrary FC happens to be non-empty
+export
+isNonEmptyFC : FC -> Maybe NonEmptyFC
+isNonEmptyFC (MkFC fn start end) = Just (fn, start, end)
+isNonEmptyFC EmptyFC = Nothing
+
 export
 file : NonEmptyFC -> FileName
 file (fn, _, _) = fn
@@ -44,8 +50,16 @@ startPos : NonEmptyFC -> FilePos
 startPos (_, s, _) = s
 
 export
+startLine : NonEmptyFC -> Int
+startLine = fst . startPos
+
+export
 endPos : NonEmptyFC -> FilePos
 endPos (_, _, e) = e
+
+export
+endLine : NonEmptyFC -> Int
+endLine = fst . endPos
 
 ------------------------------------------------------------------------
 -- Smart constructors
