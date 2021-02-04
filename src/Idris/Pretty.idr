@@ -218,10 +218,6 @@ mutual
             pure continuation
 
         where
-          isUnderscoreName : Name -> Bool
-          isUnderscoreName (UN "_") = True
-          isUnderscoreName (MN "_" _) = True
-          isUnderscoreName _ = False
 
           continuation : Doc IdrisAnn
           continuation = go startPrec sc
