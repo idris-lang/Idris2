@@ -519,23 +519,37 @@ genName n
          pure (MN n i)
 
 mutual
+  quoteArg : {auto c : Ref Ctxt Defs} ->
+              {bound, free : _} ->
+              Ref QVar Int -> Defs -> Bounds bound ->
+              Env Term free -> Closure free ->
+              Core (Term (bound ++ free))
+  quoteArg q defs bounds env a
+      = quoteGenNF q defs bounds env !(evalClosure defs a)
+
+
+  quoteArgWithFC : {auto c : Ref Ctxt Defs} ->
+                   {bound, free : _} ->
+                   Ref QVar Int -> Defs -> Bounds bound ->
+                   Env Term free -> (FC, Closure free) ->
+                   Core ((FC, Term (bound ++ free)))
+  quoteArgWithFC q defs bounds env
+       = traversePair (quoteArg q defs bounds env)
+
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (bound ++ free)))
-  quoteArgs q defs bounds env [] = pure []
-  quoteArgs q defs bounds env (a :: args)
-      = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
-                !(quoteArgs q defs bounds env args))
+  quoteArgs q defs bounds env = traverse (quoteArg q defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
                     Env Term free -> List (FC, Closure free) ->
                     Core (List (FC, Term (bound ++ free)))
-  quoteArgsWithFC q defs bounds env terms
-      = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
+  quoteArgsWithFC q defs bounds env
+      = traverse (quoteArgWithFC q defs bounds env)
 
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
@@ -1263,22 +1277,22 @@ replace' {vars} tmpi defs env lhs parg tm
         = do empty <- clearDefs defs
              quote empty env (NApp fc hd [])
     repSub (NApp fc hd args)
-        = do args' <- traverse (repArg . snd) args
+        = do args' <- traverse (traversePair repArg) args
              pure $ applyWithFC
                         !(replace' tmpi defs env lhs parg (NApp fc hd []))
-                        (zip (map fst args) args')
+                        args'
     repSub (NDCon fc n t a args)
-        = do args' <- traverse (repArg . snd) args
+        = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyWithFC
                         !(quote empty env (NDCon fc n t a []))
-                        (zip (map fst args) args')
+                        args'
     repSub (NTCon fc n t a args)
-        = do args' <- traverse (repArg . snd) args
+        = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyWithFC
                         !(quote empty env (NTCon fc n t a []))
-                        (zip (map fst args) args')
+                        args'
     repSub (NAs fc s a p)
         = do a' <- repSub a
              p' <- repSub p
@@ -1291,9 +1305,9 @@ replace' {vars} tmpi defs env lhs parg tm
              tm' <- replace' tmpi defs env lhs parg !(evalClosure defs tm)
              pure (TDelay fc r ty' tm')
     repSub (NForce fc r tm args)
-        = do args' <- traverse (repArg . snd) args
+        = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
-             pure $ applyWithFC (TForce fc r tm') $ zip (map fst args) args'
+             pure $ applyWithFC (TForce fc r tm') args'
     repSub tm = do empty <- clearDefs defs
                    quote empty env tm
 

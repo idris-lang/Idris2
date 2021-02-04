@@ -539,6 +539,10 @@ traverseOpt f Nothing = pure Nothing
 traverseOpt f (Just x) = map Just (f x)
 
 export
+traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
+traversePair f (w, a) = (w,) <$> f a
+
+export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
 traverse_ f (x :: xs)
