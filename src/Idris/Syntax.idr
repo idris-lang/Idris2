@@ -621,15 +621,44 @@ mutual
         = "with " ++ show ns ++ " " ++ showPrec d rhs
 
 public export
+record Method where
+  constructor MkMethod
+  name     : Name
+  count    : RigCount
+  totalReq : Maybe TotalReq
+  type     : RawImp
+
+export
+Show Method where
+  show (MkMethod n c treq ty)
+    = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty
+
+public export
 record IFaceInfo where
   constructor MkIFaceInfo
   iconstructor : Name
   implParams : List Name
   params : List Name
   parents : List RawImp
-  methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
+  methods : List Method
      -- ^ name, whether a data method, and desugared type (without constraint)
   defaults : List (Name, List ImpClause)
+
+export
+TTC Method where
+  toBuf b (MkMethod nm c treq ty)
+      = do toBuf b nm
+           toBuf b c
+           toBuf b treq
+           toBuf b ty
+
+  fromBuf b
+      = do nm <- fromBuf b
+           c <- fromBuf b
+           treq <- fromBuf b
+           ty <- fromBuf b
+           pure (MkMethod nm c treq ty)
+
 
 export
 TTC IFaceInfo where
