@@ -529,7 +529,7 @@ allPrimitives =
 
     map (\t => MkPrim (BAnd t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (BOr t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType, Bits8Type, Bits16Type, Bits32Type] ++
+    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
 
     map (\t => MkPrim (LT t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (LTE t) (cmpTy t) isTotal) [IntType, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
