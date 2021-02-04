@@ -449,9 +449,7 @@ processEdit (GenerateDef upd line name rej)
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
 
-                    let l : Nat = integerToNat $ cast $ case fc of
-                         (MkFC _ (_, col) _) => col
-                         _ => the Int 0
+                    let l : Nat = integerToNat $ cast $ startCol (toNonEmptyFC fc)
 
                     Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
@@ -465,9 +463,7 @@ processEdit (GenerateDef upd line name rej)
 processEdit GenerateDefNext
     = do Just (line, (fc, cs)) <- nextGenDef 0
               | Nothing => pure (EditError "No more results")
-         let l : Nat = integerToNat $ cast $ case fc of
-                (MkFC _ (_, col) _) => col
-                _ => the Int 0
+         let l : Nat = integerToNat $ cast $ startCol (toNonEmptyFC fc)
          Just srcLine <- getSourceLine line
             | Nothing => pure (EditError "Source line not found")
          let (markM, srcLineUnlit) = isLitLine srcLine

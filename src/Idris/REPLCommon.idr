@@ -67,7 +67,8 @@ emitProblem a replDocCreator idemodeDocCreator getFC
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
                   do msg <- idemodeDocCreator a
-                     case map defaultFC (getFC a) of
+                     -- TODO: Display a better message when the error doesn't contain a location
+                     case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
                           Just (file, startPos, endPos) =>
                             send f (SExpList [SymbolAtom "warning",
@@ -79,11 +80,6 @@ emitProblem a replDocCreator idemodeDocCreator getFC
                                               SExpList []],
                                     toSExp i])
   where
-    -- TODO: Display a better message when the error doesn't contain a location
-    defaultFC : FC -> NonEmptyFC
-    defaultFC EmptyFC = ("", (0, 0), (0, 0))
-    defaultFC (MkFC fname start end) = (fname, start, end)
-
     addOne : (Int, Int) -> (Int, Int)
     addOne (l, c) = (l + 1, c + 1)
 

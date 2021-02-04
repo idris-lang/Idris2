@@ -1,5 +1,6 @@
 module Core.FC
 
+import Data.Maybe
 import Libraries.Text.Bounded
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -33,13 +34,29 @@ NonEmptyFC : Type
 NonEmptyFC = (FileName, FilePos, FilePos)
 
 ------------------------------------------------------------------------
--- Projections
+-- Conversion between NonEmptyFC and FC
+
+||| NonEmptyFC always embeds into FC
+export
+justFC : NonEmptyFC -> FC
+justFC (fname, start, end) = MkFC fname start end
 
 ||| A view checking whether an arbitrary FC happens to be non-empty
 export
 isNonEmptyFC : FC -> Maybe NonEmptyFC
 isNonEmptyFC (MkFC fn start end) = Just (fn, start, end)
 isNonEmptyFC EmptyFC = Nothing
+
+export
+defaultFC : NonEmptyFC
+defaultFC = ("", (0, 0), (0, 0))
+
+export
+toNonEmptyFC : FC -> NonEmptyFC
+toNonEmptyFC = fromMaybe defaultFC . isNonEmptyFC
+
+------------------------------------------------------------------------
+-- Projections
 
 export
 file : NonEmptyFC -> FileName
@@ -54,6 +71,10 @@ startLine : NonEmptyFC -> Int
 startLine = fst . startPos
 
 export
+startCol : NonEmptyFC -> Int
+startCol = snd . startPos
+
+export
 endPos : NonEmptyFC -> FilePos
 endPos (_, _, e) = e
 
@@ -61,16 +82,16 @@ export
 endLine : NonEmptyFC -> Int
 endLine = fst . endPos
 
+export
+endCol : NonEmptyFC -> Int
+endCol = snd . endPos
+
 ------------------------------------------------------------------------
 -- Smart constructors
 
 export
 boundToFC : FileName -> WithBounds t -> FC
 boundToFC fname b = MkFC fname (start b) (end b)
-
-export
-justFC : NonEmptyFC -> FC
-justFC (fname, start, end) = MkFC fname start end
 
 ------------------------------------------------------------------------
 -- Predicates
