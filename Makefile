@@ -85,6 +85,7 @@ testbin:
 test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
+	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
 

@@ -55,7 +55,7 @@ Installing from a Package Manager
 =================================
 
 Installing Using Homebrew
-----------------------
+-------------------------
 
 If you are Homebrew user you can install Idris 2 together with all the requirements
 by running following command::

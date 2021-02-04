@@ -179,11 +179,11 @@ jobs:
       - name: Artifact Idris2
         uses: actions/upload-artifact@v2
         with:
-          name: idris2-nightly
+          name: idris2-nightly-chez
           path: ~/.idris2/
 
   build-api:
-    needs: build-previous-version
+    needs: self-host-previous-version
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
@@ -194,7 +194,7 @@ jobs:
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v2
         with:
-          name: installed-idris2-${{ env.IDRIS2_VERSION }}-chez
+          name: idris2-nightly-chez
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
