@@ -248,40 +248,6 @@ breakStartEmpty {k} {k' = S k'} {ford1} {ford2} (gamma -. ty) =
                         (uip u _)
                         (keep v)
 
-toSegment : {k : Nat} -> (gamma : Telescope k) -> Segment k []
-toSegment gamma =
-  let u : Segment (cast (start gamma) + 0)
-                  (break {k = cast (finComplement $ start gamma)}
-                         gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})
-      u = breakOnto gamma (start gamma) []
-      q : break {k  = cast $ finComplement $ start gamma}
-                {k' = k}
-                gamma (start gamma)
-                {ford = sym $ finComplementSpec $ start gamma}
-          ~=~ Telescope.Nil
-      q = breakStartEmpty {k = cast $ finComplement $ start gamma}
-                          {k' = k}
-                          gamma
-                          {ford1 = cong (finToNat) $ complementLastZero k}
-                          {ford2 = sym $ finComplementSpec $ start gamma}
-      w : Segment (cast (start gamma) + 0) []
-      w =
-          replace {p = \u => Segment (cast (start gamma) + 0) u}
-                  q --(rewrite sym $ cong finToNat $ complementLastZero k in q)
-                  ?hole
-          --?hole323
-      {-
-      sg_eq_k : cast (start gamma) + 0 = k
-      v : Segment k
-                  (break {k = cast (finComplement $ start gamma)}
-                         gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})
-      v = replace {p = \u => Segment u
-                             (break {k = cast (finComplement $ start gamma)}
-                                    gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})}
-                  sg_eq_k u
-      -}
-  in ?hole90
-
 
 
 public export
