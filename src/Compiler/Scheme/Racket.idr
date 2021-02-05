@@ -44,6 +44,7 @@ schHeader : String -> String
 schHeader libs
   = "#lang racket/base\n" ++
     "; @generated\n" ++
+    "(require racket/async-channel)\n" ++ -- for asynchronous channels
     "(require racket/future)\n" ++ -- for parallelism/concurrency
     "(require racket/math)\n" ++ -- for math ops
     "(require racket/system)\n" ++ -- for system

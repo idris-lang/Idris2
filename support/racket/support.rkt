@@ -186,10 +186,15 @@
 
 ;; Threads
 
-(define blodwen-thread-data (make-thread-cell #f))
+(define (blodwen-thread proc)
+  (thread (lambda () (proc (vector 0)))))
 
-(define (blodwen-thread p)
-    (thread (lambda () (p (vector 0)))))
+(define (blodwen-thread-wait handle)
+  (thread-wait handle))
+
+;; Thread mailboxes
+
+(define blodwen-thread-data (make-thread-cell #f))
 
 (define (blodwen-get-thread-data ty)
   (thread-cell-ref blodwen-thread-data))
@@ -197,22 +202,92 @@
 (define (blodwen-set-thread-data a)
   (thread-cell-set! blodwen-thread-data a))
 
-(define (blodwen-mutex) (make-semaphore 1))
-(define (blodwen-lock m) (semaphore-post m))
-(define (blodwen-unlock m) (semaphore-wait m))
-(define (blodwen-thisthread) (current-thread))
+;; Semaphores
 
-(define (blodwen-condition) (make-channel))
-(define (blodwen-condition-wait c m)
-  (blodwen-unlock m) ;; consistency with interface for posix condition variables
-  (sync c)
-  (blodwen-lock m))
-(define (blodwen-condition-wait-timeout c m t)
-  (blodwen-unlock m) ;; consistency with interface for posix condition variables
-  (sync/timeout (/ t 1000000) c)
-  (blodwen-lock m))
-(define (blodwen-condition-signal c)
-  (channel-put c 'ready))
+(define (blodwen-make-semaphore init)
+  (make-semaphore init))
+
+(define (blodwen-semaphore-post sema)
+  (semaphore-post sema))
+
+(define (blodwen-semaphore-wait sema)
+  (semaphore-wait sema))
+
+;; Barriers
+
+(struct barrier (count-box num-threads mutex semaphore))
+
+(define (blodwen-make-barrier num-threads)
+  (barrier (box 0) num-threads (blodwen-make-mutex) (make-semaphore 0)))
+
+(define (blodwen-barrier-wait barrier)
+  (blodwen-mutex-acquire (barrier-mutex barrier))
+  (let* [(count-box (barrier-count-box barrier))
+         (count-old (unbox count-box))
+         (count-new (+ count-old 1))
+         (sema (barrier-semaphore barrier))]
+    (set-box! count-box count-new)
+    (blodwen-mutex-release (barrier-mutex barrier))
+    (when (= count-new (barrier-num-threads barrier)) (semaphore-post sema))
+    (semaphore-wait sema)
+    (semaphore-post sema)
+    ))
+
+;; Channels
+
+(define (blodwen-make-channel ty)
+  (make-channel))
+
+(define (blodwen-channel-get ty chan)
+  (channel-get chan))
+
+(define (blodwen-channel-put ty chan val)
+  (channel-put chan val))
+
+;; Mutex
+
+(define (blodwen-make-mutex)
+  (make-semaphore 1))
+
+(define (blodwen-mutex-acquire sema)
+  (semaphore-wait sema))
+
+(define (blodwen-mutex-release sema)
+  (if (semaphore-try-wait? sema)
+      (blodwen-error-quit "Exception in mutexRelease: thread does not own mutex")
+      (semaphore-post sema)))
+
+;; Condition Variables
+
+(define (blodwen-make-condition)
+  (make-async-channel))
+
+(define (blodwen-condition-wait ach mutex)
+  ;; Pre-condition: this threads holds `mutex'.
+  (let [(sema (make-semaphore 0))]
+    (async-channel-put ach sema)
+    (blodwen-mutex-release mutex)
+    (sync sema)
+    (blodwen-mutex-acquire mutex)))
+
+(define (blodwen-condition-wait-timeout ach mutex timeout)
+  ;; Pre-condition: this threads holds `mutex'.
+  (let [(sema (make-semaphore 0))]
+    (async-channel-put ach sema)
+    (blodwen-mutex-release mutex)
+    (sync/timeout (/ timeout 1000000) sema)
+    (blodwen-mutex-acquire mutex)))
+
+(define (blodwen-condition-signal ach)
+  (let [(sema (async-channel-try-get ach))]
+    (when sema (semaphore-post sema))))
+
+(define (blodwen-condition-broadcast ach)
+  (letrec [(loop (lambda ()
+                   (let [(sema (async-channel-try-get ach))]
+                     (when sema ((semaphore-post sema) (loop))))))]
+    loop))
+
 
 (define (blodwen-make-future work) (future work))
 (define (blodwen-await-future ty future) (touch future))

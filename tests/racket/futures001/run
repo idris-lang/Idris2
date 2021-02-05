@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --cg racket Futures.idr -p contrib --exec constant
+$1 --no-banner --no-color --console-width 0 --cg racket Futures.idr -p contrib --exec map
+
+rm -r build

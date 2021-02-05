@@ -8,8 +8,8 @@ export
 data Future : Type -> Type where [external]
 
 %extern prim__makeFuture : {0 a : Type} -> Lazy a -> Future a
-%foreign "racket:blodwen-await-future"
-         "scheme:blodwen-await-future"
+
+%foreign "scheme:blodwen-await-future"
 prim__awaitFuture : {0 a : Type} -> Future a -> a
 
 export

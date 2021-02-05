@@ -20,17 +20,18 @@ import Lib
 
 ttimpTests : TestPool
 ttimpTests = MkTestPool []
-      ["basic001", "basic002", "basic003", "basic004", "basic005",
-       "basic006",
-       "coverage001", "coverage002",
-       "dot001",
-       "eta001", "eta002",
-       "lazy001",
-       "nest001", "nest002",
-       "perf001", "perf002", "perf003",
-       "record001", "record002", "record003",
-       "qtt001", "qtt003",
-       "total001", "total002", "total003"]
+     [ "basic001", "basic002", "basic003", "basic004", "basic005"
+     , "basic006"
+     , "coverage001", "coverage002"
+     , "dot001"
+     , "eta001", "eta002"
+     , "lazy001"
+     , "nest001", "nest002"
+     , "perf001", "perf002", "perf003"
+     , "record001", "record002", "record003"
+     , "qtt001", "qtt003"
+     , "total001", "total002", "total003"
+     ]
 
 idrisTestsBasic : TestPool
 idrisTestsBasic = MkTestPool []
@@ -157,21 +158,25 @@ idrisTests = MkTestPool []
 
 typeddTests : TestPool
 typeddTests = MkTestPool []
-     ["chapter01", "chapter02", "chapter03", "chapter04", "chapter05",
-      "chapter06", "chapter07", "chapter08", "chapter09", "chapter10",
-      "chapter11", "chapter12", "chapter13", "chapter14"]
+     [ "chapter01", "chapter02", "chapter03", "chapter04", "chapter05"
+     , "chapter06", "chapter07", "chapter08", "chapter09", "chapter10"
+     , "chapter11", "chapter12", "chapter13", "chapter14"
+     ]
 
 chezTests : TestPool
 chezTests = MkTestPool [Chez]
-     ["chez001", "chez002", "chez003", "chez004", "chez005", "chez006",
-      "chez007", "chez008", "chez009", "chez010", "chez011", "chez012",
-      "chez013", "chez014", "chez015", "chez016", "chez017", "chez018",
-      "chez019", "chez020", "chez021", "chez022", "chez023", "chez024",
-      "chez025", "chez026", "chez027", "chez028", "chez029", "chez030",
-      "chez031",
-      "concurrency001",
-      "perf001",
-      "reg001"]
+    [ "chez001", "chez002", "chez003", "chez004", "chez005", "chez006"
+    , "chez007", "chez008", "chez009", "chez010", "chez011", "chez012"
+    , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
+    , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
+    , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
+    , "chez031"
+    , "futures001"
+    , "semaphores001"
+    , "semaphores002"
+    , "perf001"
+    , "reg001"
+    ]
 
 refcTests : TestPool
 refcTests = MkTestPool [C]
@@ -179,7 +184,10 @@ refcTests = MkTestPool [C]
 
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
-    ["concurrency001"]
+    [ "forkjoin001"
+    , "semaphores001", "semaphores002"
+    , "futures001"
+    ]
 
 nodeTests : TestPool
 nodeTests = MkTestPool [Node]
@@ -195,15 +203,18 @@ nodeTests = MkTestPool [Node]
 
 ideModeTests : TestPool
 ideModeTests = MkTestPool []
-  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004" ]
+  [ "ideMode001", "ideMode002", "ideMode003", "ideMode004"
+  ]
 
 preludeTests : TestPool
 preludeTests = MkTestPool []
-  [ "reg001" ]
+  [ "reg001"
+  ]
 
 templateTests : TestPool
 templateTests = MkTestPool []
-  [ "simple-test", "ttimp", "with-ipkg" ]
+  [ "simple-test", "ttimp", "with-ipkg"
+  ]
 
 main : IO ()
 main = runner
