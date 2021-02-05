@@ -64,15 +64,16 @@ Show StopReason where
 tokenise : Tokenizer a -> (reject : Lexer) ->
            (line, col : Int) -> List (WithBounds a) ->
            List Char ->
-           (List (WithBounds a), (Int, Int, List Char, StopReason))
+           (List (WithBounds a), StopReason, (Int, Int, List Char))
+tokenise tokenizer reject line col acc [] = (reverse acc, EndInput, (line, col, []))
 tokenise tokenizer reject line col acc str
     = case scan reject [] str of
-           Just _ => (reverse acc, (line, col, str, NoRuleApply))
+           Just _ => (reverse acc, NoRuleApply, (line, col, str))
            Nothing => case getFirstToken tokenizer str of
                            Right (tok, line', col', rest) =>
                                  -- assert total because getFirstToken must consume something
                                  assert_total (tokenise tokenizer reject line' col' (tok :: acc) rest)
-                           Left reason => (reverse acc, (line, col, str, reason))
+                           Left reason => (reverse acc, reason, (line, col, str))
   where
     countNLs : List Char -> Nat
     countNLs str = List.length (filter (== '\n') str)
@@ -85,7 +86,6 @@ tokenise tokenizer reject line col acc str
 
     getFirstToken : Tokenizer a -> List Char ->
                     Either StopReason (WithBounds a, Int, Int, List Char)
-    getFirstToken _ [] = Left EndInput
     getFirstToken (Match lex fn) str
         = do let Just (tok, rest) = scan lex [] str
                | _ => Left NoRuleApply
@@ -101,7 +101,7 @@ tokenise tokenizer reject line col acc str
              let tag = tagger $ fastPack beginTok
              let middle = middleFn tag
              let end = endFn tag
-             let (midToks, (line'', col'', rest'', reason)) =
+             let (midToks, reason, (line'', col'', rest'')) =
                     tokenise middle end line' col' [] rest
              case reason of
                   NoRuleApply => Right ()
@@ -123,8 +123,8 @@ tokenise tokenizer reject line col acc str
 ||| and the line, column, and remainder of the input at the first point in the string
 ||| where there are no recognised tokens.
 export
-lex : Tokenizer a -> String -> (List (WithBounds a), (Int, Int, String, StopReason))
+lex : Tokenizer a -> String -> (List (WithBounds a), StopReason, (Int, Int, String))
 lex tokenizer str
-    = let (ts, (l, c, str', reason)) =
+    = let (ts, reason, (l, c, str')) =
               tokenise tokenizer (pred $ const False) 0 0 [] (fastUnpack str) in
-          (ts, (l, c, fastPack str', reason))
+          (ts, reason, (l, c, fastPack str'))
