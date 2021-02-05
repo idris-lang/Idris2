@@ -14,6 +14,7 @@ import Data.Telescope.Telescope
 import Syntax.PreorderReasoning
 import Data.Fin
 import Data.Nat
+import Data.DPair
 
 %default total
 
@@ -23,9 +24,29 @@ public export
 data Segment : (n : Nat) -> Telescope k -> Type where
   Nil  : Segment 0 gamma
   (::) : (ty : TypeIn gamma) -> (delta : Segment n (gamma -. ty)) -> Segment (S n) gamma
-  
-%name Segment delta,delta',delta1,delta2  
-  
+
+||| A segment of size `n` indexed by `gamma` can be seen as the tabulation of a
+||| function that turns environments for `gamma` into telescopes of size `n`.
+public export
+tabulate : (n : Nat) -> (Environment gamma -> Telescope n) -> Segment n gamma
+tabulate Z tel = []
+tabulate {gamma} (S n) tel = (sigma :: tabulate n (uncurry delta)) where
+
+  sigma : TypeIn gamma
+  sigma env = fst (unsnoc (tel env))
+
+  delta : (env : Environment gamma) -> sigma env -> Telescope n
+  delta env v with (unsnoc (tel env))
+    delta env v | (sig ** delt ** _) = delt v
+
+||| Any telescope is a segment in the empty telescope. It amounts to looking
+||| at it left-to-right instead of right-to-left.
+public export
+fromTelescope : {k : Nat} -> Telescope k -> Segment k []
+fromTelescope gamma = tabulate _ (const gamma)
+
+%name Segment delta,delta',delta1,delta2
+
 infixl 3 |++, :++
 
 ||| This lemma comes up all the time when mixing induction on Nat with

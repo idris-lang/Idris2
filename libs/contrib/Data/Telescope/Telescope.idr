@@ -36,7 +36,18 @@ mutual
 
 public export
 weakenTypeIn : TypeIn gamma -> TypeIn (gamma -. ty)
-weakenTypeIn ty' (env =. _) = ty' env
+weakenTypeIn ty' (env ** _) = ty' env
+
+public export
+unsnoc : (gamma : Telescope (S k)) ->
+         (ty : Type ** delta : (ty -> Telescope k)
+          ** (v : ty) -> Environment (delta v) -> Environment gamma)
+unsnoc ([] -. ty) = (ty () ** const [] ** \ v, _ => (() ** v))
+unsnoc (gamma@(_ -. _) -. ty) =
+  let (sigma ** delta ** left) = unsnoc gamma in
+  (sigma ** (\ v => delta v -. (\ env => ty (left v env)))
+         ** (\ v, (env ** w) => (left v env ** w)))
+
 
 ||| A position between the variables of a telescope, counting from the _end_:
 ||| Telescope:   Nil -. ty1 -. ... -. tyn
