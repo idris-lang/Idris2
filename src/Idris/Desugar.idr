@@ -111,7 +111,7 @@ bindBangs : List (Name, FC, RawImp) -> RawImp -> RawImp
 bindBangs [] tm = tm
 bindBangs ((n, fc, btm) :: bs) tm
     = bindBangs bs $ IApp fc (IApp fc (IVar fc (UN ">>=")) btm)
-                          (ILam fc top Explicit (Just n)
+                          (ILam EmptyFC top Explicit (Just n)
                                 (Implicit fc False) tm)
 
 idiomise : FC -> RawImp -> RawImp
@@ -155,9 +155,9 @@ mutual
            then pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
                                     !(desugar side (n :: ps) scope)
-           else pure $ ILam fc rig !(traverse (desugar side ps) p)
+           else pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
-                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar side ps) p)
@@ -168,13 +168,13 @@ mutual
                            Nothing !(desugarB side ps argTy)
                                    !(desugar side ps scope)
   desugarB side ps (PLam fc rig p pat argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
+      = pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
                    (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
-                 ICase fc (IVar fc (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [!(desugarClause ps True (MkPatClause fc pat scope []))]
-  desugarB side ps (PLet fc rig (PRef _ n) nTy nVal scope [])
-      = pure $ ILet fc rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
-                             !(desugar side (n :: ps) scope)
+  desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
+      = pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
+                                    !(desugar side (n :: ps) scope)
   desugarB side ps (PLet fc rig pat nTy nVal scope alts)
       = pure $ ICase fc !(desugarB side ps nVal) !(desugarB side ps nTy)
                         !(traverse (desugarClause ps True)
@@ -271,8 +271,8 @@ mutual
                  put Syn (record { bracketholes $= ((UN holename) ::) } syn)
            pure $ IHole fc holename
   desugarB side ps (PType fc) = pure $ IType fc
-  desugarB side ps (PAs fc vname pattern)
-      = pure $ IAs fc UseRight vname !(desugarB side ps pattern)
+  desugarB side ps (PAs fc nameFC vname pattern)
+      = pure $ IAs fc nameFC UseRight vname !(desugarB side ps pattern)
   desugarB side ps (PDotted fc x)
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
@@ -286,7 +286,7 @@ mutual
            put Bang (record { nextName $= (+1),
                               bangNames $= ((bn, fc, itm) ::)
                             } bs)
-           pure (IVar fc bn)
+           pure (IVar EmptyFC bn)
   desugarB side ps (PIdiom fc term)
       = do itm <- desugarB side ps term
            logRaw "desugar.idiom" 10 "Desugaring idiom for" itm
@@ -416,11 +416,11 @@ mutual
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
                           (ILam fc top Explicit Nothing
                                 ty rest')
-  expandDo side ps topfc ns (DoBind fc n tm :: rest)
+  expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc ns rest
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
-                     (ILam fc top Explicit (Just n)
+                     (ILam nameFC top Explicit (Just n)
                            (Implicit fc False) rest')
   expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat
@@ -430,18 +430,18 @@ mutual
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
            pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) exp')
-                    (ILam fc top Explicit (Just (MN "_" 0))
+                    (ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar fc (MN "_" 0))
+                          (ICase fc (IVar EmptyFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fc bpat rest'
                                   :: alts')))
-  expandDo side ps topfc ns (DoLet fc n rig ty tm :: rest)
+  expandDo side ps topfc ns (DoLet fc lhsFC n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
            rest' <- expandDo side ps topfc ns rest
-           let bind = ILet fc rig n ty' tm' rest'
+           let bind = ILet fc lhsFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
@@ -502,10 +502,10 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 List Name -> PTypeDecl -> Core ImpTy
-  desugarType ps (MkPTy fc n d ty)
+  desugarType ps (MkPTy fc nameFC n d ty)
       = do addDocString n d
            syn <- get Syn
-           pure $ MkImpTy fc n !(bindTypeNames (usingImpl syn)
+           pure $ MkImpTy fc nameFC n !(bindTypeNames (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
   desugarClause : {auto s : Ref Syn SyntaxInfo} ->

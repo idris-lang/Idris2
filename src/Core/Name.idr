@@ -62,6 +62,12 @@ userNameRoot (RF n) = Just ("." ++ n)  -- TMP HACK
 userNameRoot _ = Nothing
 
 export
+isUnderscoreName : Name -> Bool
+isUnderscoreName (UN "_") = True
+isUnderscoreName (MN "_" _) = True
+isUnderscoreName _ = False
+
+export
 isUserName : Name -> Bool
 isUserName (PV _ _) = False
 isUserName (MN _ _) = False

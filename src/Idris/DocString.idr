@@ -87,14 +87,13 @@ getDocsFor fc n
              ty <- normaliseHoles defs [] (type def)
              pure (Just (indent (show !(resugar [] ty) ++ "\n")))
 
-    getMethDoc : (Name, RigCount, Maybe TotalReq, Bool, RawImp) ->
-                 Core (Maybe String)
-    getMethDoc (n, c, tot, _, ty)
+    getMethDoc : Method -> Core (Maybe String)
+    getMethDoc meth
         = do syn <- get Syn
-             let [(n, str)] = lookupName n (docstrings syn)
+             let [(n, str)] = lookupName meth.name (docstrings syn)
                   | _ => pure Nothing
-             pure (Just (nameRoot n ++ " : " ++ show !(pterm ty)
-                          ++ maybe "" (\t => "\n" ++ show t) tot
+             pure (Just (nameRoot meth.name ++ " : " ++ show !(pterm meth.type)
+                          ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
                           ++ "\n" ++ indent str))
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String

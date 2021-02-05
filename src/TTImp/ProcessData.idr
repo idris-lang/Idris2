@@ -85,7 +85,7 @@ checkCon : {vars : _} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
+checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
     = do cn <- inCurrentNS cn_in
          let ty_raw = updateNS tn_in tn ty_raw
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
@@ -136,7 +136,7 @@ getIndexPats tm
 
     getPats : Defs -> NF [] -> Core (List (NF []))
     getPats defs (NTCon fc _ _ _ args)
-        = traverse (evalClosure defs) args
+        = traverse (evalClosure defs . snd) args
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
@@ -163,15 +163,15 @@ getDetags fc tys
           = if t /= t'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs) args
-                       args'nf <- traverse (evalClosure defs) args'
+                       argsnf <- traverse (evalClosure defs . snd) args
+                       args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
       disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs) args
-                       args'nf <- traverse (evalClosure defs) args'
+                       argsnf <- traverse (evalClosure defs . snd) args
+                       args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
       disjoint (NPrimVal _ c) (NPrimVal _ c') = pure (c /= c')
       disjoint _ _ = pure False

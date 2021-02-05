@@ -375,13 +375,13 @@ mutual
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do b <- bounds (do x <- unqualifiedName
+      = do b <- bounds (do x <- bounds unqualifiedName
                            symbol "@"
                            commit
                            expr <- simpleExpr fname indents
                            pure (x, expr))
            (x, expr) <- pure b.val
-           pure (PAs (boundToFC fname b) (UN x) expr)
+           pure (PAs (boundToFC fname b) (boundToFC fname x) (UN x.val) expr)
     <|> atom fname
     <|> binder fname indents
     <|> rewrite_ fname indents
@@ -691,16 +691,16 @@ mutual
 
   doAct : FileName -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do n <- name
+      = do b <- bounds (do n <- bounds name
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail
-                           validPatternVar n
+                           validPatternVar n.val
                            symbol "<-"
                            val <- expr pdef fname indents
                            pure (n, val))
            atEnd indents
            (n, val) <- pure b.val
-           pure [DoBind (boundToFC fname b) n val]
+           pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val val]
     <|> do keyword "let"
            commit
            res <- nonEmptyBlock (letBlock fname)
@@ -780,14 +780,14 @@ visibility
 tyDecl : String -> FileName -> IndentInfo -> Rule PTypeDecl
 tyDecl predoc fname indents
     = do b <- bounds (do doc   <- option "" documentation
-                         n     <- name
+                         n     <- bounds name
                          symbol ":"
                          mustWork $
                             do ty  <- expr pdef fname indents
-                               pure (doc, n, ty))
+                               pure (doc, n.val, boundToFC fname n, ty))
          atEnd indents
-         (doc, n, ty) <- pure b.val
-         pure (MkPTy (boundToFC fname b) n (predoc ++ doc) ty)
+         let (doc, n, nFC, ty) = b.val
+         pure (MkPTy (boundToFC fname b) nFC n (predoc ++ doc) ty)
 
 withFlags : SourceEmptyRule (List WithFlag)
 withFlags
@@ -860,14 +860,14 @@ mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
 simpleCon : FileName -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
     = do b <- bounds (do cdoc   <- option "" documentation
-                         cname  <- name
+                         cname  <- bounds name
                          params <- many (argExpr plhs fname indents)
-                         pure (cdoc, cname, params))
+                         pure (cdoc, cname.val, boundToFC fname cname, params))
          atEnd indents
-         (cdoc, cname, params) <- pure b.val
+         (cdoc, cname, cnameFC, params) <- pure b.val
          let cfc = boundToFC fname b
          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                   (pure . MkPTy cfc cname cdoc <$> mkDataConType cfc ret (concat params))
+                   (pure . MkPTy cfc cnameFC cname cdoc <$> mkDataConType cfc ret (concat params))
 
 simpleData : FileName -> WithBounds t -> Name -> IndentInfo -> Rule PDataDecl
 simpleData fname start n indents

@@ -72,14 +72,14 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ (UN n) p) (IAs fc _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN n) p) (IAs fc _ _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
-  getMatch lhs (IAs _ _ (UN n) p) p'
+  getMatch lhs (IAs _ _ _ (UN n) p) p'
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, p') :: ms)
-  getMatch lhs (IAs _ _ _ p) p' = getMatch lhs p p'
-  getMatch lhs p (IAs _ _ _ p') = getMatch lhs p p'
+  getMatch lhs (IAs _ _ _ _ p) p' = getMatch lhs p p'
+  getMatch lhs p (IAs _ _ _ _ p') = getMatch lhs p p'
   getMatch lhs (IType _) (IType _) = pure []
   getMatch lhs (IPrimVal fc c) (IPrimVal fc' c') =
     if c == c'
@@ -125,7 +125,7 @@ getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
         Nothing =>
           let arg = ISearch ploc 500 in
           if isJust (isLHS mode)
-            then IAs ploc UseLeft nm arg
+            then IAs ploc ploc UseLeft nm arg
              else arg
 getArgMatch ploc mode search warg ms (Just (_, nm))
     = case (isUN nm >>= \ n => lookup n ms) of
@@ -133,7 +133,7 @@ getArgMatch ploc mode search warg ms (Just (_, nm))
         Nothing =>
           let arg = Implicit ploc True in
            if isJust (isLHS mode)
-             then IAs ploc UseLeft nm arg
+             then IAs ploc ploc UseLeft nm arg
              else arg
 
 export
@@ -209,8 +209,8 @@ withRHS fc drop wname wargnames tm toplhs
           = pure $ IPi fc c p n !(wrhs ty) !(wrhs sc)
       wrhs (ILam fc c p n ty sc)
           = pure $ ILam fc c p n !(wrhs ty) !(wrhs sc)
-      wrhs (ILet fc c n ty val sc)
-          = pure $ ILet fc c n !(wrhs ty) !(wrhs val) !(wrhs sc)
+      wrhs (ILet fc lhsFC c n ty val sc)
+          = pure $ ILet fc lhsFC c n !(wrhs ty) !(wrhs val) !(wrhs sc)
       wrhs (ICase fc sc ty clauses)
           = pure $ ICase fc !(wrhs sc) !(wrhs ty) !(traverse wrhsC clauses)
       wrhs (ILocal fc decls sc)

@@ -204,12 +204,12 @@ mutual
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
-           then do amatch <- mightMatchArgs defs args args'
+           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
       = if t == t'
-           then do amatch <- mightMatchArgs defs args args'
+           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)

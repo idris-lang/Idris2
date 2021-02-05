@@ -577,15 +577,15 @@ nameIn defs tyns (NBind fc x b sc)
                  nameIn defs tyns sc'
 nameIn defs tyns (NApp _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs) args)
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs) args
+         else do args' <- traverse (evalClosure defs . snd) args
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs) args)
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
@@ -598,8 +598,8 @@ posArg defs tyns (NTCon _ tc _ _ args)
     = let testargs : List (Closure [])
              = case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) =>
-                         dropParams 0 params args
-                    _ => args
+                         dropParams 0 params (map snd args)
+                    _ => map snd args
       in if !(anyM (nameIn defs tyns)
                   !(traverse (evalClosure defs) testargs))
              then pure (NotTerminating NotStrictlyPositive)

@@ -31,7 +31,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 43
+ttcVersion = 44
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

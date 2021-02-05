@@ -40,7 +40,7 @@ getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
 Stack : List Name -> Type
-Stack vars = List (Closure vars)
+Stack vars = List (FC, Closure vars)
 
 evalWithOpts : {auto c : Ref Ctxt Defs} ->
                {free, vars : _} ->
@@ -114,7 +114,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         closeArgs [] = []
         closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
-        = eval env (thunk :: locs) scope stk
+        = eval env (snd thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
              then do b' <- traverse (\tm => eval env locs tm []) b
@@ -128,7 +128,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (arg :: locs) scope stk)
     eval env locs (App fc fn arg) stk
-        = eval env locs fn (MkClosure topopts locs env arg :: stk)
+        = eval env locs fn ((fc, MkClosure topopts locs env arg) :: stk)
     eval env locs (As fc s n tm) stk
         = if removeAs topopts
              then eval env locs tm stk
@@ -165,7 +165,7 @@ parameters (defs : Defs, topopts : EvalOpts)
       where
         applyToStack : NF free -> Stack free -> Core (NF free)
         applyToStack (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
-            = do arg' <- sc defs arg
+            = do arg' <- sc defs $ snd arg
                  applyToStack arg' stk
         applyToStack (NApp fc (NRef nt fn) args) stk
             = evalRef env False fc nt fn (args ++ stk)
@@ -216,7 +216,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = evalRef env True fc Func (Resolved i) (args ++ stk)
+        = evalRef env True fc Func (Resolved i) (map (EmptyFC,) args ++ stk)
                   (NApp fc (NMeta nm i args) stk)
 
     evalRef : {auto c : Ref Ctxt Defs} ->
@@ -283,12 +283,12 @@ parameters (defs : Defs, topopts : EvalOpts)
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
-              then evalConAlt env loc opts fc stk args args' sc
+              then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
     -- Type constructor matching, in typecase
     tryAlt {more} env loc opts fc stk (NTCon _ nm tag' arity args') (ConCase nm' tag args sc)
          = if nm == nm'
-              then evalConAlt env loc opts fc stk args args' sc
+              then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
@@ -384,7 +384,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         takeStk (S k) [] acc = Nothing
         takeStk {got} (S k) (arg :: stk) acc
            = rewrite sym (plusSuccRightSucc got k) in
-                     takeStk k stk (arg :: acc)
+                     takeStk k stk (snd arg :: acc)
 
     argsFromStack : (args : List Name) ->
                     Stack free ->
@@ -393,7 +393,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     argsFromStack (n :: ns) [] = Nothing
     argsFromStack (n :: ns) (arg :: args)
          = do (loc', stk') <- argsFromStack ns args
-              pure (arg :: loc', stk')
+              pure (snd arg :: loc', stk')
 
     evalOp : {auto c : Ref Ctxt Defs} ->
              {arity, free : _} ->
@@ -519,15 +519,37 @@ genName n
          pure (MN n i)
 
 mutual
+  quoteArg : {auto c : Ref Ctxt Defs} ->
+              {bound, free : _} ->
+              Ref QVar Int -> Defs -> Bounds bound ->
+              Env Term free -> Closure free ->
+              Core (Term (bound ++ free))
+  quoteArg q defs bounds env a
+      = quoteGenNF q defs bounds env !(evalClosure defs a)
+
+
+  quoteArgWithFC : {auto c : Ref Ctxt Defs} ->
+                   {bound, free : _} ->
+                   Ref QVar Int -> Defs -> Bounds bound ->
+                   Env Term free -> (FC, Closure free) ->
+                   Core ((FC, Term (bound ++ free)))
+  quoteArgWithFC q defs bounds env
+       = traversePair (quoteArg q defs bounds env)
+
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (bound ++ free)))
-  quoteArgs q defs bounds env [] = pure []
-  quoteArgs q defs bounds env (a :: args)
-      = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
-                !(quoteArgs q defs bounds env args))
+  quoteArgs q defs bounds env = traverse (quoteArg q defs bounds env)
+
+  quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
+                    {bound, free : _} ->
+                    Ref QVar Int -> Defs -> Bounds bound ->
+                    Env Term free -> List (FC, Closure free) ->
+                    Core (List (FC, Term (bound ++ free)))
+  quoteArgsWithFC q defs bounds env
+      = traverse (quoteArgWithFC q defs bounds env)
 
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
@@ -620,14 +642,14 @@ mutual
            pure (Bind fc n b' sc')
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
-           args' <- quoteArgs q defs bound env args
-           pure $ apply fc f' args'
+           args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
-      = do args' <- quoteArgs q defs bound env args
-           pure $ apply fc (Ref fc (DataCon t ar) n) args'
+      = do args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
-      = do args' <- quoteArgs q defs bound env args
-           pure $ apply fc (Ref fc (TyCon t ar) n) args'
+      = do args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q defs bound env n
            pat' <- quoteGenNF q defs bound env pat
@@ -649,13 +671,13 @@ mutual
                       locs env tm
       toHolesOnly c = c
   quoteGenNF q defs bound env (NForce fc r arg args)
-      = do args' <- quoteArgs q defs bound env args
+      = do args' <- quoteArgsWithFC q defs bound env args
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ apply fc !(quoteGenNF q defs bound env argNF) args'
+                      pure $ applyWithFC !(quoteGenNF q defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q defs bound env arg
-                        pure $ apply fc (TForce fc r arg') args'
+                        pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc i) = pure $ Erased fc i
   quoteGenNF q defs bound env (NType fc) = pure $ TType fc
@@ -1064,16 +1086,23 @@ mutual
 
     convGen q defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q defs env val val')
-             then allConv q defs env args args'
-             else chkConvCaseBlock fc q defs env val args val' args'
+             then allConv q defs env args1 args2
+             else chkConvCaseBlock fc q defs env val args1 val' args2
+        where
+          -- Discard file context information irrelevant for conversion checking
+          args1 : List (Closure vars)
+          args1 = map snd args
+
+          args2 : List (Closure vars)
+          args2 = map snd args'
 
     convGen q defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
         = if tag == tag'
-             then allConv q defs env args args'
+             then allConv q defs env (map snd args) (map snd args')
              else pure False
     convGen q defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
         = if nm == nm'
-             then allConv q defs env args args'
+             then allConv q defs env (map snd args) (map snd args')
              else pure False
     convGen q defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
         = convGen q defs env tm tm'
@@ -1094,7 +1123,7 @@ mutual
     convGen q defs env (NForce _ r arg args) (NForce _ r' arg' args')
         = if compatible r r'
              then if !(convGen q defs env arg arg')
-                     then allConv q defs env args args'
+                     then allConv q defs env (map snd args) (map snd args')
                      else pure False
              else pure False
 
@@ -1222,7 +1251,6 @@ logEnv str n msg env
                              show (piInfo b) ++ " " ++
                              show x) bs (binderType b)
              dumpEnv bs
-
 replace' : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
            Int -> Defs -> Env Term vars ->
@@ -1249,20 +1277,20 @@ replace' {vars} tmpi defs env lhs parg tm
         = do empty <- clearDefs defs
              quote empty env (NApp fc hd [])
     repSub (NApp fc hd args)
-        = do args' <- traverse repArg args
-             pure $ apply fc
+        = do args' <- traverse (traversePair repArg) args
+             pure $ applyWithFC
                         !(replace' tmpi defs env lhs parg (NApp fc hd []))
                         args'
     repSub (NDCon fc n t a args)
-        = do args' <- traverse repArg args
+        = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ apply fc
+             pure $ applyWithFC
                         !(quote empty env (NDCon fc n t a []))
                         args'
     repSub (NTCon fc n t a args)
-        = do args' <- traverse repArg args
+        = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ apply fc
+             pure $ applyWithFC
                         !(quote empty env (NTCon fc n t a []))
                         args'
     repSub (NAs fc s a p)
@@ -1277,9 +1305,9 @@ replace' {vars} tmpi defs env lhs parg tm
              tm' <- replace' tmpi defs env lhs parg !(evalClosure defs tm)
              pure (TDelay fc r ty' tm')
     repSub (NForce fc r tm args)
-        = do args' <- traverse repArg args
+        = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
-             pure $ apply fc (TForce fc r tm') args'
+             pure $ applyWithFC (TForce fc r tm') args'
     repSub tm = do empty <- clearDefs defs
                    quote empty env tm
 

@@ -430,7 +430,10 @@ checkBindVar rig elabinfo nest env fc str topexp
                    est <- get EST
                    put EST (record { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
                                      toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
+
                    checkExp rig elabinfo env fc tm (gnf env exp) topexp
               Just bty =>
                 do -- Check rig is consistent with the one in bty, and
@@ -438,7 +441,10 @@ checkBindVar rig elabinfo nest env fc str topexp
                    combine (UN str) rig (bindingRig bty)
                    let tm = bindingTerm bty
                    let ty = bindingType bty
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env ty
+
                    checkExp rig elabinfo env fc tm (gnf env ty) topexp
   where
     updateRig : Name -> RigCount -> List (Name, ImplBinding vars) ->

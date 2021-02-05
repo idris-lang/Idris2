@@ -119,17 +119,17 @@ processFnOpt fc _ ndef (SpecArgs ns)
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
-               ns' <- getDepsArgs False !(traverse (evalClosure defs) args) ns
+               ns' <- getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
                pure (insert n inparam ns')
       getDeps inparam (NDCon _ n t a args) ns
           = do defs <- get Ctxt
-               getDepsArgs False !(traverse (evalClosure defs) args) ns
+               getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
       getDeps inparam (NTCon _ n t a args) ns
           = do defs <- get Ctxt
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params args
+               let (ps, ds) = splitPs 0 params (map snd args)
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
@@ -233,10 +233,10 @@ findInferrable defs ty = fi 0 0 [] [] ty
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (p :: acc)
       findInf acc pos (NDCon _ _ _ _ args)
-          = do args' <- traverse (evalClosure defs) args
+          = do args' <- traverse (evalClosure defs . snd) args
                findInfs acc pos args'
       findInf acc pos (NTCon _ _ _ _ args)
-          = do args' <- traverse (evalClosure defs) args
+          = do args' <- traverse (evalClosure defs . snd) args
                findInfs acc pos args'
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
@@ -262,7 +262,7 @@ processType : {vars : _} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
-processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
+processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_raw)
     = do n <- inCurrentNS n_in
 
          log "declare.type" 1 $ "Processing " ++ show n
@@ -314,7 +314,9 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          -- Add to the interactive editing metadata
          addTyDecl fc (Resolved idx) env ty -- for definition generation
-         addNameType fc (Resolved idx) env ty -- for looking up types
+
+         log "metadata.names" 7 $ "processType is adding ↓"
+         addNameType nameFC (Resolved idx) env ty -- for looking up types
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n

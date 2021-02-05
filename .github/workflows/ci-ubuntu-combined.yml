@@ -183,7 +183,7 @@ jobs:
           path: ~/.idris2/
 
   build-api:
-    needs: self-host-previous-version
+    needs: build-bootstrap-chez
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
@@ -194,7 +194,7 @@ jobs:
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v2
         with:
-          name: idris2-nightly-chez
+          name: installed-bootstrapped-idris2-chez
           path: ~/.idris2/
       - name: Install build dependencies
         run: |

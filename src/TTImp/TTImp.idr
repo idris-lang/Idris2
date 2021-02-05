@@ -52,7 +52,7 @@ mutual
              (argTy : RawImp) -> (retTy : RawImp) -> RawImp
        ILam : FC -> RigCount -> PiInfo RawImp -> Maybe Name ->
               (argTy : RawImp) -> (lamTy : RawImp) -> RawImp
-       ILet : FC -> RigCount -> Name ->
+       ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp) -> (nVal : RawImp) ->
               (scope : RawImp) -> RawImp
        ICase : FC -> RawImp -> (ty : RawImp) ->
@@ -84,7 +84,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> RawImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> RawImp -> RawImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> RawImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> RawImp -> RawImp
@@ -134,7 +134,7 @@ mutual
       show (ILam fc c p n arg sc)
          = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
            showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
-      show (ILet fc c n ty val sc)
+      show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
       show (ICase _ scr scrty alts)
@@ -165,7 +165,7 @@ mutual
       show (IBindHere fc b sc)
          = "(%bindhere " ++ show sc ++ ")"
       show (IBindVar fc n) = "$" ++ n
-      show (IAs fc _ n tm) = show n ++ "@(" ++ show tm ++ ")"
+      show (IAs fc _ _ n tm) = show n ++ "@(" ++ show tm ++ ")"
       show (IMustUnify fc r tm) = ".(" ++ show tm ++ ")"
       show (IDelayed fc r tm) = "(%delayed " ++ show tm ++ ")"
       show (IDelay fc tm) = "(%delay " ++ show tm ++ ")"
@@ -242,11 +242,11 @@ mutual
 
   public export
   data ImpTy : Type where
-       MkImpTy : FC -> (n : Name) -> (ty : RawImp) -> ImpTy
+       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp) -> ImpTy
 
   export
   Show ImpTy where
-    show (MkImpTy fc n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
+    show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
 
   public export
   data DataOpt : Type where
@@ -438,9 +438,9 @@ findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ (UN n) pat)
+findIBinds (IAs fc _ _ (UN n) pat)
     = n :: findIBinds pat
-findIBinds (IAs fc _ n pat)
+findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
 findIBinds (IMustUnify fc r pat)
     = findIBinds pat
@@ -474,7 +474,7 @@ findImplicits (INamedApp _ fn _ av)
     = findImplicits fn ++ findImplicits av
 findImplicits (IWithApp fc fn av)
     = findImplicits fn ++ findImplicits av
-findImplicits (IAs fc _ n pat)
+findImplicits (IAs fc _ _ n pat)
     = findImplicits pat
 findImplicits (IMustUnify fc r pat)
     = findImplicits pat
@@ -569,14 +569,17 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
         impAs loc' ((UN n, AutoImplicit) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm (UN n) (IBindVar loc' n)
+
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm n
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' ((n, DefImplicit t) :: ns) tm
             = impAs loc' ns $
                  INamedApp loc' tm n
-                     (IAs loc' UseLeft n (Implicit loc' True))
+                     (IAs loc' EmptyFC UseLeft n (Implicit loc' True))
+
         impAs loc' (_ :: ns) tm = impAs loc' ns tm
     setAs is es tm = pure tm
 
@@ -587,7 +590,7 @@ definedInBlock ns decls =
     concatMap (defName ns) decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ n _) = n
+    getName (MkImpTy _ _ n _) = n
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
@@ -642,7 +645,7 @@ getFC : RawImp -> FC
 getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
-getFC (ILet x _ _ _ _ _) = x
+getFC (ILet x _ _ _ _ _ _) = x
 getFC (ICase x _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
@@ -670,7 +673,7 @@ getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
 getFC (IRunElab x _) = x
-getFC (IAs x _ _ _) = x
+getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
 
@@ -685,7 +688,7 @@ getFn (IApp _ f arg) = getFn f
 getFn (IWithApp _ f arg) = getFn f
 getFn (INamedApp _ f _ _) = getFn f
 getFn (IAutoApp _ f _) = getFn f
-getFn (IAs _ _ _ f) = getFn f
+getFn (IAs _ _ _ _ f) = getFn f
 getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
@@ -701,8 +704,8 @@ mutual
     toBuf b (ILam fc r p n argTy scope)
         = do tag 2; toBuf b fc; toBuf b r; toBuf b p; toBuf b n;
              toBuf b argTy; toBuf b scope
-    toBuf b (ILet fc r n nTy nVal scope)
-        = do tag 3; toBuf b fc; toBuf b r; toBuf b n;
+    toBuf b (ILet fc lhsFC r n nTy nVal scope)
+        = do tag 3; toBuf b fc; toBuf b lhsFC; toBuf b r; toBuf b n;
              toBuf b nTy; toBuf b nVal; toBuf b scope
     toBuf b (ICase fc y ty xs)
         = do tag 4; toBuf b fc; toBuf b y; toBuf b ty; toBuf b xs
@@ -731,8 +734,9 @@ mutual
         = do tag 14; toBuf b fc; toBuf b m; toBuf b y
     toBuf b (IBindVar fc y)
         = do tag 15; toBuf b fc; toBuf b y
-    toBuf b (IAs fc s y pattern)
-        = do tag 16; toBuf b fc; toBuf b s; toBuf b y; toBuf b pattern
+    toBuf b (IAs fc nameFC s y pattern)
+        = do tag 16; toBuf b fc; toBuf b nameFC; toBuf b s; toBuf b y;
+             toBuf b pattern
     toBuf b (IMustUnify fc r pattern)
         -- No need to record 'r', it's for type errors only
         = do tag 17; toBuf b fc; toBuf b pattern
@@ -784,10 +788,11 @@ mutual
                        argTy <- fromBuf b; scope <- fromBuf b
                        pure (ILam fc r p n argTy scope)
                3 => do fc <- fromBuf b;
+                       lhsFC <- fromBuf b;
                        r <- fromBuf b; n <- fromBuf b
                        nTy <- fromBuf b; nVal <- fromBuf b
                        scope <- fromBuf b
-                       pure (ILet fc r n nTy nVal scope)
+                       pure (ILet fc lhsFC r n nTy nVal scope)
                4 => do fc <- fromBuf b; y <- fromBuf b;
                        ty <- fromBuf b; xs <- fromBuf b
                        pure (ICase fc y ty xs)
@@ -819,10 +824,10 @@ mutual
                         pure (IBindHere fc m y)
                15 => do fc <- fromBuf b; y <- fromBuf b
                         pure (IBindVar fc y)
-               16 => do fc <- fromBuf b; side <- fromBuf b
-                        y <- fromBuf b
-                        pattern <- fromBuf b
-                        pure (IAs fc side y pattern)
+               16 => do fc <- fromBuf b; nameFC <- fromBuf b
+                        side <- fromBuf b;
+                        y <- fromBuf b; pattern <- fromBuf b
+                        pure (IAs fc nameFC side y pattern)
                17 => do fc <- fromBuf b
                         pattern <- fromBuf b
                         pure (IMustUnify fc UnknownDot pattern)
@@ -909,11 +914,11 @@ mutual
 
   export
   TTC ImpTy where
-    toBuf b (MkImpTy fc n ty)
-        = do toBuf b fc; toBuf b n; toBuf b ty
+    toBuf b (MkImpTy fc nameFC n ty)
+        = do toBuf b fc; toBuf b nameFC; toBuf b n; toBuf b ty
     fromBuf b
-        = do fc <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
-             pure (MkImpTy fc n ty)
+        = do fc <- fromBuf b; nameFC <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
+             pure (MkImpTy fc nameFC n ty)
 
   export
   TTC ImpClause where
