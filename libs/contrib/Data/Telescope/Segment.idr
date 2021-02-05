@@ -150,7 +150,6 @@ public export
 (:++) {n = S n} env (x .= xs) = rewrite sym $ succLemma n k in
                                 (env ** x) :++ xs
 
-
 -- This is too nasty for now, leave to later
 {-
 public export

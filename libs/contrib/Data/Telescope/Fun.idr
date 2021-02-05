@@ -9,13 +9,14 @@ import Data.Telescope.Segment
 import Data.Telescope.SimpleFun
 
 public export
-Fun : (env : Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma) 
+Fun : (env : Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma)
    -> (cod : SimpleFun env delta Type)
    -> Type
 Fun env {n = 0  } []            cod = cod
-Fun env {n = S n} (ty :: delta) cod = (x : ty env) -> Fun (env =. x) delta (cod x)
+Fun env {n = S n} (ty :: delta) cod = (x : ty env) -> Fun (env ** x) delta (cod x)
 
-uncurry : {0 n : Nat} -> {0 env : Environment gamma} -> {0 delta : Segment n gamma} 
+public export
+uncurry : {0 n : Nat} -> {0 env : Environment gamma} -> {0 delta : Segment n gamma}
        -> {0 cod : SimpleFun env delta Type}
        -> (f : Fun env delta cod) -> (ext : Environment env delta)
        -> uncurry cod ext
@@ -28,4 +29,4 @@ curry : {n : Nat} -> {0 env : Environment gamma} -> {0 delta : Segment n gamma}
      -> ((ext : Environment env delta) -> SimpleFun.uncurry cod ext)
      -> Fun env delta cod
 curry {n = 0  } {delta = []         } f = f Empty
-curry {n = S n} {delta = ty :: delta} f = \x => Fun.curry {env = (env =. x)} (\xs => f (x .= xs))
+curry {n = S n} {delta = ty :: delta} f = \x => Fun.curry (\xs => f (x .= xs))

@@ -13,12 +13,12 @@ congType : (delta : Segment n gamma)
   -> (env2 : Environment gamma) -> (sy2 : SimpleFun env2 delta Type) -> (rhs : Fun env2 delta sy2)
   -> Type
 congType []            env1 sy1 lhs  env2 sy2 rhs = lhs ~=~ rhs
-congType (ty :: delta) env1 sy1 lhs  env2 sy2 rhs = 
-                         {x1 : ty env1} -> {x2 : ty env2} 
+congType (ty :: delta) env1 sy1 lhs  env2 sy2 rhs =
+                         {x1 : ty env1} -> {x2 : ty env2}
                       -> x1 ~=~ x2
                       -> congType delta
-                           (env1 =. x1) (sy1 x1) (lhs x1) 
-                           (env2 =. x2) (sy2 x2) (rhs x2)
+                           (env1 ** x1) (sy1 x1) (lhs x1)
+                           (env2 ** x2) (sy2 x2) (rhs x2)
 
 public export
 congSegment : {n : Nat} -> (0 delta : Segment n gamma)
@@ -31,18 +31,18 @@ congSegment {n = 0  } []            env sy context env sy context Refl Refl Refl
 congSegment {n = S n} (ty :: delta) env sy context env sy context Refl Refl Refl = recursiveCall
   where
     recursiveCall : {x1 : ty env} -> {x2 : ty env} -> x1 ~=~ x2
-                 -> congType delta (env =. x1) (sy x1) (context x1)
-                                   (env =. x2) (sy x2) (context x2)
-    recursiveCall {x1=x} {x2=x} Refl = congSegment delta 
-                                                   (env =. x) (sy x) (context x)
-                                                   (env =. x) (sy x) (context x)
+                 -> congType delta (env ** x1) (sy x1) (context x1)
+                                   (env ** x2) (sy x2) (context x2)
+    recursiveCall {x1=x} {x2=x} Refl = congSegment delta
+                                                   (env ** x) (sy x) (context x)
+                                                   (env ** x) (sy x) (context x)
                                                    Refl       Refl   Refl
 
 public export
-cong : {n : Nat} -> {0 delta : Segment n []} -> {0 sy : SimpleFun Empty delta Type}
-    -> (context : Fun Empty delta sy)
-    -> congType delta Empty sy context
-                      Empty sy context
-cong {n} {delta} {sy} context = congSegment delta Empty sy   context
-                                                  Empty sy   context
+cong : {n : Nat} -> {0 delta : Segment n []} -> {0 sy : SimpleFun () delta Type}
+    -> (context : Fun () delta sy)
+    -> congType delta () sy context
+                      () sy context
+cong {n} {delta} {sy} context = congSegment delta ()    sy   context
+                                                  ()    sy   context
                                                   Refl  Refl Refl
