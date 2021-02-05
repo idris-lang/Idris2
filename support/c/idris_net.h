@@ -39,6 +39,12 @@ int idrnet_errno();
 
 int idrnet_socket(int domain, int type, int protocol);
 
+// Address family accessors
+int idrnet_af_unspec(void);
+int idrnet_af_unix(void);
+int idrnet_af_inet(void);
+int idrnet_af_inet6(void);
+
 // Bind
 int idrnet_bind(int sockfd, int family, int socket_type, char* host, int port);
 

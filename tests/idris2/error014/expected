@@ -1,0 +1,15 @@
+1/1: Building Issue735 (Issue735.idr)
+Error: Constructor Prelude.Types.:: is not fully applied.
+
+Issue735.idr:5:8--5:12
+   |
+ 5 | isCons (::) = True
+   |        ^^^^
+
+Error: Constructor Issue735.A is not fully applied.
+
+Issue735.idr:12:6--12:7
+    |
+ 12 | test A = Just 1
+    |      ^
+

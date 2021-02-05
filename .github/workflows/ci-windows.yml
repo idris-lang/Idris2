@@ -12,7 +12,9 @@ env:
   MSYSTEM: MINGW64
   MSYS2_PATH_TYPE: inherit
   SCHEME: scheme
+  IDRIS2_TESTS_CG: chez
   CC: gcc
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
@@ -24,7 +26,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Get Chez Scheme
-        run: | 
+        run: |
           git clone --depth 1 https://github.com/cisco/ChezScheme
           c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
           echo "::set-env name=PWD::$(c:\msys64\usr\bin\cygpath -u $(pwd))"

@@ -5,8 +5,10 @@ import Core.Context.Log
 import Core.TT
 import TTImp.BindImplicits
 import TTImp.TTImp
+import TTImp.Elab.Check
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -40,7 +42,9 @@ mutual
   -- TODO: Lam, Let, Case, Local, Update
   getMatch lhs (IApp _ f a) (IApp loc f' a')
       = matchAll lhs [(f, f'), (a, a')]
-  getMatch lhs (IImplicitApp _ f n a) (IImplicitApp loc f' n' a')
+  getMatch lhs (IAutoApp _ f a) (IAutoApp loc f' a')
+      = matchAll lhs [(f, f'), (a, a')]
+  getMatch lhs (INamedApp _ f n a) (INamedApp loc f' n' a')
       = if n == n'
            then matchAll lhs [(f, f'), (a, a')]
            else matchFail loc
@@ -49,27 +53,33 @@ mutual
   -- On LHS: If there's an implicit in the parent, but not the clause, add the
   -- implicit to the clause. This will propagate the implicit through to the
   -- body
-  getMatch True (IImplicitApp fc f n a) f'
+  getMatch True (INamedApp fc f n a) f'
+      = matchAll True [(f, f'), (a, a)]
+  getMatch True (IAutoApp fc f a) f'
       = matchAll True [(f, f'), (a, a)]
   -- On RHS: Rely on unification to fill in the implicit
-  getMatch False (IImplicitApp fc f n a) f'
+  getMatch False (INamedApp fc f n a) f'
+      = getMatch False f f
+  getMatch False (IAutoApp fc f a) f'
       = getMatch False f f
   -- Can't have an implicit in the clause if there wasn't a matching
   -- implicit in the parent
-  getMatch lhs f (IImplicitApp fc f' n a)
+  getMatch lhs f (INamedApp fc f' n a)
+      = matchFail fc
+  getMatch lhs f (IAutoApp fc f' a)
       = matchFail fc
   -- Alternatives are okay as long as the alternatives correspond, and
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ (UN n) p) (IAs fc _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN n) p) (IAs fc _ _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
-  getMatch lhs (IAs _ _ (UN n) p) p'
+  getMatch lhs (IAs _ _ _ (UN n) p) p'
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, p') :: ms)
-  getMatch lhs (IAs _ _ _ p) p' = getMatch lhs p p'
-  getMatch lhs p (IAs _ _ _ p') = getMatch lhs p p'
+  getMatch lhs (IAs _ _ _ _ p) p' = getMatch lhs p p'
+  getMatch lhs p (IAs _ _ _ _ p') = getMatch lhs p p'
   getMatch lhs (IType _) (IType _) = pure []
   getMatch lhs (IPrimVal fc c) (IPrimVal fc' c') =
     if c == c'
@@ -105,20 +115,26 @@ mutual
 
 -- Get the arguments for the rewritten pattern clause of a with by looking
 -- up how the argument names matched
-getArgMatch : FC -> Bool -> RawImp -> List (String, RawImp) ->
-              Maybe (PiInfo RawImp, Name) -> RawImp
-getArgMatch ploc search warg ms Nothing = warg
-getArgMatch ploc True warg ms (Just (AutoImplicit, UN n))
-    = case lookup n ms of
-           Nothing => ISearch ploc 500
-           Just tm => tm
-getArgMatch ploc True warg ms (Just (AutoImplicit, _))
-    = ISearch ploc 500
-getArgMatch ploc search warg ms (Just (_, UN n))
-    = case lookup n ms of
-           Nothing => Implicit ploc True
-           Just tm => tm
-getArgMatch ploc search warg ms _ = Implicit ploc True
+getArgMatch : FC -> (side : ElabMode) -> (search : Bool) ->
+              (warg : RawImp) -> (matches : List (String, RawImp)) ->
+              (arg : Maybe (PiInfo RawImp, Name)) -> RawImp
+getArgMatch ploc mode search warg ms Nothing = warg
+getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
+    = case (isUN nm >>= \ n => lookup n ms) of
+        Just tm => tm
+        Nothing =>
+          let arg = ISearch ploc 500 in
+          if isJust (isLHS mode)
+            then IAs ploc ploc UseLeft nm arg
+             else arg
+getArgMatch ploc mode search warg ms (Just (_, nm))
+    = case (isUN nm >>= \ n => lookup n ms) of
+        Just tm => tm
+        Nothing =>
+          let arg = Implicit ploc True in
+           if isJust (isLHS mode)
+             then IAs ploc ploc UseLeft nm arg
+             else arg
 
 export
 getNewLHS : {auto c : Ref Ctxt Defs} ->
@@ -127,21 +143,27 @@ getNewLHS : {auto c : Ref Ctxt Defs} ->
             RawImp -> RawImp -> Core RawImp
 getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
     = do (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
          (_, lhs) <- bindNames False lhs_raw
          (_, mlhs) <- bindNames False mlhs_raw
          setUnboundImplicits autoimp
 
+         log "declare.def.clause.with" 20 $ "Parent LHS (with implicits): " ++ show lhs
+         log "declare.def.clause.with" 20 $ "Modified LHS (with implicits): " ++ show mlhs
+
          let (warg :: rest) = reverse wrest
              | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
-         log "with" 5 $ show lhs ++ " against " ++ show mlhs ++
+         log "declare.def.clause.with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
-         log "with" 5 $ "Matches: " ++ show ms
-         let newlhs = apply (IVar ploc wname)
-                            (map (getArgMatch ploc False warg ms) wargnames ++ rest)
-         log "with" 5 $ "New LHS: " ++ show newlhs
+         log "declare.def.clause.with" 5 $ "Matches: " ++ show ms
+         let params = map (getArgMatch ploc (InLHS top) False warg ms) wargnames
+         log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
+
+         let newlhs = apply (IVar ploc wname) (params ++ rest)
+         log "declare.def.clause.with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
     dropWithArgs : Nat -> RawImp ->
@@ -172,13 +194,13 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm []
         = throw (GenericMsg fc "Badly formed 'with' application")
     updateWith fc tm (arg :: args)
-        = do log "with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
+        = do log "declare.def.clause.with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
-             log "with" 10 $ "Result: " ++ show ms
+             log "declare.def.clause.with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar fc wname)
-                                (map (getArgMatch fc True arg ms) wargnames)
-             log "with" 10 $ "With args for RHS: " ++ show wargnames
-             log "with" 10 $ "New RHS: " ++ show newrhs
+                                (map (getArgMatch fc InExpr True arg ms) wargnames)
+             log "declare.def.clause.with" 10 $ "With args for RHS: " ++ show wargnames
+             log "declare.def.clause.with" 10 $ "New RHS: " ++ show newrhs
              pure (withApply fc newrhs args)
 
     mutual
@@ -187,8 +209,8 @@ withRHS fc drop wname wargnames tm toplhs
           = pure $ IPi fc c p n !(wrhs ty) !(wrhs sc)
       wrhs (ILam fc c p n ty sc)
           = pure $ ILam fc c p n !(wrhs ty) !(wrhs sc)
-      wrhs (ILet fc c n ty val sc)
-          = pure $ ILet fc c n !(wrhs ty) !(wrhs val) !(wrhs sc)
+      wrhs (ILet fc lhsFC c n ty val sc)
+          = pure $ ILet fc lhsFC c n !(wrhs ty) !(wrhs val) !(wrhs sc)
       wrhs (ICase fc sc ty clauses)
           = pure $ ICase fc !(wrhs sc) !(wrhs ty) !(traverse wrhsC clauses)
       wrhs (ILocal fc decls sc)
@@ -197,8 +219,10 @@ withRHS fc drop wname wargnames tm toplhs
           = pure $ IUpdate fc upds !(wrhs tm) -- TODO!
       wrhs (IApp fc f a)
           = pure $ IApp fc !(wrhs f) !(wrhs a)
-      wrhs (IImplicitApp fc f n a)
-          = pure $ IImplicitApp fc !(wrhs f) n !(wrhs a)
+      wrhs (IAutoApp fc f a)
+          = pure $ IAutoApp fc !(wrhs f) !(wrhs a)
+      wrhs (INamedApp fc f n a)
+          = pure $ INamedApp fc !(wrhs f) n !(wrhs a)
       wrhs (IWithApp fc f a) = updateWith fc f [a]
       wrhs (IRewrite fc rule tm) = pure $ IRewrite fc !(wrhs rule) !(wrhs tm)
       wrhs (IDelayed fc r tm) = pure $ IDelayed fc r !(wrhs tm)

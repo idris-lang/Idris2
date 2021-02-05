@@ -12,9 +12,9 @@ import Core.Unify
 import Data.List
 import Data.Maybe
 import Data.So
-import Data.StringMap
+import Libraries.Data.StringMap
 import Data.Strings
-import Data.StringTrie
+import Libraries.Data.StringTrie
 import Data.These
 
 import Parser.Package
@@ -22,11 +22,11 @@ import System
 import System.Directory
 import System.File
 
-import Text.Parser
-import Text.PrettyPrint.Prettyprinter
-import Utils.Binary
-import Utils.String
-import Utils.Path
+import Libraries.Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Utils.Binary
+import Libraries.Utils.String
+import Libraries.Utils.Path
 
 import Idris.CommandLine
 import Idris.ModTree
@@ -40,6 +40,7 @@ import IdrisPaths
 
 %default covering
 
+public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
@@ -67,6 +68,7 @@ record PkgDesc where
   preclean : Maybe (FC, String) -- Script to run before cleaning
   postclean : Maybe (FC, String) -- Script to run after cleaning
 
+export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
              "Version: " ++ version pkg ++ "\n" ++
@@ -496,6 +498,17 @@ runRepl fname = do
             displayErrors errs
   repl {u} {s}
 
+export
+parsePkgFile : {auto c : Ref Ctxt Defs} ->
+               String -> Core PkgDesc
+parsePkgFile file = do
+  Right (pname, fs) <- coreLift $ parseFile file
+                                          (do desc <- parsePkgDesc file
+                                              eoi
+                                              pure desc)
+                     | Left (FileFail err) => throw (FileErr file err)
+                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+  addFields fs (initPkgDesc pname)
 
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->

@@ -14,23 +14,23 @@ infix  1  ...
 |||and we can think of the `...( justification )` as ASCII art for a thought bubble.
 public export
 data Step : a -> b -> Type where
-  (...) : (y : b) -> (0 _ : x ~=~ y) -> Step x y
+  (...) : (0 y : a) -> (0 step : x ~=~ y) -> Step x y
 
 public export
 data FastDerivation : (x : a) -> (y : b) -> Type where
-  (|~) : (x : a) -> FastDerivation x x
+  (|~) : (0 x : a) -> FastDerivation x x
   (~~) : FastDerivation x y -> (step : Step y z) -> FastDerivation x z
-  
-public export 
+
+public export
 Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
 Calc (|~ x) = Refl
-Calc ((~~) {z=_} {y=_} der (_ ...(Refl))) = Calc der
+Calc ((~~) der (_ ...(Refl))) = Calc der
 
 {- -- requires import Data.Nat
 0
 example : (x : Nat) -> (x + 1) + 0 = 1 + x
-example x = 
-  Calc $ 
+example x =
+  Calc $
    |~ (x + 1) + 0
    ~~ x+1  ...( plusZeroRightNeutral $ x + 1 )
    ~~ 1+x  ...( plusCommutative x 1          )

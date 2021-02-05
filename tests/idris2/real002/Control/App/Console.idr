@@ -7,7 +7,7 @@ interface Console e where
   putStr : String -> App {l} e ()
   getStr : App {l} e String
 
-export 
+export
 PrimIO e => Console e where
   putStr str = primIO $ putStr str
   getStr = primIO $ getLine

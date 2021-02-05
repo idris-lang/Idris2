@@ -1,0 +1,10 @@
+:typeat 6 3 name
+:typeat 7 3 age
+:typeat 8 3 pet
+:typeat 8 9 animal
+:typeat 13 41 one
+:typeat 13 48 p
+:typeat 21 38 emptyString
+:typeat 21 57 zero
+:typeat 21 64 p
+:q

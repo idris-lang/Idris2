@@ -24,7 +24,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -56,10 +56,10 @@ process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)
     = processRunElab eopts nest env fc tm
-process eopts nest env (IPragma act)
+process eopts nest env (IPragma _ act)
     = act nest env
 process eopts nest env (ILog lvl)
-    = addLogLevel (uncurry unsafeMkLogLevel lvl)
+    = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
 
 TTImp.Elab.Check.processDecl = process
 
@@ -72,14 +72,22 @@ checkTotalityOK n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure Nothing
+         let fc = location gdef
+
+         -- #524: need to check positivity even if we're not in a total context
+         -- because a definition coming later may need to know it is positive
+         case definition gdef of
+           (TCon _ _ _ _ _ _ _ _) => ignore $ checkPositive fc n
+           _ => pure ()
+
+         -- Once that is done, we build up errors if necessary
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          let tot = totality gdef
-         let fc = location gdef
          log "totality" 3 $ show n ++ " must be: " ++ show treq
          case treq of
-              PartialOK => pure Nothing
-              CoveringOnly => checkCovering fc (isCovering tot)
-              Total => checkTotality fc
+            PartialOK => pure Nothing
+            CoveringOnly => checkCovering fc (isCovering tot)
+            Total => checkTotality fc
   where
     checkCovering : FC -> Covering -> Core (Maybe Error)
     checkCovering fc IsCovering = pure Nothing
@@ -130,9 +138,9 @@ processTTImpDecls {vars} nest env decls
          pure True -- TODO: False on error
   where
     bindConNames : ImpTy -> Core ImpTy
-    bindConNames (MkImpTy fc n ty)
+    bindConNames (MkImpTy fc nameFC n ty)
         = do ty' <- bindTypeNames [] vars ty
-             pure (MkImpTy fc n ty')
+             pure (MkImpTy fc nameFC n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
@@ -145,9 +153,9 @@ processTTImpDecls {vars} nest env decls
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
-    bindNames (IClaim fc c vis opts (MkImpTy tfc n ty))
+    bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
         = do ty' <- bindTypeNames [] vars ty
-             pure (IClaim fc c vis opts (MkImpTy tfc n ty'))
+             pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
     bindNames (IData fc vis d)
         = do d' <- bindDataNames d
              pure (IData fc vis d')

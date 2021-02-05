@@ -15,7 +15,7 @@ export
 Reify BindMode where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
-             (NS _ (UN "PI"), [c])
+             (NS _ (UN "PI"), [(_, c)])
                  => do c' <- reify defs !(evalClosure defs c)
                        pure (PI c')
              (NS _ (UN "PATTERN"), _) => pure PATTERN
@@ -81,7 +81,7 @@ mutual
   export
   Reify RawImp where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "IVar"), [fc, n])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           n' <- reify defs !(evalClosure defs n)
@@ -102,14 +102,15 @@ mutual
                           aty' <- reify defs !(evalClosure defs aty)
                           lty' <- reify defs !(evalClosure defs lty)
                           pure (ILam fc' c' p' mn' aty' lty')
-               (NS _ (UN "ILet"), [fc, c, n, ty, val, sc])
+               (NS _ (UN "ILet"), [fc, lhsFC, c, n, ty, val, sc])
                     => do fc' <- reify defs !(evalClosure defs fc)
+                          lhsFC' <- reify defs !(evalClosure defs lhsFC)
                           c' <- reify defs !(evalClosure defs c)
                           n' <- reify defs !(evalClosure defs n)
                           ty' <- reify defs !(evalClosure defs ty)
                           val' <- reify defs !(evalClosure defs val)
                           sc' <- reify defs !(evalClosure defs sc)
-                          pure (ILet fc' c' n' ty' val' sc')
+                          pure (ILet fc' lhsFC' c' n' ty' val' sc')
                (NS _ (UN "ICase"), [fc, sc, ty, cs])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           sc' <- reify defs !(evalClosure defs sc)
@@ -131,12 +132,17 @@ mutual
                           f' <- reify defs !(evalClosure defs f)
                           a' <- reify defs !(evalClosure defs a)
                           pure (IApp fc' f' a')
-               (NS _ (UN "IImplicitApp"), [fc, f, m, a])
+               (NS _ (UN "INamedApp"), [fc, f, m, a])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           f' <- reify defs !(evalClosure defs f)
                           m' <- reify defs !(evalClosure defs m)
                           a' <- reify defs !(evalClosure defs a)
-                          pure (IImplicitApp fc' f' m' a')
+                          pure (INamedApp fc' f' m' a')
+               (NS _ (UN "IAutoApp"), [fc, f, a])
+                    => do fc' <- reify defs !(evalClosure defs fc)
+                          f' <- reify defs !(evalClosure defs f)
+                          a' <- reify defs !(evalClosure defs a)
+                          pure (IAutoApp fc' f' a')
                (NS _ (UN "IWithApp"), [fc, f, a])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           f' <- reify defs !(evalClosure defs f)
@@ -165,12 +171,13 @@ mutual
                     => do fc' <- reify defs !(evalClosure defs fc)
                           n' <- reify defs !(evalClosure defs n)
                           pure (IBindVar fc' n')
-               (NS _ (UN "IAs"), [fc, s, n, t])
+               (NS _ (UN "IAs"), [fc, nameFC, s, n, t])
                     => do fc' <- reify defs !(evalClosure defs fc)
+                          nameFC' <- reify defs !(evalClosure defs nameFC)
                           s' <- reify defs !(evalClosure defs s)
                           n' <- reify defs !(evalClosure defs n)
                           t' <- reify defs !(evalClosure defs t)
-                          pure (IAs fc' s' n' t')
+                          pure (IAs fc' nameFC' s' n' t')
                (NS _ (UN "IMustUnify"), [fc, r, t])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           r' <- reify defs !(evalClosure defs r)
@@ -232,11 +239,11 @@ mutual
   Reify IFieldUpdate where
     reify defs val@(NDCon _ n _ _ args)
         = case (!(full (gamma defs) n), args) of
-               (NS _ (UN "ISetField"), [x, y])
+               (NS _ (UN "ISetField"), [(_, x), (_, y)])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           pure (ISetField x' y')
-               (NS _ (UN "ISetFieldApp"), [x, y])
+               (NS _ (UN "ISetFieldApp"), [(_, x), (_, y)])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           pure (ISetFieldApp x' y')
@@ -251,7 +258,7 @@ mutual
                     => pure FirstSuccess
                (NS _ (UN "Unique"), _)
                     => pure Unique
-               (NS _ (UN "UniqueDefault"), [x])
+               (NS _ (UN "UniqueDefault"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (UniqueDefault x')
                _ => cantReify val "AltType"
@@ -263,22 +270,22 @@ mutual
         = case (!(full (gamma defs) n), args) of
                (NS _ (UN "Inline"), _) => pure Inline
                (NS _ (UN "TCInline"), _) => pure TCInline
-               (NS _ (UN "Hint"), [x])
+               (NS _ (UN "Hint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (Hint x')
-               (NS _ (UN "GlobalHint"), [x])
+               (NS _ (UN "GlobalHint"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (GlobalHint x')
                (NS _ (UN "ExternFn"), _) => pure ExternFn
-               (NS _ (UN "ForeignFn"), [x])
+               (NS _ (UN "ForeignFn"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (ForeignFn x')
                (NS _ (UN "Invertible"), _) => pure Invertible
-               (NS _ (UN "Totality"), [x])
+               (NS _ (UN "Totality"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (Totality x')
                (NS _ (UN "Macro"), _) => pure Macro
-               (NS _ (UN "SpecArgs"), [x])
+               (NS _ (UN "SpecArgs"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SpecArgs x')
                _ => cantReify val "FnOpt"
@@ -287,12 +294,13 @@ mutual
   export
   Reify ImpTy where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
-               (NS _ (UN "MkTy"), [x,y,z])
-                    => do x' <- reify defs !(evalClosure defs x)
+        = case (!(full (gamma defs) n), map snd args) of
+               (NS _ (UN "MkTy"), [w, x, y, z])
+                    => do w' <- reify defs !(evalClosure defs w)
+                          x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy x' y' z')
+                          pure (MkImpTy w' x' y' z')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -300,7 +308,7 @@ mutual
   Reify DataOpt where
     reify defs val@(NDCon _ n _ _ args)
         = case (!(full (gamma defs) n), args) of
-               (NS _ (UN "SearchBy"), [x])
+               (NS _ (UN "SearchBy"), [(_, x)])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (SearchBy x')
                (NS _ (UN "NoHints"), _) => pure NoHints
@@ -313,7 +321,7 @@ mutual
   export
   Reify ImpData where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "MkData"), [v,w,x,y,z])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
@@ -332,7 +340,7 @@ mutual
   export
   Reify IField where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "MkIField"), [v,w,x,y,z])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
@@ -346,7 +354,7 @@ mutual
   export
   Reify ImpRecord where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "MkRecord"), [v,w,x,y,z])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
@@ -360,7 +368,7 @@ mutual
   export
   Reify ImpClause where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "PatClause"), [x,y,z])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -382,7 +390,7 @@ mutual
   export
   Reify ImpDecl where
     reify defs val@(NDCon _ n _ _ args)
-        = case (!(full (gamma defs) n), args) of
+        = case (!(full (gamma defs) n), map snd args) of
                (NS _ (UN "IClaim"), [v,w,x,y,z])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
@@ -450,14 +458,15 @@ mutual
              aty' <- reflect fc defs lhs env aty
              rty' <- reflect fc defs lhs env rty
              appCon fc defs (reflectionttimp "ILam") [fc', c', p', mn', aty', rty']
-    reflect fc defs lhs env (ILet tfc c n aty aval sc)
+    reflect fc defs lhs env (ILet tfc lhsFC c n aty aval sc)
         = do fc' <- reflect fc defs lhs env tfc
+             lhsFC' <- reflect fc defs lhs env lhsFC
              c' <- reflect fc defs lhs env c
              n' <- reflect fc defs lhs env n
              aty' <- reflect fc defs lhs env aty
              aval' <- reflect fc defs lhs env aval
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "ILet") [fc', c', n', aty', aval', sc']
+             appCon fc defs (reflectionttimp "ILet") [fc', lhsFC', c', n', aty', aval', sc']
     reflect fc defs lhs env (ICase tfc sc ty cs)
         = do fc' <- reflect fc defs lhs env tfc
              sc' <- reflect fc defs lhs env sc
@@ -481,12 +490,17 @@ mutual
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
              appCon fc defs (reflectionttimp "IApp") [fc', f', a']
-    reflect fc defs lhs env (IImplicitApp tfc f m a)
+    reflect fc defs lhs env (IAutoApp tfc f a)
+        = do fc' <- reflect fc defs lhs env tfc
+             f' <- reflect fc defs lhs env f
+             a' <- reflect fc defs lhs env a
+             appCon fc defs (reflectionttimp "IAutoApp") [fc', f', a']
+    reflect fc defs lhs env (INamedApp tfc f m a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              m' <- reflect fc defs lhs env m
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "IImplicitApp") [fc', f', m', a']
+             appCon fc defs (reflectionttimp "INamedApp") [fc', f', m', a']
     reflect fc defs lhs env (IWithApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
@@ -516,12 +530,13 @@ mutual
         = do fc' <- reflect fc defs lhs env tfc
              n' <- reflect fc defs lhs env n
              appCon fc defs (reflectionttimp "IBindVar") [fc', n']
-    reflect fc defs lhs env (IAs tfc s n t)
+    reflect fc defs lhs env (IAs tfc nameFC s n t)
         = do fc' <- reflect fc defs lhs env tfc
+             nameFC' <- reflect fc defs lhs env nameFC
              s' <- reflect fc defs lhs env s
              n' <- reflect fc defs lhs env n
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IAs") [fc', s', n', t']
+             appCon fc defs (reflectionttimp "IAs") [fc', nameFC', s', n', t']
     reflect fc defs lhs env (IMustUnify tfc r t)
         = do fc' <- reflect fc defs lhs env tfc
              r' <- reflect fc defs lhs env r
@@ -627,11 +642,12 @@ mutual
 
   export
   Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy x y z)
-        = do x' <- reflect fc defs lhs env x
+    reflect fc defs lhs env (MkImpTy w x y z)
+        = do w' <- reflect fc defs lhs env w
+             x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkTy") [x', y', z']
+             appCon fc defs (reflectionttimp "MkTy") [w', x', y', z']
 
   export
   Reflect DataOpt where
@@ -738,7 +754,7 @@ mutual
              appCon fc defs (reflectionttimp "ITransform") [w', x', y', z']
     reflect fc defs lhs env (IRunElabDecl w x)
         = throw (GenericMsg fc "Can't reflect a %runElab")
-    reflect fc defs lhs env (IPragma x)
+    reflect fc defs lhs env (IPragma _ x)
         = throw (GenericMsg fc "Can't reflect a pragma")
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x

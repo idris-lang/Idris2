@@ -76,7 +76,7 @@ By "used" we mean either:
 
 * if the variable is a data type or primitive value, it is pattern matched against, ex. by being the subject of a *case* statement, or a function argument that is pattern matched against, etc.,
 * if the variable is a function, that function is applied (i.e. ran with an argument)
-  
+
 First, we'll see how this works on some small examples of functions and
 data types, then see how it can be used to encode `resource protocols`_.
 
@@ -151,10 +151,10 @@ wraps an argument with unrestricted use
 
     data Lin : Type -> Type where
          MkLin : (1 _ : a) -> Lin a
-  
+
     data Unr : Type -> Type where
          MkUnr : a -> Unr a
-  
+
 If ``MkLin x`` is used once, then ``x`` is used once. But if ``MkUnr x`` is
 used once, there is no guarantee on how often ``x`` is used. We can see this a
 bit more clearly by starting to write projection functions for ``Lin`` and
@@ -164,10 +164,10 @@ bit more clearly by starting to write projection functions for ``Lin`` and
 
     getLin : (1 _ : Lin a) -> a
     getLin (MkLin x) = ?howmanyLin
-  
+
     getUnr : (1 _ : Unr a) -> a
     getUnr (MkUnr x) = ?howmanyUnr
-  
+
 Checking the types of the holes shows us that, for ``getLin``, we must use
 ``x`` exactly once (Because the ``val`` argument is used once,
 by pattern matching on it as ``MkLin x``, and if ``MkLin x`` is used once,
@@ -197,7 +197,7 @@ If ``getLin`` has an unrestricted argument...
     getLin (MkLin x) = ?howmanyLin
 
 ...then ``x`` is unrestricted in ``howmanyLin``::
-  
+
   Main> :t howmanyLin
    0 a : Type
      x : a
@@ -267,12 +267,12 @@ So an example correct door protocol usage would be
 .. code-block:: idris
 
     doorProg : IO ()
-    doorProg 
+    doorProg
         = newDoor $ \d =>
               let d' = openDoor d
                   d'' = closeDoor d' in
                   deleteDoor d''
- 
+
 It's instructive to build this program interactively, with holes along
 the way, and see how the multiplicities of ``d``, ``d'`` etc change. For
 example
@@ -280,7 +280,7 @@ example
 .. code-block:: idris
 
     doorProg : IO ()
-    doorProg 
+    doorProg
         = newDoor $ \d =>
               let d' = openDoor d in
                   ?whatnow
@@ -302,7 +302,7 @@ It's also fine to shadow the name ``d`` throughout
 .. code-block:: idris
 
     doorProg : IO ()
-    doorProg 
+    doorProg
         = newDoor $ \d =>
               let d = openDoor d
                   d = closeDoor d in
@@ -315,7 +315,7 @@ can try not to delete the door before finishing
 .. code-block:: idris
 
     doorProg : IO ()
-    doorProg 
+    doorProg
         = newDoor $ \d =>
               let d' = openDoor d
                   d'' = closeDoor d' in
@@ -332,7 +332,7 @@ at the type level. If we have an external resource which is guaranteed to
 be used linearly, like ``Door``, we don't need to run operations on that
 resource in an ``IO`` monad, since we're already enforcing an ordering on
 operations and don't have access to any out of date resource states. This is
-similar to the way interactive programs work in 
+similar to the way interactive programs work in
 `the Clean programming language <https://clean.cs.ru.nl/Clean>`_, and in
 fact is how ``IO`` is implemented internally in Idris 2, with a special
 ``%World`` type for representing the state of the outside world that is
@@ -380,7 +380,7 @@ For example, in Idris 1 you could get the length of a vector as follows
 
     vlen : Vect n a -> Nat
     vlen {n} xs = n
-  
+
 This is fine, since it runs in constant time, but the trade off is that
 ``n`` has to be available at run time, so at run time we always need the length
 of the vector to be available if we ever call ``vlen``. Idris 1 can infer whether
@@ -392,7 +392,7 @@ In Idris 2, we need to state explicitly that ``n`` is needed at run time
 
     vlen : {n : Nat} -> Vect n a -> Nat
     vlen xs = n
-  
+
 (Incidentally, also note that in Idris 2, names bound in types are also available
 in the definition without explicitly rebinding them.)
 
@@ -403,12 +403,12 @@ example, this will give an error
 
     sumLengths : Vect m a -> Vect n a —> Nat
     sumLengths xs ys = vlen xs + vlen ys
-  
+
 Idris 2 reports::
 
   vlen.idr:7:20--7:28:While processing right hand side of Main.sumLengths at vlen.idr:7:1--10:1:
   m is not accessible in this context
-  
+
 This means that it needs to use ``m`` as an argument to pass to ``vlen xs``,
 where it needs to be available at run time, but ``m`` is not available in
 ``sumLengths`` because it has multiplicity ``0``.
@@ -420,7 +420,7 @@ We can see this more clearly by replacing the right hand side of
 
     sumLengths : Vect m a -> Vect n a -> Nat
     sumLengths xs ys = ?sumLengths_rhs
-  
+
 ...then checking the hole's type at the REPL::
 
   Main> :t sumLengths_rhs
@@ -450,7 +450,7 @@ though, that if you have bound implicits, such as...
 .. code-block:: idris
 
     excitingFn : {t : _} -> Coffee t -> Moonbase t
-   
+
 ...then it's a good idea to make sure ``t`` really is needed, or performance
 might suffer due to the run time building the instance of ``t`` unnecessarily!
 
@@ -466,7 +466,7 @@ elsewhere. So, the following definition is rejected
 
 This is rejected with the error::
 
-  badnot.idr:2:1--3:1:Attempt to match on erased argument False in 
+  badnot.idr:2:1--3:1:Attempt to match on erased argument False in
   Main.badNot
 
 The following, however, is fine, because in ``sNot``, even though we appear
@@ -478,7 +478,7 @@ the type of the second argument
     data SBool : Bool -> Type where
          SFalse : SBool False
          STrue  : SBool True
-  
+
     sNot : (0 x : Bool) -> SBool x -> Bool
     sNot False SFalse = True
     sNot True  STrue  = False
@@ -495,13 +495,13 @@ Pattern Matching on Types
 -------------------------
 
 One way to think about dependent types is to think of them as "first class"
-objects in the language, in that they can be assigned to variables, 
+objects in the language, in that they can be assigned to variables,
 passed around and returned from functions, just like any other construct.
 But, if they're truly first class, we should be able to pattern match on
 them too! Idris 2 allows us to do this. For example
 
 .. code-block:: idris
- 
+
     showType : Type -> String
     showType Int = "Int"
     showType (List a) = "List of " ++ showType a

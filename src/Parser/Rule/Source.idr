@@ -5,6 +5,7 @@ import public Parser.Rule.Common
 import public Parser.Support
 
 import Core.TT
+import Data.List1
 import Data.Strings
 
 %default total
@@ -37,7 +38,7 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           StringLit s => case escape s of
+                           StringLit n s => case escape n s of
                                                Nothing => Nothing
                                                Just s' => Just (Str s')
                            Ident "Char"    => Just CharType
@@ -83,7 +84,7 @@ strLit : Rule String
 strLit
     = terminal "Expected string literal"
                (\x => case x.val of
-                           StringLit s => Just s
+                           StringLit 0 s => Just s
                            _ => Nothing)
 
 export
@@ -95,8 +96,8 @@ aDotIdent = terminal "Expected dot+identifier"
 
 
 export
-dotIdent : Rule Name
-dotIdent = UN <$> aDotIdent
+postfixProj : Rule Name
+postfixProj = RF <$> aDotIdent
 
 export
 symbol : String -> Rule ()
@@ -214,12 +215,12 @@ name = opNonNS <|> do
       else pure $ mkNamespacedName ns x
 
   opNonNS : Rule Name
-  opNonNS = symbol "(" *> operator <* symbol ")"
+  opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 
   opNS : Namespace -> Rule Name
   opNS ns = do
     symbol ".("
-    n <- operator
+    n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
 
@@ -431,15 +432,15 @@ blockWithOptHeaderAfter {ty} mincol header item
                            pure (Nothing, ps)
 
 export
-nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List ty)
+nonEmptyBlock : (IndentInfo -> Rule ty) -> Rule (List1 ty)
 nonEmptyBlock item
     = do symbol "{"
          commit
          res <- blockEntry AnyIndent item
          ps <- blockEntries (snd res) item
          symbol "}"
-         pure (fst res :: ps)
+         pure (fst res ::: ps)
   <|> do col <- column
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
-         pure (fst res :: ps)
+         pure (fst res ::: ps)

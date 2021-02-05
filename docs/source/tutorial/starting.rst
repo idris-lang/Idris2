@@ -55,7 +55,7 @@ Installing from a Package Manager
 =================================
 
 Installing Using Homebrew
-----------------------
+-------------------------
 
 If you are Homebrew user you can install Idris 2 together with all the requirements
 by running following command::
@@ -89,6 +89,8 @@ which you can run:
     $ idris2 hello.idr -o hello
     $ ./build/exec/hello
     Hello world
+
+(On Macos you may first need to install realpath: ```brew install coreutils```)
 
 Please note that the dollar sign ``$`` indicates the shell prompt!
 Some useful options to the Idris command are:

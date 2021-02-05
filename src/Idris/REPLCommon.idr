@@ -13,8 +13,8 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Render.Terminal
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 %default covering
 
@@ -51,27 +51,30 @@ printError : {auto o : Ref ROpts REPLOpts} ->
              Doc IdrisAnn -> Core ()
 printError msg = printWithStatus (pretty "error") msg
 
--- Display an error message from checking a source file
+DocCreator : Type -> Type
+DocCreator a = a -> Core (Doc IdrisAnn)
+
 export
-emitError : {auto c : Ref Ctxt Defs} ->
+emitProblem : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             {auto s : Ref Syn SyntaxInfo} ->
-            Error -> Core ()
-emitError err
+            a -> (DocCreator a) -> (DocCreator a) -> (a -> Maybe FC) -> Core ()
+emitProblem a replDocCreator idemodeDocCreator getFC
     = do opts <- get ROpts
          case idemode opts of
               REPL _ =>
-                  do msg <- display err >>= render
+                  do msg <- replDocCreator a >>= render
                      coreLift $ putStrLn msg
               IDEMode i _ f =>
-                  do msg <- perror err
-                     case getErrorLoc err of
+                  do msg <- idemodeDocCreator a
+                     -- TODO: Display a better message when the error doesn't contain a location
+                     case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
-                          Just fc =>
+                          Just (file, startPos, endPos) =>
                             send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp (file fc),
-                                            toSExp (addOne (startPos fc)),
-                                              toSExp (addOne (endPos fc)),
+                                   SExpList [toSExp file,
+                                            toSExp (addOne startPos),
+                                              toSExp (addOne endPos),
                                               toSExp !(renderWithoutColor msg),
                                               -- highlighting; currently blank
                                               SExpList []],
@@ -85,28 +88,15 @@ emitWarning : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Warning -> Core ()
-emitWarning w
-    = do opts <- get ROpts
-         case idemode opts of
-              REPL _ =>
-                  do msg <- displayWarning w >>= render
-                     coreLift $ putStrLn msg
-              IDEMode i _ f =>
-                  do msg <- pwarning w
-                     case getWarningLoc w of
-                          Nothing => iputStrLn msg
-                          Just fc =>
-                            send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp (file fc),
-                                            toSExp (addOne (startPos fc)),
-                                              toSExp (addOne (endPos fc)),
-                                              toSExp !(renderWithoutColor msg),
-                                              -- highlighting; currently blank
-                                              SExpList []],
-                                    toSExp i])
-  where
-    addOne : (Int, Int) -> (Int, Int)
-    addOne (l, c) = (l + 1, c + 1)
+emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
+
+-- Display an error message from checking a source file
+export
+emitError : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
+            {auto s : Ref Syn SyntaxInfo} ->
+            Error -> Core ()
+emitError e = emitProblem e display perror getErrorLoc
 
 export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
@@ -118,8 +108,9 @@ emitWarnings
          traverse_ emitWarning (reverse (warnings defs))
          put Ctxt (record { warnings = [] } defs)
 
-getFCLine : FC -> Int
-getFCLine fc = fst (startPos fc)
+getFCLine : FC -> Maybe Int
+getFCLine (MkFC _ (line, _) _) = Just line
+getFCLine EmptyFC = Nothing
 
 export
 updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
@@ -129,7 +120,7 @@ updateErrorLine []
          put ROpts (record { errorLine = Nothing } opts)
 updateErrorLine (e :: _)
     = do opts <- get ROpts
-         put ROpts (record { errorLine = map getFCLine (getErrorLoc e) } opts)
+         put ROpts (record { errorLine = (getErrorLoc e) >>= getFCLine } opts)
 
 export
 resetContext : {auto c : Ref Ctxt Defs} ->

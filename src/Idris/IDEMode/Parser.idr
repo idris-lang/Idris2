@@ -11,10 +11,10 @@ import Data.Strings
 import Parser.Lexer.Source
 import Parser.Source
 import Parser.Support
-import Text.Lexer
-import Text.Parser
-import Utils.Either
-import Utils.String
+import Libraries.Text.Lexer
+import Libraries.Text.Parser
+import Libraries.Utils.Either
+import Libraries.Utils.String
 
 %default total
 
@@ -28,7 +28,7 @@ ideTokens : TokenMap Token
 ideTokens =
     map (\x => (exact x, Symbol)) symbols ++
     [(digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit (fromMaybe "" (escape (stripQuotes x)))),
+     (stringLit, \x => StringLit 0 (fromMaybe "" (escape 0 (stripQuotes x)))),
      (identAllowDashes, \x => Ident x),
      (space, Comment)]
 

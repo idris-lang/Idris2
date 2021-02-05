@@ -8,7 +8,7 @@ import Core.Context
 import Core.Name
 import Core.TT
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Vect
 
@@ -31,11 +31,12 @@ schString s = concatMap okchar (unpack s)
 
 export
 schName : Name -> String
-schName (NS ns n) = showNSWithSep "-" ns ++ "-" ++ schName n
+schName (NS ns n) = schString (showNSWithSep "-" ns) ++ "-" ++ schName n
 schName (UN n) = schString n
 schName (MN n i) = schString n ++ "-" ++ show i
 schName (PV n d) = "pat--" ++ schName n
 schName (DN _ n) = schName n
+schName (RF n) = "rf--" ++ schString n
 schName (Nested (i, x) n) = "n--" ++ show i ++ "-" ++ show x ++ "-" ++ schName n
 schName (CaseBlock x y) = "case--" ++ schString x ++ "-" ++ show y
 schName (WithBlock x y) = "with--" ++ schString x ++ "-" ++ show y
@@ -154,6 +155,7 @@ schOp (Cast IntegerType IntType) [x] = x
 schOp (Cast Bits8Type IntType) [x] = x
 schOp (Cast Bits16Type IntType) [x] = x
 schOp (Cast Bits32Type IntType) [x] = x
+schOp (Cast Bits64Type IntType) [x] = x
 schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
 schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
 schOp (Cast CharType IntType) [x] = op "char->integer" [x]
@@ -205,6 +207,7 @@ data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
+             | MakeFuture
              | Unknown Name
 
 export
@@ -222,6 +225,7 @@ Show ExtPrim where
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
   show OnCollectAny = "OnCollectAny"
+  show MakeFuture = "MakeFuture"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
@@ -235,11 +239,13 @@ toPrim pn@(NS _ n)
             (n == UN "prim__arraySet", ArraySet),
             (n == UN "prim__getField", GetField),
             (n == UN "prim__setField", SetField),
-            (n == UN "void", VoidElim),
+            (n == UN "void", VoidElim), -- DEPRECATED. TODO: remove when bootstrap has been updated
+            (n == UN "prim__void", VoidElim),
             (n == UN "prim__os", SysOS),
             (n == UN "prim__codegen", SysCodegen),
             (n == UN "prim__onCollect", OnCollect),
-            (n == UN "prim__onCollectAny", OnCollectAny)
+            (n == UN "prim__onCollectAny", OnCollectAny),
+            (n == UN "prim__makeFuture", MakeFuture)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn

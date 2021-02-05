@@ -2,14 +2,17 @@ module Core.Coverage
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.TT
 import Core.Value
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
+
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -100,11 +103,11 @@ conflict defs env nfty n
                pure (Just [(n, !(quote empty env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs i args args'
+               then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
       conflictNF i (NTCon _ n t a args) (NTCon _ n' t' a' args')
           = if n == n'
-               then conflictArgs i args args'
+               then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
       conflictNF i (NPrimVal _ c) (NPrimVal _ c')
           = if c == c'
@@ -119,8 +122,11 @@ isEmpty : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Defs -> Env Term vars -> NF vars -> Core Bool
 isEmpty defs env (NTCon fc n t a args)
-     = case !(lookupDefExact n (gamma defs)) of
-            Just (TCon _ _ _ _ flags _ cons _)
+  = do Just nty <- lookupDefExact n (gamma defs)
+         | _ => pure False
+       log "coverage.empty" 10 $ "Checking type: " ++ show nty
+       case nty of
+            TCon _ _ _ _ flags _ cons _
                  => if not (external flags)
                        then allM (conflict defs env (NTCon fc n t a args)) cons
                        else pure False
@@ -482,7 +488,15 @@ export
 checkMatched : {auto c : Ref Ctxt Defs} ->
                List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
 checkMatched cs ulhs
-    = tryClauses cs !(eraseApps ulhs)
+    = do logTerm "coverage" 5 "Checking coverage for" ulhs
+         logC "coverage" 10 $ pure $ "(raw term: " ++ show !(toFullNames ulhs) ++ ")"
+         ulhs <- eraseApps ulhs
+         logTerm "coverage" 5 "Erased to" ulhs
+         logC "coverage" 5 $ do
+            cs <- traverse toFullNames cs
+            pure $ "Against clauses:\n" ++
+                   (show $ indent {ann = ()} 2 $ vcat $ map (pretty . show) cs)
+         tryClauses cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs

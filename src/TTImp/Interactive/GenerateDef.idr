@@ -91,7 +91,9 @@ splittableNames (IApp _ f (IBindVar _ n))
     = splittableNames f ++ [UN n]
 splittableNames (IApp _ f _)
     = splittableNames f
-splittableNames (IImplicitApp _ f _ _)
+splittableNames (IAutoApp _ f _)
+    = splittableNames f
+splittableNames (INamedApp _ f _ _)
     = splittableNames f
 splittableNames _ = []
 
@@ -114,7 +116,8 @@ trySplit loc lhsraw lhs rhs n
     fixNames (IVar loc' (UN n)) = IBindVar loc' n
     fixNames (IVar loc' (MN _ _)) = Implicit loc' True
     fixNames (IApp loc' f a) = IApp loc' (fixNames f) (fixNames a)
-    fixNames (IImplicitApp loc' f t a) = IImplicitApp loc' (fixNames f) t (fixNames a)
+    fixNames (IAutoApp loc' f a) = IAutoApp loc' (fixNames f) (fixNames a)
+    fixNames (INamedApp loc' f t a) = INamedApp loc' (fixNames f) t (fixNames a)
     fixNames tm = tm
 
     updateLHS : List (Name, RawImp) -> RawImp -> RawImp
@@ -127,8 +130,9 @@ trySplit loc lhsraw lhs rhs n
                Nothing => IBindVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IApp loc' f a) = IApp loc' (updateLHS ups f) (updateLHS ups a)
-    updateLHS ups (IImplicitApp loc' f t a)
-        = IImplicitApp loc' (updateLHS ups f) t (updateLHS ups a)
+    updateLHS ups (IAutoApp loc' f a) = IAutoApp loc' (updateLHS ups f) (updateLHS ups a)
+    updateLHS ups (INamedApp loc' f t a)
+        = INamedApp loc' (updateLHS ups f) t (updateLHS ups a)
     updateLHS ups tm = tm
 
 generateSplits : {auto m : Ref MD Metadata} ->
@@ -227,16 +231,16 @@ export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
-          (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+          (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
 makeDef p n
     = do Just (loc, nidx, envlen, ty) <- findTyDeclAt p
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType loc) }
+         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
-         makeDefFromType loc opts n envlen ty
+         makeDefFromType (justFC loc) opts n envlen ty
 
 -- Given a clause, return the bindable names, and the ones that were used in
 -- the rhs
@@ -274,7 +278,7 @@ export
 makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+              (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
               Name -> Core (Search (FC, List ImpClause))
 makeDefSort p max ord n
@@ -284,7 +288,7 @@ export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
-           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
 makeDefN p max n
     = do (res, _) <- searchN max (makeDef p n)

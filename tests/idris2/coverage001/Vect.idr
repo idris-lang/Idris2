@@ -19,4 +19,3 @@ lookup (FS k) (x :: xs) = lookup k xs
 zip : Vect n a -> Vect n b -> Vect n (a, b)
 zip [] [] = []
 zip (x :: xs) (y :: ys) = (x, y) :: zip xs ys
-

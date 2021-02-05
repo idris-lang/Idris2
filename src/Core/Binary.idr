@@ -10,9 +10,9 @@ import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 import System.File
 
@@ -21,7 +21,7 @@ import System.File
 -- (Otherwise we'd save out everything, not just the things in the current
 -- file).
 
-import public Utils.Binary
+import public Libraries.Utils.Binary
 
 import Data.Buffer
 
@@ -31,7 +31,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 41
+ttcVersion = 44
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

@@ -25,4 +25,3 @@ segfaults = Fix (Lam (Var (count 0)))
 cycleDetected : {len : _} -> {ctx : Vect len Typ} ->
                 Term (TLam TNat TNat) ctx
 cycleDetected = Fix (Var (count 0))
-

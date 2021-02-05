@@ -15,10 +15,10 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Utils.Hex
+import Libraries.Utils.Hex
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -31,10 +31,6 @@ Show ArgMode where
 getStatic : ArgMode -> Maybe (Term [])
 getStatic Dynamic = Nothing
 getStatic (Static t) = Just t
-
-unload : List (FC, Term vars) -> Term vars -> Term vars
-unload [] fn = fn
-unload ((fc, arg) :: args) fn = unload args (App fc fn arg)
 
 specialiseTy : {vars : _} ->
                Nat -> List (Nat, Term []) -> Term vars -> Term vars
@@ -149,7 +145,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
-             mkRHSargs sc' (IImplicitApp fc app (Just x) (IVar fc (UN a))) as ds
+             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
@@ -159,7 +155,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc False))
              tm' <- unelabNoSugar [] tm
-             mkRHSargs sc' (IImplicitApp fc app (Just x) tm') as ds
+             mkRHSargs sc' (INamedApp fc app x tm') as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
@@ -169,7 +165,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
 
     getRawArgs : List (Maybe Name, RawImp) -> RawImp -> List (Maybe Name, RawImp)
     getRawArgs args (IApp _ f arg) = getRawArgs ((Nothing, arg) :: args) f
-    getRawArgs args (IImplicitApp _ f (Just n) arg)
+    getRawArgs args (INamedApp _ f n arg)
         = getRawArgs ((Just n, arg) :: args) f
     getRawArgs args tm = args
 
@@ -177,7 +173,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     reapply f [] = f
     reapply f ((Nothing, arg) :: args) = reapply (IApp fc f arg) args
     reapply f ((Just t, arg) :: args)
-        = reapply (IImplicitApp fc f (Just t) arg) args
+        = reapply (INamedApp fc f t arg) args
 
     dropArgs : Name -> RawImp -> RawImp
     dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [] tm))
@@ -230,7 +226,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                  = mapMaybe (\ (x, s) => case s of
                                               Dynamic => Nothing
                                               Static t => Just (x, t)) sargs
-           let peapp = unload (dropSpec 0 staticargs stk) (Ref fc Func pename)
+           let peapp = applyWithFC (Ref fc Func pename) (dropSpec 0 staticargs stk)
            Nothing <- lookupCtxtExact pename (gamma defs)
                | Just _ => -- already specialised
                            do log "specialise" 5 $ "Already specialised " ++ show pename
@@ -267,7 +263,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            setFlag fc (Resolved peidx) (PartialEval (specLimits ++ toList reds))
 
            let PMDef pminfo pmargs ct tr pats = definition gdef
-               | _ => pure (unload stk (Ref fc Func fn))
+               | _ => pure (applyWithFC (Ref fc Func fn) stk)
            logC "specialise" 5 $
                    do inpats <- traverse unelabDef pats
                       pure $ "Attempting to specialise:\n" ++
@@ -275,7 +271,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
            Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
                                        sargs staticargs pats
-                | Nothing => pure (unload stk (Ref fc Func fn))
+                | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
            processDecl [InPartialEval] (MkNested []) []
@@ -291,7 +287,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                       "\n" ++ show err
               defs <- get Ctxt
               put Ctxt (record { peFailures $= insert pename () } defs)
-              pure (unload stk (Ref fc Func fn)))
+              pure (applyWithFC (Ref fc Func fn) stk))
   where
     getAllRefs : NameMap Bool -> List ArgMode -> NameMap Bool
     getAllRefs ns (Dynamic :: xs) = getAllRefs ns xs
@@ -301,7 +297,8 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
     updateApp : Name -> RawImp -> RawImp
     updateApp n (IApp fc f a) = IApp fc (updateApp n f) a
-    updateApp n (IImplicitApp fc f m a) = IImplicitApp fc (updateApp n f) m a
+    updateApp n (IAutoApp fc f a) = IAutoApp fc (updateApp n f) a
+    updateApp n (INamedApp fc f m a) = INamedApp fc (updateApp n f) m a
     updateApp n f = IVar fc n
 
     unelabDef : (vs ** (Env Term vs, Term vs, Term vs)) ->
@@ -404,31 +401,31 @@ findSpecs : {vars : _} ->
 findSpecs env stk (Ref fc Func fn)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact fn (gamma defs)
-              | Nothing => pure (unload stk (Ref fc Func fn))
+              | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
          Just r <- specialise fc env gdef fn stk
-              | Nothing => pure (unload stk (Ref fc Func fn))
+              | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
          pure r
 findSpecs env stk (Meta fc n i args)
     = do args' <- traverse (findSpecs env []) args
-         pure $ unload stk (Meta fc n i args')
+         pure $ applyWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
     = do b' <- traverse (findSpecs env []) b
          sc' <- findSpecs (b' :: env) [] sc
-         pure $ unload stk (Bind fc x b' sc')
+         pure $ applyWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [] arg
          findSpecs env ((fc, arg') :: stk) fn
 findSpecs env stk (TDelayed fc r tm)
     = do tm' <- findSpecs env [] tm
-         pure $ unload stk (TDelayed fc r tm')
+         pure $ applyWithFC (TDelayed fc r tm') stk
 findSpecs env stk (TDelay fc r ty tm)
     = do ty' <- findSpecs env [] ty
          tm' <- findSpecs env [] tm
-         pure $ unload stk (TDelay fc r ty' tm')
+         pure $ applyWithFC (TDelay fc r ty' tm') stk
 findSpecs env stk (TForce fc r tm)
     = do tm' <- findSpecs env [] tm
-         pure $ unload stk (TForce fc r tm')
-findSpecs env stk tm = pure $ unload stk tm
+         pure $ applyWithFC (TForce fc r tm') stk
+findSpecs env stk tm = pure $ applyWithFC tm stk
 
 bName : {auto q : Ref QVar Int} -> String -> Core Name
 bName n
@@ -454,6 +451,16 @@ mutual
   quoteArgs q defs bounds env (a :: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
                 !(quoteArgs q defs bounds env args))
+
+  quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
+                    {auto m : Ref MD Metadata} ->
+                    {auto u : Ref UST UState} ->
+                    {bound, free : _} ->
+                    Ref QVar Int -> Defs -> Bounds bound ->
+                    Env Term free -> List (FC, Closure free) ->
+                    Core (List (FC, Term (bound ++ free)))
+  quoteArgsWithFC q defs bounds env terms
+      = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
   quoteHead : {bound, free : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -556,19 +563,19 @@ mutual
   -- reduction) then call specialise. Otherwise, quote as normal
   quoteGenNF q defs bound env (NApp fc (NRef Func fn) args)
       = do Just gdef <- lookupCtxtExact fn (gamma defs)
-                | Nothing => do args' <- quoteArgs q defs bound env args
-                                pure $ apply fc (Ref fc Func fn) args'
+                | Nothing => do args' <- quoteArgsWithFC q defs bound env args
+                                pure $ applyWithFC (Ref fc Func fn) args'
            case specArgs gdef of
-                [] => do args' <- quoteArgs q defs bound env args
-                         pure $ apply fc (Ref fc Func fn) args'
+                [] => do args' <- quoteArgsWithFC q defs bound env args
+                         pure $ applyWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
-                        args' <- quoteArgs q defs bound env args
-                        Just r <- specialise fc (extendEnv bound env) gdef fn (map (\t => (fc, t)) args')
+                        args' <- quoteArgsWithFC q defs bound env args
+                        Just r <- specialise fc (extendEnv bound env) gdef fn args'
                              | Nothing =>
                                   -- can't specialise, keep the arguments
                                   -- unreduced
-                                  do args' <- quoteArgs q empty bound env args
-                                     pure $ apply fc (Ref fc Func fn) args'
+                                  do args' <- quoteArgsWithFC q empty bound env args
+                                     pure $ applyWithFC (Ref fc Func fn) args'
                         pure r
      where
        extendEnv : Bounds bs -> Env Term vs -> Env Term (bs ++ vs)
@@ -579,14 +586,14 @@ mutual
            = Lam fc top Explicit (Erased fc False) :: extendEnv bs env
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
-           args' <- quoteArgs q defs bound env args
-           pure $ apply fc f' args'
+           args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
-      = do args' <- quoteArgs q defs bound env args
-           pure $ apply fc (Ref fc (DataCon t ar) n) args'
+      = do args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
-      = do args' <- quoteArgs q defs bound env args
-           pure $ apply fc (Ref fc (TyCon t ar) n) args'
+      = do args' <- quoteArgsWithFC q defs bound env args
+           pure $ applyWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q defs bound env n
            pat' <- quoteGenNF q defs bound env pat
@@ -607,13 +614,13 @@ mutual
           = MkClosure withHoles locs env tm
       toHolesOnly c = c
   quoteGenNF q defs bound env (NForce fc r arg args)
-      = do args' <- quoteArgs q defs bound env args
+      = do args' <- quoteArgsWithFC q defs bound env args
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ apply fc !(quoteGenNF q defs bound env argNF) args'
+                      pure $ applyWithFC !(quoteGenNF q defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q defs bound env arg
-                        pure $ apply fc (TForce fc r arg') args'
+                        pure $ applyWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc i) = pure $ Erased fc i
   quoteGenNF q defs bound env (NType fc) = pure $ TType fc

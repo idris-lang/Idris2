@@ -12,11 +12,11 @@ import Core.Directory
 import Core.Options
 import Core.TT
 import Core.TTC
-import Utils.Binary
+import Libraries.Utils.Binary
 
 import Data.IOArray
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 
 import System.Directory
@@ -180,8 +180,7 @@ natHackNames
     = [UN "prim__add_Integer",
        UN "prim__sub_Integer",
        UN "prim__mul_Integer",
-       NS preludeNS (UN "natToInteger"),
-       NS preludeNS (UN "integerToNat")]
+       NS typesNS (UN "prim__integerToNat")]
 
 -- Hmm, these dump functions are all very similar aren't they...
 dumpCases : Defs -> String -> List Name ->

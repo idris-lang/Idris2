@@ -5,7 +5,7 @@ import public Parser.Rule.Source
 import public Parser.Unlit
 
 import System.File
-import Utils.Either
+import Libraries.Utils.Either
 
 %default total
 

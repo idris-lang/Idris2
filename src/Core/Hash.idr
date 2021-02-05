@@ -5,7 +5,9 @@ import Core.TT
 
 import Data.List
 import Data.List1
+import Libraries.Data.List.Lazy
 import Data.Strings
+import Libraries.Data.String.Iterator
 
 %default covering
 
@@ -47,7 +49,7 @@ Hashable a => Hashable (List a) where
 
 export
 Hashable a => Hashable (List1 a) where
-  hashWithSalt h (x ::: xs) = hashWithSalt (h * 33 + hash x) xs
+  hashWithSalt h xxs = hashWithSalt (h * 33 + hash (head xxs)) (tail xxs)
 
 export
 Hashable a => Hashable (Maybe a) where
@@ -56,15 +58,7 @@ Hashable a => Hashable (Maybe a) where
 
 export
 Hashable String where
-  hashWithSalt h str = hashChars h 0 (cast (length str)) str
-    where
-      hashChars : Int -> Int -> Int -> String -> Int
-      hashChars h p len str
-          = assert_total $
-              if p == len
-                 then h
-                 else hashChars (h * 33 + cast (strIndex str p))
-                                (p + 1) len str
+  hashWithSalt h = String.Iterator.foldl hashWithSalt h
 
 export
 Hashable Namespace where

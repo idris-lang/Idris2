@@ -10,10 +10,10 @@ import Idris.Syntax
 
 import TTImp.TTImp
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 
 -- Add a doc string for a name in the current namespace
@@ -87,14 +87,13 @@ getDocsFor fc n
              ty <- normaliseHoles defs [] (type def)
              pure (Just (indent (show !(resugar [] ty) ++ "\n")))
 
-    getMethDoc : (Name, RigCount, Maybe TotalReq, Bool, RawImp) ->
-                 Core (Maybe String)
-    getMethDoc (n, c, tot, _, ty)
+    getMethDoc : Method -> Core (Maybe String)
+    getMethDoc meth
         = do syn <- get Syn
-             let [(n, str)] = lookupName n (docstrings syn)
+             let [(n, str)] = lookupName meth.name (docstrings syn)
                   | _ => pure Nothing
-             pure (Just (nameRoot n ++ " : " ++ show !(pterm ty)
-                          ++ maybe "" (\t => "\n" ++ show t) tot
+             pure (Just (nameRoot meth.name ++ " : " ++ show !(pterm meth.type)
+                          ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
                           ++ "\n" ++ indent str))
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
@@ -188,5 +187,5 @@ getContents ns
              pure (visibility def /= Private)
 
     inNS : Name -> Bool
-    inNS (NS xns (UN _)) = xns == ns
+    inNS (NS xns (UN _)) = ns `isParentOf` xns
     inNS _ = False

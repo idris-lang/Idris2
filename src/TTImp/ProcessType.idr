@@ -19,7 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -32,30 +32,36 @@ getRetTy defs ty
              "Can only add hints for concrete return types")
 
 processFnOpt : {auto c : Ref Ctxt Defs} ->
-               FC -> Name -> FnOpt -> Core ()
-processFnOpt fc ndef Inline
+               FC -> Bool -> -- ^ top level name?
+               Name -> FnOpt -> Core ()
+processFnOpt fc _ ndef Inline
     = setFlag fc ndef Inline
-processFnOpt fc ndef TCInline
+processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
-processFnOpt fc ndef (Hint d)
+processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
-processFnOpt fc ndef (GlobalHint a)
+processFnOpt fc _ ndef (Hint d)
+    = do log "elab" 5 $ "Adding local hint " ++ show !(toFullNames ndef)
+         addLocalHint ndef
+processFnOpt fc True ndef (GlobalHint a)
     = addGlobalHint ndef a
-processFnOpt fc ndef ExternFn
+processFnOpt fc _ ndef (GlobalHint a)
+    = throw (GenericMsg fc "%globalhint is not valid in local definitions")
+processFnOpt fc _ ndef ExternFn
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
-processFnOpt fc ndef (ForeignFn _)
+processFnOpt fc _ ndef (ForeignFn _)
     = setFlag fc ndef Inline -- if externally defined, inline when compiling
-processFnOpt fc ndef Invertible
+processFnOpt fc _ ndef Invertible
     = setFlag fc ndef Invertible
-processFnOpt fc ndef (Totality tot)
+processFnOpt fc _ ndef (Totality tot)
     = setFlag fc ndef (SetTotal tot)
-processFnOpt fc ndef Macro
+processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
-processFnOpt fc ndef (SpecArgs ns)
+processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => throw (UndefinedName fc ndef)
@@ -113,17 +119,17 @@ processFnOpt fc ndef (SpecArgs ns)
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
-               ns' <- getDepsArgs False !(traverse (evalClosure defs) args) ns
+               ns' <- getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
                pure (insert n inparam ns')
       getDeps inparam (NDCon _ n t a args) ns
           = do defs <- get Ctxt
-               getDepsArgs False !(traverse (evalClosure defs) args) ns
+               getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
       getDeps inparam (NTCon _ n t a args) ns
           = do defs <- get Ctxt
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params args
+               let (ps, ds) = splitPs 0 params (map snd args)
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
@@ -227,10 +233,10 @@ findInferrable defs ty = fi 0 0 [] [] ty
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (p :: acc)
       findInf acc pos (NDCon _ _ _ _ args)
-          = do args' <- traverse (evalClosure defs) args
+          = do args' <- traverse (evalClosure defs . snd) args
                findInfs acc pos args'
       findInf acc pos (NTCon _ _ _ _ args)
-          = do args' <- traverse (evalClosure defs) args
+          = do args' <- traverse (evalClosure defs . snd) args
                findInfs acc pos args'
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
@@ -256,7 +262,7 @@ processType : {vars : _} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
-processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
+processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_raw)
     = do n <- inCurrentNS n_in
 
          log "declare.type" 1 $ "Processing " ++ show n
@@ -296,14 +302,21 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          let name = Resolved idx
-         traverse (processFnOpt fc name) opts
+         let isNested : Name -> Bool
+             isNested (Nested _ _) = True
+             isNested (NS _ n) = isNested n
+             isNested _ = False
+         let nested = not (isNested n)
+         traverse (processFnOpt fc (not (isNested n)) name) opts
          -- If no function-specific totality pragma has been used, attach the default totality
          unless (any isTotalityReq opts) $
            setFlag fc name (SetTotal !getDefaultTotalityOption)
 
          -- Add to the interactive editing metadata
          addTyDecl fc (Resolved idx) env ty -- for definition generation
-         addNameType fc (Resolved idx) env ty -- for looking up types
+
+         log "metadata.names" 7 $ "processType is adding ↓"
+         addNameType nameFC (Resolved idx) env ty -- for looking up types
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n

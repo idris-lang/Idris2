@@ -101,7 +101,7 @@ yields:
     plus_commutes (S k) m = ?plus_commutes_S
 
 That is, the hole has been filled with a call to a top level
-function ``plus_commutes_Z``, applied to the variable in scope ``m``. 
+function ``plus_commutes_Z``, applied to the variable in scope ``m``.
 
 Unfortunately, we cannot prove this lemma directly, since ``plus`` is
 defined by matching on its *first* argument, and here ``plus m Z`` has a
@@ -113,14 +113,14 @@ First, create a template definition with ``\d``:
 
 .. code-block:: idris
 
-    plus_commutes_Z : (m : Nat) -> m = plus m Z 
+    plus_commutes_Z : (m : Nat) -> m = plus m Z
     plus_commutes_Z m = ?plus_commutes_Z_rhs
 
 Now, case split on ``m`` with ``\c``:
 
 .. code-block:: idris
 
-    plus_commutes_Z : (m : Nat) -> m = plus m Z 
+    plus_commutes_Z : (m : Nat) -> m = plus m Z
     plus_commutes_Z Z = ?plus_commutes_Z_rhs_1
     plus_commutes_Z (S k) = ?plus_commutes_Z_rhs_2
 

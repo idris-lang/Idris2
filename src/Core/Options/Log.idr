@@ -3,11 +3,11 @@ module Core.Options.Log
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.StringMap
-import Data.StringTrie
+import Libraries.Data.StringMap
+import Libraries.Data.StringTrie
 import Data.Strings
 import Data.These
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total
 
@@ -93,10 +93,13 @@ Pretty LogLevel where
 export
 parseLogLevel : String -> Maybe LogLevel
 parseLogLevel str = do
-  (c, n) <- case split (== ':') str of
-             n ::: [] => pure (MkLogLevel [], n)
-             ps ::: [n] => pure (mkLogLevel ps, n)
-             _ => Nothing
+  (c, n) <- let nns = split (== ':') str
+                n = head nns
+                ns = tail nns in
+                case ns of
+                     [] => pure (MkLogLevel [], n)
+                     [ns] => pure (mkLogLevel n, ns)
+                     _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
 
@@ -116,7 +119,7 @@ defaultLogLevel = singleton [] 0
 
 export
 insertLogLevel : LogLevel -> LogLevels -> LogLevels
-insertLogLevel (MkLogLevel ps n) = insertWith ps (maybe n (max n))
+insertLogLevel (MkLogLevel ps n) = insert ps n
 
 ----------------------------------------------------------------------------------
 -- CHECKING WHETHER TO LOG

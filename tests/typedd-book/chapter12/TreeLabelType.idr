@@ -57,4 +57,3 @@ treeLabelWith (Node left val right)
 
 treeLabel : Tree a -> Tree (Integer, a)
 treeLabel tree = fst (runState (treeLabelWith tree) [1..])
-

@@ -10,12 +10,12 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
-import Utils.Binary
+import Libraries.Utils.Binary
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -89,13 +89,23 @@ record UState where
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
                 -- 'Nat' is the priority (lowest first)
-                -- The 'Int' is the resolved name. Delays can't be nested,
-                -- so we just process them in order.
+                -- The 'Int' is the resolved name.
   logging : Bool
 
 export
 initUState : UState
-initUState = MkUState empty empty empty empty empty [] 0 0 [] False
+initUState = MkUState
+  { holes = empty
+  , guesses = empty
+  , currentHoles = empty
+  , delayedHoles = empty
+  , constraints = empty
+  , dotConstraints = []
+  , nextName = 0
+  , nextConstraint = 0
+  , delayedElab = []
+  , logging = False
+  }
 
 export
 data UST : Type where
@@ -125,6 +135,7 @@ genMVName : {auto c : Ref Ctxt Defs} ->
             Name -> Core Name
 genMVName (UN str) = genName str
 genMVName (MN str _) = genName str
+genMVName (RF str) = genName str
 genMVName n
     = do ust <- get UST
          put UST (record { nextName $= (+1) } ust)
@@ -479,7 +490,7 @@ newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
          let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
          log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
-         logTermNF "unify.search" 10 "New search type" env ty
+         logTermNF "unify.search" 10 "New search type" [] hty
          idx <- addDef n hole
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)

@@ -27,7 +27,7 @@ mutual
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
        ILam : FC -> Count -> PiInfo TTImp -> Maybe Name ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-       ILet : FC -> Count -> Name ->
+       ILet : FC -> (lhsFC : FC) -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
        ICase : FC -> TTImp -> (ty : TTImp) ->
@@ -36,7 +36,8 @@ mutual
        IUpdate : FC -> List IFieldUpdate -> TTImp -> TTImp
 
        IApp : FC -> TTImp -> TTImp -> TTImp
-       IImplicitApp : FC -> TTImp -> Maybe Name -> TTImp -> TTImp
+       INamedApp : FC -> TTImp -> Name -> TTImp -> TTImp
+       IAutoApp : FC -> TTImp -> TTImp -> TTImp
        IWithApp : FC -> TTImp -> TTImp -> TTImp
 
        ISearch : FC -> (depth : Nat) -> TTImp
@@ -49,7 +50,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> TTImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> TTImp -> TTImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> TTImp -> TTImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> TTImp -> TTImp
@@ -100,13 +101,13 @@ mutual
        ForeignFn : List TTImp -> FnOpt
        -- assume safe to cancel arguments in unification
        Invertible : FnOpt
-       Totalty : TotalReq -> FnOpt
+       Totality : TotalReq -> FnOpt
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
 
   public export
   data ITy : Type where
-       MkTy : FC -> (n : Name) -> (ty : TTImp) -> ITy
+       MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
 
   public export
   data DataOpt : Type where
@@ -152,6 +153,6 @@ mutual
        IParameters : FC -> List (Name, TTImp) ->
                      List Decl -> Decl
        IRecord : FC -> Visibility -> Record -> Decl
-       INamespace : FC -> List String -> List Decl -> Decl
+       INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        ILog : Nat -> Decl

@@ -11,15 +11,17 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -30,7 +32,7 @@ import System.Info
 
 pathLookup : IO String
 pathLookup
-    = do path <- getEnv "PATH"
+    = do path <- idrisGetEnv "PATH"
          let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
@@ -39,7 +41,7 @@ pathLookup
 
 findChez : IO String
 findChez
-    = do Just chez <- getEnv "CHEZ" | Nothing => pathLookup
+    = do Just chez <- idrisGetEnv "CHEZ" | Nothing => pathLookup
          pure chez
 
 -- Given the chez compiler directives, return a list of pairs of:
@@ -156,6 +158,9 @@ mutual
       = do p' <- schExp chezExtPrim chezString 0 p
            c' <- schExp chezExtPrim chezString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+  chezExtPrim i MakeFuture [_, work]
+      = do work' <- schExp chezExtPrim chezString 0 work
+           pure $ "(blodwen-make-future " ++ work' ++ ")"
   chezExtPrim i prim args
       = schExtCommon chezExtPrim chezString i prim args
 
@@ -347,7 +352,7 @@ startChez appdir target = unlines
     , "        ;;                    "
     , "esac                          "
     , ""
-    , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
+    , "export LD_LIBRARY_PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
     , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
     ]
 

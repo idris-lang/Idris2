@@ -1,4 +1,4 @@
-name: macOS
+name: macOS Chez
 on:
   push:
     branches:
@@ -8,8 +8,12 @@ on:
   pull_request:
     branches:
       - master
+
 env:
   SCHEME: chez
+  IDRIS2_TESTS_CG: chez
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
 jobs:
   build:
     runs-on: macos-latest
@@ -21,9 +25,12 @@ jobs:
           brew install chezscheme
           brew install coreutils
           echo "::add-path::$HOME/.idris2/bin"
-      - name: Build and test Idris 2 from bootstrap
-        run: make bootstrap && make install
+      - name: Build Idris 2 from bootstrap
+        run: make bootstrap && make install && make clean
         shell: bash
-      - name: Build and test self-hosted
-        run: make clean && make all && make test INTERACTIVE=''
+      - name: Build self-hosted
+        run: make all && make install
+        shell: bash
+      - name: Test self-hosted
+        run: make test INTERACTIVE=''
         shell: bash

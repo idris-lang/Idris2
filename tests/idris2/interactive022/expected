@@ -1,0 +1,6 @@
+1/1: Building TypeAtBangSyntax (TypeAtBangSyntax.idr)
+Main> xs : List a
+Main> j : b -> List c
+Main> g : a -> List b
+Main> a : a
+Main> Bye for now!

@@ -15,6 +15,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Data.Maybe
 
 %default covering
 
@@ -39,12 +40,12 @@ applyImp f [] = f
 applyImp f ((Nothing, arg) :: xs)
     = applyImp (IApp (getFC f) f arg) xs
 applyImp f ((Just n, arg) :: xs)
-    = applyImp (IImplicitApp (getFC f) f (Just n) arg) xs
+    = applyImp (INamedApp (getFC f) f n arg) xs
 
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
-    = (mn, IAs loc UseRight (UN n) (Implicit loc True))
-toLHS' loc (Field mn n _) = (mn, IBindVar loc n)
+    = (mn, IAs loc EmptyFC UseRight (UN n) (Implicit loc True))
+toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
 toLHS' loc (Constr mn con args)
     = let args' = map (\a => toLHS' loc (snd a)) args in
           (mn, applyImp (IVar loc con) args')
@@ -128,7 +129,7 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
              -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar loc (UN fldn))
+             let arg = maybe (IVar EmptyFC (UN fldn))
                              (const (Implicit loc False))
                              imp
              pure ((p, Field imp fldn arg) :: args')
@@ -153,11 +154,7 @@ getSides loc (ISetField path val) tyn orig rec
    -- then set the path on the rhs to 'val'
    = findPath loc path path (Just tyn) (const val) rec
 getSides loc (ISetFieldApp path val) tyn orig rec
-   = findPath loc path path (Just tyn) (\n => apply val [IVar loc (UN n)]) rec
- where
-   get : List String -> RawImp -> RawImp
-   get [] rec = rec
-   get (p :: ps) rec = get ps (IApp loc (IVar loc (UN p)) rec)
+   = findPath loc path path (Just tyn) (\n => apply val [IVar EmptyFC (UN n)]) rec
 
 getAllSides : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -220,7 +217,7 @@ checkUpdate rig elabinfo nest env fc upds rec expected
                                pure ty
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          delayOnFailure fc rig env recty needType 5 $
            \delayed =>
              do solveConstraints solvemode Normal

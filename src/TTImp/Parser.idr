@@ -7,7 +7,7 @@ import Core.TT
 import Parser.Source
 import TTImp.TTImp
 
-import public Text.Parser
+import public Libraries.Text.Parser
 import        Data.List
 import        Data.List.Views
 import        Data.List1
@@ -155,8 +155,10 @@ mutual
       applyExpImp start end f [] = f
       applyExpImp start end f (Left exp :: args)
           = applyExpImp start end (IApp (MkFC fname start end) f exp) args
-      applyExpImp start end f (Right (n, imp) :: args)
-          = applyExpImp start end (IImplicitApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Just n, imp) :: args)
+          = applyExpImp start end (INamedApp (MkFC fname start end) f n imp) args
+      applyExpImp start end f (Right (Nothing, imp) :: args)
+          = applyExpImp start end (IAutoApp (MkFC fname start end) f imp) args
 
   argExpr : FileName -> IndentInfo ->
             Rule (Either RawImp (Maybe Name, RawImp))
@@ -191,10 +193,11 @@ mutual
   as fname indents
       = do start <- location
            x <- unqualifiedName
+           nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
            end <- location
-           pure (IAs (MkFC fname start end) UseRight (UN x) pat)
+           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
 
   simpleExpr : FileName -> IndentInfo -> Rule RawImp
   simpleExpr fname indents
@@ -338,7 +341,7 @@ mutual
            keyword "let"
            rigc <- multiplicity
            rig <- getMult rigc
-           n <- name
+           n <- bounds name
            symbol "="
            commit
            val <- expr fname indents
@@ -347,7 +350,7 @@ mutual
            scope <- typeExpr fname indents
            end <- location
            pure (let fc = MkFC fname start end in
-                     ILet fc rig n (Implicit fc False) val scope)
+                     ILet fc (boundToFC fname n) rig n.val (Implicit fc False) val scope)
     <|> do start <- location
            keyword "let"
            ds <- block (topDecl fname)
@@ -478,11 +481,12 @@ tyDecl : FileName -> IndentInfo -> Rule ImpTy
 tyDecl fname indents
     = do start <- location
          n <- name
+         nameEnd <- location
          symbol ":"
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) n ty)
+         pure (MkImpTy (MkFC fname start end) (MkFC fname start nameEnd) n ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->
@@ -504,7 +508,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval [] (map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -515,7 +519,8 @@ mutual
       getFn : RawImp -> SourceEmptyRule Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f a) = getFn f
-      getFn (IImplicitApp _ f _ a) = getFn f
+      getFn (IAutoApp _ f a) = getFn f
+      getFn (INamedApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
 
   clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)
@@ -644,14 +649,20 @@ namespaceDecl
          commit
          namespaceId
 
+logLevel : Rule (Maybe (List String, Nat))
+logLevel
+  = (Nothing <$ exactIdent "off")
+    <|> do topic <- option [] ((::) <$> unqualifiedName <*> many aDotIdent)
+           lvl <- intLit
+           pure (Just (topic, fromInteger lvl))
+
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
-         topic <- ((::) <$> unqualifiedName <*> many aDotIdent)
-         lvl <- intLit
+         lvl <- logLevel
          atEnd indents
-         pure (ILog (topic, integerToNat lvl))
+         pure (ILog lvl)
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit
@@ -683,7 +694,7 @@ topDecl fname indents
          ns <- namespaceDecl
          ds <- assert_total (nonEmptyBlock (topDecl fname))
          end <- location
-         pure (INamespace (MkFC fname start end) ns ds)
+         pure (INamespace (MkFC fname start end) ns (forget ds))
   <|> do start <- location
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
@@ -723,7 +734,7 @@ export
 prog : FileName -> Rule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
-         pure (collectDefs ds)
+         pure (collectDefs $ forget ds)
 
 -- TTImp REPL commands
 export

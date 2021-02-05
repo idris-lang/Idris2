@@ -1,7 +1,11 @@
 module Data.List.Quantifiers
 
+import Data.DPair
+
 import Data.List
 import Data.List.Elem
+
+%default total
 
 ||| A proof that some element of a list satisfies some property
 |||
@@ -84,3 +88,29 @@ export
 mapProperty : (f : {0 x : a} -> p x -> q x) -> All p l -> All q l
 mapProperty f [] = []
 mapProperty f (p::pl) = f p :: mapProperty f pl
+
+--- Relations between listwise `All` and elementwise `Subset` ---
+
+||| Push in the property from the list level with element level
+public export
+pushIn : (xs : List a) -> (0 _ : All p xs) -> List $ Subset a p
+pushIn []      []      = []
+pushIn (x::xs) (p::ps) = Element x p :: pushIn xs ps
+
+||| Pull the elementwise property out to the list level
+public export
+pullOut : (xs : List $ Subset a p) -> Subset (List a) (All p)
+pullOut [] = Element [] []
+pullOut (Element x p :: xs) = let Element ss ps = pullOut xs in Element (x::ss) (p::ps)
+
+export
+pushInOutInverse : (xs : List a) -> (0 prf : All p xs) -> pullOut (pushIn xs prf) = Element xs prf
+pushInOutInverse [] [] = Refl
+pushInOutInverse (x::xs) (p::ps) = rewrite pushInOutInverse xs ps in Refl
+
+export
+pushOutInInverse : (xs : List $ Subset a p) -> uncurry Quantifiers.pushIn (pullOut xs) = xs
+pushOutInInverse [] = Refl
+pushOutInInverse (Element x p :: xs) with (pushOutInInverse xs)
+  pushOutInInverse (Element x p :: xs) | subprf with (pullOut xs)
+    pushOutInInverse (Element x p :: xs) | subprf | Element ss ps = rewrite subprf in Refl

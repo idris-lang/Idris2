@@ -15,7 +15,7 @@ freeThing : AnyPtr -> IO ()
 freeThing t = primIO (prim__freeThing t)
 
 doThings : IO ()
-doThings 
+doThings
      = do xp <- mkThing
           yp <- mkThing
 

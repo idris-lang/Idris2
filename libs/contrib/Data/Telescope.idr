@@ -6,10 +6,10 @@
 ||| seem to be crucial to get a compositional account. Here we use
 ||| them to get 'n-ary dependent function' (compare with `Data.Fun`
 ||| and `Data.Rel`).
-||| 
-||| I've learned this from Conor McBride on an SPLV'19 bus ride. 
+|||
+||| I've learned this from Conor McBride on an SPLV'19 bus ride.
 ||| A literary reference would be welcome. This paper is a start:
-||| Unifiers as Equivalences: Proof-Relevant Unification of Dependently Typed Data. 
+||| Unifiers as Equivalences: Proof-Relevant Unification of Dependently Typed Data.
 ||| Jesper Cockx, Dominique Devriese, Frank Piessens, ICFP'16.
 ||| but they don't seem to have segments and their left action on contexts.
 module Data.Telescope

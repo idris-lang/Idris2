@@ -105,4 +105,3 @@ is ``NoThrow`` or ``MayThrow``. But, in practice, all applications
 given to ``run`` will not throw at the top level, because the only
 exception type available is the empty type ``Void``. Any exceptions
 will have been introduced and handled inside the ``App``.
-

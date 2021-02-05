@@ -1,0 +1,7 @@
+:let x : String
+:let x = "foo"
+:exec putStrLn x
+:exec putStrLn x
+"bar"
+:exec putStrLn it
+:q

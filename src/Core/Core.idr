@@ -7,8 +7,8 @@ import Data.List
 import Data.List1
 import Data.Vect
 import Parser.Source
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Data.IORef
 import System
@@ -95,8 +95,8 @@ data Error : Type where
      NotRecordField : FC -> String -> Maybe Name -> Error
      NotRecordType : FC -> Name -> Error
      IncompatibleFieldUpdate : FC -> List String -> Error
-     InvalidImplicits : {vars : _} ->
-                        FC -> Env Term vars -> List (Maybe Name) -> Term vars -> Error
+     InvalidArgs : {vars : _} ->
+                        FC -> Env Term vars -> List Name -> Term vars -> Error
      TryWithImplicits : {vars : _} ->
                         FC -> Env Term vars -> List (Name, Term vars) -> Error
      BadUnboundImplicit : {vars : _} ->
@@ -242,8 +242,8 @@ Show Error where
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
       = show fc ++ ":Field update " ++ showSep "->" flds ++ " not compatible with other updates"
-  show (InvalidImplicits fc env ns tm)
-     = show fc ++ ":" ++ show ns ++ " are not valid implicit arguments in " ++ show tm
+  show (InvalidArgs fc env ns tm)
+     = show fc ++ ":" ++ show ns ++ " are not valid arguments in " ++ show tm
   show (TryWithImplicits fc env imps)
      = show fc ++ ":Need to bind implicits "
           ++ showSep "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
@@ -348,7 +348,7 @@ getErrorLoc (RecordTypeNeeded loc _) = Just loc
 getErrorLoc (NotRecordField loc _ _) = Just loc
 getErrorLoc (NotRecordType loc _) = Just loc
 getErrorLoc (IncompatibleFieldUpdate loc _) = Just loc
-getErrorLoc (InvalidImplicits loc _ _ _) = Just loc
+getErrorLoc (InvalidArgs loc _ _ _) = Just loc
 getErrorLoc (TryWithImplicits loc _ _) = Just loc
 getErrorLoc (BadUnboundImplicit loc _ _ _) = Just loc
 getErrorLoc (CantSolveGoal loc _ _) = Just loc
@@ -438,6 +438,10 @@ export %inline
 (<$>) : (a -> b) -> Core a -> Core b
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
+export %inline
+ignore : Core a -> Core ()
+ignore = map (\ _ => ())
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
@@ -462,6 +466,14 @@ export
 (<*>) : Core (a -> b) -> Core a -> Core b
 (<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
 
+export
+(*>) : Core a -> Core b -> Core b
+(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
+
+export
+(<*) : Core a -> Core b -> Core a
+(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
+
 export %inline
 when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
@@ -471,11 +483,16 @@ export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
 unless = when . not
 
+export %inline
+whenJust : Maybe a -> (a -> Core ()) -> Core ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export
-interface Catchable (m : Type -> Type) t | m where
-    throw : t -> m a
+interface Catchable m t | m where
+    throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
 export
@@ -493,23 +510,37 @@ traverse' f [] acc = pure (reverse acc)
 traverse' f (x :: xs) acc
     = traverse' f xs (!(f x) :: acc)
 
+%inline
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+%inline
+export
+for : List a -> (a -> Core b) -> Core (List b)
+for = flip traverse
+
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f (x ::: xs) = [| f x ::: traverse f xs |]
+traverseList1 f xxs
+    = let x = head xxs
+          xs = tail xxs in
+          [| f x ::: traverse f xs |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
 
+%inline
 export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
 traverseOpt f (Just x) = map Just (f x)
+
+export
+traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
+traversePair f (w, a) = (w,) <$> f a
 
 export
 traverse_ : (a -> Core b) -> List a -> Core ()
@@ -518,11 +549,23 @@ traverse_ f (x :: xs)
     = do f x
          traverse_ f xs
 
+%inline
+export
+sequence : List (Core a) -> Core (List a)
+sequence (x :: xs)
+   = do
+        x' <- x
+        xs' <- sequence xs
+        pure (x' :: xs')
+sequence [] = pure []
+
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f (x ::: xs) = do
-  f x
-  traverse_ f xs
+traverseList1_ f xxs
+    = do let x = head xxs
+         let xs = tail xxs
+         f x
+         traverse_ f xs
 
 namespace PiInfo
   export
@@ -605,6 +648,12 @@ get x {ref = MkRef io} = coreLift (readIORef io)
 export %inline
 put : (x : label) -> {auto ref : Ref x a} -> a -> Core ()
 put x {ref = MkRef io} val = coreLift (writeIORef io val)
+
+export %inline
+update : (x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
+update x f
+  = do v <- get x
+       put x (f v)
 
 export
 cond : List (Lazy Bool, Lazy a) -> a -> a

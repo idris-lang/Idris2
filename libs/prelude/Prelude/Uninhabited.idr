@@ -36,4 +36,3 @@ Uninhabited (True = False) where
 public export
 Uninhabited (False = True) where
   uninhabited Refl impossible
-

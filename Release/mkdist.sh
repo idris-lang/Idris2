@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ $# -eq 0 ]
   then
     echo "No version number supplied"
@@ -17,7 +19,7 @@ git checkout tags/v$1
 rm -rf .git
 rm -rf .github
 rm .git*
-rm .travis*
+rm -f .travis*
 rm -rf Release
 find . -type f -name '.gitignore' -exec rm -f {} \;
 

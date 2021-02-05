@@ -28,7 +28,7 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 
@@ -506,7 +506,7 @@ searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ [xty, yty]) target
+    findPos defs prf f x@(NTCon pfc pn _ _ [(fc1, xty), (fc2, yty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -522,17 +522,17 @@ searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => apply fc (Ref fc Func fname)
-                                                          [xtytm,
-                                                           ytytm,
-                                                           f arg])
+                                         (\arg => applyWithFC (Ref fc Func fname)
+                                                          [(fc1, xtytm),
+                                                           (fc2, ytytm),
+                                                           (fc, f arg)])
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => apply fc (Ref fc Func sname)
-                                                          [xtytm,
-                                                           ytytm,
-                                                           f arg])
+                                           (\arg => applyWithFC (Ref fc Func sname)
+                                                          [(fc1, xtytm),
+                                                           (fc2, ytytm),
+                                                           (fc, f arg)])
                                            ytynf target)]
                          else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target

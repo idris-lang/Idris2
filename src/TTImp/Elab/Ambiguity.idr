@@ -14,9 +14,9 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
-import Data.StringMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -97,8 +97,10 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     buildAlt f [] = f
     buildAlt f ((fc', Nothing, a) :: as)
         = buildAlt (IApp fc' f a) as
-    buildAlt f ((fc', Just i, a) :: as)
-        = buildAlt (IImplicitApp fc' f i a) as
+    buildAlt f ((fc', Just Nothing, a) :: as)
+        = buildAlt (IAutoApp fc' f a) as
+    buildAlt f ((fc', Just (Just i), a) :: as)
+        = buildAlt (INamedApp fc' f i a) as
 
     isPrimName : List Name -> Name -> Bool
     isPrimName [] fn = False
@@ -144,9 +146,12 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 expandAmbigName mode nest env orig args (IApp fc f a) exp
     = expandAmbigName mode nest env orig
                       ((fc, Nothing, a) :: args) f exp
-expandAmbigName mode nest env orig args (IImplicitApp fc f n a) exp
+expandAmbigName mode nest env orig args (INamedApp fc f n a) exp
     = expandAmbigName mode nest env orig
-                      ((fc, Just n, a) :: args) f exp
+                      ((fc, Just (Just n), a) :: args) f exp
+expandAmbigName mode nest env orig args (IAutoApp fc f a) exp
+    = expandAmbigName mode nest env orig
+                      ((fc, Just Nothing, a) :: args) f exp
 expandAmbigName elabmode nest env orig args tm exp
     = do log "elab.ambiguous" 10 $ "No ambiguity " ++ show orig
          pure orig
@@ -199,12 +204,12 @@ mutual
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
-           then do amatch <- mightMatchArgs defs args args'
+           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
       = if t == t'
-           then do amatch <- mightMatchArgs defs args args'
+           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
@@ -315,7 +320,8 @@ checkAmbigDepth fc info
 getName : RawImp -> Maybe Name
 getName (IVar _ n) = Just n
 getName (IApp _ f _) = getName f
-getName (IImplicitApp _ f _ _) = getName f
+getName (INamedApp _ f _ _) = getName f
+getName (IAutoApp _ f _) = getName f
 getName _ = Nothing
 
 export
@@ -343,7 +349,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
-                              _ => inTermP False
+                              _ => inTerm
          delayOnFailure fc rig env expected ambiguous 5 $
              \delayed =>
                do solveConstraints solvemode Normal
@@ -393,7 +399,7 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
                                       InLHS c => inLHS
-                                      _ => inTermP False
+                                      _ => inTerm
                 delayOnFailure fc rig env expected ambiguous 5 $
                      \delayed =>
                        do defs <- get Ctxt

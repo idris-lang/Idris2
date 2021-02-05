@@ -1,5 +1,7 @@
 module Data.List1
 
+import public Data.Zippable
+
 %default total
 
 infixr 7 :::
@@ -10,17 +12,19 @@ record List1 a where
   head : a
   tail : List a
 
+%name List1 xs, ys, zs
+
 ------------------------------------------------------------------------
 -- Conversion
 
 ||| Forget that a list is non-empty
 public export
-forget : (1 xs : List1 a) -> List a
+forget : (xs : List1 a) -> List a
 forget (x ::: xs) = x :: xs
 
 ||| Check whether a list is non-empty
 export
-fromList : (1 xs : List a) -> Maybe (List1 a)
+fromList : (xs : List a) -> Maybe (List1 a)
 fromList [] = Nothing
 fromList (x :: xs) = Just (x ::: xs)
 
@@ -28,7 +32,7 @@ fromList (x :: xs) = Just (x ::: xs)
 -- Basic functions
 
 public export
-singleton : (1 x : a) -> List1 a
+singleton : (x : a) -> List1 a
 singleton a = a ::: []
 
 export
@@ -59,15 +63,15 @@ foldl1 n c (x ::: xs) = foldl c (n x) xs
 -- Append
 
 export
-appendl : (1 xs : List1 a) -> (1 ys : List a) -> List1 a
+appendl : (xs : List1 a) -> (ys : List a) -> List1 a
 appendl (x ::: xs) ys = x ::: xs ++ ys
 
 export
-append : (1 xs, ys : List1 a) -> List1 a
+append : (xs, ys : List1 a) -> List1 a
 append xs ys = appendl xs (forget ys)
 
 export
-lappend : (1 xs : List a) -> (1 ys : List1 a) -> List1 a
+lappend : (xs : List a) -> (ys : List1 a) -> List1 a
 lappend [] ys = ys
 lappend (x :: xs) ys = append (x ::: xs) ys
 
@@ -75,23 +79,23 @@ lappend (x :: xs) ys = append (x ::: xs) ys
 -- Cons/Snoc
 
 public export
-cons : (1 x : a) -> (1 xs : List1 a) -> List1 a
+cons : (x : a) -> (xs : List1 a) -> List1 a
 cons x xs = x ::: forget xs
 
 export
-snoc : (1 xs : List1 a) -> (1 x : a) -> List1 a
+snoc : (xs : List1 a) -> (x : a) -> List1 a
 snoc xs x = append xs (singleton x)
 
 ------------------------------------------------------------------------
 -- Reverse
 
 public export
-reverseOnto : (1 acc : List1 a) -> (1 xs : List a) -> List1 a
+reverseOnto : (acc : List1 a) -> (xs : List a) -> List1 a
 reverseOnto acc [] = acc
 reverseOnto acc (x :: xs) = reverseOnto (x ::: forget acc) xs
 
 public export
-reverse : (1 xs : List1 a) -> List1 a
+reverse : (xs : List1 a) -> List1 a
 reverse (x ::: xs) = reverseOnto (singleton x) xs
 
 ------------------------------------------------------------------------
@@ -117,6 +121,11 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  null _ = False
+
+export
+Traversable List1 where
+  traverse f (x ::: xs) = [| f x ::: traverse f xs |]
 
 export
 Show a => Show (List1 a) where
@@ -136,3 +145,43 @@ Ord a => Ord (List1 a) where
 export
 consInjective : the (List1 a) (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+------------------------------------------------------------------------
+-- Zippable
+
+export
+Zippable List1 where
+  zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
+  where
+      zipWith' : List a -> List b -> List c
+      zipWith' [] _ = []
+      zipWith' _ [] = []
+      zipWith' (x :: xs) (y :: ys) = f x y :: zipWith' xs ys
+
+  zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) = f x y z ::: zipWith3' xs ys zs
+    where
+      zipWith3' : List a -> List b -> List c -> List d
+      zipWith3' [] _ _ = []
+      zipWith3' _ [] _ = []
+      zipWith3' _ _ [] = []
+      zipWith3' (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3' xs ys zs
+
+  unzipWith f (x ::: xs) = let (b, c) = f x
+                               (bs, cs) = unzipWith' xs in
+                               (b ::: bs, c ::: cs)
+    where
+      unzipWith' : List a -> (List b, List c)
+      unzipWith' [] = ([], [])
+      unzipWith' (x :: xs) = let (b, c) = f x
+                                 (bs, cs) = unzipWith' xs in
+                                 (b :: bs, c :: cs)
+
+  unzipWith3 f (x ::: xs) = let (b, c, d) = f x
+                                (bs, cs, ds) = unzipWith3' xs in
+                                (b ::: bs, c ::: cs, d ::: ds)
+    where
+      unzipWith3' : List a -> (List b, List c, List d)
+      unzipWith3' [] = ([], [], [])
+      unzipWith3' (x :: xs) = let (b, c, d) = f x
+                                  (bs, cs, ds) = unzipWith3' xs in
+                                  (b :: bs, c :: cs, d :: ds)

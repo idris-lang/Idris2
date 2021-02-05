@@ -69,9 +69,9 @@ export
 shiftR : Int -> Int -> Int
 shiftR = prim__shr_Int
 
-----------------------------------------------
--- FUNCTOR, APPLICATIVE, ALTERNATIVE, MONAD --
-----------------------------------------------
+---------------------------------------------------------
+-- FUNCTOR, BIFUNCTOR, APPLICATIVE, ALTERNATIVE, MONAD --
+---------------------------------------------------------
 
 ||| Functors allow a uniform action over a parameterised type.
 ||| @ f a parameterised type
@@ -104,6 +104,41 @@ public export
 public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
+
+||| Bifunctors
+||| @f The action of the Bifunctor on pairs of objects
+public export
+interface Bifunctor f where
+  ||| The action of the Bifunctor on pairs of morphisms
+  |||
+  ||| ````idris example
+  ||| bimap (\x => x + 1) reverse (1, "hello") == (2, "olleh")
+  ||| ````
+  |||
+  bimap : (a -> c) -> (b -> d) -> f a b -> f c d
+  bimap f g = mapFst f . mapSnd g
+
+  ||| The action of the Bifunctor on morphisms pertaining to the first object
+  |||
+  ||| ````idris example
+  ||| mapFst (\x => x + 1) (1, "hello") == (2, "hello")
+  ||| ````
+  |||
+  mapFst : (a -> c) -> f a b -> f c b
+  mapFst f = bimap f id
+
+  ||| The action of the Bifunctor on morphisms pertaining to the second object
+  |||
+  ||| ````idris example
+  ||| mapSnd reverse (1, "hello") == (1, "olleh")
+  ||| ````
+  |||
+  mapSnd : (b -> d) -> f a b -> f a d
+  mapSnd = bimap id
+
+public export
+mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
+mapHom f = bimap f f
 
 public export
 interface Functor f => Applicative f where
@@ -141,6 +176,10 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+public export
+(>>) : (Monad m) => m a -> m b -> m b
+a >> b = a >>= \_ => b
+
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
 guard : Alternative f => Bool -> f ()
@@ -161,7 +200,7 @@ when False f = pure ()
 ||| function, into a single result.
 ||| @ t The type of the 'Foldable' parameterised type.
 public export
-interface Foldable (t : Type -> Type) where
+interface Foldable t where
   ||| Successively combine the elements in a parameterised type using the
   ||| provided function, starting with the element that is in the final position
   ||| i.e. the right-most position.
@@ -178,11 +217,21 @@ interface Foldable (t : Type -> Type) where
   foldl : (func : acc -> elem -> acc) -> (init : acc) -> (input : t elem) -> acc
   foldl f z t = foldr (flip (.) . flip f) id t z
 
+  ||| Test whether the structure is empty.
+  ||| @ acc The accumulator value which is specified to be lazy
+  null : t elem -> Lazy Bool
+  null = foldr {acc = Lazy Bool} (\ _,_ => False) True
+
 ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
 ||| Consequently, the final value is wrapped in the same `Monad`.
 public export
 foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
 foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+
+||| Maps each element to a value and combine them
+public export
+foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
+foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
 public export
@@ -289,7 +338,7 @@ choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
 choiceMap f = foldr (\e, a => f e <|> a) empty
 
 public export
-interface (Functor t, Foldable t) => Traversable (t : Type -> Type) where
+interface (Functor t, Foldable t) => Traversable t where
   ||| Map each element of a structure to a computation, evaluate those
   ||| computations and combine the results.
   traverse : Applicative f => (a -> f b) -> t a -> f (t b)
@@ -303,4 +352,3 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
-

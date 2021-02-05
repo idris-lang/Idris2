@@ -1,16 +1,17 @@
 module Idris.Pretty
 
 import Data.List
+import Data.Maybe
 import Data.Strings
-import Control.ANSI.SGR
-import public Text.PrettyPrint.Prettyprinter
-import public Text.PrettyPrint.Prettyprinter.Render.Terminal
-import public Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Control.ANSI.SGR
+import public Libraries.Text.PrettyPrint.Prettyprinter
+import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
+import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Algebra
 import Idris.REPLOpts
 import Idris.Syntax
-import Utils.Term
+import Libraries.Utils.Term
 
 %default covering
 
@@ -122,10 +123,10 @@ mutual
 
   prettyDo : PDo -> Doc IdrisAnn
   prettyDo (DoExp _ tm) = prettyTerm tm
-  prettyDo (DoBind _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
+  prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
     prettyTerm l <++> pretty "<-" <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
-  prettyDo (DoLet _ l rig _ tm) =
+  prettyDo (DoLet _ _ l rig _ tm) =
     let_ <++> prettyRig rig <+> pretty l <++> equals <++> prettyTerm tm
   prettyDo (DoLetPat _ l _ tm alts) =
     let_ <++> prettyTerm l <++> equals <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
@@ -149,8 +150,6 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
-      parenthesise : Bool -> Doc IdrisAnn -> Doc IdrisAnn
-      parenthesise b = if b then parens else id
 
       go : Prec -> PTerm -> Doc IdrisAnn
       go d (PRef _ n) = pretty n
@@ -199,9 +198,39 @@ mutual
           prettyBindings ((rig, n, (PImplicit _)) :: ns) = prettyRig rig <+> go startPrec n <+> comma <+> line <+> prettyBindings ns
           prettyBindings ((rig, n, ty) :: ns) = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
       go d (PLet _ rig n (PImplicit _) val sc alts) =
-        parenthesise (d > startPrec) $ group $ align $
-          let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
-            <+> in_ <++> (group $ align $ hang 2 $ go startPrec sc)
+          -- Hide uninformative lets
+          -- (Those that look like 'let x = x in ...')
+          -- Makes printing the types of names bound in where clauses a lot
+          -- more readable
+          fromMaybe fullLet $ do
+            nName   <- getPRefName n
+            valName <- getPRefName val
+            guard (show nName == show valName)
+            pure continuation
+
+         -- Hide lets that bind to underscore
+         -- That is, 'let _ = x in ...'
+         -- Those end up polluting the types of let bound variables in some
+         -- occasions
+          <|> do
+            nName <- getPRefName n
+            guard (isUnderscoreName nName)
+            pure continuation
+
+        where
+
+          continuation : Doc IdrisAnn
+          continuation = go startPrec sc
+
+          fullLet : Doc IdrisAnn
+          fullLet = parenthesise (d > startPrec) $ group $ align $
+            let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
+              <+> in_ <++> (group $ align $ hang 2 $ continuation)
+
+          getPRefName : PTerm -> Maybe Name
+          getPRefName (PRef _ n) = Just n
+          getPRefName _ = Nothing
+
       go d (PLet _ rig n ty val sc alts) =
         parenthesise (d > startPrec) $ group $ align $
           let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <++> equals <+> line <+> go startPrec val) <+> hardline
@@ -220,14 +249,14 @@ mutual
       go d (PDelayed _ _ ty) = parenthesise (d > appPrec) $ "Lazy" <++> go appPrec ty
       go d (PDelay _ tm) = parenthesise (d > appPrec) $ "Delay" <++> go appPrec tm
       go d (PForce _ tm) = parenthesise (d > appPrec) $ "Force" <++> go appPrec tm
-      go d (PImplicitApp _ f Nothing a) =
+      go d (PAutoApp _ f a) =
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> "@" <+> braces (go startPrec a)
-      go d (PImplicitApp _ f (Just n) (PRef _ a)) =
+      go d (PNamedApp _ f n (PRef _ a)) =
         parenthesise (d > appPrec) $ group $
           if n == a
              then go leftAppPrec f <++> braces (pretty n)
              else go leftAppPrec f <++> braces (pretty n <++> equals <++> pretty a)
-      go d (PImplicitApp _ f (Just n) a) =
+      go d (PNamedApp _ f n a) =
         parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> braces (pretty n <++> equals <++> go d a)
       go d (PSearch _ _) = pragma "%search"
       go d (PQuote _ tm) = parenthesise (d > appPrec) $ "`" <+> parens (go startPrec tm)
@@ -238,7 +267,7 @@ mutual
       go d (PPrimVal _ c) = pretty c
       go d (PHole _ _ n) = meta (pretty (strCons '?' n))
       go d (PType _) = pretty "Type"
-      go d (PAs _ n p) = pretty n <+> "@" <+> go d p
+      go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
@@ -279,33 +308,35 @@ mutual
       go d (PRangeStream _ start (Just next)) =
         brackets (go startPrec start <+> comma <++> go startPrec next <++> pretty "..")
       go d (PUnifyLog _ lvl tm) = go d tm
-      go d (PPostfixProjs fc rec fields) =
-        parenthesise (d > appPrec) $ go startPrec rec <++> dot <+> concatWith (surround dot) (go startPrec <$> fields)
-      go d (PPostfixProjsSection fc fields args) =
-        parens (dot <+> concatWith (surround dot) (go startPrec <$> fields) <+> fillSep (go appPrec <$> args))
+      go d (PPostfixApp fc rec fields) =
+        parenthesise (d > appPrec) $ go startPrec rec <++> dot <+> concatWith (surround dot) (map pretty fields)
+      go d (PPostfixAppPartial fc fields) =
+        parens (dot <+> concatWith (surround dot) (map pretty fields))
       go d (PWithUnambigNames fc ns rhs) = parenthesise (d > appPrec) $ group $ with_ <++> pretty ns <+> line <+> go startPrec rhs
+
+getPageWidth : {auto o : Ref ROpts REPLOpts} -> Core PageWidth
+getPageWidth = do
+  consoleWidth <- getConsoleWidth
+  case consoleWidth of
+    Nothing => do
+      cols <- coreLift getTermCols
+      pure $ if cols == 0 then Unbounded else AvailablePerLine cols 1
+    Just 0 => pure $ Unbounded
+    Just cw => pure $ AvailablePerLine (cast cw) 1
 
 export
 render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 render doc = do
-  consoleWidth <- getConsoleWidth
   color <- getColor
-  opts <- case consoleWidth of
-               Nothing => do cols <- coreLift getTermCols
-                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
-               Just 0 => pure $ MkLayoutOptions Unbounded
-               Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
+  pageWidth <- getPageWidth
+  let opts = MkLayoutOptions pageWidth
   let layout = layoutPretty opts doc
   pure $ renderString $ if color then reAnnotateS colorAnn layout else unAnnotateS layout
 
 export
 renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
 renderWithoutColor doc = do
-  consoleWidth <- getConsoleWidth
-  opts <- case consoleWidth of
-               Nothing => do cols <- coreLift getTermCols
-                             pure $ MkLayoutOptions (AvailablePerLine cols 1)
-               Just 0 => pure $ MkLayoutOptions Unbounded
-               Just cw => pure $ MkLayoutOptions (AvailablePerLine (cast cw) 1)
+  pageWidth <- getPageWidth
+  let opts = MkLayoutOptions pageWidth
   let layout = layoutPretty opts doc
   pure $ renderString $ unAnnotateS layout

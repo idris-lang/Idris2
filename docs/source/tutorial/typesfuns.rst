@@ -716,8 +716,8 @@ Useful Data Types
 
 Idris includes a number of useful data types and library functions
 (see the ``libs/`` directory in the distribution, and the
-`documentation <https://www.idris-lang.org/documentation/>`_). This section
-describes a few of these, and how to import them.
+`documentation <https://www.idris-lang.org/pages/documentation.html>`_). This
+section describes a few of these, and how to import them.
 
 ``List`` and ``Vect``
 ---------------------
@@ -988,8 +988,8 @@ type. The field names can be used to access the field values:
     "Fred" : String
     *Record> fred.age
     30 : Int
-    *Record> :t firstName
-    firstName : Person -> String
+    *Record> :t (.firstName)
+    Main.Person.(.firstName) : Person -> String
 
 We can use prefix field projections, like in Haskell:
 
@@ -999,6 +999,14 @@ We can use prefix field projections, like in Haskell:
     "Fred" : String
     *Record> age fred
     30 : Int
+    *Record> :t firstName
+    firstName : Person -> String
+
+Prefix field projections can be disabled per record definition
+using pragma ``%prefix_record_projections off``, which makes
+all subsequently defined records generate only dotted projections.
+This pragma has effect until the end of the module
+or until the closest occurrence of ``%prefix_record_projections on``.
 
 We can also use the field names to update a record (or, more
 precisely, produce a copy of the record with the given fields

@@ -1,0 +1,5 @@
+$1 --no-banner --no-color --console-width 0 "Module'.idr" < input
+$1 --exec main --cg ${IDRIS2_TESTS_CG} "Module'.idr"
+EDITOR=true $1 --no-banner --no-color --console-width 0 "Module'.idr" < input-ed
+
+rm -rf build

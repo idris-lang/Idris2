@@ -31,8 +31,8 @@ mutual
       = pure $ IPi fc c p n !(getUnquote arg) !(getUnquote ret)
   getUnquote (ILam fc c p n arg sc)
       = pure $ ILam fc c p n !(getUnquote arg) !(getUnquote sc)
-  getUnquote (ILet fc c n ty val sc)
-      = pure $ ILet fc c n !(getUnquote ty) !(getUnquote val) !(getUnquote sc)
+  getUnquote (ILet fc lhsFC c n ty val sc)
+      = pure $ ILet fc lhsFC c n !(getUnquote ty) !(getUnquote val) !(getUnquote sc)
   getUnquote (ICase fc sc ty cs)
       = pure $ ICase fc !(getUnquote sc) !(getUnquote ty)
                         !(traverse getUnquoteClause cs)
@@ -42,8 +42,10 @@ mutual
       = pure $ IUpdate fc !(traverse getUnquoteUpdate ds) !(getUnquote sc)
   getUnquote (IApp fc f a)
       = pure $ IApp fc !(getUnquote f) !(getUnquote a)
-  getUnquote (IImplicitApp fc f n a)
-      = pure $ IImplicitApp fc !(getUnquote f) n !(getUnquote a)
+  getUnquote (IAutoApp fc f a)
+      = pure $ IAutoApp fc !(getUnquote f) !(getUnquote a)
+  getUnquote (INamedApp fc f n a)
+      = pure $ INamedApp fc !(getUnquote f) n !(getUnquote a)
   getUnquote (IWithApp fc f a)
       = pure $ IWithApp fc !(getUnquote f) !(getUnquote a)
   getUnquote (IAlternative fc at as)
@@ -54,8 +56,8 @@ mutual
       = pure $ ICoerced fc !(getUnquote t)
   getUnquote (IBindHere fc m t)
       = pure $ IBindHere fc m !(getUnquote t)
-  getUnquote (IAs fc u nm t)
-      = pure $ IAs fc u nm !(getUnquote t)
+  getUnquote (IAs fc nameFC u nm t)
+      = pure $ IAs fc nameFC u nm !(getUnquote t)
   getUnquote (IMustUnify fc r t)
       = pure $ IMustUnify fc r !(getUnquote t)
   getUnquote (IDelayed fc r t)
@@ -99,7 +101,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  ImpTy ->
                  Core ImpTy
-  getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
+  getUnquoteTy (MkImpTy fc nameFC n t) = pure $ MkImpTy fc nameFC n !(getUnquote t)
 
   getUnquoteField : {auto c : Ref Ctxt Defs} ->
                     {auto q : Ref Unq (List (Name, FC, RawImp))} ->

@@ -24,6 +24,13 @@ data Nat =
 
 %name Nat k, j, i
 
+-- This is used in the compiler as an efficient substitute for integerToNat.
+prim__integerToNat : Integer -> Nat
+prim__integerToNat i
+  = if intToBool (prim__lte_Integer 0 i)
+      then believe_me i
+      else Z
+
 public export
 integerToNat : Integer -> Nat
 integerToNat x
@@ -36,21 +43,21 @@ integerToNat x
 ||| @ x the number to case-split on
 ||| @ y the other numberpublic export
 public export
-plus : (1 x : Nat) -> (1 y : Nat) -> Nat
+plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
 ||| Subtract natural numbers.  If the second number is larger than the first,
 ||| return 0.
 public export
-minus : (1 left : Nat) -> Nat -> Nat
+minus : (left : Nat) -> Nat -> Nat
 minus Z        right     = Z
 minus left     Z         = left
 minus (S left) (S right) = minus left right
 
 ||| Multiply natural numbers.
 public export
-mult : (1 x : Nat) -> Nat -> Nat
+mult : (x : Nat) -> Nat -> Nat
 mult Z y = Z
 mult (S k) y = plus y (mult k y)
 
@@ -81,17 +88,24 @@ natToInteger (S k) = 1 + natToInteger k
                          -- integer (+) may be non-linear in second
                          -- argument
 
+||| Counts the number of elements that satify a predicate.
+public export
+count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
+count predicate = foldr (\v => if predicate v then S else id) Z
+
 -----------
 -- PAIRS --
 -----------
 
+%inline
+public export
+Bifunctor Pair where
+  bimap f g (x, y) = (f x, g y)
+
+%inline
 public export
 Functor (Pair a) where
-  map f (x, y) = (x, f y)
-
-public export
-mapFst : (a -> c) -> (a, b) -> (c, b)
-mapFst f (x, y) = (f x, y)
+  map = mapSnd
 
 -----------
 -- MAYBE --
@@ -105,7 +119,7 @@ data Maybe : (ty : Type) -> Type where
   Nothing : Maybe ty
 
   ||| A value of type `ty` is stored
-  Just : (1 x : ty) -> Maybe ty
+  Just : (x : ty) -> Maybe ty
 
 public export
 Uninhabited (Nothing = Just x) where
@@ -157,10 +171,10 @@ Applicative Maybe where
 
 public export
 Alternative Maybe where
-    empty = Nothing
+  empty = Nothing
 
-    (Just x) <|> _ = Just x
-    Nothing  <|> v = v
+  (Just x) <|> _ = Just x
+  Nothing  <|> v = v
 
 public export
 Monad Maybe where
@@ -171,6 +185,8 @@ public export
 Foldable Maybe where
   foldr _ z Nothing  = z
   foldr f z (Just x) = f x z
+  null Nothing = True
+  null (Just _) = False
 
 public export
 Traversable Maybe where
@@ -192,6 +208,9 @@ data Dec : Type -> Type where
   ||| @ contra a demonstration that prop would be a contradiction
   No  : (contra : prop -> Void) -> Dec prop
 
+export Uninhabited (Yes p === No q) where uninhabited eq impossible
+export Uninhabited (No p === Yes q) where uninhabited eq impossible
+
 ------------
 -- EITHER --
 ------------
@@ -200,10 +219,13 @@ data Dec : Type -> Type where
 public export
 data Either : (a : Type) -> (b : Type) -> Type where
   ||| One possibility of the sum, conventionally used to represent errors.
-  Left : forall a, b. (1 x : a) -> Either a b
+  Left : forall a, b. (x : a) -> Either a b
 
   ||| The other possibility, conventionally used to represent success.
-  Right : forall a, b. (1 x : b) -> Either a b
+  Right : forall a, b. (x : b) -> Either a b
+
+export Uninhabited (Left p === Right q) where uninhabited eq impossible
+export Uninhabited (Right p === Left q) where uninhabited eq impossible
 
 ||| Simply-typed eliminator for Either.
 ||| @ f the action to take on Left
@@ -235,22 +257,30 @@ Functor (Either e) where
 
 %inline
 public export
-Applicative (Either e) where
-    pure = Right
+Bifunctor Either where
+  bimap f _ (Left x) = Left (f x)
+  bimap _ g (Right y) = Right (g y)
 
-    (Left a) <*> _          = Left a
-    (Right f) <*> (Right r) = Right (f r)
-    (Right _) <*> (Left l)  = Left l
+%inline
+public export
+Applicative (Either e) where
+  pure = Right
+
+  (Left a) <*> _          = Left a
+  (Right f) <*> (Right r) = Right (f r)
+  (Right _) <*> (Left l)  = Left l
 
 public export
 Monad (Either e) where
-    (Left n) >>= _ = Left n
-    (Right r) >>= f = f r
+  (Left n) >>= _ = Left n
+  (Right r) >>= f = f r
 
 public export
 Foldable (Either e) where
   foldr f acc (Left _) = acc
   foldr f acc (Right x) = f x acc
+  null (Left _) = True
+  null (Right _) = False
 
 public export
 Traversable (Either e) where
@@ -290,7 +320,7 @@ Ord a => Ord (List a) where
 
 namespace List
   public export
-  (++) : (1 xs, ys : List a) -> List a
+  (++) : (xs, ys : List a) -> List a
   [] ++ ys = ys
   (x :: xs) ++ ys = x :: xs ++ ys
 
@@ -320,6 +350,9 @@ Foldable List where
   foldl f q [] = q
   foldl f q (x::xs) = foldl f (f q x) xs
 
+  null [] = True
+  null (_::_) = False
+
 public export
 Applicative List where
   pure x = [x]
@@ -327,8 +360,8 @@ Applicative List where
 
 public export
 Alternative List where
-    empty = []
-    (<|>) = (++)
+  empty = []
+  (<|>) = (++)
 
 public export
 Monad List where
@@ -355,6 +388,8 @@ namespace Stream
   data Stream : Type -> Type where
        (::) : a -> Inf (Stream a) -> Stream a
 
+%name Stream xs, ys, zs
+
 public export
 Functor Stream where
   map f (x :: xs) = f x :: map f xs
@@ -373,7 +408,7 @@ tail (x :: xs) = xs
 ||| @ n how many elements to take
 ||| @ xs the stream
 public export
-take : (1 n : Nat) -> (xs : Stream a) -> List a
+take : (n : Nat) -> (xs : Stream a) -> List a
 take Z xs = []
 take (S k) (x :: xs) = x :: take k xs
 
@@ -381,9 +416,9 @@ take (S k) (x :: xs) = x :: take k xs
 -- STRINGS --
 -------------
 
-namespace Strings
+namespace String
   public export
-  (++) : (1 x : String) -> (1 y : String) -> String
+  (++) : (x : String) -> (y : String) -> String
   x ++ y = prim__strAppend x y
 
   ||| Returns the length of the string.
@@ -642,229 +677,6 @@ floor x = prim__doubleFloor x
 public export
 ceiling : Double -> Double
 ceiling x = prim__doubleCeiling x
-
------------
--- CASTS --
------------
-
--- Casts between primitives only here.  They might be lossy.
-
-||| Interface for transforming an instance of a data type to another type.
-public export
-interface Cast from to where
-  ||| Perform a (potentially lossy!) cast operation.
-  ||| @ orig The original type
-  cast : (orig : from) -> to
-
--- To String
-
-export
-Cast Int String where
-  cast = prim__cast_IntString
-
-export
-Cast Integer String where
-  cast = prim__cast_IntegerString
-
-export
-Cast Char String where
-  cast = prim__cast_CharString
-
-export
-Cast Double String where
-  cast = prim__cast_DoubleString
-
--- To Integer
-
-export
-Cast Int Integer where
-  cast = prim__cast_IntInteger
-
-export
-Cast Char Integer where
-  cast = prim__cast_CharInteger
-
-export
-Cast Double Integer where
-  cast = prim__cast_DoubleInteger
-
-export
-Cast String Integer where
-  cast = prim__cast_StringInteger
-
-export
-Cast Nat Integer where
-  cast = natToInteger
-
-export
-Cast Bits8 Integer where
-  cast = prim__cast_Bits8Integer
-
-export
-Cast Bits16 Integer where
-  cast = prim__cast_Bits16Integer
-
-export
-Cast Bits32 Integer where
-  cast = prim__cast_Bits32Integer
-
-export
-Cast Bits64 Integer where
-  cast = prim__cast_Bits64Integer
-
--- To Int
-
-export
-Cast Integer Int where
-  cast = prim__cast_IntegerInt
-
-export
-Cast Char Int where
-  cast = prim__cast_CharInt
-
-export
-Cast Double Int where
-  cast = prim__cast_DoubleInt
-
-export
-Cast String Int where
-  cast = prim__cast_StringInt
-
-export
-Cast Nat Int where
-  cast = fromInteger . natToInteger
-
-export
-Cast Bits8 Int where
-  cast = prim__cast_Bits8Int
-
-export
-Cast Bits16 Int where
-  cast = prim__cast_Bits16Int
-
-export
-Cast Bits32 Int where
-  cast = prim__cast_Bits32Int
-
-export
-Cast Bits64 Int where
-  cast = prim__cast_Bits64Int
-
--- To Char
-
-export
-Cast Int Char where
-  cast = prim__cast_IntChar
-
--- To Double
-
-export
-Cast Int Double where
-  cast = prim__cast_IntDouble
-
-export
-Cast Integer Double where
-  cast = prim__cast_IntegerDouble
-
-export
-Cast String Double where
-  cast = prim__cast_StringDouble
-
-export
-Cast Nat Double where
-  cast = prim__cast_IntegerDouble . natToInteger
-
-
--- To Bits8
-
-export
-Cast Int Bits8 where
-  cast = prim__cast_IntBits8
-
-export
-Cast Integer Bits8 where
-  cast = prim__cast_IntegerBits8
-
-export
-Cast Bits16 Bits8 where
-  cast = prim__cast_Bits16Bits8
-
-export
-Cast Bits32 Bits8 where
-  cast = prim__cast_Bits32Bits8
-
-export
-Cast Bits64 Bits8 where
-  cast = prim__cast_Bits64Bits8
-
-
--- To Bits16
-
-export
-Cast Int Bits16 where
-  cast = prim__cast_IntBits16
-
-export
-Cast Integer Bits16 where
-  cast = prim__cast_IntegerBits16
-
-export
-Cast Bits8 Bits16 where
-  cast = prim__cast_Bits8Bits16
-
-export
-Cast Bits32 Bits16 where
-  cast = prim__cast_Bits32Bits16
-
-export
-Cast Bits64 Bits16 where
-  cast = prim__cast_Bits64Bits16
-
-
--- To Bits32
-
-export
-Cast Int Bits32 where
-  cast = prim__cast_IntBits32
-
-export
-Cast Integer Bits32 where
-  cast = prim__cast_IntegerBits32
-
-export
-Cast Bits8 Bits32 where
-  cast = prim__cast_Bits8Bits32
-
-export
-Cast Bits16 Bits32 where
-  cast = prim__cast_Bits16Bits32
-
-export
-Cast Bits64 Bits32 where
-  cast = prim__cast_Bits64Bits32
-
--- To Bits64
-
-export
-Cast Int Bits64 where
-  cast = prim__cast_IntBits64
-
-export
-Cast Integer Bits64 where
-  cast = prim__cast_IntegerBits64
-
-export
-Cast Bits8 Bits64 where
-  cast = prim__cast_Bits8Bits64
-
-export
-Cast Bits16 Bits64 where
-  cast = prim__cast_Bits16Bits64
-
-export
-Cast Bits32 Bits64 where
-  cast = prim__cast_Bits32Bits64
-
 
 ------------
 -- RANGES --

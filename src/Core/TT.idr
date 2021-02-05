@@ -3,14 +3,14 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Nat
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Vect
 import Decidable.Equality
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Algebra
 
@@ -651,8 +651,8 @@ eqTerm (TType _) (TType _) = True
 eqTerm _ _ = False
 
 public export
-interface Weaken (tm : List Name -> Type) where
-  weaken : tm vars -> tm (n :: vars)
+interface Weaken tm where
+  weaken : {0 vars : List Name} -> tm vars -> tm (n :: vars)
   weakenNs : SizeOf ns -> tm vars -> tm (ns ++ vars)
 
   weakenNs p t = case sizedView p of
@@ -925,6 +925,12 @@ export
 apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
+
+-- Creates a chain of `App` nodes, each with its own file context
+export
+applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
+applyWithFC fn [] = fn
+applyWithFC fn ((fc, arg) :: args) = applyWithFC (App fc fn arg) args
 
 -- Build a simple function type
 export

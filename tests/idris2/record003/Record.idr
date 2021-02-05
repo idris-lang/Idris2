@@ -24,10 +24,9 @@ UTForASCII ASCII = List Char   --- Just to demonstrate
 record FlexiString { default UTF k : KindOfString} where
   constructor MkFlexiString
   val : UTForASCII k
-  
+
 c : FlexiString
 c = MkFlexiString "hello"
 
 d : FlexiString {k = ASCII}
 d = MkFlexiString ['h', 'i']
-

@@ -1,4 +1,4 @@
-||| A segment is a compositional gragment of a telescope.
+||| A segment is a compositional fragment of a telescope.
 ||| A key difference is that segments are right-nested, whereas
 ||| telescopes are left nested.
 ||| So telescopes are convenient for well-bracketing dependencies,
@@ -17,7 +17,7 @@ import Data.Nat
 
 %default total
 
-||| A segment is a compositional gragment of a telescope, indexed by
+||| A segment is a compositional fragment of a telescope, indexed by
 ||| the segment's length.
 public export
 data Segment : (n : Nat) -> Telescope k -> Type where
@@ -32,8 +32,8 @@ infixl 3 |++, :++
 ||| indexing modulo addition.  An alternative is to use something like
 ||| frex.
 succLemma : (lft, rgt : Nat) -> lft + (S rgt) = S (lft + rgt)
-succLemma x y = Calc $ 
-  |~ x + (1 + y) 
+succLemma x y = Calc $
+  |~ x + (1 + y)
   ~~ (x + 1)+ y  ...(plusAssociative x 1 y)
   ~~ (1 + x)+ y  ...(cong (+y) $ plusCommutative x 1)
   ~~ 1 + (x + y) ...(sym $ plusAssociative 1 x y)
@@ -54,41 +54,41 @@ keep Refl = Refl
 public export
 (|++) : (gamma : Telescope k) -> {n : Nat} -> (delta : Segment n gamma) -> Telescope (n + k)
 (|++)     gamma {n = 0} delta  = gamma
-(|++) {k} gamma {n=S n} (ty :: delta) = rewrite sym $ succLemma n k in 
+(|++) {k} gamma {n=S n} (ty :: delta) = rewrite sym $ succLemma n k in
                                           gamma -. ty |++ delta
 
 ||| Segments form a kind of an indexed monoid w.r.t. the action `(|++)`
 public export
-(++) : {gamma : Telescope k} 
+(++) : {gamma : Telescope k}
     -> {n : Nat}
-    -> (lft : Segment n  gamma         ) 
+    -> (lft : Segment n  gamma         )
     -> (rgt : Segment m (gamma |++ lft))
     -> Segment (n + m) gamma
 (++) {n = 0  }     delta       rgt = rgt
-(++) {n = S n} {m} (ty :: lft) rgt = ty :: lft ++ rewrite succLemma n k in 
+(++) {n = S n} {m} (ty :: lft) rgt = ty :: lft ++ rewrite succLemma n k in
                                                   rgt
 -- This monoid does act on telescopes:
 export
-actSegmentAssociative : (gamma : Telescope k) 
+actSegmentAssociative : (gamma : Telescope k)
                      -> (lft : Segment n gamma)
                      -> (rgt : Segment m (gamma |++ lft))
                      -> (gamma |++ (lft ++ rgt)) ~=~ ((gamma |++ lft) |++ rgt)
 actSegmentAssociative gamma {n = 0}   []          rgt = Refl
-actSegmentAssociative gamma {n = S n} (ty :: lft) rgt = 
+actSegmentAssociative gamma {n = S n} (ty :: lft) rgt =
   let rgt' : Segment {k = n + (S k)} m (gamma -. ty |++ lft)
       rgt' = rewrite succLemma n k in
              rgt
       rgt_eq_rgt' : rgt ~=~ rgt'
       rgt_eq_rgt' = rewrite succLemma n k in
                     Refl
-  in  
-  rewrite sym $ succLemma (n + m) k in 
+  in
+  rewrite sym $ succLemma (n + m) k in
   rewrite sym $ succLemma n       k in keep $ Calc $
   |~ ((gamma -. ty) |++ (lft ++ rgt'))
-  ~~ ((gamma -. ty |++  lft) |++ rgt')  
+  ~~ ((gamma -. ty |++  lft) |++ rgt')
           ...(actSegmentAssociative (gamma -. ty) lft rgt')
 
-public export  
+public export
 weaken : {0 gamma : Telescope k}
       -> {delta : Segment n gamma} -> (sy : TypeIn gamma)
       -> TypeIn (gamma |++ delta)
@@ -97,28 +97,27 @@ weaken {n = S n} {delta = ty :: delta} sy = rewrite sym $ succLemma n k in
                                             weaken (weakenTypeIn sy)
 
 public export
-projection : {0 gamma : Telescope k} 
+projection : {0 gamma : Telescope k}
           -> {n : Nat}
           -> {0 delta : Segment n gamma}
           -> Environment (gamma |++ delta)
           -> Environment gamma
 projection {n = 0  } {delta = []         } env = env
-projection {n = S n} {delta = ty :: delta} env = let (env' =. _) = projection {n} {delta} 
-                                                                   rewrite succLemma n k in env 
+projection {n = S n} {delta = ty :: delta} env = let (env' ** _) = projection {n} {delta}
+                                                                   rewrite succLemma n k in env
                                                  in env'
-
 
 infixl 4 .=
 
 public export
-data Environment : (env : Data.Telescope.Telescope.Environment gamma) 
+data Environment : (env : Telescope.Environment gamma)
                 -> (delta : Segment n gamma) -> Type where
   Empty : Environment env []
-  (.=) : {0 gamma : Telescope k} -> {0 ty : TypeIn gamma} 
-      -> {0 env   : Telescope.Environment gamma} 
+  (.=) : {0 gamma : Telescope k} -> {0 ty : TypeIn gamma}
+      -> {0 env   : Telescope.Environment gamma}
       -> {0 delta : Segment n (gamma -. ty)}
-      
-      -> (x : ty env) -> (xs : Segment.Environment (env =. x) delta)
+
+      -> (x : ty env) -> (xs : Segment.Environment (env ** x) delta)
       -> Environment env (ty :: delta)
 
 public export
@@ -127,8 +126,8 @@ public export
      -> (ext :   Segment.Environment env delta)
      ->        Telescope.Environment (gamma |++ delta)
 (:++) env Empty = env
-(:++) {n = S n} env (x .= xs) = rewrite sym $ succLemma n k in 
-                                (env =. x) :++ xs
+(:++) {n = S n} env (x .= xs) = rewrite sym $ succLemma n k in
+                                (env ** x) :++ xs
 
 
 -- This is too nasty for now, leave to later
@@ -170,7 +169,7 @@ finComplementSpec {n = .(S n)} (FS i@ FZ   ) = rewrite castNaturality (finComple
 finComplementSpec {n = .(S n)} (FS i@(FS _)) = rewrite castNaturality (finComplement i) in
                                                rewrite finComplementSpec i in
                                                Refl
-                                               
+
 complementLastZero : (n : Nat) -> finComplement (last {n}) = FZ
 complementLastZero n = finToNatInjective _ _ $ plusLeftCancel n _ _ $ Calc $
    let n' : Nat
@@ -182,24 +181,24 @@ complementLastZero n = finToNatInjective _ _ $ plusLeftCancel n _ _ $ Calc $
    ~~ n         + 0 ...(sym $ plusZeroRightNeutral n)
 
 public export
-breakOnto : {0 k,k' : Nat} -> (gamma : Telescope k) -> (pos : Position gamma) 
+breakOnto : {0 k,k' : Nat} -> (gamma : Telescope k) -> (pos : Position gamma)
          -> (delta : Segment n gamma)
          -> {auto 0 ford1 : k' === (finToNat $ finComplement pos) }
-         -> {default 
+         -> {default
                -- disgusting, sorry
-               (replace {p = \u => k = finToNat pos + u} 
-                        (sym ford1) 
+               (replace {p = \u => k = finToNat pos + u}
+                        (sym ford1)
                         (sym $ finComplementSpec pos))
              0 ford2 : (k === ((finToNat pos) + k')) }
-         -> Segment (cast pos + n) 
-                    (break {k = k'} 
-                           gamma pos 
+         -> Segment (cast pos + n)
+                    (break {k = k'}
+                           gamma pos
                            {ford = ford2})
-breakOnto gamma          FZ      delta {ford1 = Refl} {ford2} = 
+breakOnto gamma          FZ      delta {ford1 = Refl} {ford2} =
                          rewrite sym ford2 in
                          delta
-breakOnto (gamma -. ty) (FS pos) delta {ford1 = Refl} {ford2} = 
-                         rewrite sym $ succLemma (cast pos) n in 
+breakOnto (gamma -. ty) (FS pos) delta {ford1 = Refl} {ford2} =
+                         rewrite sym $ succLemma (cast pos) n in
                          rewrite castNaturality (finComplement pos) in
                          breakOnto gamma pos (ty :: delta)
 
@@ -207,46 +206,46 @@ uip : (prf1, prf2 : x ~=~ y) -> prf1 ~=~ prf2
 uip Refl Refl = Refl
 
 export
-breakStartEmpty : (gamma : Telescope k') 
+breakStartEmpty : (gamma : Telescope k')
                -> {auto 0 ford1 : k = 0}
                -> {auto 0 ford2 : k' = finToNat (start gamma) + k}
                -> break {k} {k'} gamma (start gamma) {ford = ford2}
                 ~=~ Telescope.Nil
 breakStartEmpty [] {ford1 = Refl} {ford2 = Refl}            = Refl
-breakStartEmpty {k} {k' = S k'} {ford1} {ford2} (gamma -. ty) = 
+breakStartEmpty {k} {k' = S k'} {ford1} {ford2} (gamma -. ty) =
                 -- Yuck!
                 let 0 u : (k' = finToNat (start gamma) + k)
                     u = succInjective _ _ ford2
                     v : break {k} {k'} gamma (start gamma) {ford = u}
                         ~=~ Telescope.Nil
-                    v = breakStartEmpty {k} {k'} gamma {ford2 = u} 
-                in replace {p = \z => 
+                    v = breakStartEmpty {k} {k'} gamma {ford2 = u}
+                in replace {p = \z =>
                              Equal {a = Telescope k} {b = Telescope 0}
                                    (break {k'} {k} gamma (start gamma)
-                                          {ford = z}) 
+                                          {ford = z})
                                           []
-                        } 
-                        (uip u _) 
+                        }
+                        (uip u _)
                         (keep v)
 
 toSegment : {k : Nat} -> (gamma : Telescope k) -> Segment k []
-toSegment gamma = 
-  let u : Segment (cast (start gamma) + 0) 
-                  (break {k = cast (finComplement $ start gamma)} 
+toSegment gamma =
+  let u : Segment (cast (start gamma) + 0)
+                  (break {k = cast (finComplement $ start gamma)}
                          gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})
-      u = breakOnto gamma (start gamma) [] 
-      q : break {k  = cast $ finComplement $ start gamma} 
-                {k' = k} 
-                gamma (start gamma) 
-                {ford = sym $ finComplementSpec $ start gamma} 
+      u = breakOnto gamma (start gamma) []
+      q : break {k  = cast $ finComplement $ start gamma}
+                {k' = k}
+                gamma (start gamma)
+                {ford = sym $ finComplementSpec $ start gamma}
           ~=~ Telescope.Nil
       q = breakStartEmpty {k = cast $ finComplement $ start gamma}
-                          {k' = k} 
+                          {k' = k}
                           gamma
                           {ford1 = cong (finToNat) $ complementLastZero k}
                           {ford2 = sym $ finComplementSpec $ start gamma}
       w : Segment (cast (start gamma) + 0) []
-      w = 
+      w =
           replace {p = \u => Segment (cast (start gamma) + 0) u}
                   q --(rewrite sym $ cong finToNat $ complementLastZero k in q)
                   ?hole
@@ -254,10 +253,10 @@ toSegment gamma =
       {-
       sg_eq_k : cast (start gamma) + 0 = k
       v : Segment k
-                  (break {k = cast (finComplement $ start gamma)} 
+                  (break {k = cast (finComplement $ start gamma)}
                          gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})
-      v = replace {p = \u => Segment u 
-                             (break {k = cast (finComplement $ start gamma)} 
+      v = replace {p = \u => Segment u
+                             (break {k = cast (finComplement $ start gamma)}
                                     gamma (start gamma) {ford = sym $ finComplementSpec $ start gamma})}
                   sg_eq_k u
       -}
@@ -267,12 +266,12 @@ toSegment gamma =
 
 public export
 projection : {0 gamma : Telescope k} -> (pos : Position gamma) -> (env : Environment gamma)
-          -> Environment (break {k = cast (finComplement pos)} gamma pos 
+          -> Environment (break {k = cast (finComplement pos)} gamma pos
                                 {ford = sym $ finComplementSpec pos})
-projection FZ env = rewrite finComplementSpec $ FZ {k} in 
+projection FZ env = rewrite finComplementSpec $ FZ {k} in
                     env
 projection {gamma = []} (FS pos) Empty impossible
-projection {k = S k} {gamma = gamma -. ty} (FS pos) (env =. x) = 
-  rewrite castNaturality (finComplement pos) in 
+projection {k = S k} {gamma = gamma -. ty} (FS pos) (env ** x) =
+  rewrite castNaturality (finComplement pos) in
   projection {k} pos env
 -}

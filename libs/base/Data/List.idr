@@ -2,6 +2,10 @@ module Data.List
 
 import Data.Nat
 import Data.List1
+import Data.Fin
+import public Data.Zippable
+
+%default total
 
 public export
 isNil : List a -> Bool
@@ -58,18 +62,36 @@ inBounds (S k) (x :: xs) with (inBounds k xs)
 |||
 ||| @ ok a proof that the index is within bounds
 public export
-index : (n : Nat) -> (xs : List a) -> {auto ok : InBounds n xs} -> a
+index : (n : Nat) -> (xs : List a) -> {auto 0 ok : InBounds n xs} -> a
 index Z (x :: xs) {ok = InFirst} = x
 index (S k) (_ :: xs) {ok = InLater _} = index k xs
+
+public export
+index' : (xs : List a) -> Fin (length xs) -> a
+index' (x::_)  FZ     = x
+index' (_::xs) (FS i) = index' xs i
 
 ||| Generate a list by repeatedly applying a partial function until exhausted.
 ||| @ f the function to iterate
 ||| @ x the initial value that will be the head of the list
+covering
 public export
 iterate : (f : a -> Maybe a) -> (x : a) -> List a
 iterate f x  = x :: case f x of
   Nothing => []
   Just y => iterate f y
+
+covering
+public export
+unfoldr : (b -> Maybe (a, b)) -> b -> List a
+unfoldr f c = case f c of
+  Nothing     => []
+  Just (a, n) => a :: unfoldr f n
+
+public export
+iterateN : Nat -> (a -> a) -> a -> List a
+iterateN Z     _ _ = []
+iterateN (S n) f x = x :: iterateN n f (f x)
 
 public export
 takeWhile : (p : a -> Bool) -> List a -> List a
@@ -175,12 +197,19 @@ union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
 public export
+spanBy : (a -> Maybe b) -> List a -> (List b, List a)
+spanBy p [] = ([], [])
+spanBy p (x :: xs) = case p x of
+  Nothing => ([], x :: xs)
+  Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
+
+public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])
 span p (x::xs) =
   if p x then
     let (ys, zs) = span p xs in
-      (x::ys, zs)
+        (x::ys, zs)
   else
     ([], x::xs)
 
@@ -247,6 +276,10 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
+public export
+replaceWhen : (a -> Bool) -> a -> List a -> List a
+replaceWhen p b l = map (\c => if p c then b else c) l
+
 ||| Replaces all occurences of the first argument with the second argument in a list.
 |||
 ||| ```idris example
@@ -255,7 +288,7 @@ splitOn a = split (== a)
 |||
 public export
 replaceOn : Eq a => a -> a -> List a -> List a
-replaceOn a b l = map (\c => if c == a then b else c) l
+replaceOn a = replaceWhen (== a)
 
 public export
 reverseOnto : List a -> List a -> List a
@@ -293,38 +326,30 @@ export
 intersectAll : Eq a => List (List a) -> List a
 intersectAll = intersectAllBy (==)
 
-||| Combine two lists elementwise using some function.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zipWith : (a -> b -> c) -> List a -> List b -> List c
-zipWith _ [] _ = []
-zipWith _ _ [] = []
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-||| Combine two lists elementwise into pairs.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip : List a -> List b -> List (a, b)
-zip = zipWith \x, y => (x, y)
+---------------------------
+-- Zippable --
+---------------------------
 
 export
-zipWith3 : (a -> b -> c -> d) -> List a -> List b -> List c -> List d
-zipWith3 _ [] _ _ = []
-zipWith3 _ _ [] _ = []
-zipWith3 _ _ _ [] = []
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+Zippable List where
+  zipWith _ [] _ = []
+  zipWith _ _ [] = []
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
-||| Combine three lists elementwise into tuples.
-|||
-||| If the lists are different lengths, the result is truncated to the
-||| length of the shortest list.
-export
-zip3 : List a -> List b -> List c -> List (a, b, c)
-zip3 = zipWith3 \x, y, z => (x, y, z)
+  zipWith3 _ [] _ _ = []
+  zipWith3 _ _ [] _ = []
+  zipWith3 _ _ _ [] = []
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
+
+  unzipWith f [] = ([], [])
+  unzipWith f (x :: xs) = let (b, c) = f x
+                              (bs, cs) = unzipWith f xs in
+                              (b :: bs, c :: cs)
+
+  unzipWith3 f [] = ([], [], [])
+  unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                               (bs, cs, ds) = unzipWith3 f xs in
+                               (b :: bs, c :: cs, d :: ds)
 
 public export
 data NonEmpty : (xs : List a) -> Type where
@@ -442,6 +467,11 @@ mapMaybe f (x::xs) =
   case f x of
     Nothing => mapMaybe f xs
     Just j  => j :: mapMaybe f xs
+
+||| Extract all of the values contained in a List of Maybes
+public export
+catMaybes : List (Maybe a) -> List a
+catMaybes = mapMaybe id
 
 --------------------------------------------------------------------------------
 -- Special folds
@@ -632,6 +662,14 @@ revAppend (v :: vs) ns
           rewrite sym (revAppend vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) [v] in
               Refl
+
+||| List reverse applied twice yields the identity function.
+export
+reverseInvolutive : (xs : List a) -> reverse (reverse xs) = xs
+reverseInvolutive [] = Refl
+reverseInvolutive (x :: xs) = rewrite revOnto [x] xs in
+                                rewrite sym (revAppend (reverse xs) [x]) in
+                                  cong (x ::) $ reverseInvolutive xs
 
 export
 dropFusion : (n, m : Nat) -> (l : List t) -> drop n (drop m l) = drop (n+m) l

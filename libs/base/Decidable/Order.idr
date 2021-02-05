@@ -17,28 +17,25 @@ import Data.Rel
 --------------------------------------------------------------------------------
 
 public export
-interface Preorder t (po : t -> t -> Type) where
-  total transitive : (a : t) -> (b : t) -> (c : t) -> po a b -> po b c -> po a c
+interface Preorder t po where
+  total transitive : (a, b, c : t) -> po a b -> po b c -> po a c
   total reflexive : (a : t) -> po a a
 
 public export
-interface (Preorder t po) => Poset t (po : t -> t -> Type) where
-  total antisymmetric : (a : t) -> (b : t) -> po a b -> po b a -> a = b
+interface (Preorder t po) => Poset t po where
+  total antisymmetric : (a, b : t) -> po a b -> po b a -> a = b
 
 public export
-interface (Poset t to) => Ordered t (to : t -> t -> Type) where
-  total order : (a : t) -> (b : t) -> Either (to a b) (to b a)
+interface (Poset t to) => Ordered t to where
+  total order : (a, b : t) -> Either (to a b) (to b a)
 
 public export
-interface (Preorder t eq) => Equivalence t (eq : t -> t -> Type) where
-  total symmetric : (a : t) -> (b : t) -> eq a b -> eq b a
+interface (Preorder t eq) => Equivalence t eq where
+  total symmetric : (a, b : t) -> eq a b -> eq b a
 
 public export
-interface (Equivalence t eq) => Congruence t (f : t -> t) (eq : t -> t -> Type) where
-  total congruent : (a : t) ->
-                    (b : t) ->
-                    eq a b ->
-                    eq (f a) (f b)
+interface (Equivalence t eq) => Congruence t f eq where
+  total congruent : (a, b : t) -> eq a b -> eq (f a) (f b)
 
 public export
 minimum : (Ordered t to) => t -> t -> t

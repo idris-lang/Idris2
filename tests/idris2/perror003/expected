@@ -1,3 +1,6 @@
 1/1: Building PError (PError.idr)
-Error: Parse error at line 5:17:
-Expected 'case', 'if', 'do', application or operator expression (next tokens: [symbol (, literal 42, in, identifier y, symbol +, identifier x, identifier baz, symbol :, identifier Int, symbol ->])
+Error: Parse error at line 5:9:
+Expected 'case', 'if', 'do', application or operator expression (next tokens: [let, identifier y, symbol =, symbol (, literal 42, in, identifier y, symbol +, identifier x, identifier baz])
+1/1: Building PError2 (PError2.idr)
+Error: Parse error at line 5:9:
+Expected 'case', 'if', 'do', application or operator expression (next tokens: [let, identifier y, symbol :=, symbol (, literal 42, in, identifier y, symbol +, identifier x, identifier baz])

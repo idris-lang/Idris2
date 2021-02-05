@@ -15,7 +15,7 @@ import TTImp.Elab.ImplicitBind
 import TTImp.TTImp
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -27,9 +27,9 @@ checkAs : {vars : _} ->
           {auto e : Ref EST (EState vars)} ->
           RigCount -> ElabInfo ->
           NestedNames vars -> Env Term vars ->
-          FC -> UseSide -> Name -> RawImp -> Maybe (Glued vars) ->
+          FC -> (nameFC : FC) -> UseSide -> Name -> RawImp -> Maybe (Glued vars) ->
           Core (Term vars, Glued vars)
-checkAs rig elabinfo nest env fc side n_in pat topexp
+checkAs rig elabinfo nest env fc nameFC side n_in pat topexp
     = do let elabmode = elabMode elabinfo
          let InLHS _ = elabmode
              | _ => do log "elab.as" 2 $ "Bad @-pattern " ++ show pat
@@ -41,7 +41,7 @@ checkAs rig elabinfo nest env fc side n_in pat topexp
          case lookup n (boundNames est) of
               Nothing =>
                  do (pattm, patty) <- check rigPat elabinfo nest env pat topexp
-                    (tm, exp, bty) <- mkPatternHole fc rig n env
+                    (tm, exp, bty) <- mkPatternHole nameFC rig n env
                                             (implicitMode elabinfo)
                                             topexp
                     log "elab.as" 5 $ "Added as pattern name " ++ show (n, (rigAs, tm, exp, bty))
@@ -51,8 +51,13 @@ checkAs rig elabinfo nest env fc side n_in pat topexp
                         (record { boundNames $= ((n, AsBinding rigAs Explicit tm exp pattm) :: ),
                                   toBind $= ((n, AsBinding rigAs Explicit tm bty pattm) ::) }
                                 est)
-                    (ntm, nty) <- checkExp rig elabinfo env fc tm (gnf env exp)
+                    (ntm, nty) <- checkExp rig elabinfo env nameFC tm (gnf env exp)
                                            (Just patty)
+
+                    -- Add the name type to the metadata
+                    log "metadata.names" 7 $ "checkAs is adding ↓"
+                    addNameType nameFC n_in env !(getTerm nty)
+
                     pure (As fc side ntm pattm, patty)
               Just bty => throw (NonLinearPattern fc n_in)
   where

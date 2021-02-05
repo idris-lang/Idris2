@@ -11,12 +11,13 @@ import public Core.TT
 
 import TTImp.TTImp
 
-import Data.ANameMap
+import Libraries.Data.ANameMap
 import Data.List
-import Data.NameMap
-import Data.StringMap
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Data.Maybe
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 %default covering
 
@@ -48,7 +49,8 @@ mutual
        PUpdate : FC -> List PFieldUpdate -> PTerm
        PApp : FC -> PTerm -> PTerm -> PTerm
        PWithApp : FC -> PTerm -> PTerm -> PTerm
-       PImplicitApp : FC -> PTerm -> (argn : Maybe Name) -> PTerm -> PTerm
+       PNamedApp : FC -> PTerm -> Name -> PTerm -> PTerm
+       PAutoApp : FC -> PTerm -> PTerm -> PTerm
 
        PDelayed : FC -> LazyReason -> PTerm -> PTerm
        PDelay : FC -> PTerm -> PTerm
@@ -63,7 +65,7 @@ mutual
        PRunElab : FC -> PTerm -> PTerm
        PHole : FC -> (bracket : Bool) -> (holename : String) -> PTerm
        PType : FC -> PTerm
-       PAs : FC -> Name -> (pattern : PTerm) -> PTerm
+       PAs : FC -> (nameFC : FC) -> Name -> (pattern : PTerm) -> PTerm
        PDotted : FC -> PTerm -> PTerm
        PImplicit : FC -> PTerm
        PInfer : FC -> PTerm
@@ -93,10 +95,10 @@ mutual
        PRange : FC -> PTerm -> Maybe PTerm -> PTerm -> PTerm
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
-       -- r.x.y, equivalent to (y (x r))
-       PPostfixProjs : FC -> PTerm -> List PTerm -> PTerm
-       -- (.x.y p q), equivalent to (\r => r.x.y p q)
-       PPostfixProjsSection : FC -> List PTerm -> List PTerm -> PTerm
+       -- r.x.y
+       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       -- .x.y
+       PPostfixAppPartial : FC -> List Name -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> LogLevel -> PTerm -> PTerm
@@ -115,7 +117,8 @@ mutual
   getPTermLoc (PUpdate fc _) = fc
   getPTermLoc (PApp fc _ _) = fc
   getPTermLoc (PWithApp fc _ _) = fc
-  getPTermLoc (PImplicitApp fc _ _ _) = fc
+  getPTermLoc (PAutoApp fc _ _) = fc
+  getPTermLoc (PNamedApp fc _ _ _) = fc
   getPTermLoc (PDelayed fc _ _) = fc
   getPTermLoc (PDelay fc _) = fc
   getPTermLoc (PForce fc _) = fc
@@ -128,7 +131,7 @@ mutual
   getPTermLoc (PRunElab fc _) = fc
   getPTermLoc (PHole fc _ _) = fc
   getPTermLoc (PType fc) = fc
-  getPTermLoc (PAs fc _ _) = fc
+  getPTermLoc (PAs fc _  _ _) = fc
   getPTermLoc (PDotted fc _) = fc
   getPTermLoc (PImplicit fc) = fc
   getPTermLoc (PInfer fc) = fc
@@ -150,8 +153,8 @@ mutual
   getPTermLoc (PRewrite fc _ _) = fc
   getPTermLoc (PRange fc _ _ _) = fc
   getPTermLoc (PRangeStream fc _ _) = fc
-  getPTermLoc (PPostfixProjs fc _ _) = fc
-  getPTermLoc (PPostfixProjsSection fc _ _) = fc
+  getPTermLoc (PPostfixApp fc _ _) = fc
+  getPTermLoc (PPostfixAppPartial fc _) = fc
   getPTermLoc (PUnifyLog fc _ _) = fc
   getPTermLoc (PWithUnambigNames fc _ _) = fc
 
@@ -163,9 +166,9 @@ mutual
   public export
   data PDo : Type where
        DoExp : FC -> PTerm -> PDo
-       DoBind : FC -> Name -> PTerm -> PDo
+       DoBind : FC -> (nameFC : FC) -> Name -> PTerm -> PDo
        DoBindPat : FC -> PTerm -> PTerm -> List PClause -> PDo
-       DoLet : FC -> Name -> RigCount -> PTerm -> PTerm -> PDo
+       DoLet : FC -> (lhs : FC) -> Name -> RigCount -> PTerm -> PTerm -> PDo
        DoLetPat : FC -> PTerm -> PTerm -> PTerm -> List PClause -> PDo
        DoLetLocal : FC -> List PDecl -> PDo
        DoRewrite : FC -> PTerm -> PDo
@@ -173,9 +176,9 @@ mutual
   export
   getLoc : PDo -> FC
   getLoc (DoExp fc _) = fc
-  getLoc (DoBind fc _ _) = fc
+  getLoc (DoBind fc _ _ _) = fc
   getLoc (DoBindPat fc _ _ _) = fc
-  getLoc (DoLet fc _ _ _ _) = fc
+  getLoc (DoLet fc _ _ _ _ _) = fc
   getLoc (DoLetPat fc _ _ _ _) = fc
   getLoc (DoLetLocal fc _) = fc
   getLoc (DoRewrite fc _) = fc
@@ -187,11 +190,11 @@ mutual
 
   public export
   data PTypeDecl : Type where
-       MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
+       MkPTy : FC -> (nameFC : FC) -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
   export
   getPTypeDeclLoc : PTypeDecl -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
+  getPTypeDeclLoc (MkPTy fc _ _ _ _) = fc
 
   public export
   data PDataDecl : Type where
@@ -222,7 +225,7 @@ mutual
   public export
   data Directive : Type where
        Hide : Name -> Directive
-       Logging : LogLevel -> Directive
+       Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
        UnboundImplicits : Bool -> Directive
        AmbigDepth : Nat -> Directive
@@ -237,6 +240,7 @@ mutual
        Overloadable : Name -> Directive
        Extension : LangExt -> Directive
        DefaultTotality : TotalReq -> Directive
+       PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
 
   public export
@@ -282,7 +286,7 @@ mutual
                     (constraints : List (Maybe Name, PTerm)) ->
                     Name ->
                     (doc : String) ->
-                    (params : List (Name, PTerm)) ->
+                    (params : List (Name, (RigCount, PTerm))) ->
                     (det : List Name) ->
                     (conName : Maybe Name) ->
                     List PDecl ->
@@ -333,17 +337,23 @@ mutual
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
 
+  export
+  isPDef : PDecl -> Maybe (FC, List PClause)
+  isPDef (PDef annot cs) = Just (annot, cs)
+  isPDef _ = Nothing
+
+
 definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where
     getName : PTypeDecl -> Name
-    getName (MkPTy _ n _ _) = n
+    getName (MkPTy _ _ n _ _) = n
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ n _ _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
 definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -421,7 +431,7 @@ data REPLCmd : Type where
      Compile : PTerm -> String -> REPLCmd
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
-     ProofSearch : Name -> REPLCmd
+     TypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
@@ -432,11 +442,12 @@ data REPLCmd : Type where
      Total : Name -> REPLCmd
      Doc : Name -> REPLCmd
      Browse : Namespace -> REPLCmd
-     SetLog : LogLevel -> REPLCmd
+     SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd
      SetColor : Bool -> REPLCmd
      Metavars : REPLCmd
      Editing : EditCmd -> REPLCmd
+     RunShellCommand : String -> REPLCmd
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
@@ -466,10 +477,10 @@ mutual
 
   showDo : PDo -> String
   showDo (DoExp _ tm) = show tm
-  showDo (DoBind _ n tm) = show n ++ " <- " ++ show tm
+  showDo (DoBind _ _ n tm) = show n ++ " <- " ++ show tm
   showDo (DoBindPat _ l tm alts)
       = show l ++ " <- " ++ show tm ++ concatMap showAlt alts
-  showDo (DoLet _ l rig _ tm) = "let " ++ show l ++ " = " ++ show tm
+  showDo (DoLet _ _ l rig _ tm) = "let " ++ show l ++ " = " ++ show tm
   showDo (DoLetPat _ l _ tm alts)
       = "let " ++ show l ++ " = " ++ show tm ++ concatMap showAlt alts
   showDo (DoLetLocal _ ds)
@@ -530,7 +541,7 @@ mutual
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
     showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
-    showPrec d (PImplicitApp _ f Nothing a)
+    showPrec d (PAutoApp _ f a)
         = showPrec d f ++ " @{" ++ showPrec d a ++ "}"
     showPrec d (PDelayed _ LInf ty)
         = showCon d "Inf" $ showArg ty
@@ -540,11 +551,11 @@ mutual
         = showCon d "Delay" $ showArg tm
     showPrec d (PForce _ tm)
         = showCon d "Force" $ showArg tm
-    showPrec d (PImplicitApp _ f (Just n) (PRef _ a))
+    showPrec d (PNamedApp _ f n (PRef _ a))
         = if n == a
              then showPrec d f ++ " {" ++ showPrec d n ++ "}"
              else showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
-    showPrec d (PImplicitApp _ f (Just n) a)
+    showPrec d (PNamedApp _ f n a)
         = showPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d a ++ "}"
     showPrec _ (PSearch _ _) = "%search"
     showPrec d (PQuote _ tm) = "`(" ++ showPrec d tm ++ ")"
@@ -555,7 +566,7 @@ mutual
     showPrec d (PPrimVal _ c) = showPrec d c
     showPrec _ (PHole _ _ n) = "?" ++ n
     showPrec _ (PType _) = "Type"
-    showPrec d (PAs _ n p) = showPrec d n ++ "@" ++ showPrec d p
+    showPrec d (PAs _ _ n p) = showPrec d n ++ "@" ++ showPrec d p
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
@@ -602,15 +613,25 @@ mutual
     showPrec d (PRangeStream _ start (Just next))
         = "[" ++ showPrec d start ++ ", " ++ showPrec d next ++ " .. ]"
     showPrec d (PUnifyLog _ _ tm) = showPrec d tm
-    showPrec d (PPostfixProjs fc rec fields)
+    showPrec d (PPostfixApp fc rec fields)
         = showPrec d rec ++ concatMap (\n => "." ++ show n) fields
-    showPrec d (PPostfixProjsSection fc fields args)
-        = "("
-            ++ concatMap (\n => "." ++ show n) fields
-            ++ concatMap (\x => " " ++ showPrec App x) args
-            ++ ")"
+    showPrec d (PPostfixAppPartial fc fields)
+        = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
+
+public export
+record Method where
+  constructor MkMethod
+  name     : Name
+  count    : RigCount
+  totalReq : Maybe TotalReq
+  type     : RawImp
+
+export
+Show Method where
+  show (MkMethod n c treq ty)
+    = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty
 
 public export
 record IFaceInfo where
@@ -619,9 +640,25 @@ record IFaceInfo where
   implParams : List Name
   params : List Name
   parents : List RawImp
-  methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
+  methods : List Method
      -- ^ name, whether a data method, and desugared type (without constraint)
   defaults : List (Name, List ImpClause)
+
+export
+TTC Method where
+  toBuf b (MkMethod nm c treq ty)
+      = do toBuf b nm
+           toBuf b c
+           toBuf b treq
+           toBuf b ty
+
+  fromBuf b
+      = do nm <- fromBuf b
+           c <- fromBuf b
+           treq <- fromBuf b
+           ty <- fromBuf b
+           pure (MkMethod nm c treq ty)
+
 
 export
 TTC IFaceInfo where
@@ -799,10 +836,14 @@ mapPTermM f = goPTerm where
       PWithApp fc <$> goPTerm x
                   <*> goPTerm y
       >>= f
-    goPTerm (PImplicitApp fc x argn y) =
-      PImplicitApp fc <$> goPTerm x
-                      <*> pure argn
-                      <*> goPTerm y
+    goPTerm (PAutoApp fc x y) =
+      PAutoApp fc <$> goPTerm x
+                         <*> goPTerm y
+      >>= f
+    goPTerm (PNamedApp fc x n y) =
+      PNamedApp fc <$> goPTerm x
+                   <*> pure n
+                   <*> goPTerm y
       >>= f
     goPTerm (PDelayed fc x y) =
       PDelayed fc x <$> goPTerm y
@@ -830,8 +871,8 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PHole _ _ _) = f t
     goPTerm t@(PType _) = f t
-    goPTerm (PAs fc x pat) =
-      PAs fc x <$> goPTerm pat
+    goPTerm (PAs fc nameFC x pat) =
+      PAs fc nameFC x <$> goPTerm pat
       >>= f
     goPTerm (PDotted fc x) =
       PDotted fc <$> goPTerm x
@@ -906,12 +947,11 @@ mapPTermM f = goPTerm where
     goPTerm (PUnifyLog fc k x) =
       PUnifyLog fc k <$> goPTerm x
       >>= f
-    goPTerm (PPostfixProjs fc rec fields) =
-      PPostfixProjs fc <$> goPTerm rec <*> pure fields
+    goPTerm (PPostfixApp fc rec fields) =
+      PPostfixApp fc <$> goPTerm rec <*> pure fields
       >>= f
-    goPTerm (PPostfixProjsSection fc fields args) =
-      PPostfixProjsSection fc fields <$> goPTerms args
-      >>= f
+    goPTerm (PPostfixAppPartial fc fields) =
+      f (PPostfixAppPartial fc fields)
     goPTerm (PWithUnambigNames fc ns rhs) =
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f
@@ -922,14 +962,14 @@ mapPTermM f = goPTerm where
 
     goPDo : PDo -> Core PDo
     goPDo (DoExp fc t) = DoExp fc <$> goPTerm t
-    goPDo (DoBind fc n t) = DoBind fc n <$> goPTerm t
+    goPDo (DoBind fc nameFC n t) = DoBind fc nameFC n <$> goPTerm t
     goPDo (DoBindPat fc t u cls) =
       DoBindPat fc <$> goPTerm t
                    <*> goPTerm u
                    <*> goPClauses cls
-    goPDo (DoLet fc n c t scope) =
-       DoLet fc n c <$> goPTerm t
-                    <*> goPTerm scope
+    goPDo (DoLet fc lhsFC n c t scope) =
+       DoLet fc lhsFC n c <$> goPTerm t
+                          <*> goPTerm scope
     goPDo (DoLetPat fc pat t scope cls) =
        DoLetPat fc <$> goPTerm pat
                    <*> goPTerm t
@@ -963,11 +1003,11 @@ mapPTermM f = goPTerm where
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
     goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
-    goPDecl (PInterface fc v mnts n doc nts ns mn ps) =
+    goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
                       <*> pure doc
-                      <*> goPairedPTerms nts
+                      <*> go3TupledPTerms nrts
                       <*> pure ns
                       <*> pure mn
                       <*> goPDecls ps
@@ -992,7 +1032,7 @@ mapPTermM f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
-    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
+    goPTypeDecl (MkPTy fc nameFC n d t) = MkPTy fc nameFC n d <$> goPTerm t
 
     goPDataDecl : PDataDecl -> Core PDataDecl
     goPDataDecl (MkPData fc n t opts tdecls) =

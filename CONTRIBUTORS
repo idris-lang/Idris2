@@ -1,46 +1,61 @@
 Thanks to the following for their help and contributions to Idris 2:
 
+Aaron Lebahn
 Abdelhakim Qbaich
-Alex Gryzlov 
-Alex Silva 
-Andre Kuhlenschmidt 
-André Videla 
+Alex Gryzlov
+Alex Silva
+alissa42
+Andre Kuhlenschmidt
+André Videla
 Andy Lok
 Anthony Lodi
-Arnaud Bailly 
-Brian Wignall 
-Christian Rasmussen 
-David Smith 
-Edwin Brady 
-Fabián Heredia Montiel
-George Pollard
-GhiOm 
-Guillaume Allais
-Ilya Rezvov 
-Jan de Muijnck-Hughes 
-Jeetu
-Johann Rudloff
-Kamil Shakirov 
+Arnaud Bailly
+Brian Wignall
 Bryn Keller
-Kevin Boulain 
-LuoChen 
+Christian Rasmussen
+David Smith
+Denis Buzdalov
+Edwin Brady
+Fabián Heredia Montiel
+Felix Springer
+George Pollard
+GhiOm
+Giuseppe Lomurno
+Guillaume Allais
+Ilya Rezvov
+Jan de Muijnck-Hughes
+Jeetu
+Joey Eremondi
+Johann Rudloff
+Kamil Shakirov
+Kevin Boulain
+LuoChen
 Marc Petit-Huguenin
 MarcelineVQ
-Marshall Bowers 
-Matthew Wilson 
-Matus Tejiscak 
-Michael Morgan 
-Milan Kral 
-Molly Miller 
-Mounir Boudia 
+Marshall Bowers
+Mathew Polzin
+Matthew Wilson
+Matus Tejiscak
+Michael Messer
+Michael Morgan
+Milan Kral
+Molly Miller
+Mounir Boudia
 Nicolas Biri
-Niklas Larsson 
-Ohad Kammar 
-Peter Hajdu 
+Niklas Larsson
+Ohad Kammar
+Peter Hajdu
+Rodrigo Oliveira
 Rohit Grover
 Rui Barreiro
-Simon Chatterjee 
+Ruslan Feizerahmanov
+Simon Chatterjee
+tensorknower69
 then0rTh
-Theo Butler 
-Tim Süberkrüb 
-Timmy Jose 
+Theo Butler
+Thomas Dziedzic
+Tim Süberkrüb
+Timmy Jose
+
+Apologies to anyone we've missed - let us know and we'll correct it (or just
+send a PR with the correction).

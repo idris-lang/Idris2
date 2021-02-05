@@ -13,7 +13,7 @@ import TTImp.Utils
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.StringMap
+import Libraries.Data.StringMap
 
 %default covering
 
@@ -199,13 +199,13 @@ mutual
            sc' <- toPTerm startPrec sc
            pt' <- traverse (toPTerm argPrec) pt
            bracket p startPrec (PLam fc rig pt' (PRef fc n) arg' sc')
-  toPTerm p (ILet fc rig n ty val sc)
+  toPTerm p (ILet fc lhsFC rig n ty val sc)
       = do imp <- showImplicits
            ty' <- if imp then toPTerm startPrec ty
                          else pure (PImplicit fc)
            val' <- toPTerm startPrec val
            sc' <- toPTerm startPrec sc
-           bracket p startPrec (PLet fc rig (PRef fc n)
+           bracket p startPrec (PLet fc rig (PRef lhsFC n)
                                      ty' val' sc' [])
   toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc
@@ -238,13 +238,17 @@ mutual
       = do arg' <- toPTerm argPrec arg
            app <- toPTermApp fn [(fc, Nothing, arg')]
            bracket p appPrec app
+  toPTerm p (IAutoApp fc fn arg)
+      = do arg' <- toPTerm argPrec arg
+           app <- toPTermApp fn [(fc, Just Nothing, arg')]
+           bracket p appPrec app
   toPTerm p (IWithApp fc fn arg)
       = do arg' <- toPTerm startPrec arg
            fn' <- toPTerm startPrec fn
            bracket p appPrec (PWithApp fc fn' arg')
-  toPTerm p (IImplicitApp fc fn n arg)
+  toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
-           app <- toPTermApp fn [(fc, Just n, arg')]
+           app <- toPTermApp fn [(fc, Just (Just n), arg')]
            imp <- showImplicits
            if imp
               then bracket p startPrec app
@@ -260,7 +264,7 @@ mutual
   toPTerm p (IType fc) = pure (PType fc)
   toPTerm p (IBindVar fc v) = pure (PRef fc (UN v))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
-  toPTerm p (IAs fc _ n pat) = pure (PAs fc n !(toPTerm argPrec pat))
+  toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
 
   toPTerm p (IDelayed fc r ty) = pure (PDelayed fc r !(toPTerm argPrec ty))
@@ -288,10 +292,13 @@ mutual
   mkApp fn ((fc, Nothing, arg) :: rest)
       = do let ap = sugarApp (PApp fc fn arg)
            mkApp ap rest
-  mkApp fn ((fc, Just n, arg) :: rest)
+  mkApp fn ((fc, Just Nothing, arg) :: rest)
+      = do let ap = sugarApp (PAutoApp fc fn arg)
+           mkApp ap rest
+  mkApp fn ((fc, Just (Just n), arg) :: rest)
       = do imp <- showImplicits
            if imp
-              then do let ap = PImplicitApp fc fn n arg
+              then do let ap = PNamedApp fc fn n arg
                       mkApp ap rest
               else mkApp fn rest
 
@@ -302,9 +309,9 @@ mutual
   toPTermApp (IApp fc f a) args
       = do a' <- toPTerm argPrec a
            toPTermApp f ((fc, Nothing, a') :: args)
-  toPTermApp (IImplicitApp fc f n a) args
+  toPTermApp (INamedApp fc f n a) args
       = do a' <- toPTerm startPrec a
-           toPTermApp f ((fc, Just n, a') :: args)
+           toPTermApp f ((fc, Just (Just n), a') :: args)
   toPTermApp fn@(IVar fc n) args
       = do defs <- get Ctxt
            case !(lookupCtxtExact n (gamma defs)) of
@@ -349,8 +356,8 @@ mutual
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy -> Core PTypeDecl
-  toPTypeDecl (MkImpTy fc n ty)
-      = pure (MkPTy fc n "" !(toPTerm startPrec ty))
+  toPTypeDecl (MkImpTy fc nameFC n ty)
+      = pure (MkPTy fc nameFC n "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -423,7 +430,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
-  toPDecl (IPragma _) = pure Nothing
+  toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
 
 export

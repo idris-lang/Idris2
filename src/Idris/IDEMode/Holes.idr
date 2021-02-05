@@ -1,6 +1,7 @@
 module Idris.IDEMode.Holes
 
 import Core.Env
+import Core.Context.Log
 
 import Idris.Resugar
 import Idris.Syntax
@@ -8,8 +9,8 @@ import Idris.Pretty
 
 import Idris.IDEMode.Commands
 
-import Data.String.Extra
-import Utils.Term
+import Libraries.Data.String.Extra
+import Libraries.Utils.Term
 
 %default covering
 
@@ -78,7 +79,8 @@ extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
   = do rest <- extractHoleData defs (b :: env) fn args sc
        let True = showName x
-         | False => pure rest
+         | False => do log "idemode.hole" 10 $ "Not showing name: " ++ show x
+                       pure rest
        ity <- resugar env !(normalise defs env (binderType b))
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ record { context $= (premise ::)  } rest

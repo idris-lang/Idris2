@@ -1,0 +1,11 @@
+1/1: Building TypeAtRecords (TypeAtRecords.idr)
+Main> Main.Person.name : Person animal -> String
+Main> Main.Person.age : Person animal -> Nat
+Main> Main.Person.pet : Person animal -> animal
+Main> animal : Type
+Main> one : Nat
+Main> p : Person a
+Main> emptyString : String
+Main> zero : Nat
+Main> p : Person a
+Main> Bye for now!

@@ -20,7 +20,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -218,16 +218,20 @@ updateArg allvars var con (IVar fc n)
 updateArg allvars var con (IApp fc f a)
     = pure $ IApp fc !(updateArg allvars var con f)
                      !(updateArg allvars var con a)
-updateArg allvars var con (IImplicitApp fc f n a)
-    = pure $ IImplicitApp fc !(updateArg allvars var con f) n
-                             !(updateArg allvars var con a)
-updateArg allvars var con (IAs fc s n p)
+updateArg allvars var con (IAutoApp fc f a)
+    = pure $ IAutoApp fc !(updateArg allvars var con f)
+                     !(updateArg allvars var con a)
+updateArg allvars var con (INamedApp fc f n a)
+    = pure $ INamedApp fc !(updateArg allvars var con f) n
+                          !(updateArg allvars var con a)
+updateArg allvars var con (IAs fc nameFC s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
 data ArgType
     = Explicit FC RawImp
-    | Implicit FC (Maybe Name) RawImp
+    | Auto     FC RawImp
+    | Named    FC Name RawImp
 
 update : {auto c : Ref Ctxt Defs} ->
          List Name -> -- all the variable names
@@ -235,19 +239,24 @@ update : {auto c : Ref Ctxt Defs} ->
          ArgType -> Core ArgType
 update allvars var con (Explicit fc arg)
     = pure $ Explicit fc !(updateArg allvars var con arg)
-update allvars var con (Implicit fc n arg)
-    = pure $ Implicit fc n !(updateArg allvars var con arg)
+update allvars var con (Auto fc arg)
+    = pure $ Auto fc !(updateArg allvars var con arg)
+update allvars var con (Named fc n arg)
+    = pure $ Named fc n !(updateArg allvars var con arg)
 
 getFnArgs : RawImp -> List ArgType -> (RawImp, List ArgType)
 getFnArgs (IApp fc tm a) args
     = getFnArgs tm (Explicit fc a :: args)
-getFnArgs (IImplicitApp fc tm n a) args
-    = getFnArgs tm (Implicit fc n a :: args)
+getFnArgs (IAutoApp fc tm a) args
+    = getFnArgs tm (Auto fc a :: args)
+getFnArgs (INamedApp fc tm n a) args
+    = getFnArgs tm (Named fc n a :: args)
 getFnArgs tm args = (tm, args)
 
 apply : RawImp -> List ArgType -> RawImp
 apply f (Explicit fc a :: args) = apply (IApp fc f a) args
-apply f (Implicit fc n a :: args) = apply (IImplicitApp fc f n a) args
+apply f (Auto fc a :: args) = apply (IAutoApp fc f a) args
+apply f (Named fc n a :: args) = apply (INamedApp fc f n a) args
 apply f [] = f
 
 -- Return a new LHS to check, replacing 'var' with an application of 'con'
@@ -295,13 +304,20 @@ findUpdates defs (IVar fc n) tm = recordUpdate fc n tm
 findUpdates defs (IApp _ f a) (IApp _ f' a')
     = do findUpdates defs f f'
          findUpdates defs a a'
-findUpdates defs (IImplicitApp _ f _ a) (IImplicitApp _ f' _ a')
+findUpdates defs (IAutoApp _ f a) (IAutoApp _ f' a')
     = do findUpdates defs f f'
          findUpdates defs a a'
-findUpdates defs (IImplicitApp _ f _ a) f' = findUpdates defs f f'
-findUpdates defs f (IImplicitApp _ f' _ a) = findUpdates defs f f'
-findUpdates defs (IAs _ _ _ f) f' = findUpdates defs f f'
-findUpdates defs f (IAs _ _ _ f') = findUpdates defs f f'
+findUpdates defs (IAutoApp _ f a) f'
+    = findUpdates defs f f'
+findUpdates defs f (IAutoApp _ f' a)
+    = findUpdates defs f f'
+findUpdates defs (INamedApp _ f _ a) (INamedApp _ f' _ a')
+    = do findUpdates defs f f'
+         findUpdates defs a a'
+findUpdates defs (INamedApp _ f _ a) f' = findUpdates defs f f'
+findUpdates defs f (INamedApp _ f' _ a) = findUpdates defs f f'
+findUpdates defs (IAs _ _ _ _ f) f' = findUpdates defs f f'
+findUpdates defs f (IAs _ _ _ _ f') = findUpdates defs f f'
 findUpdates _ _ _ = pure ()
 
 getUpdates : Defs -> RawImp -> RawImp -> Core (List (Name, RawImp))
@@ -318,13 +334,21 @@ mkCase {c} {u} fn orig lhs_raw
          defs <- get Ctxt
          ust <- get UST
          catch
-           (do -- Use 'Rig0' since it might be a type level function, or it might
+           (do
+               -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
+               -- then the current namespace (accessed by calling getNS) differs from the function
+               -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
+               setAllPublic True
+
+               -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
                                     fn (InLHS erased) [] (MkNested [])
                                     [] (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
+               -- Revert all public back to false
+               setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
                lhs' <- unelabNoSugar [] lhs
@@ -387,9 +411,9 @@ export
 getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            (FC -> ClosedTerm -> Bool) -> Name ->
+            (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n
     = do Just (loc, envlen, lhs_in) <- findLHSAt p
               | Nothing => pure (SplitFail CantFindLHS)
-         getSplitsLHS loc envlen lhs_in n
+         getSplitsLHS (justFC loc) envlen lhs_in n

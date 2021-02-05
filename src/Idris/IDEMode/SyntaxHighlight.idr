@@ -28,7 +28,7 @@ SExpable Decoration where
 
 record Highlight where
   constructor MkHighlight
-  location : FC
+  location : NonEmptyFC
   name : Name
   isImplicit : Bool
   key : String
@@ -47,7 +47,7 @@ SExpable FC where
 
 SExpable Highlight where
   toSExp (MkHighlight loc nam impl k dec doc t ns)
-    = SExpList [ toSExp loc
+    = SExpList [ toSExp $ justFC loc
                , SExpList [ SExpList [ SymbolAtom "name", StringAtom (show nam) ]
                           , SExpList [ SymbolAtom "namespace", StringAtom ns ]
                           , SExpList [ SymbolAtom "decor", toSExp dec ]
@@ -58,9 +58,8 @@ SExpable Highlight where
                           ]
                ]
 
-inFile : String -> (FC, (Name, Nat, ClosedTerm)) -> Bool
-inFile fname (MkFC file _ _, _) = file == fname
-inFile _     (EmptyFC, _)       = False
+inFile : String -> (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Bool
+inFile fname ((file, _, _), _) = file == fname
 
 ||| Output some data using current dialog index
 export
@@ -88,7 +87,7 @@ outputHighlight h =
     hlt = [h]
 
 outputNameSyntax : {auto opts : Ref ROpts REPLOpts} ->
-                   (FC, (Name, Nat, ClosedTerm)) -> Core ()
+                   (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Core ()
 outputNameSyntax (fc, (name, _, term)) =
   let dec = case term of
                  (Local fc x idx y) => Just Bound
@@ -123,7 +122,11 @@ outputSyntaxHighlighting : {auto m : Ref MD Metadata} ->
                            REPLResult ->
                            Core REPLResult
 outputSyntaxHighlighting fname loadResult = do
-  allNames <- filter (inFile fname) . names <$> get MD
---  decls <- filter (inFile fname) . tydecls <$> get MD
-  _ <- traverse outputNameSyntax allNames -- ++ decls)
+  opts <- get ROpts
+  when (opts.synHighlightOn) $ do
+    allNames <- the (Core ?) $ filter (inFile fname) . names <$> get MD
+    --  decls <- filter (inFile fname) . tydecls <$> get MD
+    _ <- traverse outputNameSyntax allNames -- ++ decls)
+    pure ()
+
   pure loadResult

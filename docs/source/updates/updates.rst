@@ -579,6 +579,149 @@ Idris 1 took a different approach here: names which were parameters to data
 types were in scope, other names were not. The Idris 2 approach is, we hope,
 more consistent and easier to understand.
 
+.. _sect-app-syntax-additions:
+
+Function application syntax additions
+-------------------------------------
+
+From now on you can utilise the new syntax of function applications:
+
+.. code-block:: idris
+
+    f {x1 [= e1], x2 [= e2], ...}
+
+There are three additions here:
+
+1. More than one argument can be written in braces, separated with commas:
+
+.. code-block:: idris
+
+    record Dog where
+      constructor MkDog
+      name : String
+      age : Nat
+
+    -- Notice that `name` and `age` are explicit arguments.
+    -- See paragraph (2)
+    haveADog : Dog
+    haveADog = MkDog {name = "Max", age = 3}
+
+    pairOfStringAndNat : (String, Nat)
+    pairOfStringAndNat = MkPair {x = "year", y = 2020}
+
+    myPlus : (n : Nat) -> (k : Nat) -> Nat
+    myPlus {n = Z   , k} = k
+    myPlus {n = S n', k} = S (myPlus n' k)
+
+    twoPlusTwoIsFour : myPlus {n = 2, k = 2} === 4
+    twoPlusTwoIsFour = Refl
+
+2. Arguments in braces can now correspond to explicit, implicit and auto implicit
+   dependent function types (``Pi`` types), provided the domain type is named:
+
+.. code-block:: idris
+
+    myPointlessFunction : (exp : String) -> {imp : String} -> {auto aut : String} -> String
+    myPointlessFunction exp = exp ++ imp ++ aut
+
+    callIt : String
+    callIt = myPointlessFunction {imp = "a ", exp = "Just ", aut = "test"}
+
+Order of the arguments doesn't matter as long as they are in braces and the names are distinct.
+It is better to stick named arguments in braces at the end of your argument list, because
+regular unnamed explicit arguments are processed first and take priority:
+
+.. code-block:: idris
+
+    myPointlessFunction' : (a : String) -> String -> (c : String) -> String
+    myPointlessFunction' a b c = a ++ b ++ c
+
+    badCall : String
+    badCall = myPointlessFunction' {a = "a", c = "c"} "b"
+
+This snippet won't type check, because "b" in ``badCall`` is passed first,
+although logically we want it to be second.
+Idris will tell you that it couldn't find a spot for ``a = "a"`` (because "b" took its place),
+so the application is ill-formed.
+
+Thus if you want to use the new syntax, it is worth naming your ``Pi`` types.
+
+3. Multiple explicit arguments can be "skipped" more easily with the following syntax:
+
+.. code-block:: idris
+
+    f {x1 [= e1], x2 [= e2], ..., xn [= en], _}
+
+or
+
+.. code-block:: idris
+
+    f {}
+
+in case none of the named arguments are wanted.
+
+Examples:
+
+.. code-block:: idris
+
+    import Data.Nat
+
+    record Four a b c d where
+      constructor MkFour
+      x : a
+      y : b
+      z : c
+      w : d
+
+    firstTwo : Four a b c d -> (a, b)
+    firstTwo $ MkFour {x, y, _} = (x, y)
+    -- firstTwo $ MkFour {x, y, z = _, w = _} = (x, y)
+
+    dontCare : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
+    dontCare {} = plusCommutative {}
+    --dontCare _ _ _ _ _ = plusCommutative _ _
+
+Last rule worth noting is the case of named applications with repeated argument names, e.g:
+
+.. code-block:: idris
+
+    data WeirdPair : Type -> Type -> Type where
+      MkWeirdPair : (x : a) -> (x : b) -> WeirdPair a b
+
+    weirdSnd : WeirdPair a b -> b
+    --weirdSnd $ MkWeirdPair {x, x} = x
+    --                        ^
+    -- Error: "Non linear pattern variable"
+    -- But that one is okay:
+    weirdSnd $ MkWeirdPair {x = _, x} = x
+
+In this example the name ``x`` is given repeatedly to the ``Pi`` types of the data constructor ``MkWeirdPair``.
+In order to deconstruct the ``WeirdPair a b`` in ``weirdSnd``, while writing the left-hand side of the pattern-matching clause
+in a named manner (via the new syntax), we have to rename the first occurrence of ``x`` to any fresh name or the ``_`` as we did.
+Then the definition type checks normally.
+
+In general, duplicate names are bound sequentially on the left-hand side and must be renamed for the pattern expression to be valid.
+
+The situation is similar on the right-hand side of pattern-matching clauses:
+
+.. code-block:: idris
+
+   0 TypeOf : a -> Type
+   TypeOf _ = a
+
+   weirdId : {0 a : Type} -> (1 a : a) -> TypeOf a
+   weirdId a = a
+
+   zero : Nat
+   -- zero = weirdId { a = Z }
+   --                      ^
+   -- Error: "Mismatch between: Nat and Type"
+   -- But this works:
+   zero = weirdId { a = Nat, a = Z }
+
+Named arguments should be passed sequentially in the order they were defined in the ``Pi`` types,
+regardless of their (imp)explicitness.
+
 Better inference
 ----------------
 
@@ -655,6 +798,23 @@ correspondingly:
     addEntry : String -> WrapVect String -> WrapVect String
     addEntry val = record { length $= S,
                             content $= (val :: ) }
+
+Another novelty - new update syntax (previous one still functional):
+
+.. code-block:: idris
+
+    record Three a b c where
+      constructor MkThree
+      x : a
+      y : b
+      z : c
+
+    -- Yet another contrived example
+    mapSetMap : Three a b c -> (a -> a') -> b' -> (c -> c') -> Three a' b' c'
+    mapSetMap three@(MkThree x y z) f y' g = {x $= f, y := y', z $= g} three
+
+The ``record`` keyword has been discarded for brevity, symbol ``:=`` replaces ``=``
+in order to not introduce any ambiguity.
 
 Generate definition
 -------------------

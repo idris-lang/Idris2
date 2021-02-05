@@ -9,3 +9,7 @@ data C : Type -> Type where
 
 data D : Type -> Type where
   MkD : {0 a : Type} -> let 0 b = List a in b -> D a
+
+%logging off
+
+data E : Type where

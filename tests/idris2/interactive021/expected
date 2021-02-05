@@ -1,0 +1,25 @@
+1/1: Building TypeAtDoNotation (TypeAtDoNotation.idr)
+Main> f : Maybe Nat -> Nat -> Maybe Nat
+Main> Main.f : Maybe Nat -> Nat -> Maybe Nat
+Main> x : Maybe Nat
+Main> y : Nat
+Main> x' : Nat
+Main> x : Maybe Nat
+Main> x'' : Nat
+Main> x : Maybe Nat
+Main> y' : Nat
+Main> y : Nat
+Main> y'' : Nat
+Main> y : Nat
+Main> a : Nat
+Main> a : Nat
+Main> x' : Nat
+Main> x : Maybe Nat
+Main> x' : Nat
+Main> x'' : Nat
+Main> y : Nat
+Main> y' : Nat
+Main> y' : Nat
+Main> y'' : Nat
+Main> a : Nat
+Main> Bye for now!

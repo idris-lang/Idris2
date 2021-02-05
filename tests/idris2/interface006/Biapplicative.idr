@@ -1,6 +1,5 @@
 module Biapplicative
 
-import Bifunctor
 import Apply
 
 infixl 4 <<*>>, <<*, *>>, <<**>>

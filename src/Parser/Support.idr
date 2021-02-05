@@ -1,9 +1,9 @@
 module Parser.Support
 
-import public Text.Lexer
-import public Text.Parser
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import public Libraries.Text.Lexer
+import public Libraries.Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
 import Data.List
@@ -138,64 +138,66 @@ getEsc "SP" = Just '\SP'
 getEsc "DEL" = Just '\DEL'
 getEsc str = Nothing
 
-escape' : List Char -> Maybe (List Char)
-escape' [] = pure []
-escape' ('\\' :: '\\' :: xs) = pure $ '\\' :: !(escape' xs)
-escape' ('\\' :: '&' :: xs) = pure !(escape' xs)
-escape' ('\\' :: 'a' :: xs) = pure $ '\a' :: !(escape' xs)
-escape' ('\\' :: 'b' :: xs) = pure $ '\b' :: !(escape' xs)
-escape' ('\\' :: 'f' :: xs) = pure $ '\f' :: !(escape' xs)
-escape' ('\\' :: 'n' :: xs) = pure $ '\n' :: !(escape' xs)
-escape' ('\\' :: 'r' :: xs) = pure $ '\r' :: !(escape' xs)
-escape' ('\\' :: 't' :: xs) = pure $ '\t' :: !(escape' xs)
-escape' ('\\' :: 'v' :: xs) = pure $ '\v' :: !(escape' xs)
-escape' ('\\' :: '\'' :: xs) = pure $ '\'' :: !(escape' xs)
-escape' ('\\' :: '\"' :: xs) = pure $ '\"' :: !(escape' xs)
-escape' ('\\' :: 'x' :: xs)
-    = case span isHexDigit xs of
-           ([], rest) => assert_total (escape' rest)
-           (ds, rest) => pure $ cast !(toHex 1 (reverse ds)) ::
-                                 !(assert_total (escape' rest))
+escape' : List Char -> List Char -> Maybe (List Char)
+escape' _ [] = pure []
+escape' escapeChars (x::xs)
+    = assert_total $ if escapeChars `isPrefixOf` (x::xs)
+         then case drop (length escapeChars) (x::xs) of
+                   ('\\' :: xs) => pure $ '\\' :: !(escape' escapeChars xs)
+                   ('\n' :: xs) => pure !(escape' escapeChars xs)
+                   ('&' :: xs) => pure !(escape' escapeChars xs)
+                   ('a' :: xs) => pure $ '\a' :: !(escape' escapeChars xs)
+                   ('b' :: xs) => pure $ '\b' :: !(escape' escapeChars xs)
+                   ('f' :: xs) => pure $ '\f' :: !(escape' escapeChars xs)
+                   ('n' :: xs) => pure $ '\n' :: !(escape' escapeChars xs)
+                   ('r' :: xs) => pure $ '\r' :: !(escape' escapeChars xs)
+                   ('t' :: xs) => pure $ '\t' :: !(escape' escapeChars xs)
+                   ('v' :: xs) => pure $ '\v' :: !(escape' escapeChars xs)
+                   ('\'' :: xs) => pure $ '\'' :: !(escape' escapeChars xs)
+                   ('"' :: xs) => pure $ '"' :: !(escape' escapeChars xs)
+                   ('x' :: xs) => case span isHexDigit xs of
+                                       ([], rest) => escape' escapeChars rest
+                                       (ds, rest) => pure $ cast !(toHex 1 (reverse ds)) ::
+                                                             !(escape' escapeChars rest)
+                   ('o' :: xs) => case span isOctDigit xs of
+                                       ([], rest) => escape' escapeChars rest
+                                       (ds, rest) => pure $ cast !(toOct 1 (reverse ds)) ::
+                                                             !(escape' escapeChars rest)
+                   xs => case span isDigit xs of
+                              ([], (a :: b :: c :: rest)) =>
+                                case getEsc (fastPack (the (List _) [a, b, c])) of
+                                     Just v => Just (v :: !(escape' escapeChars rest))
+                                     Nothing => case getEsc (fastPack (the (List _) [a, b])) of
+                                                     Just v => Just (v :: !(escape' escapeChars (c :: rest)))
+                                                     Nothing => escape' escapeChars xs
+                              ([], (a :: b :: [])) =>
+                                case getEsc (fastPack (the (List _) [a, b])) of
+                                     Just v => Just (v :: [])
+                                     Nothing => escape' escapeChars xs
+                              ([], rest) => escape' escapeChars rest
+                              (ds, rest) => Just $ cast (cast {to=Int} (fastPack ds)) ::
+                                              !(escape' escapeChars rest)
+         else Just $ x :: !(escape' escapeChars xs)
   where
     toHex : Int -> List Char -> Maybe Int
     toHex _ [] = Just 0
     toHex m (d :: ds)
         = pure $ !(hex (toLower d)) * m + !(toHex (m*16) ds)
-escape' ('\\' :: 'o' :: xs)
-    = case span isOctDigit xs of
-           ([], rest) => assert_total (escape' rest)
-           (ds, rest) => pure $ cast !(toOct 1 (reverse ds)) ::
-                                 !(assert_total (escape' rest))
-  where
+
     toOct : Int -> List Char -> Maybe Int
     toOct _ [] = Just 0
     toOct m (d :: ds)
         = pure $ !(oct (toLower d)) * m + !(toOct (m*8) ds)
-escape' ('\\' :: xs)
-    = case span isDigit xs of
-           ([], (a :: b :: c :: rest)) =>
-               case getEsc (fastPack (the (List _) [a, b, c])) of
-                   Just v => Just (v :: !(assert_total (escape' rest)))
-                   Nothing => case getEsc (fastPack (the (List _) [a, b])) of
-                                   Just v => Just (v :: !(assert_total (escape' (c :: rest))))
-                                   Nothing => escape' xs
-           ([], (a :: b :: [])) =>
-               case getEsc (fastPack (the (List _) [a, b])) of
-                   Just v => Just (v :: [])
-                   Nothing => escape' xs
-           ([], rest) => assert_total (escape' rest)
-           (ds, rest) => Just $ cast (cast {to=Int} (fastPack ds)) ::
-                                 !(assert_total (escape' rest))
-escape' (x :: xs) = Just $ x :: !(escape' xs)
 
 export
-escape : String -> Maybe String
-escape x = pure $ fastPack !(escape' (unpack x))
+escape : Nat -> String -> Maybe String
+escape hashtag x = let escapeChars = '\\' :: replicate hashtag '#' in
+                       fastPack <$> (escape' escapeChars (unpack x))
 
 export
 getCharLit : String -> Maybe Char
 getCharLit str
-   = do e <- escape str
+   = do e <- escape 0 str
         if length e == 1
            then Just (assert_total (prim__strHead e))
            else if length e == 0 -- parsed the NULL character that terminated the string!

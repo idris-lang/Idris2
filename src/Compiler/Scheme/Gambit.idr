@@ -10,14 +10,16 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -29,14 +31,21 @@ import System.Info
 -- TODO Look for gsi-script, then gsi
 findGSI : IO String
 findGSI =
-  do env <- getEnv "GAMBIT_GSI"
+  do env <- idrisGetEnv "GAMBIT_GSI"
      pure $ fromMaybe "/usr/bin/env gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
-  do env <- getEnv "GAMBIT_GSC"
+  do env <- idrisGetEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
+
+findGSCBackend : IO String
+findGSCBackend =
+  do env <- idrisGetEnv "GAMBIT_GSC_BACKEND"
+     pure $ case env of
+              Nothing => ""
+              Just e => " -cc " ++ e
 
 schHeader : String
 schHeader = "; @generated\n
@@ -228,7 +237,7 @@ cCall fc cfn fnWrapName clib args ret
     replaceChar old new = pack . replaceOn old new . unpack
 
     buildCWrapperDefs : CCallbackInfo -> CWrapperDefs
-    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) = 
+    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) =
       let box = schemeWrap ++ "-box"
           setBox = "\n (set-box! " ++ box ++ " " ++ callbackStr ++ ")"
           cWrapName = replaceChar '-' '_' schemeWrap
@@ -387,9 +396,15 @@ compileExpr c tmpDir outputDir tm outfile
          libsname <- compileToSCM c tm srcPath
          libsfile <- traverse findLibraryFile $ map (<.> "a") (nub libsname)
          gsc <- coreLift findGSC
-         let cmd = gsc ++
-                   " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
-                   (showSep " " libsfile) ++ "\" -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+         gscBackend <- coreLift findGSCBackend
+         ds <- getDirectives Gambit
+         let gscCompileOpts =
+             case find (== "C") ds of
+                 Nothing => gscBackend ++ " -exe -cc-options \"-Wno-implicit-function-declaration\" -ld-options \"" ++
+                   (showSep " " libsfile) ++ "\""
+                 Just _ => " -c"
+         let cmd =
+             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)

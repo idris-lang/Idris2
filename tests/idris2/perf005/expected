@@ -11,3 +11,12 @@ Lambda.idr:62:3--88:9
  66 |                      (Func
  67 |                           (Func
 
+1/1: Building Bad1 (Bad1.idr)
+Error: Parse error at line 3:1:
+Couldn't parse declaration (next tokens: [data, identifier Bad, symbol =, identifier BadDCon, symbol (, identifier x, symbol :, identifier Nat, symbol ), end of input])
+1/1: Building Bad2 (Bad2.idr)
+Error: Parse error at line 3:13:
+Expected 'case', 'if', 'do', application or operator expression (next tokens: [symbol (, identifier whatever, symbol :, identifier Int, symbol ), end of input])
+1/1: Building Bad3 (Bad3.idr)
+Error: Parse error at line 4:1:
+Couldn't parse declaration (next tokens: [identifier badExpr, symbol (, identifier whatever, symbol :, symbol (, symbol ), symbol ), end of input])

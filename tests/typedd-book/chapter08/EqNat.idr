@@ -11,5 +11,3 @@ checkEqNat (S k) Z = Nothing
 checkEqNat (S k) (S j) = case checkEqNat k j of
                               Nothing => Nothing
                               Just eq => Just (sameS _ _ eq)
-
-

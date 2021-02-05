@@ -24,4 +24,3 @@ data Pair : Type -> Type -> Type where
 zip : Vect n a -> Vect n b -> Vect n (Pair a b)
 zip Nil Nil impossible
 zip (Cons x xs) (Cons y ys) = Cons (MkPair x y) (zip xs ys)
-

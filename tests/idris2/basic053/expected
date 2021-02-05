@@ -1,0 +1,13 @@
+foo
+bar
+foo bar
+foo
+  bar
+"foo"
+
+  \bar
+"foo"   \bar
+
+name: #"foo"
+version: "bar"
+bzs: \#\'a\n\t\\'
