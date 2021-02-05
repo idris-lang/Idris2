@@ -32,7 +32,7 @@ mutual
   public export
   data Environment : Telescope k -> Type where
     Empty : Environment []
-    (=.)  : Environment gamma -> ty env -> Environment (gamma -. ty)
+    (=.)  : (env : Environment gamma) -> ty env -> Environment (gamma -. ty)
   
 %name Telescope   gamma,gamma',gamma1,gamma2,gamma3
 %name Environment env,env',env1,env2,env3
