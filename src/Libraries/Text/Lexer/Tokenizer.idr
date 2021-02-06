@@ -50,30 +50,29 @@ compose = Compose
 ||| Stop reason why tokenizer can't make more progress.
 ||| @ ComposeNotClosing carries the span of composition begin token in the
 |||                     form of `(startLine, startCol), (endLine, endCol)`.
-export
+public export
 data StopReason =
      EndInput
    | NoRuleApply
    | ComposeNotClosing (Int, Int) (Int, Int)
 
+export
 Show StopReason where
     show EndInput = "EndInput"
     show NoRuleApply = "NoRuleApply"
     show (ComposeNotClosing start end) = "ComposeNotClosing " ++ show start ++ " " ++ show end
 
-tokenise : Tokenizer a -> (reject : Lexer) ->
+tokenise : Tokenizer a ->
            (line, col : Int) -> List (WithBounds a) ->
            List Char ->
            (List (WithBounds a), StopReason, (Int, Int, List Char))
-tokenise tokenizer reject line col acc [] = (reverse acc, EndInput, (line, col, []))
-tokenise tokenizer reject line col acc str
-    = case scan reject [] str of
-           Just _ => (reverse acc, NoRuleApply, (line, col, str))
-           Nothing => case getFirstToken tokenizer str of
-                           Right (tok, line', col', rest) =>
-                                 -- assert total because getFirstToken must consume something
-                                 assert_total (tokenise tokenizer reject line' col' (tok :: acc) rest)
-                           Left reason => (reverse acc, reason, (line, col, str))
+tokenise tokenizer line col acc [] = (reverse acc, EndInput, (line, col, []))
+tokenise tokenizer line col acc str
+    = case getFirstToken tokenizer str of
+           Right (tok, line', col', rest) =>
+                 -- assert total because getFirstToken must consume something
+                 assert_total (tokenise tokenizer line' col' (tok :: acc) rest)
+           Left reason => (reverse acc, reason, (line, col, str))
   where
     countNLs : List Char -> Nat
     countNLs str = List.length (filter (== '\n') str)
@@ -100,13 +99,12 @@ tokenise tokenizer reject line col acc str
              let col' = getCols beginTok col
              let tag = tagger $ fastPack beginTok
              let middle = middleFn tag
-             let end = endFn tag
              let (midToks, reason, (line'', col'', rest'')) =
-                    tokenise middle end line' col' [] rest
+                    tokenise middle line' col' [] rest
              case reason of
-                  NoRuleApply => Right ()
-                  EndInput => Right ()
-                  notClosing => Left notClosing
+                  reason@(ComposeNotClosing _ _) => Left reason
+                  _ => Right ()
+             let end = endFn tag
              let Just (endTok, rest''') = scan end [] rest''
                | _ => Left $ ComposeNotClosing (line, col) (line', col')
              let line''' = line'' + cast (countNLs endTok)
@@ -126,5 +124,5 @@ export
 lex : Tokenizer a -> String -> (List (WithBounds a), StopReason, (Int, Int, String))
 lex tokenizer str
     = let (ts, reason, (l, c, str')) =
-              tokenise tokenizer (pred $ const False) 0 0 [] (fastUnpack str) in
+              tokenise tokenizer 0 0 [] (fastUnpack str) in
           (ts, reason, (l, c, fastPack str'))
