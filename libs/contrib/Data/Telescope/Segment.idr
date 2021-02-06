@@ -45,10 +45,17 @@ public export
 fromTelescope : {k : Nat} -> Telescope k -> Segment k []
 fromTelescope gamma = tabulate _ (const gamma)
 
+||| Conversely, a segment of size `n` in telescope `gamma` can be seen as a function
+||| from environments for `gamma` to telescopes of size `n`.
 public export
 untabulate : {n : Nat} -> Segment n gamma -> (Environment gamma -> Telescope n)
 untabulate []            _   = []
 untabulate (ty :: delta) env = cons (ty env) (untabulate delta . (\ v => (env ** v)))
+
+||| Any segment in the empty telescope correspond to a telescope.
+public export
+toTelescope : {k : Nat} -> Segment k [] -> Telescope k
+toTelescope seg = untabulate seg ()
 
 %name Segment delta,delta',delta1,delta2
 
