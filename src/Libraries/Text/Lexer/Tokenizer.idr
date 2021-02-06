@@ -91,24 +91,22 @@ tokenise pred tokenizer line col acc str
              Right (MkBounded (fn (fastPack (reverse tok))) False line col line' col',
                    line', col', rest)
     getFirstToken (Compose begin tagger middleFn endFn fn) str
-        = do let Just (beginTok, rest) = scan begin [] str
-               | _ => Left NoRuleApply
-             let line' = line + cast (countNLs beginTok)
-             let col' = getCols beginTok col
-             let tag = tagger $ fastPack beginTok
-             let middle = middleFn tag
-             let (midToks, reason, (line'', col'', rest'')) =
+        = let Just (beginTok, rest) = scan begin [] str
+                | _ => Left NoRuleApply
+              line' = line + cast (countNLs beginTok)
+              col' = getCols beginTok col
+              tag = tagger $ fastPack beginTok
+              middle = middleFn tag
+              (midToks, NoRuleApply, (line'', col'', rest'')) =
                     tokenise (const False) middle line' col' [] rest
-             case reason of
-                  reason@(ComposeNotClosing _ _) => Left reason
-                  _ => Right ()
-             let end = endFn tag
-             let Just (endTok, rest''') = scan end [] rest''
-               | _ => Left $ ComposeNotClosing (line, col) (line', col')
-             let line''' = line'' + cast (countNLs endTok)
-             let col''' = getCols endTok col''
-             let midToks' = MkBounded (fn tag midToks) False line col line''' col'''
-             Right (midToks', line''', col''', rest''')
+                | (_, reason, _) => Left reason
+              end = endFn tag
+              Just (endTok, rest''') = scan end [] rest''
+                | _ => Left $ ComposeNotClosing (line, col) (line', col')
+              line''' = line'' + cast (countNLs endTok)
+              col''' = getCols endTok col''
+              midToks' = MkBounded (fn tag midToks) False line col line''' col''' in
+              Right (midToks', line''', col''', rest''')
     getFirstToken (Alt t1 t2) str
         = case getFirstToken t1 str of
                Right result => Right result
