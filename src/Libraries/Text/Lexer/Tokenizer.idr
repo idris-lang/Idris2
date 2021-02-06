@@ -84,12 +84,12 @@ tokenise pred tokenizer line col acc str
     getFirstToken : Tokenizer a -> List Char ->
                     Either StopReason (WithBounds a, Int, Int, List Char)
     getFirstToken (Match lex fn) str
-        = do let Just (tok, rest) = scan lex [] str
-               | _ => Left NoRuleApply
-             let line' = line + cast (countNLs tok)
-             let col' = getCols tok col
-             Right (MkBounded (fn (fastPack (reverse tok))) False line col line' col',
-                   line', col', rest)
+        = let Just (tok, rest) = scan lex [] str
+                | _ => Left NoRuleApply
+              line' = line + cast (countNLs tok)
+              col' = getCols tok col in
+              Right (MkBounded (fn (fastPack (reverse tok))) False line col line' col',
+                    line', col', rest)
     getFirstToken (Compose begin tagger middleFn endFn fn) str
         = let Just (beginTok, rest) = scan begin [] str
                 | _ => Left NoRuleApply
