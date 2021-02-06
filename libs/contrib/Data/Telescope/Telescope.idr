@@ -4,6 +4,8 @@
 ||| type-checker during inference.
 module Data.Telescope.Telescope
 
+import Data.DPair
+import Data.Nat
 import Data.Fin
 import Syntax.PreorderReasoning
 
@@ -39,15 +41,45 @@ weakenTypeIn : TypeIn gamma -> TypeIn (gamma -. ty)
 weakenTypeIn ty' (env ** _) = ty' env
 
 public export
-unsnoc : (gamma : Telescope (S k)) ->
+uncons : (gamma : Telescope (S k)) ->
          (ty : Type ** delta : (ty -> Telescope k)
           ** (v : ty) -> Environment (delta v) -> Environment gamma)
-unsnoc ([] -. ty) = (ty () ** const [] ** \ v, _ => (() ** v))
-unsnoc (gamma@(_ -. _) -. ty) =
-  let (sigma ** delta ** left) = unsnoc gamma in
+uncons ([] -. ty) = (ty () ** const [] ** \ v, _ => (() ** v))
+uncons (gamma@(_ -. _) -. ty) =
+  let (sigma ** delta ** left) = uncons gamma in
   (sigma ** (\ v => delta v -. (\ env => ty (left v env)))
          ** (\ v, (env ** w) => (left v env ** w)))
 
+public export
+plusAcc : Nat -> Nat -> Nat
+plusAcc Z n = n
+plusAcc (S m) n = plusAcc m (S n)
+
+export
+plusAccIsPlus : (m, n : Nat) -> plusAcc m n === (m + n)
+plusAccIsPlus Z n = Refl
+plusAccIsPlus (S m) n =
+  rewrite plusSuccRightSucc m n in
+  plusAccIsPlus m (S n)
+
+public export
+(++) : {n : Nat} -> (gamma : Telescope m) -> (Environment gamma -> Telescope n) -> Telescope (plusAcc n m)
+(++) {n = Z} gamma delta = gamma
+(++) {m} {n = S n} gamma delta = (gamma -. sigma) ++ uncurry theta where
+
+  sigma : Environment gamma -> Type
+  sigma env = fst (uncons (delta env))
+
+  theta : (env : Environment gamma) -> sigma env -> Telescope n
+  theta env val with (uncons (delta env))
+    theta env val | (sig ** omega ** _) = omega val
+
+public export
+cons : {n : Nat} -> (ty : Type) -> (ty -> Telescope n) -> Telescope (S n)
+cons {n} ty gamma =
+  rewrite plusCommutative 1 n in
+  rewrite sym (plusAccIsPlus n 1) in
+  ([] -. const ty) ++ (gamma . snd)
 
 ||| A position between the variables of a telescope, counting from the _end_:
 ||| Telescope:   Nil -. ty1 -. ... -. tyn

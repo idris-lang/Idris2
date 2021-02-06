@@ -33,10 +33,10 @@ tabulate Z tel = []
 tabulate {gamma} (S n) tel = (sigma :: tabulate n (uncurry delta)) where
 
   sigma : TypeIn gamma
-  sigma env = fst (unsnoc (tel env))
+  sigma env = fst (uncons (tel env))
 
   delta : (env : Environment gamma) -> sigma env -> Telescope n
-  delta env v with (unsnoc (tel env))
+  delta env v with (uncons (tel env))
     delta env v | (sig ** delt ** _) = delt v
 
 ||| Any telescope is a segment in the empty telescope. It amounts to looking
@@ -44,6 +44,11 @@ tabulate {gamma} (S n) tel = (sigma :: tabulate n (uncurry delta)) where
 public export
 fromTelescope : {k : Nat} -> Telescope k -> Segment k []
 fromTelescope gamma = tabulate _ (const gamma)
+
+public export
+untabulate : {n : Nat} -> Segment n gamma -> (Environment gamma -> Telescope n)
+untabulate []            _   = []
+untabulate (ty :: delta) env = cons (ty env) (untabulate delta . (\ v => (env ** v)))
 
 %name Segment delta,delta',delta1,delta2
 
