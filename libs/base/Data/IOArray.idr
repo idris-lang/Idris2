@@ -65,13 +65,13 @@ toList arr = iter 0 (max arr) []
                       assert_total (iter (pos + 1) end (el :: acc))
 
 export
-fromList : List (Maybe elem) -> IO (IOArray elem)
+fromList : HasIO io => List (Maybe elem) -> io (IOArray elem)
 fromList ns
     = do arr <- newArray (cast (length ns))
          addToArray 0 ns arr
          pure arr
   where
-    addToArray : Int -> List (Maybe elem) -> IOArray elem -> IO ()
+    addToArray : Int -> List (Maybe elem) -> IOArray elem -> io ()
     addToArray loc [] arr = pure ()
     addToArray loc (Nothing :: ns) arr
         = assert_total (addToArray (loc + 1) ns arr)
