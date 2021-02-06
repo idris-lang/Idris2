@@ -46,7 +46,7 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051", "basic052", "basic053", "basic054"]
+       "basic051", "basic052", "basic053", "basic054", "basic055"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -170,7 +170,7 @@ chezTests = MkTestPool [Chez]
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031"
+    , "chez031", "chez032"
     , "futures001"
     , "semaphores001"
     , "semaphores002"
@@ -194,7 +194,7 @@ nodeTests = MkTestPool [Node]
     [ "node001", "node002", "node003", "node004", "node005", "node006"
     , "node007", "node008", "node009", "node011", "node012", "node015"
     , "node017", "node018", "node019", "node021", "node022", "node023"
-    , "node025"
+    , "node024", "node025"
     -- , "node14", "node020"
     , "reg001"
     , "syntax001"
