@@ -51,27 +51,25 @@ compose = Compose
 ||| @ ComposeNotClosing carries the span of composition begin token in the
 |||                     form of `(startLine, startCol), (endLine, endCol)`.
 public export
-data StopReason =
-     EndInput
-   | NoRuleApply
-   | ComposeNotClosing (Int, Int) (Int, Int)
+data StopReason = NoRuleApply | ComposeNotClosing (Int, Int) (Int, Int)
 
 export
 Show StopReason where
-    show EndInput = "EndInput"
     show NoRuleApply = "NoRuleApply"
     show (ComposeNotClosing start end) = "ComposeNotClosing " ++ show start ++ " " ++ show end
 
-tokenise : Tokenizer a ->
+tokenise : (WithBounds a -> Bool) ->
+           Tokenizer a ->
            (line, col : Int) -> List (WithBounds a) ->
            List Char ->
            (List (WithBounds a), StopReason, (Int, Int, List Char))
-tokenise tokenizer line col acc [] = (reverse acc, EndInput, (line, col, []))
-tokenise tokenizer line col acc str
+tokenise pred tokenizer line col acc str
     = case getFirstToken tokenizer str of
            Right (tok, line', col', rest) =>
-                 -- assert total because getFirstToken must consume something
-                 assert_total (tokenise tokenizer line' col' (tok :: acc) rest)
+                 if pred tok
+                    then (reverse acc, NoRuleApply, (line, col, []))
+                    -- assert total because getFirstToken must consume something
+                    else assert_total (tokenise pred tokenizer line' col' (tok :: acc) rest)
            Left reason => (reverse acc, reason, (line, col, str))
   where
     countNLs : List Char -> Nat
@@ -100,7 +98,7 @@ tokenise tokenizer line col acc str
              let tag = tagger $ fastPack beginTok
              let middle = middleFn tag
              let (midToks, reason, (line'', col'', rest'')) =
-                    tokenise middle line' col' [] rest
+                    tokenise (const False) middle line' col' [] rest
              case reason of
                   reason@(ComposeNotClosing _ _) => Left reason
                   _ => Right ()
@@ -117,12 +115,19 @@ tokenise tokenizer line col acc str
                Left reason@(ComposeNotClosing _ _) => Left reason
                Left _ => getFirstToken t2 str
 
+export
+lexTo : (WithBounds a -> Bool) ->
+        Tokenizer a ->
+        String ->
+        (List (WithBounds a), StopReason, (Int, Int, String))
+lexTo pred tokenizer str
+    = let (ts, reason, (l, c, str')) =
+              tokenise pred tokenizer 0 0 [] (fastUnpack str) in
+          (ts, reason, (l, c, fastPack str'))
+
 ||| Given a tokenizer and an input string, return a list of recognised tokens,
 ||| and the line, column, and remainder of the input at the first point in the string
 ||| where there are no recognised tokens.
 export
 lex : Tokenizer a -> String -> (List (WithBounds a), StopReason, (Int, Int, String))
-lex tokenizer str
-    = let (ts, reason, (l, c, str')) =
-              tokenise tokenizer 0 0 [] (fastUnpack str) in
-          (ts, reason, (l, c, fastPack str'))
+lex tokenizer str = lexTo (const False) tokenizer str

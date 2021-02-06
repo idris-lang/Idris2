@@ -30,7 +30,7 @@ ideTokens =
     [(digits, \x => IntegerLit (cast x)),
      (stringLit, \x => StringLit 0 (fromMaybe "" (escape 0 (stripQuotes x)))),
      (identAllowDashes, \x => Ident x),
-     (space, Comment)]
+     (space, (const Comment))]
 
 idelex : String -> Either (Int, Int, String) (List (WithBounds Token))
 idelex str
@@ -43,7 +43,7 @@ idelex str
     where
       notComment : WithBounds Token -> Bool
       notComment t = case t.val of
-                          Comment _ => False
+                          Comment => False
                           _ => True
 
 covering

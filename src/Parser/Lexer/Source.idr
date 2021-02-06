@@ -8,6 +8,7 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
+import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -33,7 +34,7 @@ data Token
   | DotIdent String               -- .ident
   | Symbol String
   -- Comments
-  | Comment String
+  | Comment
   | DocComment String
   -- Special
   | CGDirective String
@@ -56,7 +57,7 @@ Show Token where
   show (DotIdent x) = "dot+identifier " ++ x
   show (Symbol x) = "symbol " ++ x
   -- Comments
-  show (Comment _) = "comment"
+  show Comment = "comment"
   show (DocComment c) = "doc comment: \"" ++ c ++ "\""
   -- Special
   show (CGDirective x) = "CGDirective " ++ x
@@ -79,7 +80,7 @@ Pretty Token where
   pretty (DotIdent x) = pretty "dot+identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
   -- Comments
-  pretty (Comment _) = pretty "comment"
+  pretty Comment = pretty "comment"
   pretty (DocComment c) = reflow "doc comment:" <++> dquotes (pretty c)
   -- Special
   pretty (CGDirective x) = pretty "CGDirective" <++> pretty x
@@ -246,31 +247,31 @@ fromOctLit str
              fromMaybe 0 (fromOct (reverse num))
              --        ^-- can't happen if the literal lexed correctly
 
-rawTokens : TokenMap Token
+rawTokens : Tokenizer Token
 rawTokens =
-    [(comment, Comment),
-     (blockComment, Comment),
-     (docComment, DocComment . drop 3),
-     (cgDirective, mkDirective),
-     (holeIdent, \x => HoleIdent (assert_total (strTail x)))] ++
-    map (\x => (exact x, Symbol)) symbols ++
-    [(doubleLit, \x => DoubleLit (cast x)),
-     (binLit, \x => IntegerLit (fromBinLit x)),
-     (hexLit, \x => IntegerLit (fromHexLit x)),
-     (octLit, \x => IntegerLit (fromOctLit x)),
-     (digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit 0 (stripQuotes x)),
-     (stringLit1, \x => StringLit 1 (stripSurrounds 2 2 x)),
-     (stringLit2, \x => StringLit 2 (stripSurrounds 3 3 x)),
-     (stringLit3, \x => StringLit 3 (stripSurrounds 4 4 x)),
-     (charLit, \x => CharLit (stripQuotes x)),
-     (dotIdent, \x => DotIdent (assert_total $ strTail x)),
-     (namespacedIdent, parseNamespace),
-     (identNormal, parseIdent),
-     (pragma, \x => Pragma (assert_total $ strTail x)),
-     (space, Comment),
-     (validSymbol, Symbol),
-     (symbol, Unrecognised)]
+        match comment (const Comment)
+    <|> match blockComment (const Comment)
+    <|> match docComment (DocComment . drop 3)
+    <|> match cgDirective mkDirective
+    <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
+    <|> match (choice $ exact <$> symbols) Symbol
+    <|> match doubleLit (\x => DoubleLit (cast x))
+    <|> match binLit (\x => IntegerLit (fromBinLit x))
+    <|> match hexLit (\x => IntegerLit (fromHexLit x))
+    <|> match octLit (\x => IntegerLit (fromOctLit x))
+    <|> match digits (\x => IntegerLit (cast x))
+    <|> match stringLit (\x => StringLit 0 (stripQuotes x))
+    <|> match stringLit1 (\x => StringLit 1 (stripSurrounds 2 2 x))
+    <|> match stringLit2 (\x => StringLit 2 (stripSurrounds 3 3 x))
+    <|> match stringLit3 (\x => StringLit 3 (stripSurrounds 4 4 x))
+    <|> match charLit (\x => CharLit (stripQuotes x))
+    <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
+    <|> match namespacedIdent parseNamespace
+    <|> match identNormal parseIdent
+    <|> match pragma (\x => Pragma (assert_total $ strTail x))
+    <|> match space (const Comment)
+    <|> match validSymbol Symbol
+    <|> match symbol Unrecognised
   where
     parseIdent : String -> Token
     parseIdent x = if x `elem` keywords then Keyword x
@@ -287,13 +288,13 @@ lexTo pred str
     = case lexTo pred rawTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
-           (tok, (l, c, "")) => Right (filter notComment tok ++
+           (tok, NoRuleApply, (l, c, "")) => Right (filter notComment tok ++
                                       [MkBounded EndInput False l c l c])
-           (_, fail) => Left fail
+           (_, _, fail) => Left fail
     where
       notComment : WithBounds Token -> Bool
       notComment t = case t.val of
-                          Comment _ => False
+                          Comment => False
                           _ => True
 
 export
