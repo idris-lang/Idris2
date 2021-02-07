@@ -21,40 +21,40 @@ import Data.DPair
 ||| A segment is a compositional fragment of a telescope, indexed by
 ||| the segment's length.
 public export
-data Segment : (n : Nat) -> Telescope k -> Type where
+data Segment : (n : Nat) -> Left.Telescope k -> Type where
   Nil  : Segment 0 gamma
   (::) : (ty : TypeIn gamma) -> (delta : Segment n (gamma -. ty)) -> Segment (S n) gamma
 
 ||| A segment of size `n` indexed by `gamma` can be seen as the tabulation of a
 ||| function that turns environments for `gamma` into telescopes of size `n`.
 public export
-tabulate : (n : Nat) -> (Environment gamma -> Telescope n) -> Segment n gamma
+tabulate : (n : Nat) -> (Left.Environment gamma -> Left.Telescope n) -> Segment n gamma
 tabulate Z tel = []
 tabulate {gamma} (S n) tel = (sigma :: tabulate n (uncurry delta)) where
 
   sigma : TypeIn gamma
   sigma env = fst (uncons (tel env))
 
-  delta : (env : Environment gamma) -> sigma env -> Telescope n
+  delta : (env : Environment gamma) -> sigma env -> Left.Telescope n
   delta env v with (uncons (tel env))
     delta env v | (sig ** delt ** _) = delt v
 
 ||| Any telescope is a segment in the empty telescope. It amounts to looking
 ||| at it left-to-right instead of right-to-left.
 public export
-fromTelescope : {k : Nat} -> Telescope k -> Segment k []
+fromTelescope : {k : Nat} -> Left.Telescope k -> Segment k []
 fromTelescope gamma = tabulate _ (const gamma)
 
 ||| Conversely, a segment of size `n` in telescope `gamma` can be seen as a function
 ||| from environments for `gamma` to telescopes of size `n`.
 public export
-untabulate : {n : Nat} -> Segment n gamma -> (Environment gamma -> Telescope n)
+untabulate : {n : Nat} -> Segment n gamma -> (Left.Environment gamma -> Left.Telescope n)
 untabulate []            _   = []
 untabulate (ty :: delta) env = cons (ty env) (untabulate delta . (\ v => (env ** v)))
 
 ||| Any segment in the empty telescope correspond to a telescope.
 public export
-toTelescope : {k : Nat} -> Segment k [] -> Telescope k
+toTelescope : {k : Nat} -> Segment k [] -> Left.Telescope k
 toTelescope seg = untabulate seg ()
 
 %name Segment delta,delta',delta1,delta2
@@ -85,14 +85,14 @@ keep Refl = Refl
 
 ||| Segments act on telescope from the right.
 public export
-(|++) : (gamma : Telescope k) -> {n : Nat} -> (delta : Segment n gamma) -> Telescope (n + k)
+(|++) : (gamma : Left.Telescope k) -> {n : Nat} -> (delta : Segment n gamma) -> Left.Telescope (n + k)
 (|++)     gamma {n = 0} delta  = gamma
 (|++) {k} gamma {n=S n} (ty :: delta) = rewrite sym $ succLemma n k in
                                           gamma -. ty |++ delta
 
 ||| Segments form a kind of an indexed monoid w.r.t. the action `(|++)`
 public export
-(++) : {gamma : Telescope k}
+(++) : {gamma : Left.Telescope k}
     -> {n : Nat}
     -> (lft : Segment n  gamma         )
     -> (rgt : Segment m (gamma |++ lft))
@@ -102,7 +102,7 @@ public export
                                                   rgt
 -- This monoid does act on telescopes:
 export
-actSegmentAssociative : (gamma : Telescope k)
+actSegmentAssociative : (gamma : Left.Telescope k)
                      -> (lft : Segment n gamma)
                      -> (rgt : Segment m (gamma |++ lft))
                      -> (gamma |++ (lft ++ rgt)) ~=~ ((gamma |++ lft) |++ rgt)
@@ -122,7 +122,7 @@ actSegmentAssociative gamma {n = S n} (ty :: lft) rgt =
           ...(actSegmentAssociative (gamma -. ty) lft rgt')
 
 public export
-weaken : {0 gamma : Telescope k}
+weaken : {0 gamma : Left.Telescope k}
       -> {delta : Segment n gamma} -> (sy : TypeIn gamma)
       -> TypeIn (gamma |++ delta)
 weaken           {delta = []         } sy = sy
@@ -130,7 +130,7 @@ weaken {n = S n} {delta = ty :: delta} sy = rewrite sym $ succLemma n k in
                                             weaken (weakenTypeIn sy)
 
 public export
-projection : {0 gamma : Telescope k}
+projection : {0 gamma : Left.Telescope k}
           -> {n : Nat}
           -> {0 delta : Segment n gamma}
           -> Environment (gamma |++ delta)
@@ -143,21 +143,21 @@ projection {n = S n} {delta = ty :: delta} env = let (env' ** _) = projection {n
 infixl 4 .=
 
 public export
-data Environment : (env : Telescope.Environment gamma)
+data Environment : (env : Left.Environment gamma)
                 -> (delta : Segment n gamma) -> Type where
   Empty : Environment env []
-  (.=) : {0 gamma : Telescope k} -> {0 ty : TypeIn gamma}
-      -> {0 env   : Telescope.Environment gamma}
+  (.=) : {0 gamma : Left.Telescope k} -> {0 ty : TypeIn gamma}
+      -> {0 env   : Left.Environment gamma}
       -> {0 delta : Segment n (gamma -. ty)}
 
       -> (x : ty env) -> (xs : Segment.Environment (env ** x) delta)
       -> Environment env (ty :: delta)
 
 public export
-(:++) : {0 gamma : Telescope k} -> {0 delta : Segment n gamma}
-     -> (env : Telescope.Environment gamma)
-     -> (ext :   Segment.Environment env delta)
-     ->        Telescope.Environment (gamma |++ delta)
+(:++) : {0 gamma : Left.Telescope k} -> {0 delta : Segment n gamma}
+     -> (env : Left.Environment gamma)
+     -> (ext : Segment.Environment env delta)
+     ->        Left.Environment (gamma |++ delta)
 (:++) env Empty = env
 (:++) {n = S n} env (x .= xs) = rewrite sym $ succLemma n k in
                                 (env ** x) :++ xs

@@ -9,8 +9,8 @@ import Data.Telescope.Fun
 
 public export
 congType : (delta : Segment n gamma)
-  -> (env1 : Environment gamma) -> (sy1 : SimpleFun env1 delta Type) -> (lhs : Fun env1 delta sy1)
-  -> (env2 : Environment gamma) -> (sy2 : SimpleFun env2 delta Type) -> (rhs : Fun env2 delta sy2)
+  -> (env1 : Left.Environment gamma) -> (sy1 : SimpleFun env1 delta Type) -> (lhs : Fun env1 delta sy1)
+  -> (env2 : Left.Environment gamma) -> (sy2 : SimpleFun env2 delta Type) -> (rhs : Fun env2 delta sy2)
   -> Type
 congType []            env1 sy1 lhs  env2 sy2 rhs = lhs ~=~ rhs
 congType (ty :: delta) env1 sy1 lhs  env2 sy2 rhs =
@@ -22,8 +22,8 @@ congType (ty :: delta) env1 sy1 lhs  env2 sy2 rhs =
 
 public export
 congSegment : {n : Nat} -> (0 delta : Segment n gamma)
-  ->(0 env1 : Environment gamma)-> (0 sy1 : SimpleFun env1 delta Type) -> (0 lhs : Fun env1 delta sy1)
-  ->(0 env2 : Environment gamma)-> (0 sy2 : SimpleFun env2 delta Type) -> (0 rhs : Fun env2 delta sy2)
+  ->(0 env1 : Left.Environment gamma)-> (0 sy1 : SimpleFun env1 delta Type) -> (0 lhs : Fun env1 delta sy1)
+  ->(0 env2 : Left.Environment gamma)-> (0 sy2 : SimpleFun env2 delta Type) -> (0 rhs : Fun env2 delta sy2)
   ->(0 _ : env1 ~=~ env2)      -> (0 _ : sy1 ~=~ sy2)                 -> (0 _ : lhs ~=~ rhs)
   -> congType delta env1 sy1 lhs
                     env2 sy2 rhs
