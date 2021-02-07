@@ -31,6 +31,7 @@ modules = Control.ANSI,
           Data.Fun.Graph,
 
           Data.InductionRecursion.DybjerSetzer,
+          Data.Int.Order,
 
           Data.Late,
 
