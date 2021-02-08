@@ -942,21 +942,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
 parseRepl inp
-    = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD), (":!", RunShellCommand)] inp of
-           Nothing => runParser Nothing inp (parseEmptyCmd <|> parseCmd)
-           Just cmd => Right $ Just cmd
-  where
-    -- a right load of hackery - we can't tokenise the filename using the
-    -- ordinary parser. There's probably a better way...
-    getLoad : Nat -> (String -> REPLCmd) -> String -> Maybe REPLCmd
-    getLoad n cmd str = Just (cmd (trim (substr n (length str) str)))
-
-    fnameCmd : List (String, String -> REPLCmd) -> String -> Maybe REPLCmd
-    fnameCmd [] inp = Nothing
-    fnameCmd ((pre, cmd) :: rest) inp
-        = if isPrefixOf pre inp
-             then getLoad (length pre) cmd inp
-             else fnameCmd rest inp
+    = runParser Nothing inp (parseEmptyCmd <|> parseCmd)
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->
