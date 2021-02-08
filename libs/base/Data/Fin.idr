@@ -76,7 +76,7 @@ weaken (FS k) = FS $ weaken k
 
 ||| Weaken the bound on a Fin by some amount
 public export
-weakenN : (n : Nat) -> Fin m -> Fin (m + n)
+weakenN : (0 n : Nat) -> Fin m -> Fin (m + n)
 weakenN n FZ = FZ
 weakenN n (FS f) = FS $ weakenN n f
 
