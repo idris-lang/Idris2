@@ -176,9 +176,15 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+||| Sequencing of effectful composition
 public export
 (>>) : (Monad m) => m a -> m b -> m b
 a >> b = a >>= \_ => b
+
+||| Kleisli composition of effectful computations
+public export
+(>>>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
+(>>>) f g = (>>= g) . f
 
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
