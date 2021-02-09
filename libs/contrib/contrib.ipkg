@@ -9,7 +9,6 @@ modules = Control.ANSI,
           Control.Linear.LIO,
 
           Control.Monad.Algebra,
-          Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,

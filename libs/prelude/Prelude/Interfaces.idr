@@ -176,15 +176,25 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+||| Right-to-left monadic bind, flipped version of `>>=`.
+public export
+(=<<) : Monad m => (a -> m b) -> m a -> m b
+(=<<) = flip (>>=)
+
 ||| Sequencing of effectful composition
 public export
 (>>) : (Monad m) => m a -> m b -> m b
 a >> b = a >>= \_ => b
 
-||| Kleisli composition of effectful computations
+||| Left-to-right Kleisli composition of monads.
 public export
-(>>>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
-(>>>) f g = (>>= g) . f
+(>=>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
+(>=>) f g = \x => f x >>= g
+
+||| Right-to-left Kleisli composition of monads, flipped version of `>=>`.
+public export
+(<=<) : Monad m => (b -> m c) -> (a -> m b) -> (a -> m c)
+(<=<) = flip (>=>)
 
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
