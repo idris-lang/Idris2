@@ -189,6 +189,11 @@ racketTests = MkTestPool [Racket]
     , "futures001"
     ]
 
+gambitTests : TestPool
+gambitTests = MkTestPool [Gambit]
+    [ "bitops001"
+    ]
+
 nodeTests : TestPool
 nodeTests = MkTestPool [Node]
     [ "node001", "node002", "node003", "node004", "node005", "node006"
@@ -236,6 +241,7 @@ main = runner
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
+  , testPaths "gambit" gambitTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
   ] where
