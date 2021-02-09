@@ -25,10 +25,19 @@ lteReflection 0 b = RTrue LTEZero
 lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
 lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
 
+export
+ltReflection : (a, b : Nat) -> Reflects (a `LT` b) (a `lt` b)
+ltReflection a = lteReflection (S a)
+
 -- For example:
 export
 lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
 lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
+export
+notlteIsNotLTE : (a, b : Nat) -> a `lte` b = False -> Not (a `LTE` b)
+notlteIsNotLTE a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
 
 export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
@@ -37,16 +46,20 @@ notlteIsLT a b prf = notLTImpliesGTE
                          (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
 
+export
+notltIsGTE : (a, b : Nat) -> (a `lt` b) === False -> a `GTE` b
+notltIsGTE a b p = notLTImpliesGTE (notlteIsNotLTE (S a) b p)
+
 
 -- The converse to lteIsLTE:
 export
-LteIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
-LteIslte  a b a_lt_b = reflect (lteReflection a b) a_lt_b
+LTEIslte : (a, b : Nat) -> a `LTE` b -> a `lte` b = True
+LTEIslte  a b a_lt_b = reflect (lteReflection a b) a_lt_b
 
 -- The converse to lteIsLTE with negation
 export
-notLteIsnotlte : (a, b : Nat) -> Not (a `LTE` b) -> a `lte` b = False
-notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
+notLTEIsnotlte : (a, b : Nat) -> Not (a `LTE` b) -> a `lte` b = False
+notLTEIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 
 -- The converse to lteIsLTE:
 export
@@ -57,7 +70,7 @@ GTIsnotlte a b b_lt_a =
         |~ 1 + a
         <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
         <~ a     ...(b_lt_a)
-  in notLteIsnotlte a b not_a_lte_b
+  in notLTEIsnotlte a b not_a_lte_b
 
 ||| Subtracting a number gives a smaller number
 export
@@ -77,19 +90,19 @@ minusPosLT (S a) (S b) z_lt_sa          a_lte_b = LTESucc (minusLTE a b)
 
 -- This is the opposite of the convention in `Data.Nat`, but 'monotone on the left' means the below
 export
-multLteMonotoneRight : (l, a, b : Nat) -> a `LTE` b -> l*a `LTE` l*b
-multLteMonotoneRight  0    a b _ = LTEZero
-multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
+multLTEMonotoneRight : (l, a, b : Nat) -> a `LTE` b -> l*a `LTE` l*b
+multLTEMonotoneRight  0    a b _ = LTEZero
+multLTEMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
   |~ (1 + k) * a
   ~~ a +  k*a    ...(Refl)
   <~ b +  k*a    ...(plusLteMonotoneRight (k*a) a b a_lte_b)
   <~ b +  k*b    ...(plusLteMonotoneLeft  b (k*a) (k*b) $
-                     multLteMonotoneRight k    a     b   a_lte_b)
+                     multLTEMonotoneRight k    a     b   a_lte_b)
   ~~ (1 + k) * b ...(Refl)
 
 export
-multLteMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> a*r `LTE` b*r
-multLteMonotoneLeft a b r a_lt_b =
+multLTEMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> a*r `LTE` b*r
+multLTEMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
-  multLteMonotoneRight r a b a_lt_b
+  multLTEMonotoneRight r a b a_lt_b
