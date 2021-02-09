@@ -119,7 +119,7 @@ jobs:
           path: ~/.idris2/
       - name: Install build dependencies
         run: |
-          sudo apt-get install -y chezscheme
+          sudo apt-get install -y chezscheme gambc
           echo "::add-path::$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
