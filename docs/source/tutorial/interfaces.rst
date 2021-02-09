@@ -199,7 +199,7 @@ We may for instance want to declare an interface for ``Storable`` types. The con
 exactly ``size`` bytes.
 
 If the user provides a method to read a value for such a type ``a`` at a given offset,
-then we can read the ``k``th element stored in the buffer by computing the appropriate
+then we can read the ``k`` th element stored in the buffer by computing the appropriate
 offset from ``k`` and ``size``. This is demonstrated by providing a default implementation
 for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and the parameter
 ``size``.
