@@ -59,7 +59,7 @@ split : Subset Nat (HasLength ss) -> Union (ss ++ ts) v -> Either (Union ss v) (
 split m (Element n p t) with (@@ lt n (fst m))
   split m (Element n p t) | (True ** lt) = Left (Element n (strengthenL m lt p) t)
   split m (Element n p t) | (False ** notlt) =
-     let 0 lte : lte (fst m) n === True = LTEIslte (fst m) n (notltIsGTE n (fst m) notlt)
+     let 0 lte : lte (fst m) n === True = LteIslte (fst m) n (notltIsGTE n (fst m) notlt)
      in Right (Element (minus n (fst m)) (strengthenR m lte p) t)
 
 ||| We can inspect an open union over a non-empty list of families to check
