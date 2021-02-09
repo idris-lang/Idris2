@@ -71,6 +71,13 @@ modules = Control.ANSI,
           Data.String.Parser,
           Data.String.Parser.Expression,
 
+          Data.Telescope,
+          Data.Telescope.Telescope,
+          Data.Telescope.Segment,
+          Data.Telescope.Fun,
+          Data.Telescope.SimpleFun,
+          Data.Telescope.Congruence,
+
           Data.Vect.Sort,
 
           Data.Void,
