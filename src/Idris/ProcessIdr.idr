@@ -199,17 +199,11 @@ readHeader : {auto c : Ref Ctxt Defs} ->
 readHeader path
     = do Right res <- coreLift (readFile path)
             | Left err => throw (FileErr path err)
-         case runParserTo (isLitFile path) isColon res (progHdr path) of
+         -- Stop at the first :, that's definitely not part of the header, to
+         -- save lexing the whole file unnecessarily
+         case runParserTo (isLitFile path) (is ':') res (progHdr path) of
               Left err => throw (ParseFail (getParseErrorLoc path err) err)
               Right mod => pure mod
-  where
-    -- Stop at the first :, that's definitely not part of the header, to
-    -- save lexing the whole file unnecessarily
-    isColon : WithBounds Token -> Bool
-    isColon t
-        = case t.val of
-               Symbol ":" => True
-               _ => False
 
 %foreign "scheme:collect"
 prim__gc : Int -> PrimIO ()

@@ -193,6 +193,16 @@ special = ["%lam", "%pi", "%imppi", "%let"]
 
 -- Special symbols - things which can't be a prefix of another symbol, and
 -- don't match 'validSymbol'
+-- export
+-- symbols : List String
+-- -- symbols
+--     -- = [".(", -- for things such as Foo.Bar.(+)
+--     --    "@{", "{", "}",
+--     --    "[|", "|]",
+--     --    "(", ")", "[", "]", ",", ";", "_",
+--     --    "`(", "`{{", "`[", "`"]
+-- symbols = [",", ";", "_", "`"]
+
 export
 symbols : List String
 symbols
@@ -201,6 +211,25 @@ symbols
        "[|", "|]",
        "(", ")", "{", "}", "[", "]", ",", ";", "_",
        "`(", "`{{", "`[", "`"]
+
+export
+groupSymbols : List String
+-- groupSymbols = ["{"]
+groupSymbols = [".(", -- for things such as Foo.Bar.(+)
+    "@{", "{", "[|", "(", "[", "`(", "`{{", "`["]
+
+export
+groupClose : String -> String
+groupClose ".(" = ")"
+groupClose "@{" = "}"
+groupClose "[|" = "|]"
+groupClose "(" = ")"
+groupClose "[" = "]"
+groupClose "{" = "}"
+groupClose "`(" = ")"
+groupClose "`{{" = "}}"
+groupClose "`[" = "]"
+groupClose _ = ""
 
 export
 isOpChar : Char -> Bool
@@ -254,6 +283,41 @@ rawTokens =
     <|> match docComment (DocComment . drop 3)
     <|> match cgDirective mkDirective
     <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
+    <|> compose (choice $ exact <$> groupSymbols) id (const Symbol) (\_ => rawTokens) (exact . groupClose) (const Symbol)
+    <|> match (choice $ exact <$> symbols) Symbol
+    <|> match doubleLit (\x => DoubleLit (cast x))
+    <|> match binLit (\x => IntegerLit (fromBinLit x))
+    <|> match hexLit (\x => IntegerLit (fromHexLit x))
+    <|> match octLit (\x => IntegerLit (fromOctLit x))
+    <|> match digits (\x => IntegerLit (cast x))
+    <|> match stringLit (\x => StringLit 0 (stripQuotes x))
+    <|> match stringLit1 (\x => StringLit 1 (stripSurrounds 2 2 x))
+    <|> match stringLit2 (\x => StringLit 2 (stripSurrounds 3 3 x))
+    <|> match stringLit3 (\x => StringLit 3 (stripSurrounds 4 4 x))
+    <|> match charLit (\x => CharLit (stripQuotes x))
+    <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
+    <|> match namespacedIdent parseNamespace
+    <|> match identNormal parseIdent
+    <|> match pragma (\x => Pragma (assert_total $ strTail x))
+    <|> match space (const Comment)
+    <|> match validSymbol Symbol
+    <|> match symbol Unrecognised
+  where
+    parseIdent : String -> Token
+    parseIdent x = if x `elem` keywords then Keyword x
+                   else Ident x
+    parseNamespace : String -> Token
+    parseNamespace ns = case mkNamespacedIdent ns of
+                             (Nothing, ident) => parseIdent ident
+                             (Just ns, n)     => DotSepIdent ns n
+
+rawTokens1 : Tokenizer Token
+rawTokens1 =
+        match comment (const Comment)
+    <|> match blockComment (const Comment)
+    <|> match docComment (DocComment . drop 3)
+    <|> match cgDirective mkDirective
+    <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
     <|> match (choice $ exact <$> symbols) Symbol
     <|> match doubleLit (\x => DoubleLit (cast x))
     <|> match binLit (\x => IntegerLit (fromBinLit x))
@@ -282,13 +346,33 @@ rawTokens =
                              (Just ns, n)     => DotSepIdent ns n
 
 export
-lexTo : (WithBounds Token -> Bool) ->
+lexTo1 : Lexer ->
         String -> Either (Int, Int, String) (List (WithBounds Token))
-lexTo pred str
-    = case lexTo pred rawTokens str of
+lexTo1 reject str
+    = case lexTo reject rawTokens1 str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
-           (tok, NoRuleApply, (l, c, "")) => Right (filter notComment tok ++
+           (tok, EndInput, (l, c, _)) => Right (filter notComment tok ++
+                                      [MkBounded EndInput False l c l c])
+           (_, _, fail) => Left fail
+    where
+      notComment : WithBounds Token -> Bool
+      notComment t = case t.val of
+                          Comment => False
+                          _ => True
+
+export
+lex1 : String -> Either (Int, Int, String) (List (WithBounds Token))
+lex1 = lexTo1 (pred $ const False)
+
+export
+lexTo : Lexer ->
+        String -> Either (Int, Int, String) (List (WithBounds Token))
+lexTo reject str
+    = case lexTo reject rawTokens str of
+           -- Add the EndInput token so that we'll have a line and column
+           -- number to read when storing spans in the file
+           (tok, EndInput, (l, c, _)) => Right (filter notComment tok ++
                                       [MkBounded EndInput False l c l c])
            (_, _, fail) => Left fail
     where
@@ -299,4 +383,4 @@ lexTo pred str
 
 export
 lex : String -> Either (Int, Int, String) (List (WithBounds Token))
-lex = lexTo (const False)
+lex = lexTo (pred $ const False)

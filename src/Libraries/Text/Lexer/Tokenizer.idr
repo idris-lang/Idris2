@@ -19,9 +19,10 @@ data Tokenizer : (tokenType : Type) -> Type where
      Match : Lexer -> (String -> tokenType) -> Tokenizer tokenType
      Compose : (begin : Lexer) ->
                (tagger : String -> tag) ->
-               (middle : tag -> Tokenizer midTokenType) ->
+               (mapBegin : tag -> String -> tokenType) ->
+               (middle : Inf (tag -> Tokenizer tokenType)) ->
                (end : tag -> Lexer) ->
-               (map : tag -> List (WithBounds midTokenType) -> tokenType) ->
+               (mapEnd : tag -> String -> tokenType) ->
                Tokenizer tokenType
      Alt : Tokenizer tokenType -> Lazy (Tokenizer tokenType) -> Tokenizer tokenType
 
@@ -41,9 +42,10 @@ match = Match
 export
 compose : (begin : Lexer) ->
           (tagger : String -> tag) ->
-          (middle : tag -> Tokenizer b) ->
+          (mapBegin : tag -> String -> a) ->
+          (middle : Inf (tag -> Tokenizer a)) ->
           (end : tag -> Lexer) ->
-          (map : tag -> List (WithBounds b) -> a) ->
+          (mapEnd : tag -> String -> a) ->
           Tokenizer a
 compose = Compose
 
@@ -51,26 +53,28 @@ compose = Compose
 ||| @ ComposeNotClosing carries the span of composition begin token in the
 |||                     form of `(startLine, startCol), (endLine, endCol)`.
 public export
-data StopReason = NoRuleApply | ComposeNotClosing (Int, Int) (Int, Int)
+data StopReason = EndInput | NoRuleApply | ComposeNotClosing (Int, Int) (Int, Int)
 
 export
 Show StopReason where
+    show EndInput = "EndInput"
     show NoRuleApply = "NoRuleApply"
     show (ComposeNotClosing start end) = "ComposeNotClosing " ++ show start ++ " " ++ show end
 
-tokenise : (WithBounds a -> Bool) ->
+tokenise : Lexer ->
            Tokenizer a ->
            (line, col : Int) -> List (WithBounds a) ->
            List Char ->
            (List (WithBounds a), StopReason, (Int, Int, List Char))
-tokenise pred tokenizer line col acc str
-    = case getFirstToken tokenizer str of
-           Right (tok, line', col', rest) =>
-                 if pred tok
-                    then (reverse acc, NoRuleApply, (line, col, []))
-                    -- assert total because getFirstToken must consume something
-                    else assert_total (tokenise pred tokenizer line' col' (tok :: acc) rest)
-           Left reason => (reverse acc, reason, (line, col, str))
+tokenise reject tokenizer line col acc [] = (reverse acc, EndInput, (line, col, []))
+tokenise reject tokenizer line col acc str
+    = case scan reject [] str of
+           Just _ => (reverse acc, EndInput, (line, col, str))
+           Nothing => case getFirstMatch tokenizer str of
+                           Right (toks, line', col', rest) =>
+                               -- assert total because getFirstMatch must consume something
+                               assert_total (tokenise reject tokenizer line' col' (toks ++ acc) rest)
+                           Left reason => (reverse acc, reason, (line, col, str))
   where
     countNLs : List Char -> Nat
     countNLs str = List.length (filter (== '\n') str)
@@ -81,46 +85,51 @@ tokenise pred tokenizer line col acc str
                (incol, []) => c + cast (length incol)
                (incol, _) => cast (length incol)
 
-    getFirstToken : Tokenizer a -> List Char ->
-                    Either StopReason (WithBounds a, Int, Int, List Char)
-    getFirstToken (Match lex fn) str
+    getFirstMatch : Tokenizer a -> List Char ->
+                    Either StopReason (List (WithBounds a), Int, Int, List Char)
+    getFirstMatch (Match lex fn) str
         = let Just (tok, rest) = scan lex [] str
                 | _ => Left NoRuleApply
               line' = line + cast (countNLs tok)
-              col' = getCols tok col in
-              Right (MkBounded (fn (fastPack (reverse tok))) False line col line' col',
-                    line', col', rest)
-    getFirstToken (Compose begin tagger middleFn endFn fn) str
-        = let Just (beginTok, rest) = scan begin [] str
-                | _ => Left NoRuleApply
-              line' = line + cast (countNLs beginTok)
-              col' = getCols beginTok col
-              tag = tagger $ fastPack beginTok
-              middle = middleFn tag
-              (midToks, NoRuleApply, (line'', col'', rest'')) =
-                    tokenise (const False) middle line' col' [] rest
-                | (_, reason, _) => Left reason
-              end = endFn tag
-              Just (endTok, rest''') = scan end [] rest''
-                | _ => Left $ ComposeNotClosing (line, col) (line', col')
-              line''' = line'' + cast (countNLs endTok)
-              col''' = getCols endTok col''
-              midToks' = MkBounded (fn tag midToks) False line col line''' col''' in
-              Right (midToks', line''', col''', rest''')
-    getFirstToken (Alt t1 t2) str
-        = case getFirstToken t1 str of
+              col' = getCols tok col
+              tok' = MkBounded (fn (fastPack (reverse tok))) False line col line' col' in
+              Right ([tok'], line', col', rest)
+    getFirstMatch (Compose begin tagger mapBegin middleFn endFn mapEnd) str
+        = do let Just (beginTok, rest) = scan begin [] str
+                 | _ => Left NoRuleApply
+             let line' = line + cast (countNLs beginTok)
+             let col' = getCols beginTok col
+             let beginTok' = fastPack beginTok
+             let tag = tagger beginTok'
+             let beginTok'' = MkBounded (mapBegin tag beginTok') False line col line' col'
+             let middle = middleFn tag
+             let end = endFn tag
+             let (midToks, reason, (line'', col'', rest'')) =
+                    tokenise end middle line' col' [] rest
+             case reason of
+                  reason@(ComposeNotClosing _ _) => Left reason
+                  _ => Right ()
+             let Just (endTok, rest''') = scan end [] rest''
+                 | _ => Left $ ComposeNotClosing (line, col) (line', col')
+             let line''' = line'' + cast (countNLs endTok)
+             let col''' = getCols endTok col''
+             let endTok' = fastPack endTok
+             let endTok'' = MkBounded (mapEnd tag endTok') False line'' col'' line''' col'''
+             Right ([endTok''] ++ reverse midToks ++ [beginTok''], line''', col''', rest''')
+    getFirstMatch (Alt t1 t2) str
+        = case getFirstMatch t1 str of
                Right result => Right result
                Left reason@(ComposeNotClosing _ _) => Left reason
-               Left _ => getFirstToken t2 str
+               Left _ => getFirstMatch t2 str
 
 export
-lexTo : (WithBounds a -> Bool) ->
+lexTo : Lexer ->
         Tokenizer a ->
         String ->
         (List (WithBounds a), StopReason, (Int, Int, String))
-lexTo pred tokenizer str
+lexTo reject tokenizer str
     = let (ts, reason, (l, c, str')) =
-              tokenise pred tokenizer 0 0 [] (fastUnpack str) in
+              tokenise reject tokenizer 0 0 [] (fastUnpack str) in
           (ts, reason, (l, c, fastPack str'))
 
 ||| Given a tokenizer and an input string, return a list of recognised tokens,
@@ -128,4 +137,4 @@ lexTo pred tokenizer str
 ||| where there are no recognised tokens.
 export
 lex : Tokenizer a -> String -> (List (WithBounds a), StopReason, (Int, Int, String))
-lex tokenizer str = lexTo (const False) tokenizer str
+lex tokenizer str = lexTo (pred $ const False) tokenizer str
