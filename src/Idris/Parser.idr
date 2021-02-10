@@ -386,6 +386,8 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
+    <|> do b <- bounds strLit
+           pure (PString (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")

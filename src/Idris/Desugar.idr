@@ -241,12 +241,6 @@ mutual
                                  IPrimVal fc (I (fromInteger x))]
              Just fi => pure $ IApp fc (IVar fc fi)
                                        (IPrimVal fc (BI x))
-  desugarB side ps (PPrimVal fc (Str x))
-      = case !fromStringName of
-             Nothing =>
-                pure $ IPrimVal fc (Str x)
-             Just f => pure $ IApp fc (IVar fc f)
-                                      (IPrimVal fc (Str x))
   desugarB side ps (PPrimVal fc (Ch x))
       = case !fromCharName of
              Nothing =>
@@ -277,6 +271,12 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
+  desugarB side ps (PString fc x)
+      = case !fromStringName of
+             Nothing =>
+                pure $ IPrimVal fc (Str x)
+             Just f => pure $ IApp fc (IVar fc f)
+                                      (IPrimVal fc (Str x))
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)

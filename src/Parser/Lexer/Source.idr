@@ -26,6 +26,9 @@ data Token
   = CharLit String
   | DoubleLit Double
   | IntegerLit Integer
+  -- String
+  | StringBegin
+  | StringEnd
   | StringLit Nat String
   -- Identifiers
   | HoleIdent String
@@ -49,6 +52,9 @@ Show Token where
   show (CharLit x) = "character " ++ show x
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
+  -- String
+  show StringBegin = "string begin"
+  show StringEnd = "string end"
   show (StringLit n x) = "string" ++ replicate n '#' ++ " " ++ show x
   -- Identifiers
   show (HoleIdent x) = "hole identifier " ++ x
@@ -72,6 +78,9 @@ Pretty Token where
   pretty (CharLit x) = pretty "character" <++> squotes (pretty x)
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
+  -- String
+  pretty StringBegin = reflow "string begin"
+  pretty StringEnd = reflow "string end"
   pretty (StringLit n x) = pretty ("string" ++ String.Extra.replicate n '#') <++> dquotes (pretty x)
   -- Identifiers
   pretty (HoleIdent x) = reflow "hole identifier" <++> pretty x
@@ -153,14 +162,11 @@ doubleLit
     = digits <+> is '.' <+> digits <+> opt
            (is 'e' <+> opt (is '-' <|> is '+') <+> digits)
 
-stringLit1 : Lexer
-stringLit1 = surround (exact "#\"") (exact "\"#") any
+stringBegin : Lexer
+stringBegin = many (is '#') <+> (is '"')
 
-stringLit2 : Lexer
-stringLit2 = surround (exact "##\"") (exact "\"##") any
-
-stringLit3 : Lexer
-stringLit3 = surround (exact "###\"") (exact "\"###") any
+stringEnd : Nat -> String
+stringEnd hashtag = "\"" ++ replicate hashtag '#'
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -258,6 +264,13 @@ fromOctLit str
              fromMaybe 0 (fromOct (reverse num))
              --        ^-- can't happen if the literal lexed correctly
 
+stringTokens : Nat -> Tokenizer Token
+stringTokens hashtag
+    = let escapeChars = "\\" ++ replicate hashtag '#'
+          escapeLexer = escape (exact escapeChars) any
+          stringLexer = non $ exact (stringEnd hashtag) in
+          match (some (escapeLexer <|> stringLexer)) (\x => StringLit hashtag x)
+
 rawTokens : Tokenizer Token
 rawTokens =
         match comment (const Comment)
@@ -272,10 +285,7 @@ rawTokens =
     <|> match hexLit (\x => IntegerLit (fromHexLit x))
     <|> match octLit (\x => IntegerLit (fromOctLit x))
     <|> match digits (\x => IntegerLit (cast x))
-    <|> match stringLit (\x => StringLit 0 (stripQuotes x))
-    <|> match stringLit1 (\x => StringLit 1 (stripSurrounds 2 2 x))
-    <|> match stringLit2 (\x => StringLit 2 (stripSurrounds 3 3 x))
-    <|> match stringLit3 (\x => StringLit 3 (stripSurrounds 4 4 x))
+    <|> compose stringBegin (const StringBegin) countHashtag stringTokens (exact . stringEnd) (const StringEnd)
     <|> match charLit (\x => CharLit (stripQuotes x))
     <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
     <|> match namespacedIdent parseNamespace
@@ -292,6 +302,9 @@ rawTokens =
     parseNamespace ns = case mkNamespacedIdent ns of
                              (Nothing, ident) => parseIdent ident
                              (Just ns, n)     => DotSepIdent ns n
+
+    countHashtag : String -> Nat
+    countHashtag = count (== '#') . unpack
 
 export
 lexTo : Lexer ->

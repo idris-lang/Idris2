@@ -55,7 +55,7 @@ sexp
          pure (BoolAtom False)
   <|> do i <- intLit
          pure (IntegerAtom i)
-  <|> do str <- strLit
+  <|> do str <- strLit0
          pure (StringAtom str)
   <|> do symbol ":"; x <- unqualifiedName
          pure (SymbolAtom x)

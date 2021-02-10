@@ -80,7 +80,7 @@ mutual
        PBracketed : FC -> PTerm -> PTerm
 
        -- Syntactic sugar
-
+       PString : FC -> String -> PTerm
        PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
@@ -141,6 +141,7 @@ mutual
   getPTermLoc (PSectionR fc _ _) = fc
   getPTermLoc (PEq fc _ _) = fc
   getPTermLoc (PBracketed fc _) = fc
+  getPTermLoc (PString fc _) = fc
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _) = fc
@@ -576,6 +577,7 @@ mutual
     showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
+    showPrec d (PString _ str) = "\"" ++ str ++ "\""
     showPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
     showPrec d (PBang _ tm) = "!" ++ showPrec d tm
@@ -900,6 +902,7 @@ mapPTermM f = goPTerm where
     goPTerm (PBracketed fc x) =
       PBracketed fc <$> goPTerm x
       >>= f
+    goPTerm t@(PString _ _) = f t
     goPTerm (PDoBlock fc ns xs) =
       PDoBlock fc ns <$> goPDos xs
       >>= f

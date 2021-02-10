@@ -38,9 +38,6 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           StringLit n s => case escape n s of
-                                               Nothing => Nothing
-                                               Just s' => Just (Str s')
                            Ident "Char"    => Just CharType
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
@@ -80,12 +77,28 @@ onOffLit
                            _ => Nothing)
 
 export
-strLit : Rule String
-strLit
+strLit0 : Rule String
+strLit0
     = terminal "Expected string literal"
                (\x => case x.val of
                            StringLit 0 s => Just s
                            _ => Nothing)
+
+export
+strLit : Rule String
+strLit = do terminal "Expected string begin"
+               (\x => case x.val of
+                           StringBegin => Just ()
+                           _ => Nothing)
+            str <- option "" $ terminal "Expected string literal"
+                                  (\x => case x.val of
+                                              StringLit n s => escape n s
+                                              _ => Nothing)
+            terminal "Expected string literal"
+               (\x => case x.val of
+                           StringEnd => Just ()
+                           _ => Nothing)
+            pure str
 
 export
 aDotIdent : Rule String
@@ -93,7 +106,6 @@ aDotIdent = terminal "Expected dot+identifier"
                (\x => case x.val of
                            DotIdent s => Just s
                            _ => Nothing)
-
 
 export
 postfixProj : Rule Name
