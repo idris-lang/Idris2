@@ -11,7 +11,6 @@ module Control.Validation
 -- failing early with a nice error message if it isn't.
 
 import Control.Monad.Identity
-import Control.Monad.Syntax
 import Control.Monad.Error.Either
 import Data.Nat
 import Data.Strings

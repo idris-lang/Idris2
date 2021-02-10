@@ -25,10 +25,19 @@ lteReflection 0 b = RTrue LTEZero
 lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
 lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
 
+export
+ltReflection : (a, b : Nat) -> Reflects (a `LT` b) (a `lt` b)
+ltReflection a = lteReflection (S a)
+
 -- For example:
 export
 lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
 lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
+export
+notlteIsNotLTE : (a, b : Nat) -> a `lte` b = False -> Not (a `LTE` b)
+notlteIsNotLTE a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
 
 export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
@@ -36,6 +45,10 @@ notlteIsLT a b prf = notLTImpliesGTE
                        \prf' =>
                          (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
+
+export
+notltIsGTE : (a, b : Nat) -> (a `lt` b) === False -> a `GTE` b
+notltIsGTE a b p = notLTImpliesGTE (notlteIsNotLTE (S a) b p)
 
 
 -- The converse to lteIsLTE:
