@@ -180,7 +180,7 @@ chezTests = MkTestPool [Chez]
 
 refcTests : TestPool
 refcTests = MkTestPool [C]
-  [ "refc001" ]
+  [ "refc001" , "refc002" ]
 
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
