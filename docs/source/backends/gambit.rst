@@ -63,7 +63,7 @@ Gambit Directives
     %foreign "scheme:my-mul"
     myMul : Int -> Int -> Int
 
-  .. code-block::
+  .. code-block:: shell
 
     $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
 
