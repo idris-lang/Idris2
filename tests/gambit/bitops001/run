@@ -1,3 +1,6 @@
-$1 --cg gambit --no-banner --no-color --console-width 0 BitOps.idr < input
-
+$1 --cg gambit --exec main BitOps.idr > output
 rm -rf build
+
+# We finish with cmp so that the test fails if the comparison fails
+diff expected output
+cmp expected output
