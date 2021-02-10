@@ -349,7 +349,7 @@ main = do printLn shiftRBits8
           printLn xorBits8
           printLn xorBits16
           printLn xorBits32
-          -- printLn xorBits64
-          -- printLn xorInteger
+          printLn xorBits64
+          printLn xorInteger
           printLn xorInt
           printLn xorNegativeInt
