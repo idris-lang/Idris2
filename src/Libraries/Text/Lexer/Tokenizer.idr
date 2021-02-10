@@ -15,7 +15,7 @@ import Data.Strings
 
 %default total
 
-||| Description a language's tokenizer rule.
+||| Description of a language's tokenization rule.
 export
 data Tokenizer : (tokenType : Type) -> Type where
      Match : Lexer -> (String -> tokenType) -> Tokenizer tokenType
@@ -38,9 +38,9 @@ export
 match : Lexer -> (String -> a) -> Tokenizer a
 match = Match
 
-||| Compose other language's tokenizer. Language composition should be
-||| quoted between a begin recogniser and a end recogniser. The begin token
-||| can be used to generate the composition tokenizer and the end recogniser.
+||| Compose other tokenizer. Language composition should be quoted between
+||| a begin lexer and a end lexer. The begin token can be used to generate
+||| the composition tokenizer and the end lexer.
 export
 compose : (begin : Lexer) ->
           (mapBegin : String -> a) ->
