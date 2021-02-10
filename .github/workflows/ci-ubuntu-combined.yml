@@ -127,31 +127,6 @@ jobs:
       - name: Test self-hosted
         run: make test INTERACTIVE=''
 
-  test-gambit:
-    needs: build-bootstrap-chez
-    runs-on: ubuntu-latest
-    env:
-      IDRIS2_CG: gambit
-      IDRIS2_TESTS_CG: gambit
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Install Gambit Scheme
-        uses: guenchi/setup-scheme@v0.0.8
-        with:
-          implementation: gambit
-      - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: installed-bootstrapped-idris2-chez
-          path: ~/.idris2/
-      - name: Install build dependencies
-        run: |
-          echo "::add-path::$HOME/.idris2/bin"
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
-      - name: Test gambit backend
-        run: make test INTERACTIVE='' only=gambit
-
   self-host-racket:
     needs: build-bootstrap-racket
     runs-on: ubuntu-latest

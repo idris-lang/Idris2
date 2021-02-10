@@ -23,6 +23,7 @@ jobs:
       - name: Install build dependencies
         run: |
           brew install chezscheme
+          brew install gambit-scheme
           brew install coreutils
           echo "::add-path::$HOME/.idris2/bin"
       - name: Build Idris 2 from bootstrap
