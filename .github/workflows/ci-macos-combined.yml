@@ -81,8 +81,8 @@ jobs:
           brew install chezscheme
           brew install coreutils
           brew install gambit-scheme
-          echo "::add-path::/usr/local/current/bin
-          echo "::add-path::$HOME/.idris2/bin""
+          echo "::add-path::/usr/local/Gambit/current/bin"
+          echo "::add-path::$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Test gambit
         run: cd tests/gambit/bitops001/ && ./run idris2
