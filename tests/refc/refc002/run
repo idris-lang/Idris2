@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --cg refc -o refc002 RecordProjection.idr > /dev/null
+./build/exec/refc002
+
+rm -rf build
