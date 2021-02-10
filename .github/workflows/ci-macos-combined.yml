@@ -81,9 +81,8 @@ jobs:
           brew install chezscheme
           brew install coreutils
           brew install gambit-scheme
-          ls /usr/local
-          ls /Library
-          echo "::add-path::/Library/Gambit/current/bin"
+          CURRENTDIR=$(find /usr/local/Cellar/gambit-scheme -type l -name current)
+          echo "::add-path::${CURRENTDIR}/bin"
           echo "::add-path::$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Test gambit
