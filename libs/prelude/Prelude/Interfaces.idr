@@ -105,6 +105,12 @@ public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
 
+namespace Functor
+  ||| Composition of functors is a functor.
+  export
+  [Compose] (Functor f, Functor g) => Functor (f . g) where
+    map fun = map (map fun)
+
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
 public export
@@ -156,6 +162,15 @@ a *> b = map (const id) a <*> b
 %allow_overloads pure
 %allow_overloads (<*)
 %allow_overloads (*>)
+
+namespace Applicative
+  ||| Composition of applicative functors is an applicative functor.
+  export
+  [Compose] (Applicative f, Applicative g) => Applicative (f . g)
+    using Functor.Compose where
+      pure = pure . pure
+
+      fun <*> x = ((<*>) <$> fun <*> x)
 
 public export
 interface Applicative f => Alternative f where
