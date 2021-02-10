@@ -81,6 +81,7 @@ jobs:
           brew install gambit-scheme
           ln -s /usr/local/Cellar/gambit-scheme/4.9.3*/v4.9.3/bin/gsi /usr/local/bin/gsi
           ln -s /usr/local/Cellar/gambit-scheme/4.9.3*/v4.9.3/bin/gsc /usr/local/bin/gsc
+          brew install coreutils
           echo "::add-path::$HOME/.idris2/bin"
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Test gambit
