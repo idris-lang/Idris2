@@ -14,7 +14,7 @@ import Libraries.Utils.Either
 export
 runParser : String -> Rule ty -> Either (ParseError Token) ty
 runParser str p
-    = do toks   <- mapError LexFail $ lex str
+    = do toks   <- mapError (\err => LexFail (NoRuleApply, err)) $ lex str
          parsed <- mapError toGenericParsingError $ parse p toks
          Right (fst parsed)
 

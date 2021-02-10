@@ -66,7 +66,7 @@ sexp
 
 ideParser : {e : _} -> String -> Grammar Token e ty -> Either (ParseError Token) ty
 ideParser str p
-    = do toks   <- mapError LexFail $ idelex str
+    = do toks   <- mapError (\err => LexFail (NoRuleApply, err)) $ idelex str
          parsed <- mapError toGenericParsingError $ parse p toks
          Right (fst parsed)
 

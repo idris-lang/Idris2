@@ -1,3 +1,6 @@
 1/1: Building PError (PError.idr)
-Error: Parse error at line 5:1:
-Expected ')' (next tokens: [identifier bar, identifier x, symbol =, let, identifier y, symbol =, literal 42, in, identifier y, symbol +])
+Error: Lex error ComposeNotClosing (3, 6) (3, 7) at (3, 6) input: (Int -> Int
+bar x = let y = 42 in y + x
+
+baz : Int -> Int
+baz x = x

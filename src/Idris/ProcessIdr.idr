@@ -189,7 +189,7 @@ modTime fname
 export
 getParseErrorLoc : String -> ParseError Token -> FC
 getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
-getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
+getParseErrorLoc fname (LexFail (_, l, c, _)) = MkFC fname (l, c) (l, c)
 getParseErrorLoc fname (LitFail (MkLitErr l c _)) = MkFC fname (l, 0) (l, 0)
 getParseErrorLoc fname _ = replFC
 

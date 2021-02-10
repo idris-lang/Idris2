@@ -15,7 +15,7 @@ runParserTo : {e : _} ->
               String -> Grammar Token e ty -> Either (ParseError Token) ty
 runParserTo lit reject str p
     = do str    <- mapError LitFail $ unlit lit str
-         toks   <- mapError LexFail $ lexTo1 reject str
+         toks   <- mapError LexFail $ lexTo reject str
          parsed <- mapError toGenericParsingError $ parse p toks
          Right (fst parsed)
 
