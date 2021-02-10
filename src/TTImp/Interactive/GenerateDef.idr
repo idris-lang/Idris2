@@ -231,16 +231,16 @@ export
 makeDef : {auto c : Ref Ctxt Defs} ->
           {auto m : Ref MD Metadata} ->
           {auto u : Ref UST UState} ->
-          (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+          (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
           Name -> Core (Search (FC, List ImpClause))
 makeDef p n
     = do Just (loc, nidx, envlen, ty) <- findTyDeclAt p
             | Nothing => noResult
          n <- getFullName nidx
          logTerm "interaction.generate" 5 ("Searching for " ++ show n) ty
-         let opts = record { genExpr = Just (makeDefFromType loc) }
+         let opts = record { genExpr = Just (makeDefFromType (justFC loc)) }
                            (initSearchOpts True 5)
-         makeDefFromType loc opts n envlen ty
+         makeDefFromType (justFC loc) opts n envlen ty
 
 -- Given a clause, return the bindable names, and the ones that were used in
 -- the rhs
@@ -278,7 +278,7 @@ export
 makeDefSort : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
-              (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+              (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
               Nat -> (List ImpClause -> List ImpClause -> Ordering) ->
               Name -> Core (Search (FC, List ImpClause))
 makeDefSort p max ord n
@@ -288,7 +288,7 @@ export
 makeDefN : {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
-           (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+           (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
            Nat -> Name -> Core (List (FC, List ImpClause))
 makeDefN p max n
     = do (res, _) <- searchN max (makeDef p n)

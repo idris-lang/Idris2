@@ -10,6 +10,61 @@ Changes since Idris 2 v0.2.1
 
 Library changes:
 
+* Overhaul of the concurrency primitives:
+
+  - Renamed `System.Concurrency.Raw` to `System.Concurrency`.
+
+  - Modified the implementation of `Prelude.IO.fork` in the Chez Scheme RTS, which
+    now returns a semaphore instead of a thread object. This allows the main
+    thread to wait for the child thread to finish (see next bullet). The Racket
+    implementation already returned a thread descriptor, which could be used to
+    wait for the thread to finish.
+
+  - Added `Prelude.IO.threadWait` which waits for a thread, identified by a
+    `ThreadID`, to finish. This operation is supported by both the Chez Scheme and
+    the Racket RTS'es.
+
+  - Added semaphores to `System.Concurrency`, supported by both the Chez Scheme
+    and Racket RTS'es.
+
+  - Added barriers to `System.Concurrency`, supported by both the Chez Scheme
+    and Racket RTS'es.
+
+  - Added synchronous channels to `System.Concurrency`, supported by both the Chez
+    Scheme and Racket RTS'es.
+
+  - Fixed the support for mutexes in the Racket RTS. Formerly, they were
+    implemented with semaphores, and calling`mutexRelease` multiple times would
+    increment the internal counter multiple times, allowing multiple concurrent
+    `mutexAcquire` operations to succeed simultaneously. Currently, `mutexRelease`
+    fails when called on a mutex which isn't owned. (However, `mutexRelease` does
+    not check whether the mutex is in fact owned by the current thread, which may
+    be a bug.)
+
+  - Modified the support for condition variables in the Racket RTS. Formerly,
+    they were implemented using synchronous channels, meaning that: 
+      + `conditionSignal` was a blocking operation; and 
+      + calling `conditionSignal` on a condition variable on which no thread
+        was waiting would wake the next thread to call `conditionWait`, whereas
+        condition variables are supposed to be stateless, and only wake threads
+        already in the queue. 
+    The implementation was replaced with an implementation based on asynchronous
+    channels and mutexes, based on the following paper:
+    https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
+
+  - Removed `threadID` and `blodwen-thisthread`. Formerly, in the Chez Scheme
+    backend, this function returned "the thread id of the current thread" as a
+    value of type `ThreadID`. However, `fork` returned a "thread object" as a
+    value of type `ThreadID`. These are *different kinds of values* in Chez
+    Scheme. As there was nothing one could do with a value of type `ThreadID`, I
+    chose to remove `threadID`, as it allowed me to implement `threadWait` more
+    easily.
+
+  - Renamed `blodwen-lock` and `blodwen-unlock` to `blodwen-mutex-acquire` and
+    `blodwen-mutex-release` for consistency, as these functions are referred to
+    with acquire and release both in Chez Scheme and in the Idris2 concurrency
+    module.
+
 * Added `Data.HVect` in `contrib`, for heterogeneous vectors.
 * Various other library functions added throughout `base` and `contrib`
 

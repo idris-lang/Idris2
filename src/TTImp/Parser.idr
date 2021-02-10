@@ -193,10 +193,11 @@ mutual
   as fname indents
       = do start <- location
            x <- unqualifiedName
+           nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
            end <- location
-           pure (IAs (MkFC fname start end) UseRight (UN x) pat)
+           pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
 
   simpleExpr : FileName -> IndentInfo -> Rule RawImp
   simpleExpr fname indents
@@ -340,7 +341,7 @@ mutual
            keyword "let"
            rigc <- multiplicity
            rig <- getMult rigc
-           n <- name
+           n <- bounds name
            symbol "="
            commit
            val <- expr fname indents
@@ -349,7 +350,7 @@ mutual
            scope <- typeExpr fname indents
            end <- location
            pure (let fc = MkFC fname start end in
-                     ILet fc rig n (Implicit fc False) val scope)
+                     ILet fc (boundToFC fname n) rig n.val (Implicit fc False) val scope)
     <|> do start <- location
            keyword "let"
            ds <- block (topDecl fname)
@@ -480,11 +481,12 @@ tyDecl : FileName -> IndentInfo -> Rule ImpTy
 tyDecl fname indents
     = do start <- location
          n <- name
+         nameEnd <- location
          symbol ":"
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) n ty)
+         pure (MkImpTy (MkFC fname start end) (MkFC fname start nameEnd) n ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->

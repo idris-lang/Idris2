@@ -4,7 +4,7 @@ import Linear
 import Data.IORef
 import Data.List
 
-import System.Concurrency.Raw
+import System.Concurrency
 
 public export
 data Actions : Type -> Type where

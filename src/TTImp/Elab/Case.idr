@@ -282,7 +282,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
         = let n = getBindName idx v used
               (ns, rest) = addEnv (idx + 1) bs (snd n :: used)
               ns' = n :: ns in
-              (ns', IAs fc UseLeft (snd n) (Implicit fc True) :: rest)
+              (ns', IAs fc EmptyFC UseLeft (snd n) (Implicit fc True) :: rest)
 
     -- Replace a variable in the argument list; if the reference is to
     -- a variable kept in the outer environment (therefore not an argument
@@ -290,7 +290,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     replace : (idx : Nat) -> RawImp -> List RawImp -> List RawImp
     replace Z lhs (old :: xs)
        = let lhs' = case old of
-                         IAs loc' side n _ => IAs loc' side n lhs
+                         IAs loc' nameLoc' side n _ => IAs loc' nameLoc' side n lhs
                          _ => lhs in
              lhs' :: xs
     replace (S k) lhs (x :: xs)
@@ -309,7 +309,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
     usedIn : RawImp -> List Name
     usedIn (IBindVar _ n) = [UN n]
     usedIn (IApp _ f a) = usedIn f ++ usedIn a
-    usedIn (IAs _ _ n a) = n :: usedIn a
+    usedIn (IAs _ _ _ n a) = n :: usedIn a
     usedIn (IAlternative _ _ alts) = concatMap usedIn alts
     usedIn _ = []
 

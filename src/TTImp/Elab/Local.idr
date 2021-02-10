@@ -100,8 +100,8 @@ localHelper {vars} nest env nestdecls_in func
                _ => n
 
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest (MkImpTy loc' n ty)
-        = MkImpTy loc' (newName nest n) ty
+    updateTyName nest (MkImpTy loc' nameLoc n ty)
+        = MkImpTy loc' nameLoc (newName nest n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)

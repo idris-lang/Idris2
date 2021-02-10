@@ -142,8 +142,8 @@ checkTerm rig elabinfo nest env (ILam fc r p (Just n) argTy scope) exp
 checkTerm rig elabinfo nest env (ILam fc r p Nothing argTy scope) exp
     = do n <- genVarName "_"
          checkLambda rig elabinfo nest env fc r p n argTy scope exp
-checkTerm rig elabinfo nest env (ILet fc r n nTy nVal scope) exp
-    = checkLet rig elabinfo nest env fc r n nTy nVal scope exp
+checkTerm rig elabinfo nest env (ILet fc lhsFC r n nTy nVal scope) exp
+    = checkLet rig elabinfo nest env fc lhsFC r n nTy nVal scope exp
 checkTerm rig elabinfo nest env (ICase fc scr scrty alts) exp
     = checkCase rig elabinfo nest env fc scr scrty alts exp
 checkTerm rig elabinfo nest env (ILocal fc nested scope) exp
@@ -183,8 +183,8 @@ checkTerm rig elabinfo nest env (IBindHere fc binder sc) exp
     = checkBindHere rig elabinfo nest env fc binder sc exp
 checkTerm rig elabinfo nest env (IBindVar fc n) exp
     = checkBindVar rig elabinfo nest env fc n exp
-checkTerm rig elabinfo nest env (IAs fc side n_in tm) exp
-    = checkAs rig elabinfo nest env fc side n_in tm exp
+checkTerm rig elabinfo nest env (IAs fc nameFC side n_in tm) exp
+    = checkAs rig elabinfo nest env fc nameFC side n_in tm exp
 checkTerm rig elabinfo nest env (IMustUnify fc reason tm) exp
     = checkDot rig elabinfo nest env fc reason tm exp
 checkTerm rig elabinfo nest env (IDelayed fc r tm) exp
@@ -279,7 +279,7 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
 TTImp.Elab.Check.check rigc elabinfo nest env (ICoerced fc tm) exp
     = checkImp rigc elabinfo nest env tm exp
 -- Don't add implicits/coercions on local blocks or record updates
-TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet _ _ _ _ _ _) exp
+TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILet _ _ _ _ _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm@(ILocal _ _ _) exp
     = checkImp rigc elabinfo nest env tm exp

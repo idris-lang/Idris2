@@ -1,6 +1,7 @@
 module TTImp.Elab.Binders
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -163,6 +164,13 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                                 (Just (gnf env' (renameTop n psc))))
                     logTermNF "elab.binder" 10 "Lambda type" env exptynf
                     logGlueNF "elab.binder" 10 "Got scope type" env' scopet
+
+                    -- Currently, the fc a PLam holds (and that ILam gets as a consequence)
+                    -- is the file context of the argument to the lambda. This fits nicely
+                    -- in this exact use, but is likely a bug.
+                    log "metadata.names" 7 "checkLambda is adding ↓"
+                    addNameType fc n env pty -- Add the type of the argument to the metadata
+
                     checkExp rig elabinfo env fc
                              (Bind fc n (Lam fc' rigb info' tyv) scopev)
                              (gnf env
@@ -187,12 +195,11 @@ checkLet : {vars : _} ->
            {auto e : Ref EST (EState vars)} ->
            RigCount -> ElabInfo ->
            NestedNames vars -> Env Term vars ->
-           FC ->
-           RigCount -> (n : Name) ->
+           FC -> (lhsFC : FC) -> RigCount -> (n : Name) ->
            (nTy : RawImp) -> (nVal : RawImp) -> (scope : RawImp) ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
-checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
+checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
     = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
@@ -231,6 +238,11 @@ checkLet rigc_in elabinfo nest env fc rigl n nTy nVal scope expty {vars}
          -- No need to 'checkExp' here - we've already checked scopet
          -- against the expected type when checking the scope, so just
          -- build the term directly
+
+         -- Add the lhs of the let to metadata
+         log "metadata.names" 7 $ "checkLet is adding ↓"
+         addNameType lhsFC n env tyv
+
          pure (Bind fc n (Let fc rigb valv tyv) scopev,
                gnf env (Bind fc n (Let fc rigb valv tyv) scopet))
   where

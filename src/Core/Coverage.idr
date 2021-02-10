@@ -103,11 +103,11 @@ conflict defs env nfty n
                pure (Just [(n, !(quote empty env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs i args args'
+               then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
       conflictNF i (NTCon _ n t a args) (NTCon _ n' t' a' args')
           = if n == n'
-               then conflictArgs i args args'
+               then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
       conflictNF i (NPrimVal _ c) (NPrimVal _ c')
           = if c == c'

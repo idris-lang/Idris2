@@ -483,6 +483,11 @@ export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
 unless = when . not
 
+export %inline
+whenJust : Maybe a -> (a -> Core ()) -> Core ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
 public export
@@ -532,6 +537,10 @@ export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
 traverseOpt f (Just x) = map Just (f x)
+
+export
+traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
+traversePair f (w, a) = (w,) <$> f a
 
 export
 traverse_ : (a -> Core b) -> List a -> Core ()

@@ -123,6 +123,14 @@ export
 fork : (1 prog : IO ()) -> IO ThreadID
 fork act = fromPrim (prim__fork (toPrim act))
 
+%foreign "scheme:blodwen-thread-wait"
+export
+prim__threadWait : (1 threadID : ThreadID) -> PrimIO ()
+
+export
+threadWait : (1 threadID : ThreadID) -> IO ()
+threadWait threadID = fromPrim (prim__threadWait threadID)
+
 %foreign "C:idris2_readString, libidris2_support"
 export
 prim__getErrno : Int

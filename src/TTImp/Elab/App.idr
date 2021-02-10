@@ -46,7 +46,10 @@ getNameType rigc env fc x
               do rigSafe rigb rigc
                  let binder = getBinder lv env
                  let bty = binderType binder
+
+                 log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
+
                  when (isLinear rigb) $
                       do est <- get EST
                          put EST
@@ -101,6 +104,11 @@ getVarType rigc nest env fc x
                                 logTerm "elab" 5 ("Type of " ++ show n') tyenv
                                 logTerm "elab" 5 ("Expands to") tm
                                 log "elab" 5 $ "Arg length " ++ show arglen
+
+                                -- Add the type to the metadata
+                                log "metadata.names" 7 $ "getVarType is adding ↓"
+                                addNameType fc x env tyenv
+
                                 pure (tm, arglen, gnf env tyenv)
     where
       useVars : {vars : _} ->
@@ -359,9 +367,9 @@ mutual
                  IMustUnify _ _ _ => tm
                  IBindVar _ _ => tm
                  Implicit _ _ => tm
-                 IAs _ _ _ (IBindVar _ _) => tm
-                 IAs _ _ _ (Implicit _ _) => tm
-                 IAs fc p t arg => IAs fc p t (IMustUnify fc ErasedArg tm)
+                 IAs _ _ _ _ (IBindVar _ _) => tm
+                 IAs _ _ _ _ (Implicit _ _) => tm
+                 IAs fc nameFC p t arg => IAs fc nameFC p t (IMustUnify fc ErasedArg tm)
                  _ => IMustUnify (getFC tm) ErasedArg tm
   dotErased _ _ _ _ _ tm = pure tm
 
@@ -468,7 +476,7 @@ mutual
   findBindAllExpPattern = lookup (UN "_")
 
   isImplicitAs : RawImp -> Bool
-  isImplicitAs (IAs _ UseLeft _ (Implicit _ _)) = True
+  isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool
@@ -663,7 +671,7 @@ checkApp rig elabinfo nest env fc (IAutoApp fc' fn arg) expargs autoargs namedar
 checkApp rig elabinfo nest env fc (INamedApp fc' fn nm arg) expargs autoargs namedargs exp
    = checkApp rig elabinfo nest env fc' fn expargs autoargs ((nm, arg) :: namedargs) exp
 checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
-   = do (ntm, arglen, nty_in) <- getVarType rig nest env fc n
+   = do (ntm, arglen, nty_in) <- getVarType rig nest env fc' n
         nty <- getNF nty_in
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo

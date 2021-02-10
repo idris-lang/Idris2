@@ -200,8 +200,8 @@ findCG
                             Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
                                           coreLift $ exitWith (ExitFailure 1)
 
-anyAt : (FC -> Bool) -> FC -> a -> Bool
-anyAt p loc y = p loc
+anyAt : (a -> Bool) -> a -> b -> Bool
+anyAt p loc _ = p loc
 
 printClause : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -357,18 +357,26 @@ processEdit : {auto c : Ref Ctxt Defs} ->
               EditCmd -> Core EditResult
 processEdit (TypeAt line col name)
     = do defs <- get Ctxt
-         glob <- lookupCtxtName name (gamma defs)
-         res <- the (Core (Doc IdrisAnn)) $ case glob of
-                     [] => pure emptyDoc
-                     ts => do tys <- traverse (displayType defs) ts
-                              pure (vsep tys)
-         Just (n, num, t) <- findTypeAt (\p, n => within (line-1, col-1) p)
-            | Nothing => case res of
-                              Empty => throw (UndefinedName (MkFC "(interactive)" (0,0) (0,0)) name)
-                              _     => pure (DisplayEdit res)
-         case res of
-            Empty => pure (DisplayEdit $ pretty (nameRoot n) <++> colon <++> !(displayTerm defs t))
-            _     => pure (DisplayEdit emptyDoc)  -- ? Why () This means there is a global name and a type at (line,col)
+
+         -- Lookup the name globally
+         globals <- lookupCtxtName name (gamma defs)
+
+         -- Get the Doc for the result
+         globalResult <- the (Core $ Maybe $ Doc IdrisAnn) $ case globals of
+           [] => pure Nothing
+           ts => do tys <- traverse (displayType defs) ts
+                    pure $ Just (vsep tys)
+
+         -- Lookup the name locally (The name at the specified position)
+         localResult <- findTypeAt $ anyAt $ within (line-1, col-1)
+
+         case (globalResult, localResult) of
+              -- Give precedence to the local name, as it shadows the others
+              (_, Just (n, _, type)) => pure $ DisplayEdit $
+                pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
+              (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
+              (Nothing, Nothing) => throw (UndefinedName replFC name)
+
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
                        then within (line-1, col-1)
@@ -440,7 +448,9 @@ processEdit (GenerateDef upd line name rej)
                     put ROpts (record { gdResult = Just (line, searchdef) } ropts)
                     Just (_, (fc, cs)) <- nextGenDef rej
                          | Nothing => pure (EditError "No search results")
-                    let l : Nat =  integerToNat (cast (snd (startPos fc)))
+
+                    let l : Nat = integerToNat $ cast $ startCol (toNonEmptyFC fc)
+
                     Just srcLine <- getSourceLine line
                        | Nothing => pure (EditError "Source line not found")
                     let (markM, srcLineUnlit) = isLitLine srcLine
@@ -453,7 +463,7 @@ processEdit (GenerateDef upd line name rej)
 processEdit GenerateDefNext
     = do Just (line, (fc, cs)) <- nextGenDef 0
               | Nothing => pure (EditError "No more results")
-         let l : Nat =  integerToNat (cast (snd (startPos fc)))
+         let l : Nat = integerToNat $ cast $ startCol (toNonEmptyFC fc)
          Just srcLine <- getSourceLine line
             | Nothing => pure (EditError "Source line not found")
          let (markM, srcLineUnlit) = isLitLine srcLine
@@ -549,7 +559,7 @@ getItDecls
     = do opts <- get ROpts
          case evalResultName opts of
             Nothing => pure []
-            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
+            Just n => pure [ IClaim replFC top Private [] (MkImpTy replFC EmptyFC (UN "it") (Implicit replFC False)), IDef replFC (UN "it") [PatClause replFC (IVar replFC (UN "it")) (IVar replFC n)]]
 
 prepareExp :
     {auto c : Ref Ctxt Defs} ->
@@ -932,21 +942,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
 parseRepl inp
-    = case fnameCmd [(":load ", Load), (":l ", Load), (":cd ", CD), (":!", RunShellCommand)] inp of
-           Nothing => runParser Nothing inp (parseEmptyCmd <|> parseCmd)
-           Just cmd => Right $ Just cmd
-  where
-    -- a right load of hackery - we can't tokenise the filename using the
-    -- ordinary parser. There's probably a better way...
-    getLoad : Nat -> (String -> REPLCmd) -> String -> Maybe REPLCmd
-    getLoad n cmd str = Just (cmd (trim (substr n (length str) str)))
-
-    fnameCmd : List (String, String -> REPLCmd) -> String -> Maybe REPLCmd
-    fnameCmd [] inp = Nothing
-    fnameCmd ((pre, cmd) :: rest) inp
-        = if isPrefixOf pre inp
-             then getLoad (length pre) cmd inp
-             else fnameCmd rest inp
+    = runParser Nothing inp (parseEmptyCmd <|> parseCmd)
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->

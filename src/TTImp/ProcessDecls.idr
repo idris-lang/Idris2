@@ -138,9 +138,9 @@ processTTImpDecls {vars} nest env decls
          pure True -- TODO: False on error
   where
     bindConNames : ImpTy -> Core ImpTy
-    bindConNames (MkImpTy fc n ty)
+    bindConNames (MkImpTy fc nameFC n ty)
         = do ty' <- bindTypeNames [] vars ty
-             pure (MkImpTy fc n ty')
+             pure (MkImpTy fc nameFC n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
@@ -153,9 +153,9 @@ processTTImpDecls {vars} nest env decls
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
-    bindNames (IClaim fc c vis opts (MkImpTy tfc n ty))
+    bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
         = do ty' <- bindTypeNames [] vars ty
-             pure (IClaim fc c vis opts (MkImpTy tfc n ty'))
+             pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
     bindNames (IData fc vis d)
         = do d' <- bindDataNames d
              pure (IData fc vis d')

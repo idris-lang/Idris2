@@ -27,7 +27,7 @@ mutual
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
        ILam : FC -> Count -> PiInfo TTImp -> Maybe Name ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-       ILet : FC -> Count -> Name ->
+       ILet : FC -> (lhsFC : FC) -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
        ICase : FC -> TTImp -> (ty : TTImp) ->
@@ -50,7 +50,7 @@ mutual
        -- A name which should be implicitly bound
        IBindVar : FC -> String -> TTImp
        -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> UseSide -> Name -> TTImp -> TTImp
+       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> TTImp -> TTImp
        -- A 'dot' pattern, i.e. one which must also have the given value
        -- by unification
        IMustUnify : FC -> DotReason -> TTImp -> TTImp
@@ -107,7 +107,7 @@ mutual
 
   public export
   data ITy : Type where
-       MkTy : FC -> (n : Name) -> (ty : TTImp) -> ITy
+       MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
 
   public export
   data DataOpt : Type where

@@ -65,7 +65,7 @@ mutual
        PRunElab : FC -> PTerm -> PTerm
        PHole : FC -> (bracket : Bool) -> (holename : String) -> PTerm
        PType : FC -> PTerm
-       PAs : FC -> Name -> (pattern : PTerm) -> PTerm
+       PAs : FC -> (nameFC : FC) -> Name -> (pattern : PTerm) -> PTerm
        PDotted : FC -> PTerm -> PTerm
        PImplicit : FC -> PTerm
        PInfer : FC -> PTerm
@@ -131,7 +131,7 @@ mutual
   getPTermLoc (PRunElab fc _) = fc
   getPTermLoc (PHole fc _ _) = fc
   getPTermLoc (PType fc) = fc
-  getPTermLoc (PAs fc _ _) = fc
+  getPTermLoc (PAs fc _  _ _) = fc
   getPTermLoc (PDotted fc _) = fc
   getPTermLoc (PImplicit fc) = fc
   getPTermLoc (PInfer fc) = fc
@@ -166,9 +166,9 @@ mutual
   public export
   data PDo : Type where
        DoExp : FC -> PTerm -> PDo
-       DoBind : FC -> Name -> PTerm -> PDo
+       DoBind : FC -> (nameFC : FC) -> Name -> PTerm -> PDo
        DoBindPat : FC -> PTerm -> PTerm -> List PClause -> PDo
-       DoLet : FC -> Name -> RigCount -> PTerm -> PTerm -> PDo
+       DoLet : FC -> (lhs : FC) -> Name -> RigCount -> PTerm -> PTerm -> PDo
        DoLetPat : FC -> PTerm -> PTerm -> PTerm -> List PClause -> PDo
        DoLetLocal : FC -> List PDecl -> PDo
        DoRewrite : FC -> PTerm -> PDo
@@ -176,9 +176,9 @@ mutual
   export
   getLoc : PDo -> FC
   getLoc (DoExp fc _) = fc
-  getLoc (DoBind fc _ _) = fc
+  getLoc (DoBind fc _ _ _) = fc
   getLoc (DoBindPat fc _ _ _) = fc
-  getLoc (DoLet fc _ _ _ _) = fc
+  getLoc (DoLet fc _ _ _ _ _) = fc
   getLoc (DoLetPat fc _ _ _ _) = fc
   getLoc (DoLetLocal fc _) = fc
   getLoc (DoRewrite fc _) = fc
@@ -190,11 +190,11 @@ mutual
 
   public export
   data PTypeDecl : Type where
-       MkPTy : FC -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
+       MkPTy : FC -> (nameFC : FC) -> (n : Name) -> (doc: String) -> (type : PTerm) -> PTypeDecl
 
   export
   getPTypeDeclLoc : PTypeDecl -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
+  getPTypeDeclLoc (MkPTy fc _ _ _ _) = fc
 
   public export
   data PDataDecl : Type where
@@ -347,13 +347,13 @@ definedInData : PDataDecl -> List Name
 definedInData (MkPData _ n _ _ cons) = n :: map getName cons
   where
     getName : PTypeDecl -> Name
-    getName (MkPTy _ n _ _) = n
+    getName (MkPTy _ _ n _ _) = n
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ n _ _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
 definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -477,10 +477,10 @@ mutual
 
   showDo : PDo -> String
   showDo (DoExp _ tm) = show tm
-  showDo (DoBind _ n tm) = show n ++ " <- " ++ show tm
+  showDo (DoBind _ _ n tm) = show n ++ " <- " ++ show tm
   showDo (DoBindPat _ l tm alts)
       = show l ++ " <- " ++ show tm ++ concatMap showAlt alts
-  showDo (DoLet _ l rig _ tm) = "let " ++ show l ++ " = " ++ show tm
+  showDo (DoLet _ _ l rig _ tm) = "let " ++ show l ++ " = " ++ show tm
   showDo (DoLetPat _ l _ tm alts)
       = "let " ++ show l ++ " = " ++ show tm ++ concatMap showAlt alts
   showDo (DoLetLocal _ ds)
@@ -566,7 +566,7 @@ mutual
     showPrec d (PPrimVal _ c) = showPrec d c
     showPrec _ (PHole _ _ n) = "?" ++ n
     showPrec _ (PType _) = "Type"
-    showPrec d (PAs _ n p) = showPrec d n ++ "@" ++ showPrec d p
+    showPrec d (PAs _ _ n p) = showPrec d n ++ "@" ++ showPrec d p
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
@@ -621,15 +621,44 @@ mutual
         = "with " ++ show ns ++ " " ++ showPrec d rhs
 
 public export
+record Method where
+  constructor MkMethod
+  name     : Name
+  count    : RigCount
+  totalReq : Maybe TotalReq
+  type     : RawImp
+
+export
+Show Method where
+  show (MkMethod n c treq ty)
+    = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty
+
+public export
 record IFaceInfo where
   constructor MkIFaceInfo
   iconstructor : Name
   implParams : List Name
   params : List Name
   parents : List RawImp
-  methods : List (Name, RigCount, Maybe TotalReq, Bool, RawImp)
+  methods : List Method
      -- ^ name, whether a data method, and desugared type (without constraint)
   defaults : List (Name, List ImpClause)
+
+export
+TTC Method where
+  toBuf b (MkMethod nm c treq ty)
+      = do toBuf b nm
+           toBuf b c
+           toBuf b treq
+           toBuf b ty
+
+  fromBuf b
+      = do nm <- fromBuf b
+           c <- fromBuf b
+           treq <- fromBuf b
+           ty <- fromBuf b
+           pure (MkMethod nm c treq ty)
+
 
 export
 TTC IFaceInfo where
@@ -842,8 +871,8 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PHole _ _ _) = f t
     goPTerm t@(PType _) = f t
-    goPTerm (PAs fc x pat) =
-      PAs fc x <$> goPTerm pat
+    goPTerm (PAs fc nameFC x pat) =
+      PAs fc nameFC x <$> goPTerm pat
       >>= f
     goPTerm (PDotted fc x) =
       PDotted fc <$> goPTerm x
@@ -933,14 +962,14 @@ mapPTermM f = goPTerm where
 
     goPDo : PDo -> Core PDo
     goPDo (DoExp fc t) = DoExp fc <$> goPTerm t
-    goPDo (DoBind fc n t) = DoBind fc n <$> goPTerm t
+    goPDo (DoBind fc nameFC n t) = DoBind fc nameFC n <$> goPTerm t
     goPDo (DoBindPat fc t u cls) =
       DoBindPat fc <$> goPTerm t
                    <*> goPTerm u
                    <*> goPClauses cls
-    goPDo (DoLet fc n c t scope) =
-       DoLet fc n c <$> goPTerm t
-                    <*> goPTerm scope
+    goPDo (DoLet fc lhsFC n c t scope) =
+       DoLet fc lhsFC n c <$> goPTerm t
+                          <*> goPTerm scope
     goPDo (DoLetPat fc pat t scope cls) =
        DoLetPat fc <$> goPTerm pat
                    <*> goPTerm t
@@ -1003,7 +1032,7 @@ mapPTermM f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
-    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
+    goPTypeDecl (MkPTy fc nameFC n d t) = MkPTy fc nameFC n d <$> goPTerm t
 
     goPDataDecl : PDataDecl -> Core PDataDecl
     goPDataDecl (MkPData fc n t opts tdecls) =

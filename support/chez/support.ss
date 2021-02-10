@@ -195,10 +195,21 @@
 
 ;; Threads
 
-(define blodwen-thread-data (make-thread-parameter #f))
+(define-record thread-handle (semaphore))
 
-(define (blodwen-thread p)
-    (fork-thread (lambda () (p (vector 0)))))
+(define (blodwen-thread proc)
+  (let [(sema (blodwen-make-semaphore 0))]
+    (fork-thread (lambda () (proc (vector 0)) (blodwen-semaphore-post sema)))
+    (make-thread-handle sema)
+    ))
+
+(define (blodwen-thread-wait handle)
+  (blodwen-semaphore-wait (thread-handle-semaphore handle)))
+
+;; Thread mailboxes
+
+(define blodwen-thread-data
+  (make-thread-parameter #f))
 
 (define (blodwen-get-thread-data ty)
   (blodwen-thread-data))
@@ -206,19 +217,103 @@
 (define (blodwen-set-thread-data a)
   (blodwen-thread-data a))
 
-(define (blodwen-mutex) (make-mutex))
-(define (blodwen-lock m) (mutex-acquire m))
-(define (blodwen-unlock m) (mutex-release m))
-(define (blodwen-thisthread) (get-thread-id))
+;; Semaphore
 
-(define (blodwen-condition) (make-condition))
-(define (blodwen-condition-wait c m) (condition-wait c m))
-(define (blodwen-condition-wait-timeout c m t)
-  (let ((sec (div t 1000000))
-        (micro (mod t 1000000)))
-  (condition-wait c m (make-time 'time-duration (* 1000 micro) sec))))
-(define (blodwen-condition-signal c) (condition-signal c))
-(define (blodwen-condition-broadcast c) (condition-broadcast c))
+(define-record semaphore (box mutex condition))
+
+(define (blodwen-make-semaphore init)
+  (make-semaphore (box init) (make-mutex) (make-condition)))
+
+(define (blodwen-semaphore-post sema)
+  (with-mutex (semaphore-mutex sema)
+    (let [(sema-box (semaphore-box sema))]
+      (set-box! sema-box (+ (unbox sema-box) 1))
+      (condition-signal (semaphore-condition sema))
+    )))
+
+(define (blodwen-semaphore-wait sema)
+  (with-mutex (semaphore-mutex sema)
+    (let [(sema-box (semaphore-box sema))]
+      (when (= (unbox sema-box) 0)
+        (condition-wait (semaphore-condition sema) (semaphore-mutex sema)))
+      (set-box! sema-box (- (unbox sema-box) 1))
+      )))
+
+;; Barrier
+
+(define-record barrier (count-box num-threads mutex cond))
+
+(define (blodwen-make-barrier num-threads)
+  (make-barrier (box 0) num-threads (make-mutex) (make-condition)))
+
+(define (blodwen-barrier-wait barrier)
+  (let [(count-box (barrier-count-box barrier))
+        (num-threads (barrier-num-threads barrier))
+        (mutex (barrier-mutex barrier))
+        (condition (barrier-cond barrier))]
+    (with-mutex mutex
+    (let* [(count-old (unbox count-box))
+           (count-new (+ count-old 1))]
+      (set-box! count-box count-new)
+      (if (= count-new num-threads)
+          (condition-broadcast condition)
+          (condition-wait condition mutex))
+      ))))
+
+;; Channel
+
+(define-record channel (box mutex semaphore-get semaphore-put))
+
+(define (blodwen-make-channel ty)
+  (make-channel
+   (box '())
+   (make-mutex)
+   (blodwen-make-semaphore 0)
+   (blodwen-make-semaphore 0)))
+
+(define (blodwen-channel-get ty chan)
+  (blodwen-semaphore-post (channel-semaphore-get chan))
+  (blodwen-semaphore-wait (channel-semaphore-put chan))
+  (with-mutex (channel-mutex chan)
+    (let* [(chan-box (channel-box chan))
+           (chan-msg-queue (unbox chan-box))]
+      (set-box! chan-box (cdr chan-msg-queue))
+      (car chan-msg-queue)
+      )))
+
+(define (blodwen-channel-put ty chan val)
+  (with-mutex (channel-mutex chan)
+    (let* [(chan-box (channel-box chan))
+           (chan-msg-queue (unbox chan-box))]
+      (set-box! chan-box (append chan-msg-queue (list val)))))
+  (blodwen-semaphore-post (channel-semaphore-put chan))
+  (blodwen-semaphore-wait (channel-semaphore-get chan)))
+
+;; Mutex
+
+(define (blodwen-make-mutex)
+  (make-mutex))
+(define (blodwen-mutex-acquire mutex)
+  (mutex-acquire mutex))
+(define (blodwen-mutex-release mutex)
+  (mutex-release mutex))
+
+;; Condition variable
+
+(define (blodwen-make-condition)
+  (make-condition))
+(define (blodwen-condition-wait condition mutex)
+  (condition-wait condition mutex))
+(define (blodwen-condition-wait-timeout condition mutex timeout)
+  (let* [(sec (div timeout 1000000))
+         (micro (mod timeout 1000000))]
+    (condition-wait condition mutex (make-time 'time-duration (* 1000 micro) sec))))
+(define (blodwen-condition-signal condition)
+  (condition-signal condition))
+(define (blodwen-condition-broadcast condition)
+  (condition-broadcast condition))
+
+;; Future
 
 (define-record future-internal (result ready mutex signal))
 (define (blodwen-make-future work)
