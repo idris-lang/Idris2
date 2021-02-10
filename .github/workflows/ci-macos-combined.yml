@@ -1,4 +1,4 @@
-name: macOS Chez
+name: macOS Combined Chez
 on:
   push:
     branches:
@@ -35,7 +35,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: installed-bootstrapped-idris2-chez
-          path: $HOME/.idris2/
+          path: ~/.idris2/
 
   # self hosting and testing
 
