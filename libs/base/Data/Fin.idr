@@ -140,7 +140,7 @@ integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto prf : (IsJust (integerToFin x n))} ->
+              {auto 0 prf : (IsJust (integerToFin x n))} ->
               Fin n
 fromInteger {n} x {prf} with (integerToFin x n)
   fromInteger {n} x {prf = ItIsJust} | Just y = y
