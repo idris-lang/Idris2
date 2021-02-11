@@ -1,6 +1,8 @@
 1/1: Building PError (PError.idr)
-Error: Lex error ComposeNotClosing (3, 6) (3, 7) at (3, 6) input: (Int -> Int
-bar x = let y = 42 in y + x
+Error: Bracket is not properly closed.
 
-baz : Int -> Int
-baz x = x
+PError.idr:4:7--4:8
+   |
+ 4 | bar : (Int -> Int
+   |       ^
+

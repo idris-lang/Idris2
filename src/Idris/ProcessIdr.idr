@@ -4,6 +4,7 @@ import Compiler.Inline
 
 import Core.Binary
 import Core.Context
+import Core.Core
 import Core.Context.Log
 import Core.Directory
 import Core.Env
@@ -187,11 +188,13 @@ modTime fname
          pure (cast t)
 
 export
-getParseErrorLoc : String -> ParseError Token -> FC
-getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
-getParseErrorLoc fname (LexFail (_, l, c, _)) = MkFC fname (l, c) (l, c)
-getParseErrorLoc fname (LitFail (MkLitErr l c _)) = MkFC fname (l, 0) (l, 0)
-getParseErrorLoc fname _ = replFC
+fromParseError : (Show token, Pretty token) => String -> ParseError token -> Error
+fromParseError fname (FileFail err) = FileErr fname err
+fromParseError fname (LitFail (MkLitErr l c _)) = LitFail (MkFC fname (l, c) (l, c + 1))
+fromParseError fname (LexFail (ComposeNotClosing begin end, _, _, _)) = LexFail (MkFC fname begin end) "Bracket is not properly closed."
+fromParseError fname (LexFail (_, l, c, _)) = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognoise token."
+fromParseError fname (ParseFail msg (Just (l, c)) toks) = ParseFail (MkFC fname (l, c) (l, c + 1)) msg toks
+fromParseError fname (ParseFail msg Nothing toks) = ParseFail replFC msg toks
 
 export
 readHeader : {auto c : Ref Ctxt Defs} ->
@@ -202,7 +205,7 @@ readHeader path
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          case runParserTo (isLitFile path) (is ':') res (progHdr path) of
-              Left err => throw (ParseFail (getParseErrorLoc path err) err)
+              Left err => throw (fromParseError path err)
               Right mod => pure mod
 
 %foreign "scheme:collect"
@@ -265,7 +268,7 @@ processMod srcf ttcf msg sourcecode
              do iputStrLn msg
                 Right mod <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
-                      | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
+                      | Left err => pure (Just [fromParseError srcf err])
                 initHash
                 traverse addPublicHash (sort hs)
                 resetNextVar

@@ -1,3 +1,8 @@
 1/1: Building PError (PError.idr)
-Error: Parse error at line 4:33:
-Wrong number of 'with' arguments (next tokens: [symbol =, identifier x, identifier foo, identifier x, identifier y, symbol |, identifier True, symbol |, identifier True, symbol =])
+Error: Wrong number of 'with' arguments
+
+PError.idr:4:33--4:34
+   |
+ 4 |     foo x y | True | False | 10 = x
+   |                                 ^
+
