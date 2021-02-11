@@ -187,6 +187,14 @@ racketTests = MkTestPool [Racket]
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
     --, "futures001"
+    , "mutex001", "mutex002", "mutex003", "mutex004", "mutex005"
+    , "conditions001"
+    , "conditions002"
+    , "conditions003"
+    --, "conditions004"
+    --, "conditions005"
+    , "conditions006"
+    , "conditions007"
     ]
 
 nodeTests : TestPool

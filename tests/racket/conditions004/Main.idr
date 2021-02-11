@@ -3,7 +3,7 @@
 import System
 import System.Concurrency
 
--- Test `conditionSignal` works for 1 main and 1 child thread
+-- Test `conditionBroadcast` wakes the child with 1 main and 1 child thread
 
 main : IO ()
 main =
@@ -12,9 +12,8 @@ main =
      t <- fork $ do mutexAcquire cvMutex
                     conditionWait cv cvMutex
                     putStrLn "Hello mother"
-                    mutexRelease cvMutex
      putStrLn "Hello child"
      sleep 1
-     conditionSignal cv
+     conditionBroadcast cv
      threadWait t
 

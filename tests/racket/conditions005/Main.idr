@@ -3,7 +3,7 @@
 import System
 import System.Concurrency
 
--- Test `conditionSignal` wakes 1 thread for 1 main and N child threads
+-- Test `conditionBroadcast` wakes all threads for 1 main and N child threads
 
 main : IO ()
 main =
@@ -14,9 +14,9 @@ main =
                                         conditionWait cv cvMutex
                                         putStrLn "Hello mother"
                                         mutexRelease cvMutex
-     putStrLn "Hello child"
+     putStrLn "Hello children"
      sleep 1
-     conditionSignal cv
-     -- don't threadWait since we don't know which thread got signalled
+     conditionBroadcast cv
+     for ts $ \t => threadWait t
      sleep 1
 
