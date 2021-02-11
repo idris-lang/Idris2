@@ -66,10 +66,9 @@ ploc fc@(MkFC fn s e) = do
     source <- lines <$> getCurrentElabSource
     if sr == er
        then do
-         let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
-         let line = (annotate FileCtxt pipe) <++> maybe emptyDoc pretty (elemAt source sr)
-         let emph = (annotate FileCtxt pipe) <++> spaces (cast sc) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
-         pure $ vsep [emptyDoc, head, firstRow, annotate FileCtxt (space <+> pretty (sr + 1)) <++> align (vsep [line, emph]), emptyDoc]
+         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
+         let firstr = er `minus` 4
+         pure $ vsep ([emptyDoc, head] ++ (addLineNumbers nsize firstr (pretty <$> extractRange firstr er source)) ++ [emph]) <+> line
        else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String

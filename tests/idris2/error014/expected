@@ -2,14 +2,20 @@
 Error: Constructor Prelude.Types.:: is not fully applied.
 
 Issue735.idr:5:8--5:12
-   |
+ 1 | module Issue735
+ 2 | 
+ 3 | -- Not allowed to pattern-match on under-applied constructors
+ 4 | isCons : (a -> List a -> List a) -> Bool
  5 | isCons (::) = True
-   |        ^^^^
+            ^^^^
 
 Error: Constructor Issue735.A is not fully applied.
 
 Issue735.idr:12:6--12:7
-    |
+ 08 | interface A a where
+ 09 | 
+ 10 | -- Not allowed to pattern-match on under-applied type constructors
+ 11 | test : (kind : Type -> Type) -> Maybe Nat
  12 | test A = Just 1
-    |      ^
+           ^
 

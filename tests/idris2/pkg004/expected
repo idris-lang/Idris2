@@ -2,9 +2,8 @@
 Dummy> Error: Undefined name undefined. 
 
 (interactive):1:4--1:13
-   |
  1 | :t undefined
-   |    ^^^^^^^^^
+        ^^^^^^^^^
 
 Dummy> Dummy.something : String
 Dummy> "Something something"

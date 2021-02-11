@@ -3,7 +3,10 @@ Error: While processing right hand side of dpairWithExtraInfoBad. When unifying 
 Mismatch between: [MN 0] and [].
 
 Main.idr:27:26--27:73
-    |
+ 23 | dpairWithExtraInfoWorks : List (vars : List Name ** Expr vars)
+ 24 | dpairWithExtraInfoWorks = [([MN 0] ** CLocal {x=MN 0} (First {ns=[]}))]
+ 25 | 
+ 26 | dpairWithExtraInfoBad : List (vars : List Name ** Expr vars)
  27 | dpairWithExtraInfoBad = [([MN 0] ** CLocal {x=MN 0} (First {ns=[MN 0]}))]
-    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
