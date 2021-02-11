@@ -80,6 +80,28 @@ public export
 LT : Nat -> Nat -> Type
 LT left right = LTE (S left) right
 
+namespace LT
+
+  ||| LT is defined in terms of LTE which makes it annoying to use.
+  ||| This convenient view of allows us to avoid having to constantly
+  ||| perform nested matches to obtain another LT subproof instead of
+  ||| an LTE one.
+  public export
+  data View : LT m n -> Type where
+    LTZero : View (LTESucc LTEZero)
+    LTSucc : (lt : m `LT` n) -> View (LTESucc lt)
+
+  ||| Deconstruct an LT proof into either a base case or a further *LT*
+  export
+  view : (lt : LT m n) -> View lt
+  view (LTESucc LTEZero) = LTZero
+  view (LTESucc lt@(LTESucc _)) = LTSucc lt
+
+  ||| A convenient alias for trivial LT proofs
+  export
+  ltZero : Z `LT` S m
+  ltZero = LTESucc LTEZero
+
 public export
 GT : Nat -> Nat -> Type
 GT left right = LT right left
@@ -481,6 +503,31 @@ export
 minusPlusZero : (n, m : Nat) -> minus n (n + m) = Z
 minusPlusZero Z     _ = Refl
 minusPlusZero (S n) m = minusPlusZero n m
+
+export
+minusPos : m `LT` n -> Z `LT` minus n m
+minusPos lt = case view lt of
+  LTZero    => ltZero
+  LTSucc lt => minusPos lt
+
+export
+minusLteMonotone : {p : Nat} -> m `LTE` n -> minus m p `LTE` minus n p
+minusLteMonotone LTEZero = LTEZero
+minusLteMonotone {p = Z} prf@(LTESucc _) = prf
+minusLteMonotone {p = S p} (LTESucc lte) = minusLteMonotone lte
+
+export
+minusLtMonotone : m `LT` n -> p `LT` n -> minus m p `LT` minus n p
+minusLtMonotone mltn pltn = case view pltn of
+  LTZero => rewrite minusZeroRight m in mltn
+  LTSucc pltn => case view mltn of
+    LTZero => minusPos pltn
+    LTSucc mltn => minusLtMonotone mltn pltn
+
+public export
+minusPlus : (m : Nat) -> minus (plus m n) m === n
+minusPlus Z = irrelevantEq (minusZeroRight n)
+minusPlus (S m) = minusPlus m
 
 export
 plusMinusLte : (n, m : Nat) -> LTE n m -> (minus m n) + n = m
