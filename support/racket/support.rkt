@@ -186,6 +186,11 @@
 
 ;; Threads
 
+;; NB: Racket threads are green/virtual threads meaning extra caution is to be
+;; taken when using FFI functions in combination with threads. The *entire*
+;; Racket runtime blocks on a foreign call, meaning no threads will progress
+;; until the foreign call returns.
+
 (define (blodwen-thread proc)
   (thread (lambda () (proc (vector 0)))))
 
@@ -292,6 +297,10 @@
 (define (blodwen-make-future work) (future work))
 (define (blodwen-await-future ty future) (touch future))
 
+;; NB: These should *ALWAYS* be used in multi-threaded programs since Racket
+;; threads are green/virtual threads and so using an external function will
+;; block the *entire* runtime until the function returns. This is fine for most
+;; things, but not for `sleep`.
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
 

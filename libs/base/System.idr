@@ -10,9 +10,17 @@ support fn = "C:" ++ fn ++ ", libidris2_support"
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
-%foreign support "idris2_sleep"
+-- `sleep` and `usleep` need to be tied to `blodwen-[u]sleep` for threading
+-- reasons (see support/racket/support.rkt)
+
+%foreign "scheme,racket:blodwen-sleep"
+         support "idris2_sleep"
+--         "C:idris2_sleep, libidris2_support"
 prim__sleep : Int -> PrimIO ()
-%foreign support "idris2_usleep"
+
+%foreign "scheme,racket:blodwen-usleep"
+         support "idris2_usleep"
+--         "C:idris2_usleep, libidris2_support"
 prim__usleep : Int -> PrimIO ()
 
 export

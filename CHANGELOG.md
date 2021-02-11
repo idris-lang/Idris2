@@ -5,6 +5,11 @@ REPL/IDE mode changes:
 
 * Added `:search` command, which searches for functions by type
 
+Compiler changes:
+
+* Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
+  order to not block the Racket runtime when `sleep` is called.
+
 Changes since Idris 2 v0.2.1
 ----------------------------
 
@@ -42,12 +47,12 @@ Library changes:
     be a bug.)
 
   - Modified the support for condition variables in the Racket RTS. Formerly,
-    they were implemented using synchronous channels, meaning that: 
-      + `conditionSignal` was a blocking operation; and 
+    they were implemented using synchronous channels, meaning that:
+      + `conditionSignal` was a blocking operation; and
       + calling `conditionSignal` on a condition variable on which no thread
         was waiting would wake the next thread to call `conditionWait`, whereas
         condition variables are supposed to be stateless, and only wake threads
-        already in the queue. 
+        already in the queue.
     The implementation was replaced with an implementation based on asynchronous
     channels and mutexes, based on the following paper:
     https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
