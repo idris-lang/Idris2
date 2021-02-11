@@ -2,7 +2,10 @@
 Error: While processing right hand side of bug. Can't find an implementation for Gnu.
 
 LocalHints.idr:48:17--48:22
-    |
+ 44 | bug {a} x = let M : More
+ 45 |                 M = MkMore a
+ 46 |                 %hint arg : Gnat (Ty M)
+ 47 |                 arg = MkGnat (const B)
  48 |             in (findB ** Refl)
-    |                 ^^^^^
+                      ^^^^^
 

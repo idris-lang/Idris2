@@ -3,9 +3,9 @@
 Error: While processing left hand side of foo. Can't match on ?x [no locals in scope] (Non linear pattern variable).
 
 Dots2.idr:2:7--2:8
-   |
+ 1 | foo : Int -> Int -> Int
  2 | foo x x = x + x
-   |       ^
+           ^
 
 1/1: Building Dots3 (Dots3.idr)
 Error: While processing left hand side of addBaz. Pattern variable z unifies with: ?y [no locals in scope].

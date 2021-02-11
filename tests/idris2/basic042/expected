@@ -6,9 +6,8 @@ Main> False
 Main> Error: Can't find an implementation for IsJust Nothing.
 
 (interactive):1:10--1:14
-   |
  1 | the Bool "42"
-   |          ^^^^
+              ^^^^
 
 Main> Bye for now!
 1/1: Building LiteralsInteger (LiteralsInteger.idr)
@@ -19,8 +18,7 @@ Main> FS (FS FZ)
 Main> Error: Can't find an implementation for IsJust (integerToFin 6 3).
 
 (interactive):1:13--1:14
-   |
  1 | the (Fin 3) 6
-   |             ^
+                 ^
 
 Main> Bye for now!

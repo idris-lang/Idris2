@@ -3,23 +3,32 @@ Error: While processing right hand side of bad. When unifying Int and TTImp.
 Mismatch between: Int and TTImp.
 
 quote.idr:25:19--25:22
-    |
+ 21 | bad : Int -> TTImp
+ 22 | bad val
+ 23 |     = `(let xfn : Int -> Int
+ 24 |             xfn var = var * 2 in
  25 |             xfn ~(val))
-    |                   ^^^
+                        ^^^
 
 Error: %language ElabReflection not enabled
 
 quote.idr:33:1--33:21
-    |
+ 29 | 
+ 30 | noExtension : Elab ()
+ 31 | noExtension = fail "Should not print this message"
+ 32 | 
  33 | %runElab noExtension
-    | ^^^^^^^^^^^^^^^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^
 
 Error: Error during reflection: Should not print this message
 
 quote.idr:37:1--37:21
-    |
+ 33 | %runElab noExtension
+ 34 | 
+ 35 | %language ElabReflection
+ 36 | 
  37 | %runElab noExtension
-    | ^^^^^^^^^^^^^^^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^
 
 Main> IApp (MkFC "quote.idr" (3, 12) (3, 23)) (IApp (MkFC "quote.idr" (3, 12) (3, 23)) (IVar (MkFC "quote.idr" (3, 12) (3, 23)) (UN "+")) (IApp (MkFC "quote.idr" (6, 13) (6, 14)) (IVar (MkFC "quote.idr" (6, 13) (6, 14)) (UN "fromInteger")) (IPrimVal (MkFC "quote.idr" (6, 13) (6, 14)) (BI 3)))) (IApp (MkFC "quote.idr" (6, 18) (6, 19)) (IVar (MkFC "quote.idr" (6, 18) (6, 19)) (UN "fromInteger")) (IPrimVal (MkFC "quote.idr" (6, 18) (6, 19)) (BI 4)))
 Main> IApp (MkFC "quote.idr" (3, 12) (3, 23)) (IApp (MkFC "quote.idr" (3, 12) (3, 23)) (IVar (MkFC "quote.idr" (3, 12) (3, 23)) (UN "+")) (IVar (MkFC "(interactive)" (0, 6) (0, 10)) (UN "True"))) (IVar (MkFC "(interactive)" (0, 14) (0, 19)) (UN "False"))
