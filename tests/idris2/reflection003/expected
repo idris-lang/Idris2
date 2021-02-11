@@ -8,28 +8,40 @@ LOG 0: Constructors: [Prelude.Types.Z, Prelude.Types.S]
 Error: While processing right hand side of dummy1. Error during reflection: Not really trying
 
 refprims.idr:43:10--43:27
-    |
+ 39 |         ns <- inCurrentNS n
+ 40 |         fail $ "failed after generating " ++ censorDigits (show ns)
+ 41 | 
+ 42 | dummy1 : a
  43 | dummy1 = %runElab logPrims
-    |          ^^^^^^^^^^^^^^^^^
+               ^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy2. Error during reflection: Still not trying
 
 refprims.idr:46:10--46:30
-    |
+ 42 | dummy1 : a
+ 43 | dummy1 = %runElab logPrims
+ 44 | 
+ 45 | dummy2 : a
  46 | dummy2 = %runElab logDataCons
-    |          ^^^^^^^^^^^^^^^^^^^^
+               ^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy3. Error during reflection: Undefined name
 
 refprims.idr:49:10--49:25
-    |
+ 45 | dummy2 : a
+ 46 | dummy2 = %runElab logDataCons
+ 47 | 
+ 48 | dummy3 : a
  49 | dummy3 = %runElab logBad
-    |          ^^^^^^^^^^^^^^^
+               ^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of dummy4. Error during reflection: failed after generating Main.{plus:XXXX}
 
 refprims.idr:52:10--52:28
-    |
+ 48 | dummy3 : a
+ 49 | dummy3 = %runElab logBad
+ 50 | 
+ 51 | dummy4 : a
  52 | dummy4 = %runElab tryGenSym
-    |          ^^^^^^^^^^^^^^^^^^
+               ^^^^^^^^^^^^^^^^^^
 

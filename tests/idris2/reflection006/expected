@@ -5,7 +5,10 @@ LOG 0: Right: ((Prelude.Types.plus y) x)
 Error: While processing right hand side of commutes. Error during reflection: Not done
 
 refleq.idr:24:16--24:21
-    |
+ 20 |          logMsg "" 0 (show env)
+ 21 |          solveReflected g
+ 22 | 
+ 23 | commutes : (x, y : Nat) -> plus x y = plus y x
  24 | commutes x y = prove
-    |                ^^^^^
+                     ^^^^^
 
