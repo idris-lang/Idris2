@@ -191,8 +191,8 @@ racketTests = MkTestPool [Racket]
     , "conditions001"
     , "conditions002"
     , "conditions003"
-    --, "conditions004"
-    --, "conditions005"
+    , "conditions004"
+    , "conditions005"
     , "conditions006"
     , "conditions007"
     ]

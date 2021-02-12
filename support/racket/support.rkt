@@ -263,35 +263,119 @@
       (semaphore-post sema)))
 
 ;; Condition Variables
+;; As per p.5 of the MS paper
 
-(define (blodwen-make-condition)
-  (make-async-channel))
+; The MS paper has the mutex be part of the CV, but that seems to be contrary to
+; most other implementations
+(struct cv (semS semX waiters semH) #:mutable)
 
-(define (blodwen-condition-wait ach mutex)
-  ;; Pre-condition: this threads holds `mutex'.
-  (let [(sema (make-semaphore 0))]
-    (async-channel-put ach sema)
-    (blodwen-mutex-release mutex)
-    (sync sema)
-    (blodwen-mutex-acquire mutex)))
+; CONSTRUCTOR
+(define (blodwen-make-cv)
+  (let ([s (make-semaphore 0)]
+        [x (make-semaphore 1)]
+        [h (make-semaphore 0)])
+    (cv s x 0 h)))
 
-(define (blodwen-condition-wait-timeout ach mutex timeout)
-  ;; Pre-condition: this threads holds `mutex'.
-  (let [(sema (make-semaphore 0))]
-    (async-channel-put ach sema)
-    (blodwen-mutex-release mutex)
-    (sync/timeout (/ timeout 1000000) sema)
-    (blodwen-mutex-acquire mutex)))
+;; MS paper: sem.V() := sem-post  /* "sem.V() increments sem.count, atomically" */
+;;           sem.P() := sem-wait
 
-(define (blodwen-condition-signal ach)
-  (let [(sema (async-channel-try-get ach))]
-    (when sema (semaphore-post sema))))
+; WAIT
+(define (blodwen-cv-wait my-cv lockM)
+  ;; precondition: calling thread holds lockM
+  (begin
+   (semaphore-wait (cv-semX my-cv))                 ; x.P()
+   (set-cv-waiters! my-cv (+ (cv-waiters my-cv) 1)) ; waiters++
+   (semaphore-post (cv-semX my-cv))                 ; x.V()
+   (blodwen-mutex-release lockM)                    ; m.Release()
+   (semaphore-wait (cv-semS my-cv))                 ; s.P()
+   (semaphore-post (cv-semH my-cv))                 ; h.V()
+   (blodwen-mutex-acquire lockM)                    ; m.Acquire()
+   ))
 
-(define (blodwen-condition-broadcast ach)
-  (letrec [(loop (lambda ()
-                   (let [(sema (async-channel-try-get ach))]
-                     (when sema ((semaphore-post sema) (loop))))))]
-    loop))
+; SIGNAL
+(define (blodwen-cv-signal my-cv)
+  (begin
+   (semaphore-wait (cv-semX my-cv))                      ; x.P()
+   (if (> (cv-waiters my-cv) 0)
+       (begin
+        (set-cv-waiters! my-cv (- (cv-waiters my-cv) 1)) ; waiters--
+        (semaphore-post (cv-semS my-cv))                 ; s.V()
+        (semaphore-wait (cv-semH my-cv)))                ; h.P()
+       (void)                                            ; else: nothing
+   )
+   (semaphore-post (cv-semX my-cv))                      ; x.V()
+   ))
+
+; BROADCAST_WHILE
+; helper to get around not having "while"
+(define (while-helper my-cv)
+  (if (= (cv-waiters my-cv) 0)
+      (void)                                              ; base case: done
+      (begin
+       (set-cv-waiters! my-cv (- (cv-waiters my-cv) 1))   ; waiters--
+       (semaphore-post (cv-semS my-cv))                   ; not in paper, but works?...
+       (semaphore-wait (cv-semH my-cv))                   ; h.P()
+       (while-helper my-cv))                              ; recurse/loop
+      ))
+
+; BROADCAST
+(define (blodwen-cv-broadcast my-cv)
+  (begin
+   (semaphore-wait (cv-semX my-cv))                         ; x.P()
+   ; i = 0, i < waiters, i++
+   (let ([i-range (in-range 0 (- (cv-waiters my-cv) 1))]) 
+     (begin
+      (for ([i i-range]) (semaphore-post (cv-semS my-cv)))  ; s.V()
+      (while-helper my-cv)                                  ; while-loop
+      (semaphore-post (cv-semX my-cv))                      ; x.V()
+      ))))
+
+
+; WAIT-TIMEOUT (EXPERIMENTAL)
+(define (blodwen-cv-wait-timeout my-cv lockM timeout)
+  ;; precondition: calling thread holds lockM
+  (begin
+   (semaphore-wait (cv-semX my-cv))                 ; x.P()
+   (set-cv-waiters! my-cv (+ (cv-waiters my-cv) 1)) ; waiters++
+   (semaphore-post (cv-semX my-cv))                 ; x.V()
+   (blodwen-mutex-release lockM)                    ; m.Release()
+
+   (sync/timeout (/ timeout 1000000) (cv-semS my-cv)) ; FIXME
+
+   (semaphore-wait (cv-semS my-cv))                 ; s.P()
+   (semaphore-post (cv-semH my-cv))                 ; h.V()
+   (blodwen-mutex-acquire lockM)                    ; m.Acquire()
+   ))
+
+;; Wen's implementation
+;;(define (blodwen-make-condition)
+;;  (make-async-channel))
+;;
+;;(define (blodwen-condition-wait ach mutex)
+;;  ;; Pre-condition: this threads holds `mutex'.
+;;  (let [(sema (make-semaphore 0))]
+;;    (async-channel-put ach sema)
+;;    (blodwen-mutex-release mutex)
+;;    (sync sema)
+;;    (blodwen-mutex-acquire mutex)))
+;;
+;;(define (blodwen-condition-wait-timeout ach mutex timeout)
+;;  ;; Pre-condition: this threads holds `mutex'.
+;;  (let [(sema (make-semaphore 0))]
+;;    (async-channel-put ach sema)
+;;    (blodwen-mutex-release mutex)
+;;    (sync/timeout (/ timeout 1000000) sema)
+;;    (blodwen-mutex-acquire mutex)))
+;;
+;;(define (blodwen-condition-signal ach)
+;;  (let [(sema (async-channel-try-get ach))]
+;;    (when sema (semaphore-post sema))))
+;;
+;;(define (blodwen-condition-broadcast ach)
+;;  (letrec [(loop (lambda ()
+;;                   (let [(sema (async-channel-try-get ach))]
+;;                     (when sema ((semaphore-post sema) (loop))))))]
+;;    loop))
 
 
 (define (blodwen-make-future work) (future work))
