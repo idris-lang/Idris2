@@ -114,7 +114,7 @@ interpEnd = terminal "Expected string interp end"
 
 export
 simpleStr : Rule String
-simpleStr = between strBegin strEnd (option "" strLit)
+simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 
 export
 aDotIdent : Rule String

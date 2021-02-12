@@ -9,6 +9,7 @@ foo
 "foo"   \bar
 foo bar
 hello world.
+Hello Idris2!
 
 name: #"foo"
 version: "bar"

@@ -36,6 +36,8 @@ test =
     putStrLn withEscapeNoWrap
     putStrLn interp
     putStrLn interp2
+    let idris = "Idris"
+    putStrLn "Hello \{idris ++ show 2}!"
     putStrLn ##"
 name: #"foo"
 version: "bar"

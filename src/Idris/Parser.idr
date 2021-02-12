@@ -773,11 +773,13 @@ mutual
   interpStr q fname idents = do
       strBegin
       commit
-      let interp = between interpBegin interpEnd (expr q fname idents)
-      xs <- many $ bounds $ interp <||> strLit
+      xs <- many $ bounds $ interpBlock <||> strLit
       strEnd
       pure $ toPString <$> xs
     where
+      interpBlock : Rule PTerm
+      interpBlock = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+
       toPString : (WithBounds $ Either PTerm String) -> PStr
       toPString x
           = case x.val of
