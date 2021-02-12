@@ -474,13 +474,6 @@ clean pkg opts -- `opts` is not used but might be in the future
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
 
-getParseErrorLoc : String -> ParseError Token -> FC
-getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
-getParseErrorLoc fname (LexFail (ComposeNotClosing start end, _, _, _)) = MkFC fname start end
-getParseErrorLoc fname (LexFail (_, l, c, _)) = MkFC fname (l, c) (l, c)
-getParseErrorLoc fname (LitFail _) = MkFC fname (0, 0) (0, 0) -- TODO: Remove this unused case
-getParseErrorLoc fname _ = replFC
-
 -- Just load the given module, if it exists, which will involve building
 -- it if necessary
 runRepl : {auto c : Ref Ctxt Defs} ->
