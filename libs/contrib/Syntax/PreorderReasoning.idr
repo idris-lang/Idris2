@@ -22,7 +22,7 @@ data FastDerivation : (x : a) -> (y : b) -> Type where
   (~~) : FastDerivation x y -> (step : Step y z) -> FastDerivation x z
 
 public export
-Calc : {x : a} -> {y : b} -> FastDerivation x y -> x ~=~ y
+Calc : {0 x : a} -> {0 y : b} -> FastDerivation x y -> x ~=~ y
 Calc (|~ x) = Refl
 Calc ((~~) der (_ ...(Refl))) = Calc der
 
