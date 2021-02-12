@@ -389,6 +389,14 @@ plusLteMonotoneLeft p q r p_lt_q
      rewrite plusCommutative p r in
      plusLteMonotoneRight p q r p_lt_q
 
+export
+plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
+                  (m + p) `LTE` (n + q)
+plusLteMonotone left right
+  = lteTransitive
+      (plusLteMonotoneLeft m p q right)
+      (plusLteMonotoneRight q m n left)
+
 zeroPlusLeftZero : (a,b : Nat) -> (0 = a + b) -> a = 0
 zeroPlusLeftZero 0 0 Refl = Refl
 zeroPlusLeftZero (S k) b _ impossible
