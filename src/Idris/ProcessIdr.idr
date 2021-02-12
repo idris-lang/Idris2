@@ -27,6 +27,7 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
+import Libraries.Data.String.Extra
 import Libraries.Data.NameMap
 
 import System.File
@@ -193,8 +194,8 @@ fromParseError fname (FileFail err) = FileErr fname err
 fromParseError fname (LitFail (MkLitErr l c _)) = LitFail (MkFC fname (l, c) (l, c + 1))
 fromParseError fname (LexFail (ComposeNotClosing begin end, _, _, _)) = LexFail (MkFC fname begin end) "Bracket is not properly closed."
 fromParseError fname (LexFail (_, l, c, _)) = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognoise token."
-fromParseError fname (ParseFail msg (Just (l, c)) toks) = ParseFail (MkFC fname (l, c) (l, c + 1)) msg toks
-fromParseError fname (ParseFail msg Nothing toks) = ParseFail replFC msg toks
+fromParseError fname (ParseFail msg (Just (l, c)) toks) = ParseFail (MkFC fname (l, c) (l, c + 1)) (msg +> '.') toks
+fromParseError fname (ParseFail msg Nothing toks) = ParseFail replFC (msg +> '.') toks
 
 export
 readHeader : {auto c : Ref Ctxt Defs} ->
