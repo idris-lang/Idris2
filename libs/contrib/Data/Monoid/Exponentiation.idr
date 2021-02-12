@@ -10,20 +10,25 @@ import Syntax.PreorderReasoning
 ------------------------------------------------------------------------
 -- Implementations
 
-export
+public export
 linear : Monoid a => a -> Nat -> a
 linear v Z = neutral
 linear v (S k) = v <+> linear v k
 
-export
+public export
 modularRec : Monoid a => a -> HalfRec n -> a
 modularRec v HalfRecZ = neutral
 modularRec v (HalfRecEven _ acc) = let e = modularRec v acc in e <+> e
 modularRec v (HalfRecOdd _ acc) = let e = modularRec v acc in v <+> e <+> e
 
-export
+public export
 modular : Monoid a => a -> Nat -> a
 modular v n = modularRec v (halfRec n)
+
+infixl 10 ^
+public export
+(^) : Num a => a -> Nat -> a
+(^) = modular @{Multiplicative}
 
 ------------------------------------------------------------------------
 -- Properties
@@ -67,7 +72,12 @@ modularRecCorrect opAssoc neutralL v acc = go acc where
     ~~ v <+> (linear v k <+> linear v k)  ...( opAssoc )
     ~~ v <+> (linear v (k + k))           ...( cong (v <+>) aux )
 
-infixl 10 ^
 export
-(^) : Num a => a -> Nat -> a
-(^) = modular @{MULTIPLICATIVE}
+modularCorrect : (mon : Monoid a) =>
+    -- good monoid
+  (opAssoc : {0 x, y, z : a} -> ((x <+> y) <+> z) === (x <+> (y <+> z))) ->
+  (neutralL : {0 x : a} -> (neutral @{mon} <+> x) === x) ->
+  -- result
+  (v : a) -> {n : Nat} -> modular v n === linear v n
+modularCorrect opAssoc neutralL v
+  = modularRecCorrect opAssoc neutralL v (halfRec n)
