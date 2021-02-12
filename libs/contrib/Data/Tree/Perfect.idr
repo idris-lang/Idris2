@@ -28,6 +28,18 @@ Functor (Tree n) where
   map f (Node l r) = Node (map f l) (map f r)
 
 public export
+replicate : (n : Nat) -> a -> Tree n a
+replicate Z a = Leaf a
+replicate (S n) a = let t = replicate n a in Node t t
+
+public export
+{n : _} -> Applicative (Tree n) where
+  pure = replicate n
+
+  Leaf f <*> Leaf a = Leaf (f a)
+  Node fl fr <*> Node xl xr = Node (fl <*> xl) (fr <*> xr)
+
+public export
 data Path : Nat -> Type where
   Here  : Path Z
   Left  : Path n -> Path (S n)
