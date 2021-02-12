@@ -35,8 +35,16 @@ lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
 lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
 
 export
+ltIsLT : (a, b : Nat) -> a `lt` b = True -> a `LT` b
+ltIsLT  a = lteIsLTE (S a)
+
+export
 notlteIsNotLTE : (a, b : Nat) -> a `lte` b = False -> Not (a `LTE` b)
 notlteIsNotLTE a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
+export
+notltIsNotLT : (a, b : Nat) -> a `lt` b = False -> Not (a `LT` b)
+notltIsNotLT a = notlteIsNotLTE (S a)
 
 
 export
