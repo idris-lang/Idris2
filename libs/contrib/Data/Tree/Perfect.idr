@@ -58,6 +58,11 @@ toNatBounded (S n) (Right p) =
 
 namespace FromNat
 
+  ||| This pattern-matching in `fromNat` is annoying:
+  ||| The    `Z (S _)` case is impossible
+  ||| In the `k (S n)` case we want to branch on whether `k `LT` 2 ^ n`
+  ||| and get our hands on some proofs.
+  ||| This view factors out that work.
   public export
   data View : (k, n : Nat) -> Type where
     ZZ   : View Z Z
@@ -82,6 +87,7 @@ namespace FromNat
       0 prf : minus k (2 ^ n) `LT` 2 ^ n
       prf = replace {p = LTE _} (minusPlus _) bnd
 
+||| Convert a natural number to a path in a perfect binary tree
 public export
 fromNat : (k, n : Nat) -> (0 _ : k `LT` (2 ^ n)) -> Path n
 fromNat k n p with (view k n p)
@@ -89,6 +95,7 @@ fromNat k n p with (view k n p)
   fromNat k (S n) p | SLT lt = Left (fromNat k n lt)
   fromNat k (S n) p | SNLT _ lt = Right (fromNat (minus k (2 ^ n)) n lt)
 
+||| The `fromNat` conversion is compatible with the semantics `toNat`
 export
 fromNatCorrect : (k, n : Nat) -> (0 p : k `LT` 2 ^ n) ->
                  toNat (fromNat k n p) === k
