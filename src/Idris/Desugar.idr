@@ -30,6 +30,7 @@ import Libraries.Utils.String
 
 import Control.Monad.State
 import Data.List
+import Data.List1
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -271,12 +272,21 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
-  desugarB side ps (PString fc x)
+  desugarB side ps (PString fc strs)
       = case !fromStringName of
-             Nothing =>
-                pure $ IPrimVal fc (Str x)
+             Nothing => pure $ !(desugurStr strs)
              Just f => pure $ IApp fc (IVar fc f)
-                                      (IPrimVal fc (Str x))
+                                      !(desugurStr strs)
+    where
+      toRawImp : PStr -> Core RawImp
+      toRawImp (StrLiteral fc s) = pure $ IPrimVal fc (Str s)
+      toRawImp (StrInterp fc tm) = desugarB side ps tm
+      concat : RawImp -> RawImp -> RawImp
+      concat a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
+      desugurStr : List PStr -> Core RawImp
+      desugurStr xs = pure $ case List1.fromList !(traverse toRawImp xs) of
+                                  Nothing => IPrimVal fc (Str "")
+                                  Just xs => foldr1 concat xs
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)

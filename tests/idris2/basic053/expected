@@ -7,6 +7,8 @@ foo
 
   \bar
 "foo"   \bar
+foo bar
+hello world.
 
 name: #"foo"
 version: "bar"

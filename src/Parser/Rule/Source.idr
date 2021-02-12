@@ -77,28 +77,44 @@ onOffLit
                            _ => Nothing)
 
 export
-strLit0 : Rule String
-strLit0
+strLit : Rule String
+strLit
     = terminal "Expected string literal"
                (\x => case x.val of
-                           StringLit 0 s => Just s
+                           StringLit n s => escape n s
                            _ => Nothing)
 
 export
-strLit : Rule String
-strLit = do terminal "Expected string begin"
+strBegin : Rule ()
+strBegin = terminal "Expected string begin"
                (\x => case x.val of
                            StringBegin => Just ()
                            _ => Nothing)
-            str <- option "" $ terminal "Expected string literal"
-                                  (\x => case x.val of
-                                              StringLit n s => escape n s
-                                              _ => Nothing)
-            terminal "Expected string literal"
+
+export
+strEnd : Rule ()
+strEnd = terminal "Expected string end"
                (\x => case x.val of
                            StringEnd => Just ()
                            _ => Nothing)
-            pure str
+
+export
+interpBegin : Rule ()
+interpBegin = terminal "Expected string interp begin"
+               (\x => case x.val of
+                           InterpBegin => Just ()
+                           _ => Nothing)
+
+export
+interpEnd : Rule ()
+interpEnd = terminal "Expected string interp end"
+               (\x => case x.val of
+                           InterpEnd => Just ()
+                           _ => Nothing)
+
+export
+simpleStr : Rule String
+simpleStr = between strBegin strEnd (option "" strLit)
 
 export
 aDotIdent : Rule String

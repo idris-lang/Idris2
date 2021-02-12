@@ -12,6 +12,7 @@ import Parser.Lexer.Source
 import Parser.Source
 import Parser.Support
 import Libraries.Text.Lexer
+import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
 import Libraries.Utils.Either
 import Libraries.Utils.String
@@ -24,21 +25,25 @@ import Libraries.Utils.String
 symbols : List String
 symbols = ["(", ":", ")"]
 
-ideTokens : TokenMap Token
-ideTokens =
-    map (\x => (exact x, Symbol)) symbols ++
-    [(digits, \x => IntegerLit (cast x)),
-     (stringLit, \x => StringLit 0 (fromMaybe "" (escape 0 (stripQuotes x)))),
-     (identAllowDashes, \x => Ident x),
-     (space, (const Comment))]
+stringTokens : Tokenizer Token
+stringTokens
+    = match (someUntil (is '"') (escape (is '\\') any <|> any)) (\x => StringLit 0 x)
 
-idelex : String -> Either (Int, Int, String) (List (WithBounds Token))
+ideTokens : Tokenizer Token
+ideTokens =
+      match (choice $ exact <$> symbols) Symbol
+  <|> match digits (\x => IntegerLit (cast x))
+  <|> compose (is '"') (const StringBegin) (const ()) (const stringTokens) (const $ is '"') (const StringEnd)
+  <|> match identAllowDashes Ident
+  <|> match space (const Comment)
+
+idelex : String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
 idelex str
     = case lex ideTokens str of
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
-           (tok, (l, c, "")) => Right (filter notComment tok ++
-                                      [MkBounded EndInput False l c l c])
+           (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
+                                               [MkBounded EndInput False l c l c])
            (_, fail) => Left fail
     where
       notComment : WithBounds Token -> Bool
@@ -55,7 +60,7 @@ sexp
          pure (BoolAtom False)
   <|> do i <- intLit
          pure (IntegerAtom i)
-  <|> do str <- strLit0
+  <|> do str <- simpleStr
          pure (StringAtom str)
   <|> do symbol ":"; x <- unqualifiedName
          pure (SymbolAtom x)
@@ -66,7 +71,7 @@ sexp
 
 ideParser : {e : _} -> String -> Grammar Token e ty -> Either (ParseError Token) ty
 ideParser str p
-    = do toks   <- mapError (\err => LexFail (NoRuleApply, err)) $ idelex str
+    = do toks   <- mapError LexFail $ idelex str
          parsed <- mapError toGenericParsingError $ parse p toks
          Right (fst parsed)
 

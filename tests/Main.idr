@@ -63,7 +63,7 @@ idrisTestsError = MkTestPool []
        "error011", "error012", "error013", "error014",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006"]
+       "perror006", "perror007"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool []

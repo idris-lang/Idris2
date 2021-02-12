@@ -37,7 +37,7 @@ atom fname
          end <- location
          pure (IPrimVal (MkFC fname start end) x)
   <|> do start <- location
-         str <- strLit
+         str <- simpleStr
          end <- location
          pure (IPrimVal (MkFC fname start end) (Str str))
   <|> do start <- location

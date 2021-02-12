@@ -1,4 +1,4 @@
-module RawString
+module StringLiteral
 
 withWrap : String
 withWrap = "foo
@@ -20,6 +20,12 @@ withEscapeNoWrap : String
 withEscapeNoWrap = #""foo" \#
   \bar"#
 
+interp : String
+interp = "\{withNoWrap}"
+
+interp2 : String
+interp2 = "hello\{ " " ++ ##"world\##{#"."#}"## }"
+
 test : IO ()
 test =
   do
@@ -28,6 +34,8 @@ test =
     putStrLn withIndent
     putStrLn withEscape
     putStrLn withEscapeNoWrap
+    putStrLn interp
+    putStrLn interp2
     putStrLn ##"
 name: #"foo"
 version: "bar"
