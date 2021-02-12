@@ -412,11 +412,10 @@ compileExpr c tmpDir outputDir tm outfile
 
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
-    = do outn <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
-         case outn of
-              -- TODO: on windows, should add exe extension
-              Just outn => map (const ()) $ coreLift $ system outn
-              Nothing => pure ()
+    = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
+           | Nothing => throw (InternalError "compileExpr returned Nothing")
+         coreLift $ system sh -- TODO: on windows, should add exe extension
+         pure ()
 
 export
 codegenGambit : Codegen

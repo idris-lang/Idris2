@@ -9,7 +9,6 @@ modules = Control.ANSI,
           Control.Linear.LIO,
 
           Control.Monad.Algebra,
-          Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,
@@ -44,6 +43,8 @@ modules = Control.ANSI,
           Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
+          Data.List.HasLength,
+          Data.List.AtIndex,
 
           Data.Logic.Propositional,
 
@@ -59,6 +60,8 @@ modules = Control.ANSI,
           Data.Nat.Order.Strict,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
+
+          Data.OpenUnion,
 
           Data.Recursion.Free,
 

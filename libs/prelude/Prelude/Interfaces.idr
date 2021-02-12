@@ -105,6 +105,12 @@ public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
 
+namespace Functor
+  ||| Composition of functors is a functor.
+  export
+  [Compose] (Functor f, Functor g) => Functor (f . g) where
+    map fun = map (map fun)
+
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
 public export
@@ -157,6 +163,15 @@ a *> b = map (const id) a <*> b
 %allow_overloads (<*)
 %allow_overloads (*>)
 
+namespace Applicative
+  ||| Composition of applicative functors is an applicative functor.
+  export
+  [Compose] (Applicative f, Applicative g) => Applicative (f . g)
+    using Functor.Compose where
+      pure = pure . pure
+
+      fun <*> x = ((<*>) <$> fun <*> x)
+
 public export
 interface Applicative f => Alternative f where
   empty : f a
@@ -176,9 +191,25 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+||| Right-to-left monadic bind, flipped version of `>>=`.
+public export
+(=<<) : Monad m => (a -> m b) -> m a -> m b
+(=<<) = flip (>>=)
+
+||| Sequencing of effectful composition
 public export
 (>>) : (Monad m) => m a -> m b -> m b
 a >> b = a >>= \_ => b
+
+||| Left-to-right Kleisli composition of monads.
+public export
+(>=>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
+(>=>) f g = \x => f x >>= g
+
+||| Right-to-left Kleisli composition of monads, flipped version of `>=>`.
+public export
+(<=<) : Monad m => (b -> m c) -> (a -> m b) -> (a -> m c)
+(<=<) = flip (>=>)
 
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export

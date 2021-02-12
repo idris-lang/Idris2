@@ -180,18 +180,13 @@ chezTests = MkTestPool [Chez]
 
 refcTests : TestPool
 refcTests = MkTestPool [C]
-  [ "refc001" ]
+  [ "refc001" , "refc002" ]
 
 racketTests : TestPool
 racketTests = MkTestPool [Racket]
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
     , "futures001"
-    ]
-
-gambitTests : TestPool
-gambitTests = MkTestPool [Gambit]
-    [ "bitops001"
     ]
 
 nodeTests : TestPool
@@ -241,7 +236,6 @@ main = runner
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
-  , testPaths "gambit" gambitTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
   ] where
