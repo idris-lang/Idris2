@@ -417,7 +417,7 @@ mutual
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IRecord x' Nothing y' z')
+                          pure (IRecord x' y' z')
                (NS _ (UN "INamespace"), [w,x,y])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
@@ -736,7 +736,7 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "IParameters") [x', y', z']
-    reflect fc defs lhs env (IRecord x _ y z)
+    reflect fc defs lhs env (IRecord x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z

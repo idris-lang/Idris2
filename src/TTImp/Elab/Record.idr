@@ -82,7 +82,10 @@ findFields defs con
              let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             pure $ (nameRoot x, imp, getRecordType [] ty) :: rest
+             -- Update syntax can't be used with anything other than UN names.
+             let Just x = isUN x
+               | _ => pure rest
+             pure $ (x, imp, getRecordType [] ty) :: rest
     getExpNames _ = pure []
 
 genFieldName : {auto u : Ref UST UState} ->

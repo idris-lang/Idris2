@@ -19,6 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.Maybe
 import Libraries.Data.NameMap
 
 %default covering
@@ -78,18 +79,34 @@ updateNS orig ns tm = updateNSApp tm
     updateNSApp (INamedApp fc f n arg) = INamedApp fc (updateNSApp f) n arg
     updateNSApp t = t
 
+||| A data constructor name is an unqualified user-defined (UN) name.
+export
+isValidInputDConName : Name -> Maybe String
+isValidInputDConName = isUN
+
+||| A type constructor name is a potentially qualified, user-defined (UN) name.
+export
+isValidInputTConName : Name -> Maybe (Maybe Namespace, String)
+isValidInputTConName (NS ns (UN n)) = Just (Just ns, n)
+isValidInputTConName (UN n) = Just (Nothing, n)
+isValidInputTConName _ = Nothing
+
 checkCon : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            List ElabOpt -> NestedNames vars ->
-           Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
+           Env Term vars -> Visibility ->
+           (tconName : (Namespace, String)) -> (resolved : Name) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
-    = do cn <- inCurrentNS cn_in
-         let ty_raw = updateNS tn_in tn ty_raw
+checkCon {vars} opts nest env vis (tconNs, tconRoot) tn (MkImpTy fc _ cn_in ty_raw)
+    = do let Just cn_root = isValidInputDConName cn_in
+           | Nothing =>
+               throw (GenericMsg fc $ "Invalid data constructor name: " ++ show cn_in)
+         let cn = NS (tconNs <.> mkNamespace tconRoot) (UN cn_root)
+         let ty_raw = updateNS (UN tconRoot) tn ty_raw
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
-         log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
+         log "declare.data.constructor" 10 $ "Updated " ++ show (tconRoot, tn)
 
          defs <- get Ctxt
          -- Check 'cn' is undefined
@@ -250,8 +267,16 @@ processData : {vars : _} ->
               Env Term vars -> FC -> Visibility ->
               ImpData -> Core ()
 processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
-    = do n <- inCurrentNS n_in
+    = do let Just (mbNs, tconRoot) = isValidInputTConName n_in
+           | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show n_in)
+         let ns = fromMaybe !getNS mbNs
+         -- Namespace in which to define constructors.
+         let nsNested = ns <.> mkNamespace tconRoot
+         let n = NS ns (UN tconRoot)
          ty_raw <- bindTypeNames [] vars ty_raw
+         -- Tell Idris that the nested namespace, the constructors
+         -- are to be checked in, is accessible (its names are visible) from the outer.
+         update Ctxt {nestedNS $= (nsNested ::)}
 
          defs <- get Ctxt
          -- Check 'n' is undefined
@@ -286,7 +311,15 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
                       addHashWithNames fullty
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
-    = do n <- inCurrentNS n_in
+    = do let Just (mbNs, tconRoot) = isValidInputTConName n_in
+           | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show n_in)
+         let ns = fromMaybe !getNS mbNs
+         -- Namespace in which to define constructors.
+         let nsNested = ns <.> mkNamespace tconRoot
+         -- Tell Idris that the nested namespace, the constructors
+         -- are to be checked in, is accessible (names are visible) from the outer.
+         update Ctxt {nestedNS $= (nsNested ::)}
+         let n = NS ns (UN tconRoot)
          ty_raw <- bindTypeNames [] vars ty_raw
 
          log "declare.data" 1 $ "Processing " ++ show n
@@ -332,7 +365,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          -- Constructors are private if the data type as a whole is
          -- export
          let cvis = if vis == Export then Private else vis
-         cons <- traverse (checkCon eopts nest env cvis n_in (Resolved tidx)) cons_raw
+         cons <- traverse (checkCon eopts nest env cvis (ns, tconRoot) (Resolved tidx)) cons_raw
 
          let ddef = MkData (MkCon dfc n arity fullty) cons
          addData vars vis tidx ddef

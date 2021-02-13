@@ -6,7 +6,7 @@ import Data.Fin
 import Data.Fun
 import Data.Rel
 
-%hide Prelude.Equal
+%hide Prelude.Prec.Equal
 
 --------------------------------------------------------------------------------
 -- Utility Lemmas

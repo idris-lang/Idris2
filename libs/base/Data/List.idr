@@ -621,11 +621,11 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
 --------------------------------------------------------------------------------
 
 export
-Uninhabited ([] = Prelude.(::) x xs) where
+Uninhabited ([] = List.(::) x xs) where
   uninhabited Refl impossible
 
 export
-Uninhabited (Prelude.(::) x xs = []) where
+Uninhabited (List.(::) x xs = []) where
   uninhabited Refl impossible
 
 ||| (::) is injective

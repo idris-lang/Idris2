@@ -30,6 +30,7 @@ import Libraries.Utils.String
 
 import Control.Monad.State
 import Data.List
+import Data.Maybe
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -127,13 +128,13 @@ pairname : Name
 pairname = NS builtinNS (UN "Pair")
 
 mkpairname : Name
-mkpairname = NS builtinNS (UN "MkPair")
+mkpairname = NS (builtinNS <.> mkNamespace "Pair") (UN "MkPair")
 
 dpairname : Name
 dpairname = NS dpairNS (UN "DPair")
 
 mkdpairname : Name
-mkdpairname = NS dpairNS (UN "MkDPair")
+mkdpairname = NS (dpairNS <.> mkNamespace "DPair") (UN "MkDPair")
 
 data Bang : Type where
 
@@ -685,7 +686,7 @@ mutual
   desugarDecl ps (PReflect fc tm)
       = throw (GenericMsg fc "Reflection not implemented yet")
 --       pure [IReflect fc !(desugar AnyExpr ps tm)]
-  desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
+  desugarDecl ps (PInterface fc vis cons_in tn doc params det mbconname body)
       = do addDocString tn doc
            let paramNames = map fst params
 
@@ -714,7 +715,8 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma (maybe [tn] (\n => [tn, n]) conname)
+           let conname = fromMaybe (UN "Mk") mbconname
+           pure [IPragma [tn, conname]
                          (\nest, env =>
                              elabInterface fc vis env nest consb
                                            tn paramsb det conname
@@ -799,17 +801,12 @@ mutual
                                               map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
-           let conname = maybe (mkConName tn) id conname_in
+           let conname = fromMaybe (UN "Mk") conname_in
            let _ = the Name conname
-           pure [IRecord fc (Just recName)
-                         vis (MkImpRecord fc tn paramsb conname fields')]
+           pure [IRecord fc vis (MkImpRecord fc tn paramsb conname fields')]
     where
       fname : PField -> Name
       fname (MkField _ _ _ _ n _) = n
-
-      mkConName : Name -> Name
-      mkConName (NS ns (UN n)) = NS ns (DN n (MN ("__mk" ++ n) 0))
-      mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
       mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
       mapDesugarPiInfo ps Implicit         = pure   Implicit

@@ -640,7 +640,7 @@ recordDecl fname indents
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
          pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis
+                   IRecord fc vis
                            (MkImpRecord fc n params dc (concat flds)))
 
 namespaceDecl : Rule Namespace

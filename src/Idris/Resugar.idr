@@ -418,7 +418,7 @@ mutual
                 !(traverse (\ntm => do tm' <- toPTerm startPrec (snd ntm)
                                        pure (fst ntm, tm')) ps)
                 (mapMaybe id ds')))
-  toPDecl (IRecord fc _ vis r)
+  toPDecl (IRecord fc vis r)
       = do (n, ps, con, fs) <- toPRecord r
            pure (Just (PRecord fc "" vis n ps con fs))
   toPDecl (INamespace fc ns ds)

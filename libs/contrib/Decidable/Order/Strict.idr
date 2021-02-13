@@ -19,7 +19,7 @@ interface StrictPreorder t spo where
 public export
 asymmetric : StrictPreorder t spo => (a, b : t) -> a `spo` b -> Not (b `spo` a)
 asymmetric a b aLTb bLTa = irreflexive a $
-                           Strict.transitive a b a aLTb bLTa
+                           StrictPreorder.transitive a b a aLTb bLTa
 
 public export
 EqOr : (spo : t -> t -> Type) -> StrictPreorder t spo => (a,b : t) -> Type
@@ -31,7 +31,7 @@ public export
   reflexive a = Left Refl
   transitive a _ c (Left  Refl) bLTEc        = bLTEc
   transitive a b _ (Right aLTb) (Left  Refl) = Right aLTb
-  transitive a b c (Right aLTb) (Right bLTc) = Right $ Strict.transitive a b c aLTb bLTc
+  transitive a b c (Right aLTb) (Right bLTc) = Right $ StrictPreorder.transitive a b c aLTb bLTc
 
 [MkPoset] {antisym : (a,b : t) -> a `leq` b -> b `leq` a -> a = b} -> Preorder t leq => Poset t leq where
   antisymmetric = antisym
@@ -66,7 +66,7 @@ InferOrder : {t : Type} -> {spo : t -> t -> Type} -> StrictOrdered t spo => Orde
 InferOrder {t} {spo} @{so} = MkOrdered @{InferPoset} {ord = ord}
   where
     ord : (a,b : t) -> Either (EqOr spo a b) (EqOr spo b a)
-    ord  a b with (Strict.order @{so} a b)
+    ord  a b with (StrictOrdered.order @{so} a b)
      ord a _ | DecEQ Refl = Left  (Left  Refl)
      ord a b | DecLT aLTb = Left  (Right aLTb)
      ord a b | DecGT bLTa = Right (Right bLTa)
