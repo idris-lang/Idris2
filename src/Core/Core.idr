@@ -6,7 +6,6 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
-import Parser.Source
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 

@@ -9,6 +9,7 @@ foo
 "foo"   \bar
 foo bar
 hello world.
+Just 1 + Just 2 = Just 3
 Hello Idris2!
 
 name: #"foo"

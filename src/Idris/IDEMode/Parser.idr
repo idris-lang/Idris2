@@ -4,6 +4,7 @@
 module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
+import Core.Core
 
 import Data.Maybe
 import Data.List
@@ -69,15 +70,16 @@ sexp
          symbol ")"
          pure (SExpList xs)
 
-ideParser : {e : _} -> String -> Grammar Token e ty -> Either (ParseError Token) ty
-ideParser str p
-    = do toks   <- mapError LexFail $ idelex str
-         parsed <- mapError toGenericParsingError $ parse p toks
+ideParser : {e : _} ->
+            (fname : String) -> String -> Grammar Token e ty -> Either Error ty
+ideParser fname str p
+    = do toks   <- mapError (fromLexError fname) $ idelex str
+         parsed <- mapError (fromParsingError fname) $ parse p toks
          Right (fst parsed)
 
 
 export
 covering
-parseSExp : String -> Either (ParseError Token) SExp
+parseSExp : String -> Either Error SExp
 parseSExp inp
-    = ideParser inp (do c <- sexp; eoi; pure c)
+    = ideParser "(interactive)" inp (do c <- sexp; eoi; pure c)

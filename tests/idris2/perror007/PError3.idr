@@ -1,2 +1,2 @@
 foo : String
-foo = "mismatch: \{ 1 + }"
+foo = "incomplete: \{ a <+> }"

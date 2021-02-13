@@ -500,7 +500,7 @@ parsePkgFile file = do
                                           (do desc <- parsePkgDesc file
                                               eoi
                                               pure desc)
-                     | Left err => throw (fromParseError file err)
+      | Left err => throw err
   addFields fs (initPkgDesc pname)
 
 processPackage : {auto c : Ref Ctxt Defs} ->
@@ -518,7 +518,7 @@ processPackage cmd file opts
                                           (do desc <- parsePkgDesc file
                                               eoi
                                               pure desc)
-                     | Left err => throw (fromParseError file err)
+                    | Left err => throw err
                  pkg <- addFields fs (initPkgDesc pname)
                  maybe (pure ()) setBuildDir (builddir pkg)
                  setOutputDir (outputdir pkg)
@@ -620,7 +620,7 @@ findIpkg fname
                                  (do desc <- parsePkgDesc ipkgn
                                      eoi
                                      pure desc)
-              | Left err => throw (fromParseError ipkgn err)
+            | Left err => throw err
         pkg <- addFields fs (initPkgDesc pname)
         maybe (pure ()) setBuildDir (builddir pkg)
         setOutputDir (outputdir pkg)
