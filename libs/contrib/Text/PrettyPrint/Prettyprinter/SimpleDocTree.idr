@@ -54,7 +54,7 @@ traverse f (STChar c) = pure $ STChar c
 traverse f (STText len text) = pure $ STText len text
 traverse f (STLine i) = pure $ STLine i
 traverse f (STAnn ann rest) = STAnn <$> f ann <*> traverse f rest
-traverse f (STConcat xs) = assert_total $ STConcat <$> Traversable.traverse (traverse f) xs
+traverse f (STConcat xs) = assert_total $ STConcat <$> traverse (traverse f) xs
 
 sdocToTreeParser : SimpleDocStream ann -> (Maybe (SimpleDocTree ann), Maybe (SimpleDocStream ann))
 sdocToTreeParser SEmpty = (Just STEmpty, Nothing)

@@ -58,8 +58,6 @@ choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
                                                f x <|> acc)
                            (fail "No more options") xs
 
-%hide Monad.(>>=)
-
 ||| Try each grammar in a container until the first one succeeds.
 ||| Fails if the container is empty.
 export
