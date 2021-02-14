@@ -432,6 +432,10 @@ mutual
                (NS _ (UN "ILog"), [x])
                     => do x' <- reify defs !(evalClosure defs x)
                           pure (ILog x')
+               (NS _ (UN "IHide"), [x, y])
+                    => do x' <- reify defs !(evalClosure defs x)
+                          y' <- reify defs !(evalClosure defs y)
+                          pure (IHide x' y')
                _ => cantReify val "Decl"
     reify defs val = cantReify val "Decl"
 
@@ -759,3 +763,7 @@ mutual
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "ILog") [x']
+    reflect fc defs lhs env (IHide x y)
+        = do x' <- reflect fc defs lhs env x
+             y' <- reflect fc defs lhs env y
+             appCon fc defs (reflectionttimp "IHide") [x', y']
