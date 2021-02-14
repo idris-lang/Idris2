@@ -9,6 +9,12 @@ data Digit : Type where
   O : Digit
   I : Digit
 
+||| Translation to Bool
+public export
+isI : Digit -> Bool
+isI I = True
+isI O = False
+
 public export
 toNat : Digit -> Nat
 toNat O = 0
