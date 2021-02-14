@@ -10,7 +10,7 @@ import Language.Reflection
 
 ||| Given a namespace filter, represented as a dotted string,
 ||| and a (partial) name - tries to disambiguate
-||| the later among the set of all full names,
+||| the latter among the set of all full names,
 ||| compatible with it.
 ||| Returns the one matching name, or fails
 ||| if multiple or none fit the filter.
