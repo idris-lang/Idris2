@@ -2,8 +2,21 @@
 module Data.Nat.Properties
 
 import Data.Nat
+import Syntax.PreorderReasoning
 
 %default total
+
+export
+unfoldDouble : {0 n : Nat} -> (2 * n) === (n + n)
+unfoldDouble = irrelevantEq $ cong (n +) (plusZeroRightNeutral _)
+
+export
+unfoldDoubleS : {0 n : Nat} -> (2 * S n) === (2 + 2 * n)
+unfoldDoubleS = irrelevantEq $ Calc $
+  |~ 2 * S n
+  ~~ S n + S n   ...( unfoldDouble {n = S n} )
+  ~~ 2 + (n + n) ...( sym (plusSuccRightSucc (S n) n) )
+  ~~ 2 + 2 * n   ...( cong (2 +) (sym unfoldDouble) )
 
 export
 multRightCancel : (a,b,r : Nat) -> Not (r = 0) -> a*r = b*r -> a = b

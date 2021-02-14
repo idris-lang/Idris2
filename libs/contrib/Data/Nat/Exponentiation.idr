@@ -1,6 +1,7 @@
 module Data.Nat.Exponentiation
 
 import Data.Nat as Nat
+import Data.Nat.Properties
 import Data.Monoid.Exponentiation as Mon
 import Data.Num.Implementations as Num
 import Data.Nat.Views
@@ -39,10 +40,6 @@ modularCorrect
 export
 pow2Correct : {n : Nat} -> pow2 n === lpow2 n
 pow2Correct = modularCorrect 2
-
-export
-unfoldDouble : {0 n : Nat} -> (2 * n) === (n + n)
-unfoldDouble = irrelevantEq $ cong (n +) (plusZeroRightNeutral _)
 
 export
 unfoldLpow2 : lpow2 (S n) === (lpow2 n + lpow2 n)

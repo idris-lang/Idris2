@@ -473,8 +473,9 @@ multOneLeftNeutral right = plusZeroRightNeutral right
 
 export
 multOneRightNeutral : (left : Nat) -> left * 1 = left
-multOneRightNeutral left = rewrite multCommutative left 1 in multOneLeftNeutral left
-
+multOneRightNeutral left =
+  rewrite multCommutative left 1 in
+  multOneLeftNeutral left
 
 -- Proofs on minus
 
