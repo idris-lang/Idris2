@@ -349,6 +349,7 @@ mutual
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
+       IHide : FC -> Name -> ImpDecl
 
   export
   Show ImpDecl where
@@ -371,6 +372,7 @@ mutual
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IHide _ name) = show name
 
 export
 isIPrimVal : RawImp -> Maybe Constant
@@ -1049,6 +1051,9 @@ mutual
     toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IHide fc n)
+        = do tag 9; toBuf b fc; toBuf b n
+
 
     fromBuf b
         = case !getTag of
@@ -1079,6 +1084,9 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       n <- fromBuf b
+                       pure (IHide fc n)
                _ => corrupt "ImpDecl"
 
 

@@ -156,3 +156,4 @@ mutual
        INamespace : FC -> Namespace -> List Decl -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        ILog : Nat -> Decl
+       IHide : FC -> Name -> Decl

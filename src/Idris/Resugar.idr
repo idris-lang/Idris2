@@ -432,6 +432,7 @@ mutual
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
+  toPDecl (IHide _ _) = pure Nothing
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->
