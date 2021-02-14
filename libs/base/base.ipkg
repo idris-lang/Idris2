@@ -70,6 +70,7 @@ modules = Control.App,
           Decidable.Order,
 
           Language.Reflection,
+          Language.Reflection.Disambiguate,
           Language.Reflection.TT,
           Language.Reflection.TTImp,
 
