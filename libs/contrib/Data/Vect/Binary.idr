@@ -7,6 +7,7 @@ import Data.Binary.Digit
 import Data.Binary
 import Data.IMaybe
 import Data.Nat
+import Data.Nat.Exponentiation
 import Data.Nat.Properties
 import Data.Tree.Perfect
 
@@ -21,6 +22,13 @@ public export
 data Path : Nat -> Bin -> Type where
   Here  : Path n -> Path n (I :: bs)
   There : Path (S n) bs -> Path n (b :: bs)
+
+public export
+zero : {bs : Bin} -> {n : Nat} -> Path n (suc bs)
+zero {bs} = case bs of
+  [] => Here (fromNat 0 n (ltePow2 {m = n}))
+  (O :: bs) => Here (fromNat 0 n (ltePow2 {m = n}))
+  (I :: bs) => There zero
 
 public export
 lookup : BVect n bs a -> Path n bs -> a
