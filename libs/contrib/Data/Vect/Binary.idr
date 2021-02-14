@@ -31,6 +31,16 @@ zero {bs} = case bs of
   (I :: bs) => There zero
 
 public export
+weaken : {bs : _} -> Path n bs -> Path n (suc bs)
+weaken {bs = I :: bs} (Here p) = There $ case bs of
+  [] => Here (Left p)
+  (I :: bs) => weaken (Here (Left p))
+  (O :: bs) => Here (Left p)
+weaken {bs = b :: bs} (There p) = case b of
+  I => There (weaken p)
+  O => There p
+
+public export
 lookup : BVect n bs a -> Path n bs -> a
 lookup (hd :: _) (Here p) = lookup (fromJust hd) p
 lookup (_ :: tl) (There p) = lookup tl p
