@@ -1,3 +1,6 @@
+# @readFilePage@ uses primitive functions with definitions for both
+# C (supported by most backends) and Node.
 $1 --no-color --console-width 0 --no-banner ReadFilePage.idr < input
+$1 --cg node --no-color --console-width 0 --no-banner ReadFilePage.idr < input
 
 rm -rf build

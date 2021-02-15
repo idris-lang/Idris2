@@ -11,13 +11,13 @@ function support_system_file_seekLine(file_ptr){
     if (bytesRead === 0) {
       file_ptr.eof = true;
       file_ptr.buffer = Buffer.alloc(0);
-      return 0;
+      return 0n;
     }
     file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
     lineEnd = file_ptr.buffer.indexOf(LF);
   }
   file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1);
-  return 0;
+  return 0n;
 }
 
 function support_system_file_readLine(file_ptr){

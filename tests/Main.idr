@@ -217,8 +217,12 @@ templateTests = MkTestPool []
   [ "simple-test", "ttimp", "with-ipkg"
   ]
 
+-- tests are run against both the default
+-- codegen and also any codegens that have
+-- special behavior defined for the tests
+-- in this pool.
 baseLibraryTests : TestPool
-baseLibraryTests = MkTestPool []
+baseLibraryTests = MkTestPool [Node]
   [ "system_file001"
   ]
 
