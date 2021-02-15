@@ -328,7 +328,7 @@ displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
   = printIDEResult outf i
-  $ StringAtom $ "Current working directory is '" ++ dir ++ "'"
+  $ StringAtom $ "Current working directory is \"" ++ dir ++ "\""
 displayIDEResult outf i  (REPL CompilationFailed)
   = printIDEError outf i $ reflow "Compilation failed"
 displayIDEResult outf i  (REPL $ Compiled f)
