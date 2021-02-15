@@ -48,11 +48,11 @@ Library changes:
 
   - Modified the support for condition variables in the Racket RTS. Formerly,
     they were implemented using synchronous channels, meaning that:
-      + `conditionSignal` was a blocking operation; and
-      + calling `conditionSignal` on a condition variable on which no thread
-        was waiting would wake the next thread to call `conditionWait`, whereas
-        condition variables are supposed to be stateless, and only wake threads
-        already in the queue.
+    + `conditionSignal` was a blocking operation; and
+    + calling `conditionSignal` on a condition variable on which no thread
+      was waiting would wake the next thread to call `conditionWait`, whereas
+      condition variables are supposed to be stateless, and only wake threads
+      already in the queue.
     The implementation was replaced with an implementation based on asynchronous
     channels and mutexes, based on the following paper:
     https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
@@ -126,24 +126,24 @@ Changes since Idris 2 v0.2.0
 Language changes:
 
 * `Bits8`, `Bits16`, `Bits32` and `Bits64` primitive types added, with:
-   + `Num`, `Eq`, `Ord` and `Show` implementations.
-   + Casts from `Integer`, for literals
-   + Casts to `Int` (except `Bits64` which might not fit), `Integer` and `String`
-   + Passed to C FFI as `unsigned`
-   + Primitives added in `Data.Buffer`
+  + `Num`, `Eq`, `Ord` and `Show` implementations.
+  + Casts from `Integer`, for literals
+  + Casts to `Int` (except `Bits64` which might not fit), `Integer` and `String`
+  + Passed to C FFI as `unsigned`
+  + Primitives added in `Data.Buffer`
 * Elaborator reflection and quoting terms
-   + Requires extension `%language ElabReflection`
-   + API defined in `Language.Reflection`, including functions for getting types
-     of global names, constructors of data types, and adding new top level
-     declarations
-   + Implemented `%macro` function flag, to remove the syntactic noise of
-     invoking elaborator scripts. This means the function must always
-     be fully applied, and is run under `%runElab`
+  + Requires extension `%language ElabReflection`
+  + API defined in `Language.Reflection`, including functions for getting types
+    of global names, constructors of data types, and adding new top level
+    declarations
+  + Implemented `%macro` function flag, to remove the syntactic noise of
+    invoking elaborator scripts. This means the function must always
+    be fully applied, and is run under `%runElab`
 * Add `import X as Y`
-   + This imports the module `X`, adding aliases for the definitions in
-     namespace `Y`, so they can be referred to as `Y`.
+  + This imports the module `X`, adding aliases for the definitions in
+    namespace `Y`, so they can be referred to as `Y`.
 * `do` notation can now be qualified with a namespace
-   + `MyDo.do` opens a `do` block where the `>>=` operator used is `MyDo.(>>=)`
+  + `MyDo.do` opens a `do` block where the `>>=` operator used is `MyDo.(>>=)`
 
 Library changes:
 
@@ -152,9 +152,9 @@ Library changes:
 * Experimental `Data.Linear.Array` added to `contrib`, supporting mutable
   linear arrays with constant time read/write, convertible to immutable arrays
   with constant time read.
-   + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
-     should be considered experimental with the API able to change at any time!
-     Further experiments in `Data.Linear` are welcome :).
+  + Anything in `Data.Linear` in `contrib`, just like the rest of `contrib`,
+    should be considered experimental with the API able to change at any time!
+    Further experiments in `Data.Linear` are welcome :).
 * Experimental `Control.Linear.LIO` added to `contrib`, supporting computations
   which track the multiplicities of their return values, which allows linear
   resources to be tracked.
@@ -211,7 +211,7 @@ Language changes:
   + That is, `%default covering` is the default status.
 * Fields of records can be accessed (and updated) using the dot syntax,
   such as `r.field1.field2` or `record { field1.field2 = 42 }`.
-  For details, see https://idris2.readthedocs.io/en/latest/reference/records.html
+  For details, see [the documentation](https://idris2.readthedocs.io/en/latest/reference/records.html)
 * New function flag `%tcinline` which means that the function should be
   inlined for the purposes of totality checking (but otherwise not inlined).
   This can be used as a hint for totality checking, to make the checker look
@@ -252,10 +252,11 @@ Other improvements:
     they only get retried if those metavariables make progress.
   + Evaluating `fromInteger` at compile time.
 * Extend Idris2's literate mode to support reading Markdown and OrgMode files.
-  For more details see: https://idris2.readthedocs.io/en/latest/reference/literate.html
+  For more details see:
+  [https://idris2.readthedocs.io/en/latest/reference/literate.html](https://idris2.readthedocs.io/en/latest/reference/literate.html)
 
 Changes since Idris 1
 ---------------------
 
 Everything :). For full details, see:
-https://idris2.readthedocs.io/en/latest/updates/updates.html
+[https://idris2.readthedocs.io/en/latest/updates/updates.html](https://idris2.readthedocs.io/en/latest/updates/updates.html)
