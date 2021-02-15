@@ -10,6 +10,15 @@ Compiler changes:
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
 
+Library changes:
+
+* Redid condition variables in the Racket codegen based on page 5 of the
+  Microsoft [Implementing CVs paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf).
+  Previously, they were based on an implementation using semaphores and
+  asynchronous channels, which worked apart from `broadcast`. The rework fixes
+  `broadcast` at the cost of losing `wait-timeout` due to increased complexity
+  of their internals and interactions between their associated functions.
+
 Changes since Idris 2 v0.2.1
 ----------------------------
 
@@ -55,7 +64,7 @@ Library changes:
       already in the queue.
     The implementation was replaced with an implementation based on asynchronous
     channels and mutexes, based on the following paper:
-    https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
+    [https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf](https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf)
 
   - Removed `threadID` and `blodwen-thisthread`. Formerly, in the Chez Scheme
     backend, this function returned "the thread id of the current thread" as a

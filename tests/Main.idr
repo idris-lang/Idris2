@@ -193,8 +193,8 @@ racketTests = MkTestPool [Racket]
     , "conditions003"
     , "conditions004"
     , "conditions005"
-    , "conditions006"
-    , "conditions007"
+--    , "conditions006"
+--    , "conditions007"
     ]
 
 nodeTests : TestPool

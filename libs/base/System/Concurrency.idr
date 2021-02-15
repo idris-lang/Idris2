@@ -70,8 +70,8 @@ prim__makeCondition : PrimIO Condition
          "scheme,chez:blodwen-condition-wait"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
 
-%foreign "scheme,racket:blodwen-cv-wait-timeout"
-         "scheme,chez:blodwen-condition-wait-timeout"
+%foreign "scheme,chez:blodwen-condition-wait-timeout"
+--         "scheme,racket:blodwen-cv-wait-timeout"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-cv-signal"
