@@ -34,7 +34,7 @@ fromMaybe _   (Just j) = j
 
 ||| Returns the `a` value of a `Maybe a` which is proved `Just`.
 public export
-fromJust : (v : Maybe a) -> IsJust v => a
+fromJust : (v : Maybe a) -> (0 _ : IsJust v) => a
 fromJust (Just x) = x
 fromJust Nothing impossible
 

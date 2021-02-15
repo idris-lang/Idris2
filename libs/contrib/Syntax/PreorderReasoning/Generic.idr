@@ -18,12 +18,12 @@ data FastDerivation : (leq : a -> a -> Type) -> (x : a) -> (y : a) -> Type where
          -> FastDerivation leq x z
 
 public export
-CalcWith : Preorder dom leq => {x,y : dom} -> FastDerivation leq x y -> x `leq` y
+CalcWith : Preorder dom leq => {0 x : dom} -> {0 y : dom} -> FastDerivation leq x y -> x `leq` y
 CalcWith (|~ x) = reflexive x
 CalcWith ((<~) der (z ... step)) = transitive {po = leq} _ _ _ (CalcWith der) step
 
 public export
-(~~) : {x,y : dom}
+(~~) : {0 x : dom} -> {0 y : dom}
          -> FastDerivation leq x y -> {z : dom} -> (step : Step Equal y z)
          -> FastDerivation leq x z
 (~~) der (z ... Refl) = der
