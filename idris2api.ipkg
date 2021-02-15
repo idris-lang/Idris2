@@ -118,6 +118,7 @@ modules =
     Libraries.Text.Bounded,
     Libraries.Text.Lexer,
     Libraries.Text.Lexer.Core,
+    Libraries.Text.Lexer.Tokenizer,
     Libraries.Text.Literate,
     Libraries.Text.Parser,
     Libraries.Text.Parser.Core,

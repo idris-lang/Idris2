@@ -474,12 +474,6 @@ clean pkg opts -- `opts` is not used but might be in the future
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
 
-getParseErrorLoc : String -> ParseError Token -> FC
-getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
-getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
-getParseErrorLoc fname (LitFail _) = MkFC fname (0, 0) (0, 0) -- TODO: Remove this unused case
-getParseErrorLoc fname _ = replFC
-
 -- Just load the given module, if it exists, which will involve building
 -- it if necessary
 runRepl : {auto c : Ref Ctxt Defs} ->
@@ -506,8 +500,7 @@ parsePkgFile file = do
                                           (do desc <- parsePkgDesc file
                                               eoi
                                               pure desc)
-                     | Left (FileFail err) => throw (FileErr file err)
-                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+                     | Left err => throw (fromParseError file err)
   addFields fs (initPkgDesc pname)
 
 processPackage : {auto c : Ref Ctxt Defs} ->
@@ -525,8 +518,7 @@ processPackage cmd file opts
                                           (do desc <- parsePkgDesc file
                                               eoi
                                               pure desc)
-                     | Left (FileFail err) => throw (FileErr file err)
-                     | Left err => throw (ParseFail (getParseErrorLoc file err) err)
+                     | Left err => throw (fromParseError file err)
                  pkg <- addFields fs (initPkgDesc pname)
                  maybe (pure ()) setBuildDir (builddir pkg)
                  setOutputDir (outputdir pkg)
@@ -628,8 +620,7 @@ findIpkg fname
                                  (do desc <- parsePkgDesc ipkgn
                                      eoi
                                      pure desc)
-              | Left (FileFail err) => throw (FileErr ipkgn err)
-              | Left err => throw (ParseFail (getParseErrorLoc ipkgn err) err)
+              | Left err => throw (fromParseError ipkgn err)
         pkg <- addFields fs (initPkgDesc pname)
         maybe (pure ()) setBuildDir (builddir pkg)
         setOutputDir (outputdir pkg)
