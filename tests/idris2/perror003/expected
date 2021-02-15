@@ -2,15 +2,21 @@
 Error: Bracket is not properly closed.
 
 PError.idr:5:17--5:18
-   |
+ 1 | foo : Int -> Int
+ 2 | foo x = x
+ 3 | 
+ 4 | bar : Int -> Int
  5 | bar x = let y = (42 in y + x
-   |                 ^
+                     ^
 
 1/1: Building PError2 (PError2.idr)
 Error: Bracket is not properly closed.
 
 PError2.idr:5:18--5:19
-   |
+ 1 | foo : Int -> Int
+ 2 | foo x = x
+ 3 | 
+ 4 | bar : Int -> Int
  5 | bar x = let y := (42 in y + x
-   |                  ^
+                      ^
 
