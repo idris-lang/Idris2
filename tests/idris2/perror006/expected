@@ -1,3 +1,11 @@
 1/1: Building PError (PError.idr)
-Error: Parse error at line 7:1:
-Expected 'else' (next tokens: [identifier baz, symbol :, identifier Int, symbol ->, identifier Int, identifier baz, identifier x, symbol =, identifier x, end of input])
+Error: Expected 'else'.
+
+PError.idr:7:1--7:2
+ 3 | 
+ 4 | bar : Int -> Int
+ 5 | bar x = if x == 95 then 0
+ 6 | 
+ 7 | baz : Int -> Int
+     ^
+

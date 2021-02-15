@@ -2,14 +2,20 @@
 Error: While processing type of len'. Undefined name xs. 
 
 unboundimps.idr:18:11--18:13
-    |
+ 14 | -- xs and its indices
+ 15 | len : forall xs . Env xs -> Nat
+ 16 | 
+ 17 | -- neither of these are fine
  18 | len': Env xs -> Nat
-    |           ^^
+                ^^
 
 Error: While processing type of append'. Undefined name n. 
 
 unboundimps.idr:19:16--19:17
-    |
+ 15 | len : forall xs . Env xs -> Nat
+ 16 | 
+ 17 | -- neither of these are fine
+ 18 | len': Env xs -> Nat
  19 | append' : Vect n a -> Vect m a -> Vect (n + m) a
-    |                ^
+                     ^
 

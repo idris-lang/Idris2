@@ -3,9 +3,12 @@ Error: While processing right hand side of TestSurprise1. Multiple solutions fou
     Gnu
 
 gnu.idr:47:27--47:32
-    |
+ 43 | 
+ 44 | ||| This is the meat. I'd expect this function to raise an error
+ 45 | ||| because it is ambiguous which local/local function to use.
+ 46 | TestSurprise1 : (gnu1, gnu2 : Gnu) -> String
  47 | TestSurprise1 gnu1 gnu2 = Guess
-    |                           ^^^^^
+                                ^^^^^
 
 Possible correct results:
     gnu1
@@ -14,9 +17,12 @@ Error: While processing right hand side of TestSurprise2. Multiple solutions fou
     Gnu
 
 gnu.idr:50:21--50:26
-    |
+ 46 | TestSurprise1 : (gnu1, gnu2 : Gnu) -> String
+ 47 | TestSurprise1 gnu1 gnu2 = Guess
+ 48 | 
+ 49 | TestSurprise2 : (f,g : Unit -> Gnu) -> String
  50 | TestSurprise2 f g = Guess
-    |                     ^^^^^
+                          ^^^^^
 
 Possible correct results:
     f ()
@@ -24,7 +30,10 @@ Possible correct results:
 Error: While processing right hand side of TestSurprise3. Can't find an implementation for Gnu.
 
 gnu.idr:53:19--53:24
-    |
+ 49 | TestSurprise2 : (f,g : Unit -> Gnu) -> String
+ 50 | TestSurprise2 f g = Guess
+ 51 | 
+ 52 | TestSurprise3 : (Unit -> Gnu, Unit -> Gnu) -> String
  53 | TestSurprise3 f = Guess
-    |                   ^^^^^
+                        ^^^^^
 

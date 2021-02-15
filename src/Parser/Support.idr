@@ -1,5 +1,6 @@
 module Parser.Support
 
+import public Libraries.Text.Lexer.Tokenizer
 import public Libraries.Text.Lexer
 import public Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -17,7 +18,7 @@ import System.File
 public export
 data ParseError tok
   = ParseFail String (Maybe (Int, Int)) (List tok)
-  | LexFail   (Int, Int, String)
+  | LexFail   (StopReason, Int, Int, String)
   | FileFail  FileError
   | LitFail   LiterateError
 
@@ -26,8 +27,8 @@ Show tok => Show (ParseError tok) where
   show (ParseFail err loc toks)
       = "Parse error: " ++ err ++ " (next tokens: "
             ++ show (take 10 toks) ++ ")"
-  show (LexFail (c, l, str))
-      = "Lex error at " ++ show (c, l) ++ " input: " ++ str
+  show (LexFail (reason, c, l, str))
+      = "Lex error " ++ show reason ++ " at " ++ show (c, l) ++ " input: " ++ str
   show (FileFail err)
       = "File error: " ++ show err
   show (LitFail (MkLitErr l c str))
@@ -42,8 +43,8 @@ Pretty tok => Pretty (ParseError tok) where
       prettyLine : Maybe (Int, Int) -> Doc ann
       prettyLine Nothing = emptyDoc
       prettyLine (Just (r, c)) = space <+> "at" <++> "line" <++> pretty (r + 1) <+> ":" <+> pretty (c + 1)
-  pretty (LexFail (c, l, str))
-      = reflow "Lex error at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
+  pretty (LexFail (reason, c, l, str))
+      = reflow "Lex error" <++> pretty reason <++> "at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
   pretty (FileFail err)
       = reflow "File error:" <++> pretty (show err)
   pretty (LitFail (MkLitErr l c str))

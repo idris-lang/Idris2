@@ -66,10 +66,9 @@ ploc fc@(MkFC fn s e) = do
     source <- lines <$> getCurrentElabSource
     if sr == er
        then do
-         let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
-         let line = (annotate FileCtxt pipe) <++> maybe emptyDoc pretty (elemAt source sr)
-         let emph = (annotate FileCtxt pipe) <++> spaces (cast sc) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
-         pure $ vsep [emptyDoc, head, firstRow, annotate FileCtxt (space <+> pretty (sr + 1)) <++> align (vsep [line, emph]), emptyDoc]
+         let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
+         let firstr = er `minus` 4
+         pure $ vsep ([emptyDoc, head] ++ (addLineNumbers nsize firstr (pretty <$> extractRange firstr er source)) ++ [emph]) <+> line
        else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
@@ -407,8 +406,12 @@ perror (TTCError msg)
         <++> parens (pretty "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files")
 perror (FileErr fname err)
     = pure $ errorDesc (reflow "File error in" <++> pretty fname <++> colon) <++> pretty (show err)
-perror (ParseFail _ err)
-    = pure $ pretty err
+perror (LitFail fc)
+    = pure $ errorDesc (reflow "Can't parse literate.") <+> line <+> !(ploc fc)
+perror (LexFail fc msg)
+    = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
+perror (ParseFail fc msg toks)
+    = pure $ errorDesc (pretty msg) <+> line <+> !(ploc fc)
 perror (ModuleNotFound fc ns)
     = pure $ errorDesc ("Module" <++> annotate FileCtxt (pretty ns) <++> reflow "not found") <+> line <+> !(ploc fc)
 perror (CyclicImports ns)

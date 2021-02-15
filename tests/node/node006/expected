@@ -17,14 +17,20 @@ Main> Bye for now!
 Error: While processing left hand side of strangeId. Can't match on Nat (Erased argument).
 
 TypeCase2.idr:5:14--5:17
-   |
+ 1 | data Bar = MkBar
+ 2 | data Baz = MkBaz
+ 3 | 
+ 4 | strangeId : a -> a
  5 | strangeId {a=Nat} x = x+1
-   |              ^^^
+                  ^^^
 
 Error: While processing left hand side of foo. Can't match on Nat (Erased argument).
 
 TypeCase2.idr:9:5--9:8
-   |
+ 5 | strangeId {a=Nat} x = x+1
+ 6 | strangeId x = x
+ 7 | 
+ 8 | foo : (0 x : Type) -> String
  9 | foo Nat = "Nat"
-   |     ^^^
+         ^^^
 
