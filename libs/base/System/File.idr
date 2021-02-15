@@ -1,8 +1,9 @@
 module System.File
 
+import public Data.Fuel
+
 import Data.List
 import Data.Strings
-import Data.Fuel
 import System.Info
 
 %default total
