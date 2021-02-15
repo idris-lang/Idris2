@@ -217,7 +217,7 @@ templateTests = MkTestPool []
   [ "simple-test", "ttimp", "with-ipkg"
   ]
 
--- base library tests are run against 
+-- base library tests are run against
 -- each codegen supported and to keep
 -- things simple it's all one test group
 -- that only runs if all backends are

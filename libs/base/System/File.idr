@@ -323,8 +323,8 @@ lineCount (S k) = More (lineCount k)
 ||| The @lineCount@ function can provide you with enough
 ||| fuel to read exactly a given number of lines.
 |||
-||| On success, returns a tuple of whether the end of 
-||| the file was reached or not and the String read in 
+||| On success, returns a tuple of whether the end of
+||| the file was reached or not and the String read in
 ||| from the file.
 |||
 ||| Note that because we are chunking by lines, this
@@ -343,14 +343,14 @@ readFilePage offset fuel file
   where
     read : (offset : Nat) -> (fuel : Fuel) -> List String -> File -> io (Either FileError (Bool, List String))
     read 0 Dry acc h = pure (Right (False, reverse acc))
-    read (S offset) fuel acc h 
+    read (S offset) fuel acc h
       = do eof <- fEOF h
            if eof
               then pure (Right (True, reverse acc))
               else do Right () <- fSeekLine h
                         | Left err => returnError
                       read offset fuel acc h
-    read 0 (More fuel) acc h 
+    read 0 (More fuel) acc h
       = do eof <- fEOF h
            if eof
               then pure (Right (True, reverse acc))
