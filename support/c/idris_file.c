@@ -96,6 +96,25 @@ void idris2_pclose(void *stream) {
 #endif
 }
 
+// seek through the next newline, consuming and
+// throwing away anything until then.
+int idris2_seekLine(FILE *f)
+{
+    while (1) {
+        int c = fgetc(f);
+        if (c == -1) {
+            if (feof(f)) {
+                return 0;
+            } else {
+                return -1;
+            }
+        }
+        if (c == '\n') {
+            return 0;
+        }
+    }
+}
+
 char* idris2_readLine(FILE* f) {
     char *buffer = NULL;
     size_t n = 0;

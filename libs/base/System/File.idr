@@ -2,7 +2,10 @@ module System.File
 
 import Data.List
 import Data.Strings
+import Data.Fuel
 import System.Info
+
+%default total
 
 public export
 data Mode = Read | WriteTruncate | Append | ReadWrite | ReadWriteTruncate | ReadAppend
@@ -32,6 +35,10 @@ prim__error : FilePtr -> PrimIO Int
 %foreign support "idris2_fileErrno"
          "node:lambda:()=>-BigInt(process.__lasterr.errno)"
 prim__fileErrno : PrimIO Int
+
+%foreign support "idris2_seekLine"
+         "node:support:seekLine,support_system_file"
+prim__seekLine : FilePtr -> PrimIO Int
 
 %foreign support "idris2_readLine"
          "node:support:readLine,support_system_file"
@@ -181,6 +188,17 @@ fileError (FHandle f)
     = do x <- primIO $ prim__error f
          pure (x /= 0)
 
+||| Seek through the next newline.
+||| This is @fGetLine@ without the overhead of copying
+||| any characters.
+export
+fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
+fSeekLine (FHandle f)
+    = do res <- primIO (prim__seekLine f)
+         if res /= 0
+            then returnError
+            else ok ()
+
 export
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
@@ -288,26 +306,61 @@ fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
+||| Produce enough @Fuel@ to read the given number
+||| of lines.
 export
-readFile : HasIO io => String -> io (Either FileError String)
-readFile file
+lineCount : Nat -> Fuel
+lineCount 0 = Dry
+lineCount (S k) = More (lineCount k)
+
+||| Read a chunk of a file in a line-delimited fashion.
+||| You can use this function to read an entire file
+||| as with @readFile@ by reading until @forever@ or by
+||| iterating through pages until hitting the end of
+||| the file.
+|||
+||| The @lineCount@ function can provide you with enough
+||| fuel to read exactly a given number of lines.
+|||
+||| On success, returns a tuple of whether the end of 
+||| the file was reached or not and the String read in 
+||| from the file.
+|||
+||| Note that because we are chunking by lines, this
+||| function's totality depends on the assumption that
+||| no single line in the input file is infinite.
+export
+readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, String))
+readFilePage offset fuel file
   = do Right h <- openFile file Read
           | Left err => returnError
-       Right content <- read [] h
+       Right (eof, content) <- read offset fuel [] h
           | Left err => do closeFile h
                            returnError
        closeFile h
-       pure (Right (fastAppend content))
+       pure (Right (eof, (fastAppend content)))
   where
-    read : List String -> File -> io (Either FileError (List String))
-    read acc h
-        = do eof <- fEOF h
-             if eof
-                then pure (Right (reverse acc))
-                else
-                  do Right str <- fGetLine h
+    read : (offset : Nat) -> (fuel : Fuel) -> List String -> File -> io (Either FileError (Bool, List String))
+    read 0 Dry acc h = pure (Right (False, reverse acc))
+    read (S offset) fuel acc h 
+      = do eof <- fEOF h
+           if eof
+              then pure (Right (True, reverse acc))
+              else do Right () <- fSeekLine h
                         | Left err => returnError
-                     read (str :: acc) h
+                      read offset fuel acc h
+    read 0 (More fuel) acc h 
+      = do eof <- fEOF h
+           if eof
+              then pure (Right (True, reverse acc))
+              else do Right str <- fGetLine h
+                        | Left err => returnError
+                      read 0 fuel (str :: acc) h
+
+export
+partial
+readFile : HasIO io => String -> io (Either FileError String)
+readFile = (map $ map snd) . readFilePage 0 forever
 
 ||| Write a string to a file
 export

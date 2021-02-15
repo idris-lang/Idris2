@@ -1,5 +1,25 @@
 const support_system_file_fs = require("fs")
 
+// like `readLine` without the overhaead of copying characters.
+// returns int (success 0, failure -1) to align with the C counterpart.
+function support_system_file_seekLine(file_ptr){
+  const LF = 0x0a;
+  const readBuf = Buffer.alloc(1);
+  let lineEnd = file_ptr.buffer.indexOf(LF);
+  while (lineEnd === -1) {
+    const bytesRead = support_system_file_fs.readSync(file_ptr.fd, readBuf,0,1,null);
+    if (bytesRead === 0) {
+      file_ptr.eof = true;
+      file_ptr.buffer = Buffer.alloc(0);
+      return 0;
+    }
+    file_ptr.buffer = Buffer.concat([file_ptr.buffer, readBuf.slice(0, bytesRead)]);
+    lineEnd = file_ptr.buffer.indexOf(LF);
+  }
+  file_ptr.buffer = file_ptr.buffer.slice(lineEnd + 1);
+  return 0;
+}
+
 function support_system_file_readLine(file_ptr){
   const LF = 0x0a;
   const readBuf = Buffer.alloc(1);
