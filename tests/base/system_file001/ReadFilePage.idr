@@ -35,3 +35,7 @@ main = do totalChecks
             | Right (False, _) => putStrLn "Failed EOF check"
             | Left err => putStrLn $ show err
           putStrLn $ "empty: " ++ (show l7)
+          Right l8 <- readFile "test.txt"
+            | Left err => putStrLn $ show err
+          putStrLn l8
+
