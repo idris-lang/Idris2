@@ -217,7 +217,7 @@ for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and th
 
 
 Note that ``a`` is explicitly marked as runtime irrelevant so that it is erased by the
-compiler. Equivalently we could have written ``interface Sotrable a (size : Nat)``.
+compiler. Equivalently we could have written ``interface Storable a (size : Nat)``.
 The meaning of ``| a`` is explained in :ref:`DeterminingParameters`.
 
 
