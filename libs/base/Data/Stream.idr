@@ -69,8 +69,8 @@ scanl f acc (x :: xs) = acc :: scanl f (f acc x) xs
 ||| @ xs the sequence to repeat
 ||| @ ok proof that the list is non-empty
 export
-cycle : (xs : List a) -> {auto ok : NonEmpty xs} -> Stream a
-cycle {a} (x :: xs) {ok = IsNonEmpty} = x :: cycle' xs
+cycle : (xs : List a) -> {auto 0 ok : NonEmpty xs} -> Stream a
+cycle (x :: xs) = x :: cycle' xs
   where cycle' : List a -> Stream a
         cycle' []        = x :: cycle' xs
         cycle' (y :: ys) = y :: cycle' ys

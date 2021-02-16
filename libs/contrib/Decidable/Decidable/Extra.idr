@@ -10,7 +10,6 @@ import Decidable.Decidable
 
 %default total
 
-
 public export
 NotNot : {n : Nat} -> {ts : Vect n Type} -> (r : Rel ts) -> Rel ts
 NotNot r = map @{Nary} (Not . Not) r
@@ -23,9 +22,9 @@ doubleNegationElimination : {n : Nat} -> {0 ts : Vect n Type} -> {r : Rel ts} ->
   (witness : HVect ts) ->
   uncurry (NotNot {ts} r) witness ->
   uncurry              r  witness
-doubleNegationElimination {ts = []     } @{dec} [] prfnn =
+doubleNegationElimination {ts = []} @{dec} [] prfnn =
   case decide @{dec} of
-    Yes prf   => prf
+    Yes prf  => prf
     No  prfn => absurd $ prfnn prfn
 doubleNegationElimination {ts = t :: ts} @{dec} (w :: witness) prfnn =
   doubleNegationElimination {ts} {r = r w} @{ DecidablePartialApplication @{dec} } witness prfnn
@@ -43,7 +42,7 @@ public export
 doubleNegationExists : {n : Nat} -> {0 ts : Vect n Type} -> {r : Rel ts} -> Decidable n ts r =>
   Ex ts (NotNot {ts} r) ->
   Ex ts r
-doubleNegationExists {ts} {r} @{dec} nnxs =
+doubleNegationExists @{dec} nnxs =
   let witness : HVect ts
       witness = extractWitness nnxs
       witnessingnn : uncurry (NotNot {ts} r) witness
@@ -63,8 +62,8 @@ decideTransform :
   -> (tDec : {a : Type} -> Dec a -> Dec (t a))
   -> (posDec : IsDecidable n ts r)
   -> IsDecidable n ts (chain {ts} t r)
-decideTransform {t = t} tDec posDec =
-  curryAll $ \xs =>
+decideTransform tDec posDec =
+  curryAll \xs =>
     replace {p = id} (chainUncurry (chain t r) Dec xs) $
       replace {p = Dec} (chainUncurry r t xs) $
         tDec $ replace {p = id} (sym $ chainUncurry r Dec xs) $
@@ -86,8 +85,8 @@ notExistsNotForall :
   -> Dec ((x : a) -> p x)
 notExistsNotForall dec decEx =
   case decEx of
-    Yes (x ** nx) => No $ \ f => nx $ f x
-    No notNot => Yes $ \x => case (dec x) of
+    Yes (x ** nx) => No \f => nx $ f x
+    No notNot => Yes \x => case (dec x) of
       Yes px => px
       No nx => void $ notNot $ (x ** nx)
 
