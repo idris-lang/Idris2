@@ -260,23 +260,23 @@ xorBits32 = [ prim__xor_Bits32 11 b32max
             , prim__xor_Bits32 11 11
             ]
 
--- xorBits64 : List Bits64
--- xorBits64 = [ prim__xor_Bits64 11 b64max
---             , prim__xor_Bits64 11 0
---             , prim__xor_Bits64 11 1
---             , prim__xor_Bits64 11 2
---             , prim__xor_Bits64 11 4
---             , prim__xor_Bits64 11 11
---             ]
---
--- xorInteger : List Integer
--- xorInteger = [ prim__xor_Integer 11 (prim__shl_Integer 1 128 - 1)
---              , prim__xor_Integer 11 0
---              , prim__xor_Integer 11 1
---              , prim__xor_Integer 11 2
---              , prim__xor_Integer 11 4
---              , prim__xor_Integer 11 11
---              ]
+xorBits64 : List Bits64
+xorBits64 = [ prim__xor_Bits64 11 b64max
+            , prim__xor_Bits64 11 0
+            , prim__xor_Bits64 11 1
+            , prim__xor_Bits64 11 2
+            , prim__xor_Bits64 11 4
+            , prim__xor_Bits64 11 11
+            ]
+
+xorInteger : List Integer
+xorInteger = [ prim__xor_Integer 11 (prim__shl_Integer 1 128 - 1)
+             , prim__xor_Integer 11 0
+             , prim__xor_Integer 11 1
+             , prim__xor_Integer 11 2
+             , prim__xor_Integer 11 4
+             , prim__xor_Integer 11 11
+             ]
 
 xorInt : List Int
 xorInt = [ prim__xor_Int 11 intmax
@@ -349,7 +349,7 @@ main = do printLn shiftRBits8
           printLn xorBits8
           printLn xorBits16
           printLn xorBits32
-          -- printLn xorBits64
-          -- printLn xorInteger
+          printLn xorBits64
+          printLn xorInteger
           printLn xorInt
           printLn xorNegativeInt
