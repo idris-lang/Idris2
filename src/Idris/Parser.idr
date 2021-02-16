@@ -137,7 +137,8 @@ mutual
       applyExpImp start end f (UnnamedAutoArg imp :: args)
           = applyExpImp start end (PAutoApp (MkFC fname start end) f imp) args
       applyExpImp start end f (NamedArg n imp :: args)
-          = applyExpImp start end (PNamedApp (MkFC fname start end) f n imp) args
+          = let fc = MkFC fname start end in
+            applyExpImp start end (PNamedApp fc f n imp) args
       applyExpImp start end f (WithArg exp :: args)
           = applyExpImp start end (PWithApp (MkFC fname start end) f exp) args
 
@@ -157,23 +158,28 @@ mutual
                    pure [WithArg arg]
            else fail "| not allowed here"
     where
+      underscore : FC -> ArgType
+      underscore fc = NamedArg (UN "_") (PImplicit fc)
+
       braceArgs : FileName -> IndentInfo -> Rule (List ArgType)
       braceArgs fname indents
           = do start <- bounds (symbol "{")
                list <- sepBy (symbol ",")
                         $ do x <- bounds unqualifiedName
-                             option (NamedArg (UN x.val) $ PRef (boundToFC fname x) (UN x.val))
+                             let fc = boundToFC fname x
+                             option (NamedArg (UN x.val) $ PRef fc (UN x.val))
                               $ do tm <- symbol "=" *> expr pdef fname indents
                                    pure (NamedArg (UN x.val) tm)
                matchAny <- option [] (if isCons list then
                                          do symbol ","
                                             x <- bounds (symbol "_")
-                                            pure [NamedArg (UN "_") (PImplicit (boundToFC fname x))]
+                                            pure [underscore (boundToFC fname x)]
                                       else fail "non-empty list required")
                end <- bounds (symbol "}")
-               matchAny <- pure $ if isNil list
-                                  then [NamedArg (UN "_") (PImplicit (boundToFC fname (mergeBounds start end)))]
-                                  else matchAny
+               matchAny <- do let fc = boundToFC fname (mergeBounds start end)
+                              pure $ if isNil list
+                                then [underscore fc]
+                                else matchAny
                pure $ matchAny ++ list
 
         <|> do symbol "@{"
@@ -611,7 +617,8 @@ mutual
   caseRHS fname start indents lhs
       = do rhs <- bounds (symbol "=>" *> mustContinue indents Nothing *> expr pdef fname indents)
            atEnd indents
-           pure (MkPatClause (boundToFC fname (mergeBounds start rhs)) lhs rhs.val [])
+           let fc = boundToFC fname (mergeBounds start rhs)
+           pure (MkPatClause fc lhs rhs.val [])
     <|> do end <- bounds (keyword "impossible")
            atEnd indents
            pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
@@ -679,8 +686,8 @@ mutual
                 (ns, "do") =>
                    do commit
                       actions <- bounds (block (doAct fname))
-                      pure (PDoBlock (boundToFC fname (mergeBounds nsdo actions))
-                                     ns (concat actions.val))
+                      let fc = boundToFC fname (mergeBounds nsdo actions)
+                      pure (PDoBlock fc ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
   validPatternVar : Name -> SourceEmptyRule ()
@@ -718,7 +725,8 @@ mutual
                                      pure (val, alts))
                      atEnd indents
                      (v, alts) <- pure b.val
-                     pure [DoBindPat (boundToFC fname (mergeBounds e b)) e.val v alts])
+                     let fc = boundToFC fname (mergeBounds e b)
+                     pure [DoBindPat fc e.val v alts])
 
   patAlt : FileName -> IndentInfo -> Rule PClause
   patAlt fname indents
@@ -807,7 +815,8 @@ mutual
                               pure (rhs, ws)))
             atEnd indents
             (rhs, ws) <- pure b.val
-            pure (MkPatClause (boundToFC fname (mergeBounds start b)) lhs rhs ws)
+            let fc = boundToFC fname (mergeBounds start b)
+            pure (MkPatClause fc lhs rhs ws)
      <|> do b <- bounds (do keyword "with"
                             flags <- bounds (withFlags)
                             symbol "("
@@ -815,7 +824,8 @@ mutual
                             ws <- nonEmptyBlock (clause (S withArgs) fname)
                             pure (flags, wval, forget ws))
             (flags, wval, ws) <- pure b.val
-            pure (MkWithClause (boundToFC fname (mergeBounds start b)) lhs wval flags.val ws)
+            let fc = boundToFC fname (mergeBounds start b)
+            pure (MkWithClause fc lhs wval flags.val ws)
      <|> do end <- bounds (keyword "impossible")
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
