@@ -646,7 +646,9 @@ mutual
       getFn (IApp _ f _) = getFn f
       getFn (IAutoApp _ f _) = getFn f
       getFn (INamedApp _ f _ _) = getFn f
-      getFn tm = throw (InternalError (show tm ++ " is not a function application"))
+      getFn tm = throw $ case tm of
+        Implicit fc _ => GenericMsg fc "Invalid name for a declaration"
+        _ => InternalError (show tm ++ " is not a function application")
 
       toIDef : ImpClause -> Core ImpDecl
       toIDef (PatClause fc lhs rhs)
