@@ -54,9 +54,9 @@ choiceMap : {c : Bool} ->
             (a -> Grammar tok c b) ->
             Foldable t => t a ->
             Grammar tok c b
-choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
-                                               f x <|> acc)
-                           (fail "No more options") xs
+choiceMap f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
+                                           f x <|> acc)
+                       (fail "No more options") xs
 
 %hide Prelude.(>>=)
 
@@ -125,9 +125,9 @@ mutual
              (end : Grammar tok c e) ->
              (p : Grammar tok True a) ->
              Grammar tok True (List a)
-  someTill {c} end p = do x <- p
-                          seq (manyTill end p)
-                              (\xs => pure (x :: xs))
+  someTill end p = do x <- p
+                      seq (manyTill end p)
+                          (\xs => pure (x :: xs))
 
   ||| Parse zero or more instances of `p` until `end` succeeds, returning the
   ||| list of values from `p`. Guaranteed to consume input if `end` consumes.
@@ -136,8 +136,8 @@ mutual
              (end : Grammar tok c e) ->
              (p : Grammar tok True a) ->
              Grammar tok c (List a)
-  manyTill {c} end p = rewrite sym (andTrueNeutral c) in
-                               map (const []) end <|> someTill end p
+  manyTill end p = rewrite sym (andTrueNeutral c) in
+                           map (const []) end <|> someTill end p
 
 ||| Parse one or more instances of `p` until `end` succeeds, returning the
 ||| list of values from `p`, along with a proof that the resulting list is
@@ -170,8 +170,8 @@ mutual
               (skip : Grammar tok True s) ->
               (p : Grammar tok c a) ->
               Grammar tok c a
-  afterMany {c} skip p = rewrite sym (andTrueNeutral c) in
-                                 p <|> afterSome skip p
+  afterMany skip p = rewrite sym (andTrueNeutral c) in
+                             p <|> afterSome skip p
 
 ||| Parse one or more things, each separated by another thing.
 export
@@ -179,8 +179,8 @@ sepBy1 : {c : Bool} ->
          (sep : Grammar tok True s) ->
          (p : Grammar tok c a) ->
          Grammar tok c (List a)
-sepBy1 {c} sep p = rewrite sym (orFalseNeutral c) in
-                           [| p :: many (sep *> p) |]
+sepBy1 sep p = rewrite sym (orFalseNeutral c) in
+                       [| p :: many (sep *> p) |]
 
 ||| Parse zero or more things, each separated by another thing. May
 ||| match the empty input.
@@ -198,7 +198,7 @@ sepBy1' : {c : Bool} ->
          (sep : Grammar tok True s) ->
          (p : Grammar tok c a) ->
          Grammar tok c (xs : List a ** NonEmpty xs)
-sepBy1' {c} sep p
+sepBy1' sep p
   = rewrite sym (orFalseNeutral c) in
             seq p (\x => do xs <- many (sep *> p)
                             pure (x :: xs ** IsNonEmpty))
@@ -210,8 +210,8 @@ sepEndBy1 : {c : Bool} ->
             (sep : Grammar tok True s) ->
             (p : Grammar tok c a) ->
             Grammar tok c (List a)
-sepEndBy1 {c} sep p = rewrite sym (orFalseNeutral c) in
-                              sepBy1 sep p <* optional sep
+sepEndBy1 sep p = rewrite sym (orFalseNeutral c) in
+                          sepBy1 sep p <* optional sep
 
 ||| Parse zero or more instances of `p`, separated by and optionally terminated
 ||| by `sep`. Will not match a separator by itself.
@@ -230,8 +230,8 @@ sepEndBy1' : {c : Bool} ->
              (sep : Grammar tok True s) ->
              (p : Grammar tok c a) ->
              Grammar tok c (xs : List a ** NonEmpty xs)
-sepEndBy1' {c} sep p = rewrite sym (orFalseNeutral c) in
-                               sepBy1' sep p <* optional sep
+sepEndBy1' sep p = rewrite sym (orFalseNeutral c) in
+                           sepBy1' sep p <* optional sep
 
 ||| Parse one or more instances of `p`, separated and terminated by `sep`.
 export
@@ -239,8 +239,8 @@ endBy1 : {c : Bool} ->
          (sep : Grammar tok True s) ->
          (p : Grammar tok c a) ->
          Grammar tok True (List a)
-endBy1 {c} sep p = some $ rewrite sym (orTrueTrue c) in
-                                  p <* sep
+endBy1 sep p = some $ rewrite sym (orTrueTrue c) in
+                              p <* sep
 
 export
 endBy : {c : _} ->
@@ -256,8 +256,8 @@ endBy1' : {c : Bool} ->
           (sep : Grammar tok True s) ->
           (p : Grammar tok c a) ->
           Grammar tok True (xs : List a ** NonEmpty xs)
-endBy1' {c} sep p = some' $ rewrite sym (orTrueTrue c) in
-                                    p <* sep
+endBy1' sep p = some' $ rewrite sym (orTrueTrue c) in
+                                p <* sep
 
 ||| Parse an instance of `p` that is between `left` and `right`.
 export

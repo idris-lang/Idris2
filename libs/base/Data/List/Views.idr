@@ -24,8 +24,8 @@ smallerLeft (z :: ys) y zs = LTESucc (smallerLeft ys _ _)
 
 smallerRight : (ys : List a) -> (zs : List a) ->
                LTE (S (S (length zs))) (S (length (ys ++ (y :: zs))))
-smallerRight {y} ys zs = rewrite lengthSuc ys y zs in
-                                 (LTESucc (LTESucc (lengthLT _ _)))
+smallerRight ys zs = rewrite lengthSuc ys y zs in
+                     (LTESucc (LTESucc (lengthLT _ _)))
 
 ||| View for splitting a list in half, non-recursively
 public export

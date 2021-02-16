@@ -22,4 +22,4 @@ public export
 ||| Returns the co-domain of a n-ary function.
 public export
 target : {ts : Vect n Type} -> {r: Type} -> Fun ts r -> Type
-target {r} _ = r
+target _ = r
