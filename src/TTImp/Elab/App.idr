@@ -404,7 +404,19 @@ mutual
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
                            concrete defs env sc'
-          if (isHole aty && kr) || !(needsDelay (elabMode elabinfo) kr arg_in) then do
+          -- #1012: a subtle criterion to decide in which order to elaborate
+          -- the application. Privilege the rest of the application if:
+          -- + the type of the argument is a meta & we know that of the function
+          --   (i.e. we may solve that meta by processing the rest first)
+          -- + or the argument is not concrete and the argument could use delay
+          --   (e.g. a stuck application of a yet-unsolved type constructor)
+          -- + or we're on the LHS and the argument could use delay
+          let mode = elabMode elabinfo
+          couldUseDelay <- needsDelay mode kr arg_in
+          isConcreteArgTy <- concrete defs env aty
+          if (isHole aty && kr
+             || (not isConcreteArgTy && couldUseDelay)
+             || (isJust (isLHS mode) && couldUseDelay)) then do
              nm <- genMVName x
              empty <- clearDefs defs
              metaty <- quote empty env aty

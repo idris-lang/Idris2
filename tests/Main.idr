@@ -48,6 +48,10 @@ idrisTestsBasic = MkTestPool []
        "basic046", "basic047", "basic048", "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055"]
 
+idrisTestsTypechecking : TestPool
+idrisTestsTypechecking = MkTestPool []
+      ["typechecking001"]
+
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
        -- Coverage checking
@@ -221,6 +225,7 @@ main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
+  , testPaths "idris2" idrisTestsTypechecking
   , testPaths "idris2" idrisTestsCoverage
   , testPaths "idris2" idrisTestsError
   , testPaths "idris2" idrisTestsInteractive
