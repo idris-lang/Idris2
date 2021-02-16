@@ -27,3 +27,10 @@ decEqSelfIsYes : DecEq a => {x : a} -> decEq x x = Yes Refl
 decEqSelfIsYes {x} with (decEq x x)
   decEqSelfIsYes {x} | Yes Refl = Refl
   decEqSelfIsYes {x} | No contra = absurd $ contra Refl
+
+||| If you have a proof of inequality, you're sure that `decEq` would give a `No`.
+export
+decEqContraIsNo : DecEq a => {x, y : a} -> Not (x = y) -> (p ** decEq x y = No p)
+decEqContraIsNo uxy with (decEq x y)
+  decEqContraIsNo uxy | Yes xy = absurd $ uxy xy
+  decEqContraIsNo _   | No uxy = (uxy ** Refl)
