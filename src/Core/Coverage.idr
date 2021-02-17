@@ -10,7 +10,7 @@ import Core.Value
 
 import Libraries.Data.Bool.Extra
 import Data.List
-import Data.String
+import Data.Strings
 import Libraries.Data.NameMap
 
 import Libraries.Text.PrettyPrint.Prettyprinter
