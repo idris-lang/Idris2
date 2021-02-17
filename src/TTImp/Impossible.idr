@@ -44,13 +44,13 @@ match nty (n, i, rty)
     sameRet _ _ = pure False
 
 dropNoMatch : {auto c : Ref Ctxt Defs} ->
-              Maybe (NF []) -> List (Name, Int, ClosedTerm) ->
-              Core (List (Name, Int, ClosedTerm))
+              Maybe (NF []) -> List (Name, Int, GlobalDef) ->
+              Core (List (Name, Int, GlobalDef))
 dropNoMatch _ [t] = pure [t]
 dropNoMatch Nothing ts = pure ts
 dropNoMatch (Just nty) ts
     = -- if the return type of a thing in ts doesn't match nty, drop it
-      filterM (match nty) ts
+      filterM (match nty . map (map type)) ts
 
 nextVar : {auto q : Ref QVar Int} ->
           FC -> Core (Term [])
@@ -133,12 +133,16 @@ mutual
            when (n `elem` prims) $
                throw (InternalError "Can't deal with constants here yet")
 
-           tys <- lookupTyName n (gamma defs)
-           [(n', _, ty)] <- dropNoMatch mty tys
+           gdefs <- lookupNameBy id n (gamma defs)
+           [(n', _, gdef)] <- dropNoMatch mty gdefs
               | [] => throw (UndefinedName fc n)
               | ts => throw (AmbiguousName fc (map fst ts))
-           tynf <- nf defs [] ty
-           processArgs (Ref fc Func n') tynf exps autos named
+           tynf <- nf defs [] (type gdef)
+           let head = case definition gdef of
+                        DCon t a _ => DataCon t a
+                        TCon t a _ _ _ _ _ _ => TyCon t a
+                        _ => Func
+           processArgs (Ref fc head n') tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
