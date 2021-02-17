@@ -307,12 +307,18 @@ fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
-||| Produce enough @Fuel@ to read the given number
-||| of lines.
 export
-lineCount : Nat -> Fuel
-lineCount 0 = Dry
-lineCount (S k) = More (lineCount k)
+withFile : HasIO io => (filename : String) ->
+                       Mode ->
+                       (onError : FileError -> io a) ->
+                       (onOpen  : File -> io b) ->
+                       io (Either a b)
+withFile filename mode onError onOpen =
+  do Right h <- openFile filename mode
+       | Left err => Left <$> onError err
+     res <- onOpen h
+     closeFile h
+     pure $ Right res
 
 ||| Read a chunk of a file in a line-delimited fashion.
 ||| You can use this function to read an entire file
@@ -320,7 +326,7 @@ lineCount (S k) = More (lineCount k)
 ||| iterating through pages until hitting the end of
 ||| the file.
 |||
-||| The @lineCount@ function can provide you with enough
+||| The @limit@ function can provide you with enough
 ||| fuel to read exactly a given number of lines.
 |||
 ||| On success, returns a tuple of whether the end of
@@ -331,15 +337,10 @@ lineCount (S k) = More (lineCount k)
 ||| function's totality depends on the assumption that
 ||| no single line in the input file is infinite.
 export
-readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, String))
+readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
 readFilePage offset fuel file
-  = do Right h <- openFile file Read
-          | Left err => returnError
-       Right (eof, content) <- read offset fuel [] h
-          | Left err => do closeFile h
-                           returnError
-       closeFile h
-       pure (Right (eof, (fastAppend content)))
+  = join <$> (withFile file Read pure $
+                read offset fuel [])
   where
     read : (offset : Nat) -> (fuel : Fuel) -> List String -> File -> io (Either FileError (Bool, List String))
     read 0 Dry acc h = pure (Right (False, reverse acc))
@@ -361,7 +362,7 @@ readFilePage offset fuel file
 export
 partial
 readFile : HasIO io => String -> io (Either FileError String)
-readFile = (map $ map snd) . readFilePage 0 forever
+readFile = (map $ map (fastAppend . snd)) . readFilePage 0 forever
 
 ||| Write a string to a file
 export

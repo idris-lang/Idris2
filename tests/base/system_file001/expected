@@ -1,4 +1,4 @@
-empty: ""
+empty: []
 one
 
 two
@@ -20,7 +20,7 @@ three lines in
 four
 five lines total
 
-empty: ""
+empty: []
 one
 two
 three lines in
@@ -29,7 +29,7 @@ five lines total
 
 1/1: Building ReadFilePage (ReadFilePage.idr)
 Main> Main> Bye for now!
-empty: ""
+empty: []
 one
 
 two
@@ -51,7 +51,7 @@ three lines in
 four
 five lines total
 
-empty: ""
+empty: []
 one
 two
 three lines in

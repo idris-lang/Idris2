@@ -3,7 +3,7 @@
 $1 --cg chez --no-color --console-width 0 --no-banner ReadFilePage.idr < input
 $1 --cg node --no-color --console-width 0 --no-banner ReadFilePage.idr < input
 
-# The following backends failed for reasons unrealted to this test. They can be
+# The following backends failed for reasons unrelated to this test. They can be
 # uncommented at a future date.
 # RACKET failed to find the builtin idris support library
 # $1 --cg racket --no-color --console-width 0 --no-banner ReadFilePage.idr < input

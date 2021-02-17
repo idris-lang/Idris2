@@ -1,6 +1,6 @@
 const support_system_file_fs = require('fs')
 
-// like `readLine` without the overhaead of copying characters.
+// like `readLine` without the overhead of copying characters.
 // returns int (success 0, failure -1) to align with the C counterpart.
 function support_system_file_seekLine (file_ptr) {
   const LF = 0x0a
