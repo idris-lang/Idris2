@@ -37,6 +37,8 @@ else
 	SEP := :
 endif
 
+IDRIS2_DESTDIR := ${DESTDIR}${IDRIS2_PREFIX}
+
 # Library and data paths for bootstrap-test
 IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/lib
 IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
@@ -115,25 +117,25 @@ install-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
 
 install-idris2:
-	mkdir -p ${PREFIX}/bin/
-	install ${TARGET} ${PREFIX}/bin
+	mkdir -p ${IDRIS2_DESTDIR}/bin/
+	install ${TARGET} ${IDRIS2_DESTDIR}/bin
 ifeq ($(OS), windows)
-	-install ${TARGET}.cmd ${PREFIX}/bin
+	-install ${TARGET}.cmd ${IDRIS2_DESTDIR}/bin
 endif
-	mkdir -p ${PREFIX}/lib/
-	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
-	mkdir -p ${PREFIX}/bin/${NAME}_app
-	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+	mkdir -p ${IDRIS2_DESTDIR}/lib/
+	install support/c/${IDRIS2_SUPPORT} ${IDRIS2_DESTDIR}/lib
+	mkdir -p ${IDRIS2_DESTDIR}/bin/${NAME}_app
+	install ${TARGETDIR}/${NAME}_app/* ${IDRIS2_DESTDIR}/bin/${NAME}_app
 
 install-support:
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
-	install support/chez/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
-	install support/racket/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
-	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
-	install support/js/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
+	mkdir -p ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/chez
+	mkdir -p ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/racket
+	mkdir -p ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/gambit
+	mkdir -p ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/js
+	install support/chez/* ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/chez
+	install support/racket/* ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/racket
+	install support/gambit/* ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/gambit
+	install support/js/* ${IDRIS2_DESTDIR}/idris2-${IDRIS2_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
 
