@@ -1070,7 +1070,8 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 -- for the type, which we can use in coverage checking to ensure that one of
 -- the arguments has an empty type
 getPMDef fc phase fn ty []
-    = do defs <- get Ctxt
+    = do log "compile.casetree" 20 "No clauses!"
+         defs <- get Ctxt
          pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
   where
     getArgs : Int -> NF [] -> Core (List Name)
@@ -1083,6 +1084,8 @@ getPMDef fc phase fn ty clauses
     = do defs <- get Ctxt
          let cs = map (toClosed defs) (labelPat 0 clauses)
          (_ ** t) <- simpleCase fc phase fn ty Nothing cs
+         logC "compile.casetree" 20 $
+           pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
          pure (_ ** (t, getUnreachable 0 reached clauses))
   where
