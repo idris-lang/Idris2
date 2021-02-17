@@ -923,7 +923,10 @@ mkPat args orig (Ref fc Func n)
        mtm <- normalisePrims (const True) isPConst prims n args orig []
        case mtm of
          Just tm => mkPat [] tm tm
-         Nothing => pure $ PUnmatchable (getLoc orig) orig
+         Nothing =>
+           do log "compile.casetree" 10 $
+                "Unmatchable function: " ++ show n
+              pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
     = let t' = subst (Erased fc False) t in
       pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
@@ -941,7 +944,10 @@ mkPat args orig (PrimVal fc c)
          then PConst fc c
          else PTyCon fc (UN (show c)) 0 []
 mkPat args orig (TType fc) = pure $ PTyCon fc (UN "Type") 0 []
-mkPat args orig tm = pure $ PUnmatchable (getLoc orig) orig
+mkPat args orig tm
+   = do log "compile.casetree" 10 $
+          "Catchall: marking " ++ show tm ++ " as unmatchable"
+        pure $ PUnmatchable (getLoc orig) orig
 
 export
 argToPat : {auto c : Ref Ctxt Defs} -> ClosedTerm -> Core Pat
@@ -1054,7 +1060,7 @@ simpleCase : {auto c : Ref Ctxt Defs} ->
 simpleCase fc phase fn ty def clauses
     = do logC "compile.casetree" 5 $
                 do cs <- traverse (\ (c,d) => [| MkPair (toFullNames c) (toFullNames d) |]) clauses
-                   pure $ "Clauses:\n" ++ show (
+                   pure $ "simpleCase: Clauses:\n" ++ show (
                      indent {ann = ()} 2 $ vcat $ flip map cs $ \ (lrhs) =>
                        pretty {ann = ()} (fst lrhs) <++> pretty "=" <++> pretty (snd lrhs))
          ps <- traverse (toPatClause fc fn) clauses
