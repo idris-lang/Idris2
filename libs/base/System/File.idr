@@ -320,7 +320,7 @@ withFile filename mode onError onOpen =
      closeFile h
      pure $ Right res
 
-try : (Monad m) => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
+try : Monad m => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
 try a f = a >>= either (pure . Left) f
 
 readOnto : HasIO io => (acc : List String) ->
@@ -364,7 +364,7 @@ readFilePage offset fuel file
 export
 partial
 readFile : HasIO io => String -> io (Either FileError String)
-readFile = (map $ map (fastAppend . snd)) . readFilePage 0 forever
+readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 
 ||| Write a string to a file
 export
