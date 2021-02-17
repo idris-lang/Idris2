@@ -359,7 +359,7 @@ export
 readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
 readFilePage offset fuel file
   = join <$> (withFile file Read pure $
-                readOnto [] offset fuel) 
+                readOnto [] offset fuel)
 
 export
 partial
