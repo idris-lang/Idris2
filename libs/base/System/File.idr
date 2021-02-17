@@ -333,8 +333,8 @@ readOnto acc offset (More fuel) h
   = do False <- fEOF h
          | True => pure $ Right (True, reverse acc)
        case offset of
-            (S offset') => fSeekLine h >> readOnto acc offset' (More fuel) h
-            0           => try (fGetLine h) (\str => readOnto (str :: acc) 0 fuel h)
+            (S offset') => try (fSeekLine h) (const $ readOnto acc offset' (More fuel) h)
+            0           => try (fGetLine h)  (\str => readOnto (str :: acc) 0 fuel h)
 
 ||| Read a chunk of a file in a line-delimited fashion.
 ||| You can use this function to read an entire file
