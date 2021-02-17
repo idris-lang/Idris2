@@ -320,6 +320,22 @@ withFile filename mode onError onOpen =
      closeFile h
      pure $ Right res
 
+try : (Monad m) => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
+try a f = a >>= either (pure . Left) f
+
+readOnto : HasIO io => (acc : List String) ->
+                       (offset : Nat) ->
+                       (fuel : Fuel) ->
+                       File ->
+                       io (Either FileError (Bool, List String))
+readOnto acc _ Dry h = pure (Right (False, reverse acc))
+readOnto acc offset (More fuel) h
+  = do False <- fEOF h
+         | True => pure $ Right (True, reverse acc)
+       case offset of
+            (S offset') => fSeekLine h >> readOnto acc offset' (More fuel) h
+            0           => try (fGetLine h) (\str => readOnto (str :: acc) 0 fuel h)
+
 ||| Read a chunk of a file in a line-delimited fashion.
 ||| You can use this function to read an entire file
 ||| as with @readFile@ by reading until @forever@ or by
@@ -343,24 +359,7 @@ export
 readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
 readFilePage offset fuel file
   = join <$> (withFile file Read pure $
-                read offset fuel [])
-  where
-    read : (offset : Nat) -> (fuel : Fuel) -> List String -> File -> io (Either FileError (Bool, List String))
-    read 0 Dry acc h = pure (Right (False, reverse acc))
-    read (S offset) fuel acc h
-      = do eof <- fEOF h
-           if eof
-              then pure (Right (True, reverse acc))
-              else do Right () <- fSeekLine h
-                        | Left err => returnError
-                      read offset fuel acc h
-    read 0 (More fuel) acc h
-      = do eof <- fEOF h
-           if eof
-              then pure (Right (True, reverse acc))
-              else do Right str <- fGetLine h
-                        | Left err => returnError
-                      read 0 fuel (str :: acc) h
+                readOnto [] offset fuel) 
 
 export
 partial
