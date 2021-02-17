@@ -330,10 +330,13 @@ withFile filename mode onError onOpen =
 ||| fuel to read exactly a given number of lines.
 |||
 ||| On success, returns a tuple of whether the end of
-||| the file was reached or not and the String read in
+||| the file was reached or not and the lines read in
 ||| from the file.
 |||
-||| Note that because we are chunking by lines, this
+||| Note that each line will still have a newline
+||| character at the end.
+|||
+||| Important: because we are chunking by lines, this
 ||| function's totality depends on the assumption that
 ||| no single line in the input file is infinite.
 export
