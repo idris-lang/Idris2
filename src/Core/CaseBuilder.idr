@@ -798,11 +798,19 @@ mutual
   -- has the most distinct constructors (via pickNext)
   match {todo = (_ :: _)} fc fn phase clauses err
       = do (n ** MkNVar next) <- pickNext fc phase fn (map getNPs clauses)
+           log "compile.casetree" 25 $ "Picked " ++ show n ++ " as the next split"
            let clauses' = map (shuffleVars next) clauses
+           log "compile.casetree" 25 $ "Using clauses " ++ show clauses'
            let ps = partition phase clauses'
-           maybe (pure (Unmatched "No clauses"))
-                 Core.pure
-                !(mixture fc fn phase ps err)
+           log "compile.casetree" 25 $ "Got Partition " ++ show ps
+           mix <- mixture fc fn phase ps err
+           case mix of
+             Nothing =>
+               do log "compile.casetree" 25 "match: No clauses"
+                  pure (Unmatched "No clauses")
+             Just m =>
+               do log "compile.casetree" 25 $ "match: new case tree " ++ show m
+                  Core.pure m
   match {todo = []} fc fn phase [] err
        = maybe (pure (Unmatched "No patterns"))
                pure err
@@ -951,6 +959,9 @@ mkPatClause fc fn args ty pid (ps, rhs)
                do defs <- get Ctxt
                   nty <- nf defs [] ty
                   ns <- mkNames args ps eq (Just nty)
+                  log "compile.casetree" 20 $
+                    "Make pat clause for names " ++ show ns
+                     ++ " in LHS " ++ show ps
                   pure (MkPatClause [] ns pid
                           (rewrite sym (appendNilRightNeutral args) in
                                    (weakenNs (mkSizeOf args) rhs))))
@@ -1070,7 +1081,7 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 -- for the type, which we can use in coverage checking to ensure that one of
 -- the arguments has an empty type
 getPMDef fc phase fn ty []
-    = do log "compile.casetree" 20 "No clauses!"
+    = do log "compile.casetree" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
          pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
   where
