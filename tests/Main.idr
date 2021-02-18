@@ -217,6 +217,16 @@ templateTests = MkTestPool []
   [ "simple-test", "ttimp", "with-ipkg"
   ]
 
+-- base library tests are run against
+-- each codegen supported and to keep
+-- things simple it's all one test group
+-- that only runs if all backends are
+-- available.
+baseLibraryTests : TestPool
+baseLibraryTests = MkTestPool [Chez, Node]
+  [ "system_file001"
+  ]
+
 main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
@@ -233,6 +243,7 @@ main = runner
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
+  , testPaths "base" baseLibraryTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
