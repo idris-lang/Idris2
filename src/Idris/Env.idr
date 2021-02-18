@@ -33,7 +33,8 @@ envs = [
          MkEnvDesc "IDRIS2_CC"     "C compiler executable used in RefC codegen",
          MkEnvDesc "CC"            "C compiler executable used in RefC codegen",
          MkEnvDesc "NODE"          "node executable used in Node codegen",
-         MkEnvDesc "PATH"          "PATH variable is used to search for executables in certain codegens"
+         MkEnvDesc "PATH"          "PATH variable is used to search for executables in certain codegens",
+         MkEnvDesc "DESTDIR"       "variable prepended to each installed target file for install comand"
        ]
 
 --- `public export` only for `auto` to work in `idrisGetEnv`

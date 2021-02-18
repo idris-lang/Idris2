@@ -36,6 +36,7 @@ import Idris.REPLOpts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
+import Idris.Env
 import IdrisPaths
 
 %default covering
@@ -366,8 +367,12 @@ install pkg opts -- not used but might be in the future
          -- Make the package installation directory
          let installPrefix = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version
+         maybeDestdir <- coreLift $ idrisGetEnv "DESTDIR"
+         let installPath = case maybeDestdir of
+              Just destdir => destdir </> installPrefix
+              Nothing => installPrefix
          True <- coreLift $ changeDir installPrefix
-             | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
+             | False => throw $ InternalError $ "Can't change directory to " ++ installPath
          Right _ <- coreLift $ mkdirAll (name pkg)
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directory " ++ name pkg
@@ -379,7 +384,7 @@ install pkg opts -- not used but might be in the future
          -- srcdir/build into it
          traverse_ (installFrom (name pkg)
                                 (srcdir </> build)
-                                (installPrefix </> name pkg)) toInstall
+                                (installPath </> name pkg)) toInstall
          coreLift_ $ changeDir srcdir
          runScript (postinstall pkg)
 
