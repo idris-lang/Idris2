@@ -307,6 +307,9 @@ fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
+||| Perform a given operation on successful file open
+||| and ensure the file is closed afterwards or perform
+||| a different operation if the file fails to open.
 export
 withFile : HasIO io => (filename : String) ->
                        Mode ->
@@ -323,18 +326,18 @@ withFile filename mode onError onOpen =
 try : Monad m => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
 try a f = a >>= either (pure . Left) f
 
-readOnto : HasIO io => (acc : List String) ->
-                       (offset : Nat) ->
-                       (fuel : Fuel) ->
-                       File ->
-                       io (Either FileError (Bool, List String))
-readOnto acc _ Dry h = pure (Right (False, reverse acc))
-readOnto acc offset (More fuel) h
+readLinesOnto : HasIO io => (acc : List String) ->
+                            (offset : Nat) ->
+                            (fuel : Fuel) ->
+                            File ->
+                            io (Either FileError (Bool, List String))
+readLinesOnto acc _ Dry h = pure (Right (False, reverse acc))
+readLinesOnto acc offset (More fuel) h
   = do False <- fEOF h
          | True => pure $ Right (True, reverse acc)
        case offset of
-            (S offset') => try (fSeekLine h) (const $ readOnto acc offset' (More fuel) h)
-            0           => try (fGetLine h)  (\str => readOnto (str :: acc) 0 fuel h)
+            (S offset') => try (fSeekLine h) (const $ readLinesOnto acc offset' (More fuel) h)
+            0           => try (fGetLine  h) (\str => readLinesOnto (str :: acc) 0 fuel h)
 
 ||| Read a chunk of a file in a line-delimited fashion.
 ||| You can use this function to read an entire file
@@ -359,7 +362,7 @@ export
 readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
 readFilePage offset fuel file
   = join <$> (withFile file Read pure $
-                readOnto [] offset fuel)
+                readLinesOnto [] offset fuel)
 
 export
 partial
