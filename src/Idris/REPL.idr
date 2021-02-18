@@ -940,9 +940,9 @@ parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
-parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
+parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = runParser Nothing inp (parseEmptyCmd <|> parseCmd)
+    = runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd)
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->
@@ -952,12 +952,11 @@ interpret : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             String -> Core REPLResult
 interpret inp
-    = case parseRepl inp of
-           Left err => pure $ REPLError (pretty err)
+    = do setCurrentElabSource inp
+         case parseRepl inp of
+           Left err => pure $ REPLError !(perror err)
            Right Nothing => pure Done
-           Right (Just cmd) => do
-             setCurrentElabSource inp
-             processCatch cmd
+           Right (Just cmd) => processCatch cmd
 
 mutual
   export

@@ -434,7 +434,7 @@ loop
                    then pure ()
                    else case parseSExp inp of
                       Left err =>
-                        do printIDEError outf idx (reflow "Parse error:" <++> pretty err)
+                        do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
                            loop
                       Right sexp =>
                         case getMsg sexp of

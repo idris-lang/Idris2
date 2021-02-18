@@ -392,6 +392,8 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
+    <|> do b <- bounds (interpStr pdef fname indents)
+           pure (PString (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")
@@ -774,6 +776,24 @@ mutual
   expr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   expr = typeExpr
 
+  export
+  interpStr : ParseOpts -> FileName -> IndentInfo -> Rule (List PStr)
+  interpStr q fname idents = do
+      strBegin
+      commit
+      xs <- many $ bounds $ interpBlock <||> strLit
+      strEnd
+      pure $ toPString <$> xs
+    where
+      interpBlock : Rule PTerm
+      interpBlock = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+
+      toPString : (WithBounds $ Either PTerm String) -> PStr
+      toPString x
+          = case x.val of
+                 Right s => StrLiteral (boundToFC fname x) s
+                 Left tm => StrInterp (boundToFC fname x) tm
+
 visOption : Rule Visibility
 visOption
     = (keyword "public" *> keyword "export" *> pure Public)
@@ -1073,7 +1093,7 @@ namespaceDecl fname indents
 transformDecl : FileName -> IndentInfo -> Rule PDecl
 transformDecl fname indents
     = do b <- bounds (do pragma "transform"
-                         n <- strLit
+                         n <- simpleStr
                          lhs <- expr plhs fname indents
                          symbol "="
                          rhs <- expr pnowith fname indents
@@ -1681,7 +1701,7 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      s <- strLit
+      s <- simpleStr
       pure (command s)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
