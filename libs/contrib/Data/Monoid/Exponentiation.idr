@@ -25,7 +25,7 @@ public export
 modular : Monoid a => a -> Nat -> a
 modular v n = modularRec v (halfRec n)
 
-infixl 10 ^
+infixr 10 ^
 public export
 (^) : Num a => a -> Nat -> a
 (^) = modular @{Multiplicative}
