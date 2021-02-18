@@ -314,14 +314,14 @@ export
 withFile : HasIO io => (filename : String) ->
                        Mode ->
                        (onError : FileError -> io a) ->
-                       (onOpen  : File -> io b) ->
+                       (onOpen  : File -> io (Either a b)) ->
                        io (Either a b)
 withFile filename mode onError onOpen =
   do Right h <- openFile filename mode
        | Left err => Left <$> onError err
      res <- onOpen h
      closeFile h
-     pure $ Right res
+     pure res
 
 try : Monad m => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
 try a f = a >>= either (pure . Left) f
@@ -361,8 +361,8 @@ readLinesOnto acc offset (More fuel) h
 export
 readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
 readFilePage offset fuel file
-  = join <$> (withFile file Read pure $
-                readLinesOnto [] offset fuel)
+  = withFile file Read pure $
+      readLinesOnto [] offset fuel
 
 export
 partial
@@ -374,14 +374,9 @@ export
 writeFile : HasIO io =>
             (filepath : String) -> (contents : String) ->
             io (Either FileError ())
-writeFile fn contents = do
-     Right h  <- openFile fn WriteTruncate
-        | Left err => pure (Left err)
-     Right () <- fPutStr h contents
-        | Left err => do closeFile h
-                         pure (Left err)
-     closeFile h
-     pure (Right ())
+writeFile file contents 
+  = withFile file WriteTruncate pure $
+      (flip fPutStr contents)
 
 namespace FileMode
   public export
