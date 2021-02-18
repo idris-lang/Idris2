@@ -374,7 +374,7 @@ export
 writeFile : HasIO io =>
             (filepath : String) -> (contents : String) ->
             io (Either FileError ())
-writeFile file contents 
+writeFile file contents
   = withFile file WriteTruncate pure $
       (flip fPutStr contents)
 
