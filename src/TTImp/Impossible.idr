@@ -138,6 +138,12 @@ mutual
               | [] => throw (UndefinedName fc n)
               | ts => throw (AmbiguousName fc (map fst ts))
            tynf <- nf defs [] (type gdef)
+           -- #899 we need to make sure that type & data constructors are marked
+           -- as such so that the coverage checker actually uses the matches in
+           -- `impossible` branches to generate parts of the case tree.
+           -- When `head` is `Func`, the pattern will be marked as forced and
+           -- the coverage checker will considers that all the cases have been
+           -- covered!
            let head = case definition gdef of
                         DCon t a _ => DataCon t a
                         TCon t a _ _ _ _ _ _ => TyCon t a
