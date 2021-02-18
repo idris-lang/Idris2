@@ -5,6 +5,7 @@ infix 6 ==, /=, <, <=, >, >=
 infixl 7 <<, >> -- unused
 infixl 8 +, -
 infixl 9 *, /
+infixr 10 ^
 
 -- Boolean operators
 infixr 5 &&

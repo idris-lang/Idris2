@@ -37,3 +37,14 @@ halfRec n with (sizeAccessible n)
           in HalfRecEven _ (halfRec (S k) | acc (S k) (LTESucc (LTESucc (lteAddRight _))))
     halfRec (S (k + k)) | Access acc | HalfEven k
       = HalfRecOdd _ (halfRec k | acc k (LTESucc (lteAddRight _)))
+
+public export
+||| Raises a number to a power which is a natural number.
+(^) : Num ty => ty -> Nat -> ty
+(^) x k = fastPow k x 1 where
+  ||| Raises a number to a natural-number-power using repeated squaring.
+  fastPow : Nat -> ty -> ty -> ty
+  fastPow k x res with (halfRec k)
+    fastPow Z x res | HalfRecZ = res
+    fastPow (m + m) x res | (HalfRecEven m rec) = fastPow m (x * x) res | rec
+    fastPow (S (m + m)) x res | (HalfRecOdd m rec) = fastPow m (x * x) (res * x) | rec
