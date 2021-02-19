@@ -415,7 +415,7 @@ mutual
     <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
            pure (PRunElab (boundToFC fname b) b.val)
     <|> do b <- bounds $ do pragma "logging"
-                            topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
+                            topic <- optional (split (('.') ==) <$> simpleStr)
                             lvl   <- intLit
                             e     <- expr pdef fname indents
                             pure (MkPair (mkLogLevel' topic (integerToNat lvl)) e)
@@ -491,7 +491,7 @@ mutual
            binders <- pibindList fname indents
            symbol ")"
            exp <- bindSymbol
-           scope <- typeExpr pdef fname indents
+           scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname exp binders scope)
 
   autoImplicitPi : FileName -> IndentInfo -> Rule PTerm
@@ -502,7 +502,7 @@ mutual
            binders <- pibindList fname indents
            symbol "}"
            symbol "->"
-           scope <- typeExpr pdef fname indents
+           scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname AutoImplicit binders scope)
 
   defaultImplicitPi : FileName -> IndentInfo -> Rule PTerm
@@ -514,7 +514,7 @@ mutual
            binders <- pibindList fname indents
            symbol "}"
            symbol "->"
-           scope <- typeExpr pdef fname indents
+           scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname (DefImplicit t) binders scope)
 
   forall_ : FileName -> IndentInfo -> Rule PTerm
@@ -527,7 +527,7 @@ mutual
                                     , PImplicit (boundToFC fname n))
                                     ) ns
            symbol "."
-           scope <- typeExpr pdef fname indents
+           scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname Implicit binders scope)
 
   implicitPi : FileName -> IndentInfo -> Rule PTerm
@@ -536,7 +536,7 @@ mutual
            binders <- pibindList fname indents
            symbol "}"
            symbol "->"
-           scope <- typeExpr pdef fname indents
+           scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname Implicit binders scope)
 
   lam : FileName -> IndentInfo -> Rule PTerm
@@ -987,9 +987,10 @@ totalityOpt
 logLevel : Rule (Maybe LogLevel)
 logLevel
   = (Nothing <$ exactIdent "off")
-    <|> do topic <- optional ((:::) <$> unqualifiedName <*> many aDotIdent)
+    <|> do topic <- optional (split ('.' ==) <$> simpleStr)
            lvl <- intLit
            pure (Just (mkLogLevel' topic (fromInteger lvl)))
+    <|> fail "expected a log level"
 
 directive : FileName -> IndentInfo -> Rule Directive
 directive fname indents
@@ -1688,7 +1689,7 @@ nameArgCmd parseCmd command doc = (names, NameArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- name
+      n <- mustWork name
       pure (command n)
 
 stringArgCmd : ParseCmd -> (String -> REPLCmd) -> String -> CommandDefinition
@@ -1701,7 +1702,7 @@ stringArgCmd parseCmd command doc = (names, StringArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      s <- simpleStr
+      s <- mustWork simpleStr
       pure (command s)
 
 moduleArgCmd : ParseCmd -> (ModuleIdent -> REPLCmd) -> String -> CommandDefinition
@@ -1714,7 +1715,7 @@ moduleArgCmd parseCmd command doc = (names, ModuleArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- moduleIdent
+      n <- mustWork moduleIdent
       pure (command n)
 
 exprArgCmd : ParseCmd -> (PTerm -> REPLCmd) -> String -> CommandDefinition
@@ -1727,7 +1728,7 @@ exprArgCmd parseCmd command doc = (names, ExprArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      tm <- expr pdef "(interactive)" init
+      tm <- mustWork $ expr pdef "(interactive)" init
       pure (command tm)
 
 declsArgCmd : ParseCmd -> (List PDecl -> REPLCmd) -> String -> CommandDefinition
@@ -1739,7 +1740,7 @@ declsArgCmd parseCmd command doc = (names, DeclsArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      tm <- topDecl "(interactive)" init
+      tm <- mustWork $ topDecl "(interactive)" init
       pure (command tm)
 
 optArgCmd : ParseCmd -> (REPLOpt -> REPLCmd) -> Bool -> String -> CommandDefinition
@@ -1752,7 +1753,7 @@ optArgCmd parseCmd command set doc = (names, OptionArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      opt <- setOption set
+      opt <- mustWork $ setOption set
       pure (command opt)
 
 numberArgCmd : ParseCmd -> (Nat -> REPLCmd) -> String -> CommandDefinition
@@ -1765,7 +1766,7 @@ numberArgCmd parseCmd command doc = (names, NumberArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      i <- intLit
+      i <- mustWork intLit
       pure (command (fromInteger i))
 
 autoNumberArgCmd : ParseCmd -> (Maybe Nat -> REPLCmd) -> String -> CommandDefinition
@@ -1774,11 +1775,16 @@ autoNumberArgCmd parseCmd command doc = (names, AutoNumberArg, doc, parse)
     names : List String
     names = extractNames parseCmd
 
+    autoNumber : Rule (Maybe Nat)
+    autoNumber = Nothing <$ keyword "auto"
+             <|> Just . fromInteger <$> intLit
+
     parse : Rule REPLCmd
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      (do keyword "auto"; pure (command Nothing)) <|> (do i <- intLit; pure (command (Just (fromInteger i))))
+      mi <- mustWork autoNumber
+      pure (command mi)
 
 onOffArgCmd : ParseCmd -> (Bool -> REPLCmd) -> String -> CommandDefinition
 onOffArgCmd parseCmd command doc = (names, OnOffArg, doc, parse)
@@ -1790,7 +1796,7 @@ onOffArgCmd parseCmd command doc = (names, OnOffArg, doc, parse)
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      i <- onOffLit
+      i <- mustWork onOffLit
       pure (command i)
 
 compileArgsCmd : ParseCmd -> (PTerm -> String -> REPLCmd) -> String -> CommandDefinition
@@ -1804,8 +1810,8 @@ compileArgsCmd parseCmd command doc
     parse = do
       symbol ":"
       runParseCmd parseCmd
-      n <- unqualifiedName
-      tm <- expr pdef "(interactive)" init
+      n <- mustWork unqualifiedName
+      tm <- mustWork $ expr pdef "(interactive)" init
       pure (command tm n)
 
 loggingArgCmd : ParseCmd -> (Maybe LogLevel -> REPLCmd) -> String -> CommandDefinition
@@ -1818,7 +1824,7 @@ loggingArgCmd parseCmd command doc = (names, Args [StringArg, NumberArg], doc, p
   parse = do
     symbol ":"
     runParseCmd parseCmd
-    lvl <- logLevel
+    lvl <- mustWork logLevel
     pure (command lvl)
 
 parserCommandsForHelp : CommandTable

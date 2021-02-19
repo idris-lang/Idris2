@@ -3,7 +3,7 @@ module Term
 import Data.Fin
 
 %logging 1
-%logging declare.def 3
+%logging "declare.def" 3
 
 mutual
 
