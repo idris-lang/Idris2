@@ -50,7 +50,7 @@ Applicative LazyList where
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (++)
+  xs <|> ys = xs ++ ys
 
 public export
 Monad LazyList where
