@@ -2,7 +2,7 @@ module Issue660
 
 %default total
 
-%logging declare.data.parameters 20
+%logging "declare.data.parameters" 20
 
 data C : Type -> Type where
   MkC : List a -> C a
