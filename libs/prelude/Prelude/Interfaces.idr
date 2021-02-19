@@ -60,15 +60,6 @@ public export
 Monoid b => Monoid (a -> b) where
   neutral _ = neutral
 
-
-export
-shiftL : Int -> Int -> Int
-shiftL = prim__shl_Int
-
-export
-shiftR : Int -> Int -> Int
-shiftR = prim__shr_Int
-
 ---------------------------------------------------------
 -- FUNCTOR, BIFUNCTOR, APPLICATIVE, ALTERNATIVE, MONAD --
 ---------------------------------------------------------
