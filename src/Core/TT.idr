@@ -197,6 +197,7 @@ data PrimFn : Nat -> Type where
      DoubleASin : PrimFn 1
      DoubleACos : PrimFn 1
      DoubleATan : PrimFn 1
+     DoubleATan2 : PrimFn 2
      DoubleSqrt : PrimFn 1
      DoubleFloor : PrimFn 1
      DoubleCeiling : PrimFn 1
@@ -239,6 +240,7 @@ Show (PrimFn arity) where
   show DoubleASin = "op_doubleASin"
   show DoubleACos = "op_doubleACos"
   show DoubleATan = "op_doubleATan"
+  show DoubleATan2 = "op_doubleATan2"
   show DoubleSqrt = "op_doubleSqrt"
   show DoubleFloor = "op_doubleFloor"
   show DoubleCeiling = "op_doubleCeiling"

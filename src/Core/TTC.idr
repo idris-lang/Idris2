@@ -528,6 +528,7 @@ export
   toBuf b DoubleASin = tag 25
   toBuf b DoubleACos = tag 26
   toBuf b DoubleATan = tag 27
+  toBuf b DoubleATan2 = tag 28
   toBuf b DoubleSqrt = tag 32
   toBuf b DoubleFloor = tag 33
   toBuf b DoubleCeiling = tag 34
@@ -582,6 +583,7 @@ export
                  14 => pure StrIndex
                  15 => pure StrCons
                  16 => pure StrAppend
+                 28 => pure DoubleATan2
                  35 => do ty <- fromBuf b; pure (ShiftL ty)
                  36 => do ty <- fromBuf b; pure (ShiftR ty)
                  37 => do ty <- fromBuf b; pure (BAnd ty)

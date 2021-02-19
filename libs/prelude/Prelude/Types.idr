@@ -667,6 +667,10 @@ tanh : Double -> Double
 tanh x = sinh x / cosh x
 
 public export
+atan2 : (y : Double) -> (x : Double) -> Double
+atan2 y x = prim__doubleATan2 y x
+
+public export
 sqrt : Double -> Double
 sqrt x = prim__doubleSqrt x
 
