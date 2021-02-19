@@ -128,7 +128,7 @@ Monad m => Monad (MaybeT m) where
 public export
 Monad m => Alternative (MaybeT m) where
   empty = nothing
-  (<|>) = (<+>)
+  a <|> b = a <+> b
 
 public export
 MonadTrans MaybeT where
