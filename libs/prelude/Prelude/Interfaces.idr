@@ -367,6 +367,14 @@ public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
 choiceMap f = foldr (\e, a => f e <|> a) empty
 
+namespace Foldable
+  ||| Composition of foldables is foldable.
+  export
+  [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
+    foldr = foldr . flip . foldr
+    foldl = foldl . foldl
+    null tf = null tf || all (force . null) tf
+
 public export
 interface (Functor t, Foldable t) => Traversable t where
   ||| Map each element of a structure to a computation, evaluate those
@@ -382,3 +390,17 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
+
+namespace Traversable
+  ||| Composition of traversables is traversable.
+  export
+  [Compose] (Traversable t, Traversable f) => Traversable (t . f)
+    using Foldable.Compose Functor.Compose where
+      traverse = traverse . traverse
+
+namespace Monad
+  ||| Composition of a traversable monad and a monad is a monad.
+  export
+  [Compose] (Monad m, Monad t, Traversable t) => Monad (m . t)
+    using Applicative.Compose where
+      a >>= f = a >>= map join . traverse f
