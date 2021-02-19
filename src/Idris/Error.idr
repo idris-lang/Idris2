@@ -63,7 +63,7 @@ ploc fc@(MkFC fn s e) = do
     let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
     let head = annotate FileCtxt (pretty fc)
-    source <- lines <$> getCurrentElabSource
+    source <- (forget . lines) <$> getCurrentElabSource
     if sr == er
        then do
          let emph = spaces (cast $ nsize + sc + 4) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
@@ -94,7 +94,7 @@ ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
           else do let nsize = length $ show (er2 + 1)
                   let head = annotate FileCtxt (pretty $ MkFC fn1 s1 e2)
                   let firstRow = annotate FileCtxt (spaces (cast $ nsize + 2) <+> pipe)
-                  source <- lines <$> getCurrentElabSource
+                  source <- (forget . lines) <$> getCurrentElabSource
                   case (sr1 == er1, sr2 == er2, sr1 == sr2) of
                        (True, True, True) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)

@@ -8,6 +8,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.Strings
 
@@ -96,9 +97,8 @@ fmtOpt : OptDescr a -> List (String,String,String)
 fmtOpt (MkOpt sos los ad descr) =
   let sosFmt = concat $ intersperse ", " (map (fmtShort ad) sos)
       losFmt = concat $ intersperse ", " (map (fmtLong ad) los)
-   in case lines descr of
-           []       => [(sosFmt,losFmt,"")]
-           (h :: t) => (sosFmt,losFmt,h) :: map (\s => ("","",s)) t
+      (h ::: t) = lines descr in
+      (sosFmt,losFmt,h) :: map (\s => ("","",s)) t
 
 ||| Return a string describing the usage of a command, derived from
 ||| the header (first argument) and the options described by the

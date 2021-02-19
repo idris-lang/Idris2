@@ -1,6 +1,7 @@
 module Data.String.Extra
 
 import Data.List
+import Data.List1
 import Data.Nat
 import Data.Strings
 
@@ -101,4 +102,4 @@ indent n x = replicate n ' ' ++ x
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (indent n) $ lines str
+indentLines n str = unlines $ map (indent n) $ forget $ lines str

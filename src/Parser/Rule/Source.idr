@@ -56,7 +56,7 @@ documentation' = terminal "Expected documentation comment"
 
 export
 documentation : Rule String
-documentation = unlines <$> some documentation'
+documentation = (unlines . forget) <$> some documentation'
 
 export
 intLit : Rule Integer

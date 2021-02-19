@@ -678,7 +678,7 @@ processPackageOpts opts
              | (MkPFR Nothing opts _) => pure False
 
          if err
-           then do coreLift (putStrLn errorMsg)
+           then do coreLift $ putStrLn (errorMsg ++ "\n")
                    pure True
            else do processPackage cmd f opts'
                    pure True

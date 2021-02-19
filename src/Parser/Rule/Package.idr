@@ -4,6 +4,7 @@ import public Parser.Lexer.Package
 import public Parser.Rule.Common
 
 import Data.List
+import Data.List1
 
 import Core.Name.Namespace
 
@@ -134,4 +135,4 @@ sep' = terminal "Expected separator"
 
 export
 sep : Rule t -> Rule (List t)
-sep rule = sepBy1 sep' rule
+sep rule = forget <$> sepBy1 sep' rule

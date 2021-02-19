@@ -54,6 +54,7 @@ import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
@@ -242,7 +243,7 @@ updateFile update
          Right content <- coreLift $ readFile f
                | Left err => throw (FileErr f err)
          coreLift_ $ writeFile (f ++ "~") content
-         coreLift_ $ writeFile f (unlines (update (lines content)))
+         coreLift_ $ writeFile f (unlines (update (forget $ lines content)))
          pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
@@ -498,7 +499,7 @@ processEdit (MakeCase upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let c = lines $ makeCase brack name l
+         let c = forget $ lines $ makeCase brack name l
          if upd
             then updateFile (addMadeCase markM c (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeCase markM c
@@ -509,7 +510,7 @@ processEdit (MakeWith upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let w = lines $ makeWith name l
+         let w = forget $ lines $ makeWith name l
          if upd
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w

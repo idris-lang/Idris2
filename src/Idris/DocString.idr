@@ -13,6 +13,7 @@ import TTImp.Elab.Prim
 
 import Libraries.Data.ANameMap
 import Data.List
+import Data.List1
 import Data.Maybe
 import Libraries.Data.NameMap
 import Data.Strings
@@ -68,8 +69,11 @@ getDocsForName fc n
              | [] => pure ["No documentation for " ++ show n]
          traverse showDoc ns
   where
+    addNL : String -> String
+    addNL str = if trim str == "" then "" else str ++ "\n"
+
     indent : String -> String
-    indent str = unlines $ map ("\t" ++) (lines str)
+    indent str = unlines $ map ("\t" ++) (forget $ lines str)
 
     showTotal : Name -> Totality -> String
     showTotal n tot
@@ -87,7 +91,7 @@ getDocsForName fc n
                   | _ => pure Nothing
              ty <- normaliseHoles defs [] (type def)
              pure (Just (nameRoot n ++ " : " ++ show !(resugar [] ty)
-                          ++ "\n" ++ indent str))
+                          ++ "\n" ++ addNL (indent str)))
 
     getImplDoc : Name -> Core (Maybe String)
     getImplDoc n
@@ -95,7 +99,7 @@ getDocsForName fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure Nothing
              ty <- normaliseHoles defs [] (type def)
-             pure (Just (indent (show !(resugar [] ty) ++ "\n")))
+             pure $ Just $ addNL $ indent $ show !(resugar [] ty)
 
     getMethDoc : Method -> Core (Maybe String)
     getMethDoc meth
@@ -104,7 +108,7 @@ getDocsForName fc n
                   | _ => pure Nothing
              pure (Just (nameRoot meth.name ++ " : " ++ show !(pterm meth.type)
                           ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
-                          ++ "\n" ++ indent str))
+                          ++ "\n" ++ addNL (indent str)))
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
@@ -155,7 +159,7 @@ getDocsForName fc n
                   | Nothing => throw (UndefinedName fc n)
              ty <- normaliseHoles defs [] (type def)
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
-                              ++ "\n" ++ indent str
+                              ++ "\n" ++ addNL (indent str)
              extra <- getExtra n def
              pure (doc ++ extra)
 
@@ -183,8 +187,8 @@ summarise n -- n is fully qualified
              | _ => pure ""
          let doc = case lookupName n (docstrings syn) of
                         [(_, doc)] => case lines doc of
-                                           (d :: _) => Just d
-                                           _ => Nothing
+                                           ("" ::: _) => Nothing
+                                           (d ::: _) => Just d
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
