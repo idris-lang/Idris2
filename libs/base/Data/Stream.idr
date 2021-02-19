@@ -121,11 +121,11 @@ public export
 cantor : Stream (Stream a) -> Stream a
 cantor (l :: ls) = zig (l ::: []) ls
 
-||| Exploring the Nat*Nat top right quadrant of the plane
-||| using Cantor's zig-zag traversal:
+-- Exploring the Nat*Nat top right quadrant of the plane
+-- using Cantor's zig-zag traversal:
 example :
   let quadrant : Stream (Stream (Nat, Nat))
-      quadrant = zipWith (map . (,)) Stream.nats (repeat Stream.nats)
+      quadrant = map (\ i => map (i,) Stream.nats) Stream.nats
   in
      take 10 (cantor quadrant)
      === [ (0, 0)
@@ -134,6 +134,24 @@ example :
          , (3, 0), (2, 1), (1, 2), (0, 3)
          ]
 example = Refl
+
+namespace DPair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : {0 p : a -> Type} ->
+          Stream a -> ((x : a) -> Stream (p x)) ->
+          Stream (x : a ** p x)
+  plane as f = cantor (map (\ x => map (\ prf => (x ** prf)) (f x)) as)
+
+namespace Pair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Stream a -> Stream b -> Stream (a, b)
+  plane as bs = cantor (map (\ a => map (a,) bs) as)
 
 --------------------------------------------------------------------------------
 -- Implementations
