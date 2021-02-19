@@ -132,8 +132,17 @@ notLTEImpliesGT {a = S a} {b = 0  } notLTE = LTESucc LTEZero
 notLTEImpliesGT {a = S a} {b = S k} notLTE = LTESucc (notLTEImpliesGT (notLTE . LTESucc))
 
 export
+LTEImpliesNotGT : a `LTE` b -> Not (a `GT` b)
+LTEImpliesNotGT LTEZero q = absurd q
+LTEImpliesNotGT (LTESucc p) (LTESucc q) = LTEImpliesNotGT p q
+
+export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
 notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
+
+export
+LTImpliesNotGTE : a `LT` b -> Not (a `GTE` b)
+LTImpliesNotGTE p q = LTEImpliesNotGT q p
 
 public export
 lte : Nat -> Nat -> Bool
