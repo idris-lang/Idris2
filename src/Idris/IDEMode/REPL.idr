@@ -238,6 +238,8 @@ process (Metavariables _)
     = replWrap $ Idris.REPL.process Metavars
 process GetOptions
     = replWrap $ Idris.REPL.process GetOpts
+process VersionIDEProtocol
+    = replWrap $ Idris.REPL.process ShowVersionIDEProtocol
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->

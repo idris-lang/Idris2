@@ -458,6 +458,7 @@ data REPLCmd : Type where
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
+     ShowVersionIDEProtocol : REPLCmd
 
 public export
 record Import where

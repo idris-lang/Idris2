@@ -548,6 +548,7 @@ data REPLResult : Type where
   ConsoleWidthSet : Maybe Nat -> REPLResult
   ColorSet : Bool -> REPLResult
   VersionIs : Version -> REPLResult
+  VersionIDEProtocolIs : Int -> REPLResult
   DefDeclared : REPLResult
   Exited : REPLResult
   Edited : EditResult -> REPLResult
@@ -910,6 +911,8 @@ process NOP
     = pure Done
 process ShowVersion
     = pure $ VersionIs  version
+process ShowVersionIDEProtocol
+    = pure $ VersionIDEProtocolIs versionIDEProtocol
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
@@ -1060,6 +1063,7 @@ mutual
   displayResult (ConsoleWidthSet Nothing) = printResult (reflow "Set consolewidth to auto")
   displayResult (ColorSet b) = printResult (reflow (if b then "Set color on" else "Set color off"))
   displayResult (VersionIs x) = printResult (pretty (showVersion True x))
+  displayResult (VersionIDEProtocolIs x) = printResult (pretty x)
   displayResult (RequestedHelp) = printResult (pretty displayHelp)
   displayResult (Edited (DisplayEdit Empty)) = pure ()
   displayResult (Edited (DisplayEdit xs)) = printResult xs

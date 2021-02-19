@@ -3,6 +3,10 @@ Changes since Idris 2 v0.3.0
 
 REPL/IDE mode changes:
 
+* Extended the IDE Protocol to introduce IDE protocol versions.
+  This will allow IDE Clients to differentiate between versions of the protocol used by Idris1 and Idris2.
+  A reasonable way to support compatibility between clients and versions of Idris.
+  By default Idris1 will have protocol version 0 and Idris2 protocol version 1.
 * Added `:search` command, which searches for functions by type
 * `:load`/`:l` and `:cd` commands now only accept paths surrounded by double quotes
 

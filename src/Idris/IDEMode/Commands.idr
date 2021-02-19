@@ -9,6 +9,10 @@ import System.File
 
 %default total
 
+export
+versionIDEProtocol : Int
+versionIDEProtocol = 1
+
 public export
 data SExp = SExpList (List SExp)
           | StringAtom String
@@ -52,6 +56,7 @@ data IDECommand
      | EnableSyntax Bool
      | Version
      | GetOptions
+     | VersionIDEProtocol
 
 readHints : List SExp -> Maybe (List String)
 readHints [] = Just []
@@ -146,6 +151,7 @@ getIDECommand (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
     = Just $ EnableSyntax b
 getIDECommand (SymbolAtom "version") = Just Version
 getIDECommand (SExpList [SymbolAtom "get-options"]) = Just GetOptions
+getIDECommand (SymbolAtom "version-ide-protocol") = Just VersionIDEProtocol
 getIDECommand _ = Nothing
 
 export
@@ -191,6 +197,8 @@ putIDECommand (Directive n)             = (SExpList [SymbolAtom "directive", Str
 putIDECommand (EnableSyntax b)                = (SExpList [SymbolAtom "enable-syntax", BoolAtom b])
 putIDECommand GetOptions                      = (SExpList [SymbolAtom "get-options"])
 putIDECommand Version                         = SymbolAtom "version"
+putIDECommand VersionIDEProtocol              = SymbolAtom "version-ide-protocol"
+
 
 export
 getMsg : SExp -> Maybe (IDECommand, Integer)
@@ -275,6 +283,10 @@ sym = UN
 export
 version : Int -> Int -> SExp
 version maj min = toSExp (SymbolAtom "protocol-version", maj, min)
+
+export
+versionProtocol : SExp
+versionProtocol = toSExp (SymbolAtom "version-ide-protocol", versionIDEProtocol)
 
 sendStr : File -> String -> IO ()
 sendStr f st =
