@@ -2,8 +2,8 @@ module Main
 
 %default total
 
-%logging declare.data.parameters 20
-%logging eval.eta 10
+%logging "declare.data.parameters" 20
+%logging "eval.eta" 10
 
 
 -- explicit

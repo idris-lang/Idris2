@@ -1,0 +1,20 @@
+Main> Expected 'case', 'if', 'do', application or operator expression.
+
+(interactive):1:4--1:5
+ 1 | :t (3 : Nat)
+        ^
+
+Main> Expected string begin.
+
+(interactive):1:5--1:6
+ 1 | :cd ..
+         ^
+
+Main> Expected string begin.
+
+(interactive):1:7--1:8
+ 1 | :load expected
+           ^
+
+Main> 
+Bye for now!
