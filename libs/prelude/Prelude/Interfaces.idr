@@ -107,7 +107,7 @@ ignore = map (const ())
 
 namespace Functor
   ||| Composition of functors is a functor.
-  export
+  public export
   [Compose] (Functor f, Functor g) => Functor (f . g) where
     map = map . map
 
@@ -165,7 +165,7 @@ a *> b = map (const id) a <*> b
 
 namespace Applicative
   ||| Composition of applicative functors is an applicative functor.
-  export
+  public export
   [Compose] (Applicative f, Applicative g) => Applicative (f . g)
     using Functor.Compose where
       pure = pure . pure
@@ -369,7 +369,7 @@ choiceMap f = foldr (\e, a => f e <|> a) empty
 
 namespace Foldable
   ||| Composition of foldables is foldable.
-  export
+  public export
   [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
@@ -393,14 +393,14 @@ for = flip traverse
 
 namespace Traversable
   ||| Composition of traversables is traversable.
-  export
+  public export
   [Compose] (Traversable t, Traversable f) => Traversable (t . f)
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
 
 namespace Monad
   ||| Composition of a traversable monad and a monad is a monad.
-  export
+  public export
   [Compose] (Monad m, Monad t, Traversable t) => Monad (m . t)
     using Applicative.Compose where
       a >>= f = a >>= map join . traverse f
