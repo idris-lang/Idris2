@@ -103,6 +103,20 @@ modules = Control.ANSI,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
 
+          Search.Generator,
+          Search.HDecidable,
+          Search.Negation,
+          Search.Properties,
+
+          Syntax.WithProof,
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic,
+
+          System.Console.GetOpt,
+          System.Future,
+          System.Random,
+          System.Path,
+
           Test.Golden,
 
           Text.Token,
@@ -117,13 +131,4 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Util,
           Text.PrettyPrint.Prettyprinter.SimpleDocTree,
           Text.PrettyPrint.Prettyprinter.Render.String,
-          Text.PrettyPrint.Prettyprinter.Render.Terminal,
-
-          System.Console.GetOpt,
-          System.Future,
-          System.Random,
-          System.Path,
-
-          Syntax.WithProof,
-          Syntax.PreorderReasoning,
-          Syntax.PreorderReasoning.Generic
+          Text.PrettyPrint.Prettyprinter.Render.Terminal
