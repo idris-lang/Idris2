@@ -361,7 +361,7 @@ Applicative List where
 public export
 Alternative List where
   empty = []
-  (<|>) = (++)
+  xs <|> ys = xs ++ ys
 
 public export
 Monad List where

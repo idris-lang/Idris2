@@ -1,5 +1,8 @@
 module Data.List.Lazy
 
+import Data.Fuel
+import Data.Stream
+
 %default total
 
 -- All functions here are public export
@@ -88,7 +91,7 @@ Applicative LazyList where
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (<+>)
+  (<|>) = (++)
 
 public export
 Monad LazyList where
