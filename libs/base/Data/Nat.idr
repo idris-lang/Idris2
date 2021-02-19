@@ -92,7 +92,7 @@ export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
-export
+public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
 isLTE (S k) Z = No succNotLTEzero
