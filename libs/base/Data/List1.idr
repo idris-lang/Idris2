@@ -105,7 +105,7 @@ export
 Semigroup (List1 a) where
   (<+>) = append
 
-export
+public export
 Functor List1 where
   map f (x ::: xs) = f x ::: map f xs
 

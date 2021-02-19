@@ -151,7 +151,7 @@ namespace Pair
   ||| using Cantor's zig zag traversal
   public export
   plane : Stream a -> Stream b -> Stream (a, b)
-  plane as bs = cantor (map (\ a => map (a,) bs) as)
+  plane as bs = cantor (map (\ a => map (\ b => (a, b)) bs) as)
 
 --------------------------------------------------------------------------------
 -- Implementations

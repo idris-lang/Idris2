@@ -58,8 +58,7 @@ Show a => Show (LazyList a) where
 
 public export
 Semigroup (LazyList a) where
-  [] <+> ys = ys
-  (x :: xs) <+> ys = x :: (xs <+> ys)
+  xs <+> ys = xs ++ ys
 
 public export
 Monoid (LazyList a) where
@@ -184,3 +183,8 @@ mapMaybe f []      = []
 mapMaybe f (x::xs) = case f x of
   Nothing => mapMaybe f xs
   Just y  => y :: mapMaybe f xs
+
+public export
+takeStream : Fuel -> Stream a -> LazyList a
+takeStream Dry _ = []
+takeStream (More f) (x :: xs) = x :: takeStream f xs
