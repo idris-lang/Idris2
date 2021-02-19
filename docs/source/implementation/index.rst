@@ -21,3 +21,4 @@ debugging and future contributions.
    :maxdepth: 1
 
    overview
+   ide-protocol
