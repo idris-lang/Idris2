@@ -360,13 +360,19 @@ for_ = flip traverse_
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
-choice : (Foldable t, Alternative f) => t (f a) -> f a
-choice = foldr (\ x, xs => x <|> xs) empty
+choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
+choice t = foldr {elem = Lazy (f a)} {acc = Lazy (f a)}
+                 (\ x, xs => x <|> xs)
+                 empty
+                 t
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap f = foldr (\e, a => f e <|> a) empty
+choiceMap act t = foldr {elem = a} {acc = Lazy (f b)}
+                        (\e, a => act e <|> a)
+                        empty
+                        t
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
