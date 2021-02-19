@@ -109,7 +109,7 @@ namespace Functor
   ||| Composition of functors is a functor.
   export
   [Compose] (Functor f, Functor g) => Functor (f . g) where
-    map fun = map (map fun)
+    map = map . map
 
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
@@ -169,8 +169,7 @@ namespace Applicative
   [Compose] (Applicative f, Applicative g) => Applicative (f . g)
     using Functor.Compose where
       pure = pure . pure
-
-      fun <*> x = ((<*>) <$> fun <*> x)
+      fun <*> x = [| fun <*> x |]
 
 public export
 interface Applicative f => Alternative f where
