@@ -101,6 +101,18 @@ isLTE (S k) (S j)
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
 
+public export
+isGTE : (m, n : Nat) -> Dec (GTE m n)
+isGTE m n = isLTE n m
+
+public export
+isLT : (m, n : Nat) -> Dec (LT m n)
+isLT m n = isLTE (S m) n
+
+public export
+isGT : (m, n : Nat) -> Dec (GT m n)
+isGT m n = isLT n m
+
 export
 lteRefl : {n : Nat} -> LTE n n
 lteRefl {n = Z}   = LTEZero
