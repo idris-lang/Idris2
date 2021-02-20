@@ -229,7 +229,7 @@ different things absolutely necessary, but the result is that it contains:
 - ``Semigroup``, ``Monoid``
 - ``Functor``, ``Applicative``, ``Monad`` and related functions
 - ``Foldable``, ``Alternative`` and ``Traversable``
-- ``Enum``, for list range syntax
+- ``Range``, for list range syntax
 - Console ``IO``
 
 Anything which doesn't fit in here has been moved to the ``base`` libraries.
