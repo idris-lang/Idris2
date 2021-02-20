@@ -57,10 +57,10 @@ test = do
     putStrLn multi4
     putStrLn """
     """
-    putStrLn ##""" 
+    putStrLn ##"""
 a
 """##
-    putStrLn ##""" 
+    putStrLn ##"""
 name: #"foo"
 version: "bar"
 bzs: \#\'a\n\t\\'
