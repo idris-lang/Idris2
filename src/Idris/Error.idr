@@ -70,7 +70,7 @@ ploc fc@(MkFC fn s e) = do
          let line = (annotate FileCtxt pipe) <++> maybe emptyDoc pretty (elemAt source sr)
          let emph = (annotate FileCtxt pipe) <++> spaces (cast sc) <+> annotate Error (pretty (Extra.replicate (ec `minus` sc) '^'))
          pure $ vsep [emptyDoc, head, firstRow, annotate FileCtxt (space <+> pretty (sr + 1)) <++> align (vsep [line, emph]), emptyDoc]
-       else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr (Prelude.min er (sr + 5)) source)) <+> line
+       else pure $ vsep (emptyDoc :: head :: addLineNumbers nsize sr (pretty <$> extractRange sr ((the (? -> ? -> ?) min) er (sr + 5)) source)) <+> line
   where
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
@@ -117,13 +117,13 @@ ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
                          pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
-                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) ((the (? -> ? -> ?) max) er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, True) => do
                          let line = fileCtxt pipe <++> maybe emptyDoc pretty (elemAt source sr1)
                          let emph = fileCtxt pipe <++> spaces (cast sc1) <+> error (pretty (Extra.replicate (ec1 `minus` sc1) '^'))
                          pure $ vsep $ [emptyDoc, head, firstRow, fileCtxt (space <+> pretty (sr1 + 1)) <++> align (vsep [line, emph])]
-                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) (Prelude.max er1 er2) source)
+                            ++ addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) ((the (? -> ? -> ?) max) er1 er2) source)
                             ++ [emptyDoc]
                        (False, True, False) => do
                          let top = addLineNumbers nsize (sr1 + 1) (pretty <$> extractRange (sr1 + 1) er1 source)

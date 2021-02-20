@@ -34,3 +34,20 @@ showVersion tag (MkVersion (maj,min,patch) versionTag) =
     showTag = case versionTag of
                 Nothing => ""
                 Just tag => "-" ++ tag
+
+export
+(<) : (Nat, Nat, Nat) -> (Nat, Nat, Nat) -> Bool
+(<) (x, y, z) (x', y', z') =
+  x < x' || x == x' && (y < y' || y == y' && z < z')
+
+export
+(<=) : (Nat, Nat, Nat) -> (Nat, Nat, Nat) -> Bool
+(<=) x y = (Version.(<) x y) || (x == y)
+
+public export
+Ver030 : (Nat, Nat, Nat)
+Ver030 = (0, 3, 0)
+
+public export
+Ver033 : (Nat, Nat, Nat)
+Ver033 = (0, 3, 3)

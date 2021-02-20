@@ -42,7 +42,7 @@ localHelper {vars} nest env nestdecls_in func
                if vis == Public
                   then map setPublic nestdecls_in
                   else nestdecls_in
-         let defNames = definedInBlock emptyNS nestdecls
+         let defNames = definedInBlock !getNS nestdecls
          names' <- traverse (applyEnv f)
                             (nub defNames) -- binding names must be unique
                                            -- fixes bug #115
@@ -78,15 +78,18 @@ localHelper {vars} nest env nestdecls_in func
              then setMultiplicity b erased :: dropLinear bs
              else b :: dropLinear bs
 
+    insertNested : (Int, Int) -> Name -> Name
+    insertNested dat (NS ns n) = NS ns (Nested dat n)
+    insertNested dat n = Nested dat n
+
     applyEnv : Int -> Name ->
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner
           = do ust <- get UST
                put UST (record { nextName $= (+1) } ust)
-               let nestedName_in = Nested (outer, nextName ust) inner
-               nestedName <- inCurrentNS nestedName_in
+               let nestedName = insertNested (outer, nextName ust) inner
                n' <- addName nestedName
-               pure (inner, (Just nestedName, reverse (allVars env),
+               pure (dropNS inner, (Just nestedName, reverse (allVars env),
                         \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))
 

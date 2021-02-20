@@ -5,6 +5,9 @@ import Data.Strings
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Data.Vect
+import Data.Vect.Elem
+import public Libraries.Data.HVect
 
 import public Core.Name.Namespace
 
@@ -24,6 +27,84 @@ data Name : Type where
      CaseBlock : String -> Int -> Name -- case block nested in (resolved) name
      WithBlock : String -> Int -> Name -- with block nested in (resolved) name
      Resolved : Int -> Name -- resolved, index into context
+
+namespace Name'
+  public export
+  data Root = User String | Machine String Int
+
+  public export
+  data ResolvedID = ID Int
+
+  public export
+  data Qualification = Qualified Namespace | Unqualified
+
+  public export
+  toMbNamespace : Qualification -> Maybe Namespace
+  toMbNamespace (Qualified ns) = Just ns
+  toMbNamespace Unqualified = Nothing
+
+  public export
+  data AuxCase = MkAuxCase
+
+  public export
+  data AuxWith = MkAuxWith
+
+  public export
+  data Nesting = Global | Nested Int
+
+  public export
+  data AuxPattern = MkAuxPattern Int
+
+  public export
+  data Display = Custom String | Regular
+
+  public export
+  data Fix = Prefix | Postfix
+
+  public export
+  parseRoot : Name -> Maybe (HVect [Root, Fix])
+  parseRoot (UN n) = Just [User n, Prefix]
+  parseRoot (RF n) = Just [User n, Postfix]
+  parseRoot (MN i n) = Just [Machine i n, Prefix]
+  parseRoot _ = Nothing
+
+  public export
+  forgetRoot : HVect [Root, Fix] -> Name
+  forgetRoot [User n, Prefix] = UN n
+  forgetRoot [User n, Postfix] = RF n
+  forgetRoot [Machine i n, _] = MN i n
+
+  public export
+  parseDisplay : Name -> Maybe (HVect [Root, Fix, Display])
+  parseDisplay (DN str n) =
+    (++ [Custom str]) <$> parseRoot n
+  parseDisplay n = (++ [Regular]) <$> parseRoot n
+
+  public export
+  forgetDisplay : HVect [Root, Fix, Display] -> Name
+  forgetDisplay [u, f, Custom dis] = DN dis (forgetRoot [u, f])
+  forgetDisplay [u, f, Regular] = forgetRoot [u, f]
+
+  public export
+  parseNesting : Name -> Maybe (HVect [Root, Fix, Display, Nesting])
+  parseNesting (Nested (defining, _) n) =
+    (++ [Nested defining]) <$> parseDisplay n
+  parseNesting n = (++ [Global]) <$> parseDisplay n
+
+  public export
+  forgetNesting : HVect [Root, Fix, Display, Nesting] -> Name
+  forgetNesting [u, f, d, Nested defining] = Nested (defining, -1) (forgetDisplay [u, f, d])
+  forgetNesting [u, f, d, Global] = forgetDisplay [u, f, d]
+
+  public export
+  parseQualification : Name -> Maybe (HVect [Root, Fix, Display, Nesting, Qualification])
+  parseQualification (NS ns n) = (++ [Qualified ns]) <$> parseNesting n
+  parseQualification n = (++ [Unqualified]) <$> parseNesting n
+
+  public export
+  forgetQualification : HVect [Root, Fix, Display, Nesting, Qualification] -> Name
+  forgetQualification [r, f, d, n, Qualified ns] = NS ns (forgetNesting [r, f, d, n])
+  forgetQualification [r, f, d, n, Unqualified] = forgetNesting [r, f, d, n]
 
 export
 mkNamespacedName : Maybe Namespace -> String -> Name

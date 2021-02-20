@@ -11,6 +11,11 @@ import TTImp.TTImp
 
 %default covering
 
+-- Auto-convert Strings to Namespaces below
+%hint
+FROMSTRING_NAMESPACE : FromString Namespace
+FROMSTRING_NAMESPACE = FromString.NAMESPACE
+
 export
 Reify BindMode where
   reify defs val@(NDCon _ n _ _ args)
@@ -27,11 +32,11 @@ export
 Reflect BindMode where
   reflect fc defs lhs env (PI c)
       = do c' <- reflect fc defs lhs env c
-           appCon fc defs (reflectionttimp "PI") [c']
+           appCon fc defs (NS (reflectionTTImpNS <.?> "BindMode") (UN "PI")) [c']
   reflect fc defs lhs env PATTERN
-      = getCon fc defs (reflectionttimp "PATTERN")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "BindMode") (UN "PATTERN"))
   reflect fc defs lhs env NONE
-      = getCon fc defs (reflectionttimp "NONE")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "BindMode") (UN "NONE"))
 
 export
 Reify UseSide where
@@ -45,9 +50,9 @@ Reify UseSide where
 export
 Reflect UseSide where
   reflect fc defs lhs env UseLeft
-      = getCon fc defs (reflectionttimp "UseLeft")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "UseSide") (UN "UseLeft"))
   reflect fc defs lhs env UseRight
-      = getCon fc defs (reflectionttimp "UseRight")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "UseSide") (UN "UseRight"))
 
 export
 Reify DotReason where
@@ -65,17 +70,17 @@ Reify DotReason where
 export
 Reflect DotReason where
   reflect fc defs lhs env NonLinearVar
-      = getCon fc defs (reflectionttimp "NonLinearVar")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "NonLinearVar"))
   reflect fc defs lhs env VarApplied
-      = getCon fc defs (reflectionttimp "VarApplied")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "VarApplied"))
   reflect fc defs lhs env NotConstructor
-      = getCon fc defs (reflectionttimp "NotConstructor")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "NotConstructor"))
   reflect fc defs lhs env ErasedArg
-      = getCon fc defs (reflectionttimp "ErasedArg")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "ErasedArg"))
   reflect fc defs lhs env UserDotted
-      = getCon fc defs (reflectionttimp "UserDotted")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "UserDotted"))
   reflect fc defs lhs env UnknownDot
-      = getCon fc defs (reflectionttimp "UnknownDot")
+      = getCon fc defs (NS (reflectionTTImpNS <.?> "DotReason") (UN "UnknownDot"))
 
 mutual
   export
@@ -445,7 +450,7 @@ mutual
     reflect fc defs lhs env (IVar tfc n)
         = do fc' <- reflect fc defs lhs env tfc
              n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "IVar") [fc', n']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IVar")) [fc', n']
     reflect fc defs lhs env (IPi tfc c p mn aty rty)
         = do fc' <- reflect fc defs lhs env tfc
              c' <- reflect fc defs lhs env c
@@ -453,7 +458,7 @@ mutual
              mn' <- reflect fc defs lhs env mn
              aty' <- reflect fc defs lhs env aty
              rty' <- reflect fc defs lhs env rty
-             appCon fc defs (reflectionttimp "IPi") [fc', c', p', mn', aty', rty']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IPi")) [fc', c', p', mn', aty', rty']
     reflect fc defs lhs env (ILam tfc c p mn aty rty)
         = do fc' <- reflect fc defs lhs env tfc
              c' <- reflect fc defs lhs env c
@@ -461,7 +466,7 @@ mutual
              mn' <- reflect fc defs lhs env mn
              aty' <- reflect fc defs lhs env aty
              rty' <- reflect fc defs lhs env rty
-             appCon fc defs (reflectionttimp "ILam") [fc', c', p', mn', aty', rty']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "ILam")) [fc', c', p', mn', aty', rty']
     reflect fc defs lhs env (ILet tfc lhsFC c n aty aval sc)
         = do fc' <- reflect fc defs lhs env tfc
              lhsFC' <- reflect fc defs lhs env lhsFC
@@ -470,107 +475,107 @@ mutual
              aty' <- reflect fc defs lhs env aty
              aval' <- reflect fc defs lhs env aval
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "ILet") [fc', lhsFC', c', n', aty', aval', sc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "ILet")) [fc', lhsFC', c', n', aty', aval', sc']
     reflect fc defs lhs env (ICase tfc sc ty cs)
         = do fc' <- reflect fc defs lhs env tfc
              sc' <- reflect fc defs lhs env sc
              ty' <- reflect fc defs lhs env ty
              cs' <- reflect fc defs lhs env cs
-             appCon fc defs (reflectionttimp "ICase") [fc', sc', ty', cs']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "ICase")) [fc', sc', ty', cs']
     reflect fc defs lhs env (ILocal tfc ds sc)
         = do fc' <- reflect fc defs lhs env tfc
              ds' <- reflect fc defs lhs env ds
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "ILocal") [fc', ds', sc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "ILocal")) [fc', ds', sc']
     reflect fc defs lhs env (ICaseLocal tfc u i args t)
         = reflect fc defs lhs env t -- shouldn't see this anyway...
     reflect fc defs lhs env (IUpdate tfc ds sc)
         = do fc' <- reflect fc defs lhs env tfc
              ds' <- reflect fc defs lhs env ds
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "IUpdate") [fc', ds', sc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IUpdate")) [fc', ds', sc']
     reflect fc defs lhs env (IApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "IApp") [fc', f', a']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IApp")) [fc', f', a']
     reflect fc defs lhs env (IAutoApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "IAutoApp") [fc', f', a']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IAutoApp")) [fc', f', a']
     reflect fc defs lhs env (INamedApp tfc f m a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              m' <- reflect fc defs lhs env m
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "INamedApp") [fc', f', m', a']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "INamedApp")) [fc', f', m', a']
     reflect fc defs lhs env (IWithApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "IWithApp") [fc', f', a']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IWithApp")) [fc', f', a']
     reflect fc defs lhs env (ISearch tfc d)
         = do fc' <- reflect fc defs lhs env tfc
              d' <- reflect fc defs lhs env d
-             appCon fc defs (reflectionttimp "ISearch") [fc', d']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "ISearch")) [fc', d']
     reflect fc defs lhs env (IAlternative tfc t as)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
              as' <- reflect fc defs lhs env as
-             appCon fc defs (reflectionttimp "IAlternative") [fc', t', as']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IAlternative")) [fc', t', as']
     reflect fc defs lhs env (IRewrite tfc t sc)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "IRewrite") [fc', t', sc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IRewrite")) [fc', t', sc']
     reflect fc defs lhs env (ICoerced tfc d) = reflect fc defs lhs env d
     reflect fc defs lhs env (IBindHere tfc n sc)
         = do fc' <- reflect fc defs lhs env tfc
              n' <- reflect fc defs lhs env n
              sc' <- reflect fc defs lhs env sc
-             appCon fc defs (reflectionttimp "IBindHere") [fc', n', sc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IBindHere")) [fc', n', sc']
     reflect fc defs lhs env (IBindVar tfc n)
         = do fc' <- reflect fc defs lhs env tfc
              n' <- reflect fc defs lhs env n
-             appCon fc defs (reflectionttimp "IBindVar") [fc', n']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IBindVar")) [fc', n']
     reflect fc defs lhs env (IAs tfc nameFC s n t)
         = do fc' <- reflect fc defs lhs env tfc
              nameFC' <- reflect fc defs lhs env nameFC
              s' <- reflect fc defs lhs env s
              n' <- reflect fc defs lhs env n
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IAs") [fc', nameFC', s', n', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IAs")) [fc', nameFC', s', n', t']
     reflect fc defs lhs env (IMustUnify tfc r t)
         = do fc' <- reflect fc defs lhs env tfc
              r' <- reflect fc defs lhs env r
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IMustUnify") [fc', r', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IMustUnify")) [fc', r', t']
     reflect fc defs lhs env (IDelayed tfc r t)
         = do fc' <- reflect fc defs lhs env tfc
              r' <- reflect fc defs lhs env r
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IDelayed") [fc', r', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IDelayed")) [fc', r', t']
     reflect fc defs lhs env (IDelay tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IDelay") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IDelay")) [fc', t']
     reflect fc defs lhs env (IForce tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IForce") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IForce")) [fc', t']
     reflect fc defs lhs env (IQuote tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IQuote") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IQuote")) [fc', t']
     reflect fc defs lhs env (IQuoteName tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IQuoteName") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IQuoteName")) [fc', t']
     reflect fc defs lhs env (IQuoteDecl tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IQuoteDecl") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IQuoteDecl")) [fc', t']
     reflect fc defs lhs env (IUnquote tfc (IVar _ t))
         = pure (Ref tfc Bound t)
     reflect fc defs lhs env (IUnquote tfc t)
@@ -580,14 +585,14 @@ mutual
     reflect fc defs lhs env (IPrimVal tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IPrimVal") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IPrimVal")) [fc', t']
     reflect fc defs lhs env (IType tfc)
         = do fc' <- reflect fc defs lhs env tfc
-             appCon fc defs (reflectionttimp "IType") [fc']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IType")) [fc']
     reflect fc defs lhs env (IHole tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "IHole") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "IHole")) [fc', t']
     reflect fc defs lhs env (IUnifyLog tfc _ t)
         = reflect fc defs lhs env t
     reflect fc defs True env (Implicit tfc t)
@@ -595,54 +600,54 @@ mutual
     reflect fc defs lhs env (Implicit tfc t)
         = do fc' <- reflect fc defs lhs env tfc
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "Implicit") [fc', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "Implicit")) [fc', t']
     reflect fc defs lhs env (IWithUnambigNames tfc ns t)
         = do fc' <- reflect fc defs lhs env tfc
              ns' <- reflect fc defs lhs env ns
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "WithUnambigNames") [fc', ns', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "TTImp") (UN "WithUnambigNames")) [fc', ns', t']
 
   export
   Reflect IFieldUpdate where
     reflect fc defs lhs env (ISetField p t)
         = do p' <- reflect fc defs lhs env p
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "ISetField") [p', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "IFieldUpdate") (UN "ISetField")) [p', t']
     reflect fc defs lhs env (ISetFieldApp p t)
         = do p' <- reflect fc defs lhs env p
              t' <- reflect fc defs lhs env t
-             appCon fc defs (reflectionttimp "ISetFieldApp") [p', t']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "IFieldUpdate") (UN "ISetFieldApp")) [p', t']
 
   export
   Reflect AltType where
-    reflect fc defs lhs env FirstSuccess = getCon fc defs (reflectionttimp "FirstSuccess")
-    reflect fc defs lhs env Unique = getCon fc defs (reflectionttimp "Unique")
+    reflect fc defs lhs env FirstSuccess = getCon fc defs (NS (reflectionTTImpNS <.?> "AltType") (UN "FirstSuccess"))
+    reflect fc defs lhs env Unique = getCon fc defs (NS (reflectionTTImpNS <.?> "AltType") (UN "Unique"))
     reflect fc defs lhs env (UniqueDefault x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "UniqueDefault") [x']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "AltType") (UN "UniqueDefault")) [x']
 
   export
   Reflect FnOpt where
-    reflect fc defs lhs env Inline = getCon fc defs (reflectionttimp "Inline")
-    reflect fc defs lhs env TCInline = getCon fc defs (reflectionttimp "TCInline")
+    reflect fc defs lhs env Inline = getCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "Inline"))
+    reflect fc defs lhs env TCInline = getCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "TCInline"))
     reflect fc defs lhs env (Hint x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "Hint") [x']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "Hint")) [x']
     reflect fc defs lhs env (GlobalHint x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "GlobalHint") [x']
-    reflect fc defs lhs env ExternFn = getCon fc defs (reflectionttimp "ExternFn")
+             appCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "GlobalHint")) [x']
+    reflect fc defs lhs env ExternFn = getCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "ExternFn"))
     reflect fc defs lhs env (ForeignFn x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "ForeignFn") [x']
-    reflect fc defs lhs env Invertible = getCon fc defs (reflectionttimp "Invertible")
+             appCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "ForeignFn")) [x']
+    reflect fc defs lhs env Invertible = getCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "Invertible"))
     reflect fc defs lhs env (Totality r)
         = do r' <- reflect fc defs lhs env r
-             appCon fc defs (reflectionttimp "Totality") [r']
-    reflect fc defs lhs env Macro = getCon fc defs (reflectionttimp "Macro")
+             appCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "Totality")) [r']
+    reflect fc defs lhs env Macro = getCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "Macro"))
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
-             appCon fc defs (reflectionttimp "SpecArgs") [r']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "FnOpt") (UN "SpecArgs")) [r']
 
   export
   Reflect ImpTy where
@@ -651,17 +656,17 @@ mutual
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkTy") [w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "ITy") (UN "MkTy")) [w', x', y', z']
 
   export
   Reflect DataOpt where
     reflect fc defs lhs env (SearchBy x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "SearchBy") [x']
-    reflect fc defs lhs env NoHints = getCon fc defs (reflectionttimp "NoHints")
-    reflect fc defs lhs env UniqueSearch = getCon fc defs (reflectionttimp "UniqueSearch")
-    reflect fc defs lhs env External = getCon fc defs (reflectionttimp "External")
-    reflect fc defs lhs env NoNewtype = getCon fc defs (reflectionttimp "NoNewtype")
+             appCon fc defs (NS (reflectionTTImpNS <.?> "DataOpt") (UN "SearchBy")) [x']
+    reflect fc defs lhs env NoHints = getCon fc defs (NS (reflectionTTImpNS <.?> "DataOpt") (UN "NoHints"))
+    reflect fc defs lhs env UniqueSearch = getCon fc defs (NS (reflectionTTImpNS <.?> "DataOpt") (UN "UniqueSearch"))
+    reflect fc defs lhs env External = getCon fc defs (NS (reflectionTTImpNS <.?> "DataOpt") (UN "External"))
+    reflect fc defs lhs env NoNewtype = getCon fc defs (NS (reflectionTTImpNS <.?> "DataOpt") (UN "NoNewtype"))
 
   export
   Reflect ImpData where
@@ -671,12 +676,12 @@ mutual
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkData") [v', w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Data") (UN "MkData")) [v', w', x', y', z']
     reflect fc defs lhs env (MkImpLater x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkLater") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Data") (UN "MkLater")) [x', y', z']
 
   export
   Reflect IField where
@@ -686,7 +691,7 @@ mutual
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkIField") [v', w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "IField") (UN "MkIField")) [v', w', x', y', z']
 
   export
   Reflect ImpRecord where
@@ -696,7 +701,7 @@ mutual
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Record") (UN "MkRecord")) [v', w', x', y', z']
 
   export
   Reflect ImpClause where
@@ -704,17 +709,17 @@ mutual
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "PatClause") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Clause") (UN "PatClause")) [x', y', z']
     reflect fc defs lhs env (WithClause v w x y z)
         = do v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "WithClause") [v', w', x', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Clause") (UN "WithClause")) [v', w', x', z']
     reflect fc defs lhs env (ImpossibleClause x y)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
-             appCon fc defs (reflectionttimp "ImpossibleClause") [x', y']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Clause") (UN "ImpossibleClause")) [x', y']
 
   export
   Reflect ImpDecl where
@@ -724,46 +729,46 @@ mutual
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IClaim") [v', w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IClaim")) [v', w', x', y', z']
     reflect fc defs lhs env (IData x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IData") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IData")) [x', y', z']
     reflect fc defs lhs env (IDef x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IDef") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IDef")) [x', y', z']
     reflect fc defs lhs env (IParameters x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IParameters") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IParameters")) [x', y', z']
     reflect fc defs lhs env (IRecord x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IRecord") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IRecord")) [x', y', z']
     reflect fc defs lhs env (INamespace x y z)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "INamespace") [x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "INamespace")) [x', y', z']
     reflect fc defs lhs env (ITransform w x y z)
         = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "ITransform") [w', x', y', z']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "ITransform")) [w', x', y', z']
     reflect fc defs lhs env (IRunElabDecl w x)
         = throw (GenericMsg fc "Can't reflect a %runElab")
     reflect fc defs lhs env (IPragma _ x)
         = throw (GenericMsg fc "Can't reflect a pragma")
     reflect fc defs lhs env (ILog x)
         = do x' <- reflect fc defs lhs env x
-             appCon fc defs (reflectionttimp "ILog") [x']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "ILog")) [x']
     reflect fc defs lhs env (IHide x y)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
-             appCon fc defs (reflectionttimp "IHide") [x', y']
+             appCon fc defs (NS (reflectionTTImpNS <.?> "Decl") (UN "IHide")) [x', y']

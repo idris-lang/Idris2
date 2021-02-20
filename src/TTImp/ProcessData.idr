@@ -19,8 +19,12 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.Vect
+import Data.Vect.Elem
+import Data.Vect.Quantifiers
 import Data.Maybe
 import Libraries.Data.NameMap
+import Libraries.Data.HVect
 
 %default covering
 
@@ -79,17 +83,59 @@ updateNS orig ns tm = updateNSApp tm
     updateNSApp (INamedApp fc f n arg) = INamedApp fc (updateNSApp f) n arg
     updateNSApp t = t
 
-||| A data constructor name is an unqualified user-defined (UN) name.
-export
-isValidInputDConName : Name -> Maybe String
-isValidInputDConName = isUN
 
-||| A type constructor name is a potentially qualified, user-defined (UN) name.
-export
-isValidInputTConName : Name -> Maybe (Maybe Namespace, String)
-isValidInputTConName (NS ns (UN n)) = Just (Just ns, n)
-isValidInputTConName (UN n) = Just (Nothing, n)
-isValidInputTConName _ = Nothing
+public export
+ConName : Type
+ConName = HVect [Root, Fix, Display, Nesting, Qualification]
+
+public export
+QualifiedConName : Type
+QualifiedConName = HVect [Root, Fix, Display, Nesting, Namespace]
+
+public export
+UnqualifiedConName : Type
+UnqualifiedConName = HVect [Root, Fix, Display, Nesting]
+
+public export
+parseConName : Name -> Maybe ConName
+parseConName = parseQualification
+
+public export
+forgetConName : ConName -> Name
+forgetConName = forgetQualification
+
+public export
+forgetUnqualifiedConName : UnqualifiedConName -> Name
+forgetUnqualifiedConName = forgetNesting
+
+public export
+forgetQualifiedConName : QualifiedConName -> Name
+forgetQualifiedConName [r, f, d, n, ns] = NS ns (forgetUnqualifiedConName [r, f, d, n])
+
+public export
+toUnqualified : ConName -> UnqualifiedConName
+toUnqualified [r, f, d, n, _] = [r, f, d, n]
+
+public export
+mbMkInnerNamespace : (tconNameRoot : Root) -> Maybe String
+mbMkInnerNamespace (User root) = Just root
+mbMkInnerNamespace (Machine _ _) = Nothing
+
+deepenDConName : (tconName : QualifiedConName) -> (dconName : ConName) -> Maybe QualifiedConName
+deepenDConName tconName dconName =
+  let base = get tconName
+      mbsuffix = mbMkInnerNamespace (get tconName)
+      full = maybe base
+               (\suffix => base <.> mkNamespace suffix)
+               mbsuffix
+   in case get dconName of
+        Qualified ns =>
+          if full == ns
+          then Just (the UnqualifiedConName (subHVect dconName) ++ [full])
+          else Nothing
+        Unqualified =>
+          Just (the UnqualifiedConName (subHVect dconName) ++ [full])
+
 
 checkCon : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -97,16 +143,22 @@ checkCon : {vars : _} ->
            {auto u : Ref UST UState} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility ->
-           (tconName : (Namespace, String)) -> (resolved : Name) ->
+           (tconName : QualifiedConName) -> (tconResolved : Int) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis (tconNs, tconRoot) tn (MkImpTy fc _ cn_in ty_raw)
-    = do let Just cn_root = isValidInputDConName cn_in
+checkCon {vars} opts nest env vis tn' tnID (MkImpTy fc _ cn_in ty_raw)
+    = do let Just cnParsed = parseConName cn_in
            | Nothing =>
                throw (GenericMsg fc $ "Invalid data constructor name: " ++ show cn_in)
-         let cn = NS (tconNs <.> mkNamespace tconRoot) (UN cn_root)
-         let ty_raw = updateNS (UN tconRoot) tn ty_raw
+         let Just cn' = deepenDConName tn' cnParsed
+           | _ =>
+               throw (GenericMsg fc $ "Invalid data constructor name: " ++ show cn_in)
+         let cn = forgetQualifiedConName cn'
+         let tn = forgetQualifiedConName tn'
+         let ty_raw =
+              case get tn' of
+                User root => updateNS (UN root) tn ty_raw
+                Machine _ _ => ty_raw
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
-         log "declare.data.constructor" 10 $ "Updated " ++ show (tconRoot, tn)
 
          defs <- get Ctxt
          -- Check 'cn' is undefined
@@ -119,7 +171,7 @@ checkCon {vars} opts nest env vis (tconNs, tconRoot) tn (MkImpTy fc _ cn_in ty_r
                               (gType fc)
 
          -- Check 'ty' returns something in the right family
-         checkFamily fc cn tn env !(nf defs env ty)
+         checkFamily fc cn (Resolved tnID) env !(nf defs env ty)
          let fullty = abstractEnvType fc env ty
          logTermNF "declare.data.constructor" 5 ("Constructor " ++ show cn) [] fullty
 
@@ -267,12 +319,14 @@ processData : {vars : _} ->
               Env Term vars -> FC -> Visibility ->
               ImpData -> Core ()
 processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
-    = do let Just (mbNs, tconRoot) = isValidInputTConName n_in
+    = do let Just n' = parseConName n_in
            | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show n_in)
-         let ns = fromMaybe !getNS mbNs
+         let ns = fromMaybe !getNS (toMbNamespace (get n'))
+         let n' = toUnqualified n' ++ [ns]
+         let mbInner = mbMkInnerNamespace (get n')
          -- Namespace in which to define constructors.
-         let nsNested = ns <.> mkNamespace tconRoot
-         let n = NS ns (UN tconRoot)
+         let nsNested = maybe ns (\root => ns <.> mkNamespace root) mbInner
+         let n = forgetQualifiedConName n'
          ty_raw <- bindTypeNames [] vars ty_raw
          -- Tell Idris that the nested namespace, the constructors
          -- are to be checked in, is accessible (its names are visible) from the outer.
@@ -311,15 +365,17 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
                       addHashWithNames fullty
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
-    = do let Just (mbNs, tconRoot) = isValidInputTConName n_in
+    = do let Just n' = parseConName n_in
            | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show n_in)
-         let ns = fromMaybe !getNS mbNs
+         let ns = fromMaybe !getNS (toMbNamespace (get n'))
+         let n' = toUnqualified n' ++ [ns]
+         let mbInner = mbMkInnerNamespace (get n')
          -- Namespace in which to define constructors.
-         let nsNested = ns <.> mkNamespace tconRoot
+         let nsNested = maybe ns (\root => ns <.> mkNamespace root) mbInner
+         let n = forgetQualifiedConName n'
          -- Tell Idris that the nested namespace, the constructors
          -- are to be checked in, is accessible (names are visible) from the outer.
          update Ctxt {nestedNS $= (nsNested ::)}
-         let n = NS ns (UN tconRoot)
          ty_raw <- bindTypeNames [] vars ty_raw
 
          log "declare.data" 1 $ "Processing " ++ show n
@@ -365,7 +421,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          -- Constructors are private if the data type as a whole is
          -- export
          let cvis = if vis == Export then Private else vis
-         cons <- traverse (checkCon eopts nest env cvis (ns, tconRoot) (Resolved tidx)) cons_raw
+         cons <- traverse (checkCon eopts nest env cvis n' tidx) cons_raw
 
          let ddef = MkData (MkCon dfc n arity fullty) cons
          addData vars vis tidx ddef

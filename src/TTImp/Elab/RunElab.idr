@@ -33,7 +33,9 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
          fnm <- toFullNames nm
          case fnm of
               NS ns (UN n)
-                 => if ns == reflectionNS then elabCon defs n (map snd args) else failWith defs
+                 => if (reflectionNS <.?> mkNamespace "Elab") == ns
+                      then elabCon defs n (map snd args)
+                      else failWith defs
               _ => failWith defs
   where
     failWith : Defs -> Core a
@@ -183,7 +185,7 @@ checkRunElab rig elabinfo nest env fc script exp
          unless (isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN "Elab")
-         let ttn = reflectiontt "TT"
+         let ttn = NS reflectionTTNS (UN "TT")
          elabtt <- appCon fc defs n [expected]
          (stm, sty) <- runDelays 0 $
                            check rig elabinfo nest env script (Just (gnf env elabtt))

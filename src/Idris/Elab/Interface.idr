@@ -24,7 +24,11 @@ import TTImp.Utils
 
 import Libraries.Data.ANameMap
 import Libraries.Data.List.Extra
+import Libraries.Data.HVect
 import Data.List
+import Data.Vect
+import Data.Vect.Elem
+import Data.Vect.Quantifiers
 import Data.Maybe
 
 %default covering
@@ -335,20 +339,22 @@ elabInterface : {vars : _} ->
                 Core ()
 elabInterface {vars} fc vis env nest constraints iname params dets conName_in body
     = do currentNS <- getNS -- Save the ns we are in.
-         let Just conNameRoot = isValidInputDConName conName_in
+         let Just conName' = parseConName conName_in
            | _ =>
                throw (GenericMsg fc $
                  "Invalid data constructor name: " ++ show conName_in)
-         let conName = UN conNameRoot
-         let Just (mbNs, tconNameRoot) = isValidInputTConName iname
+         let conName = forgetUnqualifiedConName (toUnqualified conName')
+         let Just tconName' = parseConName iname
            | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show iname)
          -- Namespace in which to define the type constructor.
-         let ns = fromMaybe currentNS mbNs
-         let tconNs = NS ns (UN tconNameRoot)
+         let ns = fromMaybe currentNS (toMbNamespace (get tconName'))
+         let tconName' = toUnqualified tconName' ++ [ns]
+         let tconNS = forgetQualifiedConName tconName'
+         let mbInner = mbMkInnerNamespace (get tconName')
          -- Namespace in which to define the constructor and projections.
-         let nsNested = ns <.> mkNamespace tconNameRoot
+         let nsNested = maybe ns (\root => ns <.> mkNamespace root) mbInner
          -- Machine generated names need to be qualified when looking them up
-         let conNameNs = NS nsNested conName
+         let conNameNS = NS nsNested conName
          let meth_sigs = mapMaybe getSig body
          let meth_decls = map sigToDecl meth_sigs
          let meth_names = map name meth_decls
@@ -356,19 +362,19 @@ elabInterface {vars} fc vis env nest constraints iname params dets conName_in bo
 
          elabAsData conName meth_names meth_sigs
          setNS nsNested
-         elabConstraintHints conNameNs meth_names
+         elabConstraintHints conNameNS meth_names
          elabMethods conName ns nsNested meth_names meth_sigs
          ds <- traverse (elabDefault meth_decls ns nsNested) defaults
 
          ns_meths <- traverse (\mt => do n <- inCurrentNS mt.name
                                          pure (record { name = n } mt)) meth_decls
          defs <- get Ctxt
-         Just ty <- lookupTyExact tconNs (gamma defs)
-              | Nothing => throw (UndefinedName fc tconNs)
+         Just ty <- lookupTyExact tconNS (gamma defs)
+              | Nothing => throw (UndefinedName fc tconNS)
          let implParams = getImplParams ty
          setNS currentNS
 
-         updateIfaceSyn tconNs conNameNs
+         updateIfaceSyn tconNS conNameNS
                         implParams paramNames (map snd constraints)
                         ns_meths ds
   where

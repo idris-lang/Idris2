@@ -965,7 +965,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
              empty <- clearDefs defs
              fa_tys <- the (Core (Maybe _, ArgType _)) $
                 case fty of
-                     Nothing => pure (Nothing, CaseBuilder.Unknown)
+                     Nothing => pure (Nothing, Unknown)
                      Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
                         pure (Just !(fsc defs (toClosure defaultOpts [] (Ref pfc Bound arg))),
                                 Known c (embed {more = arg :: args}
@@ -1000,7 +1000,7 @@ patCompile fc fn phase ty (p :: ps) def
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
-                                 map (TT.weakenNs n) def)
+                                 map (weakenNs n) def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : List Name) ->

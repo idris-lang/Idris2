@@ -18,7 +18,12 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
+import Data.Vect
+import Data.Vect.Elem
+import Data.Vect.Quantifiers
 import Data.Maybe
+
+import Libraries.Data.HVect
 
 %default covering
 
@@ -45,28 +50,30 @@ elabRecord : {vars : _} ->
              Core ()
 elabRecord {vars} eopts fc env nest vis tn params conName_in fields
     = do currentNS <- getNS -- Save the ns we are in.
-         let Just conNameRoot = isValidInputDConName conName_in
+         let Just conName' = parseConName conName_in
            | _ =>
                throw (GenericMsg fc $
                  "Invalid data constructor name: " ++ show conName_in)
-         let conName = UN conNameRoot
-         let Just (mbNs, tconNameRoot) = isValidInputTConName tn
+         let conName = forgetUnqualifiedConName (toUnqualified conName')
+         let Just tconName' = parseConName tn
            | _ => throw (GenericMsg fc $ "Invalid type constructor name: " ++ show tn)
          -- Namespace in which to define the type constructor.
-         let ns = fromMaybe currentNS mbNs
-         let tconNs = NS ns (UN tconNameRoot)
+         let ns = fromMaybe currentNS (toMbNamespace (get tconName'))
+         let tconName' = toUnqualified tconName' ++ [ns]
+         let tconNS = forgetQualifiedConName tconName'
+         let mbInner = mbMkInnerNamespace (get tconName')
          -- Namespace in which to define the constructor and projections.
-         let nsNested = ns <.> mkNamespace tconNameRoot
-         elabAsData tconNs conName
+         let nsNested = maybe ns (\root => ns <.> mkNamespace root) mbInner
+         elabAsData tconNS conName
          defs <- get Ctxt
          Just conty <- lookupTyExact (NS nsNested conName) (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ " failed"))
 
          -- Go into the nested namespace for elaboration of projections.
          setNS nsNested
-         elabGetters tconNs conName nsNested 0 [] RF [] conty -- make postfix projections
+         elabGetters tconNS conName nsNested 0 [] RF [] conty -- make postfix projections
          when !isPrefixRecordProjections $
-           elabGetters tconNs conName nsNested 0 [] UN [] conty -- make prefix projections
+           elabGetters tconNS conName nsNested 0 [] UN [] conty -- make prefix projections
          -- Restore to the previous namespace.
          setNS currentNS
   where

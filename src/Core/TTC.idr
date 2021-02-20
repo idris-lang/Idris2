@@ -885,7 +885,7 @@ TTC Def where
              8 => do g <- fromBuf b; envb <- fromBuf b; cs <- fromBuf b
                      pure (Guess g envb cs)
              9 => pure ImpBind
-             10 => pure Context.Delayed
+             10 => pure Delayed
              _ => corrupt "Def"
 
 export

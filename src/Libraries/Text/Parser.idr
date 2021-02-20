@@ -1,12 +1,18 @@
 module Libraries.Text.Parser
 
-import Libraries.Data.Bool.Extra
 import Data.List
+import Data.List1
 import Data.Nat
+import Data.String
+import Language.Reflection
+import Language.Reflection.Disambiguate
+import Libraries.Data.Bool.Extra
 
 import public Libraries.Text.Parser.Core
 import public Libraries.Text.Quantity
 import public Libraries.Text.Token
+
+%language ElabReflection
 
 %default total
 
@@ -59,7 +65,8 @@ choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
                                                f x <|> acc)
                            (fail "No more options") xs
 
-%hide Prelude.(>>=)
+-- %hide Prelude.(>>=)
+%runElab hideName "Prelude" `{{(>>=)}}
 
 ||| Try each grammar in a container until the first one succeeds.
 ||| Fails if the container is empty.

@@ -30,7 +30,7 @@ processRunElab eopts nest env fc tm
              throw (GenericMsg fc "%language ElabReflection not enabled")
          tidx <- resolveName (UN "[elaborator script]")
          let n = NS reflectionNS (UN "Elab")
-         unit <- getCon fc defs (builtin "Unit")
+         unit <- getCon fc defs (NS builtinNS (UN "Unit"))
          exp <- appCon fc defs n [unit]
 
          stm <- checkTerm tidx InExpr eopts nest env tm (gnf env exp)

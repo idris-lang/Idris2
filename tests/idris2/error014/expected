@@ -1,5 +1,5 @@
 1/1: Building Issue735 (Issue735.idr)
-Error: Constructor Prelude.Types.:: is not fully applied.
+Error: Constructor Prelude.Types.List.:: is not fully applied.
 
 Issue735.idr:5:8--5:12
    |

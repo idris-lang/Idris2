@@ -172,8 +172,8 @@ bindUnqs : {vars : _} ->
 bindUnqs [] _ _ _ _ tm = pure tm
 bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
     = do defs <- get Ctxt
-         Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
-              | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
+         Just (idx, gdef) <- lookupCtxtExactI (NS reflectionTTImpNS (UN "TTImp")) (gamma defs)
+              | _ => throw (UndefinedName fc (NS reflectionTTImpNS (UN "TTImp")))
          (escv, escty) <- check rig elabinfo nest env esctm
                                 (Just (gnf env (Ref fc (TyCon 0 0)
                                            (Resolved idx))))
@@ -201,7 +201,7 @@ checkQuote rig elabinfo nest env fc tm exp
          tm' <- getUnquote tm
          qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
-         qty <- getCon fc defs (reflectionttimp "TTImp")
+         qty <- getCon fc defs (NS reflectionTTImpNS (UN "TTImp"))
          qtm <- bindUnqs unqs rig elabinfo nest env qtm
          fullqtm <- normalise defs env qtm
          checkExp rig elabinfo env fc fullqtm (gnf env qty) exp
@@ -219,7 +219,7 @@ checkQuoteName : {vars : _} ->
 checkQuoteName rig elabinfo nest env fc n exp
     = do defs <- get Ctxt
          qnm <- reflect fc defs (onLHS (elabMode elabinfo)) env n
-         qty <- getCon fc defs (reflectiontt "Name")
+         qty <- getCon fc defs (NS reflectionTTNS (UN "Name"))
          checkExp rig elabinfo env fc qnm (gnf env qty) exp
 
 export
@@ -238,8 +238,8 @@ checkQuoteDecl rig elabinfo nest env fc ds exp
          ds' <- traverse getUnquoteDecl ds
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
-         qd <- getCon fc defs (reflectionttimp "Decl")
-         qty <- appCon fc defs (preludetypes "List") [qd]
+         qd <- getCon fc defs (NS reflectionTTImpNS (UN "Decl"))
+         qty <- appCon fc defs (NS typesNS (UN "List")) [qd]
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qds)
                   (gnf env qty) exp

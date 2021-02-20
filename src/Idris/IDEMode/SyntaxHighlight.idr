@@ -112,7 +112,7 @@ outputNameSyntax (fc, (name, _, term)) =
                  (PrimVal fc c) => Just Typ
                  (Erased fc imp) => Just Bound
                  (TType fc) => Just Typ
-      hilite = Prelude.map (\ d => MkHighlight fc name False "" d "" (show term) "") dec
+      hilite = map (\ d => MkHighlight fc name False "" d "" (show term) "") dec
   in maybe (pure ()) outputHighlight hilite
 
 export

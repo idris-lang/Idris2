@@ -604,15 +604,22 @@ definedInBlock ns decls =
            RF _ => NS ns n
            _ => n
 
+    extractNS : Name -> Maybe Namespace
+    extractNS (NS ns _) = Just ns
+    extractNS _ = Nothing
+
     defName : Namespace -> ImpDecl -> List Name
     defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
     defName ns (IData _ _ (MkImpData _ n _ _ cons))
-        = expandNS ns n :: map (expandNS ns) (map getName cons)
+        = let ns' = fromMaybe ns (extractNS (expandNS ns n))
+              ns'Nested = ns' <.> mkNamespace (nameRoot n)
+           in
+             expandNS ns n :: map (expandNS ns) (map (NS ns'Nested . getName) cons)
     defName ns (IData _ _ (MkImpLater _ n _)) = [expandNS ns n]
     defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
     defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
     defName ns (IRecord _ _ (MkImpRecord _ n _ con flds))
-        = expandNS ns con :: all
+        = all
       where
         fldns : Namespace
         fldns = ns <.> mkNamespace (nameRoot n)
@@ -635,7 +642,9 @@ definedInBlock ns decls =
         -- inside the parameter block)
         -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns) (fnsRF ++ fnsUN)
+        all = expandNS fldns con
+           :: expandNS ns n
+           :: map (expandNS fldns) (fnsRF ++ fnsUN)
 
     defName ns (IPragma pns _) = map (expandNS ns) pns
     defName _ _ = []

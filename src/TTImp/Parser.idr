@@ -13,6 +13,10 @@ import        Data.List.Views
 import        Data.List1
 import        Data.Maybe
 import        Data.Strings
+import        Language.Reflection
+import        Language.Reflection.Disambiguate
+
+%language ElabReflection
 
 topDecl : FileName -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
@@ -22,13 +26,26 @@ collectDefs : List ImpDecl -> List ImpDecl
 
 %default covering
 
-%hide Prelude.(>>=)
+%runElab hideName "Reflection" `{{DataOpt}}
+%runElab hideName "Reflection" `{{FC}}
+%runElab hideName "Reflection" `{{FilePos}}
+%runElab hideName "Reflection" `{{FnOpt}}
+%runElab hideName "Reflection" `{{IFieldUpdate}}
+%runElab hideName "Reflection" `{{IField}}
+%runElab hideName "Reflection" `{{Namespace}}
+%runElab hideName "Reflection" `{{Name}}
+%runElab hideName "Reflection" `{{PiInfo}}
+%runElab hideName "Reflection" `{{TotalReq}}
+%runElab hideName "Reflection" `{{Visibility}}
+
+%runElab hideName "Prelude" `{{(>>=)}}
+%runElab hideName "Prelude" `{{pure}}
+%runElab hideName "Prelude" `{{(<|>)}}
+
 %hide Core.Core.(>>=)
-%hide Prelude.pure
 %hide Core.Core.pure
 
 %hide Lexer.Core.(<|>)
-%hide Prelude.(<|>)
 
 atom : FileName -> Rule RawImp
 atom fname

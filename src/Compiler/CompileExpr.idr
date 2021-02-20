@@ -167,9 +167,9 @@ natMinus fc fc' [m,n] = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]
 
 natHack : CExp vars -> CExp vars
 natHack = magic
-    [ MagicCCon typesNS "Z" 0
+    [ MagicCCon (typesNS <.?> mkNamespace "Nat") "Z" 0
          (\ fc, [] => CPrimVal fc (BI 0))
-    , MagicCCon typesNS "S" 1
+    , MagicCCon (typesNS <.?> mkNamespace "Nat") "S" 1
          (\ fc, [k] => CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k])
     , MagicCRef typesNS "natToInteger" 1
          (\ _, _, [k] => k)
@@ -185,7 +185,7 @@ natHack = magic
 
 isNatCon : Name -> Bool
 isNatCon (NS ns (UN n))
-   = (n == "Z" || n == "S") && ns == typesNS
+   = (n == "Z" || n == "S") && ns == (typesNS <.?> mkNamespace "Nat")
 isNatCon _ = False
 
 natBranch : CConAlt vars -> Bool
@@ -193,14 +193,14 @@ natBranch (MkConAlt n _ _ _) = isNatCon n
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
 trySBranch n (MkConAlt (NS ns (UN nm)) _ [arg] sc)
-  = do guard (nm == "S" && ns == typesNS)
+  = do guard (nm == "S" && ns == (typesNS <.?> mkNamespace "Nat"))
        let fc = getFC n
        pure (CLet fc arg True (natMinus fc fc [n, CPrimVal fc (BI 1)]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
 tryZBranch (MkConAlt (NS ns (UN n)) _ [] sc)
-   = do guard (n == "Z" && ns == typesNS)
+   = do guard (n == "Z" && ns == (typesNS <.?> mkNamespace "Nat"))
         pure sc
 tryZBranch _ = Nothing
 
@@ -227,8 +227,8 @@ natHackTree t = t
 -- TODO: Generalise to all finite enumerations
 isFiniteEnum : Name -> Bool
 isFiniteEnum (NS ns (UN n))
-   =  ((n == "True" || n == "False") && ns == basicsNS) -- booleans
-   || ((n == "LT" || n == "EQ" || n == "GT") && ns == eqOrdNS) -- comparison
+   =  ((n == "True" || n == "False") && ns == (basicsNS <.?> mkNamespace "Bool")) -- booleans
+   || ((n == "LT" || n == "EQ" || n == "GT") && ns == (eqOrdNS <.?> mkNamespace "Ordering")) -- comparison
 isFiniteEnum _ = False
 
 boolHackTree : CExp vars -> CExp vars

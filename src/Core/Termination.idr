@@ -371,7 +371,7 @@ mutual
               (caseFn fn,
                   do mps <- getCasePats defs fn pats args
                      case mps of
-                          Nothing => pure Prelude.Nil
+                          Nothing => pure []
                           Just ps => do scs <- traverse (findInCase defs g) ps
                                         pure (concat scs))]
               (do scs <- traverse (findSC defs env g pats) args

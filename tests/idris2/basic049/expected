@@ -1,7 +1,7 @@
 1/1: Building Fld (Fld.idr)
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
-    Main.R2.MkR
-    Main.R1.MkR Type
+    Main.R2.R2.MkR
+    Main.R1.R1.MkR Type
 
 Fld.idr:72:26--72:29
     |

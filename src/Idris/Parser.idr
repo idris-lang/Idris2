@@ -14,8 +14,12 @@ import        Data.List1
 import        Data.Maybe
 import        Data.Strings
 import Libraries.Utils.String
+import Language.Reflection
+import Language.Reflection.Disambiguate
 
 import Idris.Parser.Let
+
+%language ElabReflection
 
 %default covering
 
@@ -47,9 +51,24 @@ export
 plhs : ParseOpts
 plhs = MkParseOpts False False
 
-%hide Prelude.(>>=)
+%runElab hideName "Reflection" `{{DataOpt}}
+%runElab hideName "Reflection" `{{FC}}
+%runElab hideName "Reflection" `{{FilePos}}
+%runElab hideName "Reflection" `{{FnOpt}}
+%runElab hideName "Reflection" `{{IFieldUpdate}}
+%runElab hideName "Reflection" `{{IField}}
+%runElab hideName "Reflection" `{{Namespace}}
+%runElab hideName "Reflection" `{{Name}}
+%runElab hideName "Reflection" `{{PiInfo}}
+%runElab hideName "Reflection" `{{TotalReq}}
+%runElab hideName "Reflection" `{{UN}}
+%runElab hideName "Reflection" `{{Visibility}}
+%runElab hideName "Reflection" `{{showSep}}
+
+%runElab hideName "Prelude" `{{(>>=)}}
+%runElab hideName "Prelude" `{{pure}}
+
 %hide Core.Core.(>>=)
-%hide Prelude.pure
 %hide Core.Core.pure
 
 atom : FileName -> Rule PTerm
