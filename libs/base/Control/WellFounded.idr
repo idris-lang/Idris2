@@ -27,13 +27,13 @@ accInd step z (Access f) =
   step z $ \y, lt => accInd step y (f y lt)
 
 export
-wfRec : WellFounded a rel =>
+wfRec : (0 _ : WellFounded a rel) =>
         (step : (x : a) -> ((y : a) -> rel y x -> b) -> b) ->
         a -> b
 wfRec step x = accRec step x (wellFounded {rel} x)
 
 export
-wfInd : WellFounded a rel => {0 P : a -> Type} ->
+wfInd : (0 _ : WellFounded a rel) => {0 P : a -> Type} ->
         (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
         (myz : a) -> P myz
 wfInd step myz = accInd step myz (wellFounded {rel} myz)

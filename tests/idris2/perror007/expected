@@ -1,0 +1,24 @@
+1/1: Building PError (PError.idr)
+Error: Expected 'case', 'if', 'do', application or operator expression.
+
+PError.idr:2:24--2:25
+ 1 | foo : String
+ 2 | foo = "empty interp: \{}"
+                            ^
+
+1/1: Building PError2 (PError2.idr)
+Error: Expected 'case', 'if', 'do', application or operator expression.
+
+PError2.idr:2:19--2:20
+ 1 | foo : String
+ 2 | foo = "nested: \{ " \{ 1 +  } " }"
+                       ^
+
+1/1: Building PError3 (PError3.idr)
+Error: Expected 'case', 'if', 'do', application or operator expression.
+
+PError3.idr:2:7--2:8
+ 1 | foo : String
+ 2 | foo = "incomplete: \{ a <+> }"
+           ^
+

@@ -38,9 +38,6 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           StringLit n s => case escape n s of
-                                               Nothing => Nothing
-                                               Just s' => Just (Str s')
                            Ident "Char"    => Just CharType
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
@@ -84,8 +81,40 @@ strLit : Rule String
 strLit
     = terminal "Expected string literal"
                (\x => case x.val of
-                           StringLit 0 s => Just s
+                           StringLit n s => escape n s
                            _ => Nothing)
+
+export
+strBegin : Rule ()
+strBegin = terminal "Expected string begin"
+               (\x => case x.val of
+                           StringBegin => Just ()
+                           _ => Nothing)
+
+export
+strEnd : Rule ()
+strEnd = terminal "Expected string end"
+               (\x => case x.val of
+                           StringEnd => Just ()
+                           _ => Nothing)
+
+export
+interpBegin : Rule ()
+interpBegin = terminal "Expected string interp begin"
+               (\x => case x.val of
+                           InterpBegin => Just ()
+                           _ => Nothing)
+
+export
+interpEnd : Rule ()
+interpEnd = terminal "Expected string interp end"
+               (\x => case x.val of
+                           InterpEnd => Just ()
+                           _ => Nothing)
+
+export
+simpleStr : Rule String
+simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 
 export
 aDotIdent : Rule String
@@ -93,7 +122,6 @@ aDotIdent = terminal "Expected dot+identifier"
                (\x => case x.val of
                            DotIdent s => Just s
                            _ => Nothing)
-
 
 export
 postfixProj : Rule Name

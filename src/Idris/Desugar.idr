@@ -40,6 +40,7 @@ import Data.Maybe
 
 -- * Shunting infix operators into function applications according to precedence
 -- * Replacing 'do' notating with applications of (>>=)
+-- * Replacing string interpolation with concatenation by (++)
 -- * Replacing pattern matching binds with 'case'
 -- * Changing tuples to 'Pair/MkPair'
 -- * List notation
@@ -242,12 +243,6 @@ mutual
                                  IPrimVal fc (I (fromInteger x))]
              Just fi => pure $ IApp fc (IVar fc fi)
                                        (IPrimVal fc (BI x))
-  desugarB side ps (PPrimVal fc (Str x))
-      = case !fromStringName of
-             Nothing =>
-                pure $ IPrimVal fc (Str x)
-             Just f => pure $ IApp fc (IVar fc f)
-                                      (IPrimVal fc (Str x))
   desugarB side ps (PPrimVal fc (Ch x))
       = case !fromCharName of
              Nothing =>
@@ -278,6 +273,7 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
+  desugarB side ps (PString fc strs) = addFromString fc !(expandString side ps fc strs)
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
@@ -395,6 +391,34 @@ mutual
   addNS (Just ns) n@(NS _ _) = n
   addNS (Just ns) n = NS ns n
   addNS _ n = n
+
+  addFromString : {auto c : Ref Ctxt Defs} ->
+                  FC -> RawImp -> Core RawImp
+  addFromString fc tm
+      = pure $ case !fromStringName of
+                    Nothing => tm
+                    Just f => IApp fc (IVar fc f) tm
+
+  expandString : {auto s : Ref Syn SyntaxInfo} ->
+                 {auto b : Ref Bang BangData} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 {auto m : Ref MD Metadata} ->
+                 {auto u : Ref UST UState} ->
+                 Side -> List Name -> FC -> List PStr -> Core RawImp
+  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty xs)) of
+                                   [] => IPrimVal fc (Str "")
+                                   xs@(_::_) => foldr1 concatStr xs
+    where
+      toRawImp : PStr -> Core RawImp
+      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrInterp fc tm) = desugarB side ps tm
+
+      notEmpty : PStr -> Bool
+      notEmpty (StrLiteral _ str) = str /= ""
+      notEmpty (StrInterp _ _) = True
+
+      concatStr : RawImp -> RawImp -> RawImp
+      concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
@@ -647,7 +671,9 @@ mutual
       getFn (IApp _ f _) = getFn f
       getFn (IAutoApp _ f _) = getFn f
       getFn (INamedApp _ f _ _) = getFn f
-      getFn tm = throw (InternalError (show tm ++ " is not a function application"))
+      getFn tm = throw $ case tm of
+        Implicit fc _ => GenericMsg fc "Invalid name for a declaration"
+        _ => InternalError (show tm ++ " is not a function application")
 
       toIDef : ImpClause -> Core ImpDecl
       toIDef (PatClause fc lhs rhs)

@@ -1,4 +1,4 @@
-module RawString
+module StringLiteral
 
 withWrap : String
 withWrap = "foo
@@ -20,6 +20,19 @@ withEscapeNoWrap : String
 withEscapeNoWrap = #""foo" \#
   \bar"#
 
+interp : String
+interp = "\{withNoWrap}"
+
+interp2 : String
+interp2 = "hello\{ " " ++ ##"world\##{#"."#}"## }"
+
+interp3 : String
+interp3 = "Just 1 + Just 2 = \{
+  show $ do a <- Just 1
+            b <- Just 2
+            Just (a + b)
+}"
+
 test : IO ()
 test =
   do
@@ -28,6 +41,11 @@ test =
     putStrLn withIndent
     putStrLn withEscape
     putStrLn withEscapeNoWrap
+    putStrLn interp
+    putStrLn interp2
+    putStrLn interp3
+    let idris = "Idris"
+    putStrLn "Hello \{idris ++ show 2}!"
     putStrLn ##"
 name: #"foo"
 version: "bar"

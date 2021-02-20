@@ -73,6 +73,7 @@ modules = Control.ANSI,
           Data.String.Iterator,
           Data.String.Parser,
           Data.String.Parser.Expression,
+          Data.String.Position,
 
           Data.Telescope,
           Data.Telescope.Telescope,

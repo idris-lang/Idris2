@@ -1,11 +1,14 @@
 module Parser.Support
 
+import public Libraries.Text.Lexer.Tokenizer
 import public Libraries.Text.Lexer
 import public Libraries.Text.Parser
-import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
+import public Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Core.TT
+import Core.Core
 import Data.List
 import Data.List.Views
 import Data.Strings
@@ -14,45 +17,24 @@ import System.File
 
 %default total
 
-public export
-data ParseError tok
-  = ParseFail String (Maybe (Int, Int)) (List tok)
-  | LexFail   (Int, Int, String)
-  | FileFail  FileError
-  | LitFail   LiterateError
+export
+fromLitError : String -> LiterateError -> Error
+fromLitError fname (MkLitErr l c _) = LitFail (MkFC fname (l, c) (l, c + 1))
 
 export
-Show tok => Show (ParseError tok) where
-  show (ParseFail err loc toks)
-      = "Parse error: " ++ err ++ " (next tokens: "
-            ++ show (take 10 toks) ++ ")"
-  show (LexFail (c, l, str))
-      = "Lex error at " ++ show (c, l) ++ " input: " ++ str
-  show (FileFail err)
-      = "File error: " ++ show err
-  show (LitFail (MkLitErr l c str))
-      = "Lit error(s) at " ++ show (c, l) ++ " input: " ++ str
+fromLexError : String -> (StopReason, Int, Int, String) -> Error
+fromLexError fname (ComposeNotClosing begin end, _, _, _)
+    = LexFail (MkFC fname begin end) "Bracket is not properly closed."
+fromLexError fname (_, l, c, _)
+    = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognoise token."
 
 export
-Pretty tok => Pretty (ParseError tok) where
-  pretty (ParseFail err loc toks)
-      = reflow "Parse error" <+> prettyLine loc <+> ":" <+> line <+> pretty err <++> parens (reflow "next tokens:"
-            <++> brackets (align $ concatWith (surround (comma <+> space)) (pretty <$> take 10 toks)))
-    where
-      prettyLine : Maybe (Int, Int) -> Doc ann
-      prettyLine Nothing = emptyDoc
-      prettyLine (Just (r, c)) = space <+> "at" <++> "line" <++> pretty (r + 1) <+> ":" <+> pretty (c + 1)
-  pretty (LexFail (c, l, str))
-      = reflow "Lex error at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
-  pretty (FileFail err)
-      = reflow "File error:" <++> pretty (show err)
-  pretty (LitFail (MkLitErr l c str))
-      = reflow "Lit error(s) at" <++> pretty (c, l) <++> pretty "input:" <++> pretty str
-
-export
-toGenericParsingError : ParsingError token -> ParseError token
-toGenericParsingError (Error err [])      = ParseFail err Nothing []
-toGenericParsingError (Error err (t::ts)) = ParseFail err (Just (t.startLine, t.startCol)) (map val (t :: ts))
+fromParsingError : (Show token, Pretty token) => String -> ParsingError token -> Error
+fromParsingError fname (Error msg []) = ParseFail {token=token} (MkFC fname (0, 0) (0, 0)) (msg +> '.') []
+fromParsingError fname (Error msg (t::ts))
+    = let l = t.startLine
+          c = t.startCol in
+          ParseFail (MkFC fname (l, c) (l, c + 1)) (msg +> '.') (val <$> (t :: ts))
 
 export
 hex : Char -> Maybe Int

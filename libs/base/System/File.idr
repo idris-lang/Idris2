@@ -1,8 +1,12 @@
 module System.File
 
+import public Data.Fuel
+
 import Data.List
 import Data.Strings
 import System.Info
+
+%default total
 
 public export
 data Mode = Read | WriteTruncate | Append | ReadWrite | ReadWriteTruncate | ReadAppend
@@ -32,6 +36,10 @@ prim__error : FilePtr -> PrimIO Int
 %foreign support "idris2_fileErrno"
          "node:lambda:()=>-BigInt(process.__lasterr.errno)"
 prim__fileErrno : PrimIO Int
+
+%foreign support "idris2_seekLine"
+         "node:support:seekLine,support_system_file"
+prim__seekLine : FilePtr -> PrimIO Int
 
 %foreign support "idris2_readLine"
          "node:support:readLine,support_system_file"
@@ -181,6 +189,17 @@ fileError (FHandle f)
     = do x <- primIO $ prim__error f
          pure (x /= 0)
 
+||| Seek through the next newline.
+||| This is @fGetLine@ without the overhead of copying
+||| any characters.
+export
+fSeekLine : HasIO io => (h : File) -> io (Either FileError ())
+fSeekLine (FHandle f)
+    = do res <- primIO (prim__seekLine f)
+         if res /= 0
+            then returnError
+            else ok ()
+
 export
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
 fGetLine (FHandle f)
@@ -288,40 +307,76 @@ fPoll (FHandle f)
     = do p <- primIO (prim__fPoll f)
          pure (p > 0)
 
+||| Perform a given operation on successful file open
+||| and ensure the file is closed afterwards or perform
+||| a different operation if the file fails to open.
 export
+withFile : HasIO io => (filename : String) ->
+                       Mode ->
+                       (onError : FileError -> io a) ->
+                       (onOpen  : File -> io (Either a b)) ->
+                       io (Either a b)
+withFile filename mode onError onOpen =
+  do Right h <- openFile filename mode
+       | Left err => Left <$> onError err
+     res <- onOpen h
+     closeFile h
+     pure res
+
+try : Monad m => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
+try a f = a >>= either (pure . Left) f
+
+readLinesOnto : HasIO io => (acc : List String) ->
+                            (offset : Nat) ->
+                            (fuel : Fuel) ->
+                            File ->
+                            io (Either FileError (Bool, List String))
+readLinesOnto acc _ Dry h = pure (Right (False, reverse acc))
+readLinesOnto acc offset (More fuel) h
+  = do False <- fEOF h
+         | True => pure $ Right (True, reverse acc)
+       case offset of
+            (S offset') => try (fSeekLine h) (const $ readLinesOnto acc offset' (More fuel) h)
+            0           => try (fGetLine  h) (\str => readLinesOnto (str :: acc) 0 fuel h)
+
+||| Read a chunk of a file in a line-delimited fashion.
+||| You can use this function to read an entire file
+||| as with @readFile@ by reading until @forever@ or by
+||| iterating through pages until hitting the end of
+||| the file.
+|||
+||| The @limit@ function can provide you with enough
+||| fuel to read exactly a given number of lines.
+|||
+||| On success, returns a tuple of whether the end of
+||| the file was reached or not and the lines read in
+||| from the file.
+|||
+||| Note that each line will still have a newline
+||| character at the end.
+|||
+||| Important: because we are chunking by lines, this
+||| function's totality depends on the assumption that
+||| no single line in the input file is infinite.
+export
+readFilePage : HasIO io => (offset : Nat) -> (until : Fuel) -> String -> io (Either FileError (Bool, List String))
+readFilePage offset fuel file
+  = withFile file Read pure $
+      readLinesOnto [] offset fuel
+
+export
+partial
 readFile : HasIO io => String -> io (Either FileError String)
-readFile file
-  = do Right h <- openFile file Read
-          | Left err => returnError
-       Right content <- read [] h
-          | Left err => do closeFile h
-                           returnError
-       closeFile h
-       pure (Right (fastAppend content))
-  where
-    read : List String -> File -> io (Either FileError (List String))
-    read acc h
-        = do eof <- fEOF h
-             if eof
-                then pure (Right (reverse acc))
-                else
-                  do Right str <- fGetLine h
-                        | Left err => returnError
-                     read (str :: acc) h
+readFile = (map $ map (fastConcat . snd)) . readFilePage 0 forever
 
 ||| Write a string to a file
 export
 writeFile : HasIO io =>
             (filepath : String) -> (contents : String) ->
             io (Either FileError ())
-writeFile fn contents = do
-     Right h  <- openFile fn WriteTruncate
-        | Left err => pure (Left err)
-     Right () <- fPutStr h contents
-        | Left err => do closeFile h
-                         pure (Left err)
-     closeFile h
-     pure (Right ())
+writeFile file contents
+  = withFile file WriteTruncate pure $
+      (flip fPutStr contents)
 
 namespace FileMode
   public export

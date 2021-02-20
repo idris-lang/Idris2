@@ -2,7 +2,10 @@
 Error: While processing right hand side of badcard. k is not accessible in this context.
 
 Deps.idr:18:13--18:14
-    |
+ 14 |   badcard   : Nat
+ 15 |   badto     : t -> Fin card
+ 16 | 
+ 17 | implementation BadFinite (Fin k) where
  18 |   badcard = k
-    |             ^
+                  ^
 

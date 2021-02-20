@@ -126,6 +126,13 @@ mutual
   many : Lexer -> Recognise False
   many l = opt (some l)
 
+||| Repeat the sub-lexer `l` one or more times until the lexer
+||| `stopBefore` is encountered. `stopBefore` will not be consumed.
+||| /((?!`stopBefore`)`l`)\+/
+export
+someUntil : (stopBefore : Recognise c) -> (l : Lexer) -> Lexer
+someUntil stopBefore l = some (reject stopBefore <+> l)
+
 ||| Repeat the sub-lexer `l` zero or more times until the lexer
 ||| `stopBefore` is encountered. `stopBefore` will not be consumed.
 ||| Not guaranteed to consume input.
@@ -313,18 +320,19 @@ export
 quote : (q : Lexer) -> (l : Lexer) -> Lexer
 quote q l = surround q q l
 
-||| Recognise an escape character (often '\\') followed by a sub-lexer
+||| Recognise an escape sub-lexer (often '\\') followed by
+||| another sub-lexer
 ||| /[`esc`]`l`/
 export
-escape : (esc : Char) -> Lexer -> Lexer
-escape esc l = is esc <+> l
+escape : (esc : Lexer) -> Lexer -> Lexer
+escape esc l = esc <+> l
 
 ||| Recognise a string literal, including escaped characters.
 ||| (Note: doesn't yet handle escape sequences such as \123)
 ||| /"(\\\\.|.)\*?"/
 export
 stringLit : Lexer
-stringLit = quote (is '"') (escape '\\' any <|> any)
+stringLit = quote (is '"') (escape (is '\\') any <|> any)
 
 ||| Recognise a character literal, including escaped characters.
 ||| (Note: doesn't yet handle escape sequences such as \123)
@@ -332,7 +340,7 @@ stringLit = quote (is '"') (escape '\\' any <|> any)
 export
 charLit : Lexer
 charLit = let q = '\'' in
-              is q <+> (escape '\\' (control <|> any) <|> isNot q) <+> is q
+              is q <+> (escape (is '\\') (control <|> any) <|> isNot q) <+> is q
   where
     lexStr : List String -> Lexer
     lexStr [] = fail

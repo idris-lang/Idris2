@@ -1,5 +1,5 @@
 {
-  "Exclude" : ["expected"],
+  "Exclude" : ["expected", "*.js"],
   "Disable": {
     "IndentSize": true,
     "Indentation": true

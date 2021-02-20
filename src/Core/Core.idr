@@ -6,7 +6,6 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
-import Parser.Source
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -133,8 +132,10 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
+     LitFail : FC -> Error
+     LexFail : FC -> String -> Error
      ParseFail : (Show token, Pretty token) =>
-               FC -> ParseError token -> Error
+               FC -> String -> List token -> Error
      ModuleNotFound : FC -> ModuleIdent -> Error
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
@@ -295,7 +296,9 @@ Show Error where
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
-  show (ParseFail fc err) = "Parse error (" ++ show err ++ ")"
+  show (LitFail fc) = show fc ++ ":Can't parse literate"
+  show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
+  show (ParseFail fc err toks) = "Parse error (" ++ show err ++ "): " ++ show toks
   show (ModuleNotFound fc ns)
       = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
@@ -373,7 +376,9 @@ getErrorLoc (BadRunElab loc _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
-getErrorLoc (ParseFail loc _) = Just loc
+getErrorLoc (LitFail loc) = Just loc
+getErrorLoc (LexFail loc _) = Just loc
+getErrorLoc (ParseFail loc _ _) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing

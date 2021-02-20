@@ -3,9 +3,11 @@ Error: While processing right hand side of f. While processing right hand side o
     Num a
 
 TwoNum.idr:4:7--4:8
-   |
+ 1 | f : Num a => a
+ 2 | f = g where
+ 3 |   g : Num a => a
  4 |   g = 0
-   |       ^
+           ^
 
 Possible correct results:
     conArg (implicitly bound at TwoNum.idr:4:3--4:8)

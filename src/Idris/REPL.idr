@@ -940,9 +940,9 @@ parseCmd : SourceEmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
-parseRepl : String -> Either (ParseError Token) (Maybe REPLCmd)
+parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = runParser Nothing inp (parseEmptyCmd <|> parseCmd)
+    = runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd)
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->
@@ -952,12 +952,11 @@ interpret : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
             String -> Core REPLResult
 interpret inp
-    = case parseRepl inp of
-           Left err => pure $ REPLError (pretty err)
+    = do setCurrentElabSource inp
+         case parseRepl inp of
+           Left err => pure $ REPLError !(perror err)
            Right Nothing => pure Done
-           Right (Just cmd) => do
-             setCurrentElabSource inp
-             processCatch cmd
+           Right (Just cmd) => processCatch cmd
 
 mutual
   export
@@ -1044,7 +1043,7 @@ mutual
   displayResult (ErrorLoadingFile x err) = printResult (reflow "Error loading file" <++> pretty x <+> colon <++> pretty (show err))
   displayResult (ErrorsBuildingFile x errs) = printResult (reflow "Error(s) building file" <++> pretty x) -- messages already displayed while building
   displayResult NoFileLoaded = printError (reflow "No file can be reloaded")
-  displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> squotes (pretty dir))
+  displayResult (CurrentDirectory dir) = printResult (reflow "Current working directory is" <++> dquotes (pretty dir))
   displayResult CompilationFailed = printError (reflow "Compilation failed")
   displayResult (Compiled f) = printResult (pretty "File" <++> pretty f <++> pretty "written")
   displayResult (ProofFound x) = printResult (prettyTerm x)

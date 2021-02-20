@@ -21,7 +21,7 @@ FileName : Type
 FileName = String
 
 ||| A file context is a filename together with starting and ending positions.
-||| It's often carried by AST nodes that might have beeen created from a source
+||| It's often carried by AST nodes that might have been created from a source
 ||| file or by the compiler. That makes it useful to have the notion of
 ||| `EmptyFC` as part of the type.
 public export

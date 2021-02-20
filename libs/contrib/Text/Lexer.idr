@@ -37,9 +37,9 @@ non l = reject l <+> any
 export
 choiceMap : {c : Bool} ->
             Foldable t => (a -> Recognise c) -> t a -> Recognise c
-choiceMap {c} f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
-                                               f x <|> acc)
-                           fail xs
+choiceMap f xs = foldr (\x, acc => rewrite sym (andSameNeutral c) in
+                                           f x <|> acc)
+                       fail xs
 
 ||| Recognise the first matching recogniser in a container. Consumes input if
 ||| recognisers in the list consume. Fails if the container is empty.

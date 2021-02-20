@@ -3,7 +3,7 @@ Error: While processing right hand side of badmap. When unifying (0 _ : ?a) -> ?
 Mismatch between: (0 _ : ?a) -> ?b and ?a -> ?b.
 
 lammult.idr:2:18--2:19
-   |
+ 1 | badmap : List Int -> List Int
  2 | badmap = map (\0 x => 2)
-   |                  ^
+                      ^
 

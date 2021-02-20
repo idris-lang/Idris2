@@ -52,6 +52,7 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_JSCPD: false  # erroneously complains about docs/requirements.txt
+          VALIDATE_JAVASCRIPT_STANDARD: false #requires camel-casing
           DEFAULT_BRANCH: master
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -121,6 +121,10 @@ mutual
   prettyCase (MkImpossible _ lhs) =
     prettyTerm lhs <++> impossible_
 
+  prettyString : PStr -> Doc IdrisAnn
+  prettyString (StrLiteral _ str) = pretty str
+  prettyString (StrInterp _ tm) = prettyTerm tm
+
   prettyDo : PDo -> Doc IdrisAnn
   prettyDo (DoExp _ tm) = prettyTerm tm
   prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
@@ -277,6 +281,7 @@ mutual
       go d (PSectionR _ x op) = parens (go startPrec x <++> pretty op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
+      go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
       go d (PDoBlock _ ns ds) = parenthesise (d > appPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)

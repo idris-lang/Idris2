@@ -328,7 +328,7 @@ displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
   = printIDEResult outf i
-  $ StringAtom $ "Current working directory is '" ++ dir ++ "'"
+  $ StringAtom $ "Current working directory is \"" ++ dir ++ "\""
 displayIDEResult outf i  (REPL CompilationFailed)
   = printIDEError outf i $ reflow "Compilation failed"
 displayIDEResult outf i  (REPL $ Compiled f)
@@ -434,7 +434,7 @@ loop
                    then pure ()
                    else case parseSExp inp of
                       Left err =>
-                        do printIDEError outf idx (reflow "Parse error:" <++> pretty err)
+                        do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
                            loop
                       Right sexp =>
                         case getMsg sexp of

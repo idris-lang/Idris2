@@ -186,8 +186,8 @@ replicate (S k) x = x :: replicate k x
 ||| ```
 export
 mergeBy : (elem -> elem -> Ordering) -> (xs : Vect n elem) -> (ys : Vect m elem) -> Vect (n + m) elem
-mergeBy     _ [] ys = ys
-mergeBy {n} _ xs [] = rewrite plusZeroRightNeutral n in xs
+mergeBy _ [] ys = ys
+mergeBy _ xs [] = rewrite plusZeroRightNeutral n in xs
 mergeBy {n = S k} {m = S k'} order (x :: xs) (y :: ys)
      = case order x y of
             LT => x :: mergeBy order xs (y :: ys)
@@ -247,7 +247,7 @@ toVect _ _ = Nothing
 public export
 fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
-fromList' {len} ys (x::xs) =
+fromList' ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
   fromList' (x::ys) xs
 
@@ -831,9 +831,8 @@ exactLength {m} len xs with (decEq m len)
 export
 overLength : {m : Nat} -> -- expected at run-time
              (len : Nat) -> (xs : Vect m a) -> Maybe (p ** Vect (plus p len) a)
-overLength {m} n xs with (cmp m n)
-  overLength {m = m} (plus m (S y)) xs | (CmpLT y) = Nothing
-  overLength {m = m} m xs | CmpEQ
-         = Just (0 ** xs)
+overLength n xs with (cmp m n)
+  overLength {m}   (plus m (S y)) xs | (CmpLT y) = Nothing
+  overLength {m}                m xs | CmpEQ     = Just (0 ** xs)
   overLength {m = plus n (S x)} n xs | (CmpGT x)
          = Just (S x ** rewrite plusCommutative (S x) n in xs)

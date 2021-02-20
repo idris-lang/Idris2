@@ -78,8 +78,8 @@ reject = Lookahead False
 export
 concatMap : (a -> Recognise c) -> (xs : List a) ->
             Recognise (c && (isCons xs))
-concatMap {c} _ [] = rewrite andFalseFalse c in Empty
-concatMap {c} f (x :: xs)
+concatMap _ [] = rewrite andFalseFalse c in Empty
+concatMap f (x :: xs)
    = rewrite andTrueNeutral c in
      rewrite sym (orSameAndRightNeutral c (isCons xs)) in
              SeqEmpty (f x) (Core.concatMap f xs)

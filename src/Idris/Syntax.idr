@@ -15,6 +15,7 @@ import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
+import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -80,7 +81,7 @@ mutual
        PBracketed : FC -> PTerm -> PTerm
 
        -- Syntactic sugar
-
+       PString : FC -> List PStr -> PTerm
        PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
@@ -141,6 +142,7 @@ mutual
   getPTermLoc (PSectionR fc _ _) = fc
   getPTermLoc (PEq fc _ _) = fc
   getPTermLoc (PBracketed fc _) = fc
+  getPTermLoc (PString fc _) = fc
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _) = fc
@@ -172,6 +174,11 @@ mutual
        DoLetPat : FC -> PTerm -> PTerm -> PTerm -> List PClause -> PDo
        DoLetLocal : FC -> List PDecl -> PDo
        DoRewrite : FC -> PTerm -> PDo
+
+  public export
+  data PStr : Type where
+       StrLiteral : FC -> String -> PStr
+       StrInterp : FC -> PTerm -> PStr
 
   export
   getLoc : PDo -> FC
@@ -489,6 +496,10 @@ mutual
   showDo (DoRewrite _ rule)
       = "rewrite " ++ show rule
 
+  showString : PStr -> String
+  showString (StrLiteral _ str) = show str
+  showString (StrInterp _ tm) = show tm
+
   showUpdate : PFieldUpdate -> String
   showUpdate (PSetField p v) = showSep "." p ++ " = " ++ show v
   showUpdate (PSetFieldApp p v) = showSep "." p ++ " $= " ++ show v
@@ -576,6 +587,7 @@ mutual
     showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
+    showPrec d (PString _ xs) = join " ++ " $ showString <$> xs
     showPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
     showPrec d (PBang _ tm) = "!" ++ showPrec d tm
@@ -900,6 +912,9 @@ mapPTermM f = goPTerm where
     goPTerm (PBracketed fc x) =
       PBracketed fc <$> goPTerm x
       >>= f
+    goPTerm (PString fc xs) =
+      PString fc <$> goPStrings xs
+      >>= f
     goPTerm (PDoBlock fc ns xs) =
       PDoBlock fc ns <$> goPDos xs
       >>= f
@@ -959,6 +974,10 @@ mapPTermM f = goPTerm where
     goPFieldUpdate : PFieldUpdate -> Core PFieldUpdate
     goPFieldUpdate (PSetField p t)    = PSetField p <$> goPTerm t
     goPFieldUpdate (PSetFieldApp p t) = PSetFieldApp p <$> goPTerm t
+
+    goPString : PStr -> Core PStr
+    goPString (StrInterp fc t) = StrInterp fc <$> goPTerm t
+    goPString x                = pure x
 
     goPDo : PDo -> Core PDo
     goPDo (DoExp fc t) = DoExp fc <$> goPTerm t
@@ -1083,6 +1102,10 @@ mapPTermM f = goPTerm where
       (\ p, d, ts => (a, b, p, d) :: ts) <$> goPiInfo p
                                          <*> goPTerm t
                                          <*> go4TupledPTerms ts
+
+    goPStrings : List PStr -> Core (List PStr)
+    goPStrings []        = pure []
+    goPStrings (str :: strs) = (::) <$> goPString str <*> goPStrings strs
 
     goPDos : List PDo -> Core (List PDo)
     goPDos []        = pure []

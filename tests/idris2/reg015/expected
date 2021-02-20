@@ -2,7 +2,10 @@
 Error: showing (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndSize addr len)))) SomethingVeryComplicatedIs is not a valid impossible case.
 
 anyfail.idr:21:1--21:48
-    |
+ 17 |         TooComplicatedToBeTrue
+ 18 |             (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndSize addr len))))
+ 19 | 
+ 20 | showing  :  (something : EvenMoreComplicated) -> (TooComplicatedToBeTrue something) -> Void
  21 | showing _ SomethingVeryComplicatedIs impossible
-    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

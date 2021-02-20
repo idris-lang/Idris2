@@ -1,3 +1,10 @@
 1/1: Building PError (PError.idr)
-Error: Parse error at line 5:1:
-Expected ')' (next tokens: [identifier bar, identifier x, symbol =, let, identifier y, symbol =, literal 42, in, identifier y, symbol +])
+Error: Bracket is not properly closed.
+
+PError.idr:4:7--4:8
+ 1 | foo : Int -> Int
+ 2 | foo x = x
+ 3 | 
+ 4 | bar : (Int -> Int
+           ^
+

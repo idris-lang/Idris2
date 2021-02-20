@@ -97,6 +97,7 @@ strTail start (MkStrLen str len)
 
 -- If the string is recognised, returns the index at which the token
 -- ends
+export
 scan : Recognise c -> List Char -> List Char -> Maybe (List Char, List Char)
 scan Empty tok str = pure (tok, str)
 scan Fail tok str = Nothing
