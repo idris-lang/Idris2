@@ -278,7 +278,8 @@ mutual
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
   desugarB side ps (PMultiline fc indent strs)
       = addFromString fc !(expandString side ps fc !(trimMultiline fc indent strs))
-  desugarB side ps (PString fc strs) = addFromString fc !(expandString side ps fc strs)
+  desugarB side ps (PString fc strs)
+      = addFromString fc !(expandString side ps fc !(checkSingleLine strs))
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
@@ -433,34 +434,42 @@ mutual
       concatStr : RawImp -> RawImp -> RawImp
       concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
 
+  checkSingleLine : List PStr -> Core (List PStr)
+  checkSingleLine [] = pure []
+  checkSingleLine ((StrLiteral fc True _)::xs)
+      = throw $ BadMultiline fc "Multi-line string is expected to begin with \"\"\""
+  checkSingleLine (x::xs) = pure $ x :: !(checkSingleLine xs)
+
   trimMultiline : FC -> Nat -> List PStr -> Core (List PStr)
   trimMultiline fc indent xs = do
       xs <- trimFirst fc xs
-      xs <- trimLast fc xs
-      xs <- traverse (trimLeft indent) xs
+      xs <- if indent == 0 then pure xs else trimLast fc xs
+      xs <- traverse (trimLeft indent) (dropLastNL xs)
       pure xs
     where
       trimFirst : FC -> List PStr -> Core (List PStr)
-      trimFirst fc [] = throw $ BadMultiline fc "Expected line wrap"
-      trimFirst _ ((StrInterp fc _)::_) = throw $ BadMultiline fc "Unexpected interpolation in the first line"
-      trimFirst _ ((StrLiteral fc isLB str)::pstrs)
+      trimFirst _ ((StrLiteral fc _ str)::pstrs)
           = if any (not . isSpace) (fastUnpack str)
                then throw $ BadMultiline fc "Unexpected character in the first line"
                else pure pstrs
+      trimFirst _ _ = throw $ InternalError "Expected StrLiteral"
 
-      trimLast : FC ->  List PStr -> Core (List PStr)
+      trimLast : FC -> List PStr -> Core (List PStr)
       trimLast fc pstrs with (snocList pstrs)
         trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
         trimLast _ (initPStr `snoc` (StrInterp fc _)) | Snoc (StrInterp _ _) initPStr _
             = throw $ BadMultiline fc "Unexpected interpolation in the last line"
-        trimLast _ (initPStr `snoc` (StrLiteral fc _ str)) | Snoc (StrLiteral _ _ _) initPStr rec
+        trimLast _ (initPStr `snoc` (StrLiteral fc _ str)) | Snoc (StrLiteral _ _ _) initPStr _
             = if any (not . isSpace) (fastUnpack str)
                      then throw $ BadMultiline fc "Unexpected character in the last line"
-                     else case rec of
-                               Snoc (StrLiteral fc isLB str) initPStr' _ =>
-                                    -- remove the last line wrap
-                                    pure $ initPStr' `snoc` (StrLiteral fc isLB (dropLast 1 str))
-                               _ => pure initPStr
+                     else pure initPStr
+
+      dropLastNL : List PStr -> List PStr
+      dropLastNL pstrs with (snocList pstrs)
+        dropLastNL [] | Empty = []
+        dropLastNL (initPStr `snoc` (StrLiteral fc isLB str)) | Snoc (StrLiteral _ _ _) initPStr _
+            = initPStr `snoc` (StrLiteral fc isLB (fst $ break isNL str))
+        dropLastNL pstrs | _ = pstrs
 
       trimLeft : Nat -> PStr -> Core PStr
       trimLeft indent (StrLiteral fc True line)

@@ -794,8 +794,7 @@ mutual
 
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> List PStr
       toPStr x = case x.val of
-                      -- The lines after '\n' is considered line begin (to be trimed in multiline).
-                      -- Note that the first item of the result of splitting by '\n' is not line begin.
+                      -- The lines after the first '\n' is considered line begin (to be trimed in multiline).
                       -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
                       Right (str ::: strs) => (StrLiteral (boundToFC fname x) False str) ::
                                               (StrLiteral (boundToFC fname x) True <$> strs)

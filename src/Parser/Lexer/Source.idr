@@ -176,6 +176,13 @@ stringBegin = many (is '#') <+> (is '"')
 stringEnd : Nat -> String
 stringEnd hashtag = "\"" ++ replicate hashtag '#'
 
+multilineBegin : Lexer
+multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
+                    manyUntil newline space <+> expect newline
+
+multilineEnd : Nat -> String
+multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
+
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
 cgDirective : Lexer
@@ -278,7 +285,7 @@ mutual
       = let escapeChars = "\\" ++ replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
-            charLexer = non $ exact (if multi then "\"\"\"" else stringEnd hashtag)
+            charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
           in
             match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit hashtag x)
         <|> compose (exact interpStart) (const InterpBegin) (const ()) (\_ => rawTokens) (const $ is '}') (const InterpEnd)
@@ -302,11 +309,11 @@ mutual
       <|> match hexLit (\x => IntegerLit (fromHexLit x))
       <|> match octLit (\x => IntegerLit (fromOctLit x))
       <|> match digits (\x => IntegerLit (cast x))
-      <|> compose (exact "\"\"\"")
+      <|> compose multilineBegin
                   (const $ StringBegin True)
-                  (const ())
-                  (const $ stringTokens True 0)
-                  (const $ exact "\"\"\"")
+                  countHashtag
+                  (stringTokens True)
+                  (exact . multilineEnd)
                   (const StringEnd)
       <|> compose stringBegin
                   (const $ StringBegin False)

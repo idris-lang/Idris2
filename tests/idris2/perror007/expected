@@ -23,15 +23,15 @@ StrError3.idr:2:7--2:8
            ^
 
 1/1: Building StrError4 (StrError4.idr)
-Error: While processing multiline string. Expected line wrap.
+Error: While processing right hand side of foo. Can't find an implementation for FromString (String -> String -> String).
 
-StrError4.idr:2:7--2:13
+StrError4.idr:2:7--2:9
  1 | foo : String
  2 | foo = """"""
-           ^^^^^^
+           ^^
 
 1/1: Building StrError5 (StrError5.idr)
-Error: While processing multiline string. Indentation not enough.
+Error: While processing multi-line string. Indentation not enough.
 
 StrError5.idr:2:10--4:5
  2 | foo = """
@@ -39,30 +39,31 @@ StrError5.idr:2:10--4:5
  4 |     """
 
 1/1: Building StrError6 (StrError6.idr)
-Error: While processing multiline string. Unexpected character in the first line.
+Error: While processing right hand side of foo. Can't find an implementation for FromString (String -> String -> String).
 
-StrError6.idr:2:10--3:1
+StrError6.idr:2:7--2:9
+ 1 | foo : String
  2 | foo = """a
- 3 | """
+           ^^
 
 1/1: Building StrError7 (StrError7.idr)
-Error: While processing multiline string. Unexpected character in the first line.
+Error: While processing right hand side of foo. Can't find an implementation for FromString (String -> String -> String).
 
-StrError7.idr:2:10--2:11
+StrError7.idr:2:7--2:9
  1 | foo : String
  2 | foo = """a"""
-              ^
+           ^^
 
 1/1: Building StrError8 (StrError8.idr)
-Error: While processing multiline string. Unexpected interpolation in the first line.
+Error: While processing right hand side of foo. Can't find an implementation for FromString (String -> String -> String).
 
-StrError8.idr:2:10--2:20
+StrError8.idr:2:7--2:9
  1 | foo : String
  2 | foo = """\{"hello"}
-              ^^^^^^^^^^
+           ^^
 
 1/1: Building StrError9 (StrError9.idr)
-Error: While processing multiline string. Unexpected interpolation in the last line.
+Error: While processing multi-line string. Unexpected interpolation in the last line.
 
 StrError9.idr:3:1--3:11
  1 | foo : String
@@ -71,9 +72,16 @@ StrError9.idr:3:1--3:11
      ^^^^^^^^^^
 
 1/1: Building StrError10 (StrError10.idr)
-Error: While processing multiline string. Unexpected character in the last line.
+Error: While processing multi-line string. Unexpected character in the last line.
 
 StrError10.idr:2:10--3:2
  2 | foo = """
  3 | a"""
+
+1/1: Building StrError11 (StrError11.idr)
+Error: While processing multi-line string. Multi-line string is expected to begin with """.
+
+StrError11.idr:2:8--3:5
+ 2 | foo = "a
+ 3 |     "
 
