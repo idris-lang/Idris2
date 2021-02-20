@@ -264,12 +264,7 @@ doParse com (SeqEmpty {c1} {c2} act next) xs
     = let p' = assert_total (doParse {c = c1} com act xs) in
               case p' of
                Failure com fatal msg ts => Failure com fatal msg ts
-               EmptyRes com val xs =>
-                     case assert_total (doParse com (next val) xs) of
-                          Failure com' fatal msg ts => Failure com' fatal msg ts
-                          EmptyRes com' val xs => EmptyRes com' val xs
-                          NonEmptyRes {xs=xs'} com' val more =>
-                                           NonEmptyRes {xs=xs'} com' val more
+               EmptyRes com val xs => assert_total (doParse com (next val) xs)
                NonEmptyRes {x} {xs=ys} com val more =>
                      case (assert_total (doParse com (next val) more)) of
                           Failure com' fatal msg ts => Failure com' fatal msg ts
@@ -292,12 +287,7 @@ doParse com (ThenEmpty {c1} {c2} act next) xs
     = let p' = assert_total (doParse {c = c1} com act xs) in
               case p' of
                Failure com fatal msg ts => Failure com fatal msg ts
-               EmptyRes com val xs =>
-                     case assert_total (doParse com next xs) of
-                          Failure com' fatal msg ts => Failure com' fatal msg ts
-                          EmptyRes com' val xs => EmptyRes com' val xs
-                          NonEmptyRes {xs=xs'} com' val more =>
-                                           NonEmptyRes {xs=xs'} com' val more
+               EmptyRes com val xs => assert_total (doParse com next xs)
                NonEmptyRes {x} {xs=ys} com val more =>
                      case (assert_total (doParse com next more)) of
                           Failure com' fatal msg ts => Failure com' fatal msg ts
