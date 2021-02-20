@@ -90,6 +90,8 @@ modules = Control.ANSI,
 
           Data.Tree.Perfect,
 
+          Data.Validated,
+
           Data.Vect.Binary,
 
           Data.Vect.Sort,
