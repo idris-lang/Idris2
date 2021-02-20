@@ -198,7 +198,7 @@ public export
 
 ||| Sequencing of effectful composition
 public export
-(>>) : (Monad m) => m a -> m b -> m b
+(>>) : (Monad m) => m () -> m b -> m b
 a >> b = a >>= \_ => b
 
 ||| Left-to-right Kleisli composition of monads.

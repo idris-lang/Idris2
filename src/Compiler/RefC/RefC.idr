@@ -392,7 +392,7 @@ freeTmpVars = do
     lists <- get TemporaryVariableTracker
     case lists of
         (vars :: varss) => do
-            traverse (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
+            traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
             put TemporaryVariableTracker varss
         [] => pure ()
 
@@ -734,7 +734,7 @@ mutual
                 increaseIndentation
                 newTemporaryVariableLevel
                 defaultAssignment <- cStatementsFromANF d
-                -- traverse (\l => emit EmptyFC (l) ) defaultBody
+                -- traverse_ (\l => emit EmptyFC (l) ) defaultBody
                 emit EmptyFC $ switchReturnVar ++ " = " ++ nonTailCall defaultAssignment ++ ";"
                 freeTmpVars
                 decreaseIndentation
@@ -855,7 +855,7 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
     emit EmptyFC "("
     increaseIndentation
     emit EmptyFC $ "  Value *" ++ varName
-    traverse (\(varType, varName, varCFType) => emit EmptyFC $ ", Value *" ++ varName) xs
+    traverse_ (\(varType, varName, varCFType) => emit EmptyFC $ ", Value *" ++ varName) xs
     decreaseIndentation
     emit EmptyFC ")"
 
@@ -936,7 +936,7 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC $ "("
     increaseIndentation
     let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") argsNrs)
-    traverse (emit EmptyFC) commaSepArglist
+    traverse_ (emit EmptyFC) commaSepArglist
     decreaseIndentation
     emit EmptyFC ");"
     decreaseIndentation
@@ -971,7 +971,7 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           emit EmptyFC $ "("
           increaseIndentation
           let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") (getArgsNrList fargs Z))
-          traverse (emit EmptyFC) commaSepArglist
+          traverse_ (emit EmptyFC) commaSepArglist
           decreaseIndentation
           emit EmptyFC ");"
           decreaseIndentation
@@ -1034,7 +1034,7 @@ header = do
                     , "#include <idris_support.h> // for libidris2_support"]
     extLibs <- get ExternalLibs
     let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
-    traverse (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
+    traverse_ (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
     fns <- get FunctionDefinitions
     update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
 
@@ -1052,9 +1052,8 @@ footer = do
 export
 executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c _ tm
-    = do coreLift $ putStrLn "Execute expression not yet implemented for refc"
-         coreLift $ system "false"
-         pure ()
+    = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
+         coreLift_ $ system "false"
 
 export
 compileExpr : UsePhase
@@ -1069,23 +1068,23 @@ compileExpr ANF c _ outputDir tm outfile =
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
 
-     coreLift $ mkdirAll outputDir
+     coreLift_ $ mkdirAll outputDir
      cdata <- getCompileData ANF tm
      let defs = anf cdata
-     newRef ArgCounter 0
-     newRef FunctionDefinitions []
-     newRef TemporaryVariableTracker []
-     newRef OutfileText DList.Nil
-     newRef ExternalLibs []
-     newRef IndentLevel 0
-     traverse (\(n, d) => createCFunctions n d) defs
+     _ <- newRef ArgCounter 0
+     _ <- newRef FunctionDefinitions []
+     _ <- newRef TemporaryVariableTracker []
+     _ <- newRef OutfileText DList.Nil
+     _ <- newRef ExternalLibs []
+     _ <- newRef IndentLevel 0
+     traverse_ (\(n, d) => createCFunctions n d) defs
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
      let code = fastAppend (map (++ "\n") (reify fileContent))
 
-     coreLift (writeFile outn code)
-     coreLift $ putStrLn $ "Generated C file " ++ outn
+     coreLift_ $ writeFile outn code
+     coreLift_ $ putStrLn $ "Generated C file " ++ outn
 
      cc <- coreLift findCC
      dirs <- getDirs

@@ -597,7 +597,7 @@ calcRefs rt at fn
          refs <- ifThenElse rt
                     (dropErased (keys refs_all) refs_all)
                     (pure refs_all)
-         ifThenElse rt
+         ignore $ ifThenElse rt
             (addDef fn (record { refersToRuntimeM = Just refs } gdef))
             (addDef fn (record { refersToM = Just refs } gdef))
          traverse_ (calcRefs rt at) (keys refs)
@@ -648,9 +648,9 @@ mkRunTime fc n
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
-           addDef n (record { definition = PMDef r rargs tree_ct tree_rt pats
-                            } gdef)
-           pure ()
+           ignore $ addDef n $
+                       record { definition = PMDef r rargs tree_ct tree_rt pats
+                              } gdef
   where
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
@@ -699,7 +699,7 @@ compileRunTime : {auto c : Ref Ctxt Defs} ->
 compileRunTime fc atotal
     = do defs <- get Ctxt
          traverse_ (mkRunTime fc) (toCompileCase defs)
-         traverse (calcRefs True atotal) (toCompileCase defs)
+         traverse_ (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
          put Ctxt (record { toCompileCase = [] } defs)
@@ -755,7 +755,7 @@ processDef opts nest env fc n_in cs_in
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
-         addDef (Resolved nidx)
+         ignore $ addDef (Resolved nidx)
                   (record { definition = PMDef defaultPI cargs tree_ct tree_ct pats
                           } gdef)
 

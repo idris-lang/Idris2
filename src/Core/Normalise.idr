@@ -1012,7 +1012,7 @@ mutual
                 | Nothing => pure False
            let Just sc' = getScrutinee scpos' nargs'
                 | Nothing => pure False
-           convGen q defs env sc sc'
+           ignore $ convGen q defs env sc sc'
            pure (location def == location def')
     where
       -- Need to find the position of the scrutinee to see if they are the

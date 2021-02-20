@@ -47,7 +47,9 @@ export
 plhs : ParseOpts
 plhs = MkParseOpts False False
 
+%hide Prelude.(>>)
 %hide Prelude.(>>=)
+%hide Core.Core.(>>)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure

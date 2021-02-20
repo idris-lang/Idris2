@@ -252,8 +252,7 @@ retryDelayed : {vars : _} ->
 retryDelayed ds
     = do est <- get EST
          ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
-         retryDelayed' AllErrors [] ds -- fail on all errors
-         pure ()
+         ignore $ retryDelayed' AllErrors [] ds -- fail on all errors
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
@@ -270,9 +269,8 @@ runDelays pri elab
          tm <- elab
          ust <- get UST
          log "elab.delay" 2 $ "Rerunning delayed in elaborator"
-         handle (do retryDelayed' AllErrors []
-                       (reverse (filter hasPri (delayedElab ust)))
-                    pure ())
+         handle (do ignore $ retryDelayed' AllErrors []
+                       (reverse (filter hasPri (delayedElab ust))))
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)
          ust <- get UST

@@ -52,6 +52,18 @@ export %inline
 (>>=) {c1 = True}  = SeqEat
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
+||| guaranteed to consume some input. If the first one consumes input, the
+||| second is allowed to be recursive (because it means some input has been
+||| consumed and therefore the input is smaller)
+public export %inline %tcinline
+(>>) : {c1, c2 : Bool} ->
+        Grammar tok c1 () ->
+        inf c1 (Grammar tok c2 a) ->
+        Grammar tok (c1 || c2) a
+(>>) {c1 = False} ma mb = SeqEmpty ma (const mb)
+(>>) {c1 = True} ma mb = SeqEat ma (Delay \ a => mb)
+
+||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume input. This is an explicitly non-infinite version
 ||| of `>>=`.
 export %inline

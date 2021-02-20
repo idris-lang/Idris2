@@ -311,7 +311,7 @@ concatBuffers xs
          let cumulative = reverse revCumulative
          Just buf <- newBuffer totalSize
               | Nothing => pure Nothing
-         traverse (\(b, size, watermark) => copyData b 0 size buf watermark) (zip3 xs sizes cumulative)
+         traverse_ (\(b, size, watermark) => copyData b 0 size buf watermark) (zip3 xs sizes cumulative)
          pure (Just buf)
     where
         scanSize : (Int, List Int) -> Int -> (Int, List Int)

@@ -668,8 +668,7 @@ dumpHole' lvl hole
                                               show !(toFullNames !(normaliseHoles defs [] ty))
                             log' lvl $ "\t  = " ++ show !(normaliseHoles defs [] tm)
                                             ++ "\n\twhen"
-                            traverse dumpConstraint constraints
-                            pure ()
+                            traverse_ dumpConstraint constraints
                     (Hole _ p, ty) =>
                          log' lvl $ "?" ++ show (fullname gdef) ++ " : " ++
                                            show !(normaliseHoles defs [] ty)
@@ -720,12 +719,10 @@ dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
          let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel $ session $ options defs) then
+         when (keepLog lvl (logLevel $ session $ options defs)) $
             do let hs = toList (guesses ust) ++
                         toList (if all then holes ust else currentHoles ust)
                case hs of
                     [] => pure ()
                     _ => do log' lvl "--- CONSTRAINTS AND HOLES ---"
-                            traverse (dumpHole' lvl) (map fst hs)
-                            pure ()
-            else pure ()
+                            traverse_ (dumpHole' lvl) (map fst hs)

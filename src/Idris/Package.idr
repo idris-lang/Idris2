@@ -150,24 +150,24 @@ field fname
     <|> strField PPostinstall "postinstall"
     <|> strField PPreclean "preclean"
     <|> strField PPostclean "postclean"
-    <|> do exactProperty "depends"
+    <|> do ignore $ exactProperty "depends"
            equals
            ds <- sep packageName
            pure (PDepends ds)
-    <|> do exactProperty "modules"
+    <|> do ignore $ exactProperty "modules"
            equals
            ms <- sep (do start <- location
                          m <- moduleIdent
                          end <- location
                          pure (MkFC fname start end, m))
            pure (PModules ms)
-    <|> do exactProperty "main"
+    <|> do ignore $ exactProperty "main"
            equals
            start <- location
            m <- moduleIdent
            end <- location
            pure (PMainMod (MkFC fname start end) m)
-    <|> do exactProperty "executable"
+    <|> do ignore $ exactProperty "executable"
            equals
            e <- (stringLit <|> packageName)
            pure (PExec e)
@@ -175,7 +175,7 @@ field fname
     strField : (FC -> String -> DescField) -> String -> Rule DescField
     strField fieldConstructor fieldName
         = do start <- location
-             exactProperty fieldName
+             ignore $ exactProperty fieldName
              equals
              str <- stringLit
              end <- location
@@ -183,7 +183,7 @@ field fname
 
 parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
-    = do exactProperty "package"
+    = do ignore $ exactProperty "package"
          name <- packageName
          fields <- many (field fname)
          pure (name, fields)
@@ -264,8 +264,7 @@ processOptions Nothing = pure ()
 processOptions (Just (fc, opts))
     = do let Right clopts = getOpts (words opts)
                 | Left err => throw (GenericMsg fc err)
-         preOptions clopts
-         pure ()
+         ignore $ preOptions clopts
 
 compileMain : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -274,10 +273,8 @@ compileMain : {auto c : Ref Ctxt Defs} ->
 compileMain mainn mmod exec
     = do m <- newRef MD initMetadata
          u <- newRef UST initUState
-
-         loadMainFile mmod
-         compileExp (PRef replFC mainn) exec
-         pure ()
+         ignore $ loadMainFile mmod
+         ignore $ compileExp (PRef replFC mainn) exec
 
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
@@ -291,7 +288,7 @@ prepareCompilation pkg opts =
     addDeps pkg
 
     processOptions (options pkg)
-    preOptions opts
+    ignore $ preOptions opts
 
     runScript (prebuild pkg)
 
@@ -374,10 +371,10 @@ install pkg opts -- not used but might be in the future
 
          -- We're in that directory now, so copy the files from
          -- srcdir/build into it
-         traverse (installFrom (name pkg)
-                               (srcdir </> build)
-                               (installPrefix </> name pkg)) toInstall
-         coreLift $ changeDir srcdir
+         traverse_ (installFrom (name pkg)
+                                (srcdir </> build)
+                                (installPrefix </> name pkg)) toInstall
+         coreLift_ $ changeDir srcdir
          runScript (postinstall pkg)
 
 -- Check package without compiling anything.
@@ -614,7 +611,7 @@ findIpkg : {auto c : Ref Ctxt Defs} ->
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
              | Nothing => pure fname
-        coreLift $ changeDir dir
+        coreLift_ $ changeDir dir
         setWorkingDir dir
         Right (pname, fs) <- coreLift $ parseFile ipkgn
                                  (do desc <- parsePkgDesc ipkgn

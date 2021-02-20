@@ -246,8 +246,7 @@ fEOF (FHandle f)
 export
 fflush : HasIO io => (h : File) -> io ()
 fflush (FHandle f)
-    = do primIO (prim__flush f)
-         pure ()
+    = ignore $ primIO (prim__flush f)
 
 export
 popen : HasIO io => String -> Mode -> io (Either FileError File)

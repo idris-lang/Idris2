@@ -156,7 +156,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
-                    convert fc elabinfo env (gnf env tyv) (gnf env pty)
+                    ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>

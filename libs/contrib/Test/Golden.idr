@@ -144,7 +144,7 @@ runTest opts testPath = forkIO $ do
   let cg = case codegen opts of
          Nothing => ""
          Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
-  system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd " ++ testPath ++ " && " ++
     cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
   end <- clockTime Thread
 
