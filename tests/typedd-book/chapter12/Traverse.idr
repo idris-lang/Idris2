@@ -5,6 +5,5 @@ main : IO ()
 main = do putStr "Display Crew? "
           x <- getLine
           when (x == "yes") $
-               do traverse putStrLn crew
-                  pure ()
+            do traverse_ putStrLn crew
           putStrLn "Done"
