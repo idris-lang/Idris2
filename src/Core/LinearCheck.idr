@@ -667,9 +667,9 @@ mutual
       = do defs <- get Ctxt
            empty <- clearDefs defs
            ty <- quote empty env nty
-           throw (GenericMsg fc ("Linearity checking failed on metavar
-                      " ++ show n ++ " (" ++ show ty ++
-                      " not a function type)"))
+           throw (GenericMsg fc ("Linearity checking failed on metavar "
+                      ++ show n ++ " (" ++ show ty
+                      ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt
            pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])
