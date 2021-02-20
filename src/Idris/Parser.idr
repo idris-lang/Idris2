@@ -392,8 +392,7 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
-    <|> do b <- bounds (interpStr pdef fname indents)
-           pure (PString (boundToFC fname b) b.val)
+    <|> interpStr pdef fname indents
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")
@@ -777,22 +776,30 @@ mutual
   expr = typeExpr
 
   export
-  interpStr : ParseOpts -> FileName -> IndentInfo -> Rule (List PStr)
-  interpStr q fname idents = do
-      strBegin
-      commit
-      xs <- many $ bounds $ interpBlock <||> strLit
-      strEnd
-      pure $ toPString <$> xs
+  interpStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  interpStr q fname idents
+      = do b <- bounds $ do multi <- strBegin
+                            commit
+                            xs <- many $ bounds $ interpBlock <||> strLitLines
+                            endloc <- location
+                            strEnd
+                            pure (multi, endloc, concatMap toPStr xs)
+           the (SourceEmptyRule PTerm) $
+              case b.val of
+                   (False, _, xs) => pure $ PString (boundToFC fname b) xs
+                   (True, (_, col), xs) => pure $ PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
     where
       interpBlock : Rule PTerm
       interpBlock = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
 
-      toPString : (WithBounds $ Either PTerm String) -> PStr
-      toPString x
-          = case x.val of
-                 Right s => StrLiteral (boundToFC fname x) s
-                 Left tm => StrInterp (boundToFC fname x) tm
+      toPStr : (WithBounds $ Either PTerm (List1 String)) -> List PStr
+      toPStr x = case x.val of
+                      -- The lines after '\n' is considered line begin (to be trimed in multiline).
+                      -- Note that the first item of the result of splitting by '\n' is not line begin.
+                      -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
+                      Right (str ::: strs) => (StrLiteral (boundToFC fname x) False str) ::
+                                              (StrLiteral (boundToFC fname x) True <$> strs)
+                      Left tm => [StrInterp (boundToFC fname x) tm]
 
 visOption : Rule Visibility
 visOption
@@ -1185,7 +1192,7 @@ visOpt fname
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility PFnOpt) ->
-               SourceEmptyRule Visibility
+                SourceEmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs

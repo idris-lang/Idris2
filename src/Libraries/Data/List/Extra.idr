@@ -1,5 +1,7 @@
 module Libraries.Data.List.Extra
 
+import Data.List1
+
 %default total
 
 ||| Fetches the element at a given position.
@@ -17,3 +19,18 @@ firstBy p (x :: xs)
   = case p x of
       Nothing => firstBy p xs
       Just win => pure win
+
+export
+breakAfter : (a -> Bool) -> List a -> (List a, List a)
+breakAfter p [] = ([], [])
+breakAfter p (x::xs)
+    = if p x
+         then ([x], xs)
+         else let (ys, zs) = breakAfter p xs in (x::ys, zs)
+
+export
+splitAfter : (a -> Bool) -> List a -> List1 (List a)
+splitAfter p xs
+    = case breakAfter p xs of
+           (chunk, []) => singleton chunk
+           (chunk, rest@(_::_)) => cons chunk (splitAfter p (assert_smaller xs rest))

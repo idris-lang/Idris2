@@ -7,6 +7,7 @@ import public Parser.Support
 import Core.TT
 import Data.List1
 import Data.Strings
+import Libraries.Data.List.Extra
 
 %default total
 
@@ -84,11 +85,22 @@ strLit
                            StringLit n s => escape n s
                            _ => Nothing)
 
+||| String literal split by line wrap (not striped) before escaping the string.
 export
-strBegin : Rule ()
+strLitLines : Rule (List1 String)
+strLitLines
+    = terminal "Expected string literal"
+               (\x => case x.val of
+                           StringLit n s => traverse (escape n . fastPack)
+                                                     (splitAfter isNL (fastUnpack s))
+                           _ => Nothing)
+
+||| String literal begin quote. The bool indicates whether the it is multiline string.
+export
+strBegin : Rule Bool
 strBegin = terminal "Expected string begin"
                (\x => case x.val of
-                           StringBegin => Just ()
+                           StringBegin multi => Just multi
                            _ => Nothing)
 
 export

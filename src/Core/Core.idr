@@ -142,6 +142,7 @@ data Error : Type where
      InternalError : String -> Error
      UserError : String -> Error
      NoForeignCC : FC -> Error
+     BadMultiline : FC -> String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -308,6 +309,7 @@ Show Error where
   show (UserError str) = "Error: " ++ str
   show (NoForeignCC fc) = show fc ++
        ":The given specifier was not accepted by any available backend."
+  show (BadMultiline fc str) = "Invalid multiline string: " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -385,6 +387,7 @@ getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
 getErrorLoc (NoForeignCC loc) = Just loc
+getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err

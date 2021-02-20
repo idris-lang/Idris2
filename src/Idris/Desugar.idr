@@ -10,6 +10,7 @@ import Core.TT
 import Core.Unify
 
 import Libraries.Data.StringMap
+import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 
 import Idris.DocString
@@ -30,6 +31,9 @@ import Libraries.Utils.String
 
 import Control.Monad.State
 import Data.List
+import Data.List.Views
+import Data.List1
+import Data.Strings
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -77,7 +81,7 @@ toTokList (POp fc opn l r)
          let op = nameRoot opn
          case lookup op (infixes syn) of
               Nothing =>
-                  if any isOpChar (unpack op)
+                  if any isOpChar (fastUnpack op)
                      then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
                      else do rtoks <- toTokList r
                              pure (Expr l :: Op fc opn backtickPrec :: rtoks)
@@ -272,6 +276,8 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
+  desugarB side ps (PMultiline fc indent strs)
+      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent strs))
   desugarB side ps (PString fc strs) = addFromString fc !(expandString side ps fc strs)
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
@@ -404,20 +410,65 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty xs)) of
+  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty $ mergeStrLit xs)) of
                                    [] => IPrimVal fc (Str "")
                                    xs@(_::_) => foldr1 concatStr xs
     where
       toRawImp : PStr -> Core RawImp
-      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrLiteral fc _ str) = pure $ IPrimVal fc (Str str)
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
+      -- merge neighbouring StrLiteral
+      mergeStrLit : List PStr -> List PStr
+      mergeStrLit [] = []
+      mergeStrLit [x] = [x]
+      mergeStrLit ((StrLiteral fc isLB str1)::(StrLiteral _ _ str2)::xs)
+          = (StrLiteral fc isLB (str1 ++ str2)) :: xs
+      mergeStrLit (x::xs) = x :: mergeStrLit xs
+
       notEmpty : PStr -> Bool
-      notEmpty (StrLiteral _ str) = str /= ""
+      notEmpty (StrLiteral _ _ str) = str /= ""
       notEmpty (StrInterp _ _) = True
 
       concatStr : RawImp -> RawImp -> RawImp
       concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
+
+  trimMultiline : FC -> Nat -> List PStr -> Core (List PStr)
+  trimMultiline fc indent xs = do
+      xs <- trimFirst fc xs
+      xs <- trimLast fc xs
+      xs <- traverse (trimLeft indent) xs
+      pure xs
+    where
+      trimFirst : FC -> List PStr -> Core (List PStr)
+      trimFirst fc [] = throw $ BadMultiline fc "Expected line wrap"
+      trimFirst _ ((StrInterp fc _)::_) = throw $ BadMultiline fc "Unexpected interpolation in the first line"
+      trimFirst _ ((StrLiteral fc isLB str)::pstrs)
+          = if any (not . isSpace) (fastUnpack str)
+               then throw $ BadMultiline fc "Unexpected character in the first line"
+               else pure pstrs
+
+      trimLast : FC ->  List PStr -> Core (List PStr)
+      trimLast fc pstrs with (snocList pstrs)
+        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
+        trimLast _ (initPStr `snoc` (StrInterp fc _)) | Snoc (StrInterp _ _) initPStr _
+            = throw $ BadMultiline fc "Unexpected interpolation in the last line"
+        trimLast _ (initPStr `snoc` (StrLiteral fc _ str)) | Snoc (StrLiteral _ _ _) initPStr rec
+            = if any (not . isSpace) (fastUnpack str)
+                     then throw $ BadMultiline fc "Unexpected character in the last line"
+                     else case rec of
+                               Snoc (StrLiteral fc isLB str) initPStr' _ =>
+                                    -- remove the last line wrap
+                                    pure $ initPStr' `snoc` (StrLiteral fc isLB (dropLast 1 str))
+                               _ => pure initPStr
+
+      trimLeft : Nat -> PStr -> Core PStr
+      trimLeft indent (StrLiteral fc True line)
+          = let (trimed, rest) = splitAt indent (fastUnpack line) in
+                if any (not . isSpace) trimed
+                   then throw $ BadMultiline fc "Indentation not enough"
+                   else pure $ StrLiteral fc True (fastPack rest)
+      trimLeft indent x = pure x
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->

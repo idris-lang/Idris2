@@ -34,7 +34,12 @@ ideTokens : Tokenizer Token
 ideTokens =
       match (choice $ exact <$> symbols) Symbol
   <|> match digits (\x => IntegerLit (cast x))
-  <|> compose (is '"') (const StringBegin) (const ()) (const stringTokens) (const $ is '"') (const StringEnd)
+  <|> compose (is '"')
+              (const $ StringBegin False)
+              (const ())
+              (const stringTokens)
+              (const $ is '"')
+              (const StringEnd)
   <|> match identAllowDashes Ident
   <|> match space (const Comment)
 
