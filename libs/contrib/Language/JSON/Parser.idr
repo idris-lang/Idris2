@@ -34,10 +34,10 @@ mutual
   private
   object : Grammar JSONToken True JSON
   object = do punct $ Curly Open
-              mustWork $ do
-                props <- properties
-                punct $ Curly Close
-                pure $ JObject props
+              commit
+              props <- properties
+              punct $ Curly Close
+              pure $ JObject props
     where
       properties : Grammar JSONToken False (List (String, JSON))
       properties = sepBy (punct Comma) $
@@ -49,10 +49,10 @@ mutual
   private
   array : Grammar JSONToken True JSON
   array = do punct (Square Open)
-             mustWork $ do
-               vals <- values
-               punct (Square Close)
-               pure (JArray vals)
+             commit
+             vals <- values
+             punct (Square Close)
+             pure (JArray vals)
     where
       values : Grammar JSONToken False (List JSON)
       values = sepBy (punct Comma) json
