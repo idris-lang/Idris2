@@ -35,7 +35,7 @@ refprims.idr:49:10--49:25
  49 | dummy3 = %runElab logBad
                ^^^^^^^^^^^^^^^
 
-Error: While processing right hand side of dummy4. Error during reflection: failed after generating Main.{plus:XXXX}
+Error: While processing right hand side of dummy4. Error during reflection: failed after generating Main.{plus:XXX}
 
 refprims.idr:52:10--52:28
  48 | dummy3 : a

@@ -31,6 +31,10 @@ public export
 (>>=) = Bind
 
 public export
+(>>) : Protocol a -> Protocol b -> Protocol b
+ma >> mb = ma >>= \ _ => mb
+
+public export
 ClientK : Protocol a -> (a -> Actions b) -> Actions b
 ClientK (Request a) k = Send a k
 ClientK (Respond a) k = Recv a k
@@ -213,5 +217,5 @@ fork proc
         -- deconstruct and reconstruct is a hack to work around the fact that
         -- 'run' doesn't express the function is only used once in its type, because
         -- 'Monad' and 'Applicative' don't express linearity... ugh!
-         lift $ fork (run (proc (MkChannel a b c d e)))
+         lift $ ignore $ fork (run (proc (MkChannel a b c d e)))
          pure cchan

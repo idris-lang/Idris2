@@ -5,7 +5,7 @@ import Language.Reflection
 logPrims : Elab a
 logPrims
     = do ns <- getType `{{ (++) }}
-         traverse (\ (n, ty) =>
+         traverse_ (\ (n, ty) =>
                         do logMsg "" 0 ("Name: " ++ show n)
                            logTerm "" 0 "Type" ty) ns
          fail "Not really trying"
