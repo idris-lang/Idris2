@@ -168,23 +168,27 @@ popCountImpl z o stop = run 0
 namespace Bits8
   ||| Return the number of set bits in the argument.  This number is
   ||| known as the population count or the Hamming weight.
+  export
   popCount : Bits8 -> Nat
   popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
 
 namespace Bits16
   ||| Return the number of set bits in the argument.  This number is
   ||| known as the population count or the Hamming weight.
+  export
   popCount : Bits16 -> Nat
   popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
 
 namespace Bits32
   ||| Return the number of set bits in the argument.  This number is
   ||| known as the population count or the Hamming weight.
+  export
   popCount : Bits32 -> Nat
   popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
 
 namespace Int
   ||| Return the number of set bits in the argument.  This number is
   ||| known as the population count or the Hamming weight.
+  export
   popCount : Int -> Nat
   popCount = popCountImpl (fromNat 0) (fromNat 1) (\x => 0 == x || (-1) == x)
