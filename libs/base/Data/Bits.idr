@@ -1,7 +1,9 @@
 module Data.Bits
 
 import Data.DPair
-import Data.Nat
+import public Data.Nat
+
+%default total
 
 infixl 8 `shiftL`, `shiftR`
 infixl 7 .&.
@@ -59,24 +61,12 @@ interface Bits a where
   clearBit : (x : a) -> (i : Index) -> a
   clearBit x i = x `xor` (bit i .&. x)
 
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  popCount          : a -> Nat
-
   ||| Tests, whether the i-th bit is set in the given value.
   testBit : a -> Index -> Bool
 
   ||| Sets the i-th bit of a value.
   setBit : a -> (i : Index) -> a
   setBit x i = x .|. bit i
-
-popCountUnsigned : (Eq a, Num a, Bits a)
-                 => (zero : Index {a}) -> (one : Index {a}) -> a -> Nat
-popCountUnsigned z o = run 0
-  where run : Nat -> a -> Nat
-        run n x = if x == 0 then n
-                            else let n2 = if testBit x z then S n else n
-                                  in run n2 (x `shiftR` o)
 
 public export %inline
 Bits Bits8 where
@@ -89,7 +79,6 @@ Bits Bits8 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits8 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits8 x . fromInteger . cast . fst
-  popCount    = popCountUnsigned (fromNat 0) (fromNat 1)
 
 public export %inline
 Bits Bits16 where
@@ -102,7 +91,6 @@ Bits Bits16 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits16 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits16 x . fromInteger . cast . fst
-  popCount    = popCountUnsigned (fromNat 0) (fromNat 1)
 
 public export %inline
 Bits Bits32 where
@@ -115,7 +103,18 @@ Bits Bits32 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits32 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits32 x . fromInteger . cast . fst
-  popCount    = popCountUnsigned (fromNat 0) (fromNat 1)
+
+public export %inline
+Bits Int where
+  Index       = Subset Nat (`LT` 64)
+  (.&.)       = prim__and_Int
+  (.|.)       = prim__or_Int
+  xor         = prim__xor_Int
+  bit         = (1 `shiftL`)
+  zeroBits    = 0
+  testBit x i = (x .&. bit i) /= 0
+  shiftR x    = prim__shr_Int x . cast . fst
+  shiftL x    = prim__shl_Int x . cast . fst
 
 --------------------------------------------------------------------------------
 --          FiniteBits
@@ -143,3 +142,49 @@ public export %inline
 FiniteBits Bits32 where
   bitSize     = 32
   complement  = xor 0xffffffff
+
+public export %inline
+FiniteBits Int where
+  bitSize     = 64
+  complement  = xor (-1)
+
+--------------------------------------------------------------------------------
+--          popCount
+--------------------------------------------------------------------------------
+
+popCountImpl :  Bits a
+             => (zero : Index {a})
+             -> (one : Index {a})
+             -> (stop : a -> Bool)
+             -> a
+             -> Nat
+popCountImpl z o stop = run 0
+  where run : Nat -> a -> Nat
+        run n x = if stop x
+                     then n
+                     else let n2 = if testBit x z then S n else n
+                          in run n2 (assert_smaller x (x `shiftR` o))
+
+namespace Bits8
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : Bits8 -> Nat
+  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
+
+namespace Bits16
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : Bits16 -> Nat
+  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
+
+namespace Bits32
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : Bits32 -> Nat
+  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
+
+namespace Int
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : Int -> Nat
+  popCount = popCountImpl (fromNat 0) (fromNat 1) (\x => 0 == x || (-1) == x)
