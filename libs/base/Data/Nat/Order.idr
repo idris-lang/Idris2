@@ -58,8 +58,8 @@ decideLTE (S x)     Z  = No  zeroNeverGreater
 decideLTE (S x)   (S y) with (decEq (S x) (S y))
   decideLTE (S x)   (S y) | Yes eq      = rewrite eq in Yes (reflexive (S y))
   decideLTE (S x)   (S y) | No _ with (decideLTE x y)
-  decideLTE (S x)   (S y) | No _   | Yes nLTEm = Yes (LTESucc nLTEm)
-  decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
+    decideLTE (S x)   (S y) | No _   | Yes nLTEm = Yes (LTESucc nLTEm)
+    decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
 
 public export
 implementation Decidable 2 [Nat,Nat] LTE where
