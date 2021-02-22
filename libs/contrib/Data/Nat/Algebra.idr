@@ -5,11 +5,15 @@ import Data.Nat
 
 %default total
 
-public export
-SemigroupV Nat where
-  semigroupOpIsAssociative = plusAssociative
+namespace SemigroupV
 
-public export
-MonoidV Nat where
-  monoidNeutralIsNeutralL = plusZeroRightNeutral
-  monoidNeutralIsNeutralR = plusZeroLeftNeutral
+  public export
+  [Additive] SemigroupV Nat using Semigroup.Additive where
+    semigroupOpIsAssociative = plusAssociative
+
+namespace MonoidV
+
+  public export
+  [Additive] MonoidV Nat using Monoid.Additive SemigroupV.Additive where
+    monoidNeutralIsNeutralL = plusZeroRightNeutral
+    monoidNeutralIsNeutralR = plusZeroLeftNeutral
