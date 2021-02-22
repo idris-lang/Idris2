@@ -9,6 +9,7 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
@@ -30,6 +31,7 @@ import Libraries.Utils.Shunting
 import Libraries.Utils.String
 
 import Control.Monad.State
+import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.List1
@@ -276,10 +278,10 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
-  desugarB side ps (PMultiline fc indent strs)
-      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent strs))
+  desugarB side ps (PMultiline fc indent lines)
+      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
   desugarB side ps (PString fc strs)
-      = addFromString fc !(expandString side ps fc !(checkSingleLine strs))
+      = addFromString fc !(expandString side ps fc strs)
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
@@ -416,68 +418,66 @@ mutual
                                    xs@(_::_) => foldr1 concatStr xs
     where
       toRawImp : PStr -> Core RawImp
-      toRawImp (StrLiteral fc _ str) = pure $ IPrimVal fc (Str str)
+      toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
       mergeStrLit [] = []
       mergeStrLit [x] = [x]
-      mergeStrLit ((StrLiteral fc isLB str1)::(StrLiteral _ _ str2)::xs)
-          = (StrLiteral fc isLB (str1 ++ str2)) :: xs
+      mergeStrLit ((StrLiteral fc str1)::(StrLiteral _ str2)::xs)
+          = (StrLiteral fc (str1 ++ str2)) :: xs
       mergeStrLit (x::xs) = x :: mergeStrLit xs
 
       notEmpty : PStr -> Bool
-      notEmpty (StrLiteral _ _ str) = str /= ""
+      notEmpty (StrLiteral _ str) = str /= ""
       notEmpty (StrInterp _ _) = True
 
       concatStr : RawImp -> RawImp -> RawImp
       concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
 
-  checkSingleLine : List PStr -> Core (List PStr)
-  checkSingleLine [] = pure []
-  checkSingleLine ((StrLiteral fc True _)::xs)
-      = throw $ BadMultiline fc "Multi-line string is expected to begin with \"\"\""
-  checkSingleLine (x::xs) = pure $ x :: !(checkSingleLine xs)
-
-  trimMultiline : FC -> Nat -> List PStr -> Core (List PStr)
-  trimMultiline fc indent xs = do
-      xs <- trimFirst fc xs
-      xs <- if indent == 0 then pure xs else trimLast fc xs
-      xs <- traverse (trimLeft indent) (dropLastNL xs)
-      pure xs
+  trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
+  trimMultiline fc indent lines
+      = if indent == 0
+           then pure $ dropLastNL $ concat lines
+           else do
+             lines <- trimLast fc lines
+             lines <- traverse (trimLeft indent) lines
+             pure $ dropLastNL $ concat lines
     where
-      trimFirst : FC -> List PStr -> Core (List PStr)
-      trimFirst _ ((StrLiteral fc _ str)::pstrs)
-          = if any (not . isSpace) (fastUnpack str)
-               then throw $ BadMultiline fc "Unexpected character in the first line"
-               else pure pstrs
-      trimFirst _ _ = throw $ InternalError "Expected StrLiteral"
-
-      trimLast : FC -> List PStr -> Core (List PStr)
-      trimLast fc pstrs with (snocList pstrs)
+      trimLast : FC -> List (List PStr) -> Core (List (List PStr))
+      trimLast fc lines with (snocList lines)
         trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
-        trimLast _ (initPStr `snoc` (StrInterp fc _)) | Snoc (StrInterp _ _) initPStr _
-            = throw $ BadMultiline fc "Unexpected interpolation in the last line"
-        trimLast _ (initPStr `snoc` (StrLiteral fc _ str)) | Snoc (StrLiteral _ _ _) initPStr _
+        trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
+        trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
             = if any (not . isSpace) (fastUnpack str)
                      then throw $ BadMultiline fc "Unexpected character in the last line"
-                     else pure initPStr
+                     else pure initLines
+        trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
+            = let fc = fromMaybe fc $ findBy (\case StrInterp fc _ => Just fc;
+                                                    StrLiteral _ _ => Nothing) xs in
+                  throw $ BadMultiline fc "Unexpected interpolation in the last line"
 
       dropLastNL : List PStr -> List PStr
       dropLastNL pstrs with (snocList pstrs)
         dropLastNL [] | Empty = []
-        dropLastNL (initPStr `snoc` (StrLiteral fc isLB str)) | Snoc (StrLiteral _ _ _) initPStr _
-            = initPStr `snoc` (StrLiteral fc isLB (fst $ break isNL str))
+        dropLastNL (initLines `snoc` (StrLiteral fc str)) | Snoc (StrLiteral _ _) initLines _
+            = initLines `snoc` (StrLiteral fc (fst $ break isNL str))
         dropLastNL pstrs | _ = pstrs
 
-      trimLeft : Nat -> PStr -> Core PStr
-      trimLeft indent (StrLiteral fc True line)
-          = let (trimed, rest) = splitAt indent (fastUnpack line) in
+      trimLeft : Nat -> List PStr -> Core (List PStr)
+      trimLeft indent [] = pure []
+      trimLeft indent [(StrLiteral fc str)]
+          = let (trimed, rest) = splitAt indent (fastUnpack str) in
                 if any (not . isSpace) trimed
                    then throw $ BadMultiline fc "Indentation not enough"
-                   else pure $ StrLiteral fc True (fastPack rest)
-      trimLeft indent x = pure x
+                   else pure $ [StrLiteral fc (fastPack rest)]
+      trimLeft indent ((StrLiteral fc str)::xs)
+          = let (trimed, rest) = splitAt indent (fastUnpack str) in
+                if any (not . isSpace) trimed || length trimed < indent
+                   then throw $ BadMultiline fc "Indentation not enough"
+                   else pure $ (StrLiteral fc (fastPack rest))::xs
+      trimLeft indent xs = throw $ BadMultiline fc "Indentation not enough"
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->

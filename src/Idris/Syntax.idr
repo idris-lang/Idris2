@@ -82,7 +82,7 @@ mutual
 
        -- Syntactic sugar
        PString : FC -> List PStr -> PTerm
-       PMultiline : FC -> (indent : Nat) -> List PStr -> PTerm
+       PMultiline : FC -> (indent : Nat) -> List (List PStr) -> PTerm
        PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
@@ -179,9 +179,7 @@ mutual
 
   public export
   data PStr : Type where
-       ||| String literals that are split after visual line wrap (not the escaped '\n').
-       ||| @isLineBegin indicates whether the previous item is ended by a line wrap.
-       StrLiteral : FC -> (isLineBegin : Bool) -> String -> PStr
+       StrLiteral : FC -> String -> PStr
        StrInterp : FC -> PTerm -> PStr
 
   export
@@ -502,7 +500,7 @@ mutual
 
   export
   showPStr : PStr -> String
-  showPStr (StrLiteral _ _ str) = show str
+  showPStr (StrLiteral _ str) = show str
   showPStr (StrInterp _ tm) = show tm
 
   showUpdate : PFieldUpdate -> String
@@ -593,7 +591,7 @@ mutual
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
     showPrec d (PString _ xs) = join " ++ " $ showPStr <$> xs
-    showPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> xs) ++ ")"
+    showPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
     showPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
     showPrec d (PBang _ tm) = "!" ++ showPrec d tm
@@ -922,7 +920,7 @@ mapPTermM f = goPTerm where
       PString fc <$> goPStrings xs
       >>= f
     goPTerm (PMultiline fc x ys) =
-      PMultiline fc x <$> goPStrings ys
+      PMultiline fc x <$> goPStringLines ys
       >>= f
     goPTerm (PDoBlock fc ns xs) =
       PDoBlock fc ns <$> goPDos xs
@@ -1111,6 +1109,10 @@ mapPTermM f = goPTerm where
       (\ p, d, ts => (a, b, p, d) :: ts) <$> goPiInfo p
                                          <*> goPTerm t
                                          <*> go4TupledPTerms ts
+
+    goPStringLines : List (List PStr) -> Core (List (List PStr))
+    goPStringLines []        = pure []
+    goPStringLines (line :: lines) = (::) <$> goPStrings line <*> goPStringLines lines
 
     goPStrings : List PStr -> Core (List PStr)
     goPStrings []        = pure []

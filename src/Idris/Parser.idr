@@ -392,7 +392,8 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
-    <|> interpStr pdef fname indents
+    <|> singlelineStr pdef fname indents
+    <|> multilineStr pdef fname indents
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")
@@ -775,30 +776,49 @@ mutual
   expr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   expr = typeExpr
 
+  interpBlock : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+
   export
-  interpStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
-  interpStr q fname idents
-      = do b <- bounds $ do multi <- strBegin
+  singlelineStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  singlelineStr q fname idents
+      = do b <- bounds $ do strBegin
                             commit
-                            xs <- many $ bounds $ interpBlock <||> strLitLines
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            strEnd
+                            the (SourceEmptyRule _) $
+                                case traverse toPStr xs of
+                                     Left err => fatalError err
+                                     Right pstrs => pure $ pstrs
+           pure $ PString (boundToFC fname b) b.val
+    where
+      toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
+      toPStr x = case x.val of
+                      Right (str:::[]) => Right $ StrLiteral (boundToFC fname x) str
+                      Right (_:::strs) => Left "Multi-line string is expected to begin with \"\"\""
+                      Left tm => Right $ StrInterp (boundToFC fname x) tm
+
+  export
+  multilineStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  multilineStr q fname idents
+      = do b <- bounds $ do multilineBegin
+                            commit
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             endloc <- location
                             strEnd
-                            pure (multi, endloc, concatMap toPStr xs)
-           the (SourceEmptyRule PTerm) $
-              case b.val of
-                   (False, _, xs) => pure $ PString (boundToFC fname b) xs
-                   (True, (_, col), xs) => pure $ PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+                            pure (endloc, toLines xs [] [])
+           pure $ let ((_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
     where
-      interpBlock : Rule PTerm
-      interpBlock = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
-
-      toPStr : (WithBounds $ Either PTerm (List1 String)) -> List PStr
-      toPStr x = case x.val of
-                      -- The lines after the first '\n' is considered line begin (to be trimed in multiline).
-                      -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
-                      Right (str ::: strs) => (StrLiteral (boundToFC fname x) False str) ::
-                                              (StrLiteral (boundToFC fname x) True <$> strs)
-                      Left tm => [StrInterp (boundToFC fname x) tm]
+      toLines : List (WithBounds $ Either PTerm (List1 String)) -> List PStr -> List (List PStr) -> List (List PStr)
+      toLines [] line acc = reverse (reverse line::acc)
+      toLines (x::xs) line acc
+          = case x.val of
+                 Left tm => toLines xs ((StrInterp (boundToFC fname x) tm)::line) acc
+                 Right (str:::[]) => toLines xs ((StrLiteral (boundToFC fname x) str)::line) acc
+                 Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
+                                                         ((map (\str => [StrLiteral (boundToFC fname x) str]) (List.drop 1 $ reverse strs))
+                                                            ++ (List.reverse ((StrLiteral (boundToFC fname x) str)::line)::acc))
 
 visOption : Rule Visibility
 visOption

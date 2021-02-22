@@ -13,11 +13,11 @@ elemAt (l :: _)  Z     = Just l
 elemAt (_ :: ls) (S n) = elemAt ls n
 
 export
-firstBy : (a -> Maybe b) -> List a -> Maybe b
-firstBy p [] = Nothing
-firstBy p (x :: xs)
+findBy : (a -> Maybe b) -> List a -> Maybe b
+findBy p [] = Nothing
+findBy p (x :: xs)
   = case p x of
-      Nothing => firstBy p xs
+      Nothing => findBy p xs
       Just win => pure win
 
 export

@@ -178,7 +178,7 @@ stringEnd hashtag = "\"" ++ replicate hashtag '#'
 
 multilineBegin : Lexer
 multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
-                    manyUntil newline space <+> expect newline
+                    manyUntil newline space <+> newline
 
 multilineEnd : Nat -> String
 multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
@@ -288,7 +288,12 @@ mutual
             charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
           in
             match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit hashtag x)
-        <|> compose (exact interpStart) (const InterpBegin) (const ()) (\_ => rawTokens) (const $ is '}') (const InterpEnd)
+        <|> compose (exact interpStart)
+                    (const InterpBegin)
+                    (const ())
+                    (\_ => rawTokens)
+                    (const $ is '}')
+                    (const InterpEnd)
 
   rawTokens : Tokenizer Token
   rawTokens =
@@ -319,7 +324,7 @@ mutual
                   (const $ StringBegin False)
                   countHashtag
                   (stringTokens False)
-                  (exact . stringEnd)
+                  (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
                   (const StringEnd)
       <|> match charLit (\x => CharLit (stripQuotes x))
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))

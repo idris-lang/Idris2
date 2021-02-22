@@ -95,12 +95,18 @@ strLitLines
                                                      (splitAfter isNL (fastUnpack s))
                            _ => Nothing)
 
-||| String literal begin quote. The bool indicates whether the it is multiline string.
 export
-strBegin : Rule Bool
+strBegin : Rule ()
 strBegin = terminal "Expected string begin"
                (\x => case x.val of
-                           StringBegin multi => Just multi
+                           StringBegin False => Just ()
+                           _ => Nothing)
+
+export
+multilineBegin : Rule ()
+multilineBegin = terminal "Expected multiline string begin"
+               (\x => case x.val of
+                           StringBegin True => Just ()
                            _ => Nothing)
 
 export
