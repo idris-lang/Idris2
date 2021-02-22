@@ -339,10 +339,14 @@ installFrom pname builddir destdir ns
          let destFile = destdir </> ttcfile <.> "ttc"
 
          Right _ <- coreLift $ mkdirAll $ destNest
-             | Left err => throw (InternalError ("Can't make directories " ++ show modPath))
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't make directories " ++ show modPath
+                             , show err ]
          coreLift $ putStrLn $ "Installing " ++ ttcPath ++ " to " ++ destPath
          Right _ <- coreLift $ copyFile ttcPath destFile
-             | Left err => throw (InternalError ("Can't copy file " ++ ttcPath ++ " to " ++ destPath))
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
+                             , show err ]
          pure ()
 
 -- Install all the built modules in prefix/package/
@@ -366,11 +370,13 @@ install pkg opts -- not used but might be in the future
          let installPrefix = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
-             | False => throw (InternalError ("Can't change directory to " ++ installPrefix))
+             | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
          Right _ <- coreLift $ mkdirAll (name pkg)
-             | Left err => throw (InternalError ("Can't make directory " ++ name pkg))
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't make directory " ++ name pkg
+                             , show err ]
          True <- coreLift $ changeDir (name pkg)
-             | False => throw (InternalError ("Can't change directory to " ++ name pkg))
+             | False => throw $ InternalError $ "Can't change directory to " ++ name pkg
 
          -- We're in that directory now, so copy the files from
          -- srcdir/build into it
