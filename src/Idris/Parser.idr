@@ -816,6 +816,7 @@ mutual
           = case x.val of
                  Left tm => toLines xs ((StrInterp (boundToFC fname x) tm)::line) acc
                  Right (str:::[]) => toLines xs ((StrLiteral (boundToFC fname x) str)::line) acc
+                 -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
                  Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
                                                          ((map (\str => [StrLiteral (boundToFC fname x) str]) (List.drop 1 $ reverse strs))
                                                             ++ (List.reverse ((StrLiteral (boundToFC fname x) str)::line)::acc))
