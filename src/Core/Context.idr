@@ -1730,7 +1730,7 @@ addHintFor fc tyn_in hintn_in direct loading
 
 export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
-					      Name -> Bool -> Core ()
+                Name -> Bool -> Core ()
 addGlobalHint hintn_in isdef
     = do defs <- get Ctxt
          hintn <- toResolvedNames hintn_in

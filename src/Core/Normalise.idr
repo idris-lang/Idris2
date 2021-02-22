@@ -1232,9 +1232,10 @@ logEnv : {vars : _} ->
          String -> Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
     = do opts <- getSession
-         if keepLog lvl (logLevel opts)
-            then dumpEnv env
-            else pure ()
+         when (keepLog lvl (logLevel opts)) $ do
+           coreLift (putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg)
+           dumpEnv env
+
   where
     lvl : LogLevel
     lvl = mkLogLevel str n

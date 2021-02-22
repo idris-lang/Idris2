@@ -10,6 +10,7 @@ import Core.Value
 
 import Libraries.Data.Bool.Extra
 import Data.List
+import Data.Strings
 import Libraries.Data.NameMap
 
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -380,6 +381,10 @@ getMissing fc n ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
         pats <- buildArgs fc defs [] [] psIn ctree
+        logC "coverage.missing" 20 $ map unlines $
+          flip traverse (concat pats) $ \ pat =>
+            do pat' <- toFullNames pat
+               pure (show pat')
         pure (map (apply fc (Ref fc Func n)) pats)
 
 -- For the given name, get the names it refers to which are not themselves

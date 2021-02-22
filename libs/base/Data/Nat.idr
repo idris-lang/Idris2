@@ -72,6 +72,10 @@ export
 Uninhabited (LTE (S n) Z) where
   uninhabited LTEZero impossible
 
+export
+Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
+  uninhabited (LTESucc lte) = uninhabited lte
+
 public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
