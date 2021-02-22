@@ -19,7 +19,7 @@ As such, it should contain:
 - Semigroup, Monoid
 - Functor, Applicative, Monad and related functions
 - Foldable, Traversable
-- Enum for range syntax
+- Range for range syntax
 - Console IO and interfaces for supporting IO
 
 Everything else should be in the base libraries, and imported as required.
