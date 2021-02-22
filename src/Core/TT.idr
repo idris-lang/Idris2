@@ -591,6 +591,12 @@ Eq LazyReason where
   (==) _ _ = False
 
 export
+Show LazyReason where
+    show LInf = "Inf"
+    show LLazy = "Lazy"
+    show LUnknown = "Unkown"
+
+export
 compatible : LazyReason -> LazyReason -> Bool
 compatible LUnknown _ = True
 compatible _ LUnknown = True

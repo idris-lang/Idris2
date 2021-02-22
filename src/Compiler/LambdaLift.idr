@@ -197,8 +197,8 @@ mutual
       traverseArgs [] = pure []
       traverseArgs (a :: as) = pure $ !(liftExp a) :: !(traverseArgs as)
   liftExp (CExtPrim fc p args) = pure $ LExtPrim fc p !(traverse liftExp args)
-  liftExp (CForce fc tm) = liftExp (CApp fc tm [CErased fc])
-  liftExp (CDelay fc tm) = liftExp (CLam fc (MN "act" 0) (weaken tm))
+  liftExp (CForce fc _ tm) = liftExp (CApp fc tm [CErased fc])
+  liftExp (CDelay fc _ tm) = liftExp (CLam fc (MN "act" 0) (weaken tm))
   liftExp (CConCase fc sc alts def)
       = pure $ LConCase fc !(liftExp sc) !(traverse liftConAlt alts)
                            !(traverseOpt liftExp def)
