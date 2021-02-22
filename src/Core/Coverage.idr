@@ -27,6 +27,8 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
         = t /= t'
     clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
         = t /= t'
+    clash (PrimVal _ c) (PrimVal _ c')
+      = c /= c'
     clash (Ref _ t _) (PrimVal _ _) = isCon t
     clash (PrimVal _ _) (Ref _ t _) = isCon t
     clash (Ref _ t _) (TType _) = isCon t
