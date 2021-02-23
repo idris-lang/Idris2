@@ -331,20 +331,28 @@ testBitNegInt = map (testBit (negate $ the Int 0xaaaaaaaaaaaaaaa))
 --          popCount
 --------------------------------------------------------------------------------
 
-popCountBits8 : Nat
-popCountBits8 = Bits8.popCount 0xaa
+popCountBits8 : List Nat
+popCountBits8 = map popCount [the Bits8 0, 0xaa, 0xff]
 
-popCountBits16 : Nat
-popCountBits16 = Bits16.popCount 0xaaaa
+popCountBits16 : List Nat
+popCountBits16 = map popCount [the Bits16 0, 0xaaaa, 0xffff]
 
-popCountBits32 : Nat
-popCountBits32 = Bits32.popCount 0xaaaaaaaa
+popCountBits32 : List Nat
+popCountBits32 = map popCount [the Bits32 0, 0xaaaaaaaa, 0xffffffff]
 
-popCountInt : Nat
-popCountInt = Int.popCount 0xaaaaaaaaaaaaaaa
+popCountInt : List Nat
+popCountInt = map popCount [ the Int 0
 
-popCountNegInt : Nat
-popCountNegInt = Int.popCount (negate 0xaaaaaaaaaaaaaaa)
+                           -- 0101 0101 ... 0101
+                           -- => 32
+                           , 0x5555555555555555
+
+                           , -1
+
+                           -- 1010 1010 ... 1011
+                           -- => 33
+                           , negate 0x5555555555555555
+                           ]
 
 --------------------------------------------------------------------------------
 --          Running Tests
@@ -431,4 +439,3 @@ main = do printLn shiftRBits8
           printLn popCountBits16
           printLn popCountBits32
           printLn popCountInt
-          printLn popCountNegInt

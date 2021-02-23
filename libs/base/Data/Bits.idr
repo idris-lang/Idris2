@@ -68,6 +68,10 @@ interface Bits a where
   setBit : a -> (i : Index) -> a
   setBit x i = x .|. bit i
 
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : a -> Nat
+
 public export %inline
 Bits Bits8 where
   Index       = Subset Nat (`LT` 8)
@@ -79,6 +83,13 @@ Bits Bits8 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits8 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits8 x . fromInteger . cast . fst
+
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x55) + ((x0 `shiftR` fromNat 1) .&. 0x55)
+        x2 = (x1 .&. 0x33) + ((x1 `shiftR` fromNat 2) .&. 0x33)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F)
+     in fromInteger $ cast x3
 
 public export %inline
 Bits Bits16 where
@@ -92,6 +103,14 @@ Bits Bits16 where
   shiftR x    = prim__shr_Bits16 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits16 x . fromInteger . cast . fst
 
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x5555) + ((x0 `shiftR` fromNat 1) .&. 0x5555)
+        x2 = (x1 .&. 0x3333) + ((x1 `shiftR` fromNat 2) .&. 0x3333)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F)
+        x4 = (x3 * 0x0101) `shiftR` fromNat 8
+     in fromInteger $ cast x4
+
 public export %inline
 Bits Bits32 where
   Index       = Subset Nat (`LT` 32)
@@ -104,6 +123,14 @@ Bits Bits32 where
   shiftR x    = prim__shr_Bits32 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits32 x . fromInteger . cast . fst
 
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x55555555) + ((x0 `shiftR` fromNat 1) .&. 0x55555555)
+        x2 = (x1 .&. 0x33333333) + ((x1 `shiftR` fromNat 2) .&. 0x33333333)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F)
+        x4 = (x3 * 0x01010101) `shiftR` fromNat 24
+     in fromInteger $ cast x4
+
 public export %inline
 Bits Int where
   Index       = Subset Nat (`LT` 64)
@@ -115,6 +142,22 @@ Bits Int where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int x . cast . fst
   shiftL x    = prim__shl_Int x . cast . fst
+
+  popCount x =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    -- We have to treat negative numbers separately in order to
+    -- prevent overflows in the first addition.
+    -- The top bit is therefore cleared and 1 is added in the end
+    -- in case of a negative number
+    let x0 = x `clearBit` fromNat 63
+        x1 = (x0 .&. 0x5555555555555555)
+           + ((x0 `shiftR` fromNat 1) .&. 0x5555555555555555)
+        x2 = (x1 .&. 0x3333333333333333)
+           + ((x1 `shiftR` fromNat 2) .&. 0x3333333333333333)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F0F0F0F0F)
+        x4 = (x3 * 0x0101010101010101) `shiftR` fromNat 56
+        x5 = if x < 0 then x4 + 1 else x4
+     in fromInteger $ cast x5
 
 --------------------------------------------------------------------------------
 --          FiniteBits
@@ -147,48 +190,3 @@ public export %inline
 FiniteBits Int where
   bitSize     = 64
   complement  = xor (-1)
-
---------------------------------------------------------------------------------
---          popCount
---------------------------------------------------------------------------------
-
-popCountImpl :  Bits a
-             => (zero : Index {a})
-             -> (one : Index {a})
-             -> (stop : a -> Bool)
-             -> a
-             -> Nat
-popCountImpl z o stop = run 0
-  where run : Nat -> a -> Nat
-        run n x = if stop x
-                     then n
-                     else let n2 = if testBit x z then S n else n
-                          in run n2 (assert_smaller x (x `shiftR` o))
-
-namespace Bits8
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  export
-  popCount : Bits8 -> Nat
-  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
-
-namespace Bits16
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  export
-  popCount : Bits16 -> Nat
-  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
-
-namespace Bits32
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  export
-  popCount : Bits32 -> Nat
-  popCount = popCountImpl (fromNat 0) (fromNat 1) (0 ==)
-
-namespace Int
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  export
-  popCount : Int -> Nat
-  popCount = popCountImpl (fromNat 0) (fromNat 1) (\x => 0 == x || (-1) == x)
