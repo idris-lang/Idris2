@@ -177,11 +177,11 @@ mutual
         {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
   anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
-  anf vs (LAppName fc n args)
+  anf vs (LAppName fc lazy n args)
       = anfArgs fc vs args (AAppName fc n)
   anf vs (LUnderApp fc n m args)
       = anfArgs fc vs args (AUnderApp fc n m)
-  anf vs (LApp fc f a)
+  anf vs (LApp fc lazy f a)
       = anfArgs fc vs [f, a]
                 (\args => case args of
                                [fvar, avar] => AApp fc fvar avar
@@ -192,13 +192,13 @@ mutual
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
   anf vs (LCon fc n t args)
       = anfArgs fc vs args (ACon fc n t)
-  anf vs (LOp {arity} fc op args)
+  anf vs (LOp {arity} fc lazy op args)
       = do args' <- traverse (anf vs) (toList args)
            letBind fc args'
                 (\args => case toVect arity args of
                                Nothing => ACrash fc "Can't happen (AOp)"
                                Just argsv => AOp fc op argsv)
-  anf vs (LExtPrim fc p args)
+  anf vs (LExtPrim fc lazy p args)
       = anfArgs fc vs args (AExtPrim fc p)
   anf vs (LConCase fc scr alts def)
       = do scr' <- anf vs scr

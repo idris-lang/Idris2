@@ -278,11 +278,11 @@ getCompileData phase tm_in
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
-         (liftedtm, ldefs) <- liftBody mainname compiledtm
+         (liftedtm, ldefs) <- liftBody {doLazyAnnots = False} mainname compiledtm -- for now use old behaviour
 
          namedefs <- traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted
-                         then logTime "Lambda lift" $ traverse lambdaLift rcns
+                         then logTime "Lambda lift" $ traverse (lambdaLift False) rcns -- for now use old behaviour
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
