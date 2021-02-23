@@ -7,8 +7,7 @@ name: "project"
 version: "0.1.0"
 [deps]
 "semver" = 0.2
-a
- b\n
+a b\n
   c
 sticking together!
 

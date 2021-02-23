@@ -24,7 +24,7 @@ multi1 = """
 
 multi2 : String
 multi2 = #"""
-            a
+            a\#
              b\n
               \#{"c"}
             """#
