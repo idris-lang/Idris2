@@ -25,6 +25,16 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     clash : Term vars -> Term vars -> Bool
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
         = t /= t'
+    clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
+        = t /= t'
+    clash (PrimVal _ c) (PrimVal _ c')
+      = c /= c'
+    clash (Ref _ t _) (PrimVal _ _) = isCon t
+    clash (PrimVal _ _) (Ref _ t _) = isCon t
+    clash (Ref _ t _) (TType _) = isCon t
+    clash (TType _) (Ref _ t _) = isCon t
+    clash (TType _) (PrimVal _ _) = True
+    clash (PrimVal _ _) (TType _) = True
     clash _ _ = False
 
     findN : Nat -> Term vars -> Bool
