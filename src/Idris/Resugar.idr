@@ -98,11 +98,11 @@ extractNat : Nat -> PTerm -> Maybe Nat
 extractNat acc tm = case tm of
   PRef _ (NS ns (UN n)) =>
     do guard (n == "Z")
-       guard (ns == (preludeNS <.?> mkNamespace "Nat"))
+       guard (ns == (preludeNS <.> mkNamespace "Nat"))
        pure acc
   PApp _ (PRef _ (NS ns (UN n))) k => do
     do guard (n == "S")
-       guard (ns == (preludeNS <.?> mkNamespace "Nat"))
+       guard (ns == (preludeNS <.> mkNamespace "Nat"))
        extractNat (1 + acc) k
   PPrimVal _ (BI n) => pure (acc + integerToNat n)
   PBracketed _ k    => extractNat acc k

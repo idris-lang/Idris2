@@ -117,21 +117,6 @@ export
 unsafeFoldModuleIdent : List String -> ModuleIdent
 unsafeFoldModuleIdent = MkMI
 
--- FIXME Replace with (<.>) when Idris version becomes X.X.[3;)
-infixl 5 <.?>
-export
-(<.?>) : Namespace -> Namespace -> Namespace
-(<.?>) = (<.>)
--- (<.?>) ns ms =
---   case Version.(<) version.semVer Ver033 of
---     False => unsafePerformIO $ do
---       putStrLn "REPLACE (<.?>) with (<.>)"
---       exitFailure
---     True =>
---       if Version.(<) version.semVer Ver030
---         then ns
---         else ns <.> ms
-
 -------------------------------------------------------------------------------------
 -- HIERARCHICAL STRUCTURE
 -------------------------------------------------------------------------------------
