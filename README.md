@@ -88,6 +88,11 @@ Javascript
 ====================
 The javascript codegen uses the new BigInt, hence nodejs 10.4 or higher is required.
 
+Editor Plugins
+===============
+The [wiki](https://github.com/idris-lang/Idris2/wiki/The-Idris-editor-experience)
+lists the current plugins available for common text editors and their features.
+
 Things still missing
 ====================
 
