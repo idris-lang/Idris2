@@ -80,6 +80,12 @@ impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NPrimVal _ _) = pure True
 impossibleOK defs x y = pure False
 
 export
