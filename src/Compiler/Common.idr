@@ -250,9 +250,9 @@ dumpVMCode fn lns
 -- them to CExp form (and update that in the Defs).
 -- Return the names, the type tags, and a compiled version of the expression
 export
-getCompileData : {auto c : Ref Ctxt Defs} ->
+getCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
                  UsePhase -> ClosedTerm -> Core CompileData
-getCompileData phase tm_in
+getCompileData doLazyAnnots phase tm_in
     = do defs <- get Ctxt
          sopts <- getSession
          let ns = getRefs (Resolved (-1)) tm_in
@@ -278,11 +278,11 @@ getCompileData phase tm_in
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
-         (liftedtm, ldefs) <- liftBody {doLazyAnnots = False} mainname compiledtm -- for now use old behaviour
+         (liftedtm, ldefs) <- liftBody {doLazyAnnots} mainname compiledtm
 
          namedefs <- traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted
-                         then logTime "Lambda lift" $ traverse (lambdaLift False) rcns -- for now use old behaviour
+                         then logTime "Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::

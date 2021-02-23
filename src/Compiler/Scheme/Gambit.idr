@@ -367,7 +367,7 @@ getFgnCall (n, fc, d) = schFgnDef fc n d
 compileToSCM : Ref Ctxt Defs ->
                ClosedTerm -> (outfile : String) -> Core (List String)
 compileToSCM c tm outfile
-    = do cdata <- getCompileData Cases tm
+    = do cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          -- let tags = nameTags cdata
          let ctm = forget (mainExpr cdata)

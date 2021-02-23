@@ -214,7 +214,7 @@ export
 compileToImperative : Ref Ctxt Defs -> ClosedTerm -> Core (ImperativeStatement, ImperativeStatement)
 compileToImperative c tm =
   do
-    cdata <- getCompileData Cases tm
+    cdata <- getCompileData False Cases tm
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
     newRef Imps (MkImpSt 0)

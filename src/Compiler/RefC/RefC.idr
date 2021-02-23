@@ -1070,7 +1070,7 @@ compileExpr ANF c _ outputDir tm outfile =
      let outexec = outputDir </> outfile
 
      coreLift $ mkdirAll outputDir
-     cdata <- getCompileData ANF tm
+     cdata <- getCompileData False ANF tm
      let defs = anf cdata
      newRef ArgCounter 0
      newRef FunctionDefinitions []
