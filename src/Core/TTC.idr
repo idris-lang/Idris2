@@ -137,6 +137,11 @@ TTC Constant where
   toBuf b DoubleType = tag 18
   toBuf b WorldType = tag 19
 
+  toBuf b (I32 x) = do tag 20; toBuf b x
+  toBuf b (I64 x) = do tag 21; toBuf b x
+  toBuf b Int32Type = tag 22
+  toBuf b Int64Type = tag 23
+
   fromBuf b
       = case !getTag of
              0 => do x <- fromBuf b; pure (I x)
@@ -159,6 +164,10 @@ TTC Constant where
              17 => pure CharType
              18 => pure DoubleType
              19 => pure WorldType
+             20 => do x <- fromBuf b; pure (I32 x)
+             21 => do x <- fromBuf b; pure (I64 x)
+             22 => pure Int32Type
+             23 => pure Int64Type
              _ => corrupt "Constant"
 
 export

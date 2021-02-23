@@ -236,6 +236,8 @@ mkWorld res = res -- MkIORes is a newtype now! schConstructor 0 [res, "#f"] -- M
 
 schConstant : (String -> String) -> Constant -> String
 schConstant _ (I x) = show x
+schConstant _ (I32 x) = show x
+schConstant _ (I64 x) = show x
 schConstant _ (BI x) = show x
 schConstant _ (B8 x) = show x
 schConstant _ (B16 x) = show x
@@ -249,6 +251,8 @@ schConstant _ (Ch x)
 schConstant _ (Db x) = show x
 schConstant _ WorldVal = "#f"
 schConstant _ IntType = "#t"
+schConstant _ Int32Type = "#t"
+schConstant _ Int64Type = "#t"
 schConstant _ IntegerType = "#t"
 schConstant _ Bits8Type = "#t"
 schConstant _ Bits16Type = "#t"

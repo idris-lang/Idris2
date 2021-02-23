@@ -46,6 +46,8 @@ constant
                            Ident "Char"    => Just CharType
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
+                           Ident "Int32"   => Just Int32Type
+                           Ident "Int64"   => Just Int64Type
                            Ident "Integer" => Just IntegerType
                            Ident "Bits8"   => Just Bits8Type
                            Ident "Bits16"  => Just Bits16Type
@@ -250,8 +252,10 @@ holeName
 
 reservedNames : List String
 reservedNames
-    = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
-       "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
+    = [ "Type", "Int", "Int32", "Int64", "Integer"
+      , "Bits8", "Bits16", "Bits32", "Bits64"
+      , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
+      ]
 
 isNotReservedIdent : WithBounds String -> SourceEmptyRule ()
 isNotReservedIdent x
