@@ -86,7 +86,7 @@ mutual
         = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
     show (LApp fc lazy c arg)
-        = show c ++ " @" ++ showLazy lazy ++ "(" ++ show arg ++ ")"
+        = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (LLet fc x val sc)
         = "%let " ++ show x ++ " = " ++ show val ++ " in " ++ show sc
     show (LCon fc n t args)
