@@ -53,6 +53,13 @@ interface Bits a where
   ||| The value with all bits unset.
   zeroBits : a
 
+  ||| Returns the bitwise complement of a value.
+  complement : a -> a
+
+  ||| The value with all bits set..
+  oneBits : a
+  oneBits = complement zeroBits
+
   ||| `complementBit x i` is the same as `xor x (bit i)`.
   complementBit : (x : a) -> (i : Index) -> a
   complementBit x i = x `xor` bit i
@@ -68,10 +75,6 @@ interface Bits a where
   setBit : a -> (i : Index) -> a
   setBit x i = x .|. bit i
 
-  ||| Return the number of set bits in the argument.  This number is
-  ||| known as the population count or the Hamming weight.
-  popCount : a -> Nat
-
 public export %inline
 Bits Bits8 where
   Index       = Subset Nat (`LT` 8)
@@ -83,13 +86,8 @@ Bits Bits8 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits8 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits8 x . fromInteger . cast . fst
-
-  popCount x0 =
-    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
-    let x1 = (x0 .&. 0x55) + ((x0 `shiftR` fromNat 1) .&. 0x55)
-        x2 = (x1 .&. 0x33) + ((x1 `shiftR` fromNat 2) .&. 0x33)
-        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F)
-     in fromInteger $ cast x3
+  complement  = xor 0xff
+  oneBits     = 0xff
 
 public export %inline
 Bits Bits16 where
@@ -102,14 +100,8 @@ Bits Bits16 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits16 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits16 x . fromInteger . cast . fst
-
-  popCount x0 =
-    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
-    let x1 = (x0 .&. 0x5555) + ((x0 `shiftR` fromNat 1) .&. 0x5555)
-        x2 = (x1 .&. 0x3333) + ((x1 `shiftR` fromNat 2) .&. 0x3333)
-        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F)
-        x4 = (x3 * 0x0101) `shiftR` fromNat 8
-     in fromInteger $ cast x4
+  complement  = xor 0xffff
+  oneBits     = 0xffff
 
 public export %inline
 Bits Bits32 where
@@ -122,14 +114,8 @@ Bits Bits32 where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Bits32 x . fromInteger . cast . fst
   shiftL x    = prim__shl_Bits32 x . fromInteger . cast . fst
-
-  popCount x0 =
-    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
-    let x1 = (x0 .&. 0x55555555) + ((x0 `shiftR` fromNat 1) .&. 0x55555555)
-        x2 = (x1 .&. 0x33333333) + ((x1 `shiftR` fromNat 2) .&. 0x33333333)
-        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F)
-        x4 = (x3 * 0x01010101) `shiftR` fromNat 24
-     in fromInteger $ cast x4
+  complement  = xor 0xffffffff
+  oneBits     = 0xffffffff
 
 public export %inline
 Bits Int where
@@ -142,6 +128,67 @@ Bits Int where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int x . cast . fst
   shiftL x    = prim__shl_Int x . cast . fst
+  complement  = xor (-1)
+  oneBits     = (-1)
+
+--------------------------------------------------------------------------------
+--          FiniteBits
+--------------------------------------------------------------------------------
+
+public export
+interface Bits a => FiniteBits a where
+  ||| Return the number of bits in values of type `t`.
+  bitSize : Nat
+
+  ||| Properly correlates `bitSize` and `Index`.
+  bitsToIndex : Subset Nat (`LT` bitSize) -> Index {a}
+
+  ||| Return the number of set bits in the argument.  This number is
+  ||| known as the population count or the Hamming weight.
+  popCount : a -> Nat
+
+public export %inline
+FiniteBits Bits8 where
+  bitSize     = 8
+  bitsToIndex = id
+
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x55) + ((x0 `shiftR` fromNat 1) .&. 0x55)
+        x2 = (x1 .&. 0x33) + ((x1 `shiftR` fromNat 2) .&. 0x33)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F)
+     in fromInteger $ cast x3
+
+public export %inline
+FiniteBits Bits16 where
+  bitSize     = 16
+  bitsToIndex = id
+
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x5555) + ((x0 `shiftR` fromNat 1) .&. 0x5555)
+        x2 = (x1 .&. 0x3333) + ((x1 `shiftR` fromNat 2) .&. 0x3333)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F)
+        x4 = (x3 * 0x0101) `shiftR` fromNat 8
+     in fromInteger $ cast x4
+
+public export %inline
+FiniteBits Bits32 where
+  bitSize     = 32
+  bitsToIndex = id
+
+  popCount x0 =
+    -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+    let x1 = (x0 .&. 0x55555555) + ((x0 `shiftR` fromNat 1) .&. 0x55555555)
+        x2 = (x1 .&. 0x33333333) + ((x1 `shiftR` fromNat 2) .&. 0x33333333)
+        x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F)
+        x4 = (x3 * 0x01010101) `shiftR` fromNat 24
+     in fromInteger $ cast x4
+
+public export %inline
+FiniteBits Int where
+  bitSize     = 64
+  bitsToIndex = id
 
   popCount x =
     -- see https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
@@ -158,35 +205,3 @@ Bits Int where
         x4 = (x3 * 0x0101010101010101) `shiftR` fromNat 56
         x5 = if x < 0 then x4 + 1 else x4
      in fromInteger $ cast x5
-
---------------------------------------------------------------------------------
---          FiniteBits
---------------------------------------------------------------------------------
-
-public export
-interface Bits a => FiniteBits a where
-  ||| Return the number of bits in values of type `t`.
-  bitSize : Nat
-
-  ||| Returns the bitwise complement of a value.
-  complement : a -> a
-
-public export %inline
-FiniteBits Bits8 where
-  bitSize     = 8
-  complement  = xor 0xff
-
-public export %inline
-FiniteBits Bits16 where
-  bitSize     = 16
-  complement  = xor 0xffff
-
-public export %inline
-FiniteBits Bits32 where
-  bitSize     = 32
-  complement  = xor 0xffffffff
-
-public export %inline
-FiniteBits Int where
-  bitSize     = 64
-  complement  = xor (-1)
