@@ -122,14 +122,24 @@ recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
 -- Type constructor vs. primitive type
 recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+-- Type constructor vs. type
+recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
+recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+
 recoverable defs (NTCon _ _ _ _ _) _ = pure True
+recoverable defs _ (NTCon _ _ _ _ _) = pure True
 
 -- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
          else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
+-- Data constructor vs. primitive constant
+recoverable defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+
 recoverable defs (NDCon _ _ _ _ _) _ = pure True
+recoverable defs _ (NDCon _ _ _ _ _) = pure True
 
 -- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
