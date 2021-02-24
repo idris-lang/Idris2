@@ -43,6 +43,14 @@ namespace Exists
   uncurry : {0 p : a -> Type} -> ({0 x : a} -> p x -> c) -> Exists {type=a} p -> c
   uncurry f ex = f ex.snd
 
+  export
+  evidenceInjectiveFst : Evidence x p = Evidence y q -> x = y
+  evidenceInjectiveFst Refl = Refl
+
+  export
+  evidenceInjectiveSnd : Evidence x p = Evidence x q -> p = q
+  evidenceInjectiveSnd Refl = Refl
+
   public export
   bimap : (0 f : a -> b) -> (forall x. p x -> q (f x)) -> Exists {type=a} p -> Exists {type=b} q
   bimap f g (Evidence x y) = Evidence (f x) (g y)
@@ -71,6 +79,14 @@ namespace Subset
   public export
   uncurry : {0 p : a -> Type} -> ((x : a) -> (0 _ : p x) -> c) -> Subset a p -> c
   uncurry f s = f s.fst s.snd
+
+  export
+  elementInjectiveFst : Element x p = Element y q -> x = y
+  elementInjectiveFst Refl = Refl
+
+  export
+  elementInjectiveSnd : Element x p = Element x q -> p = q
+  elementInjectiveSnd Refl = Refl
 
   public export
   bimap : (f : a -> b) -> (0 _ : forall x. p x -> q (f x)) -> Subset a p -> Subset b q
