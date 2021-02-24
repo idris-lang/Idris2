@@ -15,11 +15,11 @@ interface StoreI e where
 Has [Console] e => StoreI e where
   connect f
       = let (>>=) = bindL in
+        let (>>) = seqL in
             do putStrLn "Connected"
                f (MkStore "xyzzy")
   disconnect (MkStore _)
-      = do putStrLn "Disconnected"
-           pure ()
+      = do ignore $ putStrLn "Disconnected"
 
 login : (1 s : Store LoggedOut) -> (password : String) ->
         Res Bool (\ok => Store (if ok then LoggedIn else LoggedOut))
@@ -32,6 +32,7 @@ logout (MkStore secret) = MkStore secret
 storeProg : Has [Console, StoreI] e => App e ()
 storeProg
     = let (>>=) = bindL in
+      let (>>) = seqL in
         do putStr "Password: "
            password <- Console.getStr
            connect $ \s =>

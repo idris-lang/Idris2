@@ -19,6 +19,11 @@ data DoorCmd : (ty : Type) ->
           ((res: a) -> DoorCmd b (state2_fn res) state3_fn) ->
           DoorCmd b state1 state3_fn
 
+(>>) : DoorCmd () state1 state2_fn ->
+       Lazy (DoorCmd a (state2_fn ()) state3_fn) ->
+       DoorCmd a state1 state3_fn
+ma >> mb = ma >>= \ () => mb
+
 logOpen : DoorCmd DoorResult DoorClosed
                              (\res => case res of
                                            OK => DoorOpen

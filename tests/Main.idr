@@ -53,7 +53,8 @@ idrisTestsCoverage = MkTestPool []
        -- Coverage checking
       ["coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
-       "coverage009", "coverage010", "coverage011", "coverage012"]
+       "coverage009", "coverage010", "coverage011", "coverage012",
+       "coverage013"]
 
 idrisTestsError : TestPool
 idrisTestsError = MkTestPool []
@@ -84,14 +85,15 @@ idrisTestsInterface = MkTestPool []
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
-       "interface021", "interface022"]
+       "interface021", "interface022", "interface023"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool []
        -- QTT and linearity related
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
-        "linear009", "linear010", "linear011", "linear012"]
+        "linear009", "linear010", "linear011", "linear012",
+        "linear013"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool []
@@ -152,7 +154,7 @@ idrisTests = MkTestPool []
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
-       "with001", "with002",
+       "with001", "with002", "with004",
        -- with-disambiguation
        "with003"]
 

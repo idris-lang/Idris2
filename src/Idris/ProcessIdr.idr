@@ -40,7 +40,7 @@ processDecl : {auto c : Ref Ctxt Defs} ->
               PDecl -> Core (Maybe Error)
 processDecl decl
     = catch (do impdecls <- desugarDecl [] decl
-                traverse (Check.processDecl [] (MkNested []) []) impdecls
+                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
                 pure Nothing)
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure (Just err))
@@ -261,7 +261,7 @@ processMod srcf ttcf msg sourcecode
                             pure (runParser srcf (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [err])
                 initHash
-                traverse addPublicHash (sort hs)
+                traverse_ addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
                    do let MkFC fname _ _ = headerloc mod

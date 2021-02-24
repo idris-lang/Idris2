@@ -147,11 +147,10 @@ bindUnsolved {vars} fc elabmode _
                                     sub subEnv
                                     !(normaliseHoles defs env exp)
              logTerm "elab" 5 ("Added unbound implicit") bindtm
-             unify (case elabmode of
+             ignore $ unify (case elabmode of
                          InLHS _ => inLHS
                          _ => inTerm)
                    fc env tm bindtm
-             pure ()
 
 swapIsVarH : {idx : Nat} -> (0 p : IsVar name idx (x :: y :: xs)) ->
              Var (y :: x :: xs)

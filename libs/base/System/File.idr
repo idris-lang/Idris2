@@ -246,8 +246,7 @@ fEOF (FHandle f)
 export
 fflush : HasIO io => (h : File) -> io ()
 fflush (FHandle f)
-    = do primIO (prim__flush f)
-         pure ()
+    = ignore $ primIO (prim__flush f)
 
 export
 popen : HasIO io => String -> Mode -> io (Either FileError File)
@@ -323,9 +322,6 @@ withFile filename mode onError onOpen =
      closeFile h
      pure res
 
-try : Monad m => m (Either FileError a) -> (a -> m (Either FileError b)) -> m (Either FileError b)
-try a f = a >>= either (pure . Left) f
-
 readLinesOnto : HasIO io => (acc : List String) ->
                             (offset : Nat) ->
                             (fuel : Fuel) ->
@@ -336,8 +332,8 @@ readLinesOnto acc offset (More fuel) h
   = do False <- fEOF h
          | True => pure $ Right (True, reverse acc)
        case offset of
-            (S offset') => try (fSeekLine h) (const $ readLinesOnto acc offset' (More fuel) h)
-            0           => try (fGetLine  h) (\str => readLinesOnto (str :: acc) 0 fuel h)
+            (S offset') => (fSeekLine h *> readLinesOnto acc offset' (More fuel) h) @{Applicative.Compose}
+            0           => (fGetLine h >>= \str => readLinesOnto (str :: acc) 0 fuel h) @{Monad.Compose}
 
 ||| Read a chunk of a file in a line-delimited fashion.
 ||| You can use this function to read an entire file

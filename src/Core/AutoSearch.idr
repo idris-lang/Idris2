@@ -316,7 +316,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                    let env' = clearEnv prf env
                    -- Work right to left, because later arguments may solve
                    -- earlier ones by unification
-                   traverse (searchIfHole fc defaults trying False depth def top env')
+                   traverse_ (searchIfHole fc defaults trying False depth def top env')
                             (impLast args)
                    pure candidate
                 else do logNF "auto" 10 "Can't use " env ty
@@ -452,7 +452,7 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
          logTermNF "auto" 10 "Candidate " env candidate
          -- Work right to left, because later arguments may solve earlier
          -- dependencies by unification
-         traverse (searchIfHole fc defaults trying ispair depth def top env)
+         traverse_ (searchIfHole fc defaults trying ispair depth def top env)
                   (impLast args)
          pure candidate
 
@@ -516,25 +516,21 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n
              let args' = drop 0 (detArgs sd) args
-             traverse (\ parg => do argnf <- evalClosure defs parg
-                                    concrete defs argnf False) (map snd args')
-             pure ()
+             traverse_ (\ parg => do argnf <- evalClosure defs parg
+                                     concrete defs argnf False) (map snd args')
     concrete defs (NDCon nfc n t a args) atTop
-        = do traverse (\ parg => do argnf <- evalClosure defs parg
-                                    concrete defs argnf False) (map snd args)
-             pure ()
+        = do traverse_ (\ parg => do argnf <- evalClosure defs parg
+                                     concrete defs argnf False) (map snd args)
     concrete defs (NApp _ (NMeta n i _) _) True
         = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | _ => throw (DeterminingArg fc n i [] top)
-             when (not (implbind b)) $
+             unless (implbind b) $
                   throw (DeterminingArg fc n i [] top)
-             pure ()
     concrete defs (NApp _ (NMeta n i _) _) False
         = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | def => throw (CantSolveGoal fc [] top)
-             when (not (implbind b)) $
+             unless (implbind b) $
                   throw (CantSolveGoal fc [] top)
-             pure ()
     concrete defs tm atTop = pure ()
 
 checkConcreteDets : {vars : _} ->

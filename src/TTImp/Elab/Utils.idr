@@ -64,9 +64,10 @@ updateErasable n
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          (es, dtes) <- findErased (type gdef)
-         addDef n (record { eraseArgs = es,
-                            safeErase = dtes } gdef)
-         pure ()
+         ignore $ addDef n $ record
+                    { eraseArgs = es,
+                      safeErase = dtes } gdef
+
 export
 wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a
 wrapErrorC opts err
