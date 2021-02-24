@@ -103,6 +103,7 @@ modules =
     Libraries.Data.ANameMap,
     Libraries.Data.Bool.Extra,
     Libraries.Data.DList,
+    Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,
