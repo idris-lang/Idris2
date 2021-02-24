@@ -15,6 +15,10 @@ data ConsoleIO : Type -> Type where
 (>>=) : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
 (>>=) = Do
 
+%tcinline
+(>>) : Command () -> Inf (ConsoleIO b) -> ConsoleIO b
+ma >> mb = Do ma (\ _ => mb)
+
 data Fuel = Dry | More (Lazy Fuel)
 
 runCommand : Command a -> IO a

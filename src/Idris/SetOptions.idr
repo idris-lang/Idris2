@@ -140,18 +140,18 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               REPLResult -> List CLOpt -> Core Bool
 postOptions _ [] = pure True
 postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
-    = do postOptions res rest
+    = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
-         postOptions res rest
+    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+         ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
-         postOptions res rest
+    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+         ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)
-    = do postOptions res rest
+    = do ignore $ postOptions res rest
          pure False
 postOptions res (RunREPL str :: rest)
     = do replCmd str

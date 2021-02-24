@@ -67,6 +67,15 @@ namespace MachineDo
           (a -> Inf (MachineIO state2)) -> MachineIO state1
   (>>=) = Do
 
+  export
+  (>>) : {state1 : _} ->
+         MachineCmd a state1 state2 ->
+         Inf (MachineIO state2) ->
+         MachineIO state1
+  ma >> mb = ma >>= const mb
+
+
+
 data Fuel = Dry | More (Lazy Fuel)
 
 partial
@@ -74,7 +83,7 @@ forever : Fuel
 forever = More forever
 
 ignore : IO a -> IO ()
-ignore x = do x; pure ()
+ignore mx = do x <- mx; pure ()
 
 run : Fuel -> MachineIO mstate -> IO ()
 run (More fuel) (Do c f)
@@ -83,7 +92,7 @@ run (More fuel) (Do c f)
 run Dry p = pure ()
 
 mutual
-  vend : {pounds : _} -> {chocs : _} -> MachineIO (pounds, chocs)
+  vend : {pounds, chocs : _} -> MachineIO (pounds, chocs)
   vend {pounds = (S p)} {chocs = (S c)} = do Vend
                                              Display "Enjoy!"
                                              machineLoop
@@ -92,13 +101,13 @@ mutual
   vend {chocs = Z} = do Display "Out of stock"
                         machineLoop
 
-  refill: {pounds : _} -> {chocs : _} -> (num : Nat) -> MachineIO (pounds, chocs)
+  refill: {pounds, chocs : _} -> (num : Nat) -> MachineIO (pounds, chocs)
   refill {pounds = Z} num = do Refill num
                                machineLoop
   refill _ = do Display "Can't refill: Coins in machine"
                 machineLoop
 
-  machineLoop : {pounds : _} -> {chocs : _} -> MachineIO (pounds, chocs)
+  machineLoop : {pounds, chocs : _} -> MachineIO (pounds, chocs)
   machineLoop = -- Do (Display "Foo") (\x => machineLoop)
                   do Just x <- GetInput
                                | Nothing => do Display "Invalid input"

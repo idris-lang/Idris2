@@ -87,11 +87,11 @@ mutual
                 else do scty <- updateHoleType useInHole var zs sc as
                         pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (a :: as)
-      = do updateHoleUsage False var zs a
+      = do ignore $ updateHoleUsage False var zs a
            scty <- updateHoleType useInHole var zs sc as
            pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs ty as
-      = do updateHoleUsageArgs False var zs as
+      = do ignore $ updateHoleUsageArgs False var zs as
            pure ty
 
   updateHoleUsagePats : {auto c : Ref Ctxt Defs} ->

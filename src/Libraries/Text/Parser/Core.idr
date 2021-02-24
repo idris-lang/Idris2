@@ -34,6 +34,14 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
      SeqEmpty : {c1, c2 : Bool} ->
                 Grammar tok c1 a -> (a -> Grammar tok c2 b) ->
                 Grammar tok (c1 || c2) b
+
+     ThenEat : {c2 : Bool} ->
+               Grammar tok True () -> Inf (Grammar tok c2 a) ->
+               Grammar tok True a
+     ThenEmpty : {c1, c2 : Bool} ->
+                 Grammar tok c1 () -> Grammar tok c2 a ->
+                 Grammar tok (c1 || c2) a
+
      Alt : {c1, c2 : Bool} ->
            Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
            Grammar tok (c1 && c2) ty
@@ -50,6 +58,18 @@ export %inline
         Grammar tok (c1 || c2) b
 (>>=) {c1 = False} = SeqEmpty
 (>>=) {c1 = True}  = SeqEat
+
+||| Sequence two grammars. If either consumes some input, the sequence is
+||| guaranteed to consume some input. If the first one consumes input, the
+||| second is allowed to be recursive (because it means some input has been
+||| consumed and therefore the input is smaller)
+public export %inline %tcinline
+(>>) : {c1, c2 : Bool} ->
+        Grammar tok c1 () ->
+        inf c1 (Grammar tok c2 a) ->
+        Grammar tok (c1 || c2) a
+(>>) {c1 = False} = ThenEmpty
+(>>) {c1 = True} = ThenEat
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume input. This is an explicitly non-infinite version
@@ -82,8 +102,14 @@ Functor (Grammar tok c) where
   map f (SeqEat act next)
       = SeqEat act (\val => map f (next val))
   map f (SeqEmpty act next)
-      = SeqEmpty act (\val => map f (next val))
-  map {c} f (Bounds act) = rewrite sym $ orFalseNeutral c in SeqEmpty (Bounds act) (Empty . f) -- Bounds (map f act)
+      = SeqEmpty act (\ val => map f (next val))
+  map f (ThenEat act next)
+      = ThenEat act (map f next)
+  map f (ThenEmpty act next)
+      = ThenEmpty act (map f next)
+  map {c} f (Bounds act)
+    = rewrite sym $ orFalseNeutral c in
+      SeqEmpty (Bounds act) (Empty . f) -- Bounds (map f act)
   -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
   -- so a sequence must be used.
   map {c = False} f p = SeqEmpty p (Empty . f)
@@ -148,8 +174,14 @@ mapToken f (Fail fatal msg) = Fail fatal msg
 mapToken f (Try g) = Try (mapToken f g)
 mapToken f (MustWork g) = MustWork (mapToken f g)
 mapToken f Commit = Commit
-mapToken f (SeqEat act next) = SeqEat (mapToken f act) (\x => mapToken f (next x))
-mapToken f (SeqEmpty act next) = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
+mapToken f (SeqEat act next)
+  = SeqEat (mapToken f act) (\x => mapToken f (next x))
+mapToken f (SeqEmpty act next)
+  = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
+mapToken f (ThenEat act next)
+  = ThenEat (mapToken f act) (mapToken f next)
+mapToken f (ThenEmpty act next)
+  = ThenEmpty (mapToken f act) (mapToken f next)
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
 mapToken f (Bounds act) = Bounds (mapToken f act)
 
@@ -264,6 +296,20 @@ mutual
              Failure com fatal msg ts => Failure com fatal msg ts
              Res com v xs =>
                    case assert_total (doParse com (next v.val) xs) of
+                        Failure com' fatal msg ts => Failure com' fatal msg ts
+                        Res com' v' xs => Res com' (mergeBounds v v') xs
+  doParse com (ThenEmpty act next) xs
+      = case assert_total (doParse com act xs) of
+             Failure com fatal msg ts => Failure com fatal msg ts
+             Res com v xs =>
+               case assert_total (doParse com next xs) of
+                    Failure com' fatal msg ts => Failure com' fatal msg ts
+                    Res com' v' xs => Res com' (mergeBounds v v') xs
+  doParse com (ThenEat act next) xs
+      = case assert_total (doParse com act xs) of
+             Failure com fatal msg ts => Failure com fatal msg ts
+             Res com v xs =>
+                   case assert_total (doParse com next xs) of
                         Failure com' fatal msg ts => Failure com' fatal msg ts
                         Res com' v' xs => Res com' (mergeBounds v v') xs
   doParse com (Bounds act) xs

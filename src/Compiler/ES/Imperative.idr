@@ -18,11 +18,18 @@ mutual
   isNameUsed name (NmLocal fc n) = n == name
   isNameUsed name (NmRef fc n) = n == name
   isNameUsed name (NmLam fc n e) = isNameUsed name e
-  isNameUsed name (NmApp fc x args) = isNameUsed name x || any (isNameUsed name) args
+  isNameUsed name (NmApp fc x args)
+    = isNameUsed name x || any (isNameUsed name) args
   isNameUsed name (NmPrimVal fc c) = False
   isNameUsed name (NmOp fc op args) = any (isNameUsed name) args
-  isNameUsed name (NmConCase fc sc alts def) = isNameUsed name sc || any (isNameUsedConAlt name) alts  || maybe False (isNameUsed name) def
-  isNameUsed name (NmConstCase fc sc alts def) = isNameUsed name sc || any (isNameUsedConstAlt name) alts  || maybe False (isNameUsed name) def
+  isNameUsed name (NmConCase fc sc alts def)
+    = isNameUsed name sc
+    || any (isNameUsedConAlt name) alts
+    || maybe False (isNameUsed name) def
+  isNameUsed name (NmConstCase fc sc alts def)
+    = isNameUsed name sc
+    || any (isNameUsedConstAlt name) alts
+    || maybe False (isNameUsed name) def
   isNameUsed name (NmExtPrim fc p args) = any (isNameUsed name) args
   isNameUsed name (NmCon fc x t args) = any (isNameUsed name) args
   isNameUsed name (NmDelay fc t) = isNameUsed name t
@@ -217,7 +224,7 @@ compileToImperative c tm =
     cdata <- getCompileData Cases tm
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
-    newRef Imps (MkImpSt 0)
+    ref <- newRef Imps (MkImpSt 0)
     lst_defs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
     let defs = concat lst_defs
     defs_optim <- tailRecOptim defs

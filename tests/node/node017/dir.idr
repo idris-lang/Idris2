@@ -10,5 +10,5 @@ main = do Right () <- createDir "testdir"
           printLn ok
           ok <- changeDir "testdir"
           printLn ok
-          writeFile "test.txt" "hello\n"
+          ignore $ writeFile "test.txt" "hello\n"
           printLn !currentDir

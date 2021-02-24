@@ -447,6 +447,12 @@ export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 
+-- This would be better if we restrict it to a limited set of IO operations
+export
+%inline
+coreLift_ : IO a -> Core ()
+coreLift_ op = ignore (coreLift op)
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
@@ -455,6 +461,10 @@ export %inline
                    (\x => case x of
                                Left err => pure (Left err)
                                Right val => runCore (f val)))
+
+export %inline
+(>>) : Core () -> Core a -> Core a
+ma >> mb = ma >>= const mb
 
 -- Flipped bind
 infixr 1 =<<
@@ -551,8 +561,8 @@ export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
 traverse_ f (x :: xs)
-    = do f x
-         traverse_ f xs
+    = Core.do ignore (f x)
+              traverse_ f xs
 
 %inline
 export
@@ -569,7 +579,7 @@ traverseList1_ : (a -> Core b) -> List1 a -> Core ()
 traverseList1_ f xxs
     = do let x = head xxs
          let xs = tail xxs
-         f x
+         ignore (f x)
          traverse_ f xs
 
 namespace PiInfo
@@ -638,7 +648,7 @@ filterM p (x :: xs)
 export
 data Ref : (l : label) -> Type -> Type where
      [search l]
-	   MkRef : IORef a -> Ref x a
+     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)

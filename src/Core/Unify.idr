@@ -493,7 +493,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          let newdef = record { definition =
                                  PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
                              } mdef
-         addDef (Resolved mref) newdef
+         ignore $ addDef (Resolved mref) newdef
          removeHole mref
   where
     precise : Bool
@@ -1324,8 +1324,7 @@ setInvertible fc n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName fc n)
-         addDef n (record { invertible = True } gdef)
-         pure ()
+         ignore $ addDef n (record { invertible = True } gdef)
 
 public export
 data SolveMode = Normal -- during elaboration: unifies and searches
@@ -1421,7 +1420,7 @@ retryGuess mode smode (hid, (loc, hname))
                                       (type def) []
                          let gdef = record { definition = PMDef defaultPI [] (STerm 0 tm) (STerm 0 tm) [] } def
                          logTermNF "unify.retry" 5 ("Solved " ++ show hname) [] tm
-                         addDef (Resolved hid) gdef
+                         ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
                      (\err => case err of
@@ -1452,7 +1451,7 @@ retryGuess mode smode (hid, (loc, hname))
                                   let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
                                                                          [] (STerm 0 tm') (STerm 0 tm') [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm'
-                                  addDef (Resolved hid) gdef
+                                  ignore $ addDef (Resolved hid) gdef
                                   removeGuess hid
                                   pure (holesSolved cs)
                          newcs => do tm' <- case addLazy cs of
@@ -1463,7 +1462,7 @@ retryGuess mode smode (hid, (loc, hname))
                                                  logTerm "unify.retry" 5 "Retry Delay (constrained)" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                      let gdef = record { definition = Guess tm' envb newcs } def
-                                     addDef (Resolved hid) gdef
+                                     ignore $ addDef (Resolved hid) gdef
                                      pure False
                Guess tm envb constrs =>
                  do let umode = case smode of
@@ -1478,11 +1477,11 @@ retryGuess mode smode (hid, (loc, hname))
                          [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
                                                                          [] (STerm 0 tm) (STerm 0 tm) [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm
-                                  addDef (Resolved hid) gdef
+                                  ignore $ addDef (Resolved hid) gdef
                                   removeGuess hid
                                   pure (holesSolved csAll)
                          newcs => do let gdef = record { definition = Guess tm envb newcs } def
-                                     addDef (Resolved hid) gdef
+                                     ignore $ addDef (Resolved hid) gdef
                                      pure False
                _ => pure False
 

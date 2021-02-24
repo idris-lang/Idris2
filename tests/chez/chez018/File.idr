@@ -5,7 +5,7 @@ main
     = do Right ok <- readFile "test.txt"
                | Left err => printLn err
          putStr ok
-         writeFile "testout.txt" "abc\ndef\n"
+         ignore $ writeFile "testout.txt" "abc\ndef\n"
          Right ok <- readFile "testout.txt"
                | Left err => printLn err
          putStr ok

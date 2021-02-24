@@ -5,7 +5,7 @@ import System.Concurrency
 main : IO ()
 main = do
     sema <- makeSemaphore 0
-    fork $ do
+    ignore $ fork $ do
         putStrLn "Hello"
         semaphorePost sema
         semaphorePost sema

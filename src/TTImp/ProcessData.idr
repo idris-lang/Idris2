@@ -335,7 +335,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          cons <- traverse (checkCon eopts nest env cvis n_in (Resolved tidx)) cons_raw
 
          let ddef = MkData (MkCon dfc n arity fullty) cons
-         addData vars vis tidx ddef
+         ignore $ addData vars vis tidx ddef
 
          -- Flag data type as a newtype, if possible (See `findNewtype` for criteria).
          -- Skip optimisation if the data type has specified `noNewtype` in its
@@ -361,7 +361,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          let connames = map conName cons
-         when (not (NoHints `elem` opts)) $
+         unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
          traverse_ updateErasable (Resolved tidx :: connames)

@@ -69,8 +69,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec [] ddeps ps nty
-         addDef ndef (record { specArgs = specs } gdef)
-         pure ()
+         ignore $ addDef ndef (record { specArgs = specs } gdef)
   where
     insertDeps : List Nat -> List (Name, Nat) -> List Name -> List Nat
     insertDeps acc ps [] = acc
@@ -289,7 +288,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          empty <- clearDefs defs
          infargs <- findInferrable empty !(nf defs [] fullty)
 
-         addDef (Resolved idx)
+         ignore $ addDef (Resolved idx)
                 (record { eraseArgs = erased,
                           safeErase = dterased,
                           inferrable = infargs }
@@ -298,7 +297,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          -- from the top level.
          -- But, if it's a case block, it'll be checked as part of the top
          -- level check so don't set the flag.
-         when (not (InCase `elem` eopts)) $ setLinearCheck idx True
+         unless (InCase `elem` eopts) $ setLinearCheck idx True
 
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          let name = Resolved idx
@@ -307,7 +306,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
              isNested (NS _ n) = isNested n
              isNested _ = False
          let nested = not (isNested n)
-         traverse (processFnOpt fc (not (isNested n)) name) opts
+         traverse_ (processFnOpt fc (not (isNested n)) name) opts
          -- If no function-specific totality pragma has been used, attach the default totality
          unless (any isTotalityReq opts) $
            setFlag fc name (SetTotal !getDefaultTotalityOption)

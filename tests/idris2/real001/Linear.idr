@@ -35,6 +35,15 @@ public export
 (>>=) {p=Once} = BindOnce
 (>>=) {p=Many} = BindMany
 
+public export
+delay : {p : _} -> (1 k : Lin m q b) -> contType m p q () b
+delay {p=Once} mb = \ () => mb
+delay {p=Many} mb = \ _ => mb
+
+public export
+(>>) : {p : _} -> (1 f : Lin m p ()) -> (1 k : Lin m q b) -> Lin m q b
+ma >> mb = ma >>= delay mb
+
 export
 run : Monad m => Lin m usage t -> m t
 run (Pure x) = pure x

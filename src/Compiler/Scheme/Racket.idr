@@ -293,7 +293,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "[" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto f : Ref Done (List String) } ->
@@ -390,7 +390,7 @@ compileToRKT c appdir tm outfile
                    schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
-         coreLift $ chmodRaw outfile 0o755
+         coreLift_ $ chmodRaw outfile 0o755
          pure ()
 
 makeSh : String -> String -> String -> String -> Core ()
@@ -414,7 +414,7 @@ compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String)
 compileExpr mkexec c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift $ mkdirAll appDirGen
+         coreLift_ $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
 
@@ -443,7 +443,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                        else if mkexec
                                then makeSh "" outShRel appDirRel outBinFile
                                else makeSh (racket ++ " ") outShRel appDirRel outRktFile
-                    coreLift $ chmodRaw outShRel 0o755
+                    coreLift_ $ chmodRaw outShRel 0o755
                     pure (Just outShRel)
             else pure Nothing
 
@@ -451,8 +451,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift $ system sh
-         pure ()
+         coreLift_ $ system sh
 
 export
 codegenRacket : Codegen

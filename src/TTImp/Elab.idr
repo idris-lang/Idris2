@@ -62,23 +62,19 @@ normaliseHoleTypes
     = do ust <- get UST
          let hs = keys (holes ust)
          defs <- get Ctxt
-         traverse (normaliseH defs) hs
-         pure ()
+         traverse_ (normaliseH defs) hs
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
         = do ty' <- normaliseHoles defs [] (type def)
-             addDef (Resolved i) (record { type = ty' } def)
-             pure ()
+             ignore $ addDef (Resolved i) (record { type = ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
     normaliseH defs i
-        = case !(lookupCtxtExact (Resolved i) (gamma defs)) of
-               Just gdef =>
-                  case definition gdef of
-                       Hole _ _ => updateType defs i gdef
-                       _ => pure ()
-               Nothing => pure ()
+        = whenJust !(lookupCtxtExact (Resolved i) (gamma defs)) $ \ gdef =>
+            case definition gdef of
+              Hole _ _ => updateType defs i gdef
+              _ => pure ()
 
 export
 addHoleToSave : {auto c : Ref Ctxt Defs} ->

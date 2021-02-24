@@ -677,7 +677,7 @@ checkPositive loc n_in
               Unchecked =>
                   do (tot', cons) <- calcPositive loc n
                      setTerminating loc n tot'
-                     traverse (\c => setTerminating loc c tot') cons
+                     traverse_ (\c => setTerminating loc c tot') cons
                      pure tot'
               t => pure t
 
