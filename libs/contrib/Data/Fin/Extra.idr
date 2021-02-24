@@ -102,8 +102,9 @@ divMod {ok=_} (S n) (S d) =
 ||| Total function to convert a nat to a Fin, given a proof
 ||| that it is less than the bound.
 public export
-natToFinLTE : (n : Nat) -> LT n m -> Fin m
-natToFinLTE n = weakenLTE (last {n})
+natToFinLTE : (n : Nat) -> (0 _ : LT n m) -> Fin m
+natToFinLTE Z     (LTESucc _) = FZ
+natToFinLTE (S k) (LTESucc l) = FS $ natToFinLTE k l
 
 ||| Converting from a Nat to a Fin and back is the identity.
 public export
