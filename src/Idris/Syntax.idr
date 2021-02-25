@@ -499,9 +499,9 @@ mutual
       = "rewrite " ++ show rule
 
   export
-  showPStr : PStr -> String
-  showPStr (StrLiteral _ str) = show str
-  showPStr (StrInterp _ tm) = show tm
+  Show PStr where
+    show (StrLiteral _ str) = show str
+    show (StrInterp _ tm) = show tm
 
   showUpdate : PFieldUpdate -> String
   showUpdate (PSetField p v) = showSep "." p ++ " = " ++ show v
@@ -590,8 +590,8 @@ mutual
     showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
-    showPrec d (PString _ xs) = join " ++ " $ showPStr <$> xs
-    showPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
+    showPrec d (PString _ xs) = join " ++ " $ show <$> xs
+    showPrec d (PMultiline _ indent xs) = "multiline (" ++ (join " ++ " $ show <$> concat xs) ++ ")"
     showPrec d (PDoBlock _ ns ds)
         = "do " ++ showSep " ; " (map showDo ds)
     showPrec d (PBang _ tm) = "!" ++ showPrec d tm

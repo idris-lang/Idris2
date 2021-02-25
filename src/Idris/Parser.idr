@@ -795,6 +795,8 @@ mutual
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
       toPStr x = case x.val of
                       Right (str:::[]) => Right $ StrLiteral (boundToFC fname x) str
+                      -- FIXME: This throws the error at the next line after the line wrap.
+                      --        But it's supposed to point to the string begin quote.
                       Right (_:::strs) => Left "Multi-line string is expected to begin with \"\"\""
                       Left tm => Right $ StrInterp (boundToFC fname x) tm
 
@@ -811,15 +813,15 @@ mutual
                       PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
     where
       toLines : List (WithBounds $ Either PTerm (List1 String)) -> List PStr -> List (List PStr) -> List (List PStr)
-      toLines [] line acc = reverse (reverse line::acc)
+      toLines [] line acc = acc `snoc` line
       toLines (x::xs) line acc
           = case x.val of
-                 Left tm => toLines xs ((StrInterp (boundToFC fname x) tm)::line) acc
-                 Right (str:::[]) => toLines xs ((StrLiteral (boundToFC fname x) str)::line) acc
+                 Left tm => toLines xs (line `snoc` (StrInterp (boundToFC fname x) tm)) acc
+                 Right (str:::[]) => toLines xs (line `snoc` (StrLiteral (boundToFC fname x) str)) acc
                  -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
                  Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
-                                                         ((map (\str => [StrLiteral (boundToFC fname x) str]) (List.drop 1 $ reverse strs))
-                                                            ++ (List.reverse ((StrLiteral (boundToFC fname x) str)::line)::acc))
+                                                         ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
+                                                               ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
 
 visOption : Rule Visibility
 visOption

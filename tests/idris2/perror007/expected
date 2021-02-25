@@ -31,7 +31,7 @@ StrError4.idr:2:7--2:8
            ^
 
 1/1: Building StrError5 (StrError5.idr)
-Error: While processing multi-line string. Indentation not enough.
+Error: While processing multi-line string. Line is less indented than the closing delimiter.
 
 StrError5.idr:3:1--4:5
  3 |    a
@@ -62,7 +62,7 @@ StrError8.idr:2:7--2:8
            ^
 
 1/1: Building StrError9 (StrError9.idr)
-Error: While processing multi-line string. Unexpected interpolation in the last line.
+Error: While processing multi-line string. Closing delimiter of multiline strings cannot be preceded by non-whitespace characters.
 
 StrError9.idr:3:1--3:11
  1 | foo : String
@@ -71,7 +71,7 @@ StrError9.idr:3:1--3:11
      ^^^^^^^^^^
 
 1/1: Building StrError10 (StrError10.idr)
-Error: While processing multi-line string. Unexpected character in the last line.
+Error: While processing multi-line string. Closing delimiter of multiline strings cannot be preceded by non-whitespace characters.
 
 StrError10.idr:3:1--3:2
  1 | foo : String
@@ -89,7 +89,7 @@ StrError11.idr:4:1--4:2
      ^
 
 1/1: Building StrError12 (StrError12.idr)
-Error: While processing multi-line string. Indentation not enough.
+Error: While processing multi-line string. Line is less indented than the closing delimiter.
 
 StrError12.idr:3:1--3:3
  1 | foo : String

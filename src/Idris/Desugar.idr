@@ -424,7 +424,6 @@ mutual
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
       mergeStrLit [] = []
-      mergeStrLit [x] = [x]
       mergeStrLit ((StrLiteral fc str1)::(StrLiteral _ str2)::xs)
           = (StrLiteral fc (str1 ++ str2)) :: xs
       mergeStrLit (x::xs) = x :: mergeStrLit xs
@@ -451,12 +450,12 @@ mutual
         trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
         trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
             = if any (not . isSpace) (fastUnpack str)
-                     then throw $ BadMultiline fc "Unexpected character in the last line"
+                     then throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
                      else pure initLines
         trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
             = let fc = fromMaybe fc $ findBy (\case StrInterp fc _ => Just fc;
                                                     StrLiteral _ _ => Nothing) xs in
-                  throw $ BadMultiline fc "Unexpected interpolation in the last line"
+                  throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
 
       dropLastNL : List PStr -> List PStr
       dropLastNL pstrs with (snocList pstrs)
@@ -470,14 +469,14 @@ mutual
       trimLeft indent [(StrLiteral fc str)]
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
                 if any (not . isSpace) trimed
-                   then throw $ BadMultiline fc "Indentation not enough"
+                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
                    else pure $ [StrLiteral fc (fastPack rest)]
       trimLeft indent ((StrLiteral fc str)::xs)
           = let (trimed, rest) = splitAt indent (fastUnpack str) in
                 if any (not . isSpace) trimed || length trimed < indent
-                   then throw $ BadMultiline fc "Indentation not enough"
+                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
                    else pure $ (StrLiteral fc (fastPack rest))::xs
-      trimLeft indent xs = throw $ BadMultiline fc "Indentation not enough"
+      trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->
