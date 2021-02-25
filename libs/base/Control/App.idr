@@ -198,7 +198,7 @@ namespace App1
 
   delay : {u_act : _} -> (1 _ : App1 {u=u_k} e b) -> Cont1Type u_act () u_k e b
   delay mb = case u_act of
-                  One => \ () => ?ars
+                  One => \ () => mb
                   Any => \ _ => mb
 
   export %inline
