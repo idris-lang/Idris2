@@ -4,6 +4,10 @@ The IDE Protocol
 
 The Idris REPL has two modes of interaction: a human-readable syntax designed for direct use in a terminal, and a machine-readable syntax designed for using Idris as a backend for external tools.
 
+The IDE-Protocol is versioned separately from the Idris compiler.
+The first version of Idris (written in Haskell and is at v1.3.3) implements version one of the IDE Protocol, and Idris2 (self-hosting and is at v.0.3.0) implements version two of the IDE Protocol.
+
+
 Protocol Overview
 -----------------
 
@@ -43,10 +47,30 @@ The atom ``nil`` is accepted instead of ``()`` for compatibility with some regex
 The state of the Idris process is mainly the active file, which needs to be kept synchronised between the editor and Idris.
 This is achieved by the already seen ``:load-file`` command.
 
-The available commands include:
+Protocol Versioning
+-------------------
+
+When interacting with Idris through the IDE Protocol the initial message sent by the running Idris Process is the version (major and minor) of the IDE Protocol being used.
+
+The expected message has the following format:
+
+  ``(:protocol-version MAJOR MINOR)``
+
+IDE Clients can use this to help support multiple Idris versions.
+
+Commands
+--------
+
+The available commands are listed below.
+They are compatible with Version 1 and 2.0 of the protocol unless otherwise stated.
 
   ``(:load-file FILENAME [LINE])``
     Load the named file.  If a ``LINE`` number is provided, the file is only loaded up to that line.  Otherwise, the entire file is loaded.
+    Version 2 of the IDE Protocol Requires that the file name is quoted.
+
+  ``(:cd FILEPATH)``
+    Change the working direction to the given ``FILEPATH``
+    Version 2 of the IDE Protocol Requires that the path is quoted.
 
   ``(:interpret STRING)``
     Interpret ``STRING`` at the Idris REPL, returning a highlighted result.
@@ -124,7 +148,22 @@ The available commands include:
   ``:version``
     Return the version information of the Idris compiler.
 
+New For Version 2
+-----------------
 
+New in Version 2 of the protocol are:
+
+  ``(:generate-def LINE NAME)``
+    Generate a definition
+
+  ``(:generate-def-next)``
+    Replace the previous generated definition with next definition.
+
+  ``(:proof-search-next)``
+    Replace the previous proof search result with the next one.
+
+Possible Replies
+----------------
 
 Possible replies include a normal final reply:::
 
