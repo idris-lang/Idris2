@@ -85,8 +85,8 @@ mutual
   used n (CCon _ _ _ args) = foldr (+) 0 (map (used n) args)
   used n (COp _ _ args) = foldr (+) 0 (map (used n) args)
   used n (CExtPrim _ _ args) = foldr (+) 0 (map (used n) args)
-  used n (CForce _ x) = used n x
-  used n (CDelay _ x) = used n x
+  used n (CForce _ _ x) = used n x
+  used n (CDelay _ _ x) = used n x
   used n (CConCase fc sc alts def)
      = used n sc +
           largest (maybe 0 (used n) def) (map (usedCon n) alts)
@@ -195,12 +195,12 @@ mutual
       = pure $ unload stk $ COp fc p !(traverseVect (eval rec env []) args)
   eval rec env stk (CExtPrim fc p args)
       = pure $ unload stk $ CExtPrim fc p !(traverse (eval rec env []) args)
-  eval rec env stk (CForce fc e)
+  eval rec env stk (CForce fc lr e)
       = case !(eval rec env [] e) of
-             CDelay _ e' => eval rec [] stk e'
-             res => pure $ unload stk (CForce fc res)
-  eval rec env stk (CDelay fc e)
-      = pure $ unload stk (CDelay fc !(eval rec env [] e))
+             CDelay _ _ e' => eval rec [] stk e'
+             res => pure $ unload stk (CForce fc lr res) -- change this to preserve laziness semantics
+  eval rec env stk (CDelay fc lr e)
+      = pure $ unload stk (CDelay fc lr !(eval rec env [] e))
   eval rec env stk (CConCase fc sc alts def)
       = do sc' <- eval rec env [] sc
            Nothing <- pickAlt rec env stk sc' alts def | Just val => pure val
@@ -322,10 +322,10 @@ fixArityTm (COp fc op args) []
     traverseArgs (a :: as) = pure $ !(fixArityTm a []) :: !(traverseArgs as)
 fixArityTm (CExtPrim fc p args) []
     = pure $ CExtPrim fc p !(traverse (\tm => fixArityTm tm []) args)
-fixArityTm (CForce fc tm) args
-    = pure $ expandToArity Z (CForce fc !(fixArityTm tm [])) args
-fixArityTm (CDelay fc tm) args
-    = pure $ expandToArity Z (CDelay fc !(fixArityTm tm [])) args
+fixArityTm (CForce fc lr tm) args
+    = pure $ expandToArity Z (CForce fc lr !(fixArityTm tm [])) args
+fixArityTm (CDelay fc lr tm) args
+    = pure $ expandToArity Z (CDelay fc lr !(fixArityTm tm [])) args
 fixArityTm (CConCase fc sc alts def) args
     = pure $ expandToArity Z
               (CConCase fc !(fixArityTm sc [])

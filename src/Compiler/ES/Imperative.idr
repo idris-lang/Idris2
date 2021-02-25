@@ -32,8 +32,8 @@ mutual
     || maybe False (isNameUsed name) def
   isNameUsed name (NmExtPrim fc p args) = any (isNameUsed name) args
   isNameUsed name (NmCon fc x t args) = any (isNameUsed name) args
-  isNameUsed name (NmDelay fc t) = isNameUsed name t
-  isNameUsed name (NmForce fc t) = isNameUsed name t
+  isNameUsed name (NmDelay fc _ t) = isNameUsed name t
+  isNameUsed name (NmForce fc _ t) = isNameUsed name t
   isNameUsed name (NmLet fc x val sc) =
     if x == name then isNameUsed name val
       else isNameUsed name val || isNameUsed name sc
@@ -151,11 +151,11 @@ mutual
     do
       (s, a) <- impListExp args
       pairToReturn toReturn (s, IEConstructor (impTag x tag) a)
-  impExp toReturn (NmDelay fc t) =
+  impExp toReturn (NmDelay fc _ t) =
     do
       (s, x) <- impExp False t
       pairToReturn toReturn (s, IEDelay x)
-  impExp toReturn (NmForce fc t) =
+  impExp toReturn (NmForce fc _ t) =
     do
       (s, x) <- impExp False t
       pairToReturn toReturn (s, IEForce x)
@@ -221,7 +221,7 @@ export
 compileToImperative : Ref Ctxt Defs -> ClosedTerm -> Core (ImperativeStatement, ImperativeStatement)
 compileToImperative c tm =
   do
-    cdata <- getCompileData Cases tm
+    cdata <- getCompileData False Cases tm
     let ndefs = namedDefs cdata
     let ctm = forget (mainExpr cdata)
     ref <- newRef Imps (MkImpSt 0)

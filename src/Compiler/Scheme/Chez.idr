@@ -380,7 +380,7 @@ compileToSS c appdir tm outfile
     = do ds <- getDirectives Chez
          libs <- findLibs ds
          traverse_ copyLib libs
-         cdata <- getCompileData Cases tm
+         cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          let ctm = forget (mainExpr cdata)
 

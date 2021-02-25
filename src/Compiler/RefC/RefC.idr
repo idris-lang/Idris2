@@ -648,7 +648,7 @@ mutual
     cStatementsFromANF (AV fc x) = do
         let returnLine = "newReference(" ++ varName x  ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AAppName fc n args) = do
+    cStatementsFromANF (AAppName fc _ n args) = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
@@ -672,7 +672,7 @@ mutual
         emit fc f_ptr
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc closure arg) =
+    cStatementsFromANF (AApp fc _ closure arg) =
         -- pure $ "apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")"
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
                     ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
@@ -697,11 +697,11 @@ mutual
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
         --fillingStatements <- fillConstructorArgs constr args 0
         --pure $ (statement1 :: fillingStatements, "(Value*)" ++ constr ++ ";")
-    cStatementsFromANF (AOp fc op args) = do
+    cStatementsFromANF (AOp fc _ op args) = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
         pure $ MkRS opStatement opStatement
-    cStatementsFromANF (AExtPrim fc p args) = do
+    cStatementsFromANF (AExtPrim fc _ p args) = do
         emit fc $ "// call to external primitive " ++ cName p
         let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map (\v => varName v) args) ++")")
         pure $ MkRS returnLine returnLine
@@ -946,7 +946,7 @@ createCFunctions n (MkAFun args anf) = do
     pure ()
 
 
-createCFunctions n (MkACon tag arity) = do
+createCFunctions n (MkACon tag arity nt) = do
   emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
@@ -1067,9 +1067,8 @@ compileExpr ANF c _ outputDir tm outfile =
   do let outn = outputDir </> outfile ++ ".c"
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
-
      coreLift_ $ mkdirAll outputDir
-     cdata <- getCompileData ANF tm
+     cdata <- getCompileData False ANF tm
      let defs = anf cdata
      _ <- newRef ArgCounter 0
      _ <- newRef FunctionDefinitions []

@@ -369,7 +369,7 @@ startRacketWinSh racket appdir target = unlines
 compileToRKT : Ref Ctxt Defs ->
                String -> ClosedTerm -> (outfile : String) -> Core ()
 compileToRKT c appdir tm outfile
-    = do cdata <- getCompileData Cases tm
+    = do cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          let ctm = forget (mainExpr cdata)
 

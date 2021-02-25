@@ -608,8 +608,8 @@ mutual
     toBuf b (CCon fc t n as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b as
     toBuf b (COp {arity} fc op as) = assert_total $ do tag 6; toBuf b fc; toBuf b arity; toBuf b op; toBuf b as
     toBuf b (CExtPrim fc f as) = assert_total $ do tag 7; toBuf b fc; toBuf b f; toBuf b as
-    toBuf b (CForce fc x) = assert_total $ do tag 8; toBuf b fc; toBuf b x
-    toBuf b (CDelay fc x) = assert_total $ do tag 9; toBuf b fc; toBuf b x
+    toBuf b (CForce fc lr x) = assert_total $ do tag 8; toBuf b fc; toBuf b lr; toBuf b x
+    toBuf b (CDelay fc lr x) = assert_total $ do tag 9; toBuf b fc; toBuf b lr; toBuf b x
     toBuf b (CConCase fc sc alts def) = assert_total $ do tag 10; toBuf b fc; toBuf b sc; toBuf b alts; toBuf b def
     toBuf b (CConstCase fc sc alts def) = assert_total $ do tag 11; toBuf b fc; toBuf b sc; toBuf b alts; toBuf b def
     toBuf b (CPrimVal fc c) = do tag 12; toBuf b fc; toBuf b c
@@ -645,11 +645,13 @@ mutual
                        p <- fromBuf b; as <- fromBuf b
                        pure (CExtPrim fc p as)
                8 => do fc <- fromBuf b
+                       lr <- fromBuf b
                        x <- fromBuf b
-                       pure (CForce fc x)
+                       pure (CForce fc lr x)
                9 => do fc <- fromBuf b
+                       lr <- fromBuf b
                        x <- fromBuf b
-                       pure (CDelay fc x)
+                       pure (CDelay fc lr x)
                10 => do fc <- fromBuf b
                         sc <- fromBuf b; alts <- fromBuf b; def <- fromBuf b
                         pure (CConCase fc sc alts def)
