@@ -196,15 +196,15 @@ namespace App1
           (1 k : Cont1Type u a u' e b) -> App1 {u=u'} e b
   (>>=) = bindApp1
 
-  delay : {u_act : _} -> (1 _ : App1 {u=u_k} e b) -> Cont1Type u_act () u_k e b
-  delay mb = case u_act of
+  decideUsage : {u_act : _} -> (1 _ : App1 {u=u_k} e b) -> Cont1Type u_act () u_k e b
+  decideUsage mb = case u_act of
                   One => \ () => mb
                   Any => \ _ => mb
 
   export %inline
   (>>) : {u_act : _} -> (1 _ : App1 {u=u_act} e ()) ->
          (1 _ : App1 {u=u_k} e b) -> App1 {u=u_k} e b
-  ma >> mb = ma >>= delay mb
+  ma >> mb = ma >>= decideUsage mb
 
   export
   pure : (x : a) -> App1 {u=Any} e a
