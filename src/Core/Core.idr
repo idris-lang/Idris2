@@ -6,6 +6,8 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
+
+import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -494,14 +496,29 @@ when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
 
+
 export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
 unless = when . not
+
+export
+iwhen : (b : Bool) -> Lazy (Core a) -> Core (IMaybe b a)
+iwhen True f = Just <$> f
+iwhen False _ = pure Nothing
+
+export
+iunless : (b : Bool) -> Lazy (Core a) -> Core (IMaybe (not b) a)
+iunless b f = iwhen (not b) f
 
 export %inline
 whenJust : Maybe a -> (a -> Core ()) -> Core ()
 whenJust (Just a) k = k a
 whenJust Nothing k = pure ()
+
+export
+iwhenJust : IMaybe b a -> (a -> Core ()) -> Core ()
+iwhenJust (Just a) k = k a
+iwhenJust Nothing k = pure ()
 
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
