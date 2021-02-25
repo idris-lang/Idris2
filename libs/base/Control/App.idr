@@ -197,6 +197,11 @@ namespace App1
   (>>=) = bindApp1
 
   export
+  (>>) : {u : _} -> (1 _ : App1 e ()) ->
+         (1 _ : App1 {u} e b) -> App1 {u} e b
+  ma >> mb = ma >>= (\() => mb)
+
+  export
   pure : (x : a) -> App1 {u=Any} e a
   pure x =  MkApp1 $ \w => MkApp1ResW x w
 
