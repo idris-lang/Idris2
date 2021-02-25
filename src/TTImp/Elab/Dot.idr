@@ -18,6 +18,23 @@ import Libraries.Data.NameMap
 %default covering
 
 export
+registerDot : {vars : _} ->
+              {auto c : Ref Ctxt Defs} ->
+              {auto m : Ref MD Metadata} ->
+              {auto u : Ref UST UState} ->
+              {auto e : Ref EST (EState vars)} ->
+              RigCount -> Env Term vars ->
+              FC -> DotReason ->
+              Term vars -> Glued vars ->
+              Core (Term vars, Glued vars)
+registerDot rig env fc reason wantedTm gexpty
+    = do nm <- genName "dotTm"
+         expty <- getTerm gexpty
+         metaval <- metaVar fc rig env nm expty
+         addDot fc env nm wantedTm reason metaval
+         pure (metaval, gexpty)
+
+export
 checkDot : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
@@ -38,10 +55,6 @@ checkDot rig elabinfo nest env fc reason tm (Just gexpty)
                                                   elabinfo)
                                               nest env
                                               tm (Just gexpty)
-             nm <- genName "dotTm"
-             expty <- getTerm gexpty
-             metaval <- metaVar fc rig env nm expty
-             addDot fc env nm wantedTm reason metaval
-             pure (metaval, gexpty)
+             registerDot rig env fc reason wantedTm gexpty
         _ => throw (GenericMsg fc ("Dot pattern not valid here (Not LHS) "
                                    ++ show tm))

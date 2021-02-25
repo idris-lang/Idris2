@@ -10,6 +10,7 @@ import Core.Value
 
 import Libraries.Data.Bool.Extra
 import Data.List
+import Data.Maybe
 import Data.Strings
 import Libraries.Data.NameMap
 
@@ -29,10 +30,10 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
         = t /= t'
     clash (PrimVal _ c) (PrimVal _ c')
       = c /= c'
-    clash (Ref _ t _) (PrimVal _ _) = isCon t
-    clash (PrimVal _ _) (Ref _ t _) = isCon t
-    clash (Ref _ t _) (TType _) = isCon t
-    clash (TType _) (Ref _ t _) = isCon t
+    clash (Ref _ t _) (PrimVal _ _) = isJust (isCon t)
+    clash (PrimVal _ _) (Ref _ t _) = isJust (isCon t)
+    clash (Ref _ t _) (TType _) = isJust (isCon t)
+    clash (TType _) (Ref _ t _) = isJust (isCon t)
     clash (TType _) (PrimVal _ _) = True
     clash (PrimVal _ _) (TType _) = True
     clash _ _ = False
