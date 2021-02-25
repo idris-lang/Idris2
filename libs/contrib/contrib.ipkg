@@ -19,6 +19,9 @@ modules = Control.ANSI,
 
           Control.Validation,
 
+          Data.Binary.Digit,
+          Data.Binary,
+
           Data.Bool.Algebra,
           Data.Bool.Decidable,
 
@@ -29,7 +32,10 @@ modules = Control.ANSI,
           Data.Fun.Extra,
           Data.Fun.Graph,
 
+          Data.IMaybe,
+
           Data.InductionRecursion.DybjerSetzer,
+
           Data.Int.Order,
 
           Data.Late,
@@ -81,6 +87,10 @@ modules = Control.ANSI,
           Data.Telescope.Fun,
           Data.Telescope.SimpleFun,
           Data.Telescope.Congruence,
+
+          Data.Tree.Perfect,
+
+          Data.Vect.Binary,
 
           Data.Vect.Sort,
 

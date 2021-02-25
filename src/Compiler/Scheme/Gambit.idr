@@ -336,7 +336,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "(" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto c : Ref Ctxt Defs} ->
@@ -415,7 +415,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift $ system sh -- TODO: on windows, should add exe extension
+         coreLift_ $ system sh -- TODO: on windows, should add exe extension
          pure ()
 
 export

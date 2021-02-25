@@ -391,8 +391,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                   dets meths
              log "elab.interface" 10 $ "Methods: " ++ show meths
              log "elab.interface" 5 $ "Making interface data type " ++ show dt
-             processDecls nest env [dt]
-             pure ()
+             ignore $ processDecls nest env [dt]
 
     elabMethods : (conName : Name) -> List Name ->
                   List Signature ->
@@ -405,7 +404,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                                params) meth_sigs
              let fns = concat fnsm
              log "elab.interface" 5 $ "Top level methods: " ++ show fns
-             traverse (processDecl [] nest env) fns
+             traverse_ (processDecl [] nest env) fns
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag fc mn Inline
                                  setFlag fc mn TCInline
@@ -499,6 +498,6 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                                  meth_names
                                                  paramNames) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
-             traverse (processDecl [] nest env) (concatMap snd chints)
+             traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag fc mn TCInline) (map fst chints)

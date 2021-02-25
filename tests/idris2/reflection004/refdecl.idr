@@ -3,13 +3,12 @@ import Data.Vect
 import Language.Reflection
 
 %language ElabReflection
-
 axes : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Vect n String
 axes 1 = ["x"]
 axes 2 = "y" :: axes 1
 axes 3 = "z" :: axes 2
 axes 4  = "w" :: axes 3
-axes (S (S (S (S (S _))))) {lte = (LTESucc (LTESucc (LTESucc (LTESucc (LTESucc _)))))} impossible
+axes (S (S (S (S (S _))))) {lte} = absurd lte
 
 mkPoint : (n : Nat) -> {auto gt : GT n 0} -> {auto lte : LTE n 4} -> Decl
 mkPoint n

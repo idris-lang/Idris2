@@ -21,7 +21,8 @@ jsString : String -> String
 jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
   where
     okchar : Char -> String
-    okchar c = if (c >= ' ') && (c /= '\\') && (c /= '"') && (c /= '\'') && (c <= '~')
+    okchar c = if (c >= ' ') && (c /= '\\')
+                  && (c /= '"') && (c /= '\'') && (c <= '~')
                   then cast c
                   else case c of
                             '\0' => "\\0"
@@ -35,7 +36,8 @@ esName : String -> String
 esName x = "__esPrim_" ++ x
 
 
-addToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> String -> Core String
+addToPreamble : {auto c : Ref ESs ESSt} ->
+                String -> String -> String -> Core String
 addToPreamble name newName def =
   do
     s <- get ESs
@@ -45,8 +47,10 @@ addToPreamble name newName def =
           put ESs (record { preamble = insert name def (preamble s) } s)
           pure newName
       Just x =>
-        if x /= def then throw $ InternalError $ "two incompatible definitions for " ++ name ++ "<|" ++ x ++"|> <|"++ def ++ "|>"
-                    else pure newName
+        if x /= def
+         then throw $ InternalError $ "two incompatible definitions for "
+                         ++ name ++ "<|" ++ x ++"|> <|"++ def ++ "|>"
+         else pure newName
 
 addConstToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addConstToPreamble name def =
@@ -323,11 +327,11 @@ makeForeign n x =
           let (name, lib_) = break (== ',') def
           let lib = drop 1 lib_
           lib_code <- readDataFile ("js/" ++ lib ++ ".js")
-          addSupportToPreamble lib lib_code
+          ignore $ addSupportToPreamble lib lib_code
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
       "stringIterator" =>
         do
-          addStringIteratorToPreamble
+          ignore addStringIteratorToPreamble
           case def of
             "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
             "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"

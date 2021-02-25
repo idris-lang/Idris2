@@ -23,6 +23,12 @@ data NameType : Type where
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
 
+export
+isCon : NameType -> Bool
+isCon (DataCon _ _) = True
+isCon (TyCon _ _) = True
+isCon _ = False
+
 public export
 data Constant
     = I Int

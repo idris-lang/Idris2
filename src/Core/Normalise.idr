@@ -1012,7 +1012,7 @@ mutual
                 | Nothing => pure False
            let Just sc' = getScrutinee scpos' nargs'
                 | Nothing => pure False
-           convGen q defs env sc sc'
+           ignore $ convGen q defs env sc sc'
            pure (location def == location def')
     where
       -- Need to find the position of the scrutinee to see if they are the
@@ -1232,9 +1232,10 @@ logEnv : {vars : _} ->
          String -> Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
     = do opts <- getSession
-         if keepLog lvl (logLevel opts)
-            then dumpEnv env
-            else pure ()
+         when (keepLog lvl (logLevel opts)) $ do
+           coreLift (putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg)
+           dumpEnv env
+
   where
     lvl : LogLevel
     lvl = mkLogLevel str n

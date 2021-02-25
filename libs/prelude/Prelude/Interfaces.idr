@@ -107,9 +107,9 @@ ignore = map (const ())
 
 namespace Functor
   ||| Composition of functors is a functor.
-  export
+  public export
   [Compose] (Functor f, Functor g) => Functor (f . g) where
-    map fun = map (map fun)
+    map = map . map
 
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
@@ -165,12 +165,11 @@ a *> b = map (const id) a <*> b
 
 namespace Applicative
   ||| Composition of applicative functors is an applicative functor.
-  export
+  public export
   [Compose] (Applicative f, Applicative g) => Applicative (f . g)
     using Functor.Compose where
       pure = pure . pure
-
-      fun <*> x = ((<*>) <$> fun <*> x)
+      fun <*> x = [| fun <*> x |]
 
 public export
 interface Applicative f => Alternative f where
@@ -198,7 +197,7 @@ public export
 
 ||| Sequencing of effectful composition
 public export
-(>>) : (Monad m) => m a -> m b -> m b
+(>>) : Monad m => m () -> Lazy (m b) -> m b
 a >> b = a >>= \_ => b
 
 ||| Left-to-right Kleisli composition of monads.
@@ -368,6 +367,14 @@ public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
 choiceMap f = foldr (\e, a => f e <|> a) empty
 
+namespace Foldable
+  ||| Composition of foldables is foldable.
+  public export
+  [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
+    foldr = foldr . flip . foldr
+    foldl = foldl . foldl
+    null tf = null tf || all (force . null) tf
+
 public export
 interface (Functor t, Foldable t) => Traversable t where
   ||| Map each element of a structure to a computation, evaluate those
@@ -383,3 +390,17 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
+
+namespace Traversable
+  ||| Composition of traversables is traversable.
+  public export
+  [Compose] (Traversable t, Traversable f) => Traversable (t . f)
+    using Foldable.Compose Functor.Compose where
+      traverse = traverse . traverse
+
+namespace Monad
+  ||| Composition of a traversable monad and a monad is a monad.
+  public export
+  [Compose] (Monad m, Monad t, Traversable t) => Monad (m . t)
+    using Applicative.Compose where
+      a >>= f = a >>= map join . traverse f

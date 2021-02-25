@@ -5,15 +5,20 @@ import System
 
 data InfIO : Type where
      Do : IO a -> (a -> Inf InfIO) -> InfIO
+     Seq : IO () -> Inf InfIO -> InfIO
 
 (>>=) : IO a -> (a -> Inf InfIO) -> InfIO
 (>>=) = Do
+
+(>>) :  IO () -> Inf InfIO -> InfIO
+(>>) = Seq
 
 data Fuel = Dry | More (Lazy Fuel)
 
 run : Fuel -> InfIO -> IO ()
 run (More fuel) (Do c f) = do res <- c
                               run fuel (f res)
+run (More fuel) (Seq c d) = do c; run fuel d
 run Dry p = putStrLn "Out of fuel"
 
 randoms : Int -> Stream Int

@@ -71,25 +71,24 @@ import System.File
 showInfo : {auto c : Ref Ctxt Defs} ->
            (Name, Int, GlobalDef) -> Core ()
 showInfo (n, idx, d)
-    = do coreLift $ putStrLn (show (fullname d) ++ " ==> " ++
+    = do coreLift_ $ putStrLn (show (fullname d) ++ " ==> " ++
                               show !(toFullNames (definition d)))
-         coreLift $ putStrLn (show (multiplicity d))
-         coreLift $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
-         coreLift $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
-         coreLift $ putStrLn ("Specialise args: " ++ show (specArgs d))
-         coreLift $ putStrLn ("Inferrable args: " ++ show (inferrable d))
-         case compexpr d of
-              Nothing => pure ()
-              Just expr => coreLift $ putStrLn ("Compiled: " ++ show expr)
-         coreLift $ putStrLn ("Refers to: " ++
+         coreLift_ $ putStrLn (show (multiplicity d))
+         coreLift_ $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
+         coreLift_ $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
+         coreLift_ $ putStrLn ("Specialise args: " ++ show (specArgs d))
+         coreLift_ $ putStrLn ("Inferrable args: " ++ show (inferrable d))
+         whenJust (compexpr d) $ \ expr =>
+           coreLift_ $ putStrLn ("Compiled: " ++ show expr)
+         coreLift_ $ putStrLn ("Refers to: " ++
                                show !(traverse getFullName (keys (refersTo d))))
-         coreLift $ putStrLn ("Refers to (runtime): " ++
+         coreLift_ $ putStrLn ("Refers to (runtime): " ++
                                show !(traverse getFullName (keys (refersToRuntime d))))
-         coreLift $ putStrLn ("Flags: " ++ show (flags d))
+         coreLift_ $ putStrLn ("Flags: " ++ show (flags d))
          when (not (isNil (sizeChange d))) $
             let scinfo = map (\s => show (fnCall s) ++ ": " ++
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
-                coreLift $ putStrLn $
+                coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
 displayType : {auto c : Ref Ctxt Defs} ->
@@ -197,7 +196,7 @@ findCG
               RefC => pure codegenRefC
               Other s => case !(getCodegen s) of
                             Just cg => pure cg
-                            Nothing => do coreLift $ putStrLn ("No such code generator: " ++ s)
+                            Nothing => do coreLift_ $ putStrLn ("No such code generator: " ++ s)
                                           coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (a -> Bool) -> a -> b -> Bool
@@ -242,8 +241,8 @@ updateFile update
              | Nothing => pure (DisplayEdit emptyDoc) -- no file, nothing to do
          Right content <- coreLift $ readFile f
                | Left err => throw (FileErr f err)
-         coreLift $ writeFile (f ++ "~") content
-         coreLift $ writeFile f (unlines (update (lines content)))
+         coreLift_ $ writeFile (f ++ "~") content
+         coreLift_ $ writeFile f (unlines (update (lines content)))
          pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
@@ -617,7 +616,7 @@ execDecls decls = do
     execDecl decl = do
       i <- desugarDecl [] decl
       inidx <- resolveName (UN "[defs]")
-      newRef EST (initEStateSub inidx [] SubRefl)
+      _ <- newRef EST (initEStateSub inidx [] SubRefl)
       processLocal [] (MkNested []) [] !getItDecls i
 
 export
@@ -682,7 +681,7 @@ equivTypes : {auto c : Ref Ctxt Defs} ->
 equivTypes ty1 ty2 = do defs <- get Ctxt
                         True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
                           | False => pure False
-                        newRef UST initUState
+                        _ <- newRef UST initUState
                         catch (do res <- unify inTerm replFC [] ty1 ty2
                                   case res of
                                        (MkUnifyResult _ _ _ NoLazy) => pure True
@@ -704,7 +703,7 @@ process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
          case evalMode opts of
-            Execute => do execExp itm; pure (Executed itm)
+            Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
               do ttimp <- desugar AnyExpr [] itm
                  let ttimpWithIt = ILocal replFC !getItDecls ttimp
@@ -727,7 +726,9 @@ process (Eval itm)
                  itm <- resugar [] ntm
                  ty <- getTerm gty
                  evalResultName <- DN "it" <$> genName "evalResult"
-                 addDef evalResultName (newDef replFC evalResultName top [] ty Private (PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []))
+                 ignore $ addDef evalResultName
+                   $ newDef replFC evalResultName top [] ty Private
+                   $ PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts (record { evalResultName = Just evalResultName } opts)
                  if showTypes opts
@@ -798,7 +799,7 @@ process Edit
               Nothing => pure NoFileLoaded
               Just f =>
                 do let line = maybe "" (\i => " +" ++ show (i + 1)) (errorLine opts)
-                   coreLift $ system (editor opts ++ " \"" ++ f ++ "\"" ++ line)
+                   coreLift_ $ system (editor opts ++ " \"" ++ f ++ "\"" ++ line)
                    loadMainFile f
 process (Compile ctm outfile)
     = compileExp ctm outfile
@@ -844,7 +845,7 @@ process (Total n)
               [] => throw (UndefinedName replFC n)
               ts => map CheckedTotal $
                     traverse (\fn =>
-                          do checkTotal replFC fn
+                          do ignore $ checkTotal replFC fn
                              tot <- getTotality replFC fn >>= toFullNames
                              pure $ (fn, tot))
                                (map fst ts)
@@ -902,7 +903,7 @@ process (CGDirective str)
     = do setSession (record { directives $= (str::) } !getSession)
          pure Done
 process (RunShellCommand cmd)
-    = do coreLift (system cmd)
+    = do coreLift_ (system cmd)
          pure Done
 process Quit
     = pure Exited
@@ -981,13 +982,13 @@ mutual
   repl
       = do ns <- getNS
            opts <- get ROpts
-           coreLift (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
+           coreLift_ (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
            inp <- coreLift getLine
            end <- coreLift $ fEOF stdin
            if end
              then do
                -- start a new line in REPL mode (not relevant in IDE mode)
-               coreLift $ putStrLn ""
+               coreLift_ $ putStrLn ""
                iputStrLn $ pretty "Bye for now!"
               else do res <- interpret inp
                       handleResult res

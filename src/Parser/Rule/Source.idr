@@ -21,9 +21,7 @@ SourceEmptyRule = EmptyRule Token
 
 export
 eoi : SourceEmptyRule ()
-eoi
-    = do nextIs "Expected end of input" (isEOI . val)
-         pure ()
+eoi = do ignore $ nextIs "Expected end of input" (isEOI . val)
   where
     isEOI : Token -> Bool
     isEOI EndInput = True
@@ -350,8 +348,7 @@ export
 atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
 atEnd indent
     = eoi
-  <|> do nextIs "Expected end of block" (isTerminator . val)
-         pure ()
+  <|> do ignore $ nextIs "Expected end of block" (isTerminator . val)
   <|> do col <- Common.column
          if (col <= indent)
             then pure ()
@@ -456,7 +453,11 @@ blockAfter mincol item
             else blockEntries (AtPos col) item
 
 export
-blockWithOptHeaderAfter : Int -> (IndentInfo -> Rule hd) -> (IndentInfo -> Rule ty) -> SourceEmptyRule (Maybe hd, List ty)
+blockWithOptHeaderAfter :
+   (column : Int) ->
+   (header : IndentInfo -> Rule hd) ->
+   (item : IndentInfo -> Rule ty) ->
+   SourceEmptyRule (Maybe hd, List ty)
 blockWithOptHeaderAfter {ty} mincol header item
     = do symbol "{"
          commit
@@ -487,6 +488,26 @@ nonEmptyBlock item
          symbol "}"
          pure (fst res ::: ps)
   <|> do col <- column
+         res <- blockEntry (AtPos col) item
+         ps <- blockEntries (snd res) item
+         pure (fst res ::: ps)
+
+||| `nonEmptyBlockAfter col rule` parses a non-empty `rule`-block indented
+||| by at least `col` spaces (unless the block is explicitly delimited
+||| by curly braces). `rule` is a function of the actual indentation
+||| level.
+export
+nonEmptyBlockAfter : Int -> (IndentInfo -> Rule ty) -> Rule (List1 ty)
+nonEmptyBlockAfter mincol item
+    = do symbol "{"
+         commit
+         res <- blockEntry AnyIndent item
+         ps <- blockEntries (snd res) item
+         symbol "}"
+         pure (fst res ::: ps)
+  <|> do col <- column
+         let False = col <= mincol
+            | True => fail "Expected an indented non-empty block"
          res <- blockEntry (AtPos col) item
          ps <- blockEntries (snd res) item
          pure (fst res ::: ps)

@@ -35,7 +35,7 @@ processArgs : List String -> Core Bool
 processArgs [] = pure False
 processArgs ["--timing"] = pure True
 processArgs _
-    = coreLift $ do putStrLn usage
+    = coreLift $ do ignore $ putStrLn usage
                     exitWith (ExitFailure 1)
 
 HasNames () where
@@ -54,16 +54,16 @@ yaffleMain fname args
          setLogTimings t
          addPrimitives
          case extension fname of
-              Just "ttc" => do coreLift $ putStrLn "Processing as TTC"
-                               readFromTTC {extra = ()} True emptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
-                               coreLift $ putStrLn "Read TTC"
-              _ => do coreLift $ putStrLn "Processing as TTImp"
+              Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
+                               ignore $ readFromTTC {extra = ()} True emptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
+                               coreLift_ $ putStrLn "Read TTC"
+              _ => do coreLift_ $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile fname
                       when ok $
                          do ns <- pathToNS (working_dir d) (source_dir d) fname
                             makeBuildDirectory ns
                             writeToTTC () !(getTTCFileName fname "ttc")
-                            coreLift $ putStrLn "Written TTC"
+                            coreLift_ $ putStrLn "Written TTC"
          ust <- get UST
 
          repl {c} {u}

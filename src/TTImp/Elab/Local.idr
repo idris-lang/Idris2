@@ -58,7 +58,7 @@ localHelper {vars} nest env nestdecls_in func
          -- store the local hints, so we can reset them after we've elaborated
          -- everything
          let oldhints = localHints defs
-         traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
+         traverse_ (processDecl [] nest' env') (map (updateName nest') nestdecls)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
          defs <- get Ctxt

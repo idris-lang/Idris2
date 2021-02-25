@@ -243,7 +243,7 @@ export
 tailRecOptim :  ImperativeStatement -> Core ImperativeStatement
 tailRecOptim x =
     do
-        newRef TailRecS (MkTailSt 0)
+        ref <- newRef TailRecS (MkTailSt 0)
         let graph = tailCallGraph x
         let groups =  recursiveTailCallGroups graph
         let functionsToOptimize = foldl SortedSet.union empty $ map SortedSet.fromList groups
