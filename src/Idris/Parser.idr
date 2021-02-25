@@ -787,11 +787,11 @@ mutual
       = do b <- bounds $ do strBegin
                             commit
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            pstrs <- case traverse toPStr xs of
+                                          Left err => fatalError err
+                                          Right pstrs => pure $ pstrs
                             strEnd
-                            the (SourceEmptyRule _) $
-                                case traverse toPStr xs of
-                                     Left err => fatalError err
-                                     Right pstrs => pure $ pstrs
+                            pure pstrs
            pure $ PString (boundToFC fname b) b.val
     where
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
