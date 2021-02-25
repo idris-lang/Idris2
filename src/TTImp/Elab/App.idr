@@ -649,6 +649,9 @@ mutual
               then checkExp rig elabinfo env fc tm (glueBack defs env ty) expty
               else throw (InvalidArgs fc env (map (const (UN "<auto>")) autoargs ++ map fst namedargs) tm)
 
+  ||| Entrypoint for checkAppWith: run the elaboration first and, if we're
+  ||| on the LHS and the result is an under-applied constructor then insist
+  ||| that it ought to be forced by another pattern somewhere else in the LHS.
   checkAppWith : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto m : Ref MD Metadata} ->
