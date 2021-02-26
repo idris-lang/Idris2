@@ -110,7 +110,7 @@ mutual
            case lookup n rest' of
                 Nothing => pure ((n, tm) :: rest')
                 Just tm' =>
-                   do getMatch lhs tm tm' -- just need to know it succeeds
+                   do ignore $ getMatch lhs tm tm' -- just need to know it succeeds
                       mergeMatches lhs rest
 
 -- Get the arguments for the rewritten pattern clause of a with by looking

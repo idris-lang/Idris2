@@ -48,16 +48,25 @@ export
 data ConsoleIO : Type -> Type where
      Quit : a -> ConsoleIO a
      Do : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
+     Seq : Command () -> Inf (ConsoleIO a) -> ConsoleIO a
 
 namespace ConsoleDo
   export
   (>>=) : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
   (>>=) = Do
 
+  export
+  (>>) : Command () -> Inf (ConsoleIO a) -> ConsoleIO a
+  (>>) = Seq
+
 namespace CommandDo
   export
   (>>=) : Command a -> (a -> Command b) -> Command b
   (>>=)  = Bind
+
+  export
+  (>>) : Command () -> Command b -> Command b
+  ma >> mb  = ma >>= \ () => mb
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
@@ -99,6 +108,9 @@ run fuel rnds state (Quit val) = do pure (Just val, rnds, state)
 run (More fuel) rnds state (Do c f)
      = do (res, newRnds, newState) <- runCommand rnds state c
           run fuel newRnds newState (f res)
+run (More fuel) rnds state (Seq c f)
+     = do ((), newRnds, newState) <- runCommand rnds state c
+          run fuel newRnds newState f
 run Dry rnds state p = pure (Nothing, rnds, state)
 
 mutual

@@ -10,6 +10,7 @@ import Core.Value
 
 import Libraries.Data.Bool.Extra
 import Data.List
+import Data.Strings
 import Libraries.Data.NameMap
 
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -24,6 +25,16 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     clash : Term vars -> Term vars -> Bool
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
         = t /= t'
+    clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
+        = t /= t'
+    clash (PrimVal _ c) (PrimVal _ c')
+      = c /= c'
+    clash (Ref _ t _) (PrimVal _ _) = isCon t
+    clash (PrimVal _ _) (Ref _ t _) = isCon t
+    clash (Ref _ t _) (TType _) = isCon t
+    clash (TType _) (Ref _ t _) = isCon t
+    clash (TType _) (PrimVal _ _) = True
+    clash (PrimVal _ _) (TType _) = True
     clash _ _ = False
 
     findN : Nat -> Term vars -> Bool
@@ -380,6 +391,10 @@ getMissing fc n ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
         pats <- buildArgs fc defs [] [] psIn ctree
+        logC "coverage.missing" 20 $ map unlines $
+          flip traverse (concat pats) $ \ pat =>
+            do pat' <- toFullNames pat
+               pure (show pat')
         pure (map (apply fc (Ref fc Func n)) pats)
 
 -- For the given name, get the names it refers to which are not themselves

@@ -161,12 +161,12 @@ lazyFilterRec pred (x :: xs) with (pred x)
         -> {auto prf2 : NonEmpty rest}
         -> LazyFilterRec (reverse reverseOfSkipped ++ rest)
       filterHelper revSkipped (y :: xs) with (pred y)
-      filterHelper revSkipped (y :: xs) | True =
-        Found (reverse revSkipped) y (lazyFilterRec pred xs)
-      filterHelper revSkipped (y :: []) | False =
-        rewrite sym (reverseOntoSpec [y] revSkipped) in
-          Exhausted $ reverse (y :: revSkipped)
-      filterHelper revSkipped (y :: (z :: zs)) | False =
-        rewrite appendAssociative (reverse revSkipped) [y] (z :: zs) in
+        filterHelper revSkipped (y :: xs) | True =
+          Found (reverse revSkipped) y (lazyFilterRec pred xs)
+        filterHelper revSkipped (y :: []) | False =
           rewrite sym (reverseOntoSpec [y] revSkipped) in
-            filterHelper (y :: revSkipped) (z :: zs)
+          Exhausted $ reverse (y :: revSkipped)
+        filterHelper revSkipped (y :: (z :: zs)) | False =
+          rewrite appendAssociative (reverse revSkipped) [y] (z :: zs) in
+            rewrite sym (reverseOntoSpec [y] revSkipped) in
+              filterHelper (y :: revSkipped) (z :: zs)

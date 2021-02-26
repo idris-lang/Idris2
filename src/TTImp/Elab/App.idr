@@ -442,8 +442,7 @@ mutual
              case elabMode elabinfo of
                   InLHS _ => -- reset hole and redo it with the unexpanded definition
                      do updateDef (Resolved idx) (const (Just (Hole 0 (holeInit False))))
-                        solveIfUndefined env metaval argv
-                        pure ()
+                        ignore $ solveIfUndefined env metaval argv
                   _ => pure ()
              removeHole idx
              pure (tm, gty)
@@ -634,7 +633,7 @@ mutual
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi fc top Explicit argTy) (weaken retTy))
            logGlue "elab.with" 10 "Expected function type" env expfnty
-           maybe (pure ()) (logGlue "elab.with" 10 "Expected result type" env) expty
+           whenJust expty (logGlue "elab.with" 10 "Expected result type" env)
            res <- checkAppWith rig elabinfo nest env fc fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            cres <- Check.convert fc elabinfo env (glueBack defs env ty) expfnty
            let [] = constraints cres

@@ -158,6 +158,10 @@ bindL (MkApp prog) next
                    Left err => absurdWith2 next world' err
 
 export
+seqL : App {l=NoThrow} e () -> (1 k : App {l} e b) -> App {l} e b
+seqL ma mb = bindL ma (\ () => mb)
+
+export
 app : (1 p : App {l=NoThrow} e a) -> App1 {u=Any} e a
 app (MkApp prog)
     = MkApp1 $ \world =>
@@ -200,6 +204,17 @@ namespace App1
   (>>=) : {u : _} -> (1 act : App1 {u} e a) ->
           (1 k : Cont1Type u a u' e b) -> App1 {u=u'} e b
   (>>=) = bindApp1
+
+  export
+  delay : {u : _} -> (1 k : App1 {u=u'} e b) ->
+          Cont1Type u a u' e b
+  delay {u = One} mb = \ () => mb
+  delay {u = Any} mb = \ _ => mb
+
+  export
+  (>>) : {u : _} -> (1 act : App1 {u} e ()) ->
+          (1 k : App1 {u=u'} e b) -> App1 {u=u'} e b
+  ma >> mb = ma >>= delay mb
 
   export
   pure : (x : a) -> App1 {u=Any} e a

@@ -283,10 +283,10 @@ mutual
   toCExpTm n (As _ _ _ p) = toCExpTm n p
   -- TODO: Either make sure 'Delayed' is always Rig0, or add to typecase
   toCExpTm n (TDelayed fc _ _) = pure $ CErased fc
-  toCExpTm n (TDelay fc _ _ arg)
-      = pure (CDelay fc !(toCExp n arg))
-  toCExpTm n (TForce fc _ arg)
-      = pure (CForce fc !(toCExp n arg))
+  toCExpTm n (TDelay fc lr _ arg)
+      = pure (CDelay fc lr !(toCExp n arg))
+  toCExpTm n (TForce fc lr arg)
+      = pure (CForce fc lr !(toCExp n arg))
   toCExpTm n (PrimVal fc c)
       = let t = constTag c in
             if t == 0
@@ -429,7 +429,7 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg True (CForce fc (CLocal (getLoc scTy) x)) $
+              CLet fc arg True (CForce fc LInf (CLocal (getLoc scTy) x)) $
               CLet fc ty True (CErased fc)
                    !(toCExpTree n sc)
   toCExpTree n alts

@@ -22,6 +22,12 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
               Grammar tok True b
      SeqEmpty : {c1, c2 : _} -> Grammar tok c1 a -> (a -> Grammar tok c2 b) ->
                 Grammar tok (c1 || c2) b
+
+     ThenEat : {c2 : _} -> Grammar tok True () -> Inf (Grammar tok c2 b) ->
+               Grammar tok True b
+     ThenEmpty : {c1, c2 : _} -> Grammar tok c1 () -> Grammar tok c2 b ->
+                 Grammar tok (c1 || c2) b
+
      Alt : {c1, c2 : _} -> Grammar tok c1 ty -> Grammar tok c2 ty ->
            Grammar tok (c1 && c2) ty
 
@@ -36,6 +42,18 @@ public export %inline %tcinline
         Grammar tok (c1 || c2) b
 (>>=) {c1 = False} = SeqEmpty
 (>>=) {c1 = True} = SeqEat
+
+||| Sequence two grammars. If either consumes some input, the sequence is
+||| guaranteed to consume some input. If the first one consumes input, the
+||| second is allowed to be recursive (because it means some input has been
+||| consumed and therefore the input is smaller)
+public export %inline %tcinline
+(>>) : {c1, c2 : Bool} ->
+        Grammar tok c1 () ->
+        inf c1 (Grammar tok c2 a) ->
+        Grammar tok (c1 || c2) a
+(>>) {c1 = False} = ThenEmpty
+(>>) {c1 = True} = ThenEat
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume input. This is an explicitly non-infinite version
@@ -75,6 +93,10 @@ export
       = SeqEat act (\val => map f (next val))
   map f (SeqEmpty act next)
       = SeqEmpty act (\val => map f (next val))
+  map f (ThenEat act next)
+      = ThenEat act (map f next)
+  map f (ThenEmpty act next)
+      = ThenEmpty act (map f next)
   -- The remaining constructors (NextIs, EOF, Commit) have a fixed type,
   -- so a sequence must be used.
   map {c = False} f p = SeqEmpty p (Empty . f)
@@ -120,8 +142,14 @@ mapToken f EOF = EOF
 mapToken f (Fail fatal msg) = Fail fatal msg
 mapToken f (MustWork g) = MustWork (mapToken f g)
 mapToken f Commit = Commit
-mapToken f (SeqEat act next) = SeqEat (mapToken f act) (\x => mapToken f (next x))
-mapToken f (SeqEmpty act next) = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
+mapToken f (SeqEat act next)
+   = SeqEat (mapToken f act) (\x => mapToken f (next x))
+mapToken f (SeqEmpty act next)
+   = SeqEmpty (mapToken f act) (\x => mapToken f (next x))
+mapToken f (ThenEat act next)
+   = ThenEat (mapToken f act) (mapToken f next)
+mapToken f (ThenEmpty act next)
+   = ThenEmpty (mapToken f act) (mapToken f next)
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
 
 ||| Always succeed with the given value.
@@ -186,7 +214,7 @@ data ParseResult : List tok -> (consumes : Bool) -> Type -> Type where
 -- flag to take both alternatives into account
 weakenRes : {whatever, c : Bool} -> {xs : List tok} ->
             (com' : Bool) ->
-						ParseResult xs c ty -> ParseResult xs (whatever && c) ty
+            ParseResult xs c ty -> ParseResult xs (whatever && c) ty
 weakenRes com' (Failure com fatal msg ts) = Failure com' fatal msg ts
 weakenRes {whatever=True} com' (EmptyRes com val xs) = EmptyRes com' val xs
 weakenRes {whatever=False} com' (EmptyRes com val xs) = EmptyRes com' val xs
@@ -236,12 +264,7 @@ doParse com (SeqEmpty {c1} {c2} act next) xs
     = let p' = assert_total (doParse {c = c1} com act xs) in
               case p' of
                Failure com fatal msg ts => Failure com fatal msg ts
-               EmptyRes com val xs =>
-                     case assert_total (doParse com (next val) xs) of
-                          Failure com' fatal msg ts => Failure com' fatal msg ts
-                          EmptyRes com' val xs => EmptyRes com' val xs
-                          NonEmptyRes {xs=xs'} com' val more =>
-                                           NonEmptyRes {xs=xs'} com' val more
+               EmptyRes com val xs => assert_total (doParse com (next val) xs)
                NonEmptyRes {x} {xs=ys} com val more =>
                      case (assert_total (doParse com (next val) more)) of
                           Failure com' fatal msg ts => Failure com' fatal msg ts
@@ -260,6 +283,30 @@ doParse com (SeqEat act next) xs with (doParse com act xs)
               NonEmptyRes {x=x1} {xs=xs1} com' val more' =>
                    rewrite appendAssociative (x :: ys) (x1 :: xs1) more' in
                            NonEmptyRes {xs = ys ++ (x1 :: xs1)} com' val more'
+doParse com (ThenEmpty {c1} {c2} act next) xs
+    = let p' = assert_total (doParse {c = c1} com act xs) in
+              case p' of
+               Failure com fatal msg ts => Failure com fatal msg ts
+               EmptyRes com val xs => assert_total (doParse com next xs)
+               NonEmptyRes {x} {xs=ys} com val more =>
+                     case (assert_total (doParse com next more)) of
+                          Failure com' fatal msg ts => Failure com' fatal msg ts
+                          EmptyRes com' val _ => NonEmptyRes {xs=ys} com' val more
+                          NonEmptyRes {x=x1} {xs=xs1} com' val more' =>
+                               rewrite appendAssociative (x :: ys) (x1 :: xs1) more' in
+                                       NonEmptyRes {xs = ys ++ (x1 :: xs1)} com' val more'
+doParse com (ThenEat act next) xs with (doParse com act xs)
+  doParse com (ThenEat act next) xs | Failure com' fatal msg ts
+       = Failure com' fatal msg ts
+  doParse com (ThenEat act next) (x :: (ys ++ more)) | (NonEmptyRes {xs=ys} com' val more)
+       = let p' = assert_total (doParse com' next more) in
+             case p' of
+              Failure com' fatal msg ts => Failure com' fatal msg ts
+              EmptyRes com' val _ => NonEmptyRes {xs=ys} com' val more
+              NonEmptyRes {x=x1} {xs=xs1} com' val more' =>
+                   rewrite appendAssociative (x :: ys) (x1 :: xs1) more' in
+                           NonEmptyRes {xs = ys ++ (x1 :: xs1)} com' val more'
+
 -- This next line is not strictly necessary, but it stops the coverage
 -- checker taking a really long time and eating lots of memory...
 -- doParse _ _ _ = Failure True True "Help the coverage checker!" []

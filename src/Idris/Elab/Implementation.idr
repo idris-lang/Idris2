@@ -237,9 +237,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
 
                -- If it's a named implementation, add it as a global hint while
                -- elaborating the record and bodies
-               if named
-                  then addOpenHint impName
-                  else pure ()
+               when named $ addOpenHint impName
 
                -- Make sure we don't use this name to solve parent constraints
                -- when elaborating the record, or we'll end up in a cycle!
@@ -250,7 +248,7 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
                names' <- traverse applyEnv (impName :: mtops)
                let nest' = record { names $= (names' ++) } nest
 
-               traverse (processDecl [] nest' env) [impFn]
+               traverse_ (processDecl [] nest' env) [impFn]
                unsetFlag fc impName BlockedHint
 
                setFlag fc impName TCInline
@@ -265,10 +263,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
                body' <- traverse (updateBody upds) body
 
                log "elab.implementation" 10 $ "Implementation body: " ++ show body'
-               traverse (processDecl [] nest' env) body'
+               traverse_ (processDecl [] nest' env) body'
 
                -- 6. Add transformation rules for top level methods
-               traverse (addTransform impName upds) (methods cdata)
+               traverse_ (addTransform impName upds) (methods cdata)
 
                -- inline flag has done its job, and outside the interface
                -- it can hurt, so unset it now

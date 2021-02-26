@@ -260,17 +260,18 @@ It's no longer necessary to give ``{input}`` explicitly in the patterns for
 
 In ``IsSuffix.idr``, the matching has to be written slightly differently. The
 recursive with application in Idris 1 probably shouldn't have allowed this!
+Note that the ``Snoc`` - ``Snoc`` case has to be written first otherwise Idris
+generates a case tree splitting on ``input1`` and ``input2`` instead of the
+``SnocList`` objects and this leads to a lot of cases being detected as missing.
 
 .. code-block:: idris
 
-    isSuffix : Eq a => List a -> List a -> Bool
-    isSuffix input1 input2 with (snocList input1, snocList input2)
-      isSuffix [] input2 | (Empty, s) = True
-      isSuffix input1 [] | (s, Empty) = False
-      isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc xsrec, Snoc ysrec)
-         = if x == y
-              then isSuffix xs ys | (xsrec, ysrec)
-              else False
+  isSuffix : Eq a => List a -> List a -> Bool
+  isSuffix input1 input2 with (snocList input1, snocList input2)
+    isSuffix _ _ | (Snoc x xs xsrec, Snoc y ys ysrec)
+       = (x == y) && (isSuffix _ _ | (xsrec, ysrec))
+    isSuffix _ _ | (Empty, s) = True
+    isSuffix _ _ | (s, Empty) = False
 
 This doesn't yet get past the totality checker, however, because it doesn't
 know about looking inside pairs.

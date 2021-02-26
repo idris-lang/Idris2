@@ -23,6 +23,7 @@ collectDefs : List ImpDecl -> List ImpDecl
 %default covering
 
 %hide Prelude.(>>=)
+%hide Prelude.(>>)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure

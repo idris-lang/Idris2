@@ -47,7 +47,9 @@ export
 plhs : ParseOpts
 plhs = MkParseOpts False False
 
+%hide Prelude.(>>)
 %hide Prelude.(>>=)
+%hide Core.Core.(>>)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure
@@ -841,7 +843,7 @@ mutual
                             flags <- bounds (withFlags)
                             symbol "("
                             wval <- bracketedExpr fname flags indents
-                            ws <- nonEmptyBlock (clause (S withArgs) fname)
+                            ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
                             pure (flags, wval, forget ws))
             (flags, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)

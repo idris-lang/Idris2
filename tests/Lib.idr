@@ -144,7 +144,7 @@ runTest opts testPath = forkIO $ do
   let cg = case codegen opts of
          Nothing => ""
          Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
-  system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd " ++ testPath ++ " && " ++
     cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
   end <- clockTime Thread
 
@@ -202,10 +202,10 @@ runTest opts testPath = forkIO $ do
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
             ["Accept actual value as new golden value? [yn]"]
-          b <- getAnswer
-          when b $ do Right _ <- writeFile (testPath ++ "/expected") out
-                        | Left err => print err
-                      pure ()
+      b <- getAnswer
+      when b $ do Right _ <- writeFile (testPath ++ "/expected") out
+                    | Left err => print err
+                  pure ()
 
     printTiming : Bool -> Clock type -> String -> IO ()
     printTiming True  clock msg = putStrLn (unwords [msg, show clock])

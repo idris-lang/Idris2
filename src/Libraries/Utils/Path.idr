@@ -167,7 +167,7 @@ bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 verbatim : Grammar PathToken True ()
 verbatim =
   do
-    count (exactly 2) $ match $ PTPunct '\\'
+    ignore $ count (exactly 2) $ match $ PTPunct '\\'
     match $ PTPunct '?'
     match $ PTPunct '\\'
     pure ()
@@ -176,7 +176,7 @@ verbatim =
 unc : Grammar PathToken True Volume
 unc =
   do
-    count (exactly 2) $ match $ PTPunct '\\'
+    ignore $ count (exactly 2) $ match $ PTPunct '\\'
     server <- match PTText
     bodySeparator
     share <- match PTText

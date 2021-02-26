@@ -109,11 +109,11 @@ toVM : (tailpos : Bool) -> (target : Reg) -> ANF -> List VMInst
 toVM t Discard _ = []
 toVM t res (AV fc (ALocal i))
     = [ASSIGN res (Loc i)]
-toVM t res (AAppName fc n args)
+toVM t res (AAppName fc _ n args)
     = [CALL res t n (map toReg args)]
 toVM t res (AUnderApp fc n m args)
     = [MKCLOSURE res n m (map toReg args)]
-toVM t res (AApp fc f a)
+toVM t res (AApp fc _ f a)
     = [APPLY res (toReg f) (toReg a)]
 toVM t res (ALet fc var val body)
     = toVM False (Loc var) val ++ toVM t res body
@@ -121,9 +121,9 @@ toVM t res (ACon fc n (Just tag) args)
     = [MKCON res (Left tag) (map toReg args)]
 toVM t res (ACon fc n Nothing args)
     = [MKCON res (Right n) (map toReg args)]
-toVM t res (AOp fc op args)
+toVM t res (AOp fc _ op args)
     = [OP res op (map toReg args)]
-toVM t res (AExtPrim fc p args)
+toVM t res (AExtPrim fc _ p args)
     = [EXTPRIM res p (map toReg args)]
 toVM t res (AConCase fc (ALocal scr) alts def)
     = [CASE (Loc scr) (map toVMConAlt alts) (map (toVM t res) def)]

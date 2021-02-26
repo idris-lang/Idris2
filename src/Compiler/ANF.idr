@@ -25,13 +25,13 @@ mutual
   public export
   data ANF : Type where
     AV : FC -> AVar -> ANF
-    AAppName : FC -> Name -> List AVar -> ANF
+    AAppName : FC -> (lazy : Maybe LazyReason) -> Name -> List AVar -> ANF
     AUnderApp : FC -> Name -> (missing : Nat) -> (args : List AVar) -> ANF
-    AApp : FC -> (closure : AVar) -> (arg : AVar) -> ANF
+    AApp : FC -> (lazy : Maybe LazyReason) -> (closure : AVar) -> (arg : AVar) -> ANF
     ALet : FC -> (var : Int) -> ANF -> ANF -> ANF
     ACon : FC -> Name -> (tag : Maybe Int) -> List AVar -> ANF
-    AOp : FC -> PrimFn arity -> Vect arity AVar -> ANF
-    AExtPrim : FC -> Name -> List AVar -> ANF
+    AOp : FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity AVar -> ANF
+    AExtPrim : FC -> (lazy : Maybe LazyReason) -> Name -> List AVar -> ANF
     AConCase : FC -> AVar -> List AConAlt -> Maybe ANF -> ANF
     AConstCase : FC -> AVar -> List AConstAlt -> Maybe ANF -> ANF
     APrimVal : FC -> Constant -> ANF
@@ -50,10 +50,13 @@ mutual
 public export
 data ANFDef : Type where
      MkAFun : (args : List Int) -> ANF -> ANFDef
-     MkACon : (tag : Maybe Int) -> (arity : Nat) -> ANFDef
+     MkACon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> ANFDef
      MkAForeign : (ccs : List String) -> (fargs : List CFType) ->
                   CFType -> ANFDef
      MkAError : ANF -> ANFDef
+
+showLazy : Maybe LazyReason -> String
+showLazy = maybe "" $ (" " ++) . show
 
 mutual
   export
@@ -64,21 +67,21 @@ mutual
   export
   Show ANF where
     show (AV _ v) = show v
-    show (AAppName fc n args)
-        = show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+    show (AAppName fc lazy n args)
+        = show n ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
         = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
           showSep ", " (map show args) ++ ")"
-    show (AApp fc c arg)
-        = show c ++ " @ (" ++ show arg ++ ")"
+    show (AApp fc lazy c arg)
+        = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (ALet fc x val sc)
         = "%let v" ++ show x ++ " = (" ++ show val ++ ") in (" ++ show sc ++ ")"
     show (ACon fc n t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
-    show (AOp fc op args)
-        = "%op " ++ show op ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
-    show (AExtPrim fc p args)
-        = "%extprim " ++ show p ++ "(" ++ showSep ", " (map show args) ++ ")"
+    show (AOp fc lazy op args)
+        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
+    show (AExtPrim fc lazy p args)
+        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
              ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
@@ -106,8 +109,8 @@ mutual
 export
 Show ANFDef where
   show (MkAFun args exp) = show args ++ ": " ++ show exp
-  show (MkACon tag arity)
-      = "Constructor tag " ++ show tag ++ " arity " ++ show arity
+  show (MkACon tag arity nt)
+      = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++ " newtype by " ++ show nt
   show (MkAForeign ccs args ret)
       = "Foreign call " ++ show ccs ++ " " ++
         show args ++ " -> " ++ show ret
@@ -177,14 +180,14 @@ mutual
         {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
   anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
-  anf vs (LAppName fc n args)
-      = anfArgs fc vs args (AAppName fc n)
+  anf vs (LAppName fc lazy n args)
+      = anfArgs fc vs args (AAppName fc lazy n)
   anf vs (LUnderApp fc n m args)
       = anfArgs fc vs args (AUnderApp fc n m)
-  anf vs (LApp fc f a)
+  anf vs (LApp fc lazy f a)
       = anfArgs fc vs [f, a]
                 (\args => case args of
-                               [fvar, avar] => AApp fc fvar avar
+                               [fvar, avar] => AApp fc lazy fvar avar
                                _ => ACrash fc "Can't happen (AApp)")
   anf vs (LLet fc x val sc)
       = do i <- nextVar
@@ -192,14 +195,14 @@ mutual
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
   anf vs (LCon fc n t args)
       = anfArgs fc vs args (ACon fc n t)
-  anf vs (LOp {arity} fc op args)
+  anf vs (LOp {arity} fc lazy op args)
       = do args' <- traverse (anf vs) (toList args)
            letBind fc args'
                 (\args => case toVect arity args of
                                Nothing => ACrash fc "Can't happen (AOp)"
-                               Just argsv => AOp fc op argsv)
-  anf vs (LExtPrim fc p args)
-      = anfArgs fc vs args (AExtPrim fc p)
+                               Just argsv => AOp fc lazy op argsv)
+  anf vs (LExtPrim fc lazy p args)
+      = anfArgs fc vs args (AExtPrim fc lazy p)
   anf vs (LConCase fc scr alts def)
       = do scr' <- anf vs scr
            alts' <- traverse (anfConAlt vs) alts
@@ -253,7 +256,7 @@ toANF (MkLFun args scope sc)
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs
              pure (i :: is, i :: vs')
-toANF (MkLCon t a ns) = pure $ MkACon t a
+toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
