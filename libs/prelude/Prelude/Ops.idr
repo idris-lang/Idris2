@@ -2,7 +2,6 @@ module Prelude.Ops
 
 -- Numerical operators
 infix 6 ==, /=, <, <=, >, >=
-infixl 7 <<, >> -- unused
 infixl 8 +, -
 infixl 9 *, /
 
