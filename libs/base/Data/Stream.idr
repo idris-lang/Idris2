@@ -52,6 +52,16 @@ Zippable Stream where
 
   unzip3 xs = (map (\(x, _, _) => x) xs, map (\(_, x, _) => x) xs, map (\(_, _, x) => x) xs)
 
+export
+zipWithIndexLinear : (0 f : _) -> (xs, ys : Stream a) -> (i : Nat) -> index i (zipWith f xs ys) = f (index i xs) (index i ys)
+zipWithIndexLinear f (_::xs) (_::ys) Z     = Refl
+zipWithIndexLinear f (_::xs) (_::ys) (S k) = zipWithIndexLinear f xs ys k
+
+export
+zipWith3IndexLinear : (0 f : _) -> (xs, ys, zs : Stream a) -> (i : Nat) -> index i (zipWith3 f xs ys zs) = f (index i xs) (index i ys) (index i zs)
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) Z     = Refl
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (S k) = zipWith3IndexLinear f xs ys zs k
+
 ||| Return the diagonal elements of a stream of streams
 export
 diag : Stream (Stream a) -> Stream a

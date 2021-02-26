@@ -768,6 +768,16 @@ Zippable (Vect k) where
                                (bs, cs, ds) = unzipWith3 f xs in
                                (b :: bs, c :: cs, d :: ds)
 
+export
+zipWithIndexLinear : (0 f : _) -> (xs, ys : Vect n a) -> (i : Fin n) -> index i (zipWith f xs ys) = f (index i xs) (index i ys)
+zipWithIndexLinear _ (_::xs) (_::ys) FZ     = Refl
+zipWithIndexLinear f (_::xs) (_::ys) (FS i) = zipWithIndexLinear f xs ys i
+
+export
+zipWith3IndexLinear : (0 f : _) -> (xs, ys, zs : Vect n a) -> (i : Fin n) -> index i (zipWith3 f xs ys zs) = f (index i xs) (index i ys) (index i zs)
+zipWith3IndexLinear _ (_::xs) (_::ys) (_::zs) FZ     = Refl
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (FS i) = zipWith3IndexLinear f xs ys zs i
+
 --------------------------------------------------------------------------------
 -- Matrix transposition
 --------------------------------------------------------------------------------
