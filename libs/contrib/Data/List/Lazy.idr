@@ -2,6 +2,8 @@ module Data.List.Lazy
 
 import Data.Fuel
 import Data.Stream
+import Data.Colist
+import Data.Colist1
 
 %default total
 
@@ -187,7 +189,23 @@ mapMaybe f (x::xs) = case f x of
   Nothing => mapMaybe f xs
   Just y  => y :: mapMaybe f xs
 
-public export
-takeStream : Fuel -> Stream a -> LazyList a
-takeStream Dry _ = []
-takeStream (More f) (x :: xs) = x :: takeStream f xs
+namespace Stream
+
+  public export
+  take : Fuel -> Stream a -> LazyList a
+  take Dry _ = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist
+
+  public export
+  take : Fuel -> Colist a -> LazyList a
+  take Dry _ = []
+  take _ [] = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist1
+
+  public export
+  take : Fuel -> Colist1 a -> LazyList a
+  take fuel as = take fuel (forget as)
