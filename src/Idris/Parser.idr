@@ -797,8 +797,6 @@ mutual
       toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
       toPStr x = case x.val of
                       Right (str:::[]) => Right $ StrLiteral (boundToFC fname x) str
-                      -- FIXME: This throws the error at the next line after the line wrap.
-                      --        But it's supposed to point to the string begin quote.
                       Right (_:::strs) => Left "Multi-line string is expected to begin with \"\"\""
                       Left tm => Right $ StrInterp (boundToFC fname x) tm
 
@@ -820,7 +818,6 @@ mutual
           = case x.val of
                  Left tm => toLines xs (line `snoc` (StrInterp (boundToFC fname x) tm)) acc
                  Right (str:::[]) => toLines xs (line `snoc` (StrLiteral (boundToFC fname x) str)) acc
-                 -- FIXME: calculate the precise FC so as to improve error report for invalid indentation.
                  Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
                                                          ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
                                                                ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
