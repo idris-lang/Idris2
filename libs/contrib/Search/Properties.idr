@@ -10,6 +10,8 @@ import Data.List.Lazy.Quantifiers
 import Data.Nat
 import Data.So
 import Data.Stream
+import Data.Colist
+import Data.Colist1
 
 import public Search.Negation
 import public Search.HDecidable
@@ -36,7 +38,7 @@ record Prop (cs : List Type) (a : Type) where
   constructor MkProp
   ||| The function trying to find an `a` provided generators for `cs`.
   ||| Made total by consuming some fuel along the way.
-  runProp : Stream (Product cs) -> Fuel -> HDec a
+  runProp : Colist1 (Product cs) -> Fuel -> HDec a
 
 ------------------------------------------------------------------------
 -- Prop-like structure
@@ -80,7 +82,7 @@ exists : {0 p : a -> Type} -> (aPropt : AProp t) =>
          ((x : a) -> t (p x)) ->
          Prop (a :: Constraints @{aPropt}) (DPair a p)
 exists test = MkProp $ \ acs, fuel =>
-  let candidates : LazyList a = takeStream fuel (map fst acs) in
+  let candidates : LazyList a = take fuel (map fst acs) in
   let cs = map snd acs in
   let find = any candidates (\ x => runProp (toProp (test x)) cs fuel) in
   map toDPair find
@@ -115,4 +117,4 @@ namespace Pythagoras
   -- This one is quite a bit slower so it's better to run
   -- the compiled version instead
   lemma : HDec Pythagoras.formula
-  lemma = runProp search generate (limit 1000)
+  lemma = runProp search generate (limit 10)
