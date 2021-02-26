@@ -38,7 +38,7 @@ index (S k) (x::xs) = index k xs
 -- Zippable --
 ---------------------------
 
-export
+public export
 Zippable Stream where
   zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 

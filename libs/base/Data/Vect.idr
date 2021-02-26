@@ -750,7 +750,7 @@ range {len=S _} = FZ :: map FS range
 -- Zippable
 --------------------------------------------------------------------------------
 
-export
+public export
 Zippable (Vect k) where
   zipWith _ [] [] = []
   zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys

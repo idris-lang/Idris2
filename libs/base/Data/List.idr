@@ -330,7 +330,7 @@ intersectAll = intersectAllBy (==)
 -- Zippable --
 ---------------------------
 
-export
+public export
 Zippable List where
   zipWith _ [] _ = []
   zipWith _ _ [] = []

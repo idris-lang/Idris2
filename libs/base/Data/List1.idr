@@ -149,7 +149,7 @@ consInjective Refl = (Refl, Refl)
 ------------------------------------------------------------------------
 -- Zippable
 
-export
+public export
 Zippable List1 where
   zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
   where
