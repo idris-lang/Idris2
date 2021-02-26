@@ -217,6 +217,36 @@ Zippable Colist1 where
 -- Applications of Applicative Proof Search
 -- by Liam O'Connor
 
+-- Unfortunately cannot be put in `Data.Colist` because it's using `Colist1`
+-- internally.
+namespace Colist
+
+  public export
+  zig : List1 (Colist1 a) -> List (Colist1 a) -> Colist a
+
+  public export
+  zag : List1 a -> List1 (Colist a) -> List (Colist1 a) -> Colist a
+
+  zig xs =
+    let (hds, tls) = unzipWith (\ (x ::: xs) => (x, xs)) xs in
+    zag hds tls
+
+  zag (x ::: []) zs [] = x ::
+    let Just zs = List1.fromList $ mapMaybe fromColist (forget zs)
+          | Nothing => []
+    in zig zs []
+  zag (x ::: []) zs (l :: ls) = x ::
+    let zs = mapMaybe fromColist (forget zs)
+    in zig (l ::: zs) ls
+  zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
+
+  public export
+  cantor : List (Colist a) -> Colist a
+  cantor xs =
+    let Just (l ::: ls) = List1.fromList $ mapMaybe fromColist xs
+          | Nothing => []
+    in zig (l ::: []) ls
+
 public export
 zig : List1 (Colist1 a) -> Colist (Colist1 a) -> Colist1 a
 
@@ -225,10 +255,13 @@ zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
 
 zig xs = zag (head <$> xs) (tail <$> xs)
 
-zag (x ::: []) zs [] = x ::: foldr1 (<+>) zs
-zag (x ::: []) zs (l :: ls) =
-  let zs = mapMaybe fromColist (forget zs) in
-  x ::: forgetInf (zig (l ::: zs) ls)
+zag (x ::: []) zs [] = x :::
+  let Just zs = List1.fromList (mapMaybe fromColist (forget zs))
+        | Nothing => []
+  in Colist.zig zs []
+zag (x ::: []) zs (l :: ls) =  x :::
+  let zs = mapMaybe fromColist (forget zs)
+  in forgetInf (zig (l ::: zs) ls)
 zag (x ::: (y :: xs)) zs ls = x ::: forgetInf (zag (y ::: xs) zs ls)
 
 public export
