@@ -1,6 +1,7 @@
 module Data.Colist1
 
 import Data.Colist
+import Data.List
 import Data.List1
 import Data.Nat
 import public Data.Zippable
@@ -86,6 +87,11 @@ unfold f s a = a ::: unfold f s
 public export
 forget : Colist1 a -> Colist a
 forget (h ::: t) = h :: t
+
+||| Convert an `Inf (Colist1 a)` to an `Inf (Colist a)`
+public export
+forgetInf : Inf (Colist1 a) -> Inf (Colist a)
+forgetInf (h ::: t) = h :: t
 
 ||| Prepends an element to a `Colist1`.
 public export
@@ -201,3 +207,48 @@ Zippable Colist1 where
   unzipWith f = unzip . map f
 
   unzipWith3 f = unzip3 . map f
+
+--------------------------------------------------------------------------------
+-- Interleavings
+--------------------------------------------------------------------------------
+
+-- zig, zag, and cantor are generalised version of the Stream functions
+-- defined in the paper
+-- Applications of Applicative Proof Search
+-- by Liam O'Connor
+
+public export
+zig : List1 (Colist1 a) -> Colist (Colist1 a) -> Colist1 a
+
+public export
+zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
+
+zig xs = zag (head <$> xs) (tail <$> xs)
+
+zag (x ::: []) zs [] = x ::: foldr1 (<+>) zs
+zag (x ::: []) zs (l :: ls) =
+  let zs = mapMaybe fromColist (forget zs) in
+  x ::: forgetInf (zig (l ::: zs) ls)
+zag (x ::: (y :: xs)) zs ls = x ::: forgetInf (zag (y ::: xs) zs ls)
+
+public export
+cantor : Colist1 (Colist1 a) -> Colist1 a
+cantor (l ::: ls) = zig (l ::: []) ls
+
+namespace DPair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : {0 p : a -> Type} ->
+          Colist1 a -> ((x : a) -> Colist1 (p x)) ->
+          Colist1 (x : a ** p x)
+  plane as f = cantor (map (\ x => map (\ prf => (x ** prf)) (f x)) as)
+
+namespace Pair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Colist1 a -> Colist1 b -> Colist1 (a, b)
+  plane as bs = cantor (map (\ a => map (\ b => (a, b)) bs) as)
