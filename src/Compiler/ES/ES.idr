@@ -66,19 +66,20 @@ addSupportToPreamble name code =
 addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
 addStringIteratorToPreamble =
   do
-    let defs = "
-function __prim_stringIteratorNew(str) {
-  return 0;
-}
-function __prim_stringIteratorToString(_, str, it, f) {
-  return f(str.slice(it));
-}
-function __prim_stringIteratorNext(str, it) {
-  if (it >= str.length)
-    return {h: 0};
-  else
-    return {h: 1, a1: str.charAt(it), a2: it + 1};
-}"
+    let defs = unlines $
+      [ "function __prim_stringIteratorNew(str) {"
+      , "  return 0;"
+      , "}"
+      , "function __prim_stringIteratorToString(_, str, it, f) {"
+      , "  return f(str.slice(it));"
+      , "}"
+      , "function __prim_stringIteratorNext(str, it) {"
+      , "  if (it >= str.length)"
+      , "    return {h: 0};"
+      , "  else"
+      , "    return {h: 1, a1: str.charAt(it), a2: it + 1};"
+      , "}"
+      ]
     let name = "stringIterator"
     let newName = esName name
     addToPreamble name newName defs

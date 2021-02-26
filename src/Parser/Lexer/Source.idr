@@ -27,7 +27,7 @@ data Token
   | DoubleLit Double
   | IntegerLit Integer
   -- String
-  | StringBegin
+  | StringBegin Bool -- Whether is multiline string
   | StringEnd
   | InterpBegin
   | InterpEnd
@@ -55,7 +55,8 @@ Show Token where
   show (DoubleLit x) = "double " ++ show x
   show (IntegerLit x) = "literal " ++ show x
   -- String
-  show StringBegin = "string begin"
+  show (StringBegin True) = "string begin"
+  show (StringBegin False) = "multiline string begin"
   show StringEnd = "string end"
   show InterpBegin = "string interp begin"
   show InterpEnd = "string interp end"
@@ -83,7 +84,8 @@ Pretty Token where
   pretty (DoubleLit x) = pretty "double" <++> pretty x
   pretty (IntegerLit x) = pretty "literal" <++> pretty x
   -- String
-  pretty StringBegin = reflow "string begin"
+  pretty (StringBegin True) = reflow "string begin"
+  pretty (StringBegin False) = reflow "multiline string begin"
   pretty StringEnd = reflow "string end"
   pretty InterpBegin = reflow "string interp begin"
   pretty InterpEnd = reflow "string interp end"
@@ -173,6 +175,13 @@ stringBegin = many (is '#') <+> (is '"')
 
 stringEnd : Nat -> String
 stringEnd hashtag = "\"" ++ replicate hashtag '#'
+
+multilineBegin : Lexer
+multilineBegin = many (is '#') <+> (exact "\"\"\"") <+>
+                    manyUntil newline space <+> newline
+
+multilineEnd : Nat -> String
+multilineEnd hashtag = "\"\"\"" ++ replicate hashtag '#'
 
 -- Do this as an entire token, because the contents will be processed by
 -- a specific back end
@@ -271,15 +280,20 @@ fromOctLit str
              --        ^-- can't happen if the literal lexed correctly
 
 mutual
-  stringTokens : Nat -> Tokenizer Token
-  stringTokens hashtag
+  stringTokens : Bool -> Nat -> Tokenizer Token
+  stringTokens multi hashtag
       = let escapeChars = "\\" ++ replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
-            stringLexer = non $ exact (stringEnd hashtag)
+            charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
           in
-            match (someUntil (exact interpStart) (escapeLexer <|> stringLexer)) (\x => StringLit hashtag x)
-        <|> compose (exact interpStart) (const InterpBegin) (const ()) (\_ => rawTokens) (const $ is '}') (const InterpEnd)
+            match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit hashtag x)
+        <|> compose (exact interpStart)
+                    (const InterpBegin)
+                    (const ())
+                    (\_ => rawTokens)
+                    (const $ is '}')
+                    (const InterpEnd)
 
   rawTokens : Tokenizer Token
   rawTokens =
@@ -288,14 +302,30 @@ mutual
       <|> match docComment (DocComment . drop 3)
       <|> match cgDirective mkDirective
       <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
-      <|> compose (choice $ exact <$> groupSymbols) Symbol id (\_ => rawTokens) (exact . groupClose) Symbol
+      <|> compose (choice $ exact <$> groupSymbols)
+                  Symbol
+                  id
+                  (\_ => rawTokens)
+                  (exact . groupClose)
+                  Symbol
       <|> match (choice $ exact <$> symbols) Symbol
       <|> match doubleLit (\x => DoubleLit (cast x))
       <|> match binLit (\x => IntegerLit (fromBinLit x))
       <|> match hexLit (\x => IntegerLit (fromHexLit x))
       <|> match octLit (\x => IntegerLit (fromOctLit x))
       <|> match digits (\x => IntegerLit (cast x))
-      <|> compose stringBegin (const StringBegin) countHashtag stringTokens (exact . stringEnd) (const StringEnd)
+      <|> compose multilineBegin
+                  (const $ StringBegin True)
+                  countHashtag
+                  (stringTokens True)
+                  (exact . multilineEnd)
+                  (const StringEnd)
+      <|> compose stringBegin
+                  (const $ StringBegin False)
+                  countHashtag
+                  (stringTokens False)
+                  (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
+                  (const StringEnd)
       <|> match charLit (\x => CharLit (stripQuotes x))
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
       <|> match namespacedIdent parseNamespace
@@ -312,7 +342,6 @@ mutual
       parseNamespace ns = case mkNamespacedIdent ns of
                                (Nothing, ident) => parseIdent ident
                                (Just ns, n)     => DotSepIdent ns n
-
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
 

@@ -426,6 +426,7 @@ perror (NoForeignCC fc) = do
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)
     pure res
+perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
 
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot
