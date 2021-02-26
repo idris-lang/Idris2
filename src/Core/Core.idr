@@ -37,6 +37,7 @@ data DotReason = NonLinearVar
                | ErasedArg
                | UserDotted
                | UnknownDot
+               | UnderAppliedCon
 
 export
 Show DotReason where
@@ -46,6 +47,7 @@ Show DotReason where
   show ErasedArg = "Erased argument"
   show UserDotted = "User dotted"
   show UnknownDot = "Unknown reason"
+  show UnderAppliedCon = "Under-applied constructor"
 
 export
 Pretty DotReason where
@@ -55,6 +57,7 @@ Pretty DotReason where
   pretty ErasedArg = reflow "Erased argument"
   pretty UserDotted = reflow "User dotted"
   pretty UnknownDot = reflow "Unknown reason"
+  pretty UnderAppliedCon = reflow "Under-applied constructor"
 
 -- All possible errors, carrying a location
 public export

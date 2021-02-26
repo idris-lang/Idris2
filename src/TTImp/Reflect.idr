@@ -59,6 +59,7 @@ Reify DotReason where
              (NS _ (UN "ErasedArg"), _) => pure ErasedArg
              (NS _ (UN "UserDotted"), _) => pure UserDotted
              (NS _ (UN "UnknownDot"), _) => pure UnknownDot
+             (NS _ (UN "UnderAppliedCon"), _) => pure UnderAppliedCon
              _ => cantReify val "DotReason"
   reify defs val = cantReify val "DotReason"
 
@@ -76,6 +77,9 @@ Reflect DotReason where
       = getCon fc defs (reflectionttimp "UserDotted")
   reflect fc defs lhs env UnknownDot
       = getCon fc defs (reflectionttimp "UnknownDot")
+  reflect fc defs lhs env UnderAppliedCon
+      = getCon fc defs (reflectionttimp "UnderAppliedCon")
+
 
 mutual
   export

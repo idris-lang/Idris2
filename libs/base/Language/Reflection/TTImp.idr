@@ -19,6 +19,7 @@ mutual
                  | ErasedArg
                  | UserDotted
                  | UnknownDot
+                 | UnderAppliedCon
 
   public export
   data TTImp : Type where
