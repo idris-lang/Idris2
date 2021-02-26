@@ -240,15 +240,32 @@ namespace DPair
   ||| Explore the plane corresponding to all possible pairings
   ||| using Cantor's zig zag traversal
   public export
+  planeWith : {0 p : a -> Type} ->
+              ((x : a) -> p x -> c) ->
+              Colist1 a -> ((x : a) -> Colist1 (p x)) ->
+              Colist1 c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
   plane : {0 p : a -> Type} ->
           Colist1 a -> ((x : a) -> Colist1 (p x)) ->
           Colist1 (x : a ** p x)
-  plane as f = cantor (map (\ x => map (\ prf => (x ** prf)) (f x)) as)
+  plane = planeWith (\ x, prf => (x ** prf))
 
 namespace Pair
 
   ||| Explore the plane corresponding to all possible pairings
   ||| using Cantor's zig zag traversal
   public export
-  plane : Colist1 a -> Colist1 b -> Colist1 (a, b)
-  plane as bs = cantor (map (\ a => map (\ b => (a, b)) bs) as)
+  planeWith : (a -> b -> c) ->
+              Colist1 a -> (a -> Colist1 b) ->
+              Colist1 c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Colist1 a -> (a -> Colist1 b) -> Colist1 (a, b)
+  plane = Pair.planeWith (,)

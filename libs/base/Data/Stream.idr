@@ -140,18 +140,35 @@ namespace DPair
   ||| Explore the plane corresponding to all possible pairings
   ||| using Cantor's zig zag traversal
   public export
+  planeWith : {0 p : a -> Type} ->
+              ((x : a) -> p x -> c) ->
+              Stream a -> ((x : a) -> Stream (p x)) ->
+              Stream c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
   plane : {0 p : a -> Type} ->
           Stream a -> ((x : a) -> Stream (p x)) ->
           Stream (x : a ** p x)
-  plane as f = cantor (map (\ x => map (\ prf => (x ** prf)) (f x)) as)
+  plane = planeWith (\ x, prf => (x ** prf))
 
 namespace Pair
 
   ||| Explore the plane corresponding to all possible pairings
   ||| using Cantor's zig zag traversal
   public export
-  plane : Stream a -> Stream b -> Stream (a, b)
-  plane as bs = cantor (map (\ a => map (\ b => (a, b)) bs) as)
+  planeWith : (a -> b -> c) ->
+              Stream a -> (a -> Stream b) ->
+              Stream c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Stream a -> (a -> Stream b) -> Stream (a, b)
+  plane = Pair.planeWith (,)
 
 --------------------------------------------------------------------------------
 -- Implementations
