@@ -1,3 +1,3 @@
-{ nixpkgs ? import <nixos> {} }: with nixpkgs;
+{ pkgs ? import <nixos> {} }: with pkgs;
 
-callPackage ./package.nix {}
+callPackage ./nix/package.nix {}
