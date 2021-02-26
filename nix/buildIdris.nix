@@ -9,10 +9,10 @@ stdenv.mkDerivation {
   src = src;
   buildInputs = [ idris2 ];
   buildPhase = let
-    ipkgName = projectName + ".idr";
+    ipkgName = projectName + ".ipkg";
   in ''
-    idris2 ${ipkgName} -o ${projectName}
-  # '';
+    idris2 --build ${ipkgName}
+  '';
   installPhase = ''
     mkdir -p $out/
     mv build/exec/* $out
