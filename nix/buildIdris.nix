@@ -14,7 +14,7 @@ stdenv.mkDerivation {
     idris2 ${ipkgName} -o ${projectName}
   # '';
   installPhase = ''
-    mv build/exec $out
-    mv $out && mv ${projectName} bin
+    mkdir -p $out/
+    mv build/exec/* $out
   '';
 }
