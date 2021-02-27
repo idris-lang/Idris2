@@ -74,8 +74,8 @@ updateEnv
          -- for the tests means they test the local version not the installed
          -- version
          defs <- get Ctxt
-         addPkgDir "prelude"
-         addPkgDir "base"
+         addPkgDir "prelude" anyBounds
+         addPkgDir "base" anyBounds
          addDataDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "support")
          addLibDir (prefix_dir (dirs (options defs)) </>

@@ -1,4 +1,5 @@
 package network
+version = 0.3.0
 
 opts = "-p contrib"
 

@@ -21,6 +21,7 @@ record Dirs where
   working_dir : String
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
+  depends_dir : String -- local dependencies directory, relative to working directory
   output_dir : Maybe String -- output directory, relative to working directory
   prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
@@ -37,10 +38,11 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs ldirs ddirs) =
   unlines [ "+ Working Directory      :: " ++ show wdir
           , "+ Source Directory       :: " ++ show sdir
           , "+ Build Directory        :: " ++ show bdir
+          , "+ Local Depend Directory :: " ++ show ldir
           , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
           , "+ Installation Prefix    :: " ++ show dfix
           , "+ Extra Directories      :: " ++ show edirs
@@ -175,7 +177,7 @@ getCG : Options -> String -> Maybe CG
 getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" Nothing
+defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
                      "/usr/local" ["."] [] []
 
 defaultPPrint : PPrinter

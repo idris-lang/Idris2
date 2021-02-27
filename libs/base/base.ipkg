@@ -1,4 +1,5 @@
 package base
+version = 0.3.0
 
 modules = Control.App,
           Control.App.Console,

@@ -23,8 +23,10 @@ data Token
   | Equals
   | DotSepIdent (Maybe Namespace) String
   | Separator
+  | Dot
   | Space
   | StringLit String
+  | IntegerLit Integer
 
 public export
 Show Token where
@@ -33,8 +35,10 @@ Show Token where
   show Equals = "Equals"
   show (DotSepIdent ns n) = "DotSepIdentifier: " ++ show ns ++ "." ++ show n
   show Separator = "Separator"
+  show Dot = "Dot"
   show Space = "Space"
   show (StringLit s) = "StringLit: " ++ s
+  show (IntegerLit i) = "IntegerLit: " ++ show i
 
 public export
 Pretty Token where
@@ -43,14 +47,19 @@ Pretty Token where
   pretty Equals = "Equals"
   pretty (DotSepIdent ns n) = "DotSepIdentifier:" <++> pretty ns <+> dot <+> pretty n
   pretty Separator = "Separator"
+  pretty Dot = "Dot"
   pretty Space = "Space"
   pretty (StringLit s) = "StringLit:" <++> pretty s
+  pretty (IntegerLit i) = "IntegerLit:" <++> pretty i
 
 equals : Lexer
 equals = is '='
 
 separator : Lexer
 separator = is ','
+
+dot : Lexer
+dot = is '.'
 
 rawTokens : TokenMap Token
 rawTokens =
@@ -59,8 +68,10 @@ rawTokens =
   , (namespacedIdent, uncurry DotSepIdent . mkNamespacedIdent)
   , (identAllowDashes, DotSepIdent Nothing)
   , (separator, const Separator)
+  , (dot, const Dot)
   , (spacesOrNewlines, const Space)
   , (stringLit, \s => StringLit (stripQuotes s))
+  , (intLit, \i => IntegerLit (cast i))
   ]
 
 export

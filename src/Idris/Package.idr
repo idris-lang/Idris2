@@ -44,7 +44,7 @@ public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
-  version : String
+  version : PkgVersion
   authors : String
   maintainers : Maybe String
   license : Maybe String
@@ -68,10 +68,13 @@ record PkgDesc where
   preclean : Maybe (FC, String) -- Script to run before cleaning
   postclean : Maybe (FC, String) -- Script to run after cleaning
 
+installDir : PkgDesc -> String
+installDir p = name p ++ "-" ++ show (version p)
+
 export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
-             "Version: " ++ version pkg ++ "\n" ++
+             "Version: " ++ show (version pkg) ++ "\n" ++
              "Authors: " ++ authors pkg ++ "\n" ++
              maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
              maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
@@ -97,14 +100,14 @@ Show PkgDesc where
 
 initPkgDesc : String -> PkgDesc
 initPkgDesc pname
-    = MkPkgDesc pname "0" "Anonymous" Nothing Nothing
+    = MkPkgDesc pname (MkPkgVersion [0,0]) "Anonymous" Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
                 [] []
                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing
 
 data DescField : Type where
-  PVersion     : FC -> String -> DescField
+  PVersion     : FC -> PkgVersion -> DescField
   PAuthors     : FC -> String -> DescField
   PMaintainers : FC -> String -> DescField
   PLicense     : FC -> String -> DescField
@@ -130,8 +133,7 @@ data DescField : Type where
 
 field : String -> Rule DescField
 field fname
-      = strField PVersion "version"
-    <|> strField PAuthors "authors"
+      = strField PAuthors "authors"
     <|> strField PMaintainers "maintainers"
     <|> strField PLicense "license"
     <|> strField PBrief "brief"
@@ -150,6 +152,13 @@ field fname
     <|> strField PPostinstall "postinstall"
     <|> strField PPreclean "preclean"
     <|> strField PPostclean "postclean"
+    <|> do start <- location
+           ignore $ exactProperty "version"
+           equals
+           vs <- sepBy1 dot' integerLit
+           end <- location
+           pure (PVersion (MkFC fname start end)
+                          (MkPkgVersion (map fromInteger vs)))
     <|> do ignore $ exactProperty "depends"
            equals
            ds <- sep packageName
@@ -255,7 +264,7 @@ addDeps : {auto c : Ref Ctxt Defs} ->
           PkgDesc -> Core ()
 addDeps pkg
     = do defs <- get Ctxt
-         traverse_ addPkgDir (depends pkg)
+         traverse_ (\p => addPkgDir p anyBounds) (depends pkg)
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -325,8 +334,8 @@ copyFile src dest
          writeToFile dest buf
 
 installFrom : {auto c : Ref Ctxt Defs} ->
-              String -> String -> String -> ModuleIdent -> Core ()
-installFrom pname builddir destdir ns
+              String -> String -> ModuleIdent -> Core ()
+installFrom builddir destdir ns
     = do let ttcfile = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
 
@@ -368,18 +377,17 @@ install pkg opts -- not used but might be in the future
                              "idris2-" ++ showVersion False version
          True <- coreLift $ changeDir installPrefix
              | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
-         Right _ <- coreLift $ mkdirAll (name pkg)
+         Right _ <- coreLift $ mkdirAll (installDir pkg)
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ name pkg
+                             [ "Can't make directory " ++ installDir pkg
                              , show err ]
-         True <- coreLift $ changeDir (name pkg)
-             | False => throw $ InternalError $ "Can't change directory to " ++ name pkg
+         True <- coreLift $ changeDir (installDir pkg)
+             | False => throw $ InternalError $ "Can't change directory to " ++ installDir pkg
 
          -- We're in that directory now, so copy the files from
          -- srcdir/build into it
-         traverse_ (installFrom (name pkg)
-                                (srcdir </> build)
-                                (installPrefix </> name pkg)) toInstall
+         traverse_ (installFrom (srcdir </> build)
+                                (installPrefix </> installDir pkg)) toInstall
          coreLift_ $ changeDir srcdir
          runScript (postinstall pkg)
 
@@ -643,4 +651,4 @@ findIpkg fname
     dropHead str (x :: xs)
         = if x == str then xs else x :: xs
     loadDependencies : List String -> Core ()
-    loadDependencies = traverse_ addPkgDir
+    loadDependencies = traverse_ (\p => addPkgDir p anyBounds)

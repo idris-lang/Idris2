@@ -48,6 +48,13 @@ stringLit = terminal "Expected string"
                                  _ => Nothing)
 
 export
+integerLit : Rule Integer
+integerLit = terminal "Expected string"
+                     (\x => case x.val of
+                                 IntegerLit i => Just i
+                                 _ => Nothing)
+
+export
 namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent = terminal "Expected namespaced identifier"
                            (\x => case x.val of
@@ -69,6 +76,13 @@ packageName = terminal "Expected package name"
                                      if isIdent AllowDashes str then Just str
                                      else Nothing
                                    _ => Nothing)
+
+export
+dot' : Rule ()
+dot' = terminal "Expected dot"
+                (\x => case x.val of
+                            Dot => Just ()
+                            _ => Nothing)
 
 sep' : Rule ()
 sep' = terminal "Expected separator"

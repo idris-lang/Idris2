@@ -5,6 +5,7 @@ import IdrisPaths
 import Idris.Env
 import Idris.Version
 
+import Core.Name.Namespace
 import Core.Options
 
 import Data.List
@@ -39,6 +40,46 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
+
+public export
+data PkgVersion = MkPkgVersion (List Nat)
+
+export
+Show PkgVersion where
+  show (MkPkgVersion vs) = showSep "." (map show vs)
+
+export
+Eq PkgVersion where
+  MkPkgVersion p == MkPkgVersion q = p == q
+
+export
+Ord PkgVersion where
+  -- list ordering gives us what we want
+  compare (MkPkgVersion p) (MkPkgVersion q) = compare p q
+
+-- version must be >= lowerBound and <= upperBound
+-- Do we want < and > as well?
+public export
+record PkgVersionBounds where
+  constructor MkPkgVersionBounds
+  lowerBound : Maybe PkgVersion
+  upperBound : Maybe PkgVersion
+
+export
+anyBounds : PkgVersionBounds
+anyBounds = MkPkgVersionBounds Nothing Nothing
+
+export
+current : PkgVersionBounds
+current = let (maj,min,patch) = semVer version
+              version = Just (MkPkgVersion [maj, min, patch]) in
+              MkPkgVersionBounds version version
+
+export
+inBounds : PkgVersion -> PkgVersionBounds -> Bool
+inBounds v bounds
+   = maybe True (\v' => v >= v') bounds.lowerBound &&
+     maybe True (\v' => v <= v') bounds.upperBound
 
 ||| CLOpt - possible command line options
 public export

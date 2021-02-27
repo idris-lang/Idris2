@@ -1,4 +1,5 @@
 package contrib
+version = 0.3.0
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
