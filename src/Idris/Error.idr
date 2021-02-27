@@ -455,6 +455,8 @@ pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
+pwarning (Deprecated s)
+    = pure $ pretty "Deprecation warning:" <++> pretty s
 
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc

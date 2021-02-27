@@ -65,7 +65,6 @@ candidateDirs dname pkg bounds
                 then getFiles d (((dname </> str), ver) :: acc)
                 else getFiles d acc
 
--- TODO: Version numbers on dependencies
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> PkgVersionBounds -> Core ()
@@ -94,7 +93,7 @@ addPkgDir p bounds
          -- If there's none, report it
          -- (TODO: Can't do this quite yet due to idris2 build system...)
          case sorted of
-              [] => pure () -- throw (CantFindPackage p)
+              [] => throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
               ((p, _) :: ps) => addExtraDir p
 
 dirOption : Dirs -> DirCommand -> Core ()

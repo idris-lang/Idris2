@@ -155,6 +155,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     Deprecated : String -> Warning
 
 export
 Show TTCErrorMsg where
@@ -398,6 +399,7 @@ getErrorLoc (InRHS _ _ err) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export

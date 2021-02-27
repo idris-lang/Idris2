@@ -25,6 +25,48 @@ equals = terminal "Expected equals"
                                   _ => Nothing)
 
 export
+lte : Rule ()
+lte = terminal "Expected <="
+                      (\x => case x.val of
+                                  LTE => Just ()
+                                  _ => Nothing)
+
+export
+gte : Rule ()
+gte = terminal "Expected >="
+                      (\x => case x.val of
+                                  GTE => Just ()
+                                  _ => Nothing)
+
+export
+lt : Rule ()
+lt = terminal "Expected <="
+                      (\x => case x.val of
+                                  LT => Just ()
+                                  _ => Nothing)
+
+export
+gt : Rule ()
+gt = terminal "Expected >="
+                      (\x => case x.val of
+                                  GT => Just ()
+                                  _ => Nothing)
+
+export
+eqop : Rule ()
+eqop = terminal "Expected =="
+                      (\x => case x.val of
+                                  EqOp => Just ()
+                                  _ => Nothing)
+
+export
+andop : Rule ()
+andop = terminal "Expected &&"
+                      (\x => case x.val of
+                                  AndOp => Just ()
+                                  _ => Nothing)
+
+export
 eoi : Rule ()
 eoi = terminal "Expected end of input"
                (\x => case x.val of

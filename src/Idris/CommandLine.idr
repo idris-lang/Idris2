@@ -63,23 +63,39 @@ public export
 record PkgVersionBounds where
   constructor MkPkgVersionBounds
   lowerBound : Maybe PkgVersion
+  lowerInclusive : Bool -- >= if true
   upperBound : Maybe PkgVersion
+  upperInclusive : Bool -- <= if true
+
+export
+Show PkgVersionBounds where
+  show p = if noBounds p then "any"
+              else maybe "" (\v => (if p.lowerInclusive then ">= " else "> ")
+                                       ++ show v ++ " ") p.lowerBound ++
+                   maybe "" (\v => (if p.upperInclusive then "<= " else "< ") ++ show v) p.upperBound
+    where
+      noBounds : PkgVersionBounds -> Bool
+      noBounds p = isNothing p.lowerBound && isNothing p.upperBound
 
 export
 anyBounds : PkgVersionBounds
-anyBounds = MkPkgVersionBounds Nothing Nothing
+anyBounds = MkPkgVersionBounds Nothing True Nothing True
 
 export
 current : PkgVersionBounds
 current = let (maj,min,patch) = semVer version
               version = Just (MkPkgVersion [maj, min, patch]) in
-              MkPkgVersionBounds version version
+              MkPkgVersionBounds version True version True
 
 export
 inBounds : PkgVersion -> PkgVersionBounds -> Bool
 inBounds v bounds
-   = maybe True (\v' => v >= v') bounds.lowerBound &&
-     maybe True (\v' => v <= v') bounds.upperBound
+   = maybe True (\v' => if bounds.lowerInclusive
+                           then v >= v'
+                           else v > v') bounds.lowerBound &&
+     maybe True (\v' => if bounds.upperInclusive
+                           then v <= v'
+                           else v < v') bounds.upperBound
 
 ||| CLOpt - possible command line options
 public export
