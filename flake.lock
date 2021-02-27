@@ -15,13 +15,29 @@
         "type": "github"
       }
     },
+    "idris-emacs-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1613351183,
+        "narHash": "sha256-ngg48SzrR2LCtjle3WR3BOK86USRB0ZXmgXWu9EzQbo=",
+        "owner": "redfish64",
+        "repo": "idris2-mode",
+        "rev": "77390611a934f13e03a45e9f8a4e476dd17a9c5b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "redfish64",
+        "repo": "idris2-mode",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1614313282,
-        "narHash": "sha256-UyUBXiXpiplkoxXdGr/XwvER9t5HTbvNjTnjzWTuoy8=",
+        "lastModified": 1614382363,
+        "narHash": "sha256-JYmL3W3Fu+kObw2LfPiJZKDrCipaiJg/hcR8IPk+qh4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "c33e84e655ee6929927c915a7d195a939f2f84a5",
+        "rev": "36126fdbfabe7aa34d4f84d1ee9ac06cd371aada",
         "type": "github"
       },
       "original": {
@@ -32,6 +48,7 @@
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "idris-emacs-src": "idris-emacs-src",
         "nixpkgs": "nixpkgs"
       }
     }

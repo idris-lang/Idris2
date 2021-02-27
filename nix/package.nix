@@ -1,4 +1,5 @@
 { stdenv
+, lib
 , chez
 , clang
 , fetchFromGitHub
@@ -21,7 +22,7 @@ stdenv.mkDerivation rec {
   '';
 
   makeFlags = [ "PREFIX=$(out)" ]
-    ++ stdenv.lib.optional stdenv.isDarwin "OS=";
+    ++ lib.optional stdenv.isDarwin "OS=";
 
   # The name of the main executable of pkgs.chez is `scheme`
   buildFlags = [ "bootstrap" "SCHEME=scheme" ];
