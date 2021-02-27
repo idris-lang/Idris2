@@ -74,8 +74,9 @@ updateEnv
          -- for the tests means they test the local version not the installed
          -- version
          defs <- get Ctxt
-         addPkgDir "prelude" anyBounds
-         addPkgDir "base" anyBounds
+         -- These might fail while bootstrapping
+         catch (addPkgDir "prelude" anyBounds) (const (pure ()))
+         catch (addPkgDir "base" anyBounds) (const (pure ()))
          addDataDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "support")
          addLibDir (prefix_dir (dirs (options defs)) </>
@@ -109,6 +110,11 @@ tryYaffle [] = pure False
 tryYaffle (Yaffle f :: _) = do yaffleMain f []
                                pure True
 tryYaffle (c :: cs) = tryYaffle cs
+
+ignoreMissingIpkg : List CLOpt -> Bool
+ignoreMissingIpkg [] = False
+ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
+ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
 
 tryTTM : List CLOpt -> Core Bool
 tryTTM [] = pure False
@@ -145,6 +151,9 @@ stMain cgs opts
          addPrimitives
 
          setWorkingDir "."
+         when (ignoreMissingIpkg opts) $
+            setSession (record { ignoreMissingPkg = True } !getSession)
+
          updateEnv
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts

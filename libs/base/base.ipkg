@@ -1,6 +1,8 @@
 package base
 version = 0.3.0
 
+opts = "--ignore-missing-ipkg"
+
 modules = Control.App,
           Control.App.Console,
           Control.App.FileIO,

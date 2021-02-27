@@ -93,7 +93,9 @@ addPkgDir p bounds
          -- If there's none, report it
          -- (TODO: Can't do this quite yet due to idris2 build system...)
          case sorted of
-              [] => throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
+              [] => if defs.options.session.ignoreMissingPkg
+                       then pure ()
+                       else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
               ((p, _) :: ps) => addExtraDir p
 
 dirOption : Dirs -> DirCommand -> Core ()
@@ -173,6 +175,9 @@ preOptions (RunREPL _ :: opts)
          preOptions opts
 preOptions (FindIPKG :: opts)
     = do setSession (record { findipkg = True } !getSession)
+         preOptions opts
+preOptions (IgnoreMissingIPKG :: opts)
+    = do setSession (record { ignoreMissingPkg = True } !getSession)
          preOptions opts
 preOptions (DumpCases f :: opts)
     = do setSession (record { dumpcases = Just f } !getSession)

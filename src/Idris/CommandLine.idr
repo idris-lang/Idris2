@@ -163,6 +163,7 @@ data CLOpt
   DumpVMCode String |
    ||| Run a REPL command then exit immediately
   RunREPL String |
+  IgnoreMissingIPKG |
   FindIPKG |
   Timing |
   DebugElabCheck |
@@ -264,7 +265,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
-              (Just "Find and use an .ipkg file in a parent directory"),
+              (Just "Find and use an .ipkg file in a parent directory."),
+           MkOpt ["--ignore-missing-ipkg"] [] [IgnoreMissingIPKG]
+              (Just "Fail silently if a dependency is missing."),
 
            optSeparator,
            MkOpt ["--ide-mode"] [] [IdeMode]

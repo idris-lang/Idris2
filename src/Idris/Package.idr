@@ -360,9 +360,10 @@ prepareCompilation : {auto c : Ref Ctxt Defs} ->
 prepareCompilation pkg opts =
   do
     defs <- get Ctxt
-    addDeps pkg
 
     processOptions (options pkg)
+    addDeps pkg
+
     ignore $ preOptions opts
 
     runScript (prebuild pkg)
