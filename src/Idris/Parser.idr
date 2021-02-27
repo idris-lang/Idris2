@@ -1876,7 +1876,7 @@ parserCommandsForHelp =
   , noArgCmd (ParseREPLCmd ["e", "edit"]) Edit "Edit current file using $EDITOR or $VISUAL"
   , nameArgCmd (ParseREPLCmd ["miss", "missing"]) Missing "Show missing clauses"
   , nameArgCmd (ParseKeywordCmd "total") Total "Check the totality of a name"
-  , nameArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name"
+  , exprArgCmd (ParseIdentCmd "doc") Doc "Show documentation for a name or primitive"
   , moduleArgCmd (ParseIdentCmd "browse") (Browse . miAsNamespace) "Browse contents of a namespace"
   , loggingArgCmd (ParseREPLCmd ["log", "logging"]) SetLog "Set logging level"
   , autoNumberArgCmd (ParseREPLCmd ["consolewidth"]) SetConsoleWidth "Set the width of the console output (0 for unbounded) (auto by default)"
