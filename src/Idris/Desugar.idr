@@ -9,7 +9,9 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
+import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 
 import Idris.DocString
@@ -30,7 +32,11 @@ import Libraries.Utils.Shunting
 import Libraries.Utils.String
 
 import Control.Monad.State
+import Data.Maybe
 import Data.List
+import Data.List.Views
+import Data.List1
+import Data.Strings
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -78,7 +84,7 @@ toTokList (POp fc opn l r)
          let op = nameRoot opn
          case lookup op (infixes syn) of
               Nothing =>
-                  if any isOpChar (unpack op)
+                  if any isOpChar (fastUnpack op)
                      then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
                      else do rtoks <- toTokList r
                              pure (Expr l :: Op fc opn backtickPrec :: rtoks)
@@ -273,7 +279,10 @@ mutual
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
   desugarB side ps (PInfer fc) = pure $ Implicit fc False
-  desugarB side ps (PString fc strs) = addFromString fc !(expandString side ps fc strs)
+  desugarB side ps (PMultiline fc indent lines)
+      = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
+  desugarB side ps (PString fc strs)
+      = addFromString fc !(expandString side ps fc strs)
   desugarB side ps (PDoBlock fc ns block)
       = expandDo side ps fc ns block
   desugarB side ps (PBang fc term)
@@ -405,7 +414,7 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty xs)) of
+  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty $ mergeStrLit xs)) of
                                    [] => IPrimVal fc (Str "")
                                    xs@(_::_) => foldr1 concatStr xs
     where
@@ -413,12 +422,62 @@ mutual
       toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
       toRawImp (StrInterp fc tm) = desugarB side ps tm
 
+      -- merge neighbouring StrLiteral
+      mergeStrLit : List PStr -> List PStr
+      mergeStrLit [] = []
+      mergeStrLit ((StrLiteral fc str1)::(StrLiteral _ str2)::xs)
+          = (StrLiteral fc (str1 ++ str2)) :: xs
+      mergeStrLit (x::xs) = x :: mergeStrLit xs
+
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
       notEmpty (StrInterp _ _) = True
 
       concatStr : RawImp -> RawImp -> RawImp
       concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
+
+  trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
+  trimMultiline fc indent lines
+      = if indent == 0
+           then pure $ dropLastNL $ concat lines
+           else do
+             lines <- trimLast fc lines
+             lines <- traverse (trimLeft indent) lines
+             pure $ dropLastNL $ concat lines
+    where
+      trimLast : FC -> List (List PStr) -> Core (List (List PStr))
+      trimLast fc lines with (snocList lines)
+        trimLast fc [] | Empty = throw $ BadMultiline fc "Expected line wrap"
+        trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
+        trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
+            = if any (not . isSpace) (fastUnpack str)
+                     then throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
+                     else pure initLines
+        trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
+            = let fc = fromMaybe fc $ findBy (\case StrInterp fc _ => Just fc;
+                                                    StrLiteral _ _ => Nothing) xs in
+                  throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
+
+      dropLastNL : List PStr -> List PStr
+      dropLastNL pstrs with (snocList pstrs)
+        dropLastNL [] | Empty = []
+        dropLastNL (initLines `snoc` (StrLiteral fc str)) | Snoc (StrLiteral _ _) initLines _
+            = initLines `snoc` (StrLiteral fc (fst $ break isNL str))
+        dropLastNL pstrs | _ = pstrs
+
+      trimLeft : Nat -> List PStr -> Core (List PStr)
+      trimLeft indent [] = pure []
+      trimLeft indent [(StrLiteral fc str)]
+          = let (trimed, rest) = splitAt indent (fastUnpack str) in
+                if any (not . isSpace) trimed
+                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+                   else pure $ [StrLiteral fc (fastPack rest)]
+      trimLeft indent ((StrLiteral fc str)::xs)
+          = let (trimed, rest) = splitAt indent (fastUnpack str) in
+                if any (not . isSpace) trimed || length trimed < indent
+                   then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
+                   else pure $ (StrLiteral fc (fastPack rest))::xs
+      trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"
 
   expandDo : {auto s : Ref Syn SyntaxInfo} ->
              {auto c : Ref Ctxt Defs} ->

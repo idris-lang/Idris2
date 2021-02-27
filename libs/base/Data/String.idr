@@ -90,6 +90,7 @@ unwords = pack . unwords' . map unpack
 ||| ```idris example
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
+export
 lines' : List Char -> List (List Char)
 lines' [] = []
 lines' s  = case break isNL s of
@@ -111,6 +112,7 @@ lines s = map pack (lines' (unpack s))
 ||| ```idris example
 ||| unlines' [['l','i','n','e'], ['l','i','n','e','2'], ['l','n','3'], ['D']]
 ||| ```
+export
 unlines' : List (List Char) -> List Char
 unlines' [] = []
 unlines' (l::ls) = l ++ '\n' :: unlines' ls

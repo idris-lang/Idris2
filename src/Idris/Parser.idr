@@ -394,8 +394,8 @@ mutual
     <|> binder fname indents
     <|> rewrite_ fname indents
     <|> record_ fname indents
-    <|> do b <- bounds (interpStr pdef fname indents)
-           pure (PString (boundToFC fname b) b.val)
+    <|> singlelineStr pdef fname indents
+    <|> multilineStr pdef fname indents
     <|> do b <- bounds (symbol ".(" *> commit *> expr pdef fname indents <* symbol ")")
            pure (PDotted (boundToFC fname b) b.val)
     <|> do b <- bounds (symbol "`(" *> expr pdef fname indents <* symbol ")")
@@ -778,23 +778,49 @@ mutual
   expr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   expr = typeExpr
 
-  export
-  interpStr : ParseOpts -> FileName -> IndentInfo -> Rule (List PStr)
-  interpStr q fname idents = do
-      strBegin
-      commit
-      xs <- many $ bounds $ interpBlock <||> strLit
-      strEnd
-      pure $ toPString <$> xs
-    where
-      interpBlock : Rule PTerm
-      interpBlock = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+  interpBlock : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
 
-      toPString : (WithBounds $ Either PTerm String) -> PStr
-      toPString x
+  export
+  singlelineStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  singlelineStr q fname idents
+      = do b <- bounds $ do strBegin
+                            commit
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            pstrs <- case traverse toPStr xs of
+                                          Left err => fatalError err
+                                          Right pstrs => pure $ pstrs
+                            strEnd
+                            pure pstrs
+           pure $ PString (boundToFC fname b) b.val
+    where
+      toPStr : (WithBounds $ Either PTerm (List1 String)) -> Either String PStr
+      toPStr x = case x.val of
+                      Right (str:::[]) => Right $ StrLiteral (boundToFC fname x) str
+                      Right (_:::strs) => Left "Multi-line string is expected to begin with \"\"\""
+                      Left tm => Right $ StrInterp (boundToFC fname x) tm
+
+  export
+  multilineStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
+  multilineStr q fname idents
+      = do b <- bounds $ do multilineBegin
+                            commit
+                            xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
+                            endloc <- location
+                            strEnd
+                            pure (endloc, toLines xs [] [])
+           pure $ let ((_, col), xs) = b.val in
+                      PMultiline (boundToFC fname b) (fromInteger $ cast col) xs
+    where
+      toLines : List (WithBounds $ Either PTerm (List1 String)) -> List PStr -> List (List PStr) -> List (List PStr)
+      toLines [] line acc = acc `snoc` line
+      toLines (x::xs) line acc
           = case x.val of
-                 Right s => StrLiteral (boundToFC fname x) s
-                 Left tm => StrInterp (boundToFC fname x) tm
+                 Left tm => toLines xs (line `snoc` (StrInterp (boundToFC fname x) tm)) acc
+                 Right (str:::[]) => toLines xs (line `snoc` (StrLiteral (boundToFC fname x) str)) acc
+                 Right (str:::strs@(_::_)) => toLines xs [StrLiteral (boundToFC fname x) (last strs)]
+                                                         ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
+                                                               ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
 
 visOption : Rule Visibility
 visOption
@@ -1187,7 +1213,7 @@ visOpt fname
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility PFnOpt) ->
-               SourceEmptyRule Visibility
+                SourceEmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs

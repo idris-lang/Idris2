@@ -56,6 +56,11 @@ idrisTestsCoverage = MkTestPool []
        "coverage009", "coverage010", "coverage011", "coverage012",
        "coverage013", "coverage014"]
 
+idrisTestsCasetree : TestPool
+idrisTestsCasetree = MkTestPool []
+       -- Case tree building
+      ["casetree001"]
+
 idrisTestsError : TestPool
 idrisTestsError = MkTestPool []
        -- Error messages
@@ -234,6 +239,7 @@ main = runner
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
   , testPaths "idris2" idrisTestsCoverage
+  , testPaths "idris2" idrisTestsCasetree
   , testPaths "idris2" idrisTestsError
   , testPaths "idris2" idrisTestsInteractive
   , testPaths "idris2" idrisTestsInterface

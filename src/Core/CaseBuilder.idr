@@ -292,24 +292,31 @@ clauseType : Phase -> PatClause vars (a :: as) -> ClauseType
 -- and don't see later, treat it as a variable
 -- Or, if we're compiling for runtime we won't be able to split on it, so
 -- also treat it as a variable
+-- Or, if it's an under-applied constructor then do NOT attempt to split on it!
 clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
     = getClauseType phase arg ty
   where
+    -- used when we are tempted to split on a constructor: is
+    -- this actually a fully applied one?
+    splitCon : Nat -> List Pat -> ClauseType
+    splitCon arity xs
+      = if arity == length xs then ConClause else VarClause
+
     -- used to get the remaining clause types
     clauseType' : Pat -> ClauseType
-    clauseType' (PCon _ _ _ _ xs) = ConClause
-    clauseType' (PTyCon _ _ _ xs) = ConClause
+    clauseType' (PCon _ _ _ a xs) = splitCon a xs
+    clauseType' (PTyCon _ _ a xs) = splitCon a xs
     clauseType' (PConst _ x)      = ConClause
     clauseType' (PArrow _ _ s t)  = ConClause
     clauseType' (PDelay _ _ _ _)  = ConClause
     clauseType' _                 = VarClause
 
     getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
-    getClauseType (CompileTime cr) (PCon _ _ _ _ xs) (Known r t)
-        = if isErased r && not (isErased cr) &&
-             all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs
+    getClauseType (CompileTime cr) (PCon _ _ _ a xs) (Known r t)
+        = if (isErased r && not (isErased cr) &&
+             all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs)
              then VarClause
-             else ConClause
+             else splitCon a xs
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t
     getClauseType phase l (Known r t) = if isErased r
       then VarClause
