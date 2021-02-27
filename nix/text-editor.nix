@@ -12,7 +12,7 @@ in rec {
     packageRequires = with pkgs.emacsPackages.melpaPackages; [ prop-menu ];
     version = "1";
     recipe = pkgs.writeText "recipe" ''
-      (idris2-mode :repo "redfish64/idris2-mode" :fetcher github :files ("*.el"))
+      (idris2-mode :repo "redfish64/idris2-mode" :fetcher github)
     '';
   };
   idris-emacs = emacsWithPackages [ idris2-mode ];
