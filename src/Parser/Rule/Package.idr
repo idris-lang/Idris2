@@ -91,7 +91,7 @@ stringLit = terminal "Expected string"
 
 export
 integerLit : Rule Integer
-integerLit = terminal "Expected string"
+integerLit = terminal "Expected integer"
                      (\x => case x.val of
                                  IntegerLit i => Just i
                                  _ => Nothing)
