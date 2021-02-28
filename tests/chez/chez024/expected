@@ -1,4 +1,5 @@
-True
+1/1: Building Envy (Envy.idr)
+Main> True
 HI
 True
 HI
@@ -6,5 +7,4 @@ True
 EH
 True
 Nothing there
-1/1: Building Envy (Envy.idr)
-Main> Main> Bye for now!
+Main> Bye for now!
