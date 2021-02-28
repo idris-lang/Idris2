@@ -81,10 +81,13 @@ addPkgDir p bounds
          -- and the local package directory
          locFiles <- coreLift $ candidateDirs localdir p bounds
          globFiles <- coreLift $ candidateDirs globaldir p bounds
+         -- Look in all the package paths too
+         let pkgdirs = (options defs).dirs.package_dirs
+         pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) pkgdirs
 
          -- If there's anything locally, use that and ignore the global ones
          let allFiles = if isNil locFiles
-                           then globFiles
+                           then globFiles ++ concat pkgFiles
                            else locFiles
          -- Sort in reverse order of version number
          let sorted = sortBy (\x, y => compare (snd y) (snd x)) allFiles
