@@ -26,7 +26,7 @@ fromLexError : String -> (StopReason, Int, Int, String) -> Error
 fromLexError fname (ComposeNotClosing begin end, _, _, _)
     = LexFail (MkFC fname begin end) "Bracket is not properly closed."
 fromLexError fname (_, l, c, _)
-    = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognoise token."
+    = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognise token."
 
 export
 fromParsingError : (Show token, Pretty token) => String -> ParsingError token -> Error

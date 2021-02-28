@@ -137,6 +137,7 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
+     CantFindPackage : String -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
      ParseFail : (Show token, Pretty token) =>
@@ -158,6 +159,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     Deprecated : String -> Warning
 
 export
 Show TTCErrorMsg where
@@ -302,6 +304,7 @@ Show Error where
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
+  show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
   show (ParseFail fc err toks) = "Parse error (" ++ show err ++ "): " ++ show toks
@@ -383,6 +386,7 @@ getErrorLoc (BadRunElab loc _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
+getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
 getErrorLoc (ParseFail loc _ _) = Just loc
@@ -401,6 +405,7 @@ getErrorLoc (InRHS _ _ err) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
