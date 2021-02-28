@@ -15,6 +15,8 @@ Other changes:
   dots (e.g. `1.0`, `0.3.0`, `3.1.4.1.5` etc)
 * Idris now looks in the current working directory, under a subdirectory
   `depends` for local installations of packages before looking globally.
+* Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
+  look for packages.
 
 Changes since Idris 2 v0.2.1
 ----------------------------

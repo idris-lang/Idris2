@@ -62,6 +62,10 @@ updateEnv
          the (Core ()) $ case blibs of
               Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
+         pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
+         the (Core ()) $ case pdirs of
+              Just path => do traverseList1_ addPackageDir (map trim (split (==pathSeparator) path))
+              Nothing => pure ()
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
          the (Core ()) $ case cg of
               Just e => case getCG (options defs) e of

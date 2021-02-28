@@ -21,6 +21,7 @@ envs = [
          MkEnvDesc "EDITOR"        "Editor used in REPL :e command",
          MkEnvDesc "IDRIS2_PREFIX" "Idris2 installation prefix",
          MkEnvDesc "IDRIS2_PATH"   "Places Idris2 looks for import files",
+         MkEnvDesc "IDRIS2_PACKAGE_PATH" "Places Idris2 looks for packages",
          MkEnvDesc "IDRIS2_DATA"   "Places Idris2 looks for data files",
          MkEnvDesc "IDRIS2_LIBS"   "Places Idris2 looks for libraries (for code generation)",
          MkEnvDesc "IDRIS2_CG"     "Codegen backend",
