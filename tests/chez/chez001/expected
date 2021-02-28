@@ -1,3 +1,3 @@
-[1, 2, 2, 4, 3, 6, 4, 8, 5, 10]
 1/1: Building Total (Total.idr)
-Main> Main> Bye for now!
+Main> [1, 2, 2, 4, 3, 6, 4, 8, 5, 10]
+Main> Bye for now!

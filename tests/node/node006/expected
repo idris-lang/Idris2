@@ -1,4 +1,5 @@
-"Nat"
+1/1: Building TypeCase (TypeCase.idr)
+Main> "Nat"
 "List of Nat"
 "List of Something else"
 "List of Something else"
@@ -9,8 +10,7 @@
 "List of Int"
 43
 42
-1/1: Building TypeCase (TypeCase.idr)
-Main> Main> Main.strangeId is total
+Main> Main.strangeId is total
 Main> Main.strangeId': strangeId' _
 Main> Bye for now!
 1/1: Building TypeCase2 (TypeCase2.idr)
