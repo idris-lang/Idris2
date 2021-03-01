@@ -576,12 +576,12 @@ checkDelayedHoles
 -- not guarded by a unification problem (in which case, report that the unification
 -- problem is unsolved) and it doesn't depend on an implicit pattern variable
 -- (in which case, perhaps suggest binding it explicitly)
-export
 checkValidHole : {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
-                 (Int, (FC, Name)) -> Core ()
-checkValidHole (idx, (fc, n))
-    = do defs <- get Ctxt
+                 Int -> (Int, (FC, Name)) -> Core ()
+checkValidHole base (idx, (fc, n))
+  = if base > idx then pure () else
+      do defs <- get Ctxt
          ust <- get UST
          Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Nothing => pure ()
@@ -622,14 +622,14 @@ checkValidHole (idx, (fc, n))
 -- Also throw an error if there are unresolved guarded constants or
 -- unsolved searches
 export
-checkUserHoles : {auto u : Ref UST UState} ->
-                 {auto c : Ref Ctxt Defs} ->
-                 Bool -> Core ()
-checkUserHoles now
+checkUserHolesAfter : {auto u : Ref UST UState} ->
+                      {auto c : Ref Ctxt Defs} ->
+                      Int -> Bool -> Core ()
+checkUserHolesAfter base now
     = do gs_map <- getGuesses
          let gs = toList gs_map
          log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
-         traverse_ checkValidHole gs
+         traverse_ (checkValidHole base) gs
          hs_map <- getCurrentHoles
          let hs = toList hs_map
          let hs' = if any isUserName (map (snd . snd) hs)
@@ -642,6 +642,12 @@ checkUserHoles now
   where
     nameEq : (a, b, Name) -> (a, b, Name) -> Bool
     nameEq (_, _, x) (_, _, y) = x == y
+
+export
+checkUserHoles : {auto u : Ref UST UState} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 Bool -> Core ()
+checkUserHoles = checkUserHolesAfter 0
 
 export
 checkNoGuards : {auto u : Ref UST UState} ->
