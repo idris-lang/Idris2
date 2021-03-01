@@ -580,7 +580,7 @@ checkValidHole : {auto c : Ref Ctxt Defs} ->
                  {auto u : Ref UST UState} ->
                  Int -> (Int, (FC, Name)) -> Core ()
 checkValidHole base (idx, (fc, n))
-  = if base > idx then pure () else
+  = when (idx >= base) $
       do defs <- get Ctxt
          ust <- get UST
          Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
