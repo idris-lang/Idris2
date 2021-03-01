@@ -105,11 +105,11 @@ export
 Semigroup (List1 a) where
   (<+>) = append
 
-export
+public export
 Functor List1 where
   map f (x ::: xs) = f x ::: map f xs
 
-export
+public export
 Applicative List1 where
   pure x = singleton x
   f ::: fs <*> xs = appendl (map f xs) (fs <*> forget xs)

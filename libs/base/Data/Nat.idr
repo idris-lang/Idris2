@@ -118,7 +118,7 @@ export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
-export
+public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
 isLTE (S k) Z = No succNotLTEzero
@@ -126,6 +126,18 @@ isLTE (S k) (S j)
     = case isLTE k j of
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
+
+public export
+isGTE : (m, n : Nat) -> Dec (GTE m n)
+isGTE m n = isLTE n m
+
+public export
+isLT : (m, n : Nat) -> Dec (LT m n)
+isLT m n = isLTE (S m) n
+
+public export
+isGT : (m, n : Nat) -> Dec (GT m n)
+isGT m n = isLT n m
 
 export
 lteRefl : {n : Nat} -> LTE n n
@@ -158,8 +170,17 @@ notLTEImpliesGT {a = S a} {b = 0  } notLTE = LTESucc LTEZero
 notLTEImpliesGT {a = S a} {b = S k} notLTE = LTESucc (notLTEImpliesGT (notLTE . LTESucc))
 
 export
+LTEImpliesNotGT : a `LTE` b -> Not (a `GT` b)
+LTEImpliesNotGT LTEZero q = absurd q
+LTEImpliesNotGT (LTESucc p) (LTESucc q) = LTEImpliesNotGT p q
+
+export
 notLTImpliesGTE : {a, b : _} -> Not (LT a b) -> GTE a b
 notLTImpliesGTE notLT = fromLteSucc $ notLTEImpliesGT notLT
+
+export
+LTImpliesNotGTE : a `LT` b -> Not (a `GTE` b)
+LTImpliesNotGTE p q = LTEImpliesNotGT q p
 
 public export
 lte : Nat -> Nat -> Bool

@@ -174,7 +174,7 @@ namespace Applicative
 public export
 interface Applicative f => Alternative f where
   empty : f a
-  (<|>) : f a -> f a -> f a
+  (<|>) : f a -> Lazy (f a) -> f a
 
 public export
 interface Applicative m => Monad m where
@@ -359,13 +359,19 @@ for_ = flip traverse_
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
-choice : (Foldable t, Alternative f) => t (f a) -> f a
-choice = foldr (<|>) empty
+choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
+choice t = foldr {elem = Lazy (f a)} {acc = Lazy (f a)}
+                 (\ x, xs => x <|> xs)
+                 empty
+                 t
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap f = foldr (\e, a => f e <|> a) empty
+choiceMap act t = foldr {elem = a} {acc = Lazy (f b)}
+                        (\e, a => act e <|> a)
+                        empty
+                        t
 
 namespace Foldable
   ||| Composition of foldables is foldable.

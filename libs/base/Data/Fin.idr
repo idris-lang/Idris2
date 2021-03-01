@@ -1,5 +1,6 @@
 module Data.Fin
 
+import Data.List1
 import public Data.Maybe
 import Data.Nat
 import Decidable.Equality.Core
@@ -111,6 +112,12 @@ public export
 last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
+
+||| All of the Fin elements
+public export
+allFins : (n : Nat) -> List1 (Fin (S n))
+allFins Z = FZ ::: []
+allFins (S n) = FZ ::: map FS (forget (allFins n))
 
 export
 Ord (Fin n) where
