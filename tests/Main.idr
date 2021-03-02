@@ -161,7 +161,9 @@ idrisTests = MkTestPool []
        -- The 'with' rule
        "with001", "with002", "with004",
        -- with-disambiguation
-       "with003"]
+       "with003",
+       -- unification
+       "unify001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool []
