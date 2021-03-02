@@ -139,16 +139,20 @@ For example::
 Where does Idris look for packages?
 ===================================
 
-Packages can be installed globally (under ``$PREFIX/idris-<version>/`` as
+Compiled packages are directories with compiled TTC files (see :ref:`build-artefacts` section).
+Directory structure of the source `*.idr` files is preserved for TTC files.
+
+Compiled packages can be installed globally (under ``$PREFIX/idris-<version>/`` as
 described above) or locally (under a ``depends`` subdirectory in the top level
 working directory of a project).
 Packages specified using ``-p pkgname`` or with the ``depends`` field of a
 package will then be located as follows:
 
-* First, Idris looks in ``depends/pkgname-version``, for a package which
-  satsifies the version constraint.
+* First, Idris looks in ``depends/pkgname-<version>``, for a package which
+  satisfies the version constraint.
 * If no package is found locally, Idris looks in
-  ``$PREFIX/idris-<version>/pkgname-version``.
+  ``$PREFIX/idris-<version>/pkgname-<version>``.
 
 In each case, if more than one version satisfies the constraint, it will choose
 the one with the highest version number.
+If package versions are omitted in directory names, they are treated as the version ``0``.
