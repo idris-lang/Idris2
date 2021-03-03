@@ -15,6 +15,7 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
+import Data.List1
 import Data.So
 import Data.Strings
 
@@ -43,13 +44,15 @@ candidateDirs dname pkg bounds
                             (stringToNatOrZ num :: toVersionNum rest)
 
     getVersion : String -> (String, PkgVersion)
-    getVersion str
-        = case span (/= '-') str of
-               (name, ver) => case strM ver of
-                                   StrNil => (name, MkPkgVersion [0])
-                                   StrCons _ ver =>
-                                      (name, MkPkgVersion (toVersionNum ver))
-               _ => (str, MkPkgVersion [0])
+    getVersion str =
+      -- split the dir name into parts concatenated by "-"
+      -- treating the last part as the version number
+      -- and the initial parts as the package name
+      case reverse $ split (== '-') str of
+           last ::: Nil   => (last, MkPkgVersion [0])
+           last ::: rinit => ( concat . intersperse "-" $ reverse rinit
+                             , MkPkgVersion (toVersionNum last)
+                             )
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
