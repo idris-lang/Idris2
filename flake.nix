@@ -9,12 +9,13 @@
 
   outputs = { self, nixpkgs, flake-utils, idris-emacs-src }: flake-utils.lib.eachDefaultSystem (system:
     let pkgs = import nixpkgs { inherit system; };
-        text-editor = import ./nix/text-editor.nix { inherit pkgs idris-emacs-src; };
+        idris2Pkg = pkgs.callPackage ./nix/package.nix {};
+        text-editor = import ./nix/text-editor.nix { inherit pkgs idris-emacs-src idris2Pkg; };
     in rec {
       packages = rec {
-        idris2 = import ./default.nix { inherit pkgs; };
+        idris2 = idris2Pkg;
         buildIdris = { projectName, src }:
-          import ./nix/buildIdris.nix { inherit idris2 src projectName; stdenv = pkgs.stdenv; };
+          import ./nix/buildIdris.nix { inherit idris2Pkg src projectName; stdenv = pkgs.stdenv; };
       } // text-editor;
       apps = rec {
         type = "app";
