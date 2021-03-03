@@ -52,10 +52,8 @@ candidateDirs dname pkg bounds
         (Nil, last) => (last, MkPkgVersion [0])
         (init,last) =>
           case toVersion last of
-            Just v  => ( concat $ intersperse "-" init, v )
-            Nothing => ( concat $ intersperse "-" (init ++ [last])
-                       , MkPkgVersion [0]
-                       )
+            Just v  => (concat $ intersperse "-" init, v)
+            Nothing => (str, MkPkgVersion [0])
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
