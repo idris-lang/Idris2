@@ -25,7 +25,7 @@ elemAppLorR : (xs, ys : List a)
            -> Either (Elem k xs) (Elem k ys)
 elemAppLorR [] [] prf = absurd prf
 elemAppLorR [] _ prf = Right prf
-elemAppLorR (x :: xs) [] prf = 
+elemAppLorR (x :: xs) [] prf =
   Left rewrite sym $ appendNilRightNeutral xs in prf
 elemAppLorR (x :: xs) _ Here = Left Here
 elemAppLorR (x :: xs) ys (There prf) = mapFst There $ elemAppLorR xs ys prf
