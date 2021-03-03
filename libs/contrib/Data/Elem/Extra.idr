@@ -5,13 +5,6 @@ import Data.List.Elem
 
 %default total
 
-||| Convenience lemma showing that prepending nil to xs is just xs.
-public export
-appendNilLeftNeutral : (xs : List a) -> ([] ++ xs) = xs
-appendNilLeftNeutral [] = Refl
-appendNilLeftNeutral (x :: xs) = Refl
-
-
 ||| Proof that an element is still inside a list if we append to it.
 public export
 elemAppLeft : (xs, ys : List a) -> (prf : Elem x xs) -> Elem x (xs ++ ys)
