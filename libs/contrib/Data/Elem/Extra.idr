@@ -25,16 +25,10 @@ elemAppLorR : (xs, ys : List a)
            -> Either (Elem k xs) (Elem k ys)
 elemAppLorR [] [] prf = absurd prf
 elemAppLorR [] _ prf = Right prf
-elemAppLorR (x :: xs) [] prf =
-  let eq   : (xs ++ [] = xs)  = appendNilRightNeutral xs
-      prf' : Elem k (x :: xs) = replace {p = \g => Elem k (x :: g)} eq prf
-  in Left prf'
+elemAppLorR (x :: xs) [] prf = 
+  Left rewrite sym $ appendNilRightNeutral xs in prf
 elemAppLorR (x :: xs) _ Here = Left Here
-elemAppLorR (x :: xs) ys (There prf) =
-  let iH : Either (Elem k xs) (Elem k ys) = elemAppLorR xs ys prf
-  in case iH of
-      (Left l) => Left $ There l
-      (Right r) => Right r
+elemAppLorR (x :: xs) ys (There prf) = mapFst There $ elemAppLorR xs ys prf
 
 
 ||| Proof that x is not in (xs ++ ys) implies proof that x is not in xs.
