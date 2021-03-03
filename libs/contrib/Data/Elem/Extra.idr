@@ -21,11 +21,11 @@ elemAppLeft (x :: xs) ys (There prf2) = There $ elemAppLeft xs ys prf2
 
 ||| Proof that an element is still inside a list if we prepend to it.
 public export
-elemAppRight :  (xs, ys : List a) -> (prf : Elem x xs) -> Elem x (ys ++ xs)
-elemAppRight (x :: xs) [] Here = Here
-elemAppRight (x :: xs) [] (There prf2) = There prf2
-elemAppRight xs [] prf = prf
-elemAppRight xs (y :: ys) prf = There $ elemAppRight xs ys prf
+elemAppRight :  (ys, xs : List a) -> (prf : Elem x xs) -> Elem x (ys ++ xs)
+elemAppRight [] (x :: xs) Here = Here
+elemAppRight [] (x :: xs) (There prf2) = There prf2
+elemAppRight [] xs prf = prf
+elemAppRight (y :: ys) xs prf = There $ elemAppRight ys xs prf
 
 ||| Proof that membership on append implies membership in left or right sublist.
 public export
@@ -55,7 +55,7 @@ notElemAppLeft xs ys prf val = prf $ elemAppLeft xs ys val
 
 ||| Proof that x is not in (xs ++ ys) implies proof that x is not in ys.
 public export
-notElemAppRight : (xs, ys : List a)
+notElemAppRight : (ys, xs : List a)
                -> (prf : Not (Elem x (xs ++ ys)))
                -> Not (Elem x ys)
-notElemAppRight xs ys prf val = prf $ elemAppRight ys xs val
+notElemAppRight ys xs prf val = prf $ elemAppRight xs ys val

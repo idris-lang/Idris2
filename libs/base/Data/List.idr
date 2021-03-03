@@ -634,6 +634,12 @@ consInjective : forall x, xs, y, ys .
                 the (List a) (x :: xs) = the (List b) (y :: ys) -> (x = y, xs = ys)
 consInjective Refl = (Refl, Refl)
 
+||| The empty list is a left identity for append.
+public export
+appendNilLeftNeutral : (xs : List a) -> ([] ++ xs) = xs
+appendNilLeftNeutral xs = Refl
+
+
 ||| The empty list is a right identity for append.
 export
 appendNilRightNeutral : (l : List a) -> l ++ [] = l
