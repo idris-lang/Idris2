@@ -6,6 +6,7 @@ import Core.Metadata
 import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
+import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.REPL
@@ -15,7 +16,6 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
-import Data.List1
 import Data.So
 import Data.Strings
 
@@ -48,11 +48,11 @@ candidateDirs dname pkg bounds
       -- split the dir name into parts concatenated by "-"
       -- treating the last part as the version number
       -- and the initial parts as the package name
-      case reverse $ split (== '-') str of
-           last ::: Nil   => (last, MkPkgVersion [0])
-           last ::: rinit => ( concat . intersperse "-" $ reverse rinit
-                             , MkPkgVersion (toVersionNum last)
-                             )
+      case Lib.unsnoc $ split (== '-') str of
+           (Nil, last) => (last, MkPkgVersion [0])
+           (init,last) => ( concat $ intersperse "-" init
+                          , MkPkgVersion (toVersionNum last)
+                          )
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
