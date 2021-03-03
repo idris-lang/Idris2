@@ -84,12 +84,13 @@ record UState where
   dotConstraints : List (Name, DotReason, Constraint) -- dot pattern constraints
   nextName : Int
   nextConstraint : Int
-  delayedElab : List (Nat, Int, Core ClosedTerm)
+  delayedElab : List (Nat, Int, NameMap (), Core ClosedTerm)
                 -- Elaborators which we need to try again later, because
                 -- we didn't have enough type information to elaborate
                 -- successfully yet.
                 -- 'Nat' is the priority (lowest first)
                 -- The 'Int' is the resolved name.
+                -- NameMap () is the set of local hints at the point of delay
   logging : Bool
 
 export
