@@ -15,8 +15,6 @@ elemAppLeft (x :: xs) ys (There prf2) = There $ elemAppLeft xs ys prf2
 ||| Proof that an element is still inside a list if we prepend to it.
 public export
 elemAppRight :  (ys, xs : List a) -> (prf : Elem x xs) -> Elem x (ys ++ xs)
-elemAppRight [] (x :: xs) Here = Here
-elemAppRight [] (x :: xs) (There prf2) = There prf2
 elemAppRight [] xs prf = prf
 elemAppRight (y :: ys) xs prf = There $ elemAppRight ys xs prf
 
