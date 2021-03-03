@@ -86,6 +86,13 @@ export
 snoc : (xs : List1 a) -> (x : a) -> List1 a
 snoc xs x = append xs (singleton x)
 
+public export
+unsnoc : (xs : List1 a) -> (List a, a)
+unsnoc (h ::: Nil)       = (Nil, h)
+unsnoc (h ::: (x :: xs)) =
+  let (ini,lst) = unsnoc (x ::: xs)
+   in (h :: ini, lst)
+
 ------------------------------------------------------------------------
 -- Reverse
 
