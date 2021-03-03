@@ -34,25 +34,28 @@ candidateDirs dname pkg bounds
              | Left err => pure []
          getFiles d []
   where
-    toVersionNum : String -> List Nat
-    toVersionNum str
-        = case span (/= '.') str of
-               (num, rest) =>
-                   case strM rest of
-                        StrNil => [stringToNatOrZ num]
-                        StrCons _ rest =>
-                            (stringToNatOrZ num :: toVersionNum rest)
+    toVersion : String -> Maybe PkgVersion
+    toVersion = map MkPkgVersion
+              . traverse parsePositive
+              . forget
+              . split (== '.')
 
     getVersion : String -> (String, PkgVersion)
     getVersion str =
-      -- split the dir name into parts concatenated by "-"
+      -- Split the dir name into parts concatenated by "-"
       -- treating the last part as the version number
-      -- and the initial parts as the package name
+      -- and the initial parts as the package name.
+      -- For reasons of backwards compatibility, we also
+      -- accept hyphenated directory names without a part
+      -- corresponding to a version number.
       case Lib.unsnoc $ split (== '-') str of
-           (Nil, last) => (last, MkPkgVersion [0])
-           (init,last) => ( concat $ intersperse "-" init
-                          , MkPkgVersion (toVersionNum last)
-                          )
+        (Nil, last) => (last, MkPkgVersion [0])
+        (init,last) =>
+          case toVersion last of
+            Just v  => ( concat $ intersperse "-" init, v )
+            Nothing => ( concat $ intersperse "-" (init ++ [last])
+                       , MkPkgVersion [0]
+                       )
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
