@@ -135,4 +135,3 @@ EckmannHilton ma mb prf =
                                               (rgtUnit ma x))
         ~~ y .+. x                   ...(sym $ SameMults y x)
   in (Commutativity, SameMults)
-
