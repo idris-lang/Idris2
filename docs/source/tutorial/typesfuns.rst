@@ -716,8 +716,8 @@ Useful Data Types
 
 Idris includes a number of useful data types and library functions
 (see the ``libs/`` directory in the distribution, and the
-`documentation <https://www.idris-lang.org/documentation/>`_). This section
-describes a few of these, and how to import them.
+`documentation <https://www.idris-lang.org/pages/documentation.html>`_). This
+section describes a few of these, and how to import them.
 
 ``List`` and ``Vect``
 ---------------------

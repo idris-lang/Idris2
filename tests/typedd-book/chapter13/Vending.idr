@@ -41,6 +41,9 @@ data MachineIO : VendState -> Type where
   Do : {state1 : _} ->
        MachineCmd a state1 state2 ->
        (a -> Inf (MachineIO state2)) -> MachineIO state1
+  Seq : {state1 : _} ->
+        MachineCmd () state1 state2 ->
+        Inf (MachineIO state2) -> MachineIO state1
 
 runMachine : {inState : _} -> MachineCmd ty inState outState -> IO ty
 runMachine InsertCoin = putStrLn "Coin inserted"
@@ -66,6 +69,12 @@ namespace MachineDo
           (a -> Inf (MachineIO state2)) -> MachineIO state1
   (>>=) = Do
 
+  export
+  (>>) : {state1 : _} ->
+         MachineCmd () state1 state2 ->
+         Inf (MachineIO state2) -> MachineIO state1
+  (>>) = Seq
+
 data Fuel = Dry | More (Lazy Fuel)
 
 partial
@@ -76,6 +85,7 @@ run : Fuel -> MachineIO state -> IO ()
 run (More fuel) (Do c f)
      = do res <- runMachine c
           run fuel (f res)
+run (More fuel) (Seq c d) = do runMachine c; run fuel d
 run Dry p = pure ()
 
 mutual

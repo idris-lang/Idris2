@@ -17,7 +17,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -147,11 +147,10 @@ bindUnsolved {vars} fc elabmode _
                                     sub subEnv
                                     !(normaliseHoles defs env exp)
              logTerm "elab" 5 ("Added unbound implicit") bindtm
-             unify (case elabmode of
+             ignore $ unify (case elabmode of
                          InLHS _ => inLHS
                          _ => inTerm)
                    fc env tm bindtm
-             pure ()
 
 swapIsVarH : {idx : Nat} -> (0 p : IsVar name idx (x :: y :: xs)) ->
              Var (y :: x :: xs)
@@ -430,7 +429,10 @@ checkBindVar rig elabinfo nest env fc str topexp
                    est <- get EST
                    put EST (record { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
                                      toBind $= ((n, NameBinding rig Explicit tm bty) :: ) } est)
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
+
                    checkExp rig elabinfo env fc tm (gnf env exp) topexp
               Just bty =>
                 do -- Check rig is consistent with the one in bty, and
@@ -438,7 +440,10 @@ checkBindVar rig elabinfo nest env fc str topexp
                    combine (UN str) rig (bindingRig bty)
                    let tm = bindingTerm bty
                    let ty = bindingType bty
+
+                   log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env ty
+
                    checkExp rig elabinfo env fc tm (gnf env ty) topexp
   where
     updateRig : Name -> RigCount -> List (Name, ImplBinding vars) ->

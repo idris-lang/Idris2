@@ -7,4 +7,3 @@ public export
 plus : Nat -> Nat -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
-

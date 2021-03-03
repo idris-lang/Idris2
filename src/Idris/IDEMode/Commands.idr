@@ -3,7 +3,7 @@ module Idris.IDEMode.Commands
 import Core.Core
 import Core.Name
 import public Idris.REPLOpts
-import Utils.Hex
+import Libraries.Utils.Hex
 
 import System.File
 

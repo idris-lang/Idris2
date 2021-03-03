@@ -3,6 +3,7 @@ module Data.Vect
 import Data.List
 import Data.Nat
 import public Data.Fin
+import public Data.Zippable
 
 import Decidable.Equality
 
@@ -17,7 +18,7 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
   (::) : (x : elem) -> (xs : Vect len elem) -> Vect (S len) elem
 
 -- Hints for interactive editing
-%name Vect xs,ys,zs,ws
+%name Vect xs, ys, zs, ws
 
 public export
 length : (xs : Vect len elem) -> Nat
@@ -185,8 +186,8 @@ replicate (S k) x = x :: replicate k x
 ||| ```
 export
 mergeBy : (elem -> elem -> Ordering) -> (xs : Vect n elem) -> (ys : Vect m elem) -> Vect (n + m) elem
-mergeBy     _ [] ys = ys
-mergeBy {n} _ xs [] = rewrite plusZeroRightNeutral n in xs
+mergeBy _ [] ys = ys
+mergeBy _ xs [] = rewrite plusZeroRightNeutral n in xs
 mergeBy {n = S k} {m = S k'} order (x :: xs) (y :: ys)
      = case order x y of
             LT => x :: mergeBy order xs (y :: ys)
@@ -246,7 +247,7 @@ toVect _ _ = Nothing
 public export
 fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
 fromList' ys [] = ys
-fromList' {len} ys (x::xs) =
+fromList' ys (x::xs) =
   rewrite (plusSuccRightSucc (length xs) len) in
   fromList' (x::ys) xs
 
@@ -262,76 +263,6 @@ fromList : (xs : List elem) -> Vect (length xs) elem
 fromList l =
   rewrite (sym $ plusZeroRightNeutral (length l)) in
   reverse $ fromList' [] l
-
---------------------------------------------------------------------------------
--- Zips and unzips
---------------------------------------------------------------------------------
-
-||| Combine two equal-length vectors pairwise with some function.
-|||
-||| @ f the function to combine elements with
-||| @ xs the first vector of elements
-||| @ ys the second vector of elements
-|||
-||| ```idris example
-||| zipWith (+) (fromList [1,2,3,4]) (fromList [5,6,7,8])
-||| ```
-public export
-zipWith : (f : a -> b -> c) -> (xs : Vect n a) -> (ys : Vect n b) -> Vect n c
-zipWith f []      []      = []
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-||| Combine three equal-length vectors into a vector with some function
-|||
-||| ```idris example
-||| zipWith3 (\x,y,z => x+y+z) (fromList [1,2,3,4]) (fromList [5,6,7,8]) (fromList [1,1,1,1])
-||| ```
-public export
-zipWith3 : (a -> b -> c -> d) -> (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n d
-zipWith3 f []      []      []      = []
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
-
-||| Combine two equal-length vectors pairwise
-|||
-||| ```idris example
-||| zip (fromList [1,2,3,4]) (fromList [1,2,3,4])
-||| ```
-public export
-zip : (xs : Vect n a) -> (ys : Vect n b) -> Vect n (a, b)
-zip []      []      = []
-zip (x::xs) (y::ys) = (x, y) :: zip xs ys
-
-||| Combine three equal-length vectors elementwise into a vector of tuples
-|||
-||| ```idris example
-||| zip3 (fromList [1,2,3,4]) (fromList [1,2,3,4]) (fromList [1,2,3,4])
-||| ```
-public export
-zip3 : (xs : Vect n a) -> (ys : Vect n b) -> (zs : Vect n c) -> Vect n (a, b, c)
-zip3 []      []      []      = []
-zip3 (x::xs) (y::ys) (z::zs) = (x, y, z) :: zip3 xs ys zs
-
-||| Convert a vector of pairs to a pair of vectors
-|||
-||| ```idris example
-||| unzip (fromList [(1,2), (1,2)])
-||| ```
-public export
-unzip : (xs : Vect n (a, b)) -> (Vect n a, Vect n b)
-unzip []           = ([], [])
-unzip ((l, r)::xs) = let (lefts, rights) = unzip xs
-                     in (l::lefts, r::rights)
-
-||| Convert a vector of three-tuples to a triplet of vectors
-|||
-||| ```idris example
-||| unzip3 (fromList [(1,2,3), (1,2,3)])
-||| ```
-public export
-unzip3 : (xs : Vect n (a, b, c)) -> (Vect n a, Vect n b, Vect n c)
-unzip3 []            = ([], [], [])
-unzip3 ((l,c,r)::xs) = let (lefts, centers, rights) = unzip3 xs
-                       in (l::lefts, c::centers, r::rights)
 
 --------------------------------------------------------------------------------
 -- Equality
@@ -816,6 +747,38 @@ range {len=Z}   = []
 range {len=S _} = FZ :: map FS range
 
 --------------------------------------------------------------------------------
+-- Zippable
+--------------------------------------------------------------------------------
+
+public export
+Zippable (Vect k) where
+  zipWith _ [] [] = []
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
+
+  zipWith3 _ [] [] [] = []
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
+
+  unzipWith f [] = ([], [])
+  unzipWith f (x :: xs) = let (b, c) = f x
+                              (bs, cs) = unzipWith f xs in
+                              (b :: bs, c :: cs)
+
+  unzipWith3 f [] = ([], [], [])
+  unzipWith3 f (x :: xs) = let (b, c, d) = f x
+                               (bs, cs, ds) = unzipWith3 f xs in
+                               (b :: bs, c :: cs, d :: ds)
+
+export
+zipWithIndexLinear : (0 f : _) -> (xs, ys : Vect n a) -> (i : Fin n) -> index i (zipWith f xs ys) = f (index i xs) (index i ys)
+zipWithIndexLinear _ (_::xs) (_::ys) FZ     = Refl
+zipWithIndexLinear f (_::xs) (_::ys) (FS i) = zipWithIndexLinear f xs ys i
+
+export
+zipWith3IndexLinear : (0 f : _) -> (xs, ys, zs : Vect n a) -> (i : Fin n) -> index i (zipWith3 f xs ys zs) = f (index i xs) (index i ys) (index i zs)
+zipWith3IndexLinear _ (_::xs) (_::ys) (_::zs) FZ     = Refl
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (FS i) = zipWith3IndexLinear f xs ys zs i
+
+--------------------------------------------------------------------------------
 -- Matrix transposition
 --------------------------------------------------------------------------------
 ||| Transpose a `Vect` of `Vect`s, turning rows into columns and vice versa.
@@ -878,9 +841,8 @@ exactLength {m} len xs with (decEq m len)
 export
 overLength : {m : Nat} -> -- expected at run-time
              (len : Nat) -> (xs : Vect m a) -> Maybe (p ** Vect (plus p len) a)
-overLength {m} n xs with (cmp m n)
-  overLength {m = m} (plus m (S y)) xs | (CmpLT y) = Nothing
-  overLength {m = m} m xs | CmpEQ
-         = Just (0 ** xs)
+overLength n xs with (cmp m n)
+  overLength {m}   (plus m (S y)) xs | (CmpLT y) = Nothing
+  overLength {m}                m xs | CmpEQ     = Just (0 ** xs)
   overLength {m = plus n (S x)} n xs | (CmpGT x)
          = Just (S x ** rewrite plusCommutative (S x) n in xs)

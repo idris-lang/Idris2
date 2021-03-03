@@ -2,9 +2,10 @@
 Error: While processing left hand side of describe_list_end. Can't match on ?xs ++ [?x] (Not a constructor application or primitive).
 
 DLFail.idr:3:20--3:29
-   |
+ 1 | describe_list_end : List Int -> String
+ 2 | describe_list_end [] = "Empty"
  3 | describe_list_end (xs ++ [x]) = "Non-empty, initial portion = " ++ show xs
-   |                    ^^^^^^^^^
+                        ^^^^^^^^^
 
 1/13: Building DataStore (DataStore.idr)
 2/13: Building DescribeList (DescribeList.idr)

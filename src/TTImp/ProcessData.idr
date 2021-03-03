@@ -19,7 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -85,7 +85,7 @@ checkCon : {vars : _} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
+checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
     = do cn <- inCurrentNS cn_in
          let ty_raw = updateNS tn_in tn ty_raw
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
@@ -136,7 +136,7 @@ getIndexPats tm
 
     getPats : Defs -> NF [] -> Core (List (NF []))
     getPats defs (NTCon fc _ _ _ args)
-        = traverse (evalClosure defs) args
+        = traverse (evalClosure defs . snd) args
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
@@ -163,15 +163,15 @@ getDetags fc tys
           = if t /= t'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs) args
-                       args'nf <- traverse (evalClosure defs) args'
+                       argsnf <- traverse (evalClosure defs . snd) args
+                       args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
       disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs) args
-                       args'nf <- traverse (evalClosure defs) args'
+                       argsnf <- traverse (evalClosure defs . snd) args
+                       args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
       disjoint (NPrimVal _ c) (NPrimVal _ c') = pure (c /= c')
       disjoint _ _ = pure False
@@ -335,7 +335,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          cons <- traverse (checkCon eopts nest env cvis n_in (Resolved tidx)) cons_raw
 
          let ddef = MkData (MkCon dfc n arity fullty) cons
-         addData vars vis tidx ddef
+         ignore $ addData vars vis tidx ddef
 
          -- Flag data type as a newtype, if possible (See `findNewtype` for criteria).
          -- Skip optimisation if the data type has specified `noNewtype` in its
@@ -361,7 +361,7 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          let connames = map conName cons
-         when (not (NoHints `elem` opts)) $
+         unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
          traverse_ updateErasable (Resolved tidx :: connames)

@@ -1,6 +1,8 @@
 module Data.Stream
 
 import Data.List
+import Data.List1
+import public Data.Zippable
 
 %default total
 
@@ -27,45 +29,44 @@ public export
 unfoldr : (b -> (a, b)) -> b -> Stream a
 unfoldr f c = let (a, n) = f c in a :: unfoldr f n
 
+||| All of the natural numbers, in order
+public export
+nats : Stream Nat
+nats = unfoldr (\n => (n, S n)) Z
+
 ||| Get the nth element of a stream
 public export
 index : Nat -> Stream a -> a
 index Z     (x::xs) = x
 index (S k) (x::xs) = index k xs
 
-||| Combine two streams element-wise using a function.
-|||
-||| @ f the function to combine elements with
-||| @ xs the first stream of elements
-||| @ ys the second stream of elements
-export
-zipWith : (f : a -> b -> c) -> (xs : Stream a) -> (ys : Stream b) -> Stream c
-zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+---------------------------
+-- Zippable --
+---------------------------
 
-||| Combine three streams by applying a function element-wise along them
-export
-zipWith3 : (a -> b -> c -> d) -> Stream a -> Stream b -> Stream c -> Stream d
-zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+public export
+Zippable Stream where
+  zipWith f (x :: xs) (y :: ys) = f x y :: zipWith f xs ys
 
-||| Create a stream of pairs from two streams
-export
-zip : Stream a -> Stream b -> Stream (a, b)
-zip = zipWith (\x,y => (x,y))
+  zipWith3 f (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3 f xs ys zs
 
-||| Combine three streams into a stream of tuples elementwise
-export
-zip3 : Stream a -> Stream b -> Stream c -> Stream (a, b, c)
-zip3 = zipWith3 (\x,y,z => (x,y,z))
+  unzipWith f xs = unzip (map f xs)
 
-||| Create a pair of streams from a stream of pairs
-export
-unzip : Stream (a, b) -> (Stream a, Stream b)
-unzip xs = (map fst xs, map snd xs)
+  unzip xs = (map fst xs, map snd xs)
 
-||| Split a stream of three-element tuples into three streams
+  unzipWith3 f xs = unzip3 (map f xs)
+
+  unzip3 xs = (map (\(x, _, _) => x) xs, map (\(_, x, _) => x) xs, map (\(_, _, x) => x) xs)
+
 export
-unzip3 : Stream (a, b, c) -> (Stream a, Stream b, Stream c)
-unzip3 xs = (map (\(x,_,_) => x) xs, map (\(_,x,_) => x) xs, map (\(_,_,x) => x) xs)
+zipWithIndexLinear : (0 f : _) -> (xs, ys : Stream a) -> (i : Nat) -> index i (zipWith f xs ys) = f (index i xs) (index i ys)
+zipWithIndexLinear f (_::xs) (_::ys) Z     = Refl
+zipWithIndexLinear f (_::xs) (_::ys) (S k) = zipWithIndexLinear f xs ys k
+
+export
+zipWith3IndexLinear : (0 f : _) -> (xs, ys, zs : Stream a) -> (i : Nat) -> index i (zipWith3 f xs ys zs) = f (index i xs) (index i ys) (index i zs)
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) Z     = Refl
+zipWith3IndexLinear f (_::xs) (_::ys) (_::zs) (S k) = zipWith3IndexLinear f xs ys zs k
 
 ||| Return the diagonal elements of a stream of streams
 export
@@ -84,8 +85,8 @@ scanl f acc (x :: xs) = acc :: scanl f (f acc x) xs
 ||| @ xs the sequence to repeat
 ||| @ ok proof that the list is non-empty
 export
-cycle : (xs : List a) -> {auto ok : NonEmpty xs} -> Stream a
-cycle {a} (x :: xs) {ok = IsNonEmpty} = x :: cycle' xs
+cycle : (xs : List a) -> {auto 0 ok : NonEmpty xs} -> Stream a
+cycle (x :: xs) = x :: cycle' xs
   where cycle' : List a -> Stream a
         cycle' []        = x :: cycle' xs
         cycle' (y :: ys) = y :: cycle' ys
@@ -105,6 +106,83 @@ takeBefore p (x :: xs)
     = if p x
          then []
          else x :: takeBefore p xs
+
+
+--------------------------------------------------------------------------------
+-- Interleavings
+--------------------------------------------------------------------------------
+
+-- zig, zag, and cantor are taken from the paper
+-- Applications of Applicative Proof Search
+-- by Liam O'Connor
+
+public export
+zig : List1 (Stream a) -> Stream (Stream a) -> Stream a
+
+public export
+zag : List1 a -> List1 (Stream a) -> Stream (Stream a) -> Stream a
+
+zig xs = zag (head <$> xs) (tail <$> xs)
+
+zag (x ::: []) zs (l :: ls) = x :: zig (l ::: forget zs) ls
+zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
+
+public export
+cantor : Stream (Stream a) -> Stream a
+cantor (l :: ls) = zig (l ::: []) ls
+
+-- Exploring the Nat*Nat top right quadrant of the plane
+-- using Cantor's zig-zag traversal:
+example :
+  let quadrant : Stream (Stream (Nat, Nat))
+      quadrant = map (\ i => map (i,) Stream.nats) Stream.nats
+  in
+     take 10 (cantor quadrant)
+     === [ (0, 0)
+         , (1, 0), (0, 1)
+         , (2, 0), (1, 1), (0, 2)
+         , (3, 0), (2, 1), (1, 2), (0, 3)
+         ]
+example = Refl
+
+namespace DPair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  planeWith : {0 p : a -> Type} ->
+              ((x : a) -> p x -> c) ->
+              Stream a -> ((x : a) -> Stream (p x)) ->
+              Stream c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : {0 p : a -> Type} ->
+          Stream a -> ((x : a) -> Stream (p x)) ->
+          Stream (x : a ** p x)
+  plane = planeWith (\ x, prf => (x ** prf))
+
+namespace Pair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  planeWith : (a -> b -> c) ->
+              Stream a -> (a -> Stream b) ->
+              Stream c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Stream a -> (a -> Stream b) -> Stream (a, b)
+  plane = Pair.planeWith (,)
+
+--------------------------------------------------------------------------------
+-- Implementations
+--------------------------------------------------------------------------------
 
 export
 Applicative Stream where

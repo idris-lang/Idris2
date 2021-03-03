@@ -16,14 +16,18 @@ import Data.Bool.Decidable
 export
 LTESuccInjectiveMonotone : (m, n : Nat) -> Reflects (m `LTE` n) b -> Reflects (S m `LTE` S n) b
 LTESuccInjectiveMonotone m n (RTrue      m_lte_n) = RTrue  $ LTESucc m_lte_n
-LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case 
+LTESuccInjectiveMonotone m n (RFalse not_m_lte_n) = RFalse $ \case
                                                                LTESucc m_lte_n => not_m_lte_n m_lte_n
-                                                               
+
 export
 lteReflection : (a, b : Nat) -> Reflects (a `LTE` b) (a `lte` b)
 lteReflection 0 b = RTrue LTEZero
 lteReflection (S k) 0 = RFalse \sk_lte_z => absurd sk_lte_z
 lteReflection (S a) (S b) = LTESuccInjectiveMonotone a b (lteReflection a b)
+
+export
+ltReflection : (a, b : Nat) -> Reflects (a `LT` b) (a `lt` b)
+ltReflection a = lteReflection (S a)
 
 -- For example:
 export
@@ -31,12 +35,29 @@ lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
 lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
 
 export
+ltIsLT : (a, b : Nat) -> a `lt` b = True -> a `LT` b
+ltIsLT  a = lteIsLTE (S a)
+
+export
+notlteIsNotLTE : (a, b : Nat) -> a `lte` b = False -> Not (a `LTE` b)
+notlteIsNotLTE a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+
+export
+notltIsNotLT : (a, b : Nat) -> a `lt` b = False -> Not (a `LT` b)
+notltIsNotLT a = notlteIsNotLTE (S a)
+
+
+export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
 notlteIsLT a b prf = notLTImpliesGTE
                        \prf' =>
-                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf 
+                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf
                                  $ lteReflection (S a) (S b)) prf'
-  
+
+export
+notltIsGTE : (a, b : Nat) -> (a `lt` b) === False -> a `GTE` b
+notltIsGTE a b p = notLTImpliesGTE (notlteIsNotLTE (S a) b p)
+
 
 -- The converse to lteIsLTE:
 export
@@ -51,9 +72,9 @@ notLteIsnotlte a b not_a_lte_b = reflect (lteReflection a b) not_a_lte_b
 -- The converse to lteIsLTE:
 export
 GTIsnotlte : (a, b : Nat) -> b `LT` a -> a `lte` b = False
-GTIsnotlte a b b_lt_a = 
+GTIsnotlte a b b_lt_a =
   let not_a_lte_b : Not (a `LTE` b)
-      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $ 
+      not_a_lte_b = \a_lte_b => irreflexive {spo = Nat.LT} a $ CalcWith {leq = LTE} $
         |~ 1 + a
         <~ 1 + b ...(plusLteMonotoneLeft 1 a b a_lte_b)
         <~ a     ...(b_lt_a)
@@ -89,7 +110,7 @@ multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
 
 export
 multLteMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> a*r `LTE` b*r
-multLteMonotoneLeft a b r a_lt_b = 
+multLteMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
   multLteMonotoneRight r a b a_lt_b

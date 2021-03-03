@@ -1,5 +1,7 @@
 module Data.List1
 
+import public Data.Zippable
+
 %default total
 
 infixr 7 :::
@@ -9,6 +11,8 @@ record List1 a where
   constructor (:::)
   head : a
   tail : List a
+
+%name List1 xs, ys, zs
 
 ------------------------------------------------------------------------
 -- Conversion
@@ -101,11 +105,11 @@ export
 Semigroup (List1 a) where
   (<+>) = append
 
-export
+public export
 Functor List1 where
   map f (x ::: xs) = f x ::: map f xs
 
-export
+public export
 Applicative List1 where
   pure x = singleton x
   f ::: fs <*> xs = appendl (map f xs) (fs <*> forget xs)
@@ -141,3 +145,43 @@ Ord a => Ord (List1 a) where
 export
 consInjective : the (List1 a) (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
+
+------------------------------------------------------------------------
+-- Zippable
+
+public export
+Zippable List1 where
+  zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
+  where
+      zipWith' : List a -> List b -> List c
+      zipWith' [] _ = []
+      zipWith' _ [] = []
+      zipWith' (x :: xs) (y :: ys) = f x y :: zipWith' xs ys
+
+  zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) = f x y z ::: zipWith3' xs ys zs
+    where
+      zipWith3' : List a -> List b -> List c -> List d
+      zipWith3' [] _ _ = []
+      zipWith3' _ [] _ = []
+      zipWith3' _ _ [] = []
+      zipWith3' (x :: xs) (y :: ys) (z :: zs) = f x y z :: zipWith3' xs ys zs
+
+  unzipWith f (x ::: xs) = let (b, c) = f x
+                               (bs, cs) = unzipWith' xs in
+                               (b ::: bs, c ::: cs)
+    where
+      unzipWith' : List a -> (List b, List c)
+      unzipWith' [] = ([], [])
+      unzipWith' (x :: xs) = let (b, c) = f x
+                                 (bs, cs) = unzipWith' xs in
+                                 (b :: bs, c :: cs)
+
+  unzipWith3 f (x ::: xs) = let (b, c, d) = f x
+                                (bs, cs, ds) = unzipWith3' xs in
+                                (b ::: bs, c ::: cs, d ::: ds)
+    where
+      unzipWith3' : List a -> (List b, List c, List d)
+      unzipWith3' [] = ([], [], [])
+      unzipWith3' (x :: xs) = let (b, c, d) = f x
+                                  (bs, cs, ds) = unzipWith3' xs in
+                                  (b :: bs, c :: cs, d :: ds)

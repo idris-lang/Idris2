@@ -16,7 +16,7 @@ data Usage = None | Linear | Unrestricted
 
 -- Not sure about this, it is a horrible hack, but it makes the notation
 -- a bit nicer
-public export 
+public export
 fromInteger : (x : Integer) -> {auto _ : Either (x = 0) (x = 1)} -> Usage
 fromInteger 0 = None
 fromInteger 1 = Linear
@@ -105,6 +105,20 @@ export %inline
         (1 _ : L io {use=u_act} a) ->
         (1 _ : ContType io u_act u_k a b) -> L io {use=u_k} b
 (>>=) = Bind
+
+export
+delay : {u_act : _} -> (1 _ : L io {use=u_k} b) -> ContType io u_act u_k () b
+delay mb = case u_act of
+  None => \ _ => mb
+  Linear => \ () => mb
+  Unrestricted => \ _ => mb
+
+export %inline
+(>>) : {u_act : _} ->
+        LinearBind io =>
+        (1 _ : L io {use=u_act} ()) ->
+        (1 _ : L io {use=u_k} b) -> L io {use=u_k} b
+ma >> mb = ma >>= delay mb
 
 export %inline
 pure0 : (0 x : a) -> L io {use=0} a

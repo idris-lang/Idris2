@@ -24,7 +24,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -96,7 +96,8 @@ checkTotalityOK n
 
     checkTotality : FC -> Core (Maybe Error)
     checkTotality fc
-        = do checkTotal fc n -- checked lazily, so better calculate here
+        = do ignore $ checkTotal fc n
+             -- ^ checked lazily, so better calculate here
              t <- getTotality fc n
              err <- checkCovering fc (isCovering t)
              maybe (case isTerminating t of
@@ -138,9 +139,9 @@ processTTImpDecls {vars} nest env decls
          pure True -- TODO: False on error
   where
     bindConNames : ImpTy -> Core ImpTy
-    bindConNames (MkImpTy fc n ty)
+    bindConNames (MkImpTy fc nameFC n ty)
         = do ty' <- bindTypeNames [] vars ty
-             pure (MkImpTy fc n ty')
+             pure (MkImpTy fc nameFC n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
@@ -153,9 +154,9 @@ processTTImpDecls {vars} nest env decls
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
-    bindNames (IClaim fc c vis opts (MkImpTy tfc n ty))
+    bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
         = do ty' <- bindTypeNames [] vars ty
-             pure (IClaim fc c vis opts (MkImpTy tfc n ty'))
+             pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
     bindNames (IData fc vis d)
         = do d' <- bindDataNames d
              pure (IData fc vis d')
@@ -174,9 +175,9 @@ processTTImpFile fname
                | Left err => do coreLift (putStrLn (show err))
                                 pure False
          logTime "Elaboration" $
-            catch (do processTTImpDecls (MkNested []) [] tti
+            catch (do ignore $ processTTImpDecls (MkNested []) [] tti
                       Nothing <- checkDelayedHoles
                           | Just err => throw err
                       pure True)
-                  (\err => do coreLift (printLn err)
+                  (\err => do coreLift_ (printLn err)
                               pure False)

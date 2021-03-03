@@ -1,0 +1,4 @@
+package test4
+
+depends = baz,
+          bar >= 1

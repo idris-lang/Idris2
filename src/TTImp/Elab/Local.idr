@@ -15,23 +15,21 @@ import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.TTImp
 
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering
 
 export
-checkLocal : {vars : _} ->
+localHelper : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              {auto e : Ref EST (EState vars)} ->
-             RigCount -> ElabInfo ->
              NestedNames vars -> Env Term vars ->
-             FC -> List ImpDecl -> (scope : RawImp) ->
-             (expTy : Maybe (Glued vars)) ->
-             Core (Term vars, Glued vars)
-checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
+             List ImpDecl -> (NestedNames vars -> Core a) ->
+             Core a
+localHelper {vars} nest env nestdecls_in func
     = do est <- get EST
          let f = defining est
          defs <- get Ctxt
@@ -60,11 +58,11 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
          -- store the local hints, so we can reset them after we've elaborated
          -- everything
          let oldhints = localHints defs
-         traverse (processDecl [] nest' env') (map (updateName nest') nestdecls)
+         traverse_ (processDecl [] nest' env') (map (updateName nest') nestdecls)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
          defs <- get Ctxt
-         res <- check rig elabinfo nest' env scope expty
+         res <- func nest'
          defs <- get Ctxt
          put Ctxt (record { localHints = oldhints } defs)
          pure res
@@ -102,8 +100,8 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
                _ => n
 
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest (MkImpTy loc' n ty)
-        = MkImpTy loc' (newName nest n) ty
+    updateTyName nest (MkImpTy loc' nameLoc n ty)
+        = MkImpTy loc' nameLoc (newName nest n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
@@ -130,6 +128,20 @@ checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
     setPublic (INamespace fc ps decls)
         = INamespace fc ps (map setPublic decls)
     setPublic d = d
+
+export
+checkLocal : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             {auto m : Ref MD Metadata} ->
+             {auto u : Ref UST UState} ->
+             {auto e : Ref EST (EState vars)} ->
+             RigCount -> ElabInfo ->
+             NestedNames vars -> Env Term vars ->
+             FC -> List ImpDecl -> (scope : RawImp) ->
+             (expTy : Maybe (Glued vars)) ->
+             Core (Term vars, Glued vars)
+checkLocal {vars} rig elabinfo nest env fc nestdecls_in scope expty
+    = localHelper nest env nestdecls_in $ \nest' => check rig elabinfo nest' env scope expty
 
 getLocalTerm : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->

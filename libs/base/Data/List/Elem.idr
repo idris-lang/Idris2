@@ -49,7 +49,7 @@ neitherHereNorThere xny _     Here        = xny Refl
 neitherHereNorThere _   xnxs  (There xxs) = xnxs xxs
 
 ||| Check whether the given element is a member of the given list.
-export
+public export
 isElem : DecEq a => (x : a) -> (xs : List a) -> Dec (Elem x xs)
 isElem x [] = No absurd
 isElem x (y :: xs) with (decEq x y)

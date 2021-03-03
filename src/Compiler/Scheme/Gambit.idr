@@ -10,14 +10,16 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -29,30 +31,31 @@ import System.Info
 -- TODO Look for gsi-script, then gsi
 findGSI : IO String
 findGSI =
-  do env <- getEnv "GAMBIT_GSI"
+  do env <- idrisGetEnv "GAMBIT_GSI"
      pure $ fromMaybe "/usr/bin/env gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
-  do env <- getEnv "GAMBIT_GSC"
+  do env <- idrisGetEnv "GAMBIT_GSC"
      pure $ fromMaybe "/usr/bin/env gsc" env
 
 findGSCBackend : IO String
 findGSCBackend =
-  do env <- getEnv "GAMBIT_GSC_BACKEND"
+  do env <- idrisGetEnv "GAMBIT_GSC_BACKEND"
      pure $ case env of
               Nothing => ""
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader = "; @generated\n
-         (declare (block)
-         (inlining-limit 450)
-         (standard-bindings)
-         (extended-bindings)
-         (not safe)
-         (optimize-dead-definitions))\n"
+schHeader =
+    "; @generated\n" ++
+    "(declare (block)\n" ++
+    "(inlining-limit 450)\n" ++
+    "(standard-bindings)\n" ++
+    "(extended-bindings)\n" ++
+    "(not safe)\n" ++
+    "(optimize-dead-definitions))\n"
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -235,7 +238,7 @@ cCall fc cfn fnWrapName clib args ret
     replaceChar old new = pack . replaceOn old new . unpack
 
     buildCWrapperDefs : CCallbackInfo -> CWrapperDefs
-    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) = 
+    buildCWrapperDefs (MkCCallbackInfo arg schemeWrap callbackStr argTypes retType) =
       let box = schemeWrap ++ "-box"
           setBox = "\n (set-box! " ++ box ++ " " ++ callbackStr ++ ")"
           cWrapName = replaceChar '-' '_' schemeWrap
@@ -333,7 +336,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "(" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto c : Ref Ctxt Defs} ->
@@ -365,7 +368,7 @@ getFgnCall (n, fc, d) = schFgnDef fc n d
 compileToSCM : Ref Ctxt Defs ->
                ClosedTerm -> (outfile : String) -> Core (List String)
 compileToSCM c tm outfile
-    = do cdata <- getCompileData Cases tm
+    = do cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          -- let tags = nameTags cdata
          let ctm = forget (mainExpr cdata)
@@ -410,11 +413,10 @@ compileExpr c tmpDir outputDir tm outfile
 
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
-    = do outn <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
-         case outn of
-              -- TODO: on windows, should add exe extension
-              Just outn => map (const ()) $ coreLift $ system outn
-              Nothing => pure ()
+    = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
+           | Nothing => throw (InternalError "compileExpr returned Nothing")
+         coreLift_ $ system sh -- TODO: on windows, should add exe extension
+         pure ()
 
 export
 codegenGambit : Codegen

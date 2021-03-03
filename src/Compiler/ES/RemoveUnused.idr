@@ -1,7 +1,7 @@
 module Compiler.ES.RemoveUnused
 
-import Data.SortedSet
-import Data.SortedMap
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Data.Vect
 import Data.List
 
@@ -23,8 +23,8 @@ mutual
   usedNames (NmConstCase fc sc alts def) = (usedNames sc `union` concat (usedNamesConstAlt <$> alts)) `union` maybe empty usedNames def
   usedNames (NmExtPrim fc p args) = concat $ usedNames <$> args
   usedNames (NmCon fc x t args) = concat $ usedNames <$> args
-  usedNames (NmDelay fc t) = usedNames t
-  usedNames (NmForce fc t) = usedNames t
+  usedNames (NmDelay fc _ t) = usedNames t
+  usedNames (NmForce fc _ t) = usedNames t
   usedNames (NmLet fc x val sc) = usedNames val `union` usedNames sc
   usedNames (NmErased fc) = empty
   usedNames (NmCrash fc msg) = empty

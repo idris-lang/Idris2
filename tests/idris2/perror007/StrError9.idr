@@ -1,0 +1,3 @@
+foo : String
+foo = """
+\{"hello"}"""

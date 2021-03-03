@@ -1,12 +1,12 @@
 module Idris.Parser.Let
 
 import Idris.Syntax
-import Text.Bounded
+import Libraries.Text.Bounded
 
 import Data.Either
 import Data.List1
 
-import Utils.String
+import Libraries.Utils.String
 
 %default total
 
@@ -84,7 +84,7 @@ mkDoLets fname lets = letFactory
     buildDoLets (b :: rest) = let fc = boundToFC fname b in case b.val of
       (MkLetBinder rig (PRef fc' (UN n)) ty val []) =>
          (if lowerFirst n
-            then DoLet fc (UN n) rig ty val
+            then DoLet fc fc' (UN n) rig ty val
             else DoLetPat fc (PRef fc' (UN n)) ty val []
          ) :: buildDoLets rest
       (MkLetBinder rig pat ty val alts) => DoLetPat fc pat ty val alts :: buildDoLets rest

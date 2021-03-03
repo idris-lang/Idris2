@@ -5,7 +5,7 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Data.IntMap
+import Libraries.Data.IntMap
 
 %default covering
 
@@ -75,15 +75,18 @@ mutual
   data NF : List Name -> Type where
        NBind    : FC -> (x : Name) -> Binder (NF vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
-       NApp     : FC -> NHead vars -> List (Closure vars) -> NF vars
+       -- Each closure is associated with the file context of the App node that
+       -- had it as an argument. It's necessary so as to not lose file context
+       -- information when creating the normal form.
+       NApp     : FC -> NHead vars -> List (FC, Closure vars) -> NF vars
        NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (Closure vars) -> NF vars
+                  List (FC, Closure vars) -> NF vars
        NTCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (Closure vars) -> NF vars
+                  List (FC, Closure vars) -> NF vars
        NAs      : FC -> UseSide -> NF vars -> NF vars -> NF vars
        NDelayed : FC -> LazyReason -> NF vars -> NF vars
        NDelay   : FC -> LazyReason -> Closure vars -> Closure vars -> NF vars
-       NForce   : FC -> LazyReason -> NF vars -> List (Closure vars) -> NF vars
+       NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
        NType    : FC -> NF vars

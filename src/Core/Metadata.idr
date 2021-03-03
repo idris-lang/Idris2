@@ -2,6 +2,7 @@ module Core.Metadata
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.FC
@@ -11,7 +12,7 @@ import Core.TTC
 
 import Data.List
 import System.File
-import Utils.Binary
+import Libraries.Utils.Binary
 
 %default covering
 
@@ -23,16 +24,16 @@ record Metadata where
        -- Mapping from source annotation (location, typically) to
        -- the LHS defined at that location. Also record the outer environment
        -- length, since we don't want to case split on these.
-       lhsApps : List (FC, (Nat, ClosedTerm))
-       -- Mapping from annotation the the name defined with that annotation,
+       lhsApps : List (NonEmptyFC, (Nat, ClosedTerm))
+       -- Mapping from annotation to the name defined with that annotation,
        -- and its type (so, giving the ability to get the types of locally
        -- defined names)
        -- The type is abstracted over the whole environment; the Nat gives
-       -- the number of names which were in the environment at the time
-       names : List (FC, (Name, Nat, ClosedTerm))
+       -- the number of names which were in the environment at the time.
+       names : List (NonEmptyFC, (Name, Nat, ClosedTerm))
        -- Mapping from annotation to the name that's declared there and
        -- its type; the Nat is as above
-       tydecls : List (FC, (Name, Nat, ClosedTerm))
+       tydecls : List (NonEmptyFC, (Name, Nat, ClosedTerm))
        -- Current lhs, if applicable, and a mapping from hole names to the
        -- lhs they're under. This is for expression search, to ensure that
        -- recursive calls have a smaller value as an argument.
@@ -52,7 +53,13 @@ Show Metadata where
 
 export
 initMetadata : Metadata
-initMetadata = MkMetadata [] [] [] Nothing []
+initMetadata = MkMetadata
+  { lhsApps = []
+  , names = []
+  , tydecls = []
+  , currentLHS = Nothing
+  , holeLHS = []
+  }
 
 -- A label for metadata in the global state
 export
@@ -80,9 +87,10 @@ addLHS : {vars : _} ->
 addLHS loc outerenvlen env tm
     = do meta <- get MD
          tm' <- toFullNames (bindEnv loc (toPat env) tm)
-         put MD (record {
-                      lhsApps $= ((loc, outerenvlen, tm') ::)
-                    } meta)
+         -- Put the lhs on the metadata if it's not empty
+         whenJust (isNonEmptyFC loc) $ \ neloc =>
+           put MD $ record { lhsApps $= ((neloc, outerenvlen, tm') ::) } meta
+
   where
     toPat : Env Term vs -> Env Term vs
     toPat (Lam fc c p ty :: bs) = PVar fc c p ty :: toPat bs
@@ -111,9 +119,11 @@ addNameType : {vars : _} ->
 addNameType loc n env tm
     = do meta <- get MD
          n' <- getFullName n
-         put MD (record {
-                      names $= ((loc, (n', 0, substEnv loc env tm)) ::)
-                    } meta)
+
+         -- Add the name to the metadata if the file context is not empty
+         whenJust (isNonEmptyFC loc) $ \ neloc => do
+           put MD $ record { names $= ((neloc, (n', 0, substEnv loc env tm)) ::) } meta
+           log "metadata.names" 7 $ show n' ++ " at line " ++ show (1 + startLine neloc)
 
 export
 addTyDecl : {vars : _} ->
@@ -123,9 +133,10 @@ addTyDecl : {vars : _} ->
 addTyDecl loc n env tm
     = do meta <- get MD
          n' <- getFullName n
-         put MD (record {
-                      tydecls $= ((loc, (n', length env, bindEnv loc env tm)) ::)
-                    } meta)
+
+         -- Add the type declaration to the metadata if the file context is not empty
+         whenJust (isNonEmptyFC loc) $ \ neloc =>
+           put MD $ record { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
 
 export
 setHoleLHS : {auto m : Ref MD Metadata} ->
@@ -152,24 +163,20 @@ withCurrentLHS n
                (\lhs => put MD (record { holeLHS $= ((n', lhs) ::) } meta))
                (currentLHS meta)
 
-findEntryWith : (FC -> a -> Bool) -> List (FC, a) -> Maybe (FC, a)
-findEntryWith p [] = Nothing
-findEntryWith p ((l, x) :: xs)
-    = if p l x
-         then Just (l, x)
-         else findEntryWith p xs
+findEntryWith : (NonEmptyFC -> a -> Bool) -> List (NonEmptyFC, a) -> Maybe (NonEmptyFC, a)
+findEntryWith = find . uncurry
 
 export
 findLHSAt : {auto m : Ref MD Metadata} ->
-            (FC -> ClosedTerm -> Bool) ->
-            Core (Maybe (FC, Nat, ClosedTerm))
+            (NonEmptyFC -> ClosedTerm -> Bool) ->
+            Core (Maybe (NonEmptyFC, Nat, ClosedTerm))
 findLHSAt p
     = do meta <- get MD
          pure (findEntryWith (\ loc, tm => p loc (snd tm)) (lhsApps meta))
 
 export
 findTypeAt : {auto m : Ref MD Metadata} ->
-             (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
+             (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
              Core (Maybe (Name, Nat, ClosedTerm))
 findTypeAt p
     = do meta <- get MD
@@ -177,8 +184,8 @@ findTypeAt p
 
 export
 findTyDeclAt : {auto m : Ref MD Metadata} ->
-               (FC -> (Name, Nat, ClosedTerm) -> Bool) ->
-               Core (Maybe (FC, Name, Nat, ClosedTerm))
+               (NonEmptyFC -> (Name, Nat, ClosedTerm) -> Bool) ->
+               Core (Maybe (NonEmptyFC, Name, Nat, ClosedTerm))
 findTyDeclAt p
     = do meta <- get MD
          pure (findEntryWith p (tydecls meta))
@@ -201,8 +208,8 @@ normaliseTypes
          ns' <- traverse (nfType defs) (names meta)
          put MD (record { names = ns' } meta)
   where
-    nfType : Defs -> (FC, (Name, Nat, ClosedTerm)) ->
-             Core (FC, (Name, Nat, ClosedTerm))
+    nfType : Defs -> (NonEmptyFC, (Name, Nat, ClosedTerm)) ->
+             Core (NonEmptyFC, (Name, Nat, ClosedTerm))
     nfType defs (loc, (n, len, ty))
        = pure (loc, (n, len, !(normaliseArgHoles defs [] ty)))
 
@@ -233,10 +240,10 @@ HasNames Metadata where
                           Nothing
                           !(traverse fullHLHS hlhs)
     where
-      fullLHS : (FC, (Nat, ClosedTerm)) -> Core (FC, (Nat, ClosedTerm))
+      fullLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       fullLHS (fc, (i, tm)) = pure (fc, (i, !(full gam tm)))
 
-      fullTy : (FC, (Name, Nat, ClosedTerm)) -> Core (FC, (Name, Nat, ClosedTerm))
+      fullTy : (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Core (NonEmptyFC, (Name, Nat, ClosedTerm))
       fullTy (fc, (n, i, tm)) = pure (fc, (!(full gam n), i, !(full gam tm)))
 
       fullHLHS : (Name, ClosedTerm) -> Core (Name, ClosedTerm)
@@ -249,10 +256,10 @@ HasNames Metadata where
                           Nothing
                           !(traverse resolvedHLHS hlhs)
     where
-      resolvedLHS : (FC, (Nat, ClosedTerm)) -> Core (FC, (Nat, ClosedTerm))
+      resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))
 
-      resolvedTy : (FC, (Name, Nat, ClosedTerm)) -> Core (FC, (Name, Nat, ClosedTerm))
+      resolvedTy : (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Core (NonEmptyFC, (Name, Nat, ClosedTerm))
       resolvedTy (fc, (n, i, tm)) = pure (fc, (!(resolved gam n), i, !(resolved gam tm)))
 
       resolvedHLHS : (Name, ClosedTerm) -> Core (Name, ClosedTerm)

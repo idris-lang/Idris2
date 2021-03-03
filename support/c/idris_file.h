@@ -16,6 +16,10 @@ int idris2_fileSize(FILE* h);
 
 int idris2_fpoll(FILE* f);
 
+// Seek through the next newline without
+// saving anything along the way
+int idris2_seekLine(FILE* f);
+
 // Treat as a Ptr String (might be NULL)
 char* idris2_readLine(FILE* f);
 char* idris2_readChars(int num, FILE* f);

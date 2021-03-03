@@ -31,7 +31,7 @@ Or if the ``proposition`` is,
 +-------+
 
 we can't prove it is true, but it is still a valid proposition and perhaps we
-can prove it is false so the ``judgment`` is, 
+can prove it is false so the ``judgment`` is,
 
 +-------------+
 | 1+1=3 false |

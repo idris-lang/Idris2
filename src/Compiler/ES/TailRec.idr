@@ -3,8 +3,8 @@ module Compiler.ES.TailRec
 import Data.Maybe
 import Data.List
 import Data.Strings
-import Data.SortedSet
-import Data.SortedMap
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Core.Name
 import Core.Context
 import Compiler.ES.ImperativeAst
@@ -234,7 +234,7 @@ tailRecOptimGroup defs names =
         let fusion = FunDecl EmptyFC fusionName fusionArgs (makeTailOptimToBody fusionName fusionArgs fusionBody)
         let newFunctions = Prelude.concat $ map
                             (changeBodyToUseFusion fusionName)
-                            (ids `List.zip` (names `List.zip` d))
+                            (ids `zip` (names `zip` d))
         pure $ fusion <+> newFunctions
 
 
@@ -243,7 +243,7 @@ export
 tailRecOptim :  ImperativeStatement -> Core ImperativeStatement
 tailRecOptim x =
     do
-        newRef TailRecS (MkTailSt 0)
+        ref <- newRef TailRecS (MkTailSt 0)
         let graph = tailCallGraph x
         let groups =  recursiveTailCallGroups graph
         let functionsToOptimize = foldl SortedSet.union empty $ map SortedSet.fromList groups

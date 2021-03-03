@@ -48,7 +48,7 @@
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
 (define-macro (blodwen-bits-shl x y bits)
                    `(remainder (arithmetic-shift ,x ,y)
-                               (arithmetic-shitt 1 ,bits)))
+                               (arithmetic-shift 1 ,bits)))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 
@@ -100,6 +100,9 @@
 
 (define (blodwen-string-iterator-new s)
   0)
+
+(define (blodwen-string-iterator-to-string _ s ofs f)
+  (f (substring s ofs (string-length s))))
 
 (define (blodwen-string-iterator-next s ofs)
   (if (>= ofs (string-length s))

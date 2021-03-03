@@ -1,11 +1,11 @@
 module Compiler.ES.ES
 
 import Compiler.ES.Imperative
-import Utils.Hex
+import Libraries.Utils.Hex
 import Data.List1
 import Data.Strings
-import Data.SortedMap
-import Data.String.Extra
+import Libraries.Data.SortedMap
+import Libraries.Data.String.Extra
 
 import Core.Directory
 
@@ -21,7 +21,8 @@ jsString : String -> String
 jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
   where
     okchar : Char -> String
-    okchar c = if (c >= ' ') && (c /= '\\') && (c /= '"') && (c /= '\'') && (c <= '~')
+    okchar c = if (c >= ' ') && (c /= '\\')
+                  && (c /= '"') && (c /= '\'') && (c <= '~')
                   then cast c
                   else case c of
                             '\0' => "\\0"
@@ -35,7 +36,8 @@ esName : String -> String
 esName x = "__esPrim_" ++ x
 
 
-addToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> String -> Core String
+addToPreamble : {auto c : Ref ESs ESSt} ->
+                String -> String -> String -> Core String
 addToPreamble name newName def =
   do
     s <- get ESs
@@ -45,8 +47,10 @@ addToPreamble name newName def =
           put ESs (record { preamble = insert name def (preamble s) } s)
           pure newName
       Just x =>
-        if x /= def then throw $ InternalError $ "two incompatible definitions for " ++ name ++ "<|" ++ x ++"|> <|"++ def ++ "|>"
-                    else pure newName
+        if x /= def
+         then throw $ InternalError $ "two incompatible definitions for "
+                         ++ name ++ "<|" ++ x ++"|> <|"++ def ++ "|>"
+         else pure newName
 
 addConstToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core String
 addConstToPreamble name def =
@@ -62,22 +66,20 @@ addSupportToPreamble name code =
 addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
 addStringIteratorToPreamble =
   do
-    let defs = "
-function __prim_stringIteratorNew(str) {
-  return str[Symbol.iterator]();
-}
-function __prim_stringIteratorNext(str, it) {
-  const char = it.next();
-  if (char.done) {
-    return {h: 0}; // EOF
-  } else {
-    return {
-      h: 1, // Character
-      a1: char.value,
-      a2: it
-    };
-  }
-}"
+    let defs = unlines $
+      [ "function __prim_stringIteratorNew(str) {"
+      , "  return 0;"
+      , "}"
+      , "function __prim_stringIteratorToString(_, str, it, f) {"
+      , "  return f(str.slice(it));"
+      , "}"
+      , "function __prim_stringIteratorNext(str, it) {"
+      , "  if (it >= str.length)"
+      , "    return {h: 0};"
+      , "  else"
+      , "    return {h: 1, a1: str.charAt(it), a2: it + 1};"
+      , "}"
+      ]
     let name = "stringIterator"
     let newName = esName name
     addToPreamble name newName defs
@@ -144,7 +146,7 @@ boundedUInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 boundedUInt bits e =
   do
     n <- makeIntBound bits
-    fn <- addConstToPreamble ("truncToUInt"++show bits) ("x=>{const m = x%" ++ n ++ ";return m>0?m:m+" ++ n ++ "}")
+    fn <- addConstToPreamble ("truncToUInt"++show bits) ("x=>{const m = x%" ++ n ++ ";return m>=0?m:m+" ++ n ++ "}")
     pure $ fn ++ "(" ++ e ++ ")"
 
 boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
@@ -201,13 +203,13 @@ jsOp (Mul ty) [x, y] = pure $ binOp "*" x y
 jsOp (Div ty) [x, y] = pure $ binOp "/" x y
 jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
-jsOp (ShiftL IntType) [x, y] = pure $ !(boundedUIntOp 63 "<<" x y)
+jsOp (ShiftL IntType) [x, y] = pure $ !(boundedIntOp 63 "<<" x y)
 jsOp (ShiftL Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "<<" x y)
 jsOp (ShiftL Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "<<" x y)
 jsOp (ShiftL Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "<<" x y)
 jsOp (ShiftL Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "<<" x y)
 jsOp (ShiftL ty) [x, y] = pure $ binOp "<<" x y
-jsOp (ShiftR IntType) [x, y] = pure $ !(boundedUIntOp 63 ">>" x y)
+jsOp (ShiftR IntType) [x, y] = pure $ !(boundedIntOp 63 ">>" x y)
 jsOp (ShiftR Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 ">>" x y)
 jsOp (ShiftR Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 ">>" x y)
 jsOp (ShiftR Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 ">>" x y)
@@ -251,6 +253,8 @@ jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
 jsOp (Cast CharType IntegerType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
 jsOp (Cast DoubleType IntType) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
 jsOp (Cast DoubleType IntegerType) [x] = pure $ "BigInt(Math.floor(" ++ x ++ "))"
+jsOp (Cast IntType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
+jsOp (Cast IntegerType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
 jsOp (Cast StringType IntType) [x] = boundedInt 63 $ !(jsIntegerOfString x)
 jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 jsOp (Cast IntegerType IntType) [x] = boundedInt 63 x
@@ -324,15 +328,16 @@ makeForeign n x =
           let (name, lib_) = break (== ',') def
           let lib = drop 1 lib_
           lib_code <- readDataFile ("js/" ++ lib ++ ".js")
-          addSupportToPreamble lib lib_code
+          ignore $ addSupportToPreamble lib lib_code
           pure $ "const " ++ jsName n ++ " = " ++ lib ++ "_" ++ name ++ "\n"
       "stringIterator" =>
         do
-          addStringIteratorToPreamble
+          ignore addStringIteratorToPreamble
           case def of
             "new" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNew;\n"
             "next" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorNext;\n"
-            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\"")
+            "toString" => pure $ "const " ++ jsName n ++ " = __prim_stringIteratorToString;\n"
+            _ => throw (InternalError $ "invalid string iterator function: " ++ def ++ ", supported functions are \"new\", \"next\", \"toString\"")
 
 
       _ => throw (InternalError $ "invalid foreign type : " ++ ty ++ ", supported types are \"lambda\", \"support\"")

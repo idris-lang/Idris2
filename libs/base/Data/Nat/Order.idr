@@ -39,8 +39,8 @@ implementation Poset Nat LTE where
 
 public export
 total zeroNeverGreater : {n : Nat} -> LTE (S n) Z -> Void
-zeroNeverGreater {n} LTEZero     impossible
-zeroNeverGreater {n} (LTESucc _) impossible
+zeroNeverGreater LTEZero     impossible
+zeroNeverGreater (LTESucc _) impossible
 
 public export
 total zeroAlwaysSmaller : {n : Nat} -> LTE Z n
@@ -48,8 +48,8 @@ zeroAlwaysSmaller = LTEZero
 
 public export
 total ltesuccinjective : {0 n : Nat} -> {0 m : Nat} -> (LTE n m -> Void) -> LTE (S n) (S m) -> Void
-ltesuccinjective {n} {m} disprf (LTESucc nLTEm) = void (disprf nLTEm)
-ltesuccinjective {n} {m} disprf LTEZero         impossible
+ltesuccinjective disprf (LTESucc nLTEm) = void (disprf nLTEm)
+ltesuccinjective disprf LTEZero         impossible
 
 public export
 total decideLTE : (n : Nat) -> (m : Nat) -> Dec (LTE n m)
@@ -58,8 +58,8 @@ decideLTE (S x)     Z  = No  zeroNeverGreater
 decideLTE (S x)   (S y) with (decEq (S x) (S y))
   decideLTE (S x)   (S y) | Yes eq      = rewrite eq in Yes (reflexive (S y))
   decideLTE (S x)   (S y) | No _ with (decideLTE x y)
-  decideLTE (S x)   (S y) | No _   | Yes nLTEm = Yes (LTESucc nLTEm)
-  decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
+    decideLTE (S x)   (S y) | No _   | Yes nLTEm = Yes (LTESucc nLTEm)
+    decideLTE (S x)   (S y) | No _   | No  nGTm  = No (ltesuccinjective nGTm)
 
 public export
 implementation Decidable 2 [Nat,Nat] LTE where

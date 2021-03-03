@@ -33,7 +33,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
          fnm <- toFullNames nm
          case fnm of
               NS ns (UN n)
-                 => if ns == reflectionNS then elabCon defs n args else failWith defs
+                 => if ns == reflectionNS then elabCon defs n (map snd args) else failWith defs
               _ => failWith defs
   where
     failWith : Defs -> Core a

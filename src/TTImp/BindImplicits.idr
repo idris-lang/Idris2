@@ -43,8 +43,8 @@ renameIBinds rs us (INamedApp fc fn n arg)
     = pure $ INamedApp fc !(renameIBinds rs us fn) n !(renameIBinds rs us arg)
 renameIBinds rs us (IWithApp fc fn arg)
     = pure $ IWithApp fc !(renameIBinds rs us fn) !(renameIBinds rs us arg)
-renameIBinds rs us (IAs fc s n pat)
-    = pure $ IAs fc s n !(renameIBinds rs us pat)
+renameIBinds rs us (IAs fc nameFC s n pat)
+    = pure $ IAs fc nameFC s n !(renameIBinds rs us pat)
 renameIBinds rs us (IMustUnify fc r pat)
     = pure $ IMustUnify fc r !(renameIBinds rs us pat)
 renameIBinds rs us (IDelayed fc r t)
@@ -94,8 +94,8 @@ doBind ns (INamedApp fc fn n av)
     = INamedApp fc (doBind ns fn) n (doBind ns av)
 doBind ns (IWithApp fc fn av)
     = IWithApp fc (doBind ns fn) (doBind ns av)
-doBind ns (IAs fc s n pat)
-    = IAs fc s n (doBind ns pat)
+doBind ns (IAs fc nameFC s n pat)
+    = IAs fc nameFC s n (doBind ns pat)
 doBind ns (IMustUnify fc r pat)
     = IMustUnify fc r (doBind ns pat)
 doBind ns (IDelayed fc r ty)
@@ -140,8 +140,7 @@ getUsing n ((t, Nothing, ty) :: us) -- autoimplicit binder
 
 getUsings : List Name -> List (Int, Maybe Name, RawImp) ->
             List (Int, (RigCount, PiInfo RawImp, Maybe Name, RawImp))
-getUsings [] u = []
-getUsings (n :: ns) u = getUsing n u ++ getUsings ns u
+getUsings ns u = concatMap (flip getUsing u) ns
 
 bindUsings : List (RigCount, PiInfo RawImp, Maybe Name, RawImp) -> RawImp -> RawImp
 bindUsings [] tm = tm
@@ -157,8 +156,7 @@ addUsing uimpls tm
           bindUsings (map snd bs) tm
   where
     tag : Int -> List a -> List (Int, a) -- to check uniqueness of resulting uimps
-    tag t [] = []
-    tag t (x :: xs) = (t, x) :: tag (t + 1) xs
+    tag t xs = zip (map (+t) [0..cast (length xs)]) xs
 
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->
@@ -190,4 +188,3 @@ piBindNames loc env tm
     piBind [] ty = ty
     piBind (n :: ns) ty
        = IPi loc erased Implicit (Just (UN n)) (Implicit loc False) (piBind ns ty)
-

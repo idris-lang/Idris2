@@ -20,7 +20,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -224,7 +224,7 @@ updateArg allvars var con (IAutoApp fc f a)
 updateArg allvars var con (INamedApp fc f n a)
     = pure $ INamedApp fc !(updateArg allvars var con f) n
                           !(updateArg allvars var con a)
-updateArg allvars var con (IAs fc s n p)
+updateArg allvars var con (IAs fc nameFC s n p)
     = updateArg allvars var con p
 updateArg allvars var con tm = pure $ Implicit (getFC tm) True
 
@@ -316,8 +316,8 @@ findUpdates defs (INamedApp _ f _ a) (INamedApp _ f' _ a')
          findUpdates defs a a'
 findUpdates defs (INamedApp _ f _ a) f' = findUpdates defs f f'
 findUpdates defs f (INamedApp _ f' _ a) = findUpdates defs f f'
-findUpdates defs (IAs _ _ _ f) f' = findUpdates defs f f'
-findUpdates defs f (IAs _ _ _ f') = findUpdates defs f f'
+findUpdates defs (IAs _ _ _ _ f) f' = findUpdates defs f f'
+findUpdates defs f (IAs _ _ _ _ f') = findUpdates defs f f'
 findUpdates _ _ _ = pure ()
 
 getUpdates : Defs -> RawImp -> RawImp -> Core (List (Name, RawImp))
@@ -334,12 +334,12 @@ mkCase {c} {u} fn orig lhs_raw
          defs <- get Ctxt
          ust <- get UST
          catch
-           (do 
+           (do
                -- Fixes Issue #74. The problem is that if the function is defined in a sub module,
                -- then the current namespace (accessed by calling getNS) differs from the function
                -- namespace, therefore it is not considered visible by TTImp.Elab.App.checkVisibleNS
-               setAllPublic True 
-               
+               setAllPublic True
+
                -- Use 'Rig0' since it might be a type level function, or it might
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
@@ -348,7 +348,7 @@ mkCase {c} {u} fn orig lhs_raw
                                     [] (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false
-               setAllPublic False 
+               setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
                lhs' <- unelabNoSugar [] lhs
@@ -411,9 +411,9 @@ export
 getSplits : {auto c : Ref Ctxt Defs} ->
             {auto m : Ref MD Metadata} ->
             {auto u : Ref UST UState} ->
-            (FC -> ClosedTerm -> Bool) -> Name ->
+            (NonEmptyFC -> ClosedTerm -> Bool) -> Name ->
             Core (SplitResult (List ClauseUpdate))
 getSplits p n
     = do Just (loc, envlen, lhs_in) <- findLHSAt p
               | Nothing => pure (SplitFail CantFindLHS)
-         getSplitsLHS loc envlen lhs_in n
+         getSplitsLHS (justFC loc) envlen lhs_in n

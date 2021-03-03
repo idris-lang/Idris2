@@ -5,6 +5,9 @@ data MyCmd : Type -> Type where
   Pure : ty -> MyCmd ty
   (>>=) : MyCmd a -> (a -> MyCmd b) -> MyCmd b
 
+(>>) : MyCmd () -> MyCmd a -> MyCmd a
+ma >> mb = ma >>= const mb
+
 runMyCmd : MyCmd a -> IO a
 runMyCmd (Display str) = putStrLn str
 runMyCmd Input = do str <- getLine

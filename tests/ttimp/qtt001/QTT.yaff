@@ -12,4 +12,3 @@ dup2 $x = MkPair ?baz2 x
 
 dupbad : (1 x : $a) -> Pair $a $a
 dupbad $x = MkPair x x
-

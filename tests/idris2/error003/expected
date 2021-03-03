@@ -4,23 +4,32 @@ If Main.length: When unifying Nat and Vect ?n ?a.
 Mismatch between: Nat and Vect ?n ?a.
 
 Error.idr:12:18--12:19
-    |
+ 08 | length [] = Z
+ 09 | length (x :: xs) = S (length xs)
+ 10 | 
+ 11 | wrong : Nat -> Nat
  12 | wrong x = length x
-    |                  ^
+                       ^
 
 If Prelude.List.length: When unifying Nat and List ?a.
 Mismatch between: Nat and List ?a.
 
 Error.idr:12:18--12:19
-    |
+ 08 | length [] = Z
+ 09 | length (x :: xs) = S (length xs)
+ 10 | 
+ 11 | wrong : Nat -> Nat
  12 | wrong x = length x
-    |                  ^
+                       ^
 
-If Prelude.Strings.length: When unifying Nat and String.
+If Prelude.String.length: When unifying Nat and String.
 Mismatch between: Nat and String.
 
 Error.idr:12:18--12:19
-    |
+ 08 | length [] = Z
+ 09 | length (x :: xs) = S (length xs)
+ 10 | 
+ 11 | wrong : Nat -> Nat
  12 | wrong x = length x
-    |                  ^
+                       ^
 

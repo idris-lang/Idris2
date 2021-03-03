@@ -37,4 +37,3 @@ Show a => Show (Vect n a) where
         show' Nil        = ""
         show' (x :: Nil) = show x
         show' (x :: xs)  = show x ++ ", " ++ show' xs
-

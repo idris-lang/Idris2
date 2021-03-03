@@ -16,4 +16,3 @@ addBaz (plus x y) (AddThings x y) = plus x y
 -- which would accidentally lead to a non-linear pattern
 addBaz3 : (x : Nat) -> Baz x -> Nat
 addBaz3 (plus x x) (AddThings _ _) = plus x x
-

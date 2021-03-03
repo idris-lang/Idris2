@@ -10,9 +10,9 @@ import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 import System.File
 
@@ -21,7 +21,7 @@ import System.File
 -- (Otherwise we'd save out everything, not just the things in the current
 -- file).
 
-import public Utils.Binary
+import public Libraries.Utils.Binary
 
 import Data.Buffer
 
@@ -31,7 +31,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 43
+ttcVersion = 45
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -286,13 +286,11 @@ addGlobalDef modns asm (n, def)
                         (\ p => do x <- decode (gamma defs) (fst p) False (snd p)
                                    pure (Just x))
                         codedentry
-         if completeDef entry
-            then pure ()
-            else do addContextEntry n def
-                    pure ()
-         maybe (pure ())
-               (\ as => addContextAlias (asName modns as n) n)
-               asm
+         unless (completeDef entry) $
+           ignore $ addContextEntry n def
+
+         whenJust asm $ \ as => addContextAlias (asName modns as n) n
+
   where
     -- If the definition already exists, don't overwrite it with an empty
     -- definition or hole. This might happen if a function is declared in one
@@ -428,7 +426,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
          if alreadyDone modNS importAs (allImported defs)
             then pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
-               traverse (addGlobalDef modNS as) (context ttc)
+               traverse_ (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)

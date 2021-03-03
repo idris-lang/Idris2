@@ -3,14 +3,14 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Nat
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Vect
 import Decidable.Equality
-import Text.PrettyPrint.Prettyprinter
-import Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import public Algebra
 
@@ -22,6 +22,12 @@ data NameType : Type where
      Func    : NameType
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
      TyCon   : (tag : Int) -> (arity : Nat) -> NameType
+
+export
+isCon : NameType -> Maybe (Int, Nat)
+isCon (DataCon t a) = Just (t, a)
+isCon (TyCon t a) = Just (t, a)
+isCon _ = Nothing
 
 public export
 data Constant
@@ -591,6 +597,12 @@ Eq LazyReason where
   (==) _ _ = False
 
 export
+Show LazyReason where
+    show LInf = "Inf"
+    show LLazy = "Lazy"
+    show LUnknown = "Unkown"
+
+export
 compatible : LazyReason -> LazyReason -> Bool
 compatible LUnknown _ = True
 compatible _ LUnknown = True
@@ -925,6 +937,12 @@ export
 apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
+
+-- Creates a chain of `App` nodes, each with its own file context
+export
+applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
+applyWithFC fn [] = fn
+applyWithFC fn ((fc, arg) :: args) = applyWithFC (App fc fn arg) args
 
 -- Build a simple function type
 export

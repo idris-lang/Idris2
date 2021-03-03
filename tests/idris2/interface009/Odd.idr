@@ -6,4 +6,3 @@ interface Foo m where
 -- clash, so one has to be renamed.
 Eq k => Foo (\s, t => List (s, t)) where
   bar x y z = ?bang
-

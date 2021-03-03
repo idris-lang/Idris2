@@ -1,5 +1,6 @@
 module Data.Fin
 
+import Data.List1
 import public Data.Maybe
 import Data.Nat
 import Decidable.Equality.Core
@@ -76,7 +77,7 @@ weaken (FS k) = FS $ weaken k
 
 ||| Weaken the bound on a Fin by some amount
 public export
-weakenN : (n : Nat) -> Fin m -> Fin (m + n)
+weakenN : (0 n : Nat) -> Fin m -> Fin (m + n)
 weakenN n FZ = FZ
 weakenN n (FS f) = FS $ weakenN n f
 
@@ -112,6 +113,12 @@ last : {n : _} -> Fin (S n)
 last {n=Z} = FZ
 last {n=S _} = FS last
 
+||| All of the Fin elements
+public export
+allFins : (n : Nat) -> List1 (Fin (S n))
+allFins Z = FZ ::: []
+allFins (S n) = FZ ::: map FS (forget (allFins n))
+
 export
 Ord (Fin n) where
   compare  FZ     FZ    = EQ
@@ -140,7 +147,7 @@ integerToFin x n = if x >= 0 then natToFin (fromInteger x) n else Nothing
 ||| @ prf an automatically-constructed proof that `x` is in bounds
 public export
 fromInteger : (x : Integer) -> {n : Nat} ->
-              {auto prf : (IsJust (integerToFin x n))} ->
+              {auto 0 prf : (IsJust (integerToFin x n))} ->
               Fin n
 fromInteger {n} x {prf} with (integerToFin x n)
   fromInteger {n} x {prf = ItIsJust} | Just y = y

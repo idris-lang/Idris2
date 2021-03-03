@@ -12,14 +12,13 @@ MAJOR=0
 MINOR=3
 PATCH=0
 
-
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
-    # inside a git repo
-    ifneq ($(shell git describe --exact-match --tags >/dev/null 2>&1; echo $$?), 0)
-        # not tagged as a released version, so add sha1 of this build in between releases
-        GIT_SHA1 := $(shell git rev-parse --short=9 HEAD)
-    endif
+	# inside a git repo
+	ifneq ($(shell git describe --exact-match --tags >/dev/null 2>&1; echo $$?), 0)
+		# not tagged as a released version, so add sha1 of this build in between releases
+		GIT_SHA1 := $(shell git rev-parse --short=9 HEAD)
+	endif
 endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
@@ -59,7 +58,8 @@ ${TARGET}: src/IdrisPaths.idr
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
-	echo 'module IdrisPaths' > src/IdrisPaths.idr
+	echo '-- @generated' > src/IdrisPaths.idr
+	echo 'module IdrisPaths' >> src/IdrisPaths.idr
 	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${GIT_SHA1}")' >> src/IdrisPaths.idr
 	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
 
@@ -82,7 +82,11 @@ libs : prelude base contrib network
 testbin:
 	@${MAKE} -C tests testbin
 
-test:
+test: testbin
+	@echo
+	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
+	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
+	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
 
 support:
@@ -134,39 +138,31 @@ install-support:
 	@${MAKE} -C support/refc install
 
 install-libs:
-	${MAKE} -C libs/prelude install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/base install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/contrib install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/network install IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/prelude install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
 # Bootstrapping using SCHEME
-bootstrap: bootstrap-build bootstrap-test
-
-bootstrap-build: support
+bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	sed s/libidris2_support.so/${IDRIS2_SUPPORT}/g bootstrap/idris2_app/idris2.ss > bootstrap/idris2_app/idris2-boot.ss
-ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
-else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.ss
-endif
-	sh ./bootstrap.sh
+	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+		bootstrap/idris2_app/idris2.ss \
+		> bootstrap/idris2_app/idris2-boot.ss
+	sh ./bootstrap-stage1-chez.sh
+	sh ./bootstrap-stage2.sh IDRIS2_CG="chez"
 
 # Bootstrapping using racket
-bootstrap-racket: bootstrap-racket-build bootstrap-test
-
-bootstrap-racket-build: support
+bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	cp bootstrap/idris2_app/idris2.rkt bootstrap/idris2_app/idris2-boot.rkt
-ifeq ($(OS), darwin)
-	sed -i '' 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
-else
-	sed -i 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' bootstrap/idris2_app/idris2-boot.rkt
-endif
-	sh ./bootstrap-rkt.sh
+	sed 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+		bootstrap/idris2_app/idris2.rkt \
+		> bootstrap/idris2_app/idris2-boot.rkt
+	sh ./bootstrap-stage1-racket.sh
+	sh ./bootstrap-stage2.sh IDRIS2_CG="racket"
 
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_LIBS=${IDRIS2_BOOT_TEST_LIBS}

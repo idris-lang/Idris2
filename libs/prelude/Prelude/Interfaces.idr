@@ -105,6 +105,12 @@ public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
 
+namespace Functor
+  ||| Composition of functors is a functor.
+  public export
+  [Compose] (Functor f, Functor g) => Functor (f . g) where
+    map = map . map
+
 ||| Bifunctors
 ||| @f The action of the Bifunctor on pairs of objects
 public export
@@ -157,10 +163,18 @@ a *> b = map (const id) a <*> b
 %allow_overloads (<*)
 %allow_overloads (*>)
 
+namespace Applicative
+  ||| Composition of applicative functors is an applicative functor.
+  public export
+  [Compose] (Applicative f, Applicative g) => Applicative (f . g)
+    using Functor.Compose where
+      pure = pure . pure
+      fun <*> x = [| fun <*> x |]
+
 public export
 interface Applicative f => Alternative f where
   empty : f a
-  (<|>) : f a -> f a -> f a
+  (<|>) : f a -> Lazy (f a) -> f a
 
 public export
 interface Applicative m => Monad m where
@@ -176,9 +190,25 @@ interface Applicative m => Monad m where
 
 %allow_overloads (>>=)
 
+||| Right-to-left monadic bind, flipped version of `>>=`.
 public export
-(>>) : (Monad m) => m a -> m b -> m b
+(=<<) : Monad m => (a -> m b) -> m a -> m b
+(=<<) = flip (>>=)
+
+||| Sequencing of effectful composition
+public export
+(>>) : Monad m => m () -> Lazy (m b) -> m b
 a >> b = a >>= \_ => b
+
+||| Left-to-right Kleisli composition of monads.
+public export
+(>=>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
+(>=>) f g = \x => f x >>= g
+
+||| Right-to-left Kleisli composition of monads, flipped version of `>=>`.
+public export
+(<=<) : Monad m => (b -> m c) -> (a -> m b) -> (a -> m c)
+(<=<) = flip (>=>)
 
 ||| `guard a` is `pure ()` if `a` is `True` and `empty` if `a` is `False`.
 public export
@@ -329,13 +359,27 @@ for_ = flip traverse_
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
-choice : (Foldable t, Alternative f) => t (f a) -> f a
-choice = foldr (<|>) empty
+choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
+choice t = foldr {elem = Lazy (f a)} {acc = Lazy (f a)}
+                 (\ x, xs => x <|> xs)
+                 empty
+                 t
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap f = foldr (\e, a => f e <|> a) empty
+choiceMap act t = foldr {elem = a} {acc = Lazy (f b)}
+                        (\e, a => act e <|> a)
+                        empty
+                        t
+
+namespace Foldable
+  ||| Composition of foldables is foldable.
+  public export
+  [Compose] (Foldable t, Foldable f) => Foldable (t . f) where
+    foldr = foldr . flip . foldr
+    foldl = foldl . foldl
+    null tf = null tf || all (force . null) tf
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
@@ -352,3 +396,17 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
+
+namespace Traversable
+  ||| Composition of traversables is traversable.
+  public export
+  [Compose] (Traversable t, Traversable f) => Traversable (t . f)
+    using Foldable.Compose Functor.Compose where
+      traverse = traverse . traverse
+
+namespace Monad
+  ||| Composition of a traversable monad and a monad is a monad.
+  public export
+  [Compose] (Monad m, Monad t, Traversable t) => Monad (m . t)
+    using Applicative.Compose where
+      a >>= f = a >>= map join . traverse f

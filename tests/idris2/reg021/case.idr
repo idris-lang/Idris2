@@ -7,6 +7,6 @@ twice m n o p (S x)
 bothS : Int -> String -> (Nat, Nat) -> (Nat, Nat)
 bothS test dummy = \(c, d) => (S c, S d)
 
-pf : (x : Nat) -> twice 'a' 'b' 'c' 'd' (S x) 
+pf : (x : Nat) -> twice 'a' 'b' 'c' 'd' (S x)
                      = bothS 99 "red balloons" (twice 'a' 'b' 'c' 'd' x)
 pf k = Refl -- Refl

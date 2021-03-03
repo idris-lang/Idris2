@@ -1,5 +1,7 @@
 module Compiler.ES.Node
 
+import Idris.Env
+
 import Compiler.ES.ES
 
 import Compiler.Common
@@ -7,7 +9,7 @@ import Compiler.CompileExpr
 
 import Core.Context
 import Core.TT
-import Utils.Path
+import Libraries.Utils.Path
 
 import System
 import System.File
@@ -16,7 +18,7 @@ import Data.Maybe
 
 findNode : IO String
 findNode =
-  do env <- getEnv "NODE"
+  do env <- idrisGetEnv "NODE"
      pure $ fromMaybe "/usr/bin/env node" env
 
 ||| Compile a TT expression to Node
@@ -43,7 +45,7 @@ executeExpr c tmpDir tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)
      node <- coreLift findNode
-     coreLift $ system (node ++ " " ++ outn)
+     coreLift_ $ system (node ++ " " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

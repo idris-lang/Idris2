@@ -2,6 +2,8 @@ module Prelude.Basics
 
 import Builtin
 
+import Prelude.Ops
+
 %default total
 
 public export
@@ -38,6 +40,32 @@ const x = \value => x
 public export %inline
 (.) : (b -> c) -> (a -> b) -> a -> c
 (.) f g = \x => f (g x)
+
+||| Composition of a two-argument function with a single-argument one.
+||| `(.:)` is like `(.)` but the second argument and the result are two-argument functions.
+||| This operator is also known as "blackbird operator".
+public export %inline
+(.:) : (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.:) = (.) . (.)
+
+||| `on b u x y` runs the binary function b on the results of applying
+||| unary function u to two arguments x and y. From the opposite perspective,
+||| it transforms two inputs and combines the outputs.
+|||
+||| ```idris example
+||| ((+) `on` f) x y = f x + f y
+||| ```
+|||
+||| Typical usage:
+|||
+||| ```idris example
+||| sortBy (compare `on` fst).
+||| ```
+public export
+on : (b -> b -> c) -> (a -> b) -> a -> a -> c
+on f g x y = g x `f` g y
+
+infixl 0 `on`
 
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip
@@ -79,6 +107,11 @@ export
 -- These are natural in equational reasoning.
 cong2 : (0 f : t1 -> t2 -> u) -> (p1 : a = b) -> (p2 : c = d) -> f a c = f b d
 cong2 f Refl Refl = Refl
+
+||| Irrelevant equalities can always be made relevant
+export
+irrelevantEq : (0 _ : a === b) -> a === b
+irrelevantEq Refl = Refl
 
 --------------
 -- BOOLEANS --

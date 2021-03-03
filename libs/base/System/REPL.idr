@@ -33,5 +33,3 @@ repl : HasIO io =>
        (prompt : String) -> (onInput : String -> String) -> io ()
 repl prompt fn
    = replWith () prompt (\x, s => Just (fn s, ()))
-
-

@@ -11,15 +11,17 @@ import Core.Directory
 import Core.Name
 import Core.Options
 import Core.TT
-import Utils.Hex
-import Utils.Path
+import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
+
+import Idris.Env
 
 import System
 import System.Directory
@@ -30,7 +32,7 @@ import System.Info
 
 pathLookup : IO String
 pathLookup
-    = do path <- getEnv "PATH"
+    = do path <- idrisGetEnv "PATH"
          let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
          let candidates = [p ++ "/" ++ x | p <- pathList,
                                            x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
@@ -39,7 +41,7 @@ pathLookup
 
 findChez : IO String
 findChez
-    = do Just chez <- getEnv "CHEZ" | Nothing => pathLookup
+    = do Just chez <- idrisGetEnv "CHEZ" | Nothing => pathLookup
          pure chez
 
 -- Given the chez compiler directives, return a list of pairs of:
@@ -308,7 +310,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "[" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto c : Ref Ctxt Defs} ->
@@ -378,7 +380,7 @@ compileToSS c appdir tm outfile
     = do ds <- getDirectives Chez
          libs <- findLibs ds
          traverse_ copyLib libs
-         cdata <- getCompileData Cases tm
+         cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          let ctm = forget (mainExpr cdata)
 
@@ -399,7 +401,7 @@ compileToSS c appdir tm outfile
                    main ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
-         coreLift $ chmodRaw outfile 0o755
+         coreLift_ $ chmodRaw outfile 0o755
          pure ()
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
@@ -411,8 +413,8 @@ compileToSO chez appDirRel outSsAbs
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
-         coreLift $ chmodRaw tmpFileAbs 0o755
-         coreLift $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
+         coreLift_ $ chmodRaw tmpFileAbs 0o755
+         coreLift_ $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
 
 makeSh : String -> String -> String -> Core ()
@@ -437,7 +439,7 @@ compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String)
 compileExpr makeitso c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift $ mkdirAll appDirGen
+         coreLift_ $ mkdirAll appDirGen
          Just cwd <- coreLift currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          let outSsFile = appDirRel </> outfile <.> "ss"
@@ -451,7 +453,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
-         coreLift $ chmodRaw outShRel 0o755
+         coreLift_ $ chmodRaw outShRel 0o755
          pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
@@ -460,7 +462,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift $ system sh
+         coreLift_ $ system sh
          pure ()
 
 ||| Codegen wrapper for Chez scheme implementation.

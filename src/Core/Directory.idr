@@ -5,7 +5,7 @@ import Core.Core
 import Core.FC
 import Core.Name
 import Core.Options
-import Utils.Path
+import Libraries.Utils.Path
 
 import Data.List
 import Data.Strings
@@ -28,14 +28,22 @@ firstAvailable (f :: fs)
 
 export
 covering
-readDataFile : {auto c : Ref Ctxt Defs} ->
+findDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
-readDataFile fname
+findDataFile fname
     = do d <- getDirs
          let fs = map (\p => p </> fname) (data_dirs d)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find data file " ++ fname ++
                                                " in any of " ++ show fs))
+         pure f
+
+export
+covering
+readDataFile : {auto c : Ref Ctxt Defs} ->
+               String -> Core String
+readDataFile fname
+    = do f <- findDataFile fname
          Right d <- coreLift $ readFile f
             | Left err => throw (FileErr f err)
          pure d
@@ -95,11 +103,11 @@ pathToNS wdir sdir fname =
   in
     case Path.dropBase base fname of
       Nothing => throw (UserError (
-          "Source file " 
-        ++ show fname 
-        ++ " is not in the source directory " 
+          "Source file "
+        ++ show fname
+        ++ " is not in the source directory "
         ++ show (wdir </> sdir)))
-      Just relPath => 
+      Just relPath =>
         pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
 
 dirExists : String -> IO Bool

@@ -4,6 +4,7 @@ import Compiler.Inline
 
 import Core.Binary
 import Core.Context
+import Core.Core
 import Core.Context.Log
 import Core.Directory
 import Core.Env
@@ -26,7 +27,7 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 
 import System.File
 
@@ -39,7 +40,7 @@ processDecl : {auto c : Ref Ctxt Defs} ->
               PDecl -> Core (Maybe Error)
 processDecl decl
     = catch (do impdecls <- desugarDecl [] decl
-                traverse (Check.processDecl [] (MkNested []) []) impdecls
+                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
                 pure Nothing)
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure (Just err))
@@ -187,29 +188,16 @@ modTime fname
          pure (cast t)
 
 export
-getParseErrorLoc : String -> ParseError Token -> FC
-getParseErrorLoc fname (ParseFail _ (Just pos) _) = MkFC fname pos pos
-getParseErrorLoc fname (LexFail (l, c, _)) = MkFC fname (l, c) (l, c)
-getParseErrorLoc fname (LitFail (MkLitErr l c _)) = MkFC fname (l, 0) (l, 0)
-getParseErrorLoc fname _ = replFC
-
-export
 readHeader : {auto c : Ref Ctxt Defs} ->
              (path : String) -> Core Module
 readHeader path
     = do Right res <- coreLift (readFile path)
             | Left err => throw (FileErr path err)
-         case runParserTo (isLitFile path) isColon res (progHdr path) of
-              Left err => throw (ParseFail (getParseErrorLoc path err) err)
-              Right mod => pure mod
-  where
-    -- Stop at the first :, that's definitely not part of the header, to
-    -- save lexing the whole file unnecessarily
-    isColon : WithBounds Token -> Bool
-    isColon t
-        = case t.val of
-               Symbol ":" => True
-               _ => False
+         -- Stop at the first :, that's definitely not part of the header, to
+         -- save lexing the whole file unnecessarily
+         let Right mod = runParserTo path (isLitFile path) (is ':') res (progHdr path)
+            | Left err => throw err
+         pure mod
 
 %foreign "scheme:collect"
 prim__gc : Int -> PrimIO ()
@@ -270,13 +258,14 @@ processMod srcf ttcf msg sourcecode
            else -- needs rebuilding
              do iputStrLn msg
                 Right mod <- logTime ("++ Parsing " ++ srcf) $
-                            pure (runParser (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
-                      | Left err => pure (Just [ParseFail (getParseErrorLoc srcf err) err])
+                            pure (runParser srcf (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
+                      | Left err => pure (Just [err])
                 initHash
-                traverse addPublicHash (sort hs)
+                traverse_ addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
                    do let MkFC fname _ _ = headerloc mod
+                          | EmptyFC => throw (InternalError "No file name")
                       d <- getDirs
                       ns' <- pathToNS (working_dir d) (source_dir d) fname
                       when (ns /= ns') $

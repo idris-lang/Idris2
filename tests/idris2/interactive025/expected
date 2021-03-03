@@ -1,0 +1,7 @@
+1/1: Building TypeAtInterfaces (TypeAtInterfaces.idr)
+Main> a : Type
+Main> x : Nat
+Main> x : Nat
+Main> y : Nat
+Main> y : Nat
+Main> Bye for now!

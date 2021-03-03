@@ -17,7 +17,7 @@ detagSafe : {auto c : Ref Ctxt Defs} ->
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
-         args' <- traverse (evalClosure defs) args
+         args' <- traverse (evalClosure defs . snd) args
          pure $ notErased 0 detags args'
   where
     -- if any argument positions are in the detaggable set, and unerased, then
@@ -64,9 +64,10 @@ updateErasable n
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
          (es, dtes) <- findErased (type gdef)
-         addDef n (record { eraseArgs = es,
-                            safeErase = dtes } gdef)
-         pure ()
+         ignore $ addDef n $ record
+                    { eraseArgs = es,
+                      safeErase = dtes } gdef
+
 export
 wrapErrorC : List ElabOpt -> (Error -> Error) -> Core a -> Core a
 wrapErrorC opts err

@@ -1,16 +1,29 @@
 package contrib
+version = 0.3.0
+
+opts = "--ignore-missing-ipkg"
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
           Control.ANSI.CSI,
+
           Control.Delayed,
+
           Control.Linear.LIO,
+
           Control.Monad.Algebra,
-          Control.Monad.Syntax,
 
           Control.Algebra,
           Control.Algebra.Laws,
           Control.Algebra.Implementations,
+
+          Control.Arrow,
+          Control.Category,
+
+          Control.Validation,
+
+          Data.Binary.Digit,
+          Data.Binary,
 
           Data.Bool.Algebra,
           Data.Bool.Decidable,
@@ -20,8 +33,13 @@ modules = Control.ANSI,
           Data.Fin.Extra,
 
           Data.Fun.Extra,
+          Data.Fun.Graph,
+
+          Data.IMaybe,
 
           Data.InductionRecursion.DybjerSetzer,
+
+          Data.Int.Order,
 
           Data.Late,
 
@@ -31,9 +49,13 @@ modules = Control.ANSI,
           Data.List.TailRec,
           Data.List.Equalities,
           Data.List.Reverse,
-          Data.List.Lazy,
           Data.List.Views.Extra,
           Data.List.Palindrome,
+          Data.List.HasLength,
+          Data.List.AtIndex,
+
+          Data.List.Lazy,
+          Data.List.Lazy.Quantifiers,
 
           Data.Logic.Propositional,
 
@@ -50,6 +72,8 @@ modules = Control.ANSI,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
 
+          Data.OpenUnion,
+
           Data.Recursion.Free,
 
           Data.SortedMap,
@@ -60,6 +84,18 @@ modules = Control.ANSI,
           Data.String.Iterator,
           Data.String.Parser,
           Data.String.Parser.Expression,
+          Data.String.Position,
+
+          Data.Telescope,
+          Data.Telescope.Telescope,
+          Data.Telescope.Segment,
+          Data.Telescope.Fun,
+          Data.Telescope.SimpleFun,
+          Data.Telescope.Congruence,
+
+          Data.Tree.Perfect,
+
+          Data.Vect.Binary,
 
           Data.Vect.Sort,
 
@@ -82,6 +118,20 @@ modules = Control.ANSI,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
 
+          Search.Generator,
+          Search.HDecidable,
+          Search.Negation,
+          Search.Properties,
+
+          Syntax.WithProof,
+          Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Generic,
+
+          System.Console.GetOpt,
+          System.Future,
+          System.Random,
+          System.Path,
+
           Test.Golden,
 
           Text.Token,
@@ -96,11 +146,4 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Util,
           Text.PrettyPrint.Prettyprinter.SimpleDocTree,
           Text.PrettyPrint.Prettyprinter.Render.String,
-          Text.PrettyPrint.Prettyprinter.Render.Terminal,
-
-          System.Future,
-          System.Random,
-          System.Path,
-          Syntax.WithProof,
-          Syntax.PreorderReasoning,
-          Syntax.PreorderReasoning.Generic
+          Text.PrettyPrint.Prettyprinter.Render.Terminal

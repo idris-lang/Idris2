@@ -42,7 +42,7 @@ import TTImp.Elab
 import TTImp.TTImp
 import TTImp.ProcessDecls
 
-import Utils.Hex
+import Libraries.Utils.Hex
 
 import Data.List
 import System
@@ -129,7 +129,7 @@ getInput f
                 do rest <- getFLine f
                    pure (pack x ++ rest)
               Just num =>
-                do inp <- getNChars f (integerToNat (cast num))
+                do inp <- getNChars f (integerToNat num)
                    pure (pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
@@ -328,7 +328,7 @@ displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
   = printIDEResult outf i
-  $ StringAtom $ "Current working directory is '" ++ dir ++ "'"
+  $ StringAtom $ "Current working directory is \"" ++ dir ++ "\""
 displayIDEResult outf i  (REPL CompilationFailed)
   = printIDEError outf i $ reflow "Compilation failed"
 displayIDEResult outf i  (REPL $ Compiled f)
@@ -393,18 +393,18 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
                     Nothing => "auto"
     in printIDEResult outf i $ StringAtom $ "Set consolewidth to " ++ width
 displayIDEResult outf i (NameLocList dat)
-  = printIDEResult outf i
-     $ SExpList !(traverse
-                   (\(name, fc)
-                     => pure $ SExpList [ StringAtom !(render $ pretty name)
-                                        , StringAtom (file fc)
-                                        , IntegerAtom $ cast (fst (startPos fc))
-                                        , IntegerAtom $ cast (snd (startPos fc))
-                                        , IntegerAtom $ cast (fst (endPos fc))
-                                        , IntegerAtom $ cast (snd (endPos fc))]
-                   )
-                   dat
-                 )
+  = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
+  where
+    constructSExp : (Name, NonEmptyFC) -> Core SExp
+    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
+        SExpList [ StringAtom !(render $ pretty name)
+                 , StringAtom fname
+                 , IntegerAtom $ cast $ startLine
+                 , IntegerAtom $ cast $ startCol
+                 , IntegerAtom $ cast $ endLine
+                 , IntegerAtom $ cast $ endCol
+                 ]
+
 displayIDEResult outf i  _ = pure ()
 
 
@@ -434,7 +434,7 @@ loop
                    then pure ()
                    else case parseSExp inp of
                       Left err =>
-                        do printIDEError outf idx (reflow "Parse error:" <++> pretty err)
+                        do printIDEError outf idx (reflow "Parse error:" <++> !(perror err))
                            loop
                       Right sexp =>
                         case getMsg sexp of

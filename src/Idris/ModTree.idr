@@ -20,12 +20,12 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Data.StringMap
+import Libraries.Data.StringMap
 
 import System.Directory
 import System.File
 
-import Utils.Either
+import Libraries.Utils.Either
 
 %default covering
 
@@ -184,7 +184,7 @@ buildMod loc num len mod
                                <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
                    [] <- process {u} {m} msg src
                       | errs => do emitWarnings
-                                   traverse emitError errs
+                                   traverse_ emitError errs
                                    pure (ferrs ++ errs)
                    emitWarnings
                    traverse_ emitError ferrs

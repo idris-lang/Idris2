@@ -1,16 +1,17 @@
 module Idris.Pretty
 
 import Data.List
+import Data.Maybe
 import Data.Strings
-import Control.ANSI.SGR
-import public Text.PrettyPrint.Prettyprinter
-import public Text.PrettyPrint.Prettyprinter.Render.Terminal
-import public Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Control.ANSI.SGR
+import public Libraries.Text.PrettyPrint.Prettyprinter
+import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
+import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Algebra
 import Idris.REPLOpts
 import Idris.Syntax
-import Utils.Term
+import Libraries.Utils.Term
 
 %default covering
 
@@ -120,12 +121,16 @@ mutual
   prettyCase (MkImpossible _ lhs) =
     prettyTerm lhs <++> impossible_
 
+  prettyString : PStr -> Doc IdrisAnn
+  prettyString (StrLiteral _ str) = pretty str
+  prettyString (StrInterp _ tm) = prettyTerm tm
+
   prettyDo : PDo -> Doc IdrisAnn
   prettyDo (DoExp _ tm) = prettyTerm tm
-  prettyDo (DoBind _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
+  prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
     prettyTerm l <++> pretty "<-" <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
-  prettyDo (DoLet _ l rig _ tm) =
+  prettyDo (DoLet _ _ l rig _ tm) =
     let_ <++> prettyRig rig <+> pretty l <++> equals <++> prettyTerm tm
   prettyDo (DoLetPat _ l _ tm alts) =
     let_ <++> prettyTerm l <++> equals <++> prettyTerm tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
@@ -197,9 +202,39 @@ mutual
           prettyBindings ((rig, n, (PImplicit _)) :: ns) = prettyRig rig <+> go startPrec n <+> comma <+> line <+> prettyBindings ns
           prettyBindings ((rig, n, ty) :: ns) = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <+> comma <+> line <+> prettyBindings ns
       go d (PLet _ rig n (PImplicit _) val sc alts) =
-        parenthesise (d > startPrec) $ group $ align $
-          let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
-            <+> in_ <++> (group $ align $ hang 2 $ go startPrec sc)
+          -- Hide uninformative lets
+          -- (Those that look like 'let x = x in ...')
+          -- Makes printing the types of names bound in where clauses a lot
+          -- more readable
+          fromMaybe fullLet $ do
+            nName   <- getPRefName n
+            valName <- getPRefName val
+            guard (show nName == show valName)
+            pure continuation
+
+         -- Hide lets that bind to underscore
+         -- That is, 'let _ = x in ...'
+         -- Those end up polluting the types of let bound variables in some
+         -- occasions
+          <|> do
+            nName <- getPRefName n
+            guard (isUnderscoreName nName)
+            pure continuation
+
+        where
+
+          continuation : Doc IdrisAnn
+          continuation = go startPrec sc
+
+          fullLet : Doc IdrisAnn
+          fullLet = parenthesise (d > startPrec) $ group $ align $
+            let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
+              <+> in_ <++> (group $ align $ hang 2 $ continuation)
+
+          getPRefName : PTerm -> Maybe Name
+          getPRefName (PRef _ n) = Just n
+          getPRefName _ = Nothing
+
       go d (PLet _ rig n ty val sc alts) =
         parenthesise (d > startPrec) $ group $ align $
           let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty <++> equals <+> line <+> go startPrec val) <+> hardline
@@ -236,7 +271,7 @@ mutual
       go d (PPrimVal _ c) = pretty c
       go d (PHole _ _ n) = meta (pretty (strCons '?' n))
       go d (PType _) = pretty "Type"
-      go d (PAs _ n p) = pretty n <+> "@" <+> go d p
+      go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
@@ -246,6 +281,8 @@ mutual
       go d (PSectionR _ x op) = parens (go startPrec x <++> pretty op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
+      go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
+      go d (PMultiline _ indent xs) = "multiline" <++> (parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> concat xs))
       go d (PDoBlock _ ns ds) = parenthesise (d > appPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)

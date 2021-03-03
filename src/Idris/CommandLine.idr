@@ -2,8 +2,10 @@ module Idris.CommandLine
 
 import IdrisPaths
 
+import Idris.Env
 import Idris.Version
 
+import Core.Name.Namespace
 import Core.Options
 
 import Data.List
@@ -38,6 +40,62 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
+
+public export
+data PkgVersion = MkPkgVersion (List Nat)
+
+export
+Show PkgVersion where
+  show (MkPkgVersion vs) = showSep "." (map show vs)
+
+export
+Eq PkgVersion where
+  MkPkgVersion p == MkPkgVersion q = p == q
+
+export
+Ord PkgVersion where
+  -- list ordering gives us what we want
+  compare (MkPkgVersion p) (MkPkgVersion q) = compare p q
+
+-- version must be >= lowerBound and <= upperBound
+-- Do we want < and > as well?
+public export
+record PkgVersionBounds where
+  constructor MkPkgVersionBounds
+  lowerBound : Maybe PkgVersion
+  lowerInclusive : Bool -- >= if true
+  upperBound : Maybe PkgVersion
+  upperInclusive : Bool -- <= if true
+
+export
+Show PkgVersionBounds where
+  show p = if noBounds p then "any"
+              else maybe "" (\v => (if p.lowerInclusive then ">= " else "> ")
+                                       ++ show v ++ " ") p.lowerBound ++
+                   maybe "" (\v => (if p.upperInclusive then "<= " else "< ") ++ show v) p.upperBound
+    where
+      noBounds : PkgVersionBounds -> Bool
+      noBounds p = isNothing p.lowerBound && isNothing p.upperBound
+
+export
+anyBounds : PkgVersionBounds
+anyBounds = MkPkgVersionBounds Nothing True Nothing True
+
+export
+current : PkgVersionBounds
+current = let (maj,min,patch) = semVer version
+              version = Just (MkPkgVersion [maj, min, patch]) in
+              MkPkgVersionBounds version True version True
+
+export
+inBounds : PkgVersion -> PkgVersionBounds -> Bool
+inBounds v bounds
+   = maybe True (\v' => if bounds.lowerInclusive
+                           then v >= v'
+                           else v > v') bounds.lowerBound &&
+     maybe True (\v' => if bounds.upperInclusive
+                           then v <= v'
+                           else v < v') bounds.upperBound
 
 ||| CLOpt - possible command line options
 public export
@@ -105,6 +163,7 @@ data CLOpt
   DumpVMCode String |
    ||| Run a REPL command then exit immediately
   RunREPL String |
+  IgnoreMissingIPKG |
   FindIPKG |
   Timing |
   DebugElabCheck |
@@ -206,7 +265,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--repl"] [Required "package file"] (\f => [Package REPL f])
               (Just "Build the given package and launch a REPL instance."),
            MkOpt ["--find-ipkg"] [] [FindIPKG]
-              (Just "Find and use an .ipkg file in a parent directory"),
+              (Just "Find and use an .ipkg file in a parent directory."),
+           MkOpt ["--ignore-missing-ipkg"] [] [IgnoreMissingIPKG]
+              (Just "Fail silently if a dependency is missing."),
 
            optSeparator,
            MkOpt ["--ide-mode"] [] [IdeMode]
@@ -261,22 +322,25 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               Nothing -- do more elaborator checks (currently conversion in LinearCheck)
            ]
 
-optsUsage : (options : List OptDesc) -> String
-optsUsage options = let optsShow = map optShow options
-                        maxOpt = foldr (\(opt, _), acc => max acc (length opt)) 0 optsShow in
-                        concatMap (optUsage maxOpt) optsShow
+optShow : OptDesc -> (String, Maybe String)
+optShow (MkOpt [] _ _ _) = ("", Just "")
+optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
+                                              showSep " " (map show argdescs),
+                                              help)
   where
     showSep : String -> List String -> String
     showSep sep [] = ""
     showSep sep [x] = x
     showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
-    optShow : OptDesc -> (String, Maybe String)
-    optShow (MkOpt [] _ _ _) = ("", Just "")
-    optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                                  showSep " " (map show argdescs),
-                                                  help)
+firstColumnWidth : Nat
+firstColumnWidth = let maxOpt = foldr max 0 $ map (length . fst . optShow) options
+                       maxEnv = foldr max 0 $ map (length . .name) envs in
+                       max maxOpt maxEnv
 
+makeTextFromOptionsOrEnvs : List (String, Maybe String) -> String
+makeTextFromOptionsOrEnvs rows = concatMap (optUsage firstColumnWidth) rows
+  where
     optUsage : Nat -> (String, Maybe String) -> String
     optUsage maxOpt (optshow, help) = maybe ""  -- Don't show anything if there's no help string (that means
                                                 -- it's an internal option)
@@ -284,6 +348,12 @@ optsUsage options = let optsShow = map optShow options
                                              pack (List.replicate (minus (maxOpt + 2) (length optshow)) ' ') ++
                                              h ++ "\n")
                                       help
+
+optsUsage : String
+optsUsage = makeTextFromOptionsOrEnvs $ map optShow options
+
+envsUsage : String
+envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
@@ -294,7 +364,10 @@ usage : String
 usage = versionMsg ++ "\n" ++
         "Usage: idris2 [options] [input file]\n\n" ++
         "Available options:\n" ++
-        optsUsage options
+        optsUsage ++
+        "\n" ++
+        "Environment variables:\n" ++
+        envsUsage
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)

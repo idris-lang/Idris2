@@ -14,7 +14,7 @@ newDoor : LinearIO io => (1 _ : (1 _ : Door CLOSED) -> L io ()) -> L io ()
 
 openDoor : LinearIO io =>
            (1 _ : Door CLOSED) ->
-           L io {use=1} (Res OpenResult (\case 
+           L io {use=1} (Res OpenResult (\case
                                            Jammed => Door CLOSED
                                            OK => Door OPEN))
 

@@ -1,11 +1,13 @@
 package prelude
+version = 0.3.0
 
-opts = "--no-prelude"
+opts = "--ignore-missing-ipkg --no-prelude"
 
 modules = Builtin,
           PrimIO,
           Prelude,
           Prelude.Basics,
+          Prelude.Cast,
           Prelude.EqOrd,
           Prelude.Interfaces,
           Prelude.IO,

@@ -10,13 +10,13 @@ import        Core.Options
 import public Core.Options.Log
 import public Core.TT
 
-import Utils.Binary
+import Libraries.Utils.Binary
 
-import Data.IntMap
+import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
-import Data.NameMap
-import Data.StringMap
+import Libraries.Data.NameMap
+import Libraries.Data.StringMap
 
 import System
 import System.Directory
@@ -364,7 +364,19 @@ initCtxtS : Int -> Core Context
 initCtxtS s
     = do arr <- coreLift $ newArray s
          aref <- newRef Arr arr
-         pure $ MkContext 0 0 empty empty aref 0 empty [partialEvalNS] False False empty
+         pure $ MkContext
+            { firstEntry = 0
+            , nextEntry = 0
+            , resolvedAs = empty
+            , possibles = empty
+            , content = aref
+            , branchDepth = 0
+            , staging = empty
+            , visibleNS = [partialEvalNS]
+            , allPublic = False
+            , inlineOnly = False
+            , hidden = empty
+            }
 
 export
 initCtxt : Core Context
@@ -588,9 +600,29 @@ export
 newDef : FC -> Name -> RigCount -> List Name ->
          ClosedTerm -> Visibility -> Def -> GlobalDef
 newDef fc n rig vars ty vis def
-    = MkGlobalDef fc n ty [] [] [] []
-                  rig vars vis unchecked [] Nothing Nothing False False False def
-                  Nothing Nothing []
+    = MkGlobalDef
+        { location = fc
+        , fullname = n
+        , type = ty
+        , eraseArgs = []
+        , safeErase = []
+        , specArgs = []
+        , inferrable = []
+        , multiplicity = rig
+        , vars = vars
+        , visibility = vis
+        , totality = unchecked
+        , flags = []
+        , refersToM = Nothing
+        , refersToRuntimeM = Nothing
+        , invertible = False
+        , noCycles = False
+        , linearChecked = False
+        , definition = def
+        , compexpr = Nothing
+        , namedcompexpr = Nothing
+        , sizeChange = []
+        }
 
 -- Rewrite rules, applied after type checking, for runtime code only
 -- LHS and RHS must have the same type, but we don't (currently) require that
@@ -989,9 +1021,35 @@ export
 initDefs : Core Defs
 initDefs
     = do gam <- initCtxt
-         pure (MkDefs gam [] mainNS [] defaults empty 100
-                      empty empty empty empty [] [] empty []
-                      empty 5381 [] [] [] [] [] empty empty empty empty [])
+         pure $ MkDefs
+           { gamma = gam
+           , mutData = []
+           , currentNS = mainNS
+           , nestedNS = []
+           , options = defaults
+           , toSave = empty
+           , nextTag = 100
+           , typeHints = empty
+           , autoHints = empty
+           , openHints = empty
+           , localHints = empty
+           , saveTypeHints = []
+           , saveAutoHints = []
+           , transforms = empty
+           , saveTransforms = []
+           , namedirectives = empty
+           , ifaceHash = 5381
+           , importHashes = []
+           , imported = []
+           , allImported = []
+           , cgdirectives = []
+           , toCompileCase = []
+           , toIR = empty
+           , userHoles = empty
+           , peFailures = empty
+           , timings = empty
+           , warnings = []
+           }
 
 -- Reset the context, except for the options
 export
@@ -1127,11 +1185,30 @@ addBuiltin : {arity : _} ->
              Name -> ClosedTerm -> Totality ->
              PrimFn arity -> Core ()
 addBuiltin n ty tot op
-    = do addDef n (MkGlobalDef emptyFC n ty [] [] [] [] top [] Public tot
-                               [Inline] Nothing Nothing
-                               False False True (Builtin op)
-                               Nothing Nothing [])
-         pure ()
+   = do ignore $
+       addDef n $ MkGlobalDef
+         { location = emptyFC
+         , fullname = n
+         , type = ty
+         , eraseArgs = []
+         , safeErase = []
+         , specArgs = []
+         , inferrable = []
+         , multiplicity = top
+         , vars = []
+         , visibility = Public
+         , totality = tot
+         , flags = [Inline]
+         , refersToM = Nothing
+         , refersToRuntimeM = Nothing
+         , invertible = False
+         , noCycles = False
+         , linearChecked = True
+         , definition = Builtin op
+         , compexpr = Nothing
+         , namedcompexpr = Nothing
+         , sizeChange = []
+         }
 
 export
 updateDef : {auto c : Ref Ctxt Defs} ->
@@ -1142,8 +1219,7 @@ updateDef n fdef
              | Nothing => pure ()
          case fdef (definition gdef) of
               Nothing => pure ()
-              Just def' => do addDef n (record { definition = def' } gdef)
-                              pure ()
+              Just def' => ignore $ addDef n (record { definition = def' } gdef)
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->
@@ -1152,8 +1228,7 @@ updateTy i ty
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
               | Nothing => pure ()
-         addDef (Resolved i) (record { type = ty } gdef)
-         pure ()
+         ignore $ addDef (Resolved i) (record { type = ty } gdef)
 
 export
 setCompiled : {auto c : Ref Ctxt Defs} ->
@@ -1162,8 +1237,7 @@ setCompiled n cexp
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
-         addDef n (record { compexpr = Just cexp } gdef)
-         pure ()
+         ignore $ addDef n (record { compexpr = Just cexp } gdef)
 
 export
 setNamedCompiled : {auto c : Ref Ctxt Defs} ->
@@ -1172,8 +1246,7 @@ setNamedCompiled n cexp
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
-         addDef n (record { namedcompexpr = Just cexp } gdef)
-         pure ()
+         ignore $ addDef n (record { namedcompexpr = Just cexp } gdef)
 
 -- Record that the name has been linearity checked so we don't need to do
 -- it again
@@ -1184,8 +1257,7 @@ setLinearCheck i chk
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
               | Nothing => pure ()
-         addDef (Resolved i) (record { linearChecked = chk } gdef)
-         pure ()
+         ignore $ addDef (Resolved i) (record { linearChecked = chk } gdef)
 
 export
 setCtxt : {auto c : Ref Ctxt Defs} -> Context -> Core ()
@@ -1367,20 +1439,18 @@ setFlag fc n fl
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName fc n)
          let flags' = fl :: filter (/= fl) (flags def)
-         addDef n (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef n (record { flags = flags' } def)
 
 export
 setNameFlag : {auto c : Ref Ctxt Defs} ->
-			    		FC -> Name -> DefFlag -> Core ()
+              FC -> Name -> DefFlag -> Core ()
 setNameFlag fc n fl
     = do defs <- get Ctxt
          [(n', i, def)] <- lookupCtxtName n (gamma defs)
               | [] => throw (UndefinedName fc n)
               | res => throw (AmbiguousName fc (map fst res))
          let flags' = fl :: filter (/= fl) (flags def)
-         addDef (Resolved i) (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef (Resolved i) (record { flags = flags' } def)
 
 export
 unsetFlag : {auto c : Ref Ctxt Defs} ->
@@ -1390,8 +1460,7 @@ unsetFlag fc n fl
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName fc n)
          let flags' = filter (/= fl) (flags def)
-         addDef n (record { flags = flags' } def)
-         pure ()
+         ignore $ addDef n (record { flags = flags' } def)
 
 export
 hasFlag : {auto c : Ref Ctxt Defs} ->
@@ -1409,8 +1478,7 @@ setSizeChange loc n sc
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
-         addDef n (record { sizeChange = sc } def)
-         pure ()
+         ignore $ addDef n (record { sizeChange = sc } def)
 
 export
 setTotality : {auto c : Ref Ctxt Defs} ->
@@ -1419,8 +1487,7 @@ setTotality loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality = tot } def)
-         pure ()
+         ignore $ addDef n (record { totality = tot } def)
 
 export
 setCovering : {auto c : Ref Ctxt Defs} ->
@@ -1429,8 +1496,7 @@ setCovering loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality->isCovering = tot } def)
-         pure ()
+         ignore $ addDef n (record { totality->isCovering = tot } def)
 
 export
 setTerminating : {auto c : Ref Ctxt Defs} ->
@@ -1439,8 +1505,7 @@ setTerminating loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName loc n)
-         addDef n (record { totality->isTerminating = tot } def)
-         pure ()
+         ignore $ addDef n (record { totality->isTerminating = tot } def)
 
 export
 getTotality : {auto c : Ref Ctxt Defs} ->
@@ -1467,8 +1532,7 @@ setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName fc n)
-         addDef n (record { visibility = vis } def)
-         pure ()
+         ignore $ addDef n (record { visibility = vis } def)
 
 -- Set a name as Private that was previously visible (and, if 'everywhere' is
 -- set, hide in any modules imported by this one)
@@ -1652,7 +1716,7 @@ addHintFor fc tyn_in hintn_in direct loading
 
 export
 addGlobalHint : {auto c : Ref Ctxt Defs} ->
-					      Name -> Bool -> Core ()
+                Name -> Bool -> Core ()
 addGlobalHint hintn_in isdef
     = do defs <- get Ctxt
          hintn <- toResolvedNames hintn_in
@@ -1954,6 +2018,12 @@ addExtraDir dir
          put Ctxt (record { options->dirs->extra_dirs $= (++ [dir]) } defs)
 
 export
+addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->package_dirs $= (++ [dir]) } defs)
+
+export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 addDataDir dir
     = do defs <- get Ctxt
@@ -1972,6 +2042,12 @@ setBuildDir dir
          put Ctxt (record { options->dirs->build_dir = dir } defs)
 
 export
+setDependsDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+setDependsDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->depends_dir = dir } defs)
+
+export
 setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()
 setOutputDir dir
     = do defs <- get Ctxt
@@ -1987,7 +2063,7 @@ export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
     = do defs <- get Ctxt
-         coreLift $ changeDir dir
+         coreLift_ $ changeDir dir
          Just cdir <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          put Ctxt (record { options->dirs->working_dir = cdir } defs)

@@ -29,11 +29,11 @@ import TTImp.WithClause
 
 import Data.Either
 import Data.List
-import Data.NameMap
+import Libraries.Data.NameMap
 import Data.Strings
 import Data.Maybe
 
-import Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
 
@@ -44,11 +44,11 @@ mutual
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zip xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zip xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
@@ -70,16 +70,22 @@ impossibleOK : {auto c : Ref Ctxt Defs} ->
                Defs -> NF vars -> NF vars -> Core Bool
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn == yn
-         then anyM (mismatch defs) (zip xargs yargs)
+         then anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
          else pure False
 -- If it's a data constructor, any mismatch will do
 impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zip xargs yargs)
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NType _) = pure True
+impossibleOK defs (NType _) (NPrimVal _ _) = pure True
 impossibleOK defs x y = pure False
 
 export
@@ -112,18 +118,28 @@ recoverable : {auto c : Ref Ctxt Defs} ->
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure False
-         else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Type constructor vs. primitive type
 recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+-- Type constructor vs. type
+recoverable defs (NTCon _ _ _ _ _) (NType _) = pure False
+recoverable defs (NType _) (NTCon _ _ _ _ _) = pure False
+
 recoverable defs (NTCon _ _ _ _ _) _ = pure True
+recoverable defs _ (NTCon _ _ _ _ _) = pure True
 
 -- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
-         else pure $ not !(anyM (mismatch defs) (zip xargs yargs))
+         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
+-- Data constructor vs. primitive constant
+recoverable defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+
 recoverable defs (NDCon _ _ _ _ _) _ = pure True
+recoverable defs _ (NDCon _ _ _ _ _) = pure True
 
 -- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
@@ -395,8 +411,8 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                (_, lhs) <- bindNames False lhs_raw
                setUnboundImplicits autoimp
 
-               log "declare.def.clause" 5 $ "Checking " ++ show lhs
-               logEnv "declare.def.clause" 5 "In env" env
+               log "declare.def.clause.impossible" 5 $ "Checking " ++ show lhs
+               logEnv "declare.def.clause.impossible" 5 "In env" env
                (lhstm, lhstyg) <-
                            elabTerm n (InLHS mult) opts nest env
                                       (IBindHere fc PATTERN lhs) Nothing
@@ -447,16 +463,16 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
-         logTerm "declare.def.clause" 5 "With value" wval
-         logTerm "declare.def.clause" 3 "Required type" reqty
+         logTerm "declare.def.clause.with" 5 "With value" wval
+         logTerm "declare.def.clause.with" 3 "Required type" reqty
          wvalTy <- getTerm gwvalTy
          defs <- get Ctxt
          wval <- normaliseHoles defs env' wval
          wvalTy <- normaliseHoles defs env' wvalTy
 
          let (wevars ** withSub) = keepOldEnv sub' (snd (findSubEnv env' wval))
-         logTerm "declare.def.clause" 5 "With value type" wvalTy
-         log "declare.def.clause" 5 $ "Using vars " ++ show wevars
+         logTerm "declare.def.clause.with" 5 "With value type" wvalTy
+         log "declare.def.clause.with" 5 $ "Using vars " ++ show wevars
 
          let Just wval = shrinkTerm wval withSub
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #1")
@@ -495,8 +511,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                  = map Just reqns ++
                    Nothing :: map Just notreqns
 
-         logTerm "declare.def.clause" 3 "With function type" wtype
-         log "declare.def.clause" 5 $ "Argument names " ++ show wargNames
+         logTerm "declare.def.clause.with" 3 "With function type" wtype
+         log "declare.def.clause.with" 5 $ "Argument names " ++ show wargNames
 
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
@@ -513,7 +529,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          -- Generate new clauses by rewriting the matched arguments
          cs' <- traverse (mkClauseWith 1 wname wargNames lhs) cs
-         log "declare.def.clause" 3 $ "With clauses: " ++ show cs'
+         log "declare.def.clause.with" 3 $ "With clauses: " ++ show cs'
 
          -- Elaborate the new definition here
          nestname <- applyEnv env wname
@@ -552,16 +568,19 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
                    RawImp -> ImpClause ->
                    Core ImpClause
     mkClauseWith drop wname wargnames lhs (PatClause ploc patlhs rhs)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "PatClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
     mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "WithClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
              pure (WithClause ploc newlhs newrhs flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
-        = do newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
+        = do log "declare.def.clause.with" 20 "ImpossibleClause"
+             newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
 
 nameListEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)
@@ -594,7 +613,7 @@ calcRefs rt at fn
          refs <- ifThenElse rt
                     (dropErased (keys refs_all) refs_all)
                     (pure refs_all)
-         ifThenElse rt
+         ignore $ ifThenElse rt
             (addDef fn (record { refersToRuntimeM = Just refs } gdef))
             (addDef fn (record { refersToM = Just refs } gdef))
          traverse_ (calcRefs rt at) (keys refs)
@@ -645,9 +664,9 @@ mkRunTime fc n
 
            let Just Refl = nameListEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
-           addDef n (record { definition = PMDef r rargs tree_ct tree_rt pats
-                            } gdef)
-           pure ()
+           ignore $ addDef n $
+                       record { definition = PMDef r rargs tree_ct tree_rt pats
+                              } gdef
   where
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
@@ -696,7 +715,7 @@ compileRunTime : {auto c : Ref Ctxt Defs} ->
 compileRunTime fc atotal
     = do defs <- get Ctxt
          traverse_ (mkRunTime fc) (toCompileCase defs)
-         traverse (calcRefs True atotal) (toCompileCase defs)
+         traverse_ (calcRefs True atotal) (toCompileCase defs)
 
          defs <- get Ctxt
          put Ctxt (record { toCompileCase = [] } defs)
@@ -752,7 +771,7 @@ processDef opts nest env fc n_in cs_in
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
-         addDef (Resolved nidx)
+         ignore $ addDef (Resolved nidx)
                   (record { definition = PMDef defaultPI cargs tree_ct tree_ct pats
                           } gdef)
 
@@ -852,7 +871,7 @@ processDef opts nest env fc n_in cs_in
     getClause : Either RawImp Clause -> Core (Maybe Clause)
     getClause (Left rawlhs)
         = catch (do lhsp <- getImpossibleTerm env nest rawlhs
-                    log "declare.def" 3 $ "Generated impossible LHS: " ++ show lhsp
+                    log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
                     pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) True))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
                           pure Nothing)
@@ -863,6 +882,7 @@ processDef opts nest env fc n_in cs_in
                     Core Covering
     checkCoverage n ty mult cs
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
+             log "declare.def" 5 $ "Using clauses :" ++ show !(traverse toFullNames covcs')
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
                  getPMDef fc (CompileTime mult) (Resolved n) ty covcs

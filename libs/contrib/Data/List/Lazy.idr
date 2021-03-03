@@ -1,5 +1,10 @@
 module Data.List.Lazy
 
+import Data.Fuel
+import Data.Stream
+import Data.Colist
+import Data.Colist1
+
 %default total
 
 -- All functions here are public export
@@ -10,12 +15,55 @@ data LazyList : Type -> Type where
   Nil : LazyList a
   (::) : (x : a) -> (xs : Lazy (LazyList a)) -> LazyList a
 
+--- Truly lazy functions ---
+
+public export
+foldrLazy : (func : elem -> Lazy acc -> acc) -> (init : Lazy acc) -> (input : LazyList elem) -> acc
+foldrLazy _  init [] = init
+foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
+
+public export
+(++) : LazyList a -> Lazy (LazyList a) -> LazyList a
+(++) = flip $ foldrLazy (::)
+
+-- Specialized variant of `concatMap` with both `t` and `m` being `LazyList`.
+public export
+bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
+bindLazy f = foldrLazy ((++) . f) []
+
 --- Interface implementations ---
 
 public export
+Eq a => Eq (LazyList a) where
+  [] == [] = True
+  x :: xs == y :: ys = x == y && xs == ys
+  _ == _ = False
+
+public export
+Ord a => Ord (LazyList a) where
+  compare [] [] = EQ
+  compare [] (x :: xs) = LT
+  compare (x :: xs) [] = GT
+  compare (x :: xs) (y ::ys)
+     = case compare x y of
+            EQ => compare xs ys
+            c => c
+
+export
+Show a => Show (LazyList a) where
+  show []       = "[]"
+  show (h :: t) = "[" ++ show' "" h t ++ "]"
+    where
+      -- Idris didn't like the lazyness involved when using the
+      -- same implementation as for `List`, therefore, this was
+      -- adjusted to first force the head and tail of the list.
+      show' : String -> a -> LazyList a -> String
+      show' acc h Nil       = acc ++ show h
+      show' acc h (x :: xs) = show' (acc ++ show h ++ ", ") x xs
+
+public export
 Semigroup (LazyList a) where
-  [] <+> ys = ys
-  (x :: xs) <+> ys = x :: (xs <+> ys)
+  xs <+> ys = xs ++ ys
 
 public export
 Monoid (LazyList a) where
@@ -40,16 +88,16 @@ Functor LazyList where
 public export
 Applicative LazyList where
   pure x = [x]
-  fs <*> vs = concatMap (\f => map f vs) fs
+  fs <*> vs = bindLazy (\f => map f vs) fs
 
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (<+>)
+  (<|>) = (++)
 
 public export
 Monad LazyList where
-  m >>= f = concatMap f m
+  m >>= f = bindLazy f m
 
 -- There is no Traversable instance for lazy lists.
 -- The result of a traversal will be a non-lazy list in general
@@ -140,3 +188,24 @@ mapMaybe f []      = []
 mapMaybe f (x::xs) = case f x of
   Nothing => mapMaybe f xs
   Just y  => y :: mapMaybe f xs
+
+namespace Stream
+
+  public export
+  take : Fuel -> Stream a -> LazyList a
+  take Dry _ = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist
+
+  public export
+  take : Fuel -> Colist a -> LazyList a
+  take Dry _ = []
+  take _ [] = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist1
+
+  public export
+  take : Fuel -> Colist1 a -> LazyList a
+  take fuel as = take fuel (forget as)

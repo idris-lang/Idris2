@@ -19,7 +19,7 @@ import Idris.Resugar
 import Idris.Syntax
 
 import Data.List
-import Data.List.Extra
+import Libraries.Data.List.Extra
 import Data.Strings
 import System.File
 
@@ -179,7 +179,7 @@ getClause l n
          pure (Just (indent mark loc ++ fnName True n ++ concat (map (" " ++) argns) ++
                   " = ?" ++ fnName False n ++ "_rhs"))
   where
-    indent : Maybe String -> FC -> String
+    indent : Maybe String -> NonEmptyFC -> String
     indent (Just mark) fc
         = relit (Just mark) $ pack (replicate (integerToNat (cast (max 0 (snd (startPos fc) - 1)))) ' ')
     indent Nothing fc = pack (replicate (integerToNat (cast (snd (startPos fc)))) ' ')

@@ -11,7 +11,7 @@ import Core.UnifyState
 import Core.Value
 import Core.TT
 
-import Data.Bool.Extra
+import Libraries.Data.Bool.Extra
 import Data.List
 
 %default covering
@@ -87,11 +87,11 @@ mutual
                 else do scty <- updateHoleType useInHole var zs sc as
                         pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (a :: as)
-      = do updateHoleUsage False var zs a
+      = do ignore $ updateHoleUsage False var zs a
            scty <- updateHoleType useInHole var zs sc as
            pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs ty as
-      = do updateHoleUsageArgs False var zs as
+      = do ignore $ updateHoleUsageArgs False var zs as
            pure ty
 
   updateHoleUsagePats : {auto c : Ref Ctxt Defs} ->
@@ -667,9 +667,9 @@ mutual
       = do defs <- get Ctxt
            empty <- clearDefs defs
            ty <- quote empty env nty
-           throw (GenericMsg fc ("Linearity checking failed on metavar
-                      " ++ show n ++ " (" ++ show ty ++
-                      " not a function type)"))
+           throw (GenericMsg fc ("Linearity checking failed on metavar "
+                      ++ show n ++ " (" ++ show ty
+                      ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt
            pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])

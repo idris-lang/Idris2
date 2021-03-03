@@ -27,4 +27,3 @@ testDVect = MkDVect 94 [1,2,3,4,5]
 
 testPerson : Person
 testPerson = MkPerson "Wowbagger" 1337 10 (\x => S x)
-

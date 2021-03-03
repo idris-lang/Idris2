@@ -3,9 +3,12 @@ Error: While processing right hand side of bad. When unifying Elab () and Elab a
 Mismatch between: () and a.
 
 refdecl.idr:13:16--13:29
-    |
+ 09 | 
+ 10 | %runElab mkDecls `(94)
+ 11 | 
+ 12 | bad : a
  13 | bad = %runElab mkDecls `(94)
-    |                ^^^^^^^^^^^^^
+                     ^^^^^^^^^^^^^
 
 Main> 9400
 Main> Bye for now!

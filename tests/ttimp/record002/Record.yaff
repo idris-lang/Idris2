@@ -44,4 +44,3 @@ testPerson = MkPerson "Fred" 1337 10 (MkStats 10 10)
 
 grow : Person -> Person
 grow p = record { more->height $= prim__add_Integer 1 } p
-
