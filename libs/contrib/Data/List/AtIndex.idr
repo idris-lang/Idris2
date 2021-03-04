@@ -56,7 +56,7 @@ public export
 interface Member (0 t : a) (0 ts : List a) where
   isMember' : Subset Nat (AtIndex t ts)
 
-public exportfindElement
+public export
 isMember : (0 t : a) -> (0 ts : List a) -> Member t ts =>
               Subset Nat (AtIndex t ts)
 isMember t ts @{p} = isMember' @{p}
