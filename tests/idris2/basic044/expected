@@ -98,7 +98,7 @@ Term> Bye for now!
 LOG declare.type:1: Processing Vec.Vec
 LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1])
 LOG declare.type:1: Processing Vec.Nil
-LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] ?Vec.{t:N}_[{arg:N}[0]] Data.Fin.Uninhabited implementation at Data/Fin.idr:19:1--22:32)
+LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] ?Vec.{t:N}_[{arg:N}[0]] Data.Fin.Uninhabited implementation at Data/Fin.idr:20:1--23:32)
 LOG declare.type:1: Processing Vec.::
 LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
  { Data.Fin.FZ {e:N} => [0] {arg:N}[3]

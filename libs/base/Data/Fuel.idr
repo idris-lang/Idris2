@@ -7,7 +7,7 @@ public export
 data Fuel = Dry | More (Lazy Fuel)
 
 ||| Provide `n` units of fuel.
-export
+public export
 limit : Nat -> Fuel
 limit  Z    = Dry
 limit (S n) = More (limit n)

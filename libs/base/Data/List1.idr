@@ -86,6 +86,13 @@ export
 snoc : (xs : List1 a) -> (x : a) -> List1 a
 snoc xs x = append xs (singleton x)
 
+public export
+unsnoc : (xs : List1 a) -> (List a, a)
+unsnoc (h ::: Nil)       = (Nil, h)
+unsnoc (h ::: (x :: xs)) =
+  let (ini,lst) = unsnoc (x ::: xs)
+   in (h :: ini, lst)
+
 ------------------------------------------------------------------------
 -- Reverse
 
@@ -105,11 +112,11 @@ export
 Semigroup (List1 a) where
   (<+>) = append
 
-export
+public export
 Functor List1 where
   map f (x ::: xs) = f x ::: map f xs
 
-export
+public export
 Applicative List1 where
   pure x = singleton x
   f ::: fs <*> xs = appendl (map f xs) (fs <*> forget xs)
@@ -149,7 +156,7 @@ consInjective Refl = (Refl, Refl)
 ------------------------------------------------------------------------
 -- Zippable
 
-export
+public export
 Zippable List1 where
   zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith' xs ys
   where

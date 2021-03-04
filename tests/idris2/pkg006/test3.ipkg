@@ -1,0 +1,4 @@
+package test3
+
+depends = foo >= 0.4 && < 0.5,
+          bar >= 1

@@ -6,6 +6,18 @@ REPL/IDE mode changes:
 * Added `:search` command, which searches for functions by type
 * `:load`/`:l` and `:cd` commands now only accept paths surrounded by double quotes
 
+Other changes:
+
+* The `version` field in `.ipkg` files is now used. Packages are installed into
+  a directory which includes its version number, and dependencies can have
+  version number ranges using `<=`, `<`, `>=`, `>`, `==` to express version
+  constraints. Version numbers must be in the form of integers, separated by
+  dots (e.g. `1.0`, `0.3.0`, `3.1.4.1.5` etc)
+* Idris now looks in the current working directory, under a subdirectory
+  `depends` for local installations of packages before looking globally.
+* Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
+  look for packages.
+
 Changes since Idris 2 v0.2.1
 ----------------------------
 

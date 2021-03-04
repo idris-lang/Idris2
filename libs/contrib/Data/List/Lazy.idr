@@ -1,5 +1,10 @@
 module Data.List.Lazy
 
+import Data.Fuel
+import Data.Stream
+import Data.Colist
+import Data.Colist1
+
 %default total
 
 -- All functions here are public export
@@ -58,8 +63,7 @@ Show a => Show (LazyList a) where
 
 public export
 Semigroup (LazyList a) where
-  [] <+> ys = ys
-  (x :: xs) <+> ys = x :: (xs <+> ys)
+  xs <+> ys = xs ++ ys
 
 public export
 Monoid (LazyList a) where
@@ -89,7 +93,7 @@ Applicative LazyList where
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (<+>)
+  (<|>) = (++)
 
 public export
 Monad LazyList where
@@ -184,3 +188,24 @@ mapMaybe f []      = []
 mapMaybe f (x::xs) = case f x of
   Nothing => mapMaybe f xs
   Just y  => y :: mapMaybe f xs
+
+namespace Stream
+
+  public export
+  take : Fuel -> Stream a -> LazyList a
+  take Dry _ = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist
+
+  public export
+  take : Fuel -> Colist a -> LazyList a
+  take Dry _ = []
+  take _ [] = []
+  take (More f) (x :: xs) = x :: take f xs
+
+namespace Colist1
+
+  public export
+  take : Fuel -> Colist1 a -> LazyList a
+  take fuel as = take fuel (forget as)

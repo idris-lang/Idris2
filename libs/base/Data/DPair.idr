@@ -30,17 +30,17 @@ namespace Exists
   ||| @type The type of the type-level value in the proof.
   ||| @this The dependent type that requires an instance of `type`.
   public export
-  record Exists {0 type : _} this where
+  record Exists {0 type : Type} this where
     constructor Evidence
     0 fst : type
     snd : this fst
 
   public export
-  curry : {0 p : a -> Type} -> (Exists {type=a} p -> c) -> ({0 x : a} -> p x -> c)
+  curry : {0 p : a -> Type} -> (Exists p -> c) -> ({0 x : a} -> p x -> c)
   curry f = f . Evidence _
 
   public export
-  uncurry : {0 p : a -> Type} -> ({0 x : a} -> p x -> c) -> Exists {type=a} p -> c
+  uncurry : {0 p : a -> Type} -> ({0 x : a} -> p x -> c) -> Exists p -> c
   uncurry f ex = f ex.snd
 
   export

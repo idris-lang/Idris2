@@ -2018,6 +2018,12 @@ addExtraDir dir
          put Ctxt (record { options->dirs->extra_dirs $= (++ [dir]) } defs)
 
 export
+addPackageDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->package_dirs $= (++ [dir]) } defs)
+
+export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 addDataDir dir
     = do defs <- get Ctxt
@@ -2034,6 +2040,12 @@ setBuildDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setBuildDir dir
     = do defs <- get Ctxt
          put Ctxt (record { options->dirs->build_dir = dir } defs)
+
+export
+setDependsDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
+setDependsDir dir
+    = do defs <- get Ctxt
+         put Ctxt (record { options->dirs->depends_dir = dir } defs)
 
 export
 setOutputDir : {auto c : Ref Ctxt Defs} -> Maybe String -> Core ()

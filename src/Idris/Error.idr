@@ -406,6 +406,8 @@ perror (TTCError msg)
         <++> parens (pretty "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files")
 perror (FileErr fname err)
     = pure $ errorDesc (reflow "File error in" <++> pretty fname <++> colon) <++> pretty (show err)
+perror (CantFindPackage fname)
+    = pure $ errorDesc (reflow "Can't find package " <++> pretty fname)
 perror (LitFail fc)
     = pure $ errorDesc (reflow "Can't parse literate.") <+> line <+> !(ploc fc)
 perror (LexFail fc msg)
@@ -454,6 +456,8 @@ pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
+pwarning (Deprecated s)
+    = pure $ pretty "Deprecation warning:" <++> pretty s
 
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc

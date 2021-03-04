@@ -90,7 +90,7 @@ idrisTestsInterface = MkTestPool []
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
-       "interface021", "interface022", "interface023"]
+       "interface021", "interface022", "interface023", "interface024"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool []
@@ -122,7 +122,7 @@ idrisTestsRegression = MkTestPool []
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036"]
+       "reg036", "reg037"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool []
@@ -142,7 +142,7 @@ idrisTests = MkTestPool []
        -- Parameters blocks
        "params001",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005",
+       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
@@ -231,7 +231,7 @@ templateTests = MkTestPool []
 -- available.
 baseLibraryTests : TestPool
 baseLibraryTests = MkTestPool [Chez, Node]
-  [ "system_file001"
+  [ "system_file001", "data_bits001"
   ]
 
 main : IO ()
