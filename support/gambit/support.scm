@@ -43,6 +43,16 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
+(define truncate-bits
+  (lambda (x bits)
+    (if (bit-set? bits x)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+
+(define blodwen-bits-shl-signed
+  (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+
+
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
