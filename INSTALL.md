@@ -131,6 +131,6 @@ If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install I
 
 ### Run on emacs using nix flakes
 
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
+If you are using [nix flakes](https://nixos.wiki/wiki/Flakes), you can run Idris 2 in emacs by running the following command:
 
     nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
