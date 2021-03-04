@@ -6,6 +6,7 @@ import Core.Metadata
 import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
+import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.REPL
@@ -33,23 +34,26 @@ candidateDirs dname pkg bounds
              | Left err => pure []
          getFiles d []
   where
-    toVersionNum : String -> List Nat
-    toVersionNum str
-        = case span (/= '.') str of
-               (num, rest) =>
-                   case strM rest of
-                        StrNil => [stringToNatOrZ num]
-                        StrCons _ rest =>
-                            (stringToNatOrZ num :: toVersionNum rest)
+    toVersion : String -> Maybe PkgVersion
+    toVersion = map MkPkgVersion
+              . traverse parsePositive
+              . forget
+              . split (== '.')
 
     getVersion : String -> (String, PkgVersion)
-    getVersion str
-        = case span (/= '-') str of
-               (name, ver) => case strM ver of
-                                   StrNil => (name, MkPkgVersion [0])
-                                   StrCons _ ver =>
-                                      (name, MkPkgVersion (toVersionNum ver))
-               _ => (str, MkPkgVersion [0])
+    getVersion str =
+      -- Split the dir name into parts concatenated by "-"
+      -- treating the last part as the version number
+      -- and the initial parts as the package name.
+      -- For reasons of backwards compatibility, we also
+      -- accept hyphenated directory names without a part
+      -- corresponding to a version number.
+      case Lib.unsnoc $ split (== '-') str of
+        (Nil, last) => (last, MkPkgVersion [0])
+        (init,last) =>
+          case toVersion last of
+            Just v  => (concat $ intersperse "-" init, v)
+            Nothing => (str, MkPkgVersion [0])
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
