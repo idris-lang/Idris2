@@ -63,7 +63,8 @@ stdenv.mkDerivation rec {
       --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
       --suffix IDRIS2_DATA ':' "$out/${name}/support" \
       --suffix IDRIS2_PATH ':' "${additionalIdris2Paths}" \
-      --suffix IDRIS2_PACKAGE_PATH ':' "/run/current-system/sw/lib/${name}:~/.nix-profile/lib/${name}" \
+      --run "export IDRIS2_PACKAGE_PATH=\$HOME/.nix-profile/lib/${name}" \
+      --suffix IDRIS2_PACKAGE_PATH ':' "/run/current-system/sw/lib/${name}" \
       --suffix LD_LIBRARY_PATH ':' "$out/${name}/lib"
   '';
 }
