@@ -424,10 +424,10 @@ mutual
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
-      mergeStrLit [] = []
       mergeStrLit ((StrLiteral fc str1)::(StrLiteral _ str2)::xs)
-          = (StrLiteral fc (str1 ++ str2)) :: xs
+          = mergeStrLit $ (StrLiteral fc (str1 ++ str2)) :: xs
       mergeStrLit (x::xs) = x :: mergeStrLit xs
+      mergeStrLit [] = []
 
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
