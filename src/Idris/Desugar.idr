@@ -424,8 +424,9 @@ mutual
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
-      mergeStrLit ((StrLiteral fc str1)::(StrLiteral _ str2)::xs)
-          = mergeStrLit $ (StrLiteral fc (str1 ++ str2)) :: xs
+      mergeStrLit xs@((StrLiteral fc _)::(StrLiteral _ _)::_)
+          = let (strs, rest) = List.spanBy (\case StrLiteral _ str => Just str; _ => Nothing) xs in
+                (StrLiteral fc (fastConcat strs)) :: mergeStrLit rest
       mergeStrLit (x::xs) = x :: mergeStrLit xs
       mergeStrLit [] = []
 
