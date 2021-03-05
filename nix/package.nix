@@ -4,12 +4,13 @@
 , clang
 , fetchFromGitHub
 , makeWrapper
+, idris2-version
 }:
 
 # Uses scheme to bootstrap the build of idris2
 stdenv.mkDerivation rec {
   pname = "idris2";
-  version = "0.3.0";
+  version = idris2-version;
 
   src = ../.;
 
@@ -62,6 +63,7 @@ stdenv.mkDerivation rec {
       --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
       --suffix IDRIS2_DATA ':' "$out/${name}/support" \
       --suffix IDRIS2_PATH ':' "${additionalIdris2Paths}" \
+      --suffix IDRIS2_PACKAGE_PATH ':' "/run/current-system/sw/lib/${name}:~/.nix-profile/lib/${name}" \
       --suffix LD_LIBRARY_PATH ':' "$out/${name}/lib"
   '';
 }

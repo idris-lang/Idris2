@@ -10,15 +10,13 @@
   outputs = { self, idris, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
     let
       idrisPkgs = idris.packages.${system};
-      pkg = idrisPkgs.buildIdris {
-        projectName = "Foo";
+      pkgs = idrisPkgs.buildIdris {
+        projectName = "mypkg";
         src = ./.;
       };
     in rec {
-      packages = pkg // {
-        inherit (idrisPkgs) idris;
-      };
-      defaultPackage = pkg;
+      packages = pkgs // idrisPkgs;
+      defaultPackage = pkgs.build;
     }
   );
 }
