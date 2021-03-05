@@ -424,11 +424,11 @@ mutual
 
       -- merge neighbouring StrLiteral
       mergeStrLit : List PStr -> List PStr
-      mergeStrLit xs@((StrLiteral fc _)::(StrLiteral _ _)::_)
-          = let (strs, rest) = List.spanBy (\case StrLiteral _ str => Just str; _ => Nothing) xs in
-                (StrLiteral fc (fastConcat strs)) :: mergeStrLit rest
-      mergeStrLit (x::xs) = x :: mergeStrLit xs
-      mergeStrLit [] = []
+      mergeStrLit xs
+          = case List.spanBy (\case StrLiteral fc str => Just (fc, str); _ => Nothing) xs of
+                 ([], []) => []
+                 ([], x::xs) => x :: mergeStrLit xs
+                 (lits@(_::_), xs) => (StrLiteral (fst $ head lits) (fastConcat $ snd <$> lits)) :: mergeStrLit xs
 
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
