@@ -2,7 +2,7 @@ Changes since Idris 2 v0.3.0
 ============================
 
 Library changes:
-* Introduction of `testing` library.
+* Introduced `testing` library.
 
   - Moved `tests/Lib.idr` into new `testing` library.
 
