@@ -3,7 +3,7 @@
 
   inputs.flake-utils.url = github:numtide/flake-utils;
   inputs.idris = {
-    url = github:guilhermehas/Idris2;
+    url = github:idris-lang/Idris2;
     inputs.flake-utils.follows = "flake-utils";
   };
 
@@ -13,6 +13,7 @@
       pkgs = idrisPkgs.buildIdris {
         projectName = "mypkg";
         src = ./.;
+        idrisLibraries = [];
       };
     in rec {
       packages = pkgs // idrisPkgs;

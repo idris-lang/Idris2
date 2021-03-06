@@ -13,9 +13,9 @@
       let pkgs = import nixpkgs { inherit system; };
           idris2Pkg = pkgs.callPackage ./nix/package.nix { inherit idris2-version; };
           text-editor = import ./nix/text-editor.nix { inherit pkgs idris-emacs-src idris2Pkg; };
-          buildIdrisPkg = { projectName, src }:
-            import ./nix/buildIdris.nix
-              { inherit src projectName idris2-version; idris2 = idris2Pkg; stdenv = pkgs.stdenv; };
+          buildIdrisPkg = { projectName, src, idrisLibraries }:
+            pkgs.callPackage ./nix/buildIdris.nix
+              { inherit src projectName idrisLibraries idris2-version; idris2 = idris2Pkg; };
       in rec {
         packages = rec {
           idris2 = idris2Pkg;

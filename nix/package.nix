@@ -37,6 +37,8 @@ stdenv.mkDerivation rec {
     name = "${pname}-${version}";
     packagePaths = builtins.map (l: "$out/${name}/${l}-${version}") includedLibs;
     additionalIdris2Paths = builtins.concatStringsSep ":" packagePaths;
+    globalLibraries = [ "\\$HOME/.nix-profile/lib/${name}" "/run/current-system/sw/lib/${name}" ];
+    globalLibrariesPath = builtins.concatStringsSep ":" globalLibraries;
   in ''
     # Remove existing idris2 wrapper that sets incorrect LD_LIBRARY_PATH
     rm $out/bin/idris2
@@ -63,8 +65,7 @@ stdenv.mkDerivation rec {
       --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
       --suffix IDRIS2_DATA ':' "$out/${name}/support" \
       --suffix IDRIS2_PATH ':' "${additionalIdris2Paths}" \
-      --run "export IDRIS2_PACKAGE_PATH=\$HOME/.nix-profile/lib/${name}" \
-      --suffix IDRIS2_PACKAGE_PATH ':' "/run/current-system/sw/lib/${name}" \
+      --run "export IDRIS2_PACKAGE_PATH=\$IDRIS2_PACKAGE_PATH:${globalLibrariesPath}" \
       --suffix LD_LIBRARY_PATH ':' "$out/${name}/lib"
   '';
 }
