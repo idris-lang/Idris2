@@ -34,7 +34,7 @@ tests = MkTestPool [] [
 The first argument to `MkTestPool` (empty in the above example) is a list of codegen backends required to run the tests in the given pool. Any empty list means no requirements. If your tests required the Racket backend, you could instead specify `[Racket]`. See the [`Requirement` type](./Golden.idr#L228) for more.
 
 The second argument to `MkTestPool` is a list of directory names that can be found relative to your `Main.idr` file. This directory will have some combination of the following files.
-```
+```Shell
 my_great_test/
   Test.idr
   test.ipkg
@@ -43,9 +43,17 @@ my_great_test/
   run
 ```
 
-These files define any Idris 2 source code needed for the test (Test.idr, which can be named anything you'd like and is not limited to 1 file), any package information needed to build those source files (test.ipkg), the command run at the shell to execute your test (run), optional input passed to your test case (input), and finally the expected output of running your test (expected). See the [documentation](./Golden.idr#L12) in `Golden.idr` and the [template directories](../../tests/templates) provided with the Idris 2 project for a great primer on these files.
+These files define:
+1. Any Idris 2 source code needed for the test (Test.idr, which can be named anything you'd like and is not limited to 1 file).
+2. Any package information needed to build those source files (test.ipkg).
+3. The command run at the shell to execute your test (run).
+4. Optional input passed to your test case (input).
+5. The expected output of running your test (expected). 
+
+See the [documentation](./Golden.idr#L12) in `Golden.idr` and the [template directories](../../tests/templates) provided with the Idris 2 project for a great primer on these files.
 
 When you run your tests (the executable produced by building your `tests/Main.idr` file), you need to specify the Idris executable to use and optionally use interactive mode (`--interactive`) or limit the test cases that are run (`--only [names]`).
 
-Interactive mode is useful when you know the expected output for a test case is going to change -- you will be prompted to updated the expectation so you can choose whether the output produced by a new test run should become the new "golden" standard. You can even skip the step of creating an `expected` file altogether when you write a new test case and use interactive mode to accept the output of your test case as the expectation.
+Interactive mode is useful when you know the expected output for a test case is going to change -- you will be prompted to updated the expectation so you can choose whether the output produced by a new test run should become the new "golden" standard. 
+You can even skip the step of creating an `expected` file altogether when you write a new test case and use interactive mode to accept the output of your test case as the expectation.
 
