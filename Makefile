@@ -77,7 +77,7 @@ network: prelude
 contrib: prelude
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-libs : prelude base contrib network
+libs : prelude base contrib network testing
 
 testbin:
 	@${MAKE} -C tests testbin
@@ -102,6 +102,7 @@ clean-libs:
 	${MAKE} -C libs/base clean
 	${MAKE} -C libs/contrib clean
 	${MAKE} -C libs/network clean
+	${MAKE} -C libs/testing clean
 
 clean: clean-libs support-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
@@ -142,6 +143,7 @@ install-libs:
 	${MAKE} -C libs/base install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/network install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/testing install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean

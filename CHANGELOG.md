@@ -1,6 +1,13 @@
 Changes since Idris 2 v0.3.0
 ============================
 
+Library changes:
+* Introduction of `testing` library.
+
+  - Moved `tests/Lib.idr` into new `testing` library.
+
+  - Removed `contrib/Test/Golden` which duplicated the test framework now in the `testing` package.
+
 REPL/IDE mode changes:
 
 * Added `:search` command, which searches for functions by type

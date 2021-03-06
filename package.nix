@@ -31,7 +31,7 @@ stdenv.mkDerivation rec {
   # TODO: Move this into its own derivation, such that this can be changed
   #       without having to recompile idris2 every time.
   postInstall = let
-    includedLibs = [ "base" "contrib" "network" "prelude" ];
+    includedLibs = [ "base" "contrib" "network" "prelude" "testing" ];
     name = "${pname}-${version}";
     packagePaths = builtins.map (l: "$out/${name}/" + l) includedLibs;
     additionalIdris2Paths = builtins.concatStringsSep ":" packagePaths;

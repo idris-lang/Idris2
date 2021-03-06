@@ -58,7 +58,7 @@
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
 
-module Lib
+module Golden
 
 import Data.Maybe
 import Data.List

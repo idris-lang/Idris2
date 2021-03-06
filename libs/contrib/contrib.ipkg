@@ -132,8 +132,6 @@ modules = Control.ANSI,
           System.Random,
           System.Path,
 
-          Test.Golden,
-
           Text.Token,
           Text.Quantity,
           Text.Parser,
