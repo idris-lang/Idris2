@@ -48,12 +48,12 @@ These files define:
 2. Any package information needed to build those source files (test.ipkg).
 3. The command run at the shell to execute your test (run).
 4. Optional input passed to your test case (input).
-5. The expected output of running your test (expected). 
+5. The expected output of running your test (expected).
 
 See the [documentation](./Golden.idr#L12) in `Golden.idr` and the [template directories](../../tests/templates) provided with the Idris 2 project for a great primer on these files.
 
 When you run your tests (the executable produced by building your `tests/Main.idr` file), you need to specify the Idris executable to use and optionally use interactive mode (`--interactive`) or limit the test cases that are run (`--only [names]`).
 
-Interactive mode is useful when you know the expected output for a test case is going to change -- you will be prompted to updated the expectation so you can choose whether the output produced by a new test run should become the new "golden" standard. 
+Interactive mode is useful when you know the expected output for a test case is going to change -- you will be prompted to updated the expectation so you can choose whether the output produced by a new test run should become the new "golden" standard.
 You can even skip the step of creating an `expected` file altogether when you write a new test case and use interactive mode to accept the output of your test case as the expectation.
 
