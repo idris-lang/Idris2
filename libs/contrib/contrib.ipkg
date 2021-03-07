@@ -30,8 +30,6 @@ modules = Control.ANSI,
 
           Data.Container,
 
-          Data.Elem.Extra,
-
           Data.Fin.Extra,
 
           Data.Fun.Extra,
@@ -55,6 +53,8 @@ modules = Control.ANSI,
           Data.List.Palindrome,
           Data.List.HasLength,
           Data.List.AtIndex,
+
+          Data.List.Elem.Extra,
 
           Data.List.Lazy,
           Data.List.Lazy.Quantifiers,
