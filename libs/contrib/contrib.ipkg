@@ -30,6 +30,8 @@ modules = Control.ANSI,
 
           Data.Container,
 
+          Data.Elem.Extra,
+
           Data.Fin.Extra,
 
           Data.Fun.Extra,
