@@ -1,4 +1,4 @@
-module Data.Elem.Extra
+module Data.List.Elem.Extra
 
 import Data.List
 import Data.List.Elem
