@@ -12,7 +12,8 @@
     let
       npkgs = import nixpkgs { inherit system; };
       idrisPkgs = idris.packages.${system};
-      pkgs = idrisPkgs.buildIdris {
+      buildIdris = idris.buildIdris.${system};
+      pkgs = buildIdris {
         projectName = "mypkg";
         src = ./.;
         idrisLibraries = [];

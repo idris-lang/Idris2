@@ -19,12 +19,12 @@
       in rec {
         packages = rec {
           idris2 = idris2Pkg;
-          buildIdris = buildIdrisPkg;
         } // text-editor;
         apps = rec {
           type = "app";
           emacs-dev = text-editor.emacs-dev;
         };
+        buildIdris = buildIdrisPkg;
         defaultPackage = packages.idris2;
       }) // rec {
         templates.pkg = {
