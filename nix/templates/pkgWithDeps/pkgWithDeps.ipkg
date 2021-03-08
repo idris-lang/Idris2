@@ -1,0 +1,7 @@
+package mypkg2
+
+depends = mypkg
+
+modules = Bar
+main = Bar
+executable = runMyPkg2
