@@ -91,3 +91,17 @@ namespace Subset
   public export
   bimap : (f : a -> b) -> (0 _ : forall x. p x -> q (f x)) -> Subset a p -> Subset b q
   bimap f g (Element x y) = Element (f x) (g y)
+
+  public export
+  Eq type => Eq (Subset type pred) where
+    (==) = (==) `on` fst
+
+  public export
+  Ord type => Ord (Subset type pred) where
+    compare = compare `on` fst
+
+  ||| This Show implementation replaces the (erased) invariant
+  ||| with an underscore.
+  export
+  Show type => Show (Subset type pred) where
+    showPrec p (Element v _) = showCon p "Element" $ showArg v ++ " _"
