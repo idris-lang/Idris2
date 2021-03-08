@@ -16,7 +16,9 @@
           buildIdrisPkg = { projectName, src, idrisLibraries }:
             pkgs.callPackage ./nix/buildIdris.nix
               { inherit src projectName idrisLibraries idris2-version; idris2 = idris2Pkg; };
-      in rec {
+      in if system != "aarch64-linux" then rec {
+        checks = with pkgs; import ./nix/test.nix
+          { inherit nixpkgs flake-utils system stdenv runCommand lib; idris = self; };
         packages = rec {
           idris2 = idris2Pkg;
         } // text-editor;
@@ -26,10 +28,10 @@
         };
         buildIdris = buildIdrisPkg;
         defaultPackage = packages.idris2;
-      }) // rec {
+      } else {}) // rec {
         templates.pkg = {
-            path = ./nix/templates/pkg;
-            description = "A custom Idris 2 package";
+          path = ./nix/templates/pkg;
+          description = "A custom Idris 2 package";
         };
         defaultTemplate = templates.pkg;
         version = idris2-version;
