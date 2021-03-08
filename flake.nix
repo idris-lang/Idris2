@@ -33,6 +33,10 @@
           path = ./nix/templates/pkg;
           description = "A custom Idris 2 package";
         };
+        templates.pkgWithDeps = {
+          path = ./nix/templates/pkgWithDeps;
+          description = "A custom Idris 2 package with dependencies";
+        };
         defaultTemplate = templates.pkg;
         version = idris2-version;
       };
