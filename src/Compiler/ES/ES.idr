@@ -142,6 +142,21 @@ boundedInt bits e =
     n <- makeIntBound bits
     pure $ "(" ++ e ++ " % " ++ n ++ ")"
 
+truncateInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
+truncateInt bits e =
+  let bs = show bits
+   in do
+         mn <- addConstToPreamble ("int_mask_neg_" ++ bs)
+                                  ("BigInt(-1) << BigInt(" ++ bs ++")")
+         mp <- addConstToPreamble ("int_mask_pos_" ++ bs)
+                                  ("(BigInt(1) << BigInt(" ++ bs ++")) - BigInt(1)")
+         pure $ concat {t = List}
+                       [ "((", mn, " & ", e, ") == BigInt(0) ? "
+                       , "(", e, " & ", mp, ") : "
+                       , "(", e, " | ", mn, ")"
+                       , ")"
+                       ]
+
 boundedUInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 boundedUInt bits e =
   do
@@ -151,6 +166,9 @@ boundedUInt bits e =
 
 boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
 boundedIntOp bits o lhs rhs = boundedInt bits (binOp o lhs rhs)
+
+boundedIntBitOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
+boundedIntBitOp bits o lhs rhs = truncateInt bits (binOp o lhs rhs)
 
 boundedUIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
 boundedUIntOp bits o lhs rhs = boundedUInt bits (binOp o lhs rhs)
@@ -203,13 +221,13 @@ jsOp (Mul ty) [x, y] = pure $ binOp "*" x y
 jsOp (Div ty) [x, y] = pure $ binOp "/" x y
 jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
-jsOp (ShiftL IntType) [x, y] = pure $ !(boundedIntOp 63 "<<" x y)
+jsOp (ShiftL IntType) [x, y] = pure $ !(boundedIntBitOp 63 "<<" x y)
 jsOp (ShiftL Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 "<<" x y)
 jsOp (ShiftL Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 "<<" x y)
 jsOp (ShiftL Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 "<<" x y)
 jsOp (ShiftL Bits64Type) [x, y] = pure $ !(boundedUIntOp 64 "<<" x y)
 jsOp (ShiftL ty) [x, y] = pure $ binOp "<<" x y
-jsOp (ShiftR IntType) [x, y] = pure $ !(boundedIntOp 63 ">>" x y)
+jsOp (ShiftR IntType) [x, y] = pure $ !(boundedIntBitOp 63 ">>" x y)
 jsOp (ShiftR Bits8Type) [x, y] = pure $ !(boundedUIntOp 8 ">>" x y)
 jsOp (ShiftR Bits16Type) [x, y] = pure $ !(boundedUIntOp 16 ">>" x y)
 jsOp (ShiftR Bits32Type) [x, y] = pure $ !(boundedUIntOp 32 ">>" x y)

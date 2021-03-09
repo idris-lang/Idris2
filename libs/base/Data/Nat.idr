@@ -200,6 +200,25 @@ public export
 gt : Nat -> Nat -> Bool
 gt left right = lt right left
 
+export
+lteReflectsLTE : (k : Nat) -> (n : Nat) -> lte k n === True -> k `LTE` n
+lteReflectsLTE (S k)  0    _ impossible
+lteReflectsLTE 0      0    _   = LTEZero
+lteReflectsLTE 0     (S k) _   = LTEZero
+lteReflectsLTE (S k) (S j) prf = LTESucc (lteReflectsLTE k j prf)
+
+export
+gteReflectsGTE : (k : Nat) -> (n : Nat) -> gte k n === True -> k `GTE` n
+gteReflectsGTE k n prf = lteReflectsLTE n k prf
+
+export
+ltReflectsLT : (k : Nat) -> (n : Nat) -> lt k n === True -> k `LT` n
+ltReflectsLT k n prf = lteReflectsLTE (S k) n prf
+
+export
+gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n
+gtReflectsGT k n prf = ltReflectsLT n k prf
+
 public export
 minimum : Nat -> Nat -> Nat
 minimum Z m = Z

@@ -4,8 +4,6 @@
 Environment Variables
 *********************
 
-.. todo::
-
 Idris 2 recognises a number of environment variables, to decide where to look
 for packages, external libraries, code generators, etc. It currently recognises,
 in approximately the order you're likely to need them:

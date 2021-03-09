@@ -1,4 +1,5 @@
 import Data.Primitives.Views
+import Data.Bits
 import Data.Strings
 import System
 
@@ -70,7 +71,7 @@ namespace CommandDo
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` 2) :: randoms seed'
+                   (seed' `shiftR` fromNat 2) :: randoms seed'
 
 runCommand : Stream Int -> GameState -> Command a ->
              IO (a, Stream Int, GameState)

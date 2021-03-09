@@ -265,6 +265,7 @@ processMod srcf ttcf msg sourcecode
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
                    do let MkFC fname _ _ = headerloc mod
+                          | EmptyFC => throw (InternalError "No file name")
                       d <- getDirs
                       ns' <- pathToNS (working_dir d) (source_dir d) fname
                       when (ns /= ns') $

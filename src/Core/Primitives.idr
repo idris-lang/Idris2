@@ -216,7 +216,7 @@ mod (I x) (I y) = pure $ I (assert_total (x `mod` y))
 mod _ _ = Nothing
 
 shiftl : Constant -> Constant -> Maybe Constant
-shiftl (I x) (I y) = pure $ I (shiftL x y)
+shiftl (I x) (I y) = pure $ I (prim__shl_Int x y)
 shiftl (BI x) (BI y) = pure $ BI (prim__shl_Integer x y)
 shiftl (B8 x) (B8 y) = pure $ B8 $ (prim__shl_Int x y) `mod` b8max
 shiftl (B16 x) (B16 y) = pure $ B16 $ (prim__shl_Int x y) `mod` b16max
@@ -225,7 +225,7 @@ shiftl (B64 x) (B64 y) = pure $ B64 $ (prim__shl_Integer x y) `mod` b64max
 shiftl _ _ = Nothing
 
 shiftr : Constant -> Constant -> Maybe Constant
-shiftr (I x) (I y) = pure $ I (shiftR x y)
+shiftr (I x) (I y) = pure $ I (prim__shr_Int x y)
 shiftr (BI x) (BI y) = pure $ BI (prim__shr_Integer x y)
 shiftr (B8 x) (B8 y) = pure $ B8 $ (prim__shr_Int x y)
 shiftr (B16 x) (B16 y) = pure $ B16 $ (prim__shr_Int x y)
