@@ -10,8 +10,8 @@ import Data.Telescope.Segment
 ||| An n-ary function whose codomain does not depend on its
 ||| arguments. The arguments may have dependencies.
 public export
-SimpleFun : (env : Left.Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma)
-         -> (cod : Type) -> Type
+0 SimpleFun : (env : Left.Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma)
+           -> (cod : Type) -> Type
 SimpleFun env {n = 0  } [] cod = cod
 SimpleFun env {n = S n} (ty :: delta) cod = (x : ty env) -> SimpleFun (env ** x) delta cod
 
