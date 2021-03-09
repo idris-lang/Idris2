@@ -11,7 +11,7 @@ import System.File
 import System.Info
 import System.Path
 
-import Golden
+import Test.Golden
 
 %default covering
 

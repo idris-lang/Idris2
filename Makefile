@@ -42,7 +42,7 @@ IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/li
 IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
 
 # These are the library path in the build dir to be used during build
-export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/testing/build/ttc"
+export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
 
 export SCHEME
 
@@ -77,12 +77,12 @@ network: prelude
 contrib: base
 	${MAKE} -C libs/contrib IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-testing: contrib
-	${MAKE} -C libs/testing IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+test-lib: contrib
+	${MAKE} -C libs/test IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-libs : prelude base contrib network testing
+libs : prelude base contrib network test-lib
 
-testbin: testing install
+testbin: test-lib install
 	@${MAKE} -C tests testbin IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 test: testbin
@@ -105,7 +105,7 @@ clean-libs:
 	${MAKE} -C libs/base clean
 	${MAKE} -C libs/contrib clean
 	${MAKE} -C libs/network clean
-	${MAKE} -C libs/testing clean
+	${MAKE} -C libs/test clean
 
 clean: clean-libs support-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
@@ -146,7 +146,7 @@ install-libs:
 	${MAKE} -C libs/base install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/network install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/testing install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
