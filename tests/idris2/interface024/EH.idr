@@ -51,11 +51,11 @@ MultiplicativeStruct m = MkMultiplicative (Mult $ Struct m)
                                           (Unit $ Struct m)
 -----------------------------------------------------
 
-Commutative : MonoidOver a -> Type
+0 Commutative : MonoidOver a -> Type
 Commutative m = (x,y : a) -> let _ = AdditiveStruct m in
                 x .+. y = y .+. x
 
-Commute : (Additive a, Additive2 a) => Type
+0 Commute : (Additive a, Additive2 a) => Type
 Commute =
           (x11,x12,x21,x22 : a) ->
           ((x11 :+: x12) .+. (x21 :+: x22))

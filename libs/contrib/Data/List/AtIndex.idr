@@ -53,15 +53,22 @@ find x (y :: xs) with (decEq x y)
 
 ||| If the equality is not decidable, we may instead rely on interface resolution
 public export
-interface FindElement (0 t : a) (0 ts : List a) where
-  findElement : Subset Nat (AtIndex t ts)
+interface Member (0 t : a) (0 ts : List a) where
+  isMember' : Subset Nat (AtIndex t ts)
 
-FindElement t (t :: ts) where
-  findElement = Element 0 Z
+public export
+isMember : (0 t : a) -> (0 ts : List a) -> Member t ts =>
+              Subset Nat (AtIndex t ts)
+isMember t ts @{p} = isMember' @{p}
 
-FindElement t ts => FindElement t (u :: ts) where
-  findElement = let (Element n prf) = findElement in
-                Element (S n) (S prf)
+public export
+Member t (t :: ts) where
+  isMember' = Element 0 Z
+
+public export
+Member t ts => Member t (u :: ts) where
+  isMember' = let (Element n prf) = isMember t ts in
+              Element (S n) (S prf)
 
 ||| Given an index, we can decide whether there is a value corresponding to it
 public export

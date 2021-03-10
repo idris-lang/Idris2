@@ -12,7 +12,7 @@ countArgs _ = 0
 
 -- %logging 5
 public export
-genEq : Name -> Elab (t -> t -> Bool)
+genEq : {t : _} -> Name -> Elab (t -> t -> Bool)
 genEq typeName = do
   let pos : FC = MkFC "generated code" (0,0) (0,0)
   [(n, _)] <- getType typeName
