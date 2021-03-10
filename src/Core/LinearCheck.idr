@@ -287,7 +287,10 @@ mutual
     where
       rig : RigCount
       rig = case b of
-                 Pi _ _ _ _ => erased
+                 Pi _ _ _ _ =>
+                      if isErased rig_in
+                         then erased
+                         else top -- checking as if an inspectable run-time type
                  _ => if isErased rig_in
                          then erased
                          else linear
@@ -391,7 +394,7 @@ mutual
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (Let fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (Pi fc c x ty)
-      = do (tyv, tyt, _) <- lcheck erased erase env ty
+      = do (tyv, tyt, _) <- lcheck (rig |*| c) erase env ty
            pure (Pi fc c x tyv, tyt, [])
   lcheckBinder rig erase env (PVar fc c p ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty

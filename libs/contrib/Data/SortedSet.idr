@@ -65,6 +65,14 @@ Ord k => Monoid (SortedSet k) where
   neutral = empty
 
 export
+Eq k => Eq (SortedSet k) where
+  SetWrapper x == SetWrapper y = x == y
+
+export
+Show k => Show (SortedSet k) where
+   show m = "fromList " ++ (show $ toList m)
+
+export
 keySet : SortedMap k v -> SortedSet k
 keySet = SetWrapper . map (const ())
 

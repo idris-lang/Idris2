@@ -30,6 +30,14 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
+(define truncate-bits
+  (lambda (x bits)
+    (if (logbit? bits x)
+        (logor x (ash (- 1) bits))
+        (logand x (- (ash 1 bits) 1)))))
+
+(define blodwen-bits-shl-signed (lambda (x y bits) (truncate-bits (ash x y) bits)))
+
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))

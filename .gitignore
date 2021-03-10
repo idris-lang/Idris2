@@ -42,3 +42,6 @@ result
 /bootstrap/idris2-boot.rkt
 
 /custom.mk
+
+#Mac OS
+.DS_Store

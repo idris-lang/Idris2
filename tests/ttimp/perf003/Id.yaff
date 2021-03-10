@@ -1,4 +1,4 @@
-IdType : Type
+0 IdType : Type
 IdType = {0 a : Type} -> a -> a
 
 id : IdType

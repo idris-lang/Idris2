@@ -452,6 +452,8 @@ switching to ``%default partial`` (which is not recommended - use a ``partial``
 annotation instead to have the smallest possible place where functions are
 partial).
 
+.. _build-artefacts:
+
 Build artefacts
 ---------------
 

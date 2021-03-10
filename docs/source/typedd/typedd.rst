@@ -324,22 +324,34 @@ arguments for the dividend and remainder, so they need to be explicit in
     bound x with (divides x 12)
       bound ((12 * div) + rem) | (DivBy div rem prf) = rem + 1
 
-In ``ArithCmd.idr``, update ``DivBy`` as above. Also add ``import Data.Strings`` for
-``Strings.toLower``.
+In addition,  ``import Data.Bits`` has to be added for ``shiftR``, which
+now uses a safer type for the number of shifts:
 
-In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also,
+.. code-block:: idris
+
+    randoms : Int -> Stream Int
+    randoms seed = let seed' = 1664525 * seed + 1013904223 in
+                       (seed' `shiftR` fromNat 2) :: randoms seed'
+
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``
+as above. Also add ``import Data.Strings`` for ``Strings.toLower``.
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits``
+and ``import Data.Strings`` as above. Also,
 since export rules are per-namespace now, rather than per-file, you need to
 export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
 
 In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
-also have to be ``export``.
+also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
 ----------
 
-For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``.
+For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``
+and ``import Data.Bits`` and update ``randoms``.
 Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
 own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
 arguments ``div`` and ``rem``.

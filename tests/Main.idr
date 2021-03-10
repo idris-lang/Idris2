@@ -11,7 +11,7 @@ import System.File
 import System.Info
 import System.Path
 
-import Lib
+import Test.Golden
 
 %default covering
 
@@ -90,7 +90,8 @@ idrisTestsInterface = MkTestPool []
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
-       "interface021", "interface022", "interface023", "interface024"]
+       "interface021", "interface022", "interface023", "interface024",
+       "interface025"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool []
@@ -122,7 +123,7 @@ idrisTestsRegression = MkTestPool []
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037"]
+       "reg036", "reg037", "reg038"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool []
@@ -231,7 +232,7 @@ templateTests = MkTestPool []
 -- available.
 baseLibraryTests : TestPool
 baseLibraryTests = MkTestPool [Chez, Node]
-  [ "system_file001"
+  [ "system_file001", "data_bits001"
   ]
 
 main : IO ()

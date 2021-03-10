@@ -109,6 +109,7 @@ modules =
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,
     Libraries.Data.List.Lazy,
+    Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,

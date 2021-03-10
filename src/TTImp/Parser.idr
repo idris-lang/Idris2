@@ -704,9 +704,11 @@ topDecl fname indents
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
+         m <- multiplicity
+         rig <- getMult m
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkFC fname start end) top vis opts claim)
+         pure (IClaim (MkFC fname start end) rig vis opts claim)
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents
