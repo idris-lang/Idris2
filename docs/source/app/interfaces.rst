@@ -50,7 +50,7 @@ use ``PrimIO`` in the initial list of errors ``Init``.
 
 .. code-block:: idris
 
-    HasErr Void e => PrimIO e where ...
+    HasErr AppHasIO e => PrimIO e where ...
 
 Given this, we can implement ``Console`` and run our ``hello``
 program in ``IO``. It is implemented as follows in ``Control.App.Console``:
