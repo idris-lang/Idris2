@@ -1077,6 +1077,10 @@ directive fname indents
          n <- name
          atEnd indents
          pure (PrimChar n)
+  <|> do pragma "doubleLit"
+         n <- name
+         atEnd indents
+         pure (PrimDouble n)
   <|> do pragma "name"
          n <- name
          ns <- sepBy1 (symbol ",") unqualifiedName

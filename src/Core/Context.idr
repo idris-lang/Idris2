@@ -2241,6 +2241,13 @@ setFromChar n
          put Ctxt (record { options $= setFromChar n } defs)
 
 export
+setFromDouble : {auto c : Ref Ctxt Defs} ->
+              Name -> Core ()
+setFromDouble n
+    = do defs <- get Ctxt
+         put Ctxt (record { options $= setFromDouble n } defs)
+
+export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
@@ -2311,8 +2318,19 @@ fromCharName
          pure $ fromCharName (primnames (options defs))
 
 export
+fromDoubleName : {auto c : Ref Ctxt Defs} ->
+               Core (Maybe Name)
+fromDoubleName
+    = do defs <- get Ctxt
+         pure $ fromDoubleName (primnames (options defs))
+
+export
 getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
-getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
+getPrimitiveNames = pure $ catMaybes [ !fromIntegerName
+                                     , !fromStringName
+                                     , !fromCharName
+                                     , !fromDoubleName
+                                     ]
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->
