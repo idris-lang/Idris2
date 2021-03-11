@@ -95,7 +95,7 @@ synonym for ``Type``):
 .. code-block:: idris
 
     Init : List Error
-    Init = [Void]
+    Init = [AppHasIO]
 
     run : App {l} Init a -> IO a
 
@@ -103,5 +103,5 @@ Generalising the ``Path`` parameter with ``l``
 means that we can invoke ``run`` for any application, whether the ``Path``
 is ``NoThrow`` or ``MayThrow``. But, in practice, all applications
 given to ``run`` will not throw at the top level, because the only
-exception type available is the empty type ``Void``. Any exceptions
+exception type available is the type ``AppHasIO``. Any exceptions
 will have been introduced and handled inside the ``App``.
