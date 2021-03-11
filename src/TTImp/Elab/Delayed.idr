@@ -15,6 +15,7 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 
 import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 import Data.List
 
 %default covering
@@ -81,8 +82,10 @@ delayOnFailure fc rig env expected pred pri elab
                                       " for") env expected
                          log "elab.delay" 10 ("Due to error " ++ show err)
                          ust <- get UST
+                         defs <- get Ctxt
                          put UST (record { delayedElab $=
-                                 ((pri, ci, mkClosedElab fc env (deeper (elab True))) :: ) }
+                                 ((pri, ci, localHints defs,
+                                   mkClosedElab fc env (deeper (elab True))) :: ) }
                                          ust)
                          pure (dtm, expected)
                     else throw err)
@@ -106,8 +109,9 @@ delayElab {vars} fc rig env exp pri elab
          logGlueNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
                       " for") env expected
          ust <- get UST
+         defs <- get Ctxt
          put UST (record { delayedElab $=
-                 ((pri, ci, mkClosedElab fc env elab) :: ) }
+                 ((pri, ci, localHints defs, mkClosedElab fc env elab) :: ) }
                          ust)
          pure (dtm, expected)
   where
@@ -208,11 +212,11 @@ retryDelayed' : {vars : _} ->
                 {auto u : Ref UST UState} ->
                 {auto e : Ref EST (EState vars)} ->
                 RetryError ->
-                List (Nat, Int, Core ClosedTerm) ->
-                List (Nat, Int, Core ClosedTerm) ->
-                Core (List (Nat, Int, Core ClosedTerm))
+                List (Nat, Int, NameMap (), Core ClosedTerm) ->
+                List (Nat, Int, NameMap (), Core ClosedTerm) ->
+                Core (List (Nat, Int, NameMap (), Core ClosedTerm))
 retryDelayed' errmode acc [] = pure (reverse acc)
-retryDelayed' errmode acc (d@(_, i, elab) :: ds)
+retryDelayed' errmode acc (d@(_, i, hints, elab) :: ds)
     = do defs <- get Ctxt
          Just Delayed <- lookupDefExact (Resolved i) (gamma defs)
               | _ => retryDelayed' errmode acc ds
@@ -222,6 +226,9 @@ retryDelayed' errmode acc (d@(_, i, elab) :: ds)
                -- elab itself might have delays internally, so keep track of them
                ust <- get UST
                put UST (record { delayedElab = [] } ust)
+               defs <- get Ctxt
+               put Ctxt (record { localHints = hints } defs)
+
                tm <- elab
                ust <- get UST
                let ds' = reverse (delayedElab ust) ++ ds
@@ -247,13 +254,12 @@ retryDelayed : {vars : _} ->
                {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                {auto e : Ref EST (EState vars)} ->
-               List (Nat, Int, Core ClosedTerm) ->
+               List (Nat, Int, NameMap (), Core ClosedTerm) ->
                Core ()
 retryDelayed ds
     = do est <- get EST
          ds <- retryDelayed' RecoverableErrors [] ds -- try everything again
-         retryDelayed' AllErrors [] ds -- fail on all errors
-         pure ()
+         ignore $ retryDelayed' AllErrors [] ds -- fail on all errors
 
 -- Run an elaborator, then all the delayed elaborators arising from it
 export
@@ -270,9 +276,8 @@ runDelays pri elab
          tm <- elab
          ust <- get UST
          log "elab.delay" 2 $ "Rerunning delayed in elaborator"
-         handle (do retryDelayed' AllErrors []
-                       (reverse (filter hasPri (delayedElab ust)))
-                    pure ())
+         handle (do ignore $ retryDelayed' AllErrors []
+                       (reverse (filter hasPri (delayedElab ust))))
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)
          ust <- get UST

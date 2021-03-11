@@ -684,8 +684,8 @@ apply f (x :: xs) = apply (IApp (getFC f) f x) xs
 
 export
 getFn : RawImp -> RawImp
-getFn (IApp _ f arg) = getFn f
-getFn (IWithApp _ f arg) = getFn f
+getFn (IApp _ f _) = getFn f
+getFn (IWithApp _ f _) = getFn f
 getFn (INamedApp _ f _ _) = getFn f
 getFn (IAutoApp _ f _) = getFn f
 getFn (IAs _ _ _ _ f) = getFn f

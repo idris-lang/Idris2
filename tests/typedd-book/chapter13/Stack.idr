@@ -10,6 +10,11 @@ data StackCmd : Type -> Nat -> Nat -> Type where
           (a -> StackCmd b height2 height3) ->
           StackCmd b height1 height3
 
+(>>) : StackCmd () height1 height2 ->
+       Lazy (StackCmd a height2 height3) ->
+       StackCmd a height1 height3
+ma >> mb = ma >>= \ () => mb
+
 runStack : (stk : Vect inHeight Integer) ->
            StackCmd ty inHeight outHeight ->
            (ty, Vect outHeight Integer)

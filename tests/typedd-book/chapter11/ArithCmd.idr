@@ -1,4 +1,5 @@
 import Data.Primitives.Views
+import Data.Bits
 import Data.Strings
 import System
 
@@ -15,6 +16,10 @@ data ConsoleIO : Type -> Type where
 (>>=) : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
 (>>=) = Do
 
+%tcinline
+(>>) : Command () -> Inf (ConsoleIO b) -> ConsoleIO b
+ma >> mb = Do ma (\ _ => mb)
+
 data Fuel = Dry | More (Lazy Fuel)
 
 runCommand : Command a -> IO a
@@ -29,7 +34,7 @@ run Dry p = pure Nothing
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` 2) :: randoms seed'
+                   (seed' `shiftR` fromNat 2) :: randoms seed'
 
 arithInputs : Int -> Stream Int
 arithInputs seed = map bound (randoms seed)

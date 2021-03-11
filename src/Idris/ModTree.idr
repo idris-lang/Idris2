@@ -184,7 +184,7 @@ buildMod loc num len mod
                                <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
                    [] <- process {u} {m} msg src
                       | errs => do emitWarnings
-                                   traverse emitError errs
+                                   traverse_ emitError errs
                                    pure (ferrs ++ errs)
                    emitWarnings
                    traverse_ emitError ferrs

@@ -1,6 +1,13 @@
 Changes since Idris 2 v0.3.0
 ============================
 
+Library changes:
+* Introduced `test` package.
+
+  - Moved `tests/Lib.idr` into new `test` package as `Test/Golden.idr`.
+
+  - Removed `contrib/Test/Golden.idr` which duplicated the test framework now in the `test` package.
+
 REPL/IDE mode changes:
 
 * Added `:search` command, which searches for functions by type
@@ -19,6 +26,18 @@ Library changes:
   asynchronous channels, which worked apart from `broadcast`. The rework fixes
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
+
+Other changes:
+
+* The `version` field in `.ipkg` files is now used. Packages are installed into
+  a directory which includes its version number, and dependencies can have
+  version number ranges using `<=`, `<`, `>=`, `>`, `==` to express version
+  constraints. Version numbers must be in the form of integers, separated by
+  dots (e.g. `1.0`, `0.3.0`, `3.1.4.1.5` etc)
+* Idris now looks in the current working directory, under a subdirectory
+  `depends` for local installations of packages before looking globally.
+* Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
+  look for packages.
 
 Changes since Idris 2 v0.2.1
 ----------------------------

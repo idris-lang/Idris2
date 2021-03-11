@@ -6,7 +6,8 @@ import Core.TT
 import Data.List
 import Data.List1
 import Data.Vect
-import Parser.Source
+
+import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -36,6 +37,7 @@ data DotReason = NonLinearVar
                | ErasedArg
                | UserDotted
                | UnknownDot
+               | UnderAppliedCon
 
 export
 Show DotReason where
@@ -45,6 +47,7 @@ Show DotReason where
   show ErasedArg = "Erased argument"
   show UserDotted = "User dotted"
   show UnknownDot = "Unknown reason"
+  show UnderAppliedCon = "Under-applied constructor"
 
 export
 Pretty DotReason where
@@ -54,6 +57,7 @@ Pretty DotReason where
   pretty ErasedArg = reflow "Erased argument"
   pretty UserDotted = reflow "User dotted"
   pretty UnknownDot = reflow "Unknown reason"
+  pretty UnderAppliedCon = reflow "Under-applied constructor"
 
 -- All possible errors, carrying a location
 public export
@@ -133,6 +137,7 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
+     CantFindPackage : String -> Error
      LitFail : FC -> Error
      LexFail : FC -> String -> Error
      ParseFail : (Show token, Pretty token) =>
@@ -143,6 +148,7 @@ data Error : Type where
      InternalError : String -> Error
      UserError : String -> Error
      NoForeignCC : FC -> Error
+     BadMultiline : FC -> String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -153,6 +159,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     Deprecated : String -> Warning
 
 export
 Show TTCErrorMsg where
@@ -297,6 +304,7 @@ Show Error where
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
+  show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LitFail fc) = show fc ++ ":Can't parse literate"
   show (LexFail fc err) = show fc ++ ":Lexer error (" ++ show err ++ ")"
   show (ParseFail fc err toks) = "Parse error (" ++ show err ++ "): " ++ show toks
@@ -309,6 +317,7 @@ Show Error where
   show (UserError str) = "Error: " ++ str
   show (NoForeignCC fc) = show fc ++
        ":The given specifier was not accepted by any available backend."
+  show (BadMultiline fc str) = "Invalid multiline string: " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -377,6 +386,7 @@ getErrorLoc (BadRunElab loc _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
+getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LitFail loc) = Just loc
 getErrorLoc (LexFail loc _) = Just loc
 getErrorLoc (ParseFail loc _ _) = Just loc
@@ -386,6 +396,7 @@ getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
 getErrorLoc (NoForeignCC loc) = Just loc
+getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
@@ -394,6 +405,7 @@ getErrorLoc (InRHS _ _ err) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
@@ -448,6 +460,12 @@ export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 
+-- This would be better if we restrict it to a limited set of IO operations
+export
+%inline
+coreLift_ : IO a -> Core ()
+coreLift_ op = ignore (coreLift op)
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
@@ -456,6 +474,10 @@ export %inline
                    (\x => case x of
                                Left err => pure (Left err)
                                Right val => runCore (f val)))
+
+export %inline
+(>>) : Core () -> Core a -> Core a
+ma >> mb = ma >>= const mb
 
 -- Flipped bind
 infixr 1 =<<
@@ -485,14 +507,29 @@ when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
 
+
 export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
 unless = when . not
+
+export
+iwhen : (b : Bool) -> Lazy (Core a) -> Core (IMaybe b a)
+iwhen True f = Just <$> f
+iwhen False _ = pure Nothing
+
+export
+iunless : (b : Bool) -> Lazy (Core a) -> Core (IMaybe (not b) a)
+iunless b f = iwhen (not b) f
 
 export %inline
 whenJust : Maybe a -> (a -> Core ()) -> Core ()
 whenJust (Just a) k = k a
 whenJust Nothing k = pure ()
+
+export
+iwhenJust : IMaybe b a -> (a -> Core ()) -> Core ()
+iwhenJust (Just a) k = k a
+iwhenJust Nothing k = pure ()
 
 -- Control.Catchable in Idris 1, just copied here (but maybe no need for
 -- it since we'll only have the one instance for Core Error...)
@@ -552,8 +589,8 @@ export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
 traverse_ f (x :: xs)
-    = do f x
-         traverse_ f xs
+    = Core.do ignore (f x)
+              traverse_ f xs
 
 %inline
 export
@@ -570,7 +607,7 @@ traverseList1_ : (a -> Core b) -> List1 a -> Core ()
 traverseList1_ f xxs
     = do let x = head xxs
          let xs = tail xxs
-         f x
+         ignore (f x)
          traverse_ f xs
 
 namespace PiInfo
@@ -639,7 +676,7 @@ filterM p (x :: xs)
 export
 data Ref : (l : label) -> Type -> Type where
      [search l]
-	   MkRef : IORef a -> Ref x a
+     MkRef : IORef a -> Ref x a
 
 export
 newRef : (x : label) -> t -> Core (Ref x t)

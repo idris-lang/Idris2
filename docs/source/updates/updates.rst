@@ -229,7 +229,7 @@ different things absolutely necessary, but the result is that it contains:
 - ``Semigroup``, ``Monoid``
 - ``Functor``, ``Applicative``, ``Monad`` and related functions
 - ``Foldable``, ``Alternative`` and ``Traversable``
-- ``Enum``, for list range syntax
+- ``Range``, for list range syntax
 - Console ``IO``
 
 Anything which doesn't fit in here has been moved to the ``base`` libraries.
@@ -451,6 +451,8 @@ all their inputs unless stated otherwise with a ``partial`` annotation, or
 switching to ``%default partial`` (which is not recommended - use a ``partial``
 annotation instead to have the smallest possible place where functions are
 partial).
+
+.. _build-artefacts:
 
 Build artefacts
 ---------------

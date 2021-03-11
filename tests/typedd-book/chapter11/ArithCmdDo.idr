@@ -1,4 +1,5 @@
 import Data.Primitives.Views
+import Data.Bits
 import Data.Strings
 import System
 
@@ -16,16 +17,25 @@ export
 data ConsoleIO : Type -> Type where
      Quit : a -> ConsoleIO a
      Do : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
+     Seq : Command () -> Inf (ConsoleIO a) -> ConsoleIO a
 
 namespace CommandDo
   export
   (>>=) : Command a -> (a -> Command b) -> Command b
   (>>=) = Bind
 
+  export
+  (>>) : Command () -> Command b -> Command b
+  ma >> mb = Bind ma (\ _ => mb)
+
 namespace ConsoleDo
   export
   (>>=) : Command a -> (a -> Inf (ConsoleIO b)) -> ConsoleIO b
   (>>=) = Do
+
+  export
+  (>>) : Command () -> Inf (ConsoleIO b) -> ConsoleIO b
+  (>>) = Seq
 
 data Fuel = Dry | More (Lazy Fuel)
 
@@ -40,11 +50,12 @@ run : Fuel -> ConsoleIO a -> IO (Maybe a)
 run fuel (Quit val) = do pure (Just val)
 run (More fuel) (Do c f) = do res <- runCommand c
                               run fuel (f res)
+run (More fuel) (Seq c d) = do runCommand c; run fuel d
 run Dry p = pure Nothing
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` 2) :: randoms seed'
+                   (seed' `shiftR` fromNat 2) :: randoms seed'
 
 arithInputs : Int -> Stream Int
 arithInputs seed = map bound (randoms seed)

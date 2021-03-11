@@ -48,7 +48,7 @@ This will compile the expression ``Main.main``, generating an executable
 ``hello`` (with an extension depending on the code generator) in the
 ``build/exec`` directory.
 
-There are three code generators provided in Idris 2, and (later) there will be
+There are five code generators provided in Idris 2, and (later) there will be
 a system for plugging in new code generators for a variety of targets. The
 default is to compile via Chez Scheme, with an alternative via Racket or Gambit.
 You can set the code generator at the REPL with the `:set codegen` command,
@@ -63,3 +63,8 @@ or via the `IDRIS2_CG` environment variable.
    javascript
    refc
    custom
+
+There are also external code generators that aren't part of the main Idris 2
+repository and can be found on Idris 2 wiki:
+
+`External backends <https://github.com/idris-lang/Idris2/wiki/External-backends>`_

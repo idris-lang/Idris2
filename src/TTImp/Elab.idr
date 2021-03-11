@@ -62,23 +62,19 @@ normaliseHoleTypes
     = do ust <- get UST
          let hs = keys (holes ust)
          defs <- get Ctxt
-         traverse (normaliseH defs) hs
-         pure ()
+         traverse_ (normaliseH defs) hs
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
         = do ty' <- normaliseHoles defs [] (type def)
-             addDef (Resolved i) (record { type = ty' } def)
-             pure ()
+             ignore $ addDef (Resolved i) (record { type = ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
     normaliseH defs i
-        = case !(lookupCtxtExact (Resolved i) (gamma defs)) of
-               Just gdef =>
-                  case definition gdef of
-                       Hole _ _ => updateType defs i gdef
-                       _ => pure ()
-               Nothing => pure ()
+        = whenJust !(lookupCtxtExact (Resolved i) (gamma defs)) $ \ gdef =>
+            case definition gdef of
+              Hole _ _ => updateType defs i gdef
+              _ => pure ()
 
 export
 addHoleToSave : {auto c : Ref Ctxt Defs} ->
@@ -161,15 +157,15 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
          chktm <- the (Core (Term vars)) $ case mode of
-              InLHS _ => do when (not incase) $ checkUserHoles True
+              InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
-              InTransform => do when (not incase) $ checkUserHoles True
+              InTransform => do when (not incase) $ checkUserHolesAfter constart True
                                 pure chktm
               -- elsewhere, all unification problems must be
               -- solved, though we defer that if it's a case block since we
               -- might learn a bit more later.
               _ => if (not incase)
-                      then do checkUserHoles (inTrans || inPE)
+                      then do checkUserHolesAfter constart (inTrans || inPE)
                               linearCheck (getFC tm) rigc False env chktm
                           -- Linearity checking looks in case blocks, so no
                           -- need to check here.

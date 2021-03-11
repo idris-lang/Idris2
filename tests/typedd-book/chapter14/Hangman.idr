@@ -41,12 +41,20 @@ data GameCmd : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
           ((res : a) -> GameCmd b (state2_fn res) state3_fn) ->
           GameCmd b state1 state3_fn
 
+(>>) : GameCmd () state1 state2_fn ->
+       Lazy (GameCmd a (state2_fn ()) state3_fn) ->
+       GameCmd a state1 state3_fn
+ma >> mb = ma >>= \ () => mb
+
 namespace Loop
   public export
   data GameLoop : (ty : Type) -> GameState -> (ty -> GameState) -> Type where
     (>>=) : GameCmd a state1 state2_fn ->
             ((res : a) -> Inf (GameLoop b (state2_fn res) state3_fn)) ->
             GameLoop b state1 state3_fn
+    (>>) : GameCmd () state1 state2_fn ->
+           Inf (GameLoop a (state2_fn ()) state3_fn) ->
+           GameLoop a state1 state3_fn
     Exit : GameLoop () NotRunning (const NotRunning)
 
 gameLoop : {letters : _} -> {guesses : _} ->
@@ -132,9 +140,14 @@ runCmd Dry _ _ = pure OutOfFuel
 run : Fuel -> Game inState -> GameLoop ty inState outState_fn -> IO (GameResult ty outState_fn)
 run Dry _ _ = pure OutOfFuel
 run (More fuel) st Exit = ok () st
-run (More fuel) st (cmd >>= next) = do OK cmdRes newSt <- runCmd fuel st cmd
-                                                          | OutOfFuel => pure OutOfFuel
-                                       run fuel newSt (next cmdRes)
+run (More fuel) st (cmd >>= next)
+   = do OK cmdRes newSt <- runCmd fuel st cmd
+           | OutOfFuel => pure OutOfFuel
+        run fuel newSt (next cmdRes)
+run (More fuel) st (cmd >> next)
+   = do OK () newSt <- runCmd fuel st cmd
+           | OutOfFuel => pure OutOfFuel
+        run fuel newSt next
 
 partial
 forever : Fuel
@@ -142,5 +155,4 @@ forever = More forever
 
 partial
 main : IO ()
-main = do run forever GameStart hangman
-          pure ()
+main = do ignore $ run forever GameStart hangman

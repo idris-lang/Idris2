@@ -21,9 +21,11 @@ record Dirs where
   working_dir : String
   source_dir : Maybe String -- source directory, relative to working directory
   build_dir : String -- build directory, relative to working directory
+  depends_dir : String -- local dependencies directory, relative to working directory
   output_dir : Maybe String -- output directory, relative to working directory
   prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
+  package_dirs : List String -- places to look for packages
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file
 
@@ -37,13 +39,15 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir odir dfix edirs ldirs ddirs) =
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
   unlines [ "+ Working Directory      :: " ++ show wdir
           , "+ Source Directory       :: " ++ show sdir
           , "+ Build Directory        :: " ++ show bdir
+          , "+ Local Depend Directory :: " ++ show ldir
           , "+ Output Directory       :: " ++ show (outputDirWithDefault d)
           , "+ Installation Prefix    :: " ++ show dfix
           , "+ Extra Directories      :: " ++ show edirs
+          , "+ Package Directories    :: " ++ show pdirs
           , "+ CG Library Directories :: " ++ show ldirs
           , "+ Data Directories       :: " ++ show ddirs]
 
@@ -133,6 +137,9 @@ record Session where
   directives : List String
   logLevel : LogLevels
   logTimings : Bool
+  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
+          -- while we're bootstrapping, we find modules by a different route
+          -- but we still want to have the dependencies listed properly
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
@@ -175,8 +182,8 @@ getCG : Options -> String -> Maybe CG
 getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" Nothing
-                     "/usr/local" ["."] [] []
+defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
+                     "/usr/local" ["."] [] [] []
 
 defaultPPrint : PPrinter
 defaultPPrint = MkPPOpts False True False
@@ -184,7 +191,7 @@ defaultPPrint = MkPPOpts False True False
 export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
-                               False False Nothing Nothing
+                               False False False Nothing Nothing
                                Nothing Nothing
 
 export

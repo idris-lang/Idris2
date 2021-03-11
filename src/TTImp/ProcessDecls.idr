@@ -96,7 +96,8 @@ checkTotalityOK n
 
     checkTotality : FC -> Core (Maybe Error)
     checkTotality fc
-        = do checkTotal fc n -- checked lazily, so better calculate here
+        = do ignore $ checkTotal fc n
+             -- ^ checked lazily, so better calculate here
              t <- getTotality fc n
              err <- checkCovering fc (isCovering t)
              maybe (case isTerminating t of
@@ -174,9 +175,9 @@ processTTImpFile fname
                | Left err => do coreLift (putStrLn (show err))
                                 pure False
          logTime "Elaboration" $
-            catch (do processTTImpDecls (MkNested []) [] tti
+            catch (do ignore $ processTTImpDecls (MkNested []) [] tti
                       Nothing <- checkDelayedHoles
                           | Just err => throw err
                       pure True)
-                  (\err => do coreLift (printLn err)
+                  (\err => do coreLift_ (printLn err)
                               pure False)

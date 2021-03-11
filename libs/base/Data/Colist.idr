@@ -2,6 +2,7 @@ module Data.Colist
 
 import Data.Maybe
 import Data.List
+import Data.List1
 import public Data.Zippable
 
 %default total
@@ -104,6 +105,12 @@ lappend xs = append (fromList xs)
 public export
 appendl : Colist a -> List a -> Colist a
 appendl xs = append xs . fromList
+
+||| Try to extract the head and tail of a `Colist`.
+public export
+uncons : Colist a -> Maybe (a, Colist a)
+uncons [] = Nothing
+uncons (x :: xs) = Just (x, xs)
 
 ||| Try to extract the first element from a `Colist`.
 public export

@@ -1,48 +1,17 @@
 1/1: Building Main (Main.idr)
-Main> Error: Sorry, I can't find any elaboration which works. All errors:
-If Prelude.>>=: Sorry, I can't find any elaboration which works. All errors:
-If Prelude.>>=: When unifying ?_ -> IO () and IO ?b.
-Mismatch between: ?_ -> IO () and IO ?b.
+Main> Error: Ambiguous elaboration. Possible results:
+    Main.myPrintLn "foo" Prelude.>> ?arg
+    Main.myPrintLn "foo" Main.Other.>> ?arg
 
-(interactive):1:66--1:81
+(interactive):1:4--1:19
  1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                                                      ^^^^^^^^^^^^^^^
-
-If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b.
-Mismatch between: ?_ -> IO () and IO ?b.
-
-(interactive):1:38--1:64
- 1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
-If Prelude.>>=: When unifying ?_ -> IO () and IO ?b.
-Mismatch between: ?_ -> IO () and IO ?b.
-
-(interactive):1:38--1:64
- 1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If Main.Other.>>=: Sorry, I can't find any elaboration which works. All errors:
-If Prelude.>>=: When unifying ?_ -> IO () and IO ?b.
-Mismatch between: ?_ -> IO () and IO ?b.
-
-(interactive):1:66--1:81
- 1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                                                      ^^^^^^^^^^^^^^^
-
-If Main.Other.>>=: When unifying ?_ -> IO () and IO ?b.
-Mismatch between: ?_ -> IO () and IO ?b.
-
-(interactive):1:38--1:64
- 1 | do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ^^^^^^^^^^^^^^^
 
 Main> Error: Can't find an implementation for Num ().
 
-(interactive):1:61--1:65
- 1 | with Prelude.(>>=) do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
-                                                                 ^^^^
+(interactive):1:60--1:64
+ 1 | with Prelude.(>>) do myPrintLn "foo"; myPrintLn "boo"; map (+1) (myPrintLn "woo"); myPrintLn "goo"; myPrintLn "foo"
+                                                                ^^^^
 
 Main> Error: Ambiguous elaboration. Possible results:
     Prelude.Nil
@@ -62,6 +31,10 @@ Mismatch between: Vect 0 ?elem and List ?a.
                                       ^^^^^^^
 
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
-Main> Parse error at line 1:2:
-Unrecognised command (next tokens: [identifier t, with, symbol [, symbol ], literal 4, end of input])
+Main> Expected 'case', 'if', 'do', application or operator expression.
+
+(interactive):1:4--1:5
+ 1 | :t with [] 4
+        ^
+
 Main> Bye for now!

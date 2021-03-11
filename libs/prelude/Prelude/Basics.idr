@@ -108,6 +108,11 @@ export
 cong2 : (0 f : t1 -> t2 -> u) -> (p1 : a = b) -> (p2 : c = d) -> f a c = f b d
 cong2 f Refl Refl = Refl
 
+||| Irrelevant equalities can always be made relevant
+export
+irrelevantEq : (0 _ : a === b) -> a === b
+irrelevantEq Refl = Refl
+
 --------------
 -- BOOLEANS --
 --------------

@@ -171,55 +171,26 @@ exactlyOne {vars} fc env top target all
     normRes : (Term vars, Defs, UState) -> Core (Term vars)
     normRes (tm, defs, _) = normaliseHoles defs env tm
 
--- Treat it as a local hint if the binder name is Nested. This is a bit of a
--- hack, since that data isn't encoded anywhere else, but this is also the only
--- way in which a binder name could be Nested.
-getHintVal : Name -> Binder (Term vars) -> Maybe (Term vars)
-getHintVal (Nested _ _) (Let _ _ val ty)
-    = case getFnArgs val of
-           (Ref _ Func n, _) => Just val
-           _ => Nothing
-getHintVal _ _ = Nothing
-
-isHint : Name -> Binder (Term vars) -> Bool
-isHint n b = maybe False (const True) (getHintVal n b)
-
 -- We can only resolve things which are at unrestricted multiplicity. Expression
 -- search happens before linearity checking and we can't guarantee that just
 -- because something is apparently available now, it will be available by the
 -- time we get to linearity checking.
 -- It's also fine to use anything if we're working at multiplicity 0
-getEnvNohints : {vars : _} ->
+getUsableEnv : {vars : _} ->
                 FC -> RigCount ->
                 SizeOf done ->
                 Env Term vars ->
                 List (Term (done ++ vars), Term (done ++ vars))
-getEnvNohints fc rigc p [] = []
-getEnvNohints {vars = v :: vs} {done} fc rigc p (b :: env)
-   = let rest = getEnvNohints fc rigc (sucR p) env in
-         if not (isHint v b) && (multiplicity b == top || isErased rigc)
+getUsableEnv fc rigc p [] = []
+getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
+   = let rest = getUsableEnv fc rigc (sucR p) env in
+         if (multiplicity b == top || isErased rigc)
             then let MkVar var = weakenVar p (MkVar First) in
                      (Local (binderLoc b) Nothing _ var,
                        rewrite appendAssociative done [v] vs in
                           weakenNs (sucR p) (binderType b)) ::
                                rewrite appendAssociative done [v] vs in rest
             else rewrite appendAssociative done [v] vs in rest
-
--- Get the variables which stand for local hint applications
-getEnvHints : {vars : _} ->
-              FC -> RigCount ->
-              SizeOf done ->
-              Env Term vars ->
-              List (Term (done ++ vars), Term (done ++ vars))
-getEnvHints fc rigc p [] = []
-getEnvHints {vars = v :: vs} {done} fc rigc p (b :: env)
-   = let rest = getEnvHints fc rigc (sucR p) env in
-         case getHintVal v b of
-              Nothing => rewrite appendAssociative done [v] vs in rest
-              Just tm => (weakenNs p (weaken tm),
-                          rewrite appendAssociative done [v] vs in
-                            weakenNs (sucR p) (binderType b)) ::
-                                 rewrite appendAssociative done [v] vs in rest
 
 -- A local is usable if it contains no holes in a determining argument position
 usableLocal : {vars : _} ->
@@ -316,7 +287,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                    let env' = clearEnv prf env
                    -- Work right to left, because later arguments may solve
                    -- earlier ones by unification
-                   traverse (searchIfHole fc defaults trying False depth def top env')
+                   traverse_ (searchIfHole fc defaults trying False depth def top env')
                             (impLast args)
                    pure candidate
                 else do logNF "auto" 10 "Can't use " env ty
@@ -371,43 +342,8 @@ searchLocalVars : {vars : _} ->
 searchLocalVars fc rig defaults trying depth def top env target
     = do let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
                                               top env t target)
-                         (getEnvNohints fc rig zero env)
+                         (getUsableEnv fc rig zero env)
          exactlyOne fc env top target elabs
-
-searchLocalHints : {vars : _} ->
-                   {auto c : Ref Ctxt Defs} ->
-                   {auto u : Ref UST UState} ->
-                   FC -> RigCount ->
-                   (defaults : Bool) -> List (Term vars) ->
-                   (depth : Nat) ->
-                   (defining : Name) -> (topTy : ClosedTerm) ->
-                   Env Term vars ->
-                   (target : NF vars) -> Core (Term vars)
-searchLocalHints fc rig defaults trying depth def top env target
-    = do let elabs = map (\t => searchLocalWith fc rig defaults trying depth def
-                                             top env t target)
-                         (getEnvHints fc rig zero env)
-         exactlyOne fc env top target elabs
-
-searchLocal : {vars : _} ->
-              {auto c : Ref Ctxt Defs} ->
-              {auto u : Ref UST UState} ->
-              FC -> RigCount ->
-              (defaults : Bool) -> List (Term vars) ->
-              (depth : Nat) ->
-              (defining : Name) -> (topTy : ClosedTerm) ->
-              Env Term vars ->
-              (target : NF vars) -> Core (Term vars)
-searchLocal fc rig defaults trying depth def top env target
-    = handleUnify
-          (searchLocalVars fc rig defaults trying depth def top env target)
-          (\e => if ambig e
-                     then throw e
-                     else searchLocalVars fc rig defaults trying depth def top env target)
-  where
-    ambig : Error -> Bool
-    ambig (AmbiguousSearch _ _ _ _) = True
-    ambig _ = False
 
 isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool
@@ -452,7 +388,7 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
          logTermNF "auto" 10 "Candidate " env candidate
          -- Work right to left, because later arguments may solve earlier
          -- dependencies by unification
-         traverse (searchIfHole fc defaults trying ispair depth def top env)
+         traverse_ (searchIfHole fc defaults trying ispair depth def top env)
                   (impLast args)
          pure candidate
 
@@ -516,25 +452,21 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n
              let args' = drop 0 (detArgs sd) args
-             traverse (\ parg => do argnf <- evalClosure defs parg
-                                    concrete defs argnf False) (map snd args')
-             pure ()
+             traverse_ (\ parg => do argnf <- evalClosure defs parg
+                                     concrete defs argnf False) (map snd args')
     concrete defs (NDCon nfc n t a args) atTop
-        = do traverse (\ parg => do argnf <- evalClosure defs parg
-                                    concrete defs argnf False) (map snd args)
-             pure ()
+        = do traverse_ (\ parg => do argnf <- evalClosure defs parg
+                                     concrete defs argnf False) (map snd args)
     concrete defs (NApp _ (NMeta n i _) _) True
         = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | _ => throw (DeterminingArg fc n i [] top)
-             when (not (implbind b)) $
+             unless (implbind b) $
                   throw (DeterminingArg fc n i [] top)
-             pure ()
     concrete defs (NApp _ (NMeta n i _) _) False
         = do Just (Hole _ b) <- lookupDefExact n (gamma defs)
                   | def => throw (CantSolveGoal fc [] top)
-             when (not (implbind b)) $
+             unless (implbind b) $
                   throw (CantSolveGoal fc [] top)
-             pure ()
     concrete defs tm atTop = pure ()
 
 checkConcreteDets : {vars : _} ->
@@ -600,13 +532,13 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                              if defaults && checkdets
                                 then tryGroups Nothing nty (hintGroups sd)
                                 else handleUnify
-                                       (searchLocal fc rigc defaults trying' depth def top env nty)
+                                       (searchLocalVars fc rigc defaults trying' depth def top env nty)
                                        (\e => if ambig e
                                                  then throw e
                                                  else tryGroups Nothing nty (hintGroups sd))
                      else throw (CantSolveGoal fc [] top)
               _ => do logNF "auto" 10 "Next target: " env nty
-                      searchLocal fc rigc defaults trying' depth def top env nty
+                      searchLocalVars fc rigc defaults trying' depth def top env nty
   where
     ambig : Error -> Bool
     ambig (AmbiguousSearch _ _ _ _) = True

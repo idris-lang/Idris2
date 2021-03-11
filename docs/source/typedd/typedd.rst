@@ -260,17 +260,18 @@ It's no longer necessary to give ``{input}`` explicitly in the patterns for
 
 In ``IsSuffix.idr``, the matching has to be written slightly differently. The
 recursive with application in Idris 1 probably shouldn't have allowed this!
+Note that the ``Snoc`` - ``Snoc`` case has to be written first otherwise Idris
+generates a case tree splitting on ``input1`` and ``input2`` instead of the
+``SnocList`` objects and this leads to a lot of cases being detected as missing.
 
 .. code-block:: idris
 
-    isSuffix : Eq a => List a -> List a -> Bool
-    isSuffix input1 input2 with (snocList input1, snocList input2)
-      isSuffix [] input2 | (Empty, s) = True
-      isSuffix input1 [] | (s, Empty) = False
-      isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc xsrec, Snoc ysrec)
-         = if x == y
-              then isSuffix xs ys | (xsrec, ysrec)
-              else False
+  isSuffix : Eq a => List a -> List a -> Bool
+  isSuffix input1 input2 with (snocList input1, snocList input2)
+    isSuffix _ _ | (Snoc x xs xsrec, Snoc y ys ysrec)
+       = (x == y) && (isSuffix _ _ | (xsrec, ysrec))
+    isSuffix _ _ | (Empty, s) = True
+    isSuffix _ _ | (s, Empty) = False
 
 This doesn't yet get past the totality checker, however, because it doesn't
 know about looking inside pairs.
@@ -323,22 +324,34 @@ arguments for the dividend and remainder, so they need to be explicit in
     bound x with (divides x 12)
       bound ((12 * div) + rem) | (DivBy div rem prf) = rem + 1
 
-In ``ArithCmd.idr``, update ``DivBy`` as above. Also add ``import Data.Strings`` for
-``Strings.toLower``.
+In addition,  ``import Data.Bits`` has to be added for ``shiftR``, which
+now uses a safer type for the number of shifts:
 
-In ``ArithCmd.idr``, update ``DivBy`` and ``import Data.Strings`` as above. Also,
+.. code-block:: idris
+
+    randoms : Int -> Stream Int
+    randoms seed = let seed' = 1664525 * seed + 1013904223 in
+                       (seed' `shiftR` fromNat 2) :: randoms seed'
+
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``
+as above. Also add ``import Data.Strings`` for ``Strings.toLower``.
+
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits``
+and ``import Data.Strings`` as above. Also,
 since export rules are per-namespace now, rather than per-file, you need to
 export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
 
 In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
-also have to be ``export``.
+also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
 Chapter 12
 ----------
 
-For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``.
+For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``
+and ``import Data.Bits`` and update ``randoms``.
 Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
 own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
 arguments ``div`` and ``rem``.

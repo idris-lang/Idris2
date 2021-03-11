@@ -86,7 +86,7 @@ schOp (Div IntegerType) [x, y] = op "quotient" [x, y]
 schOp (Div ty) [x, y] = op "/" [x, y]
 schOp (Mod ty) [x, y] = op "remainder" [x, y]
 schOp (Neg ty) [x] = op "-" [x]
-schOp (ShiftL IntType) [x, y] = op "blodwen-bits-shl" [x, y, "63"]
+schOp (ShiftL IntType) [x, y] = op "blodwen-bits-shl-signed" [x, y, "63"]
 schOp (ShiftL Bits8Type) [x, y] = op "blodwen-bits-shl" [x, y, "8"]
 schOp (ShiftL Bits16Type) [x, y] = op "blodwen-bits-shl" [x, y, "16"]
 schOp (ShiftL Bits32Type) [x, y] = op "blodwen-bits-shl" [x, y, "32"]
@@ -299,8 +299,8 @@ mutual
   used n (NmCon _ _ _ args) = anyTrue (map (used n) args)
   used n (NmOp _ _ args) = anyTrue (toList (map (used n) args))
   used n (NmExtPrim _ _ args) = anyTrue (map (used n) args)
-  used n (NmForce _ t) = used n t
-  used n (NmDelay _ t) = used n t
+  used n (NmForce _ _ t) = used n t
+  used n (NmDelay _ _ t) = used n t
   used n (NmConCase _ sc alts def)
       = used n sc || anyTrue (map (usedCon n) alts)
             || maybe False (used n) def
@@ -377,8 +377,8 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         = pure $ schOp op !(schArgs i args)
     schExp i (NmExtPrim fc p args)
         = schExtPrim i (toPrim p) args
-    schExp i (NmForce fc t) = pure $ "(" ++ !(schExp i t) ++ ")"
-    schExp i (NmDelay fc t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
+    schExp i (NmForce fc lr t) = pure $ "(" ++ !(schExp i t) ++ ")"
+    schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
     schExp i (NmConCase fc sc [] def)
         = do tcode <- schExp (i+1) sc
              defc <- maybe (pure "'erased") (schExp i) def

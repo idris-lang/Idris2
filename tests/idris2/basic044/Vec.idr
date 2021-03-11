@@ -5,7 +5,7 @@ import Data.Fin
 %default total
 
 %logging 1
-%logging declare.def 2
+%logging "declare.def" 2
 
 Vec : Type -> Nat -> Type
 Vec a n = Fin n -> a

@@ -10,6 +10,11 @@ data LazyList : Type -> Type where
   Nil : LazyList a
   (::) : (1 x : a) -> (1 xs : Lazy (LazyList a)) -> LazyList a
 
+public export
+(++) : LazyList a -> Lazy (LazyList a) -> LazyList a
+[] ++ ys = ys
+(x :: xs) ++ ys = x :: (xs ++ ys)
+
 --- Interface implementations ---
 
 public export
@@ -45,7 +50,7 @@ Applicative LazyList where
 public export
 Alternative LazyList where
   empty = []
-  (<|>) = (<+>)
+  xs <|> ys = xs ++ ys
 
 public export
 Monad LazyList where

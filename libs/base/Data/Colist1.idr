@@ -1,6 +1,7 @@
 module Data.Colist1
 
 import Data.Colist
+import Data.List
 import Data.List1
 import Data.Nat
 import public Data.Zippable
@@ -86,6 +87,11 @@ unfold f s a = a ::: unfold f s
 public export
 forget : Colist1 a -> Colist a
 forget (h ::: t) = h :: t
+
+||| Convert an `Inf (Colist1 a)` to an `Inf (Colist a)`
+public export
+forgetInf : Inf (Colist1 a) -> Inf (Colist a)
+forgetInf (h ::: t) = h :: t
 
 ||| Prepends an element to a `Colist1`.
 public export
@@ -201,3 +207,98 @@ Zippable Colist1 where
   unzipWith f = unzip . map f
 
   unzipWith3 f = unzip3 . map f
+
+--------------------------------------------------------------------------------
+-- Interleavings
+--------------------------------------------------------------------------------
+
+-- zig, zag, and cantor are generalised version of the Stream functions
+-- defined in the paper
+-- Applications of Applicative Proof Search
+-- by Liam O'Connor
+
+-- Unfortunately cannot be put in `Data.Colist` because it's using `Colist1`
+-- internally.
+namespace Colist
+
+  public export
+  zig : List1 (Colist1 a) -> List (Colist1 a) -> Colist a
+
+  public export
+  zag : List1 a -> List1 (Colist a) -> List (Colist1 a) -> Colist a
+
+  zig xs =
+    let (hds, tls) = unzipWith (\ (x ::: xs) => (x, xs)) xs in
+    zag hds tls
+
+  zag (x ::: []) zs [] = x ::
+    let Just zs = List1.fromList $ mapMaybe fromColist (forget zs)
+          | Nothing => []
+    in zig zs []
+  zag (x ::: []) zs (l :: ls) = x ::
+    let zs = mapMaybe fromColist (forget zs)
+    in zig (l ::: zs) ls
+  zag (x ::: (y :: xs)) zs ls = x :: zag (y ::: xs) zs ls
+
+  public export
+  cantor : List (Colist a) -> Colist a
+  cantor xs =
+    let Just (l ::: ls) = List1.fromList $ mapMaybe fromColist xs
+          | Nothing => []
+    in zig (l ::: []) ls
+
+public export
+zig : List1 (Colist1 a) -> Colist (Colist1 a) -> Colist1 a
+
+public export
+zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
+
+zig xs = zag (head <$> xs) (tail <$> xs)
+
+zag (x ::: []) zs [] = x :::
+  let Just zs = List1.fromList (mapMaybe fromColist (forget zs))
+        | Nothing => []
+  in Colist.zig zs []
+zag (x ::: []) zs (l :: ls) =  x :::
+  let zs = mapMaybe fromColist (forget zs)
+  in forgetInf (zig (l ::: zs) ls)
+zag (x ::: (y :: xs)) zs ls = x ::: forgetInf (zag (y ::: xs) zs ls)
+
+public export
+cantor : Colist1 (Colist1 a) -> Colist1 a
+cantor (l ::: ls) = zig (l ::: []) ls
+
+namespace DPair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  planeWith : {0 p : a -> Type} ->
+              ((x : a) -> p x -> c) ->
+              Colist1 a -> ((x : a) -> Colist1 (p x)) ->
+              Colist1 c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : {0 p : a -> Type} ->
+          Colist1 a -> ((x : a) -> Colist1 (p x)) ->
+          Colist1 (x : a ** p x)
+  plane = planeWith (\ x, prf => (x ** prf))
+
+namespace Pair
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  planeWith : (a -> b -> c) ->
+              Colist1 a -> (a -> Colist1 b) ->
+              Colist1 c
+  planeWith k as f = cantor (map (\ x => map (k x) (f x)) as)
+
+  ||| Explore the plane corresponding to all possible pairings
+  ||| using Cantor's zig zag traversal
+  public export
+  plane : Colist1 a -> (a -> Colist1 b) -> Colist1 (a, b)
+  plane = Pair.planeWith (,)

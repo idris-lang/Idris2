@@ -11,7 +11,7 @@ import System.File
 import System.Info
 import System.Path
 
-import Lib
+import Test.Golden
 
 %default covering
 
@@ -53,17 +53,23 @@ idrisTestsCoverage = MkTestPool []
        -- Coverage checking
       ["coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
-       "coverage009", "coverage010", "coverage011"]
+       "coverage009", "coverage010", "coverage011", "coverage012",
+       "coverage013", "coverage014"]
+
+idrisTestsCasetree : TestPool
+idrisTestsCasetree = MkTestPool []
+       -- Case tree building
+      ["casetree001"]
 
 idrisTestsError : TestPool
 idrisTestsError = MkTestPool []
        -- Error messages
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012", "error013", "error014",
+       "error011", "error012", "error013", "error014", "error015",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006"]
+       "perror006", "perror007"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool []
@@ -74,7 +80,7 @@ idrisTestsInteractive = MkTestPool []
        "interactive013", "interactive014", "interactive015", "interactive016",
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
-       "interactive025", "interactive026", "interactive027"]
+       "interactive025", "interactive026", "interactive027", "interactive028"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []
@@ -84,14 +90,16 @@ idrisTestsInterface = MkTestPool []
        "interface009", "interface010", "interface011", "interface012",
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
-       "interface021", "interface022"]
+       "interface021", "interface022", "interface023", "interface024",
+       "interface025"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool []
        -- QTT and linearity related
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
-        "linear009", "linear010", "linear011", "linear012"]
+        "linear009", "linear010", "linear011", "linear012",
+        "linear013"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool []
@@ -115,7 +123,7 @@ idrisTestsRegression = MkTestPool []
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036"]
+       "reg036", "reg037", "reg038"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool []
@@ -135,7 +143,7 @@ idrisTests = MkTestPool []
        -- Parameters blocks
        "params001",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005",
+       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
@@ -152,7 +160,7 @@ idrisTests = MkTestPool []
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
-       "with001", "with002",
+       "with001", "with002", "with004",
        -- with-disambiguation
        "with003"]
 
@@ -225,11 +233,22 @@ templateTests = MkTestPool []
   [ "simple-test", "ttimp", "with-ipkg"
   ]
 
+-- base library tests are run against
+-- each codegen supported and to keep
+-- things simple it's all one test group
+-- that only runs if all backends are
+-- available.
+baseLibraryTests : TestPool
+baseLibraryTests = MkTestPool [Chez, Node]
+  [ "system_file001", "data_bits001"
+  ]
+
 main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
   , testPaths "idris2" idrisTestsBasic
   , testPaths "idris2" idrisTestsCoverage
+  , testPaths "idris2" idrisTestsCasetree
   , testPaths "idris2" idrisTestsError
   , testPaths "idris2" idrisTestsInteractive
   , testPaths "idris2" idrisTestsInterface
@@ -241,6 +260,7 @@ main = runner
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
+  , testPaths "base" baseLibraryTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests

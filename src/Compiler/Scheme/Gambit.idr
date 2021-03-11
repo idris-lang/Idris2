@@ -48,13 +48,14 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader = "; @generated\n
-         (declare (block)
-         (inlining-limit 450)
-         (standard-bindings)
-         (extended-bindings)
-         (not safe)
-         (optimize-dead-definitions))\n"
+schHeader =
+    "; @generated\n" ++
+    "(declare (block)\n" ++
+    "(inlining-limit 450)\n" ++
+    "(standard-bindings)\n" ++
+    "(extended-bindings)\n" ++
+    "(not safe)\n" ++
+    "(optimize-dead-definitions))\n"
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)
@@ -335,7 +336,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core String
     showFld (n, ty) = pure $ "(" ++ n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do mkStruct a; mkStruct b
+mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
 mkStruct _ = pure ""
 
 schFgnDef : {auto c : Ref Ctxt Defs} ->
@@ -367,7 +368,7 @@ getFgnCall (n, fc, d) = schFgnDef fc n d
 compileToSCM : Ref Ctxt Defs ->
                ClosedTerm -> (outfile : String) -> Core (List String)
 compileToSCM c tm outfile
-    = do cdata <- getCompileData Cases tm
+    = do cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
          -- let tags = nameTags cdata
          let ctm = forget (mainExpr cdata)
@@ -414,7 +415,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm
     = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift $ system sh -- TODO: on windows, should add exe extension
+         coreLift_ $ system sh -- TODO: on windows, should add exe extension
          pure ()
 
 export

@@ -22,6 +22,7 @@ Documentation for the Idris 2 Language
    backends/index
    updates/updates
    typedd/typedd
+   reference/packages
    app/index
    ffi/index
    proofs/index

@@ -30,7 +30,7 @@ data Segment : (n : Nat) -> Left.Telescope k -> Type where
 public export
 tabulate : (n : Nat) -> (Left.Environment gamma -> Left.Telescope n) -> Segment n gamma
 tabulate Z tel = []
-tabulate {gamma} (S n) tel = (sigma :: tabulate n (uncurry delta)) where
+tabulate (S n) tel = (sigma :: tabulate n (uncurry delta)) where
 
   sigma : TypeIn gamma
   sigma env = fst (uncons (tel env))
@@ -86,9 +86,9 @@ keep Refl = Refl
 ||| Segments act on telescope from the right.
 public export
 (|++) : (gamma : Left.Telescope k) -> {n : Nat} -> (delta : Segment n gamma) -> Left.Telescope (n + k)
-(|++)     gamma {n = 0} delta  = gamma
-(|++) {k} gamma {n=S n} (ty :: delta) = rewrite sym $ succLemma n k in
-                                          gamma -. ty |++ delta
+(|++)  gamma {n = 0} delta  = gamma
+(|++)  gamma {n=S n} (ty :: delta) = rewrite sym $ succLemma n k in
+                                       gamma -. ty |++ delta
 
 ||| Segments form a kind of an indexed monoid w.r.t. the action `(|++)`
 public export
@@ -97,9 +97,9 @@ public export
     -> (lft : Segment n  gamma         )
     -> (rgt : Segment m (gamma |++ lft))
     -> Segment (n + m) gamma
-(++) {n = 0  }     delta       rgt = rgt
-(++) {n = S n} {m} (ty :: lft) rgt = ty :: lft ++ rewrite succLemma n k in
-                                                  rgt
+(++) {n = 0  } delta       rgt = rgt
+(++) {n = S n} (ty :: lft) rgt = ty :: lft ++ rewrite succLemma n k in
+                                              rgt
 -- This monoid does act on telescopes:
 export
 actSegmentAssociative : (gamma : Left.Telescope k)
@@ -169,7 +169,7 @@ break : {0 k : Nat} -> (gamma : Telescope k') -> (pos : Position gamma)
      -> {auto 0 ford : k' = cast pos + k } -> Telescope k
 break gamma          FZ      {ford = Refl} = gamma
 break []            (FS pos) {ford = _   } impossible
-break {k} {k' = S k'} (gamma -. ty) (FS pos) {ford} = break gamma pos
+break {k' = S k'} (gamma -. ty) (FS pos) {ford} = break gamma pos
   {ford = Calc $
    |~ k'
    ~~ cast pos + k ...(succInjective _ _ ford)}

@@ -35,9 +35,9 @@ mutual
        -- Externally defined primitive operations
        CExtPrim : FC -> (p : Name) -> List (CExp vars) -> CExp vars
        -- A forced (evaluated) value
-       CForce : FC -> CExp vars -> CExp vars
+       CForce : FC -> LazyReason -> CExp vars -> CExp vars
        -- A delayed value
-       CDelay : FC -> CExp vars -> CExp vars
+       CDelay : FC -> LazyReason -> CExp vars -> CExp vars
        -- A case match statement
        CConCase : FC -> (sc : CExp vars) -> List (CConAlt vars) -> Maybe (CExp vars) -> CExp vars
        CConstCase : FC -> (sc : CExp vars) -> List (CConstAlt vars) -> Maybe (CExp vars) -> CExp vars
@@ -84,9 +84,9 @@ mutual
        -- Externally defined primitive operations
        NmExtPrim : FC -> (p : Name) -> List NamedCExp -> NamedCExp
        -- A forced (evaluated) value
-       NmForce : FC -> NamedCExp -> NamedCExp
+       NmForce : FC -> LazyReason -> NamedCExp -> NamedCExp
        -- A delayed value
-       NmDelay : FC -> NamedCExp -> NamedCExp
+       NmDelay : FC -> LazyReason -> NamedCExp -> NamedCExp
        -- A case match statement
        NmConCase : FC -> (sc : NamedCExp) -> List NamedConAlt -> Maybe NamedCExp -> NamedCExp
        NmConstCase : FC -> (sc : NamedCExp) -> List NamedConstAlt -> Maybe NamedCExp -> NamedCExp
@@ -172,8 +172,8 @@ mutual
         = assert_total $ "(" ++ show op ++ " " ++ show xs ++ ")"
     show (NmExtPrim _ p xs)
         = assert_total $ "(%extern " ++ show p ++ " " ++ show xs ++ ")"
-    show (NmForce _ x) = "(%force " ++ show x ++ ")"
-    show (NmDelay _ x) = "(%delay " ++ show x ++ ")"
+    show (NmForce _ lr x) = "(%force " ++ show lr ++ " " ++ show x ++ ")"
+    show (NmDelay _ lr x) = "(%delay " ++ show lr ++ " " ++ show x ++ ")"
     show (NmConCase _ sc xs def)
         = assert_total $ "(%case " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
     show (NmConstCase _ sc xs def)
@@ -249,10 +249,10 @@ mutual
       = NmOp fc op (map (forgetExp locs) args)
   forgetExp locs (CExtPrim fc p args)
       = NmExtPrim fc p (map (forgetExp locs) args)
-  forgetExp locs (CForce fc f)
-      = NmForce fc (forgetExp locs f)
-  forgetExp locs (CDelay fc f)
-      = NmDelay fc (forgetExp locs f)
+  forgetExp locs (CForce fc lr f)
+      = NmForce fc lr (forgetExp locs f)
+  forgetExp locs (CDelay fc lr f)
+      = NmDelay fc lr (forgetExp locs f)
   forgetExp locs (CConCase fc sc alts def)
       = NmConCase fc (forgetExp locs sc) (map (forgetConAlt locs) alts)
                      (map (forgetExp locs) def)
@@ -358,8 +358,8 @@ mutual
       = COp fc x (assert_total (map (insertNames outer ns) xs))
   insertNames outer ns (CExtPrim fc p xs)
       = CExtPrim fc p (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (CForce fc x) = CForce fc (insertNames outer ns x)
-  insertNames outer ns (CDelay fc x) = CDelay fc (insertNames outer ns x)
+  insertNames outer ns (CForce fc lr x) = CForce fc lr (insertNames outer ns x)
+  insertNames outer ns (CDelay fc lr x) = CDelay fc lr (insertNames outer ns x)
   insertNames outer ns (CConCase fc sc xs def)
       = CConCase fc (insertNames outer ns sc) (assert_total (map (insertNamesConAlt outer ns) xs))
                  (assert_total (map (insertNames outer ns) def))
@@ -446,8 +446,8 @@ mutual
       = COp fc x (assert_total (map (shrinkCExp sub) xs))
   shrinkCExp sub (CExtPrim fc p xs)
       = CExtPrim fc p (assert_total (map (shrinkCExp sub) xs))
-  shrinkCExp sub (CForce fc x) = CForce fc (shrinkCExp sub x)
-  shrinkCExp sub (CDelay fc x) = CDelay fc (shrinkCExp sub x)
+  shrinkCExp sub (CForce fc lr x) = CForce fc lr (shrinkCExp sub x)
+  shrinkCExp sub (CDelay fc lr x) = CDelay fc lr (shrinkCExp sub x)
   shrinkCExp sub (CConCase fc sc xs def)
       = CConCase fc (shrinkCExp sub sc)
                  (assert_total (map (shrinkConAlt sub) xs))
@@ -520,8 +520,8 @@ mutual
       = COp fc x (assert_total (map (substEnv outer env) xs))
   substEnv outer env (CExtPrim fc p xs)
       = CExtPrim fc p (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CForce fc x) = CForce fc (substEnv outer env x)
-  substEnv outer env (CDelay fc x) = CDelay fc (substEnv outer env x)
+  substEnv outer env (CForce fc lr x) = CForce fc lr (substEnv outer env x)
+  substEnv outer env (CDelay fc lr x) = CDelay fc lr (substEnv outer env x)
   substEnv outer env (CConCase fc sc xs def)
       = CConCase fc (substEnv outer env sc)
                  (assert_total (map (substConAlt outer env) xs))
@@ -593,10 +593,10 @@ mutual
       = COp fc x (assert_total (map (mkLocals later bs) xs))
   mkLocals later bs (CExtPrim fc x xs)
       = CExtPrim fc x (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (CForce fc x)
-      = CForce fc (mkLocals later bs x)
-  mkLocals later bs (CDelay fc x)
-      = CDelay fc (mkLocals later bs x)
+  mkLocals later bs (CForce fc lr x)
+      = CForce fc lr (mkLocals later bs x)
+  mkLocals later bs (CDelay fc lr x)
+      = CDelay fc lr (mkLocals later bs x)
   mkLocals later bs (CConCase fc sc xs def)
       = CConCase fc (mkLocals later bs sc)
                  (assert_total (map (mkLocalsConAlt later bs) xs))
@@ -641,8 +641,8 @@ getFC (CApp fc _ _) = fc
 getFC (CCon fc _ _ _) = fc
 getFC (COp fc _ _) = fc
 getFC (CExtPrim fc _ _) = fc
-getFC (CForce fc _) = fc
-getFC (CDelay fc _) = fc
+getFC (CForce fc _ _) = fc
+getFC (CDelay fc _ _) = fc
 getFC (CConCase fc _ _ _) = fc
 getFC (CConstCase fc _ _ _) = fc
 getFC (CPrimVal fc _) = fc
@@ -660,8 +660,8 @@ namespace NamedCExp
   getFC (NmCon fc _ _ _) = fc
   getFC (NmOp fc _ _) = fc
   getFC (NmExtPrim fc _ _) = fc
-  getFC (NmForce fc _) = fc
-  getFC (NmDelay fc _) = fc
+  getFC (NmForce fc _ _) = fc
+  getFC (NmDelay fc _ _) = fc
   getFC (NmConCase fc _ _ _) = fc
   getFC (NmConstCase fc _ _ _) = fc
   getFC (NmPrimVal fc _) = fc

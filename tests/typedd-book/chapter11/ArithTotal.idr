@@ -1,24 +1,30 @@
 import Data.Primitives.Views
+import Data.Bits
 import System
 
 %default total
 
 data InfIO : Type where
      Do : IO a -> (a -> Inf InfIO) -> InfIO
+     Seq : IO () -> Inf InfIO -> InfIO
 
 (>>=) : IO a -> (a -> Inf InfIO) -> InfIO
 (>>=) = Do
+
+(>>) :  IO () -> Inf InfIO -> InfIO
+(>>) = Seq
 
 data Fuel = Dry | More (Lazy Fuel)
 
 run : Fuel -> InfIO -> IO ()
 run (More fuel) (Do c f) = do res <- c
                               run fuel (f res)
+run (More fuel) (Seq c d) = do c; run fuel d
 run Dry p = putStrLn "Out of fuel"
 
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
-                   (seed' `shiftR` 2) :: randoms seed'
+                   (seed' `shiftR` fromNat 2) :: randoms seed'
 
 arithInputs : Int -> Stream Int
 arithInputs seed = map bound (randoms seed)

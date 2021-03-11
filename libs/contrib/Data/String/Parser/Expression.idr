@@ -44,7 +44,7 @@ toParserUn [] = fail "couldn't create unary parser"
 toParserUn (x :: xs) = x <|> toParserUn xs
 
 ambiguous : (assoc : String) -> (op : Parser (a -> a -> a)) -> Parser a
-ambiguous assoc op = do op
+ambiguous assoc op = do ignore op
                         fail ("ambiguous use of a " ++ assoc ++ " associative operator")
 
 mutual
@@ -71,11 +71,13 @@ mutual
   mkLassocP1 : (amRight : Parser a) -> (amNon : Parser a) -> (lassocOp : Parser (a -> a -> a)) -> (termP : Parser a) -> (x : a) -> Parser a
   mkLassocP1 amRight amNon lassocOp termP x = mkLassocP amRight amNon lassocOp termP x <|> pure x
 
-mkNassocP : (amRight : Parser a) -> (amLeft : Parser a) -> (amNon : Parser a) -> (nassocOp : Parser (a -> a -> a)) -> (termP : Parser a) -> (x : a) -> Parser a
+mkNassocP : (amRight, amLeft, amNon : Parser a) ->
+            (nassocOp : Parser (a -> a -> a)) ->
+            (termP : Parser a) -> (x : a) -> Parser a
 mkNassocP amRight amLeft amNon nassocOp termP x =
   do f <- nassocOp
      y <- termP
-     amRight <|> amLeft <|> amNon
+     ignore (amRight <|> amLeft <|> amNon)
      pure (f x y)
 
 public export

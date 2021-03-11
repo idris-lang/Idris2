@@ -25,6 +25,48 @@ equals = terminal "Expected equals"
                                   _ => Nothing)
 
 export
+lte : Rule ()
+lte = terminal "Expected <="
+                      (\x => case x.val of
+                                  LTE => Just ()
+                                  _ => Nothing)
+
+export
+gte : Rule ()
+gte = terminal "Expected >="
+                      (\x => case x.val of
+                                  GTE => Just ()
+                                  _ => Nothing)
+
+export
+lt : Rule ()
+lt = terminal "Expected <="
+                      (\x => case x.val of
+                                  LT => Just ()
+                                  _ => Nothing)
+
+export
+gt : Rule ()
+gt = terminal "Expected >="
+                      (\x => case x.val of
+                                  GT => Just ()
+                                  _ => Nothing)
+
+export
+eqop : Rule ()
+eqop = terminal "Expected =="
+                      (\x => case x.val of
+                                  EqOp => Just ()
+                                  _ => Nothing)
+
+export
+andop : Rule ()
+andop = terminal "Expected &&"
+                      (\x => case x.val of
+                                  AndOp => Just ()
+                                  _ => Nothing)
+
+export
 eoi : Rule ()
 eoi = terminal "Expected end of input"
                (\x => case x.val of
@@ -45,6 +87,13 @@ stringLit : Rule String
 stringLit = terminal "Expected string"
                      (\x => case x.val of
                                  StringLit str => Just str
+                                 _ => Nothing)
+
+export
+integerLit : Rule Integer
+integerLit = terminal "Expected integer"
+                     (\x => case x.val of
+                                 IntegerLit i => Just i
                                  _ => Nothing)
 
 export
@@ -69,6 +118,13 @@ packageName = terminal "Expected package name"
                                      if isIdent AllowDashes str then Just str
                                      else Nothing
                                    _ => Nothing)
+
+export
+dot' : Rule ()
+dot' = terminal "Expected dot"
+                (\x => case x.val of
+                            Dot => Just ()
+                            _ => Nothing)
 
 sep' : Rule ()
 sep' = terminal "Expected separator"

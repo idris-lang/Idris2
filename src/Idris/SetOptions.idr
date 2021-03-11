@@ -6,6 +6,7 @@ import Core.Metadata
 import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
+import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.REPL
@@ -14,19 +15,95 @@ import Idris.Version
 
 import IdrisPaths
 
+import Data.List
 import Data.So
+import Data.Strings
+
 import System
+import System.Directory
 
 %default covering
 
--- TODO: Version numbers on dependencies
+-- Get a list of all the candidate directories that match a package spec
+-- in a given path. Return an empty list on file error (e.g. path not existing)
+export
+candidateDirs : String -> String -> PkgVersionBounds ->
+                IO (List (String, PkgVersion))
+candidateDirs dname pkg bounds
+    = do Right d <- openDir dname
+             | Left err => pure []
+         getFiles d []
+  where
+    toVersion : String -> Maybe PkgVersion
+    toVersion = map MkPkgVersion
+              . traverse parsePositive
+              . forget
+              . split (== '.')
+
+    getVersion : String -> (String, PkgVersion)
+    getVersion str =
+      -- Split the dir name into parts concatenated by "-"
+      -- treating the last part as the version number
+      -- and the initial parts as the package name.
+      -- For reasons of backwards compatibility, we also
+      -- accept hyphenated directory names without a part
+      -- corresponding to a version number.
+      case Lib.unsnoc $ split (== '-') str of
+        (Nil, last) => (last, MkPkgVersion [0])
+        (init,last) =>
+          case toVersion last of
+            Just v  => (concat $ intersperse "-" init, v)
+            Nothing => (str, MkPkgVersion [0])
+
+    -- Return a list of paths that match the version spec
+    -- (full name, version string)
+    -- We'll order by version string that the highest version number is the
+    -- one we use
+    getFiles : Directory -> List (String, PkgVersion) ->
+               IO (List (String, PkgVersion))
+    getFiles d acc
+        = do Right str <- dirEntry d
+                   | Left err => pure (reverse acc)
+             let (pkgdir, ver) = getVersion str
+             if pkgdir == pkg && inBounds ver bounds
+                then getFiles d (((dname </> str), ver) :: acc)
+                else getFiles d acc
+
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
-            String -> Core ()
-addPkgDir p
+            String -> PkgVersionBounds -> Core ()
+addPkgDir p bounds
     = do defs <- get Ctxt
-         addExtraDir (prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version </> p)
+         let globaldir = prefix_dir (dirs (options defs)) </>
+                               "idris2-" ++ showVersion False version
+         let depends = depends_dir (dirs (options defs))
+         Just srcdir <- coreLift currentDir
+             | Nothing => throw (InternalError "Can't get current directory")
+         let localdir = srcdir </> depends
+
+         -- Get candidate directories from the global install location,
+         -- and the local package directory
+         locFiles <- coreLift $ candidateDirs localdir p bounds
+         globFiles <- coreLift $ candidateDirs globaldir p bounds
+         -- Look in all the package paths too
+         let pkgdirs = (options defs).dirs.package_dirs
+         pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) pkgdirs
+
+         -- If there's anything locally, use that and ignore the global ones
+         let allFiles = if isNil locFiles
+                           then globFiles ++ concat pkgFiles
+                           else locFiles
+         -- Sort in reverse order of version number
+         let sorted = sortBy (\x, y => compare (snd y) (snd x)) allFiles
+
+         -- From what remains, pick the one with the highest version number.
+         -- If there's none, report it
+         -- (TODO: Can't do this quite yet due to idris2 build system...)
+         case sorted of
+              [] => if defs.options.session.ignoreMissingPkg
+                       then pure ()
+                       else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
+              ((p, _) :: ps) => addExtraDir p
 
 dirOption : Dirs -> DirCommand -> Core ()
 dirOption dirs LibDir
@@ -78,7 +155,7 @@ preOptions (Directive d :: opts)
     = do setSession (record { directives $= (d::) } !getSession)
          preOptions opts
 preOptions (PkgPath p :: opts)
-    = do addPkgDir p
+    = do addPkgDir p anyBounds
          preOptions opts
 preOptions (SourceDir d :: opts)
     = do setSourceDir (Just d)
@@ -105,6 +182,9 @@ preOptions (RunREPL _ :: opts)
          preOptions opts
 preOptions (FindIPKG :: opts)
     = do setSession (record { findipkg = True } !getSession)
+         preOptions opts
+preOptions (IgnoreMissingIPKG :: opts)
+    = do setSession (record { ignoreMissingPkg = True } !getSession)
          preOptions opts
 preOptions (DumpCases f :: opts)
     = do setSession (record { dumpcases = Just f } !getSession)
@@ -140,18 +220,18 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               REPLResult -> List CLOpt -> Core Bool
 postOptions _ [] = pure True
 postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
-    = do postOptions res rest
+    = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
-         postOptions res rest
+    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+         ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
-         postOptions res rest
+    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+         ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)
-    = do postOptions res rest
+    = do ignore $ postOptions res rest
          pure False
 postOptions res (RunREPL str :: rest)
     = do replCmd str

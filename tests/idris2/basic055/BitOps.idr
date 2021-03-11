@@ -9,6 +9,9 @@ import Data.Stream
 --          Utilities
 --------------------------------------------------------------------------------
 
+shl1 : Int -> Int
+shl1 = prim__shl_Int 1
+
 b8max : Bits8
 b8max = 0xff
 
@@ -21,15 +24,12 @@ b32max = 0xffffffff
 b64max : Bits64
 b64max = 18446744073709551615
 
--- treating Int as 32bit signed integer, though this might depend
--- on the backend.
+-- the only way to create -2^63
 intmin : Int
-intmin = -2147483648
+intmin = shl1 63
 
--- treating Int as 32bit signed integer, though this might depend
--- on the backend.
 intmax : Int
-intmax = 2147483647
+intmax = 0x7fffffffffffffff
 
 powsOf2 : Num a => Nat -> List a
 powsOf2 n = take n (iterate (*2) 1)
@@ -54,10 +54,10 @@ shiftRInteger : List Integer
 shiftRInteger = map (`prim__shr_Integer` 1) (powsOf2 128)
 
 shiftRInt : List Int
-shiftRInt = map (`prim__shr_Int` 1) (powsOf2 31 ++ [intmax])
+shiftRInt = map (`prim__shr_Int` 1) (powsOf2 63 ++ [intmax])
 
 shiftRNegativeInt : List Int
-shiftRNegativeInt = map (`prim__shr_Int` 1) (map negate (powsOf2 31) ++ [intmin])
+shiftRNegativeInt = map (`prim__shr_Int` 1) (map negate (powsOf2 63) ++ [intmin])
 
 --------------------------------------------------------------------------------
 --          shiftL
@@ -79,10 +79,10 @@ shiftLInteger : List Integer
 shiftLInteger = map (`prim__shl_Integer` 1) (0 :: powsOf2 127)
 
 shiftLInt : List Int
-shiftLInt = map (`prim__shl_Int` 1) (0 :: powsOf2 30)
+shiftLInt = map (`prim__shl_Int` 1) (0 :: powsOf2 62)
 
 shiftLNegativeInt : List Int
-shiftLNegativeInt = map (`prim__shl_Int` 1) (map negate (powsOf2 31))
+shiftLNegativeInt = map (`prim__shl_Int` 1) (map negate (powsOf2 62))
 
 
 --------------------------------------------------------------------------------
@@ -260,23 +260,23 @@ xorBits32 = [ prim__xor_Bits32 11 b32max
             , prim__xor_Bits32 11 11
             ]
 
--- xorBits64 : List Bits64
--- xorBits64 = [ prim__xor_Bits64 11 b64max
---             , prim__xor_Bits64 11 0
---             , prim__xor_Bits64 11 1
---             , prim__xor_Bits64 11 2
---             , prim__xor_Bits64 11 4
---             , prim__xor_Bits64 11 11
---             ]
---
--- xorInteger : List Integer
--- xorInteger = [ prim__xor_Integer 11 (prim__shl_Integer 1 128 - 1)
---              , prim__xor_Integer 11 0
---              , prim__xor_Integer 11 1
---              , prim__xor_Integer 11 2
---              , prim__xor_Integer 11 4
---              , prim__xor_Integer 11 11
---              ]
+xorBits64 : List Bits64
+xorBits64 = [ prim__xor_Bits64 11 b64max
+            , prim__xor_Bits64 11 0
+            , prim__xor_Bits64 11 1
+            , prim__xor_Bits64 11 2
+            , prim__xor_Bits64 11 4
+            , prim__xor_Bits64 11 11
+            ]
+
+xorInteger : List Integer
+xorInteger = [ prim__xor_Integer 11 (prim__shl_Integer 1 128 - 1)
+             , prim__xor_Integer 11 0
+             , prim__xor_Integer 11 1
+             , prim__xor_Integer 11 2
+             , prim__xor_Integer 11 4
+             , prim__xor_Integer 11 11
+             ]
 
 xorInt : List Int
 xorInt = [ prim__xor_Int 11 intmax
@@ -306,7 +306,11 @@ xorNegativeInt = [ prim__xor_Int (-11) intmax
 --------------------------------------------------------------------------------
 
 main : IO ()
-main = do printLn shiftRBits8
+main = do printLn intmin
+
+          putStrLn ""
+
+          printLn shiftRBits8
           printLn shiftRBits16
           printLn shiftRBits32
           printLn shiftRBits64
@@ -349,7 +353,7 @@ main = do printLn shiftRBits8
           printLn xorBits8
           printLn xorBits16
           printLn xorBits32
-          -- printLn xorBits64
-          -- printLn xorInteger
+          printLn xorBits64
+          printLn xorInteger
           printLn xorInt
           printLn xorNegativeInt

@@ -87,11 +87,11 @@ mutual
                 else do scty <- updateHoleType useInHole var zs sc as
                         pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (a :: as)
-      = do updateHoleUsage False var zs a
+      = do ignore $ updateHoleUsage False var zs a
            scty <- updateHoleType useInHole var zs sc as
            pure (Bind bfc nm (Pi fc' c e ty) scty)
   updateHoleType useInHole var zs ty as
-      = do updateHoleUsageArgs False var zs as
+      = do ignore $ updateHoleUsageArgs False var zs as
            pure ty
 
   updateHoleUsagePats : {auto c : Ref Ctxt Defs} ->
@@ -287,7 +287,10 @@ mutual
     where
       rig : RigCount
       rig = case b of
-                 Pi _ _ _ _ => erased
+                 Pi _ _ _ _ =>
+                      if isErased rig_in
+                         then erased
+                         else top -- checking as if an inspectable run-time type
                  _ => if isErased rig_in
                          then erased
                          else linear
@@ -391,7 +394,7 @@ mutual
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (Let fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (Pi fc c x ty)
-      = do (tyv, tyt, _) <- lcheck erased erase env ty
+      = do (tyv, tyt, _) <- lcheck (rig |*| c) erase env ty
            pure (Pi fc c x tyv, tyt, [])
   lcheckBinder rig erase env (PVar fc c p ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
@@ -667,9 +670,9 @@ mutual
       = do defs <- get Ctxt
            empty <- clearDefs defs
            ty <- quote empty env nty
-           throw (GenericMsg fc ("Linearity checking failed on metavar
-                      " ++ show n ++ " (" ++ show ty ++
-                      " not a function type)"))
+           throw (GenericMsg fc ("Linearity checking failed on metavar "
+                      ++ show n ++ " (" ++ show ty
+                      ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt
            pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])

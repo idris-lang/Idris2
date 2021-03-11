@@ -1,5 +1,6 @@
 [ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
 [ ] Change version numbers in doc listings
+[ ] Change version numbers in prelude, base, contrib, network, and test ipkgs
 [ ] Update bootstrap chez and racket
 [ ] Tag on github with version number (in the form vX.Y.Z)
 [ ] Run release script

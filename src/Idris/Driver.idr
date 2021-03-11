@@ -62,6 +62,10 @@ updateEnv
          the (Core ()) $ case blibs of
               Just path => do traverseList1_ addLibDir (map trim (split (==pathSeparator) path))
               Nothing => pure ()
+         pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
+         the (Core ()) $ case pdirs of
+              Just path => do traverseList1_ addPackageDir (map trim (split (==pathSeparator) path))
+              Nothing => pure ()
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
          the (Core ()) $ case cg of
               Just e => case getCG (options defs) e of
@@ -74,8 +78,9 @@ updateEnv
          -- for the tests means they test the local version not the installed
          -- version
          defs <- get Ctxt
-         addPkgDir "prelude"
-         addPkgDir "base"
+         -- These might fail while bootstrapping
+         catch (addPkgDir "prelude" anyBounds) (const (pure ()))
+         catch (addPkgDir "base" anyBounds) (const (pure ()))
          addDataDir (prefix_dir (dirs (options defs)) </>
                         ("idris2-" ++ showVersion False version) </> "support")
          addLibDir (prefix_dir (dirs (options defs)) </>
@@ -109,6 +114,11 @@ tryYaffle [] = pure False
 tryYaffle (Yaffle f :: _) = do yaffleMain f []
                                pure True
 tryYaffle (c :: cs) = tryYaffle cs
+
+ignoreMissingIpkg : List CLOpt -> Bool
+ignoreMissingIpkg [] = False
+ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
+ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
 
 tryTTM : List CLOpt -> Core Bool
 tryTTM [] = pure False
@@ -145,6 +155,9 @@ stMain cgs opts
          addPrimitives
 
          setWorkingDir "."
+         when (ignoreMissingIpkg opts) $
+            setSession (record { ignoreMissingPkg = True } !getSession)
+
          updateEnv
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts

@@ -23,8 +23,8 @@ public export
 Random Int where
   -- Generate a random value within [-2^31, 2^31-1].
   randomIO =
-    let maxInt = shiftL 1 31 - 1
-        minInt = negate $ shiftL 1 31
+    let maxInt = 2147483647  --shiftL 1 31 - 1
+        minInt = -2147483648 -- negate $ shiftL 1 31
         range = maxInt - minInt
      in map (+ minInt) $ liftIO $ randomInt range
 
@@ -69,9 +69,9 @@ rndFin (S k) = do
 ||| Select a random element from a vector
 public export
 rndSelect' : {k : Nat} -> Vect (S k) a -> IO a
-rndSelect' {k} xs = pure $ Vect.index !(rndFin k) xs
+rndSelect' xs = pure $ Vect.index !(rndFin k) xs
 
 ||| Select a random element from a non-empty list
 public export
-rndSelect : (elems : List a) -> {auto prf : NonEmpty elems} -> IO a
-rndSelect (x :: xs) {prf = IsNonEmpty} = rndSelect' $ fromList (x :: xs)
+rndSelect : (elems : List a) -> (0 _ : NonEmpty elems) => IO a
+rndSelect (x :: xs) = rndSelect' $ fromList (x :: xs)

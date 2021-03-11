@@ -39,7 +39,7 @@ public export
 %hint
 public export
 InferPoset : {t : Type} -> {spo : t -> t -> Type} -> StrictPreorder t spo => Poset t (EqOr spo)
-InferPoset {t} {spo} = MkPoset @{MkPreorder} {antisym = antisym}
+InferPoset = MkPoset @{MkPreorder} {antisym}
   where
     antisym : (a,b : t) -> EqOr spo a b -> EqOr spo b a -> a = b
     antisym a a (Left  Refl) (Left  Refl) = Refl
@@ -63,7 +63,7 @@ interface StrictPreorder t spo => StrictOrdered t spo where
 %hint
 public export
 InferOrder : {t : Type} -> {spo : t -> t -> Type} -> StrictOrdered t spo => Ordered t (EqOr spo)
-InferOrder {t} {spo} @{so} = MkOrdered @{InferPoset} {ord = ord}
+InferOrder @{so} = MkOrdered @{InferPoset} {ord}
   where
     ord : (a,b : t) -> Either (EqOr spo a b) (EqOr spo b a)
     ord  a b with (Strict.order @{so} a b)

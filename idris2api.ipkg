@@ -1,4 +1,5 @@
 package idris2
+version = 0.3.0
 
 modules =
     Algebra,
@@ -103,10 +104,12 @@ modules =
     Libraries.Data.ANameMap,
     Libraries.Data.Bool.Extra,
     Libraries.Data.DList,
+    Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,
     Libraries.Data.List.Lazy,
+    Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,

@@ -60,9 +60,7 @@ export
 soOr : {a : Bool} -> So (a || b) -> Either (So a) (So b)
 soOr soab with (choose a)
   soOr {a=True}  _    | Left Oh = Left Oh
-  soOr {a=False} _    | Left Oh impossible
   soOr {a=False} soab | Right Oh = Right soab
-  soOr {a=True}  _    | Right Oh impossible
 
 export
 orSo : Either (So a) (So b) -> So (a || b)

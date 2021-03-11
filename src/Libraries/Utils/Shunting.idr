@@ -120,7 +120,7 @@ shunt stk (Op loc op prec :: rest)
     = do stk' <- processStack stk op prec
          shunt ((loc, op, prec) :: stk') rest
 shunt stk []
-    = do traverse (\s => emit (Op (sloc s) (sop s) (sprec s))) stk
+    = do traverse_ (\s => emit (Op (sloc s) (sop s) (sprec s))) stk
          [out] <- get Out
              | out => throw (InternalError "Invalid input to shunting")
          pure out

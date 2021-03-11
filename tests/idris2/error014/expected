@@ -1,5 +1,5 @@
 1/1: Building Issue735 (Issue735.idr)
-Error: Constructor Prelude.Types.:: is not fully applied.
+Error: While processing left hand side of isCons. Can't match on :: (Under-applied constructor).
 
 Issue735.idr:5:8--5:12
  1 | module Issue735
@@ -9,7 +9,7 @@ Issue735.idr:5:8--5:12
  5 | isCons (::) = True
             ^^^^
 
-Error: Constructor Issue735.A is not fully applied.
+Error: While processing left hand side of test. Can't match on A (Under-applied constructor).
 
 Issue735.idr:12:6--12:7
  08 | interface A a where

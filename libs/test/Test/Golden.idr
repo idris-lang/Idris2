@@ -136,7 +136,7 @@ normalize str =
 |||
 ||| See the module documentation for more information.
 |||
-||| @testpath the directory that contains the test.
+||| @testPath the directory that contains the test.
 export
 runTest : Options -> String -> IO (Future Bool)
 runTest opts testPath = forkIO $ do
@@ -144,7 +144,7 @@ runTest opts testPath = forkIO $ do
   let cg = case codegen opts of
          Nothing => ""
          Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
-  system $ "cd " ++ testPath ++ " && " ++
+  ignore $ system $ "cd " ++ testPath ++ " && " ++
     cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
   end <- clockTime Thread
 
@@ -202,10 +202,10 @@ runTest opts testPath = forkIO $ do
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
             ["Accept actual value as new golden value? [yn]"]
-          b <- getAnswer
-          when b $ do Right _ <- writeFile (testPath ++ "/expected") out
-                        | Left err => print err
-                      pure ()
+      b <- getAnswer
+      when b $ do Right _ <- writeFile (testPath ++ "/expected") out
+                    | Left err => print err
+                  pure ()
 
     printTiming : Bool -> Clock type -> String -> IO ()
     printTiming True  clock msg = putStrLn (unwords [msg, show clock])
@@ -225,14 +225,15 @@ pathLookup names = do
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = Chez | Node | Racket | C
+data Requirement = C | Chez | Node | Racket | Gambit
 
 export
 Show Requirement where
+  show C = "C"
   show Chez = "Chez"
   show Node = "node"
   show Racket = "racket"
-  show C = "C"
+  show Gambit = "gambit"
 
 export
 checkRequirement : Requirement -> IO (Maybe String)
@@ -243,10 +244,11 @@ checkRequirement req
 
   where
     requirement : Requirement -> (String, List String)
+    requirement C = ("CC", ["cc"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
-    requirement C = ("CC", ["cc"])
+    requirement Gambit = ("GAMBIT", ["gsc"])
 
 export
 findCG : IO (Maybe String)
@@ -255,6 +257,7 @@ findCG
        Nothing <- checkRequirement Chez    | p => pure (Just "chez")
        Nothing <- checkRequirement Node    | p => pure (Just "node")
        Nothing <- checkRequirement Racket  | p => pure (Just "racket")
+       Nothing <- checkRequirement Gambit  | p => pure (Just "gsc")
        Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
@@ -293,6 +296,7 @@ poolRunner opts pool
              | Nothing => pure []
        -- if so run them all!
        map await <$> traverse (runTest opts) tests
+
 
 ||| A runner for a whole test suite
 export

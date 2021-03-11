@@ -23,6 +23,7 @@ collectDefs : List ImpDecl -> List ImpDecl
 %default covering
 
 %hide Prelude.(>>=)
+%hide Prelude.(>>)
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure
@@ -36,6 +37,10 @@ atom fname
          x <- constant
          end <- location
          pure (IPrimVal (MkFC fname start end) x)
+  <|> do start <- location
+         str <- simpleStr
+         end <- location
+         pure (IPrimVal (MkFC fname start end) (Str str))
   <|> do start <- location
          exactIdent "Type"
          end <- location
@@ -119,7 +124,7 @@ visOpt
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility FnOpt) ->
-               SourceEmptyRule Visibility
+                SourceEmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs
@@ -699,9 +704,11 @@ topDecl fname indents
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
+         m <- multiplicity
+         rig <- getMult m
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkFC fname start end) top vis opts claim)
+         pure (IClaim (MkFC fname start end) rig vis opts claim)
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents

@@ -9,9 +9,9 @@ import Data.Telescope.Segment
 import Data.Telescope.SimpleFun
 
 public export
-Fun : (env : Left.Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma)
-   -> (cod : SimpleFun env delta Type)
-   -> Type
+0 Fun : (env : Left.Environment gamma) -> {n : Nat} -> (0 delta : Segment n gamma)
+     -> (cod : SimpleFun env delta Type)
+     -> Type
 Fun env {n = 0  } []            cod = cod
 Fun env {n = S n} (ty :: delta) cod = (x : ty env) -> Fun (env ** x) delta (cod x)
 

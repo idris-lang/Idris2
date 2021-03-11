@@ -322,8 +322,8 @@ searchName fc rigc opts env target topty (n, ndef)
          let [] = constraints ures
              | _ => noResult
          -- Search the explicit arguments first, they may resolve other holes
-         traverse (searchIfHole fc opts topty env)
-                  (filter explicit args)
+         traverse_ (searchIfHole fc opts topty env)
+                   (filter explicit args)
          args' <- traverse (searchIfHole fc opts topty env)
                            args
          mkCandidates fc (Ref fc namety n) [] args'
@@ -844,9 +844,9 @@ firstLinearOK : {auto c : Ref Ctxt Defs} ->
 firstLinearOK fc NoMore = noResult
 firstLinearOK fc (Result (t, ds) next)
     = handleUnify
-            (do when (not (isNil ds)) $
+            (do unless (isNil ds) $
                    traverse_ (processDecl [InCase] (MkNested []) []) ds
-                linearCheck fc linear False [] t
+                ignore $ linearCheck fc linear False [] t
                 defs <- get Ctxt
                 nft <- normaliseHoles defs [] t
                 raw <- unelab [] !(toFullNames nft)

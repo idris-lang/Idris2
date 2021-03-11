@@ -34,6 +34,15 @@
 (define blodwen-or (lambda (x y) (bitwise-ior x y)))
 (define blodwen-xor (lambda (x y) (bitwise-xor x y)))
 
+(define truncate-bits
+  (lambda (x bits)
+    (if (bitwise-bit-set? x bits)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+
+(define blodwen-bits-shl-signed
+  (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+
 (define cast-num
   (lambda (x)
     (if (number? x) x 0)))
