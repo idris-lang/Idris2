@@ -449,7 +449,7 @@ data REPLCmd : Type where
      CWD: REPLCmd
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
-     Doc : Name -> REPLCmd
+     Doc : PTerm -> REPLCmd
      Browse : Namespace -> REPLCmd
      SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd

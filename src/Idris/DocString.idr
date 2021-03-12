@@ -9,6 +9,7 @@ import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.TTImp
+import TTImp.Elab.Prim
 
 import Libraries.Data.ANameMap
 import Data.List
@@ -45,10 +46,19 @@ addDocStringNS ns n_in doc
                            saveDocstrings $= insert n' () } syn)
 
 export
-getDocsFor : {auto c : Ref Ctxt Defs} ->
-             {auto s : Ref Syn SyntaxInfo} ->
-             FC -> Name -> Core (List String)
-getDocsFor fc n
+getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
+                      {auto s : Ref Syn SyntaxInfo} ->
+                      Constant -> Core (List String)
+getDocsForPrimitive constant = do
+    let (_, type) = checkPrim EmptyFC constant
+    let typeString = show constant ++ " : " ++ show !(resugar [] type)
+    pure [typeString ++ "\n\tPrimitive"]
+
+export
+getDocsForName : {auto c : Ref Ctxt Defs} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 FC -> Name -> Core (List String)
+getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
@@ -148,6 +158,20 @@ getDocsFor fc n
                               ++ "\n" ++ indent str
              extra <- getExtra n def
              pure (doc ++ extra)
+
+export
+getDocsForPTerm : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  PTerm -> Core (List String)
+getDocsForPTerm (PRef fc name) = getDocsForName fc name
+getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
+getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
+getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
+getDocsForPTerm (PList _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
+getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
+getDocsForPTerm (PDPair _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
+getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
+getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
