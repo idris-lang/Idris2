@@ -1,16 +1,123 @@
 module Core.Context.Log
 
+
+import Data.Strings
+import Data.These
+
 import Core.Context
 import Core.Options
-
+import Data.Maybe
+import Data.String
+import Data.List
+import Data.List1
+import Libraries.Data.StringTrie
 import Libraries.Data.StringMap
 
 import System.Clock
 
 %default covering
 
+----------------------------------------------------------------------------------
+-- TOPICS 
+public export
+total
+splitname : String -> List String 
+splitname = List1.forget . Data.String.split (== '.')
+
+public export 
+topicList : List (String, String)
+topicList = [
+    ("", "some documentation of this option"),
+    ("auto", "some documentation of this option"),
+    ("compile.casetree", "some documentation of this option"),
+    ("compiler.inline.eval", "some documentation of this option"),
+    ("coverage.empty", "some documentation of this option"),
+    ("coverage.recover", "some documentation of this option"),
+    ("declare.data", "some documentation of this option"),
+    ("declare.data.constructor", "some documentation of this option"),
+    ("declare.data.parameters", "some documentation of this option"),
+    ("declare.def", "some documentation of this option"),
+    ("declare.def.clause", "some documentation of this option"),
+    ("declare.def.clause.impossible", "some documentation of this option"),
+    ("declare.def.clause.with", "some documentation of this option"),
+    ("declare.def.impossible", "some documentation of this option"),
+    ("declare.def.lhs", "some documentation of this option"),
+    ("declare.param", "some documentation of this option"),
+    ("declare.record", "some documentation of this option"),
+    ("declare.record.field", "some documentation of this option"),
+    ("declare.record.projection", "some documentation of this option"),
+    ("declare.type", "some documentation of this option"),
+    ("elab", "some documentation of this option"),
+    ("elab.ambiguous", "some documentation of this option"),
+    ("elab.as", "some documentation of this option"),
+    ("elab.case", "some documentation of this option"),
+    ("elab.delay", "some documentation of this option"),
+    ("elab.hole", "some documentation of this option"),
+    ("elab.implementation", "some documentation of this option"),
+    ("elab.interface", "some documentation of this option"),
+    ("elab.interface.default", "some documentation of this option"),
+    ("elab.local", "some documentation of this option"),
+    ("elab.prun", "some documentation of this option"),
+    ("elab.prune", "some documentation of this option"),
+    ("elab.record", "some documentation of this option"),
+    ("elab.retry", "some documentation of this option"),
+    ("elab.rewrite", "some documentation of this option"),
+    ("eval.casetree", "some documentation of this option"),
+    ("eval.casetree.stuck", "some documentation of this option"),
+    ("eval.eta", "some documentation of this option"),
+    ("eval.stuck", "some documentation of this option"),
+    ("idemode.hole", "some documentation of this option"),
+    ("import", "some documentation of this option"),
+    ("interaction.casesplit", "some documentation of this option"),
+    ("interaction.generate", "some documentation of this option"),
+    ("interaction.search", "some documentation of this option"),
+    ("metadata.names", "some documentation of this option"),
+    ("quantity", "some documentation of this option"),
+    ("quantity.hole", "some documentation of this option"),
+    ("specialise", "some documentation of this option"),
+    ("totality", "some documentation of this option"),
+    ("totality.positivity", "some documentation of this option"),
+    ("totality.termination", "some documentation of this option"),
+    ("totality.termination.calc", "some documentation of this option"),
+    ("totality.termination.guarded", "some documentation of this option"),
+    ("totality.termination.sizechange", "some documentation of this option"),
+    ("totality.termination.sizechange.checkCall", "some documentation of this option"),
+    ("totality.termination.sizechange.checkCall.inPath", "some documentation of this option"),
+    ("totality.termination.sizechange.checkCall.inPathNot.restart", "some documentation of this option"),
+    ("totality.termination.sizechange.checkCall.inPathNot.return", "some documentation of this option"),
+    ("totality.termination.sizechange.inPath", "some documentation of this option"),
+    ("totality.termination.sizechange.isTerminating", "some documentation of this option"),
+    ("totality.termination.sizechange.needsChecking", "some documentation of this option"),
+    ("ttc.write", "some documentation of this option"),
+    ("unify.application", "some documentation of this option"),
+    ("unify.constant", "some documentation of this option"),
+    ("unify.delay", "some documentation of this option"),
+    ("unify.equal", "some documentation of this option"),
+    ("unify.head", "some documentation of this option"),
+    ("unify.instantiate", "some documentation of this option"),
+    ("unify.invertible", "some documentation of this option"),
+    ("unify.meta", "some documentation of this option"),
+    ("unify.noeta", "some documentation of this option"),
+    ("unify.postpone", "some documentation of this option"),
+    ("unify.retry", "some documentation of this option"),
+    ("unify.search", "some documentation of this option"),
+    ("unify.unsolved", "some documentation of this option")
+] 
+
+public export
+total 
+possibleTopics : StringTrie String 
+possibleTopics = foldr ins StringTrie.empty topicList where 
+    ins : (String, String) -> StringTrie String -> StringTrie String
+    ins (name, docs) trie = StringTrie.insert (Core.Context.Log.splitname name) docs trie
+
+public export
+total 
+topicDeclared : String -> Bool 
+topicDeclared logctx = isJust $ StringTrie.find (Core.Context.Log.splitname logctx) possibleTopics
+
 -- Log message with a term, translating back to human readable names first
-export
+public export
 logTerm : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           String -> Nat -> Lazy String -> Term vars -> Core ()
@@ -22,7 +129,9 @@ logTerm str n msg tm
                     coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
             else pure ()
-export
+
+public export
+total
 log' : {auto c : Ref Ctxt Defs} ->
        LogLevel -> Lazy String -> Core ()
 log' lvl msg
@@ -33,14 +142,15 @@ log' lvl msg
 
 ||| Log a message with the given log level. Use increasingly
 ||| high log level numbers for more granular logging.
-export
-log : {auto c : Ref Ctxt Defs} ->
-      String -> Nat -> Lazy String -> Core ()
+public export
+total
+log : {auto c : Ref Ctxt Defs} -> (str: String) -> {auto known : (topicDeclared str) = True} 
+      -> Nat -> Lazy String -> Core ()
 log str n msg
     = do let lvl = mkLogLevel str n
          log' lvl msg
 
-export
+public export
 logC : {auto c : Ref Ctxt Defs} ->
        String -> Nat -> Core String -> Core ()
 logC str n cmsg
@@ -51,7 +161,7 @@ logC str n cmsg
                     coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
             else pure ()
 
-export
+public export
 logTimeOver : Integer -> Core String -> Core a -> Core a
 logTimeOver nsecs str act
     = do clock <- coreLift (clockTime Process)
@@ -76,7 +186,7 @@ logTimeOver nsecs str act
     addZeros [x,y] = "0" ++ cast x ++ cast y
     addZeros str = pack str
 
-export
+public export
 logTimeWhen : {auto c : Ref Ctxt Defs} ->
               Bool -> Lazy String -> Core a -> Core a
 logTimeWhen p str act
@@ -121,7 +231,7 @@ logTimeRecord' key act
 
 -- for ad-hoc profiling, record the time the action takes and add it
 -- to the time for the given category
-export
+public export
 logTimeRecord : {auto c : Ref Ctxt Defs} ->
                 String -> Core a -> Core a
 logTimeRecord key act
@@ -135,7 +245,7 @@ logTimeRecord key act
               Nothing
                 => logTimeRecord' key act
 
-export
+public export
 showTimeRecord : {auto c : Ref Ctxt Defs} ->
                  Core ()
 showTimeRecord
@@ -157,7 +267,7 @@ showTimeRecord
                                addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
                                "s"
 
-export
+public export
 logTime : {auto c : Ref Ctxt Defs} ->
           Lazy String -> Core a -> Core a
 logTime str act

@@ -64,3 +64,15 @@ foldWithKeysM {a} {m} {b} fk fv = go []
                           neutral
                           (toList sm))
                 nd
+
+-- search the trie for a specific path of strings
+public export
+find : List String -> StringTrie a -> Maybe a 
+-- If our "path" has finished, and this node in the trie has some "data", return it.
+find [] (MkStringTrie (This x)) = Just x
+find [] (MkStringTrie (Both x _)) = Just x
+-- If we still have some path left, search the children for the head of the path.
+find (y :: ys) (MkStringTrie (That children)) = (lookup y children) >>= (find ys)
+find (y :: ys) (MkStringTrie (Both _ children)) = (lookup y children) >>= (find ys)
+-- Otherwise, we can't find what we're looking for (path too short, or too long)
+find _ _ = Nothing

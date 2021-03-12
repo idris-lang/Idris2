@@ -75,6 +75,7 @@ merge3 (Branch2 a b c) d (Branch3 e f g h i) j k = branch6 a b c d e f g h i j k
 merge3 (Branch3 a b c d e) f (Branch2 g h i) j k = branch6 a b c d e f g h i j k
 merge3 (Branch3 a b c d e) f (Branch3 g h i j k) l m = branch7 a b c d e f g h i j k l m
 
+public export
 treeLookup : Key -> Tree n v -> Maybe v
 treeLookup k (Leaf k' v) =
   if k == k' then
@@ -94,6 +95,7 @@ treeLookup k (Branch3 t1 k1 t2 k2 t3) =
   else
     treeLookup k t3
 
+public export
 treeInsert' : Key -> v -> Tree n v -> Either (Tree n v) (Tree n v, Key, Tree n v)
 treeInsert' k v (Leaf k' v') =
   case compare k k' of
@@ -124,6 +126,7 @@ treeInsert' k v (Branch3 t1 k1 t2 k2 t3) =
         Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
         Right (a, b, c) => Right (Branch2 t1 k1 t2, k2, Branch2 a b c)
 
+public export
 treeInsert : Key -> v -> Tree n v -> Either (Tree n v) (Tree (S n) v)
 treeInsert k v t =
   case treeInsert' k v t of
@@ -199,25 +202,25 @@ treeToList = treeToList' (:: [])
     treeToList' cont (Branch2 t1 _ t2) = treeToList' (:: treeToList' cont t2) t1
     treeToList' cont (Branch3 t1 _ t2 _ t3) = treeToList' (:: treeToList' (:: treeToList' cont t3) t2) t1
 
-export
+public export
 data StringMap : Type -> Type where
   Empty : StringMap v
   M : (n : Nat) -> Tree n v -> StringMap v
 
-export
+public export
 empty : StringMap v
 empty = Empty
 
-export
+public export
 singleton : String -> v -> StringMap v
 singleton k v = M Z (Leaf k v)
 
-export
+public export
 lookup : String -> StringMap v -> Maybe v
 lookup _ Empty = Nothing
 lookup k (M _ t) = treeLookup k t
 
-export
+public export
 insert : String -> v -> StringMap v -> StringMap v
 insert k v Empty = M Z (Leaf k v)
 insert k v (M _ t) =
@@ -225,11 +228,11 @@ insert k v (M _ t) =
     Left t' => (M _ t')
     Right t' => (M _ t')
 
-export
+public export
 insertFrom : List (String, v) -> StringMap v -> StringMap v
 insertFrom = flip $ foldl $ flip $ uncurry insert
 
-export
+public export
 delete : String -> StringMap v -> StringMap v
 delete _ Empty = Empty
 delete k (M Z t) =
@@ -241,22 +244,22 @@ delete k (M (S _) t) =
     Left t' => (M _ t')
     Right t' => (M _ t')
 
-export
+public export
 fromList : List (String, v) -> StringMap v
 fromList l = foldl (flip (uncurry insert)) empty l
 
-export
+public export
 toList : StringMap v -> List (String, v)
 toList Empty = []
 toList (M _ t) = treeToList t
 
 ||| Gets the Keys of the map.
-export
+public export
 keys : StringMap v -> List String
 keys = map fst . toList
 
 ||| Gets the values of the map. Could contain duplicates.
-export
+public export
 values : StringMap v -> List v
 values = map snd . toList
 
@@ -266,14 +269,14 @@ treeMap f (Branch2 t1 k t2) = Branch2 (treeMap f t1) k (treeMap f t2)
 treeMap f (Branch3 t1 k1 t2 k2 t3)
     = Branch3 (treeMap f t1) k1 (treeMap f t2) k2 (treeMap f t3)
 
-export
+public export
 implementation Functor StringMap where
   map _ Empty = Empty
   map f (M n t) = M _ (treeMap f t)
 
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.
-export
+public export
 mergeWith : (v -> v -> v) -> StringMap v -> StringMap v -> StringMap v
 mergeWith f x y = insertFrom inserted x where
   inserted : List (Key, v)
@@ -284,23 +287,23 @@ mergeWith f x y = insertFrom inserted x where
 
 ||| Merge two maps using the Semigroup (and by extension, Monoid) operation.
 ||| Uses mergeWith internally, so the ordering of the left map is kept.
-export
+public export
 merge : Semigroup v => StringMap v -> StringMap v -> StringMap v
 merge = mergeWith (<+>)
 
 ||| Left-biased merge, also keeps the ordering specified  by the left map.
-export
+public export
 mergeLeft : StringMap v -> StringMap v -> StringMap v
 mergeLeft x y = mergeWith const x y
 
-export
+public export
 adjust : String -> (v -> v) -> StringMap v -> StringMap v
 adjust k f m =
   case lookup k m of
     Nothing => m
     Just v => insert k (f v) m
 
-export
+public export
 Show v => Show (StringMap v) where
   show m = show $ map {b=String} (\(k,v) => k ++ "->" ++ show v) $ toList m
 
@@ -309,10 +312,10 @@ Show v => Show (StringMap v) where
 -- strictly more powerful I believe, because `mergeLeft` can be emulated with
 -- the `First` monoid. However, this does require more code to do the same
 -- thing.
-export
+public export
 Semigroup v => Semigroup (StringMap v) where
   (<+>) = merge
 
-export
+public export
 (Semigroup v) => Monoid (StringMap v) where
   neutral = empty
