@@ -17,6 +17,6 @@ main =
      putStrLn "Hello children"
      sleep 1
      conditionBroadcast cv
-     for ts $ \t => threadWait t
+     ignore $ for ts $ \t => threadWait t
      sleep 1
 
