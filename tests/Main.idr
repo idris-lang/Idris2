@@ -179,7 +179,7 @@ chezTests = MkTestPool [Chez]
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
     , "chez031", "chez032"
-    --, "futures001"
+    , "futures001"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
@@ -194,7 +194,7 @@ racketTests : TestPool
 racketTests = MkTestPool [Racket]
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
-    --, "futures001"
+    , "futures001"
     , "mutex001", "mutex002", "mutex003", "mutex004", "mutex005"
     , "conditions001"
     , "conditions002"
