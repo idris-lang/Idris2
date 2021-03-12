@@ -110,7 +110,7 @@ tokenise reject tokenizer line col acc str
     getFirstMatch (Match lex fn) str
         = let Just (tok, line', col', rest) = getNext lex line col str
                 | _ => Left NoRuleApply
-              tok' = MkBounded (fn tok) False line col line' col'
+              tok' = MkBounded (fn tok) False (MkBounds line col line' col')
            in Right ([tok'], line', col', rest)
     getFirstMatch (Compose begin mapBegin tagger middleFn endFn mapEnd) str
         = let Just (beginTok', line', col' , rest) = getNext begin line col str
@@ -118,7 +118,7 @@ tokenise reject tokenizer line col acc str
               tag = tagger beginTok'
               middle = middleFn tag
               end = endFn tag
-              beginTok'' = MkBounded (mapBegin beginTok') False line col line' col'
+              beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
               (midToks, (reason, line'', col'', rest'')) =
                     tokenise end middle line' col' [] rest
            in case reason of
@@ -126,7 +126,7 @@ tokenise reject tokenizer line col acc str
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =
                                 getNext end line'' col'' rest''
                               | _ => Left $ ComposeNotClosing (line, col) (line', col')
-                            endTok'' = MkBounded (mapEnd endTok') False line'' col'' lineEnd colEnd
+                            endTok'' = MkBounded (mapEnd endTok') False (MkBounds line'' col'' lineEnd colEnd)
                          in Right ([endTok''] ++ reverse midToks ++ [beginTok''], lineEnd, colEnd, restEnd)
     getFirstMatch (Alt t1 t2) str
         = case getFirstMatch t1 str of

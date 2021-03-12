@@ -16,8 +16,8 @@ match : (Eq k, TokenKind k) =>
         (kind : k) ->
         Grammar (Token k) True (TokType kind)
 match k = terminal "Unrecognised input" $
-    \t => if t.val.kind == k
-             then Just $ tokValue k t.val.text
+    \t => if t.kind == k
+             then Just $ tokValue k t.text
              else Nothing
 
 ||| Optionally parse a thing, with a default value if the grammar doesn't
