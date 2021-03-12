@@ -299,7 +299,7 @@ mutual
   rawTokens =
           match comment (const Comment)
       <|> match blockComment (const Comment)
-      <|> match docComment (DocComment . drop 3)
+      <|> match docComment (DocComment . removeOptionalLeadingSpace . drop 3)
       <|> match cgDirective mkDirective
       <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
       <|> compose (choice $ exact <$> groupSymbols)
@@ -344,6 +344,11 @@ mutual
                                (Just ns, n)     => DotSepIdent ns n
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
+
+      removeOptionalLeadingSpace : String -> String
+      removeOptionalLeadingSpace str = case strM str of
+        StrCons ' ' tail => tail
+        _ => str
 
 export
 lexTo : Lexer ->

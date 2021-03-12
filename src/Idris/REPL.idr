@@ -666,7 +666,7 @@ docsOrSignature fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         getDocsFor fc n
+         getDocsForName fc n
   where
     typeSummary : Defs -> Core (List String)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
@@ -849,8 +849,8 @@ process (Total n)
                              tot <- getTotality replFC fn >>= toFullNames
                              pure $ (fn, tot))
                                (map fst ts)
-process (Doc n)
-    = do doc <- getDocsFor replFC n
+process (Doc itm)
+    = do doc <- getDocsForPTerm itm
          pure $ Printed $ vsep $ pretty <$> doc
 process (Browse ns)
     = do doc <- getContents ns
