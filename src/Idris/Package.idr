@@ -445,23 +445,32 @@ htmlEscape s = fastAppend $ reverse $ go [] s
                                go (escaped::safe::acc) (assert_total $ strTail rest)
 
 htmlPreamble : String -> String -> String -> String
-htmlPreamble title root class = "
+htmlPreamble title root class = """
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
   <head>
-    <meta charset=\"utf-8\">
-    <title>" ++ htmlEscape title ++ "</title>
-    <link rel=\"stylesheet\" href=\"" ++ root ++ "styles.css\">
+    <meta charset="utf-8">
+    <title>
+""" ++ htmlEscape title ++ """
+    </title>
+    <link rel="stylesheet" href="
+""" ++ root ++ """
+styles.css">
   </head>
-  <body class=\"" ++ class ++ "\">
+  <body class="
+""" ++ class ++ """
+">
     <header>
-      <strong>Idris2Doc</strong> : " ++ htmlEscape title ++ "
+      <strong>Idris2Doc</strong> :
+""" ++ " " ++ htmlEscape title ++ """
       <nav>
-        <a href=\"" ++ root ++ "index.html\">Index</a>
+        <a href="
+""" ++ root ++ """
+index.html">Index</a>
       </nav>
     </header>
-    <div class=\"container\">
-"
+    <div class="container">
+"""
 
 htmlFooter : String
 htmlFooter = "</div><footer>Produced by Idris2 version " ++ (showVersion True version) ++ "</footer></body></html>"
@@ -546,7 +555,7 @@ makeDoc pkg opts =
        let build = build_dir (dirs (options defs))
        let docBase = build </> "docs"
        let docDir = docBase </> "docs"
-       coreLift $ mkdirAll docDir
+       ignore $ coreLift $ mkdirAll docDir
        u <- newRef UST initUState
        setPPrint (MkPPOpts False False True)
 
@@ -554,7 +563,7 @@ makeDoc pkg opts =
            let outputFileName = (show mod) ++ ".html"
            Right outFile <- coreLift $ openFile (docDir </> outputFileName) WriteTruncate
              | Left err => pure [InternalError $ ("error opening file \"" ++ (docDir </> outputFileName) ++ "\": " ++ (show err))]
-           let writeHtml = \s => (coreLift $ fPutStrLn outFile s)
+           let writeHtml = \s => (coreLift_ $ fPutStrLn outFile s)
            let ns = miAsNamespace mod
            addImport (MkImport emptyFC False mod ns)
            defs <- get Ctxt
@@ -565,7 +574,7 @@ makeDoc pkg opts =
            writeHtml $ htmlPreamble (show mod) "../" "namespace"
            writeHtml ("<h1>" ++ show mod ++ "</h1>")
            writeHtml ("<dl class=\"decls\">")
-           for (sort allNs) (\name => do
+           ignore $ for (sort allNs) (\name => do
                Just gdef <- lookupCtxtExact name (gamma defs)
                  | Nothing => writeHtml ("ERROR: lookup failed: " ++ show name)
                typeTm <- resugar [] !(normaliseHoles defs [] (type gdef))
@@ -575,7 +584,7 @@ makeDoc pkg opts =
                writeHtml ("<dt id=\"" ++ (htmlEscape $ show name) ++ "\">")
                writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")
                writeHtml ("</dt><dd><pre>")
-               doc <- getDocsFor emptyFC name
+               doc <- getDocsForName emptyFC name
                writeHtml (unlines $ map htmlEscape doc)
                writeHtml ("</pre></dd>")
              )
@@ -588,22 +597,22 @@ makeDoc pkg opts =
 
        Right outFile <- coreLift $ openFile (docBase </> "index.html") WriteTruncate
          | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "index.html") ++ "\": " ++ (show err))]
-       let writeHtml = \s => (coreLift $ fPutStrLn outFile s)
+       let writeHtml = \s => (coreLift_ $ fPutStrLn outFile s)
        writeHtml $ htmlPreamble (name pkg) "" "index"
        writeHtml ("<h1>Package " ++ name pkg ++ " - Namespaces</h1>")
        writeHtml "<ul class=\"names\">"
-       for (modules pkg) (\(mod, filename) => do
+       ignore $ for (modules pkg) (\(mod, filename) => do
          writeHtml ("<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>")
          )
        writeHtml "</ul>"
        writeHtml htmlFooter
-       coreLift $ closeFile outFile
+       coreLift_ $ closeFile outFile
 
        css <- readDataFile "docs/styles.css"
        Right outFile <- coreLift $ openFile (docBase </> "styles.css") WriteTruncate
          | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "styles.css") ++ "\": " ++ (show err))]
-       coreLift $ fPutStr outFile css
-       coreLift $ closeFile outFile
+       coreLift_ $ fPutStr outFile css
+       coreLift_ $ closeFile outFile
 
        runScript (postbuild pkg)
        pure []
