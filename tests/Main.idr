@@ -151,7 +151,7 @@ idrisTests = MkTestPool []
        "real001", "real002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006",
+       "record006", "record007",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
