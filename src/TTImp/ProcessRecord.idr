@@ -129,7 +129,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds mkProjName (b :: tyenv) sc
+                              upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
                    rfNameNS <- inCurrentNS (RF fldNameStr)
@@ -194,9 +194,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    elabGetters con
                                (if imp == Explicit
                                    then S done else done)
-                               upds' mkProjName (b :: tyenv) sc
+                               upds' (b :: tyenv) sc
 
-    elabGetters con done upds _ _ _ = pure ()
+    elabGetters con done upds _ _ = pure ()
 
 export
 processRecord : {vars : _} ->
