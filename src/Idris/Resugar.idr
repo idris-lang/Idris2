@@ -113,30 +113,37 @@ mutual
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
   sugarAppM : PTerm -> Maybe PTerm
-  sugarAppM (PApp fc (PApp _ (PRef _ nm) l) r) =
-    case nameRoot nm of
-      "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
-      "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
-      "DPair"  => case unbracket r of
-        PLam _ _ _ n _ r' => pure $ PDPair fc n (unbracket l) (unbracket r')
-        _                 => Nothing
-      "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
-      "==="    => pure $ PEq fc (unbracket l) (unbracket r)
-      "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
-      "::"     => case sugarApp (unbracket r) of
-        PList fc xs => pure $ PList fc (unbracketApp l :: xs)
-        _           => Nothing
-      _        => Nothing
+  sugarAppM (PApp fc (PApp _ (PRef _ (NS ns nm)) l) r) =
+    if builtinNS == ns
+       then case nameRoot nm of
+         "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
+         "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
+         "DPair"  => case unbracket r of
+            PLam _ _ _ n _ r' => pure $ PDPair fc n (unbracket l) (unbracket r')
+            _                 => Nothing
+         "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
+         "==="    => pure $ PEq fc (unbracket l) (unbracket r)
+         "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
+         _        => Nothing
+       else if nameRoot nm == "::"
+               then case sugarApp (unbracket r) of
+                 PList fc xs => pure $ PList fc (unbracketApp l :: xs)
+                 _           => Nothing
+               else Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
     case extractNat 0 tm of
       Just k  => pure $ PPrimVal (getPTermLoc tm) (BI (cast k))
       Nothing => case tm of
-        PRef fc nm => case nameRoot nm of
-          "Nil"    => pure $ PList fc []
-          "Unit"   => pure $ PUnit fc
-          "MkUnit" => pure $ PUnit fc
-          _           => Nothing
+        PRef fc (NS ns nm) =>
+          if builtinNS == ns
+             then case nameRoot nm of
+               "Unit"   => pure $ PUnit fc
+               "MkUnit" => pure $ PUnit fc
+               _           => Nothing
+             else if nameRoot nm == "Nil"
+                     then pure $ PList fc []
+                     else Nothing
         _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
