@@ -180,8 +180,8 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                         else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC unNameNS projTy))
 
                      -- Define the LHS and RHS
-                     let lhs = IVar fc rfNameNS
-                     let rhs = IVar fc unNameNS
+                     let lhs = IVar fc unNameNS
+                     let rhs = IVar fc rfNameNS
                      log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show lhs ++ " = " ++ show rhs
                      processDecl [] nest env
                          (IDef fc unNameNS [PatClause fc lhs rhs])
