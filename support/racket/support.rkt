@@ -195,6 +195,11 @@
 
 ;; Threads
 
+;; NB: Racket threads are green/virtual threads meaning extra caution is to be
+;; taken when using FFI functions in combination with threads. The *entire*
+;; Racket runtime blocks on a foreign call, meaning no threads will progress
+;; until the foreign call returns.
+
 (define (blodwen-thread proc)
   (thread (lambda () (proc (vector 0)))))
 
@@ -267,40 +272,127 @@
       (semaphore-post sema)))
 
 ;; Condition Variables
+;; As per p.5 of the MS paper
+;; https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
 
-(define (blodwen-make-condition)
-  (make-async-channel))
+; The MS paper has the mutex be part of the CV, but that seems to be contrary to
+; most other implementations
+(struct cv (countingSem waitersLock waiters handshakeSem) #:mutable)
 
-(define (blodwen-condition-wait ach mutex)
-  ;; Pre-condition: this threads holds `mutex'.
-  (let [(sema (make-semaphore 0))]
-    (async-channel-put ach sema)
-    (blodwen-mutex-release mutex)
-    (sync sema)
-    (blodwen-mutex-acquire mutex)))
+; CONSTRUCTOR
+(define (blodwen-make-cv)
+  (let ([s (make-semaphore 0)]
+        [x (make-semaphore 1)]
+        [h (make-semaphore 0)])
+    (cv s x 0 h)))
 
-(define (blodwen-condition-wait-timeout ach mutex timeout)
-  ;; Pre-condition: this threads holds `mutex'.
-  (let [(sema (make-semaphore 0))]
-    (async-channel-put ach sema)
-    (blodwen-mutex-release mutex)
-    (sync/timeout (/ timeout 1000000) sema)
-    (blodwen-mutex-acquire mutex)))
+;; MS paper: sem.V() := sem-post  /* "sem.V() increments sem.count, atomically" */
+;;           sem.P() := sem-wait
+;; (turns out this is Dijkstra's fault: P and V match up with the Dutch
+;;  terminology)
 
-(define (blodwen-condition-signal ach)
-  (let [(sema (async-channel-try-get ach))]
-    (when sema (semaphore-post sema))))
+; WAIT
+(define (blodwen-cv-wait my-cv m)
+    ; atomically increment waiters
+    (semaphore-wait (cv-waitersLock my-cv))
+    (set-cv-waiters! my-cv (+ (cv-waiters my-cv) 1))
+    (semaphore-post (cv-waitersLock my-cv))
+    ; release the provided mutex
+    (blodwen-mutex-release m)
+    ; wait for the counting semaphore to let us through
+    (semaphore-wait (cv-countingSem my-cv))
+    ; signal to broadcast that we have proceeded past the critical point/have
+    ; been woken up successfully
+    (semaphore-post (cv-handshakeSem my-cv))
+    ; re-acquire the provided mutex
+    (blodwen-mutex-acquire m)
+    )
 
-(define (blodwen-condition-broadcast ach)
-  (letrec [(loop (lambda ()
-                   (let [(sema (async-channel-try-get ach))]
-                     (when sema ((semaphore-post sema) (loop))))))]
-    loop))
+; SIGNAL
+(define (blodwen-cv-signal my-cv)
+    ; lock access to waiters
+    (semaphore-wait (cv-waitersLock my-cv))
+    (let ([waiters (cv-waiters my-cv)])
+      (if (> waiters 0)
+
+        ; if we have waiting threads, signal one of them
+        (begin
+          (set-cv-waiters! my-cv (- waiters 1))
+          ; increment the counting semaphore to wake up a thread
+          (semaphore-post (cv-countingSem my-cv))
+          ; wait for the thread to tell us it's okay to proceed
+          (semaphore-wait (cv-handshakeSem my-cv))
+          )
+
+        ; otherwise, do nothing
+        (void)
+        )
+       ; unlock access to waiters
+       (semaphore-post (cv-waitersLock my-cv))
+       ))
+
+; BROADCAST HELPERS
+
+; for (int i = 0; i < waiters; i++) s.V();
+(define (broadcast-for-helper my-cv i)
+    (if (= i 0)
+      ; if i is zero, we're done
+      (void)
+      ; otherwise, we signal one waiting thread, decrement i, and keep going
+      (begin
+        (semaphore-post (cv-countingSem my-cv))
+
+        (broadcast-for-helper my-cv (- i 1))
+        )))
+
+; while (waiters > 0) { waiters--; h.P(); }
+(define (broadcast-while-helper my-cv waiters)
+    (if (= waiters 0)
+      ; if waiters is 0, we're done
+      (void)
+      ; otherwise, wait for "waiters" many threads to tell us they're awake
+      (begin
+        (semaphore-wait (cv-handshakeSem my-cv))
+        (broadcast-while-helper my-cv (- waiters 1))
+        )))
+
+; BROADCAST
+(define (blodwen-cv-broadcast my-cv)
+    ; lock access to waiters
+    (semaphore-wait (cv-waitersLock my-cv))
+    (let ([waiters (cv-waiters my-cv)])
+      ; signal "waiters" many threads; counting *until* 0 in the helper
+      ; function, hence "waiters" and NOT "waiters - 1"
+      (broadcast-for-helper my-cv waiters)
+      ; wait on "waiters" many threads to have been woken
+      (broadcast-while-helper my-cv waiters)
+      ; unlock access to waiters
+      (semaphore-post (cv-waitersLock my-cv))
+      ))
+
+; FIXME: Maybe later. Possibly difficult because of the handshake thingy?
+;(define (blodwen-cv-wait-timeout my-cv lockM timeout)
+;  ;; precondition: calling thread holds lockM
+;   (semaphore-wait (cv-waitersLock my-cv))                 ; x.P()
+;   (set-cv-waiters! my-cv (+ (cv-waiters my-cv) 1)) ; waiters++
+;   (semaphore-post (cv-waitersLock my-cv))                 ; x.V()
+;   (blodwen-mutex-release lockM)                    ; m.Release()
+;
+;   (sync/timeout (/ timeout 1000000) (cv-countingSem my-cv))
+;
+;   (semaphore-wait (cv-countingSem my-cv))                 ; s.P()
+;   (semaphore-post (cv-handshakeSem my-cv))                 ; h.V()
+;   (blodwen-mutex-acquire lockM)                    ; m.Acquire()
+;   )
 
 
 (define (blodwen-make-future work) (future work))
 (define (blodwen-await-future ty future) (touch future))
 
+;; NB: These should *ALWAYS* be used in multi-threaded programs since Racket
+;; threads are green/virtual threads and so using an external function will
+;; block the *entire* runtime until the function returns. This is fine for most
+;; things, but not for `sleep`.
 (define (blodwen-sleep s) (sleep s))
 (define (blodwen-usleep us) (sleep (* 0.000001 us)))
 
