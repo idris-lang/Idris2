@@ -123,7 +123,7 @@ HasNames e => HasNames (TTCFile e) where
 
       fullPrim : Context -> PrimNames -> Core PrimNames
       fullPrim gam (MkPrimNs mi ms mc md)
-          = pure $ MkPrimNs !(full gam mi) !(full gam ms) !(full gam mc) !(full gam md)
+          = [| MkPrimNs (full gam mi) (full gam ms) (full gam mc) (full gam md) |]
 
 
   -- I don't think we ever actually want to call this, because after we read

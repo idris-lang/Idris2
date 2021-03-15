@@ -2325,12 +2325,12 @@ fromDoubleName
          pure $ fromDoubleName (primnames (options defs))
 
 export
+getPrimNames : {auto c : Ref Ctxt Defs} -> Core PrimNames
+getPrimNames = [| MkPrimNs fromIntegerName fromStringName fromCharName fromDoubleName |]
+
+export
 getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
-getPrimitiveNames = pure $ catMaybes [ !fromIntegerName
-                                     , !fromStringName
-                                     , !fromCharName
-                                     , !fromDoubleName
-                                     ]
+getPrimitiveNames = primNamesToList <$> getPrimNames
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->

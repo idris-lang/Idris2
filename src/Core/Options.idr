@@ -102,6 +102,10 @@ record PrimNames where
   fromCharName : Maybe Name
   fromDoubleName : Maybe Name
 
+export
+primNamesToList : PrimNames -> List Name
+primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
+
 public export
 data LangExt
      = ElabReflection
