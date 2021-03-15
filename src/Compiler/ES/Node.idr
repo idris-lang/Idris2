@@ -38,14 +38,14 @@ compileExpr c tmpDir outputDir tm outfile
          pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> List String -> Core ()
+executeExpr c tmpDir tm args
 = do let outn = tmpDir </> "_tmp_node" ++ ".js"
      js <- compileToNode c tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)
      node <- coreLift findNode
-     coreLift_ $ system (node ++ " " ++ outn)
+     coreLift_ $ system (node ++ " " ++ outn ++ foldl (\a, x => a ++ " " ++ x) "" args)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

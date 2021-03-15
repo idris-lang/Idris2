@@ -411,11 +411,11 @@ compileExpr c tmpDir outputDir tm outfile
             then pure (Just execPath)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> List String -> Core ()
+executeExpr c tmpDir tm args
     = do Just sh <- compileExpr c tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh -- TODO: on windows, should add exe extension
+         coreLift_ $ system (sh ++ foldl (\a, x => a ++ " " ++ x) "" args) -- TODO: on windows, should add exe extension
          pure ()
 
 export

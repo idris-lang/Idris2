@@ -58,8 +58,8 @@ compileExpr c tmpDir outputDir tm outfile
          pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm =
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> List String -> Core ()
+executeExpr c tmpDir tm args =
   throw $ InternalError "Javascript backend is only able to compile, use Node instead"
 
 ||| Codegen wrapper for Javascript implementation.

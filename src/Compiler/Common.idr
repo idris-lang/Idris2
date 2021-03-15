@@ -33,7 +33,7 @@ record Codegen where
   compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
   ||| Execute an Idris 2 expression directly.
-  executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+  executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> List String -> Core ()
 
 -- Say which phase of compilation is the last one to use - it saves time if
 -- you only ask for what you need.
@@ -94,12 +94,12 @@ compile {c} cg tm out
 ||| the `executeExpr` method of the given Codegen
 export
 execute : {auto c : Ref Ctxt Defs} ->
-          Codegen -> ClosedTerm -> Core ()
-execute {c} cg tm
+          Codegen -> ClosedTerm -> List String -> Core ()
+execute {c} cg tm args
     = do d <- getDirs
          let tmpDir = execBuildDir d
          ensureDirectoryExists tmpDir
-         executeExpr cg c tmpDir tm
+         executeExpr cg c tmpDir tm args
          pure ()
 
 -- If an entry isn't already decoded, get the minimal entry we need for

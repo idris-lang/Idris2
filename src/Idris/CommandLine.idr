@@ -435,7 +435,6 @@ export
 getOpts : List String -> Either String (List CLOpt)
 getOpts opts = parseOpts options opts
 
-
 export covering
 getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs

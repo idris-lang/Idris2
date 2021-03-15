@@ -447,11 +447,11 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                     pure (Just outShRel)
             else pure Nothing
 
-executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c tmpDir tm
+executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> List String -> Core ()
+executeExpr c tmpDir tm args
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system sh
+         coreLift_ $ system (sh ++ foldl (\a, x => a ++ " " ++ x) "" args)
 
 export
 codegenRacket : Codegen

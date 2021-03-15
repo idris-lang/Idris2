@@ -1050,8 +1050,8 @@ footer = do
     emit EmptyFC "}"
 
 export
-executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c _ tm
+executeExpr : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> List String -> Core ()
+executeExpr c _ tm args
     = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
          coreLift_ $ system "false"
 

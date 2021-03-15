@@ -209,6 +209,9 @@ preOptions (Color b :: opts)
          preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
+findArgs : List CLOpt -> List String
+findArgs = drop 1 . join . map (\x => case x of InputFile f => pure f; _ => empty)
+
 -- Options to be processed after type checking. Returns whether execution
 -- should continue (i.e., whether to start a REPL)
 export
@@ -227,7 +230,7 @@ postOptions res (OutputFile outfile :: rest)
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str)) (findArgs rest)
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

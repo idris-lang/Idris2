@@ -595,10 +595,10 @@ execExp : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
-          PTerm -> Core REPLResult
-execExp ctm
+          PTerm -> List String -> Core REPLResult
+execExp ctm args
     = do tm_erased <- prepareExp ctm
-         execute !findCG tm_erased
+         execute !findCG tm_erased args
          pure $ Executed ctm
 
 
@@ -703,7 +703,7 @@ process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
          case evalMode opts of
-            Execute => do ignore (execExp itm); pure (Executed itm)
+            Execute => do ignore (execExp itm empty); pure (Executed itm)
             _ =>
               do ttimp <- desugar AnyExpr [] itm
                  let ttimpWithIt = ILocal replFC !getItDecls ttimp
@@ -804,7 +804,7 @@ process Edit
 process (Compile ctm outfile)
     = compileExp ctm outfile
 process (Exec ctm)
-    = execExp ctm
+    = execExp ctm empty
 process Help
     = pure RequestedHelp
 process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))

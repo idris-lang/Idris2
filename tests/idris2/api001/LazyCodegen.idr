@@ -9,8 +9,8 @@ compile : Ref Ctxt Defs -> (tmpDir : String) -> (execDir : String) ->
 compile defs tmp dir term file = do coreLift $ putStrLn "I'd rather not."
                                     pure $ Nothing
 
-execute : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> Core ()
-execute defs dir term = do coreLift $ putStrLn "Maybe in an hour."
+execute : Ref Ctxt Defs -> (execDir : String) -> ClosedTerm -> List String -> Core ()
+execute defs dir term args = do coreLift $ putStrLn "Maybe in an hour."
 
 lazyCodegen : Codegen
 lazyCodegen = MkCG compile execute
