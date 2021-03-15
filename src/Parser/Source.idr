@@ -4,11 +4,22 @@ import public Parser.Lexer.Source
 import public Parser.Rule.Source
 import public Parser.Unlit
 
+import Data.Strings
 import Core.Core
 import System.File
 import Libraries.Utils.Either
 
 %default total
+
+replaceShebang : String -> String
+replaceShebang str =
+  case strUncons str of
+       Nothing => str
+       Just ('#', s) => case strUncons s of
+                             Nothing => str
+                             Just ('!', s) => "--" ++ s
+                             Just _ => str
+       Just _ => str
 
 export
 runParserTo : {e : _} ->
@@ -16,7 +27,7 @@ runParserTo : {e : _} ->
               Maybe LiterateStyle -> Lexer ->
               String -> Grammar Token e ty -> Either Error ty
 runParserTo fname lit reject str p
-    = do str    <- mapError (fromLitError fname) $ unlit lit str
+    = do str    <- mapError (fromLitError fname) $ unlit lit (replaceShebang str)
          toks   <- mapError (fromLexError fname) $ lexTo reject str
          parsed <- mapError (fromParsingError fname) $ parse p toks
          Right (fst parsed)
