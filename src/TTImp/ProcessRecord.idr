@@ -50,18 +50,13 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
 
          -- Go into new namespace, if there is one, for getters
          case newns of
-              Nothing =>
-                   do elabGetters conName 0 [] RF [] conty -- make postfix projections
-                      when !isPrefixRecordProjections $
-                        elabGetters conName 0 [] UN [] conty -- make prefix projections
+              Nothing => elabGetters conName 0 [] [] conty
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters conName 0 [] RF [] conty -- make postfix projections
-                      when !isPrefixRecordProjections $
-                        elabGetters conName 0 [] UN [] conty -- make prefix projections
+                      elabGetters conName 0 [] [] conty
                       defs <- get Ctxt
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
@@ -127,18 +122,18 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                   List (Name, RawImp) -> -- names to update in types
                     -- (for dependent records, where a field's type may depend
                     -- on an earlier projection)
-                  (mkProjName : String -> Name) ->
                   Env Term vs -> Term vs ->
                   Core ()
-    elabGetters con done upds mkProjName tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
+    elabGetters con done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds mkProjName (b :: tyenv) sc
+                              upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
-                   projNameNS <- inCurrentNS (mkProjName fldNameStr)
+                   rfNameNS <- inCurrentNS (RF fldNameStr)
+                   unNameNS <- inCurrentNS (UN fldNameStr)
 
                    ty <- unelab tyenv ty_chk
                    let ty' = substNames vars upds ty
@@ -150,11 +145,11 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
                                       IPi fc top Explicit (Just rname) recTy ty'
-                   log "declare.record.projection" 5 $ "Projection " ++ show projNameNS ++ " : " ++ show projTy
+                   log "declare.record.projection" 5 $ "Projection " ++ show rfNameNS ++ " : " ++ show projTy
                    processDecl [] nest env
                        (IClaim fc (if isErased rc
                                       then erased
-                                      else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC projNameNS projTy))
+                                      else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC rfNameNS projTy))
 
                    -- Define the LHS and RHS
                    let lhs_exp
@@ -164,7 +159,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                                            then [IBindVar EmptyFC fldNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit fc True)))
-                   let lhs = IApp fc (IVar fc projNameNS)
+                   let lhs = IApp fc (IVar fc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
                                     else INamedApp fc lhs_exp (UN fldNameStr)
@@ -172,16 +167,36 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    let rhs = IVar EmptyFC (UN fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
-                       (IDef fc projNameNS [PatClause fc lhs rhs])
+                       (IDef fc rfNameNS [PatClause fc lhs rhs])
 
-                   -- Move on to the next getter
-                   let upds' = (n, IApp fc (IVar fc projNameNS) (IVar fc rname)) :: upds
+                   -- Make prefix projection aliases if requested
+                   when !isPrefixRecordProjections $ do  -- beware: `!` is NOT boolean `not`!
+                     -- Claim the type.
+                     -- we just reuse `projTy` defined above
+                     log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show unNameNS ++ " : " ++ show projTy
+                     processDecl [] nest env
+                         (IClaim fc (if isErased rc
+                                        then erased
+                                        else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC unNameNS projTy))
+
+                     -- Define the LHS and RHS
+                     let lhs = IVar fc unNameNS
+                     let rhs = IVar fc rfNameNS
+                     log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show lhs ++ " = " ++ show rhs
+                     processDecl [] nest env
+                         (IDef fc unNameNS [PatClause fc lhs rhs])
+
+                   -- Move on to the next getter.
+                   --
+                   -- In upds, we use unNameNS (as opposed to rfNameNS or both)
+                   -- because the field types will probably mention the UN versions of the projections.
+                   let upds' = (n, IApp fc (IVar fc unNameNS) (IVar fc rname)) :: upds
                    elabGetters con
                                (if imp == Explicit
                                    then S done else done)
-                               upds' mkProjName (b :: tyenv) sc
+                               upds' (b :: tyenv) sc
 
-    elabGetters con done upds _ _ _ = pure ()
+    elabGetters con done upds _ _ = pure ()
 
 export
 processRecord : {vars : _} ->
