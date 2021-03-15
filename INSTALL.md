@@ -16,7 +16,7 @@ The requirements are:
   with `pkg_add coreutils gmake` command.
 
 On Windows, it has been reported that installing via `MSYS2` works
-(https://www.msys2.org/). On Windows older than Windows 8, you may need to
+[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
 set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
 
 On Raspberry Pi, you can bootstrap via Racket.
@@ -126,3 +126,11 @@ by running the following command:
 If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
 
     nix profile install github:idris-lang/Idris2
+
+## Running in text editor
+
+### Run on emacs using nix flakes
+
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
+
+    nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
