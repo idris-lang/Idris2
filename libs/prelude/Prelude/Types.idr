@@ -107,6 +107,17 @@ public export
 Functor (Pair a) where
   map = mapSnd
 
+%inline
+public export
+Monoid a => Applicative (Pair a) where
+  pure = (neutral,)
+  (a1,f) <*> (a2,v) = (a1 <+> a2, f v)
+
+%inline
+public export
+Monoid a => Monad (Pair a) where
+  (a1,a) >>= f = let (a2,b) = f a in (a1 <+> a2, b)
+
 -----------
 -- MAYBE --
 -----------

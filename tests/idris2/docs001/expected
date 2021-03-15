@@ -76,6 +76,7 @@ join : m (m a) -> m a
 
 Implementations:
 	Monad IO
+	Monoid a => Monad (Pair a)
 	Monad Maybe
 	Monad (Either e)
 	Monad List
