@@ -62,7 +62,9 @@ Monoid e => Monoid (Validated e a) where
 public export
 Monoid e => Alternative (Validated e) where
   empty = neutral
-  (<|>) = (<+>)
+  l@(Valid _) <|> _           = l
+  _           <|> r@(Valid _) = r
+  Invalid e1  <|> Invalid e2  = Invalid $ e1 <+> e2
 
 public export
 Foldable (Validated e) where
