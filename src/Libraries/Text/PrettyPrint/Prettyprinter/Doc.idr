@@ -6,6 +6,11 @@ import Data.Maybe
 import Data.Strings
 import public Libraries.Data.String.Extra
 
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
+
 %default total
 
 export

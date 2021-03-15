@@ -94,9 +94,9 @@ export
 lines' : List Char -> List1 (List Char)
 lines' [] = singleton []
 lines' s  = case break isNL s of
-              (l, s') => l ::: case s' of
-                                []       => []
-                                _ :: s'' => forget $ lines' (assert_smaller s s'')
+                 (l, s') => l ::: case s' of
+                                       [] => []
+                                       _ :: s'' => forget $ lines' (assert_smaller s s'')
 
 ||| Splits a string into a list of newline separated strings.
 |||

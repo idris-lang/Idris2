@@ -17,6 +17,12 @@ import Data.List1
 import Data.Maybe
 import Libraries.Data.NameMap
 import Data.Strings
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 -- Add a doc string for a name in the current namespace
 export

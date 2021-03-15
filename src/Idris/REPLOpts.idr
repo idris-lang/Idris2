@@ -11,6 +11,12 @@ import Data.List1
 import Libraries.Data.List.Extra
 import Data.Strings
 import System.File
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 

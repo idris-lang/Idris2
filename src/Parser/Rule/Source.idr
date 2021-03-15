@@ -8,6 +8,12 @@ import Core.TT
 import Data.List1
 import Data.Strings
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 
