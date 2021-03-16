@@ -3,6 +3,7 @@ Issue835>    P : Nat -> Type
 ------------------------------
 rhs1 : Dec (P 0)
 Issue835>    P : Nat -> Type
+   P2 : Nat -> Type
    x1 : Nat
    x : Nat
 ------------------------------

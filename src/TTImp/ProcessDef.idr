@@ -332,7 +332,7 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 
          lhs <- if trans
                    then pure lhs_bound
-                   else implicitsAs defs vars lhs_bound
+                   else implicitsAs n defs vars lhs_bound
 
          logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
 -- todo: add Pretty RawImp instance
