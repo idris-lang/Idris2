@@ -1379,6 +1379,7 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 -- private names are only visible in this namespace if their namespace
 -- is the current namespace (or an outer one)
 -- that is: the namespace of 'n' is a parent of nspace
+export
 visibleIn : Namespace -> Name -> Visibility -> Bool
 visibleIn nspace (NS ns n) Private = isParentOf ns nspace
 -- Public and Export names are always visible

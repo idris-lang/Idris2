@@ -816,6 +816,7 @@ process Help
     = pure RequestedHelp
 process (TypeSearch searchTerm)
     = do defs <- branch
+         let curr = currentNS defs
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
          let bound = piBindNames replFC [] rawTy
@@ -826,7 +827,7 @@ process (TypeSearch searchTerm)
               defs    <- traverse (flip lookupCtxtExact ctxt) names
               let defs = flip mapMaybe defs $ \ md =>
                              do d <- md
-                                guard (Private < visibility d)
+                                guard (visibleIn curr (fullname d) (visibility d))
                                 pure d
               allDefs <- traverse (resolved ctxt) defs
               filterM (\def => equivTypes def.type ty') allDefs
