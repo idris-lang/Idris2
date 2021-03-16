@@ -21,7 +21,7 @@ SourceEmptyRule = EmptyRule Token
 
 export
 eoi : SourceEmptyRule ()
-eoi = do ignore $ nextIs "Expected end of input" (isEOI . val)
+eoi = ignore $ nextIs "Expected end of input" isEOI
   where
     isEOI : Token -> Bool
     isEOI EndInput = True
@@ -31,7 +31,7 @@ export
 constant : Rule Constant
 constant
     = terminal "Expected constant"
-               (\x => case x.val of
+               (\x => case x of
                            CharLit c => case getCharLit c of
                                              Nothing => Nothing
                                              Just c' => Just (Ch c')
@@ -50,7 +50,7 @@ constant
 
 documentation' : Rule String
 documentation' = terminal "Expected documentation comment"
-                          (\x => case x.val of
+                          (\x => case x of
                                       DocComment d => Just d
                                       _ => Nothing)
 
@@ -62,7 +62,7 @@ export
 intLit : Rule Integer
 intLit
     = terminal "Expected integer literal"
-               (\x => case x.val of
+               (\x => case x of
                            IntegerLit i => Just i
                            _ => Nothing)
 
@@ -70,7 +70,7 @@ export
 onOffLit : Rule Bool
 onOffLit
     = terminal "Expected on or off"
-               (\x => case x.val of
+               (\x => case x of
                            Ident "on" => Just True
                            Ident "off" => Just False
                            _ => Nothing)
@@ -79,7 +79,7 @@ export
 strLit : Rule String
 strLit
     = terminal "Expected string literal"
-               (\x => case x.val of
+               (\x => case x of
                            StringLit n s => escape n s
                            _ => Nothing)
 
@@ -88,7 +88,7 @@ export
 strLitLines : Rule (List1 String)
 strLitLines
     = terminal "Expected string literal"
-               (\x => case x.val of
+               (\x => case x of
                            StringLit n s => traverse (escape n . fastPack)
                                                      (splitAfter isNL (fastUnpack s))
                            _ => Nothing)
@@ -96,35 +96,35 @@ strLitLines
 export
 strBegin : Rule ()
 strBegin = terminal "Expected string begin"
-               (\x => case x.val of
+               (\x => case x of
                            StringBegin False => Just ()
                            _ => Nothing)
 
 export
 multilineBegin : Rule ()
 multilineBegin = terminal "Expected multiline string begin"
-               (\x => case x.val of
+               (\x => case x of
                            StringBegin True => Just ()
                            _ => Nothing)
 
 export
 strEnd : Rule ()
 strEnd = terminal "Expected string end"
-               (\x => case x.val of
+               (\x => case x of
                            StringEnd => Just ()
                            _ => Nothing)
 
 export
 interpBegin : Rule ()
 interpBegin = terminal "Expected string interp begin"
-               (\x => case x.val of
+               (\x => case x of
                            InterpBegin => Just ()
                            _ => Nothing)
 
 export
 interpEnd : Rule ()
 interpEnd = terminal "Expected string interp end"
-               (\x => case x.val of
+               (\x => case x of
                            InterpEnd => Just ()
                            _ => Nothing)
 
@@ -135,7 +135,7 @@ simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 export
 aDotIdent : Rule String
 aDotIdent = terminal "Expected dot+identifier"
-               (\x => case x.val of
+               (\x => case x of
                            DotIdent s => Just s
                            _ => Nothing)
 
@@ -147,7 +147,7 @@ export
 symbol : String -> Rule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case x.val of
+               (\x => case x of
                            Symbol s => if s == req then Just ()
                                                    else Nothing
                            _ => Nothing)
@@ -156,7 +156,7 @@ export
 keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case x.val of
+               (\x => case x of
                            Keyword s => if s == req then Just ()
                                                     else Nothing
                            _ => Nothing)
@@ -165,7 +165,7 @@ export
 exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req)
-               (\x => case x.val of
+               (\x => case x of
                            Ident s => if s == req then Just ()
                                       else Nothing
                            _ => Nothing)
@@ -174,7 +174,7 @@ export
 pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
-    (\x => case x.val of
+    (\x => case x of
       Pragma s =>
         if s == n
           then Just ()
@@ -185,7 +185,7 @@ export
 operator : Rule Name
 operator
     = terminal "Expected operator"
-               (\x => case x.val of
+               (\x => case x of
                            Symbol s =>
                                 if s `elem` reservedSymbols
                                    then Nothing
@@ -195,7 +195,7 @@ operator
 identPart : Rule String
 identPart
     = terminal "Expected name"
-               (\x => case x.val of
+               (\x => case x of
                            Ident str => Just str
                            _ => Nothing)
 
@@ -203,7 +203,7 @@ export
 namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
     = terminal "Expected namespaced name"
-        (\x => case x.val of
+        (\x => case x of
             DotSepIdent ns n => Just (Just ns, n)
             Ident i => Just (Nothing, i)
             _ => Nothing)
@@ -216,7 +216,7 @@ export
 moduleIdent : Rule ModuleIdent
 moduleIdent
     = terminal "Expected module identifier"
-        (\x => case x.val of
+        (\x => case x of
             DotSepIdent ns n => Just (mkModuleIdent (Just ns) n)
             Ident i => Just (mkModuleIdent Nothing i)
             _ => Nothing)
@@ -229,7 +229,7 @@ export
 holeName : Rule String
 holeName
     = terminal "Expected hole name"
-               (\x => case x.val of
+               (\x => case x of
                            HoleIdent str => Just str
                            _ => Nothing)
 
@@ -348,7 +348,7 @@ export
 atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
 atEnd indent
     = eoi
-  <|> do ignore $ nextIs "Expected end of block" (isTerminator . val)
+  <|> do ignore $ nextIs "Expected end of block" isTerminator
   <|> do col <- Common.column
          if (col <= indent)
             then pure ()

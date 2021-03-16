@@ -689,7 +689,7 @@ mutual
            the (SourceEmptyRule PTerm) $ case nsdo.val of
                 (ns, "do") =>
                    do commit
-                      actions <- bounds (block (doAct fname))
+                      actions <- Core.bounds (block (doAct fname))
                       let fc = boundToFC fname (mergeBounds nsdo actions)
                       pure (PDoBlock fc ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
@@ -784,11 +784,11 @@ mutual
   export
   singlelineStr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   singlelineStr q fname idents
-      = do b <- bounds $ do strBegin
+      = do b <- bounds $ do begin <- bounds strBegin
                             commit
                             xs <- many $ bounds $ (interpBlock q fname idents) <||> strLitLines
                             pstrs <- case traverse toPStr xs of
-                                          Left err => fatalError err
+                                          Left err => fatalLoc begin.bounds err
                                           Right pstrs => pure $ pstrs
                             strEnd
                             pure pstrs
@@ -1455,7 +1455,7 @@ topDecl fname indents
   <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do dstr <- bounds (terminal "Expected CG directive"
-                          (\x => case x.val of
+                          (\x => case x of
                                       CGDirective d => Just d
                                       _ => Nothing))
          pure [let cgrest = span isAlphaNum dstr.val in
