@@ -93,12 +93,10 @@ Foldable LazyList where
   foldl op acc [] = acc
   foldl op acc (x :: xs) = foldl op (acc `op` x) xs
 
+  foldlM fm init xs = foldrLazy (\x, k, z => fm z x >>= k) pure xs init
+
   null []     = True
   null (_::_) = False
-
-public export
-foldlM : Monad m => (funcM : b -> a -> m b) -> (init : b) -> LazyList a -> m b
-foldlM fm init xs = foldrLazy (\x, k, z => fm z x >>= k) pure xs init
 
 public export
 Functor LazyList where

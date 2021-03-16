@@ -139,7 +139,7 @@ idrisTests = MkTestPool []
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007",
        -- Implicit laziness, lazy evaluation
-       "lazy001",
+       "lazy001", "lazy002",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
