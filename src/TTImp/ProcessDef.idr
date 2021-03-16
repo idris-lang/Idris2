@@ -318,13 +318,18 @@ checkLHS : {vars : _} ->
                            Term vars', Term vars')))
 checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
     = do defs <- get Ctxt
+         logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
                        then pure lhs_in
                        else lhsInCurrentNS nest lhs_in
+         logRaw "declare.def.lhs" 30 "Raw LHS in current NS: " lhs_raw
+
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
          (_, lhs_bound) <- bindNames False lhs_raw
          setUnboundImplicits autoimp
+         logRaw "declare.def.lhs" 30 "Raw LHS with implicits bound" lhs_bound
+
          lhs <- if trans
                    then pure lhs_bound
                    else implicitsAs defs vars lhs_bound
