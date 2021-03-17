@@ -1,9 +1,15 @@
 module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 import Data.List
+import public Data.List1
 import Data.Maybe
 import Data.Strings
-import Libraries.Data.String.Extra
+import public Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 
@@ -358,7 +364,8 @@ interface Pretty a where
 
 export
 Pretty String where
-  pretty = vsep . map unsafeTextWithoutNewLines . lines
+  pretty str = let str' = if "\n" `isSuffixOf` str then dropLast 1 str else str in
+                   vsep $ map unsafeTextWithoutNewLines $ forget $ lines str'
 
 public export
 FromString (Doc ann) where
@@ -381,6 +388,10 @@ tupled = group . encloseSep (flatAlt (pretty "( ") (pretty "("))
 export
 Pretty a => Pretty (List a) where
   pretty = align . list . map pretty
+
+export
+Pretty a => Pretty (List1 a) where
+  pretty = pretty . forget
 
 export
 [prettyListMaybe] Pretty a => Pretty (List (Maybe a)) where

@@ -232,7 +232,7 @@ namespace Colist
     zag hds tls
 
   zag (x ::: []) zs [] = x ::
-    let Just zs = List1.fromList $ mapMaybe fromColist (forget zs)
+    let Just zs = List.toList1' $ mapMaybe fromColist (forget zs)
           | Nothing => []
     in zig zs []
   zag (x ::: []) zs (l :: ls) = x ::
@@ -243,7 +243,7 @@ namespace Colist
   public export
   cantor : List (Colist a) -> Colist a
   cantor xs =
-    let Just (l ::: ls) = List1.fromList $ mapMaybe fromColist xs
+    let Just (l ::: ls) = List.toList1' $ mapMaybe fromColist xs
           | Nothing => []
     in zig (l ::: []) ls
 
@@ -256,7 +256,7 @@ zag : List1 a -> List1 (Colist a) -> Colist (Colist1 a) -> Colist1 a
 zig xs = zag (head <$> xs) (tail <$> xs)
 
 zag (x ::: []) zs [] = x :::
-  let Just zs = List1.fromList (mapMaybe fromColist (forget zs))
+  let Just zs = List.toList1' (mapMaybe fromColist (forget zs))
         | Nothing => []
   in Colist.zig zs []
 zag (x ::: []) zs (l :: ls) =  x :::
