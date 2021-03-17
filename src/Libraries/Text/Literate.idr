@@ -86,9 +86,9 @@ reduce (MkBounded (CodeLine m src) _ _ :: rest) acc =
                       )::acc)
 
 reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
-  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: ys) with (snocList ys)
-    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
-    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
+  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: ys) with (snocList ys)
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: []) | Empty = reduce rest acc -- 2
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: (srcs ++ [f])) | (Snoc f srcs rec) =
         -- the "\n" counts for the open deliminator; the closing deliminator should always be followed by a (Any "\n"), so we don't add a newline
         reduce rest (((unlines srcs) ++ "\n") :: "\n" :: acc)
 
