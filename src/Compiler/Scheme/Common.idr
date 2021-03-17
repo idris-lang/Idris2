@@ -121,17 +121,17 @@ schOp StrReverse [x] = op "string-reverse" [x]
 schOp StrSubstr [x, y, z] = op "string-substr" [x, y, z]
 
 -- `e` is Euler's number, which approximates to: 2.718281828459045
-schOp DoubleExp [x] = op "exp" [x] -- Base is `e`. Same as: `pow(e, x)`
-schOp DoubleLog [x] = op "log" [x] -- Base is `e`.
-schOp DoubleSin [x] = op "sin" [x]
-schOp DoubleCos [x] = op "cos" [x]
-schOp DoubleTan [x] = op "tan" [x]
-schOp DoubleASin [x] = op "asin" [x]
-schOp DoubleACos [x] = op "acos" [x]
-schOp DoubleATan [x] = op "atan" [x]
-schOp DoubleSqrt [x] = op "sqrt" [x]
-schOp DoubleFloor [x] = op "floor" [x]
-schOp DoubleCeiling [x] = op "ceiling" [x]
+schOp DoubleExp [x] = op "flexp" [x] -- Base is `e`. Same as: `pow(e, x)`
+schOp DoubleLog [x] = op "fllog" [x] -- Base is `e`.
+schOp DoubleSin [x] = op "flsin" [x]
+schOp DoubleCos [x] = op "flcos" [x]
+schOp DoubleTan [x] = op "fltan" [x]
+schOp DoubleASin [x] = op "flasin" [x]
+schOp DoubleACos [x] = op "flacos" [x]
+schOp DoubleATan [x] = op "flatan" [x]
+schOp DoubleSqrt [x] = op "flsqrt" [x]
+schOp DoubleFloor [x] = op "flfloor" [x]
+schOp DoubleCeiling [x] = op "flceiling" [x]
 
 schOp (Cast IntType StringType) [x] = op "number->string" [x]
 schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
