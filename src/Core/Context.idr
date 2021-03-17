@@ -1379,6 +1379,7 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 -- private names are only visible in this namespace if their namespace
 -- is the current namespace (or an outer one)
 -- that is: the namespace of 'n' is a parent of nspace
+export
 visibleIn : Namespace -> Name -> Visibility -> Bool
 visibleIn nspace (NS ns n) Private = isParentOf ns nspace
 -- Public and Export names are always visible
@@ -1709,7 +1710,7 @@ setExternal fc tyn u
 
 export
 addHintFor : {auto c : Ref Ctxt Defs} ->
-					   FC -> Name -> Name -> Bool -> Bool -> Core ()
+             FC -> Name -> Name -> Bool -> Bool -> Core ()
 addHintFor fc tyn_in hintn_in direct loading
     = do defs <- get Ctxt
          tyn <- toFullNames tyn_in
@@ -2241,6 +2242,13 @@ setFromChar n
          put Ctxt (record { options $= setFromChar n } defs)
 
 export
+setFromDouble : {auto c : Ref Ctxt Defs} ->
+              Name -> Core ()
+setFromDouble n
+    = do defs <- get Ctxt
+         put Ctxt (record { options $= setFromDouble n } defs)
+
+export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
@@ -2311,8 +2319,19 @@ fromCharName
          pure $ fromCharName (primnames (options defs))
 
 export
+fromDoubleName : {auto c : Ref Ctxt Defs} ->
+               Core (Maybe Name)
+fromDoubleName
+    = do defs <- get Ctxt
+         pure $ fromDoubleName (primnames (options defs))
+
+export
+getPrimNames : {auto c : Ref Ctxt Defs} -> Core PrimNames
+getPrimNames = [| MkPrimNs fromIntegerName fromStringName fromCharName fromDoubleName |]
+
+export
 getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
-getPrimitiveNames = pure $ catMaybes [!fromIntegerName, !fromStringName, !fromCharName]
+getPrimitiveNames = primNamesToList <$> getPrimNames
 
 export
 addLogLevel : {auto c : Ref Ctxt Defs} ->

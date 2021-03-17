@@ -81,6 +81,7 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
        let True = showName x
          | False => do log "idemode.hole" 10 $ "Not showing name: " ++ show x
                        pure rest
+       log "idemode.hole" 10 $ "Showing name: " ++ show x
        ity <- resugar env !(normalise defs env (binderType b))
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ record { context $= (premise ::)  } rest

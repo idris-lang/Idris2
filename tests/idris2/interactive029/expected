@@ -1,0 +1,33 @@
+1/1: Building Issue834 (Issue834.idr)
+Main>  0 x : Nat
+   p : Nat -> Type
+   q : Nat -> Type
+------------------------------
+a : p x
+Main>  0 x : Nat
+   p : Nat -> Type
+   q : Nat -> Type
+ 0 y : Nat
+   p2 : Nat -> Nat -> Type
+------------------------------
+b : p2 y 0
+Main>  0 x : Nat
+   p : Nat -> Type
+   q : Nat -> Type
+   p2 : Nat -> Nat -> Type
+------------------------------
+c : (y : Nat) -> p2 y 0
+Main>  0 x : Nat
+   p : Nat -> Type
+   q : Nat -> Type
+------------------------------
+d : (y : Nat) -> {p2 : Nat -> Nat -> Type} -> p2 y 0
+Main>  0 x : Nat
+   p : Nat -> Type
+   q : Nat -> Type
+   p2 : Nat -> Nat -> Type
+   y : Nat
+------------------------------
+e : p2 y 0
+Main> 
+Bye for now!

@@ -21,10 +21,10 @@
 |||
 ||| + `expected` a file containting the expected output of `run`
 |||
-||| During testing, the test harness will generate an artefact named `output` and
-||| display both outputs if there is a failure.
-||| During an interactive session the following command is used to compare them as
-||| they are:
+||| During testing, the test harness will generate an artefact named `output`
+||| and display both outputs if there is a failure.
+||| During an interactive session the following command is used to compare them
+||| as they are:
 |||
 ||| ```sh
 |||  git diff --no-index --exit-code --word-diff=color expected output
@@ -33,7 +33,7 @@
 ||| If `git` fails then the runner will simply present the expected and 'given'
 ||| files side-by-side.
 |||
-||| Of note, it is helpful if `output` was added to a local `.gitignore` instance
+||| Of note, it is helpful to add `output` to a local `.gitignore` instance
 ||| to ensure that it is not mistakenly versioned.
 |||
 ||| # Options
@@ -41,19 +41,21 @@
 ||| The test harness has several options that may be set:
 |||
 ||| + `idris2`       The path of the executable we are testing.
-||| + `onlyNames`    The list of tests to run relative to the generated executable.
+||| + `codegen`      The backend to use for code generation.
+||| + `onlyNames`    The tests to run relative to the generated executable.
 ||| + `interactive`  Whether to offer to update the expected file or not.
 ||| + `timing`       Whether to display time taken for each test.
+||| + `threads`      The maximum numbers to use (default: number of cores).
 |||
-||| We provide an options parser (`options`) that will take the command line arguments
-||| and constructs this for you.
+||| We provide an options parser (`options`) that takes the list of command line
+||| arguments and constructs this for you.
 |||
 ||| # Usage
 |||
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable under test> [--timing] [--interactive] [--only [NAMES]]
+|||runtests <path to executable under test> [--timing] [--interactive] [--cg CODEGEN] [--threads N] [--only [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -89,27 +91,49 @@ record Options where
   interactive  : Bool
   ||| Should we time and display the tests
   timing       : Bool
+  ||| How many threads should we use?
+  threads      : Nat
+
+export
+initOptions : String -> Options
+initOptions exe
+  = MkOptions exe
+              Nothing
+              []
+              False
+              False
+              1
 
 export
 usage : String -> String
-usage exe = unwords ["Usage:", exe, "runtests <path> [--timing] [--interactive] [--cg CODEGEN] [--only [NAMES]]"]
+usage exe = unwords
+  ["Usage:", exe
+  , "runtests <path>"
+  , "[--timing]"
+  , "[--interactive]"
+  , "[--cg CODEGEN]"
+  , "[--threads N]"
+  , "[--only [NAMES]]"
+  ]
 
 ||| Process the command line options.
 export
 options : List String -> Maybe Options
 options args = case args of
-    (_ :: exeUnderTest :: rest) => go rest (MkOptions exeUnderTest Nothing [] False False)
+    (_ :: exe :: rest) => go rest (initOptions exe)
     _ => Nothing
 
   where
 
     go : List String -> Options -> Maybe Options
     go rest opts = case rest of
-      []                      => pure opts
-      ("--timing" :: xs)      => go xs (record { timing = True} opts)
-      ("--interactive" :: xs) => go xs (record { interactive = True } opts)
-      ("--cg" :: cg :: xs)    => go xs (record { codegen = Just cg } opts)
-      ("--only" :: xs)        => pure $ record { onlyNames = xs } opts
+      []                       => pure opts
+      ("--timing" :: xs)       => go xs (record { timing = True} opts)
+      ("--interactive" :: xs)  => go xs (record { interactive = True } opts)
+      ("--cg" :: cg :: xs)     => go xs (record { codegen = Just cg } opts)
+      ("--threads" :: n :: xs) => do let pos : Nat = !(parsePositive n)
+                                     go xs (record { threads = pos } opts)
+      ("--only" :: xs)         => pure $ record { onlyNames = xs } opts
       _ => Nothing
 
 -- [ Core ]
@@ -295,7 +319,15 @@ poolRunner opts pool
        let Just _ = the (Maybe (List String)) (sequence cs)
              | Nothing => pure []
        -- if so run them all!
-       map await <$> traverse (runTest opts) tests
+       loop [] tests
+
+  where
+    loop : List (List Bool) -> List String -> IO (List Bool)
+    loop acc [] = pure (concat $ reverse acc)
+    loop acc tests
+      = do let (now, later) = splitAt opts.threads tests
+           bs <- map await <$> traverse (runTest opts) now
+           loop (bs :: acc) later
 
 
 ||| A runner for a whole test suite

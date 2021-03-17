@@ -30,11 +30,11 @@ fromLexError fname (_, l, c, _)
 
 export
 fromParsingError : (Show token, Pretty token) => String -> ParsingError token -> Error
-fromParsingError fname (Error msg []) = ParseFail {token=token} (MkFC fname (0, 0) (0, 0)) (msg +> '.') []
-fromParsingError fname (Error msg (t::ts))
+fromParsingError fname (Error msg Nothing) = ParseFail (MkFC fname (0, 0) (0, 0)) (msg +> '.')
+fromParsingError fname (Error msg (Just t))
     = let l = t.startLine
           c = t.startCol in
-          ParseFail (MkFC fname (l, c) (l, c + 1)) (msg +> '.') (val <$> (t :: ts))
+          ParseFail (MkFC fname (l, c) (l, c + 1)) (msg +> '.')
 
 export
 hex : Char -> Maybe Int
