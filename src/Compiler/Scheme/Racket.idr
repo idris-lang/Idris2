@@ -52,6 +52,7 @@ schHeader libs
     "(require rnrs/io/ports-6)\n" ++ -- for files
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
+    "(require racket/flonum)" ++ -- for float-typed transcendental functions
     libs ++
     "(let ()\n"
 
