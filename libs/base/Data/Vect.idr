@@ -273,7 +273,7 @@ Eq a => Eq (Vect n a) where
   (==) []      []      = True
   (==) (x::xs) (y::ys) = x == y && xs == ys
 
-export
+public export
 DecEq a => DecEq (Vect n a) where
   decEq []      []      = Yes Refl
   decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)

@@ -167,7 +167,7 @@ restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
 -- DecEq
 --------------------------------------------------------------------------------
 
-export
+public export
 DecEq (Fin n) where
   decEq FZ FZ = Yes Refl
   decEq FZ (FS f) = No absurd
