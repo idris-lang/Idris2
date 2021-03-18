@@ -93,7 +93,12 @@ Eq Path where
 ||| An empty path, which represents "".
 public export
 emptyPath : Path
-emptyPath = MkPath Nothing False [] False
+emptyPath = MkPath
+  { volume = Nothing
+  , hasRoot = False
+  , body = []
+  , hasTrailSep = False
+  }
 
 --------------------------------------------------------------------------------
 -- Show

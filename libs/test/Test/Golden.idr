@@ -112,15 +112,16 @@ record Options where
 
 export
 initOptions : String -> Bool -> Options
-initOptions exe color
-  = MkOptions exe
-              Nothing
-              []
-              False
-              color
-              False
-              1
-              Nothing
+initOptions exe color = MkOptions
+  { exeUnderTest = exe
+  , codegen = Nothing
+  , onlyNames = []
+  , interactive = False
+  , color = color
+  , timing = False
+  , threads = 1
+  , failureFile = Nothing
+  }
 
 export
 usage : String
@@ -147,11 +148,9 @@ fail err
 export
 options : List String -> IO (Maybe Options)
 options args = case args of
-    (_ :: exe :: rest) => mkOptions exe rest
-    _ => pure Nothing
-
+                    (_ :: exe :: rest) => mkOptions exe rest
+                    _ => pure Nothing
   where
-
     go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
     go rest only opts = case rest of
       []                            => pure (only, opts)

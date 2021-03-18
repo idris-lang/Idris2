@@ -68,7 +68,12 @@ Show PkgVersionBounds where
 
 export
 anyBounds : PkgVersionBounds
-anyBounds = MkPkgVersionBounds Nothing True Nothing True
+anyBounds = MkPkgVersionBounds
+  { lowerBound = Nothing
+  , lowerInclusive = True
+  , upperBound = Nothing
+  , upperInclusive = True
+  }
 
 export
 current : PkgVersionBounds
@@ -137,12 +142,32 @@ record PkgDesc where
 
 export
 initPkgDesc : String -> PkgDesc
-initPkgDesc pname
-    = MkPkgDesc pname Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing Nothing
-                [] []
-                Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing
+initPkgDesc pname = MkPkgDesc
+  { name = pname
+  , version = Nothing
+  , authors = Nothing
+  , maintainers = Nothing
+  , license = Nothing
+  , brief = Nothing
+  , readme = Nothing
+  , homepage = Nothing
+  , sourceloc = Nothing
+  , bugtracker = Nothing
+  , depends = []
+  , modules = []
+  , mainmod = Nothing
+  , executable = Nothing
+  , options = Nothing
+  , sourcedir = Nothing
+  , builddir = Nothing
+  , outputdir = Nothing
+  , prebuild = Nothing
+  , postbuild = Nothing
+  , preinstall = Nothing
+  , postinstall = Nothing
+  , preclean = Nothing
+  , postclean = Nothing
+  }
 
 export
 Show PkgDesc where

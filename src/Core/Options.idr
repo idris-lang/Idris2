@@ -19,15 +19,15 @@ public export
 record Dirs where
   constructor MkDirs
   working_dir : String
-  source_dir : Maybe String -- source directory, relative to working directory
-  build_dir : String -- build directory, relative to working directory
-  depends_dir : String -- local dependencies directory, relative to working directory
-  output_dir : Maybe String -- output directory, relative to working directory
-  prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
-  extra_dirs : List String -- places to look for import files
+  source_dir : Maybe String  -- source directory, relative to working directory
+  build_dir : String         -- build directory, relative to working directory
+  depends_dir : String       -- local dependencies directory, relative to working directory
+  output_dir : Maybe String  -- output directory, relative to working directory
+  prefix_dir : String        -- installation prefix, for finding data files (e.g. run time support)
+  extra_dirs : List String   -- places to look for import files
   package_dirs : List String -- places to look for packages
-  lib_dirs : List String -- places to look for libraries (for code generation)
-  data_dirs : List String -- places to look for data file
+  lib_dirs : List String     -- places to look for libraries (for code generation)
+  data_dirs : List String    -- places to look for data file
 
 export
 execBuildDir : Dirs -> String
@@ -148,17 +148,17 @@ record Session where
                     -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
-  ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
-          -- while we're bootstrapping, we find modules by a different route
-          -- but we still want to have the dependencies listed properly
-  debugElabCheck : Bool -- do conversion check to verify results of elaborator
-  dumpcases : Maybe String -- file to output compiled case trees
+  ignoreMissingPkg : Bool   -- fail silently on missing packages. This is because
+                            -- while we're bootstrapping, we find modules by a different route
+                            -- but we still want to have the dependencies listed properly
+  debugElabCheck : Bool     -- do conversion check to verify results of elaborator
+  dumpcases : Maybe String  -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
-  dumpanf : Maybe String -- file to output ANF definitions
+  dumpanf : Maybe String    -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
-  profile : Bool -- generate profiling information, if supported
-  searchTimeout : Integer -- maximum number of milliseconds to run
-                          -- expression/program search
+  profile : Bool            -- generate profiling information, if supported
+  searchTimeout : Integer   -- maximum number of milliseconds to run
+                            -- expression/program search
   -- Warnings
   warningsAsErrors : Bool
   showShadowingWarning : Bool
@@ -190,7 +190,6 @@ record Options where
   extensions : List LangExt
   additionalCGs : List (String, CG)
 
-
 export
 availableCGs : Options -> List (String, CG)
 availableCGs o
@@ -207,37 +206,95 @@ getCG : Options -> String -> Maybe CG
 getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
-defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
-                     "/usr/local" ["."] [] [] []
+defaultDirs = MkDirs
+  { working_dir = "."
+  , source_dir = Nothing
+  , build_dir = "build"
+  , depends_dir = "depends"
+  , output_dir = Nothing
+  , prefix_dir = "/usr/local"
+  , extra_dirs = ["."]
+  , package_dirs = []
+  , lib_dirs = []
+  , data_dirs = []
+  }
 
 defaultPPrint : PPrinter
-defaultPPrint = MkPPOpts False True False
+defaultPPrint = MkPPOpts
+  { showImplicits = False
+  , showFullEnv = True
+  , fullNamespace = False
+  }
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
-                               False False False Nothing Nothing
-                               Nothing Nothing False 1000 False True
-                               False [] False
+defaultSession = MkSessionOpts
+  { noprelude = False
+  , nobanner = False
+  , findipkg = False
+  , codegen = Chez
+  , directives = []
+  , logEnabled = False
+  , logLevel = defaultLogLevel
+  , logTimings = False
+  , ignoreMissingPkg = False
+  , debugElabCheck = False
+  , dumpcases = Nothing
+  , dumplifted = Nothing
+  , dumpanf = Nothing
+  , dumpvmcode = Nothing
+  , profile = False
+  , searchTimeout = 1000
+  , warningsAsErrors = False
+  , showShadowingWarning = True
+  , checkHashesInsteadOfModTime = False
+  , incrementalCGs = []
+  , wholeProgram = False
+  }
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50 50 True
+defaultElab = MkElabDirectives
+  { lazyActive = True
+  , unboundImplicits = True
+  , totality = CoveringOnly
+  , ambigLimit = 3
+  , autoImplicitLimit = 50
+  , nfThreshold = 50
+  , prefixRecordProjections = True
+  }
 
 export
 defaults : Options
-defaults = MkOptions defaultDirs defaultPPrint defaultSession
-                     defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing Nothing) []
-                     []
+defaults = MkOptions
+  { dirs = defaultDirs
+  , printing = defaultPPrint
+  , session = defaultSession
+  , elabDirectives = defaultElab
+  , pairnames = Nothing
+  , rewritenames = Nothing
+  , extensions = []
+  , additionalCGs = []
+  , primnames = MkPrimNs
+      { fromIntegerName = Nothing
+      , fromStringName = Nothing
+      , fromCharName = Nothing
+      , fromDoubleName = Nothing
+      }
+  }
 
 -- Reset the options which are set by source files
 export
 clearNames : Options -> Options
-clearNames = record { pairnames = Nothing,
-                      rewritenames = Nothing,
-                      primnames = MkPrimNs Nothing Nothing Nothing Nothing,
-                      extensions = []
+clearNames = record { pairnames = Nothing
+                    , rewritenames = Nothing
+                    , extensions = []
+                    , primnames = MkPrimNs
+                        { fromIntegerName = Nothing
+                        , fromStringName = Nothing
+                        , fromCharName = Nothing
+                        , fromDoubleName = Nothing
+                        }
                     }
 
 export

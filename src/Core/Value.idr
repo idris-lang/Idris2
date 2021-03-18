@@ -16,31 +16,67 @@ data EvalOrder = CBV | CBN
 public export
 record EvalOpts where
   constructor MkEvalOpts
-  holesOnly : Bool -- only evaluate hole solutions
-  argHolesOnly : Bool -- only evaluate holes which are relevant arguments
-  removeAs : Bool -- reduce 'as' patterns (don't do this on LHS)
-  evalAll : Bool -- evaluate everything, including private names
-  tcInline : Bool -- inline for totality checking
-  fuel : Maybe Nat -- Limit for recursion depth
+  holesOnly : Bool               -- only evaluate hole solutions
+  argHolesOnly : Bool            -- only evaluate holes which are relevant arguments
+  removeAs : Bool                -- reduce 'as' patterns (don't do this on LHS)
+  evalAll : Bool                 -- evaluate everything, including private names
+  tcInline : Bool                -- inline for totality checking
+  fuel : Maybe Nat               -- Limit for recursion depth
   reduceLimit : List (Name, Nat) -- reduction limits for given names. If not
-                     -- present, no limit
+                                 -- present, no limit
   strategy : EvalOrder
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True False False Nothing [] CBN
+defaultOpts = MkEvalOpts
+  { holesOnly = False
+  , argHolesOnly = False
+  , removeAs = True
+  , evalAll = False
+  , tcInline = False
+  , fuel = Nothing
+  , reduceLimit = []
+  , strategy = CBN
+  }
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False False False Nothing [] CBN
+withHoles = MkEvalOpts
+  { holesOnly = True
+  , argHolesOnly = True
+  , removeAs = False
+  , evalAll = False
+  , tcInline = False
+  , fuel = Nothing
+  , reduceLimit = []
+  , strategy = CBN
+  }
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True True False Nothing [] CBN
+withAll = MkEvalOpts
+  { holesOnly = False
+  , argHolesOnly = False
+  , removeAs = True
+  , evalAll = True
+  , tcInline = False
+  , fuel = Nothing
+  , reduceLimit = []
+  , strategy = CBN
+  }
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
+withArgHoles = MkEvalOpts
+  { holesOnly = False
+  , argHolesOnly = True
+  , removeAs = False
+  , evalAll = False
+  , tcInline = False
+  , fuel = Nothing
+  , reduceLimit = []
+  , strategy = CBN
+  }
 
 export
 tcOnly : EvalOpts
