@@ -214,9 +214,21 @@ namespacedIdent
             Ident i => Just (Nothing, i)
             _ => Nothing)
 
+isCapitalisedIdent : String -> SourceEmptyRule ()
+isCapitalisedIdent str =
+  let err : SourceEmptyRule ()
+          = fail ("Expected a capitalised identifier, got: " ++ str)
+  in case strM str of
+       StrNil => err
+       StrCons c _ => if (isUpper c || c > chr 160) then pure () else err
+
+
 export
 namespaceId : Rule Namespace
-namespaceId = map (uncurry mkNestedNamespace) namespacedIdent
+namespaceId = do
+  nsid <- namespacedIdent
+  isCapitalisedIdent (snd nsid)
+  pure (uncurry mkNestedNamespace nsid)
 
 export
 moduleIdent : Rule ModuleIdent
@@ -244,6 +256,16 @@ reservedNames
     = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
        "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
+isNotReserved : String -> SourceEmptyRule ()
+isNotReserved x
+    = if x `elem` reservedNames
+      then fail $ "can't use reserved name " ++ x
+      else pure ()
+
+export
+opNonNS : Rule Name
+opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
+
 export
 name : Rule Name
 name = opNonNS <|> do
@@ -255,17 +277,11 @@ name = opNonNS <|> do
   let x = snd nsx
   opNS (mkNestedNamespace ns x) <|> nameNS ns x
  where
-  reserved : String -> Bool
-  reserved n = n `elem` reservedNames
 
   nameNS : Maybe Namespace -> String -> SourceEmptyRule Name
-  nameNS ns x =
-    if reserved x
-      then fail $ "can't use reserved name " ++ x
-      else pure $ mkNamespacedName ns x
-
-  opNonNS : Rule Name
-  opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
+  nameNS ns x = do
+    isNotReserved x
+    pure $ mkNamespacedName ns x
 
   opNS : Namespace -> Rule Name
   opNS ns = do
@@ -273,6 +289,18 @@ name = opNonNS <|> do
     n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
+
+export
+capitalisedName : Rule Name
+capitalisedName = do
+  id <- identPart
+  isCapitalisedIdent id
+  isNotReserved id
+  pure (UN id)
+
+export
+dataConstructorName : Rule Name
+dataConstructorName = opNonNS <|> capitalisedName
 
 export
 IndentInfo : Type

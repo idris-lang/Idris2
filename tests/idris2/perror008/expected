@@ -1,0 +1,48 @@
+1/1: Building Issue710a (Issue710a.idr)
+Error: Expected a capitalised identifier, got: r.
+
+Issue710a.idr:3:10--3:11
+ 1 | module Issue710a
+ 2 | 
+ 3 | record r where
+              ^
+
+1/1: Building Issue710b (Issue710b.idr)
+Error: Expected a capitalised identifier, got: r.
+
+Issue710b.idr:3:8--3:9
+ 1 | module Issue710b
+ 2 | 
+ 3 | data r : Type where
+            ^
+
+1/1: Building Issue710c (Issue710c.idr)
+Error: Expected a capitalised identifier, got: leaf.
+
+Issue710c.idr:5:8--5:9
+ 1 | infix 3 #
+ 2 | 
+ 3 | data T : Type where
+ 4 |   (#) : T -> T -> T
+ 5 |   leaf : T
+            ^
+
+1/1: Building Issue710d (Issue710d.idr)
+Error: Expected a capitalised identifier, got: mkT.
+
+Issue710d.idr:3:1--3:2
+ 1 | record T where
+ 2 |   constructor mkT
+ 3 | 
+     ^
+
+1/1: Building Issue710e (Issue710e.idr)
+Error: Expected a capitalised identifier, got: a.
+
+Issue710e.idr:4:1--4:2
+ 1 | %default total
+ 2 | 
+ 3 | namespace a
+ 4 | 
+     ^
+

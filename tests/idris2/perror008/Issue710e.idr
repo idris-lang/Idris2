@@ -1,0 +1,3 @@
+%default total
+
+namespace a
