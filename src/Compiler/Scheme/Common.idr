@@ -73,9 +73,10 @@ mul (Just $ Unsigned $ P n) x y = op "b*" [x, y, show n]
 mul _                       x y = op "*" [x, y]
 
 div : Maybe IntKind -> String -> String -> String
-div (Just $ Signed $ P n)   x y = op "b/" [x, y, show (n-1)]
-div (Just $ Unsigned $ P n) x y = op "b/" [x, y, show n]
-div _                       x y = op "/" [x, y]
+div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
+div (Just $ Signed $ P n)     x y = op "b/" [x, y, show (n-1)]
+div (Just $ Unsigned $ P n)   x y = op "b/" [x, y, show n]
+div _                         x y = op "/" [x, y]
 
 shl : Maybe IntKind -> String -> String -> String
 shl (Just $ Signed $ P n)   x y = op "blodwen-bits-shl-signed"
