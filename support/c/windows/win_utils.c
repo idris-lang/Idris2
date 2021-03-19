@@ -83,6 +83,10 @@ int win32_getErrno() {
     return GetLastError();
 }
 
+typedef BOOL (WINAPI *LPFN_GLPI)(
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION,
+    PDWORD);
+
 long win32_getNProcessors() {
     // largely taken from
     // https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformation
@@ -147,7 +151,6 @@ long win32_getNProcessors() {
             // if we have an SMT-enabled CPU, we need to count the virtual
             // cores as well
             DWORD lshift = sizeof(ULONG_PTR) * 8 - 1;
-            DWORD bitSetCount = 0;
             ULONG_PTR bitTest = (ULONG_PTR) 1 << lshift;
             DWORD i;
             for (i = 0; i <= lshift; ++i) {
