@@ -131,7 +131,7 @@ public export
 TokenMap : (tokenType : Type) -> Type
 TokenMap tokenType = List (Lexer, String -> tokenType)
 
-tokenise : (WithBounds a -> Bool) ->
+tokenise : (a -> Bool) ->
            (line : Int) -> (col : Int) ->
            List (WithBounds a) -> TokenMap a ->
            List Char -> (List (WithBounds a), (Int, Int, List Char))
@@ -139,7 +139,7 @@ tokenise pred line col acc tmap str
     = case getFirstToken tmap str of
            Just (tok, line', col', rest) =>
            -- assert total because getFirstToken must consume something
-               if pred tok
+               if pred tok.val
                   then (reverse acc, (line, col, []))
                   else assert_total (tokenise pred line' col' (tok :: acc) tmap rest)
            Nothing => (reverse acc, (line, col, str))
@@ -161,7 +161,7 @@ tokenise pred line col acc tmap str
                Just (tok, rest) =>
                  let line' = line + cast (countNLs tok)
                      col' = getCols tok col in
-                     Just (MkBounded (fn (fastPack (reverse tok))) False line col line' col',
+                     Just (MkBounded (fn (fastPack (reverse tok))) False (MkBounds line col line' col'),
                            line', col', rest)
                Nothing => getFirstToken ts str
 
@@ -176,7 +176,7 @@ lex tmap str
           (ts, (l, c, fastPack str'))
 
 export
-lexTo : (WithBounds a -> Bool) ->
+lexTo : (a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in

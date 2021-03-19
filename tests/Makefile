@@ -1,9 +1,10 @@
 INTERACTIVE ?= --interactive
+threads ?= `nproc`
 
 .PHONY: testbin test
 
 test:
-	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --only $(only)
+	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --threads $(threads) --only $(only)
 
 testbin:
 	${IDRIS2_BOOT} --build tests.ipkg

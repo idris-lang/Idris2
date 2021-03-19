@@ -9,6 +9,11 @@ import Libraries.Data.String.Extra
 
 import Core.Directory
 
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
+
 data ESs : Type where
 
 record ESSt where

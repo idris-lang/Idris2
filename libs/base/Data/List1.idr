@@ -6,6 +6,7 @@ import public Data.Zippable
 
 infixr 7 :::
 
+||| Non-empty lists.
 public export
 record List1 a where
   constructor (:::)
@@ -15,49 +16,49 @@ record List1 a where
 %name List1 xs, ys, zs
 
 ------------------------------------------------------------------------
--- Conversion
-
-||| Forget that a list is non-empty
-public export
-forget : (xs : List1 a) -> List a
-forget (x ::: xs) = x :: xs
-
-||| Check whether a list is non-empty
-export
-fromList : (xs : List a) -> Maybe (List1 a)
-fromList [] = Nothing
-fromList (x :: xs) = Just (x ::: xs)
-
-------------------------------------------------------------------------
 -- Basic functions
 
 public export
 singleton : (x : a) -> List1 a
 singleton a = a ::: []
 
+||| Forget that a list is non-empty.
+public export
+forget : List1 a -> List a
+forget (x ::: xs) = x :: xs
+
 export
 last : List1 a -> a
 last (x ::: xs) = loop x xs where
-
   loop : a -> List a -> a
   loop x [] = x
   loop _ (x :: xs) = loop x xs
 
 export
-foldr1' : (a -> b -> b) -> (a -> b) -> List1 a -> b
-foldr1' c n (x ::: xs) = loop x xs where
+init : List1 a -> List a
+init (x ::: xs) = loop x xs where
+  loop : a -> List a -> List a
+  loop x [] = []
+  loop x (y :: xs) = x :: loop y xs
 
+export
+foldr1By : (func : a -> b -> b) -> (map : a -> b) -> (l : List1 a) -> b
+foldr1By f map (x ::: xs) = loop x xs where
   loop : a -> List a -> b
-  loop a [] = n a
-  loop a (x :: xs) = c a (loop x xs)
+  loop x [] = map x
+  loop x (y :: xs) = f x (loop y xs)
 
 export
-foldr1 : (a -> a -> a) -> List1 a -> a
-foldr1 c = foldr1' c id
+foldl1By : (func : b -> a -> b) -> (map : a -> b) -> (l : List1 a) -> b
+foldl1By f map (x ::: xs) = foldl f (map x) xs
 
 export
-foldl1 : (a -> b) -> (b -> a -> b) -> List1 a -> b
-foldl1 n c (x ::: xs) = foldl c (n x) xs
+foldr1 : (func : a -> a -> a) -> (l : List1 a) -> a
+foldr1 f = foldr1By f id
+
+export
+foldl1 : (func : a -> a -> a) -> (l : List1 a) -> a
+foldl1 f = foldl1By f id
 
 ------------------------------------------------------------------------
 -- Append
@@ -67,13 +68,13 @@ appendl : (xs : List1 a) -> (ys : List a) -> List1 a
 appendl (x ::: xs) ys = x ::: xs ++ ys
 
 export
-append : (xs, ys : List1 a) -> List1 a
-append xs ys = appendl xs (forget ys)
+(++) : (xs, ys : List1 a) -> List1 a
+(++) xs ys = appendl xs (forget ys)
 
 export
 lappend : (xs : List a) -> (ys : List1 a) -> List1 a
 lappend [] ys = ys
-lappend (x :: xs) ys = append (x ::: xs) ys
+lappend (x :: xs) ys = (x ::: xs) ++ ys
 
 ------------------------------------------------------------------------
 -- Cons/Snoc
@@ -84,7 +85,7 @@ cons x xs = x ::: forget xs
 
 export
 snoc : (xs : List1 a) -> (x : a) -> List1 a
-snoc xs x = append xs (singleton x)
+snoc xs x = xs ++ (singleton x)
 
 public export
 unsnoc : (xs : List1 a) -> (List a, a)
@@ -110,7 +111,7 @@ reverse (x ::: xs) = reverseOnto (singleton x) xs
 
 export
 Semigroup (List1 a) where
-  (<+>) = append
+  (<+>) = (++)
 
 public export
 Functor List1 where

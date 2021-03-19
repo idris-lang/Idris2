@@ -39,6 +39,11 @@ import Idris.Syntax
 import Idris.Version
 import IdrisPaths
 
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
+
 %default covering
 
 public export
@@ -170,7 +175,7 @@ field fname
            vs <- sepBy1 dot' integerLit
            end <- location
            pure (PVersion (MkFC fname start end)
-                          (MkPkgVersion (map fromInteger vs)))
+                          (MkPkgVersion (fromInteger <$> forget vs)))
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
@@ -205,20 +210,20 @@ field fname
     bound
         = do lte
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) True]
       <|> do gte
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (map fromInteger vs)) True]
+             pure [GT (MkPkgVersion (fromInteger <$> forget vs)) True]
       <|> do lt
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) False]
+             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) False]
       <|> do gt
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (map fromInteger vs)) False]
+             pure [GT (MkPkgVersion (fromInteger <$> forget vs)) False]
       <|> do eqop
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) True,
-                   GT (MkPkgVersion (map fromInteger vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) True,
+                   GT (MkPkgVersion (fromInteger <$> forget vs)) True]
 
     mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
@@ -678,7 +683,7 @@ processPackageOpts opts
              | (MkPFR Nothing opts _) => pure False
 
          if err
-           then do coreLift (putStrLn errorMsg)
+           then do coreLift $ putStrLn (errorMsg ++ "\n")
                    pure True
            else do processPackage cmd f opts'
                    pure True

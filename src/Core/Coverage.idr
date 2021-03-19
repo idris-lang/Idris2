@@ -13,8 +13,13 @@ import Data.List
 import Data.Maybe
 import Data.Strings
 import Libraries.Data.NameMap
-
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 

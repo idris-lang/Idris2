@@ -54,17 +54,24 @@ import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Data.Stream
 import Data.Strings
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import System
 import System.File
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 
@@ -242,7 +249,7 @@ updateFile update
          Right content <- coreLift $ readFile f
                | Left err => throw (FileErr f err)
          coreLift_ $ writeFile (f ++ "~") content
-         coreLift_ $ writeFile f (unlines (update (lines content)))
+         coreLift_ $ writeFile f (unlines (update (forget $ lines content)))
          pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
@@ -498,7 +505,7 @@ processEdit (MakeCase upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let c = lines $ makeCase brack name l
+         let c = forget $ lines $ makeCase brack name l
          if upd
             then updateFile (addMadeCase markM c (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeCase markM c
@@ -509,7 +516,7 @@ processEdit (MakeWith upd line name)
          let Right l = unlit litStyle src
               | Left err => pure (EditError "Invalid literate Idris")
          let (markM, _) = isLitLine src
-         let w = lines $ makeWith name l
+         let w = forget $ lines $ makeWith name l
          if upd
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
@@ -678,15 +685,22 @@ equivTypes : {auto c : Ref Ctxt Defs} ->
              (ty1 : ClosedTerm) ->
              (ty2 : ClosedTerm) ->
              Core Bool
-equivTypes ty1 ty2 = do defs <- get Ctxt
-                        True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
-                          | False => pure False
-                        _ <- newRef UST initUState
-                        catch (do res <- unify inTerm replFC [] ty1 ty2
-                                  case res of
-                                       (MkUnifyResult _ _ _ NoLazy) => pure True
-                                       _ => pure False)
-                              (\err => pure False)
+equivTypes ty1 ty2 =
+  do let False = isErased ty1
+          | _ => pure False
+     logTerm "typesearch.equiv" 10 "Candidate: " ty1
+     defs <- get Ctxt
+     True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
+       | False => pure False
+     _ <- newRef UST initUState
+     b <- catch
+           (do res <- unify inTerm replFC [] ty1 ty2
+               case res of
+                 (MkUnifyResult [] _ [] NoLazy) => pure True
+                 _ => pure False)
+           (\err => pure False)
+     when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
+     pure b
 
 ||| Process a single `REPLCmd`
 |||
@@ -807,23 +821,26 @@ process (Exec ctm)
     = execExp ctm
 process Help
     = pure RequestedHelp
-process (TypeSearch searchTerm@(PPi _ _ _ _ _ _))
+process (TypeSearch searchTerm)
     = do defs <- branch
+         let curr = currentNS defs
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
          let bound = piBindNames replFC [] rawTy
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          ty' <- toResolvedNames ty
-         filteredDefs <- do names   <- allNames ctxt
-                            defs    <- catMaybes <$> (traverse (flip lookupCtxtExact ctxt) names)
-                            allDefs <- traverse (resolved ctxt) defs
-                            (flip filterM) allDefs (\def => equivTypes def.type ty')
-
+         filteredDefs <-
+           do names   <- allNames ctxt
+              defs    <- traverse (flip lookupCtxtExact ctxt) names
+              let defs = flip mapMaybe defs $ \ md =>
+                             do d <- md
+                                guard (visibleIn curr (fullname d) (visibility d))
+                                pure d
+              allDefs <- traverse (resolved ctxt) defs
+              filterM (\def => equivTypes def.type ty') allDefs
          put Ctxt defs
          doc <- traverse (docsOrSignature replFC) $ (.fullname) <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
-process (TypeSearch _)
-    = pure $ REPLError $ reflow "Could not parse input as a type signature."
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of

@@ -49,7 +49,7 @@ idelex str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
-                                               [MkBounded EndInput False l c l c])
+                                               [MkBounded EndInput False (MkBounds l c l c)])
            (_, fail) => Left fail
     where
       notComment : WithBounds Token -> Bool
