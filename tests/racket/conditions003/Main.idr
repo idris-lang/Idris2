@@ -1,28 +1,22 @@
-module Main
+-- Idris2
 
-import Debug.Trace
 import System
 import System.Concurrency
 
+-- Test `conditionSignal` wakes 1 thread for 1 main and N child threads
+
 main : IO ()
-main = do
-    mutex <- makeMutex
-    cond <- makeCondition
+main =
+  let n = 3 in
+  do cvMutex <- makeMutex
+     cv <- makeCondition
+     ts <- for [1..n] $ \_ => fork $ do mutexAcquire cvMutex
+                                        conditionWait cv cvMutex
+                                        putStrLn "Hello mother"
+                                        mutexRelease cvMutex
+     putStrLn "Hello child"
+     sleep 1
+     conditionSignal cv
+     -- don't threadWait since we don't know which thread got signalled
+     sleep 1
 
-    thread1 <- fork $ do
-        mutexAcquire mutex
-        conditionWait cond mutex
-        putStrLn "Goodbye"
-        mutexRelease mutex
-
-    thread2 <- fork $ do
-        mutexAcquire mutex
-        conditionWait cond mutex
-        putStrLn "Goodbye"
-        mutexRelease mutex
-
-    putStrLn "Hello"
-    conditionBroadcast cond
-
-    threadWait thread1
-    threadWait thread2

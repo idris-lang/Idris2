@@ -26,8 +26,15 @@ module Libraries.Text.Literate
 import Libraries.Text.Lexer
 
 import Data.List
+import Data.List1
 import Data.List.Views
 import Data.Strings
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 
@@ -64,13 +71,13 @@ rawTokens delims ls =
 ||| Merge the tokens into a single source file.
 reduce : List (WithBounds Token) -> List String -> String
 reduce [] acc = fastAppend (reverse acc)
-reduce (MkBounded (Any x) _ _ _ _ _ :: rest) acc =
+reduce (MkBounded (Any x) _ _ :: rest) acc =
   -- newline will always be tokenized as a single token
   if x == "\n"
   then reduce rest ("\n"::acc)
   else reduce rest acc
 
-reduce (MkBounded (CodeLine m src) _ _ _ _ _ :: rest) acc =
+reduce (MkBounded (CodeLine m src) _ _ :: rest) acc =
     if m == trim src
     then reduce rest ("\n"::acc)
     else reduce rest ((substr (length m + 1) -- remove space to right of marker.
@@ -78,13 +85,12 @@ reduce (MkBounded (CodeLine m src) _ _ _ _ _ :: rest) acc =
                               src
                       )::acc)
 
-reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
-  reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | [] = reduce rest acc -- 1
-  reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: ys) with (snocList ys)
-    reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: []) | Empty = reduce rest acc -- 2
-    reduce (MkBounded (CodeBlock l r src) _ _ _ _ _ :: rest) acc | (s :: (srcs ++ [f])) | (Snoc f srcs rec) =
+reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc with (lines src) -- Strip the deliminators surrounding the block.
+  reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: ys) with (snocList ys)
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: []) | Empty = reduce rest acc -- 2
+    reduce (MkBounded (CodeBlock l r src) _ _ :: rest) acc | (s ::: (srcs ++ [f])) | (Snoc f srcs rec) =
         -- the "\n" counts for the open deliminator; the closing deliminator should always be followed by a (Any "\n"), so we don't add a newline
-        reduce rest (unlines srcs :: "\n" :: acc)
+        reduce rest (((unlines srcs) ++ "\n") :: "\n" :: acc)
 
 -- [ NOTE ] 1 & 2 shouldn't happen as code blocks are well formed i.e. have two deliminators.
 
@@ -185,7 +191,7 @@ isLiterateLine : (specification : LiterateStyle)
               -> (str : String)
               -> Pair (Maybe String) String
 isLiterateLine (MkLitStyle delims markers _) str with (lex (rawTokens delims markers) str)
-  isLiterateLine (MkLitStyle delims markers _) str | ([MkBounded (CodeLine m str') _ _ _ _ _], (_,_, "")) = (Just m, str')
+  isLiterateLine (MkLitStyle delims markers _) str | ([MkBounded (CodeLine m str') _ _], (_,_, "")) = (Just m, str')
   isLiterateLine (MkLitStyle delims markers _) str | (_, _) = (Nothing, str)
 
 ||| Given a 'literate specification' embed the given code using the

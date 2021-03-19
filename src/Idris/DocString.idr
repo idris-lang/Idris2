@@ -9,12 +9,20 @@ import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.TTImp
+import TTImp.Elab.Prim
 
 import Libraries.Data.ANameMap
 import Data.List
+import Data.List1
 import Data.Maybe
 import Libraries.Data.NameMap
 import Data.Strings
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 -- Add a doc string for a name in the current namespace
 export
@@ -45,10 +53,19 @@ addDocStringNS ns n_in doc
                            saveDocstrings $= insert n' () } syn)
 
 export
-getDocsFor : {auto c : Ref Ctxt Defs} ->
-             {auto s : Ref Syn SyntaxInfo} ->
-             FC -> Name -> Core (List String)
-getDocsFor fc n
+getDocsForPrimitive : {auto c : Ref Ctxt Defs} ->
+                      {auto s : Ref Syn SyntaxInfo} ->
+                      Constant -> Core (List String)
+getDocsForPrimitive constant = do
+    let (_, type) = checkPrim EmptyFC constant
+    let typeString = show constant ++ " : " ++ show !(resugar [] type)
+    pure [typeString ++ "\n\tPrimitive"]
+
+export
+getDocsForName : {auto c : Ref Ctxt Defs} ->
+                 {auto s : Ref Syn SyntaxInfo} ->
+                 FC -> Name -> Core (List String)
+getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
@@ -58,8 +75,11 @@ getDocsFor fc n
              | [] => pure ["No documentation for " ++ show n]
          traverse showDoc ns
   where
+    addNL : String -> String
+    addNL str = if trim str == "" then "" else str ++ "\n"
+
     indent : String -> String
-    indent str = unlines $ map ("\t" ++) (lines str)
+    indent str = unlines $ map ("\t" ++) (forget $ lines str)
 
     showTotal : Name -> Totality -> String
     showTotal n tot
@@ -77,7 +97,7 @@ getDocsFor fc n
                   | _ => pure Nothing
              ty <- normaliseHoles defs [] (type def)
              pure (Just (nameRoot n ++ " : " ++ show !(resugar [] ty)
-                          ++ "\n" ++ indent str))
+                          ++ "\n" ++ addNL (indent str)))
 
     getImplDoc : Name -> Core (Maybe String)
     getImplDoc n
@@ -85,7 +105,7 @@ getDocsFor fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure Nothing
              ty <- normaliseHoles defs [] (type def)
-             pure (Just (indent (show !(resugar [] ty) ++ "\n")))
+             pure $ Just $ addNL $ indent $ show !(resugar [] ty)
 
     getMethDoc : Method -> Core (Maybe String)
     getMethDoc meth
@@ -94,7 +114,7 @@ getDocsFor fc n
                   | _ => pure Nothing
              pure (Just (nameRoot meth.name ++ " : " ++ show !(pterm meth.type)
                           ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
-                          ++ "\n" ++ indent str))
+                          ++ "\n" ++ addNL (indent str)))
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
@@ -145,9 +165,23 @@ getDocsFor fc n
                   | Nothing => throw (UndefinedName fc n)
              ty <- normaliseHoles defs [] (type def)
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
-                              ++ "\n" ++ indent str
+                              ++ "\n" ++ addNL (indent str)
              extra <- getExtra n def
              pure (doc ++ extra)
+
+export
+getDocsForPTerm : {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  PTerm -> Core (List String)
+getDocsForPTerm (PRef fc name) = getDocsForName fc name
+getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
+getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
+getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
+getDocsForPTerm (PList _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
+getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
+getDocsForPTerm (PDPair _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
+getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
+getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
 
 summarise : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -159,8 +193,8 @@ summarise n -- n is fully qualified
              | _ => pure ""
          let doc = case lookupName n (docstrings syn) of
                         [(_, doc)] => case lines doc of
-                                           (d :: _) => Just d
-                                           _ => Nothing
+                                           ("" ::: _) => Nothing
+                                           (d ::: _) => Just d
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++

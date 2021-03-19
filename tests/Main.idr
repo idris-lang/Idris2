@@ -46,7 +46,8 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051", "basic052", "basic053", "basic054", "basic055"]
+       "basic051", "basic052", "basic053", "basic054", "basic055",
+       "basic056", "basic057"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -80,7 +81,8 @@ idrisTestsInteractive = MkTestPool []
        "interactive013", "interactive014", "interactive015", "interactive016",
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
-       "interactive025", "interactive026", "interactive027", "interactive028"]
+       "interactive025", "interactive026", "interactive027", "interactive028",
+       "interactive029"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []
@@ -151,7 +153,7 @@ idrisTests = MkTestPool []
        "real001", "real002",
        -- Records, access and dependent update
        "record001", "record002", "record003", "record004", "record005",
-       "record006",
+       "record006", "record007",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
@@ -195,6 +197,14 @@ racketTests = MkTestPool [Racket]
     [ "forkjoin001"
     , "semaphores001", "semaphores002"
     , "futures001"
+    , "mutex001", "mutex002", "mutex003", "mutex004", "mutex005"
+    , "conditions001"
+    , "conditions002"
+    , "conditions003"
+    , "conditions004"
+    , "conditions005"
+--    , "conditions006"
+--    , "conditions007"
     ]
 
 nodeTests : TestPool

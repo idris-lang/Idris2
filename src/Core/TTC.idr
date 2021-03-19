@@ -795,11 +795,13 @@ TTC PrimNames where
       = do toBuf b (fromIntegerName l)
            toBuf b (fromStringName l)
            toBuf b (fromCharName l)
+           toBuf b (fromDoubleName l)
   fromBuf b
       = do i <- fromBuf b
            str <- fromBuf b
            c <- fromBuf b
-           pure (MkPrimNs i str c)
+           d <- fromBuf b
+           pure (MkPrimNs i str c d)
 
 export
 TTC HoleInfo where

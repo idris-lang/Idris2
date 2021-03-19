@@ -243,6 +243,7 @@ mutual
        PrimInteger : Name -> Directive
        PrimString : Name -> Directive
        PrimChar : Name -> Directive
+       PrimDouble : Name -> Directive
        CGAction : String -> String -> Directive
        Names : Name -> List String -> Directive
        StartExpr : PTerm -> Directive
@@ -449,7 +450,7 @@ data REPLCmd : Type where
      CWD: REPLCmd
      Missing : Name -> REPLCmd
      Total : Name -> REPLCmd
-     Doc : Name -> REPLCmd
+     Doc : PTerm -> REPLCmd
      Browse : Namespace -> REPLCmd
      SetLog : Maybe LogLevel -> REPLCmd
      SetConsoleWidth : Maybe Nat -> REPLCmd

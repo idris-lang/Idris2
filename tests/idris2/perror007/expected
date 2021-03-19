@@ -82,11 +82,10 @@ StrError10.idr:3:1--3:2
 1/1: Building StrError11 (StrError11.idr)
 Error: Multi-line string is expected to begin with """.
 
-StrError11.idr:3:5--3:6
+StrError11.idr:2:7--2:8
  1 | foo : String
  2 | foo = "a
- 3 |     "
-         ^
+           ^
 
 1/1: Building StrError12 (StrError12.idr)
 Error: While processing multi-line string. Line is less indented than the closing delimiter.

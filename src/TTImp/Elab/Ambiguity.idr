@@ -6,6 +6,7 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
+import Core.Options
 import Core.Unify
 import Core.TT
 import Core.Value
@@ -46,10 +47,8 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                        else pure $ IMustUnify fc VarApplied orig
                   Nothing =>
                      do est <- get EST
-                        fi <- fromIntegerName
-                        si <- fromStringName
-                        ci <- fromCharName
-                        let prims = mapMaybe id [fi, si, ci]
+                        primNs <- getPrimNames
+                        let prims = primNamesToList primNs
                         let primApp = isPrimName prims x
                         case lookupUN (userNameRoot x) (unambiguousNames est) of
                           Just xr => do
@@ -64,7 +63,8 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                                [nalt] =>
                                      do log "elab.ambiguous" 10 $ "Only one " ++ show (fst nalt)
                                         pure $ mkAlt primApp est nalt
-                               nalts => pure $ IAlternative fc (uniqType fi si ci x args)
+                               nalts => pure $ IAlternative fc
+                                                      (uniqType primNs x args)
                                                       (map (mkAlt primApp est) nalts)
   where
     lookupUN : Maybe String -> StringMap a -> Maybe a
@@ -82,15 +82,16 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 
     -- If there's multiple alternatives and all else fails, resort to using
     -- the primitive directly
-    uniqType : Maybe Name -> Maybe Name -> Maybe Name -> Name ->
-               List (FC, Maybe (Maybe Name), RawImp) -> AltType
-    uniqType (Just fi) _ _ n [(_, _, IPrimVal fc (BI x))]
+    uniqType : PrimNames -> Name -> List (FC, Maybe (Maybe Name), RawImp) -> AltType
+    uniqType (MkPrimNs (Just fi) _ _ _) n [(_, _, IPrimVal fc (BI x))]
         = UniqueDefault (IPrimVal fc (BI x))
-    uniqType _ (Just si) _ n [(_, _, IPrimVal fc (Str x))]
+    uniqType (MkPrimNs _ (Just si) _ _) n [(_, _, IPrimVal fc (Str x))]
         = UniqueDefault (IPrimVal fc (Str x))
-    uniqType _ _ (Just ci) n [(_, _, IPrimVal fc (Ch x))]
+    uniqType (MkPrimNs _ _ (Just ci) _) n [(_, _, IPrimVal fc (Ch x))]
         = UniqueDefault (IPrimVal fc (Ch x))
-    uniqType _ _ _ _ _ = Unique
+    uniqType (MkPrimNs _ _ _ (Just di)) n [(_, _, IPrimVal fc (Db x))]
+        = UniqueDefault (IPrimVal fc (Db x))
+    uniqType _ _ _ = Unique
 
     buildAlt : RawImp -> List (FC, Maybe (Maybe Name), RawImp) ->
                RawImp

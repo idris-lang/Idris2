@@ -299,7 +299,7 @@ mutual
   rawTokens =
           match comment (const Comment)
       <|> match blockComment (const Comment)
-      <|> match docComment (DocComment . drop 3)
+      <|> match docComment (DocComment . removeOptionalLeadingSpace . drop 3)
       <|> match cgDirective mkDirective
       <|> match holeIdent (\x => HoleIdent (assert_total (strTail x)))
       <|> compose (choice $ exact <$> groupSymbols)
@@ -345,6 +345,11 @@ mutual
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
 
+      removeOptionalLeadingSpace : String -> String
+      removeOptionalLeadingSpace str = case strM str of
+        StrCons ' ' tail => tail
+        _ => str
+
 export
 lexTo : Lexer ->
         String -> Either (StopReason, Int, Int, String) (List (WithBounds Token))
@@ -353,7 +358,7 @@ lexTo reject str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
-                                      [MkBounded EndInput False l c l c])
+                                      [MkBounded EndInput False (MkBounds l c l c)])
            (_, fail) => Left fail
     where
       notComment : WithBounds Token -> Bool

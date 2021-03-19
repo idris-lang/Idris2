@@ -1,21 +1,20 @@
-module Main
+-- Idris2
 
-import Debug.Trace
 import System
 import System.Concurrency
 
+-- Test `conditionSignal` works for 1 main and 1 child thread
+
 main : IO ()
-main = do
-    mutex <- makeMutex
-    cond <- makeCondition
+main =
+  do cvMutex <- makeMutex
+     cv <- makeCondition
+     t <- fork $ do mutexAcquire cvMutex
+                    conditionWait cv cvMutex
+                    putStrLn "Hello mother"
+                    mutexRelease cvMutex
+     putStrLn "Hello child"
+     sleep 1
+     conditionSignal cv
+     threadWait t
 
-    threadID <- fork $ do
-        mutexAcquire mutex
-        conditionWait cond mutex
-        putStrLn "Goodbye"
-        mutexRelease mutex
-
-    putStrLn "Hello"
-    conditionSignal cond
-
-    threadWait threadID

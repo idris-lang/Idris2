@@ -32,8 +32,13 @@ import Data.List
 import Libraries.Data.NameMap
 import Data.Strings
 import Data.Maybe
-
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 
@@ -318,16 +323,21 @@ checkLHS : {vars : _} ->
                            Term vars', Term vars')))
 checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
     = do defs <- get Ctxt
+         logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
                        then pure lhs_in
                        else lhsInCurrentNS nest lhs_in
+         logRaw "declare.def.lhs" 30 "Raw LHS in current NS: " lhs_raw
+
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
          (_, lhs_bound) <- bindNames False lhs_raw
          setUnboundImplicits autoimp
+         logRaw "declare.def.lhs" 30 "Raw LHS with implicits bound" lhs_bound
+
          lhs <- if trans
                    then pure lhs_bound
-                   else implicitsAs defs vars lhs_bound
+                   else implicitsAs n defs vars lhs_bound
 
          logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
 -- todo: add Pretty RawImp instance

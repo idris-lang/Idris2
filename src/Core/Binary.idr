@@ -31,7 +31,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 45
+ttcVersion = 46
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -122,8 +122,8 @@ HasNames e => HasNames (TTCFile e) where
           = pure $ Just $ MkRewriteNs !(full gam e) !(full gam r)
 
       fullPrim : Context -> PrimNames -> Core PrimNames
-      fullPrim gam (MkPrimNs mi ms mc)
-          = pure $ MkPrimNs !(full gam mi) !(full gam ms) !(full gam mc)
+      fullPrim gam (MkPrimNs mi ms mc md)
+          = [| MkPrimNs (full gam mi) (full gam ms) (full gam mc) (full gam md) |]
 
 
   -- I don't think we ever actually want to call this, because after we read
@@ -160,8 +160,11 @@ HasNames e => HasNames (TTCFile e) where
           = pure $ Just $ MkRewriteNs !(resolved gam e) !(resolved gam r)
 
       resolvedPrim : Context -> PrimNames -> Core PrimNames
-      resolvedPrim gam (MkPrimNs mi ms mc)
-          = pure $ MkPrimNs !(resolved gam mi) !(resolved gam ms) !(resolved gam mc)
+      resolvedPrim gam (MkPrimNs mi ms mc md)
+          = pure $ MkPrimNs !(resolved gam mi)
+                            !(resolved gam ms)
+                            !(resolved gam mc)
+                            !(resolved gam md)
 
 -- NOTE: TTC files are only compatible if the version number is the same,
 -- *and* the 'annot/extra' type are the same, or there are no holes/constraints
@@ -337,7 +340,9 @@ updatePrimNames : PrimNames -> PrimNames -> PrimNames
 updatePrimNames p
     = record { fromIntegerName $= ((fromIntegerName p) <+>),
                fromStringName $= ((fromStringName p) <+>),
-               fromCharName $= ((fromCharName p) <+>) }
+               fromCharName $= ((fromCharName p) <+>),
+               fromDoubleName $= ((fromDoubleName p) <+>)
+             }
 
 export
 updatePrims : {auto c : Ref Ctxt Defs} ->

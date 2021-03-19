@@ -1,45 +1,45 @@
 Main> Prelude.plus : Nat -> Nat -> Nat
-	 Add two natural numbers.
-	 @ x the number to case-split on
-	 @ y the other numberpublic export
+	Add two natural numbers.
+	@ x the number to case-split on
+	@ y the other numberpublic export
 
 Totality: total
 Main> Prelude.Nat : Type
-	 Natural numbers: unbounded, unsigned integers which can be pattern matched.
+	Natural numbers: unbounded, unsigned integers which can be pattern matched.
 
 Constructors:
 Z : Nat
-	 Zero.
+	Zero.
 S : Nat -> Nat
-	 Successor.
+	Successor.
 Main> Prelude.List : Type -> Type
-	 Generic lists.
+	Generic lists.
 
 Constructors:
 Nil : List a
-	 Empty list
+	Empty list
 :: : a -> List a -> List a
 Main> Prelude.Show : Type -> Type
-	 Things that have a canonical `String` representation.
+	Things that have a canonical `String` representation.
 Parameters: ty
 
 Methods:
 show : (x : ty) -> String
-	 Convert a value to its `String` representation.
-	 @ x the value to convert
+	Convert a value to its `String` representation.
+	@ x the value to convert
 showPrec : (d : Prec) -> (x : ty) -> String
-	 Convert a value to its `String` representation in a certain precedence
-	 context.
+	Convert a value to its `String` representation in a certain precedence
+	context.
 	
-	 A value should produce parentheses around itself if and only if the given
-	 precedence context is greater than or equal to the precedence of the
-	 outermost operation represented in the produced `String`.  *This is
-	 different from Haskell*, which requires it to be strictly greater.  `Open`
-	 should thus always produce *no* outermost parens, `App` should always
-	 produce outermost parens except on atomic values and those that provide
-	 their own bracketing, like `Pair` and `List`.
-	 @ d the precedence context.
-	 @ x the value to convert
+	A value should produce parentheses around itself if and only if the given
+	precedence context is greater than or equal to the precedence of the
+	outermost operation represented in the produced `String`.  *This is
+	different from Haskell*, which requires it to be strictly greater.  `Open`
+	should thus always produce *no* outermost parens, `App` should always
+	produce outermost parens except on atomic values and those that provide
+	their own bracketing, like `Pair` and `List`.
+	@ d the precedence context.
+	@ x the value to convert
 
 Implementations:
 	Show Int
@@ -60,8 +60,8 @@ Implementations:
 	Show a => Show (Maybe a)
 	(Show a, Show b) => Show (Either a b)
 Main> Prelude.show : Show ty => ty -> String
-	 Convert a value to its `String` representation.
-	 @ x the value to convert
+	Convert a value to its `String` representation.
+	@ x the value to convert
 
 Totality: total
 Main> Prelude.Monad : (Type -> Type) -> Type
@@ -70,13 +70,16 @@ Constraints: Applicative m
 
 Methods:
 >>= : m a -> (a -> m b) -> m b
-	 Also called `bind`.
+	Also called `bind`.
 join : m (m a) -> m a
-	 Also called `flatten` or mu.
+	Also called `flatten` or mu.
 
 Implementations:
 	Monad IO
+	Monoid a => Monad (Pair a)
 	Monad Maybe
 	Monad (Either e)
 	Monad List
+Main> 1 : Integer
+	Primitive
 Main> Bye for now!
