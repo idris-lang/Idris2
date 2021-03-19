@@ -98,6 +98,7 @@ long win32_getNProcessors() {
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = NULL;
 
     // shortcut to a function (?)
+    LPFN_GLPI glpi;
     glpi = (LPFN_GLPI) GetProcAddress( GetModuleHandle(TEXT("kernel32"))
                                      , "GetLogicalProcessorInformation"
                                      );
@@ -149,7 +150,7 @@ long win32_getNProcessors() {
             DWORD bitSetCount = 0;
             ULONG_PTR bitTest = (ULONG_PTR) 1 << lshift;
             DWORD i;
-            for (i = 0; i <= LSHIFT; ++i) {
+            for (i = 0; i <= lshift; ++i) {
                 // count the bit if it is set
                 nSMTProcessors += ((ptr->ProcessorMask & bitTest) ? 1 : 0);
                 // move the test to the next bit
