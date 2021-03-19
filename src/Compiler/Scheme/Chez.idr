@@ -342,18 +342,27 @@ startChez : String -> String -> String
 startChez appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "case `uname -s` in            "
+    , "set -e # exit on any error"
+    , ""
+    , "case $(uname -s) in           "
     , "    OpenBSD|FreeBSD|NetBSD)   "
-    , "        DIR=\"`grealpath $0`\""
+    , "        REALPATH=\"grealpath\""
     , "        ;;                    "
     , "                              "
     , "    *)                        "
-    , "        DIR=\"`realpath $0`\" "
+    , "        REALPATH=\"realpath\" "
     , "        ;;                    "
     , "esac                          "
     , ""
-    , "export LD_LIBRARY_PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
-    , "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
+    , "if ! command -v \"$REALPATH\" >/dev/null                   "
+    , "then                                                       "
+    , "    echo \"$REALPATH is required for Chez code generator.\""
+    , "    exit 1                                                 "
+    , "fi                                                         "
+    , ""
+    , "DIR=$($REALPATH \"$0\")"
+    , "export LD_LIBRARY_PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
+    , "\"$(dirname \"$DIR\")\"/\"" ++ target ++ "\" \"$@\""
     ]
 
 startChezCmd : String -> String -> String -> String
@@ -367,9 +376,12 @@ startChezCmd chez appdir target = unlines
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target = unlines
     [ "#!/bin/sh"
-    , "DIR=\"`realpath \"$0\"`\""
+    , ""
+    , "set -e # exit on any error"
+    , ""
+    , "DIR=$(realpath \"$0\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
+    , "export PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$PATH\""
     , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
     ]
 

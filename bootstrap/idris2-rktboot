@@ -1,15 +1,30 @@
 #!/bin/sh
 
-case `uname -s` in
+set -e # exit on any error
+
+if [ -z "$IDRIS2_VERSION" ]; then
+    echo "Required IDRIS2_VERSION env is not set."
+    exit 1
+fi
+echo "Bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
+
+case $(uname -s) in
     OpenBSD|FreeBSD|NetBSD)
-        DIR="`grealpath $0`"
+        REALPATH="grealpath"
         ;;
 
     *)
-        DIR="`realpath $0`"
+        REALPATH="realpath"
         ;;
 esac
 
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:`dirname "$DIR"`/"idris2_app""
-export PATH="`dirname "$DIR"`/"idris2_app":$PATH"
-"`dirname $DIR`"/"idris2_app/idris2-boot" "$@"
+if ! command -v "$REALPATH" >/dev/null
+then
+    echo "$REALPATH is required for Racket code generator."
+    exit 1
+fi
+
+DIR=$($REALPATH "$0")
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(dirname "$DIR")/idris2_app"
+export PATH="$(dirname "$DIR")/idris2_app:$PATH"
+"$(dirname "$DIR")/idris2_app/idris2-boot" "$@"

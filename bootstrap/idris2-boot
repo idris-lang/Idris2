@@ -1,20 +1,29 @@
 #!/bin/sh
 
-case `uname -s` in
-    OpenBSD|FreeBSD|NetBSD)
-        DIR="`grealpath $0`"
-        ;;
+set -e # exit on any error
 
-    *)
-        DIR="`realpath $0`"
-        ;;
-esac
-
-if test -z "${SCHEME}"; then
-    echo "SCHEME env var is not set" >&2
+if [ -z "$SCHEME" ]; then
+    echo "Required SCHEME env is not set."
     exit 1
 fi
 
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:`dirname "$DIR"`/"idris2_app""
-export PATH="`dirname "$DIR"`/"idris2_app":$PATH"
-${SCHEME} --script "`dirname $DIR`"/"idris2_app/idris2-boot.so" "$@"
+case $(uname -s) in
+    OpenBSD|FreeBSD|NetBSD)
+        REALPATH="grealpath"
+        ;;
+
+    *)
+        REALPATH="realpath"
+        ;;
+esac
+
+if ! command -v "$REALPATH" >/dev/null
+then
+    echo "$REALPATH is required for Chez code generator."
+    exit 1
+fi
+
+DIR=$($REALPATH "$0")
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(dirname "$DIR")/idris2_app"
+export PATH="$(dirname "$DIR")/idris2_app:$PATH"
+${SCHEME} --script "$(dirname "$DIR")/idris2_app/idris2-boot.so" "$@"

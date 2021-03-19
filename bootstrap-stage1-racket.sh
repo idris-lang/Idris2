@@ -1,12 +1,12 @@
 #!/bin/sh
 
-set -e # Exit on any error
+set -e # exit on any error
 
-echo "bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
 if [ -z "$IDRIS2_VERSION" ]; then
-    echo "Required ENV not set."
+    echo "Required IDRIS2_VERSION env is not set."
     exit 1
 fi
+echo "Bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
 
 # Compile the bootstrap scheme
 cd bootstrap

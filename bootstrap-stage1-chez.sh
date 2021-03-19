@@ -1,15 +1,15 @@
 #!/bin/sh
 
-set -e # Exit on any error
+set -e # exit on any error
 
-echo "bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 if [ -z "$SCHEME" ] || [ -z "$IDRIS2_VERSION" ]; then
-    echo "Required ENV not set."
+    echo "Required SCHEME or IDRIS2_VERSION env is not set."
     if [ -z "$SCHEME" ]; then
         echo "Invoke with SCHEME=[name of chez scheme executable]"
     fi
     exit 1
 fi
+echo "Bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 
 # Compile the bootstrap scheme
 # TODO: Move boot-build to Makefile in bootstrap/Makefile

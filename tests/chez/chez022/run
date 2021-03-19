@@ -1,4 +1,4 @@
-case `uname -s` in
+case $(uname -s) in
     OpenBSD|FreeBSD|NetBSD)
         MAKE=gmake
         ;;
