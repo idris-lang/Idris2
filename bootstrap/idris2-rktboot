@@ -25,6 +25,8 @@ then
 fi
 
 DIR=$($REALPATH "$0")
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(dirname "$DIR")/idris2_app"
-export PATH="$(dirname "$DIR")/idris2_app:$PATH"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(dirname "$DIR")/idris2_app"
+PATH="$(dirname "$DIR")/idris2_app:$PATH"
+export LD_LIBRARY_PATH PATH
+
 "$(dirname "$DIR")/idris2_app/idris2-boot" "$@"
