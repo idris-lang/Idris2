@@ -240,7 +240,9 @@ templateTests = MkTestPool []
 -- available.
 baseLibraryTests : TestPool
 baseLibraryTests = MkTestPool [Chez, Node]
-  [ "system_file001", "data_bits001"
+  [ "system_file001"
+  , "data_bits001"
+  , "system_info001"
   ]
 
 main : IO ()

@@ -19,4 +19,6 @@ int idris2_time();
 
 char* idris2_getEnvPair(int i);
 
+long idris2_getNProcessors();
+
 #endif

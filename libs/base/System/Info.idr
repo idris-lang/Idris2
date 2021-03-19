@@ -14,3 +14,11 @@ codegen = prim__codegen
 export
 isWindows : Bool
 isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
+
+%foreign "C:idris2_getNProcessors, libidris2_support"
+prim__getNProcessors : PrimIO Int
+
+export
+getNProcessors : IO Int
+getNProcessors = fromPrim prim__getNProcessors
+

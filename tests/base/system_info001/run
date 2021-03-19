@@ -1,0 +1,6 @@
+rm -f expected
+echo "$(nproc) processors" > expected
+
+$1 --no-banner --no-color --console-width 0 NumProcessors.idr --exec main
+
+rm -rf build

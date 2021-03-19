@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #ifdef _WIN32
 extern char **_environ;
@@ -28,7 +29,11 @@ char* idris2_getString(void *p) {
 }
 
 int idris2_getErrno() {
+#ifdef _WIN32
+    return win32_getErrno();
+#else
     return errno;
+#endif
 }
 
 char* idris2_getStr() {
@@ -94,3 +99,13 @@ int idris2_unsetenv(const char *name) {
     return unsetenv(name);
 #endif
 }
+
+// get the number of processors configured
+long idris2_getNProcessors() {
+#ifdef _WIN32
+    return win32_getNProcessors();
+#else
+    return sysconf(_SC_NPROCESSORS_CONF);
+#endif
+}
+
