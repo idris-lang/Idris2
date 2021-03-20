@@ -12,6 +12,7 @@ import Data.Nat
 import Data.Vect
 
 import System.File
+import Libraries.Data.PosMap
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
@@ -377,6 +378,11 @@ export
           = do val <- fromBuf b
                rewrite (plusSuccRightSucc k done)
                readElems (val :: xs) k
+
+export
+(TTC a, Measure a) => TTC (PosMap a) where
+  toBuf b = toBuf b . toList
+  fromBuf b = fromList <$> fromBuf b
 
 %hide Fin.fromInteger
 

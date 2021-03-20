@@ -317,6 +317,9 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          log "metadata.names" 7 $ "processType is adding ↓"
          addNameType nameFC (Resolved idx) env ty -- for looking up types
 
+         addDeclLoc fc n -- for lookup with location
+         addDeclLoc nameFC n
+
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
          log "declare.type" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))

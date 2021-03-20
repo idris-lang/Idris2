@@ -866,6 +866,7 @@ processDef opts nest env fc n_in cs_in
              do let tymetas = getMetas (type gdef)
                 traverse_ addToSave (keys tymetas)
          addToSave n
+         addDeclLoc fc n
 
          -- Flag this name as one which needs compiling
          defs <- get Ctxt

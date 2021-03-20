@@ -1,5 +1,6 @@
 module Libraries.Data.PosMap
 
+import Data.List
 import Core.FC
 
 %default total
@@ -57,6 +58,7 @@ interface Measure a where
 interface MeasureRM a where
   measureRM : a -> RMFileRange
 
+public export
 Measure a => MeasureRM a where
   measureRM = cast . measure
 
@@ -197,6 +199,7 @@ Empty                        |> a = Single a
 (Deep _ pr m (Three d c b))  |> a = deep pr m (Four d c b a)
 (Deep _ pr m (Four e d c b)) |> a = deep pr (m |> node3 e d c) (Two b a)
 
+export
 Foldable PosMap where
   foldr f init Empty = init
   foldr f init (Single x) = f x init
@@ -564,8 +567,18 @@ inRange low high t = matches (takeUntil (greater high) t)
                           x <: xs' => x :: assert_total (matches xs')
 
 export
-search : MeasureRM a => FilePos -> PosMap a -> List a
-search p = inRange p p
+searchPos : MeasureRM a => FilePos -> PosMap a -> List a
+searchPos p = inRange p p
+
+export
+match : Measure a => FilePos -> PosMap a -> Maybe a
+match p m = head' $ sortBy (\x, y => cmp (measure x) (measure y)) $ inRange p p m
+  where cmp : FileRange -> FileRange -> Ordering
+        cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
+          case compare (er1 - sr1) (er2 - sr2) of
+               LT => LT
+               EQ => compare (ec1 - sc1) (ec2 - sr2)
+               GT => GT
 
 export
 intersections : MeasureRM a => FileRange -> PosMap a -> List a
@@ -585,10 +598,10 @@ bounds t =
               EmptyL => Nothing
               x <: _ => Just (fst (measure x), high)
 
-export
+public export
 Measure NonEmptyFC where
   measure = snd
 
-export
+public export
 Measure (NonEmptyFC, a) where
   measure = measure . fst
