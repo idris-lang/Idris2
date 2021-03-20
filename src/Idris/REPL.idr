@@ -58,6 +58,7 @@ import Data.List1
 import Data.Maybe
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.PosMap
 import Data.Stream
 import Data.Strings
 import Libraries.Data.String.Extra
@@ -367,6 +368,11 @@ processEdit : {auto c : Ref Ctxt Defs} ->
               EditCmd -> Core EditResult
 processEdit (TypeAt line col name)
     = do defs <- get Ctxt
+         meta <- get MD
+
+         -- Search the correct name by location for more precise search
+         -- and fallback to given name if nothing found
+         let name = maybe name snd (match (line, col) (declsLoc meta))
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)

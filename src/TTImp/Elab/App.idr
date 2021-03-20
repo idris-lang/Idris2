@@ -109,6 +109,7 @@ getVarType rigc nest env fc x
                                 -- Add the type to the metadata
                                 log "metadata.names" 7 $ "getVarType is adding ↓"
                                 addNameType fc x env tyenv
+                                -- addDeclLoc fc x
 
                                 pure (tm, arglen, gnf env tyenv)
     where
@@ -710,6 +711,8 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         nty <- getNF nty_in
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
+
+        addDeclLoc fc' n
 
         logC "elab" 10
                 (do defs <- get Ctxt
