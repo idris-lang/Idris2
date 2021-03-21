@@ -1,3 +1,9 @@
+||| Specialized implementation of an interval map with finger trees [1].
+||| This data structure is meant to get efficiently data with a correlated NonEmptyFC.
+||| The element data type must implement the `Measure` interface. An implementation
+||| is provided already for NonEmptyFC and tuples with NonEmptyFC as first element.
+|||
+||| [1] https://www.staff.city.ac.uk/~ross/papers/FingerTree.pdf
 module Libraries.Data.PosMap
 
 import Data.List
@@ -51,6 +57,7 @@ Cast FileRange Interval where
 Cast RMFileRange Interval where
   cast = MkInterval
 
+||| Things that have an associated interval in the source files.
 public export
 interface Measure a where
   measure : a -> FileRange
@@ -521,6 +528,7 @@ larger' : FileRange -> Interval -> Bool
 larger' i (MkInterval (MkRange k _)) = k > i
 larger' i NoInterval = False
 
+||| Inserts a new element in the map, in lexicographical order.
 export
 insert : Measure a => a -> PosMap a -> PosMap a
 insert v m = let (l, r) = split (larger (measure v)) m in l ++ (v <| r)
@@ -544,21 +552,19 @@ merge2 xs ys =
        b <: bs' => let (l, r) = split (larger' (measure b)) xs in
                        l ++ (b <| assert_total (merge1 r bs'))
 
+||| Merges two interval maps.
 export
 union : Measure a => PosMap a -> PosMap a -> PosMap a
 union xs ys = merge1 xs ys
 
-export
 atleast : FilePos -> Interval -> Bool
 atleast k (MkInterval (MkRange _ high)) = k <= high
 atleast k NoInterval = False
 
-export
 greater : FilePos -> Interval -> Bool
 greater k (MkInterval (MkRange low _)) = fst low > k
 greater k NoInterval = False
 
-export
 inRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
 inRange low high t = matches (takeUntil (greater high) t)
   where matches : PosMap a -> List a
@@ -566,18 +572,22 @@ inRange low high t = matches (takeUntil (greater high) t)
                           EmptyL => []
                           x <: xs' => x :: assert_total (matches xs')
 
+||| Returns all the interval that contains the given point.
 export
 searchPos : MeasureRM a => FilePos -> PosMap a -> List a
 searchPos p = inRange p p
 
+||| Returns all the interval that intersects the given interval.
 export
 intersections : MeasureRM a => FileRange -> PosMap a -> List a
 intersections i = inRange (fst i) (snd i)
 
+||| Returns all the interval that contains the given interval.
 export
 dominators : MeasureRM a => FileRange -> PosMap a -> List a
 dominators i = inRange (snd i) (fst i)
 
+||| Returns the extreme boundaries of the map, if non empty.
 export
 bounds : Measure a => PosMap a -> Maybe FileRange
 bounds t =

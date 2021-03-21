@@ -385,7 +385,7 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (declsLoc meta)
+         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (nameLocMap meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
