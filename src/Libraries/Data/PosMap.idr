@@ -571,16 +571,6 @@ searchPos : MeasureRM a => FilePos -> PosMap a -> List a
 searchPos p = inRange p p
 
 export
-match : Measure a => FilePos -> PosMap a -> Maybe a
-match p m = head' $ sortBy (\x, y => cmp (measure x) (measure y)) $ inRange p p m
-  where cmp : FileRange -> FileRange -> Ordering
-        cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
-          case compare (er1 - sr1) (er2 - sr2) of
-               LT => LT
-               EQ => compare (ec1 - sc1) (ec2 - sr2)
-               GT => GT
-
-export
 intersections : MeasureRM a => FileRange -> PosMap a -> List a
 intersections i = inRange (fst i) (snd i)
 

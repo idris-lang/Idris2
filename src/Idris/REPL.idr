@@ -360,6 +360,19 @@ dropLamsTm Z env tm = (_ ** (env, tm))
 dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
+findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
+findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (measure x) (measure y)) $ searchPos p m
+  where
+    cmp : FileRange -> FileRange -> Ordering
+    cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
+      case compare (er1 - sr1) (er2 - sr2) of
+           LT => LT
+           EQ => compare (ec1 - sc1) (ec2 - sr2)
+           GT => GT
+
+    match : (NonEmptyFC, Name) -> Bool
+    match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
+
 processEdit : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -372,7 +385,7 @@ processEdit (TypeAt line col name)
 
          -- Search the correct name by location for more precise search
          -- and fallback to given name if nothing found
-         let name = maybe name snd (match (line, col) (declsLoc meta))
+         let name = fromMaybe name $ findInTree (line - 1, col - 1) name (declsLoc meta)
 
          -- Lookup the name globally
          globals <- lookupCtxtName name (gamma defs)
