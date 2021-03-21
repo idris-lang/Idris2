@@ -53,7 +53,7 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
          mkPrecise !(getNF gexpty)
          -- Record the LHS for this hole in the metadata
          withCurrentLHS (Resolved idx)
-         addDeclLoc fc nm
+         addNameLoc fc nm
          addUserHole nm
          saveHole nm
          pure (metaval, gexpty)
@@ -70,7 +70,7 @@ checkHole rig elabinfo nest env fc n_in exp
                        throw (AlreadyDefined fc nm)
          (idx, metaval) <- metaVarI fc rig env' nm ty
          withCurrentLHS (Resolved idx)
-         addDeclLoc fc nm
+         addNameLoc fc nm
          addUserHole nm
          saveHole nm
          pure (metaval, gnf env ty)

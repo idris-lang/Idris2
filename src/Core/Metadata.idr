@@ -42,17 +42,17 @@ record Metadata where
        -- to know what the recursive call is, if applicable)
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
-       declsLoc : PosMap (NonEmptyFC, Name)
+       nameLocMap : PosMap (NonEmptyFC, Name)
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS declsLoc)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
       " type declarations: " ++ show tydecls ++ "\n" ++
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
-      " declsLoc: " ++ show declsLoc
+      " nameLocMap: " ++ show nameLocMap
 
 export
 initMetadata : Metadata
@@ -62,7 +62,7 @@ initMetadata = MkMetadata
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
-  , declsLoc = empty
+  , nameLocMap = empty
   }
 
 -- A label for metadata in the global state
@@ -75,7 +75,7 @@ TTC Metadata where
            toBuf b (names m)
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
-           toBuf b (declsLoc m)
+           toBuf b (nameLocMap m)
 
   fromBuf b
       = do apps <- fromBuf b
@@ -145,14 +145,14 @@ addTyDecl loc n env tm
            put MD $ record { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
 
 export
-addDeclLoc : {auto m : Ref MD Metadata} ->
+addNameLoc : {auto m : Ref MD Metadata} ->
              {auto c : Ref Ctxt Defs} ->
              FC -> Name -> Core ()
-addDeclLoc loc n
+addNameLoc loc n
     = do meta <- get MD
          n' <- getFullName n
          whenJust (isNonEmptyFC loc) $ \neloc =>
-           put MD $ record { declsLoc $= insert (neloc, n') } meta
+           put MD $ record { nameLocMap $= insert (neloc, n') } meta
 
 export
 setHoleLHS : {auto m : Ref MD Metadata} ->
