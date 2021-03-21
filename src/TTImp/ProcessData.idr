@@ -278,7 +278,6 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
-         addDeclLoc fc n
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          case vis of
@@ -359,7 +358,6 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n
-         addDeclLoc fc n
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
          let connames = map conName cons
