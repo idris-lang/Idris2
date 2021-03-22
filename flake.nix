@@ -22,10 +22,6 @@
         packages = rec {
           idris2 = idris2Pkg;
         } // text-editor;
-        apps = rec {
-          type = "app";
-          emacs-dev = text-editor.emacs-dev;
-        };
         buildIdris = buildIdrisPkg;
         defaultPackage = packages.idris2;
       } else {}) // rec {
