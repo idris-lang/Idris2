@@ -1166,10 +1166,10 @@ usingDecls fname indents
                          commit
                          symbol "("
                          us <- sepBy (symbol ",")
-                                     (do n <- option Nothing
+                                     (do n <- optional
                                                 (do x <- unqualifiedName
                                                     symbol ":"
-                                                    pure (Just (UN x)))
+                                                    pure (UN x))
                                          ty <- typeExpr pdef fname indents
                                          pure (n, ty))
                          symbol ")"
@@ -1290,7 +1290,7 @@ ifaceDecl fname indents
                                      (do symbol "|"
                                          sepBy (symbol ",") name)
                          keyword "where"
-                         dc <- option Nothing (Just <$> recordConstructor indents)
+                         dc <- optional (recordConstructor indents)
                          body <- assert_total (blockAfter col (topDecl fname))
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
@@ -1304,10 +1304,10 @@ implDecl fname indents
                          let opts = mapMaybe getRight visOpts
                          col <- column
                          option () (keyword "implementation")
-                         iname <- option Nothing (do symbol "["
-                                                     iname <- name
-                                                     symbol "]"
-                                                     pure (Just iname))
+                         iname <- optional (do symbol "["
+                                               iname <- name
+                                               symbol "]"
+                                               pure iname)
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- name
