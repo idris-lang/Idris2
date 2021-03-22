@@ -109,7 +109,7 @@ long win32_getNProcessors() {
     // to keep track of whether we're at the end of the array
     DWORD byteOffset = 0;
     
-    // repidiately try to malloc and retrieve the information until we have a
+    // repeatedly try to malloc and retrieve the information until we have a
     // large enough array of information structs, or we fail to malloc
     while (!done) {
         DWORD rc = glpi(buffer, &returnLength);
