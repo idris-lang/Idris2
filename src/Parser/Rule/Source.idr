@@ -214,11 +214,13 @@ namespacedIdent
             Ident i => Just (Nothing, i)
             _ => Nothing)
 
-isCapitalisedIdent : String -> SourceEmptyRule ()
+isCapitalisedIdent : WithBounds String -> SourceEmptyRule ()
 isCapitalisedIdent str =
-  let err : SourceEmptyRule ()
-          = fail ("Expected a capitalised identifier, got: " ++ str)
-  in case strM str of
+  let val = str.val
+      loc = str.bounds
+      err : SourceEmptyRule ()
+          = failLoc loc ("Expected a capitalised identifier, got: " ++ val)
+  in case strM val of
        StrNil => err
        StrCons c _ => if (isUpper c || c > chr 160) then pure () else err
 
@@ -226,9 +228,9 @@ isCapitalisedIdent str =
 export
 namespaceId : Rule Namespace
 namespaceId = do
-  nsid <- namespacedIdent
-  isCapitalisedIdent (snd nsid)
-  pure (uncurry mkNestedNamespace nsid)
+  nsid <- bounds namespacedIdent
+  isCapitalisedIdent (snd <$> nsid)
+  pure (uncurry mkNestedNamespace nsid.val)
 
 export
 moduleIdent : Rule ModuleIdent
@@ -256,10 +258,10 @@ reservedNames
     = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
        "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
-isNotReserved : String -> SourceEmptyRule ()
+isNotReserved : WithBounds String -> SourceEmptyRule ()
 isNotReserved x
-    = if x `elem` reservedNames
-      then fail $ "can't use reserved name " ++ x
+    = if x.val `elem` reservedNames
+      then failLoc x.bounds $ "can't use reserved name " ++ x.val
       else pure ()
 
 export
@@ -269,19 +271,19 @@ opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 export
 name : Rule Name
 name = opNonNS <|> do
-  nsx <- namespacedIdent
+  nsx <- bounds namespacedIdent
   -- writing (ns, x) <- namespacedIdent leads to an unsoled constraint.
   -- I tried to write a minimised test case but could not reproduce the error
   -- on a simplified example.
-  let ns = fst nsx
-  let x = snd nsx
-  opNS (mkNestedNamespace ns x) <|> nameNS ns x
+  let ns = fst nsx.val
+  let x = snd <$> nsx
+  opNS (mkNestedNamespace ns x.val) <|> nameNS ns x
  where
 
-  nameNS : Maybe Namespace -> String -> SourceEmptyRule Name
+  nameNS : Maybe Namespace -> WithBounds String -> SourceEmptyRule Name
   nameNS ns x = do
     isNotReserved x
-    pure $ mkNamespacedName ns x
+    pure $ mkNamespacedName ns x.val
 
   opNS : Namespace -> Rule Name
   opNS ns = do
@@ -293,10 +295,10 @@ name = opNonNS <|> do
 export
 capitalisedName : Rule Name
 capitalisedName = do
-  id <- identPart
+  id <- bounds identPart
   isCapitalisedIdent id
   isNotReserved id
-  pure (UN id)
+  pure (UN id.val)
 
 export
 dataConstructorName : Rule Name
