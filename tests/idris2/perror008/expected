@@ -44,3 +44,11 @@ Issue710e.idr:3:11--3:12
  3 | namespace a
                ^
 
+1/1: Building Issue710f (Issue710f.idr)
+Error: Expected a capitalised identifier, got: cons.
+
+Issue710f.idr:2:15--2:16
+ 1 | interface Lalala where
+ 2 |   constructor cons
+                   ^
+

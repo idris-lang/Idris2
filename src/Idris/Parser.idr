@@ -1225,6 +1225,13 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
+recordConstructor : IndentInfo -> Rule Name
+recordConstructor idt
+  = do exactIdent "constructor"
+       n <- mustWork dataConstructorName
+       atEnd idt
+       pure n
+
 constraints : FileName -> IndentInfo -> SourceEmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
@@ -1283,10 +1290,7 @@ ifaceDecl fname indents
                                      (do symbol "|"
                                          sepBy (symbol ",") name)
                          keyword "where"
-                         dc <- option Nothing
-                                 (do exactIdent "constructor"
-                                     n <- name
-                                     pure (Just n))
+                         dc <- option Nothing (Just <$> recordConstructor indents)
                          body <- assert_total (blockAfter col (topDecl fname))
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
@@ -1375,15 +1379,9 @@ recordDecl fname indents
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
                          keyword "where"
-                         dcflds <- blockWithOptHeaderAfter col ctor (fieldDecl fname)
+                         dcflds <- blockWithOptHeaderAfter col recordConstructor (fieldDecl fname)
                          pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
-  where
-  ctor : IndentInfo -> Rule Name
-  ctor idt = do exactIdent "constructor"
-                n <- mustWork dataConstructorName
-                atEnd idt
-                pure n
 
 claim : FileName -> IndentInfo -> Rule PDecl
 claim fname indents
