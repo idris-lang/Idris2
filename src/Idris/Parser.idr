@@ -833,10 +833,10 @@ visibility
     = visOption
   <|> pure Private
 
-tyDecl : String -> FileName -> IndentInfo -> Rule PTypeDecl
-tyDecl predoc fname indents
+tyDecl : Rule Name -> String -> FileName -> IndentInfo -> Rule PTypeDecl
+tyDecl declName predoc fname indents
     = do b <- bounds (do doc   <- option "" documentation
-                         n     <- bounds name
+                         n     <- bounds declName
                          symbol ":"
                          mustWork $
                             do ty  <- expr pdef fname indents
@@ -918,7 +918,7 @@ mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
 simpleCon : FileName -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
     = do b <- bounds (do cdoc   <- option "" documentation
-                         cname  <- bounds name
+                         cname  <- bounds dataConstructorName
                          params <- many (argExpr plhs fname indents)
                          pure (cdoc, cname.val, boundToFC fname cname, params))
          atEnd indents
@@ -959,7 +959,7 @@ dataBody fname mincol start n indents ty
                                                dopts <- sepBy1 (symbol ",") dataOpt
                                                symbol "]"
                                                pure $ forget dopts)
-                         cs <- blockAfter mincol (tyDecl "" fname)
+                         cs <- blockAfter mincol (tyDecl (mustWork dataConstructorName) "" fname)
                          pure (opts, cs))
          (opts, cs) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
@@ -975,7 +975,7 @@ dataDeclBody : FileName -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
                          keyword "data"
-                         n <- name
+                         n <- mustWork capitalisedName
                          pure (col, n))
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
@@ -1111,7 +1111,7 @@ fix
   <|> (keyword "prefix" *> pure Prefix)
 
 namespaceHead : Rule Namespace
-namespaceHead = keyword "namespace" *> commit *> namespaceId
+namespaceHead = keyword "namespace" *> mustWork namespaceId
 
 namespaceDecl : FileName -> IndentInfo -> Rule PDecl
 namespaceDecl fname indents
@@ -1166,10 +1166,10 @@ usingDecls fname indents
                          commit
                          symbol "("
                          us <- sepBy (symbol ",")
-                                     (do n <- option Nothing
+                                     (do n <- optional
                                                 (do x <- unqualifiedName
                                                     symbol ":"
-                                                    pure (Just (UN x)))
+                                                    pure (UN x))
                                          ty <- typeExpr pdef fname indents
                                          pure (n, ty))
                          symbol ")"
@@ -1224,6 +1224,12 @@ getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs
 getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
+
+recordConstructor : Rule Name
+recordConstructor
+  = do exactIdent "constructor"
+       n <- mustWork dataConstructorName
+       pure n
 
 constraints : FileName -> IndentInfo -> SourceEmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
@@ -1283,10 +1289,7 @@ ifaceDecl fname indents
                                      (do symbol "|"
                                          sepBy (symbol ",") name)
                          keyword "where"
-                         dc <- option Nothing
-                                 (do exactIdent "constructor"
-                                     n <- name
-                                     pure (Just n))
+                         dc <- optional recordConstructor
                          body <- assert_total (blockAfter col (topDecl fname))
                          pure (\fc : FC => PInterface fc
                                       vis cons n doc params det dc (collectDefs (concat body))))
@@ -1300,10 +1303,10 @@ implDecl fname indents
                          let opts = mapMaybe getRight visOpts
                          col <- column
                          option () (keyword "implementation")
-                         iname <- option Nothing (do symbol "["
-                                                     iname <- name
-                                                     symbol "]"
-                                                     pure (Just iname))
+                         iname <- optional (do symbol "["
+                                               iname <- name
+                                               symbol "]"
+                                               pure iname)
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- name
@@ -1371,19 +1374,15 @@ recordDecl fname indents
                          vis   <- visibility
                          col   <- column
                          keyword "record"
-                         n       <- name
+                         n       <- mustWork capitalisedName
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
                          keyword "where"
-                         dcflds <- blockWithOptHeaderAfter col ctor (fieldDecl fname)
+                         dcflds <- blockWithOptHeaderAfter col
+                                      (\ idt => recordConstructor <* atEnd idt)
+                                      (fieldDecl fname)
                          pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
-  where
-  ctor : IndentInfo -> Rule Name
-  ctor idt = do exactIdent "constructor"
-                n <- name
-                atEnd idt
-                pure n
 
 claim : FileName -> IndentInfo -> Rule PDecl
 claim fname indents
@@ -1393,7 +1392,7 @@ claim fname indents
                          let opts = mapMaybe getRight visOpts
                          m   <- multiplicity
                          rig <- getMult m
-                         cl  <- tyDecl doc fname indents
+                         cl  <- tyDecl name doc fname indents
                          pure (doc, vis, opts, rig, cl))
          (doc, vis, opts, rig, cl) <- pure b.val
          pure (PClaim (boundToFC fname b) rig vis opts cl)
@@ -1496,7 +1495,7 @@ import_ fname indents
                          ns <- moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do exactIdent "as"
-                                            namespaceId)
+                                            mustWork namespaceId)
                          pure (reexp, ns, nsAs))
          atEnd indents
          (reexp, ns, nsAs) <- pure b.val

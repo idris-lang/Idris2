@@ -213,6 +213,11 @@ export %inline
 fail : String -> Grammar tok c ty
 fail = Fail Nothing False
 
+||| Always fail with a message and a location
+export %inline
+failLoc : Bounds -> String -> Grammar tok c ty
+failLoc b = Fail (Just b) False
+
 export %inline
 fatalError : String -> Grammar tok c ty
 fatalError = Fail Nothing True
