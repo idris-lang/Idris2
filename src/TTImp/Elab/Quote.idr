@@ -82,9 +82,14 @@ mutual
                      Core ImpClause
   getUnquoteClause (PatClause fc l r)
       = pure $ PatClause fc !(getUnquote l) !(getUnquote r)
-  getUnquoteClause (WithClause fc l w flags cs)
-      = pure $ WithClause fc !(getUnquote l) !(getUnquote w)
-                          flags !(traverse getUnquoteClause cs)
+  getUnquoteClause (WithClause fc l w prf flags cs)
+      = pure $ WithClause
+                 fc
+                 !(getUnquote l)
+                 !(getUnquote w)
+                 prf
+                 flags
+                 !(traverse getUnquoteClause cs)
   getUnquoteClause (ImpossibleClause fc l)
       = pure $ ImpossibleClause fc !(getUnquote l)
 

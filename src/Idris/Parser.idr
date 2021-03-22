@@ -869,11 +869,12 @@ mutual
                             flags <- bounds (withFlags)
                             symbol "("
                             wval <- bracketedExpr fname flags indents
+                            prf <- optional (keyword "proof" *> name)
                             ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
-                            pure (flags, wval, forget ws))
-            (flags, wval, ws) <- pure b.val
+                            pure (prf, flags, wval, forget ws))
+            (prf, flags, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc lhs wval flags.val ws)
+            pure (MkWithClause fc lhs wval prf flags.val ws)
      <|> do end <- bounds (keyword "impossible")
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)

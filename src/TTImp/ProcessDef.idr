@@ -463,7 +463,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
 
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
-checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
+checkClause {vars} mult vis totreq hashit n opts nest env
+    (WithClause fc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let wmode
@@ -495,8 +496,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          -- Abstracting over 'wval' in the scope of bNotReq in order
          -- to get the 'magic with' behaviour
-         let wargn = MN "warg" 0
-         let scenv = Pi fc top Explicit wvalTy :: wvalEnv
+         (wargs ** (scenv, var, binder)) <- bindWithArgs wvalTy ((,wval) <$> mprf) wvalEnv
 
          let bnr = bindNotReq fc 0 env' withSub [] reqty
          let notreqns = fst bnr
@@ -505,11 +505,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
          rdefs <- if Syntactic `elem` flags
                      then clearDefs defs
                      else pure defs
-         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weaken wval))
-                            (Local fc (Just False) _ First)
+         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weakenNs (mkSizeOf wargs) wval))
+                            var
                             !(nf rdefs scenv
-                                 (weaken {n=wargn} notreqty))
-         let bNotReq = Bind fc wargn (Pi fc top Explicit wvalTy) wtyScope
+                                 (weakenNs (mkSizeOf wargs) notreqty))
+         let bNotReq = binder wtyScope
 
          let Just (reqns, envns, wtype) = bindReq fc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
@@ -550,6 +550,67 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          pure (Right (MkClause env' lhspat rhs))
   where
+    bindWithArgs :
+       (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
+       (wvalEnv : Env Term xs) ->
+       Core (ext : List Name
+         ** ( Env Term (ext ++ xs)
+            , Term (ext ++ xs)
+            , (Term (ext ++ xs) -> Term xs)
+            ))
+    bindWithArgs wvalTy Nothing wvalEnv =
+      let wargn : Name
+          wargn = MN "warg" 0
+          wargs : List Name
+          wargs = [wargn]
+
+          scenv : Env Term (wargs ++ xs)
+                := Pi fc top Explicit wvalTy :: wvalEnv
+
+          var : Term (wargs ++ xs)
+              := Local fc (Just False) Z First
+
+          binder : Term (wargs ++ xs) -> Term xs
+                 := Bind fc wargn (Pi fc top Explicit wvalTy)
+
+      in pure (wargs ** (scenv, var, binder))
+
+    bindWithArgs wvalTy (Just (name, wval)) wvalEnv = do
+      defs <- get Ctxt
+
+      let eqName = NS builtinNS (UN "Equal")
+      Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
+        | _ => throw (InternalError "Cannot find builtin Equal")
+      let eqTyCon = Ref fc (TyCon t ar) eqName
+
+      let wargn : Name
+          wargn = MN "warg" 0
+          wargs : List Name
+          wargs = [name, wargn]
+
+          wvalTy' := weaken wvalTy
+          eqTy : Term (MN "warg" 0 :: xs)
+               := apply fc eqTyCon
+                           [ wvalTy'
+                           , wvalTy'
+                           , Local fc (Just False) Z First
+                           , weaken wval
+                           ]
+
+          scenv : Env Term (wargs ++ xs)
+                := Pi fc top Implicit eqTy
+                :: Pi fc top Explicit wvalTy
+                :: wvalEnv
+
+          var : Term (wargs ++ xs)
+              := Local fc (Just False) (S Z) (Later First)
+
+          binder : Term (wargs ++ xs) -> Term xs
+                 := \ t => Bind fc wargn (Pi fc top Explicit wvalTy)
+                         $ Bind fc name  (Pi fc top Implicit eqTy) t
+
+      pure (wargs ** (scenv, var, binder))
+
     -- If it's 'KeepCons/SubRefl' in 'outprf', that means it was in the outer
     -- environment so we need to keep it in the same place in the 'with'
     -- function. Hence, turn it to KeepCons whatever
@@ -582,12 +643,12 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs prf flags ws)
         = do log "declare.def.clause.with" 20 "WithClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs flags ws')
+             pure (WithClause ploc newlhs newrhs prf flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do log "declare.def.clause.with" 20 "ImpossibleClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
