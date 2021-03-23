@@ -569,7 +569,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
             , Term (ext ++ xs)
             , (Term (ext ++ xs) -> Term xs)
             ))
-    bindWithArgs wvalTy Nothing wvalEnv =
+    bindWithArgs {xs} wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
           wargs : List Name
@@ -586,7 +586,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
       in pure (wargs ** (scenv, var, binder))
 
-    bindWithArgs wvalTy (Just (name, wval)) wvalEnv = do
+    bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
       defs <- get Ctxt
 
       let eqName = NS builtinNS (UN "Equal")
