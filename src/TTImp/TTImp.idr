@@ -719,6 +719,16 @@ apply f [] = f
 apply f (x :: xs) = apply (IApp (getFC f) f x) xs
 
 export
+gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+gapply f [] = f
+gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
+
+  app : RawImp -> Maybe Name -> RawImp -> RawImp
+  app f Nothing x =  IApp (getFC f) f x
+  app f (Just nm) x = INamedApp (getFC f) f nm x
+
+
+export
 getFn : RawImp -> RawImp
 getFn (IApp _ f _) = getFn f
 getFn (IWithApp _ f _) = getFn f

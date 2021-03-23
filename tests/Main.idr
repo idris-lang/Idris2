@@ -162,7 +162,7 @@ idrisTests = MkTestPool []
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
-       "with001", "with002", "with004",
+       "with001", "with002", "with004", "with005",
        -- with-disambiguation
        "with003"]
 

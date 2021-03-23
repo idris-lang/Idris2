@@ -528,9 +528,20 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
                                     (newDef fc wname (if isErased mult then erased else top)
                                       vars wtype vis None))
-         let rhs_in = apply (IVar fc wname)
-                        (map (IVar fc) envns ++
-                         map (maybe wval_raw (\pn => IVar fc (snd pn))) wargNames)
+
+         let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
+               := flip maybe (\pn => [(Nothing, IVar fc (snd pn))]) $
+                    (Nothing, wval_raw) ::
+                    case mprf of
+                      Nothing => []
+                      Just _  =>
+                       let fc = emptyFC in
+                       let refl = IVar fc (NS builtinNS (UN "Refl")) in
+                       [(mprf, INamedApp fc refl (UN "x") wval_raw)]
+
+         let rhs_in = gapply (IVar fc wname)
+                    $ map (\ nm => (Nothing, IVar fc nm)) envns
+                   ++ concatMap toWarg wargNames
 
          log "declare.def.clause" 3 $ "Applying to with argument " ++ show rhs_in
          rhs <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
@@ -593,8 +604,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                := apply fc eqTyCon
                            [ wvalTy'
                            , wvalTy'
-                           , Local fc (Just False) Z First
                            , weaken wval
+                           , Local fc (Just False) Z First
                            ]
 
           scenv : Env Term (wargs ++ xs)
@@ -633,9 +644,10 @@ checkClause {vars} mult vis totreq hashit n opts nest env
               (_ ** KeepCons rest)
 
     -- Rewrite the clauses in the block to use an updated LHS.
-    -- 'drop' is the number of additional with arguments we expect (i.e.
-    -- the things to drop from the end before matching LHSs)
-    mkClauseWith : (drop : Nat) -> Name -> List (Maybe (PiInfo RawImp, Name)) ->
+    -- 'drop' is the number of additional with arguments we expect
+    -- (i.e. the things to drop from the end before matching LHSs)
+    mkClauseWith : (drop : Nat) -> Name ->
+                   List (Maybe (PiInfo RawImp, Name)) ->
                    RawImp -> ImpClause ->
                    Core ImpClause
     mkClauseWith drop wname wargnames lhs (PatClause ploc patlhs rhs)
