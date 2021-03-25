@@ -43,5 +43,5 @@ export
 foldlPath : {0 gt : t -> t -> Type} -> {0 gu : u -> u -> Type} -> {0 f : t -> u}
         -> ({0 i, j, k : t} -> gu (f i) (f j) ->      gt j k -> gu (f i) (f k))
         ->  {0 i, j, k : t} -> gu (f i) (f j) -> Path gt j k -> gu (f i) (f k)
-foldlPath     gf ij []      = ij
-foldlPath {u} gf ij (e::jk) = foldlPath {gu} gf (gf ij e) jk
+foldlPath gf ij []      = ij
+foldlPath gf ij (e::jk) = foldlPath {gu} gf (gf ij e) jk
