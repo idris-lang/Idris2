@@ -5,7 +5,7 @@ public export
 record Graph {0 a : Type} {0 b : a -> Type}
              (f : (x : a) -> b x) (x : a) (y : b x) where
   constructor MkGraph
-  proof : f x === y
+  equality : f x === y
 
 ||| An alternative for 'Syntax.WithProof' that allows to keep the
 ||| proof certificate in non-reduced form after nested matching.

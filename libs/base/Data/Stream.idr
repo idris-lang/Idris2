@@ -32,7 +32,7 @@ unfoldr f c = let (a, n) = f c in a :: unfoldr f n
 ||| All of the natural numbers, in order
 public export
 nats : Stream Nat
-nats = unfoldr (\n => (n, S n)) Z
+nats = iterate S Z
 
 ||| Get the nth element of a stream
 public export

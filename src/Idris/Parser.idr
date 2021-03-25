@@ -866,14 +866,16 @@ mutual
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc lhs rhs ws)
      <|> do b <- bounds (do keyword "with"
+                            commit
                             flags <- bounds (withFlags)
                             symbol "("
                             wval <- bracketedExpr fname flags indents
+                            prf <- optional (keyword "proof" *> name)
                             ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
-                            pure (flags, wval, forget ws))
-            (flags, wval, ws) <- pure b.val
+                            pure (prf, flags, wval, forget ws))
+            (prf, flags, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc lhs wval flags.val ws)
+            pure (MkWithClause fc lhs wval prf flags.val ws)
      <|> do end <- bounds (keyword "impossible")
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
@@ -888,7 +890,9 @@ mutual
            -- Can't have the dependent 'if' here since we won't be able
            -- to infer the termination status of the rule
            ifThenElse (withArgs /= length extra)
-              (fatalError "Wrong number of 'with' arguments")
+              (fatalError $ "Wrong number of 'with' arguments:"
+                         ++ " expected " ++ show withArgs
+                         ++ " but got " ++ show (length extra))
               (parseRHS withArgs fname b col indents (applyArgs lhs extra))
     where
       applyArgs : PTerm -> List (FC, PTerm) -> PTerm
@@ -975,7 +979,7 @@ dataDeclBody : FileName -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
                          keyword "data"
-                         n <- mustWork capitalisedName
+                         n <- mustWork dataTypeName
                          pure (col, n))
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
@@ -1374,7 +1378,7 @@ recordDecl fname indents
                          vis   <- visibility
                          col   <- column
                          keyword "record"
-                         n       <- mustWork capitalisedName
+                         n       <- mustWork dataTypeName
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
                          keyword "where"
@@ -1492,7 +1496,7 @@ import_ fname indents
     = do b <- bounds (do keyword "import"
                          reexp <- option False (do keyword "public"
                                                    pure True)
-                         ns <- moduleIdent
+                         ns <- mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do exactIdent "as"
                                             mustWork namespaceId)
@@ -1507,7 +1511,7 @@ prog fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         moduleIdent)
+                                         mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          ds      <- block (topDecl fname)
@@ -1521,7 +1525,7 @@ progHdr fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         moduleIdent)
+                                         mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          (doc, nspace, imports) <- pure b.val

@@ -189,12 +189,14 @@ modTime fname
 
 export
 readHeader : {auto c : Ref Ctxt Defs} ->
+             {auto o : Ref ROpts REPLOpts} ->
              (path : String) -> Core Module
 readHeader path
     = do Right res <- coreLift (readFile path)
             | Left err => throw (FileErr path err)
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
+         setCurrentElabSource res -- for error printing purposes
          let Right mod = runParserTo path (isLitFile path) (is ':') res (progHdr path)
             | Left err => throw err
          pure mod

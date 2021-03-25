@@ -317,7 +317,8 @@ mutual
   public export
   data ImpClause : Type where
        PatClause : FC -> (lhs : RawImp) -> (rhs : RawImp) -> ImpClause
-       WithClause : FC -> (lhs : RawImp) -> (wval : RawImp) ->
+       WithClause : FC -> (lhs : RawImp) ->
+                    (wval : RawImp) -> (prf : Maybe Name) ->
                     (flags : List WithFlag) ->
                     List ImpClause -> ImpClause
        ImpossibleClause : FC -> (lhs : RawImp) -> ImpClause
@@ -326,8 +327,11 @@ mutual
   Show ImpClause where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval flags block)
-       = show lhs ++ " with " ++ show wval ++ "\n\t" ++ show block
+    show (WithClause fc lhs wval prf flags block)
+       = show lhs
+       ++ " with " ++ show wval
+       ++ maybe "" (\ nm => " proof " ++ show nm) prf
+       ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"
 
@@ -715,6 +719,16 @@ apply f [] = f
 apply f (x :: xs) = apply (IApp (getFC f) f x) xs
 
 export
+gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+gapply f [] = f
+gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
+
+  app : RawImp -> Maybe Name -> RawImp -> RawImp
+  app f Nothing x =  IApp (getFC f) f x
+  app f (Just nm) x = INamedApp (getFC f) f nm x
+
+
+export
 getFn : RawImp -> RawImp
 getFn (IApp _ f _) = getFn f
 getFn (IWithApp _ f _) = getFn f
@@ -958,8 +972,13 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval flags cs)
-        = do tag 2; toBuf b fc; toBuf b lhs; toBuf b wval; toBuf b cs
+    toBuf b (WithClause fc lhs wval prf flags cs)
+        = do tag 2
+             toBuf b fc
+             toBuf b lhs
+             toBuf b wval
+             toBuf b prf
+             toBuf b cs
 
     fromBuf b
         = case !getTag of
@@ -969,8 +988,9 @@ mutual
                1 => do fc <- fromBuf b; lhs <- fromBuf b;
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
-                       wval <- fromBuf b; cs <- fromBuf b
-                       pure (WithClause fc lhs wval [] cs)
+                       wval <- fromBuf b; prf <- fromBuf b;
+                       cs <- fromBuf b
+                       pure (WithClause fc lhs wval prf [] cs)
                _ => corrupt "ImpClause"
 
   export

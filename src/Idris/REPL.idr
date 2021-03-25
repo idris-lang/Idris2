@@ -217,12 +217,16 @@ printClause l i (PatClause _ lhsraw rhsraw)
     = do lhs <- pterm lhsraw
          rhs <- pterm rhsraw
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " = " ++ show rhs))
-printClause l i (WithClause _ lhsraw wvraw flags csraw)
+printClause l i (WithClause _ lhsraw wvraw prf flags csraw)
     = do lhs <- pterm lhsraw
          wval <- pterm wvraw
          cs <- traverse (printClause l (i + 2)) csraw
-         pure ((relit l ((pack (replicate i ' ') ++ show lhs ++ " with (" ++ show wval ++ ")\n")) ++
-                 showSep "\n" cs))
+         pure (relit l ((pack (replicate i ' ')
+                ++ show lhs
+                ++ " with (" ++ show wval ++ ")"
+                ++ maybe "" (\ nm => " proof " ++ show nm) prf
+                ++ "\n"))
+               ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
     = do lhs <- pterm lhsraw
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))

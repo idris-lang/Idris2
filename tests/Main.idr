@@ -47,7 +47,7 @@ idrisTestsBasic = MkTestPool []
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
-       "basic056", "basic057"]
+       "basic056", "basic057", "basic058"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -162,7 +162,7 @@ idrisTests = MkTestPool []
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
-       "with001", "with002", "with004",
+       "with001", "with002", "with004", "with005",
        -- with-disambiguation
        "with003"]
 

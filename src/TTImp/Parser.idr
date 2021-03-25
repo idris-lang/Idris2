@@ -510,10 +510,11 @@ mutual
            symbol "("
            wval <- expr fname indents
            symbol ")"
+           prf <- optional (keyword "proof" *> name)
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs wval [] (forget $ map snd ws))
+           pure (!(getFn lhs), WithClause fc lhs wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
