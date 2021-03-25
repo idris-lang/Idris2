@@ -234,12 +234,7 @@ namespaceId = do
 
 export
 moduleIdent : Rule ModuleIdent
-moduleIdent
-    = terminal "Expected module identifier"
-        (\x => case x of
-            DotSepIdent ns n => Just (mkModuleIdent (Just ns) n)
-            Ident i => Just (mkModuleIdent Nothing i)
-            _ => Nothing)
+moduleIdent = nsAsModuleIdent <$> namespaceId
 
 export
 unqualifiedName : Rule String
