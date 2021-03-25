@@ -360,9 +360,9 @@ startChez appdir target = unlines
     , "    exit 1                                                 "
     , "fi                                                         "
     , ""
-    , "DIR=$($REALPATH \"$0\")"
-    , "export LD_LIBRARY_PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
-    , "\"$(dirname \"$DIR\")\"/\"" ++ target ++ "\" \"$@\""
+    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 startChezCmd : String -> String -> String -> String
@@ -379,10 +379,10 @@ startChezWinSh chez appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(realpath \"$0\")"
+    , "DIR=$(dirname \"$(realpath \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$PATH\""
-    , "\"$CHEZ\" --script \"$(dirname \"$DIR\")/" ++ target ++ "\" \"$@\""
+    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
+    , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme

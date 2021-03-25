@@ -345,9 +345,9 @@ startRacket racket appdir target = unlines
     , "    exit 1                                                   "
     , "fi                                                           "
     , ""
-    , "DIR=$($REALPATH \"$0\")"
-    , "export LD_LIBRARY_PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$LD_LIBRARY_PATH\""
-    , racket ++ "\"$(dirname \"$DIR\")\"/\"" ++ target ++ "\" \"$@\""
+    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 startRacketCmd : String -> String -> String -> String
@@ -364,8 +364,8 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(realpath \"$0\")"
-    , "export PATH=\"$(dirname \"$DIR\")/\"" ++ appdir ++ "\":$PATH\""
+    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
 
