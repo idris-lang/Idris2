@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --check DataTypeOp.idr
+$1 --no-banner --no-color --console-width 0 --check DataTypeProj.idr
+
+rm -rf build
