@@ -157,8 +157,8 @@ bootstrap: support
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
 		bootstrap/idris2_app/idris2.ss \
 		> bootstrap/idris2_app/idris2-boot.ss
-	sh ./bootstrap-stage1-chez.sh
-	sh ./bootstrap-stage2.sh IDRIS2_CG="chez"
+	$(SHELL) ./bootstrap-stage1-chez.sh
+	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
 bootstrap-racket: support
@@ -166,8 +166,8 @@ bootstrap-racket: support
 	sed 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
 		bootstrap/idris2_app/idris2.rkt \
 		> bootstrap/idris2_app/idris2-boot.rkt
-	sh ./bootstrap-stage1-racket.sh
-	sh ./bootstrap-stage2.sh IDRIS2_CG="racket"
+	$(SHELL) ./bootstrap-stage1-racket.sh
+	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_LIBS=${IDRIS2_BOOT_TEST_LIBS}
