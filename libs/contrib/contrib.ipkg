@@ -76,6 +76,8 @@ modules = Control.ANSI,
 
           Data.OpenUnion,
 
+          Data.Path,
+
           Data.Recursion.Free,
 
           Data.SortedMap,
