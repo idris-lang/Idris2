@@ -979,7 +979,7 @@ dataDeclBody : FileName -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
                          keyword "data"
-                         n <- mustWork capitalisedName
+                         n <- mustWork dataTypeName
                          pure (col, n))
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
@@ -1378,7 +1378,7 @@ recordDecl fname indents
                          vis   <- visibility
                          col   <- column
                          keyword "record"
-                         n       <- mustWork capitalisedName
+                         n       <- mustWork dataTypeName
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss
                          keyword "where"

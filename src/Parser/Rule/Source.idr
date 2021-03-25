@@ -304,6 +304,10 @@ export
 dataConstructorName : Rule Name
 dataConstructorName = opNonNS <|> capitalisedName
 
+export %inline
+dataTypeName : Rule Name
+dataTypeName = dataConstructorName
+
 export
 IndentInfo : Type
 IndentInfo = Int
