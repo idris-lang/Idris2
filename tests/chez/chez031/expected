@@ -11,6 +11,8 @@ Error: The given specifier was not accepted by any backend. Available backends:
 Some backends have additional specifier rules, refer to their documentation.
 
 Specifiers.idr:29:1--30:35
+ 29 | %foreign "scheme,racket:+"
+ 30 | plusRacketFail : Int -> Int -> Int
 
 Main> Loaded file Specifiers.idr
 Specifiers> Error: The given specifier was not accepted by any backend. Available backends:

@@ -19,6 +19,7 @@ import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
 import Idris.Pretty
+import Idris.Error
 
 import IdrisPaths
 
@@ -170,7 +171,7 @@ stMain cgs opts
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
-           when (not done) $
+           when (not done) $ flip catch renderError $
               do True <- preOptions opts
                      | False => pure ()
 
@@ -227,6 +228,17 @@ stMain cgs opts
                          Nothing => pure ()
                          Just _ => coreLift $ exitWith (ExitFailure 1)
 
+  where
+
+  renderError : {auto c : Ref Ctxt Defs} ->
+                {auto s : Ref Syn SyntaxInfo} ->
+                {auto o : Ref ROpts REPLOpts} ->
+                Error -> Core ()
+  renderError err = do
+    doc <- perror err
+    msg <- render doc
+    throw (UserError msg)
+
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
@@ -245,14 +257,14 @@ quitOpts (_ :: opts) = quitOpts opts
 
 export
 mainWithCodegens : List (String, Codegen) -> IO ()
-mainWithCodegens cgs = do Right opts <- getCmdOpts
-                            | Left err => do putStrLn err
-                                             putStrLn usage
-                          continue <- quitOpts opts
-                          if continue
-                              then do setupTerm
-                                      coreRun (stMain cgs opts)
-                                        (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
-                                                            exitWith (ExitFailure 1))
-                                        (\res => pure ())
-                              else pure ()
+mainWithCodegens cgs = do
+  Right opts <- getCmdOpts
+    | Left err => do putStrLn err
+                     putStrLn usage
+  continue <- quitOpts opts
+  when continue $ do
+    setupTerm
+    coreRun (stMain cgs opts)
+      (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
+                          exitWith (ExitFailure 1))
+      (\res => pure ())
