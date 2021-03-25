@@ -1,6 +1,7 @@
 module Core.Directory
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.FC
 import Core.Name
@@ -18,10 +19,12 @@ import System.Info
 %default total
 
 -- Return the name of the first file available in the list
-firstAvailable : List String -> Core (Maybe String)
+firstAvailable : {auto c : Ref Ctxt Defs} ->
+                 List String -> Core (Maybe String)
 firstAvailable [] = pure Nothing
 firstAvailable (f :: fs)
-    = do Right ok <- coreLift $ openFile f Read
+    = do log "import.file" 30 $ "Attempting to read " ++ f
+         Right ok <- coreLift $ openFile f Read
                | Left err => firstAvailable fs
          coreLift $ closeFile ok
          pure (Just f)
