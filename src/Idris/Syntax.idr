@@ -221,14 +221,15 @@ mutual
   data PClause : Type where
        MkPatClause : FC -> (lhs : PTerm) -> (rhs : PTerm) ->
                      (whereblock : List PDecl) -> PClause
-       MkWithClause : FC -> (lhs : PTerm) -> (wval : PTerm) ->
+       MkWithClause : FC -> (lhs : PTerm) ->
+                      (wval : PTerm) -> (prf : Maybe Name) ->
                       List WithFlag -> List PClause -> PClause
        MkImpossible : FC -> (lhs : PTerm) -> PClause
 
   export
   getPClauseLoc : PClause -> FC
   getPClauseLoc (MkPatClause fc _ _ _) = fc
-  getPClauseLoc (MkWithClause fc _ _ _ _) = fc
+  getPClauseLoc (MkWithClause fc _ _ _ _ _) = fc
   getPClauseLoc (MkImpossible fc _) = fc
 
   public export
@@ -482,7 +483,7 @@ record Module where
 mutual
   showAlt : PClause -> String
   showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-  showAlt (MkWithClause _ lhs wval flags cs) = " | <<with alts not possible>>;"
+  showAlt (MkWithClause _ lhs wval prf flags cs) = " | <<with alts not possible>>;"
   showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
 
   showDo : PDo -> String
@@ -540,7 +541,7 @@ mutual
       where
         showAlt : PClause -> String
         showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-        showAlt (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
+        showAlt (MkWithClause _ lhs rhs prf flags _) = " | <<with alts not possible>>"
         showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
     showPrec _ (PCase _ tm cs)
         = "case " ++ show tm ++ " of { " ++
@@ -548,7 +549,7 @@ mutual
       where
         showCase : PClause -> String
         showCase (MkPatClause _ lhs rhs _) = show lhs ++ " => " ++ show rhs
-        showCase (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
+        showCase (MkWithClause _ lhs rhs _ flags _) = " | <<with alts not possible>>"
         showCase (MkImpossible _ lhs) = show lhs ++ " impossible"
     showPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPrec d sc
@@ -1010,9 +1011,10 @@ mapPTermM f = goPTerm where
       MkPatClause fc <$> goPTerm lhs
                      <*> goPTerm rhs
                      <*> goPDecls wh
-    goPClause (MkWithClause fc lhs wVal flags cls) =
+    goPClause (MkWithClause fc lhs wVal prf flags cls) =
       MkWithClause fc <$> goPTerm lhs
                       <*> goPTerm wVal
+                      <*> pure prf
                       <*> pure flags
                       <*> goPClauses cls
     goPClause (MkImpossible fc lhs) = MkImpossible fc <$> goPTerm lhs

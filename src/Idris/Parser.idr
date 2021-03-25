@@ -866,14 +866,16 @@ mutual
             let fc = boundToFC fname (mergeBounds start b)
             pure (MkPatClause fc lhs rhs ws)
      <|> do b <- bounds (do keyword "with"
+                            commit
                             flags <- bounds (withFlags)
                             symbol "("
                             wval <- bracketedExpr fname flags indents
+                            prf <- optional (keyword "proof" *> name)
                             ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
-                            pure (flags, wval, forget ws))
-            (flags, wval, ws) <- pure b.val
+                            pure (prf, flags, wval, forget ws))
+            (prf, flags, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc lhs wval flags.val ws)
+            pure (MkWithClause fc lhs wval prf flags.val ws)
      <|> do end <- bounds (keyword "impossible")
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
@@ -888,7 +890,9 @@ mutual
            -- Can't have the dependent 'if' here since we won't be able
            -- to infer the termination status of the rule
            ifThenElse (withArgs /= length extra)
-              (fatalError "Wrong number of 'with' arguments")
+              (fatalError $ "Wrong number of 'with' arguments:"
+                         ++ " expected " ++ show withArgs
+                         ++ " but got " ++ show (length extra))
               (parseRHS withArgs fname b col indents (applyArgs lhs extra))
     where
       applyArgs : PTerm -> List (FC, PTerm) -> PTerm
