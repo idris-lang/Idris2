@@ -245,6 +245,11 @@ baseLibraryTests = MkTestPool [Chez, Node]
   [ "system_file001", "data_bits001"
   ]
 
+codegenTests : TestPool
+codegenTests = MkTestPool []
+  [ "con001"
+  ]
+
 main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
@@ -268,6 +273,7 @@ main = runner
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
+  , testPaths "codegen" codegenTests
   ] where
 
     testPaths : String -> TestPool -> TestPool
