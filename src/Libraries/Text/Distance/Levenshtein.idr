@@ -13,8 +13,8 @@ spec : String -> String -> Int
 spec a b = loop (fastUnpack a) (fastUnpack b) where
 
   loop : List Char -> List Char -> Int
-  loop [] ys = cast (length ys) -- additions
-  loop xs [] = cast (length xs) -- additions
+  loop [] ys = cast (length ys) -- deletions
+  loop xs [] = cast (length xs) -- insertions
   loop (x :: xs) (y :: ys)
     = if x == y then loop xs ys -- match
       else 1 + minimum [ loop (x :: xs) ys -- insert y
@@ -23,16 +23,30 @@ spec a b = loop (fastUnpack a) (fastUnpack b) where
                        ]
 
 ||| Dynamic programming
-compute : String -> String -> IO Int
+compute : HasIO io => String -> String -> io Int
 compute a b = assert_total $ do
   let w = strLength a
   let h = strLength b
+  -- In mat[i][j], we store the distance between
+  -- * the suffix of a of size i
+  -- * the suffix of b of size j
+  -- So we need a matrix of size (|a|+1) * (|b|+1)
   mat <- new (w+1) (h+1)
-  let get = \i, j => case !(read {io = IO} mat i j) of
+  -- Whenever one of the two suffixes of interest is empty, the only
+  -- winning move is to:
+  -- * delete all of the first
+  -- * insert all of the second
+  -- i.e. the cost is the length of the non-zero suffix
+  for_ [0..w] $ \ i => write mat i 0 i -- deletions
+  for_ [0..h] $ \ j => write mat 0 j j -- insertions
+
+  -- We introduce a specialised `read` for ease of use
+  let get = \i, j => case !(read {io} mat i j) of
         Nothing => idris_crash "INTERNAL ERROR: Badly initialised matrix"
         Just n => pure n
-  for_ [0..w] $ \ i => write mat i 0 i -- additions
-  for_ [0..h] $ \ j => write mat 0 j j -- additions
+
+  -- We fill the matrix from the bottom up, using the same formula we used
+  -- in the specification's `loop`.
   for_ [1..h] $ \ j => do
     for_ [1..w] $ \ i => do
       let cost = if strIndex a (i-1) == strIndex b (j-1) then 0 else 1
@@ -41,4 +55,6 @@ compute a b = assert_total $ do
                 , 1    + !(get (i-1) j)     -- delete x
                 , cost + !(get (i-1) (j-1)) -- equal or substitute y for x
                 ]
+
+  -- Once the matrix is fully filled, we can simply read the top right corner
   get w h
