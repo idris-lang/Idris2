@@ -1496,7 +1496,7 @@ import_ fname indents
     = do b <- bounds (do keyword "import"
                          reexp <- option False (do keyword "public"
                                                    pure True)
-                         ns <- moduleIdent
+                         ns <- mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do exactIdent "as"
                                             mustWork namespaceId)
@@ -1511,7 +1511,7 @@ prog fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         moduleIdent)
+                                         mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          ds      <- block (topDecl fname)
@@ -1525,7 +1525,7 @@ progHdr fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do keyword "module"
-                                         moduleIdent)
+                                         mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
          (doc, nspace, imports) <- pure b.val

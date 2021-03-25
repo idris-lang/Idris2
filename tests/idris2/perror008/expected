@@ -52,3 +52,15 @@ Issue710f.idr:2:15--2:16
  2 |   constructor cons
                    ^
 
+Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+
+Issue1224a.idr:1:8--1:9
+ 1 | module ggg
+            ^
+
+Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+
+Issue1224b.idr:1:8--1:9
+ 1 | import ggg
+            ^
+

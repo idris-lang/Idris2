@@ -23,7 +23,8 @@ runParserTo fname lit reject str p
 
 export
 runParser : {e : _} ->
-            (fname : String) -> Maybe LiterateStyle -> String -> Grammar Token e ty -> Either Error ty
+            (fname : String) -> Maybe LiterateStyle -> String ->
+            Grammar Token e ty -> Either Error ty
 runParser fname lit = runParserTo fname lit (pred $ const False)
 
 export covering

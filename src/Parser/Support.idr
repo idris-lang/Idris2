@@ -29,8 +29,10 @@ fromLexError fname (_, l, c, _)
     = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognise token."
 
 export
-fromParsingError : (Show token, Pretty token) => String -> ParsingError token -> Error
-fromParsingError fname (Error msg Nothing) = ParseFail (MkFC fname (0, 0) (0, 0)) (msg +> '.')
+fromParsingError : (Show token, Pretty token) =>
+                   String -> ParsingError token -> Error
+fromParsingError fname (Error msg Nothing)
+    = ParseFail (MkFC fname (0, 0) (0, 0)) (msg +> '.')
 fromParsingError fname (Error msg (Just t))
     = let l = t.startLine
           c = t.startCol in
