@@ -61,6 +61,8 @@ modules = Control.ANSI,
 
           Data.Logic.Propositional,
 
+          Data.Monoid.Exponentiation,
+
           Data.Morphisms.Algebra,
 
           Data.Nat.Algebra,
