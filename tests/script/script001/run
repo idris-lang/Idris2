@@ -1,0 +1,3 @@
+IDRIS=$1 ./Hello.sh
+
+rm -rf build

@@ -173,6 +173,11 @@ typeddTests = MkTestPool []
      , "chapter11", "chapter12", "chapter13", "chapter14"
      ]
 
+scriptTests : TestPool
+scriptTests = MkTestPool [Chez]
+      [ "script001"
+      ]
+
 chezTests : TestPool
 chezTests = MkTestPool [Chez]
     [ "chez001", "chez002", "chez003", "chez004", "chez005", "chez006"
@@ -263,6 +268,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "base" baseLibraryTests
+  , testPaths "script" scriptTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
