@@ -19,6 +19,7 @@ isWindows = os `elem` ["windows", "mingw32", "cygwin32"]
 prim__getNProcessors : PrimIO Int
 
 export
-getNProcessors : IO Int
-getNProcessors = fromPrim prim__getNProcessors
-
+getNProcessors : IO (Maybe Nat)
+getNProcessors = do
+  i <- fromPrim prim__getNProcessors
+  pure (if i < 0 then Nothing else Just (integerToNat (cast i)))
