@@ -8,7 +8,7 @@ UnboundImplicits.idr:6:22--6:23
  5 | 
  6 | record Foo (x : Vect n Nat) where
                           ^
-
+Did you mean any of: S, Z, or on?
 Error: Undefined name n. 
 
 UnboundImplicits.idr:9:24--9:25
@@ -18,7 +18,7 @@ UnboundImplicits.idr:9:24--9:25
  8 | 
  9 | parameters (Foo : Vect n Nat)
                             ^
-
+Did you mean any of: S, Z, or on?
 Error: While processing constructor Foo. Undefined name n. 
 
 UnboundImplicits.idr:14:25--14:26
@@ -28,7 +28,7 @@ UnboundImplicits.idr:14:25--14:26
  13 | 
  14 | interface Foo (a : Vect n Nat) where
                               ^
-
+Did you mean any of: S, Z, or on?
 Error: While processing type of Functor implementation at UnboundImplicits.idr:17:1--17:38. Undefined name n. 
 
 UnboundImplicits.idr:17:30--17:31
@@ -38,4 +38,4 @@ UnboundImplicits.idr:17:30--17:31
  16 | 
  17 | implementation Functor (Vect n) where
                                    ^
-
+Did you mean any of: S, Z, or on?

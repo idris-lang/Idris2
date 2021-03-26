@@ -1087,8 +1087,18 @@ getSimilarNames nm = case userNameRoot nm of
     in do defs <- get Ctxt
           kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
           let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
-          let roots = map (nameRoot . fst) sorted
+          let roots = mapMaybe (showNames str . fst) sorted
           pure (nub roots)
+
+  where
+
+  showNames : String -> Name -> Maybe String
+  showNames str nm = do
+    let root = nameRoot nm
+    let True = str == root | _ => pure root
+    let full = show nm
+    let True = str == full | _ => pure full
+    Nothing
 
 
 maybeMisspelling : {auto c : Ref Ctxt Defs} ->

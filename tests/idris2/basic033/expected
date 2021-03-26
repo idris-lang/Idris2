@@ -18,4 +18,4 @@ unboundimps.idr:19:16--19:17
  18 | len': Env xs -> Nat
  19 | append' : Vect n a -> Vect m a -> Vect (n + m) a
                      ^
-
+Did you mean any of: S, Z, or on?

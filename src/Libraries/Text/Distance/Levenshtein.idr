@@ -50,7 +50,14 @@ compute a b = assert_total $ do
   -- in the specification's `loop`.
   for_ [1..h] $ \ j => do
     for_ [1..w] $ \ i => do
-      let cost = if strIndex a (i-1) == strIndex b (j-1) then 0 else 1
+      -- here we change Levenshtein slightly so that we may only substitute
+      -- alpha / numerical characters for similar ones. This avoids suggesting
+      -- "#" as a replacement for an out of scope "n".
+      let cost = let c = strIndex a (i-1)
+                     d = strIndex b (j-1)
+                 in if c == d then 0 else
+                    if isAlpha c && isAlpha d then 1 else
+                    if isDigit c && isDigit d then 1 else 2
       write mat i j $
         minimum [ 1    + !(get i (j-1))     -- insert y
                 , 1    + !(get (i-1) j)     -- delete x

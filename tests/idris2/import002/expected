@@ -20,5 +20,5 @@ Test.idr:6:1--6:28
  5 | thing : Nat -> Nat
  6 | thing x = mult x (plus x x)
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+Did you mean: Test.thing?
 Test> Bye for now!
