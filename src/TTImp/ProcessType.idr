@@ -41,7 +41,7 @@ processFnOpt fc _ ndef TCInline
 processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
-              | Nothing => throw (UndefinedName fc ndef)
+              | Nothing => undefinedName fc ndef
          target <- getRetTy defs !(nf defs [] ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
@@ -64,7 +64,7 @@ processFnOpt fc _ ndef Macro
 processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
-              | Nothing => throw (UndefinedName fc ndef)
+              | Nothing => undefinedName fc ndef
          nty <- nf defs [] (type gdef)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty

@@ -59,7 +59,7 @@ getNameType rigc env fc x
            Nothing =>
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
-                      | [] => throw (UndefinedName fc x)
+                      | [] => undefinedName fc x
                       | ns => throw (AmbiguousName fc (map fst ns))
                  checkVisibleNS fc !(getFullName pname) (visibility def)
                  rigSafe (multiplicity def) rigc
@@ -91,7 +91,7 @@ getVarType rigc nest env fc x
                  let arglen = length argns
                  let n' = maybe x id nestn
                  case !(lookupCtxtExact n' (gamma defs)) of
-                      Nothing => throw (UndefinedName fc n')
+                      Nothing => undefinedName fc n'
                       Just ndef =>
                          let nt = case definition ndef of
                                        PMDef _ _ _ _ _ => Func

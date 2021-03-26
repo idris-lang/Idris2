@@ -154,6 +154,8 @@ data Error : Type where
      InLHS : FC -> Name -> Error -> Error
      InRHS : FC -> Name -> Error -> Error
 
+     MaybeMisspelling : Error -> List1 String -> Error
+
 public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
@@ -189,7 +191,8 @@ Show Error where
            case prob of
              Left tm => assert_total (show tm) ++ " is not a valid impossible pattern because it typechecks"
              Right err => "Not a valid impossible pattern:\n\t" ++ assert_total (show err)
-  show (UndefinedName fc x) = show fc ++ ":Undefined name " ++ show x
+  show (UndefinedName fc x)
+    = show fc ++ ":Undefined name " ++ show x
   show (InvisibleName fc x (Just ns))
        = show fc ++ ":Name " ++ show x ++ " is inaccessible since " ++
          show ns ++ " is not explicitly imported"
@@ -331,6 +334,10 @@ Show Error where
        = show fc ++ ":When elaborating right hand side of " ++ show n ++ ":\n" ++
          show err
 
+  show (MaybeMisspelling err ns)
+     = show err ++ "\nDid you mean" ++ case ns of
+         (n ::: []) => ": " ++ n ++ "?"
+         _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
 export
 getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
@@ -400,6 +407,7 @@ getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
+getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 
 export
 getWarningLoc : Warning -> Maybe FC

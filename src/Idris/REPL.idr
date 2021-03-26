@@ -385,7 +385,7 @@ processEdit (TypeAt line col name)
               (_, Just (n, _, type)) => pure $ DisplayEdit $
                 pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
               (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
-              (Nothing, Nothing) => throw (UndefinedName replFC name)
+              (Nothing, Nothing) => undefinedName replFC name
 
 processEdit (CaseSplit upd line col name)
     = do let find = if col > 0
@@ -673,7 +673,7 @@ docsOrSignature fc n
     = do syn  <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
-             | _ => throw (UndefinedName fc n)
+             | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
@@ -770,7 +770,7 @@ process (Check (PRef fc (UN "it")))
 process (Check (PRef fc fn))
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
-              [] => throw (UndefinedName fc fn)
+              [] => undefinedName fc fn
               ts => do tys <- traverse (displayType defs) ts
                        pure (Printed $ vsep tys)
 process (Check itm)
@@ -787,7 +787,7 @@ process (Check itm)
 process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
-              [] => throw (UndefinedName replFC fn)
+              [] => undefinedName replFC fn
               ts => do defs <- traverse (displayPats defs) ts
                        pure (Printed $ vsep defs)
 process Reload
@@ -848,7 +848,7 @@ process (TypeSearch searchTerm)
 process (Missing n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName replFC n)
+              [] => undefinedName replFC n
               ts => map Missed $ traverse (\fn =>
                                          do tot <- getTotality replFC fn
                                             the (Core MissedResult) $ case isCovering tot of
@@ -863,7 +863,7 @@ process (Missing n)
 process (Total n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName replFC n)
+              [] => undefinedName replFC n
               ts => map CheckedTotal $
                     traverse (\fn =>
                           do ignore $ checkTotal replFC fn

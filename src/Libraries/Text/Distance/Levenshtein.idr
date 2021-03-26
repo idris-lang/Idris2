@@ -9,12 +9,12 @@ import Libraries.Data.List.Extra
 %default total
 
 ||| Self-evidently correct but O(3 ^ (min mn)) complexity
-spec : String -> String -> Int
+spec : String -> String -> Nat
 spec a b = loop (fastUnpack a) (fastUnpack b) where
 
-  loop : List Char -> List Char -> Int
-  loop [] ys = cast (length ys) -- deletions
-  loop xs [] = cast (length xs) -- insertions
+  loop : List Char -> List Char -> Nat
+  loop [] ys = length ys -- deletions
+  loop xs [] = length xs -- insertions
   loop (x :: xs) (y :: ys)
     = if x == y then loop xs ys -- match
       else 1 + minimum [ loop (x :: xs) ys -- insert y
@@ -23,7 +23,8 @@ spec a b = loop (fastUnpack a) (fastUnpack b) where
                        ]
 
 ||| Dynamic programming
-compute : HasIO io => String -> String -> io Int
+export
+compute : HasIO io => String -> String -> io Nat
 compute a b = assert_total $ do
   let w = strLength a
   let h = strLength b
@@ -57,4 +58,4 @@ compute a b = assert_total $ do
                 ]
 
   -- Once the matrix is fully filled, we can simply read the top right corner
-  get w h
+  integerToNat . cast <$> get w h

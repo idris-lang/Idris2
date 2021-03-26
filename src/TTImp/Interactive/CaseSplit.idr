@@ -199,7 +199,7 @@ expandCon : {auto c : Ref Ctxt Defs} ->
 expandCon fc usedvars con
     = do defs <- get Ctxt
          Just ty <- lookupTyExact con (gamma defs)
-              | Nothing => throw (UndefinedName fc con)
+              | Nothing => undefinedName fc con
          pure (apply (IVar fc con)
                 (map (IBindVar fc)
                      !(getArgNames defs [] usedvars []
@@ -402,7 +402,7 @@ getSplitsLHS fc envlen lhs_in n
          trycases <- traverse (\c => newLHS fc envlen usedns n c rawlhs) cons
 
          let Just idx = getNameID fn (gamma defs)
-             | Nothing => throw (UndefinedName fc fn)
+             | Nothing => undefinedName fc fn
          cases <- traverse (mkCase idx rawlhs) trycases
 
          pure (combine cases [])

@@ -15,9 +15,12 @@ import Libraries.Utils.Binary
 import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
+import Data.List1
 import Data.Maybe
+import Data.Nat
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
+import Libraries.Text.Distance.Levenshtein
 
 import System
 import System.Directory
@@ -1069,6 +1072,45 @@ clearCtxt
     resetElab : Options -> Options
     resetElab = record { elabDirectives = defaultElab }
 
+-- Find similar looking names in the context
+getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
+getSimilarNames nm = case userNameRoot nm of
+  Nothing => pure []
+  Just str =>
+    let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
+        test : Name -> IO (Maybe Nat) := \ nm => do
+            let (Just str') = userNameRoot nm
+                   | _ => pure Nothing
+            dist <- Levenshtein.compute str str'
+            let True = dist <= threshold | _ => pure Nothing
+            pure (Just dist)
+    in do defs <- get Ctxt
+          kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
+          let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
+          let roots = map (nameRoot . fst) sorted
+          pure (nub roots)
+
+
+maybeMisspelling : {auto c : Ref Ctxt Defs} ->
+                   Error -> Name -> Core a
+maybeMisspelling err nm = do
+  candidates <- getSimilarNames nm
+  case candidates of
+    [] => throw err
+    (x::xs) => throw (MaybeMisspelling err (x ::: xs))
+
+-- Throw an UndefinedName exception. But try to find similar names first.
+export
+undefinedName : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core a
+undefinedName loc nm = maybeMisspelling (UndefinedName loc nm) nm
+
+-- Throw a NoDeclaration exception. But try to find similar names first.
+export
+noDeclaration : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core a
+noDeclaration loc nm = maybeMisspelling (NoDeclaration loc nm) nm
+
 -- Get the canonical name of something that might have been aliased via
 -- import as
 export
@@ -1077,7 +1119,7 @@ canonicalName : {auto c : Ref Ctxt Defs} ->
 canonicalName fc n
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName fc n)
+              [] => undefinedName fc n
               [(n, _, _)] => pure n
               ns => throw (AmbiguousName fc (map fst ns))
 
@@ -1444,7 +1486,7 @@ setFlag : {auto c : Ref Ctxt Defs} ->
 setFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          let flags' = fl :: filter (/= fl) (flags def)
          ignore $ addDef n (record { flags = flags' } def)
 
@@ -1454,7 +1496,7 @@ setNameFlag : {auto c : Ref Ctxt Defs} ->
 setNameFlag fc n fl
     = do defs <- get Ctxt
          [(n', i, def)] <- lookupCtxtName n (gamma defs)
-              | [] => throw (UndefinedName fc n)
+              | [] => undefinedName fc n
               | res => throw (AmbiguousName fc (map fst res))
          let flags' = fl :: filter (/= fl) (flags def)
          ignore $ addDef (Resolved i) (record { flags = flags' } def)
@@ -1465,7 +1507,7 @@ unsetFlag : {auto c : Ref Ctxt Defs} ->
 unsetFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          let flags' = filter (/= fl) (flags def)
          ignore $ addDef n (record { flags = flags' } def)
 
@@ -1475,7 +1517,7 @@ hasFlag : {auto c : Ref Ctxt Defs} ->
 hasFlag fc n fl
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          pure (fl `elem` flags def)
 
 export
@@ -1484,7 +1526,7 @@ setSizeChange : {auto c : Ref Ctxt Defs} ->
 setSizeChange loc n sc
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          ignore $ addDef n (record { sizeChange = sc } def)
 
 export
@@ -1493,7 +1535,7 @@ setTotality : {auto c : Ref Ctxt Defs} ->
 setTotality loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          ignore $ addDef n (record { totality = tot } def)
 
 export
@@ -1502,7 +1544,7 @@ setCovering : {auto c : Ref Ctxt Defs} ->
 setCovering loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          ignore $ addDef n (record { totality->isCovering = tot } def)
 
 export
@@ -1511,7 +1553,7 @@ setTerminating : {auto c : Ref Ctxt Defs} ->
 setTerminating loc n tot
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          ignore $ addDef n (record { totality->isTerminating = tot } def)
 
 export
@@ -1520,7 +1562,7 @@ getTotality : {auto c : Ref Ctxt Defs} ->
 getTotality loc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          pure $ totality def
 
 export
@@ -1529,7 +1571,7 @@ getSizeChange : {auto c : Ref Ctxt Defs} ->
 getSizeChange loc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          pure $ sizeChange def
 
 export
@@ -1538,7 +1580,7 @@ setVisibility : {auto c : Ref Ctxt Defs} ->
 setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          ignore $ addDef n (record { visibility = vis } def)
 
 -- Set a name as Private that was previously visible (and, if 'everywhere' is
@@ -1549,7 +1591,7 @@ hide : {auto c : Ref Ctxt Defs} ->
 hide fc n
     = do defs <- get Ctxt
          [(nsn, _)] <- lookupCtxtName n (gamma defs)
-              | [] => throw (UndefinedName fc n)
+              | [] => undefinedName fc n
               | res => throw (AmbiguousName fc (map fst res))
          put Ctxt (record { gamma $= hideName nsn } defs)
 
@@ -1559,7 +1601,7 @@ getVisibility : {auto c : Ref Ctxt Defs} ->
 getVisibility fc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          pure $ visibility def
 
 public export
@@ -1589,7 +1631,7 @@ getSearchData : {auto c : Ref Ctxt Defs} ->
 getSearchData fc defaults target
     = do defs <- get Ctxt
          Just (TCon _ _ _ dets u _ _ _) <- lookupDefExact target (gamma defs)
-              | _ => throw (UndefinedName fc target)
+              | _ => undefinedName fc target
          hs <- case lookup !(toFullNames target) (typeHints defs) of
                        Just hs => filterM (\x => notHidden x (gamma defs)) hs
                        Nothing => pure []
@@ -1630,7 +1672,7 @@ setMutWith : {auto c : Ref Ctxt Defs} ->
 setMutWith fc tn tns
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tn (gamma defs)
-              | _ => throw (UndefinedName fc tn)
+              | _ => undefinedName fc tn
          let TCon t a ps dets u _ cons det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setMutWith]"))
          updateDef tn (const (Just (TCon t a ps dets u tns cons det)))
@@ -1655,7 +1697,7 @@ setDetermining : {auto c : Ref Ctxt Defs} ->
 setDetermining fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps _ u cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          apos <- getPos 0 args (type g)
@@ -1679,7 +1721,7 @@ setDetags : {auto c : Ref Ctxt Defs} ->
 setDetags fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps det u cons ms _ = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          updateDef tyn (const (Just (TCon t a ps det u cons ms args)))
@@ -1690,7 +1732,7 @@ setUniqueSearch : {auto c : Ref Ctxt Defs} ->
 setUniqueSearch fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = record { uniqueAuto = u } fl
@@ -1702,7 +1744,7 @@ setExternal : {auto c : Ref Ctxt Defs} ->
 setExternal fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
-              | _ => throw (UndefinedName fc tyn)
+              | _ => undefinedName fc tyn
          let TCon t a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = record { external = u } fl
@@ -2114,7 +2156,7 @@ checkUnambig : {auto c : Ref Ctxt Defs} ->
 checkUnambig fc n
     = do defs <- get Ctxt
          case !(lookupDefName n (gamma defs)) of
-              [] => throw (UndefinedName fc n)
+              [] => undefinedName fc n
               [(fulln, i, _)] => pure (Resolved i)
               ns => throw (AmbiguousName fc (map fst ns))
 
