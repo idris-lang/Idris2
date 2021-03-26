@@ -37,6 +37,11 @@ fastUnpack : String -> List Char
 export
 fastConcat : List String -> String
 
+-- This uses fastConcat internally so it won't compute at compile time.
+export
+fastUnlines : List String -> String
+fastUnlines = fastConcat . intersperse "\n"
+
 -- This is a deprecated alias for fastConcat for backwards compatibility
 -- (unfortunately, we don't have %deprecated yet).
 export
