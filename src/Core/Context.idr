@@ -1076,7 +1076,7 @@ clearCtxt
 getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
 getSimilarNames nm = case userNameRoot nm of
   Nothing => pure []
-  Just str =>
+  Just str => if length str <= 1 then pure [] else
     let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
         test : Name -> IO (Maybe Nat) := \ nm => do
             let (Just str') = userNameRoot nm
@@ -1087,17 +1087,17 @@ getSimilarNames nm = case userNameRoot nm of
     in do defs <- get Ctxt
           kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
           let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
-          let roots = mapMaybe (showNames str . fst) sorted
+          let roots = mapMaybe (showNames nm str . fst) sorted
           pure (nub roots)
 
   where
 
-  showNames : String -> Name -> Maybe String
-  showNames str nm = do
+  showNames : Name -> String -> Name -> Maybe String
+  showNames target str nm = do
     let root = nameRoot nm
     let True = str == root | _ => pure root
     let full = show nm
-    let True = str == full | _ => pure full
+    let True = str == full || show target == full | _ => pure full
     Nothing
 
 
