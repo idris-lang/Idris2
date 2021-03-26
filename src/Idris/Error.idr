@@ -15,7 +15,7 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Data.List1
+import Libraries.Data.List1 as Lib
 import Libraries.Data.List.Extra
 import Data.Maybe
 import Data.Stream
@@ -455,7 +455,7 @@ perror (InRHS fc n err)
 
 perror (MaybeMisspelling err ns) = pure $ !(perror err) <+> case ns of
   (n ::: []) => reflow "Did you mean:" <++> pretty n <+> "?"
-  _ => let (xs, x) = unsnoc ns in
+  _ => let (xs, x) = Lib.unsnoc ns in
        reflow "Did you mean any of:"
        <++> concatWith (surround (comma <+> space)) (map pretty xs)
        <+> comma <++> reflow "or" <++> pretty x <+> "?"
