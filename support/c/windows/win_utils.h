@@ -9,3 +9,7 @@ FILE *win32_u8popen(const char *path, const char *mode);
 void win32_gettime(int64_t* sec, int64_t* nsec);
 void win32_sleep(int ms);
 int win32_modenv(const char* name, const char* value, int overwrite);
+
+int win32_getErrno();
+long win32_getNProcessors();
+
