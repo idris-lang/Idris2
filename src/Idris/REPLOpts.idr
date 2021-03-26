@@ -7,9 +7,16 @@ import TTImp.Interactive.ExprSearch
 import TTImp.TTImp
 
 import Data.List
+import Data.List1
 import Libraries.Data.List.Extra
 import Data.Strings
 import System.File
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 
@@ -123,7 +130,7 @@ getSourceLine : {auto o : Ref ROpts REPLOpts} ->
                 Int -> Core (Maybe String)
 getSourceLine l
     = do src <- getSource
-         pure $ elemAt (lines src) (integerToNat (cast (l-1)))
+         pure $ elemAt (forget $ lines src) (integerToNat (cast (l-1)))
 
 export
 getLitStyle : {auto o : Ref ROpts REPLOpts} ->

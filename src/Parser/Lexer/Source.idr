@@ -201,7 +201,7 @@ mkDirective str = CGDirective (trim (substr 3 (length str) str))
 keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
             "auto", "default", "implicit", "mutual", "namespace",
-            "parameters", "with", "impossible", "case", "of",
+            "parameters", "with", "proof", "impossible", "case", "of",
             "if", "then", "else", "forall", "rewrite",
             "using", "interface", "implementation", "open", "import",
             "public", "export", "private",
@@ -358,7 +358,7 @@ lexTo reject str
            -- Add the EndInput token so that we'll have a line and column
            -- number to read when storing spans in the file
            (tok, (EndInput, l, c, _)) => Right (filter notComment tok ++
-                                      [MkBounded EndInput False l c l c])
+                                      [MkBounded EndInput False (MkBounds l c l c)])
            (_, fail) => Left fail
     where
       notComment : WithBounds Token -> Bool

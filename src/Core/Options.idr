@@ -100,6 +100,11 @@ record PrimNames where
   fromIntegerName : Maybe Name
   fromStringName : Maybe Name
   fromCharName : Maybe Name
+  fromDoubleName : Maybe Name
+
+export
+primNamesToList : PrimNames -> List Name
+primNamesToList (MkPrimNs i s c d) = catMaybes [i,s,c,d]
 
 public export
 data LangExt
@@ -202,7 +207,7 @@ export
 defaults : Options
 defaults = MkOptions defaultDirs defaultPPrint defaultSession
                      defaultElab Nothing Nothing
-                     (MkPrimNs Nothing Nothing Nothing) []
+                     (MkPrimNs Nothing Nothing Nothing Nothing) []
                      []
 
 -- Reset the options which are set by source files
@@ -210,7 +215,7 @@ export
 clearNames : Options -> Options
 clearNames = record { pairnames = Nothing,
                       rewritenames = Nothing,
-                      primnames = MkPrimNs Nothing Nothing Nothing,
+                      primnames = MkPrimNs Nothing Nothing Nothing Nothing,
                       extensions = []
                     }
 
@@ -234,6 +239,10 @@ setFromString n = record { primnames->fromStringName = Just n }
 export
 setFromChar : Name -> Options -> Options
 setFromChar n = record { primnames->fromCharName = Just n }
+
+export
+setFromDouble : Name -> Options -> Options
+setFromDouble n = record { primnames->fromDoubleName = Just n }
 
 export
 setExtension : LangExt -> Options -> Options

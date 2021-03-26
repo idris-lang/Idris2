@@ -37,6 +37,12 @@ import Data.List
 import Data.List.Views
 import Data.List1
 import Data.Strings
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -255,6 +261,12 @@ mutual
                 pure $ IPrimVal fc (Ch x)
              Just f => pure $ IApp fc (IVar fc f)
                                       (IPrimVal fc (Ch x))
+  desugarB side ps (PPrimVal fc (Db x))
+      = case !fromDoubleName of
+             Nothing =>
+                pure $ IPrimVal fc (Db x)
+             Just f => pure $ IApp fc (IVar fc f)
+                                      (IPrimVal fc (Db x))
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
       = pure $ IQuote fc !(desugarB side ps tm)
@@ -638,11 +650,11 @@ mutual
 
            pure (nm, PatClause fc lhs' rhs')
 
-  desugarClause ps arg (MkWithClause fc lhs wval flags cs)
+  desugarClause ps arg (MkWithClause fc lhs wval prf flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
            wval' <- desugar AnyExpr (bound ++ ps) wval
-           pure (nm, WithClause fc lhs' wval' flags cs')
+           pure (nm, WithClause fc lhs' wval' prf flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
       = do (nm, _, lhs') <- desugarLHS ps arg lhs
@@ -762,8 +774,8 @@ mutual
       toIDef : Name -> ImpClause -> Core ImpDecl
       toIDef nm (PatClause fc lhs rhs)
           = pure $ IDef fc nm [PatClause fc lhs rhs]
-      toIDef nm (WithClause fc lhs rhs flags cs)
-          = pure $ IDef fc nm [WithClause fc lhs rhs flags cs]
+      toIDef nm (WithClause fc lhs rhs prf flags cs)
+          = pure $ IDef fc nm [WithClause fc lhs rhs prf flags cs]
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
@@ -971,6 +983,7 @@ mutual
              PrimInteger n => pure [IPragma [] (\nest, env => setFromInteger n)]
              PrimString n => pure [IPragma [] (\nest, env => setFromString n)]
              PrimChar n => pure [IPragma [] (\nest, env => setFromChar n)]
+             PrimDouble n => pure [IPragma [] (\nest, env => setFromDouble n)]
              CGAction cg dir => pure [IPragma [] (\nest, env => addDirective cg dir)]
              Names n ns => pure [IPragma [] (\nest, env => addNameDirective fc n ns)]
              StartExpr tm => pure [IPragma [] (\nest, env => throw (InternalError "%start not implemented"))] -- TODO!

@@ -1142,23 +1142,23 @@ mutual
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
   unifyNoEta mode loc env (NTCon xfc x tagx ax xs) (NTCon yfc y tagy ay ys)
-      = if x == y
-           then do ust <- get UST
-                   -- see above
-                   {-
-                   when (logging ust) $
-                      do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                         log "" 0 "ARGUMENTS:"
-                         defs <- get Ctxt
-                         traverse_ (dumpArg env) xs
-                         log "" 0 "WITH:"
-                         traverse_ (dumpArg env) ys
-                   -}
-                   unifyArgs mode loc env (map snd xs) (map snd ys)
+   = do x <- toFullNames x
+        y <- toFullNames y
+        log "unify" 20 $ "Comparing type constructors " ++ show x ++ " and " ++ show y
+        if x == y
+           then do let xs = map snd xs
+                   let ys = map snd ys
+
+                   logC "unify" 20 $
+                     pure $ "Constructor " ++ show x
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) xs
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) ys
+                   unifyArgs mode loc env xs ys
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
              -- what's injective...
+             -- gallais: really? We don't mind being anticlassical do we?
 --                then postpone True loc mode env (quote empty env (NTCon x tagx ax xs))
 --                                           (quote empty env (NTCon y tagy ay ys))
            else convertError loc env

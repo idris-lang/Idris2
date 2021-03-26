@@ -46,7 +46,8 @@ idrisTestsBasic = MkTestPool []
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051", "basic052", "basic053", "basic054", "basic055"]
+       "basic051", "basic052", "basic053", "basic054", "basic055",
+       "basic056", "basic057", "basic058"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool []
@@ -69,7 +70,7 @@ idrisTestsError = MkTestPool []
        "error011", "error012", "error013", "error014", "error015",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006", "perror007"]
+       "perror006", "perror007", "perror008"]
 
 idrisTestsInteractive : TestPool
 idrisTestsInteractive = MkTestPool []
@@ -80,7 +81,8 @@ idrisTestsInteractive = MkTestPool []
        "interactive013", "interactive014", "interactive015", "interactive016",
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
-       "interactive025", "interactive026", "interactive027", "interactive028"]
+       "interactive025", "interactive026", "interactive027", "interactive028",
+       "interactive029"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []
@@ -160,7 +162,7 @@ idrisTests = MkTestPool []
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        -- The 'with' rule
-       "with001", "with002", "with004",
+       "with001", "with002", "with004", "with005",
        -- with-disambiguation
        "with003"]
 

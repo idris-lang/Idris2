@@ -1,6 +1,7 @@
 module TTImp.BindImplicits
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.TT
 import TTImp.TTImp
@@ -118,6 +119,7 @@ bindNames : {auto c : Ref Ctxt Defs} ->
 bindNames arg tm
     = if !isUnboundImplicits
          then do let ns = nub (findBindableNames arg [] [] tm)
+                 log "elab.bindnames" 10 $ "Found names :" ++ show ns
                  pure (map UN (map snd ns), doBind ns tm)
          else pure ([], tm)
 
