@@ -297,11 +297,11 @@ capitalisedName = do
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> capitalisedName
+dataConstructorName = name
 
-export %inline
+export
 dataTypeName : Rule Name
-dataTypeName = dataConstructorName
+dataTypeName = opNonNS <|> capitalisedName
 
 export
 IndentInfo : Type
