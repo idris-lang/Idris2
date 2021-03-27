@@ -43,15 +43,13 @@ IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/su
 
 # These are the library path in the build dir to be used during build
 export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
-export IDRIS2_BOOT_TEST_PREFIX := "${CURDIR}/tests/pkgs"
-export IDRIS2_BOOT_TEST_LIB_PATH := "${IDRIS2_BOOT_TEST_PREFIX}/idris2-${IDRIS2_VERSION}"
 
 export SCHEME
 
 
 .PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
 
-all: support ${TARGET} libs
+all: support ${TARGET} libs testbin
 
 idris2-exec: ${TARGET}
 
@@ -84,12 +82,12 @@ test-lib: contrib
 
 libs : prelude base contrib network test-lib
 
-testbin: test-lib
+testbin:
 	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} 
 
 test: testbin
 	@echo
-	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
+	@echo "NOTE: \`${MAKE} test\` does not rebuild idris or the libraries package with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
