@@ -49,7 +49,7 @@ export SCHEME
 
 .PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
 
-all: support ${TARGET} libs testbin
+all: support ${TARGET} libs
 
 idris2-exec: ${TARGET}
 
