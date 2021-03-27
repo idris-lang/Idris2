@@ -116,6 +116,7 @@ getChar : HasIO io => io Char
 getChar = primIO prim__getChar
 
 %foreign "scheme:blodwen-thread"
+         "javascript:lambda:x=>setTimeout(x,0)"
 export
 prim__fork : (1 prog : PrimIO ()) -> PrimIO ThreadID
 
