@@ -1082,8 +1082,7 @@ getSimilarNames nm = case userNameRoot nm of
             let (Just str') = userNameRoot nm
                    | _ => pure Nothing
             dist <- Levenshtein.compute str str'
-            let True = dist <= threshold | _ => pure Nothing
-            pure (Just dist)
+            pure (dist <$ guard (dist <= threshold))
     in do defs <- get Ctxt
           kept <- coreLift $ mapMaybeM test (resolvedAs (gamma defs))
           let sorted = sortBy (\ x, y => compare (snd x) (snd y)) $ toList kept
