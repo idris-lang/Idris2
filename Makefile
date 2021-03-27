@@ -43,7 +43,8 @@ IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/su
 
 # These are the library path in the build dir to be used during build
 export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
-export IDRIS2_BOOT_TEST_LIB_PATH := "${IDRIS2_CURDIR}/tests/lib/"
+export IDRIS2_BOOT_TEST_PREFIX := "${CURDIR}/tests/pkgs"
+export IDRIS2_BOOT_TEST_LIB_PATH := "${IDRIS2_BOOT_TEST_PREFIX}/idris2-${IDRIS2_VERSION}"
 
 export SCHEME
 
@@ -84,16 +85,20 @@ test-lib: contrib
 libs : prelude base contrib network test-lib
 
 testbin: test-lib
-	@mkdir -p ./tests/lib/test
-	@cp -R ./libs/test/build/ttc/* ./tests/lib/test/
-	@${MAKE} -C tests testbin IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PACKAGE_PATH="${IDRIS2_BOOT_TEST_LIB_PATH}${SEP}${IDRIS2_PACKAGE_PATH}"
+	@mkdir -p ${IDRIS2_BOOT_TEST_LIB_PATH}
+	@${MAKE} -C libs/prelude install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PREFIX=${IDRIS2_BOOT_TEST_PREFIX}
+	@${MAKE} -C libs/base install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PREFIX=${IDRIS2_BOOT_TEST_PREFIX}
+	@${MAKE} -C libs/contrib install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PREFIX=${IDRIS2_BOOT_TEST_PREFIX}
+	@${MAKE} -C libs/network install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PREFIX=${IDRIS2_BOOT_TEST_PREFIX}
+	@${MAKE} -C libs/test install IDRIS2?=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PREFIX=${IDRIS2_BOOT_TEST_PREFIX}
+	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PACKAGE_PATH=${IDRIS2_BOOT_TEST_LIB_PATH}
 
 test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild idris; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET}
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PACKAGE_PATH=${IDRIS2_BOOT_TEST_LIB_PATH}
 
 support:
 	@${MAKE} -C support/c
