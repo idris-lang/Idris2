@@ -86,7 +86,7 @@ libs : prelude base contrib network test-lib
 testbin: test-lib
 	@mkdir -p ./tests/lib/test
 	@cp -R ./libs/test/build/ttc/* ./tests/lib/test/
-	@${MAKE} -C tests testbin IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PACKAGE_PATH=${IDRIS2_BOOT_TEST_LIB_PATH}
+	@${MAKE} -C tests testbin IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_PACKAGE_PATH="${IDRIS2_BOOT_TEST_LIB_PATH}${SEP}${IDRIS2_PACKAGE_PATH}"
 
 test: testbin
 	@echo
