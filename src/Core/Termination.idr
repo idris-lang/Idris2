@@ -363,7 +363,7 @@ mutual
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
       = do Just gdef <- lookupCtxtExact fn_in (gamma defs)
-                | Nothing => throw (UndefinedName fc fn_in)
+                | Nothing => undefinedName fc fn_in
            let fn = fullname gdef
            log "totality.termination.sizechange" 10 $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN "assert_smaller"))
@@ -415,7 +415,7 @@ calculateSizeChange loc n
     = do log "totality.termination.sizechange" 5 $ "Calculating Size Change: " ++ show !(toFullNames n)
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName loc n)
+              | Nothing => undefinedName loc n
          getSC defs (definition def)
 
 Arg : Type
@@ -528,7 +528,7 @@ calcTerminating loc n
     = do defs <- get Ctxt
          log "totality.termination.calc" 7 $ "Calculating termination: " ++ show !(toFullNames n)
          case !(lookupCtxtExact n (gamma defs)) of
-              Nothing => throw (UndefinedName loc n)
+              Nothing => undefinedName loc n
               Just def =>
                 case !(totRefs defs (nub !(addCases defs (keys (refersTo def))))) of
                      IsTerminating =>
@@ -662,7 +662,7 @@ calcPositive loc n
                                pure (t , dcons)
                        bad => pure (bad, dcons)
               Just _ => throw (GenericMsg loc (show n ++ " not a data type"))
-              Nothing => throw (UndefinedName loc n)
+              Nothing => undefinedName loc n
 
 -- Check whether a data type satisfies the strict positivity condition, and
 -- record in the context
@@ -690,7 +690,7 @@ checkTotal : {auto c : Ref Ctxt Defs} ->
 checkTotal loc n_in
     = do defs <- get Ctxt
          let Just nidx = getNameID n_in (gamma defs)
-             | Nothing => throw (UndefinedName loc n_in)
+             | Nothing => undefinedName loc n_in
          let n = Resolved nidx
          tot <- getTotality loc n
          log "totality" 5 $ "Checking totality: " ++ show !(toFullNames n)

@@ -219,7 +219,7 @@ makeDefFromType loc opts n envlen ty
                                 (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
                                 (IHole loc rhshole)
              let Just nidx = getNameID n (gamma defs)
-                 | Nothing => throw (UndefinedName loc n)
+                 | Nothing => undefinedName loc n
              cs' <- mkSplits loc opts nidx initcs
              -- restore the global state, given that we've fiddled with it a lot!
              put Ctxt defs

@@ -1,0 +1,25 @@
+1/1: Building Issue1230 (Issue1230.idr)
+Error: No type declaration for Main.myRec2.
+
+Issue1230.idr:9:1--9:15
+ 5 | myRec1 : R
+ 6 | myRec1 = MkR 3
+ 7 | 
+ 8 | mkRec2 : R
+ 9 | myRec2 = MkR 3
+     ^^^^^^^^^^^^^^
+Did you mean any of: mkRec2, or myRec1?
+Main> Error: Undefined name nap. 
+
+(interactive):1:4--1:7
+ 1 | :t nap
+        ^^^
+Did you mean: map?
+Main> Error: Undefined name lentgh. 
+
+(interactive):1:4--1:10
+ 1 | :t lentgh
+        ^^^^^^
+Did you mean: length?
+Main> 
+Bye for now!

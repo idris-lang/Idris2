@@ -413,7 +413,7 @@ getNonCoveringRefs : {auto c : Ref Ctxt Defs} ->
 getNonCoveringRefs fc n
    = do defs <- get Ctxt
         Just d <- lookupCtxtExact n (gamma defs)
-           | Nothing => throw (UndefinedName fc n)
+           | Nothing => undefinedName fc n
         let ds = mapMaybe noAssert (toList (refersTo d))
         let cases = filter isCase !(traverse toFullNames ds)
 

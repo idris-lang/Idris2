@@ -248,7 +248,7 @@ postpone blockedMetas loc mode logstr env x y
     checkDefined : Defs -> NF vars -> Core ()
     checkDefined defs (NApp _ (NRef _ n) _)
         = do Just _ <- lookupCtxtExact n (gamma defs)
-                  | _ => throw (UndefinedName loc n)
+                  | _ => undefinedName loc n
              pure ()
     checkDefined _ _ = pure ()
 
@@ -757,7 +757,7 @@ mutual
   unifyHoleApp swap mode loc env mname mref margs margs' tm@(NApp nfc (NMeta n i margs2) args2')
       = do defs <- get Ctxt
            Just mdef <- lookupCtxtExact (Resolved i) (gamma defs)
-                | Nothing => throw (UndefinedName nfc mname)
+                | Nothing => undefinedName nfc mname
            let inv = isPatName n || invertible mdef
            if inv
               then unifyInvertible swap (lower mode) loc env mname mref margs margs' Nothing
@@ -1323,7 +1323,7 @@ setInvertible : {auto c : Ref Ctxt Defs} ->
 setInvertible fc n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          ignore $ addDef n (record { invertible = True } gdef)
 
 public export
@@ -1605,7 +1605,7 @@ checkDots
                    dotSolved <-
                       maybe (pure False)
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
-                                           | Nothing => throw (UndefinedName fc n)
+                                           | Nothing => undefinedName fc n
                                       case ndef of
                                            Hole _ _ => pure False
                                            _ => pure True)
@@ -1622,7 +1622,7 @@ checkDots
                          InternalError _ =>
                            do defs <- get Ctxt
                               Just dty <- lookupTyExact n (gamma defs)
-                                   | Nothing => throw (UndefinedName fc n)
+                                   | Nothing => undefinedName fc n
                               logTermNF "unify.constraint" 5 "Dot type" [] dty
                               -- Clear constraints so we don't report again
                               -- later

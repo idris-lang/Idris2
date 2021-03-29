@@ -823,7 +823,7 @@ processDef opts nest env fc n_in cs_in
     = do n <- inCurrentNS n_in
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (NoDeclaration fc n)
+              | Nothing => noDeclaration fc n
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
