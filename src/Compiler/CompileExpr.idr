@@ -629,8 +629,14 @@ toCDef n ty (Builtin {arity} op)
     getVars NoArgs = []
     getVars (ConsArg a rest) = MkVar First :: map weakenVar (getVars rest)
 toCDef n _ (DCon tag arity pos)
-    = let nt = maybe Nothing (Just . snd) pos in
-          pure $ MkCon (Just tag) arity nt
+    = do let nt = snd <$> pos
+         defs <- get Ctxt
+         args <- numArgs {vars = []} defs (Ref EmptyFC (DataCon tag arity) n)
+         let arity' = case args of
+                 NewTypeBy ar _ => ar
+                 EraseArgs ar erased => ar `minus` length erased
+                 Arity ar => ar
+         pure $ MkCon (Just tag) arity' nt
 toCDef n _ (TCon tag arity _ _ _ _ _ _)
     = pure $ MkCon Nothing arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
