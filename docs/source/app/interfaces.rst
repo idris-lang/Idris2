@@ -19,8 +19,10 @@ which is declared as follows, in ``Control.App.Console``:
 .. code-block:: idris
 
     interface Console e where
+      putChar : Char -> App {l} e ()
       putStr : String -> App {l} e ()
-      getStr : App {l} e String
+      getChar : App {l} e Char
+      getLine : App {l} e String
 
 It provides primitives for writing to and reading from the console, and
 generalising the path parameter to ``l`` means that neither can
@@ -58,8 +60,10 @@ program in ``IO``. It is implemented as follows in ``Control.App.Console``:
 .. code-block:: idris
 
     PrimIO e => Console e where
+      putChar c = primIO $ putChar c
       putStr str = primIO $ putStr str
-      getStr = primIO $ getLine
+      getChar = primIO getChar
+      getLine = primIO getLine
 
 Example: File I/O
 -----------------
@@ -82,10 +86,16 @@ We begin by defining the ``FileIO`` interface, in ``Control.App.FileIO``:
 .. code-block:: idris
 
     interface Has [Exception IOError] e => FileIO e where
-      withFile : String -> Mode ->  (onError : IOError -> App e a) ->
-                 (onOpen : File -> App e a) -> App e a
+      withFile : String -> Mode ->
+                 (onError : IOError -> App e a) ->
+                 (onOpen : File -> App e a) ->
+                 App e a
       fGetStr : File -> App e String
+      fGetChars : File -> Int -> App e String
+      fGetChar : File -> App e Char
       fPutStr : File -> String -> App e ()
+      fPutStrLn : File -> String -> App e ()
+      fflush : File -> App e ()
       fEOF : File -> App e Bool
 
 We use resource bracketing - passing a function to ``withFile`` for working
@@ -131,6 +141,7 @@ for example:
           = do Right h <- primIO $ openFile fname m
                   | Left err => onError (FileErr (toFileEx err))
                res <- catch (proc h) onError
+               primIO $ closeFile h
                pure res
       ...
 
