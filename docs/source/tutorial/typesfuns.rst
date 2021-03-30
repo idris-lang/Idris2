@@ -675,8 +675,7 @@ suspended. It is a primitive, but conceptually we can think of it as follows:
 
     data Lazy : Type -> Type where
          Delay : (val : a) -> Lazy a
-
-    Force : Lazy a -> a
+         Force : Lazy a -> a
 
 A value of type ``Lazy a`` is unevaluated until it is forced by
 ``Force``. The Idris type checker knows about the ``Lazy`` type,
