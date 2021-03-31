@@ -1,3 +1,5 @@
+||| Checking a %builtin pragma is correct.
+-- If we get more builtins it might be wise to move each builtin to it's own file.
 module TTImp.ProcessBuiltin
 
 import Core.Core
@@ -11,34 +13,44 @@ import TTImp.TTImp
 
 ||| Get the name and arity (of non-erased arguments only) of a list of names.
 ||| `cons` should all be data constructors (`DCon`) otherwise it will throw an error.
-getConsArity : Context -> FC -> (cons : List Name) -> Core $ List (Name, Nat)
-getConsArity c fc = traverse \n => do
+getConsGDef : Context -> FC -> (cons : List Name) -> Core $ List (Name, GlobalDef)
+getConsGDef c fc = traverse \n => do
     [(n', _, gdef)] <- lookupCtxtName n c
         | [] => throw $ UndefinedName fc n
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
-    let (DCon _ a _) = gdef.definition
-        | def => throw $ GenericMsg fc $ "Expected a data constructor, found:\n" ++ show def
-    pure (n', a `minus` length gdef.eraseArgs)
+    pure (n', gdef)
 
 ||| Check a list of constructors has exactly
 ||| 1 'Z'-like constructor
-||| and 1 `S`-like constructor.
-checkCons : (cons : List (Name, Nat)) -> (type : Name) -> FC -> Core ()
-checkCons cons ty fc = case !(foldr checkCon (pure (False, False)) cons) of
+||| and 1 `S`-like constructor
+||| and if the types are correct.
+checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core ()
+checkCons c cons ty fc = case !(foldr checkCon (pure (False, False)) cons) of
     (True, True) => pure ()
     (False, _) => throw $ GenericMsg fc $ "No 'Z'-like constructors for " ++ show ty ++ "."
     (_, False) => throw $ GenericMsg fc $ "No 'S'-like constructors for " ++ show ty ++ "."
   where
-    checkCon : (Name, Nat) -> Core (Bool, Bool) -> Core (Bool, Bool)
-    checkCon (n, arity) has = do
+    ||| Check the type of an 'S'-like constructor.
+    checkTyS : Name -> GlobalDef -> Core ()
+    checkTyS n gdef = case gdef.type of
+        _ => pure ()
+    ||| Check the type of a 'Z'-like constructor.
+    checkTyZ : Name -> GlobalDef -> Core ()
+    checkTyZ n gdef = case gdef.type of
+        _ => pure ()
+    ||| Check a constructor's arity and type.
+    checkCon : (Name, GlobalDef) -> Core (Bool, Bool) -> Core (Bool, Bool)
+    checkCon (n, gdef) has = do
         (hasZ, hasS) <- has
-        case arity of
+        let DCon _ arity _ = gdef.definition
+            | def => throw $ GenericMsg fc $ "Expected data constructor, found:\n" ++ show def
+        case arity `minus` length gdef.eraseArgs of
             0 => case hasZ of
                 True => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
-                False => pure (True, hasS)
+                False => checkTyZ n gdef *> pure (True, hasS)
             1 => case hasS of
                 True => throw $ GenericMsg fc $ "Multiple 'S'-like constructors for " ++ show ty ++ "."
-                False => pure (hasZ, True)
+                False => checkTyS n gdef *> pure (hasZ, True)
             _ => throw $ GenericMsg fc $ "Constructor " ++ show n ++ " doesn't match any pattern for Natural."
 
 
@@ -54,8 +66,8 @@ processBuiltinNatural ds nest env fc name = do
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc $ "Expected a type constructor, found:\n" ++ show def
-    cons <- getConsArity ds.gamma fc dcons
-    checkCons cons n fc
+    cons <- getConsGDef ds.gamma fc dcons
+    checkCons ds.gamma cons n fc
 
 ||| Check a `%builtin _ _` pragma is correct.
 export
