@@ -990,6 +990,7 @@ mutual
              Overloadable n => pure [IPragma [] (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma [] (\nest, env => setExtension e)]
              DefaultTotality tot => pure [IPragma [] (\_, _ => setDefaultTotalityOption tot)]
+  desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export
   desugar : {auto s : Ref Syn SyntaxInfo} ->

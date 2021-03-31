@@ -45,6 +45,20 @@ Weaken NestedNames where
 public export
 data BindMode = PI RigCount | PATTERN | NONE
 
+||| Types that are transformed into a faster representation
+||| during codegen.
+public export
+data BuiltinType : Type where
+    ||| A built-in `Nat`-like type
+    ||| `NatLike : [index ->] Type`
+    ||| `SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]`
+    ||| `ZLike : {0 _ : index} -> NatLike [index]`
+    BuiltinNatural : BuiltinType
+
+export
+Show BuiltinType where
+    show BuiltinNatural = "Natural"
+
 mutual
   public export
   data RawImp : Type where
@@ -356,6 +370,7 @@ mutual
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
 
   export
   Show ImpDecl where
@@ -378,6 +393,7 @@ mutual
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 export
 isIPrimVal : RawImp -> Maybe Constant
@@ -739,6 +755,14 @@ getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
 -- Everything below is TTC instances
+
+export
+TTC BuiltinType where
+    toBuf b BuiltinNatural = tag 0;
+
+    fromBuf b = case !getTag of
+                     0 => pure BuiltinNatural
+                     _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -1103,6 +1127,8 @@ mutual
     toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IBuiltin fc type name)
+        = do tag 9; toBuf b fc; toBuf b type; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1132,6 +1158,10 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       type <- fromBuf b
+                       name <- fromBuf b
+                       pure (IBuiltin fc type name)
                _ => corrupt "ImpDecl"
 
 
