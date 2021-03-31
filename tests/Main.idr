@@ -134,6 +134,9 @@ idrisTests = MkTestPool []
       ["docs001", "docs002",
        -- Evaluator
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       -- Unfortunately the behaviour of Double is platform dependent so the
+       -- following test is turned off.
+       -- "evaluator005",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Miscellaneous REPL
