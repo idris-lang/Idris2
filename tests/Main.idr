@@ -128,6 +128,14 @@ idrisTestsRegression = MkTestPool []
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038"]
 
+idrisTestsData : TestPool
+idrisTestsData = MkTestPool []
+      [-- Data types
+       "data001",
+       -- Records, access and dependent update
+       "record001", "record002", "record003", "record004", "record005",
+       "record006", "record007"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool []
        -- Documentation strings
@@ -152,9 +160,6 @@ idrisTests = MkTestPool []
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
-       -- Records, access and dependent update
-       "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
@@ -266,6 +271,7 @@ main = runner
   , testPaths "idris2" idrisTestsLinear
   , testPaths "idris2" idrisTestsPerformance
   , testPaths "idris2" idrisTestsRegression
+  , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
