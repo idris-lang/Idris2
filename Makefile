@@ -37,6 +37,10 @@ else
 	SEP := :
 endif
 
+# Library and data paths for test
+IDRIS2_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/lib
+IDRIS2_TEST_DATA := ${IDRIS2_CURDIR}/support
+
 # Library and data paths for bootstrap-test
 IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/lib
 IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
@@ -83,14 +87,15 @@ test-lib: contrib
 libs : prelude base contrib network test-lib
 
 testbin:
-	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} 
+	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
 
 test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	echo ${IDRIS2_CURDIR}
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
 
 support:
 	@${MAKE} -C support/c
