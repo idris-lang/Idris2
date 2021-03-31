@@ -664,7 +664,11 @@ filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $=
 filterPackageOpts acc (BuildDir f    ::xs) = filterPackageOpts (record {oopts $= (BuildDir f::)}     acc) xs
 filterPackageOpts acc (OutputDir f   ::xs) = filterPackageOpts (record {oopts $= (OutputDir f::)}    acc) xs
 
-filterPackageOpts acc (x::xs) = pure (record {hasError = True} acc)
+filterPackageOpts acc (ConsoleWidth n::xs) = filterPackageOpts acc xs
+filterPackageOpts acc (Color b       ::xs) = filterPackageOpts acc xs
+filterPackageOpts acc (NoBanner      ::xs) = filterPackageOpts acc xs
+
+filterPackageOpts acc (x::xs) = filterPackageOpts (record {hasError = True} acc) xs
 
 -- If there's a package option, it must be the only option, so reject if
 -- it's not
