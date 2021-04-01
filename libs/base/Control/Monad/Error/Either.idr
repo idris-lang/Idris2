@@ -14,6 +14,7 @@ module Control.Monad.Error.Either
 -------------------------------------------------
 
 import Control.Monad.Trans
+import Data.Functor.Generalised
 
 %default total
 
@@ -140,6 +141,10 @@ public export
 public export
 MonadTrans (EitherT e) where
   lift = MkEitherT . map Right
+
+public export
+Monad m => GenFunctor m (EitherT e m) where
+  gmap f (MkEitherT x) = MkEitherT $ x >>= either (pure . Left) (map Right . f . pure)
 
 public export
 HasIO m => HasIO (EitherT e m) where

@@ -3,6 +3,8 @@ module Control.Monad.State.State
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| The transformer on which the State monad is based
@@ -95,6 +97,10 @@ implementation MonadTrans (StateT stateType) where
         = ST (\st =>
                 do r <- x
                    pure (st, r))
+
+public export
+implementation Monad m => GenFunctor m (StateT s m) where
+  gmap f (ST rs) = ST \s => rs s >>= \(r, x) => (r, ) <$> f (pure x)
 
 public export
 implementation (Monad f, Alternative f) => Alternative (StateT st f) where

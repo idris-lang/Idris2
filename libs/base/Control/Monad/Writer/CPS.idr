@@ -7,6 +7,8 @@ module Control.Monad.Writer.CPS
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| A writer monad parameterized by:
@@ -103,6 +105,10 @@ Monad m => Monad (WriterT w m) where
 public export %inline
 MonadTrans (WriterT w) where
   lift m = MkWriterT \w => map (\a => (a,w)) m
+
+public export
+Monad m => GenFunctor m (WriterT w m) where
+  gmap f (MkWriterT w) = MkWriterT \u => w u >>= \(x, v) => (, v) <$> f (pure x)
 
 public export %inline
 HasIO m => HasIO (WriterT w m) where

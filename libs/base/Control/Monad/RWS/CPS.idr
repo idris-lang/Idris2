@@ -7,6 +7,8 @@ module Control.Monad.RWS.CPS
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| A monad transformer adding reading an environment of type `r`,
@@ -129,6 +131,10 @@ Monad m => Monad (RWST r w s m) where
 public export %inline
 MonadTrans (RWST r w s) where
   lift m = MkRWST \_,s,w => map (\a => (a,s,w)) m
+
+public export
+Monad m => GenFunctor m (RWST r w s m) where
+  gmap f (MkRWST rws) = MkRWST $ \r, w, s => rws r w s >>= \(x, ws) => (, ws) <$> f (pure x)
 
 public export %inline
 HasIO m => HasIO (RWST r w s m) where

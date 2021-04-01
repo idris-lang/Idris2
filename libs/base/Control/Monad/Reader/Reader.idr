@@ -3,6 +3,8 @@ module Control.Monad.Reader.Reader
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| The transformer on which the Reader monad is based
@@ -64,6 +66,10 @@ implementation Monad m => Monad (ReaderT stateType m) where
 public export
 implementation MonadTrans (ReaderT stateType) where
   lift x = MkReaderT (\_ => x)
+
+public export
+implementation Monad m => GenFunctor m (ReaderT r m) where
+  gmap f (MkReaderT rr) = MkReaderT $ f . rr
 
 public export
 implementation HasIO m => HasIO (ReaderT stateType m) where

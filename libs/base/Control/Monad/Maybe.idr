@@ -12,6 +12,8 @@ module Control.Monad.Maybe
 -------------------------------------------------
 
 import Control.Monad.Trans
+
+import Data.Functor.Generalised
 import Data.Maybe
 
 %default total
@@ -135,6 +137,10 @@ Monad m => Alternative (MaybeT m) where
 public export
 MonadTrans MaybeT where
   lift = MkMaybeT . map Just
+
+public export
+Monad m => GenFunctor m (MaybeT m) where
+  gmap f (MkMaybeT x) = MkMaybeT $ x >>= maybe (pure Nothing) (map Just . f . pure)
 
 public export
 HasIO m => HasIO (MaybeT m) where
