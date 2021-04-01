@@ -78,3 +78,9 @@ MonadState s m => MonadState s (WriterT r m) where
   get = lift get
   put = lift . put
   state = lift . state
+
+public export %inline
+[Trans] MonadState s m => MonadTrans t => Monad (t m) => MonadState s (t m) where
+  get   = lift get
+  put   = lift . put
+  state = lift . state

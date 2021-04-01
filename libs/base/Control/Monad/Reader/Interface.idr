@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| A computation which runs in a static context and produces an output
@@ -65,3 +67,8 @@ MonadReader r m => MonadReader r (WriterT w m) where
   -- accumulate values, while the implementation of
   -- MonadReader for RWST does no such thing.
   local f (MkWriterT m) = MkWriterT \w => local f (m w)
+
+public export %inline
+[Trans] MonadReader r m => MonadTrans t => GenFunctor m (t m) => Monad (t m) => MonadReader r (t m) where
+  ask   = lift ask
+  local = gmap . local

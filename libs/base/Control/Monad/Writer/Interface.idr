@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+import Data.Functor.Generalised
+
 %default total
 
 ||| MonadWriter interface
@@ -117,3 +119,10 @@ MonadWriter w m => MonadWriter w (StateT s m) where
 
   pass   (ST m) = ST \s => pass $ do (s',(a,f)) <- m s
                                      pure ((s',a),f)
+
+public export %inline
+[Trans] MonadWriter r m => MonadTrans t => GenFunctor m (t m) => Monad (t m) => MonadWriter r (t m) where
+  writer = lift . writer
+  tell   = lift . tell
+  listen = gmap listen
+  pass   = gmap pass
