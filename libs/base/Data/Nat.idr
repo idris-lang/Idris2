@@ -63,10 +63,31 @@ Uninhabited (NotBothZero 0 0) where
   uninhabited LeftIsNotZero impossible
   uninhabited RightIsNotZero impossible
 
+||| `m LTE n`: the proposition `m` is less than, or equal to, `n`.
+||| Since every such proposition has a unique proof, proofs returning
+||| `LTE` don't need to be public.
 public export
 data LTE  : (n, m : Nat) -> Type where
   LTEZero : LTE Z    right
   LTESucc : LTE left right -> LTE (S left) (S right)
+
+||| `m LTE n` is a proposition: every two proofs are equal.
+||| We ford the lower and upper bounds in the inequality when further
+||| algebraic manipulations are needed.
+export
+irrelevantLTE : {auto 0 ford_lower : n1 = n2}
+             -> {auto 0 ford_upper : m1 = m2}
+             -> (prf1 : n1 `LTE` m1)
+             -> (prf2 : n2 `LTE` m2)
+             -> prf1 = prf2
+irrelevantLTE LTEZero LTEZero
+  { ford_lower = Refl
+  , ford_upper = Refl}
+  = Refl
+irrelevantLTE (LTESucc prf1) (LTESucc prf2)
+  { ford_lower = Refl
+  , ford_upper = Refl}
+  = cong LTESucc (irrelevantLTE prf1 prf2)
 
 export
 Uninhabited (LTE (S n) Z) where
@@ -76,13 +97,43 @@ export
 Uninhabited (LTE m n) => Uninhabited (LTE (S m) (S n)) where
   uninhabited (LTESucc lte) = uninhabited lte
 
+||| `m GTE n`: the proposition `m` is greater than, or equal to, `n`.
+||| Since every such proposition has a unique proof, proofs returning
+||| `GTE` don't need to be public
 public export
 GTE : Nat -> Nat -> Type
 GTE left right = LTE right left
 
+||| `m LT n` is a proposition: every two proofs are equal.
+||| We ford the lower and upper bounds in the inequality when further
+||| algebraic manipulations are needed.
+export
+irrelevantGTE : {auto 0 ford_upper : n1 = n2}
+             -> {auto 0 ford_lower : m1 = m2}
+             -> (prf1 : n1 `GTE` m1)
+             -> (prf2 : n2 `GTE` m2)
+             -> prf1 = prf2
+irrelevantGTE prf1 prf2 = irrelevantLTE prf1 prf2
+
+
+||| `m LT n`: the proposition `m` is strictly less than `n`.
+||| Since every such proposition has a unique proof, proofs returning
+||| `LT` don't need to be public
 public export
 LT : Nat -> Nat -> Type
 LT left right = LTE (S left) right
+
+||| `m LT n` is a proposition: every two proofs are equal.
+||| We ford the lower and upper bounds in the inequality when further
+||| algebraic manipulations are needed.
+export
+irrelevantLT : {auto 0 ford_lower : n1 = n2}
+            -> {auto 0 ford_upper : m1 = m2}
+            -> (prf1 : n1 `LT` m1)
+            -> (prf2 : n2 `LT` m2)
+            -> prf1 = prf2
+irrelevantLT {ford_lower} prf1 prf2 = let 0 ford_lower = cong S ford_lower in
+                                      irrelevantLTE prf1 prf2
 
 namespace LT
 
@@ -106,9 +157,23 @@ namespace LT
   ltZero : Z `LT` S m
   ltZero = LTESucc LTEZero
 
+||| `m GT n`: the proposition `m` is strictly greater than `n`.
+||| Since every such proposition has a unique proof, proofs returning
+||| `GT` don't need to be public
 public export
 GT : Nat -> Nat -> Type
 GT left right = LT right left
+
+||| `m GT n` is a proposition: every two proofs are equal.
+||| We ford the lower and upper bounds in the inequality when further
+||| algebraic manipulations are needed.
+export
+irrelevantGT : {auto 0 ford_upper : n1 = n2}
+            -> {auto 0 ford_lower : m1 = m2}
+            -> (prf1 : n `GT` m)
+            -> (prf2 : n `GT` m)
+            -> prf1 = prf2
+irrelevantGT prf1 prf2 = irrelevantLT prf1 prf2
 
 export
 succNotLTEzero : Not (LTE (S m) Z)
