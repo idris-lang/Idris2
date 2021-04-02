@@ -149,7 +149,7 @@ mutual
   prettyTerm = go Open
     where
       startPrec : Prec
-      startPrec = User 0
+      startPrec = User 5
       appPrec : Prec
       appPrec = User 10
       leftAppPrec : Prec
@@ -288,10 +288,24 @@ mutual
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
       go d (PList _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec <$> xs))
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
-      go d (PDPair _ drig l (PImplicit _) r)
-        = group $ parens (go startPrec l <++> pretty (showDPairRig drig) <+> line <+> go startPrec r)
       go d (PDPair _ drig l ty r)
-        = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty (showDPairRig drig) <+> line <+> go startPrec r)
+        = let (inner, last) = innerDPairExps r in
+          let ann = case ty of
+               PImplicit _ => (<+> neutral)
+               _ => (<++> colon <++> go startPrec ty) in
+          group $ parens (ann (go startPrec l) <++> pretty (showDPairRig drig) <+> goInner inner last)
+       where
+        innerDPairExps : PTerm -> (List ((RigCount, RigCount), Maybe PTerm, PTerm), PTerm)
+        innerDPairExps (PDPair _ rig l (PImplicit _) r) = mapFst ((rig, Nothing, l) ::) (innerDPairExps r)
+        innerDPairExps (PDPair _ rig l ty r) = mapFst ((rig, Just ty, l) ::) (innerDPairExps r)
+        innerDPairExps other = ([], other)
+
+        goInner : List ((RigCount, RigCount), Maybe PTerm, PTerm) -> PTerm -> Doc IdrisAnn
+        goInner [] last = line <+> go startPrec last
+        goInner ((rig, Nothing, r) :: rs) last =
+          line <+> go startPrec r <++> pretty (showDPairRig rig) <+> goInner rs last
+        goInner ((rig, Just t, r) :: rs) last =
+          line <+> go startPrec r <++> colon <++> go startPrec t <++> pretty (showDPairRig rig) <+> goInner rs last
       go d (PUnit _) = "()"
       go d (PIfThenElse _ x t e) =
         parenthesise (d > appPrec) $ group $ align $ hang 2 $ vsep

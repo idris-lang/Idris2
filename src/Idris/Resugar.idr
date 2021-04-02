@@ -60,10 +60,10 @@ bracket outer inner tm
             else pure tm'
 
 startPrec : Nat
-startPrec = 0
+startPrec = 5
 
 tyPrec : Nat
-tyPrec = 1
+tyPrec = 6
 
 appPrec : Nat
 appPrec = 999
@@ -133,16 +133,19 @@ mutual
          "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
          "==="    => pure $ PEq fc (unbracket l) (unbracket r)
          "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
-         root        => case rigFromDPairTConName root of
-           Nothing => Nothing
-           Just drig => case unbracket r of
-            PLam _ _ _ n _ r' => pure $ PDPair fc drig n (unbracket l) (unbracket r')
-            _                 => Nothing
-       else if nameRoot nm == "::"
-               then case sugarApp (unbracket r) of
-                 PList fc xs => pure $ PList fc (unbracketApp l :: xs)
-                 _           => Nothing
-               else Nothing
+         _ => Nothing
+       else if dpairNS == ns
+         then
+           case rigFromDPairTConName (nameRoot nm) of
+             Nothing => Nothing
+             Just drig => case unbracket r of
+              PLam _ _ _ n _ r' => pure $ PDPair fc drig n (unbracket l) (unbracket r')
+              _                 => Nothing
+         else if nameRoot nm == "::"
+                 then case sugarApp (unbracket r) of
+                   PList fc xs => pure $ PList fc (unbracketApp l :: xs)
+                   _           => Nothing
+                 else Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
     case extractNat 0 tm of
