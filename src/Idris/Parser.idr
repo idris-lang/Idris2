@@ -113,6 +113,20 @@ argTerm (UnnamedAutoArg t) = t
 argTerm (NamedArg _ t) = t
 argTerm (WithArg t) = t
 
+dpairSymbol : Rule (RigCount, RigCount)
+dpairSymbol = do
+      (symbol "**" *> pure (top, top))
+  <|> (symbol "*|*" *> pure (top, top))
+  <|> (symbol "*|0" *> pure (top, erased))
+  <|> (symbol "*|1" *> pure (top, linear))
+  <|> (symbol "0|*" *> pure (erased, top))
+  <|> (symbol "0|0" *> pure (erased, erased))
+  <|> (symbol "0|1" *> pure (erased, linear))
+  <|> (symbol "1|*" *> pure (linear, top))
+  <|> (symbol "1|0" *> pure (linear, erased))
+  <|> (symbol "1|1" *> pure (linear, linear))
+
+
 mutual
   appExpr : ParseOpts -> FileName -> IndentInfo -> Rule PTerm
   appExpr q fname indents
@@ -234,9 +248,10 @@ mutual
                              ty <- expr pdef fname indents
                              pure (x, ty))
            (x, ty) <- pure loc.val
-           (do symbol "**"
+           (do drig <- dpairSymbol
                rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
                pure (PDPair (boundToFC fname (mergeBounds start rest))
+                            drig
                             (PRef (boundToFC fname loc) (UN x))
                             ty
                             rest.val))
@@ -245,9 +260,11 @@ mutual
   nestedDpair fname start indents
       = dpairType fname start indents
     <|> do l <- expr pdef fname indents
-           loc <- bounds (symbol "**")
+           loc <- bounds dpairSymbol
+           drig <- pure loc.val
            rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
            pure (PDPair (boundToFC fname (mergeBounds start rest))
+                        drig
                         l
                         (PImplicit (boundToFC fname (mergeBounds start rest)))
                         rest.val)
@@ -274,9 +291,11 @@ mutual
     <|> do dpairType fname s indents <* symbol ")"
     <|> do e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
-           (do loc <- bounds (symbol "**")
+           (do loc <- bounds dpairSymbol
+               drig <- pure loc.val
                rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* symbol ")")
                pure (PDPair (boundToFC fname (mergeBounds s rest))
+                            drig
                             e.val
                             (PImplicit (boundToFC fname (mergeBounds s rest)))
                             rest.val)) <|>

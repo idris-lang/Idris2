@@ -88,7 +88,7 @@ mutual
        PIdiom : FC -> PTerm -> PTerm
        PList : FC -> List PTerm -> PTerm
        PPair : FC -> PTerm -> PTerm -> PTerm
-       PDPair : FC -> PTerm -> PTerm -> PTerm -> PTerm
+       PDPair : FC -> (RigCount, RigCount) -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
        PIfThenElse : FC -> PTerm -> PTerm -> PTerm -> PTerm
        PComprehension : FC -> PTerm -> List PDo -> PTerm
@@ -150,7 +150,7 @@ mutual
   getPTermLoc (PIdiom fc _) = fc
   getPTermLoc (PList fc _) = fc
   getPTermLoc (PPair fc _ _) = fc
-  getPTermLoc (PDPair fc _ _ _) = fc
+  getPTermLoc (PDPair fc _ _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
   getPTermLoc (PIfThenElse fc _ _ _) = fc
   getPTermLoc (PComprehension fc _ _) = fc
@@ -480,6 +480,19 @@ record Module where
   documentation : String
   decls : List PDecl
 
+public export
+showDPairOneRig : RigCount -> String
+showDPairOneRig rig =
+  case rig == erased of
+    True => "0"
+    False => case rig == linear of
+      True => "1"
+      False => "*"
+
+public export
+showDPairRig : (RigCount, RigCount) -> String
+showDPairRig (l, r) = showDPairOneRig l ++ "|" ++ showDPairOneRig r
+
 mutual
   showAlt : PClause -> String
   showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
@@ -601,9 +614,11 @@ mutual
     showPrec d (PList _ xs)
         = "[" ++ showSep ", " (map (showPrec d) xs) ++ "]"
     showPrec d (PPair _ l r) = "(" ++ showPrec d l ++ ", " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
-                                 " ** " ++ showPrec d r ++ ")"
+    showPrec d (PDPair _ drig l (PImplicit _) r)
+        = "(" ++ showPrec d l ++ " " ++ showDPairRig drig ++ " " ++ showPrec d r ++ ")"
+    showPrec d (PDPair _ drig l ty r)
+        = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
+                                 " " ++ showDPairRig drig ++ " " ++ showPrec d r ++ ")"
     showPrec _ (PUnit _) = "()"
     showPrec d (PIfThenElse _ x t e) = "if " ++ showPrec d x ++ " then " ++ showPrec d t ++
                                  " else " ++ showPrec d e
@@ -940,8 +955,9 @@ mapPTermM f = goPTerm where
       PPair fc <$> goPTerm x
                <*> goPTerm y
       >>= f
-    goPTerm (PDPair fc x y z) =
-      PDPair fc <$> goPTerm x
+    goPTerm (PDPair fc drig x y z) =
+      PDPair fc drig
+                <$> goPTerm x
                 <*> goPTerm y
                 <*> goPTerm z
       >>= f

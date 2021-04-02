@@ -143,11 +143,25 @@ pairname = NS builtinNS (UN "Pair")
 mkpairname : Name
 mkpairname = NS builtinNS (UN "MkPair")
 
-dpairname : Name
-dpairname = NS dpairNS (UN "DPair")
-
-mkdpairname : Name
-mkdpairname = NS dpairNS (UN "MkDPair")
+dpairFromRig : (RigCount, RigCount) -> (Name, Name)
+dpairFromRig (l, r) =
+  case l == erased of
+    True => case r == erased of
+      True => (NS dpairNS (UN "DPair00"), NS dpairNS (UN "MkDPair00"))
+      False => case r == linear of
+        True => (NS dpairNS (UN "DPair01"), NS dpairNS (UN "MkDPair01"))
+        False => (NS dpairNS (UN "Exists"), NS dpairNS (UN "Evidence"))
+    False => case l == linear of
+      True => case r == erased of
+        True => (NS dpairNS (UN "DPair10"), NS dpairNS (UN "MkDPair10"))
+        False => case r == linear of
+          True => (NS dpairNS (UN "DPair11"), NS dpairNS (UN "MkDPair11"))
+          False => (NS dpairNS (UN "DPair1W"), NS dpairNS (UN "MkDPair1W"))
+      False => case r == erased of
+        True => (NS dpairNS (UN "Subset"), NS dpairNS (UN "Element"))
+        False => case r == linear of
+          True => (NS dpairNS (UN "Res"), NS dpairNS (UN "#"))
+          False => (NS dpairNS (UN "DPair"), NS dpairNS (UN "MkDPair"))
 
 data Bang : Type where
 
@@ -319,25 +333,28 @@ mutual
            let pval = apply (IVar fc mkpairname) [l', r']
            pure $ IAlternative fc (UniqueDefault pval)
                   [apply (IVar fc pairname) [l', r'], pval]
-  desugarB side ps (PDPair fc (PRef nfc (UN n)) (PImplicit _) r)
+  desugarB side ps (PDPair fc drig (PRef nfc (UN n)) (PImplicit _) r)
       = do r' <- desugarB side ps r
-           let pval = apply (IVar fc mkdpairname) [IVar nfc (UN n), r']
+           let (tcon, dcon) = dpairFromRig drig
+           let pval = apply (IVar fc dcon) [IVar nfc (UN n), r']
            pure $ IAlternative fc (UniqueDefault pval)
-                  [apply (IVar fc dpairname)
+                  [apply (IVar fc tcon)
                       [Implicit nfc False,
                        ILam nfc top Explicit (Just (UN n)) (Implicit nfc False) r'],
                    pval]
-  desugarB side ps (PDPair fc (PRef nfc (UN n)) ty r)
+  desugarB side ps (PDPair fc drig (PRef nfc (UN n)) ty r)
       = do ty' <- desugarB side ps ty
            r' <- desugarB side ps r
-           pure $ apply (IVar fc dpairname)
+           let (tcon, dcon) = dpairFromRig drig
+           pure $ apply (IVar fc tcon)
                         [ty',
                          ILam nfc top Explicit (Just (UN n)) ty' r']
-  desugarB side ps (PDPair fc l (PImplicit _) r)
+  desugarB side ps (PDPair fc drig l (PImplicit _) r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
-           pure $ apply (IVar fc mkdpairname) [l', r']
-  desugarB side ps (PDPair fc l ty r)
+           let (tcon, dcon) = dpairFromRig drig
+           pure $ apply (IVar fc dcon) [l', r']
+  desugarB side ps (PDPair fc drig l ty r)
       = throw (GenericMsg fc "Invalid dependent pair type")
   desugarB side ps (PUnit fc)
       = pure $ IAlternative fc (UniqueDefault (IVar fc (UN "MkUnit")))

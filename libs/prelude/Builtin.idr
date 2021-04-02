@@ -96,6 +96,58 @@ namespace DPair
   data Res : (a : Type) -> (a -> Type) -> Type where
        (#) : (val : a) -> (1 r : t val) -> Res a t
 
+  ||| A dependent pair in which the first field (witness) should be
+  ||| erased at runtime.
+  |||
+  ||| We can use `Exists` to construct dependent types in which the
+  ||| type-level value is erased at runtime but used at compile time.
+  ||| This type-level value could represent, for instance, a value
+  ||| required for an intrinsic invariant required as part of the
+  ||| dependent type's representation.
+  |||
+  ||| @type The type of the type-level value in the proof.
+  ||| @this The dependent type that requires an instance of `type`.
+  public export
+  record Exists (0 type : Type) this where
+    constructor Evidence
+    0 fst : type
+    snd : this fst
+
+  ||| A dependent pair in which the second field (evidence) should not
+  ||| be required at runtime.
+  |||
+  ||| We can use `Subset` to provide extrinsic invariants about a
+  ||| value and know that these invariants are erased at
+  ||| runtime but used at compile time.
+  |||
+  ||| @type The type-level value's type.
+  ||| @pred The dependent type that requires an instance of `type`.
+  public export
+  record Subset type pred where
+    constructor Element
+    fst : type
+    0 snd : pred fst
+
+  public export
+  data DPair00 : (a : Type) -> (a -> Type) -> Type where
+    MkDPair00 : (0 x : a) -> (0 y : p x) -> DPair00 a p
+
+  public export
+  data DPair01 : (a : Type) -> (a -> Type) -> Type where
+    MkDPair01 : (0 x : a) -> (1 y : p x) -> DPair01 a p
+
+  public export
+  data DPair10 : (a : Type) -> (a -> Type) -> Type where
+    MkDPair10 : (1 x : a) -> (0 y : p x) -> DPair10 a p
+
+  public export
+  data DPair11 : (a : Type) -> (a -> Type) -> Type where
+    MkDPair11 : (1 x : a) -> (1 y : p x) -> DPair11 a p
+
+  public export
+  data DPair1W : (a : Type) -> (a -> Type) -> Type where
+    MkDPair1W : (1 x : a) -> (y : p x) -> DPair1W a p
+
 -- The empty type
 
 ||| The empty type, also known as the trivially false proposition.

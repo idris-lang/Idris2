@@ -18,7 +18,7 @@ namespace Any
     There : {0 xs : Lazy (LazyList a)} -> Any p xs -> Any p (x :: xs)
 
   public export
-  toExists : Any p xs -> Exists p
+  toExists : Any p xs -> Exists a p
   toExists (Here prf) = Evidence _ prf
   toExists (There p) = toExists p
 

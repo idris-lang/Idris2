@@ -241,13 +241,21 @@ isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 
+reservedDPairSymbols : List String
+reservedDPairSymbols = "**" :: (do
+  let list = ["0", "1", "*"]
+  l <- list
+  r <- list
+  pure (l ++ "|" ++ r))
+
 -- Valid symbols which have a special meaning so can't be operators
 export
 reservedSymbols : List String
 reservedSymbols
     = symbols ++ groupSymbols ++ (groupClose <$> groupSymbols) ++
+      reservedDPairSymbols ++
       ["%", "\\", ":", "=", ":=", "|", "|||", "<-", "->", "=>", "?", "!",
-       "&", "**", "..", "~"]
+       "&", "..", "~"]
 
 fromBinLit : String -> Integer
 fromBinLit str
@@ -309,6 +317,7 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
+      <|> match (choice $ exact <$> reservedDPairSymbols) Symbol
       <|> match doubleLit (\x => DoubleLit (cast x))
       <|> match binLit (\x => IntegerLit (fromBinLit x))
       <|> match hexLit (\x => IntegerLit (fromHexLit x))

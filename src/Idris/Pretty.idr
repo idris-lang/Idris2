@@ -288,8 +288,10 @@ mutual
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
       go d (PList _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec <$> xs))
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
-      go d (PDPair _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
-      go d (PDPair _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)
+      go d (PDPair _ drig l (PImplicit _) r)
+        = group $ parens (go startPrec l <++> pretty (showDPairRig drig) <+> line <+> go startPrec r)
+      go d (PDPair _ drig l ty r)
+        = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty (showDPairRig drig) <+> line <+> go startPrec r)
       go d (PUnit _) = "()"
       go d (PIfThenElse _ x t e) =
         parenthesise (d > appPrec) $ group $ align $ hang 2 $ vsep

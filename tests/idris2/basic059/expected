@@ -1,0 +1,86 @@
+1/1: Building DepPair (DepPair.idr)
+Main>  0 a : Type
+ 0 p : a -> Type
+ 0 x : a
+ 0 y : p x
+------------------------------
+h00 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+ 0 x : a
+ 1 y : p x
+------------------------------
+h01 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+ 0 x : a
+   y : p x
+------------------------------
+h0W : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+ 1 x : a
+ 0 y : p x
+------------------------------
+h10 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+ 1 x : a
+ 1 y : p x
+------------------------------
+h11 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+ 1 x : a
+   y : p x
+------------------------------
+h1W : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+   x : a
+ 0 y : p x
+------------------------------
+hW0 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+   x : a
+ 1 y : p x
+------------------------------
+hW1 : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+   x : a
+   y : p x
+------------------------------
+hWW : ()
+Main>  0 a : Type
+ 0 p : a -> Type
+   x : a
+   y : p x
+------------------------------
+hWW' : ()
+Main>  0 b : Type
+ 0 a : Type
+ 0 p : a -> Type
+ 1 val : b
+ 0 x : a
+ 0 y : p x
+------------------------------
+h10W1 : ()
+Main>  0 b : Type
+ 0 a : Type
+ 0 p : a -> b -> Type
+ 1 x : a
+   y : b
+ 1 z : p x y
+------------------------------
+h11W1 : ()
+Main>  0 b : Type
+ 0 a : Type
+ 0 p : a -> b -> Type
+ 1 x : a
+   y : b
+   z : p x y
+------------------------------
+h1W11 : ()
+Main> Bye for now!

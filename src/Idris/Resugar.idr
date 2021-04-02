@@ -44,7 +44,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PBracketed _ _) = False
     needed (PRef _ _) = False
     needed (PPair _ _ _) = False
-    needed (PDPair _ _ _ _) = False
+    needed (PDPair _ _ _ _ _) = False
     needed (PUnit _) = False
     needed (PComprehension _ _ _) = False
     needed (PList _ _) = False
@@ -110,6 +110,18 @@ extractNat acc tm = case tm of
 
 mutual
 
+  rigFromDPairTConName : String -> Maybe (RigCount, RigCount)
+  rigFromDPairTConName "DPair00" = Just (erased, erased)
+  rigFromDPairTConName "DPair01" = Just (erased, linear)
+  rigFromDPairTConName "Exists" = Just (erased, top)
+  rigFromDPairTConName "DPair10" = Just (linear, erased)
+  rigFromDPairTConName "DPair11" = Just (linear, linear)
+  rigFromDPairTConName "DPair1W" = Just (linear, top)
+  rigFromDPairTConName "Subset" = Just (top, erased)
+  rigFromDPairTConName "Res" = Just (top, linear)
+  rigFromDPairTConName "DPair" = Just (top, top)
+  rigFromDPairTConName _ = Nothing
+
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
   sugarAppM : PTerm -> Maybe PTerm
@@ -118,13 +130,14 @@ mutual
        then case nameRoot nm of
          "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
          "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
-         "DPair"  => case unbracket r of
-            PLam _ _ _ n _ r' => pure $ PDPair fc n (unbracket l) (unbracket r')
-            _                 => Nothing
          "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
          "==="    => pure $ PEq fc (unbracket l) (unbracket r)
          "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
-         _        => Nothing
+         root        => case rigFromDPairTConName root of
+           Nothing => Nothing
+           Just drig => case unbracket r of
+            PLam _ _ _ n _ r' => pure $ PDPair fc drig n (unbracket l) (unbracket r')
+            _                 => Nothing
        else if nameRoot nm == "::"
                then case sugarApp (unbracket r) of
                  PList fc xs => pure $ PList fc (unbracketApp l :: xs)

@@ -54,7 +54,7 @@ namespace Any
 
   ||| Forget the membership proof
   export
-  toExists : Any p xs -> Exists p
+  toExists : Any p xs -> Exists a p
   toExists (Here prf) = Evidence _ prf
   toExists (There prf) = toExists prf
 
