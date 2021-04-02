@@ -149,7 +149,7 @@ mutual
   prettyTerm = go Open
     where
       startPrec : Prec
-      startPrec = User 5
+      startPrec = User 0
       appPrec : Prec
       appPrec = User 10
       leftAppPrec : Prec

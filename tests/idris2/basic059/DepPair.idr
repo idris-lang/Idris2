@@ -1,3 +1,8 @@
+-- test that such operators are parsable
+infix 10 ***
+infix 10 *|
+infix 10 |*
+
 test00 : {0 p : _} -> (1 v : (x : a 0|0 p x)) -> ()
 test00 (x 0|0 y) = ?h00
 

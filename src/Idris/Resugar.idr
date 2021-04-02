@@ -60,10 +60,10 @@ bracket outer inner tm
             else pure tm'
 
 startPrec : Nat
-startPrec = 5
+startPrec = 0
 
 tyPrec : Nat
-tyPrec = 6
+tyPrec = 1
 
 appPrec : Nat
 appPrec = 999
