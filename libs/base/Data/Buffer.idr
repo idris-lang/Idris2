@@ -186,7 +186,7 @@ getDouble buf loc
 
 -- Get the length of a string in bytes, rather than characters
 export
-%foreign "C:strlen,libc 6"
+%foreign "scheme:blodwen-stringbytelen"
 stringByteLength : String -> Int
 
 %foreign "scheme:blodwen-buffer-setstring"

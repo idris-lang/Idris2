@@ -66,3 +66,4 @@ version: "bar"
 bzs: \#\'a\n\t\\'
 """
 """##
+    printLn "contains\NULcharacter"
