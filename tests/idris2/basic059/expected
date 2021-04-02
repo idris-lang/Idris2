@@ -83,4 +83,5 @@ Main>  0 b : Type
    z : p x y
 ------------------------------
 h1W11 : ()
+Main> Main.atest10W1 : {0 p : a -> b -> Type} -> (1 x : a) -> (0 y : b) -> (0 _ : p x y) -> (x : a 1|0 y : b *|1 p x y)
 Main> Bye for now!
