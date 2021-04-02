@@ -42,6 +42,26 @@ Bifunctor These where
 
 %inline
 public export
+Bifoldable These where
+  bifoldr f _ acc (This a)   = f a acc
+  bifoldr _ g acc (That b)   = g b acc
+  bifoldr f g acc (Both a b) = f a (g b acc)
+
+  bifoldl f _ acc (This a)   = f acc a
+  bifoldl _ g acc (That b)   = g acc b
+  bifoldl f g acc (Both a b) = f (g acc b) a
+
+  binull _ = False
+
+%inline
+public export
+Bitraversable These where
+  bitraverse f _ (This a)   = This <$> f a
+  bitraverse _ g (That b)   = That <$> g b
+  bitraverse f g (Both a b) = [| Both (f a) (g b) |]
+
+%inline
+public export
 Functor (These a) where
   map = mapSnd
 
