@@ -70,9 +70,3 @@ bifold : Monoid m => These m m -> m
 bifold (This a)   = a
 bifold (That b)   = b
 bifold (Both a b) = a <+> b
-
-public export
-bitraverse : Applicative f => (a -> f c) -> (b -> f d) -> These a b -> f (These c d)
-bitraverse f g (This a)   = [| This (f a) |]
-bitraverse f g (That b)   = [| That (g b) |]
-bitraverse f g (Both a b) = [| Both (f a) (g b) |]
