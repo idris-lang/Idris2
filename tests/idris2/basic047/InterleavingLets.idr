@@ -1,3 +1,5 @@
+%hide Subset
+
 data Tag = MkTag
 
 data Elem :  a -> List a ->Type where
