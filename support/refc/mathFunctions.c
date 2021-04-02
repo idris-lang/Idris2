@@ -40,6 +40,19 @@ Value *sub_double(Value *x, Value *y)
     return (Value *)makeDouble(((Value_Double *)x)->d - ((Value_Double *)y)->d);
 }
 
+/* negate */
+Value *negate_i32(Value *x)
+{
+    return (Value *)makeInt32(-((Value_Int32 *)x)->i32);
+}
+Value *negate_i64(Value *x)
+{
+    return (Value *)makeInt64(-((Value_Int64 *)x)->i64);
+}
+Value *negate_double(Value *x)
+{
+    return (Value *)makeDouble(-((Value_Double *)x)->d);
+}
 /* mul */
 Value *mul_i32(Value *x, Value *y)
 {
@@ -174,6 +187,18 @@ Value *lt_char(Value *x, Value *y)
     }
 }
 
+Value *lt_string(Value *x, Value *y)
+{
+    if (strcmp(((Value_String *)x)->str, ((Value_String *)y)->str) < 0)
+    {
+        return (Value *)makeInt32(1);
+    }
+    else
+    {
+        return (Value *)makeInt32(0);
+    }
+}
+
 /* gt */
 Value *gt_i32(Value *x, Value *y)
 {
@@ -211,6 +236,18 @@ Value *gt_double(Value *x, Value *y)
 Value *gt_char(Value *x, Value *y)
 {
     if (((Value_Char *)x)->c > ((Value_Char *)y)->c)
+    {
+        return (Value *)makeInt32(1);
+    }
+    else
+    {
+        return (Value *)makeInt32(0);
+    }
+}
+
+Value *gt_string(Value *x, Value *y)
+{
+    if (strcmp(((Value_String *)x)->str, ((Value_String *)y)->str) > 0)
     {
         return (Value *)makeInt32(1);
     }
@@ -323,6 +360,18 @@ Value *lte_char(Value *x, Value *y)
     }
 }
 
+Value *lte_string(Value *x, Value *y)
+{
+    if (strcmp(((Value_String *)x)->str, ((Value_String *)y)->str) <= 0)
+    {
+        return (Value *)makeInt32(1);
+    }
+    else
+    {
+        return (Value *)makeInt32(0);
+    }
+}
+
 /* gte */
 Value *gte_i32(Value *x, Value *y)
 {
@@ -335,6 +384,7 @@ Value *gte_i32(Value *x, Value *y)
         return (Value *)makeInt32(0);
     }
 }
+
 Value *gte_i64(Value *x, Value *y)
 {
     if (((Value_Int64 *)x)->i64 >= ((Value_Int64 *)y)->i64)
@@ -346,6 +396,7 @@ Value *gte_i64(Value *x, Value *y)
         return (Value *)makeInt32(0);
     }
 }
+
 Value *gte_double(Value *x, Value *y)
 {
     if (((Value_Double *)x)->d >= ((Value_Double *)y)->d)
@@ -357,9 +408,22 @@ Value *gte_double(Value *x, Value *y)
         return (Value *)makeInt32(0);
     }
 }
+
 Value *gte_char(Value *x, Value *y)
 {
     if (((Value_Char *)x)->c >= ((Value_Char *)y)->c)
+    {
+        return (Value *)makeInt32(1);
+    }
+    else
+    {
+        return (Value *)makeInt32(0);
+    }
+}
+
+Value *gte_string(Value *x, Value *y)
+{
+    if (strcmp(((Value_String *)x)->str, ((Value_String *)y)->str) >= 0)
     {
         return (Value *)makeInt32(1);
     }
