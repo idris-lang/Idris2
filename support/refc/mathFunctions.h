@@ -16,6 +16,11 @@ Value *sub_i32(Value *x, Value *y);
 Value *sub_i64(Value *x, Value *y);
 Value *sub_double(Value *x, Value *y);
 
+/* negate */
+Value *negate_i32(Value *x);
+Value *negate_i64(Value *x);
+Value *negate_double(Value *x);
+
 /* mul */
 Value *mul_i32(Value *x, Value *y);
 Value *mul_i64(Value *x, Value *y);
@@ -55,12 +60,14 @@ Value *lt_i32(Value *x, Value *y);
 Value *lt_i64(Value *x, Value *y);
 Value *lt_double(Value *x, Value *y);
 Value *lt_char(Value *x, Value *y);
+Value *lt_string(Value *x, Value *y);
 
 /* gt */
 Value *gt_i32(Value *x, Value *y);
 Value *gt_i64(Value *x, Value *y);
 Value *gt_double(Value *x, Value *y);
 Value *gt_char(Value *x, Value *y);
+Value *gt_string(Value *x, Value *y);
 
 /* eq */
 Value *eq_i32(Value *x, Value *y);
@@ -74,11 +81,12 @@ Value *lte_i32(Value *x, Value *y);
 Value *lte_i64(Value *x, Value *y);
 Value *lte_double(Value *x, Value *y);
 Value *lte_char(Value *x, Value *y);
+Value *lte_string(Value *x, Value *y);
 
 /* gte */
 Value *gte_i32(Value *x, Value *y);
 Value *gte_i64(Value *x, Value *y);
 Value *gte_double(Value *x, Value *y);
 Value *gte_char(Value *x, Value *y);
-
+Value *gte_string(Value *x, Value *y);
 #endif

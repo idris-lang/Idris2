@@ -61,6 +61,7 @@ showcCleanStringChar '$' = ("_dollar" ++)
 showcCleanStringChar ',' = ("_comma" ++)
 showcCleanStringChar '#' = ("_number" ++)
 showcCleanStringChar '%' = ("_percent" ++)
+showcCleanStringChar '~' = ("_tilde" ++)
 showcCleanStringChar c
    = if c < chr 32 || c > chr 126
         then (("u" ++ pad (asHex (cast c))) ++)
@@ -202,7 +203,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 ||| Generate scheme for a primitive function.
 cOp : PrimFn arity -> Vect arity String -> String
-cOp (Neg ty)      [x]       = "-" ++ x
+cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
 cOp StrTail       [x]       = "tail(" ++ x ++ ")"
@@ -629,7 +630,7 @@ mutual
                 makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 1 constantArray "multiDoubleCompare"
             _ => pure ("ERROR_NOT_DOUBLE_OR_STRING", "ERROR_NOT_DOUBLE_OR_STRING")
     makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) k constantArray compareFct = do
-        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = \"" ++ extractConstant constant ++ "\";"
+        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = " ++ extractConstant constant ++ ";"
         makeNonIntSwitchStatementConst alts (k+1) constantArray compareFct
 
 
