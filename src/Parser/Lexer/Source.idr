@@ -317,7 +317,7 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
-      <|> match (choice $ exact <$> reservedDPairSymbols) Symbol
+      <|> match ((choice $ exact <$> reservedDPairSymbols) <+> expect space) Symbol
       <|> match doubleLit (\x => DoubleLit (cast x))
       <|> match binLit (\x => IntegerLit (fromBinLit x))
       <|> match hexLit (\x => IntegerLit (fromHexLit x))
