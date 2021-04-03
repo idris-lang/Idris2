@@ -240,9 +240,11 @@ export
 pathLookup : List String -> IO (Maybe String)
 pathLookup names = do
   path <- getEnv "PATH"
+  let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
   let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
-  let candidates = [p ++ "/" ++ x | p <- pathList,
-                                    x <- names]
+  let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                         x <- names,
+                                         y <- extensions]
   firstExists candidates
 
 
@@ -269,7 +271,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])

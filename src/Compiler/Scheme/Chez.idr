@@ -30,18 +30,11 @@ import System.Info
 
 %default covering
 
-pathLookup : IO String
-pathLookup
-    = do path <- idrisGetEnv "PATH"
-         let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
-         let candidates = [p ++ "/" ++ x | p <- pathList,
-                                           x <- ["chez", "chezscheme9.5", "scheme", "scheme.exe"]]
-         e <- firstExists candidates
-         pure $ fromMaybe "/usr/bin/env scheme" e
-
 findChez : IO String
 findChez
-    = do Just chez <- idrisGetEnv "CHEZ" | Nothing => pathLookup
+    = do Just chez <- idrisGetEnv "CHEZ"
+            | Nothing =>
+                pure $ fromMaybe "/usr/bin/env scheme" !(pathLookup ["chez", "chezscheme9.5", "scheme"])
          pure chez
 
 -- Given the chez compiler directives, return a list of pairs of:
