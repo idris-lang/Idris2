@@ -1058,6 +1058,10 @@ directive fname indents
          dpt <- intLit
          atEnd indents
          pure (AutoImplicitDepth (fromInteger dpt))
+  <|> do pragma "nf_metavar_threshold"
+         dpt <- intLit
+         atEnd indents
+         pure (NFMetavarThreshold (fromInteger dpt))
   <|> do pragma "pair"
          ty <- name
          f <- name

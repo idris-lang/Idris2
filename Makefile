@@ -82,7 +82,7 @@ test-lib: contrib
 
 libs : prelude base contrib network test-lib
 
-testbin: test-lib install
+testbin: test-lib
 	@${MAKE} -C tests testbin IDRIS2=../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 test: testbin

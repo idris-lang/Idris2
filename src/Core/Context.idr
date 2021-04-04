@@ -2211,6 +2211,13 @@ setAutoImplicitLimit max
          put Ctxt (record { options->elabDirectives->autoImplicitLimit = max } defs)
 
 export
+setNFThreshold : {auto c : Ref Ctxt Defs} ->
+                 Nat -> Core ()
+setNFThreshold max
+    = do defs <- get Ctxt
+         put Ctxt (record { options->elabDirectives->nfThreshold = max } defs)
+
+export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
                Core Bool
 isLazyActive
