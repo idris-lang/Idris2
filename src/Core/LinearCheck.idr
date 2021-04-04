@@ -291,6 +291,7 @@ mutual
                       if isErased rig_in
                          then erased
                          else top -- checking as if an inspectable run-time type
+                 Let _ _ _ _ => rig_in
                  _ => if isErased rig_in
                          then erased
                          else linear
