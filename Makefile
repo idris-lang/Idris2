@@ -38,8 +38,8 @@ else
 endif
 
 # Library and data paths for test
-IDRIS2_TEST_LIBS := ${IDRIS2_CURDIR}/lib
-IDRIS2_TEST_DATA := ${IDRIS2_CURDIR}/support
+IDRIS2_TEST_LIBS ?= ${IDRIS2_CURDIR}/lib
+IDRIS2_TEST_DATA ?= ${IDRIS2_CURDIR}/support
 
 # Library and data paths for bootstrap-test
 IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/lib
@@ -91,14 +91,14 @@ test-lib: contrib
 libs : prelude base contrib network test-lib
 
 testbin:
-	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_DATA:IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_LIBS:IDRIS2_TEST_LIBS}
+	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
 
 test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_DATA:IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_LIBS:IDRIS2_TEST_LIBS}
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
 
 support:
 	@${MAKE} -C support/c
@@ -120,6 +120,7 @@ clean: clean-libs support-clean
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
 	$(RM) -r build
+	$(RM) -r lib
 
 install: install-idris2 install-support install-libs
 
@@ -178,7 +179,7 @@ bootstrap-racket: support support-lib
 	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
-	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_LIBS=${IDRIS2_BOOT_TEST_LIBS}
+	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_TEST_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_TEST_LIBS=${IDRIS2_BOOT_TEST_LIBS}
 
 bootstrap-clean:
 	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}

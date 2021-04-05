@@ -8,6 +8,7 @@ result
 *.d
 *.a
 *.dll
+*.dylib
 
 # Editor/IDE Related
 .\#* # Emacs swap file
