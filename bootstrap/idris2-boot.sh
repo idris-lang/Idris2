@@ -8,7 +8,7 @@ if [ -z "$SCHEME" ]; then
 fi
 
 case $(uname -s) in
-    OpenBSD|FreeBSD|NetBSD)
+    OpenBSD | FreeBSD | NetBSD)
         REALPATH="grealpath"
         ;;
 
@@ -17,8 +17,7 @@ case $(uname -s) in
         ;;
 esac
 
-if ! command -v "$REALPATH" >/dev/null
-then
+if ! command -v "$REALPATH" >/dev/null; then
     echo "$REALPATH is required for Chez code generator."
     exit 1
 fi

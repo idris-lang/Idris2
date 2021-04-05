@@ -9,7 +9,7 @@ fi
 echo "Bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
 
 case $(uname -s) in
-    OpenBSD|FreeBSD|NetBSD)
+    OpenBSD | FreeBSD | NetBSD)
         REALPATH="grealpath"
         ;;
 
@@ -18,8 +18,7 @@ case $(uname -s) in
         ;;
 esac
 
-if ! command -v "$REALPATH" >/dev/null
-then
+if ! command -v "$REALPATH" >/dev/null; then
     echo "$REALPATH is required for Racket code generator."
     exit 1
 fi

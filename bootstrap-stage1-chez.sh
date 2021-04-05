@@ -20,5 +20,5 @@ ${SCHEME} --script compile.ss
 # Put the result in the usual place where the target goes
 mkdir -p ../build/exec
 mkdir -p ../build/exec/idris2_app
-install idris2-boot ../build/exec/idris2
+install idris2-boot.sh ../build/exec/idris2
 install idris2_app/* ../build/exec/idris2_app
