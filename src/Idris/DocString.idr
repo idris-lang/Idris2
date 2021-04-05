@@ -69,7 +69,7 @@ getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
          all@(_ :: _) <- lookupCtxtName n (gamma defs)
-             | _ => throw (UndefinedName fc n)
+             | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => pure ["No documentation for " ++ show n]
@@ -162,7 +162,7 @@ getDocsForName fc n
     showDoc (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
-                  | Nothing => throw (UndefinedName fc n)
+                  | Nothing => undefinedName fc n
              ty <- normaliseHoles defs [] (type def)
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
                               ++ "\n" ++ addNL (indent str)

@@ -38,7 +38,7 @@ else
 endif
 
 # Library and data paths for test
-IDRIS2_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/lib
+IDRIS2_TEST_LIBS := ${IDRIS2_CURDIR}/lib
 IDRIS2_TEST_DATA := ${IDRIS2_CURDIR}/support
 
 # Library and data paths for bootstrap-test
@@ -51,14 +51,18 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
+.PHONY: all idris2-exec ${TARGET} testbin support support-lib support-clean clean distclean FORCE
 
-all: support ${TARGET} libs
+all: support ${TARGET} support-lib libs
 
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
+
+support-lib:
+	mkdir -p lib
+	install support/c/${IDRIS2_SUPPORT} lib
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
@@ -87,14 +91,14 @@ test-lib: contrib
 libs : prelude base contrib network test-lib
 
 testbin:
-	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
+	@${MAKE} -C tests testbin IDRIS2=../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_DATA:IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_LIBS:IDRIS2_TEST_LIBS}
 
 test: testbin
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
+	@${MAKE} -C tests only=$(only) IDRIS2=../../../${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_DATA:IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_LIBS:IDRIS2_TEST_LIBS}
 
 support:
 	@${MAKE} -C support/c
@@ -129,7 +133,7 @@ ifeq ($(OS), windows)
 	-install ${TARGET}.cmd ${PREFIX}/bin
 endif
 	mkdir -p ${PREFIX}/lib/
-	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
+	install lib/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 

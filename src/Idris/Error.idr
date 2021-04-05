@@ -15,7 +15,7 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Data.List1
+import Libraries.Data.List1 as Lib
 import Libraries.Data.List.Extra
 import Data.Maybe
 import Data.Stream
@@ -293,8 +293,8 @@ perror (AllFailed ts)
 
     allUndefined : List (Maybe Name, Error) -> Maybe Error
     allUndefined [] = Nothing
-    allUndefined [(_, UndefinedName loc e)] = Just (UndefinedName loc e)
-    allUndefined ((_, UndefinedName _ e) :: es) = allUndefined es
+    allUndefined [(_, err@(UndefinedName _ _))] = Just err
+    allUndefined ((_, err@(UndefinedName _ _)) :: es) = allUndefined es
     allUndefined _ = Nothing
 perror (RecordTypeNeeded fc _)
     = pure $ errorDesc (reflow "Can't infer type for this record update.") <+> line <+> !(ploc fc)
@@ -430,7 +430,7 @@ perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty
 perror (NoForeignCC fc) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
     let res = vsep [ errorDesc (reflow "The given specifier was not accepted by any backend. Available backends" <+> colon)
-                   , indent 2 (concatWith (\x,y => x <+> ", " <+> y) (map reflow cgs))
+                   , indent 2 (concatWith (\ x, y => x <+> ", " <+> y) (map reflow cgs))
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)
     pure res
@@ -452,6 +452,14 @@ perror (InRHS fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing right hand side of" <++> code (pretty !(prettyName n))) <+> dot
                   , !(perror err)
                   ]
+
+perror (MaybeMisspelling err ns) = pure $ !(perror err) <+> case ns of
+  (n ::: []) => reflow "Did you mean:" <++> pretty n <+> "?"
+  _ => let (xs, x) = Lib.unsnoc ns in
+       reflow "Did you mean any of:"
+       <++> concatWith (surround (comma <+> space)) (map pretty xs)
+       <+> comma <++> reflow "or" <++> pretty x <+> "?"
+
 
 export
 pwarning : {auto c : Ref Ctxt Defs} ->

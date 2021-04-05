@@ -214,7 +214,7 @@ mutual
   lcheck {vars} rig erase env (Meta fc n idx args)
       = do defs <- get Ctxt
            Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
-                | _ => throw (UndefinedName fc n)
+                | _ => undefinedName fc n
            let expand = branchZero
                           (case type gdef of
                                 Erased _ _ => True -- defined elsewhere, need to expand
@@ -291,6 +291,7 @@ mutual
                       if isErased rig_in
                          then erased
                          else top -- checking as if an inspectable run-time type
+                 Let _ _ _ _ => rig_in
                  _ => if isErased rig_in
                          then erased
                          else linear
@@ -344,7 +345,7 @@ mutual
                             fused ++ aused)
                 NApp _ (NRef _ n) _ =>
                       do Just _ <- lookupCtxtExact n (gamma defs)
-                              | _ => throw (UndefinedName fc n)
+                              | _ => undefinedName fc n
                          tfty <- getTerm gfty
                          throw (GenericMsg fc ("Linearity checking failed on " ++ show f' ++
                               " (" ++ show tfty ++ " not a function type)"))
@@ -584,14 +585,14 @@ mutual
   lcheckDef fc rig True env n
       = do defs <- get Ctxt
            Just def <- lookupCtxtExact n (gamma defs)
-                | Nothing => throw (UndefinedName fc n)
+                | Nothing => undefinedName fc n
            pure (type def)
   lcheckDef fc rig False env n
       = do defs <- get Ctxt
            let Just idx = getNameID n (gamma defs)
-                | Nothing => throw (UndefinedName fc n)
+                | Nothing => undefinedName fc n
            Just def <- lookupCtxtExact (Resolved idx) (gamma defs)
-                | Nothing => throw (UndefinedName fc n)
+                | Nothing => undefinedName fc n
            rigSafe (multiplicity def) rig
            if linearChecked def
               then pure (type def)

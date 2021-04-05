@@ -253,8 +253,8 @@ reservedNames
     = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
        "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
-isNotReserved : WithBounds String -> SourceEmptyRule ()
-isNotReserved x
+isNotReservedIdent : WithBounds String -> SourceEmptyRule ()
+isNotReservedIdent x
     = if x.val `elem` reservedNames
       then failLoc x.bounds $ "can't use reserved name " ++ x.val
       else pure ()
@@ -263,45 +263,55 @@ export
 opNonNS : Rule Name
 opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 
-export
-name : Rule Name
-name = opNonNS <|> do
+identWithCapital : (capitalised : Bool) -> WithBounds String ->
+                   SourceEmptyRule ()
+identWithCapital b x = if b then isCapitalisedIdent x else pure ()
+
+nameWithCapital : (capitalised : Bool) -> Rule Name
+nameWithCapital b = opNonNS <|> do
   nsx <- bounds namespacedIdent
-  -- writing (ns, x) <- namespacedIdent leads to an unsoled constraint.
-  -- I tried to write a minimised test case but could not reproduce the error
-  -- on a simplified example.
-  let ns = fst nsx.val
-  let x = snd <$> nsx
-  opNS (mkNestedNamespace ns x.val) <|> nameNS ns x
+  opNS nsx <|> nameNS nsx
  where
 
-  nameNS : Maybe Namespace -> WithBounds String -> SourceEmptyRule Name
-  nameNS ns x = do
-    isNotReserved x
-    pure $ mkNamespacedName ns x.val
+  nameNS : WithBounds (Maybe Namespace, String) -> SourceEmptyRule Name
+  nameNS nsx = do
+    let id = snd <$> nsx
+    identWithCapital b id
+    isNotReservedIdent id
+    pure $ uncurry mkNamespacedName nsx.val
 
-  opNS : Namespace -> Rule Name
-  opNS ns = do
+  opNS : WithBounds (Maybe Namespace, String) -> Rule Name
+  opNS nsx = do
+    isCapitalisedIdent (snd <$> nsx)
+    let ns = uncurry mkNestedNamespace nsx.val
     symbol ".("
     n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
 
 export
+name : Rule Name
+name = nameWithCapital False
+
+export
 capitalisedName : Rule Name
-capitalisedName = do
+capitalisedName = nameWithCapital True
+
+export
+capitalisedIdent : Rule String
+capitalisedIdent = do
   id <- bounds identPart
   isCapitalisedIdent id
-  isNotReserved id
-  pure (UN id.val)
+  isNotReservedIdent id
+  pure id.val
 
 export
 dataConstructorName : Rule Name
-dataConstructorName = opNonNS <|> capitalisedName
+dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
 
 export %inline
 dataTypeName : Rule Name
-dataTypeName = dataConstructorName
+dataTypeName = opNonNS <|> capitalisedName
 
 export
 IndentInfo : Type

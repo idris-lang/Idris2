@@ -253,6 +253,7 @@ mutual
        DefaultTotality : TotalReq -> Directive
        PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
+       NFMetavarThreshold : Nat -> Directive
 
   public export
   data PField : Type where

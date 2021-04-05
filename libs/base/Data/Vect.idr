@@ -1,5 +1,6 @@
 module Data.Vect
 
+import Data.DPair
 import Data.List
 import Data.Nat
 import public Data.Fin
@@ -755,10 +756,29 @@ diag : Vect len (Vect len elem) -> Vect len elem
 diag []             = []
 diag ((x::xs)::xss) = x :: diag (map tail xss)
 
-public export
-range : {len : Nat} -> Vect len (Fin len)
-range {len=Z}   = []
-range {len=S _} = FZ :: map FS range
+namespace Fin
+
+  public export
+  tabulate : {len : Nat} -> (Fin len -> a) -> Vect len a
+  tabulate {len = Z} f = []
+  tabulate {len = S _} f = f FZ :: tabulate (f . FS)
+
+  public export
+  range : {len : Nat} -> Vect len (Fin len)
+  range = tabulate id
+
+namespace Subset
+
+  public export
+  tabulate : {len : Nat} -> (Subset Nat (`LT` len) -> a) -> Vect len a
+  tabulate {len = Z} f = []
+  tabulate {len = S _} f
+    = f (Element Z ltZero)
+    :: Subset.tabulate (\ (Element n prf) => f (Element (S n) (LTESucc prf)))
+
+  public export
+  range : {len : Nat} -> Vect len (Subset Nat (`LT` len))
+  range = tabulate id
 
 --------------------------------------------------------------------------------
 -- Zippable

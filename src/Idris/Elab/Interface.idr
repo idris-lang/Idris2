@@ -357,7 +357,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                          pure (record { name = n } mt)) meth_decls
          defs <- get Ctxt
          Just ty <- lookupTyExact ns_iname (gamma defs)
-              | Nothing => throw (UndefinedName fc iname)
+              | Nothing => undefinedName fc iname
          let implParams = getImplParams ty
 
          updateIfaceSyn ns_iname conName

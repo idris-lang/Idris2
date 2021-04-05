@@ -811,7 +811,7 @@ search fc rig opts topty n_in
                                 throw (InternalError $ "Not a hole: " ++ show n ++ " in " ++
                                         show (map recname (recData opts)))
               _ => do log "interaction.search" 10 $ show n_in ++ " not found"
-                      throw (UndefinedName fc n_in)
+                      undefinedName fc n_in
   where
     lookupHoleName : Name -> Context ->
                      Core (Maybe (Name, Int, GlobalDef))
@@ -864,7 +864,7 @@ exprSearchOpts : {auto c : Ref Ctxt Defs} ->
 exprSearchOpts opts fc n_in hints
     = do defs <- get Ctxt
          Just (n, idx, gdef) <- lookupHoleName n_in defs
-             | Nothing => throw (UndefinedName fc n_in)
+             | Nothing => undefinedName fc n_in
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
          opts' <- if getRecData opts

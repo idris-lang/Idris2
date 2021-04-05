@@ -68,6 +68,7 @@ idrisTestsError = MkTestPool []
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
+       "error016",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008"]
@@ -125,7 +126,15 @@ idrisTestsRegression = MkTestPool []
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037", "reg038"]
+       "reg036", "reg037", "reg038", "reg039"]
+
+idrisTestsData : TestPool
+idrisTestsData = MkTestPool []
+      [-- Data types
+       "data001",
+       -- Records, access and dependent update
+       "record001", "record002", "record003", "record004", "record005",
+       "record006", "record007"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool []
@@ -133,6 +142,9 @@ idrisTests = MkTestPool []
       ["docs001", "docs002",
        -- Evaluator
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       -- Unfortunately the behaviour of Double is platform dependent so the
+       -- following test is turned off.
+       -- "evaluator005",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Miscellaneous REPL
@@ -151,9 +163,6 @@ idrisTests = MkTestPool []
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",
-       -- Records, access and dependent update
-       "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007",
        -- Quotation and reflection
        "reflection001", "reflection002", "reflection003", "reflection004",
        "reflection005", "reflection006", "reflection007", "reflection008",
@@ -247,6 +256,11 @@ baseLibraryTests = MkTestPool [Chez, Node]
   , "system_info001"
   ]
 
+codegenTests : TestPool
+codegenTests = MkTestPool []
+  [ "con001"
+  ]
+
 main : IO ()
 main = runner
   [ testPaths "ttimp" ttimpTests
@@ -260,6 +274,7 @@ main = runner
   , testPaths "idris2" idrisTestsLinear
   , testPaths "idris2" idrisTestsPerformance
   , testPaths "idris2" idrisTestsRegression
+  , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
@@ -270,6 +285,7 @@ main = runner
   , testPaths "racket" racketTests
   , testPaths "node" nodeTests
   , testPaths "templates" templateTests
+  , testPaths "codegen" codegenTests
   ] where
 
     testPaths : String -> TestPool -> TestPool

@@ -316,3 +316,44 @@ Semigroup v => Semigroup (NameMap v) where
 export
 (Semigroup v) => Monoid (NameMap v) where
   neutral = empty
+
+
+treeFilterByM : Monad m => (Key -> m Bool) -> Tree n v -> m (NameMap v)
+treeFilterByM test = loop empty where
+
+  loop : NameMap v -> Tree _ v -> m (NameMap v)
+  loop acc (Leaf k v)
+    = do True <- test k | _ => pure acc
+         pure (insert k v acc)
+  loop acc (Branch2 t1 _ t2)
+    = do acc <- loop acc t1
+         loop acc t2
+  loop acc (Branch3 t1 _ t2 _ t3)
+    = do acc <- loop acc t1
+         acc <- loop acc t2
+         loop acc t3
+
+export
+filterByM : Monad m => (Name -> m Bool) -> NameMap v -> m (NameMap v)
+filterByM test Empty = pure Empty
+filterByM test (M _ t) = treeFilterByM test t
+
+treeMapMaybeM : Monad m => (Key -> m (Maybe a)) -> Tree _ v -> m (NameMap a)
+treeMapMaybeM test = loop empty where
+
+  loop : NameMap a -> Tree _ v -> m (NameMap a)
+  loop acc (Leaf k v)
+    = do Just a <- test k | _ => pure acc
+         pure (insert k a acc)
+  loop acc (Branch2 t1 _ t2)
+    = do acc <- loop acc t1
+         loop acc t2
+  loop acc (Branch3 t1 _ t2 _ t3)
+    = do acc <- loop acc t1
+         acc <- loop acc t2
+         loop acc t3
+
+export
+mapMaybeM : Monad m => (Name -> m (Maybe a)) -> NameMap v -> m (NameMap a)
+mapMaybeM test Empty = pure Empty
+mapMaybeM test (M _ t) = treeMapMaybeM test t

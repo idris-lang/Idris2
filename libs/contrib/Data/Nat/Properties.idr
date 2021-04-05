@@ -19,8 +19,8 @@ unfoldDoubleS = irrelevantEq $ Calc $
   ~~ 2 + 2 * n   ...( cong (2 +) (sym unfoldDouble) )
 
 export
-multRightCancel : (a,b,r : Nat) -> Not (r = 0) -> a*r = b*r -> a = b
-multRightCancel a      b    0           r_nz ar_eq_br = void $ r_nz Refl
+multRightCancel : (a,b,r : Nat) -> (0 _ : NonZero r) -> a*r = b*r -> a = b
+multRightCancel a      b    0           r_nz ar_eq_br = void (absurd r_nz)
 multRightCancel 0      0    r@(S predr) r_nz ar_eq_br = Refl
 multRightCancel 0     (S b) r@(S predr) r_nz ar_eq_br impossible
 multRightCancel (S a)  0    r@(S predr) r_nz ar_eq_br impossible

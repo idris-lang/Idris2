@@ -106,6 +106,7 @@ modules =
     Libraries.Data.DList,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
+    Libraries.Data.IOMatrix,
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,
     Libraries.Data.List.Lazy,
@@ -119,6 +120,7 @@ modules =
     Libraries.Data.StringTrie,
 
     Libraries.Text.Bounded,
+    Libraries.Text.Distance.Levenshtein,
     Libraries.Text.Lexer,
     Libraries.Text.Lexer.Core,
     Libraries.Text.Lexer.Tokenizer,
