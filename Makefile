@@ -160,7 +160,7 @@ install-libs:
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
 # Bootstrapping using SCHEME
-bootstrap: support
+bootstrap: support support-lib
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
 		bootstrap/idris2_app/idris2.ss \
@@ -169,7 +169,7 @@ bootstrap: support
 	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
-bootstrap-racket: support
+bootstrap-racket: support support-lib
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
 		bootstrap/idris2_app/idris2.rkt \
