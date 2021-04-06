@@ -20,11 +20,10 @@ The first codegen in the list will be set as the default codegen.
 Anyone who is interested in implementing a custom back-end needs to answer the
 following questions:
 
-- Which IR should be consumed by the custom back-end?
+- Which Intermediate Representation (IR) should be consumed by the custom back-end?
 - How to represent primitive values defined by the ``Core.TT.Constant`` type?
 - How to represent Algebraic Data Types?
 - How to implement special values?
-- Association between data and type constructors.
 - How to implement primitive operations?
 - How to compile IR expressions?
 - How to compile Definitions?
@@ -116,8 +115,8 @@ much as possible from it for the custom back-end.
 Another possibility is to implement a runtime that is capable of handling memory
 management and threading.
 
-Which IR should be consumed by the custom back-end?
----------------------------------------------------
+Which Intermediate Representation (IR) should be consumed by the custom back-end?
+---------------------------------------------------------------------------------
 
 Now lets turn our attention to the different intermediate representations (IRs)
 that Idris provides.
@@ -134,7 +133,7 @@ The question to answer here is: Which one should be picked?
 Which one fits to the custom back-end?
 
 How to represent primitive values defined by the ``Core.TT.Constant`` type?
------------------------------------------------------------------------
+---------------------------------------------------------------------------
 
 After one selects the IR to be used during code generation, the next question
 to answer is how primitive types should be represented in the back-end.
@@ -176,7 +175,8 @@ Strings are encoded in UTF-8.
 
 It is not always clear who is responsible for freeing up a ``String`` created by
 a component other than the Idris runtime. Strings created in Idris will
-always have value.
+always have value, unlike possible String representation of the host technology,
+where for example NULL pointer can be a value, which can not happen on the Idris side.
 This creates constraints on the possible representations of the Strings in the
 custom back-end and diverging from the Idris representation is not a good idea.
 The best approach here is to build a conversion layer between the string
@@ -264,11 +264,8 @@ in the IR:
   two parameters.
 - One for the ``Left`` constructor with arity of three.
   Three may be surprising, as the constructor only has one argument in Idris,
-  but we should keep in mind the type parameters for  the data type too.
-  Although the arguments associated with types can be erased in certain cases
-  and they are not real part of the constructor arguments, the number of real arguments needs to
-  be computed. See later in the 'How to compile IR expressions?' section.
-- One for the ``Right`` constructor with arity of three. Same as above.
+  but we should keep in mind the type parameters for the data type too.
+- One for the ``Right`` constructor with arity of three.
 
 In the IR constructors have unique names. For efficiency reasons,
 Idris assigns a unique integer tag to each data constructors so that constructor
@@ -350,43 +347,6 @@ as it could occur in place of normal values.
 The simplest approach is to implement it as a special data constructor and let
 the host technology provided optimizations take care of its removal.
 
-Association between data and type constructors.
------------------------------------------------
-
-A very important question to answer is how to think about the set of data constructors and their
-type constructors. The information of which data constructor corresponds to which type constructor
-can be derived from the ``Ref Ctx``. See the code snippet below:
-
-.. code-block:: idris
-
-  Core.Context.Def
-  TCon : (tag : Int) -> (arity : Nat) ->
-         (parampos : List Nat) -> -- parameters
-         (detpos : List Nat) -> -- determining arguments
-         (flags : TypeFlags) -> -- should 'auto' implicits check
-         (mutwith : List Name) ->
-         (datacons : List Name) ->
-         (detagabbleBy : Maybe (List Nat)) ->
-         Def
-
-We need to decide how the case expression on structured data will be implemented.
-If the host technology has pattern matching
-on structured data, mapping case expressions to that construct seems to be the obvious choice. But
-in these cases the type constructor associated with the data constructors is probably needed
-for the code generator of the host technology. If the host technology doesn't support pattern
-matching on data constructors, then we need to approach the problem differently. For example,
-try matching on the associated tag of the data constructor inside a case/switch expression, or create a
-chain of if-then-else calls.
-
-If data constructor association is needed, a new problem is introduced. Because Idris does pattern
-match on types too, implementation of pattern matching on types shouldn't be different from
-the implementation of pattern match on data. Because of that reason the custom back-end
-needs to create a data type in the host technology that collects all the data types defined
-in the Idris program and also present in the IR definitions as Constructors that
-represents types. For the collected type constructors, the back-end should create a data type
-in the host technology which summarizes them. With this host data type it will be possible
-to implement a case pattern match on the types of the Idris program.
-
 How to implement primitive operations?
 --------------------------------------
 
@@ -406,7 +366,7 @@ These primitive operations can be grouped as:
   ``Sqrt``, ``Floor``, ``Ceiling``)
 - Casting of numeric and string values
 - An unsafe  cast operation ``BelieveMe``
-- A ``Crash``operation taking a type and a string and creating a value at that
+- A ``Crash`` operation taking a type and a string and creating a value at that
   type by raising an error.
 
 BelieveMe
@@ -597,7 +557,7 @@ applies only one value and creates a closure from the application. For erased
 values the operation ``NULL`` assigns an empty/null value for the register.
 
 How to implement the Foreign Function Interface?
---------------------------------------------
+------------------------------------------------
 
 The Foreign Function Interface (FFI) plays a big role in running Idris programs.
 The primitive operations which are mentioned above are functions for
@@ -644,7 +604,7 @@ The foreign types are:
   Represents the current state of the world. This should refer to a token that
   is passed around between function calls.
   The implementation of the World value should contain back-end
-  specific values information about the state of the Idris runtime.
+  specific values and information about the state of the Idris runtime.
 - ``CFStruct`` of type ``String -> List (String, CFType) -> CFType`` is the
   foreign type associated with the ``System.FFI.Struct``.
   It represents a C like structure in the custom back-end.
