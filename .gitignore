@@ -18,6 +18,8 @@ result
 
 /build
 
+/lib
+
 /docs/build
 
 /libs/**/build
