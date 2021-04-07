@@ -33,19 +33,19 @@ usleep sec = primIO (prim__usleep sec)
 
 -- Get the number of arguments
 %foreign "scheme:blodwen-arg-count"
-         "node:lambda:() => process.argv.length" 
+         "node:lambda:() => process.argv.length"
 prim__getArgCount : PrimIO Int
 
 -- Get argument number `n`
 %foreign "scheme:blodwen-arg"
-         "node:lambda:n => process.argv[n]" 
+         "node:lambda:n => process.argv[n]"
 prim__getArg : Int -> PrimIO String
 
 export
 getArgs : HasIO io => io (List String)
 getArgs = do
             n <- primIO prim__getArgCount
-            if n > 0 
+            if n > 0
               then for [0..n-1] (\x => primIO $ prim__getArg x)
               else pure []
 
