@@ -630,6 +630,40 @@ record POptsFilterResult where
   oopts : List CLOpt
   hasError : Bool
 
+data POptSummary : Type where
+  PPackage : PkgCommand -> String -> POptSummary
+  POpt : POptSummary
+  PIgnore : POptSummary
+  PErr : POptSummary
+
+pOptSummary : CLOpt -> POptSummary
+pOptSummary (Package cmd f)  = PPackage cmd f
+pOptSummary Quiet            = POpt
+pOptSummary Verbose          = POpt
+pOptSummary Timing           = POpt
+pOptSummary (Logging l)      = POpt
+pOptSummary (DumpCases f)    = POpt
+pOptSummary (DumpLifted f)   = POpt
+pOptSummary (DumpVMCode f)   = POpt
+pOptSummary DebugElabCheck   = POpt
+pOptSummary (SetCG f)        = POpt
+pOptSummary (BuildDir f)     = POpt
+pOptSummary (OutputDir f)    = POpt
+pOptSummary (ConsoleWidth n) = PIgnore
+pOptSummary (Color b)        = PIgnore
+pOptSummary NoBanner         = PIgnore
+pOptSummary x                = PErr
+
+pOptUpdate : CLOpt -> (POptsFilterResult -> POptsFilterResult)
+pOptUpdate opt with (pOptSummary opt)
+  pOptUpdate opt | (PPackage cmd f) = {pkgDetails := Just (cmd, f)}
+  pOptUpdate opt | POpt    = {oopts $= (opt::)}
+  pOptUpdate opt | PIgnore = id
+  pOptUpdate opt | PErr    = {hasError := True}
+
+initPOpt : POptsFilterResult
+initPOpt = MkPFR Nothing Nil False
+
 errorMsg : String
 errorMsg = unlines
   [ "Not all command line options can be used to override package options.\n"
@@ -648,28 +682,6 @@ errorMsg = unlines
   ]
 
 
-filterPackageOpts : POptsFilterResult -> List CLOpt -> Core (POptsFilterResult)
-filterPackageOpts acc Nil                  = pure acc
-filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetails = Just (cmd, f)}  acc) xs
-
-filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
-filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
-filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
-filterPackageOpts acc (Logging l     ::xs) = filterPackageOpts (record {oopts $= (Logging l::)}      acc) xs
-filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
-filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
-filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
-filterPackageOpts acc (DebugElabCheck::xs) = filterPackageOpts (record {oopts $= (DebugElabCheck::)} acc) xs
-filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
-filterPackageOpts acc (BuildDir f    ::xs) = filterPackageOpts (record {oopts $= (BuildDir f::)}     acc) xs
-filterPackageOpts acc (OutputDir f   ::xs) = filterPackageOpts (record {oopts $= (OutputDir f::)}    acc) xs
-
-filterPackageOpts acc (ConsoleWidth n::xs) = filterPackageOpts acc xs
-filterPackageOpts acc (Color b       ::xs) = filterPackageOpts acc xs
-filterPackageOpts acc (NoBanner      ::xs) = filterPackageOpts acc xs
-
-filterPackageOpts acc (x::xs) = filterPackageOpts (record {hasError = True} acc) xs
-
 -- If there's a package option, it must be the only option, so reject if
 -- it's not
 export
@@ -681,9 +693,8 @@ processPackageOpts : {auto c : Ref Ctxt Defs} ->
 processPackageOpts Nil = pure False
 processPackageOpts [Package cmd f] = do processPackage cmd f Nil
                                         pure True
-
 processPackageOpts opts
-    = do (MkPFR (Just (cmd, f)) opts' err) <- filterPackageOpts (MkPFR Nothing Nil False) opts
+    = do (MkPFR (Just (cmd, f)) opts' err) <- pure $ foldr pOptUpdate initPOpt opts
              | (MkPFR Nothing opts _) => pure False
 
          if err
