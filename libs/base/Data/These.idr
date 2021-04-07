@@ -49,7 +49,7 @@ Bifoldable These where
 
   bifoldl f _ acc (This a)   = f acc a
   bifoldl _ g acc (That b)   = g acc b
-  bifoldl f g acc (Both a b) = f (g acc b) a
+  bifoldl f g acc (Both a b) = g (f acc a) b
 
   binull _ = False
 
