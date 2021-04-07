@@ -382,7 +382,7 @@ interface Bifoldable p where
   bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
   bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
 
-  binull : p a a -> Lazy Bool
+  binull : p a b -> Lazy Bool
   binull = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True
 
 ||| Left associative monadic bifold over a structure.
