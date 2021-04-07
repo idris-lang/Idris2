@@ -966,7 +966,7 @@ dataBody fname mincol start n indents ty
                                                symbol "]"
                                                pure $ forget dopts)
                          cs <- blockAfter mincol (tyDecls (mustWork dataConstructorName) "" fname)
-                         pure (opts, concat $ map forget cs))
+                         pure (opts, concatMap forget cs))
          (opts, cs) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
