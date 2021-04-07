@@ -9,6 +9,8 @@
 
 /build
 
+/lib
+
 idris2docs_venv
 /docs/build
 
