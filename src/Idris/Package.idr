@@ -623,45 +623,44 @@ processPackage opts (cmd, file)
                            | errs => coreLift (exitWith (ExitFailure 1))
                         runRepl (map snd $ mainmod pkg)
 
-record POptsFilterResult where
+record PackageOpts where
   constructor MkPFR
   pkgDetails : List (PkgCommand, String)
   oopts : List CLOpt
   hasError : Bool
 
-data POptSummary : Type where
-  PPackage : PkgCommand -> String -> POptSummary
-  POpt : POptSummary
-  PIgnore : POptSummary
-  PErr : POptSummary
+partitionOpts : List CLOpt -> PackageOpts
+partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
+  where
+    data OptType : Type where
+      PPackage : PkgCommand -> String -> OptType
+      POpt : OptType
+      PIgnore : OptType
+      PErr : OptType
+    optType : CLOpt -> OptType
+    optType (Package cmd f)  = PPackage cmd f
+    optType Quiet            = POpt
+    optType Verbose          = POpt
+    optType Timing           = POpt
+    optType (Logging l)      = POpt
+    optType (DumpCases f)    = POpt
+    optType (DumpLifted f)   = POpt
+    optType (DumpVMCode f)   = POpt
+    optType DebugElabCheck   = POpt
+    optType (SetCG f)        = POpt
+    optType (BuildDir f)     = POpt
+    optType (OutputDir f)    = POpt
+    optType (ConsoleWidth n) = PIgnore
+    optType (Color b)        = PIgnore
+    optType NoBanner         = PIgnore
+    optType x                = PErr
 
-pOptSummary : CLOpt -> POptSummary
-pOptSummary (Package cmd f)  = PPackage cmd f
-pOptSummary Quiet            = POpt
-pOptSummary Verbose          = POpt
-pOptSummary Timing           = POpt
-pOptSummary (Logging l)      = POpt
-pOptSummary (DumpCases f)    = POpt
-pOptSummary (DumpLifted f)   = POpt
-pOptSummary (DumpVMCode f)   = POpt
-pOptSummary DebugElabCheck   = POpt
-pOptSummary (SetCG f)        = POpt
-pOptSummary (BuildDir f)     = POpt
-pOptSummary (OutputDir f)    = POpt
-pOptSummary (ConsoleWidth n) = PIgnore
-pOptSummary (Color b)        = PIgnore
-pOptSummary NoBanner         = PIgnore
-pOptSummary x                = PErr
-
-pOptUpdate : CLOpt -> (POptsFilterResult -> POptsFilterResult)
-pOptUpdate opt with (pOptSummary opt)
-  pOptUpdate opt | (PPackage cmd f) = {pkgDetails $= ((cmd, f)::)}
-  pOptUpdate opt | POpt    = {oopts $= (opt::)}
-  pOptUpdate opt | PIgnore = id
-  pOptUpdate opt | PErr    = {hasError := True}
-
-initPOpt : POptsFilterResult
-initPOpt = MkPFR Nil Nil False
+    pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
+    pOptUpdate opt with (optType opt)
+      pOptUpdate opt | (PPackage cmd f) = record {pkgDetails $= ((cmd, f)::)}
+      pOptUpdate opt | POpt    = record {oopts $= (opt::)}
+      pOptUpdate opt | PIgnore = id
+      pOptUpdate opt | PErr    = record {hasError = True}
 
 errorMsg : String
 errorMsg = unlines
@@ -686,8 +685,8 @@ processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto o : Ref ROpts REPLOpts} ->
                      List CLOpt -> Core Bool
 processPackageOpts opts
-    = do (MkPFR cmds@(_::_) opts' err) <- pure $ foldr pOptUpdate initPOpt opts
-             | (MkPFR Nil opts _) => pure False
+    = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
+             | (MkPFR Nil opts' _) => pure False
          if err
            then coreLift $ putStrLn (errorMsg ++ "\n")
            else traverse_ (processPackage opts') cmds
