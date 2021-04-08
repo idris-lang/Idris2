@@ -690,13 +690,9 @@ processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto o : Ref ROpts REPLOpts} ->
                      List CLOpt ->
                      Core Bool
-processPackageOpts Nil = pure False
-processPackageOpts [Package cmd f] = do processPackage cmd f Nil
-                                        pure True
 processPackageOpts opts
     = do (MkPFR (Just (cmd, f)) opts' err) <- pure $ foldr pOptUpdate initPOpt opts
              | (MkPFR Nothing opts _) => pure False
-
          if err
            then do coreLift $ putStrLn (errorMsg ++ "\n")
                    pure True
