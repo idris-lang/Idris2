@@ -606,7 +606,7 @@ mutual
   case_ fname indents
       = do b <- bounds (do keyword "case"
                            scr <- expr pdef fname indents
-                           commitKeyword indents "of"
+                           mustWork (commitKeyword indents "of")
                            alts <- block (caseAlt fname)
                            pure (scr, alts))
            (scr, alts) <- pure b.val
