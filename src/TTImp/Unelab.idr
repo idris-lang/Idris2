@@ -35,6 +35,13 @@ data IArg
    | Auto FC RawImp
    | Named FC Name RawImp
 
+getFnArgs : RawImp -> List IArg -> (RawImp, List IArg)
+getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
+getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
+getFnArgs (IAutoApp fc f arg) args = getFnArgs f (Auto fc arg :: args)
+getFnArgs tm args = (tm, args)
+
+
 data UnelabMode
      = Full
      | NoSugar Bool -- uniqify names
@@ -111,11 +118,6 @@ mutual
              IVar fc (NS ns (CaseBlock n i))
                  => pure (!(unelabCase (NS ns (CaseBlock n i)) args tm), ty)
              _ => pure (tm, ty)
-    where
-      getFnArgs : RawImp -> List IArg -> (RawImp, List IArg)
-      getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
-      getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
-      getFnArgs tm args = (tm, args)
 
   -- Turn a term back into an unannotated TTImp. Returns the type of the
   -- unelaborated term so that we can work out where to put the implicit
