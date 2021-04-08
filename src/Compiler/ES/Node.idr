@@ -18,11 +18,10 @@ import Data.Maybe
 
 findNode : IO String
 findNode = do
-   Just node <- idrisGetEnv "NODE"
-      | Nothing => do
-         path <- pathLookup ["node"]
-         pure $ fromMaybe "/usr/bin/env node" path
-   pure node
+   Nothing <- idrisGetEnv "NODE"
+      | Just node => pure node
+   path <- pathLookup ["node"]
+   pure $ fromMaybe "/usr/bin/env node" path
 
 ||| Compile a TT expression to Node
 compileToNode : Ref Ctxt Defs ->

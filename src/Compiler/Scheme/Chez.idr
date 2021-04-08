@@ -32,10 +32,10 @@ import System.Info
 
 findChez : IO String
 findChez
-    = do Just chez <- idrisGetEnv "CHEZ"
-            | Nothing =>
-                pure $ fromMaybe "/usr/bin/env scheme" !(pathLookup ["chez", "chezscheme9.5", "scheme"])
-         pure chez
+    = do Nothing <- idrisGetEnv "CHEZ"
+            | Just chez => pure chez
+         path <- pathLookup ["chez", "chezscheme9.5", "scheme"]
+         pure $ fromMaybe "/usr/bin/env scheme" path
 
 -- Given the chez compiler directives, return a list of pairs of:
 --   - the library file name
