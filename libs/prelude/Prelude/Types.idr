@@ -389,6 +389,13 @@ elem : Eq a => a -> List a -> Bool
 x `elem` [] = False
 x `elem` (y :: ys) = x == y ||  elem x ys
 
+||| Lookup a value at a given position
+export
+getAt : Nat -> List a -> Maybe a
+getAt Z     (x :: xs) = Just x
+getAt (S k) (x :: xs) = getAt k xs
+getAt _     []        = Nothing
+
 -------------
 -- STREAMS --
 -------------
