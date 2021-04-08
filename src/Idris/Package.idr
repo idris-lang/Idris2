@@ -626,7 +626,7 @@ processPackage cmd file opts
 
 record POptsFilterResult where
   constructor MkPFR
-  pkgDetails : Maybe (PkgCommand, String)
+  pkgDetails : List (PkgCommand, String)
   oopts : List CLOpt
   hasError : Bool
 
@@ -656,13 +656,13 @@ pOptSummary x                = PErr
 
 pOptUpdate : CLOpt -> (POptsFilterResult -> POptsFilterResult)
 pOptUpdate opt with (pOptSummary opt)
-  pOptUpdate opt | (PPackage cmd f) = {pkgDetails := Just (cmd, f)}
+  pOptUpdate opt | (PPackage cmd f) = {pkgDetails $= ((cmd, f)::)}
   pOptUpdate opt | POpt    = {oopts $= (opt::)}
   pOptUpdate opt | PIgnore = id
   pOptUpdate opt | PErr    = {hasError := True}
 
 initPOpt : POptsFilterResult
-initPOpt = MkPFR Nothing Nil False
+initPOpt = MkPFR Nil Nil False
 
 errorMsg : String
 errorMsg = unlines
@@ -681,23 +681,18 @@ errorMsg = unlines
   , "    --output-dir <dir>"
   ]
 
-
--- If there's a package option, it must be the only option, so reject if
--- it's not
 export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt ->
-                     Core Bool
+                     List CLOpt -> Core Bool
 processPackageOpts opts
-    = do (MkPFR (Just (cmd, f)) opts' err) <- pure $ foldr pOptUpdate initPOpt opts
-             | (MkPFR Nothing opts _) => pure False
+    = do (MkPFR cmds@(_::_) opts' err) <- pure $ foldr pOptUpdate initPOpt opts
+             | (MkPFR Nil opts _) => pure False
          if err
-           then do coreLift $ putStrLn (errorMsg ++ "\n")
-                   pure True
-           else do processPackage cmd f opts'
-                   pure True
+           then coreLift $ putStrLn (errorMsg ++ "\n")
+           else traverse_ (\(c, f) => processPackage c f opts') cmds
+         pure True
 
 
 -- find an ipkg file in one of the parent directories
