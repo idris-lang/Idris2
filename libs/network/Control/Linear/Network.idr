@@ -48,7 +48,7 @@ newSocket : LinearIO io
       => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
-      -> (success : (1 _ : Socket Ready) -> L io ())
+      -> (success : (1 sock : Socket Ready) -> L io ())
       -> (fail : SocketError -> L io ())
       -> L io ()
 newSocket fam ty pnum success fail
@@ -57,13 +57,13 @@ newSocket fam ty pnum success fail
          success (MkSocket rawsock)
 
 export
-close : LinearIO io => (1 _ : Socket st) -> L io {use=1} (Socket Closed)
+close : LinearIO io => (1 sock : Socket st) -> L io {use=1} (Socket Closed)
 close (MkSocket sock)
     = do Socket.close sock
          pure1 (MkSocket sock)
 
 export
-done : LinearIO io => (1 _ : Socket Closed) -> L io ()
+done : LinearIO io => (1 sock : Socket Closed) -> L io ()
 done (MkSocket sock) = pure ()
 
 export
@@ -113,7 +113,7 @@ listen (MkSocket sock)
 
 export
 accept : LinearIO io =>
-         (1 _ : Socket Listening) ->
+         (1 sock : Socket Listening) ->
          L io {use=1} (Res (Maybe SocketError)
            (\res => Next Accept (isNothing res)))
 accept (MkSocket sock)
@@ -123,7 +123,7 @@ accept (MkSocket sock)
 
 export
 send : LinearIO io =>
-       (1 _ : Socket Open) ->
+       (1 sock : Socket Open) ->
        (msg : String) ->
        L io {use=1} (Res (Maybe SocketError)
          (\res => Next Send (isNothing res)))
@@ -134,7 +134,7 @@ send (MkSocket sock) msg
 
 export
 recv : LinearIO io =>
-       (1 _ : Socket Open) ->
+       (1 sock : Socket Open) ->
        (len : ByteLength) ->
        L io {use=1} (Res (Either SocketError (String, ResultCode))
          (\res => Next Receive (isRight res)))
@@ -145,7 +145,7 @@ recv (MkSocket sock) len
 
 export
 recvAll : LinearIO io =>
-          (1 _ : Socket Open) ->
+          (1 sock : Socket Open) ->
           L io {use=1} (Res (Either SocketError String)
             (\res => Next Receive (isRight res)))
 recvAll (MkSocket sock)
