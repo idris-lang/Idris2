@@ -591,11 +591,10 @@ parsePkgFile file = do
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 PkgCommand ->
-                 String ->
                  List CLOpt ->
+                 (PkgCommand, String) ->
                  Core ()
-processPackage cmd file opts
+processPackage opts (cmd, file)
     =  if not (isSuffixOf ".ipkg" file)
          then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                  coreLift (exitWith (ExitFailure 1))
@@ -691,7 +690,7 @@ processPackageOpts opts
              | (MkPFR Nil opts _) => pure False
          if err
            then coreLift $ putStrLn (errorMsg ++ "\n")
-           else traverse_ (\(c, f) => processPackage c f opts') cmds
+           else traverse_ (processPackage opts') cmds
          pure True
 
 
