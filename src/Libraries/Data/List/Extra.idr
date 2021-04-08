@@ -39,3 +39,9 @@ splitAfter p xs
     = case breakAfter p xs of
            (chunk, []) => singleton chunk
            (chunk, rest@(_::_)) => cons chunk (splitAfter p (assert_smaller xs rest))
+
+export
+zipMaybe : List a -> List b -> Maybe (List (a, b))
+zipMaybe [] [] = pure []
+zipMaybe (a::as) (b::bs) = ((a, b) ::) <$> zipMaybe as bs
+zipMaybe _ _ = Nothing
