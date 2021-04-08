@@ -2,7 +2,8 @@ module Control.Linear.Network
 
 -- An experimental linear type based API to sockets
 
-import Data.Maybe
+import public Data.Either
+import public Data.Maybe
 
 import Control.Linear.LIO
 
@@ -12,9 +13,35 @@ import Network.Socket
 public export
 data SocketState = Ready | Bound | Listening | Open | Closed
 
+||| Define the domain of SocketState transitions.
+||| Label every such transition.
+public export
+data Action : SocketState -> Type where
+  Bind    : Action Ready
+  Listen  : Action Bound
+  Accept  : Action Listening
+  Send    : Action Open
+  Receive : Action Open
+  Close   : Action st
+
 export
 data Socket : SocketState -> Type where
      MkSocket : Socket.Data.Socket -> Socket st
+
+||| For every label of a SocketState transition
+||| and a success value of the transition,
+||| define its result.
+public export
+Next : (action : Action st)
+    -> (success : Bool)
+    -> Type
+Next Bind    True  = Socket Bound
+Next Listen  True  = Socket Listening
+Next Accept  True  = LPair (Socket Listening) (Socket Open)
+Next Send    True  = Socket Open
+Next Receive True  = Socket Open
+Next Close   True  = Socket Closed
+Next _       False = Socket Closed
 
 export
 newSocket : LinearIO io
@@ -41,17 +68,18 @@ done (MkSocket sock) = pure ()
 
 export
 bind : LinearIO io =>
-       (1 _ : Socket Ready) ->
+       (1 sock : Socket Ready) ->
        (addr : Maybe SocketAddress) ->
        (port : Port) ->
        L io {use=1} (Res (Maybe SocketError)
-         (\res => Socket (case res of
-                               Just _  => Closed
-                               Nothing => Bound)))
+         (\res => Next Bind (isNothing res)))
 bind (MkSocket sock) addr port
-    = do ok <- Socket.bind sock addr port
-         let mbErr = toMaybe (ok /= 0) ok
-         pure1 $ mbErr # MkSocket sock
+    = do code <- Socket.bind sock addr port
+         case code of
+           0 =>
+             pure1 $ Nothing # MkSocket sock
+           err =>
+             pure1 $ Just err # MkSocket sock
 
 export
 connect : LinearIO io =>
@@ -59,32 +87,35 @@ connect : LinearIO io =>
           (addr : SocketAddress) ->
           (port : Port) ->
           L io {use=1} (Res (Maybe SocketError)
-            (\res => Socket (case res of
-                                  Just _  => Closed
-                                  Nothing => Open)))
+            (\case Nothing => Socket Ready
+                   Just _  => Socket Closed))
 connect sock addr port
-    = do ok <- Socket.connect sock addr port
-         let mbErr = toMaybe (ok /= 0) ok
-         pure1 $ mbErr # MkSocket sock
+    = do code <- Socket.connect sock addr port
+         case code of
+           0 =>
+             pure1 $ Nothing # MkSocket sock
+           err =>
+             pure1 $ Just err # MkSocket sock
 
 export
 listen : LinearIO io =>
-         (1 _ : Socket Bound) ->
+         (1 sock : Socket Bound) ->
          L io {use=1} (Res (Maybe SocketError)
-           (\res => Socket (case res of
-                                 Just _  => Closed
-                                 Nothing => Listening)))
+           (\res => Next Listen (isNothing res)))
 listen (MkSocket sock)
-    = do ok <- Socket.listen sock
-         let mbErr = toMaybe (ok /= 0) ok
-         pure1 $ mbErr # MkSocket sock
+    = do code <- Socket.listen sock
+         case code of
+           0 =>
+             pure1 $ Nothing # MkSocket sock
+           err =>
+             pure1 $ Just err # MkSocket sock
+
 
 export
 accept : LinearIO io =>
          (1 _ : Socket Listening) ->
-         L io {use=1} (Res (Maybe SocketError) (\case
-           Just _  => Socket Listening
-           Nothing => LPair (Socket Listening) (Socket Open)))
+         L io {use=1} (Res (Maybe SocketError)
+           (\res => Next Accept (isNothing res)))
 accept (MkSocket sock)
     = do Right (sock', sockaddr) <- Socket.accept sock
              | Left err => pure1 (Just err # MkSocket sock)
@@ -95,9 +126,7 @@ send : LinearIO io =>
        (1 _ : Socket Open) ->
        (msg : String) ->
        L io {use=1} (Res (Maybe SocketError)
-         (\res => Socket (case res of
-                               Just _  => Closed
-                               Nothing => Open)))
+         (\res => Next Send (isNothing res)))
 send (MkSocket sock) msg
     = do Right c <- Socket.send sock msg
              | Left err => pure1 (Just err # MkSocket sock)
@@ -108,9 +137,7 @@ recv : LinearIO io =>
        (1 _ : Socket Open) ->
        (len : ByteLength) ->
        L io {use=1} (Res (Either SocketError (String, ResultCode))
-                         (\res => Socket (case res of
-                                               Left _  => Closed
-                                               Right _ => Open)))
+         (\res => Next Receive (isRight res)))
 recv (MkSocket sock) len
     = do Right msg <- Socket.recv sock len
              | Left err => pure1 (Left err # MkSocket sock)
@@ -120,9 +147,7 @@ export
 recvAll : LinearIO io =>
           (1 _ : Socket Open) ->
           L io {use=1} (Res (Either SocketError String)
-                            (\res => Socket (case res of
-                                                  Left _  => Closed
-                                                  Right _ => Open)))
+            (\res => Next Receive (isRight res)))
 recvAll (MkSocket sock)
     = do Right msg <- Socket.recvAll sock
              | Left err => pure1 (Left err # MkSocket sock)
