@@ -57,7 +57,7 @@ newSocket fam ty pnum success fail
          success (MkSocket rawsock)
 
 export
-close : LinearIO io => (1 sock : Socket st) -> L io {use=1} (Socket Closed)
+close : LinearIO io => (1 sock : Socket st) -> L1 io (Socket Closed)
 close (MkSocket sock)
     = do Socket.close sock
          pure1 (MkSocket sock)
@@ -71,7 +71,7 @@ bind : LinearIO io =>
        (1 sock : Socket Ready) ->
        (addr : Maybe SocketAddress) ->
        (port : Port) ->
-       L io {use=1} (Res (Maybe SocketError)
+       L1 io (Res (Maybe SocketError)
          (\res => Next Bind (isNothing res)))
 bind (MkSocket sock) addr port
     = do code <- Socket.bind sock addr port
@@ -86,7 +86,7 @@ connect : LinearIO io =>
           (sock : Socket) ->
           (addr : SocketAddress) ->
           (port : Port) ->
-          L io {use=1} (Res (Maybe SocketError)
+          L1 io (Res (Maybe SocketError)
             (\case Nothing => Socket Ready
                    Just _  => Socket Closed))
 connect sock addr port
@@ -100,7 +100,7 @@ connect sock addr port
 export
 listen : LinearIO io =>
          (1 sock : Socket Bound) ->
-         L io {use=1} (Res (Maybe SocketError)
+         L1 io (Res (Maybe SocketError)
            (\res => Next Listen (isNothing res)))
 listen (MkSocket sock)
     = do code <- Socket.listen sock
@@ -114,7 +114,7 @@ listen (MkSocket sock)
 export
 accept : LinearIO io =>
          (1 sock : Socket Listening) ->
-         L io {use=1} (Res (Maybe SocketError)
+         L1 io (Res (Maybe SocketError)
            (\res => Next Accept (isNothing res)))
 accept (MkSocket sock)
     = do Right (sock', sockaddr) <- Socket.accept sock
@@ -125,7 +125,7 @@ export
 send : LinearIO io =>
        (1 sock : Socket Open) ->
        (msg : String) ->
-       L io {use=1} (Res (Maybe SocketError)
+       L1 io (Res (Maybe SocketError)
          (\res => Next Send (isNothing res)))
 send (MkSocket sock) msg
     = do Right c <- Socket.send sock msg
@@ -136,7 +136,7 @@ export
 recv : LinearIO io =>
        (1 sock : Socket Open) ->
        (len : ByteLength) ->
-       L io {use=1} (Res (Either SocketError (String, ResultCode))
+       L1 io (Res (Either SocketError (String, ResultCode))
          (\res => Next Receive (isRight res)))
 recv (MkSocket sock) len
     = do Right msg <- Socket.recv sock len
@@ -146,7 +146,7 @@ recv (MkSocket sock) len
 export
 recvAll : LinearIO io =>
           (1 sock : Socket Open) ->
-          L io {use=1} (Res (Either SocketError String)
+          L1 io (Res (Either SocketError String)
             (\res => Next Receive (isRight res)))
 recvAll (MkSocket sock)
     = do Right msg <- Socket.recvAll sock
