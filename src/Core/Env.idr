@@ -59,7 +59,7 @@ revOnto xs [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
         rewrite appendAssociative (reverse vs) [v] xs in
-				  rewrite revOnto [v] vs in Refl
+          rewrite revOnto [v] vs in Refl
 
 revNs : (vs, ns : List a) -> reverse ns ++ reverse vs = reverse (vs ++ ns)
 revNs [] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
@@ -141,7 +141,7 @@ letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
-	-- Quicker, if less safe, to store variables as a Nat, for quick comparison
+  -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
              Env Term vars -> List Nat -> Term vars -> List Nat
   findUsed env used (Local fc r idx p)
@@ -216,9 +216,9 @@ mkShrinkSub [] els
          else (_ ** DropCons SubRefl)
 mkShrinkSub (x :: xs) els
     = let (_ ** subRest) = mkShrinkSub xs (dropFirst els) in
-					if isUsed 0 els
-				     then (_ ** KeepCons subRest)
-				     else (_ ** DropCons subRest)
+      if isUsed 0 els
+        then (_ ** KeepCons subRest)
+        else (_ ** DropCons subRest)
 
 mkShrink : {vars : _} ->
            List (Var vars) ->
@@ -231,7 +231,7 @@ mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
 export
 findSubEnv : {vars : _} ->
              Env Term vars -> Term vars ->
-						 (vars' : List Name ** SubVars vars' vars)
+             (vars' : List Name ** SubVars vars' vars)
 findSubEnv env tm = mkShrink (findUsedLocs env tm)
 
 export
