@@ -1163,13 +1163,12 @@ logNF : {vars : _} ->
 logNF str n msg env tmnf
     = do opts <- getSession
          let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do defs <- get Ctxt
-                    tm <- quote defs env tmnf
-                    tm' <- toFullNames tm
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+         when (keepLog lvl (logLevel opts)) $
+            do defs <- get Ctxt
+               tm <- quote defs env tmnf
+               tm' <- toFullNames tm
+               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
-            else pure ()
 
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
@@ -1179,13 +1178,12 @@ logTermNF' : {vars : _} ->
              LogLevel -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF' lvl msg env tm
     = do opts <- getSession
-         if keepLog lvl (logLevel opts)
-            then do defs <- get Ctxt
-                    tmnf <- normaliseHoles defs env tm
-                    tm' <- toFullNames tmnf
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+         when (keepLog lvl (logLevel opts)) $
+            do defs <- get Ctxt
+               tmnf <- normaliseHoles defs env tm
+               tm' <- toFullNames tmnf
+               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
-            else pure ()
 
 export
 logTermNF : {vars : _} ->
@@ -1202,13 +1200,12 @@ logGlue : {vars : _} ->
 logGlue str n msg env gtm
     = do opts <- getSession
          let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do defs <- get Ctxt
-                    tm <- getTerm gtm
-                    tm' <- toFullNames tm
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+         when (keepLog lvl (logLevel opts)) $
+            do defs <- get Ctxt
+               tm <- getTerm gtm
+               tm' <- toFullNames tm
+               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
-            else pure ()
 
 export
 logGlueNF : {vars : _} ->
@@ -1217,14 +1214,13 @@ logGlueNF : {vars : _} ->
 logGlueNF str n msg env gtm
     = do opts <- getSession
          let lvl = mkLogLevel str n
-         if keepLog lvl (logLevel opts)
-            then do defs <- get Ctxt
-                    tm <- getTerm gtm
-                    tmnf <- normaliseHoles defs env tm
-                    tm' <- toFullNames tmnf
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
+         when (keepLog lvl (logLevel opts)) $
+            do defs <- get Ctxt
+               tm <- getTerm gtm
+               tmnf <- normaliseHoles defs env tm
+               tm' <- toFullNames tmnf
+               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
                                           ++ ": " ++ show tm'
-            else pure ()
 
 export
 logEnv : {vars : _} ->

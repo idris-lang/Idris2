@@ -2,6 +2,7 @@ module TTImp.Unelab
 
 import Core.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.Options
@@ -12,6 +13,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.Strings
 
 %default covering
 
@@ -34,6 +36,22 @@ data IArg
    = Exp FC RawImp
    | Auto FC RawImp
    | Named FC Name RawImp
+
+unIArg : IArg -> RawImp
+unIArg (Exp _ t) = t
+unIArg (Auto _ t) = t
+unIArg (Named _ _ t) = t
+
+Show IArg where
+  show (Exp fc t) = show t
+  show (Auto fc t) = "@{" ++ show t ++ "}"
+  show (Named fc n t) = "{" ++ show n ++ " = " ++ show t ++ "}"
+
+getFnArgs : RawImp -> List IArg -> (RawImp, List IArg)
+getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
+getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
+getFnArgs (IAutoApp fc f arg) args = getFnArgs f (Auto fc arg :: args)
+getFnArgs tm args = (tm, args)
 
 data UnelabMode
      = Full
@@ -87,7 +105,10 @@ mutual
                  Core ImpClause
       mkClause fc dropped (vs ** (env, lhs, rhs))
           = do let pat = nthArg fc dropped lhs
+               logTerm "unelab.case" 20 "Unelaborating LHS" pat
                lhs' <- unelabTy Full env pat
+               logTerm "unelab.case" 20 "Unelaborating RHS" rhs
+               logEnv "unelab.case" 20 "In Env" env
                rhs' <- unelabTy Full env rhs
                pure (PatClause fc (fst lhs') (fst rhs'))
 
@@ -108,14 +129,15 @@ mutual
   unelabSugar _ (tm, ty)
       = let (f, args) = getFnArgs tm [] in
             case f of
-             IVar fc (NS ns (CaseBlock n i))
-                 => pure (!(unelabCase (NS ns (CaseBlock n i)) args tm), ty)
+             IVar fc (NS ns (CaseBlock n i)) =>
+               do log "unelab.case" 20 $ unlines
+                         [ "Unelaborating case " ++ show (n, i)
+                         , "with arguments: " ++ show args
+                         ]
+                  tm <- unelabCase (NS ns (CaseBlock n i)) args tm
+                  log "unelab.case" 20 $ "Unelaborated to: " ++ show tm
+                  pure (tm, ty)
              _ => pure (tm, ty)
-    where
-      getFnArgs : RawImp -> List IArg -> (RawImp, List IArg)
-      getFnArgs (IApp fc f arg) args = getFnArgs f (Exp fc arg :: args)
-      getFnArgs (INamedApp fc f n arg) args = getFnArgs f (Named fc n arg :: args)
-      getFnArgs tm args = (tm, args)
 
   -- Turn a term back into an unannotated TTImp. Returns the type of the
   -- unelaborated term so that we can work out where to put the implicit
@@ -136,7 +158,10 @@ mutual
               Env Term vars -> Term vars ->
               Core (RawImp, Glued vars)
   unelabTy' umode env (Local fc _ idx p)
-      = pure (IVar fc (nameAt p), gnf env (binderType (getBinder p env)))
+      = do let nm = nameAt p
+           log "unelab.case" 20 $ "Found local name: " ++ show nm
+           let ty = gnf env (binderType (getBinder p env))
+           pure (IVar fc nm, ty)
   unelabTy' umode env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
