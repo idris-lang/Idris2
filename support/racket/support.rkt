@@ -409,13 +409,15 @@
 (define (blodwen-clock-second time) (time-second time))
 (define (blodwen-clock-nanosecond time) (time-nanosecond time))
 
-
 (define (blodwen-arg-count)
-  (vector-length (current-command-line-arguments)))
+  (+ (vector-length (current-command-line-arguments)) 1))
 
 (define (blodwen-arg n)
-  (if (< n (vector-length (current-command-line-arguments)))
-       (vector-ref (current-command-line-arguments) n) ""))
+  (cond
+    ((= n 0) (path->string (find-system-path 'run-file)))
+     (< n (+ (vector-length (current-command-line-arguments) 1))
+        (vector-ref (current-command-line-arguments) (- n 1)))
+     (else "")))
 
 (define (blodwen-system cmd)
   (if (system cmd)
