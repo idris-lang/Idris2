@@ -104,6 +104,18 @@ Bifunctor Pair where
 
 %inline
 public export
+Bifoldable Pair where
+  bifoldr f g acc (x, y) = f x (g y acc)
+  bifoldl f g acc (x, y) = g (f acc x) y
+  binull _ = False
+
+%inline
+public export
+Bitraversable Pair where
+  bitraverse f g (a,b) = [| (,) (f a) (g b) |]
+
+%inline
+public export
 Functor (Pair a) where
   map = mapSnd
 
@@ -271,6 +283,23 @@ public export
 Bifunctor Either where
   bimap f _ (Left x) = Left (f x)
   bimap _ g (Right y) = Right (g y)
+
+%inline
+public export
+Bifoldable Either where
+  bifoldr f _ acc (Left a)  = f a acc
+  bifoldr _ g acc (Right b) = g b acc
+
+  bifoldl f _ acc (Left a)  = f acc a
+  bifoldl _ g acc (Right b) = g acc b
+
+  binull _ = False
+
+%inline
+public export
+Bitraversable Either where
+  bitraverse f _ (Left a)  = Left <$> f a
+  bitraverse _ g (Right b) = Right <$> g b
 
 %inline
 public export
