@@ -415,7 +415,7 @@
 (define (blodwen-arg n)
   (cond
     ((= n 0) (path->string (find-system-path 'run-file)))
-     (< n (+ (vector-length (current-command-line-arguments) 1))
+    ((< n (+ (vector-length (current-command-line-arguments)) 1))
         (vector-ref (current-command-line-arguments) (- n 1)))
      (else "")))
 
