@@ -45,20 +45,6 @@ Weaken NestedNames where
 public export
 data BindMode = PI RigCount | PATTERN | NONE
 
-||| Types that are transformed into a faster representation
-||| during codegen.
-public export
-data BuiltinType : Type where
-    ||| A built-in `Nat`-like type
-    ||| `NatLike : [index ->] Type`
-    ||| `SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]`
-    ||| `ZLike : {0 _ : index} -> NatLike [index]`
-    BuiltinNatural : BuiltinType
-
-export
-Show BuiltinType where
-    show BuiltinNatural = "Natural"
-
 mutual
   public export
   data RawImp : Type where
