@@ -3,10 +3,12 @@
 module TTImp.ProcessBuiltin
 
 import Libraries.Data.Bool.Extra
+import Libraries.Data.NameMap
 import Data.List
 
 import Core.Core
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Metadata
 import Core.TT
@@ -75,11 +77,12 @@ getConsGDef c fc = traverse \n => do
 ||| Check a list of constructors has exactly
 ||| 1 'Z'-like constructor
 ||| and 1 `S`-like constructor, which has type `ty -> ty` or `ty arg -> `ty (f arg)`.
-checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core ()
-checkCons c cons ty fc = case !(foldr checkCon (pure (False, False)) cons) of
-    (True, True) => pure ()
-    (False, _) => throw $ GenericMsg fc $ "No 'Z'-like constructors for " ++ show ty ++ "."
-    (_, False) => throw $ GenericMsg fc $ "No 'S'-like constructors for " ++ show ty ++ "."
+||| Returns the 'Z' and 'S' constructor (in that order)
+checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core (Name, Name)
+checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) of
+    (Just s, Just z) => pure (s, z)
+    (Nothing, _) => throw $ GenericMsg fc $ "No 'Z'-like constructors for " ++ show ty ++ "."
+    (_, Nothing) => throw $ GenericMsg fc $ "No 'S'-like constructors for " ++ show ty ++ "."
   where
     ||| Check if a list of names contains a name.
     checkSArgType : List Name -> Core ()
@@ -100,39 +103,54 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (False, False)) cons) of
         pure ()
 
     ||| Check a constructor's arity and type.
-    checkCon : (Name, GlobalDef) -> Core (Bool, Bool) -> Core (Bool, Bool)
+    checkCon : (Name, GlobalDef) -> Core (Maybe Name, Maybe Name) -> Core (Maybe Name, Maybe Name)
     checkCon (n, gdef) has = do
         (hasZ, hasS) <- has
         let DCon _ arity _ = gdef.definition
             | def => throw $ GenericMsg fc $ "Expected data constructor, found:\n" ++ show def
         case arity `minus` length gdef.eraseArgs of
             0 => case hasZ of
-                True => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
-                False => pure (True, hasS)
+                Just _ => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
+                Nothing => pure (Just n, hasS)
             1 => case hasS of
-                True => throw $ GenericMsg fc $ "Multiple 'S'-like constructors for " ++ show ty ++ "."
-                False => do
+                Just _ => throw $ GenericMsg fc $ "Multiple 'S'-like constructors for " ++ show ty ++ "."
+                Nothing => do
                     checkTyS n gdef
-                    pure (hasZ, True)
+                    pure (hasZ, Just n)
             _ => throw $ GenericMsg fc $ "Constructor " ++ show n ++ " doesn't match any pattern for Natural."
 
+addBuiltinNat :
+    {auto c : Ref Ctxt Defs} ->
+    (ty : Name) -> (z : Name) -> (s : Name) -> Core ()
+addBuiltinNat n z s = do
+    log "builtin.Natural.addTransform" 10 $ "Add Builtin Natural transform for " ++ show n
+    update Ctxt $ record
+        { builtinTransforms.natTyNames $= insert n (z, s)
+        , builtinTransforms.natZNames $= insert z ()
+        , builtinTransforms.natSNames $= insert s ()
+        }
 
-||| Check a `%builtin Natural _` pragma is correct.
+||| Check a `%builtin Natural` pragma is correct.
 processBuiltinNatural :
     {auto c : Ref Ctxt Defs} ->
     {auto m : Ref MD Metadata} ->
     {auto u : Ref UST UState} ->
-    Defs -> NestedNames vars -> Env Term vars -> FC -> Name -> Core ()
-processBuiltinNatural ds nest env fc name = do
+    Defs -> FC -> Name -> Core ()
+processBuiltinNatural ds fc name = do
+    log "builtin.Natural" 5 $ "Processing Builtin Natural pragma for " ++ show name
     [(n, _, gdef)] <- lookupCtxtName name ds.gamma
         | [] => throw $ UndefinedName fc name
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc $ "Expected a type constructor, found:\n" ++ show def
     cons <- getConsGDef ds.gamma fc dcons
-    checkCons ds.gamma cons n fc
+    (z, s) <- checkCons ds.gamma cons n fc
+    z' <- getFullName z
+    s' <- getFullName s
+    n <- getFullName name
+    addBuiltinNat n z' s'
 
-||| Check a `%builtin _ _` pragma is correct.
+||| Check a `%builtin` pragma is correct.
 export
 processBuiltin :
     {auto c : Ref Ctxt Defs} ->
@@ -142,4 +160,4 @@ processBuiltin :
 processBuiltin nest env fc type name = do
     ds <- get Ctxt
     case type of
-        BuiltinNatural => processBuiltinNatural ds nest env fc name
+        BuiltinNatural => processBuiltinNatural ds fc name
