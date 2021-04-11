@@ -34,16 +34,34 @@ termConMatch (Meta _ _ i args0) (Meta _ _ j args1)
     = i == j && allTrue (zipWith termConMatch args0 args1)
     -- I don't understand how they're equal if args are different lengths
     -- but this is what's in Core.TT.
+termConMatch (Bind _ _ b s) (Bind _ _ c t) = eqBinderBy termConMatch b c && termConMatch s t
 termConMatch (App _ f _) (App _ g _) = termConMatch f g
 termConMatch (As _ _ a p) (As _ _ b q) = termConMatch a b && termConMatch p q
-termConMatch (TDelayed _ _ tm0) (TDelayed _ _ tm1) = termConMatch tm0 tm1
+termConMatch (TDelayed _ _ tm0) tm1 = termConMatch tm0 tm1
+termConMatch tm0 (TDelayed _ _ tm1) = termConMatch tm0 tm1
     -- don't check for laziness here to give more accurate error messages.
-termConMatch (TDelay _ _ t0 x0) (TDelay _ _ t1 x1) = termConMatch t0 t1 && termConMatch x0 x1
-termConMatch (TForce _ _ t0) (TForce _ _ t1) = termConMatch t0 t1
+termConMatch (TDelay _ _ tm0 x0) (TDelay _ _ tm1 x1) = termConMatch tm0 tm1 && termConMatch x0 x1
+termConMatch (TForce _ _ tm0) tm1 = termConMatch tm0 tm1
+termConMatch tm0 (TForce _ _ tm1) = termConMatch tm0 tm1
 termConMatch (PrimVal _ _) (PrimVal _ _) = True -- no constructor to check.
 termConMatch (Erased _ _) (Erased _ _) = True -- return type can't erased?
 termConMatch (TType _) (TType _) = True
 termConMatch _ _ = False
+
+||| Check a type is strict.
+isStrict : Term vs -> Bool
+isStrict (Local _ _ _ _) = True
+isStrict (Ref _ _ _) = True
+isStrict (Meta _ _ i args) = all isStrict args
+isStrict (Bind _ _ b s) = isStrict (binderType b) && isStrict s
+isStrict (App _ f x) = isStrict f && isStrict x
+isStrict (As _ _ a p) = isStrict a && isStrict p
+isStrict (TDelayed _ _ _) = False
+isStrict (TDelay _ _ f x) = isStrict f && isStrict x
+isStrict (TForce _ _ tm) = isStrict tm
+isStrict (PrimVal _ _) = True
+isStrict (Erased _ _) = True
+isStrict (TType _) = True
 
 ||| Get the name and arity (of non-erased arguments only) of a list of names.
 ||| `cons` should all be data constructors (`DCon`) otherwise it will throw an error.
@@ -77,8 +95,8 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (False, False)) cons) of
             erase = gdef.eraseArgs
         let (_ ** arg) = getFirstNETy type
         let (_ ** ret) = getRetTy type
-        when (not $ termConMatch arg ret) $ throw $ GenericMsg fc $ "incorrect type for 'S'-lke constructor for " ++ show ty ++ "."
-        -- checkSArgType ne
+        unless (termConMatch arg ret) $ throw $ GenericMsg fc $ "Incorrect type for 'S'-like constructor for " ++ show ty ++ "."
+        unless (isStrict arg) $ throw $ GenericMsg fc $ "Natural builtin does not support lazy types, as they can be potentially infinite."
         pure ()
 
     ||| Check a constructor's arity and type.

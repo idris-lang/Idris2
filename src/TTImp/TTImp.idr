@@ -758,7 +758,7 @@ getFn f = f
 
 export
 TTC BuiltinType where
-    toBuf b BuiltinNatural = tag 0;
+    toBuf b BuiltinNatural = tag 0
 
     fromBuf b = case !getTag of
                      0 => pure BuiltinNatural
