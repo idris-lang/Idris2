@@ -31,15 +31,23 @@ export
 usleep : HasIO io => (x : Int) -> So (x >= 0) => io ()
 usleep sec = primIO (prim__usleep sec)
 
--- This one is going to vary for different back ends. Probably needs a
--- better convention. Will revisit...
-%foreign "scheme:blodwen-args"
-         "node:lambda:() => __prim_js2idris_array(process.argv.slice(1))"
-prim__getArgs : PrimIO (List String)
+-- Get the number of arguments
+%foreign "scheme:blodwen-arg-count"
+         "node:lambda:() => process.argv.length"
+prim__getArgCount : PrimIO Int
+
+-- Get argument number `n`
+%foreign "scheme:blodwen-arg"
+         "node:lambda:n => process.argv[n]"
+prim__getArg : Int -> PrimIO String
 
 export
 getArgs : HasIO io => io (List String)
-getArgs = primIO prim__getArgs
+getArgs = do
+            n <- primIO prim__getArgCount
+            if n > 0
+              then for [0..n-1] (\x => primIO $ prim__getArg x)
+              else pure []
 
 %foreign libc "getenv"
          "node:lambda: n => process.env[n]"
