@@ -645,6 +645,42 @@ data Transform : Type where
                    Name -> -- name for identifying the rule
                    Env Term vars -> Term vars -> Term vars -> Transform
 
+||| Types that are transformed into a faster representation
+||| during codegen.
+public export
+data BuiltinType : Type where
+    ||| A built-in 'Nat'-like type
+    ||| 'NatLike : [index ->] Type'
+    ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
+    ||| 'ZLike : {0 _ : index} -> NatLike [index]'
+    BuiltinNatural : BuiltinType
+
+export
+Show BuiltinType where
+    show BuiltinNatural = "Natural"
+
+||| Rewrite rules for %builtin pragmas
+||| Seperate to 'Transform' because it must also modify case statements
+||| behaviour should remain the same after this transform
+public export
+record BuiltinTransforms where
+    constructor MkBuiltinTransforms
+    natTyNames : NameMap (Name, Name) -- map from Nat-like names to their constructors ('Z' then 'S')
+    natZNames : NameMap () -- map from S-like names to their type constructor
+    natSNames : NameMap () -- map from Z-like names to their type constructor
+
+-- TODO: After next release remove nat from here and use %builtin pragma instead
+initBuiltinTransforms : BuiltinTransforms
+initBuiltinTransforms =
+    let natTy = NS typesNS (UN "Nat")
+        natZ = NS typesNS (UN "Z")
+        natS = NS typesNS (UN "S")
+    in MkBuiltinTransforms
+        { natTyNames = insert natTy (natZ, natS) empty
+        , natZNames = insert natZ () empty
+        , natSNames = insert natS () empty
+        }
+
 export
 getFnName : Transform -> Maybe Name
 getFnName (MkTransform _ _ app _)
@@ -987,6 +1023,10 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  builtinTransforms : BuiltinTransforms
+     -- ^ A mapping from names to transformations resulting from a %builtin pragma
+     -- seperate to `transforms` because these must always fire globally so run these
+     -- when compiling to `CExp`.
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1046,6 +1086,7 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , builtinTransforms = initBuiltinTransforms
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
