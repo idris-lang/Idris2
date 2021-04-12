@@ -654,10 +654,17 @@ data BuiltinType : Type where
     ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
     ||| 'ZLike : {0 _ : index} -> NatLike [index]'
     BuiltinNatural : BuiltinType
+    -- All the following aren't implemented yet
+    -- but are here to reduce number of TTC version changes
+    NaturalPlus : BuiltinType
+    NaturalMult : BuiltinType
+    NaturalToInteger : BuiltinType
+    IntegerToNatural : BuiltinType
 
 export
 Show BuiltinType where
     show BuiltinNatural = "Natural"
+    show _ = "Not yet implemented"
 
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements
@@ -676,9 +683,9 @@ initBuiltinTransforms =
         natZ = NS typesNS (UN "Z")
         natS = NS typesNS (UN "S")
     in MkBuiltinTransforms
-        { natTyNames = insert natTy (natZ, natS) empty
-        , natZNames = insert natZ () empty
-        , natSNames = insert natS () empty
+        { natTyNames = singleton natTy (natZ, natS)
+        , natZNames = singleton natZ ()
+        , natSNames = singleton natS ()
         }
 
 export
