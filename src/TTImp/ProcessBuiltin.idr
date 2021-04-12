@@ -17,16 +17,23 @@ import Core.UnifyState
 import TTImp.TTImp
 
 ||| Get the return type.
-getRetTy : {vars : _} -> Term vars -> (vars ** Term vars)
-getRetTy (Bind _ _ _ tm) = getRetTy tm
-getRetTy tm = (vars ** tm)
+getRetTy : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
+getRetTy tm@(Bind _ x b scope) = case b of
+    Lam _ _ _ _ => Nothing
+    Let _ _ val _ => getRetTy $ subst {x} val scope
+    Pi _ _ _ _ => getRetTy scope
+    _ => Nothing
+getRetTy tm = Just (vars ** tm)
 
 ||| Get the first non-erased argument type.
-getFirstNETy : {vars : _} -> Term vars -> (vars ** Term vars)
-getFirstNETy (Bind _ _ b tm) = if isErased $ multiplicity b
-    then getFirstNETy tm
-    else (_ ** binderType b)
-getFirstNETy tm = (vars ** tm)
+getFirstNETy : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
+getFirstNETy (Bind _ x b tm) = case b of
+    Let _ _ val _ => getFirstNETy $ subst {x} val tm
+    Pi _ mul _ arg => if isErased mul
+        then getFirstNETy tm
+        else Just (_ ** arg)
+    _ => Nothing
+getFirstNETy tm = Nothing
 
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
@@ -96,8 +103,10 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) o
     checkTyS n gdef = do
         let type = gdef.type
             erase = gdef.eraseArgs
-        let (_ ** arg) = getFirstNETy type
-        let (_ ** ret) = getRetTy type
+        let Just (_ ** arg) = getFirstNETy type
+            | Nothing => throw $ InternalError "Expected a non-erased argument, found none."
+        let Just (_ ** ret) = getRetTy type
+            | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
         unless (termConMatch arg ret) $ throw $ GenericMsg fc $ "Incorrect type for 'S'-like constructor for " ++ show ty ++ "."
         unless (isStrict arg) $ throw $ GenericMsg fc $ "Natural builtin does not support lazy types, as they can be potentially infinite."
         pure ()
@@ -161,3 +170,4 @@ processBuiltin nest env fc type name = do
     ds <- get Ctxt
     case type of
         BuiltinNatural => processBuiltinNatural ds fc name
+        _ => throw $ InternalError $ "%builtin " ++ show type ++ " not yet implemented."
