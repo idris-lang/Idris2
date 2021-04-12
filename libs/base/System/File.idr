@@ -34,7 +34,7 @@ prim__close : FilePtr -> PrimIO ()
 prim__error : FilePtr -> PrimIO Int
 
 %foreign support "idris2_fileErrno"
-         "node:lambda:()=>-BigInt(process.__lasterr.errno)"
+         "node:lambda:()=>-BigInt(process.__lasterr.errno || 0)"
 prim__fileErrno : PrimIO Int
 
 %foreign support "idris2_seekLine"

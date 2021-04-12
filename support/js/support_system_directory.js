@@ -1,7 +1,7 @@
 const support_system_directory_fs = require("fs")
 
 function support_system_directory_fileErrno(){
-  const n = process.__lasterr.errno;
+  const n = process.__lasterr.errno || 0;
   switch(n){
     case -17: return 4n;
     default: return -BigInt(n)
