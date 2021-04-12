@@ -49,7 +49,7 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
+.PHONY: all idris2-exec testenv testenv-clean support support-clean clean FORCE
 
 all: support ${TARGET} libs
 
