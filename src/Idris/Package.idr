@@ -376,21 +376,19 @@ install pkg opts -- not used but might be in the future
          Just srcdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
          -- Make the package installation directory
-         let installPrefix = prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version
-         True <- coreLift $ changeDir installPrefix
-             | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
-         Right _ <- coreLift $ mkdirAll (installDir pkg)
+         let targetDir = prefix_dir (dirs (options defs)) </>
+                             "idris2-" ++ showVersion False version </>
+                             installDir pkg
+         Right _ <- coreLift $ mkdirAll (targetDir)
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ installDir pkg
+                             [ "Can't make directory " ++ targetDir
                              , show err ]
-         True <- coreLift $ changeDir (installDir pkg)
-             | False => throw $ InternalError $ "Can't change directory to " ++ installDir pkg
+         True <- coreLift $ changeDir (targetDir)
+             | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
          -- We're in that directory now, so copy the files from
          -- srcdir/build into it
-         traverse_ (installFrom (srcdir </> build)
-                                (installPrefix </> installDir pkg)) toInstall
+         traverse_ (installFrom (srcdir </> build) targetDir) toInstall
          coreLift_ $ changeDir srcdir
          runScript (postinstall pkg)
 
