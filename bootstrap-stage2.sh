@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -e # Exit on any error
+set -e # exit on any error
 
 PREFIX=$PWD/bootstrap
 

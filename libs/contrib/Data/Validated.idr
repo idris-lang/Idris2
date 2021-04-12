@@ -33,6 +33,21 @@ Bifunctor Validated where
   bimap _ s $ Valid x   = Valid   $ s x
   bimap f _ $ Invalid e = Invalid $ f e
 
+public export
+Bifoldable Validated where
+  bifoldr _ g acc (Valid a)   = g a acc
+  bifoldr f _ acc (Invalid e) = f e acc
+
+  bifoldl _ g acc (Valid a)   = g acc a
+  bifoldl f _ acc (Invalid e) = f acc e
+
+  binull _ = False
+
+public export
+Bitraversable Validated where
+  bitraverse _ g (Valid a)   = Valid <$> g a
+  bitraverse f _ (Invalid e) = Invalid <$> f e
+
 ||| Applicative composition preserves invalidity sequentially accumulating all errors.
 public export
 Semigroup e => Applicative (Validated e) where

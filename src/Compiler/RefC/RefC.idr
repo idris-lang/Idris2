@@ -61,17 +61,11 @@ showcCleanStringChar '$' = ("_dollar" ++)
 showcCleanStringChar ',' = ("_comma" ++)
 showcCleanStringChar '#' = ("_number" ++)
 showcCleanStringChar '%' = ("_percent" ++)
+showcCleanStringChar '~' = ("_tilde" ++)
 showcCleanStringChar c
    = if c < chr 32 || c > chr 126
-        then (("u" ++ pad (asHex (cast c))) ++)
+        then (("u" ++ leftPad '0' 4 (asHex (cast c))) ++)
         else strCons c
-  where
-    pad : String -> String
-    pad str
-        = let n = length str in
-          case isLTE n 4 of
-             Yes _ => fastPack (List.replicate (minus 4 n) '0') ++ str
-             No _ => str
 
 showcCleanString : List Char -> String -> String
 showcCleanString [] = id
@@ -139,17 +133,11 @@ where
     showCChar : Char -> String -> String
     showCChar '\\' = ("bkslash" ++)
     showCChar c
-       = if c < chr 32 || c > chr 126
-            then (("\\x" ++ (asHex (cast c))) ++)
-            else strCons c
-      where
-        pad : String -> String
-        pad str
-            = case isLTE (length str) 2 of
-                   --Yes _ => toString (List.replicate (natMinus 4 (length str)) '0') ++ str
-                   Yes _ => "0" ++ str
-                   No _ => str
-
+       = if c < chr 32
+            then (("\\x" ++ leftPad '0' 2 (asHex (cast c))) ++ "\"\"" ++)
+            else if c < chr 127 then strCons c
+            else if c < chr 65536 then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++ "\"\"" ++)
+            else (("\\U" ++ leftPad '0' 8 (asHex (cast c))) ++ "\"\"" ++)
 
     showCString : List Char -> String -> String
     showCString [] = id
@@ -202,7 +190,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 ||| Generate scheme for a primitive function.
 cOp : PrimFn arity -> Vect arity String -> String
-cOp (Neg ty)      [x]       = "-" ++ x
+cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
 cOp StrTail       [x]       = "tail(" ++ x ++ ")"
@@ -629,7 +617,7 @@ mutual
                 makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 1 constantArray "multiDoubleCompare"
             _ => pure ("ERROR_NOT_DOUBLE_OR_STRING", "ERROR_NOT_DOUBLE_OR_STRING")
     makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) k constantArray compareFct = do
-        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = \"" ++ extractConstant constant ++ "\";"
+        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = " ++ extractConstant constant ++ ";"
         makeNonIntSwitchStatementConst alts (k+1) constantArray compareFct
 
 

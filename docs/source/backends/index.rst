@@ -63,6 +63,7 @@ or via the `IDRIS2_CG` environment variable.
    javascript
    refc
    custom
+   backend-cookbook
 
 There are also external code generators that aren't part of the main Idris 2
 repository and can be found on Idris 2 wiki:

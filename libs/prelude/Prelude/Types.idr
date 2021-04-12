@@ -104,6 +104,18 @@ Bifunctor Pair where
 
 %inline
 public export
+Bifoldable Pair where
+  bifoldr f g acc (x, y) = f x (g y acc)
+  bifoldl f g acc (x, y) = g (f acc x) y
+  binull _ = False
+
+%inline
+public export
+Bitraversable Pair where
+  bitraverse f g (a,b) = [| (,) (f a) (g b) |]
+
+%inline
+public export
 Functor (Pair a) where
   map = mapSnd
 
@@ -274,6 +286,23 @@ Bifunctor Either where
 
 %inline
 public export
+Bifoldable Either where
+  bifoldr f _ acc (Left a)  = f a acc
+  bifoldr _ g acc (Right b) = g b acc
+
+  bifoldl f _ acc (Left a)  = f acc a
+  bifoldl _ g acc (Right b) = g acc b
+
+  binull _ = False
+
+%inline
+public export
+Bitraversable Either where
+  bitraverse f _ (Left a)  = Left <$> f a
+  bitraverse _ g (Right b) = Right <$> g b
+
+%inline
+public export
 Applicative (Either e) where
   pure = Right
 
@@ -388,6 +417,13 @@ public export
 elem : Eq a => a -> List a -> Bool
 x `elem` [] = False
 x `elem` (y :: ys) = x == y ||  elem x ys
+
+||| Lookup a value at a given position
+export
+getAt : Nat -> List a -> Maybe a
+getAt Z     (x :: xs) = Just x
+getAt (S k) (x :: xs) = getAt k xs
+getAt _     []        = Nothing
 
 -------------
 -- STREAMS --

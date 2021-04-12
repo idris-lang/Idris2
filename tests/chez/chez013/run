@@ -1,5 +1,5 @@
-case `uname -s` in
-    OpenBSD|FreeBSD|NetBSD)
+case $(uname -s) in
+    OpenBSD | FreeBSD | NetBSD)
         MAKE=gmake
         ;;
 

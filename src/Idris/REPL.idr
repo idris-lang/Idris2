@@ -1004,6 +1004,7 @@ mutual
       = do ns <- getNS
            opts <- get ROpts
            coreLift_ (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
+           coreLift_ (fflush stdout)
            inp <- coreLift getLine
            end <- coreLift $ fEOF stdin
            if end

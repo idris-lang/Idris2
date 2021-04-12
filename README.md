@@ -2,12 +2,10 @@ Idris 2
 =======
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
-[![Windows Status](https://github.com/idris-lang/Idris2/workflows/Windows/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Windows")
-[![Ubuntu Status](https://github.com/idris-lang/Idris2/workflows/Ubuntu/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu")
-[![Ubuntu Racket Status](https://github.com/idris-lang/Idris2/workflows/Ubuntu%20Racket/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Ubuntu+Racket")
-[![MacOS Status](https://github.com/idris-lang/Idris2/workflows/macOS/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"macOS")
-[![API Status](https://github.com/idris-lang/Idris2/workflows/API/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"API")
-[![Nix Status](https://github.com/idris-lang/Idris2/workflows/Nix/badge.svg)](https://github.com/idris-lang/Idris2/actions?query=workflow%3A"Nix")
+[![Windows Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml)
+[![Ubuntu Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml)
+[![MacOS Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml)
+[![Nix Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
