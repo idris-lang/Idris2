@@ -1,0 +1,6 @@
+$1 --no-color --console-width 0 --no-banner --dumpcases Main.cases -o Main Main.idr
+
+$1 --no-color --console-width 0 --no-banner --exec main CatCases.idr
+
+rm -rf build
+rm Main.cases

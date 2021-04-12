@@ -128,6 +128,11 @@ idrisTestsRegression = MkTestPool []
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038"]
 
+idrisTestsBuiltin : TestPool
+idrisTestsBuiltin = MkTestPool []
+      -- %builtin related tests for the frontend (type-checking)
+      ["builtin001", "builtin002", "builtin003", "builtin004"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool []
        -- Documentation strings
@@ -251,6 +256,7 @@ baseLibraryTests = MkTestPool [Chez, Node]
 codegenTests : TestPool
 codegenTests = MkTestPool []
   [ "con001"
+  , "builtin001"
   ]
 
 main : IO ()
@@ -266,6 +272,7 @@ main = runner
   , testPaths "idris2" idrisTestsLinear
   , testPaths "idris2" idrisTestsPerformance
   , testPaths "idris2" idrisTestsRegression
+  , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
