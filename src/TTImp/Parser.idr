@@ -678,9 +678,9 @@ directive fname indents
                          t <- builtinType
                          n <- name
                          pure (t, n))
-         (t, n) <- pure b.val 
+         (t, n) <- pure b.val
          pure $ IBuiltin (boundToFC fname b) t n
-         
+
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit
