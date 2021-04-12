@@ -745,9 +745,17 @@ getFn f = f
 export
 TTC BuiltinType where
     toBuf b BuiltinNatural = tag 0
+    toBuf b NaturalPlus = tag 1
+    toBuf b NaturalMult = tag 2
+    toBuf b NaturalToInteger = tag 3
+    toBuf b IntegerToNatural = tag 4
 
     fromBuf b = case !getTag of
                      0 => pure BuiltinNatural
+                     1 => pure NaturalPlus
+                     2 => pure NaturalMult
+                     3 => pure NaturalToInteger
+                     4 => pure IntegerToNatural
                      _ => corrupt "BuiltinType"
 
 mutual
