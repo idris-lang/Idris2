@@ -1218,6 +1218,7 @@ builtinType =
 builtinDecl : FileName -> IndentInfo -> Rule PDecl
 builtinDecl fname indents
     = do b <- bounds (do pragma "builtin"
+                         commit
                          t <- builtinType
                          n <- name
                          pure (t, n))
