@@ -1,6 +1,3 @@
-idris2docs_venv
-result
-*~
 *.ibc
 *.ttc
 *.ttm
@@ -8,15 +5,13 @@ result
 *.d
 *.a
 *.dll
-
-# Editor/IDE Related
-.\#* # Emacs swap file
-*~   # Vim swap file
-# VS Code
-.vscode/*
+*.dylib
 
 /build
 
+/lib
+
+idris2docs_venv
 /docs/build
 
 /libs/**/build
@@ -26,22 +21,27 @@ result
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
-/tests/build/exec
 
 /benchmark/**/build
 /benchmark/*.csv
 
-/src/IdrisPaths.idr
-
 /bootstrap/bin/
 /bootstrap/lib/
-/bootstrap/idris2-0*/
-/bootstrap/idris2_app/idris2-boot*
+/bootstrap/idris2-[0-9]*/
+/bootstrap/idris2_app/idris2-boot.*
 /bootstrap/idris2_app/libidris2_support.*
-/bootstrap/idris2-boot
-/bootstrap/idris2-boot.rkt
+
+/src/IdrisPaths.idr
 
 /custom.mk
 
-#Mac OS
+# NixOS
+/result
+
+# Editor/IDE Related
+*~        # Vim swap file
+.\#*      # Emacs swap file
+.vscode/* # VS Code
+
+# macOS
 .DS_Store

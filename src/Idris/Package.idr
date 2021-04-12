@@ -591,11 +591,10 @@ parsePkgFile file = do
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 PkgCommand ->
-                 String ->
                  List CLOpt ->
+                 (PkgCommand, String) ->
                  Core ()
-processPackage cmd file opts
+processPackage opts (cmd, file)
     =  if not (isSuffixOf ".ipkg" file)
          then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                  coreLift (exitWith (ExitFailure 1))
@@ -624,11 +623,44 @@ processPackage cmd file opts
                            | errs => coreLift (exitWith (ExitFailure 1))
                         runRepl (map snd $ mainmod pkg)
 
-record POptsFilterResult where
+record PackageOpts where
   constructor MkPFR
-  pkgDetails : Maybe (PkgCommand, String)
+  pkgDetails : List (PkgCommand, String)
   oopts : List CLOpt
   hasError : Bool
+
+partitionOpts : List CLOpt -> PackageOpts
+partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
+  where
+    data OptType : Type where
+      PPackage : PkgCommand -> String -> OptType
+      POpt : OptType
+      PIgnore : OptType
+      PErr : OptType
+    optType : CLOpt -> OptType
+    optType (Package cmd f)  = PPackage cmd f
+    optType Quiet            = POpt
+    optType Verbose          = POpt
+    optType Timing           = POpt
+    optType (Logging l)      = POpt
+    optType (DumpCases f)    = POpt
+    optType (DumpLifted f)   = POpt
+    optType (DumpVMCode f)   = POpt
+    optType DebugElabCheck   = POpt
+    optType (SetCG f)        = POpt
+    optType (BuildDir f)     = POpt
+    optType (OutputDir f)    = POpt
+    optType (ConsoleWidth n) = PIgnore
+    optType (Color b)        = PIgnore
+    optType NoBanner         = PIgnore
+    optType x                = PErr
+
+    pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
+    pOptUpdate opt with (optType opt)
+      pOptUpdate opt | (PPackage cmd f) = record {pkgDetails $= ((cmd, f)::)}
+      pOptUpdate opt | POpt    = record {oopts $= (opt::)}
+      pOptUpdate opt | PIgnore = id
+      pOptUpdate opt | PErr    = record {hasError = True}
 
 errorMsg : String
 errorMsg = unlines
@@ -647,46 +679,18 @@ errorMsg = unlines
   , "    --output-dir <dir>"
   ]
 
-
-filterPackageOpts : POptsFilterResult -> List CLOpt -> Core (POptsFilterResult)
-filterPackageOpts acc Nil                  = pure acc
-filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetails = Just (cmd, f)}  acc) xs
-
-filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
-filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
-filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
-filterPackageOpts acc (Logging l     ::xs) = filterPackageOpts (record {oopts $= (Logging l::)}      acc) xs
-filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
-filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
-filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
-filterPackageOpts acc (DebugElabCheck::xs) = filterPackageOpts (record {oopts $= (DebugElabCheck::)} acc) xs
-filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
-filterPackageOpts acc (BuildDir f    ::xs) = filterPackageOpts (record {oopts $= (BuildDir f::)}     acc) xs
-filterPackageOpts acc (OutputDir f   ::xs) = filterPackageOpts (record {oopts $= (OutputDir f::)}    acc) xs
-
-filterPackageOpts acc (x::xs) = pure (record {hasError = True} acc)
-
--- If there's a package option, it must be the only option, so reject if
--- it's not
 export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt ->
-                     Core Bool
-processPackageOpts Nil = pure False
-processPackageOpts [Package cmd f] = do processPackage cmd f Nil
-                                        pure True
-
+                     List CLOpt -> Core Bool
 processPackageOpts opts
-    = do (MkPFR (Just (cmd, f)) opts' err) <- filterPackageOpts (MkPFR Nothing Nil False) opts
-             | (MkPFR Nothing opts _) => pure False
-
+    = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
+             | (MkPFR Nil opts' _) => pure False
          if err
-           then do coreLift $ putStrLn (errorMsg ++ "\n")
-                   pure True
-           else do processPackage cmd f opts'
-                   pure True
+           then coreLift $ putStrLn (errorMsg ++ "\n")
+           else traverse_ (processPackage opts') cmds
+         pure True
 
 
 -- find an ipkg file in one of the parent directories

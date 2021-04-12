@@ -174,12 +174,12 @@
 (define (blodwen-time)
   (exact-floor (time->seconds (current-time))))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-  (blodwen-build-args (cdr (command-line))))
+
+(define (blodwen-arg-count)
+  (length (command-line)))
+
+(define (blodwen-arg n)
+  (if (< n (length (command-line))) (list-ref (command-line) n) ""))
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))

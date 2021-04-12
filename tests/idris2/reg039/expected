@@ -1,0 +1,8 @@
+1/1: Building dupdup (dupdup.idr)
+Error: While processing right hand side of dupLinear. Trying to use linear name x in non-linear context.
+
+dupdup.idr:2:24--2:32
+ 1 | dupLinear : (1 x : a) -> (a, a)
+ 2 | dupLinear x = dup (let var = 22 in x)
+                            ^^^^^^^^
+

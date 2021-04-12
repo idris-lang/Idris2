@@ -606,7 +606,7 @@ mutual
   case_ fname indents
       = do b <- bounds (do keyword "case"
                            scr <- expr pdef fname indents
-                           commitKeyword indents "of"
+                           mustWork (commitKeyword indents "of")
                            alts <- block (caseAlt fname)
                            pure (scr, alts))
            (scr, alts) <- pure b.val
@@ -833,17 +833,19 @@ visibility
     = visOption
   <|> pure Private
 
-tyDecl : Rule Name -> String -> FileName -> IndentInfo -> Rule PTypeDecl
-tyDecl declName predoc fname indents
-    = do b <- bounds (do doc   <- option "" documentation
-                         n     <- bounds declName
-                         symbol ":"
-                         mustWork $
-                            do ty  <- expr pdef fname indents
-                               pure (doc, n.val, boundToFC fname n, ty))
+tyDecls : Rule Name -> String -> FileName -> IndentInfo -> Rule (List1 PTypeDecl)
+tyDecls declName predoc fname indents
+    = do bs <- do docns <- sepBy1 (symbol ",") (do
+                                    doc   <- option "" documentation
+                                    n     <- bounds declName
+                                    pure (doc, n))
+                  symbol ":"
+                  mustWork $ do ty  <- expr pdef fname indents
+                                pure $ map (\(doc, n) => (doc, n.val, boundToFC fname n, ty))
+                                           docns
          atEnd indents
-         let (doc, n, nFC, ty) = b.val
-         pure (MkPTy (boundToFC fname b) nFC n (predoc ++ doc) ty)
+         pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
+                    bs
 
 withFlags : SourceEmptyRule (List WithFlag)
 withFlags
@@ -963,8 +965,8 @@ dataBody fname mincol start n indents ty
                                                dopts <- sepBy1 (symbol ",") dataOpt
                                                symbol "]"
                                                pure $ forget dopts)
-                         cs <- blockAfter mincol (tyDecl (mustWork dataConstructorName) "" fname)
-                         pure (opts, cs))
+                         cs <- blockAfter mincol (tyDecls (mustWork dataConstructorName) "" fname)
+                         pure (opts, concatMap forget cs))
          (opts, cs) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
@@ -1058,6 +1060,10 @@ directive fname indents
          dpt <- intLit
          atEnd indents
          pure (AutoImplicitDepth (fromInteger dpt))
+  <|> do pragma "nf_metavar_threshold"
+         dpt <- intLit
+         atEnd indents
+         pure (NFMetavarThreshold (fromInteger dpt))
   <|> do pragma "pair"
          ty <- name
          f <- name
@@ -1402,18 +1408,20 @@ recordDecl fname indents
                          pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
 
-claim : FileName -> IndentInfo -> Rule PDecl
-claim fname indents
-    = do b <- bounds (do doc     <- option "" documentation
-                         visOpts <- many (visOpt fname)
-                         vis     <- getVisibility Nothing visOpts
-                         let opts = mapMaybe getRight visOpts
-                         m   <- multiplicity
-                         rig <- getMult m
-                         cl  <- tyDecl name doc fname indents
-                         pure (doc, vis, opts, rig, cl))
-         (doc, vis, opts, rig, cl) <- pure b.val
-         pure (PClaim (boundToFC fname b) rig vis opts cl)
+claims : FileName -> IndentInfo -> Rule (List1 PDecl)
+claims fname indents
+    = do bs <- bounds (do
+                  doc     <- option "" documentation
+                  visOpts <- many (visOpt fname)
+                  vis     <- getVisibility Nothing visOpts
+                  let opts = mapMaybe getRight visOpts
+                  m   <- multiplicity
+                  rig <- getMult m
+                  cls  <- tyDecls name doc fname indents
+                  pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
+         pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
+                           PClaim (boundToFC fname bs) rig vis opts cl)
+                    bs.val
 
 definition : FileName -> IndentInfo -> Rule PDecl
 definition fname indents
@@ -1446,8 +1454,8 @@ directiveDecl fname indents
 topDecl fname indents
     = do d <- dataDecl fname indents
          pure [d]
-  <|> do d <- claim fname indents
-         pure [d]
+  <|> do ds <- claims fname indents
+         pure (forget ds)
   <|> do d <- definition fname indents
          pure [d]
   <|> fixDecl fname indents

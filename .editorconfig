@@ -9,12 +9,12 @@ trim_trailing_whitespace = true
 charset = utf-8
 
 # Idris source files
-[{*.idr,*.ipkg,*.tex,*.yaff,*.lidr}]
+[*.{idr,ipkg,tex,yaff,lidr}]
 indent_style = space
 indent_size = 2
 
 # Various configuration files
-[*.yml,.ecrc]
+[{*.yml,.ecrc}]
 indent_style = space
 indent_size = 2
 
@@ -22,7 +22,7 @@ indent_size = 2
 indent_style = space
 indent_size = 4
 
-[{*.c,*.h}]
+[*.{c,h}]
 indent_style = space
 indent_size = 4
 
@@ -30,7 +30,13 @@ indent_size = 4
 indent_style = space
 indent_size = 2
 
-[{*.sh,*.bat}]
+[*.sh]
+indent_style = space
+indent_size = 4
+shell_variant = posix
+switch_case_indent = true
+
+[*.bat]
 indent_style = space
 indent_size = 4
 

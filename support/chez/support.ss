@@ -358,12 +358,12 @@
 (define (blodwen-clock-second time) (time-second time))
 (define (blodwen-clock-nanosecond time) (time-nanosecond time))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-    (blodwen-build-args (command-line)))
+
+(define (blodwen-arg-count)
+  (length (command-line)))
+
+(define (blodwen-arg n)
+  (if (< n (length (command-line))) (list-ref (command-line) n) ""))
 
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))

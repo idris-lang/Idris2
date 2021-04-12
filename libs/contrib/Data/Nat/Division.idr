@@ -74,20 +74,19 @@ mod''_eq_mod' fuel numer denom = cong snd $
                                        divmod'_eq_div'_mod' fuel numer denom
 
 export
-divmodNatNZeqDivMod : (numer, denom : Nat) -> (prf1, prf2, prf3 : Not (denom = 0))
+divmodNatNZeqDivMod : (numer, denom : Nat) -> (0 prf1, prf2, prf3 : NonZero denom)
             -> (divmodNatNZ numer denom prf1) = (divNatNZ numer denom prf2, modNatNZ numer denom prf3)
-divmodNatNZeqDivMod numer 0         prf1 prf2 prf3 = void $ prf1 Refl
 divmodNatNZeqDivMod numer (S denom) prf1 prf2 prf3 = divmod'_eq_div'_mod' numer numer denom
 
 export
-fstDivmodNatNZeqDiv : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = 0))
+fstDivmodNatNZeqDiv : (numer, denom : Nat) -> (0 prf1, prf2 : NonZero denom)
             -> (fst $ divmodNatNZ numer denom prf1) = divNatNZ numer denom prf2
 fstDivmodNatNZeqDiv numer denom prf1 prf2 =
   rewrite divmodNatNZeqDivMod numer denom prf1 prf2 prf2 in
   Refl
 
 export
-sndDivmodNatNZeqMod : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = 0))
+sndDivmodNatNZeqMod : (numer, denom : Nat) -> (0 prf1, prf2 : NonZero denom)
             -> (snd $ divmodNatNZ numer denom prf1) = modNatNZ numer denom prf2
 sndDivmodNatNZeqMod numer denom prf1 prf2 =
   rewrite divmodNatNZeqDivMod numer denom prf1 prf2 prf2 in
@@ -106,9 +105,8 @@ bound_mod'' (S fuel) numer predDenom enough  = case @@(Data.Nat.lte numer predDe
                                                   (fuelLemma numer predDenom fuel enough numer_gte_n)
 
 export
-boundModNatNZ : (numer, denom : Nat) -> (denom_nz : Not (denom = 0))
+boundModNatNZ : (numer, denom : Nat) -> (0 denom_nz : NonZero denom)
               -> (modNatNZ numer denom denom_nz) `LT` denom
-boundModNatNZ numer  0            denom_nz = void $ denom_nz Refl
 boundModNatNZ numer (S predDenom) denom_nz = LTESucc $
                                              rewrite sym $ mod''_eq_mod' numer numer predDenom in
                                              bound_mod'' numer numer predDenom (reflexive numer)
@@ -152,15 +150,14 @@ divisionTheorem'  numer predDenom (S fuel) enough with (@@(Data.Nat.lte numer pr
 
 
 export
-DivisionTheoremDivMod : (numer, denom : Nat)  -> (prf : Not (denom = Z))
+DivisionTheoremDivMod : (numer, denom : Nat)  -> (0 prf : NonZero denom)
                -> numer = snd ( divmodNatNZ numer denom prf)
                        + (fst $ divmodNatNZ numer denom prf)*denom
-DivisionTheoremDivMod numer 0 prf = void (prf Refl)
 DivisionTheoremDivMod numer (S predDenom) prf
   = divisionTheorem' numer predDenom numer (reflexive numer)
 
 export
-DivisionTheorem : (numer, denom : Nat) -> (prf1, prf2 : Not (denom = Z))
+DivisionTheorem : (numer, denom : Nat) -> (0 prf1, prf2 : NonZero denom)
                -> numer = (modNatNZ numer denom prf1) + (divNatNZ numer denom prf2)*denom
 DivisionTheorem numer denom prf1 prf2
   = rewrite sym $ fstDivmodNatNZeqDiv numer denom prf1 prf2 in
@@ -299,13 +296,12 @@ addMultipleMod' (S fuel1) fuel2 predn a (S k) enough1 enough2 =
         fuelLemma ((1+k)*n + a) predn fuel1 enough1 prf1)
        enough2
 
-addMultipleMod : (a, b, n : Nat) -> (n_neq_z1, n_neq_z2 : Not (n = 0))
+addMultipleMod : (a, b, n : Nat) -> (0 n_neq_z1, n_neq_z2 : NonZero n)
               -> snd (divmodNatNZ (a*n + b) n n_neq_z1) = snd (divmodNatNZ b n n_neq_z2)
-addMultipleMod a b 0           n_neq_z1  n_neq_z2 = void (n_neq_z1 Refl)
 addMultipleMod a b n@(S predn) n_neq_z1  n_neq_z2 =
   addMultipleMod' (a*n + b) b predn b a (reflexive {po = LTE} _) (reflexive {po = LTE} _)
 
-modBelowDenom : (r, n : Nat) -> (n_neq_z : Not (n = 0))
+modBelowDenom : (r, n : Nat) -> (0 n_neq_z : NonZero n)
              -> (r `LT` n)
              -> snd (divmodNatNZ r n n_neq_z)  = r
 modBelowDenom 0 (S predn) n_neq_0 (LTESucc r_lte_predn) = Refl
@@ -313,7 +309,7 @@ modBelowDenom r@(S _) (S predn) n_neq_0 (LTESucc r_lte_predn) =
   rewrite LteIslte r predn r_lte_predn in
   Refl
 
-modInjective : (r1, r2, n : Nat) -> (n_neq_z1, n_neq_z2 : Not (n = 0))
+modInjective : (r1, r2, n : Nat) -> (0 n_neq_z1, n_neq_z2 : NonZero n)
              -> (r1 `LT` n)
              -> (r2 `LT` n)
              -> snd (divmodNatNZ r1 n n_neq_z1)  = snd (divmodNatNZ r2 n n_neq_z2)
@@ -325,7 +321,7 @@ modInjective r1 r2 n n_neq_z1 n_neq_z2 r1_lt_n r2_lt_n ri_mod_eq = Calc $
   ~~ r2                              ...(      modBelowDenom r2 n n_neq_z2 r2_lt_n)
 
 
-step1 : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
+step1 : (numer : Nat) -> (denom : Nat) -> (0 denom_nz : NonZero denom)
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> snd (divmodNatNZ numer denom denom_nz) = r
 step1 x n n_nz q r r_lt_n x_eq_qnpr = Calc $
@@ -334,7 +330,7 @@ step1 x n n_nz q r r_lt_n x_eq_qnpr = Calc $
   ~~ snd(divmodNatNZ r         n n_nz) ...(addMultipleMod q r n n_nz n_nz)
   ~~ r                                 ...(modBelowDenom r n n_nz r_lt_n)
 
-step2 : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
+step2 : (numer : Nat) -> (denom : Nat) -> (0 denom_nz : NonZero denom)
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> fst (divmodNatNZ numer denom denom_nz) = q
 step2 x n n_nz q r r_lt_n x_eq_qnr =
@@ -358,7 +354,7 @@ step2 x n n_nz q r r_lt_n x_eq_qnr =
    $ two_decompositions
 
 export
-DivisionTheoremUniquenessDivMod : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
+DivisionTheoremUniquenessDivMod : (numer : Nat) -> (denom : Nat) -> (0 denom_nz : NonZero denom)
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> divmodNatNZ numer denom denom_nz = (q, r)
 DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf =
@@ -372,7 +368,7 @@ DivisionTheoremUniquenessDivMod numer denom denom_nz q r x prf =
     pair_eta (x,y) = Refl
 
 export
-DivisionTheoremUniqueness : (numer : Nat) -> (denom : Nat) -> (denom_nz : Not (denom = 0))
+DivisionTheoremUniqueness : (numer : Nat) -> (denom : Nat) -> (0 denom_nz : NonZero denom)
      -> (q, r : Nat) -> (r `LT` denom) -> (numer = q * denom + r)
      -> (divNatNZ numer denom denom_nz = q, modNatNZ numer denom denom_nz = r)
 DivisionTheoremUniqueness numer denom denom_nz q r x prf =

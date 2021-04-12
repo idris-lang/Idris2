@@ -1,7 +1,7 @@
-File Exists
+1/1: Building dir (dir.idr)
+Main> File Exists
 False
 True
 Just "__PWD__testdir"
-1/1: Building dir (dir.idr)
-Main> Main> Bye for now!
+Main> Bye for now!
 hello
