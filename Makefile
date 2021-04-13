@@ -42,6 +42,8 @@ endif
 IDRIS2_TEST_LIBS ?= ${IDRIS2_CURDIR}/lib
 IDRIS2_TEST_DATA ?= ${IDRIS2_CURDIR}/support
 
+TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
+
 # Library and data paths for bootstrap-test
 IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap
 
@@ -90,15 +92,25 @@ test-lib: contrib
 
 libs : prelude base contrib network test-lib
 
-testbin:
-	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
+${TEST_PREFIX}/${NAME_VERSION} :
+	${MAKE} install-support PREFIX=${TEST_PREFIX}
+	ln -s ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
+	ln -s ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
+	ln -s ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
+	ln -s ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
+	ln -s ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
 
-test: testbin
+testenv:
+	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
+	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+
+test: testenv
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
 	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
 	@echo
-	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_DATA=${IDRIS2_TEST_DATA} IDRIS2_LIBS=${IDRIS2_TEST_LIBS}
+	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+
 
 support:
 	@${MAKE} -C support/c
