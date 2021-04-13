@@ -71,7 +71,11 @@ modules =
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,
+
     Idris.Package,
+    Idris.Package.Init,
+    Idris.Package.Types,
+
     Idris.Parser,
     Idris.Parser.Let,
     Idris.Pretty,

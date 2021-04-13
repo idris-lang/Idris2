@@ -39,6 +39,9 @@ import Idris.Syntax
 import Idris.Version
 import IdrisPaths
 
+import public Idris.Package.Types
+import Idris.Package.Init
+
 %hide Data.Strings.lines
 %hide Data.Strings.lines'
 %hide Data.Strings.unlines
@@ -46,81 +49,10 @@ import IdrisPaths
 
 %default covering
 
-public export
-record Depends where
-  constructor MkDepends
-  pkgname : String
-  pkgbounds : PkgVersionBounds
-
-export
-Show Depends where
-  show p = p.pkgname ++ " " ++ show p.pkgbounds
-
-public export
-record PkgDesc where
-  constructor MkPkgDesc
-  name : String
-  version : Maybe PkgVersion
-  authors : Maybe String
-  maintainers : Maybe String
-  license : Maybe String
-  brief   : Maybe String
-  readme  : Maybe String
-  homepage : Maybe String
-  sourceloc : Maybe String
-  bugtracker : Maybe String
-  depends : List Depends -- packages to add to search path
-  modules : List (ModuleIdent, String) -- modules to install (namespace, filename)
-  mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
-  executable : Maybe String -- name of executable
-  options : Maybe (FC, String)
-  sourcedir : Maybe String
-  builddir : Maybe String
-  outputdir : Maybe String
-  prebuild : Maybe (FC, String) -- Script to run before building
-  postbuild : Maybe (FC, String) -- Script to run after building
-  preinstall : Maybe (FC, String) -- Script to run after building, before installing
-  postinstall : Maybe (FC, String) -- Script to run after installing
-  preclean : Maybe (FC, String) -- Script to run before cleaning
-  postclean : Maybe (FC, String) -- Script to run after cleaning
-
 installDir : PkgDesc -> String
-installDir p = name p ++ "-" ++ show (version p)
-
-export
-Show PkgDesc where
-  show pkg = "Package: " ++ name pkg ++ "\n" ++
-             maybe "" (\m => "Version: "     ++ m ++ "\n") (show <$> version pkg) ++
-             maybe "" (\m => "Authors: "     ++ m ++ "\n") (authors pkg)     ++
-             maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
-             maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
-             maybe "" (\m => "Brief: "       ++ m ++ "\n") (brief pkg)       ++
-             maybe "" (\m => "ReadMe: "      ++ m ++ "\n") (readme pkg)      ++
-             maybe "" (\m => "HomePage: "    ++ m ++ "\n") (homepage pkg)    ++
-             maybe "" (\m => "SourceLoc: "   ++ m ++ "\n") (sourceloc pkg)   ++
-             maybe "" (\m => "BugTracker: "  ++ m ++ "\n") (bugtracker pkg)  ++
-             "Depends: " ++ show (depends pkg) ++ "\n" ++
-             "Modules: " ++ show (map snd (modules pkg)) ++ "\n" ++
-             maybe "" (\m => "Main: " ++ snd m ++ "\n") (mainmod pkg) ++
-             maybe "" (\m => "Exec: " ++ m ++ "\n") (executable pkg) ++
-             maybe "" (\m => "Opts: " ++ snd m ++ "\n") (options pkg) ++
-             maybe "" (\m => "SourceDir: " ++ m ++ "\n") (sourcedir pkg) ++
-             maybe "" (\m => "BuildDir: " ++ m ++ "\n") (builddir pkg) ++
-             maybe "" (\m => "OutputDir: " ++ m ++ "\n") (outputdir pkg) ++
-             maybe "" (\m => "Prebuild: " ++ snd m ++ "\n") (prebuild pkg) ++
-             maybe "" (\m => "Postbuild: " ++ snd m ++ "\n") (postbuild pkg) ++
-             maybe "" (\m => "Preinstall: " ++ snd m ++ "\n") (preinstall pkg) ++
-             maybe "" (\m => "Postinstall: " ++ snd m ++ "\n") (postinstall pkg) ++
-             maybe "" (\m => "Preclean: " ++ snd m ++ "\n") (preclean pkg) ++
-             maybe "" (\m => "Postclean: " ++ snd m ++ "\n") (postclean pkg)
-
-initPkgDesc : String -> PkgDesc
-initPkgDesc pname
-    = MkPkgDesc pname Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing Nothing
-                [] []
-                Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing
+installDir p = name p
+            ++ "-"
+            ++ show (fromMaybe (MkPkgVersion (0 ::: [])) (version p))
 
 data DescField : Type where
   PVersion     : FC -> PkgVersion -> DescField
@@ -595,33 +527,40 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, String) ->
                  Core ()
 processPackage opts (cmd, file)
-    =  if not (isSuffixOf ".ipkg" file)
-         then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
-                 coreLift (exitWith (ExitFailure 1))
-         else do Right (pname, fs) <- coreLift $ parseFile file
-                                          (do desc <- parsePkgDesc file
-                                              eoi
-                                              pure desc)
-                    | Left err => throw err
-                 pkg <- addFields fs (initPkgDesc pname)
-                 maybe (pure ()) setBuildDir (builddir pkg)
-                 setOutputDir (outputdir pkg)
-                 case cmd of
-                      Build => do [] <- build pkg opts
-                                     | errs => coreLift (exitWith (ExitFailure 1))
-                                  pure ()
-                      Install => do [] <- build pkg opts
-                                       | errs => coreLift (exitWith (ExitFailure 1))
-                                    install pkg opts
-                      Typecheck => do
-                        [] <- check pkg opts
-                          | errs => coreLift (exitWith (ExitFailure 1))
-                        pure ()
-                      Clean => clean pkg opts
-                      REPL => do
-                        [] <- build pkg opts
-                           | errs => coreLift (exitWith (ExitFailure 1))
-                        runRepl (map snd $ mainmod pkg)
+    = case cmd of
+        Init =>
+          do pkg <- coreLift interactive
+             let fp = if file == "" then pkg.name ++ ".ipkg" else file
+             False <- coreLift (exists fp)
+               | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
+             Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
+               | Left err => throw (FileErr fp err)
+             pure ()
+        _ =>
+         do let True = isSuffixOf ".ipkg" file
+                 | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
+                           coreLift (exitWith (ExitFailure 1))
+            Right (pname, fs) <- coreLift $ parseFile file (parsePkgDesc file <* eoi)
+              | Left err => throw err
+            pkg <- addFields fs (initPkgDesc pname)
+            whenJust (builddir pkg) setBuildDir
+            setOutputDir (outputdir pkg)
+            case cmd of
+              Build => do [] <- build pkg opts
+                            | errs => coreLift (exitWith (ExitFailure 1))
+                          pure ()
+              Install => do [] <- build pkg opts
+                               | errs => coreLift (exitWith (ExitFailure 1))
+                            install pkg opts
+              Typecheck => do [] <- check pkg opts
+                                | errs => coreLift (exitWith (ExitFailure 1))
+                              pure ()
+              Clean => clean pkg opts
+              REPL => do [] <- build pkg opts
+                            | errs => coreLift (exitWith (ExitFailure 1))
+                         runRepl (map snd $ mainmod pkg)
+              Init => pure () -- already handled earlier
+
 
 record PackageOpts where
   constructor MkPFR

@@ -9,6 +9,7 @@ import Libraries.Utils.Path
 import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
+import Idris.Package.Types
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
