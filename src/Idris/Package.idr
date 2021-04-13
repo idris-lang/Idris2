@@ -60,8 +60,8 @@ public export
 record PkgDesc where
   constructor MkPkgDesc
   name : String
-  version : PkgVersion
-  authors : String
+  version : Maybe PkgVersion
+  authors : Maybe String
   maintainers : Maybe String
   license : Maybe String
   brief   : Maybe String
@@ -90,8 +90,8 @@ installDir p = name p ++ "-" ++ show (version p)
 export
 Show PkgDesc where
   show pkg = "Package: " ++ name pkg ++ "\n" ++
-             "Version: " ++ show (version pkg) ++ "\n" ++
-             "Authors: " ++ authors pkg ++ "\n" ++
+             maybe "" (\m => "Version: "     ++ m ++ "\n") (show <$> version pkg) ++
+             maybe "" (\m => "Authors: "     ++ m ++ "\n") (authors pkg)     ++
              maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
              maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
              maybe "" (\m => "Brief: "       ++ m ++ "\n") (brief pkg)       ++
@@ -116,7 +116,7 @@ Show PkgDesc where
 
 initPkgDesc : String -> PkgDesc
 initPkgDesc pname
-    = MkPkgDesc pname (MkPkgVersion [0,0]) "Anonymous" Nothing Nothing
+    = MkPkgDesc pname Nothing Nothing Nothing Nothing
                 Nothing Nothing Nothing Nothing Nothing
                 [] []
                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -175,7 +175,7 @@ field fname
            vs <- sepBy1 dot' integerLit
            end <- location
            pure (PVersion (MkFC fname start end)
-                          (MkPkgVersion (fromInteger <$> forget vs)))
+                          (MkPkgVersion (fromInteger <$> vs)))
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
@@ -210,20 +210,20 @@ field fname
     bound
         = do lte
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) True]
       <|> do gte
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (fromInteger <$> forget vs)) True]
+             pure [GT (MkPkgVersion (fromInteger <$> vs)) True]
       <|> do lt
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) False]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) False]
       <|> do gt
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (fromInteger <$> forget vs)) False]
+             pure [GT (MkPkgVersion (fromInteger <$> vs)) False]
       <|> do eqop
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (fromInteger <$> forget vs)) True,
-                   GT (MkPkgVersion (fromInteger <$> forget vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) True,
+                   GT (MkPkgVersion (fromInteger <$> vs)) True]
 
     mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
@@ -271,11 +271,11 @@ addField : {auto c : Ref Ctxt Defs} ->
            {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
            {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
            DescField -> PkgDesc -> Core PkgDesc
-addField (PVersion fc n)     pkg = pure $ record { version = n } pkg
+addField (PVersion fc n)     pkg = pure $ record { version = Just n } pkg
 addField (PVersionDep fc n)  pkg
     = do emitWarning (Deprecated "version numbers must now be of the form x.y.z")
          pure pkg
-addField (PAuthors fc a)     pkg = pure $ record { authors = a } pkg
+addField (PAuthors fc a)     pkg = pure $ record { authors = Just a } pkg
 addField (PMaintainers fc a) pkg = pure $ record { maintainers = Just a } pkg
 addField (PLicense fc a)     pkg = pure $ record { license = Just a } pkg
 addField (PBrief fc a)       pkg = pure $ record { brief = Just a } pkg

@@ -9,6 +9,7 @@ import Core.Name.Namespace
 import Core.Options
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.Strings
 import Data.Either
@@ -42,11 +43,11 @@ Show DirCommand where
   show LibDir = "--libdir"
 
 public export
-data PkgVersion = MkPkgVersion (List Nat)
+data PkgVersion = MkPkgVersion (List1 Nat)
 
 export
 Show PkgVersion where
-  show (MkPkgVersion vs) = showSep "." (map show vs)
+  show (MkPkgVersion vs) = showSep "." (map show (forget vs))
 
 export
 Eq PkgVersion where
@@ -84,13 +85,14 @@ anyBounds = MkPkgVersionBounds Nothing True Nothing True
 export
 current : PkgVersionBounds
 current = let (maj,min,patch) = semVer version
-              version = Just (MkPkgVersion [maj, min, patch]) in
+              version = Just (MkPkgVersion (maj ::: [min, patch])) in
               MkPkgVersionBounds version True version True
 
 export
-inBounds : PkgVersion -> PkgVersionBounds -> Bool
-inBounds v bounds
-   = maybe True (\v' => if bounds.lowerInclusive
+inBounds : Maybe PkgVersion -> PkgVersionBounds -> Bool
+inBounds mv bounds
+   = let v = fromMaybe (MkPkgVersion (0 ::: [])) mv in
+     maybe True (\v' => if bounds.lowerInclusive
                            then v >= v'
                            else v > v') bounds.lowerBound &&
      maybe True (\v' => if bounds.upperInclusive
