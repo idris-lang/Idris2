@@ -271,6 +271,9 @@ useCC appdir fc (cc :: ccs) args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
+           -- This calling convention is ignored when compiling to Racket
+           Just ("C__collect_safe", [cfn, clib]) => cCall appdir fc cfn clib args ret
+           Just ("C__collect_safe", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
            _ => useCC appdir fc ccs args ret
 
 -- For every foreign arg type, return a name, and whether to pass it to the
