@@ -96,6 +96,9 @@ testenv:
 	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
 	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
 
+testenv-clean:
+	$(RM) -r ${TEST_PREFIX}/${NAME_VERSION}
+
 test: testenv
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
@@ -119,7 +122,7 @@ clean-libs:
 	${MAKE} -C libs/network clean
 	${MAKE} -C libs/test clean
 
-clean: clean-libs support-clean
+clean: clean-libs support-clean testenv-clean
 	-${IDRIS2_BOOT} --clean ${IDRIS2_APP_IPKG}
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
