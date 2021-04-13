@@ -38,10 +38,6 @@ else
 	SEP := :
 endif
 
-# Library and data paths for test
-IDRIS2_TEST_LIBS ?= ${IDRIS2_CURDIR}/lib
-IDRIS2_TEST_DATA ?= ${IDRIS2_CURDIR}/support
-
 TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
 
 # Library and data paths for bootstrap-test
@@ -53,18 +49,14 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec ${TARGET} testbin support support-lib support-clean clean distclean FORCE
+.PHONY: all idris2-exec ${TARGET} testbin support support-clean clean distclean FORCE
 
-all: support ${TARGET} support-lib libs
+all: support ${TARGET} libs
 
 idris2-exec: ${TARGET}
 
 ${TARGET}: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
-
-support-lib:
-	mkdir -p lib
-	install support/c/${IDRIS2_SUPPORT} lib
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
@@ -132,7 +124,6 @@ clean: clean-libs support-clean
 	$(RM) src/IdrisPaths.idr
 	${MAKE} -C tests clean
 	$(RM) -r build
-	$(RM) -r lib
 
 install: install-idris2 install-support install-libs
 
@@ -146,7 +137,7 @@ ifeq ($(OS), windows)
 	-install ${TARGET}.cmd ${PREFIX}/bin
 endif
 	mkdir -p ${PREFIX}/lib/
-	install lib/${IDRIS2_SUPPORT} ${PREFIX}/lib
+	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
@@ -173,7 +164,7 @@ install-libs:
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
 # Bootstrapping using SCHEME
-bootstrap: support support-lib
+bootstrap: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
@@ -182,7 +173,7 @@ bootstrap: support support-lib
 	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
-bootstrap-racket: support support-lib
+bootstrap-racket: support
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
 	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
