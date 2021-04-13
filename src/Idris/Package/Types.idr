@@ -188,7 +188,7 @@ Pretty PkgDesc where
     , seqField "modules"     (fst <$> desc.modules)
 --   mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
     , strField "executable"  desc.executable
-    , strField "opts"        (show . snd <$> desc.options)
+    , strField "opts"        (snd <$> desc.options)
     , strField "sourcedir"   desc.sourcedir
     , strField "builddir"    desc.builddir
     , strField "outputdir"   desc.outputdir

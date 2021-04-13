@@ -11,10 +11,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
-import Data.So
-import Libraries.Data.StringMap
 import Data.Strings
-import Libraries.Data.StringTrie
 import Data.These
 
 import Parser.Package
@@ -22,6 +19,8 @@ import System
 import System.Directory
 import System.File
 
+import Libraries.Data.StringMap
+import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Binary

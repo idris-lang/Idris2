@@ -1,9 +1,9 @@
 $1 --init < input
 $1 --build cool.ipkg
-rm -R build/
+rm -Rf build/
 
-$1 --init cool2.ipkg < input
+$1 --init cool2.ipkg < input2
 $1 --build cool2.ipkg
-rm -R build/
+rm -Rf build/
 
-rm cool.ipkg cool2.ipkg
+rm -f cool.ipkg cool2.ipkg

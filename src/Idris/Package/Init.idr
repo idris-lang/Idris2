@@ -22,11 +22,14 @@ interactive = do
   pname    <- putStr "Package name: " *> getLine
   pauthors <- putStr "Package authors: " *> getLine
   poptions <- putStr "Package options: " *> getLine
-  modules  <- findModules
+  psource  <- putStr "Source directory: " *> getLine
+  let sourcedir = mstring psource
+  modules  <- findModules sourcedir
   let pkg : PkgDesc =
-        { authors := mstring pauthors
-        , options := (emptyFC,) <$> mstring poptions
-        , modules := modules
+        { authors   := mstring pauthors
+        , options   := (emptyFC,) <$> mstring poptions
+        , modules   := modules
+        , sourcedir := sourcedir
         } (initPkgDesc (fromMaybe "project" (mstring pname)))
   pure pkg
 
@@ -39,7 +42,7 @@ interactive = do
     isModuleIdent : String -> Bool
     isModuleIdent str = case unpack str of
       [] => False
-      cs@(hd :: _) => isUpper hd || all isAlphaNum cs
+      cs@(hd :: _) => isUpper hd && all isAlphaNum cs
 
     directoryExists : String -> IO Bool
     directoryExists fp = do
@@ -51,47 +54,52 @@ interactive = do
     PathedName : Type
     PathedName = (List String, String)
 
-    nextDirectory : List PathedName ->
+    nextDirectory : String -> List PathedName ->
                     IO (Maybe ((List String, Directory), List PathedName))
-    nextDirectory [] = pure Nothing
-    nextDirectory ((p, d) :: stack) =
-      do Right dir <- openDir (foldl (flip (</>)) d p)
-            | Left _ => nextDirectory stack -- should be impossible
+    nextDirectory prfx [] = pure Nothing
+    nextDirectory prfx ((p, d) :: stack) =
+      do Right dir <- openDir (prfx </> foldl (flip (</>)) d p)
+            | Left _ => nextDirectory prfx stack -- should be impossible
          pure (Just ((d :: p, dir), stack))
 
     -- TODO: refactor via an abstract view of the filesystem
     covering
-    explore : List (ModuleIdent, String) -> List PathedName ->
+    explore : String ->
+              List (ModuleIdent, String) -> List PathedName ->
               (List String, Directory) -> IO (List (ModuleIdent, String))
-    explore acc stack dir@(path, d) = case !(dirEntry d) of
+    explore prfx acc stack dir@(path, d) = case !(dirEntry d) of
       Left err => do
         -- We're done: move on to the next directory, if there are
         -- none sort the accumulator and return the result
         closeDir d
-        case !(nextDirectory stack) of
+        case !(nextDirectory prfx stack) of
           Nothing => pure (sortBy (\ a, b => compare (snd a) (snd b)) acc)
-          Just (dir, stack) => explore acc stack dir
+          Just (dir, stack) => explore prfx acc stack dir
       Right entry => do
         -- ignore aliases for current and parent directories
         let False = elem entry [".", ".."]
-             | _ => explore acc stack dir
-        -- if the entry is a directory, push it on the stack of work to do
-        False <- directoryExists (foldl (flip (</>)) entry path)
-             | _ => explore acc ((path, entry) :: stack) dir
+             | _ => explore prfx acc stack dir
+        -- if the entry is a directory and it is a valid ident,
+        -- push it on the stack of work to do
+        False <- directoryExists (prfx </> foldl (flip (</>)) entry path)
+             | _ => if isModuleIdent entry
+                      then explore prfx acc ((path, entry) :: stack) dir
+                      else explore prfx acc stack dir
         -- otherwise make sure it's an idris file
         let (fname, fext) = splitFileName entry
-        let True = (fext == "idr" || fext == "lidr") && isModuleIdent fname
-             | _ => explore acc stack dir
+        let True = fext == "idr" || fext == "lidr"
+             | _ => explore prfx acc stack dir
         -- finally add the file to the accumulator
         let mod = unsafeFoldModuleIdent (fname :: path)
-        let fp  = foldl (flip (</>)) fname path
-        explore ((mod, fp) :: acc) stack dir
+        let fp  = prfx </> foldl (flip (</>)) fname path
+        explore prfx ((mod, fp) :: acc) stack dir
 
     covering
-    findModules : IO (List (ModuleIdent, String))
-    findModules = do
-      Just curr <- currentDir
+    findModules : Maybe String -> IO (List (ModuleIdent, String))
+    findModules sdir = do
+      let prfx = fromMaybe "" sdir
+      Just curr <- maybe currentDir (pure . Just) sdir
         | Nothing => pure []
       Right dir <- openDir curr
         | Left err => pure []
-      explore [] [] ([], dir)
+      explore prfx [] [] ([], dir)
