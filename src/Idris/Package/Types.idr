@@ -174,42 +174,45 @@ Show PkgDesc where
 export
 Pretty PkgDesc where
   pretty desc = vcat
-    [ field  "name"        desc.name
-    , mfield "version"     desc.version
-    , mfield "authors"     desc.authors
-    , mfield "maintainers" desc.maintainers
-    , mfield "license"     desc.license
-    , mfield "brief"       desc.brief
-    , mfield "readme"      desc.readme
-    , mfield "homepage"    desc.homepage
-    , mfield "sourceloc"   desc.sourceloc
-    , mfield "bugtracker"  desc.bugtracker
-    , lfield "depends"     desc.depends
-    , lfield "modules"     (fst <$> desc.modules)
+    [ "package" <++> pretty desc.name
+    , verField "version"     desc.version
+    , strField "authors"     desc.authors
+    , strField "maintainers" desc.maintainers
+    , strField "license"     desc.license
+    , strField "brief"       desc.brief
+    , strField "readme"      desc.readme
+    , strField "homepage"    desc.homepage
+    , strField "sourceloc"   desc.sourceloc
+    , strField "bugtracker"  desc.bugtracker
+    , seqField "depends"     desc.depends
+    , seqField "modules"     (fst <$> desc.modules)
 --   mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
-    , mfield "executable"  desc.executable
-    , mfield "options"     (show . snd <$> desc.options)
-    , mfield "sourcedir"   desc.sourcedir
-    , mfield "builddir"    desc.builddir
-    , mfield "outputdir"   desc.outputdir
-    , mfield "prebuild"    (snd <$> desc.prebuild)
-    , mfield "postbuild"   (snd <$> desc.postbuild)
-    , mfield "preinstall"  (snd <$> desc.preinstall)
-    , mfield "postinstall" (snd <$> desc.postinstall)
-    , mfield "preclean"    (snd <$> desc.preclean)
-    , mfield "postclean"   (snd <$> desc.postclean)
+    , strField "executable"  desc.executable
+    , strField "opts"        (show . snd <$> desc.options)
+    , strField "sourcedir"   desc.sourcedir
+    , strField "builddir"    desc.builddir
+    , strField "outputdir"   desc.outputdir
+    , strField "prebuild"    (snd <$> desc.prebuild)
+    , strField "postbuild"   (snd <$> desc.postbuild)
+    , strField "preinstall"  (snd <$> desc.preinstall)
+    , strField "postinstall" (snd <$> desc.postinstall)
+    , strField "preclean"    (snd <$> desc.preclean)
+    , strField "postclean"   (snd <$> desc.postclean)
     ]
 
   where
-    field : Pretty a => String -> a -> Doc ann
-    field nm val = hsep [ pretty nm, equals, pretty val ]
+    field : String -> Maybe (Doc ann) -> Doc ann
+    field nm Nothing = hsep [ pretty "--", pretty nm, equals ]
+    field nm (Just d) = hsep [ pretty nm, equals, d ]
 
-    mfield : Pretty a => String -> Maybe a -> Doc ann
-    mfield nm Nothing = hsep [ pretty "--", pretty nm, equals ]
-    mfield nm (Just val) = field nm val
+    verField : String -> Maybe PkgVersion -> Doc ann
+    verField nm = field nm . map pretty
 
-    lfield : Pretty a => String -> List a -> Doc ann
-    lfield nm [] = hsep [ pretty "--", pretty nm, equals ]
-    lfield nm xs = pretty nm
-               <++> equals
-               <++> align (sep (punctuate comma (map pretty xs)))
+    strField : String -> Maybe String -> Doc ann
+    strField nm = field nm . map (pretty . show)
+
+    seqField : Pretty a => String -> List a -> Doc ann
+    seqField nm [] = hsep [ pretty "--", pretty nm, equals ]
+    seqField nm xs = pretty nm
+                <++> equals
+                <++> align (sep (punctuate comma (map pretty xs)))
