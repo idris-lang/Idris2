@@ -69,7 +69,7 @@ interactive = do
         -- none sort the accumulator and return the result
         closeDir d
         case !(nextDirectory stack) of
-          Nothing => pure (sortBy (compare `on` snd) acc)
+          Nothing => pure (sortBy (\ a, b => compare (snd a) (snd b)) acc)
           Just (dir, stack) => explore acc stack dir
       Right entry => do
         -- ignore aliases for current and parent directories
