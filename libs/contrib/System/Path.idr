@@ -344,6 +344,7 @@ setFileName' name path =
   else
     append' path (parse name)
 
+export
 splitFileName : String -> (String, String)
 splitFileName name =
   case break (== '.') $ reverse $ unpack name of
