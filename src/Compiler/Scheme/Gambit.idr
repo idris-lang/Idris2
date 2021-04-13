@@ -309,9 +309,6 @@ useCC fc (cc :: ccs) args ret
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           -- This calling convention is ignored when compiling to Gambit
-           Just ("C__collect_safe", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           Just ("C__collect_safe", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            _ => useCC fc ccs args ret
   where
     fnWrapName : String -> String -> String
