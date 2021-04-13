@@ -22,6 +22,7 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
 endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
+NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 IDRIS2_APP_IPKG := idris2.ipkg
 IDRIS2_LIB_IPKG := idris2api.ipkg
@@ -138,14 +139,14 @@ endif
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
 install-support:
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
-	mkdir -p ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
-	install support/chez/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/chez
-	install support/racket/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/racket
-	install support/gambit/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/gambit
-	install support/js/* ${PREFIX}/idris2-${IDRIS2_VERSION}/support/js
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
+	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
+	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
+	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
+	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
 
@@ -181,7 +182,7 @@ bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
 
 bootstrap-clean:
-	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}
+	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/${NAME_VERSION}
 	$(RM) bootstrap/idris2boot* bootstrap/idris2_app/idris2-boot.* bootstrap/idris2_app/${IDRIS2_SUPPORT}
 
 
