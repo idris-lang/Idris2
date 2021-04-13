@@ -42,8 +42,7 @@ IDRIS2_TEST_LIBS ?= ${IDRIS2_CURDIR}/lib
 IDRIS2_TEST_DATA ?= ${IDRIS2_CURDIR}/support
 
 # Library and data paths for bootstrap-test
-IDRIS2_BOOT_TEST_LIBS := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/lib
-IDRIS2_BOOT_TEST_DATA := ${IDRIS2_CURDIR}/bootstrap/${NAME}-${IDRIS2_VERSION}/support
+IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap
 
 # These are the library path in the build dir to be used during build
 export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS2_CURDIR}/libs/base/build/ttc${SEP}${IDRIS2_CURDIR}/libs/contrib/build/ttc${SEP}${IDRIS2_CURDIR}/libs/network/build/ttc${SEP}${IDRIS2_CURDIR}/libs/test/build/ttc"
@@ -155,7 +154,7 @@ install-libs:
 	${MAKE} -C libs/base install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/contrib install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/network install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
-	${MAKE} -C libs/test install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test  install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
@@ -163,7 +162,7 @@ install-libs:
 # Bootstrapping using SCHEME
 bootstrap: support support-lib
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
 		> bootstrap/idris2_app/idris2-boot.ss
 	$(SHELL) ./bootstrap-stage1-chez.sh
@@ -172,14 +171,14 @@ bootstrap: support support-lib
 # Bootstrapping using racket
 bootstrap-racket: support support-lib
 	cp support/c/${IDRIS2_SUPPORT} bootstrap/idris2_app
-	sed 's|__PREFIX__|${IDRIS2_CURDIR}/bootstrap|g' \
+	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
 		> bootstrap/idris2_app/idris2-boot.rkt
 	$(SHELL) ./bootstrap-stage1-racket.sh
 	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
-	$(MAKE) test INTERACTIVE='' IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_TEST_DATA=${IDRIS2_BOOT_TEST_DATA} IDRIS2_TEST_LIBS=${IDRIS2_BOOT_TEST_LIBS}
+	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
 
 bootstrap-clean:
 	$(RM) -r bootstrap/bin bootstrap/lib bootstrap/idris2-${IDRIS2_VERSION}
