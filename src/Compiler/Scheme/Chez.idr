@@ -197,19 +197,25 @@ cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
-cCall : {auto c : Ref Ctxt Defs} ->
-        {auto l : Ref Loaded (List String)} ->
-        String -> FC -> (cfn : String) -> (clib : String) ->
-        List (Name, CFType) -> CFType -> Core (String, String)
-cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+cCall : {auto c : Ref Ctxt Defs}
+     -> {auto l : Ref Loaded (List String)}
+     -> String
+     -> FC
+     -> (cfn : String)
+     -> (clib : String)
+     -> List (Name, CFType)
+     -> CFType
+     -> (collectSafe : Bool)
+     -> Core (String, String)
+cCall appdir fc cfn clib args (CFIORes CFGCPtr) _
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
-cCall appdir fc cfn clib args CFGCPtr
+cCall appdir fc cfn clib args CFGCPtr _
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
-cCall appdir fc cfn clib args (CFIORes CFBuffer)
+cCall appdir fc cfn clib args (CFIORes CFBuffer) _
     = throw (GenericMsg fc "Can't return Buffer from a foreign function")
-cCall appdir fc cfn clib args CFBuffer
+cCall appdir fc cfn clib args CFBuffer _
     = throw (GenericMsg fc "Can't return Buffer from a foreign function")
-cCall appdir fc cfn clib args ret
+cCall appdir fc cfn clib args ret collectSafe
     = do loaded <- get Loaded
          lib <- if clib `elem` loaded
                    then pure ""
@@ -221,7 +227,8 @@ cCall appdir fc cfn clib args ret
                                     ++ "\")\n"
          argTypes <- traverse (\a => cftySpec fc (snd a)) args
          retType <- cftySpec fc ret
-         let call = "((foreign-procedure #f " ++ show cfn ++ " ("
+         let callConv = if collectSafe then " __collect_safe" else ""
+         let call = "((foreign-procedure" ++ callConv ++ " " ++ show cfn ++ " ("
                       ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
                       ++ showSep " " !(traverse buildArg args) ++ ")"
 
@@ -284,17 +291,22 @@ useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
 useCC appdir fc ccs args ret
-    = case parseCC ["scheme,chez", "scheme", "C"] ccs of
-           Nothing => throw (NoForeignCC fc)
+    = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
-           Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
-           Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => throw (NoForeignCC fc)
+           Just ("C", [cfn, clib]) =>
+             cCall appdir fc cfn clib args ret False
+           Just ("C", [cfn, clib, chdr]) =>
+             cCall appdir fc cfn clib args ret False
+           Just ("C__collect_safe", [cfn, clib]) =>
+             cCall appdir fc cfn clib args ret True
+           Just ("C__collect_safe", [cfn, clib, chdr]) =>
+             cCall appdir fc cfn clib args ret True
+           _ => throw (NoForeignCC fc ccs)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
