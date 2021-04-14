@@ -123,6 +123,8 @@ modules =
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
 
+    Libraries.System.Directory.Tree,
+
     Libraries.Text.Bounded,
     Libraries.Text.Distance.Levenshtein,
     Libraries.Text.Lexer,
