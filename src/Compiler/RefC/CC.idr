@@ -23,17 +23,17 @@ fullprefix_dir dirs sub
 export
 compileCObjectFile : {auto c : Ref Ctxt Defs}
                   -> {default False asLibrary : Bool}
-                  -> (outn : String)
-                  -> (outobj : String)
+                  -> (sourceFile : String)
+                  -> (objectFile : String)
                   -> Core (Maybe String)
-compileCObjectFile {asLibrary} outn outobj =
+compileCObjectFile {asLibrary} sourceFile objectFile =
   do cc <- coreLift findCC
      dirs <- getDirs
 
      let libraryFlag = if asLibrary then "-fpic " else ""
 
-     let runccobj = cc ++ " -c " ++ libraryFlag ++ outn ++
-                       " -o " ++ outobj ++ " " ++
+     let runccobj = cc ++ " -c " ++ libraryFlag ++ sourceFile ++
+                       " -o " ++ objectFile ++ " " ++
                        "-I" ++ fullprefix_dir dirs "refc " ++
                        "-I" ++ fullprefix_dir dirs "include"
 
@@ -41,22 +41,22 @@ compileCObjectFile {asLibrary} outn outobj =
      0 <- coreLift $ system runccobj
        | _ => pure Nothing
 
-     pure (Just outobj)
+     pure (Just objectFile)
 
 export
 compileCFile : {auto c : Ref Ctxt Defs}
             -> {default False asShared : Bool}
-            -> (outobj : String)
-            -> (outexec : String)
+            -> (objectFile : String)
+            -> (outFile : String)
             -> Core (Maybe String)
-compileCFile {asShared} outobj outexec =
+compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      dirs <- getDirs
 
      let sharedFlag = if asShared then "-shared " else ""
 
-     let runcc = cc ++ " " ++ sharedFlag ++ outobj ++
-                       " -o " ++ outexec ++ " " ++
+     let runcc = cc ++ " " ++ sharedFlag ++ objectFile ++
+                       " -o " ++ outFile ++ " " ++
                        fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
@@ -66,7 +66,7 @@ compileCFile {asShared} outobj outexec =
      0 <- coreLift $ system runcc
        | _ => pure Nothing
 
-     pure (Just outexec)
+     pure (Just outFile)
 
   where
     clibdirs : List String -> String
