@@ -1043,6 +1043,75 @@ executeExpr c _ tm
     = do coreLift_ $ putStrLn "Execute expression not yet implemented for refc"
          coreLift_ $ system "false"
 
+fullprefix_dir : Dirs -> String -> String
+fullprefix_dir dirs sub
+    = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
+
+export
+generateCSourceFile : {auto c : Ref Ctxt Defs}
+                   -> List (Name, ANFDef)
+                   -> (outn : String)
+                   -> Core ()
+generateCSourceFile defs outn =
+  do _ <- newRef ArgCounter 0
+     _ <- newRef FunctionDefinitions []
+     _ <- newRef TemporaryVariableTracker []
+     _ <- newRef OutfileText DList.Nil
+     _ <- newRef ExternalLibs []
+     _ <- newRef IndentLevel 0
+     traverse_ (uncurry createCFunctions) defs
+     header -- added after the definition traversal in order to add all encountered function defintions
+     footer
+     fileContent <- get OutfileText
+     let code = fastAppend (map (++ "\n") (reify fileContent))
+
+     coreLift_ $ writeFile outn code
+     coreLift_ $ putStrLn $ "Generated C file " ++ outn
+
+export
+compileCObjectFile : {auto c : Ref Ctxt Defs}
+                  -> (outn : String)
+                  -> (outobj : String)
+                  -> Core (Maybe String)
+compileCObjectFile outn outobj =
+  do cc <- coreLift findCC
+     dirs <- getDirs
+
+     let runccobj = cc ++ " -c " ++ outn ++ " -o " ++ outobj ++ " " ++
+                       "-I" ++ fullprefix_dir dirs "refc " ++
+                       "-I" ++ fullprefix_dir dirs "include"
+
+     coreLift $ putStrLn runccobj
+     0 <- coreLift $ system runccobj
+       | _ => pure Nothing
+
+     pure (Just outobj)
+
+export
+compileCFile : {auto c : Ref Ctxt Defs}
+            -> (outobj : String)
+            -> (outexec : String)
+            -> Core (Maybe String)
+compileCFile outobj outexec =
+  do cc <- coreLift findCC
+     dirs <- getDirs
+
+     let runcc = cc ++ " " ++ outobj ++ " -o " ++ outexec ++ " " ++
+                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
+                       "-lidris2_refc " ++
+                       "-L" ++ fullprefix_dir dirs "refc " ++
+                       clibdirs (lib_dirs dirs)
+
+     coreLift $ putStrLn runcc
+     0 <- coreLift $ system runcc
+       | _ => pure Nothing
+
+     pure (Just outexec)
+
+  where
+    clibdirs : List String -> String
+    clibdirs ds = concat (map (\d => "-L" ++ d ++ " ") ds)
+
 export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
@@ -1055,52 +1124,16 @@ compileExpr ANF c _ outputDir tm outfile =
   do let outn = outputDir </> outfile ++ ".c"
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
+
      coreLift_ $ mkdirAll outputDir
      cdata <- getCompileData False ANF tm
      let defs = anf cdata
-     _ <- newRef ArgCounter 0
-     _ <- newRef FunctionDefinitions []
-     _ <- newRef TemporaryVariableTracker []
-     _ <- newRef OutfileText DList.Nil
-     _ <- newRef ExternalLibs []
-     _ <- newRef IndentLevel 0
-     traverse_ (\(n, d) => createCFunctions n d) defs
-     header -- added after the definition traversal in order to add all encountered function defintions
-     footer
-     fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
 
-     coreLift_ $ writeFile outn code
-     coreLift_ $ putStrLn $ "Generated C file " ++ outn
+     generateCSourceFile defs outn
+     Just _ <- compileCObjectFile outn outobj
+       | Nothing => pure Nothing
+     compileCFile outobj outexec
 
-     cc <- coreLift findCC
-     dirs <- getDirs
-
-     let runccobj = cc ++ " -c " ++ outn ++ " -o " ++ outobj ++ " " ++
-                       "-I" ++ fullprefix_dir dirs "refc " ++
-                       "-I" ++ fullprefix_dir dirs "include"
-
-     let runcc = cc ++ " " ++ outobj ++ " -o " ++ outexec ++ " " ++
-                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
-                       "-lidris2_refc " ++
-                       "-L" ++ fullprefix_dir dirs "refc " ++
-                       clibdirs (lib_dirs dirs)
-
-     coreLift $ putStrLn runccobj
-     0 <- coreLift $ system runccobj
-       | _ => pure Nothing
-     coreLift $ putStrLn runcc
-     0 <- coreLift $ system runcc
-       | _ => pure Nothing
-     pure (Just outexec)
-
-  where
-    fullprefix_dir : Dirs -> String -> String
-    fullprefix_dir dirs sub
-        = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
-
-    clibdirs : List String -> String
-    clibdirs ds = concat (map (\d => "-L" ++ d ++ " ") ds)
 compileExpr _ _ _ _ _ _ = pure Nothing
 
 export
