@@ -3,8 +3,6 @@ module Idris.Package.Init
 import Core.FC
 import Core.Name.Namespace
 
-import Control.Monad.Writer
-
 import Data.List
 import Data.Maybe
 import Data.Strings
@@ -42,24 +40,25 @@ findModules start = do
     | Nothing => pure []
   let root = parse dir
   tree <- packageTree root
-  mods <- execWriterT (go [([], (root ** pure tree))])
+  mods <- go [] [([], (root ** pure tree))]
   pure (sortBy (\ a, b => compare (snd a) (snd b)) mods)
 
   where
 
-    go : List (List String, (root : Path ** IO (Tree root))) ->
-         WriterT (List (ModuleIdent, String)) IO ()
-    go [] = pure ()
-    go ((path, (root ** iot)) :: iots) = do
+    go : List (ModuleIdent, String) ->
+         List (List String, (root : Path ** IO (Tree root))) ->
+         IO (List (ModuleIdent, String))
+    go acc [] = pure acc
+    go acc ((path, (root ** iot)) :: iots) = do
       t <- liftIO iot
-      tell $ flip map t.files $ \ entry =>
-        let fname = fst (splitFileName (fileName entry)) in
-        let mod = unsafeFoldModuleIdent (fname :: path) in
-        let fp  = toFilePath entry in
-        (mod, fp)
+      let mods = flip map t.files $ \ entry =>
+                   let fname = fst (splitFileName (fileName entry)) in
+                   let mod = unsafeFoldModuleIdent (fname :: path) in
+                   let fp  = toFilePath entry in
+                   (mod, fp)
       let dirs = flip map t.subTrees $ \ (dir ** iot) =>
                    (fileName dir :: path, (_ ** iot))
-      go (dirs ++ iots)
+      go (mods ++ acc) (dirs ++ iots)
 
 export
 covering
