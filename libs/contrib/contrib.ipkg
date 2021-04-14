@@ -77,7 +77,7 @@ modules = Control.ANSI,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
 
-          Data.Num.Exponentiation,
+          Data.Num.Implementations,
 
           Data.OpenUnion,
 
