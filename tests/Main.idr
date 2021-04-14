@@ -157,7 +157,7 @@ idrisTests = MkTestPool []
        -- Parameters blocks
        "params001",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006",
+       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
