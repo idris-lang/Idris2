@@ -63,6 +63,43 @@ export
 emptyTree : Tree root
 emptyTree = MkTree [] []
 
+||| Filter out files and directories that do not satisfy a given predicate.
+export
+filter : (filePred, dirPred : {root : _} -> FileName root -> Bool) ->
+         {root : _} -> Tree root -> Tree root
+filter filePred dirPred (MkTree files dirs) = MkTree files' dirs' where
+
+  files' : List (FileName root)
+  files' = filter filePred files
+
+  dirs' : List (SubTree root)
+  dirs' = flip mapMaybe dirs $ \ (dname ** iot) => do
+            guard (dirPred dname)
+            pure (dname ** map (assert_total (filter filePred dirPred)) iot)
+
+||| Sort the lists of files and directories using the given comparison functions
+export
+sortBy : (fileCmp, dirCmp : {root : _} -> FileName root -> FileName root -> Ordering) ->
+         {root : _} -> Tree root -> Tree root
+sortBy fileCmp dirCmp (MkTree files dirs) = MkTree files' dirs' where
+
+  files' : List (FileName root)
+  files' = sortBy fileCmp files
+
+  dirs' : List (SubTree root)
+  dirs' = sortBy (\ d1, d2 => dirCmp (fst d1) (fst d2))
+        $ flip map dirs $ \ (dname ** iot) =>
+          (dname ** map (assert_total (sortBy fileCmp dirCmp)) iot)
+
+||| Sort the list of files and directories alphabetically
+export
+sort : {root : _} -> Tree root -> Tree root
+sort = sortBy cmp cmp where
+
+  cmp : {root : _} -> FileName root -> FileName root -> Ordering
+  cmp a b = compare (fileName a) (fileName b)
+
+
 ||| Exploring a filesystem from a given root to produce a tree
 export
 explore : (root : Path) -> IO (Tree root)
