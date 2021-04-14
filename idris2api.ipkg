@@ -22,6 +22,7 @@ modules =
     Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC.CC,
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
