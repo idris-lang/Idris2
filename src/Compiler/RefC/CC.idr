@@ -22,14 +22,18 @@ fullprefix_dir dirs sub
 
 export
 compileCObjectFile : {auto c : Ref Ctxt Defs}
+                  -> {default False asLibrary : Bool}
                   -> (outn : String)
                   -> (outobj : String)
                   -> Core (Maybe String)
-compileCObjectFile outn outobj =
+compileCObjectFile {asLibrary} outn outobj =
   do cc <- coreLift findCC
      dirs <- getDirs
 
-     let runccobj = cc ++ " -c " ++ outn ++ " -o " ++ outobj ++ " " ++
+     let libraryFlag = if asLibrary then "-fpic " else ""
+
+     let runccobj = cc ++ " -c " ++ libraryFlag ++ outn ++
+                       " -o " ++ outobj ++ " " ++
                        "-I" ++ fullprefix_dir dirs "refc " ++
                        "-I" ++ fullprefix_dir dirs "include"
 
@@ -41,14 +45,18 @@ compileCObjectFile outn outobj =
 
 export
 compileCFile : {auto c : Ref Ctxt Defs}
+            -> {default False asShared : Bool}
             -> (outobj : String)
             -> (outexec : String)
             -> Core (Maybe String)
-compileCFile outobj outexec =
+compileCFile {asShared} outobj outexec =
   do cc <- coreLift findCC
      dirs <- getDirs
 
-     let runcc = cc ++ " " ++ outobj ++ " -o " ++ outexec ++ " " ++
+     let sharedFlag = if asShared then "-shared " else ""
+
+     let runcc = cc ++ " " ++ sharedFlag ++ outobj ++
+                       " -o " ++ outexec ++ " " ++
                        fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
