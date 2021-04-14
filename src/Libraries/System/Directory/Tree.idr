@@ -3,7 +3,7 @@ module Libraries.System.Directory.Tree
 import Data.DPair
 import Data.List
 import Data.Nat
-import Data.String
+import Data.Strings
 import System.Directory
 import Libraries.Utils.Path
 
