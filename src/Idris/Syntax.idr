@@ -810,6 +810,10 @@ export
 data Syn : Type where
 
 export
+withSyn : {auto o : Ref Syn SyntaxInfo} -> Core a -> Core a
+withSyn = wrapRef Syn (\_ => pure ())
+
+export
 mapPTermM : (PTerm -> Core PTerm) -> PTerm -> Core PTerm
 mapPTermM f = goPTerm where
 

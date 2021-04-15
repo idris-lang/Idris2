@@ -706,10 +706,17 @@ update x f
        put x (f v)
 
 export
-wrapRef : (x : label) -> {auto ref : Ref x a} -> Core b -> Core b
-wrapRef x op
+wrapRef : (x : label) -> {auto ref : Ref x a} ->
+          (a -> Core ()) ->
+          Core b ->
+          Core b
+wrapRef x onClose op
   = do v <- get x
-       o <- op
+       o <- catch op $ \err =>
+              do onClose v
+                 put x v
+                 throw err
+       onClose v
        put x v
        pure o
 
