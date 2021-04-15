@@ -13,7 +13,7 @@ import Text.Quantity
 
 import System.Info
 
-infixr 5 </>
+infixr 5 </>, />
 infixr 7 <.>
 
 
@@ -344,6 +344,7 @@ setFileName' name path =
   else
     append' path (parse name)
 
+export
 splitFileName : String -> (String, String)
 splitFileName name =
   case break (== '.') $ reverse $ unpack name of
@@ -384,11 +385,28 @@ isRelative = not . isAbsolute
 ||| - If the right path has a volume but no root, it replaces left.
 |||
 ||| ```idris example
+||| parse "/usr" /> "local/etc" == "/usr/local/etc"
+||| ```
+export
+(/>) : (left : Path) -> (right : String) -> Path
+(/>) left right = append' left (parse right)
+
+||| Appends the right path to the left path.
+|||
+||| If the path on the right is absolute, it replaces the left path.
+|||
+||| On Windows:
+|||
+||| - If the right path has a root but no volume (e.g., `\windows`), it replaces
+|||   everything except for the volume (if any) of left.
+||| - If the right path has a volume but no root, it replaces left.
+|||
+||| ```idris example
 ||| "/usr" </> "local/etc" == "/usr/local/etc"
 ||| ```
 export
 (</>) : (left : String) -> (right : String) -> String
-(</>) left right = show $ append' (parse left) (parse right)
+(</>) left right = show $ parse left /> right
 
 ||| Joins path components into one.
 |||
@@ -397,7 +415,7 @@ export
 ||| ```
 export
 joinPath : List String -> String
-joinPath xs = foldl (</>) "" xs
+joinPath xs = show $ foldl (/>) (parse "") xs
 
 ||| Splits path into components.
 |||
