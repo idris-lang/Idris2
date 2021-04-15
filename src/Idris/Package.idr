@@ -599,7 +599,7 @@ processPackage opts (cmd, file)
             | Nothing => throw $ InternalError "Tried to split empty string"
          True <- pure $ isSuffixOf ".ipkg" filename
             | False => coreLift . putStrLn $ "Packages must have an '.ipkg' extension: " ++ show file ++ "."
-         withWorkingDir dir $ do
+         wrapRef Ctxt . wrapRef Syn . wrapRef ROpts . withWorkingDir dir $ do
            Right (pname, fs) <- coreLift $ parseFile filename
                                     (do desc <- parsePkgDesc filename
                                         eoi
