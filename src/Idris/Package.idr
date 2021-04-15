@@ -526,7 +526,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, String) ->
                  Core ()
 processPackage opts (cmd, file)
-    = case cmd of
+    = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do pkg <- coreLift interactive
              let fp = if file == "" then pkg.name ++ ".ipkg" else file
@@ -535,7 +535,7 @@ processPackage opts (cmd, file)
              Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
                | Left err => throw (FileErr fp err)
              pure ()
-        _ => withCtxt . withSyn . withROpts $
+        _ =>
           do Just (dir, filename) <- pure $ splitParent file
                | Nothing => throw $ InternalError "Tried to split empty string"
              True <- pure $ isSuffixOf ".ipkg" filename
