@@ -595,36 +595,35 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, String) ->
                  Core ()
 processPackage opts (cmd, file)
-    =  if not (isSuffixOf ".ipkg" file)
-         then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
-                 coreLift (exitWith (ExitFailure 1))
-         else do let Just (dir, filename) = splitParent file
-                        | Nothing => throw $ InternalError "Tried to split empty string"
-                 withWorkingDir dir $ do
-                   Right (pname, fs) <- coreLift $ parseFile filename
-                                            (do desc <- parsePkgDesc filename
-                                                eoi
-                                                pure desc)
-                      | Left err => throw err
-                   pkg <- addFields fs (initPkgDesc pname)
-                   maybe (pure ()) setBuildDir (builddir pkg)
-                   setOutputDir (outputdir pkg)
-                   case cmd of
-                        Build => do [] <- build pkg opts
-                                       | errs => coreLift (exitWith (ExitFailure 1))
-                                    pure ()
-                        Install => do [] <- build pkg opts
-                                         | errs => coreLift (exitWith (ExitFailure 1))
-                                      install pkg opts
-                        Typecheck => do
-                          [] <- check pkg opts
-                            | errs => coreLift (exitWith (ExitFailure 1))
-                          pure ()
-                        Clean => clean pkg opts
-                        REPL => do
-                          [] <- build pkg opts
-                             | errs => coreLift (exitWith (ExitFailure 1))
-                          runRepl (map snd $ mainmod pkg)
+    = do Just (dir, filename) <- pure $ splitParent file
+            | Nothing => throw $ InternalError "Tried to split empty string"
+         True <- pure $ isSuffixOf ".ipkg" filename
+            | False => coreLift . putStrLn $ "Packages must have an '.ipkg' extension: " ++ show file ++ "."
+         withWorkingDir dir $ do
+           Right (pname, fs) <- coreLift $ parseFile filename
+                                    (do desc <- parsePkgDesc filename
+                                        eoi
+                                        pure desc)
+              | Left err => throw err
+           pkg <- addFields fs (initPkgDesc pname)
+           maybe (pure ()) setBuildDir (builddir pkg)
+           setOutputDir (outputdir pkg)
+           case cmd of
+                Build => do [] <- build pkg opts
+                               | errs => coreLift (exitWith (ExitFailure 1))
+                            pure ()
+                Install => do [] <- build pkg opts
+                                 | errs => coreLift (exitWith (ExitFailure 1))
+                              install pkg opts
+                Typecheck => do
+                  [] <- check pkg opts
+                    | errs => coreLift (exitWith (ExitFailure 1))
+                  pure ()
+                Clean => clean pkg opts
+                REPL => do
+                  [] <- build pkg opts
+                     | errs => coreLift (exitWith (ExitFailure 1))
+                  runRepl (map snd $ mainmod pkg)
 
 record PackageOpts where
   constructor MkPFR
