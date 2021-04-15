@@ -412,7 +412,7 @@ export
 ||| ```
 export
 joinPath : List String -> String
-joinPath xs = foldl (</>) "" xs
+joinPath xs = show $ foldl (/>) (parse "") xs
 
 ||| Splits path into components.
 |||

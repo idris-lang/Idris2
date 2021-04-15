@@ -136,6 +136,7 @@ modules = Control.ANSI,
           Syntax.PreorderReasoning.Generic,
 
           System.Console.GetOpt,
+          System.Directory.Tree,
           System.Future,
           System.Random,
           System.Path,
