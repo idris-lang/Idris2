@@ -184,23 +184,50 @@ Pretty PkgDesc where
     , strField "homepage"    desc.homepage
     , strField "sourceloc"   desc.sourceloc
     , strField "bugtracker"  desc.bugtracker
+
+    , comment  "packages to add to search path"
     , seqField "depends"     desc.depends
+
+    , comment "modules to install"
     , seqField "modules"     (fst <$> desc.modules)
---   mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
+
+    , comment "main file (i.e. file to load at REPL)"
+    , field    "main"        (map (pretty . fst) desc.mainmod)
+
+    , comment "name of executable"
     , strField "executable"  desc.executable
     , strField "opts"        (snd <$> desc.options)
     , strField "sourcedir"   desc.sourcedir
     , strField "builddir"    desc.builddir
     , strField "outputdir"   desc.outputdir
+
+    , comment "script to run before building"
     , strField "prebuild"    (snd <$> desc.prebuild)
+
+    , comment "script to run after building"
     , strField "postbuild"   (snd <$> desc.postbuild)
+
+    , comment "script to run after building, before installing"
     , strField "preinstall"  (snd <$> desc.preinstall)
+
+    , comment "script to run after installing"
     , strField "postinstall" (snd <$> desc.postinstall)
+
+    , comment "script to run before cleaning"
     , strField "preclean"    (snd <$> desc.preclean)
+
+    , comment "script to run after cleaning"
     , strField "postclean"   (snd <$> desc.postclean)
     ]
 
   where
+
+    comment : String -> Doc ann
+    comment str =
+      let ws = "--" :: words str in
+      let commSoftLine = Union (Chara ' ') (hcat [Line, pretty "-- "]) in
+      Line <+> concatWith (\x, y => x <+> commSoftLine <+> y) ws
+
     field : String -> Maybe (Doc ann) -> Doc ann
     field nm Nothing = hsep [ pretty "--", pretty nm, equals ]
     field nm (Just d) = hsep [ pretty nm, equals, d ]
