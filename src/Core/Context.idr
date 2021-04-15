@@ -2144,15 +2144,6 @@ getWorkingDir
          pure d
 
 export
-withWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core a -> Core a
-withWorkingDir dir op
-    = do d <- getWorkingDir
-         setWorkingDir dir
-         res <- op
-         setWorkingDir d
-         pure res
-
-export
 withCtxt : {auto cc : Ref Ctxt Defs} -> Core a -> Core a
 withCtxt = wrapRef Ctxt resetCtxt
   where
