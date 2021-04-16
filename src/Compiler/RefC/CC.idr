@@ -1,6 +1,7 @@
 module Compiler.RefC.CC
 
 import Core.Context
+import Core.Context.Log
 import Core.Options
 
 import System
@@ -37,7 +38,7 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
                        "-I" ++ fullprefix_dir dirs "refc " ++
                        "-I" ++ fullprefix_dir dirs "include"
 
-     coreLift $ putStrLn runccobj
+     log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
        | _ => pure Nothing
 
@@ -62,7 +63,7 @@ compileCFile {asShared} objectFile outFile =
                        "-L" ++ fullprefix_dir dirs "refc " ++
                        clibdirs (lib_dirs dirs)
 
-     coreLift $ putStrLn runcc
+     log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc
        | _ => pure Nothing
 
