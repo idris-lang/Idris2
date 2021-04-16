@@ -24,6 +24,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
@@ -412,68 +413,6 @@ check pkg opts =
 
     runScript (postbuild pkg)
     pure []
-
-htmlEscape : String -> String
-htmlEscape s = fastAppend $ reverse $ go [] s
-  where
-    isSafe : Char -> Bool
-    isSafe '"' = False
-    isSafe '<' = False
-    isSafe '>' = False
-    isSafe '&' = False
-    isSafe '\'' = False
-    isSafe '\t' = True
-    isSafe '\n' = True
-    isSafe '\r' = True
-    isSafe c = (c >= ' ' && c <= '~')
-
-    htmlQuote : Char -> String
-    htmlQuote '"' = "&quot;"
-    htmlQuote '<' = "&lt;"
-    htmlQuote '>' = "&gt;"
-    htmlQuote '&' = "&amp;"
-    htmlQuote '\'' = "&apos;"
-    htmlQuote c = "&#" ++ (show $ ord c) ++ ";"
-
-    go : List String -> String -> List String
-    go acc "" = acc
-    go acc s =
-      case span isSafe s of
-           (safe, "") => safe::acc
-           (safe, rest) => let c = assert_total (strIndex rest 0)
-                               escaped = htmlQuote c in
-                               go (escaped::safe::acc) (assert_total $ strTail rest)
-
-htmlPreamble : String -> String -> String -> String
-htmlPreamble title root class = """
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>
-""" ++ htmlEscape title ++ """
-    </title>
-    <link rel="stylesheet" href="
-""" ++ root ++ """
-styles.css">
-  </head>
-  <body class="
-""" ++ class ++ """
-">
-    <header>
-      <strong>Idris2Doc</strong> :
-""" ++ " " ++ htmlEscape title ++ """
-      <nav>
-        <a href="
-""" ++ root ++ """
-index.html">Index</a>
-      </nav>
-    </header>
-    <div class="container">
-"""
-
-htmlFooter : String
-htmlFooter = "</div><footer>Produced by Idris2 version " ++ (showVersion True version) ++ "</footer></body></html>"
 
 removeAllExceptLink : IdrisAnn -> List IdrisAnn
 removeAllExceptLink x@(Link _) = [x]
