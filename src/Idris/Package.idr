@@ -538,16 +538,14 @@ processPackage opts (cmd, file)
         _ =>
           do Just (dir, filename) <- pure $ splitParent file
                | Nothing => throw $ InternalError "Tried to split empty string"
-             True <- pure $ isSuffixOf ".ipkg" filename
-               | False => coreLift . putStrLn $ "Packages must have an '.ipkg' extension: " ++ show file ++ "."
+             let True = isSuffixOf ".ipkg" filename
+                 | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
+                           coreLift (exitWith (ExitFailure 1))
              setWorkingDir dir
-             Right (pname, fs) <- coreLift $ parseFile filename
-                                      (do desc <- parsePkgDesc filename
-                                          eoi
-                                          pure desc)
+             Right (pname, fs) <- coreLift $ parseFile filename (parsePkgDesc filename <* eoi)
                 | Left err => throw err
              pkg <- addFields fs (initPkgDesc pname)
-             maybe (pure ()) setBuildDir (builddir pkg)
+             whenJust (builddir pkg) setBuildDir
              setOutputDir (outputdir pkg)
              case cmd of
                   Build => do [] <- build pkg opts
