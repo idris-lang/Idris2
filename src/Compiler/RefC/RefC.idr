@@ -7,6 +7,7 @@ import Compiler.CompileExpr
 import Compiler.ANF
 
 import Core.Context
+import Core.Context.Log
 import Core.Directory
 
 import Data.List
@@ -995,7 +996,8 @@ createCFunctions n (MkAError exp) = do
     pure ()
 
 
-header : {auto f : Ref FunctionDefinitions (List String)}
+header : {auto c : Ref Ctxt Defs}
+      -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto e : Ref ExternalLibs (List String)}
@@ -1006,7 +1008,7 @@ header = do
                     , "#include <idris_support.h> // for libidris2_support"]
     extLibs <- get ExternalLibs
     let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
-    traverse_ (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
+    traverse_ (\l => log "compiler.refc" 20 $ " header for " ++ l ++ " needed") extLibs
     fns <- get FunctionDefinitions
     update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
 
@@ -1046,7 +1048,7 @@ generateCSourceFile defs outn =
      let code = fastAppend (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
-     coreLift_ $ putStrLn $ "Generated C file " ++ outn
+     log "compiler.refc" 10 $ "Generated C file " ++ outn
 
 export
 compileExpr : UsePhase
