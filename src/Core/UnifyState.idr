@@ -663,9 +663,7 @@ dumpHole' : {auto u : Ref UST UState} ->
 dumpHole' lvl hole
     = do ust <- get UST
          defs <- get Ctxt
-         if keepLog lvl (logLevel $ session $ options defs)
-            then pure ()
-            else do
+         when (keepLog lvl (logLevel $ session $ options defs)) $ do
                defs <- get Ctxt
                case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
                  Nothing => pure ()
