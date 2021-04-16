@@ -16,8 +16,9 @@ import TTImp.Elab.Term
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Libraries.Data.IntMap
 import Data.List
+import Data.Maybe
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -137,8 +138,10 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          put UST (record { delayedElab = olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
 
-         -- As long as we're not in a case block, finish off constraint solving
-         when (not incase) $
+         -- As long as we're not in the RHS of a case block,
+         -- finish off constraint solving
+         -- On the LHS the constraint solving is used to handle overloading
+         when (not incase || isJust (isLHS mode)) $
            -- resolve any default hints
            do log "elab" 5 "Resolving default hints"
               solveConstraintsAfter constart solvemode Defaults
