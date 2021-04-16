@@ -452,7 +452,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
          compileToSS c appDirGen tm outSsAbs
-         logTime "Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
+         logTime "++ Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
