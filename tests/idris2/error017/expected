@@ -7,3 +7,4 @@ Issue962.idr:3:3--3:8
  3 |   "bar" => ()
        ^^^^^
 
+1/1: Building Issue962-case (Issue962-case.idr)
