@@ -47,7 +47,8 @@ executeExpr c tmpDir tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)
      node <- coreLift findNode
-     coreLift_ $ system (node ++ " " ++ outn)
+     quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
+     coreLift_ $ system (quoted_node ++ " " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

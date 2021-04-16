@@ -141,20 +141,23 @@ idrisTestsBuiltin = MkTestPool []
       -- %builtin related tests for the frontend (type-checking)
       ["builtin001", "builtin002", "builtin003", "builtin004"]
 
+idrisTestsEvaluator : TestPool
+idrisTestsEvaluator = MkTestPool []
+      [ -- Evaluator
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       -- Miscellaneous REPL
+       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
+       "interpreter005", "interpreter006", "interpreter007"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool []
        -- Documentation strings
       ["docs001", "docs002",
-       -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
        -- "evaluator005",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
-       -- Miscellaneous REPL
-       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007",
        -- Implicit laziness, lazy evaluation
        "lazy001",
        -- Namespace blocks
@@ -162,7 +165,7 @@ idrisTests = MkTestPool []
        -- Parameters blocks
        "params001",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006",
+       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
@@ -282,6 +285,7 @@ main = runner
   , testPaths "idris2" idrisTestsRegression
   , testPaths "idris2" idrisTestsData
   , testPaths "idris2" idrisTestsBuiltin
+  , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests

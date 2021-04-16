@@ -53,6 +53,8 @@ plhs = MkParseOpts False False
 %hide Core.Core.(>>=)
 %hide Prelude.pure
 %hide Core.Core.pure
+%hide Prelude.(<*>)
+%hide Core.Core.(<*>)
 
 atom : FileName -> Rule PTerm
 atom fname
@@ -222,7 +224,7 @@ mutual
                        pure (POp (boundToFC fname (mergeBounds l r)) (UN "=") l.val r.val)
                else fail "= not allowed")
              <|>
-             (do b <- bounds (MkPair <$> (continue indents *> iOperator) <*> opExpr q fname indents)
+             (do b <- bounds [| MkPair (continue indents *> iOperator) (opExpr q fname indents) |]
                  (op, r) <- pure b.val
                  pure (POp (boundToFC fname (mergeBounds l b)) op l.val r))
                <|> pure l.val
@@ -474,7 +476,7 @@ mutual
     where
       -- _ gets treated specially here, it means "I don't care about the name"
       binderName : Rule String
-      binderName = unqualifiedName <|> (symbol "_" *> pure "_")
+      binderName = unqualifiedName <|> (symbol "_" $> "_")
 
   pibindList : FileName -> IndentInfo ->
                Rule (List (RigCount, WithBounds (Maybe Name), PTerm))
@@ -484,8 +486,8 @@ mutual
 
   bindSymbol : Rule (PiInfo PTerm)
   bindSymbol
-      = (symbol "->" *> pure Explicit)
-    <|> (symbol "=>" *> pure AutoImplicit)
+      = (symbol "->" $> Explicit)
+    <|> (symbol "=>" $> AutoImplicit)
 
   explicitPi : FileName -> IndentInfo -> Rule PTerm
   explicitPi fname indents
@@ -642,7 +644,7 @@ mutual
 
   record_ : FileName -> IndentInfo -> Rule PTerm
   record_ fname indents
-      = do b <- bounds (do kw <- option False (keyword "record" *> pure True) -- TODO deprecated
+      = do b <- bounds (do kw <- option False (keyword "record" $> True) -- TODO deprecated
                            symbol "{"
                            commit
                            fs <- sepBy1 (symbol ",") (field kw fname indents)
@@ -653,9 +655,9 @@ mutual
   field : Bool -> FileName -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents
       = do path <- map fieldName <$> [| name :: many recFieldCompat |]
-           upd <- (ifThenElse kw (symbol "=") (symbol ":=") *> pure PSetField)
+           upd <- (ifThenElse kw (symbol "=") (symbol ":=") $> PSetField)
                       <|>
-                  (symbol "$=" *> pure PSetFieldApp)
+                  (symbol "$=" $> PSetFieldApp)
            val <- opExpr plhs fname indents
            pure (upd path val)
     where
@@ -681,8 +683,7 @@ mutual
 
   doBlock : FileName -> IndentInfo -> Rule PTerm
   doBlock fname indents
-      = do b <- bounds (do keyword "do"
-                           block (doAct fname))
+      = do b <- bounds $ keyword "do" *> block (doAct fname)
            commit
            pure (PDoBlock (boundToFC fname b) Nothing (concat b.val))
     <|> do nsdo <- bounds namespacedIdent
@@ -710,7 +711,7 @@ mutual
                            val <- expr pdef fname indents
                            pure (n, val))
            atEnd indents
-           (n, val) <- pure b.val
+           let (n, val) = b.val
            pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val val]
     <|> do keyword "let"
            commit
@@ -721,14 +722,10 @@ mutual
            atEnd indents
            pure [DoRewrite (boundToFC fname b) b.val]
     <|> do e <- bounds (expr plhs fname indents)
-           (do atEnd indents
-               pure [DoExp (boundToFC fname e) e.val])
-             <|> (do b <- bounds (do symbol "<-"
-                                     val <- expr pnowith fname indents
-                                     alts <- block (patAlt fname)
-                                     pure (val, alts))
+           (atEnd indents $> [DoExp (boundToFC fname e) e.val])
+             <|> (do b <- bounds $ symbol "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
                      atEnd indents
-                     (v, alts) <- pure b.val
+                     let (v, alts) = b.val
                      let fc = boundToFC fname (mergeBounds e b)
                      pure [DoBindPat fc e.val v alts])
 
@@ -762,9 +759,7 @@ mutual
   typeExpr q fname indents
       = do arg <- bounds (opExpr q fname indents)
            (do continue indents
-               rest <- some (do exp <- bindSymbol
-                                op <- bounds (opExpr pdef fname indents)
-                                pure (exp, op))
+               rest <- some [| (bindSymbol, bounds $ opExpr pdef fname indents) |]
                pure (mkPi arg (forget rest)))
              <|> pure arg.val
     where
@@ -824,9 +819,9 @@ mutual
 
 visOption : Rule Visibility
 visOption
-    = (keyword "public" *> keyword "export" *> pure Public)
-  <|> (keyword "export" *> pure Export)
-  <|> (keyword "private" *> pure Private)
+    = (keyword "public" *> keyword "export" $> Public)
+  <|> (keyword "export" $> Export)
+  <|> (keyword "private" $> Private)
 
 visibility : SourceEmptyRule Visibility
 visibility
@@ -835,10 +830,7 @@ visibility
 
 tyDecls : Rule Name -> String -> FileName -> IndentInfo -> Rule (List1 PTypeDecl)
 tyDecls declName predoc fname indents
-    = do bs <- do docns <- sepBy1 (symbol ",") (do
-                                    doc   <- option "" documentation
-                                    n     <- bounds declName
-                                    pure (doc, n))
+    = do bs <- do docns <- sepBy1 (symbol ",") [| (option "" documentation, bounds declName) |]
                   symbol ":"
                   mustWork $ do ty  <- expr pdef fname indents
                                 pure $ map (\(doc, n) => (doc, n.val, boundToFC fname n, ty))
@@ -849,9 +841,7 @@ tyDecls declName predoc fname indents
 
 withFlags : SourceEmptyRule (List WithFlag)
 withFlags
-    = do pragma "syntactic"
-         fs <- withFlags
-         pure $ Syntactic :: fs
+    = pragma "syntactic" *> (Syntactic ::) <$> withFlags
   <|> pure []
 
 mutual
@@ -859,10 +849,7 @@ mutual
              FileName -> WithBounds t -> Int ->
              IndentInfo -> (lhs : PTerm) -> Rule PClause
   parseRHS withArgs fname start col indents lhs
-       = do b <- bounds (symbol "=" *> mustWork (
-                           do rhs <- expr pdef fname indents
-                              ws <- option [] (whereBlock fname col)
-                              pure (rhs, ws)))
+       = do b <- bounds $ symbol "=" *> mustWork [| (expr pdef fname indents, option [] $ whereBlock fname col) |]
             atEnd indents
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
@@ -947,13 +934,11 @@ simpleData fname start n indents
 
 dataOpt : Rule DataOpt
 dataOpt
-    = (exactIdent "noHints" *> pure NoHints)
-  <|> (exactIdent "uniqueSearch" *> pure UniqueSearch)
-  <|> do exactIdent "search"
-         ns <- forget <$> some name
-         pure (SearchBy ns)
-  <|> (exactIdent "external" *> pure External)
-  <|> (exactIdent "noNewtype" *> pure NoNewtype)
+    = (exactIdent "noHints" $> NoHints)
+  <|> (exactIdent "uniqueSearch" $> UniqueSearch)
+  <|> (exactIdent "search" *> SearchBy <$> forget <$> some name)
+  <|> (exactIdent "external" $> External)
+  <|> (exactIdent "noNewtype" $> NoNewtype)
 
 dataBody : FileName -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
           SourceEmptyRule PDataDecl
@@ -961,10 +946,7 @@ dataBody fname mincol start n indents ty
     = do atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do keyword "where"
-                         opts <- option [] (do symbol "["
-                                               dopts <- sepBy1 (symbol ",") dataOpt
-                                               symbol "]"
-                                               pure $ forget dopts)
+                         opts <- option [] $ symbol "[" *> forget <$> sepBy1 (symbol ",") dataOpt <* symbol "]"
                          cs <- blockAfter mincol (tyDecls (mustWork dataConstructorName) "" fname)
                          pure (opts, concatMap forget cs))
          (opts, cs) <- pure b.val
@@ -1004,19 +986,19 @@ stripBraces str = pack (drop '{' (reverse (drop '}' (reverse (unpack str)))))
 
 onoff : Rule Bool
 onoff
-   = (exactIdent "on" *> pure True)
- <|> (exactIdent "off" *> pure False)
+   = (exactIdent "on" $> True)
+ <|> (exactIdent "off" $> False)
 
 extension : Rule LangExt
 extension
-    = (exactIdent "ElabReflection" *> pure ElabReflection)
-  <|> (exactIdent "Borrowing" *> pure Borrowing)
+    = (exactIdent "ElabReflection" $> ElabReflection)
+  <|> (exactIdent "Borrowing" $> Borrowing)
 
 totalityOpt : Rule TotalReq
 totalityOpt
-    = (keyword "partial" *> pure PartialOK)
-  <|> (keyword "total" *> pure Total)
-  <|> (keyword "covering" *> pure CoveringOnly)
+    = (keyword "partial" $> PartialOK)
+  <|> (keyword "total" $> Total)
+  <|> (keyword "covering" $> CoveringOnly)
 
 logLevel : Rule (Maybe LogLevel)
 logLevel
@@ -1115,10 +1097,10 @@ directive fname indents
 
 fix : Rule Fixity
 fix
-    = (keyword "infixl" *> pure InfixL)
-  <|> (keyword "infixr" *> pure InfixR)
-  <|> (keyword "infix"  *> pure Infix)
-  <|> (keyword "prefix" *> pure Prefix)
+    = (keyword "infixl" $> InfixL)
+  <|> (keyword "infixr" $> InfixR)
+  <|> (keyword "infix"  $> Infix)
+  <|> (keyword "prefix" $> Prefix)
 
 namespaceHead : Rule Namespace
 namespaceHead = keyword "namespace" *> mustWork namespaceId
@@ -1309,9 +1291,7 @@ ifaceDecl fname indents
                          n      <- name
                          paramss <- many (ifaceParam fname indents)
                          let params = concatMap (\ (ns, rt) => map (\ n => (n, rt)) ns) paramss
-                         det    <- option []
-                                     (do symbol "|"
-                                         sepBy (symbol ",") name)
+                         det    <- option [] $ symbol "|" *> sepBy (symbol ",") name
                          keyword "where"
                          dc <- optional recordConstructor
                          body <- assert_total (blockAfter col (topDecl fname))
@@ -1327,19 +1307,13 @@ implDecl fname indents
                          let opts = mapMaybe getRight visOpts
                          col <- column
                          option () (keyword "implementation")
-                         iname <- optional (do symbol "["
-                                               iname <- name
-                                               symbol "]"
-                                               pure iname)
+                         iname  <- optional $ symbol "[" *> name <* symbol "]"
                          impls  <- implBinds fname indents
                          cons   <- constraints fname indents
                          n      <- name
                          params <- many (simpleExpr fname indents)
-                         nusing <- option [] (do keyword "using"
-                                                 names <- some name
-                                                 pure $ forget names)
-                         body <- optional (do keyword "where"
-                                              blockAfter col (topDecl fname))
+                         nusing <- option [] $ keyword "using" *> forget <$> some name
+                         body <- optional $ keyword "where" *> blockAfter col (topDecl fname)
                          pure $ \fc : FC =>
                             (PImplementation fc vis opts Single impls cons n params iname nusing
                                              (map (collectDefs . concat) body)))
@@ -1381,10 +1355,7 @@ recordParam fname indents
          commit
          info <- the (SourceEmptyRule (PiInfo PTerm))
                  (pure  AutoImplicit <* keyword "auto"
-              <|>(do
-                  keyword "default"
-                  t <- simpleExpr fname indents
-                  pure $ DefImplicit t)
+              <|> (keyword "default" *> DefImplicit <$> simpleExpr fname indents)
               <|> pure      Implicit)
          params <- pibindListName fname indents
          symbol "}"
@@ -1482,9 +1453,9 @@ topDecl fname indents
   <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do dstr <- bounds (terminal "Expected CG directive"
-                          (\x => case x of
-                                      CGDirective d => Just d
-                                      _ => Nothing))
+                          (\case
+                             CGDirective d => Just d
+                             _ => Nothing))
          pure [let cgrest = span isAlphaNum dstr.val in
                    PDirective (boundToFC fname dstr)
                         (CGAction (fst cgrest) (stripBraces (trim (snd cgrest))))]
@@ -1518,8 +1489,7 @@ export
 import_ : FileName -> IndentInfo -> Rule Import
 import_ fname indents
     = do b <- bounds (do keyword "import"
-                         reexp <- option False (do keyword "public"
-                                                   pure True)
+                         reexp <- option False (keyword "public" $> True)
                          ns <- mustWork moduleIdent
                          nsAs <- option (miAsNamespace ns)
                                         (do exactIdent "as"
@@ -1609,25 +1579,25 @@ editCmd
          n <- name
          pure (TypeAt (fromInteger line) (fromInteger col) n)
   <|> do replCmd ["cs"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          col <- intLit
          n <- name
          pure (CaseSplit upd (fromInteger line) (fromInteger col) n)
   <|> do replCmd ["ac"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (AddClause upd (fromInteger line) n)
   <|> do replCmd ["ps", "proofsearch"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (ExprSearch upd (fromInteger line) n [])
   <|> do replCmd ["psnext"]
          pure ExprSearchNext
   <|> do replCmd ["gd"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          nreject <- option 0 intLit
@@ -1635,17 +1605,17 @@ editCmd
   <|> do replCmd ["gdnext"]
          pure GenerateDefNext
   <|> do replCmd ["ml", "makelemma"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeLemma upd (fromInteger line) n)
   <|> do replCmd ["mc", "makecase"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeCase upd (fromInteger line) n)
   <|> do replCmd ["mw", "makewith"]
-         upd <- option False (symbol "!" *> pure True)
+         upd <- option False (symbol "!" $> True)
          line <- intLit
          n <- name
          pure (MakeWith upd (fromInteger line) n)
@@ -1936,10 +1906,8 @@ eval = do
 export
 command : SourceEmptyRule REPLCmd
 command
-    = do eoi
-         pure NOP
+    = eoi $> NOP
   <|> nonEmptyCommand
-  <|> do symbol ":?"; pure Help -- special case, :? doesn't fit into above scheme
-  <|> do symbol ":"; cmd <- editCmd
-         pure (Editing cmd)
+  <|> symbol ":?" $> Help -- special case, :? doesn't fit into above scheme
+  <|> symbol ":" *> Editing <$> editCmd
   <|> eval
