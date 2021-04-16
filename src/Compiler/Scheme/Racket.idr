@@ -431,7 +431,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          racket <- coreLift findRacket
 
          ok <- the (Core Int) $ if mkexec
-                  then logTime "Build racket" $
+                  then logTime "+ Build racket" $
                          coreLift $
                            system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
                   else pure 0
