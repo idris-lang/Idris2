@@ -741,9 +741,6 @@ getAll (r :: xs) = do
 export
 putAll : (refList : RefList ls) -> RefListTy refList -> Core ()
 putAll [] () = pure ()
--- can't match on `ty` for some reason
-putAll (r :: rs) ty = do
-  let x  = fst ty
-  let xs = snd ty
+putAll (r :: rs) (x, xs) = do
   put _ @{r} x
   putAll rs xs
