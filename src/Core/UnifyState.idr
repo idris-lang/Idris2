@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Env
+import Core.Error
 import Core.FC
 import Core.Normalise
 import Core.Options

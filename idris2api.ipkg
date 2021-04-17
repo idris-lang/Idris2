@@ -41,6 +41,7 @@ modules =
     Core.Coverage,
     Core.Directory,
     Core.Env,
+    Core.Error,
     Core.FC,
     Core.GetType,
     Core.Hash,
