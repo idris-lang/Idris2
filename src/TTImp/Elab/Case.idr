@@ -373,7 +373,7 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            let chrig = if isErased rig then erased else top
            log "elab.case" 5 $ "Checking " ++ show scr ++ " at " ++ show chrig
 
-           (scrtm_in, gscrty, caseRig) <- handle
+           (scrtm_in, gscrty, caseRig) <- handleCheck
               (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
                   pure (fst c, snd c, chrig))
               (\err => case err of

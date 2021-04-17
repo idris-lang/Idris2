@@ -70,7 +70,7 @@ delayOnFailure : {vars : _} ->
                  Core (Term vars, Glued vars)
 delayOnFailure fc rig env expected pred pri elab
     = do est <- get EST
-         handle (elab False)
+         handleCheck (elab False)
           (\err =>
               do est <- get EST
                  if pred err
@@ -220,7 +220,7 @@ retryDelayed' errmode acc (d@(_, i, hints, elab) :: ds)
     = do defs <- get Ctxt
          Just Delayed <- lookupDefExact (Resolved i) (gamma defs)
               | _ => retryDelayed' errmode acc ds
-         handle
+         handleCheck
            (do est <- get EST
                log "elab.retry" 5 (show (delayDepth est) ++ ": Retrying delayed hole " ++ show !(getFullName (Resolved i)))
                -- elab itself might have delays internally, so keep track of them
@@ -276,7 +276,8 @@ runDelays pri elab
          tm <- elab
          ust <- get UST
          log "elab.delay" 2 $ "Rerunning delayed in elaborator"
-         handle (do ignore $ retryDelayed' AllErrors []
+         handleCheck
+                (do ignore $ retryDelayed' AllErrors []
                        (reverse (filter hasPri (delayedElab ust))))
                 (\err => do put UST (record { delayedElab = olddelayed } ust)
                             throw err)

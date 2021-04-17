@@ -462,50 +462,31 @@ initElabInfo : ElabMode -> ElabInfo
 initElabInfo m = MkElabInfo m NONE False True False []
 
 export
-tryError : {vars : _} ->
+tryErrorCheck : {vars : _} ->
+                {auto c : Ref Ctxt Defs} ->
+                {auto m : Ref MD Metadata} ->
+                {auto u : Ref UST UState} ->
+                {auto e : Ref EST (EState vars)} ->
+                Core a -> Core (Either Error a)
+tryErrorCheck = tryError {refs = [m, u, e]}
+
+export
+tryCheck : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto m : Ref MD Metadata} ->
            {auto u : Ref UST UState} ->
            {auto e : Ref EST (EState vars)} ->
-           Core a -> Core (Either Error a)
-tryError elab
-    = do ust <- get UST
-         est <- get EST
-         md <- get MD
-         defs <- branch
-         catch (do res <- elab
-                   commit
-                   pure (Right res))
-               (\err => do put UST ust
-                           put EST est
-                           put MD md
-                           defs' <- get Ctxt
-                           put Ctxt (record { timings = timings defs' } defs)
-                           pure (Left err))
+           Core a -> Core a -> Core a
+tryCheck = try {refs = [m, u, e]}
 
 export
-try : {vars : _} ->
-      {auto c : Ref Ctxt Defs} ->
-      {auto m : Ref MD Metadata} ->
-      {auto u : Ref UST UState} ->
-      {auto e : Ref EST (EState vars)} ->
-      Core a -> Core a -> Core a
-try elab1 elab2
-    = do Right ok <- tryError elab1
-               | Left err => elab2
-         pure ok
-
-export
-handle : {vars : _} ->
+handleCheck : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
          {auto m : Ref MD Metadata} ->
          {auto u : Ref UST UState} ->
          {auto e : Ref EST (EState vars)} ->
          Core a -> (Error -> Core a) -> Core a
-handle elab1 elab2
-    = do Right ok <- tryError elab1
-               | Left err => elab2 err
-         pure ok
+handleCheck = handle {refs = [m, u, e]}
 
 successful : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -636,7 +617,7 @@ anyOne : {vars : _} ->
          Core (Term vars, Glued vars)
 anyOne fc [] = throw (GenericMsg fc "No elaborators provided")
 anyOne fc [(tm, elab)] = elab
-anyOne fc ((tm, elab) :: es) = try elab (anyOne fc es)
+anyOne fc ((tm, elab) :: es) = tryCheck elab (anyOne fc es)
 
 -- Implemented in TTImp.Elab.Term; delaring just the type allows us to split
 -- the elaborator over multiple files more easily

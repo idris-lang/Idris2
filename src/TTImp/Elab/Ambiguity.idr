@@ -371,7 +371,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                           show alts')
 
                   if delayed -- use the default if there's still ambiguity
-                     then try
+                     then tryCheck
                             (exactlyOne' False fc env
                                 (map (\t =>
                                    (getName t,

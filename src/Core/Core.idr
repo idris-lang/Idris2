@@ -715,3 +715,35 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+public export
+data RefList : List (Type, Type) -> Type where
+  Nil : RefList []
+  (::) : {l : _} -> Ref l a -> RefList ls -> RefList ((l, a) :: ls)
+
+0
+GetTy : Ref l a -> Type
+GetTy _ = a
+
+0
+RefListTy : RefList xs -> Type
+RefListTy [] = ()
+RefListTy (r :: rs) = (GetTy r, RefListTy rs)
+
+export
+getAll : (refList : RefList ls) -> Core (RefListTy refList)
+getAll [] = pure ()
+getAll (r :: xs) = do
+  x <- get _ @{r}
+  rest <- getAll xs
+  pure (x, rest)
+
+export
+putAll : (refList : RefList ls) -> RefListTy refList -> Core ()
+putAll [] () = pure ()
+-- can't match on `ty` for some reason
+putAll (r :: rs) ty = do
+  let x  = fst ty
+  let xs = snd ty
+  put _ @{r} x
+  putAll rs xs

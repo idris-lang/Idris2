@@ -49,9 +49,14 @@ process eopts nest env (INamespace fc ns decls)
     = do defs <- get Ctxt
          let cns = currentNS defs
          extendNS ns
-         traverse_ (processDecl eopts nest env) decls
-         defs <- get Ctxt
-         put Ctxt (record { currentNS = cns } defs)
+         tryCatchFinally {
+            refs = [m, u]
+          , try = (traverse_ (processDecl eopts nest env) decls)
+          , catch = throw
+          , finally = do
+              defs <- get Ctxt
+              put Ctxt (record { currentNS = cns } defs)
+          }
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)

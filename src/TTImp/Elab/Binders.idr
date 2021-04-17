@@ -207,7 +207,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
          -- so the resulting binding should be linear)
          -- Also elaborate any case blocks in the value via runDelays
          -- (0 is the highest priority delays only)
-         (valv, valt, rigb) <- handle
+         (valv, valt, rigb) <- handleCheck
               (do c <- runDelays 0 $ check (rigl |*| rigc)
                              (record { preciseInf = True } elabinfo)
                              nest env nVal (Just (gnf env tyv))

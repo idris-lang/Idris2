@@ -524,34 +524,19 @@ export
 tryErrorUnify : {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 Core a -> Core (Either Error a)
-tryErrorUnify elab
-    = do ust <- get UST
-         defs <- branch
-         catch (do res <- elab
-                   commit
-                   pure (Right res))
-               (\err => do put UST ust
-                           defs' <- get Ctxt
-                           put Ctxt (record { timings = timings defs' } defs)
-                           pure (Left err))
+tryErrorUnify = tryError {refs = [u]}
 
 export
 tryUnify : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
            Core a -> Core a -> Core a
-tryUnify elab1 elab2
-    = do Right ok <- tryErrorUnify elab1
-               | Left err => elab2
-         pure ok
+tryUnify = try {refs = [u]}
 
 export
 handleUnify : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               Core a -> (Error -> Core a) -> Core a
-handleUnify elab1 elab2
-    = do Right ok <- tryErrorUnify elab1
-               | Left err => elab2 err
-         pure ok
+handleUnify = handle {refs = [u]}
 
 -- Note that the given hole name arises from a type declaration, so needs
 -- to be resolved later

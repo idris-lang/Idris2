@@ -553,7 +553,7 @@ mutual
                         then makeImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in)
                         -- in 'preciseInf' mode blunder on anyway, and hope
                         -- that we can resolve the implicits
-                        else handle (checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in))
+                        else handleCheck (checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in))
                                (\err => makeImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in))
   -- Same for auto
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
