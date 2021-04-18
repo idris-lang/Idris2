@@ -239,7 +239,7 @@ ideModeTests = MkTestPool []
 
 preludeTests : TestPool
 preludeTests = MkTestPool []
-  [ "reg001"
+  [ "decbool", "reg001"
   ]
 
 templateTests : TestPool
