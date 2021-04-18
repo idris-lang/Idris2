@@ -72,7 +72,6 @@ modules = Control.App,
           Decidable.Decidable,
           Decidable.Equality,
           Decidable.Equality.Core,
-          Decidable.Equality.Bool,
           Decidable.Order,
 
           Language.Reflection,
