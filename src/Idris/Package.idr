@@ -460,7 +460,7 @@ renderHtml doc = go [] doc where
   go _ SEmpty = pure neutral
   go t (SChar c rest) = pure $ (htmlEscape $ singleton c) <+> !(go t rest)
   go ts (SText l t rest) = pure $ (htmlEscape t) <+> !(go ts rest)
-  go t (SLine l rest) = pure $ (htmlEscape $ singleton '\n' <+> textSpaces l) <+> !(go t rest)
+  go t (SLine l rest) = pure $ "<br>" <+> !(go t rest)
   go ts (SAnnPush (Link n) rest) =
     do Just cName <- tryCanonicalName emptyFC n
        | Nothing => pure $ "<span class=\"implicit\">" <+> !(go ("span"::ts) rest)
@@ -522,10 +522,10 @@ makeDoc pkg opts =
                let pname = stripNS ns name
                writeHtml ("<dt id=\"" ++ (htmlEscape $ show name) ++ "\">")
                writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")
-               writeHtml ("</dt><dd><pre>")
+               writeHtml ("</dt><dd>")
                doc <- getDocsForName emptyFC name
-               writeHtml (unlines $ map htmlEscape doc)
-               writeHtml ("</pre></dd>")
+               writeHtml !(docDocToHtml $ pretty doc)
+               writeHtml ("</dd>")
              )
            writeHtml ("</dl>")
            writeHtml htmlFooter
@@ -712,6 +712,7 @@ processPackage opts (cmd, file)
              case cmd of
                   Build => do [] <- build pkg opts
                                  | errs => coreLift (exitWith (ExitFailure 1))
+                              pure ()
                   MkDoc => do [] <- makeDoc pkg opts
                                  | errs => coreLift (exitWith (ExitFailure 1))
                               pure ()
