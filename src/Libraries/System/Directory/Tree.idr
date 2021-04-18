@@ -26,6 +26,11 @@ export
 fileName : FileName root -> String
 fileName (MkFileName str) = str
 
+namespace FileName
+  export
+  setRoot : FileName root -> FileName root'
+  setRoot (MkFileName x) = MkFileName x
+
 ||| Convert a filename anchored in `root` to a filepath by appending the name
 ||| to the root path.
 export
@@ -62,6 +67,14 @@ SubTree root = (dir : FileName root ** IO (Tree (root /> fileName dir)))
 export
 emptyTree : Tree root
 emptyTree = MkTree [] []
+
+namespace Tree
+  export
+  setRoot : Tree root -> (0 root' : Path) -> Tree root'
+  setRoot (MkTree files sub) root' = assert_total $
+    let files' = map setRoot files
+        sub'   = map (DPair.bimap setRoot (map \x => setRoot x _)) sub in
+    MkTree files' sub'
 
 ||| Filter out files and directories that do not satisfy a given predicate.
 export

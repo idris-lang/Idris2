@@ -60,3 +60,8 @@ lowerMaybe (Just x) = x
 export
 raiseToMaybe : (Monoid a, Eq a) => a -> Maybe a
 raiseToMaybe x = if x == neutral then Nothing else Just x
+
+public export
+filter : (a -> Bool) -> Maybe a -> Maybe a
+filter _ Nothing = Nothing
+filter f (Just x) = toMaybe (f x) x

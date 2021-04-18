@@ -523,7 +523,8 @@ fileStem path = pure $ fst $ splitFileName !(fileName path)
 ||| - Otherwise, the portion of the file name after the last ".".
 export
 extension : String -> Maybe String
-extension path = pure $ snd $ splitFileName !(fileName path)
+extension path = fileName path >>=
+  filter (/= "") . Just . snd . splitFileName
 
 ||| Updates the file name in the path.
 |||
