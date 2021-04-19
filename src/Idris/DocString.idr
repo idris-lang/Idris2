@@ -122,7 +122,7 @@ getDocsForName fc n
         = do syn <- get Syn
              let Just (fixity, assoc) = S.lookupName n (infixes syn)
                     | Nothing => pure Nothing
-             pure . Just $ "        "
+             pure . Just $ "\t"
                         ++ resugarFix fixity ++ " operator, level "
                         ++ show assoc        ++ "\n"
         where resugarFix : Fixity -> String
@@ -136,7 +136,7 @@ getDocsForName fc n
         = do syn <- get Syn
              let Just assoc = S.lookupName n (prefixes syn)
                     | Nothing => pure Nothing
-             pure . Just $ "        "
+             pure . Just $ "\t"
                         ++ "prefix operator, level "
                         ++ show assoc ++ "\n"
 

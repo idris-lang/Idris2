@@ -81,6 +81,14 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Flipped version of `<$>`, an infix alias for `map`, applying a function across
+||| everything of type 'a' in a parameterised type.
+||| @ f the parameterised type
+||| @ func the function to apply
+public export
+(<&>) : Functor f => f a -> (func : a -> b) -> f b
+(<&>) x func = map func x
+
 ||| Run something for effects, replacing the return value with a given parameter.
 public export
 (<$) : Functor f => b -> f a -> f b
