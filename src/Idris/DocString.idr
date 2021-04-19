@@ -122,8 +122,8 @@ getDocsForName fc n
         = do syn <- get Syn
              let Just (fixity, assoc) = S.lookupName n (infixes syn)
                     | Nothing => pure Nothing
-             pure . Just $ "Fixity Declarations: "
-                        ++ resugarFix fixity ++ " "
+             pure . Just $ "        "
+                        ++ resugarFix fixity ++ " " ++ "operator, level " ++ (if assoc < 10 then " " else "")
                         ++ show assoc        ++ "\n"
         where resugarFix : Fixity -> String
               resugarFix InfixL = "infixl"
@@ -136,8 +136,8 @@ getDocsForName fc n
         = do syn <- get Syn
              let Just assoc = S.lookupName n (prefixes syn)
                     | Nothing => pure Nothing
-             pure . Just $ "Fixity Declarations: "
-                        ++ "prefix"   ++ " "
+             pure . Just $ "        "
+                        ++ "prefix operator, level " ++ (if assoc < 10 then " " else "")
                         ++ show assoc ++ "\n"
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
@@ -179,7 +179,7 @@ getDocsForName fc n
                                            !(traverse toFullNames cons)
                          case mapMaybe id cdocs of
                               [] => pure ""
-                              docs => pure $ "\nConstructors:\n" ++ concat docs ++ "\n"
+                              docs => pure $ "\nConstructors:\n" ++ concat docs
                _ => pure ""
 
     showDoc : (Name, String) -> Core String
@@ -199,7 +199,10 @@ getDocsForName fc n
              let prefixes = case getPreFixDocn of
                     Just prefixStr => prefixStr
                     Nothing        => ""
-             pure (doc ++ extra ++ infixes ++ prefixes)
+             let fixes = if infixes == "" && prefixes == ""
+                            then ""
+                            else "\nFixity Declarations:\n" ++ infixes ++ prefixes
+             pure (doc ++ extra ++ fixes)
 
 export
 getDocsForPTerm : {auto c : Ref Ctxt Defs} ->
