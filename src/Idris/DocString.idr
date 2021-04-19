@@ -123,7 +123,7 @@ getDocsForName fc n
              let Just (fixity, assoc) = S.lookupName n (infixes syn)
                     | Nothing => pure Nothing
              pure . Just $ "        "
-                        ++ resugarFix fixity ++ " " ++ "operator, level " ++ (if assoc < 10 then " " else "")
+                        ++ resugarFix fixity ++ " operator, level "
                         ++ show assoc        ++ "\n"
         where resugarFix : Fixity -> String
               resugarFix InfixL = "infixl"
@@ -137,7 +137,7 @@ getDocsForName fc n
              let Just assoc = S.lookupName n (prefixes syn)
                     | Nothing => pure Nothing
              pure . Just $ "        "
-                        ++ "prefix operator, level " ++ (if assoc < 10 then " " else "")
+                        ++ "prefix operator, level "
                         ++ show assoc ++ "\n"
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
@@ -173,7 +173,7 @@ getDocsForName fc n
                  | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
              case definition d of
                PMDef _ _ _ _ _
-                   => pure (showTotal n (totality d) ++ "\n")
+                   => pure (showTotal n (totality d))
                TCon _ _ _ _ _ _ cons _
                    => do cdocs <- traverse getConstructorDoc
                                            !(traverse toFullNames cons)
