@@ -18,6 +18,8 @@ public export
 FileRange : Type
 FileRange = (FilePos, FilePos)
 
+||| Type for rightmost intervals, ordered by their low endpoints and annotated
+||| with the maximum of the high endpoints.
 data RMFileRange = MkRange FileRange FilePos
 
 Eq RMFileRange where
@@ -27,6 +29,14 @@ Show RMFileRange where
   showPrec p (MkRange low high) = showCon p "MkRange" $ showArg low ++ showArg high
 
 Semigroup RMFileRange where
+  -- The semigroup operation on righmost intervals is the composition of two
+  -- monoids applied to each component:
+  -- 1) the operation on low endpoints always returns the last key it contains,
+  --    assuming the keys are ordered (enforced by the insertion function), the
+  --    FingerTree behaves as a store of ordered sequences, with measures
+  --    serving as signpost keys.
+  -- 2) the operation on high endpoints returns the maximum of the endpoints,
+  --    thus the FingerTree behaves as a max-priority queue.
   (MkRange low high) <+> (MkRange low' high') = MkRange low' (max high high')
 
 data Interval = MkInterval RMFileRange | NoInterval
@@ -533,6 +543,8 @@ export
 insert : Measure a => a -> PosMap a -> PosMap a
 insert v m = let (l, r) = split (larger (measure v)) m in l ++ (v <| r)
 
+||| Builds a new map from a list of measurable elements, inserting in
+||| lexicographical order.
 export
 fromList : Measure a => List a -> PosMap a
 fromList = foldr insert empty
@@ -565,6 +577,11 @@ greater : FilePos -> Interval -> Bool
 greater k (MkInterval (MkRange low _)) = fst low > k
 greater k NoInterval = False
 
+-- Finds all the interval that overlaps with the given interval.
+-- takeUntil selects all the intervals within the given upper bound,
+-- however the remaining interval are not necessarily adjacent in
+-- the sequence, thus it drops elements until the next intersecting
+-- interval with dropUntil.
 inRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
 inRange low high t = matches (takeUntil (greater high) t)
   where matches : PosMap a -> List a
@@ -577,12 +594,12 @@ export
 searchPos : MeasureRM a => FilePos -> PosMap a -> List a
 searchPos p = inRange p p
 
-||| Returns all the interval that intersects the given interval.
+||| Returns all the intervals that intersect the given interval.
 export
 intersections : MeasureRM a => FileRange -> PosMap a -> List a
 intersections i = inRange (fst i) (snd i)
 
-||| Returns all the interval that contains the given interval.
+||| Returns all the intervals that contain the given interval.
 export
 dominators : MeasureRM a => FileRange -> PosMap a -> List a
 dominators i = inRange (snd i) (fst i)

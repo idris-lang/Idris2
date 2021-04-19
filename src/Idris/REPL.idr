@@ -365,10 +365,7 @@ findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (mea
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
-      case compare (er1 - sr1) (er2 - sr2) of
-           LT => LT
-           EQ => compare (ec1 - sc1) (ec2 - sr2)
-           GT => GT
+      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sr2)
 
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
