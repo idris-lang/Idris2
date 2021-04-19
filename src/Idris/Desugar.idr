@@ -783,16 +783,17 @@ mutual
       = pure [IData fc vis !(desugarData ps doc ddecl)]
   desugarDecl ps (PParameters fc params pds)
       = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
-           params' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
-                                            pure (fst ntm, tm')) params
+           params' <- traverse (\(n, rig, i, ntm) => do tm' <- desugar AnyExpr ps ntm
+                                                        i' <- traverse (desugar AnyExpr ps) i
+                                                        pure (n, rig, i', tm')) params
            -- Look for implicitly bindable names in the parameters
            let pnames = ifThenElse !isUnboundImplicits
                           (concatMap (findBindableNames True
                                          (ps ++ map Builtin.fst params) [])
-                                       (map Builtin.snd params'))
+                                       (map (Builtin.snd . Builtin.snd . Builtin.snd) params'))
                           []
-           let paramsb = map (\ ntm => (Builtin.fst ntm,
-                                        doBind pnames (Builtin.snd ntm))) params'
+           let paramsb = map (\(n, rig, info, tm) =>
+                                 (n, rig, info, doBind pnames tm)) params'
            pure [IParameters fc paramsb (concat pds')]
   desugarDecl ps (PUsing fc uimpls uds)
       = do syn <- get Syn
@@ -935,12 +936,7 @@ mutual
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
       mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
-      mapDesugarPiInfo ps Implicit         = pure   Implicit
-      mapDesugarPiInfo ps Explicit         = pure   Explicit
-      mapDesugarPiInfo ps AutoImplicit     = pure   AutoImplicit
-      mapDesugarPiInfo ps (DefImplicit tm) = pure $ DefImplicit
-                                                  !(desugar AnyExpr ps tm)
-
+      mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc Prefix prec (UN n))
       = do syn <- get Syn

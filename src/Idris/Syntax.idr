@@ -290,7 +290,7 @@ mutual
        PClaim : FC -> RigCount -> Visibility -> List PFnOpt -> PTypeDecl -> PDecl
        PDef : FC -> List PClause -> PDecl
        PData : FC -> (doc : String) -> Visibility -> PDataDecl -> PDecl
-       PParameters : FC -> List (Name, PTerm) -> List PDecl -> PDecl
+       PParameters : FC -> List (Name, RigCount, PiInfo PTerm, PTerm) -> List PDecl -> PDecl
        PUsing : FC -> List (Maybe Name, PTerm) -> List PDecl -> PDecl
        PReflect : FC -> PTerm -> PDecl
        PInterface : FC ->
@@ -1027,7 +1027,7 @@ mapPTermM f = goPTerm where
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
     goPDecl (PData fc doc v d) = PData fc doc v <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
-      PParameters fc <$> goPairedPTerms nts
+      PParameters fc <$> go4TupledPTerms nts
                      <*> goPDecls ps
     goPDecl (PUsing fc mnts ps) =
       PUsing fc <$> goPairedPTerms mnts

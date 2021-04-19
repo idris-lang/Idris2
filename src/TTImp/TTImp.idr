@@ -341,7 +341,7 @@ mutual
                 ImpTy -> ImpDecl
        IData : FC -> Visibility -> ImpData -> ImpDecl
        IDef : FC -> Name -> List ImpClause -> ImpDecl
-       IParameters : FC -> List (Name, RawImp) ->
+       IParameters : FC -> List (Name, RigCount, PiInfo RawImp, RawImp) ->
                      List ImpDecl -> ImpDecl
        IRecord : FC ->
                  Maybe String -> -- nested namespace

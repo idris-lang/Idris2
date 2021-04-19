@@ -1129,22 +1129,6 @@ mutualDecls fname indents
     = do ds <- bounds (keyword "mutual" *> commit *> assert_total (nonEmptyBlock (topDecl fname)))
          pure (PMutual (boundToFC fname ds) (concat ds.val))
 
-paramDecls : FileName -> IndentInfo -> Rule PDecl
-paramDecls fname indents
-    = do b <- bounds (do keyword "parameters"
-                         commit
-                         symbol "("
-                         ps <- sepBy (symbol ",")
-                                     (do x <- unqualifiedName
-                                         symbol ":"
-                                         ty <- typeExpr pdef fname indents
-                                         pure (UN x, ty))
-                         symbol ")"
-                         ds <- assert_total (nonEmptyBlock (topDecl fname))
-                         pure (ps, ds))
-         (ps, ds) <- pure b.val
-         pure (PParameters (boundToFC fname b) ps (collectDefs (concat ds)))
-
 usingDecls : FileName -> IndentInfo -> Rule PDecl
 usingDecls fname indents
     = do b <- bounds (do keyword "using"
@@ -1321,8 +1305,8 @@ fieldDecl fname indents
                              pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
              pure (b.val (boundToFC fname b))
 
-recordParam : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
-recordParam fname indents
+typedArg : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+typedArg fname indents
     = do symbol "("
          params <- pibindListName fname indents
          symbol ")"
@@ -1336,6 +1320,10 @@ recordParam fname indents
          params <- pibindListName fname indents
          symbol "}"
          pure $ map (\(c, n, tm) => (n.val, c, info, tm)) params
+
+recordParam : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm,  PTerm))
+recordParam fname indents
+    = typedArg fname indents
   <|> do n <- bounds name
          pure [(n.val, top, Explicit, PInfer (boundToFC fname n))]
 
@@ -1354,6 +1342,33 @@ recordDecl fname indents
                                       (fieldDecl fname)
                          pure (\fc : FC => PRecord fc doc vis n params (fst dcflds) (concat (snd dcflds))))
          pure (b.val (boundToFC fname b))
+
+paramDecls : FileName -> IndentInfo -> Rule PDecl
+paramDecls fname indents
+    = do b1 <- bounds (keyword "parameters")
+         commit
+         args <- bounds (newParamDecls fname indents <|> oldParamDecls fname indents)
+         commit
+         declarations <- the (Rule (WithBounds (List1 (List PDecl)))) (assert_total (Core.bounds $ nonEmptyBlock (topDecl fname)))
+         mergedBounds <- pure $  b1 `mergeBounds` (args `mergeBounds` declarations)
+         pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
+
+  where
+    oldParamDecls : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+    oldParamDecls fname indents
+        = do symbol "("
+             ps <- sepBy (symbol ",")
+                         (do x <- unqualifiedName
+                             symbol ":"
+                             ty <- typeExpr pdef fname indents
+                             pure (UN x, top, Explicit, ty))
+             symbol ")"
+             pure ps
+
+    newParamDecls : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
+    newParamDecls fname indents
+        = map concat (some $ typedArg fname indents)
+
 
 claims : FileName -> IndentInfo -> Rule (List1 PDecl)
 claims fname indents

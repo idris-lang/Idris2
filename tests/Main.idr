@@ -158,7 +158,7 @@ idrisTests = MkTestPool []
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
-       "params001",
+       "params001","params002",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
        -- Positivity checking

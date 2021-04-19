@@ -152,11 +152,12 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc !(traverse unqPair ps)
+      = pure $ IParameters fc
+                           !(traverse unqTuple ps)
                            !(traverse getUnquoteDecl ds)
     where
-      unqPair : (Name, RawImp) -> Core (Name, RawImp)
-      unqPair (n, t) = pure (n, !(getUnquote t))
+      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
+      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v d)
       = pure $ IRecord fc ns v !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
