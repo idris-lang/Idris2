@@ -119,11 +119,9 @@ getDocsForName fc n
 
     getInFixDoc : Name -> Core (Maybe String)
     getInFixDoc n
-        = do syn <- get Syn
-             let Just (fixity, assoc) = S.lookupName n (infixes syn)
+        = do let Just (fixity, assoc) = S.lookupName n (infixes !(get Syn))
                     | Nothing => pure Nothing
-             pure . Just $ "\t"
-                        ++ resugarFix fixity ++ " operator, level "
+             pure . Just $ resugarFix fixity ++ " operator, level "
                         ++ show assoc        ++ "\n"
         where resugarFix : Fixity -> String
               resugarFix InfixL = "infixl"
@@ -133,11 +131,9 @@ getDocsForName fc n
 
     getPreFixDoc : Name -> Core (Maybe String)
     getPreFixDoc n
-        = do syn <- get Syn
-             let Just assoc = S.lookupName n (prefixes syn)
+        = do let Just assoc = S.lookupName n (prefixes !(get Syn))
                     | Nothing => pure Nothing
-             pure . Just $ "\t"
-                        ++ "prefix operator, level "
+             pure . Just $ "prefix operator, level "
                         ++ show assoc ++ "\n"
 
     isPrefixNeg : Name -> Core String
@@ -145,6 +141,13 @@ getDocsForName fc n
         = do pure $ if nameRoot n == "-"
                        then "\n" ++ "Unary minus\n\tDesugars to negate" ++ "\n"
                        else ""
+
+    isFixBuiltin : Name -> Core String
+    isFixBuiltin n
+        = do pure $ "\n" ++ (case nameRoot n of
+                                 "-" => "Unary minus\n\tDesugars to negate"
+                                 "=" => "Homogeneous equality\n\tDesugars to Eq"
+                                 _   => "") ++ "\n"
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
@@ -206,7 +209,9 @@ getDocsForName fc n
              let fixes = !(isPrefixNeg n) ++
                          if infixes == "" && prefixes == ""
                             then ""
-                            else "\nFixity Declarations:\n" ++ infixes ++ prefixes
+                            else if infixes == "" || prefixes == ""
+                                    then "\nFixity Declarations: "    ++ infixes         ++ prefixes
+                                    else "\nFixity Declarations:\n\t" ++ infixes ++ "\t" ++ prefixes
              pure (doc ++ extra ++ fixes)
 
 export

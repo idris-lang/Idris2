@@ -2,8 +2,7 @@ Main> Prelude.== : Eq ty => ty -> ty -> Bool
 
 Totality: total
 
-Fixity Declarations:
-	infix operator, level 6
+Fixity Declarations: infix operator, level 6
 Main> Prelude.- : Neg ty => ty -> ty -> ty
 
 Totality: total
@@ -22,8 +21,7 @@ Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
 
 Totality: total
 
-Fixity Declarations:
-	infixr operator, level 4
+Fixity Declarations: infixr operator, level 4
 Main> Prelude.Monad : (Type -> Type) -> Type
 Parameters: m
 Constraints: Applicative m
@@ -44,18 +42,27 @@ Main> Prelude.div : Integral ty => ty -> ty -> ty
 
 Totality: total
 
-Fixity Declarations:
-	infixl operator, level 9
+Fixity Declarations: infixl operator, level 9
 Main> Prelude.>>= : Monad m => m a -> (a -> m b) -> m b
 	Also called `bind`.
 
 Totality: total
 
-Fixity Declarations:
-	infixl operator, level 1
+Fixity Declarations: infixl operator, level 1
+Main> Prelude.>> : Monad m => m () -> Lazy (m b) -> m b
+	Sequencing of effectful composition
+
+Totality: total
+
+Fixity Declarations: infixl operator, level 1
 Main> Main> Main> Main> Main.@@ : (t : a) -> DPair a (\u => t = u)
 
-Fixity Declarations:
-	prefix operator, level 10
+Fixity Declarations: prefix operator, level 10
+Main> Prelude.<$ : Functor f => b -> f a -> f b
+	Run something for effects, replacing the return value with a given parameter.
+
+Totality: total
+
+Fixity Declarations: infixr operator, level 4
 Main> 
 Bye for now!
