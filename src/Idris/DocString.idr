@@ -16,6 +16,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Libraries.Data.NameMap
+import Libraries.Data.StringMap as S
 import Data.Strings
 import Libraries.Data.String.Extra
 
@@ -116,6 +117,29 @@ getDocsForName fc n
                           ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
                           ++ "\n" ++ addNL (indent str)))
 
+    getInFixDoc : Name -> Core (Maybe String)
+    getInFixDoc n
+        = do syn <- get Syn
+             let Just (fixity, assoc) = S.lookupName n (infixes syn)
+                    | Nothing => pure Nothing
+             pure . Just $ "Fixity Declarations: "
+                        ++ resugarFix fixity ++ " "
+                        ++ show assoc        ++ "\n"
+        where resugarFix : Fixity -> String
+              resugarFix InfixL = "infixl"
+              resugarFix InfixR = "infixr"
+              resugarFix Infix  = "infix"
+              resugarFix Prefix = "prefix"
+
+    getPreFixDoc : Name -> Core (Maybe String)
+    getPreFixDoc n
+        = do syn <- get Syn
+             let Just assoc = S.lookupName n (prefixes syn)
+                    | Nothing => pure Nothing
+             pure . Just $ "Fixity Declarations: "
+                        ++ "prefix"   ++ " "
+                        ++ show assoc ++ "\n"
+
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
         = do let params =
@@ -149,13 +173,13 @@ getDocsForName fc n
                  | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
              case definition d of
                PMDef _ _ _ _ _
-                   => pure (showTotal n (totality d))
+                   => pure (showTotal n (totality d) ++ "\n")
                TCon _ _ _ _ _ _ cons _
                    => do cdocs <- traverse getConstructorDoc
                                            !(traverse toFullNames cons)
                          case mapMaybe id cdocs of
                               [] => pure ""
-                              docs => pure $ "\nConstructors:\n" ++ concat docs
+                              docs => pure $ "\nConstructors:\n" ++ concat docs ++ "\n"
                _ => pure ""
 
     showDoc : (Name, String) -> Core String
@@ -167,7 +191,15 @@ getDocsForName fc n
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
                               ++ "\n" ++ addNL (indent str)
              extra <- getExtra n def
-             pure (doc ++ extra)
+             getInFixDocn <- getInFixDoc n
+             let infixes = case getInFixDocn of
+                    Just infixStr => infixStr
+                    Nothing       => ""
+             getPreFixDocn <- getPreFixDoc n
+             let prefixes = case getPreFixDocn of
+                    Just prefixStr => prefixStr
+                    Nothing        => ""
+             pure (doc ++ extra ++ infixes ++ prefixes)
 
 export
 getDocsForPTerm : {auto c : Ref Ctxt Defs} ->
