@@ -810,7 +810,7 @@ export
 data Syn : Type where
 
 export
-withSyn : {auto o : Ref Syn SyntaxInfo} -> Core a -> Core a
+withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
 withSyn = wrapRef Syn (\_ => pure ())
 
 export

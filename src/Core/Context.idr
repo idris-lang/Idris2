@@ -2144,7 +2144,7 @@ getWorkingDir
          pure d
 
 export
-withCtxt : {auto cc : Ref Ctxt Defs} -> Core a -> Core a
+withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a
 withCtxt = wrapRef Ctxt resetCtxt
   where
     resetCtxt : Defs -> Core ()
