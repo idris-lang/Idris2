@@ -140,6 +140,12 @@ getDocsForName fc n
                         ++ "prefix operator, level "
                         ++ show assoc ++ "\n"
 
+    isPrefixNeg : Name -> Core String
+    isPrefixNeg n
+        = do pure $ if nameRoot n == "-"
+                       then "\n" ++ "Unary minus\n\tDesugars to negate" ++ "\n"
+                       else ""
+
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
         = do let params =
@@ -173,7 +179,7 @@ getDocsForName fc n
                  | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
              case definition d of
                PMDef _ _ _ _ _
-                   => pure (showTotal n (totality d))
+                   => pure (showTotal n (totality d) ++ "\n")
                TCon _ _ _ _ _ _ cons _
                    => do cdocs <- traverse getConstructorDoc
                                            !(traverse toFullNames cons)
@@ -191,15 +197,14 @@ getDocsForName fc n
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
                               ++ "\n" ++ addNL (indent str)
              extra <- getExtra n def
-             getInFixDocn <- getInFixDoc n
-             let infixes = case getInFixDocn of
+             let infixes = case !(getInFixDoc n) of
                     Just infixStr => infixStr
                     Nothing       => ""
-             getPreFixDocn <- getPreFixDoc n
-             let prefixes = case getPreFixDocn of
+             let prefixes = case !(getPreFixDoc n) of
                     Just prefixStr => prefixStr
                     Nothing        => ""
-             let fixes = if infixes == "" && prefixes == ""
+             let fixes = !(isPrefixNeg n) ++
+                         if infixes == "" && prefixes == ""
                             then ""
                             else "\nFixity Declarations:\n" ++ infixes ++ prefixes
              pure (doc ++ extra ++ fixes)
