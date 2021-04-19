@@ -426,16 +426,13 @@ mutual
            (lvl, e) <- pure b.val
            pure (PUnifyLog (boundToFC fname b) lvl e)
 
-  multiplicity : SourceEmptyRule (Maybe Integer)
+  multiplicity : SourceEmptyRule RigCount
   multiplicity
-      = optional $ intLit
---     <|> 2 <$ symbol "&" Borrowing, not implemented
-
-  getMult : Maybe Integer -> SourceEmptyRule RigCount
-  getMult (Just 0) = pure erased
-  getMult (Just 1) = pure linear
-  getMult Nothing = pure top
-  getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
+      = case !(optional $ intLit) of
+          (Just 0) => pure erased
+          (Just 1) => pure linear
+          Nothing => pure top
+          _ => fail "Invalid multiplicity (must be 0 or 1)"
 
   pibindAll : FileName -> PiInfo PTerm ->
               List (RigCount, WithBounds (Maybe Name), PTerm) ->
@@ -448,30 +445,27 @@ mutual
              Rule (List (RigCount, WithBounds PTerm, PTerm))
   bindList fname indents
       = forget <$> sepBy1 (symbol ",")
-                          (do rigc <- multiplicity
+                          (do rig <- multiplicity
                               pat <- bounds (simpleExpr fname indents)
                               ty <- option
                                        (PInfer (boundToFC fname pat))
                                        (symbol ":" *> opExpr pdef fname indents)
-                              rig <- getMult rigc
                               pure (rig, pat, ty))
 
   pibindListName : FileName -> IndentInfo ->
                    Rule (List (RigCount, WithBounds Name, PTerm))
   pibindListName fname indents
-       = do rigc <- multiplicity
+       = do rig <- multiplicity
             ns <- sepBy1 (symbol ",") (bounds binderName)
             symbol ":"
             ty <- expr pdef fname indents
             atEnd indents
-            rig <- getMult rigc
             pure (map (\n => (rig, map UN n, ty)) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
-                           (do rigc <- multiplicity
+                           (do rig <- multiplicity
                                n <- bounds binderName
                                symbol ":"
                                ty <- expr pdef fname indents
-                               rig <- getMult rigc
                                pure (rig, map UN n, ty))
     where
       -- _ gets treated specially here, it means "I don't care about the name"
@@ -583,13 +577,12 @@ mutual
 
     letBinder : Rule LetBinder
     letBinder = do s <- bounds (MkPair <$> multiplicity <*> expr plhs fname indents)
-                   (rigc, pat) <- pure s.val
+                   (rig, pat) <- pure s.val
                    ty <- option (PImplicit (boundToFC fname s))
                                 (symbol ":" *> typeExpr (pnoeq pdef) fname indents)
                    (symbol "=" <|> symbol ":=")
                    val <- expr pnowith fname indents
                    alts <- block (patAlt fname)
-                   rig <- getMult rigc
                    pure (MkLetBinder rig pat ty val alts)
 
     letDecl : Rule LetDecl
@@ -1242,8 +1235,7 @@ constraints fname indents
 implBinds : FileName -> IndentInfo -> SourceEmptyRule (List (Name, RigCount, PTerm))
 implBinds fname indents
     = do symbol "{"
-         m <- multiplicity
-         rig <- getMult m
+         rig <- multiplicity
          n <- name
          symbol ":"
          tm <- expr pdef fname indents
@@ -1256,8 +1248,7 @@ implBinds fname indents
 ifaceParam : FileName -> IndentInfo -> Rule (List Name, (RigCount, PTerm))
 ifaceParam fname indents
     = do symbol "("
-         m <- multiplicity
-         rig <- getMult m
+         rig <- multiplicity
          ns <- sepBy1 (symbol ",") name
          symbol ":"
          tm <- expr pdef fname indents
@@ -1323,8 +1314,7 @@ fieldDecl fname indents
   where
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p
-        = do b <- bounds (do m <- multiplicity
-                             rig <- getMult m
+        = do b <- bounds (do rig <- multiplicity
                              ns <- sepBy1 (symbol ",") name
                              symbol ":"
                              ty <- expr pdef fname indents
@@ -1372,8 +1362,7 @@ claims fname indents
                   visOpts <- many (visOpt fname)
                   vis     <- getVisibility Nothing visOpts
                   let opts = mapMaybe getRight visOpts
-                  m   <- multiplicity
-                  rig <- getMult m
+                  rig  <- multiplicity
                   cls  <- tyDecls name doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
          pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
