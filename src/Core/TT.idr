@@ -389,6 +389,20 @@ Functor PiInfo where
   map func (DefImplicit t) = (DefImplicit (func t))
 
 export
+Foldable PiInfo where
+  foldr f acc Implicit = acc
+  foldr f acc Explicit = acc
+  foldr f acc AutoImplicit = acc
+  foldr f acc (DefImplicit x) = f x acc
+
+export
+Traversable PiInfo where
+  traverse f Implicit = pure Implicit
+  traverse f Explicit = pure Explicit
+  traverse f AutoImplicit = pure AutoImplicit
+  traverse f (DefImplicit x) = map DefImplicit (f x)
+
+export
 Functor Binder where
   map func (Lam fc c x ty) = Lam fc c (map func x) (func ty)
   map func (Let fc c val ty) = Let fc c (func val) (func ty)
