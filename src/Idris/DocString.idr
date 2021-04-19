@@ -86,7 +86,7 @@ getDocsForName fc n
     showTotal n tot
         = case isTerminating tot of
                Unchecked => ""
-               _ => "\nTotality: " ++ show tot
+               _ => "\nTotality: " ++ show tot ++ "\n"
 
     getConstructorDoc : Name -> Core (Maybe String)
     getConstructorDoc con
@@ -179,7 +179,7 @@ getDocsForName fc n
                  | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
              case definition d of
                PMDef _ _ _ _ _
-                   => pure (showTotal n (totality d) ++ "\n")
+                   => pure (showTotal n (totality d))
                TCon _ _ _ _ _ _ cons _
                    => do cdocs <- traverse getConstructorDoc
                                            !(traverse toFullNames cons)

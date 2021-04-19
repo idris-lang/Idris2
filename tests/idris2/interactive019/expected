@@ -3,7 +3,6 @@ Main> prim__cast_CharString : Char -> String
 
 Main.sameSig : Char -> String
 
-
 Data.Strings.singleton : Char -> String
 
 Totality: total
