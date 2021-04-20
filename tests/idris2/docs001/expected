@@ -5,6 +5,7 @@ Main> Prelude.plus : Nat -> Nat -> Nat
   Totality: total
 Main> Prelude.Nat : Type
   Natural numbers: unbounded, unsigned integers which can be pattern matched.
+  Totality: total
   Constructors:
     Z : Nat
       Zero.
@@ -12,6 +13,7 @@ Main> Prelude.Nat : Type
       Successor.
 Main> Prelude.List : Type -> Type
   Generic lists.
+  Totality: total
   Constructors:
     Nil : List a
       Empty list
