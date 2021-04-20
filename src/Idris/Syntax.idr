@@ -25,6 +25,13 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 public export
 data Fixity = InfixL | InfixR | Infix | Prefix
 
+export
+Show Fixity where
+  show InfixL = "infixl"
+  show InfixR = "infixr"
+  show Infix  = "infix"
+  show Prefix = "prefix"
+
 public export
 OpStr : Type
 OpStr = Name

@@ -5,25 +5,24 @@ import Core.Core
 import Core.Env
 import Core.TT
 
+import Idris.Pretty
+import Idris.REPLOpts
 import Idris.Resugar
 import Idris.Syntax
 
 import TTImp.TTImp
 import TTImp.Elab.Prim
 
-import Libraries.Data.ANameMap
 import Data.List
 import Data.List1
 import Data.Maybe
+
+import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap as S
 import Data.Strings
-import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Extra.lines
 
 -- Add a doc string for a name in the current namespace
 export
@@ -63,9 +62,10 @@ getDocsForPrimitive constant = do
     pure [typeString ++ "\n\tPrimitive"]
 
 export
-getDocsForName : {auto c : Ref Ctxt Defs} ->
+getDocsForName : {auto o : Ref ROpts REPLOpts} ->
+                 {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 FC -> Name -> Core (List String)
+                 FC -> Name -> Core String
 getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
@@ -76,134 +76,142 @@ getDocsForName fc n
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
-             | [] => pure ["No documentation for " ++ show n]
-         traverse showDoc ns
+             | [] => pure ("No documentation for " ++ show n)
+         docs <- traverse showDoc ns
+         render (vcat (punctuate Line docs))
   where
-    addNL : String -> String
-    addNL str = if trim str == "" then "" else str ++ "\n"
 
-    indent : String -> String
-    indent str = unlines $ map ("\t" ++) (forget $ lines str)
+    -- Avoid generating too much whitespace by not returning a single empty line
+    reflowDoc : String -> List (Doc IdrisAnn)
+    reflowDoc "" = []
+    reflowDoc str = map (indent 2 . reflow) (forget $ lines str)
 
-    showTotal : Name -> Totality -> String
+    showTotal : Name -> Totality -> Doc IdrisAnn
     showTotal n tot
         = case isTerminating tot of
                Unchecked => ""
-               _ => "\nTotality: " ++ show tot ++ "\n"
+               _ => pretty "Totality:" <++> pretty tot
 
-    getConstructorDoc : Name -> Core (Maybe String)
-    getConstructorDoc con
+    getConDoc : Name -> Core (List (Doc IdrisAnn))
+    getConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
-                  | Nothing => pure Nothing
+                  | Nothing => pure []
              syn <- get Syn
              let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure Nothing
-             ty <- normaliseHoles defs [] (type def)
-             pure (Just (nameRoot n ++ " : " ++ show !(resugar [] ty)
-                          ++ "\n" ++ addNL (indent str)))
+                  | _ => pure []
+             ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             pure $ pure $ vcat $
+               hsep [ident (pretty (nameRoot n)), colon, pretty (show ty)]
+               :: reflowDoc str
 
-    getImplDoc : Name -> Core (Maybe String)
+    getImplDoc : Name -> Core (List (Doc IdrisAnn))
     getImplDoc n
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
-                  | Nothing => pure Nothing
-             ty <- normaliseHoles defs [] (type def)
-             pure $ Just $ addNL $ indent $ show !(resugar [] ty)
+                  | Nothing => pure []
+             ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             pure [pretty (show ty)]
 
-    getMethDoc : Method -> Core (Maybe String)
+    getMethDoc : Method -> Core (List (Doc IdrisAnn))
     getMethDoc meth
         = do syn <- get Syn
              let [(n, str)] = lookupName meth.name (docstrings syn)
-                  | _ => pure Nothing
-             pure (Just (nameRoot meth.name ++ " : " ++ show !(pterm meth.type)
-                          ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
-                          ++ "\n" ++ addNL (indent str)))
+                  | _ => pure []
+             ty <- pterm meth.type
+             let nm = nameRoot meth.name
+             pure $ pure $ vcat $
+               [hsep [ident (pretty nm), colon, pretty (show ty)]]
+               ++ toList (indent 2 . pretty . show <$> meth.totalReq)
+               ++ reflowDoc str
 
-    getInfixDoc : Name -> Core (Maybe String)
+    getInfixDoc : Name -> Core (List (Doc IdrisAnn))
     getInfixDoc n
         = do let Just (fixity, assoc) = S.lookupName n (infixes !(get Syn))
-                    | Nothing => pure Nothing
-             pure . Just $ resugarFix fixity ++ " operator, level "
-                        ++ show assoc
-        where resugarFix : Fixity -> String
-              resugarFix InfixL = "infixl"
-              resugarFix InfixR = "infixr"
-              resugarFix Infix  = "infix"
-              resugarFix Prefix = "prefix"
+                    | Nothing => pure []
+             pure $ pure $ hsep
+                  [ pretty (show fixity)
+                  , "operator,"
+                  , "level"
+                  , pretty (show assoc)
+                  ]
 
-    getPrefixDoc : Name -> Core (Maybe String)
+    getPrefixDoc : Name -> Core (List (Doc IdrisAnn))
     getPrefixDoc n
         = do let Just assoc = S.lookupName n (prefixes !(get Syn))
-                    | Nothing => pure Nothing
-             pure . Just $ "prefix operator, level " ++ show assoc
+                    | Nothing => pure []
+             pure $ ["prefix operator, level" <++> pretty (show assoc)]
 
-    getFixityDoc : Name -> Core String
+    getFixityDoc : Name -> Core (List (Doc IdrisAnn))
     getFixityDoc n =
       pure $ case toList !(getInfixDoc n) ++ toList !(getPrefixDoc n) of
-        []  => ""
-        [f] => "Fixity Declarations: " ++ f
-        fs  => "Fixity Declarations:\n" ++ unlines (map ("\t" ++) fs)
+        []  => []
+        [f] => ["Fixity Declaration:" <++> f]
+        fs  => ["Fixity Declarations:" <+> Line <+> indent 2 (vcat fs)]
 
-    getIFaceDoc : (Name, IFaceInfo) -> Core String
+    getIFaceDoc : (Name, IFaceInfo) -> Core (Doc IdrisAnn)
     getIFaceDoc (n, iface)
         = do let params =
                 case params iface of
-                     [] => ""
-                     ps => "Parameters: " ++ showSep ", " (map show ps) ++ "\n"
-             constraints <-
-                case parents iface of
-                     [] => pure ""
-                     ps => do pts <- traverse pterm ps
-                              pure ("Constraints: " ++
-                                    showSep ", " (map show pts) ++ "\n")
+                     [] => []
+                     ps => [hsep ("Parameters:"
+                              :: punctuate comma (map (pretty . show) ps))]
+             let constraints =
+                case !(traverse pterm (parents iface)) of
+                     [] => []
+                     ps => [hsep ("Constraints:"
+                              :: punctuate comma (map (pretty . show) ps))]
              mdocs <- traverse getMethDoc (methods iface)
-             let meths = case mapMaybe id mdocs of
-                              [] => ""
-                              docs => "\nMethods:\n" ++ concat docs
+             let meths = case concat mdocs of
+                           [] => []
+                           docs => [vcat ("Methods:" :: map (indent 2) docs)]
              sd <- getSearchData fc False n
              idocs <- case hintGroups sd of
-                           [] => pure []
+                           [] => pure (the (List (List (Doc IdrisAnn))) [])
                            ((_, tophs) :: _) => traverse getImplDoc tophs
-             let insts = case mapMaybe id idocs of
-                              [] => ""
-                              docs => "\nImplementations:\n" ++ concat docs
-             pure (params ++ constraints ++ meths ++ insts)
+             let insts = case concat idocs of
+                           [] => []
+                           [doc] => ["Implementation:" <++> doc]
+                           docs => [vcat ("Implementations:" :: map (indent 2) docs)]
+             pure (vcat (params ++ constraints ++ meths ++ insts))
 
-    getExtra : Name -> GlobalDef -> Core String
+    getExtra : Name -> GlobalDef -> Core (List (Doc IdrisAnn))
     getExtra n d
         = do syn <- get Syn
              let [] = lookupName n (ifaces syn)
-                 | [ifacedata] => getIFaceDoc ifacedata
-                 | _ => pure "" -- shouldn't happen, we've resolved ambiguity by now
+                 | [ifacedata] => pure <$> getIFaceDoc ifacedata
+                 | _ => pure [] -- shouldn't happen, we've resolved ambiguity by now
              case definition d of
                PMDef _ _ _ _ _
-                   => pure (showTotal n (totality d))
+                   => pure [showTotal n (totality d)]
                TCon _ _ _ _ _ _ cons _
-                   => do cdocs <- traverse getConstructorDoc
-                                           !(traverse toFullNames cons)
-                         case mapMaybe id cdocs of
-                              [] => pure ""
-                              docs => pure $ "\nConstructors:\n" ++ concat docs
-               _ => pure ""
+                   => do cdocs <- traverse (getConDoc <=< toFullNames) cons
+                         pure $ case concat cdocs of
+                              [] => []
+                              [doc] => ["Constructor:" <++>  doc]
+                              docs => [vcat ("Constructors:" :: map (indent 2) docs)]
+               _ => pure []
 
-    showDoc : (Name, String) -> Core String
+    showDoc : (Name, String) -> Core (Doc IdrisAnn)
     showDoc (n, str)
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
-             ty <- normaliseHoles defs [] (type def)
-             let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
-                              ++ "\n" ++ addNL (indent str)
+             ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             nm <- aliasName n
+             let doc = vcat $
+                    (hsep [ident (pretty (show nm)), colon, pretty (show ty)])
+                    :: reflowDoc str
              extra <- getExtra n def
              fixes <- getFixityDoc n
-             pure (doc ++ extra ++ fixes)
+             pure (vcat (doc :: map (indent 2) (extra ++ fixes)))
 
 export
-getDocsForPTerm : {auto c : Ref Ctxt Defs} ->
+getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
+                  {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
                   PTerm -> Core (List String)
-getDocsForPTerm (PRef fc name) = getDocsForName fc name
+getDocsForPTerm (PRef fc name) = pure <$> getDocsForName fc name
 getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
 getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
 getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]

@@ -666,7 +666,8 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-docsOrSignature : {auto c : Ref Ctxt Defs} ->
+docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
+                  {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
                   FC -> Name -> Core (List String)
 docsOrSignature fc n
@@ -677,7 +678,7 @@ docsOrSignature fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         getDocsForName fc n
+         pure <$> getDocsForName fc n
   where
     typeSummary : Defs -> Core (List String)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
