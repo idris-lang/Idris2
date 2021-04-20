@@ -69,10 +69,13 @@ getDocsForName : {auto c : Ref Ctxt Defs} ->
 getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
-         all@(_ :: _) <- lookupCtxtName n (gamma defs)
+         let extra = case nameRoot n of
+                       "-" => [NS numNS (UN "negate")]
+                       _ => []
+         resolved <- lookupCtxtName n (gamma defs)
+         let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
-                                     (map fst all)
+         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
              | [] => pure ["No documentation for " ++ show n]
          traverse showDoc ns
   where
@@ -117,37 +120,30 @@ getDocsForName fc n
                           ++ maybe "" (\t => "\n" ++ show t) meth.totalReq
                           ++ "\n" ++ addNL (indent str)))
 
-    getInFixDoc : Name -> Core (Maybe String)
-    getInFixDoc n
+    getInfixDoc : Name -> Core (Maybe String)
+    getInfixDoc n
         = do let Just (fixity, assoc) = S.lookupName n (infixes !(get Syn))
                     | Nothing => pure Nothing
              pure . Just $ resugarFix fixity ++ " operator, level "
-                        ++ show assoc        ++ "\n"
+                        ++ show assoc
         where resugarFix : Fixity -> String
               resugarFix InfixL = "infixl"
               resugarFix InfixR = "infixr"
               resugarFix Infix  = "infix"
               resugarFix Prefix = "prefix"
 
-    getPreFixDoc : Name -> Core (Maybe String)
-    getPreFixDoc n
+    getPrefixDoc : Name -> Core (Maybe String)
+    getPrefixDoc n
         = do let Just assoc = S.lookupName n (prefixes !(get Syn))
                     | Nothing => pure Nothing
-             pure . Just $ "prefix operator, level "
-                        ++ show assoc ++ "\n"
+             pure . Just $ "prefix operator, level " ++ show assoc
 
-    isPrefixNeg : Name -> Core String
-    isPrefixNeg n
-        = do pure $ if nameRoot n == "-"
-                       then "\n" ++ "Unary minus\n\tDesugars to negate" ++ "\n"
-                       else ""
-
-    isFixBuiltin : Name -> Core String
-    isFixBuiltin n
-        = do pure $ "\n" ++ (case nameRoot n of
-                                 "-" => "Unary minus\n\tDesugars to negate"
-                                 "=" => "Homogeneous equality\n\tDesugars to Eq"
-                                 _   => "") ++ "\n"
+    getFixityDoc : Name -> Core String
+    getFixityDoc n =
+      pure $ case toList !(getInfixDoc n) ++ toList !(getPrefixDoc n) of
+        []  => ""
+        [f] => "Fixity Declarations: " ++ f
+        fs  => "Fixity Declarations:\n" ++ unlines (map ("\t" ++) fs)
 
     getIFaceDoc : (Name, IFaceInfo) -> Core String
     getIFaceDoc (n, iface)
@@ -200,18 +196,7 @@ getDocsForName fc n
              let doc = show !(aliasName n) ++ " : " ++ show !(resugar [] ty)
                               ++ "\n" ++ addNL (indent str)
              extra <- getExtra n def
-             let infixes = case !(getInFixDoc n) of
-                    Just infixStr => infixStr
-                    Nothing       => ""
-             let prefixes = case !(getPreFixDoc n) of
-                    Just prefixStr => prefixStr
-                    Nothing        => ""
-             let fixes = !(isPrefixNeg n) ++
-                         if infixes == "" && prefixes == ""
-                            then ""
-                            else if infixes == "" || prefixes == ""
-                                    then "\nFixity Declarations: "    ++ infixes         ++ prefixes
-                                    else "\nFixity Declarations:\n\t" ++ infixes ++ "\t" ++ prefixes
+             fixes <- getFixityDoc n
              pure (doc ++ extra ++ fixes)
 
 export

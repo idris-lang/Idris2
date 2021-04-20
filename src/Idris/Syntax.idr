@@ -795,15 +795,29 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax (insert "=" (Infix, 0) empty)
-               (insert "-" 10 empty)
+    = MkSyntax initInfix
+               initPrefix
                empty
                []
-               empty
-               empty
+               initDocStrings
+               initSaveDocStrings
                []
                []
                (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
+
+  where
+
+    initInfix : StringMap (Fixity, Nat)
+    initInfix = insert "=" (Infix, 0) empty
+
+    initPrefix : StringMap Nat
+    initPrefix = insert "-" 10 empty
+
+    initDocStrings : ANameMap String
+    initDocStrings = empty
+
+    initSaveDocStrings : NameMap ()
+    initSaveDocStrings = empty
 
 -- A label for Syntax info in the global state
 export
