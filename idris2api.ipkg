@@ -140,6 +140,7 @@ modules =
     Libraries.Text.Parser.Core,
     Libraries.Text.PrettyPrint.Prettyprinter,
     Libraries.Text.PrettyPrint.Prettyprinter.Doc,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.String,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal,
     Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree,
