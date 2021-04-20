@@ -161,7 +161,8 @@ extractConstant (B8 x)  = show x
 extractConstant (B16 x)  = show x
 extractConstant (B32 x)  = show x
 extractConstant (B64 x)  = show x
-extractConstant c = "unable_to_extract constant >>" ++ cConstant c ++ "<<"
+extractConstant c = assert_total $ idris_crash ("INTERNAL ERROR: Unable to extract constant: " ++ cConstant c)
+-- not really total but this way this internal error does not contaminate everything else
 
 ||| Generate scheme for a plain function.
 plainOp : String -> List String -> String
@@ -256,7 +257,8 @@ toPrim pn@(NS _ n)
             (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
-toPrim pn = Unknown pn -- todo: crash rather than generate garbage?
+toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
+-- not really total but this way this internal error does not contaminate everything else
 
 
 varName : AVar -> String
@@ -825,9 +827,11 @@ extractValue CFPtr           varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 extractValue CFGCPtr         varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CFBuffer        varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
 extractValue CFWorld         varName = "(Value_World*)" ++ varName
-extractValue (CFFun x y)     varName = "Value* " ++ varName ++ "/* function pointer not implemented */"
+extractValue (CFFun x y)     varName = assert_total $ idris_crash ("INTERNAL ERROR: Function pointer not implemented: " ++ varName)
+-- not really total but this way this internal error does not contaminate everything else
 extractValue (CFIORes x)     varName = extractValue x varName
-extractValue (CFStruct x xs) varName = "Value* " ++ varName ++ "/* struct access not implemented */"
+extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+-- not really total but this way this internal error does not contaminate everything else
 extractValue (CFUser x xs)   varName = "Value* " ++ varName
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
@@ -904,9 +908,8 @@ createCFunctions n (MkACon tag arity nt) = do
 
 createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
   case extractFFILocation "C" ccs of
-      Nothing => case extractFFILocation "scheme" ccs of
-          Nothing => pure ()
-          (Just (fctName, lib)) => emit EmptyFC $ "// call ffi to a scheme substitute for " ++ fctName
+      Nothing => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
+          -- not really total but this way this internal error does not contaminate everything else
       (Just (fctName, lib)) => do
           addExternalLib lib
           otherDefs <- get FunctionDefinitions
@@ -952,20 +955,10 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           decreaseIndentation
           emit EmptyFC "}"
 
-createCFunctions n (MkAForeign ccs fargs ret) = pure () -- unable to deal with return values that are not CFIORes
-createCFunctions n (MkAError exp) = do
-    fn <- functionDefSignature n []
-    fn' <- functionDefSignatureArglist n
-    otherDefs <- get FunctionDefinitions
-    put FunctionDefinitions (fn :: fn' :: otherDefs)
-    emit EmptyFC $ fn
-        ++ "\n{"
-        ++ "fprintf(stderr, \"Error in "  ++ (cName n) ++ "\");\n"
-        ++ "exit(-1);\n"
-        ++ "return NULL;"
-        ++ "\n}"
-    pure ()
-
+createCFunctions n (MkAForeign ccs fargs ret) = assert_total $ idris_crash ("INTERNAL ERROR: Unable to deal with return values that are not CFIORes: " ++ cName n)
+-- not really total but this way this internal error does not contaminate everything else
+createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
+-- not really total but this way this internal error does not contaminate everything else
 
 header : {auto c : Ref Ctxt Defs}
       -> {auto f : Ref FunctionDefinitions (List String)}
