@@ -207,11 +207,13 @@ getDocsForName fc n
                PMDef _ _ _ _ _
                    => pure [showTotal n (totality d)]
                TCon _ _ _ _ _ _ cons _
-                   => do cdocs <- traverse (getConDoc <=< toFullNames) cons
-                         pure $ case concat cdocs of
+                   => do let tot = [showTotal n (totality d)]
+                         cdocs <- traverse (getConDoc <=< toFullNames) cons
+                         let cdoc = case concat cdocs of
                               [] => []
                               [doc] => [header "Constructor:" <++>  doc]
                               docs => [vcat (header "Constructors:" :: map (indent 2) docs)]
+                         pure (tot ++ cdoc)
                _ => pure []
 
     showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
