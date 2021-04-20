@@ -536,8 +536,8 @@ processPackage opts (cmd, file)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>
-          do Just (dir, filename) <- pure $ splitParent file
-               | Nothing => throw $ InternalError "Tried to split empty string"
+          do let Just (dir, filename) = splitParent file
+                 | _ => throw $ InternalError "Tried to split empty string"
              let True = isSuffixOf ".ipkg" filename
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                            coreLift (exitWith (ExitFailure 1))
