@@ -29,21 +29,33 @@ import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 public export
 data IdrisDocAnn
-  = Ident
+  = TCon
+  | DCon
+  | Fun
   | Header
 
 export
 styleAnn : IdrisDocAnn -> AnsiStyle
-styleAnn Ident = color BrightBlue
+styleAnn TCon = color BrightBlue
+styleAnn DCon = color BrightRed
+styleAnn Fun = color BrightGreen
 styleAnn Header = underline
 
 export
-ident : Doc IdrisDocAnn -> Doc IdrisDocAnn
-ident = annotate Ident
+tCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
+tCon = annotate TCon
+
+export
+dCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
+dCon = annotate DCon
+
+export
+fun : Doc IdrisDocAnn -> Doc IdrisDocAnn
+fun = annotate Fun
 
 export
 header : Doc IdrisDocAnn -> Doc IdrisDocAnn
-header = annotate Header
+header d = annotate Header d <+> colon
 
 
 -- Add a doc string for a name in the current namespace
@@ -112,10 +124,10 @@ getDocsForName fc n
     showTotal n tot
         = case isTerminating tot of
                Unchecked => ""
-               _ => header "Totality:" <++> pretty tot
+               _ => header "Totality" <++> pretty tot
 
-    getConDoc : Name -> Core (List (Doc IdrisDocAnn))
-    getConDoc con
+    getDConDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
                   | Nothing => pure []
@@ -124,7 +136,7 @@ getDocsForName fc n
                   | _ => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              pure $ pure $ vcat $
-               hsep [ident (pretty (nameRoot n)), colon, pretty (show ty)]
+               hsep [dCon (pretty (nameRoot n)), colon, pretty (show ty)]
                :: reflowDoc str
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
@@ -143,7 +155,7 @@ getDocsForName fc n
              ty <- pterm meth.type
              let nm = nameRoot meth.name
              pure $ pure $ vcat $
-               [hsep [ident (pretty nm), colon, pretty (show ty)]]
+               [hsep [fun (pretty nm), colon, pretty (show ty)]]
                ++ toList (indent 2 . pretty . show <$> meth.totalReq)
                ++ reflowDoc str
 
@@ -168,8 +180,8 @@ getDocsForName fc n
     getFixityDoc n =
       pure $ case toList !(getInfixDoc n) ++ toList !(getPrefixDoc n) of
         []  => []
-        [f] => [header "Fixity Declaration:" <++> f]
-        fs  => [header "Fixity Declarations:" <+> Line <+>
+        [f] => [header "Fixity Declaration" <++> f]
+        fs  => [header "Fixity Declarations" <+> Line <+>
                  indent 2 (vcat fs)]
 
     getIFaceDoc : (Name, IFaceInfo) -> Core (Doc IdrisDocAnn)
@@ -177,23 +189,23 @@ getDocsForName fc n
         = do let params =
                 case params iface of
                      [] => []
-                     ps => [hsep (header "Parameters:" :: punctuate comma (map (pretty . show) ps))]
+                     ps => [hsep (header "Parameters" :: punctuate comma (map (pretty . show) ps))]
              let constraints =
                 case !(traverse pterm (parents iface)) of
                      [] => []
-                     ps => [hsep (header "Constraints:" :: punctuate comma (map (pretty . show) ps))]
+                     ps => [hsep (header "Constraints" :: punctuate comma (map (pretty . show) ps))]
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
-                           docs => [vcat (header "Methods:" :: map (indent 2) docs)]
+                           docs => [vcat (header "Methods" :: map (indent 2) docs)]
              sd <- getSearchData fc False n
              idocs <- case hintGroups sd of
                            [] => pure (the (List (List (Doc IdrisDocAnn))) [])
                            ((_, tophs) :: _) => traverse getImplDoc tophs
              let insts = case concat idocs of
                            [] => []
-                           [doc] => [header "Implementation:" <++> doc]
-                           docs => [vcat (header "Implementations:"
+                           [doc] => [header "Implementation" <++> doc]
+                           docs => [vcat (header "Implementations"
                                            :: map (indent 2) docs)]
              pure (vcat (params ++ constraints ++ meths ++ insts))
 
@@ -208,13 +220,22 @@ getDocsForName fc n
                    => pure [showTotal n (totality d)]
                TCon _ _ _ _ _ _ cons _
                    => do let tot = [showTotal n (totality d)]
-                         cdocs <- traverse (getConDoc <=< toFullNames) cons
+                         cdocs <- traverse (getDConDoc <=< toFullNames) cons
                          let cdoc = case concat cdocs of
                               [] => []
-                              [doc] => [header "Constructor:" <++>  doc]
-                              docs => [vcat (header "Constructors:" :: map (indent 2) docs)]
+                              [doc] => [header "Constructor" <++>  doc]
+                              docs => [vcat (header "Constructors" :: map (indent 2) docs)]
                          pure (tot ++ cdoc)
                _ => pure []
+
+    showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+    showCategory d = case definition d of
+      TCon _ _ _ _ _ _ _ _ => tCon
+      DCon _ _ _ => dCon
+      PMDef _ _ _ _ _ => fun
+      ForeignDef _ _ => fun
+      Builtin _ => fun
+      _ => id
 
     showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
     showDoc (n, str)
@@ -222,9 +243,10 @@ getDocsForName fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => undefinedName fc n
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             let cat = showCategory def
              nm <- aliasName n
              let doc = vcat $
-                    (hsep [ident (pretty (show nm)), colon, pretty (show ty)])
+                    (hsep [cat (pretty (show nm)), colon, pretty (show ty)])
                     :: reflowDoc str
              extra <- getExtra n def
              fixes <- getFixityDoc n
