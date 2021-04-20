@@ -7,11 +7,6 @@ double unpackDouble(Value *d)
     return ((Value_Double *)d)->d;
 }
 
-Value *believe_me(Value *a, Value *b, Value *c)
-{
-    return c;
-}
-
 /* add */
 Value *add_i32(Value *x, Value *y)
 {
