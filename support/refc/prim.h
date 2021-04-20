@@ -5,9 +5,6 @@
 
 
 
-// Value * Prelude_IO_prim__putStr(Value *, Value *);
-Value *Prelude_IO_prim__getChar(Value *);
-
 // IORef
 
 Value *newIORef(Value *, Value *, Value *);
@@ -26,8 +23,6 @@ Value *arrayGet(Value *, Value *, Value *, Value *);
 Value *arraySet(Value *, Value *, Value *, Value *, Value *);
 
 // Pointer
-Value *PrimIO_prim__nullAnyPtr(Value *);
-
 Value *onCollect(Value *, Value *, Value *, Value *);
 Value *onCollectAny(Value *, Value *, Value *, Value *);
 

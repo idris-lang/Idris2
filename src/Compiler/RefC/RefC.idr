@@ -109,9 +109,6 @@ escapeChar '\RS' = "30"
 escapeChar '\US' = "31"
 escapeChar c = show c
 
--- escapeChar '\\' = "'\\\\'"
--- escapeChar c = show c
-
 cStringQuoted : String -> String
 cStringQuoted cs = strCons '"' (showCString (unpack cs) "\"")
 where
@@ -131,12 +128,11 @@ where
 
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt32("++ show x ++")" -- (constant #:type 'i32 #:val " ++ show x ++ ")"
-cConstant (BI x) = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"--"(constant #:type 'double #:val " ++ show x ++ ")"
-cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")" --"(constant #:type 'char #:val " ++ escapeChar x ++  ")"
+cConstant (I x) = "(Value*)makeInt32("++ show x ++")"
+cConstant (BI x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
+cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
-  -- = "(constant #:type 'string #:val " ++ cStringQuoted x ++ ")"
 cConstant WorldVal = "(Value*)makeWorld()"
 cConstant IntType = "i32"
 cConstant IntegerType = "i64"
@@ -144,10 +140,10 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
+cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")"
+cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")"
+cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")"
+cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
@@ -166,7 +162,6 @@ extractConstant (B16 x)  = show x
 extractConstant (B32 x)  = show x
 extractConstant (B64 x)  = show x
 extractConstant c = "unable_to_extract constant >>" ++ cConstant c ++ "<<"
-
 
 ||| Generate scheme for a plain function.
 plainOp : String -> List String -> String
@@ -431,14 +426,6 @@ cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
 cArgsVectANF [] = pure []
 cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 
-showEitherStringInt : Either String Int -> String
-showEitherStringInt (Left s) = s
-showEitherStringInt (Right i) = show i
-
-toIntEitherStringInt : Either String Int -> Int -> Int
-toIntEitherStringInt (Left s) k = k
-toIntEitherStringInt (Right i) _ = i
-
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
 integer_switch (MkAConstAlt c _  :: _) =
@@ -488,7 +475,6 @@ mutual
                     -> Core $ ()
     copyConstructors _ [] _ _ _ = pure ()
     copyConstructors sc ((MkAConAlt n _ mTag args body) :: xs) constrFieldVar retValVar k = do
-        --(restConstructionCopy, restBody) <- copyConstructors sc xs constrFieldVar retValVar (S k)
         (tag', name') <- getNameTag mTag n
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].tag = " ++ tag' ++ ";"
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].name = " ++ name' ++ ";"
@@ -646,7 +632,6 @@ mutual
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AApp fc _ closure arg) =
-        -- pure $ "apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")"
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
                     ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
     cStatementsFromANF (ALet fc var value body) = do
@@ -668,8 +653,6 @@ mutual
 
         fillConstructorArgs constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
-        --fillingStatements <- fillConstructorArgs constr args 0
-        --pure $ (statement1 :: fillingStatements, "(Value*)" ++ constr ++ ";")
     cStatementsFromANF (AOp fc _ op args) = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
@@ -707,15 +690,11 @@ mutual
                 increaseIndentation
                 newTemporaryVariableLevel
                 defaultAssignment <- cStatementsFromANF d
-                -- traverse_ (\l => emit EmptyFC (l) ) defaultBody
                 emit EmptyFC $ switchReturnVar ++ " = " ++ nonTailCall defaultAssignment ++ ";"
                 freeTmpVars
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
-                -- let defaultBlock = []
-                --                 ++ (map (\s => s) defaultBody)
-                --                 ++ [defaultLastLine1, defaultLastLine2]
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
     cStatementsFromANF (AConstCase fc sc alts def) = do
@@ -788,24 +767,24 @@ getArgsNrList [] _ = []
 getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 
-cTypeOfCFType : CFType -> Core $ String
-cTypeOfCFType CFUnit          = pure $ "void"
-cTypeOfCFType CFInt           = pure $ "int"
-cTypeOfCFType CFUnsigned8     = pure $ "uint8_t"
-cTypeOfCFType CFUnsigned16    = pure $ "uint16_t"
-cTypeOfCFType CFUnsigned32    = pure $ "uint32_t"
-cTypeOfCFType CFUnsigned64    = pure $ "uint64_t"
-cTypeOfCFType CFString        = pure $ "char *"
-cTypeOfCFType CFDouble        = pure $ "double"
-cTypeOfCFType CFChar          = pure $ "char"
-cTypeOfCFType CFPtr           = pure $ "void *"
-cTypeOfCFType CFGCPtr         = pure $ "void *"
-cTypeOfCFType CFBuffer        = pure $ "void *"
-cTypeOfCFType CFWorld         = pure $ "void *"
-cTypeOfCFType (CFFun x y)     = pure $ "void *"
-cTypeOfCFType (CFIORes x)     = pure $ "void *"
-cTypeOfCFType (CFStruct x ys) = pure $ "void *"
-cTypeOfCFType (CFUser x ys)   = pure $ "void *"
+cTypeOfCFType : CFType -> String
+cTypeOfCFType CFUnit          = "void"
+cTypeOfCFType CFInt           = "int"
+cTypeOfCFType CFUnsigned8     = "uint8_t"
+cTypeOfCFType CFUnsigned16    = "uint16_t"
+cTypeOfCFType CFUnsigned32    = "uint32_t"
+cTypeOfCFType CFUnsigned64    = "uint64_t"
+cTypeOfCFType CFString        = "char *"
+cTypeOfCFType CFDouble        = "double"
+cTypeOfCFType CFChar          = "char"
+cTypeOfCFType CFPtr           = "void *"
+cTypeOfCFType CFGCPtr         = "void *"
+cTypeOfCFType CFBuffer        = "void *"
+cTypeOfCFType CFWorld         = "void *"
+cTypeOfCFType (CFFun x y)     = "void *"
+cTypeOfCFType (CFIORes x)     = "void *"
+cTypeOfCFType (CFStruct x ys) = "void *"
+cTypeOfCFType (CFUser x ys)   = "void *"
 
 varNamesFromList : List ty -> Nat -> List String
 varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
@@ -813,7 +792,7 @@ varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
 createFFIArgList : List CFType
                 -> Core $ List (String, String, CFType)
 createFFIArgList cftypeList = do
-    sList <- traverse cTypeOfCFType cftypeList
+    let sList = map cTypeOfCFType cftypeList
     let varList = varNamesFromList cftypeList 1
     pure $ zip3 sList varList cftypeList
 
@@ -963,22 +942,15 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
-                  decreaseIndentation
-                  emit EmptyFC "}\n"
               _ => do
-                  emit EmptyFC $ !(cTypeOfCFType ret) ++ " retVal = " ++ fctName
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
-                  decreaseIndentation
-                  emit EmptyFC "}\n"
 
-          -- decreaseIndentation
-          -- emit EmptyFC "}"
-
-          --put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
-      --ffiString n fctName lib fargs (CFIORes ret)
+          decreaseIndentation
+          emit EmptyFC "}"
 
 createCFunctions n (MkAForeign ccs fargs ret) = pure () -- unable to deal with return values that are not CFIORes
 createCFunctions n (MkAError exp) = do
@@ -986,7 +958,6 @@ createCFunctions n (MkAError exp) = do
     fn' <- functionDefSignatureArglist n
     otherDefs <- get FunctionDefinitions
     put FunctionDefinitions (fn :: fn' :: otherDefs)
-    --(statements, assignment) <- cStatementsFromANF exp
     emit EmptyFC $ fn
         ++ "\n{"
         ++ "fprintf(stderr, \"Error in "  ++ (cName n) ++ "\");\n"

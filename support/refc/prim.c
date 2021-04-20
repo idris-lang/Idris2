@@ -1,12 +1,6 @@
 #include <unistd.h>
 #include "prim.h"
 
-Value *Prelude_IO_prim__getChar(Value *world)
-{
-    char c = getchar();
-    return (Value *)makeChar(c);
-}
-
 // This is NOT THREAD SAFE in the current implementation
 
 IORef_Storage *newIORef_Storage(int capacity)
@@ -144,30 +138,6 @@ Value *arraySet(Value *erased, Value *_array, Value *_index, Value *v, Value *_w
 // -----------------------------------
 //      Pointer operations
 // -----------------------------------
-
-Value *PrimIO_prim__nullAnyPtr(Value *ptr)
-{
-    void *p;
-    switch (ptr->header.tag)
-    {
-    case STRING_TAG:
-        p = ((Value_String *)ptr)->str;
-        break;
-    case POINTER_TAG:
-        p = ((Value_Pointer *)ptr)->p;
-        break;
-    default:
-        p = NULL;
-    }
-    if (p)
-    {
-        return (Value *)makeInt32(0);
-    }
-    else
-    {
-        return (Value *)makeInt32(1);
-    }
-}
 
 Value *onCollect(Value *_erased, Value *_anyPtr, Value *_freeingFunction, Value *_world)
 {
