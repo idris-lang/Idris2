@@ -818,7 +818,10 @@ initSyntax
     initInfix = insert "=" (Infix, 0) empty
 
     initPrefix : StringMap Nat
-    initPrefix = insert "-" 10 empty
+    initPrefix = fromList
+      [ ("-", 10)
+      , ("negate", 10) -- for documentation purposes
+      ]
 
     initDocStrings : ANameMap String
     initDocStrings = empty
