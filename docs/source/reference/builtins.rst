@@ -47,9 +47,10 @@ For example:
 works because the ``k`` is always erased.
 
 This doesn't work if the argument to the ``S``-like constructor
-is lazy (sometime known as ``CoNat``) because these can be infinite.
+is ``Inf`` (sometime known as ``CoNat``) as these can be infinite
+or is ``Lazy`` as it wouldn't preserve laziness semantics.
 
-During codegen and occurances of ``Nat`` will be converted to the faster ``Integer`` implementation.
+During codegen any occurance of ``Nat`` will be converted to the faster ``Integer`` implementation.
 Here are the specifics for the conversion:
 
 ``Z`` => ``0``
