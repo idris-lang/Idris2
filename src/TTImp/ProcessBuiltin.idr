@@ -84,10 +84,9 @@ getConsGDef c fc = traverse \n => do
 ||| Check a list of constructors has exactly
 ||| 1 'Z'-like constructor
 ||| and 1 `S`-like constructor, which has type `ty -> ty` or `ty arg -> `ty (f arg)`.
-||| Returns the 'Z' and 'S' constructor (in that order)
-checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core (Name, Name)
+checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core NatBuiltin
 checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) of
-    (Just s, Just z) => pure (s, z)
+    (Just zero, Just succ) => pure $ MkNatBuiltin {zero, succ}
     (Nothing, _) => throw $ GenericMsg fc $ "No 'Z'-like constructors for " ++ show ty ++ "."
     (_, Nothing) => throw $ GenericMsg fc $ "No 'S'-like constructors for " ++ show ty ++ "."
   where
@@ -112,31 +111,32 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) o
         pure ()
 
     ||| Check a constructor's arity and type.
+    -- 'Z'-like constructor is always first, then 'S'-like constructor.
     checkCon : (Name, GlobalDef) -> Core (Maybe Name, Maybe Name) -> Core (Maybe Name, Maybe Name)
-    checkCon (n, gdef) has = do
-        (hasZ, hasS) <- has
+    checkCon (n, gdef) cons = do
+        (zero, succ) <- cons
         let DCon _ arity _ = gdef.definition
             | def => throw $ GenericMsg fc $ "Expected data constructor, found:\n" ++ show def
         case arity `minus` length gdef.eraseArgs of
-            0 => case hasZ of
+            0 => case zero of
                 Just _ => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
-                Nothing => pure (Just n, hasS)
-            1 => case hasS of
+                Nothing => pure (Just n, succ)
+            1 => case succ of
                 Just _ => throw $ GenericMsg fc $ "Multiple 'S'-like constructors for " ++ show ty ++ "."
                 Nothing => do
                     checkTyS n gdef
-                    pure (hasZ, Just n)
+                    pure (zero, Just n)
             _ => throw $ GenericMsg fc $ "Constructor " ++ show n ++ " doesn't match any pattern for Natural."
 
 addBuiltinNat :
     {auto c : Ref Ctxt Defs} ->
-    (ty : Name) -> (z : Name) -> (s : Name) -> Core ()
-addBuiltinNat n z s = do
-    log "builtin.Natural.addTransform" 10 $ "Add Builtin Natural transform for " ++ show n
+    (ty : Name) -> NatBuiltin -> Core ()
+addBuiltinNat type cons = do
+    log "builtin.Natural.addTransform" 10 $ "Add Builtin Natural transform for " ++ show type
     update Ctxt $ record
-        { builtinTransforms.natTyNames $= insert n (z, s)
-        , builtinTransforms.natZNames $= insert z ()
-        , builtinTransforms.natSNames $= insert s ()
+        { builtinTransforms.natTyNames $= insert type cons
+        , builtinTransforms.natZNames $= insert cons.zero MkZERO
+        , builtinTransforms.natSNames $= insert cons.succ MkSUCC
         }
 
 ||| Check a `%builtin Natural` pragma is correct.
@@ -153,11 +153,11 @@ processBuiltinNatural ds fc name = do
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc $ "Expected a type constructor, found:\n" ++ show def
     cons <- getConsGDef ds.gamma fc dcons
-    (z, s) <- checkCons ds.gamma cons n fc
-    z' <- getFullName z
-    s' <- getFullName s
+    cons <- checkCons ds.gamma cons n fc
+    zero <- getFullName cons.zero
+    succ <- getFullName cons.succ
     n <- getFullName name
-    addBuiltinNat n z' s'
+    addBuiltinNat n $ MkNatBuiltin {zero, succ}
 
 ||| Check a `%builtin` pragma is correct.
 export

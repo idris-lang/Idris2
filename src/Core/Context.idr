@@ -666,26 +666,38 @@ Show BuiltinType where
     show BuiltinNatural = "Natural"
     show _ = "Not yet implemented"
 
+-- Token types to make it harder to get the constructor names
+-- the wrong way round.
+public export data ZERO = MkZERO
+public export data SUCC = MkSUCC
+
+||| Record containing names of 'Nat'-like constructors.
+public export
+record NatBuiltin where
+    constructor MkNatBuiltin
+    zero : Name
+    succ : Name
+
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements
 ||| behaviour should remain the same after this transform
 public export
 record BuiltinTransforms where
     constructor MkBuiltinTransforms
-    natTyNames : NameMap (Name, Name) -- map from Nat-like names to their constructors ('Z' then 'S')
-    natZNames : NameMap () -- map from S-like names to their type constructor
-    natSNames : NameMap () -- map from Z-like names to their type constructor
+    natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
+    natZNames : NameMap ZERO -- map from Z-like names to their type constructor
+    natSNames : NameMap SUCC -- map from S-like names to their type constructor
 
 -- TODO: After next release remove nat from here and use %builtin pragma instead
 initBuiltinTransforms : BuiltinTransforms
 initBuiltinTransforms =
-    let natTy = NS typesNS (UN "Nat")
-        natZ = NS typesNS (UN "Z")
-        natS = NS typesNS (UN "S")
+    let type = NS typesNS (UN "Nat")
+        zero = NS typesNS (UN "Z")
+        succ = NS typesNS (UN "S")
     in MkBuiltinTransforms
-        { natTyNames = singleton natTy (natZ, natS)
-        , natZNames = singleton natZ ()
-        , natSNames = singleton natS ()
+        { natTyNames = singleton type (MkNatBuiltin {zero, succ})
+        , natZNames = singleton zero MkZERO
+        , natSNames = singleton succ MkSUCC
         }
 
 export

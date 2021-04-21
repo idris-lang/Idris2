@@ -184,29 +184,29 @@ builtinMagic : Ref Ctxt Defs => Core (forall vars. CExp vars -> CExp vars)
 builtinMagic = do
     defs <- get Ctxt
     let b = defs.builtinTransforms
-    let nats = concat $ uncurry builtinMagicNat <$> values (natTyNames b)
+    let nats = concatMap builtinMagicNat $ values $ natTyNames b
     pure $ magic $ natHack ++ nats
   where
-    builtinMagicNat : Name -> Name -> List Magic
-    builtinMagicNat z s =
-        [ MagicCCon z 0
+    builtinMagicNat : NatBuiltin -> List Magic
+    builtinMagicNat cons =
+        [ MagicCCon cons.zero 0
              (\ fc, [] => CPrimVal fc (BI 0))
-        , MagicCCon s 1
+        , MagicCCon cons.succ 1
              (\ fc, [k] => CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k])
         ] -- TODO: add builtin pragmas for Nat related functions (to/from Integer, add, mult, minus, compare)
 
-isNatCon : (zCons : NameMap ()) ->
-           (sCons : NameMap ()) ->
+isNatCon : (zeroMap : NameMap ZERO) ->
+           (succMap : NameMap SUCC) ->
            Name -> Bool
 isNatCon zs ss n = isJust (lookup n zs) || isJust (lookup n ss)
 
-natBranch : (zCons : NameMap ()) ->
-           (sCons : NameMap ()) ->
+natBranch : (zeroMap : NameMap ZERO) ->
+           (succMap : NameMap SUCC) ->
            CConAlt vars -> Bool
 natBranch zs ss (MkConAlt n _ _ _) = isNatCon zs ss n
 
 trySBranch :
-    (sCons : NameMap ()) ->
+    (succMap : NameMap SUCC) ->
     CExp vars ->
     CConAlt vars ->
     Maybe (CExp vars)
@@ -217,7 +217,7 @@ trySBranch ss n (MkConAlt nm _ [arg] sc)
 trySBranch _ _ _ = Nothing
 
 tryZBranch :
-    (zCons : NameMap ()) ->
+    (zeroMap : NameMap ZERO) ->
     CConAlt vars ->
     Maybe (CExp vars)
 tryZBranch zs (MkConAlt n _ [] sc)
@@ -226,7 +226,7 @@ tryZBranch zs (MkConAlt n _ [] sc)
 tryZBranch _ _ = Nothing
 
 getSBranch :
-    (sCons : NameMap ()) ->
+    (succMap : NameMap SUCC) ->
     CExp vars ->
     List (CConAlt vars) ->
     Maybe (CExp vars)
@@ -234,15 +234,15 @@ getSBranch ss n [] = Nothing
 getSBranch ss n (x :: xs) = trySBranch ss n x <+> getSBranch ss n xs
 
 getZBranch :
-    (zCons : NameMap ()) ->
+    (zeroMap : NameMap ZERO) ->
     List (CConAlt vars) ->
     Maybe (CExp vars)
 getZBranch zs [] = Nothing
 getZBranch zs (x :: xs) = tryZBranch zs x <+> getZBranch zs xs
 
 -- Rewrite case trees on Nat to be case trees on Integer
-builtinNatTree' : (zCons : NameMap ()) ->
-                  (sCons : NameMap ()) ->
+builtinNatTree' : (zeroMap : NameMap ZERO) ->
+                  (succMap : NameMap SUCC) ->
                   CExp vars -> CExp vars
 builtinNatTree' zs ss (CConCase fc sc alts def)
    = if any (natBranch zs ss) alts
