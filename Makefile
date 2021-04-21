@@ -22,7 +22,7 @@ ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
 endif
 
 export IDRIS2_VERSION := ${MAJOR}.${MINOR}.${PATCH}
-NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
+export NAME_VERSION := ${NAME}-${IDRIS2_VERSION}
 IDRIS2_SUPPORT := libidris2_support${SHLIB_SUFFIX}
 IDRIS2_APP_IPKG := idris2.ipkg
 IDRIS2_LIB_IPKG := idris2api.ipkg
