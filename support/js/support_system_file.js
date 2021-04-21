@@ -1,5 +1,23 @@
 const support_system_file_fs = require('fs')
 
+
+function support_system_file_fileErrno(){
+  const n = process.__lasterr.errno || 0
+  if (process.platform == 'win32') {
+    // TODO: Add the error codes for the other errors
+    switch(n) {
+      case -4058: return 2n
+      case -4075: return 4n
+      default: return -BigInt(n)
+    }
+  } else {
+    switch(n){
+      case -17: return 4n
+      default: return -BigInt(n)
+    }
+  }
+}
+
 // like `readLine` without the overhead of copying characters.
 // returns int (success 0, failure -1) to align with the C counterpart.
 function support_system_file_seekLine (file_ptr) {
@@ -46,7 +64,7 @@ function support_system_file_getStr () {
 
 function support_system_file_openFile (n, m) {
   try {
-    const fd = support_system_file_fs.openSync(n, m)
+    const fd = support_system_file_fs.openSync(n, m.replace('b', ''))
     return { fd: fd, buffer: Buffer.alloc(0), name: n, eof: false }
   } catch (e) {
     process.__lasterr = e
