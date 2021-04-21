@@ -2144,6 +2144,14 @@ getWorkingDir
          pure d
 
 export
+withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+withCtxt = wrapRef Ctxt resetCtxt
+  where
+    resetCtxt : Defs -> Core ()
+    resetCtxt defs = do let dir = defs.options.dirs.working_dir
+                        coreLift_ $ changeDir dir
+
+export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setPrefix dir
     = do defs <- get Ctxt

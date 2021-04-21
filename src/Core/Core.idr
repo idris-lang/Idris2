@@ -718,6 +718,21 @@ update x f
        put x (f v)
 
 export
+wrapRef : (x : label) -> {auto ref : Ref x a} ->
+          (a -> Core ()) ->
+          Core b ->
+          Core b
+wrapRef x onClose op
+  = do v <- get x
+       o <- catch op $ \err =>
+              do onClose v
+                 put x v
+                 throw err
+       onClose v
+       put x v
+       pure o
+
+export
 cond : List (Lazy Bool, Lazy a) -> a -> a
 cond [] def = def
 cond ((x, y) :: xs) def = if x then y else cond xs def
