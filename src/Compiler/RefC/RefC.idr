@@ -803,7 +803,7 @@ emitFDef : {auto oft : Ref OutfileText Output}
         -> (funcName:Name)
         -> (arglist:List (String, String, CFType))
         -> Core ()
-emitFDef funcName [] = emit EmptyFC $ cName funcName ++ "(void)"
+emitFDef funcName [] = emit EmptyFC $ "Value *" ++ cName funcName ++ "(void)"
 emitFDef funcName ((varType, varName, varCFType) :: xs) = do
     emit EmptyFC $ "Value *" ++ cName funcName
     emit EmptyFC "("
@@ -906,7 +906,7 @@ createCFunctions n (MkACon tag arity nt) = do
   emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
-createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
+createCFunctions n (MkAForeign ccs fargs ret) = do
   case extractFFILocation "C" ccs of
       Nothing => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
           -- not really total but this way this internal error does not contaminate everything else
@@ -939,24 +939,28 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           increaseIndentation
           emit EmptyFC $ " // ffi call to " ++ fctName
           case ret of
-              CFUnit => do
+              CFIORes CFUnit => do
                   emit EmptyFC $ fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
-              _ => do
+              CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ ");"
+                  emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
+              _ => do
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                              ++ "("
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
           decreaseIndentation
           emit EmptyFC "}"
 
-createCFunctions n (MkAForeign ccs fargs ret) = assert_total $ idris_crash ("INTERNAL ERROR: Unable to deal with return values that are not CFIORes: " ++ cName n)
--- not really total but this way this internal error does not contaminate everything else
 createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
 -- not really total but this way this internal error does not contaminate everything else
 
