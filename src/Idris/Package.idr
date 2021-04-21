@@ -379,11 +379,11 @@ install pkg opts -- not used but might be in the future
          let targetDir = prefix_dir (dirs (options defs)) </>
                              "idris2-" ++ showVersion False version </>
                              installDir pkg
-         Right _ <- coreLift $ mkdirAll (targetDir)
+         Right _ <- coreLift $ mkdirAll targetDir
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directory " ++ targetDir
                              , show err ]
-         True <- coreLift $ changeDir (targetDir)
+         True <- coreLift $ changeDir targetDir
              | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
          -- We're in that directory now, so copy the files from
