@@ -82,7 +82,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: Idris2-${{ env.IDRIS2_VERSION }}
-          key: ${{ runner.os }}-idris2-bootstrapped-${{ env.IDRIS2_VERSION }}
+          key: ${{ runner.os }}-idris2-bootstrapped-hirsute-chez-${{ env.IDRIS2_VERSION }}
       - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
