@@ -492,6 +492,18 @@ export %inline
 (=<<) : (a -> Core b) -> Core a -> Core b
 (=<<) = flip (>>=)
 
+-- Kleisli compose
+infixr 1 >=>
+export %inline
+(>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
+f >=> g = (g =<<) . f
+
+-- Flipped kleisli compose
+infixr 1 <=<
+export %inline
+(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
+(<=<) = flip (>=>)
+
 -- Applicative (specialised)
 export %inline
 pure : a -> Core a

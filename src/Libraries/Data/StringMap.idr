@@ -2,6 +2,8 @@ module Libraries.Data.StringMap
 
 -- Hand specialised map, for efficiency...
 
+import Core.Name
+
 %default total
 
 Key : Type
@@ -216,6 +218,12 @@ export
 lookup : String -> StringMap v -> Maybe v
 lookup _ Empty = Nothing
 lookup k (M _ t) = treeLookup k t
+
+export
+lookupName : (n : Name) -> (dict : StringMap v) -> Maybe v
+lookupName n dict = case userNameRoot n of
+  Nothing  => Nothing
+  Just str => lookup str dict
 
 export
 insert : String -> v -> StringMap v -> StringMap v
