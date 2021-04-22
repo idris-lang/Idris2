@@ -4,6 +4,7 @@ import Data.Fin
 import Data.Nat
 
 import Syntax.WithProof
+import Syntax.PreorderReasoning
 
 %default total
 
@@ -11,87 +12,91 @@ import Syntax.WithProof
 --- `finToNat`'s properties ---
 -------------------------------
 
-||| Proof that an element **n** of Fin **m** , when converted to Nat is smaller than the bound **m**.
+||| A Fin's underlying natural number is smaller than the bound
 export
 elemSmallerThanBound : (n : Fin m) -> LT (finToNat n) m
 elemSmallerThanBound FZ = LTESucc LTEZero
 elemSmallerThanBound (FS x) = LTESucc (elemSmallerThanBound x)
 
-||| Proof that application of finToNat the last element of Fin **S n** gives **n**.
+||| Last's underlying natural number is the bound's predecessor
 export
 finToNatLastIsBound : {n : Nat} -> finToNat (Fin.last {n}) = n
 finToNatLastIsBound {n=Z} = Refl
-finToNatLastIsBound {n=S k} = rewrite finToNatLastIsBound {n=k} in Refl
+finToNatLastIsBound {n=S k} = cong S finToNatLastIsBound
 
-||| Proof that an element **n** of Fin **m** , when converted to Nat is smaller than the bound **m**.
+||| Weaken does not modify the underlying natural number
 export
-finToNatWeakenNeutral : {m : Nat} -> {n : Fin m} -> finToNat (weaken n) = finToNat n
-finToNatWeakenNeutral {n=FZ} = Refl
-finToNatWeakenNeutral {m=S (S _)} {n=FS _} = cong S finToNatWeakenNeutral
+finToNatWeakenNeutral : {n : Fin m} -> finToNat (weaken n) = finToNat n
+finToNatWeakenNeutral = finToNatQuotient (weakenNeutral n)
 
+||| WeakenN does not modify the underlying natural number
 export
-finToNatWeakenNNeutral : (0 k : Nat) -> (a : Fin n) -> finToNat (weakenN k a) = finToNat a
-finToNatWeakenNNeutral k FZ     = Refl
-finToNatWeakenNNeutral k (FS x) = rewrite finToNatWeakenNNeutral k x in Refl
+finToNatWeakenNNeutral : (0 m : Nat) -> (k : Fin n) ->
+                         finToNat (weakenN m k) = finToNat k
+finToNatWeakenNNeutral m k = finToNatQuotient (weakenNNeutral m k)
 
+||| `Shift k` shifts the underlying natural number by `k`.
 export
 finToNatShift : (k : Nat) -> (a : Fin n) -> finToNat (shift k a) = k + finToNat a
 finToNatShift Z     a = Refl
-finToNatShift (S k) a = rewrite finToNatShift k a in Refl
+finToNatShift (S k) a = cong S (finToNatShift k a)
 
 -------------------------------------------------
 --- Inversion function and related properties ---
 -------------------------------------------------
 
-||| Enumerate elements of Fin **n** backwards.
+||| Compute the Fin such that `k + invFin k = n - 1`
 export
 invFin : {n : Nat} -> Fin n -> Fin n
 invFin FZ = last
-invFin {n=S (S _)} (FS k) = weaken (invFin k)
+invFin (FS k) = weaken (invFin k)
 
-||| Proof that an inverse of a weakened element of Fin **n** is a successive of an inverse of an original element.
+||| The inverse of a weakened element is the successor of its inverse
 export
-invWeakenIsSucc : {n : Nat} -> (m : Fin n) -> invFin (weaken m) = FS (invFin m)
-invWeakenIsSucc FZ = Refl
-invWeakenIsSucc {n=S (S _)} (FS k) = rewrite invWeakenIsSucc k in Refl
+invFinWeakenIsFS : {n : Nat} -> (m : Fin n) -> invFin (weaken m) = FS (invFin m)
+invFinWeakenIsFS FZ = Refl
+invFinWeakenIsFS (FS k) = cong weaken (invFinWeakenIsFS k)
 
-||| Proof that double inversion of Fin **n** gives the original.
 export
-doubleInvFinSame : {n : Nat} -> (m : Fin n) -> invFin (invFin m) = m
-doubleInvFinSame {n=S Z} FZ = Refl
-doubleInvFinSame {n=S (S k)} FZ = rewrite doubleInvFinSame {n=S k} FZ in Refl
-doubleInvFinSame {n=S (S _)} (FS x) = trans (invWeakenIsSucc $ invFin x) (cong FS $ doubleInvFinSame x)
+invFinLastIsFZ : {n : Nat} -> invFin (last {n}) = FZ
+invFinLastIsFZ {n = Z} = Refl
+invFinLastIsFZ {n = S n} = cong weaken (invFinLastIsFZ {n})
 
-||| Proof that an inverse of the last element of Fin (S **n**) in FZ.
+||| `invFin` is involutive (i.e. applied twice it is the identity)
 export
-invLastIsFZ : {n : Nat} -> invFin (Fin.last {n}) = FZ
-invLastIsFZ {n=Z} = Refl
-invLastIsFZ {n=S k} = rewrite invLastIsFZ {n=k} in Refl
+invFinInvolutive : {n : Nat} -> (m : Fin n) -> invFin (invFin m) = m
+invFinInvolutive FZ = invFinLastIsFZ
+invFinInvolutive (FS k) = Calc $
+   |~ invFin (invFin (FS k))
+   ~~ invFin (weaken (invFin k)) ...( Refl )
+   ~~ FS (invFin (invFin k))     ...( invFinWeakenIsFS (invFin k) )
+   ~~ FS k                       ...( cong FS (invFinInvolutive k) )
 
 --------------------------------
 --- Strengthening properties ---
 --------------------------------
 
-||| Proof that it's possible to strengthen a weakened element of Fin **m**.
+||| It's possible to strengthen a weakened element of Fin **m**.
 export
-strengthenWeakenNeutral : {m : Nat} -> (n : Fin m) -> strengthen (weaken n) = Right n
-strengthenWeakenNeutral {m=S _} FZ = Refl
-strengthenWeakenNeutral {m=S (S _)} (FS k) = rewrite strengthenWeakenNeutral k in Refl
+strengthenWeakenIsRight : (n : Fin m) -> strengthen (weaken n) = Right n
+strengthenWeakenIsRight FZ = Refl
+strengthenWeakenIsRight (FS k) = rewrite strengthenWeakenIsRight k in Refl
 
-||| Proof that it's not possible to strengthen the last element of Fin **n**.
+||| It's not possible to strengthen the last element of Fin **n**.
 export
 strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Left (Fin.last {n})
 strengthenLastIsLeft {n=Z} = Refl
 strengthenLastIsLeft {n=S k} = rewrite strengthenLastIsLeft {n=k} in Refl
 
--- ||| Proof that it's possible to strengthen an inverse of a succesive element of Fin **n**.
--- export
--- strengthenNotLastIsRight : (m : Fin (S n)) -> strengthen (invFin (FS m)) = Right (invFin m)
--- strengthenNotLastIsRight m = strengthenWeakenNeutral (invFin m)
---
+||| It's possible to strengthen the inverse of a succesor
+export
+strengthenNotLastIsRight : {n : Nat} -> (m : Fin n) -> strengthen (invFin (FS m)) = Right (invFin m)
+strengthenNotLastIsRight m = strengthenWeakenIsRight (invFin m)
+
 ||| Either tightens the bound on a Fin or proves that it's the last.
 export
-strengthen' : {n : Nat} -> (m : Fin (S n)) -> Either (m = Fin.last) (m' : Fin n ** finToNat m = finToNat m')
+strengthen' : {n : Nat} -> (m : Fin (S n)) ->
+              Either (m = Fin.last) (m' : Fin n ** finToNat m = finToNat m')
 strengthen' {n = Z} FZ = Left Refl
 strengthen' {n = S k} FZ = Right (FZ ** Refl)
 strengthen' {n = S k} (FS m) = case strengthen' m of
@@ -103,18 +108,20 @@ strengthen' {n = S k} (FS m) = case strengthen' m of
 ----------------------------
 
 export
-weakenNZero_preserves : {a : Nat} -> (x : Fin a) -> weakenN 0 x = rewrite plusZeroRightNeutral a in x
-weakenNZero_preserves {a=S i} FZ = rewrite plusZeroRightNeutral i in Refl
-weakenNZero_preserves {a=S i} (FS x) = rewrite weakenNZero_preserves x in
-                                       rewrite plusZeroRightNeutral i in
-                                       Refl
+weakenNZeroIdentity : (k : Fin n) ->  weakenN 0 k ~~~ k
+weakenNZeroIdentity FZ = FZ
+weakenNZeroIdentity (FS k) = FS (weakenNZeroIdentity k)
 
 export
-shift_FS_linear : (a : Nat) -> {0 b : Nat} -> (0 x : Fin b) -> shift a (FS x) = rewrite sym $ plusSuccRightSucc a b in FS (shift a x)
-shift_FS_linear Z     x = Refl
-shift_FS_linear (S k) x = rewrite shift_FS_linear k x in
-                          rewrite plusSuccRightSucc k b in
-                          Refl
+shiftFSLinear : (m : Nat) -> (f : Fin n) -> shift m (FS f) ~~~ FS (shift m f)
+shiftFSLinear Z     f = reflexive
+shiftFSLinear (S m) f = FS (shiftFSLinear m f)
+
+export
+shiftLastIsLast : (m : Nat) -> {n : Nat} ->
+                  shift m (Fin.last {n}) ~~~ Fin.last {n=m+n}
+shiftLastIsLast Z = reflexive
+shiftLastIsLast (S m) = FS (shiftLastIsLast m)
 
 -----------------------------------
 --- Division-related properties ---
@@ -162,119 +169,158 @@ natToFinToNat :
   -> (lte : LT n m)
   -> finToNat (natToFinLTE n lte) = n
 natToFinToNat 0 (LTESucc lte) = Refl
-natToFinToNat (S k) (LTESucc lte) = rewrite natToFinToNat k lte in Refl
+natToFinToNat (S k) (LTESucc lte) = cong S (natToFinToNat k lte)
 
 ----------------------------------------
 --- Result-type changing arithmetics ---
 ----------------------------------------
 
 ||| Addition of `Fin`s as bounded naturals.
-||| The resulting type has the smallest possible bound which is illustated by relations with the `last` function.
+||| The resulting type has the smallest possible bound
+||| as illustated by the relations with the `last` function.
 public export
-(+) : {a : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a + b)
-(+) FZ y = rewrite plusCommutative a b in weakenN a y
-(+) (FS x) y {a=S _} = FS $ x + y
+(+) : {m, n : Nat} -> Fin m -> Fin (S n) -> Fin (m + n)
+(+) FZ y = cast (cong S $ plusCommutative n (pred m)) (weakenN (pred m) y)
+(+) (FS x) y = FS (x + y)
 
 ||| Multiplication of `Fin`s as bounded naturals.
-||| The resulting type has the smallest possible bound which is illustated by relations with the `last` function.
+||| The resulting type has the smallest possible bound
+||| as illustated by the relations with the `last` function.
 public export
-(*) : {a, b : Nat} -> Fin (S a) -> Fin (S b) -> Fin (S $ a * b)
+(*) : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
 (*) FZ _ = FZ
-(*) (FS x) y {a=S i} = y + x * y
+(*) {m = S _} (FS x) y = y + x * y
 
 --- Properties ---
 
--- Relations of `+` and `*` to `finToNat` and same operations of `Nat`s
+-- Relation between `+` and `*` and their counterparts on `Nat`
 
 export
-finToNat_plus_linearity : {a : Nat} -> (x : Fin $ S a) -> (y : Fin $ S b) -> finToNat (x + y) = finToNat x + finToNat y
-finToNat_plus_linearity FZ     _         = rewrite plusCommutative a b in finToNatWeakenNNeutral _ _
-finToNat_plus_linearity (FS x) y {a=S _} = rewrite finToNat_plus_linearity x y in Refl
+finToNatPlusHomo : {m, n : Nat} -> (x : Fin m) -> (y : Fin (S n)) ->
+                   finToNat (x + y) = finToNat x + finToNat y
+finToNatPlusHomo FZ _
+  = finToNatQuotient $ transitive
+     (castEq _)
+     (weakenNNeutral _ _)
+finToNatPlusHomo (FS x) y = cong S (finToNatPlusHomo x y)
 
 export
-finToNat_mult_linearity : {a, b : Nat} -> (x : Fin $ S a) -> (y : Fin $ S b) -> finToNat (x * y) = finToNat x * finToNat y
-finToNat_mult_linearity FZ _ = Refl
-finToNat_mult_linearity (FS x) y {a=S i} = rewrite finToNat_plus_linearity y (x * y) in
-                                           rewrite finToNat_mult_linearity x y in
-                                           Refl
+finToNatMultHomo : {m, n : Nat} -> (x : Fin (S m)) -> (y : Fin (S n)) ->
+                   finToNat (x * y) = finToNat x * finToNat y
+finToNatMultHomo FZ _ = Refl
+finToNatMultHomo {m = S _} (FS x) y = Calc $
+  |~ finToNat (FS x * y)
+  ~~ finToNat (y + x * y)                 ...( Refl )
+  ~~ finToNat y + finToNat (x * y)        ...( finToNatPlusHomo y (x * y) )
+  ~~ finToNat y + finToNat x * finToNat y ...( cong (finToNat y +) (finToNatMultHomo x y) )
+  ~~ finToNat (FS x) * finToNat y         ...( Refl)
 
 -- Relations to `Fin`'s `last`
 
 export
-plus_preserves_last : (a, b : Nat) -> Fin.last {n=a} + Fin.last {n=b} = Fin.last
-plus_preserves_last Z     b = rewrite weakenNZero_preserves $ Fin.last {n=b} in Refl
-plus_preserves_last (S k) b = rewrite plus_preserves_last k b in Refl
+plusPreservesLast : (m, n : Nat) -> Fin.last {n=m} + Fin.last {n} = Fin.last
+plusPreservesLast Z     n
+  = homoPointwiseIsEqual $ transitive
+      (castEq _)
+      (weakenNNeutral _ _)
+plusPreservesLast (S m) n = cong FS (plusPreservesLast m n)
 
 export
-mult_preserves_last : (a, b : Nat) -> Fin.last {n=a} * Fin.last {n=b} = Fin.last
-mult_preserves_last Z     b = Refl
-mult_preserves_last (S k) b = rewrite mult_preserves_last k b in plus_preserves_last _ _
+multPreservesLast : (m, n : Nat) -> Fin.last {n=m} * Fin.last {n} = Fin.last
+multPreservesLast Z n = Refl
+multPreservesLast (S m) n = Calc $
+  |~ last + (last * last)
+  ~~ last + last          ...( cong (last +) (multPreservesLast m n) )
+  ~~ last                 ...( plusPreservesLast n (m * n) )
 
 -- General addition properties
 
 export
-plusSuccRightSucc : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> FS (left + right) = rewrite plusSuccRightSucc a b in left + FS right
-plusSuccRightSucc FZ     right         = rewrite plusCommutative a b in Refl
-plusSuccRightSucc (FS x) right {a=S i} = rewrite plusSuccRightSucc x right in
-                                         rewrite plusSuccRightSucc i b in
-                                         Refl
+plusSuccRightSucc : {m, n : Nat} -> (left : Fin m) -> (right : Fin (S n)) ->
+                    FS (left + right) ~~~ left + FS right
+plusSuccRightSucc FZ        right = FS $ congCast reflexive
+plusSuccRightSucc (FS left) right = FS $ plusSuccRightSucc left right
 
 -- Relations to `Fin`-specific `shift` and `weaken`
 
 export
-shiftAsPlus : {a, b : Nat} -> (x : Fin $ S a) -> shift b x = rewrite sym $ plusSuccRightSucc b a in last {n=b} + x
-shiftAsPlus {b=Z}   x = rewrite weakenNZero_preserves x in Refl
-shiftAsPlus {b=S k} x = rewrite shiftAsPlus {b=k} x in
-                        rewrite plusSuccRightSucc k a in
-                        Refl
+shiftAsPlus : {m, n : Nat} -> (k : Fin (S m)) ->
+              shift n k ~~~ last {n} + k
+shiftAsPlus {n=Z}   k =
+  symmetric $ transitive (castEq _) (weakenNNeutral _ _)
+shiftAsPlus {n=S n} k = FS (shiftAsPlus k)
 
 export
-weakenNAsPlusFZ : {a, b : Nat} -> (x : Fin $ S b) -> weakenN a x = x + the (Fin $ S a) FZ
-weakenNAsPlusFZ FZ = rewrite plusCommutative a b in Refl
-weakenNAsPlusFZ (FS x) {b=S j} = rewrite weakenNAsPlusFZ {a} x in Refl
+weakenNAsPlusFZ : {m, n : Nat} -> (k : Fin n) ->
+                  weakenN m k = k + the (Fin (S m)) FZ
+weakenNAsPlusFZ FZ = Refl
+weakenNAsPlusFZ (FS k) = cong FS (weakenNAsPlusFZ k)
 
 export
-weakenNOfPlus : {a, b : Nat} -> (n : Nat) -> (x : Fin $ S a) -> (y : Fin $ S b) ->
-                weakenN n (x + y) = rewrite sym $ plusAssociative a b n in
-                                    rewrite plusCommutative b n in
-                                    rewrite plusAssociative a n b in
-                                    weakenN n x + y
-weakenNOfPlus n FZ FZ = rewrite sym $ plusAssociative b a n in
-                        rewrite plusCommutative a n in
-                        rewrite plusAssociative b n a in
-                        Refl
-weakenNOfPlus n FZ (FS y) {b=S j} = rewrite sym $ weakenNOfPlus {a} n FZ y in
-                                    rewrite plusCommutative j a in
-                                    rewrite sym $ plusAssociative a j n in
-                                    rewrite plusAssociative j a n in
-                                    rewrite plusCommutative j a in
-                                    rewrite plusAssociative a j n in
-                                    Refl
-weakenNOfPlus n (FS x) y {a=S i} = rewrite weakenNOfPlus n x y in
-                                   rewrite sym $ plusAssociative i n b in
-                                   rewrite plusCommutative n b in
-                                   rewrite plusAssociative i b n in
-                                   Refl
+weakenNPlusHomo : {0 m, n : Nat} -> (k : Fin p) ->
+                  weakenN n (weakenN m k) ~~~ weakenN (m + n) k
+weakenNPlusHomo FZ = FZ
+weakenNPlusHomo (FS k) = FS (weakenNPlusHomo k)
 
+export
+weakenNOfPlus :
+  {m, n : Nat} -> (k : Fin m) -> (l : Fin (S n)) ->
+  weakenN w (k + l) ~~~ weakenN w k + l
+weakenNOfPlus FZ l
+  = transitive (congWeakenN (castEq _))
+  $ transitive (weakenNPlusHomo l)
+  $ symmetric (castEq _)
+weakenNOfPlus (FS k) l = FS (weakenNOfPlus k l)
 -- General addition properties (continued)
 
 export
-plusCommutative : {a, b : Nat} -> (left : Fin $ S a) -> (right : Fin $ S b) -> left + right = rewrite plusCommutative a b in right + left
-plusCommutative FZ     right = rewrite plusCommutative a b in weakenNAsPlusFZ {a} right
-plusCommutative (FS x) right {a=S i} = rewrite sym $ plusSuccRightSucc right x in
-                                       rewrite plusCommutative x right in
-                                       rewrite plusCommutative b i in
-                                       Refl
+plusZeroLeftNeutral : (k : Fin (S n)) -> FZ + k ~~~ k
+plusZeroLeftNeutral k = transitive (castEq _) (weakenNNeutral _ k)
 
 export
-plusAssociative : {a, b, c : Nat} -> (left : Fin $ S a) -> (centre : Fin $ S b) -> (right : Fin $ S c) ->
-                  left + (centre + right) = rewrite plusAssociative a b c in (left + centre) + right
-plusAssociative FZ centre right = rewrite weakenNOfPlus {a=b} {b=c} a centre right in
-                                  rewrite plusCommutative b a in
-                                  Refl
-plusAssociative (FS x) centre right {a=S i} = rewrite plusAssociative x centre right in
-                                              rewrite plusAssociative i b c in
-                                              Refl
+congPlusLeft : {m, n, p : Nat} -> {k : Fin m} -> {l : Fin n} ->
+               (c : Fin (S p)) -> k ~~~ l -> k + c ~~~ l + c
+congPlusLeft c FZ
+  = transitive (plusZeroLeftNeutral c)
+               (symmetric $ plusZeroLeftNeutral c)
+congPlusLeft c (FS prf) = FS (congPlusLeft c prf)
+
+export
+plusZeroRightNeutral : (k : Fin m) -> k + FZ ~~~ k
+plusZeroRightNeutral FZ = FZ
+plusZeroRightNeutral (FS k) = FS (plusZeroRightNeutral k)
+
+export
+congPlusRight : {m, n, p : Nat} -> {k : Fin (S n)} -> {l : Fin (S p)} ->
+               (c : Fin m) -> k ~~~ l -> c + k ~~~ c + l
+congPlusRight c FZ
+  = transitive (plusZeroRightNeutral c)
+               (symmetric $ plusZeroRightNeutral c)
+congPlusRight {n = S _} {p = S _} c (FS prf)
+  = transitive (symmetric $ plusSuccRightSucc c _)
+  $ transitive (FS $ congPlusRight c prf)
+               (plusSuccRightSucc c _)
+congPlusRight {p = Z} c (FS prf) impossible
+
+export
+plusCommutative : {m, n : Nat} -> (left : Fin (S m)) -> (right : Fin (S n)) ->
+                  left + right ~~~ right + left
+plusCommutative FZ        right
+  = transitive (plusZeroLeftNeutral right)
+               (symmetric $ plusZeroRightNeutral right)
+plusCommutative {m = S _} (FS left) right
+  = transitive (FS (plusCommutative left right))
+               (plusSuccRightSucc right left)
+
+export
+plusAssociative :
+  {m, n, p : Nat} ->
+  (left : Fin m) -> (centre : Fin (S n)) -> (right : Fin (S p)) ->
+  left + (centre + right) ~~~ (left + centre) + right
+plusAssociative FZ centre right
+  = transitive (plusZeroLeftNeutral (centre + right))
+               (congPlusLeft right (symmetric $ plusZeroLeftNeutral centre))
+plusAssociative (FS left) centre right = FS (plusAssociative left centre right)
 
 -------------------------------------------------
 --- Splitting operations and their properties ---
@@ -286,9 +332,9 @@ plusAssociative (FS x) centre right {a=S i} = rewrite plusAssociative x centre r
 ||| you have an index either in the first or the second of the original `Vect`s,
 ||| using this function you can get an index in the concatenated one.
 public export
-indexSum : {a : Nat} -> Either (Fin a) (Fin b) -> Fin (a + b)
-indexSum $ Left  l = weakenN b l
-indexSum $ Right r = shift a r
+indexSum : {m : Nat} -> Either (Fin m) (Fin n) -> Fin (m + n)
+indexSum (Left  l) = weakenN n l
+indexSum (Right r) = shift m r
 
 ||| Extracts an index of the first or the second part from the index of a sum.
 |||
@@ -296,82 +342,97 @@ indexSum $ Right r = shift a r
 ||| you have an index of this `Vect`, you have get an index of either left or right
 ||| original `Vect` using this function.
 public export
-splitSum : {a : Nat} -> Fin (a + b) -> Either (Fin a) (Fin b)
-splitSum {a=Z}   x      = Right x
-splitSum {a=S k} FZ     = Left FZ
-splitSum {a=S k} (FS x) = mapFst FS $ splitSum x
+splitSum : {m : Nat} -> Fin (m + n) -> Either (Fin m) (Fin n)
+splitSum {m=Z}   k      = Right k
+splitSum {m=S m} FZ     = Left FZ
+splitSum {m=S m} (FS k) = mapFst FS $ splitSum k
 
 ||| Calculates the index of a square matrix of size `a * b` by indices of each side.
 public export
-indexProd : {b : Nat} -> Fin a -> Fin b -> Fin (a * b)
-indexProd FZ     = weakenN $ mult (pred a) b
-indexProd (FS x) = shift b . indexProd x
+indexProd : {n : Nat} -> Fin m -> Fin n -> Fin (m * n)
+indexProd FZ     = weakenN $ mult (pred m) n
+indexProd (FS k) = shift n . indexProd k
 
 ||| Splits the index of a square matrix of size `a * b` to indices of each side.
 public export
-splitProd : {a, b : Nat} -> Fin (a * b) -> (Fin a, Fin b)
-splitProd {a=S _} x = case splitSum x of
-  Left  y => (FZ, y)
-  Right y => mapFst FS $ splitProd y
+splitProd : {m, n : Nat} -> Fin (m * n) -> (Fin m, Fin n)
+splitProd {m=S _} p = case splitSum p of
+  Left  k => (FZ, k)
+  Right l => mapFst FS $ splitProd l
 
 --- Properties ---
 
 export
-indexSum_preserves_last : (a, b : Nat) -> indexSum {a} (Right $ Fin.last {n=b}) = rewrite sym $ plusSuccRightSucc a b in Fin.last {n=a+b}
-indexSum_preserves_last Z     b = Refl
-indexSum_preserves_last (S k) b = rewrite indexSum_preserves_last k b in
-                                  rewrite plusSuccRightSucc k b in
-                                  Refl
+indexSumPreservesLast :
+  (m, n : Nat) -> indexSum {m} (Right $ Fin.last {n}) ~~~ Fin.last {n=m+n}
+indexSumPreservesLast Z     n = reflexive
+indexSumPreservesLast (S m) n = FS (shiftLastIsLast m)
 
 export
-indexProd_preserves_last : (a, b : Nat) -> indexProd (Fin.last {n=a}) (Fin.last {n=b}) = Fin.last
-indexProd_preserves_last Z b = rewrite weakenNZero_preserves $ Fin.last {n=b} in
-                               rewrite plusZeroRightNeutral b in
-                               Refl
-indexProd_preserves_last (S k) b = rewrite indexProd_preserves_last k b in
-                                   rewrite shiftAsPlus {b} $ last {n=pred $ S k * S b} in
-                                   rewrite plus_preserves_last b $ pred $ S k * S b in
-                                   rewrite sym $ plusSuccRightSucc b $ pred $ S k * S b in
-                                   Refl
+indexProdPreservesLast : (m, n : Nat) ->
+         indexProd (Fin.last {n=m}) (Fin.last {n}) = Fin.last
+indexProdPreservesLast Z n = homoPointwiseIsEqual
+  $ transitive (weakenNZeroIdentity last)
+               (congLast (sym $ plusZeroRightNeutral n))
+indexProdPreservesLast (S m) n = Calc $
+  |~ indexProd (last {n=S m}) (last {n})
+  ~~ FS (shift n (indexProd last last)) ...( Refl )
+  ~~ FS (shift n last)                  ...( cong (FS . shift n) (indexProdPreservesLast m n ) )
+  ~~ last                               ...( homoPointwiseIsEqual prf )
 
-splitSum_of_weakenN : (l : Fin a) -> Left l = splitSum {b} (weakenN b l)
-splitSum_of_weakenN FZ = Refl
-splitSum_of_weakenN (FS x) = cong (mapFst FS) $ splitSum_of_weakenN {b} x
+  where
 
-splitSum_of_shift : {a : Nat} -> (r : Fin b) -> Right r = splitSum {a} (shift a r)
-splitSum_of_shift {a=Z}   r = Refl
-splitSum_of_shift {a=S k} r = cong (mapFst FS) $ splitSum_of_shift {a=k} r
-
-export
-split_of_index_sum_inverse : {a : Nat} -> (e : Either (Fin a) (Fin b)) -> e = splitSum (indexSum e)
-split_of_index_sum_inverse (Left l) = splitSum_of_weakenN l
-split_of_index_sum_inverse (Right r) = splitSum_of_shift r
+    prf : shift (S n) (Fin.last {n = n + m * S n}) ~~~ Fin.last {n = n + S (n + m * S n)}
+    prf = transitive (shiftLastIsLast (S n))
+                     (congLast (plusSuccRightSucc n (n + m * S n)))
 
 export
-index_of_split_sum_inverse : {a, b : Nat} -> (f : Fin (a + b)) -> f = indexSum (splitSum {a} {b} f)
-index_of_split_sum_inverse {a=Z}   f  = Refl
-index_of_split_sum_inverse {a=S k} FZ = Refl
-index_of_split_sum_inverse {a=S k} (FS x) with (index_of_split_sum_inverse {a=k} {b} x)
-  index_of_split_sum_inverse {a=S _} (FS x) | sub with (splitSum x)
-    index_of_split_sum_inverse {a=S _} (FS _) | sub | Left  _ = rewrite sub in Refl
-    index_of_split_sum_inverse {a=S _} (FS _) | sub | Right _ = rewrite sub in Refl
+splitSumOfWeakenN : (k : Fin m) -> splitSum {m} {n} (weakenN n k) = Left k
+splitSumOfWeakenN FZ = Refl
+splitSumOfWeakenN (FS k) = cong (mapFst FS) $ splitSumOfWeakenN k
 
 export
-split_of_index_prod_inverse : {a : Nat} -> (x : Fin a) -> (y : Fin b) -> (x, y) = splitProd (indexProd x y)
-split_of_index_prod_inverse {a=S k} FZ     y = rewrite sym $ splitSum_of_weakenN {b=mult k b} y in Refl
-split_of_index_prod_inverse {a=S k} (FS x) y = rewrite sym $ splitSum_of_shift {a=b} $ indexProd x y in
-                                               cong (mapFst FS) $ split_of_index_prod_inverse x y
+splitSumOfShift : {m : Nat} -> (k : Fin n) -> splitSum {m} {n} (shift m k) = Right k
+splitSumOfShift {m=Z}   k = Refl
+splitSumOfShift {m=S m} k = cong (mapFst FS) $ splitSumOfShift k
 
 export
-index_of_split_prod_inverse : {a, b : Nat} -> (f : Fin (a * b)) -> f = uncurry (indexProd {a} {b}) (splitProd {a} {b} f)
-index_of_split_prod_inverse {a=S k} f with (@@ splitSum f)
-  index_of_split_prod_inverse f | (Left l ** prf) = rewrite prf in
-                                                    rewrite sym $ cong indexSum prf in
-                                                    index_of_split_sum_inverse f
-  index_of_split_prod_inverse f | (Right r ** prf) = rewrite prf in
-                                                     rewrite index_of_split_sum_inverse {a=b} {b=mult k b} f in
-                                                     rewrite cong indexSum prf in
-                                                     rewrite indexProd_of_mapFst_FS {a=k} {b} $ splitProd r in
-                                                     cong (shift b) $ index_of_split_prod_inverse r where
-    indexProd_of_mapFst_FS : {b : Nat} -> (x : (Fin a, Fin b)) -> uncurry (indexProd {b}) (mapFst FS x) = shift b (uncurry (indexProd {b}) x)
-    indexProd_of_mapFst_FS (x, y) = Refl
+splitOfIndexSumInverse : {m : Nat} -> (e : Either (Fin m) (Fin n)) -> splitSum (indexSum e) = e
+splitOfIndexSumInverse (Left l) = splitSumOfWeakenN l
+splitOfIndexSumInverse (Right r) = splitSumOfShift r
+
+export
+indexOfSplitSumInverse : {m, n : Nat} -> (f : Fin (m + n)) -> indexSum (splitSum {m} {n} f) = f
+indexOfSplitSumInverse {m=Z}   f  = Refl
+indexOfSplitSumInverse {m=S _} FZ = Refl
+indexOfSplitSumInverse {m=S _} (FS f) with (indexOfSplitSumInverse f)
+  indexOfSplitSumInverse {m=S _} (FS f) | eq with (splitSum f)
+    indexOfSplitSumInverse {m=S _} (FS _) | eq | Left  _ = cong FS eq
+    indexOfSplitSumInverse {m=S _} (FS _) | eq | Right _ = cong FS eq
+
+
+export
+splitOfIndexProdInverse : {m : Nat} -> (k : Fin m) -> (l : Fin n) ->
+                          splitProd (indexProd k l) = (k, l)
+splitOfIndexProdInverse FZ     l
+   = rewrite splitSumOfWeakenN {n = mult (pred m) n} l in Refl
+splitOfIndexProdInverse (FS k) l
+   = rewrite splitSumOfShift {m=n} $ indexProd k l in
+     cong (mapFst FS) $ splitOfIndexProdInverse k l
+
+export
+indexOfSplitProdInverse : {m, n : Nat} -> (f : Fin (m * n)) ->
+                          uncurry (indexProd {m} {n}) (splitProd {m} {n} f) = f
+indexOfSplitProdInverse {m = S _} f with (splitSum f) proof eq
+  indexOfSplitProdInverse {m = S _} f | Left l = Calc $
+    |~ indexSum (Left l)
+    ~~ indexSum (splitSum f) ...( cong indexSum (sym eq) )
+    ~~ f                     ...( indexOfSplitSumInverse f )
+  indexOfSplitProdInverse f | Right r with (splitProd r) proof eq2
+    indexOfSplitProdInverse f | Right r | (p, q) = Calc $
+      |~ indexProd (FS p) q
+      ~~ shift n (indexProd p q)                   ...( Refl )
+      ~~ shift n (uncurry indexProd (splitProd r)) ...( cong (shift n . uncurry indexProd) (sym eq2) )
+      ~~ shift n r                                 ...( cong (shift n) (indexOfSplitProdInverse r) )
+      ~~ indexSum (splitSum f)                     ...( sym (cong indexSum eq) )
+      ~~ f                                         ...( indexOfSplitSumInverse f )

@@ -17,6 +17,14 @@ data Fin : (n : Nat) -> Type where
     FZ : Fin (S k)
     FS : Fin k -> Fin (S k)
 
+||| Cast between Fins with equal indices
+public export
+cast : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
+cast {n = S _} eq FZ = FZ
+cast {n = Z} eq FZ impossible
+cast {n = S _} eq (FS k) = FS (cast (succInjective _ _ eq) k)
+cast {n = Z} eq (FS k) impossible
+
 export
 Uninhabited (Fin Z) where
   uninhabited FZ impossible
@@ -176,3 +184,99 @@ DecEq (Fin n) where
       = case decEq f f' of
              Yes p => Yes $ cong FS p
              No p => No $ p . fsInjective
+
+namespace Equality
+
+  ||| Pointwise equality of Fins
+  ||| It is sometimes complicated to prove equalities on type-changing
+  ||| operations on Fins.
+  ||| This inductive definition can be used to simplify proof. We can
+  ||| recover proofs of equalities by using `homoPointwiseIsEqual`.
+  public export
+  data Pointwise : Fin m -> Fin n -> Type where
+    FZ : Pointwise FZ FZ
+    FS : Pointwise k l -> Pointwise (FS k) (FS l)
+
+  infix 6 ~~~
+  ||| Convenient infix notation for the notion of pointwise equality of Fins
+  public export
+  (~~~) : Fin m -> Fin n -> Type
+  (~~~) = Pointwise
+
+  ||| Pointwise equality is reflexive
+  export
+  reflexive : {k : Fin m} -> k ~~~ k
+  reflexive {k = FZ} = FZ
+  reflexive {k = FS k} = FS reflexive
+
+  ||| Pointwise equality is symmetric
+  export
+  symmetric : k ~~~ l -> l ~~~ k
+  symmetric FZ = FZ
+  symmetric (FS prf) = FS (symmetric prf)
+
+  ||| Pointwise equality is transitive
+  export
+  transitive : j ~~~ k -> k ~~~ l -> j ~~~ l
+  transitive FZ FZ = FZ
+  transitive (FS prf) (FS prg) = FS (transitive prf prg)
+
+  ||| Pointwise equality is compatible with cast
+  export
+  castEq : {k : Fin m} -> (0 eq : m = n) -> cast eq k ~~~ k
+  castEq {k = FZ} Refl = FZ
+  castEq {k = FS k} Refl = FS (castEq _)
+
+  ||| The actual proof used by cast is irrelevant
+  export
+  congCast : {n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
+             {0 eq1 : m = n} -> {0 eq2 : p = q} ->
+             k ~~~ l ->
+             cast eq1 k ~~~ cast eq2 l
+  congCast eq = transitive (castEq _) (transitive eq $ symmetric $ castEq _)
+
+  ||| Last is congruent wrt index equality
+  export
+  congLast : {m, n : Nat} -> (0 _ : m = n) -> last {n=m} ~~~ last {n}
+  congLast {m = Z} {n = Z} eq = reflexive
+  congLast {m = S _} {n = S _} eq = FS (congLast (succInjective _ _ eq))
+
+  export
+  congShift : (m : Nat) -> k ~~~ l -> shift m k ~~~ shift m l
+  congShift Z prf = prf
+  congShift (S m) prf = FS (congShift m prf)
+
+  ||| WeakenN is congruent wrt pointwise equality
+  export
+  congWeakenN : k ~~~ l -> weakenN n k ~~~ weakenN n l
+  congWeakenN FZ = FZ
+  congWeakenN (FS prf) = FS (congWeakenN prf)
+
+  ||| Pointwise equality is propositional equality on Fins that have the same type
+  export
+  homoPointwiseIsEqual : {0 k, l : Fin m} -> k ~~~ l -> k === l
+  homoPointwiseIsEqual FZ = Refl
+  homoPointwiseIsEqual (FS prf) = cong FS (homoPointwiseIsEqual prf)
+
+  ||| Pointwise equality is propositional equality modulo transport on Fins that
+  ||| have provably equal types
+  export
+  hetPointwiseIsTransport :
+     {0 k : Fin m} -> {0 l : Fin n} ->
+     (eq : m === n) -> k ~~~ l -> k === rewrite eq in l
+  hetPointwiseIsTransport Refl = homoPointwiseIsEqual
+
+  export
+  finToNatQuotient : k ~~~ l -> finToNat k === finToNat l
+  finToNatQuotient FZ = Refl
+  finToNatQuotient (FS prf) = cong S (finToNatQuotient prf)
+
+  export
+  weakenNeutral : (k : Fin n) -> weaken k ~~~ k
+  weakenNeutral FZ = FZ
+  weakenNeutral (FS k) = FS (weakenNeutral k)
+
+  export
+  weakenNNeutral : (0 m : Nat) -> (k : Fin n) -> weakenN m k ~~~ k
+  weakenNNeutral m FZ = FZ
+  weakenNNeutral m (FS k) = FS (weakenNNeutral m k)
