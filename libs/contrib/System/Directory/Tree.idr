@@ -12,7 +12,7 @@ import System.Path
 ------------------------------------------------------------------------------
 -- Filenames
 
-||| A `Filename root` is  anchored in `root`.
+||| A `Filename root` is anchored in `root`.
 ||| We use a `data` type so that Idris can easily infer `root` when passing
 ||| a `FileName` around. We do not use a `record` because we do not want to
 ||| allow users to manufacture their own `FileName`.
@@ -28,8 +28,8 @@ fileName (MkFileName str) = str
 
 namespace FileName
   export
-  setRoot : FileName root -> FileName root'
-  setRoot (MkFileName x) = MkFileName x
+  toRelative : FileName root -> FileName (parse "")
+  toRelative (MkFileName x) = MkFileName x
 
 ||| Convert a filename anchored in `root` to a filepath by appending the name
 ||| to the root path.
@@ -69,12 +69,11 @@ emptyTree : Tree root
 emptyTree = MkTree [] []
 
 namespace Tree
+  ||| No run time information is changed,
+  ||| so we assert the identity.
   export
-  setRoot : Tree root -> (0 root' : Path) -> Tree root'
-  setRoot (MkTree files sub) root' = assert_total $
-    let files' = map setRoot files
-        sub'   = map (DPair.bimap setRoot (map \x => setRoot x _)) sub in
-    MkTree files' sub'
+  toRelative : Tree root -> Tree (parse "")
+  toRelative x = believe_me x
 
 ||| Filter out files and directories that do not satisfy a given predicate.
 export

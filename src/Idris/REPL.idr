@@ -63,6 +63,7 @@ import Data.Stream
 import Data.Strings
 import Data.DPair
 import Libraries.Data.String.Extra
+import Libraries.Data.List.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
@@ -963,7 +964,7 @@ process (ImportPackage package) = do
     | _ => pure (REPLError (pretty "Package not found in the known search directories"))
   let packageDirPath = parse packageDir
   tree <- coreLift $ explore packageDirPath
-  fentries <- unfoldTree (setRoot tree (parse ""))
+  fentries <- coreLift $ toPaths (toRelative tree)
   errs <- for fentries \entry => do
     let entry' = dropExtension entry
     let sp = forget $ split (== dirSeparator) entry'
@@ -977,11 +978,9 @@ process (ImportPackage package) = do
     onePlus => pure $ vsep !(traverse display onePlus)
   pure (Printed res)
  where
-  unfoldTree : {root : _} -> Tree root -> Core (List String)
-  unfoldTree (MkTree files subtrees) = do
-    (map toFilePath files ++) . concat <$> flip Core.traverse subtrees \(_ ** treeIO) => do
-      tree <- coreLift treeIO
-      unfoldTree tree
+  toPaths : {root : _} -> Tree root -> IO (List String)
+  toPaths tree =
+    depthFirst (\x => map (toFilePath x ::) . force) tree (pure [])
 
 -- B or _ -> B or A -> B
 -- where A and B are spines of references.
@@ -1096,17 +1095,6 @@ process (FuzzyTypeSearch expr) = do
     isApproximationOf x y
   isApproximationOf' a b = eqConst a b
 
-  fuzzyMatchName : (pattern : List NameOrConst)
-                -> (given : List NameOrConst)
-                -> (eat : Bool)
-                -> List NameOrConst
-  fuzzyMatchName [] _ _ = []
-  fuzzyMatchName (x :: xs) given eat =
-    let found = isJust (find (isApproximationOf' x) given) in
-    case found && eat of
-      True  => fuzzyMatchName xs given False
-      False => x :: fuzzyMatchName xs given eat
-
   ||| Find all name and type literal occurrences.
   export
   doFind : List NameOrConst -> Term vars -> List NameOrConst
@@ -1141,13 +1129,13 @@ process (FuzzyTypeSearch expr) = do
   fuzzyMatch neg pos (Bind _ _ b sc) = do
     let refsB = doFind [] (binderType b)
     refsB <- traverse toFullNames' refsB
-    let neg' = fuzzyMatchName neg refsB True
+    let neg' = diffBy isApproximationOf' neg refsB
     fuzzyMatch neg' pos sc
   fuzzyMatch (_ :: _) pos tm = pure False
   fuzzyMatch [] pos tm = do
     let refsB = doFind [] tm
     refsB <- traverse toFullNames' refsB
-    pure (isNil $ fuzzyMatchName pos refsB True)
+    pure (isNil $ diffBy isApproximationOf' pos refsB)
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
