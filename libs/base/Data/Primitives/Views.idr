@@ -30,16 +30,16 @@ namespace IntegerV
   public export
   data IntegerRec : Integer -> Type where
        IntegerZ : IntegerRec 0
-       IntegerSucc : IntegerRec (n - 1) -> IntegerRec n
-       IntegerPred : IntegerRec ((-n) + 1) -> IntegerRec (-n)
+       IntegerSucc : IntegerRec (-1 + n) -> IntegerRec n
+       IntegerPred : IntegerRec (1 + (-n)) -> IntegerRec (-n)
 
   ||| Covering function for `IntegerRec`
   public export
   integerRec : (x : Integer) -> IntegerRec x
   integerRec 0 = IntegerZ
-  integerRec x = if x > 0 then IntegerSucc (assert_total (integerRec (x - 1)))
+  integerRec x = if x > 0 then IntegerSucc (assert_total (integerRec (-1 + x)))
                       else believe_me (IntegerPred {n = -x}
-                                (assert_total (believe_me (integerRec (x + 1)))))
+                                (assert_total (believe_me (integerRec (1 + x)))))
 
 namespace IntV
   ||| View for expressing a number as a multiplication + a remainder
