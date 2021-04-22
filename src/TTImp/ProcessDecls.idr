@@ -13,6 +13,7 @@ import Parser.Source
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Parser
+import TTImp.ProcessBuiltin
 import TTImp.ProcessData
 import TTImp.ProcessDef
 import TTImp.ProcessParams
@@ -60,6 +61,8 @@ process eopts nest env (IPragma _ act)
     = act nest env
 process eopts nest env (ILog lvl)
     = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
+process eopts nest env (IBuiltin fc type name)
+    = processBuiltin nest env fc type name
 
 TTImp.Elab.Check.processDecl = process
 

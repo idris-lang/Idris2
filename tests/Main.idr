@@ -136,6 +136,11 @@ idrisTestsData = MkTestPool []
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007"]
 
+idrisTestsBuiltin : TestPool
+idrisTestsBuiltin = MkTestPool []
+      -- %builtin related tests for the frontend (type-checking)
+      ["builtin001", "builtin002", "builtin003", "builtin004"]
+
 idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool []
       [ -- Evaluator
@@ -269,6 +274,7 @@ contribLibraryTests = MkTestPool [Chez, Node]
 codegenTests : TestPool
 codegenTests = MkTestPool []
   [ "con001"
+  , "builtin001"
   ]
 
 main : IO ()
@@ -285,6 +291,7 @@ main = runner
   , testPaths "idris2" idrisTestsPerformance
   , testPaths "idris2" idrisTestsRegression
   , testPaths "idris2" idrisTestsData
+  , testPaths "idris2" idrisTestsBuiltin
   , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests

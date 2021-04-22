@@ -224,6 +224,10 @@ empty : NameMap v
 empty = Empty
 
 export
+singleton : Name -> v -> NameMap v
+singleton n v = M Z $ Leaf n v
+
+export
 lookup : Name -> NameMap v -> Maybe v
 lookup _ Empty = Nothing
 lookup k (M _ t) = treeLookup k t

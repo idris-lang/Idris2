@@ -337,6 +337,7 @@ mutual
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
+       PBuiltin : FC -> BuiltinType -> Name -> PDecl
 
   export
   getPDeclLoc : PDecl -> FC
@@ -355,6 +356,7 @@ mutual
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PBuiltin fc _ _) = fc
 
   export
   isPDef : PDecl -> Maybe (FC, List PClause)
@@ -1087,6 +1089,7 @@ mapPTermM f = goPTerm where
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
+    goPDecl p@(PBuiltin _ _ _) = pure p
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl

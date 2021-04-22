@@ -173,6 +173,7 @@ modules =
     TTImp.Impossible,
     TTImp.Parser,
     TTImp.PartialEval,
+    TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
     TTImp.ProcessDef,
