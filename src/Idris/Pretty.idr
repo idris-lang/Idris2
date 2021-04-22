@@ -4,14 +4,15 @@ import Data.List
 import Data.Maybe
 import Data.Strings
 import Libraries.Control.ANSI.SGR
+
+import public Idris.Pretty.Render
+
 import public Libraries.Text.PrettyPrint.Prettyprinter
-import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Algebra
 import Idris.REPLOpts
 import Idris.Syntax
-import Libraries.Utils.Term
 
 %default covering
 
@@ -320,29 +321,6 @@ mutual
         parens (dot <+> concatWith (surround dot) (map pretty fields))
       go d (PWithUnambigNames fc ns rhs) = parenthesise (d > appPrec) $ group $ with_ <++> pretty ns <+> line <+> go startPrec rhs
 
-getPageWidth : {auto o : Ref ROpts REPLOpts} -> Core PageWidth
-getPageWidth = do
-  consoleWidth <- getConsoleWidth
-  case consoleWidth of
-    Nothing => do
-      cols <- coreLift getTermCols
-      pure $ if cols == 0 then Unbounded else AvailablePerLine cols 1
-    Just 0 => pure $ Unbounded
-    Just cw => pure $ AvailablePerLine (cast cw) 1
-
 export
 render : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
-render doc = do
-  color <- getColor
-  pageWidth <- getPageWidth
-  let opts = MkLayoutOptions pageWidth
-  let layout = layoutPretty opts doc
-  pure $ renderString $ if color then reAnnotateS colorAnn layout else unAnnotateS layout
-
-export
-renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc IdrisAnn -> Core String
-renderWithoutColor doc = do
-  pageWidth <- getPageWidth
-  let opts = MkLayoutOptions pageWidth
-  let layout = layoutPretty opts doc
-  pure $ renderString $ unAnnotateS layout
+render = render colorAnn

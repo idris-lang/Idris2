@@ -25,6 +25,13 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 public export
 data Fixity = InfixL | InfixR | Infix | Prefix
 
+export
+Show Fixity where
+  show InfixL = "infixl"
+  show InfixR = "infixr"
+  show Infix  = "infix"
+  show Prefix = "prefix"
+
 public export
 OpStr : Type
 OpStr = Name
@@ -797,19 +804,40 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax (insert "=" (Infix, 0) empty)
-               (insert "-" 10 empty)
+    = MkSyntax initInfix
+               initPrefix
                empty
                []
-               empty
-               empty
+               initDocStrings
+               initSaveDocStrings
                []
                []
                (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
 
+  where
+
+    initInfix : StringMap (Fixity, Nat)
+    initInfix = insert "=" (Infix, 0) empty
+
+    initPrefix : StringMap Nat
+    initPrefix = fromList
+      [ ("-", 10)
+      , ("negate", 10) -- for documentation purposes
+      ]
+
+    initDocStrings : ANameMap String
+    initDocStrings = empty
+
+    initSaveDocStrings : NameMap ()
+    initSaveDocStrings = empty
+
 -- A label for Syntax info in the global state
 export
 data Syn : Type where
+
+export
+withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
+withSyn = wrapRef Syn (\_ => pure ())
 
 export
 mapPTermM : (PTerm -> Core PTerm) -> PTerm -> Core PTerm

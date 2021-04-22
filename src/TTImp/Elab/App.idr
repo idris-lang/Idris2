@@ -711,6 +711,8 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
 
+        addNameLoc fc' n
+
         logC "elab" 10
                 (do defs <- get Ctxt
                     fnty <- quote defs env nty

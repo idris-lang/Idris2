@@ -1,0 +1,10 @@
+1/1: Building Issue962 (Issue962.idr)
+Error: While processing right hand side of foo. Can't find an implementation for FromString (List Char).
+
+Issue962.idr:3:3--3:8
+ 1 | foo : List Char -> ()
+ 2 | foo cs = case cs of
+ 3 |   "bar" => ()
+       ^^^^^
+
+1/1: Building Issue962-case (Issue962-case.idr)

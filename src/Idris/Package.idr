@@ -526,7 +526,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, String) ->
                  Core ()
 processPackage opts (cmd, file)
-    = case cmd of
+    = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do pkg <- coreLift interactive
              let fp = if file == "" then pkg.name ++ ".ipkg" else file
@@ -536,30 +536,34 @@ processPackage opts (cmd, file)
                | Left err => throw (FileErr fp err)
              pure ()
         _ =>
-         do let True = isSuffixOf ".ipkg" file
+          do let Just (dir, filename) = splitParent file
+                 | _ => throw $ InternalError "Tried to split empty string"
+             let True = isSuffixOf ".ipkg" filename
                  | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
                            coreLift (exitWith (ExitFailure 1))
-            Right (pname, fs) <- coreLift $ parseFile file (parsePkgDesc file <* eoi)
-              | Left err => throw err
-            pkg <- addFields fs (initPkgDesc pname)
-            whenJust (builddir pkg) setBuildDir
-            setOutputDir (outputdir pkg)
-            case cmd of
-              Build => do [] <- build pkg opts
-                            | errs => coreLift (exitWith (ExitFailure 1))
-                          pure ()
-              Install => do [] <- build pkg opts
-                               | errs => coreLift (exitWith (ExitFailure 1))
-                            install pkg opts
-              Typecheck => do [] <- check pkg opts
-                                | errs => coreLift (exitWith (ExitFailure 1))
+             setWorkingDir dir
+             Right (pname, fs) <- coreLift $ parseFile filename (parsePkgDesc filename <* eoi)
+                | Left err => throw err
+             pkg <- addFields fs (initPkgDesc pname)
+             whenJust (builddir pkg) setBuildDir
+             setOutputDir (outputdir pkg)
+             case cmd of
+                  Build => do [] <- build pkg opts
+                                 | errs => coreLift (exitWith (ExitFailure 1))
                               pure ()
-              Clean => clean pkg opts
-              REPL => do [] <- build pkg opts
-                            | errs => coreLift (exitWith (ExitFailure 1))
-                         runRepl (map snd $ mainmod pkg)
-              Init => pure () -- already handled earlier
-
+                  Install => do [] <- build pkg opts
+                                   | errs => coreLift (exitWith (ExitFailure 1))
+                                install pkg opts
+                  Typecheck => do
+                    [] <- check pkg opts
+                      | errs => coreLift (exitWith (ExitFailure 1))
+                    pure ()
+                  Clean => clean pkg opts
+                  REPL => do
+                    [] <- build pkg opts
+                       | errs => coreLift (exitWith (ExitFailure 1))
+                    runRepl (map snd $ mainmod pkg)
+                  Init => pure () -- already handled earlier
 
 record PackageOpts where
   constructor MkPFR

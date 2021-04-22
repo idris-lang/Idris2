@@ -1,0 +1,12 @@
+:doc (==)
+:doc (-)
+:doc (<$>)
+:doc Monad
+:doc div
+:doc (>>=)
+:doc (>>)
+:let prefix 10 @@
+:let (@@) : (t : a) -> (u : a ** t = u)
+:let (@@) x = (x ** Refl)
+:doc (@@)
+:doc (<$)

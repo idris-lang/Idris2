@@ -1,0 +1,54 @@
+Main> Prelude.== : Eq ty => ty -> ty -> Bool
+  Totality: total
+  Fixity Declaration: infix operator, level 6
+Main> Prelude.negate : Neg ty => ty -> ty
+  The underlying of unary minus. `-5` desugars to `negate (fromInteger 5)`.
+  Totality: total
+  Fixity Declaration: prefix operator, level 10
+
+Prelude.- : Neg ty => ty -> ty -> ty
+  Totality: total
+  Fixity Declarations:
+    infixl operator, level 8
+    prefix operator, level 10
+Main> Prelude.<$> : Functor f => (a -> b) -> f a -> f b
+  An infix alias for `map`, applying a function across everything of type 'a'
+  in a parameterised type.
+  @ f the parameterised type
+  @ func the function to apply
+  Totality: total
+  Fixity Declaration: infixr operator, level 4
+Main> Prelude.Monad : (Type -> Type) -> Type
+  Parameters: m
+  Constraints: Applicative m
+  Methods:
+    >>= : m a -> (a -> m b) -> m b
+      Also called `bind`.
+    join : m (m a) -> m a
+      Also called `flatten` or mu.
+  Implementations:
+    Monad IO
+    Monoid a => Monad (Pair a)
+    Monad Maybe
+    Monad (Either e)
+    Monad List
+Main> Prelude.div : Integral ty => ty -> ty -> ty
+  Totality: total
+  Fixity Declaration: infixl operator, level 9
+Main> Prelude.>>= : Monad m => m a -> (a -> m b) -> m b
+  Also called `bind`.
+  Totality: total
+  Fixity Declaration: infixl operator, level 1
+Main> Prelude.>> : Monad m => m () -> Lazy (m b) -> m b
+  Sequencing of effectful composition
+  Totality: total
+  Fixity Declaration: infixl operator, level 1
+Main> Main> Main> Main> Main.@@ : (t : a) -> DPair a (\u => t = u)
+  
+  Fixity Declaration: prefix operator, level 10
+Main> Prelude.<$ : Functor f => b -> f a -> f b
+  Run something for effects, replacing the return value with a given parameter.
+  Totality: total
+  Fixity Declaration: infixr operator, level 4
+Main> 
+Bye for now!

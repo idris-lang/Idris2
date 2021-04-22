@@ -11,8 +11,8 @@ codegen in the list will be set as the default codegen.
 Getting started
 ===============
 
-To use Idris 2 as a library you need to install it with (at the top level of the
-Idris2 repo)
+To use Idris 2 as a library you need a self-hosting installation and
+then install the `idris2api` library (at the top level of the Idris2 repo)
 
 ::
 

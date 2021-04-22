@@ -68,7 +68,7 @@ idrisTestsError = MkTestPool []
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
-       "error016",
+       "error016", "error017",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008"]
@@ -83,7 +83,7 @@ idrisTestsInteractive = MkTestPool []
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
-       "interactive029"]
+       "interactive029", "interactive030"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []
@@ -166,6 +166,7 @@ idrisTests = MkTestPool []
        "params001",
        -- Packages and ipkg files
        "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
+       "pkg008", "pkg009",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
@@ -264,6 +265,12 @@ baseLibraryTests = MkTestPool [Chez, Node]
   , "system_info001"
   ]
 
+-- same behavior as `baseLibraryTests`
+contribLibraryTests : TestPool
+contribLibraryTests = MkTestPool [Chez, Node]
+  [ "json_001"
+  ]
+
 codegenTests : TestPool
 codegenTests = MkTestPool []
   [ "con001"
@@ -291,6 +298,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "base" baseLibraryTests
+  , testPaths "contrib" contribLibraryTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests

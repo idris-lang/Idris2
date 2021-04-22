@@ -1,0 +1,2 @@
+$1 --build testpkg/testpkg.ipkg
+rm -rf  testpkg/build/

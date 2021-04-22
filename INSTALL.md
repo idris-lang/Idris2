@@ -32,7 +32,7 @@ of `make` in the following steps.
 **NOTE**: If you're running macOS on Apple Silicon (arm64) you may need to run
 "`arch -x86_64 make ...`" instead of `make` in the following steps.
 
-### 1: Set the PREFIX
+### 1: Set installation target directory
 
 - Change the `PREFIX` in `config.mk`. The default is to install in
   `$HOME/.idris2`
@@ -95,8 +95,9 @@ code generator. To do so, once everything is successfully installed, type:
 
 - `make install-api`
 
-The API will only work if you've completed the self-hosting step, step 3, since
-the intermediate code versions need to be consistent throughout.
+The API will only work if you've completed the self-hosting step, step 4, since
+the intermediate code versions need to be consistent throughout. Otherwise, you
+will get an `Error in TTC: TTC data is in an older format` error.
 
 ### Troubleshooting
 
