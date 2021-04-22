@@ -260,6 +260,12 @@ baseLibraryTests = MkTestPool [Chez, Node]
   , "system_info001"
   ]
 
+-- same behavior as `baseLibraryTests`
+contribLibraryTests : TestPool
+contribLibraryTests = MkTestPool [Chez, Node]
+  [ "json_001"
+  ]
+
 codegenTests : TestPool
 codegenTests = MkTestPool []
   [ "con001"
@@ -285,6 +291,7 @@ main = runner
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "base" baseLibraryTests
+  , testPaths "contrib" contribLibraryTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
