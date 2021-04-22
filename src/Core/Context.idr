@@ -645,6 +645,61 @@ data Transform : Type where
                    Name -> -- name for identifying the rule
                    Env Term vars -> Term vars -> Term vars -> Transform
 
+||| Types that are transformed into a faster representation
+||| during codegen.
+public export
+data BuiltinType : Type where
+    ||| A built-in 'Nat'-like type
+    ||| 'NatLike : [index ->] Type'
+    ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
+    ||| 'ZLike : {0 _ : index} -> NatLike [index]'
+    BuiltinNatural : BuiltinType
+    -- All the following aren't implemented yet
+    -- but are here to reduce number of TTC version changes
+    NaturalPlus : BuiltinType
+    NaturalMult : BuiltinType
+    NaturalToInteger : BuiltinType
+    IntegerToNatural : BuiltinType
+
+export
+Show BuiltinType where
+    show BuiltinNatural = "Natural"
+    show _ = "Not yet implemented"
+
+-- Token types to make it harder to get the constructor names
+-- the wrong way round.
+public export data ZERO = MkZERO
+public export data SUCC = MkSUCC
+
+||| Record containing names of 'Nat'-like constructors.
+public export
+record NatBuiltin where
+    constructor MkNatBuiltin
+    zero : Name
+    succ : Name
+
+||| Rewrite rules for %builtin pragmas
+||| Seperate to 'Transform' because it must also modify case statements
+||| behaviour should remain the same after this transform
+public export
+record BuiltinTransforms where
+    constructor MkBuiltinTransforms
+    natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
+    natZNames : NameMap ZERO -- map from Z-like names to their type constructor
+    natSNames : NameMap SUCC -- map from S-like names to their type constructor
+
+-- TODO: After next release remove nat from here and use %builtin pragma instead
+initBuiltinTransforms : BuiltinTransforms
+initBuiltinTransforms =
+    let type = NS typesNS (UN "Nat")
+        zero = NS typesNS (UN "Z")
+        succ = NS typesNS (UN "S")
+    in MkBuiltinTransforms
+        { natTyNames = singleton type (MkNatBuiltin {zero, succ})
+        , natZNames = singleton zero MkZERO
+        , natSNames = singleton succ MkSUCC
+        }
+
 export
 getFnName : Transform -> Maybe Name
 getFnName (MkTransform _ _ app _)
@@ -987,6 +1042,10 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  builtinTransforms : BuiltinTransforms
+     -- ^ A mapping from names to transformations resulting from a %builtin pragma
+     -- seperate to `transforms` because these must always fire globally so run these
+     -- when compiling to `CExp`.
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1046,6 +1105,7 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , builtinTransforms = initBuiltinTransforms
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
@@ -2142,6 +2202,14 @@ getWorkingDir
     = do Just d <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          pure d
+
+export
+withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+withCtxt = wrapRef Ctxt resetCtxt
+  where
+    resetCtxt : Defs -> Core ()
+    resetCtxt defs = do let dir = defs.options.dirs.working_dir
+                        coreLift_ $ changeDir dir
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()

@@ -356,6 +356,7 @@ mutual
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
 
   export
   Show ImpDecl where
@@ -378,6 +379,7 @@ mutual
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 export
 isIPrimVal : RawImp -> Maybe Constant
@@ -739,6 +741,22 @@ getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
 -- Everything below is TTC instances
+
+export
+TTC BuiltinType where
+    toBuf b BuiltinNatural = tag 0
+    toBuf b NaturalPlus = tag 1
+    toBuf b NaturalMult = tag 2
+    toBuf b NaturalToInteger = tag 3
+    toBuf b IntegerToNatural = tag 4
+
+    fromBuf b = case !getTag of
+                     0 => pure BuiltinNatural
+                     1 => pure NaturalPlus
+                     2 => pure NaturalMult
+                     3 => pure NaturalToInteger
+                     4 => pure IntegerToNatural
+                     _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -1103,6 +1121,8 @@ mutual
     toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IBuiltin fc type name)
+        = do tag 9; toBuf b fc; toBuf b type; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1132,6 +1152,10 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       type <- fromBuf b
+                       name <- fromBuf b
+                       pure (IBuiltin fc type name)
                _ => corrupt "ImpDecl"
 
 

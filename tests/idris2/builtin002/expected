@@ -1,0 +1,12 @@
+1/1: Building Test (Test.idr)
+Error: Constructor Main.S doesn't match any pattern for Natural.
+
+Test.idr:6:1--6:23
+ 2 | data MyNat
+ 3 |     = S MyNat MyNat
+ 4 |     | Z
+ 5 | 
+ 6 | %builtin Natural MyNat
+     ^^^^^^^^^^^^^^^^^^^^^^
+
+Main> Bye for now!

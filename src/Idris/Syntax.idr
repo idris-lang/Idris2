@@ -25,6 +25,13 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 public export
 data Fixity = InfixL | InfixR | Infix | Prefix
 
+export
+Show Fixity where
+  show InfixL = "infixl"
+  show InfixR = "infixr"
+  show Infix  = "infix"
+  show Prefix = "prefix"
+
 public export
 OpStr : Type
 OpStr = Name
@@ -330,6 +337,7 @@ mutual
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
+       PBuiltin : FC -> BuiltinType -> Name -> PDecl
 
   export
   getPDeclLoc : PDecl -> FC
@@ -348,6 +356,7 @@ mutual
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PBuiltin fc _ _) = fc
 
   export
   isPDef : PDecl -> Maybe (FC, List PClause)
@@ -797,19 +806,40 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax (insert "=" (Infix, 0) empty)
-               (insert "-" 10 empty)
+    = MkSyntax initInfix
+               initPrefix
                empty
                []
-               empty
-               empty
+               initDocStrings
+               initSaveDocStrings
                []
                []
                (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
 
+  where
+
+    initInfix : StringMap (Fixity, Nat)
+    initInfix = insert "=" (Infix, 0) empty
+
+    initPrefix : StringMap Nat
+    initPrefix = fromList
+      [ ("-", 10)
+      , ("negate", 10) -- for documentation purposes
+      ]
+
+    initDocStrings : ANameMap String
+    initDocStrings = empty
+
+    initSaveDocStrings : NameMap ()
+    initSaveDocStrings = empty
+
 -- A label for Syntax info in the global state
 export
 data Syn : Type where
+
+export
+withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
+withSyn = wrapRef Syn (\_ => pure ())
 
 export
 mapPTermM : (PTerm -> Core PTerm) -> PTerm -> Core PTerm
@@ -1061,6 +1091,7 @@ mapPTermM f = goPTerm where
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
+    goPDecl p@(PBuiltin _ _ _) = pure p
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl

@@ -492,6 +492,18 @@ export %inline
 (=<<) : (a -> Core b) -> Core a -> Core b
 (=<<) = flip (>>=)
 
+-- Kleisli compose
+infixr 1 >=>
+export %inline
+(>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
+f >=> g = (g =<<) . f
+
+-- Flipped kleisli compose
+infixr 1 <=<
+export %inline
+(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
+(<=<) = flip (>=>)
+
 -- Applicative (specialised)
 export %inline
 pure : a -> Core a
@@ -704,6 +716,21 @@ update : (x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
 update x f
   = do v <- get x
        put x (f v)
+
+export
+wrapRef : (x : label) -> {auto ref : Ref x a} ->
+          (a -> Core ()) ->
+          Core b ->
+          Core b
+wrapRef x onClose op
+  = do v <- get x
+       o <- catch op $ \err =>
+              do onClose v
+                 put x v
+                 throw err
+       onClose v
+       put x v
+       pure o
 
 export
 cond : List (Lazy Bool, Lazy a) -> a -> a

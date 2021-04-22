@@ -662,6 +662,10 @@ logLevel
            lvl <- intLit
            pure (Just (topic, fromInteger lvl))
 
+builtinType : Rule BuiltinType
+builtinType =
+    BuiltinNatural <$ exactIdent "Natural"
+
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
@@ -669,6 +673,14 @@ directive fname indents
          lvl <- logLevel
          atEnd indents
          pure (ILog lvl)
+  <|> do b <- bounds (do pragma "builtin"
+                         commit
+                         t <- builtinType
+                         n <- name
+                         pure (t, n))
+         (t, n) <- pure b.val
+         pure $ IBuiltin (boundToFC fname b) t n
+
          {- Can't do IPragma due to lack of Ref Ctxt. Should we worry about this?
   <|> do pragma "pair"
          commit

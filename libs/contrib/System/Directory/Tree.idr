@@ -34,13 +34,13 @@ namespace FileName
 ||| Convert a filename anchored in `root` to a filepath by appending the name
 ||| to the root path.
 export
-toFilePath : {root : Path} -> FileName root -> String
-toFilePath file = show (root /> fileName file)
+toFilePath : {root : Path} -> FileName root -> Path
+toFilePath file = root /> fileName file
 
 export
 directoryExists : {root : Path} -> FileName root -> IO Bool
 directoryExists fp = do
-  Right dir <- openDir (toFilePath fp)
+  Right dir <- openDir (show $ toFilePath fp)
     | Left _ => pure False
   closeDir dir
   pure True
@@ -140,6 +140,26 @@ go dir acc = case !(dirEntry dir) of
                 else { files    $= (entry                ::) } acc
     assert_total (go dir acc)
 
+||| Depth first traversal of all of the files in a tree
+export
+covering
+depthFirst : ({root : Path} -> FileName root -> Lazy (IO a) -> IO a) ->
+             {root : Path} -> Tree root -> IO a -> IO a
+depthFirst check t k =
+  let next = foldr (\ (dir ** iot), def => depthFirst check !iot def) k t.subTrees in
+  foldr (\ fn, def => check fn def) next t.files
+
+||| Finding a file in a tree (depth first search)
+export
+covering
+findFile : {root : Path} -> String -> Tree root -> IO (Maybe Path)
+findFile needle t = depthFirst check t (pure Nothing) where
+
+  check : {root : Path} -> FileName root ->
+          Lazy (IO (Maybe Path)) -> IO (Maybe Path)
+  check fn next = if fileName fn == needle
+                    then pure (Just (toFilePath fn))
+                    else next
 
 ||| Display a tree by printing it procedurally. Note that because directory
 ||| trees contain suspended computations corresponding to their subtrees this

@@ -432,6 +432,7 @@ checkBindVar rig elabinfo nest env fc str topexp
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
+                   addNameLoc fc (UN str)
 
                    checkExp rig elabinfo env fc tm (gnf env exp) topexp
               Just bty =>
@@ -443,6 +444,7 @@ checkBindVar rig elabinfo nest env fc str topexp
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env ty
+                   addNameLoc fc (UN str)
 
                    checkExp rig elabinfo env fc tm (gnf env ty) topexp
   where

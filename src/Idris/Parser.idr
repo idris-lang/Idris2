@@ -1199,6 +1199,20 @@ fnDirectOpt fname
          cs <- block (expr pdef fname)
          pure $ PForeign cs
 
+builtinType : Rule BuiltinType
+builtinType =
+    BuiltinNatural <$ exactIdent "Natural"
+
+builtinDecl : FileName -> IndentInfo -> Rule PDecl
+builtinDecl fname indents
+    = do b <- bounds (do pragma "builtin"
+                         commit
+                         t <- builtinType
+                         n <- name
+                         pure (t, n))
+         (t, n) <- pure b.val
+         pure $ PBuiltin (boundToFC fname b) t n
+
 visOpt : FileName -> Rule (Either Visibility PFnOpt)
 visOpt fname
     = do vis <- visOption
@@ -1429,6 +1443,8 @@ topDecl fname indents
   <|> do d <- paramDecls fname indents
          pure [d]
   <|> do d <- usingDecls fname indents
+         pure [d]
+  <|> do d <- builtinDecl fname indents
          pure [d]
   <|> do d <- runElabDecl fname indents
          pure [d]

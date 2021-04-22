@@ -2,3 +2,5 @@ package runtests
 
 main = Main
 executable = runtests
+
+depends = contrib, test

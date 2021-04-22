@@ -2,6 +2,7 @@ module Control.App
 
 import Data.IORef
 
+||| `Error` is a type synonym for `Type`, specify for exception handling.
 public export
 Error : Type
 Error = Type
@@ -11,6 +12,8 @@ data HasErr : Error -> List Error -> Type where
      Here : HasErr e (e :: es)
      There : HasErr e es -> HasErr e (e' :: es)
 
+||| States whether the program's execution path is linear or might throw exceptions so that we can know
+||| whether it is safe to reference linear resources.
 public export
 data Path = MayThrow | NoThrow
 
@@ -86,6 +89,11 @@ prim_app1_bind : (1 act : PrimApp1 Any a) ->
 prim_app1_bind fn k w
     = let MkApp1ResW x' w' = fn w in k x' w'
 
+||| A type supports throwing and catching exceptions. See `interface Exception err e` for details.
+||| @ l  An implicit Path states whether the program's execution path is linear or might throw
+|||      exceptions. The default value is `MayThrow` which represents that the program might throw.
+||| @ es A list of exception types that can be thrown. Constrained interfaces can be defined by
+|||      parameterising with a list of errors `es`.
 export
 data App : {default MayThrow l : Path} ->
            (es : List Error) -> Type -> Type where
@@ -255,8 +263,15 @@ new val prog
 
 public export
 interface Exception err e where
-  throw : err -> App e a
-  catch : App e a -> (err -> App e a) -> App e a
+  ||| Throw an exception.
+  ||| @ ev Value of the exception.
+  throw : (ev : err) -> App e a
+  ||| Use with a given computation to do exception-catching.
+  ||| If any exception is raised then the handler is executed.
+  ||| @ act The computation to run.
+  ||| @ k   Handler to invoke if an exception is raised.
+  ||| @ ev  Value of the exception passed as an argument to the handler.
+  catch : (act : App e a) -> (k : (ev : err) -> App e a) -> App e a
 
 findException : HasErr e es -> e -> OneOf es MayThrow
 findException Here err = First err
@@ -313,6 +328,8 @@ public export
 Init : List Error
 Init = [AppHasIO]
 
+||| The only way provided by `Control.App` to run an App.
+||| @ Init A concrete list of errors.
 export
 run : App {l} Init a -> IO a
 run (MkApp prog)

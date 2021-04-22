@@ -1,0 +1,4 @@
+package bar
+
+modules = Bar
+opts = "--no-color --console-width 0"

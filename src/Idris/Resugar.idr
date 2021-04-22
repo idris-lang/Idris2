@@ -440,6 +440,7 @@ mutual
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
+  toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->
