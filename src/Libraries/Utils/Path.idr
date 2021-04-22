@@ -522,6 +522,12 @@ export
 extension : String -> Maybe String
 extension path = fileName path >>=
   filter (/= "") . Just . snd . splitFileName
+ where
+  -- TODO Use Data.Maybe.filter instead when next minor
+  -- release comes out.
+  filter : forall a. (a -> Bool) -> Maybe a -> Maybe a
+  filter f Nothing = Nothing
+  filter f (Just x) = toMaybe (f x) x
 
 ||| Updates the file name in the path.
 |||
