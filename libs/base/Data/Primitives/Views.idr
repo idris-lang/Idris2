@@ -30,16 +30,20 @@ namespace IntegerV
   public export
   data IntegerRec : Integer -> Type where
        IntegerZ : IntegerRec 0
-       IntegerSucc : IntegerRec (n - 1) -> IntegerRec n
-       IntegerPred : IntegerRec ((-n) + 1) -> IntegerRec (-n)
+       -- adding the constant (-1 or 1) on the left keeps the view
+       -- similar to the inductive definition of natural numbers, and
+       -- is usually compatible with pattern matching on arguments
+       -- left-to-right.
+       IntegerSucc : IntegerRec (-1 + n) -> IntegerRec n
+       IntegerPred : IntegerRec (1 + (-n)) -> IntegerRec (-n)
 
   ||| Covering function for `IntegerRec`
   public export
   integerRec : (x : Integer) -> IntegerRec x
   integerRec 0 = IntegerZ
-  integerRec x = if x > 0 then IntegerSucc (assert_total (integerRec (x - 1)))
+  integerRec x = if x > 0 then IntegerSucc (assert_total (integerRec (-1 + x)))
                       else believe_me (IntegerPred {n = -x}
-                                (assert_total (believe_me (integerRec (x + 1)))))
+                                (assert_total (believe_me (integerRec (1 + x)))))
 
 namespace IntV
   ||| View for expressing a number as a multiplication + a remainder
@@ -70,13 +74,17 @@ namespace IntV
   public export
   data IntRec : Int -> Type where
        IntZ : IntRec 0
-       IntSucc : IntRec (n - 1) -> IntRec n
-       IntPred : IntRec ((-n) + 1) -> IntRec (-n)
+       -- adding the constant (-1 or 1) on the left keeps the view
+       -- similar to the inductive definition of natural numbers, and
+       -- is usually compatible with pattern matching on arguments
+       -- left-to-right.
+       IntSucc : IntRec (-1 + n) -> IntRec n
+       IntPred : IntRec (1 + (-n)) -> IntRec (-n)
 
   ||| Covering function for `IntRec`
   public export
   intRec : (x : Int) -> IntRec x
   intRec 0 = IntZ
-  intRec x = if x > 0 then IntSucc (assert_total (intRec (x - 1)))
+  intRec x = if x > 0 then IntSucc (assert_total (intRec (-1 + x)))
                       else believe_me (IntPred {n = -x}
-                                (assert_total (believe_me (intRec (x + 1)))))
+                                (assert_total (believe_me (intRec (1 + x)))))
