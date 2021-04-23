@@ -230,11 +230,11 @@ copyData : HasIO io => (src : Buffer) -> (start, len : Int) ->
 copyData src start len dest loc
     = primIO (prim__copyData src start len dest loc)
 
-%foreign "C:idris2_readBufferData,libidris2_support"
+%foreign "C:idris2_readBufferData, libidris2_support, idris_buffer.h"
          "node:lambda:(f,b,l,m) => BigInt(require('fs').readSync(f.fd,b,Number(l), Number(m)))"
 prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
-%foreign "C:idris2_writeBufferData,libidris2_support"
+%foreign "C:idris2_writeBufferData, libidris2_support, idris_buffer.h"
          "node:lambda:(f,b,l,m) => BigInt(require('fs').writeSync(f.fd,b,Number(l), Number(m)))"
 prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 

@@ -14,6 +14,7 @@ import Data.List
 import Libraries.Data.DList
 import Data.Nat
 import Data.Strings
+import Libraries.Data.SortedSet
 import Data.Vect
 
 import System
@@ -269,7 +270,7 @@ data ArgCounter : Type where
 data FunctionDefinitions : Type where
 data TemporaryVariableTracker : Type where
 data IndentLevel : Type where
-data ExternalLibs : Type where
+data HeaderFiles : Type where
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -367,15 +368,12 @@ freeTmpVars = do
         [] => pure ()
 
 
-addExternalLib : {auto e : Ref ExternalLibs (List String)}
-              -> String
-              -> Core ()
-addExternalLib extLib = do
-    libs <- get ExternalLibs
-    case elem extLib libs of
-        True => pure () -- library already in list
-        False => do
-            put ExternalLibs (extLib :: libs)
+addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
+         -> String
+         -> Core ()
+addHeader header = do
+    headerFiles <- get HeaderFiles
+    put HeaderFiles $ insert header headerFiles
 
 
 
@@ -728,25 +726,6 @@ mutual
 
 
 
-readCCPart : Char -> String -> (String, String)
-readCCPart b x =
-    let (cc, def) = break (== b) x
-    in (cc, drop 1 def)
-  where
-      drop : Int -> String -> String
-      drop headLength s =
-          let len = cast (length s)
-              subStrLen = len - headLength in
-          strSubstr headLength subStrLen s
-
-extractFFILocation : (lang:String) -> List String -> Maybe (String, String)
-extractFFILocation targetLang [] = Nothing
-extractFFILocation targetLang (def :: defs) =
-    let (thisLang,pos) = readCCPart ':' def in
-    case targetLang == thisLang of
-        True => Just (readCCPart ',' pos)
-        False => extractFFILocation targetLang defs
-
 addCommaToList : List String -> List String
 addCommaToList [] = []
 addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
@@ -863,7 +842,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
-                -> {auto e : Ref ExternalLibs (List String)}
+                -> {auto h : Ref HeaderFiles (SortedSet String)}
                 -> Name
                 -> ANFDef
                 -> Core ()
@@ -907,11 +886,11 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  case extractFFILocation "C" ccs of
-      Nothing => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
-          -- not really total but this way this internal error does not contaminate everything else
-      (Just (fctName, lib)) => do
-          addExternalLib lib
+  case parseCC ["C"] ccs of
+      Just (_, fctName :: extLibOpts) => do
+          case extLibOpts of
+              [lib, header] => addHeader header
+              _ => pure ()
           otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
@@ -960,6 +939,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
 
           decreaseIndentation
           emit EmptyFC "}"
+      _ => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
+          -- not really total but this way this internal error does not contaminate everything else
 
 createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
 -- not really total but this way this internal error does not contaminate everything else
@@ -968,17 +949,15 @@ header : {auto c : Ref Ctxt Defs}
       -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
-      -> {auto e : Ref ExternalLibs (List String)}
+      -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 header = do
     let initLines = [ "#include <runtime.h>"
-                    , "/* automatically generated using the Idris2 C Backend */"
-                    , "#include <idris_support.h> // for libidris2_support"]
-    extLibs <- get ExternalLibs
-    let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
-    traverse_ (\l => log "compiler.refc" 20 $ " header for " ++ l ++ " needed") extLibs
+                    , "/* automatically generated using the Idris2 C Backend */"]
+    let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
+    let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
 footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText Output} -> Core ()
 footer = do
@@ -1007,7 +986,7 @@ generateCSourceFile defs outn =
      _ <- newRef FunctionDefinitions []
      _ <- newRef TemporaryVariableTracker []
      _ <- newRef OutfileText DList.Nil
-     _ <- newRef ExternalLibs []
+     _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
      traverse_ (uncurry createCFunctions) defs
      header -- added after the definition traversal in order to add all encountered function defintions

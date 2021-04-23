@@ -16,10 +16,7 @@ FilePtr : Type
 FilePtr = AnyPtr
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
-
-libc : String -> String
-libc fn = "C:" ++ fn ++ ", libc 6"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_file.h"
 
 %foreign support "idris2_openFile"
          "node:support:openFile,support_system_file"
@@ -97,7 +94,7 @@ prim__stdout : FilePtr
          "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
-%foreign libc "chmod"
+%foreign "C:chmod, libc 6, sys/stat.h"
          "node:support:chmod,support_system_file"
 prim__chmod : String -> Int -> PrimIO Int
 

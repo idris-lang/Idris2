@@ -5,7 +5,7 @@ import Data.List
 import Data.Strings
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
@@ -15,12 +15,10 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign "scheme,racket:blodwen-sleep"
          support "idris2_sleep"
---         "C:idris2_sleep, libidris2_support"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
          support "idris2_usleep"
---         "C:idris2_usleep, libidris2_support"
 prim__usleep : Int -> PrimIO ()
 
 export

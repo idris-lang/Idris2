@@ -7,9 +7,9 @@ DirPtr : Type
 DirPtr = AnyPtr
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_directory.h"
 
-%foreign support "idris2_fileErrno"
+%foreign "C:idris2_fileErrno, libidris2_support, idris_file.h"
          "node:support:fileErrno,support_system_file"
 prim__fileErrno : PrimIO Int
 
