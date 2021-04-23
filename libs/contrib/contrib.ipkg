@@ -61,12 +61,15 @@ modules = Control.ANSI,
 
           Data.Logic.Propositional,
 
+          Data.Monoid.Exponentiation,
+
           Data.Morphisms.Algebra,
 
           Data.Nat.Algebra,
           Data.Nat.Ack,
           Data.Nat.Division,
           Data.Nat.Equational,
+          Data.Nat.Exponentiation,
           Data.Nat.Fact,
           Data.Nat.Factor,
           Data.Nat.Fib,
@@ -74,13 +77,23 @@ modules = Control.ANSI,
           Data.Nat.Order.Properties,
           Data.Nat.Properties,
 
+          Data.Num.Implementations,
+
           Data.OpenUnion,
+
+          Data.Order,
+
+          Data.Path,
 
           Data.Recursion.Free,
 
+          Data.Rel.Complement,
+
           Data.SortedMap,
           Data.SortedSet,
+
           Data.Stream.Extra,
+
           Data.String.Extra,
           Data.String.Interpolation,
           Data.String.Iterator,
@@ -132,6 +145,7 @@ modules = Control.ANSI,
           Syntax.PreorderReasoning.Generic,
 
           System.Console.GetOpt,
+          System.Directory.Tree,
           System.Future,
           System.Random,
           System.Path,

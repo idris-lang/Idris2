@@ -7,6 +7,7 @@ import Core.Core
 import Core.Env
 import Core.GetType
 import Core.Normalise
+import Core.Options
 import Core.TT
 import public Core.UnifyState
 import Core.Value
@@ -248,7 +249,7 @@ postpone blockedMetas loc mode logstr env x y
     checkDefined : Defs -> NF vars -> Core ()
     checkDefined defs (NApp _ (NRef _ n) _)
         = do Just _ <- lookupCtxtExact n (gamma defs)
-                  | _ => throw (UndefinedName loc n)
+                  | _ => undefinedName loc n
              pure ()
     checkDefined _ _ = pure ()
 
@@ -626,6 +627,31 @@ isDefInvertible fc i
               | Nothing => throw (UndefinedName fc (Resolved i))
          pure (invertible gdef)
 
+tooBig : (counting : Bool) -> Nat -> List (Term vars) -> Term vars -> Bool
+tooBig _ Z _ _ = True
+tooBig c k stk (App _ f a)
+    = tooBig c k (a :: stk) f
+tooBig c (S k) stk (Bind _ _ _ sc)
+    = tooBig c (S k) [] sc || any (tooBig c k []) stk
+tooBig c (S k) stk (Meta _ _ _ as)
+    = any (tooBig c k []) as || any (tooBig c k []) stk
+tooBig c (S k) stk f
+    = if c || isFn f -- start counting, we're under a function
+         then tooBigArgs True k stk
+         else tooBigArgs c (S k) stk
+  where
+    isFn : Term vs -> Bool
+    isFn (Ref _ Func _) = True
+    isFn _ = False -- Don't count if it's not a function, because normalising
+                   -- won't help
+
+    tooBigArgs : Bool -> Nat -> List (Term vars) -> Bool
+    tooBigArgs c Z _ = True
+    tooBigArgs c k [] = False
+    tooBigArgs c (S k) (a :: as)
+       = tooBig c (if c then k else S k) [] a || tooBigArgs c k as
+tooBig _ _ _ _ = False
+
 mutual
   unifyIfEq : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -757,7 +783,7 @@ mutual
   unifyHoleApp swap mode loc env mname mref margs margs' tm@(NApp nfc (NMeta n i margs2) args2')
       = do defs <- get Ctxt
            Just mdef <- lookupCtxtExact (Resolved i) (gamma defs)
-                | Nothing => throw (UndefinedName nfc mname)
+                | Nothing => undefinedName nfc mname
            let inv = isPatName n || invertible mdef
            if inv
               then unifyInvertible swap (lower mode) loc env mname mref margs margs' Nothing
@@ -865,7 +891,12 @@ mutual
                          | _ => postponeS True swap loc mode "Delayed hole" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                           tmnf
-                     tm <- quote empty env tmnf
+                     tmq <- quote empty env tmnf
+                     tm <- if tooBig False
+                                     defs.options.elabDirectives.nfThreshold
+                                     [] tmq
+                              then quote defs env tmnf
+                              else pure tmq
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS True swap loc mode "Occurs check failed" env
                                           (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
@@ -876,7 +907,7 @@ mutual
                                                 margs margs' locs submv
                                                 tm stm tmnf
                           Nothing =>
-                            do tm' <- normalise defs env tm
+                            do tm' <- quote defs env tmnf
                                case shrinkTerm tm' submv of
                                     Nothing => postponeS True swap loc mode "Can't shrink" env
                                                (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
@@ -1142,23 +1173,23 @@ mutual
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
   unifyNoEta mode loc env (NTCon xfc x tagx ax xs) (NTCon yfc y tagy ay ys)
-      = if x == y
-           then do ust <- get UST
-                   -- see above
-                   {-
-                   when (logging ust) $
-                      do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                         log "" 0 "ARGUMENTS:"
-                         defs <- get Ctxt
-                         traverse_ (dumpArg env) xs
-                         log "" 0 "WITH:"
-                         traverse_ (dumpArg env) ys
-                   -}
-                   unifyArgs mode loc env (map snd xs) (map snd ys)
+   = do x <- toFullNames x
+        y <- toFullNames y
+        log "unify" 20 $ "Comparing type constructors " ++ show x ++ " and " ++ show y
+        if x == y
+           then do let xs = map snd xs
+                   let ys = map snd ys
+
+                   logC "unify" 20 $
+                     pure $ "Constructor " ++ show x
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) xs
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) ys
+                   unifyArgs mode loc env xs ys
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
              -- what's injective...
+             -- gallais: really? We don't mind being anticlassical do we?
 --                then postpone True loc mode env (quote empty env (NTCon x tagx ax xs))
 --                                           (quote empty env (NTCon y tagy ay ys))
            else convertError loc env
@@ -1323,7 +1354,7 @@ setInvertible : {auto c : Ref Ctxt Defs} ->
 setInvertible fc n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
+              | Nothing => undefinedName fc n
          ignore $ addDef n (record { invertible = True } gdef)
 
 public export
@@ -1605,7 +1636,7 @@ checkDots
                    dotSolved <-
                       maybe (pure False)
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
-                                           | Nothing => throw (UndefinedName fc n)
+                                           | Nothing => undefinedName fc n
                                       case ndef of
                                            Hole _ _ => pure False
                                            _ => pure True)
@@ -1622,7 +1653,7 @@ checkDots
                          InternalError _ =>
                            do defs <- get Ctxt
                               Just dty <- lookupTyExact n (gamma defs)
-                                   | Nothing => throw (UndefinedName fc n)
+                                   | Nothing => undefinedName fc n
                               logTermNF "unify.constraint" 5 "Dot type" [] dty
                               -- Clear constraints so we don't report again
                               -- later

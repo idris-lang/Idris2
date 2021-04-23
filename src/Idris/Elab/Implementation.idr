@@ -138,15 +138,15 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
-             | [] => throw (UndefinedName fc iname)
+             | [] => undefinedName fc iname
              | ns => throw (AmbiguousName fc (map fst ns))
          let cn : Name = fst cndata
          let cdata : IFaceInfo = snd cndata
 
          Just ity <- lookupTyExact cn (gamma defs)
-              | Nothing => throw (UndefinedName fc cn)
+              | Nothing => undefinedName fc cn
          Just conty <- lookupTyExact (iconstructor cdata) (gamma defs)
-              | Nothing => throw (UndefinedName fc (iconstructor cdata))
+              | Nothing => undefinedName fc (iconstructor cdata)
 
          let impsp = nub (concatMap findIBinds ps ++
                           concatMap findIBinds (map snd cons))
@@ -477,10 +477,10 @@ elabImplementation {vars} fc vis opts_in pass env nest is cons iname ps named im
     updateClause ns (PatClause fc lhs rhs)
         = do lhs' <- updateApp ns lhs
              pure (PatClause fc lhs' rhs)
-    updateClause ns (WithClause fc lhs wval flags cs)
+    updateClause ns (WithClause fc lhs wval prf flags cs)
         = do lhs' <- updateApp ns lhs
              cs' <- traverse (updateClause ns) cs
-             pure (WithClause fc lhs' wval flags cs')
+             pure (WithClause fc lhs' wval prf flags cs')
     updateClause ns (ImpossibleClause fc lhs)
         = do lhs' <- updateApp ns lhs
              pure (ImpossibleClause fc lhs')

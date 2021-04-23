@@ -1,0 +1,66 @@
+1/1: Building Issue710a (Issue710a.idr)
+Error: Expected a capitalised identifier, got: r.
+
+Issue710a.idr:3:8--3:9
+ 1 | module Issue710a
+ 2 | 
+ 3 | record r where
+            ^
+
+1/1: Building Issue710b (Issue710b.idr)
+Error: Expected a capitalised identifier, got: r.
+
+Issue710b.idr:3:6--3:7
+ 1 | module Issue710b
+ 2 | 
+ 3 | data r : Type where
+          ^
+
+1/1: Building Issue710c (Issue710c.idr)
+Error: Expected a capitalised identifier, got: leaf.
+
+Issue710c.idr:5:3--5:4
+ 1 | infix 3 #
+ 2 | 
+ 3 | data T : Type where
+ 4 |   (#) : T -> T -> T
+ 5 |   leaf : T
+       ^
+
+1/1: Building Issue710d (Issue710d.idr)
+Error: Expected a capitalised identifier, got: mkT.
+
+Issue710d.idr:2:15--2:16
+ 1 | record T where
+ 2 |   constructor mkT
+                   ^
+
+1/1: Building Issue710e (Issue710e.idr)
+Error: Expected a capitalised identifier, got: a.
+
+Issue710e.idr:3:11--3:12
+ 1 | %default total
+ 2 | 
+ 3 | namespace a
+               ^
+
+1/1: Building Issue710f (Issue710f.idr)
+Error: Expected a capitalised identifier, got: cons.
+
+Issue710f.idr:2:15--2:16
+ 1 | interface Lalala where
+ 2 |   constructor cons
+                   ^
+
+Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+
+Issue1224a.idr:1:8--1:9
+ 1 | module ggg
+            ^
+
+Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+
+Issue1224b.idr:1:8--1:9
+ 1 | import ggg
+            ^
+

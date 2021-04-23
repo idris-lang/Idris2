@@ -240,9 +240,11 @@ export
 pathLookup : List String -> IO (Maybe String)
 pathLookup names = do
   path <- getEnv "PATH"
+  let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
   let pathList = forget $ split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
-  let candidates = [p ++ "/" ++ x | p <- pathList,
-                                    x <- names]
+  let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                         x <- names,
+                                         y <- extensions]
   firstExists candidates
 
 
@@ -262,17 +264,22 @@ Show Requirement where
 export
 checkRequirement : Requirement -> IO (Maybe String)
 checkRequirement req
-  = do let (envvar, paths) = requirement req
-       Just exec <- getEnv envvar | Nothing => pathLookup paths
-       pure (Just exec)
-
+  = if platformSupport req
+      then do let (envvar, paths) = requirement req
+              Just exec <- getEnv envvar | Nothing => pathLookup paths
+              pure (Just exec)
+      else pure Nothing
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme", "scheme.exe"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
+    platformSupport : Requirement -> Bool
+    platformSupport C = not isWindows
+    platformSupport Racket = not isWindows
+    platformSupport _ = True
 
 export
 findCG : IO (Maybe String)

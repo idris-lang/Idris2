@@ -357,7 +357,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                                          pure (record { name = n } mt)) meth_decls
          defs <- get Ctxt
          Just ty <- lookupTyExact ns_iname (gamma defs)
-              | Nothing => throw (UndefinedName fc iname)
+              | Nothing => undefinedName fc iname
          let implParams = getImplParams ty
 
          updateIfaceSyn ns_iname conName
@@ -483,9 +483,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
         changeName : Name -> ImpClause -> ImpClause
         changeName dn (PatClause fc lhs rhs)
             = PatClause fc (changeNameTerm dn lhs) rhs
-        changeName dn (WithClause fc lhs wval flags cs)
+        changeName dn (WithClause fc lhs wval prf flags cs)
             = WithClause fc (changeNameTerm dn lhs) wval
-                         flags (map (changeName dn) cs)
+                         prf flags (map (changeName dn) cs)
         changeName dn (ImpossibleClause fc lhs)
             = ImpossibleClause fc (changeNameTerm dn lhs)
 

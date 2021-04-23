@@ -122,7 +122,7 @@ allNegAny (np :: npxs) (Here p) = absurd (np p)
 allNegAny (np :: npxs) (There p) = allNegAny npxs p
 
 ||| Given a proof of membership for some element, extract the property proof for it
-export
+public export
 indexAll : Elem x xs -> All p xs -> p x
 indexAll  Here     (p::_  ) = p
 indexAll (There e) ( _::ps) = indexAll e ps

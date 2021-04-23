@@ -1,9 +1,9 @@
-Hello
+1/1: Building usealloc (usealloc.idr)
+Main> Hello
 Hello
 Done
 Free X
 Freeing 0 Hello
 Free Y
 Freeing 1 Hello
-1/1: Building usealloc (usealloc.idr)
-Main> Main> Bye for now!
+Main> Bye for now!

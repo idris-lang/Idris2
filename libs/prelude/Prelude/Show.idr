@@ -155,11 +155,6 @@ showLitChar c
            "DLE", "DC1", "DC2", "DC3", "DC4", "NAK", "SYN", "ETB",
            "CAN", "EM",  "SUB", "ESC", "FS",  "GS",  "RS",  "US"]
 
-    getAt : Nat -> List String -> Maybe String
-    getAt Z     (x :: xs) = Just x
-    getAt (S k) (x :: xs) = getAt k xs
-    getAt _     []        = Nothing
-
 showLitString : List Char -> String -> String
 showLitString []        = id
 showLitString ('"'::cs) = ("\\\"" ++) . showLitString cs

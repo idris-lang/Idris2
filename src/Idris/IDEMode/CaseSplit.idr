@@ -19,9 +19,16 @@ import Idris.Resugar
 import Idris.Syntax
 
 import Data.List
+import Data.List1
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
 import Data.Strings
 import System.File
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 
@@ -130,7 +137,7 @@ updateCase splits line col
               Just f =>
                 do Right file <- coreLift $ readFile f
                        | Left err => throw (FileErr f err)
-                   let thisline = elemAt (lines file) (integerToNat (cast line))
+                   let thisline = elemAt (forget $ lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")
                         Just l =>

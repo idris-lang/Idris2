@@ -52,6 +52,7 @@ schHeader libs
     "(require rnrs/io/ports-6)\n" ++ -- for files
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
+    "(require racket/flonum)" ++ -- for float-typed transcendental functions
     libs ++
     "(let ()\n"
 
@@ -326,18 +327,26 @@ startRacket : String -> String -> String -> String
 startRacket racket appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "case `uname -s` in            "
-    , "    OpenBSD|FreeBSD|NetBSD)   "
-    , "        DIR=\"`grealpath $0`\""
-    , "        ;;                    "
-    , "                              "
-    , "    *)                        "
-    , "        DIR=\"`realpath $0`\" "
-    , "        ;;                    "
-    , "esac                          "
+    , "set -e # exit on any error"
     , ""
-    , "export LD_LIBRARY_PATH=\"$LD_LIBRARY_PATH:`dirname \"$DIR\"`/\"" ++ appdir ++ "\"\""
-    , racket ++ "\"`dirname \"$DIR\"`\"/\"" ++ target ++ "\" \"$@\""
+    , "case $(uname -s) in            "
+    , "    OpenBSD | FreeBSD | NetBSD)"
+    , "        REALPATH=\"grealpath\" "
+    , "        ;;                     "
+    , "                               "
+    , "    *)                         "
+    , "        REALPATH=\"realpath\"  "
+    , "        ;;                     "
+    , "esac                           "
+    , ""
+    , "if ! command -v \"$REALPATH\" >/dev/null; then               "
+    , "    echo \"$REALPATH is required for Racket code generator.\""
+    , "    exit 1                                                   "
+    , "fi                                                           "
+    , ""
+    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 startRacketCmd : String -> String -> String -> String
@@ -352,17 +361,10 @@ startRacketWinSh : String -> String -> String -> String
 startRacketWinSh racket appdir target = unlines
     [ "#!/bin/sh"
     , ""
-    , "case `uname -s` in            "
-    , "    OpenBSD|FreeBSD|NetBSD)   "
-    , "        DIR=\"`grealpath $0`\""
-    , "        ;;                    "
-    , "                              "
-    , "    *)                        "
-    , "        DIR=\"`realpath $0`\" "
-    , "        ;;                    "
-    , "esac                          "
+    , "set -e # exit on any error"
     , ""
-    , "export PATH=\"`dirname \"$DIR\"`/\"" ++ appdir ++ "\":$PATH\""
+    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
 
@@ -429,7 +431,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          racket <- coreLift findRacket
 
          ok <- the (Core Int) $ if mkexec
-                  then logTime "Build racket" $
+                  then logTime "+ Build racket" $
                          coreLift $
                            system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
                   else pure 0

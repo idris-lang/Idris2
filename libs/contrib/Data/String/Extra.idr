@@ -1,6 +1,7 @@
 module Data.String.Extra
 
 import Data.List
+import Data.List1
 import Data.Nat
 import Data.Strings
 
@@ -101,4 +102,22 @@ indent n x = replicate n ' ' ++ x
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (indent n) $ lines str
+indentLines n str = unlines $ map (indent n) $ forget $ lines str
+
+||| Return a string of the given character repeated
+||| `n` times.
+export
+fastReplicate : (n : Nat) -> Char -> String
+fastReplicate n c = fastPack $ replicate n c
+
+||| Left-justify a string to the given length, using the
+||| specified fill character on the right.
+export
+justifyLeft : Nat -> Char -> String -> String
+justifyLeft n c s = s ++ fastReplicate (n `minus` length s) c
+
+||| Right-justify a string to the given length, using the
+||| specified fill character on the left.
+export
+justifyRight : Nat -> Char -> String -> String
+justifyRight n c s = fastReplicate (n `minus` length s) c ++ s

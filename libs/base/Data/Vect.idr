@@ -1,5 +1,6 @@
 module Data.Vect
 
+import Data.DPair
 import Data.List
 import Data.Nat
 import public Data.Fin
@@ -198,6 +199,20 @@ export
 merge : Ord elem => Vect n elem -> Vect m elem -> Vect (n + m) elem
 merge = mergeBy compare
 
+-- Properties for functions in this section --
+
+export
+replaceAtSameIndex : (xs : Vect n a) -> (i : Fin n) -> (0 y : a) -> index i (replaceAt i y xs) = y
+replaceAtSameIndex (_::_) FZ     _ = Refl
+replaceAtSameIndex (_::_) (FS _) _ = replaceAtSameIndex _ _ _
+
+export
+replaceAtDiffIndexPreserves : (xs : Vect n a) -> (i, j : Fin n) -> Not (i = j) -> (0 y : a) -> index i (replaceAt j y xs) = index i xs
+replaceAtDiffIndexPreserves (_::_) FZ     FZ     co _ = absurd $ co Refl
+replaceAtDiffIndexPreserves (_::_) FZ     (FS _) _  _ = Refl
+replaceAtDiffIndexPreserves (_::_) (FS _) FZ     _  _ = Refl
+replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (co . cong FS) y
+
 --------------------------------------------------------------------------------
 -- Transformations
 --------------------------------------------------------------------------------
@@ -273,7 +288,7 @@ Eq a => Eq (Vect n a) where
   (==) []      []      = True
   (==) (x::xs) (y::ys) = x == y && xs == ys
 
-export
+public export
 DecEq a => DecEq (Vect n a) where
   decEq []      []      = Yes Refl
   decEq (x::xs) (y::ys) with (decEq x y, decEq xs ys)
@@ -741,10 +756,29 @@ diag : Vect len (Vect len elem) -> Vect len elem
 diag []             = []
 diag ((x::xs)::xss) = x :: diag (map tail xss)
 
-public export
-range : {len : Nat} -> Vect len (Fin len)
-range {len=Z}   = []
-range {len=S _} = FZ :: map FS range
+namespace Fin
+
+  public export
+  tabulate : {len : Nat} -> (Fin len -> a) -> Vect len a
+  tabulate {len = Z} f = []
+  tabulate {len = S _} f = f FZ :: tabulate (f . FS)
+
+  public export
+  range : {len : Nat} -> Vect len (Fin len)
+  range = tabulate id
+
+namespace Subset
+
+  public export
+  tabulate : {len : Nat} -> (Subset Nat (`LT` len) -> a) -> Vect len a
+  tabulate {len = Z} f = []
+  tabulate {len = S _} f
+    = f (Element Z ltZero)
+    :: Subset.tabulate (\ (Element n prf) => f (Element (S n) (LTESucc prf)))
+
+  public export
+  range : {len : Nat} -> Vect len (Subset Nat (`LT` len))
+  range = tabulate id
 
 --------------------------------------------------------------------------------
 -- Zippable

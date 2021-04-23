@@ -2,6 +2,7 @@ module TTImp.TTImp
 
 import Core.Binary
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.Options
@@ -316,7 +317,8 @@ mutual
   public export
   data ImpClause : Type where
        PatClause : FC -> (lhs : RawImp) -> (rhs : RawImp) -> ImpClause
-       WithClause : FC -> (lhs : RawImp) -> (wval : RawImp) ->
+       WithClause : FC -> (lhs : RawImp) ->
+                    (wval : RawImp) -> (prf : Maybe Name) ->
                     (flags : List WithFlag) ->
                     List ImpClause -> ImpClause
        ImpossibleClause : FC -> (lhs : RawImp) -> ImpClause
@@ -325,8 +327,11 @@ mutual
   Show ImpClause where
     show (PatClause fc lhs rhs)
        = show lhs ++ " = " ++ show rhs
-    show (WithClause fc lhs wval flags block)
-       = show lhs ++ " with " ++ show wval ++ "\n\t" ++ show block
+    show (WithClause fc lhs wval prf flags block)
+       = show lhs
+       ++ " with " ++ show wval
+       ++ maybe "" (\ nm => " proof " ++ show nm) prf
+       ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"
 
@@ -351,6 +356,7 @@ mutual
                   NestedNames vars -> Env Term vars -> Core ()) ->
                  ImpDecl
        ILog : Maybe (List String, Nat) -> ImpDecl
+       IBuiltin : FC -> BuiltinType -> Name -> ImpDecl
 
   export
   Show ImpDecl where
@@ -373,6 +379,7 @@ mutual
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
       _  => concat (intersperse "." topic) ++ " " ++ show lvl
+    show (IBuiltin _ type name) = "%builtin " ++ show type ++ " " ++ show name
 
 export
 isIPrimVal : RawImp -> Maybe Constant
@@ -495,8 +502,13 @@ findImplicits tm = []
 -- rhs
 export
 implicitsAs : {auto c : Ref Ctxt Defs} ->
-              Defs -> List Name -> RawImp -> Core RawImp
-implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
+              Int -> Defs ->
+              (vars : List Name) ->
+              RawImp -> Core RawImp
+implicitsAs n defs ns tm
+  = do let implicits = findIBinds tm
+       log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
+       setAs (map Just (ns ++ map UN implicits)) [] tm
   where
     -- Takes the function application expression which is the lhs of a clause
     -- and decomposes it into the underlying function symbol and the variables
@@ -516,11 +528,21 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
     setAs is es (IWithApp loc f a)
         = do f' <- setAs is es f
              pure $ IWithApp loc f' a
-    setAs is es (IVar loc n)
-        = case !(lookupTyExact n (gamma defs)) of
-               Nothing => pure $ IVar loc n
-               Just ty => pure $ impAs loc
-                                    !(findImps is es !(nf defs [] ty)) (IVar loc n)
+    setAs is es (IVar loc nm)
+        -- #834 Use the (already) resolved name rather than the local one
+        = case !(lookupTyExact (Resolved n) (gamma defs)) of
+            Nothing =>
+               do log "declare.def.lhs.implicits" 30 $
+                    "Could not find variable " ++ show n
+                  pure $ IVar loc nm
+            Just ty =>
+               do ty' <- nf defs [] ty
+                  implicits <- findImps is es ns ty'
+                  log "declare.def.lhs.implicits" 30 $
+                    "\n  In the type of " ++ show n ++ ": " ++ show ty ++
+                    "\n  Using locals: " ++ show ns ++
+                    "\n  Found implicits: " ++ show implicits
+                  pure $ impAs loc implicits (IVar loc nm)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
@@ -542,27 +564,43 @@ implicitsAs defs ns tm = setAs (map Just (ns ++ map UN (findIBinds tm))) [] tm
         -- The second argument, `es`, specifies which *explicit* variables appear
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
-        findImps : List (Maybe Name) -> List (Maybe Name) -> NF [] -> Core (List (Name, PiInfo RawImp))
+        findImps : List (Maybe Name) -> List (Maybe Name) ->
+                   List Name -> NF [] ->
+                   Core (List (Name, PiInfo RawImp))
+        -- #834 When we are in a local definition, we have an explicit telescope
+        -- corresponding to the variables bound in the parent function.
+        -- So we first peel off all of the explicit quantifiers corresponding
+        -- to these variables.
+        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
+          = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+               findImps ns es locals body
+               -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
-        findImps ns es (NBind fc x (Pi _ _ Explicit _) sc)
-            = case es of
+        findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
-                   Just (UN "_") :: _ => findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                   Just (UN "_") :: _ => findImps ns es [] body
                    -- Explicits weren't skipped, so we need to check
                    _ => case updateNs x es of
-                             Nothing => pure [] -- explicit wasn't given
-                             Just es' => findImps ns es' !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+                          Nothing => pure [] -- explicit wasn't given
+                          Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
-        findImps ns es (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = case updateNs x ns of
+        findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 case updateNs x ns of
                    Nothing => -- didn't find explicit call
-                      pure $ (x, AutoImplicit) :: !(findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-                   Just ns' => findImps ns' es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-        findImps ns es (NBind fc x (Pi _ _ p _) sc)
-            = if Just x `elem` ns
-                 then findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False)))
-                 else pure $ (x, forgetDef p) :: !(findImps ns es !(sc defs (toClosure defaultOpts [] (Erased fc False))))
-        findImps _ _ _ = pure []
+                      pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
+                   Just ns' => findImps ns' es [] body
+        findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
+            = do body <- sc defs (toClosure defaultOpts [] (Erased fc False))
+                 if Just x `elem` ns
+                   then findImps ns es [] body
+                   else pure $ (x, forgetDef p) :: !(findImps ns es [] body)
+        findImps _ _ locals _
+          = do log "declare.def.lhs.implicits" 50 $
+                  "Giving up with the following locals left: " ++ show locals
+               pure []
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
@@ -683,6 +721,16 @@ apply f [] = f
 apply f (x :: xs) = apply (IApp (getFC f) f x) xs
 
 export
+gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
+gapply f [] = f
+gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
+
+  app : RawImp -> Maybe Name -> RawImp -> RawImp
+  app f Nothing x =  IApp (getFC f) f x
+  app f (Just nm) x = INamedApp (getFC f) f nm x
+
+
+export
 getFn : RawImp -> RawImp
 getFn (IApp _ f _) = getFn f
 getFn (IWithApp _ f _) = getFn f
@@ -693,6 +741,22 @@ getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
 
 -- Everything below is TTC instances
+
+export
+TTC BuiltinType where
+    toBuf b BuiltinNatural = tag 0
+    toBuf b NaturalPlus = tag 1
+    toBuf b NaturalMult = tag 2
+    toBuf b NaturalToInteger = tag 3
+    toBuf b IntegerToNatural = tag 4
+
+    fromBuf b = case !getTag of
+                     0 => pure BuiltinNatural
+                     1 => pure NaturalPlus
+                     2 => pure NaturalMult
+                     3 => pure NaturalToInteger
+                     4 => pure IntegerToNatural
+                     _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -926,8 +990,13 @@ mutual
         = do tag 0; toBuf b fc; toBuf b lhs; toBuf b rhs
     toBuf b (ImpossibleClause fc lhs)
         = do tag 1; toBuf b fc; toBuf b lhs
-    toBuf b (WithClause fc lhs wval flags cs)
-        = do tag 2; toBuf b fc; toBuf b lhs; toBuf b wval; toBuf b cs
+    toBuf b (WithClause fc lhs wval prf flags cs)
+        = do tag 2
+             toBuf b fc
+             toBuf b lhs
+             toBuf b wval
+             toBuf b prf
+             toBuf b cs
 
     fromBuf b
         = case !getTag of
@@ -937,8 +1006,9 @@ mutual
                1 => do fc <- fromBuf b; lhs <- fromBuf b;
                        pure (ImpossibleClause fc lhs)
                2 => do fc <- fromBuf b; lhs <- fromBuf b;
-                       wval <- fromBuf b; cs <- fromBuf b
-                       pure (WithClause fc lhs wval [] cs)
+                       wval <- fromBuf b; prf <- fromBuf b;
+                       cs <- fromBuf b
+                       pure (WithClause fc lhs wval prf [] cs)
                _ => corrupt "ImpClause"
 
   export
@@ -1051,6 +1121,8 @@ mutual
     toBuf b (IPragma _ f) = throw (InternalError "Can't write Pragma")
     toBuf b (ILog n)
         = do tag 8; toBuf b n
+    toBuf b (IBuiltin fc type name)
+        = do tag 9; toBuf b fc; toBuf b type; toBuf b name
 
     fromBuf b
         = case !getTag of
@@ -1080,6 +1152,10 @@ mutual
                        pure (IRunElabDecl fc tm)
                8 => do n <- fromBuf b
                        pure (ILog n)
+               9 => do fc <- fromBuf b
+                       type <- fromBuf b
+                       name <- fromBuf b
+                       pure (IBuiltin fc type name)
                _ => corrupt "ImpDecl"
 
 

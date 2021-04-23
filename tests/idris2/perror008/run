@@ -1,0 +1,11 @@
+$1 --no-color --console-width 0 --check Issue710a.idr || true
+$1 --no-color --console-width 0 --check Issue710b.idr || true
+$1 --no-color --console-width 0 --check Issue710c.idr || true
+$1 --no-color --console-width 0 --check Issue710d.idr || true
+$1 --no-color --console-width 0 --check Issue710e.idr || true
+$1 --no-color --console-width 0 --check Issue710f.idr || true
+
+$1 --no-color --console-width 0 --check Issue1224a.idr || true
+$1 --no-color --console-width 0 --check Issue1224b.idr || true
+
+rm -rf build

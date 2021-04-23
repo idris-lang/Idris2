@@ -10,7 +10,7 @@ support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support"
 
 %foreign support "idris2_fileErrno"
-         "node:support:fileErrno,support_system_directory"
+         "node:support:fileErrno,support_system_file"
 prim__fileErrno : PrimIO Int
 
 returnError : HasIO io => io (Either FileError a)

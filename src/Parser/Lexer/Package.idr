@@ -121,7 +121,8 @@ lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex str =
   case lexTo (const False) rawTokens str of
        (tokenData, (l, c, "")) =>
-         Right $ (filter (useful . val) tokenData) ++ [MkBounded EndOfInput False (MkBounds l c l c)]
+         Right $ (filter (useful . val) tokenData)
+          ++ [MkBounded EndOfInput False (MkBounds l c l c)]
        (_, fail) => Left fail
   where
     useful : Token -> Bool

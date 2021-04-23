@@ -365,12 +365,12 @@ setMultiplicity (PLet fc _ val ty) c = PLet fc c val ty
 setMultiplicity (PVTy fc _ ty) c = PVTy fc c ty
 
 Show ty => Show (Binder ty) where
-	show (Lam _ c _ t) = "\\" ++ showCount c ++ show t
-	show (Pi _ c _ t) = "Pi " ++ showCount c ++ show t
-	show (Let _ c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVar _ c _ t) = "pat " ++ showCount c ++ show t
-	show (PLet _ c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
-	show (PVTy _ c t) = "pty " ++ showCount c ++ show t
+  show (Lam _ c _ t) = "\\" ++ showCount c ++ show t
+  show (Pi _ c _ t) = "Pi " ++ showCount c ++ show t
+  show (Let _ c v t) = "let " ++ showCount c ++ show v ++ " : " ++ show t
+  show (PVar _ c _ t) = "pat " ++ showCount c ++ show t
+  show (PLet _ c v t) = "plet " ++ showCount c ++ show v ++ " : " ++ show t
+  show (PVTy _ c t) = "pty " ++ showCount c ++ show t
 
 export
 setType : Binder tm -> tm -> Binder tm
@@ -573,6 +573,11 @@ data Term : List Name -> Type where
      Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
               Term vars
      TType : FC -> Term vars
+
+export
+isErased : Term vars -> Bool
+isErased (Erased _ _) = True
+isErased _ = False
 
 export
 getLoc : Term vars -> FC

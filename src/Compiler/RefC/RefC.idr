@@ -1,41 +1,26 @@
 module Compiler.RefC.RefC
 
+import Compiler.RefC.CC
+
 import Compiler.Common
 import Compiler.CompileExpr
-import Compiler.LambdaLift
 import Compiler.ANF
-import Compiler.Inline
 
 import Core.Context
+import Core.Context.Log
 import Core.Directory
-import Core.Name
-import Core.Options
-import Core.TT
 
-import Data.IORef
 import Data.List
 import Libraries.Data.DList
-import Libraries.Data.NameMap
 import Data.Nat
 import Data.Strings
 import Data.Vect
 
 import System
-import System.Info
 import System.File
 
-import Idris.Env
-import Idris.Version
 import Libraries.Utils.Hex
 import Libraries.Utils.Path
-
-findCC : IO String
-findCC
-    = do Nothing <- idrisGetEnv "IDRIS2_CC"
-           | Just cc => pure cc
-         Nothing <- idrisGetEnv "CC"
-           | Just cc => pure cc
-         pure "cc"
 
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
@@ -61,17 +46,11 @@ showcCleanStringChar '$' = ("_dollar" ++)
 showcCleanStringChar ',' = ("_comma" ++)
 showcCleanStringChar '#' = ("_number" ++)
 showcCleanStringChar '%' = ("_percent" ++)
+showcCleanStringChar '~' = ("_tilde" ++)
 showcCleanStringChar c
    = if c < chr 32 || c > chr 126
-        then (("u" ++ pad (asHex (cast c))) ++)
+        then (("u" ++ leftPad '0' 4 (asHex (cast c))) ++)
         else strCons c
-  where
-    pad : String -> String
-    pad str
-        = let n = length str in
-          case isLTE n 4 of
-             Yes _ => fastPack (List.replicate (minus 4 n) '0') ++ str
-             No _ => str
 
 showcCleanString : List Char -> String -> String
 showcCleanString [] = id
@@ -139,17 +118,11 @@ where
     showCChar : Char -> String -> String
     showCChar '\\' = ("bkslash" ++)
     showCChar c
-       = if c < chr 32 || c > chr 126
-            then (("\\x" ++ (asHex (cast c))) ++)
-            else strCons c
-      where
-        pad : String -> String
-        pad str
-            = case isLTE (length str) 2 of
-                   --Yes _ => toString (List.replicate (natMinus 4 (length str)) '0') ++ str
-                   Yes _ => "0" ++ str
-                   No _ => str
-
+       = if c < chr 32
+            then (("\\x" ++ leftPad '0' 2 (asHex (cast c))) ++ "\"\"" ++)
+            else if c < chr 127 then strCons c
+            else if c < chr 65536 then (("\\u" ++ leftPad '0' 4 (asHex (cast c))) ++ "\"\"" ++)
+            else (("\\U" ++ leftPad '0' 8 (asHex (cast c))) ++ "\"\"" ++)
 
     showCString : List Char -> String -> String
     showCString [] = id
@@ -202,7 +175,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 ||| Generate scheme for a primitive function.
 cOp : PrimFn arity -> Vect arity String -> String
-cOp (Neg ty)      [x]       = "-" ++ x
+cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
 cOp StrTail       [x]       = "tail(" ++ x ++ ")"
@@ -629,7 +602,7 @@ mutual
                 makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 1 constantArray "multiDoubleCompare"
             _ => pure ("ERROR_NOT_DOUBLE_OR_STRING", "ERROR_NOT_DOUBLE_OR_STRING")
     makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) k constantArray compareFct = do
-        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = \"" ++ extractConstant constant ++ "\";"
+        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = " ++ extractConstant constant ++ ";"
         makeNonIntSwitchStatementConst alts (k+1) constantArray compareFct
 
 
@@ -1023,7 +996,8 @@ createCFunctions n (MkAError exp) = do
     pure ()
 
 
-header : {auto f : Ref FunctionDefinitions (List String)}
+header : {auto c : Ref Ctxt Defs}
+      -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto e : Ref ExternalLibs (List String)}
@@ -1034,7 +1008,7 @@ header = do
                     , "#include <idris_support.h> // for libidris2_support"]
     extLibs <- get ExternalLibs
     let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
-    traverse_ (\l => coreLift (putStrLn $ " header for " ++ l ++ " needed")) extLibs
+    traverse_ (\l => log "compiler.refc" 20 $ " header for " ++ l ++ " needed") extLibs
     fns <- get FunctionDefinitions
     update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
 
@@ -1056,6 +1030,27 @@ executeExpr c _ tm
          coreLift_ $ system "false"
 
 export
+generateCSourceFile : {auto c : Ref Ctxt Defs}
+                   -> List (Name, ANFDef)
+                   -> (outn : String)
+                   -> Core ()
+generateCSourceFile defs outn =
+  do _ <- newRef ArgCounter 0
+     _ <- newRef FunctionDefinitions []
+     _ <- newRef TemporaryVariableTracker []
+     _ <- newRef OutfileText DList.Nil
+     _ <- newRef ExternalLibs []
+     _ <- newRef IndentLevel 0
+     traverse_ (uncurry createCFunctions) defs
+     header -- added after the definition traversal in order to add all encountered function defintions
+     footer
+     fileContent <- get OutfileText
+     let code = fastAppend (map (++ "\n") (reify fileContent))
+
+     coreLift_ $ writeFile outn code
+     log "compiler.refc" 10 $ "Generated C file " ++ outn
+
+export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
            -> (tmpDir : String)
@@ -1067,52 +1062,16 @@ compileExpr ANF c _ outputDir tm outfile =
   do let outn = outputDir </> outfile ++ ".c"
      let outobj = outputDir </> outfile ++ ".o"
      let outexec = outputDir </> outfile
+
      coreLift_ $ mkdirAll outputDir
      cdata <- getCompileData False ANF tm
      let defs = anf cdata
-     _ <- newRef ArgCounter 0
-     _ <- newRef FunctionDefinitions []
-     _ <- newRef TemporaryVariableTracker []
-     _ <- newRef OutfileText DList.Nil
-     _ <- newRef ExternalLibs []
-     _ <- newRef IndentLevel 0
-     traverse_ (\(n, d) => createCFunctions n d) defs
-     header -- added after the definition traversal in order to add all encountered function defintions
-     footer
-     fileContent <- get OutfileText
-     let code = fastAppend (map (++ "\n") (reify fileContent))
 
-     coreLift_ $ writeFile outn code
-     coreLift_ $ putStrLn $ "Generated C file " ++ outn
+     generateCSourceFile defs outn
+     Just _ <- compileCObjectFile outn outobj
+       | Nothing => pure Nothing
+     compileCFile outobj outexec
 
-     cc <- coreLift findCC
-     dirs <- getDirs
-
-     let runccobj = cc ++ " -c " ++ outn ++ " -o " ++ outobj ++ " " ++
-                       "-I" ++ fullprefix_dir dirs "refc " ++
-                       "-I" ++ fullprefix_dir dirs "include"
-
-     let runcc = cc ++ " " ++ outobj ++ " -o " ++ outexec ++ " " ++
-                       fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
-                       "-lidris2_refc " ++
-                       "-L" ++ fullprefix_dir dirs "refc " ++
-                       clibdirs (lib_dirs dirs)
-
-     coreLift $ putStrLn runccobj
-     0 <- coreLift $ system runccobj
-       | _ => pure Nothing
-     coreLift $ putStrLn runcc
-     0 <- coreLift $ system runcc
-       | _ => pure Nothing
-     pure (Just outexec)
-
-  where
-    fullprefix_dir : Dirs -> String -> String
-    fullprefix_dir dirs sub
-        = prefix_dir dirs </> "idris2-" ++ showVersion False version </> sub
-
-    clibdirs : List String -> String
-    clibdirs ds = concat (map (\d => "-L" ++ d ++ " ") ds)
 compileExpr _ _ _ _ _ _ = pure Nothing
 
 export

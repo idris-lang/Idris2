@@ -65,7 +65,7 @@ process (Check ttimp)
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName toplevelFC n_in)
+              | [] => undefinedName toplevelFC n_in
               | ns => throw (AmbiguousName toplevelFC (map fst ns))
          def <- search toplevelFC top False 1000 n ty []
          defs <- get Ctxt
@@ -75,7 +75,7 @@ process (ProofSearch n_in)
 process (ExprSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
-              | [] => throw (UndefinedName toplevelFC n_in)
+              | [] => undefinedName toplevelFC n_in
               | ns => throw (AmbiguousName toplevelFC (map fst ns))
          results <- exprSearchN toplevelFC 1 n []
          traverse_ (\d => coreLift (printLn d)) results
@@ -99,7 +99,7 @@ process (GenerateDef line name)
 process (Missing n_in)
     = do defs <- get Ctxt
          case !(lookupCtxtName n_in (gamma defs)) of
-              [] => throw (UndefinedName emptyFC n_in)
+              [] => undefinedName emptyFC n_in
               ts => do traverse_ (\fn =>
                           do tot <- getTotality emptyFC fn
                              the (Core ()) $ case isCovering tot of
@@ -118,7 +118,7 @@ process (Missing n_in)
 process (CheckTotal n)
     = do defs <- get Ctxt
          case !(lookupCtxtName n (gamma defs)) of
-              [] => throw (UndefinedName emptyFC n)
+              [] => undefinedName emptyFC n
               ts => do traverse_ (\fn =>
                           do ignore $ checkTotal emptyFC fn
                              tot <- getTotality emptyFC fn

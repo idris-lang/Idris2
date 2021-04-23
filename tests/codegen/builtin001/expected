@@ -1,0 +1,36 @@
+Dumping case trees to Main.cases
+prim__add_Integer = [{arg:N}, {arg:N}]: (+Integer [!{arg:N}, !{arg:N}])
+prim__sub_Integer = [{arg:N}, {arg:N}]: (-Integer [!{arg:N}, !{arg:N}])
+prim__mul_Integer = [{arg:N}, {arg:N}]: (*Integer [!{arg:N}, !{arg:N}])
+prim__lte_Integer = [{arg:N}, {arg:N}]: (<=Integer [!{arg:N}, !{arg:N}])
+prim__believe_me = [{arg:N}, {arg:N}, {arg:N}]: (believe_me [!{arg:N}, !{arg:N}, !{arg:N}])
+Main.plus = [{arg:N}, {arg:N}]: (%case !{arg:N} [(%constcase 0 !{arg:N})] Just (%let {e:N} (-Integer [!{arg:N}, 1]) (+Integer [1, (Main.plus [!{e:N}, !{arg:N}])])))
+Main.main = [{ext:N}]: (Main.plus [(+Integer [1, 0]), (+Integer [1, (+Integer [1, 0])])])
+Main.Z = Constructor tag Just 1 arity 0
+Main.S = Constructor tag Just 0 arity 1
+Prelude.Basics.intToBool = [{arg:N}]: (%case !{arg:N} [(%constcase 0 1)] Just 0)
+Prelude.Basics.True = Constructor tag Just 0 arity 0
+Prelude.Basics.False = Constructor tag Just 1 arity 0
+Builtin.believe_me = [{arg:N}, {arg:N}, {ext:N}]: (believe_me [___, ___, !{ext:N}])
+Prelude.Types.case block in prim__integerToNat = [{arg:N}, {arg:N}]: (%case !{arg:N} [(%constcase 0 (Builtin.believe_me [___, ___, !{arg:N}])), (%constcase 1 0)] Nothing)
+Prelude.Types.prim__integerToNat = [{arg:N}]: (Prelude.Types.case block in prim__integerToNat [!{arg:N}, (%case (<=Integer [0, !{arg:N}]) [(%constcase 0 1)] Just 0)])
+Prelude.Types.Z = Constructor tag Just 0 arity 0
+Prelude.Interfaces.Functor at Prelude/Interfaces.idr:L:C--L:C = Constructor tag Just 0 arity 2 (newtype by 1)
+Prelude.Interfaces.Applicative at Prelude/Interfaces.idr:L:C--L:C = Constructor tag Just 0 arity 3
+Prelude.Interfaces.pure = [{arg:N}, {arg:N}, {arg:N}]: (%case !{arg:N} [(%concase Prelude.Interfaces.Applicative at Prelude/Interfaces.idr:L:C--L:C Just 0 [{e:N}, {e:N}, {e:N}] (%lam {arg:N} ((!{e:N} [___]) [!{arg:N}])))] Nothing)
+PrimIO.case block in unsafePerformIO = [{arg:N}, {arg:N}, {arg:N}, {arg:N}]: (PrimIO.unsafeDestroyWorld [___, ___, !{arg:N}])
+PrimIO.case block in case block in io_bind = [{arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}]: (!{arg:N} [!{arg:N}])
+PrimIO.case block in io_bind = [{arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}, {arg:N}]: (PrimIO.case block in case block in io_bind [___, ___, ___, ___, ___, !{arg:N}, ___, (!{arg:N} [!{arg:N}])])
+PrimIO.unsafePerformIO = [{arg:N}, {arg:N}]: (PrimIO.unsafeCreateWorld [___, (%lam w (PrimIO.case block in unsafePerformIO [___, !{arg:N}, ___, (!{arg:N} [!w])]))])
+PrimIO.unsafeDestroyWorld = [{arg:N}, {arg:N}, {arg:N}]: !{arg:N}
+PrimIO.unsafeCreateWorld = [{arg:N}, {arg:N}]: (!{arg:N} [%MkWorld])
+PrimIO.io_pure = [{arg:N}, {arg:N}, {ext:N}]: !{arg:N}
+PrimIO.io_bind = [{arg:N}, {arg:N}, {arg:N}, {arg:N}, {ext:N}]: (PrimIO.case block in io_bind [___, ___, ___, !{arg:N}, ___, (!{arg:N} [!{ext:N}])])
+PrimIO.MkIORes = Constructor tag Just 0 arity 3 (newtype by 1)
+PrimIO.MkIO = Constructor tag Just 0 arity 2 (newtype by 1)
+Prelude.IO.pure = [{arg:N}, {arg:N}, {ext:N}]: !{arg:N}
+Prelude.IO.map = [{arg:N}, {arg:N}, {arg:N}, {arg:N}, {ext:N}]: (%let {act:N} (!{arg:N} [!{ext:N}]) (!{arg:N} [!{act:N}]))
+Prelude.IO.Functor implementation at Prelude/IO.idr:L:C--L:C = [{ext:N}, {ext:N}, {ext:N}, {ext:N}, {ext:N}]: (Prelude.IO.map [___, ___, !{ext:N}, !{ext:N}, !{ext:N}])
+Prelude.IO.Applicative implementation at Prelude/IO.idr:L:C--L:C = []: (%con Prelude.Interfaces.Applicative at Prelude/Interfaces.idr:L:C--L:C Just 0 [(%lam b (%lam a (%lam func (%lam {arg:N} (%lam {eta:N} (Prelude.IO.map [___, ___, !func, !{arg:N}, !{eta:N}])))))), (%lam a (%lam {arg:N} (%lam {eta:N} !{arg:N}))), (%lam b (%lam a (%lam {arg:N} (%lam {arg:N} (%lam {eta:N} (%let {act:N} (!{arg:N} [!{eta:N}]) (%let {act:N} (!{arg:N} [!{eta:N}]) (!{act:N} [!{act:N}]))))))))])
+Prelude.IO.<*> = [{arg:N}, {arg:N}, {arg:N}, {arg:N}, {ext:N}]: (%let {act:N} (!{arg:N} [!{ext:N}]) (%let {act:N} (!{arg:N} [!{ext:N}]) (!{act:N} [!{act:N}])))
+

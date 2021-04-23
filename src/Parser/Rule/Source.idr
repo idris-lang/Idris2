@@ -8,6 +8,12 @@ import Core.TT
 import Data.List1
 import Data.Strings
 import Libraries.Data.List.Extra
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default total
 
@@ -56,7 +62,7 @@ documentation' = terminal "Expected documentation comment"
 
 export
 documentation : Rule String
-documentation = unlines <$> some documentation'
+documentation = (unlines . forget) <$> some documentation'
 
 export
 intLit : Rule Integer
@@ -208,18 +214,27 @@ namespacedIdent
             Ident i => Just (Nothing, i)
             _ => Nothing)
 
+isCapitalisedIdent : WithBounds String -> SourceEmptyRule ()
+isCapitalisedIdent str =
+  let val = str.val
+      loc = str.bounds
+      err : SourceEmptyRule ()
+          = failLoc loc ("Expected a capitalised identifier, got: " ++ val)
+  in case strM val of
+       StrNil => err
+       StrCons c _ => if (isUpper c || c > chr 160) then pure () else err
+
+
 export
 namespaceId : Rule Namespace
-namespaceId = map (uncurry mkNestedNamespace) namespacedIdent
+namespaceId = do
+  nsid <- bounds namespacedIdent
+  isCapitalisedIdent (snd <$> nsid)
+  pure (uncurry mkNestedNamespace nsid.val)
 
 export
 moduleIdent : Rule ModuleIdent
-moduleIdent
-    = terminal "Expected module identifier"
-        (\x => case x of
-            DotSepIdent ns n => Just (mkModuleIdent (Just ns) n)
-            Ident i => Just (mkModuleIdent Nothing i)
-            _ => Nothing)
+moduleIdent = nsAsModuleIdent <$> namespaceId
 
 export
 unqualifiedName : Rule String
@@ -238,35 +253,65 @@ reservedNames
     = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
        "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
 
+isNotReservedIdent : WithBounds String -> SourceEmptyRule ()
+isNotReservedIdent x
+    = if x.val `elem` reservedNames
+      then failLoc x.bounds $ "can't use reserved name " ++ x.val
+      else pure ()
+
 export
-name : Rule Name
-name = opNonNS <|> do
-  nsx <- namespacedIdent
-  -- writing (ns, x) <- namespacedIdent leads to an unsoled constraint.
-  -- I tried to write a minimised test case but could not reproduce the error
-  -- on a simplified example.
-  let ns = fst nsx
-  let x = snd nsx
-  opNS (mkNestedNamespace ns x) <|> nameNS ns x
+opNonNS : Rule Name
+opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
+
+identWithCapital : (capitalised : Bool) -> WithBounds String ->
+                   SourceEmptyRule ()
+identWithCapital b x = if b then isCapitalisedIdent x else pure ()
+
+nameWithCapital : (capitalised : Bool) -> Rule Name
+nameWithCapital b = opNonNS <|> do
+  nsx <- bounds namespacedIdent
+  opNS nsx <|> nameNS nsx
  where
-  reserved : String -> Bool
-  reserved n = n `elem` reservedNames
 
-  nameNS : Maybe Namespace -> String -> SourceEmptyRule Name
-  nameNS ns x =
-    if reserved x
-      then fail $ "can't use reserved name " ++ x
-      else pure $ mkNamespacedName ns x
+  nameNS : WithBounds (Maybe Namespace, String) -> SourceEmptyRule Name
+  nameNS nsx = do
+    let id = snd <$> nsx
+    identWithCapital b id
+    isNotReservedIdent id
+    pure $ uncurry mkNamespacedName nsx.val
 
-  opNonNS : Rule Name
-  opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
-
-  opNS : Namespace -> Rule Name
-  opNS ns = do
+  opNS : WithBounds (Maybe Namespace, String) -> Rule Name
+  opNS nsx = do
+    isCapitalisedIdent (snd <$> nsx)
+    let ns = uncurry mkNestedNamespace nsx.val
     symbol ".("
     n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
+
+export
+name : Rule Name
+name = nameWithCapital False
+
+export
+capitalisedName : Rule Name
+capitalisedName = nameWithCapital True
+
+export
+capitalisedIdent : Rule String
+capitalisedIdent = do
+  id <- bounds identPart
+  isCapitalisedIdent id
+  isNotReservedIdent id
+  pure id.val
+
+export
+dataConstructorName : Rule Name
+dataConstructorName = opNonNS <|> UN <$> capitalisedIdent
+
+export %inline
+dataTypeName : Rule Name
+dataTypeName = opNonNS <|> capitalisedName
 
 export
 IndentInfo : Type

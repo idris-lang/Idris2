@@ -352,9 +352,10 @@ mutual
       = pure (MkPatClause fc !(toPTerm startPrec lhs)
                              !(toPTerm startPrec rhs)
                              [])
-  toPClause (WithClause fc lhs rhs flags cs)
+  toPClause (WithClause fc lhs rhs prf flags cs)
       = pure (MkWithClause fc !(toPTerm startPrec lhs)
                               !(toPTerm startPrec rhs)
+                              prf
                               flags
                               !(traverse toPClause cs))
   toPClause (ImpossibleClause fc lhs)
@@ -439,6 +440,7 @@ mutual
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
+  toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->

@@ -13,8 +13,13 @@ import Data.List
 import Data.Maybe
 import Data.Strings
 import Libraries.Data.NameMap
-
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 
@@ -408,7 +413,7 @@ getNonCoveringRefs : {auto c : Ref Ctxt Defs} ->
 getNonCoveringRefs fc n
    = do defs <- get Ctxt
         Just d <- lookupCtxtExact n (gamma defs)
-           | Nothing => throw (UndefinedName fc n)
+           | Nothing => undefinedName fc n
         let ds = mapMaybe noAssert (toList (refersTo d))
         let cases = filter isCase !(traverse toFullNames ds)
 

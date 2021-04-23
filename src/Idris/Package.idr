@@ -11,10 +11,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
-import Data.So
-import Libraries.Data.StringMap
 import Data.Strings
-import Libraries.Data.StringTrie
 import Data.These
 
 import Parser.Package
@@ -22,6 +19,8 @@ import System
 import System.Directory
 import System.File
 
+import Libraries.Data.StringMap
+import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Binary
@@ -39,83 +38,20 @@ import Idris.Syntax
 import Idris.Version
 import IdrisPaths
 
+import public Idris.Package.Types
+import Idris.Package.Init
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
+
 %default covering
 
-public export
-record Depends where
-  constructor MkDepends
-  pkgname : String
-  pkgbounds : PkgVersionBounds
-
-export
-Show Depends where
-  show p = p.pkgname ++ " " ++ show p.pkgbounds
-
-public export
-record PkgDesc where
-  constructor MkPkgDesc
-  name : String
-  version : PkgVersion
-  authors : String
-  maintainers : Maybe String
-  license : Maybe String
-  brief   : Maybe String
-  readme  : Maybe String
-  homepage : Maybe String
-  sourceloc : Maybe String
-  bugtracker : Maybe String
-  depends : List Depends -- packages to add to search path
-  modules : List (ModuleIdent, String) -- modules to install (namespace, filename)
-  mainmod : Maybe (ModuleIdent, String) -- main file (i.e. file to load at REPL)
-  executable : Maybe String -- name of executable
-  options : Maybe (FC, String)
-  sourcedir : Maybe String
-  builddir : Maybe String
-  outputdir : Maybe String
-  prebuild : Maybe (FC, String) -- Script to run before building
-  postbuild : Maybe (FC, String) -- Script to run after building
-  preinstall : Maybe (FC, String) -- Script to run after building, before installing
-  postinstall : Maybe (FC, String) -- Script to run after installing
-  preclean : Maybe (FC, String) -- Script to run before cleaning
-  postclean : Maybe (FC, String) -- Script to run after cleaning
-
 installDir : PkgDesc -> String
-installDir p = name p ++ "-" ++ show (version p)
-
-export
-Show PkgDesc where
-  show pkg = "Package: " ++ name pkg ++ "\n" ++
-             "Version: " ++ show (version pkg) ++ "\n" ++
-             "Authors: " ++ authors pkg ++ "\n" ++
-             maybe "" (\m => "Maintainers: " ++ m ++ "\n") (maintainers pkg) ++
-             maybe "" (\m => "License: "     ++ m ++ "\n") (license pkg)     ++
-             maybe "" (\m => "Brief: "       ++ m ++ "\n") (brief pkg)       ++
-             maybe "" (\m => "ReadMe: "      ++ m ++ "\n") (readme pkg)      ++
-             maybe "" (\m => "HomePage: "    ++ m ++ "\n") (homepage pkg)    ++
-             maybe "" (\m => "SourceLoc: "   ++ m ++ "\n") (sourceloc pkg)   ++
-             maybe "" (\m => "BugTracker: "  ++ m ++ "\n") (bugtracker pkg)  ++
-             "Depends: " ++ show (depends pkg) ++ "\n" ++
-             "Modules: " ++ show (map snd (modules pkg)) ++ "\n" ++
-             maybe "" (\m => "Main: " ++ snd m ++ "\n") (mainmod pkg) ++
-             maybe "" (\m => "Exec: " ++ m ++ "\n") (executable pkg) ++
-             maybe "" (\m => "Opts: " ++ snd m ++ "\n") (options pkg) ++
-             maybe "" (\m => "SourceDir: " ++ m ++ "\n") (sourcedir pkg) ++
-             maybe "" (\m => "BuildDir: " ++ m ++ "\n") (builddir pkg) ++
-             maybe "" (\m => "OutputDir: " ++ m ++ "\n") (outputdir pkg) ++
-             maybe "" (\m => "Prebuild: " ++ snd m ++ "\n") (prebuild pkg) ++
-             maybe "" (\m => "Postbuild: " ++ snd m ++ "\n") (postbuild pkg) ++
-             maybe "" (\m => "Preinstall: " ++ snd m ++ "\n") (preinstall pkg) ++
-             maybe "" (\m => "Postinstall: " ++ snd m ++ "\n") (postinstall pkg) ++
-             maybe "" (\m => "Preclean: " ++ snd m ++ "\n") (preclean pkg) ++
-             maybe "" (\m => "Postclean: " ++ snd m ++ "\n") (postclean pkg)
-
-initPkgDesc : String -> PkgDesc
-initPkgDesc pname
-    = MkPkgDesc pname (MkPkgVersion [0,0]) "Anonymous" Nothing Nothing
-                Nothing Nothing Nothing Nothing Nothing
-                [] []
-                Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing
+installDir p = name p
+            ++ "-"
+            ++ show (fromMaybe (MkPkgVersion (0 ::: [])) (version p))
 
 data DescField : Type where
   PVersion     : FC -> PkgVersion -> DescField
@@ -170,7 +106,7 @@ field fname
            vs <- sepBy1 dot' integerLit
            end <- location
            pure (PVersion (MkFC fname start end)
-                          (MkPkgVersion (map fromInteger vs)))
+                          (MkPkgVersion (fromInteger <$> vs)))
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
@@ -205,20 +141,20 @@ field fname
     bound
         = do lte
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) True]
       <|> do gte
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (map fromInteger vs)) True]
+             pure [GT (MkPkgVersion (fromInteger <$> vs)) True]
       <|> do lt
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) False]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) False]
       <|> do gt
              vs <- sepBy1 dot' integerLit
-             pure [GT (MkPkgVersion (map fromInteger vs)) False]
+             pure [GT (MkPkgVersion (fromInteger <$> vs)) False]
       <|> do eqop
              vs <- sepBy1 dot' integerLit
-             pure [LT (MkPkgVersion (map fromInteger vs)) True,
-                   GT (MkPkgVersion (map fromInteger vs)) True]
+             pure [LT (MkPkgVersion (fromInteger <$> vs)) True,
+                   GT (MkPkgVersion (fromInteger <$> vs)) True]
 
     mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
@@ -266,11 +202,11 @@ addField : {auto c : Ref Ctxt Defs} ->
            {auto p : Ref ParsedMods (List (FC, ModuleIdent))} ->
            {auto m : Ref MainMod (Maybe (FC, ModuleIdent))} ->
            DescField -> PkgDesc -> Core PkgDesc
-addField (PVersion fc n)     pkg = pure $ record { version = n } pkg
+addField (PVersion fc n)     pkg = pure $ record { version = Just n } pkg
 addField (PVersionDep fc n)  pkg
     = do emitWarning (Deprecated "version numbers must now be of the form x.y.z")
          pure pkg
-addField (PAuthors fc a)     pkg = pure $ record { authors = a } pkg
+addField (PAuthors fc a)     pkg = pure $ record { authors = Just a } pkg
 addField (PMaintainers fc a) pkg = pure $ record { maintainers = Just a } pkg
 addField (PLicense fc a)     pkg = pure $ record { license = Just a } pkg
 addField (PBrief fc a)       pkg = pure $ record { brief = Just a } pkg
@@ -586,44 +522,87 @@ parsePkgFile file = do
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 PkgCommand ->
-                 String ->
                  List CLOpt ->
+                 (PkgCommand, String) ->
                  Core ()
-processPackage cmd file opts
-    =  if not (isSuffixOf ".ipkg" file)
-         then do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
-                 coreLift (exitWith (ExitFailure 1))
-         else do Right (pname, fs) <- coreLift $ parseFile file
-                                          (do desc <- parsePkgDesc file
-                                              eoi
-                                              pure desc)
-                    | Left err => throw err
-                 pkg <- addFields fs (initPkgDesc pname)
-                 maybe (pure ()) setBuildDir (builddir pkg)
-                 setOutputDir (outputdir pkg)
-                 case cmd of
-                      Build => do [] <- build pkg opts
-                                     | errs => coreLift (exitWith (ExitFailure 1))
-                                  pure ()
-                      Install => do [] <- build pkg opts
-                                       | errs => coreLift (exitWith (ExitFailure 1))
-                                    install pkg opts
-                      Typecheck => do
-                        [] <- check pkg opts
-                          | errs => coreLift (exitWith (ExitFailure 1))
-                        pure ()
-                      Clean => clean pkg opts
-                      REPL => do
-                        [] <- build pkg opts
-                           | errs => coreLift (exitWith (ExitFailure 1))
-                        runRepl (map snd $ mainmod pkg)
+processPackage opts (cmd, file)
+    = withCtxt . withSyn . withROpts $ case cmd of
+        Init =>
+          do pkg <- coreLift interactive
+             let fp = if file == "" then pkg.name ++ ".ipkg" else file
+             False <- coreLift (exists fp)
+               | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
+             Right () <- coreLift $ writeFile fp (show $ the (Doc ()) $ pretty pkg)
+               | Left err => throw (FileErr fp err)
+             pure ()
+        _ =>
+          do let Just (dir, filename) = splitParent file
+                 | _ => throw $ InternalError "Tried to split empty string"
+             let True = isSuffixOf ".ipkg" filename
+                 | _ => do coreLift $ putStrLn ("Packages must have an '.ipkg' extension: " ++ show file ++ ".")
+                           coreLift (exitWith (ExitFailure 1))
+             setWorkingDir dir
+             Right (pname, fs) <- coreLift $ parseFile filename (parsePkgDesc filename <* eoi)
+                | Left err => throw err
+             pkg <- addFields fs (initPkgDesc pname)
+             whenJust (builddir pkg) setBuildDir
+             setOutputDir (outputdir pkg)
+             case cmd of
+                  Build => do [] <- build pkg opts
+                                 | errs => coreLift (exitWith (ExitFailure 1))
+                              pure ()
+                  Install => do [] <- build pkg opts
+                                   | errs => coreLift (exitWith (ExitFailure 1))
+                                install pkg opts
+                  Typecheck => do
+                    [] <- check pkg opts
+                      | errs => coreLift (exitWith (ExitFailure 1))
+                    pure ()
+                  Clean => clean pkg opts
+                  REPL => do
+                    [] <- build pkg opts
+                       | errs => coreLift (exitWith (ExitFailure 1))
+                    runRepl (map snd $ mainmod pkg)
+                  Init => pure () -- already handled earlier
 
-record POptsFilterResult where
+record PackageOpts where
   constructor MkPFR
-  pkgDetails : Maybe (PkgCommand, String)
+  pkgDetails : List (PkgCommand, String)
   oopts : List CLOpt
   hasError : Bool
+
+partitionOpts : List CLOpt -> PackageOpts
+partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
+  where
+    data OptType : Type where
+      PPackage : PkgCommand -> String -> OptType
+      POpt : OptType
+      PIgnore : OptType
+      PErr : OptType
+    optType : CLOpt -> OptType
+    optType (Package cmd f)  = PPackage cmd f
+    optType Quiet            = POpt
+    optType Verbose          = POpt
+    optType Timing           = POpt
+    optType (Logging l)      = POpt
+    optType (DumpCases f)    = POpt
+    optType (DumpLifted f)   = POpt
+    optType (DumpVMCode f)   = POpt
+    optType DebugElabCheck   = POpt
+    optType (SetCG f)        = POpt
+    optType (BuildDir f)     = POpt
+    optType (OutputDir f)    = POpt
+    optType (ConsoleWidth n) = PIgnore
+    optType (Color b)        = PIgnore
+    optType NoBanner         = PIgnore
+    optType x                = PErr
+
+    pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
+    pOptUpdate opt with (optType opt)
+      pOptUpdate opt | (PPackage cmd f) = record {pkgDetails $= ((cmd, f)::)}
+      pOptUpdate opt | POpt    = record {oopts $= (opt::)}
+      pOptUpdate opt | PIgnore = id
+      pOptUpdate opt | PErr    = record {hasError = True}
 
 errorMsg : String
 errorMsg = unlines
@@ -642,46 +621,18 @@ errorMsg = unlines
   , "    --output-dir <dir>"
   ]
 
-
-filterPackageOpts : POptsFilterResult -> List CLOpt -> Core (POptsFilterResult)
-filterPackageOpts acc Nil                  = pure acc
-filterPackageOpts acc (Package cmd f ::xs) = filterPackageOpts (record {pkgDetails = Just (cmd, f)}  acc) xs
-
-filterPackageOpts acc (Quiet         ::xs) = filterPackageOpts (record {oopts $= (Quiet::)}          acc) xs
-filterPackageOpts acc (Verbose       ::xs) = filterPackageOpts (record {oopts $= (Verbose::)}        acc) xs
-filterPackageOpts acc (Timing        ::xs) = filterPackageOpts (record {oopts $= (Timing::)}         acc) xs
-filterPackageOpts acc (Logging l     ::xs) = filterPackageOpts (record {oopts $= (Logging l::)}      acc) xs
-filterPackageOpts acc (DumpCases f   ::xs) = filterPackageOpts (record {oopts $= (DumpCases f::)}    acc) xs
-filterPackageOpts acc (DumpLifted f  ::xs) = filterPackageOpts (record {oopts $= (DumpLifted f::)}   acc) xs
-filterPackageOpts acc (DumpVMCode f  ::xs) = filterPackageOpts (record {oopts $= (DumpVMCode f::)}   acc) xs
-filterPackageOpts acc (DebugElabCheck::xs) = filterPackageOpts (record {oopts $= (DebugElabCheck::)} acc) xs
-filterPackageOpts acc (SetCG f       ::xs) = filterPackageOpts (record {oopts $= (SetCG f::)}        acc) xs
-filterPackageOpts acc (BuildDir f    ::xs) = filterPackageOpts (record {oopts $= (BuildDir f::)}     acc) xs
-filterPackageOpts acc (OutputDir f   ::xs) = filterPackageOpts (record {oopts $= (OutputDir f::)}    acc) xs
-
-filterPackageOpts acc (x::xs) = pure (record {hasError = True} acc)
-
--- If there's a package option, it must be the only option, so reject if
--- it's not
 export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt ->
-                     Core Bool
-processPackageOpts Nil = pure False
-processPackageOpts [Package cmd f] = do processPackage cmd f Nil
-                                        pure True
-
+                     List CLOpt -> Core Bool
 processPackageOpts opts
-    = do (MkPFR (Just (cmd, f)) opts' err) <- filterPackageOpts (MkPFR Nothing Nil False) opts
-             | (MkPFR Nothing opts _) => pure False
-
+    = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
+             | (MkPFR Nil opts' _) => pure False
          if err
-           then do coreLift (putStrLn errorMsg)
-                   pure True
-           else do processPackage cmd f opts'
-                   pure True
+           then coreLift $ putStrLn (errorMsg ++ "\n")
+           else traverse_ (processPackage opts') cmds
+         pure True
 
 
 -- find an ipkg file in one of the parent directories

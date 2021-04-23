@@ -81,6 +81,14 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Flipped version of `<$>`, an infix alias for `map`, applying a function across
+||| everything of type 'a' in a parameterised type.
+||| @ f the parameterised type
+||| @ func the function to apply
+public export
+(<&>) : Functor f => f a -> (func : a -> b) -> f b
+(<&>) x func = map func x
+
 ||| Run something for effects, replacing the return value with a given parameter.
 public export
 (<$) : Functor f => b -> f a -> f b
@@ -372,6 +380,19 @@ namespace Foldable
     foldl = foldl . foldl
     null tf = null tf || all (force . null) tf
 
+||| `Bifoldable` identifies foldable structures with two different varieties
+||| of elements (as opposed to `Foldable`, which has one variety of element).
+||| Common examples are `Either` and `Pair`.
+public export
+interface Bifoldable p where
+  bifoldr : (a -> acc -> acc) -> (b -> acc -> acc) -> acc -> p a b -> acc
+
+  bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
+  bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
+
+  binull : p a b -> Lazy Bool
+  binull = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True
+
 public export
 interface (Functor t, Foldable t) => Traversable t where
   ||| Map each element of a structure to a computation, evaluate those
@@ -387,6 +408,26 @@ sequence = traverse id
 public export
 for : (Traversable t, Applicative f) => t a -> (a -> f b) -> f (t b)
 for = flip traverse
+
+public export
+interface (Bifunctor p, Bifoldable p) => Bitraversable p where
+  ||| Map each element of a structure to a computation, evaluate those
+  ||| computations and combine the results.
+  bitraverse : Applicative f => (a -> f c) -> (b -> f d) -> p a b -> f (p c d)
+
+||| Evaluate each computation in a structure and collect the results.
+public export
+bisequence : (Bitraversable p, Applicative f) => p (f a) (f b) -> f (p a b)
+bisequence = bitraverse id id
+
+||| Like `bitraverse` but with the arguments flipped.
+public export
+bifor :  (Bitraversable p, Applicative f)
+      => p a b
+      -> (a -> f c)
+      -> (b -> f d)
+      -> f (p c d)
+bifor t f g = bitraverse f g t
 
 namespace Traversable
   ||| Composition of traversables is traversable.

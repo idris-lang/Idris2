@@ -37,6 +37,11 @@ fastUnpack : String -> List Char
 export
 fastConcat : List String -> String
 
+-- This uses fastConcat internally so it won't compute at compile time.
+export
+fastUnlines : List String -> String
+fastUnlines = fastConcat . intersperse "\n"
+
 -- This is a deprecated alias for fastConcat for backwards compatibility
 -- (unfortunately, we don't have %deprecated yet).
 export
@@ -91,12 +96,12 @@ unwords = pack . unwords' . map unpack
 ||| lines' (unpack "\rA BC\nD\r\nE\n")
 ||| ```
 export
-lines' : List Char -> List (List Char)
-lines' [] = []
+lines' : List Char -> List1 (List Char)
+lines' [] = singleton []
 lines' s  = case break isNL s of
-              (l, s') => l :: case s' of
-                                []       => []
-                                _ :: s'' => lines' (assert_smaller s s'')
+                 (l, s') => l ::: case s' of
+                                       [] => []
+                                       _ :: s'' => forget $ lines' (assert_smaller s s'')
 
 ||| Splits a string into a list of newline separated strings.
 |||
@@ -104,7 +109,7 @@ lines' s  = case break isNL s of
 ||| lines  "\rA BC\nD\r\nE\n"
 ||| ```
 export
-lines : String -> List String
+lines : String -> List1 String
 lines s = map pack (lines' (unpack s))
 
 ||| Joins the character lists by newlines into a single character list.
@@ -115,6 +120,7 @@ lines s = map pack (lines' (unpack s))
 export
 unlines' : List (List Char) -> List Char
 unlines' [] = []
+unlines' [l] = l
 unlines' (l::ls) = l ++ '\n' :: unlines' ls
 
 ||| Joins the strings by newlines into a single string.
@@ -125,7 +131,6 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
-
 
 ||| A view checking whether a string is empty
 ||| and, if not, returning its head and tail

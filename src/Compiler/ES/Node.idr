@@ -17,9 +17,11 @@ import System.File
 import Data.Maybe
 
 findNode : IO String
-findNode =
-  do env <- idrisGetEnv "NODE"
-     pure $ fromMaybe "/usr/bin/env node" env
+findNode = do
+   Nothing <- idrisGetEnv "NODE"
+      | Just node => pure node
+   path <- pathLookup ["node"]
+   pure $ fromMaybe "/usr/bin/env node" path
 
 ||| Compile a TT expression to Node
 compileToNode : Ref Ctxt Defs ->
@@ -45,7 +47,8 @@ executeExpr c tmpDir tm
      Right () <- coreLift $ writeFile outn js
         | Left err => throw (FileErr outn err)
      node <- coreLift findNode
-     coreLift_ $ system (node ++ " " ++ outn)
+     quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
+     coreLift_ $ system (quoted_node ++ " " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.

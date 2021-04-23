@@ -25,12 +25,12 @@ mutual
   chk env (Ref fc nt n)
       = do defs <- get Ctxt
            Just ty <- lookupTyExact n (gamma defs)
-               | Nothing => throw (UndefinedName fc n)
+               | Nothing => undefinedName fc n
            pure $ gnf env (embed ty)
   chk env (Meta fc n i args)
       = do defs <- get Ctxt
            Just mty <- lookupTyExact (Resolved i) (gamma defs)
-               | Nothing => throw (UndefinedName fc n)
+               | Nothing => undefinedName fc n
            chkMeta fc env !(nf defs env (embed mty)) args
   chk env (Bind fc nm b sc)
       = do bt <- chkBinder env b

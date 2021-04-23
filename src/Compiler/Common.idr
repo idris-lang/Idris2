@@ -1,5 +1,6 @@
 module Compiler.Common
 
+
 import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
@@ -13,11 +14,15 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Libraries.Utils.Binary
+import Libraries.Utils.Path
 
 import Data.IOArray
 import Data.List
+import Data.List1
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.Strings as String
+
+import Idris.Env
 
 import System.Directory
 import System.Info
@@ -86,7 +91,7 @@ compile {c} cg tm out
          let outputDir = outputDirWithDefault d
          ensureDirectoryExists tmpDir
          ensureDirectoryExists outputDir
-         logTime "Code generation overall" $
+         logTime "+ Code generation overall" $
              compileExpr cg c tmpDir outputDir tm out
 
 ||| execute
@@ -261,7 +266,7 @@ getCompileData doLazyAnnots phase tm_in
          -- to check than a NameMap!)
          asize <- getNextEntry
          arr <- coreLift $ newArray asize
-         logTime "Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
+         logTime "++ Get names" $ getAllDesc (natHackNames' ++ keys ns) arr defs
 
          let entries = mapMaybe id !(coreLift (toList arr))
          let allNs = map (Resolved . fst) entries
@@ -271,9 +276,9 @@ getCompileData doLazyAnnots phase tm_in
          -- unknown due to cyclic modules (i.e. declared in one, defined in
          -- another)
          rcns <- filterM nonErased cns
-         logTime "Merge lambda" $ traverse_ mergeLamDef rcns
-         logTime "Fix arity" $ traverse_ fixArityDef rcns
-         logTime "Forget names" $ traverse_ mkForgetDef rcns
+         logTime "++ Merge lambda" $ traverse_ mergeLamDef rcns
+         logTime "++ Fix arity" $ traverse_ fixArityDef rcns
+         logTime "++ Forget names" $ traverse_ mkForgetDef rcns
 
          compiledtm <- fixArityExp !(compileExp tm)
          let mainname = MN "__mainExpression" 0
@@ -281,17 +286,17 @@ getCompileData doLazyAnnots phase tm_in
 
          namedefs <- traverse getNamedDef rcns
          lifted_in <- if phase >= Lifted
-                         then logTime "Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
                          else pure []
 
          let lifted = (mainname, MkLFun [] [] liftedtm) ::
                       ldefs ++ concat lifted_in
 
          anf <- if phase >= ANF
-                   then logTime "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
                    else pure []
          vmcode <- if phase >= VMCode
-                      then logTime "Get VM Code" $ pure (allDefs anf)
+                      then logTime "++ Get VM Code" $ pure (allDefs anf)
                       else pure []
 
          defs <- get Ctxt
@@ -432,3 +437,15 @@ getExtraRuntime directives
       Right contents <- coreLift $ readFile p
         | Left err => throw (FileErr p err)
       pure contents
+
+||| Looks up an executable from a list of candidate names in the PATH
+export
+pathLookup : List String -> IO (Maybe String)
+pathLookup candidates
+    = do path <- idrisGetEnv "PATH"
+         let extensions = if isWindows then [".exe", ".cmd", ".bat", ""] else [""]
+         let pathList = forget $ String.split (== pathSeparator) $ fromMaybe "/usr/bin:/usr/local/bin" path
+         let candidates = [p ++ "/" ++ x ++ y | p <- pathList,
+                                                x <- candidates,
+                                                y <- extensions ]
+         firstExists candidates

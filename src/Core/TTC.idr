@@ -11,6 +11,7 @@ import Core.Options
 import Core.TT
 
 import Libraries.Data.NameMap
+import Libraries.Data.PosMap
 import Data.Vect
 
 import Libraries.Utils.Binary

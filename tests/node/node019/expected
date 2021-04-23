@@ -1,6 +1,6 @@
-ERROR: Unhandled input for Main.foo at partial.idr:4:1--4:17
-2
-ERROR: Unhandled input for Main.lookup' at partial.idr:19:1--19:40
-ERROR: Unhandled input for Main.lookup' at partial.idr:19:1--19:40
 1/1: Building partial (partial.idr)
-Main> Main> Main> Main> Main> Bye for now!
+Main> ERROR: Unhandled input for Main.foo at partial.idr:4:1--4:17
+Main> 2
+Main> ERROR: Unhandled input for Main.lookup' at partial.idr:19:1--19:40
+Main> ERROR: Unhandled input for Main.lookup' at partial.idr:19:1--19:40
+Main> Bye for now!

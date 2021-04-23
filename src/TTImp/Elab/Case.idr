@@ -32,7 +32,7 @@ changeVar old new (Meta fc nm i args)
     = Meta fc nm i (map (changeVar old new) args)
 changeVar (MkVar old) (MkVar new) (Bind fc x b sc)
     = Bind fc x (assert_total (map (changeVar (MkVar old) (MkVar new)) b))
-		            (changeVar (MkVar (Later old)) (MkVar (Later new)) sc)
+           (changeVar (MkVar (Later old)) (MkVar (Later new)) sc)
 changeVar old new (App fc fn arg)
     = App fc (changeVar old new fn) (changeVar old new arg)
 changeVar old new (As fc s nm p)
@@ -336,11 +336,11 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
                         (bindCaseLocals loc' (map getNestData (names nest))
                                         ns rhs)
     -- With isn't allowed in a case block but include for completeness
-    updateClause casen splitOn nest env (WithClause loc' lhs wval flags cs)
+    updateClause casen splitOn nest env (WithClause loc' lhs wval prf flags cs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args
               lhs' = apply (IVar loc' casen) args' in
-              WithClause loc' (applyNested nest lhs') wval flags cs
+              WithClause loc' (applyNested nest lhs') wval prf flags cs
     updateClause casen splitOn nest env (ImpossibleClause loc' lhs)
         = let (_, args) = addEnv 0 env (usedIn lhs)
               args' = mkSplit splitOn lhs args

@@ -135,7 +135,7 @@ mutual
 
            gdefs <- lookupNameBy id n (gamma defs)
            [(n', _, gdef)] <- dropNoMatch mty gdefs
-              | [] => throw (UndefinedName fc n)
+              | [] => undefinedName fc n
               | ts => throw (AmbiguousName fc (map fst ts))
            tynf <- nf defs [] (type gdef)
            -- #899 we need to make sure that type & data constructors are marked

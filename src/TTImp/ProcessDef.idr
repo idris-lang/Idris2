@@ -32,8 +32,13 @@ import Data.List
 import Libraries.Data.NameMap
 import Data.Strings
 import Data.Maybe
-
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.String.Extra
+
+%hide Data.Strings.lines
+%hide Data.Strings.lines'
+%hide Data.Strings.unlines
+%hide Data.Strings.unlines'
 
 %default covering
 
@@ -318,16 +323,21 @@ checkLHS : {vars : _} ->
                            Term vars', Term vars')))
 checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
     = do defs <- get Ctxt
+         logRaw "declare.def.lhs" 30 "Raw LHS: " lhs_in
          lhs_raw <- if trans
                        then pure lhs_in
                        else lhsInCurrentNS nest lhs_in
+         logRaw "declare.def.lhs" 30 "Raw LHS in current NS: " lhs_raw
+
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
          (_, lhs_bound) <- bindNames False lhs_raw
          setUnboundImplicits autoimp
+         logRaw "declare.def.lhs" 30 "Raw LHS with implicits bound" lhs_bound
+
          lhs <- if trans
                    then pure lhs_bound
-                   else implicitsAs defs vars lhs_bound
+                   else implicitsAs n defs vars lhs_bound
 
          logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
 -- todo: add Pretty RawImp instance
@@ -453,7 +463,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
 
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
-checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in wval_raw flags cs)
+checkClause {vars} mult vis totreq hashit n opts nest env
+    (WithClause fc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
              checkLHS False mult hashit n opts nest env fc lhs_in
          let wmode
@@ -485,8 +496,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          -- Abstracting over 'wval' in the scope of bNotReq in order
          -- to get the 'magic with' behaviour
-         let wargn = MN "warg" 0
-         let scenv = Pi fc top Explicit wvalTy :: wvalEnv
+         (wargs ** (scenv, var, binder)) <- bindWithArgs wvalTy ((,wval) <$> mprf) wvalEnv
 
          let bnr = bindNotReq fc 0 env' withSub [] reqty
          let notreqns = fst bnr
@@ -495,11 +505,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
          rdefs <- if Syntactic `elem` flags
                      then clearDefs defs
                      else pure defs
-         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weaken wval))
-                            (Local fc (Just False) _ First)
+         wtyScope <- replace rdefs scenv !(nf rdefs scenv (weakenNs (mkSizeOf wargs) wval))
+                            var
                             !(nf rdefs scenv
-                                 (weaken {n=wargn} notreqty))
-         let bNotReq = Bind fc wargn (Pi fc top Explicit wvalTy) wtyScope
+                                 (weakenNs (mkSizeOf wargs) notreqty))
+         let bNotReq = binder wtyScope
 
          let Just (reqns, envns, wtype) = bindReq fc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
@@ -518,9 +528,20 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
          widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
                                     (newDef fc wname (if isErased mult then erased else top)
                                       vars wtype vis None))
-         let rhs_in = apply (IVar fc wname)
-                        (map (IVar fc) envns ++
-                         map (maybe wval_raw (\pn => IVar fc (snd pn))) wargNames)
+
+         let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
+               := flip maybe (\pn => [(Nothing, IVar fc (snd pn))]) $
+                    (Nothing, wval_raw) ::
+                    case mprf of
+                      Nothing => []
+                      Just _  =>
+                       let fc = emptyFC in
+                       let refl = IVar fc (NS builtinNS (UN "Refl")) in
+                       [(mprf, INamedApp fc refl (UN "x") wval_raw)]
+
+         let rhs_in = gapply (IVar fc wname)
+                    $ map (\ nm => (Nothing, IVar fc nm)) envns
+                   ++ concatMap toWarg wargNames
 
          log "declare.def.clause" 3 $ "Applying to with argument " ++ show rhs_in
          rhs <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
@@ -540,6 +561,67 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
 
          pure (Right (MkClause env' lhspat rhs))
   where
+    bindWithArgs :
+       (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
+       (wvalEnv : Env Term xs) ->
+       Core (ext : List Name
+         ** ( Env Term (ext ++ xs)
+            , Term (ext ++ xs)
+            , (Term (ext ++ xs) -> Term xs)
+            ))
+    bindWithArgs {xs} wvalTy Nothing wvalEnv =
+      let wargn : Name
+          wargn = MN "warg" 0
+          wargs : List Name
+          wargs = [wargn]
+
+          scenv : Env Term (wargs ++ xs)
+                := Pi fc top Explicit wvalTy :: wvalEnv
+
+          var : Term (wargs ++ xs)
+              := Local fc (Just False) Z First
+
+          binder : Term (wargs ++ xs) -> Term xs
+                 := Bind fc wargn (Pi fc top Explicit wvalTy)
+
+      in pure (wargs ** (scenv, var, binder))
+
+    bindWithArgs {xs} wvalTy (Just (name, wval)) wvalEnv = do
+      defs <- get Ctxt
+
+      let eqName = NS builtinNS (UN "Equal")
+      Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
+        | _ => throw (InternalError "Cannot find builtin Equal")
+      let eqTyCon = Ref fc (TyCon t ar) eqName
+
+      let wargn : Name
+          wargn = MN "warg" 0
+          wargs : List Name
+          wargs = [name, wargn]
+
+          wvalTy' := weaken wvalTy
+          eqTy : Term (MN "warg" 0 :: xs)
+               := apply fc eqTyCon
+                           [ wvalTy'
+                           , wvalTy'
+                           , weaken wval
+                           , Local fc (Just False) Z First
+                           ]
+
+          scenv : Env Term (wargs ++ xs)
+                := Pi fc top Implicit eqTy
+                :: Pi fc top Explicit wvalTy
+                :: wvalEnv
+
+          var : Term (wargs ++ xs)
+              := Local fc (Just False) (S Z) (Later First)
+
+          binder : Term (wargs ++ xs) -> Term xs
+                 := \ t => Bind fc wargn (Pi fc top Explicit wvalTy)
+                         $ Bind fc name  (Pi fc top Implicit eqTy) t
+
+      pure (wargs ** (scenv, var, binder))
+
     -- If it's 'KeepCons/SubRefl' in 'outprf', that means it was in the outer
     -- environment so we need to keep it in the same place in the 'with'
     -- function. Hence, turn it to KeepCons whatever
@@ -562,9 +644,10 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
               (_ ** KeepCons rest)
 
     -- Rewrite the clauses in the block to use an updated LHS.
-    -- 'drop' is the number of additional with arguments we expect (i.e.
-    -- the things to drop from the end before matching LHSs)
-    mkClauseWith : (drop : Nat) -> Name -> List (Maybe (PiInfo RawImp, Name)) ->
+    -- 'drop' is the number of additional with arguments we expect
+    -- (i.e. the things to drop from the end before matching LHSs)
+    mkClauseWith : (drop : Nat) -> Name ->
+                   List (Maybe (PiInfo RawImp, Name)) ->
                    RawImp -> ImpClause ->
                    Core ImpClause
     mkClauseWith drop wname wargnames lhs (PatClause ploc patlhs rhs)
@@ -572,12 +655,12 @@ checkClause {vars} mult vis totreq hashit n opts nest env (WithClause fc lhs_in 
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              pure (PatClause ploc newlhs newrhs)
-    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs flags ws)
+    mkClauseWith drop wname wargnames lhs (WithClause ploc patlhs rhs prf flags ws)
         = do log "declare.def.clause.with" 20 "WithClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              newrhs <- withRHS ploc drop wname wargnames rhs lhs
              ws' <- traverse (mkClauseWith (S drop) wname wargnames lhs) ws
-             pure (WithClause ploc newlhs newrhs flags ws')
+             pure (WithClause ploc newlhs newrhs prf flags ws')
     mkClauseWith drop wname wargnames lhs (ImpossibleClause ploc patlhs)
         = do log "declare.def.clause.with" 20 "ImpossibleClause"
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
@@ -740,7 +823,7 @@ processDef opts nest env fc n_in cs_in
     = do n <- inCurrentNS n_in
          defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => throw (NoDeclaration fc n)
+              | Nothing => noDeclaration fc n
          let None = definition gdef
               | _ => throw (AlreadyDefined fc n)
          let ty = type gdef
@@ -797,7 +880,7 @@ processDef opts nest env fc n_in cs_in
 
          md <- get MD -- don't need the metadata collected on the coverage check
 
-         cov <- checkCoverage nidx ty mult cs
+         cov <- logTime ("+++ Checking Coverage " ++ show n) $ checkCoverage nidx ty mult cs
          setCovering fc n cov
          put MD md
 

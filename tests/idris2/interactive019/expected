@@ -2,27 +2,24 @@
 Main> prim__cast_CharString : Char -> String
 
 Main.sameSig : Char -> String
+  
 
 Data.Strings.singleton : Char -> String
-
-Totality: total
+  Totality: total
 
 Prelude.Show.show : Char -> String
 
 Prelude.Cast.cast : Char -> String
 Main> Prelude.const : a -> b -> a
-	Constant function.  Ignores its second argument.
-
-Totality: total
+  Constant function. Ignores its second argument.
+  Totality: total
 Main> Prelude.toUpper : Char -> Char
-	Convert a letter to the corresponding upper-case letter, if any.
-	Non-letters are ignored.
-
-Totality: total
+  Convert a letter to the corresponding upper-case letter, if any.
+  Non-letters are ignored.
+  Totality: total
 
 Prelude.toLower : Char -> Char
-	Convert a letter to the corresponding lower-case letter, if any.
-	Non-letters are ignored.
-
-Totality: total
+  Convert a letter to the corresponding lower-case letter, if any.
+  Non-letters are ignored.
+  Totality: total
 Main> Bye for now!

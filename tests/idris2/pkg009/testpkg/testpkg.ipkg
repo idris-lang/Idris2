@@ -1,0 +1,12 @@
+package testpkg
+
+authors = "Joe Bloggs"
+maintainers = "Joe Bloggs"
+license = "BSD3 but see LICENSE for more information"
+brief = "This is a dummy package."
+readme = "README.md"
+
+main = Main
+
+modules = Main
+opts = "--no-color --console-width 0"

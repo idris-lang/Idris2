@@ -1,0 +1,2 @@
+$1 --build foo.ipkg --build bar.ipkg
+rm -rf  build/

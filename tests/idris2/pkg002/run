@@ -1,5 +1,5 @@
 cd src/Top
-../../$1 --find-ipkg --check Dummy.idr
+$1 --find-ipkg --check Dummy.idr
 cd ../..
 
 rm -rf build

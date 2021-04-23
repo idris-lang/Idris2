@@ -241,9 +241,18 @@ export
 succInjective : (0 left, right : Nat) -> S left = S right -> left = right
 succInjective _ _ Refl = Refl
 
-export total
-SIsNotZ : (S x = Z) -> Void
-SIsNotZ Refl impossible
+||| A definition of non-zero with a better behaviour than `Not (x = Z)`
+||| This is amenable to proof search and `NonZero Z` is more readily
+||| detected as impossible by Idris
+public export
+data NonZero : Nat -> Type where
+  SIsNonZero : NonZero (S x)
+
+export Uninhabited (NonZero Z) where uninhabited SIsNonZero impossible
+
+export
+SIsNotZ : Not (S x = Z)
+SIsNotZ = absurd
 
 ||| Auxiliary function:
 ||| mod' fuel a b = a `mod` (S b)
@@ -258,13 +267,13 @@ mod' (S fuel) centre right =
         mod' fuel (minus centre (S right)) right
 
 public export
-modNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
-modNatNZ left Z         p = void (p Refl)
+modNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
+modNatNZ left Z         p = void (absurd p)
 modNatNZ left (S right) _ = mod' left left right
 
 export partial
 modNat : Nat -> Nat -> Nat
-modNat left (S right) = modNatNZ left (S right) SIsNotZ
+modNat left (S right) = modNatNZ left (S right) SIsNonZero
 
 ||| Auxiliary function:
 ||| div' fuel a b = a `div` (S b)
@@ -280,23 +289,22 @@ div' (S fuel) centre right =
 
 -- 'public' to allow type-level division
 public export
-divNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
-divNatNZ left Z         p = void (p Refl)
+divNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divNatNZ left (S right) _ = div' left left right
 
 export partial
 divNat : Nat -> Nat -> Nat
-divNat left (S right) = divNatNZ left (S right) SIsNotZ
+divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
 export partial
-divCeilNZ : Nat -> (y: Nat) -> Not (y = Z) -> Nat
+divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
   S _ => S (divNatNZ x y p)
 
 export partial
 divCeil : Nat -> Nat -> Nat
-divCeil x (S y) = divCeilNZ x (S y) SIsNotZ
+divCeil x (S y) = divCeilNZ x (S y) SIsNonZero
 
 
 public export
@@ -310,8 +318,7 @@ divmod' (S fuel) centre right =
     in (S (fst qr), snd qr)
 
 public export
-divmodNatNZ : Nat -> (y: Nat) -> Not (y = Z) -> (Nat, Nat)
-divmodNatNZ left Z         p = void (p Refl)
+divmodNatNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> (Nat, Nat)
 divmodNatNZ left (S right) _ = divmod' left left right
 
 
@@ -324,7 +331,7 @@ export partial
 gcd : (a: Nat) -> (b: Nat) -> {auto ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
-gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNotZ)
+gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNonZero)
 
 export partial
 lcm : Nat -> Nat -> Nat

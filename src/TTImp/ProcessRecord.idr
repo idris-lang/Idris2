@@ -63,27 +63,27 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                       put Ctxt (record { currentNS = cns,
                                          nestedNS = newns :: nns } defs)
   where
-    paramTelescope : List (Maybe Name, RigCount, PiInfo RawImp, RawImp)
+    paramTelescope : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
     paramTelescope = map jname params
       where
         jname : (Name, RigCount, PiInfo RawImp, RawImp)
-             -> (Maybe Name, RigCount, PiInfo RawImp, RawImp)
+             -> (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
         -- Record type parameters are implicit in the constructor
         -- and projections
-        jname (n, _, _, t) = (Just n, erased, Implicit, t)
+        jname (n, _, _, t) = (EmptyFC, Just n, erased, Implicit, t)
 
     fname : IField -> Name
     fname (MkIField fc c p n ty) = n
 
     farg : IField ->
-           (Maybe Name, RigCount, PiInfo RawImp, RawImp)
-    farg (MkIField fc c p n ty) = (Just n, c, p, ty)
+           (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
+    farg (MkIField fc c p n ty) = (fc, Just n, c, p, ty)
 
-    mkTy : List (Maybe Name, RigCount, PiInfo RawImp, RawImp) ->
+    mkTy : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp) ->
            RawImp -> RawImp
     mkTy [] ret = ret
-    mkTy ((n, c, imp, argty) :: args) ret
-        = IPi EmptyFC c imp n argty (mkTy args ret)
+    mkTy ((fc, n, c, imp, argty) :: args) ret
+        = IPi fc c imp n argty (mkTy args ret)
 
     recTy : RawImp
     recTy = apply (IVar fc tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
@@ -144,30 +144,30 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    projTy <- bindTypeNames []
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
-                                      IPi fc top Explicit (Just rname) recTy ty'
+                                      IPi bfc top Explicit (Just rname) recTy ty'
                    log "declare.record.projection" 5 $ "Projection " ++ show rfNameNS ++ " : " ++ show projTy
                    processDecl [] nest env
-                       (IClaim fc (if isErased rc
+                       (IClaim bfc (if isErased rc
                                       then erased
                                       else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC rfNameNS projTy))
 
                    -- Define the LHS and RHS
                    let lhs_exp
-                          = apply (IVar fc con)
-                                    (replicate done (Implicit fc True) ++
+                          = apply (IVar bfc con)
+                                    (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
                                            then [IBindVar EmptyFC fldNameStr]
                                            else []) ++
-                                    (replicate (countExp sc) (Implicit fc True)))
-                   let lhs = IApp fc (IVar fc rfNameNS)
+                                    (replicate (countExp sc) (Implicit bfc True)))
+                   let lhs = IApp bfc (IVar bfc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
-                                    else INamedApp fc lhs_exp (UN fldNameStr)
-                                             (IBindVar fc fldNameStr))
+                                    else INamedApp bfc lhs_exp (UN fldNameStr)
+                                             (IBindVar bfc fldNameStr))
                    let rhs = IVar EmptyFC (UN fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
-                       (IDef fc rfNameNS [PatClause fc lhs rhs])
+                       (IDef bfc rfNameNS [PatClause bfc lhs rhs])
 
                    -- Make prefix projection aliases if requested
                    when !isPrefixRecordProjections $ do  -- beware: `!` is NOT boolean `not`!
@@ -175,22 +175,22 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                      -- we just reuse `projTy` defined above
                      log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show unNameNS ++ " : " ++ show projTy
                      processDecl [] nest env
-                         (IClaim fc (if isErased rc
+                         (IClaim bfc (if isErased rc
                                         then erased
                                         else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC unNameNS projTy))
 
                      -- Define the LHS and RHS
-                     let lhs = IVar fc unNameNS
-                     let rhs = IVar fc rfNameNS
+                     let lhs = IVar bfc unNameNS
+                     let rhs = IVar bfc rfNameNS
                      log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show lhs ++ " = " ++ show rhs
                      processDecl [] nest env
-                         (IDef fc unNameNS [PatClause fc lhs rhs])
+                         (IDef bfc unNameNS [PatClause bfc lhs rhs])
 
                    -- Move on to the next getter.
                    --
                    -- In upds, we use unNameNS (as opposed to rfNameNS or both)
                    -- because the field types will probably mention the UN versions of the projections.
-                   let upds' = (n, IApp fc (IVar fc unNameNS) (IVar fc rname)) :: upds
+                   let upds' = (n, IApp bfc (IVar bfc unNameNS) (IVar bfc rname)) :: upds
                    elabGetters con
                                (if imp == Explicit
                                    then S done else done)

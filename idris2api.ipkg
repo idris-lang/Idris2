@@ -22,6 +22,7 @@ modules =
     Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC.CC,
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
@@ -71,10 +72,15 @@ modules =
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,
+
     Idris.Package,
+    Idris.Package.Init,
+    Idris.Package.Types,
+
     Idris.Parser,
     Idris.Parser.Let,
     Idris.Pretty,
+    Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,
     Idris.REPLCommon,
@@ -106,11 +112,13 @@ modules =
     Libraries.Data.DList,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
+    Libraries.Data.IOMatrix,
     Libraries.Data.LengthMatch,
     Libraries.Data.List.Extra,
     Libraries.Data.List.Lazy,
     Libraries.Data.List1,
     Libraries.Data.NameMap,
+    Libraries.Data.PosMap,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,
@@ -118,7 +126,10 @@ modules =
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
 
+    Libraries.System.Directory.Tree,
+
     Libraries.Text.Bounded,
+    Libraries.Text.Distance.Levenshtein,
     Libraries.Text.Lexer,
     Libraries.Text.Lexer.Core,
     Libraries.Text.Lexer.Tokenizer,
@@ -162,6 +173,7 @@ modules =
     TTImp.Impossible,
     TTImp.Parser,
     TTImp.PartialEval,
+    TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
     TTImp.ProcessDef,

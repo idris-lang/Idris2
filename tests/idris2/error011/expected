@@ -7,11 +7,11 @@ ConstructorDuplicate.idr:1:14--1:15
 
 Error: Main.D is already defined.
 
-ConstructorDuplicate.idr:5:3--5:15
+ConstructorDuplicate.idr:5:3--5:4
  1 | data A = B | B
  2 | 
  3 | data C : Type -> Type where
  4 |   D : C Int
  5 |   D : C String
-       ^^^^^^^^^^^^
+       ^
 

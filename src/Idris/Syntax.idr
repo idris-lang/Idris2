@@ -25,6 +25,13 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 public export
 data Fixity = InfixL | InfixR | Infix | Prefix
 
+export
+Show Fixity where
+  show InfixL = "infixl"
+  show InfixR = "infixr"
+  show Infix  = "infix"
+  show Prefix = "prefix"
+
 public export
 OpStr : Type
 OpStr = Name
@@ -221,14 +228,15 @@ mutual
   data PClause : Type where
        MkPatClause : FC -> (lhs : PTerm) -> (rhs : PTerm) ->
                      (whereblock : List PDecl) -> PClause
-       MkWithClause : FC -> (lhs : PTerm) -> (wval : PTerm) ->
+       MkWithClause : FC -> (lhs : PTerm) ->
+                      (wval : PTerm) -> (prf : Maybe Name) ->
                       List WithFlag -> List PClause -> PClause
        MkImpossible : FC -> (lhs : PTerm) -> PClause
 
   export
   getPClauseLoc : PClause -> FC
   getPClauseLoc (MkPatClause fc _ _ _) = fc
-  getPClauseLoc (MkWithClause fc _ _ _ _) = fc
+  getPClauseLoc (MkWithClause fc _ _ _ _ _) = fc
   getPClauseLoc (MkImpossible fc _) = fc
 
   public export
@@ -252,6 +260,7 @@ mutual
        DefaultTotality : TotalReq -> Directive
        PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
+       NFMetavarThreshold : Nat -> Directive
 
   public export
   data PField : Type where
@@ -328,6 +337,7 @@ mutual
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
+       PBuiltin : FC -> BuiltinType -> Name -> PDecl
 
   export
   getPDeclLoc : PDecl -> FC
@@ -346,6 +356,7 @@ mutual
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PBuiltin fc _ _) = fc
 
   export
   isPDef : PDecl -> Maybe (FC, List PClause)
@@ -482,7 +493,7 @@ record Module where
 mutual
   showAlt : PClause -> String
   showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-  showAlt (MkWithClause _ lhs wval flags cs) = " | <<with alts not possible>>;"
+  showAlt (MkWithClause _ lhs wval prf flags cs) = " | <<with alts not possible>>;"
   showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
 
   showDo : PDo -> String
@@ -540,7 +551,7 @@ mutual
       where
         showAlt : PClause -> String
         showAlt (MkPatClause _ lhs rhs _) = " | " ++ show lhs ++ " => " ++ show rhs ++ ";"
-        showAlt (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
+        showAlt (MkWithClause _ lhs rhs prf flags _) = " | <<with alts not possible>>"
         showAlt (MkImpossible _ lhs) = " | " ++ show lhs ++ " impossible;"
     showPrec _ (PCase _ tm cs)
         = "case " ++ show tm ++ " of { " ++
@@ -548,7 +559,7 @@ mutual
       where
         showCase : PClause -> String
         showCase (MkPatClause _ lhs rhs _) = show lhs ++ " => " ++ show rhs
-        showCase (MkWithClause _ lhs rhs flags _) = " | <<with alts not possible>>"
+        showCase (MkWithClause _ lhs rhs _ flags _) = " | <<with alts not possible>>"
         showCase (MkImpossible _ lhs) = show lhs ++ " impossible"
     showPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPrec d sc
@@ -793,19 +804,40 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax (insert "=" (Infix, 0) empty)
-               (insert "-" 10 empty)
+    = MkSyntax initInfix
+               initPrefix
                empty
                []
-               empty
-               empty
+               initDocStrings
+               initSaveDocStrings
                []
                []
                (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
 
+  where
+
+    initInfix : StringMap (Fixity, Nat)
+    initInfix = insert "=" (Infix, 0) empty
+
+    initPrefix : StringMap Nat
+    initPrefix = fromList
+      [ ("-", 10)
+      , ("negate", 10) -- for documentation purposes
+      ]
+
+    initDocStrings : ANameMap String
+    initDocStrings = empty
+
+    initSaveDocStrings : NameMap ()
+    initSaveDocStrings = empty
+
 -- A label for Syntax info in the global state
 export
 data Syn : Type where
+
+export
+withSyn : {auto s : Ref Syn SyntaxInfo} -> Core a -> Core a
+withSyn = wrapRef Syn (\_ => pure ())
 
 export
 mapPTermM : (PTerm -> Core PTerm) -> PTerm -> Core PTerm
@@ -1010,9 +1042,10 @@ mapPTermM f = goPTerm where
       MkPatClause fc <$> goPTerm lhs
                      <*> goPTerm rhs
                      <*> goPDecls wh
-    goPClause (MkWithClause fc lhs wVal flags cls) =
+    goPClause (MkWithClause fc lhs wVal prf flags cls) =
       MkWithClause fc <$> goPTerm lhs
                       <*> goPTerm wVal
+                      <*> pure prf
                       <*> pure flags
                       <*> goPClauses cls
     goPClause (MkImpossible fc lhs) = MkImpossible fc <$> goPTerm lhs
@@ -1056,6 +1089,7 @@ mapPTermM f = goPTerm where
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
+    goPDecl p@(PBuiltin _ _ _) = pure p
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl
