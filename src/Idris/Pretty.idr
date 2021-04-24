@@ -279,19 +279,19 @@ mutual
       go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp <++> go startPrec y
         where prettyOp : Doc ann
               prettyOp = if isOpName op
-                then Chara '`' <+> pretty op <+> Chara '`'
-                else pretty op
+                then pretty op
+                else Chara '`' <+> pretty op <+> Chara '`'
       go d (PPrefixOp _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
       go d (PSectionL _ op x) = parens (prettyOp <++> go startPrec x)
         where prettyOp : Doc ann
               prettyOp = if isOpName op
-                then Chara '`' <+> pretty op <+> Chara '`'
-                else pretty op
+                then pretty op
+                else Chara '`' <+> pretty op <+> Chara '`'
       go d (PSectionR _ x op) = parens (go startPrec x <++> prettyOp)
         where prettyOp : Doc ann
               prettyOp = if isOpName op
-                then Chara '`' <+> pretty op <+> Chara '`'
-                else pretty op
+                then pretty op
+                else Chara '`' <+> pretty op <+> Chara '`'
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
       go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
