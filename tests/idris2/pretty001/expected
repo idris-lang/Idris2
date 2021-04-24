@@ -1,0 +1,39 @@
+1/1: Building Issue1328A (Issue1328A.idr)
+Issue1328A>  0 b : Type
+ 0 a : Type
+------------------------------
+undef_0 : a `InCtx` b
+Issue1328A>  0 a : Type
+ 0 b : Type
+------------------------------
+undef_1 : a `InCtx` b
+Issue1328A>  0 b : Type
+ 0 a : Type
+------------------------------
+undef_2 : a `InCtx` b
+Issue1328A>  0 b : Type
+ 0 a : Type
+------------------------------
+undef_3 : a |- b
+Issue1328A>  0 a : Type
+ 0 b : Type
+------------------------------
+undef_4 : a |- b
+Issue1328A>  0 b : Type
+ 0 a : Type
+------------------------------
+undef_5 : a |- b
+Issue1328A> Issue1328A.def0 : Integer -> Integer -> Integer
+def0 m n = m `div` n
+Issue1328A> Issue1328A.def1 : Integer -> Integer -> Integer
+def1 m n = m `div` n
+Issue1328A> Issue1328A.def2 : Integer -> Integer -> Integer
+def2 m n = m `div` n
+Issue1328A> Issue1328A.inDef0 : Nat
+inDef0 = fromInteger 42 + fromInteger 21
+Issue1328A> Issue1328A.inDef1 : Nat
+inDef1 = fromInteger 42 + fromInteger 21
+Issue1328A> Issue1328A.inDef2 : Nat
+inDef2 = fromInteger 42 + fromInteger 21
+Issue1328A> 
+Bye for now!

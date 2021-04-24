@@ -21,3 +21,24 @@ def1 m n = (`div` n) m
 
 def2 : (m, n : Integer) -> Integer
 def2 m n = (m `div`) n
+
+infix 4 |-
+data (|-) : (a, b : Type) -> Type where
+
+inProp0 : a |- b
+inProp0 = ?undef_3
+
+inProp1 : (|- b) a
+inProp1 = ?undef_4
+
+inProp2 : (a |-) b
+inProp2 = ?undef_5
+
+inDef0 : Nat
+inDef0 = 42 + 21
+
+inDef1 : Nat
+inDef1 = (+ 21) 42
+
+inDef2 : Nat
+inDef2 = (42 +) 21
