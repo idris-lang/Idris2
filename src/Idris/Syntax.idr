@@ -596,10 +596,19 @@ mutual
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
-    showPrec d (POp _ op x y) = showPrec d x ++ " " ++ showPrec d op ++ " " ++ showPrec d y
+    showPrec d (POp _ op x y) =
+      if isOpName op
+        then showPrec d x ++ " "  ++ showPrec d op ++ " "  ++ showPrec d y
+        else showPrec d x ++ " `" ++ showPrec d op ++ "` " ++ showPrec d y
     showPrec d (PPrefixOp _ op x) = showPrec d op ++ showPrec d x
-    showPrec d (PSectionL _ op x) = "(" ++ showPrec d op ++ " " ++ showPrec d x ++ ")"
-    showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
+    showPrec d (PSectionL _ op x) =
+      if isOpName op
+        then "("  ++ showPrec d op ++ " "  ++ showPrec d x ++ ")"
+        else "(`" ++ showPrec d op ++ "` " ++ showPrec d x ++ ")"
+    showPrec d (PSectionR _ x op) =
+    if isOpName op
+      then "(" ++ showPrec d x ++ " "  ++ showPrec d op ++ ")"
+      else "(" ++ showPrec d x ++ " `" ++ showPrec d op ++ "`)"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
     showPrec d (PString _ xs) = join " ++ " $ show <$> xs
