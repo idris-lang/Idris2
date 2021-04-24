@@ -7,6 +7,8 @@ modules = Control.App,
           Control.App.Console,
           Control.App.FileIO,
 
+          Control.Applicative.Const,
+
           Control.Monad.Either,
           Control.Monad.Error.Either,
           Control.Monad.Error.Interface,
