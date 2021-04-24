@@ -11,7 +11,7 @@ import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Algebra
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Syntax
 
 %default covering

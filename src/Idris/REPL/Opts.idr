@@ -1,4 +1,4 @@
-module Idris.REPLOpts
+module Idris.REPL.Opts
 
 import Compiler.Common
 import Idris.Syntax

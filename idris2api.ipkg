@@ -83,8 +83,6 @@ modules =
     Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,
-    Idris.REPLCommon,
-    Idris.REPLOpts,
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
@@ -101,6 +99,10 @@ modules =
     Idris.IDEMode.REPL,
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
+
+    Idris.REPL.Common,
+    Idris.REPL.Opts,
+    Idris.REPL.FuzzySearch,
 
     Libraries.Control.ANSI,
     Libraries.Control.ANSI.CSI,

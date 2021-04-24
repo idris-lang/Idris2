@@ -38,9 +38,11 @@ import Idris.Parser
 import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.Resugar
-import public Idris.REPLCommon
 import Idris.Syntax
 import Idris.Version
+
+import public Idris.REPL.Common
+import Idris.REPL.FuzzySearch
 
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -241,14 +243,6 @@ printClause l i (ImpossibleClause _ lhsraw)
 lookupDefTyName : Name -> Context ->
                   Core (List (Name, Int, (Def, ClosedTerm)))
 lookupDefTyName = lookupNameBy (\g => (definition g, type g))
-
-public export
-data EditResult : Type where
-  DisplayEdit : Doc IdrisAnn -> EditResult
-  EditError : Doc IdrisAnn -> EditResult
-  MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
-  MadeWith : Maybe String -> List String -> EditResult
-  MadeCase : Maybe String -> List String -> EditResult
 
 updateFile : {auto r : Ref ROpts REPLOpts} ->
              (List String -> List String) -> Core EditResult
@@ -546,43 +540,6 @@ processEdit (MakeWith upd line name)
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
 
-public export
-data MissedResult : Type where
-  CasesMissing : Name -> List String  -> MissedResult
-  CallsNonCovering : Name -> List Name -> MissedResult
-  AllCasesCovered : Name -> MissedResult
-
-public export
-data REPLResult : Type where
-  Done : REPLResult
-  REPLError : Doc IdrisAnn -> REPLResult
-  Executed : PTerm -> REPLResult
-  RequestedHelp : REPLResult
-  Evaluated : PTerm -> (Maybe PTerm) -> REPLResult
-  Printed : Doc IdrisAnn -> REPLResult
-  TermChecked : PTerm -> PTerm -> REPLResult
-  FileLoaded : String -> REPLResult
-  ModuleLoaded : String -> REPLResult
-  ErrorLoadingModule : String -> Error -> REPLResult
-  ErrorLoadingFile : String -> FileError -> REPLResult
-  ErrorsBuildingFile : String -> List Error -> REPLResult
-  NoFileLoaded : REPLResult
-  CurrentDirectory : String -> REPLResult
-  CompilationFailed: REPLResult
-  Compiled : String -> REPLResult
-  ProofFound : PTerm -> REPLResult
-  Missed : List MissedResult -> REPLResult
-  CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List HoleData -> REPLResult
-  OptionsSet : List REPLOpt -> REPLResult
-  LogLevelSet : Maybe LogLevel -> REPLResult
-  ConsoleWidthSet : Maybe Nat -> REPLResult
-  ColorSet : Bool -> REPLResult
-  VersionIs : Version -> REPLResult
-  DefDeclared : REPLResult
-  Exited : REPLResult
-  Edited : EditResult -> REPLResult
-
 getItDecls :
     {auto o : Ref ROpts REPLOpts} ->
     Core (List ImpDecl)
@@ -686,47 +643,6 @@ loadMainFile f
          case errs of
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
-
-docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
-                  {auto c : Ref Ctxt Defs} ->
-                  {auto s : Ref Syn SyntaxInfo} ->
-                  FC -> Name -> Core (List String)
-docsOrSignature fc n
-    = do syn  <- get Syn
-         defs <- get Ctxt
-         all@(_ :: _) <- lookupCtxtName n (gamma defs)
-             | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
-                                     (map fst all)
-             | [] => typeSummary defs
-         pure <$> getDocsForName fc n
-  where
-    typeSummary : Defs -> Core (List String)
-    typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
-                            | Nothing => pure []
-                          ty <- normaliseHoles defs [] (type def)
-                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
-
-equivTypes : {auto c : Ref Ctxt Defs} ->
-             (ty1 : ClosedTerm) ->
-             (ty2 : ClosedTerm) ->
-             Core Bool
-equivTypes ty1 ty2 =
-  do let False = isErased ty1
-          | _ => pure False
-     logTerm "typesearch.equiv" 10 "Candidate: " ty1
-     defs <- get Ctxt
-     True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
-       | False => pure False
-     _ <- newRef UST initUState
-     b <- catch
-           (do res <- unify inTerm replFC [] ty1 ty2
-               case res of
-                 (MkUnifyResult [] _ [] NoLazy) => pure True
-                 _ => pure False)
-           (\err => pure False)
-     when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
-     pure b
 
 ||| Process a single `REPLCmd`
 |||
@@ -982,160 +898,7 @@ process (ImportPackage package) = do
   toPaths tree =
     depthFirst (\x => map (toFilePath x ::) . force) tree (pure [])
 
--- B or _ -> B or A -> B
--- where A and B are spines of references.
-process (FuzzyTypeSearch expr) = do
-  let Just (neg, pos) = parseExpr expr
-    | _ => pure (REPLError (pretty "Bad expression, expected"
-                       <++> code (pretty "B")
-                       <++> pretty "or"
-                       <++> code (pretty "_ -> B")
-                       <++> pretty "or"
-                       <++> code (pretty "A -> B")
-                       <+> pretty ", where"
-                       <++> code (pretty "A")
-                       <++> pretty "and"
-                       <++> code (pretty "B")
-                       <++> pretty "are spines of global names"))
-  defs <- branch
-  let curr = currentNS defs
-  let ctxt = gamma defs
-  filteredDefs <-
-    do names   <- allNames ctxt
-       defs    <- traverse (flip lookupCtxtExact ctxt) names
-       let defs = flip mapMaybe defs $ \ md =>
-                      do d <- md
-                         guard (visibleIn curr (fullname d) (visibility d))
-                         guard (isJust $ userNameRoot (fullname d))
-                         pure d
-       allDefs <- traverse (resolved ctxt) defs
-       filterM (\def => fuzzyMatch neg pos def.type) allDefs
-  put Ctxt defs
-  doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
-  pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
- where
-
-  data NameOrConst = AName Name
-                   | AInt
-                   | AInteger
-                   | ABits8
-                   | ABits16
-                   | ABits32
-                   | ABits64
-                   | AString
-                   | AChar
-                   | ADouble
-                   | AWorld
-                   | AType
-
-  eqConst : (x, y : NameOrConst) -> Bool
-  eqConst AInt     AInt     = True
-  eqConst AInteger AInteger = True
-  eqConst ABits8   ABits8   = True
-  eqConst ABits16  ABits16  = True
-  eqConst ABits32  ABits32  = True
-  eqConst ABits64  ABits64  = True
-  eqConst AString  AString  = True
-  eqConst AChar    AChar    = True
-  eqConst ADouble  ADouble  = True
-  eqConst AWorld   AWorld   = True
-  eqConst AType    AType    = True
-  eqConst _        _        = False
-
-  parseNameOrConst : PTerm -> Maybe NameOrConst
-  parseNameOrConst (PRef _ n)               = Just (AName n)
-  parseNameOrConst (PPrimVal _ IntType)     = Just AInt
-  parseNameOrConst (PPrimVal _ IntegerType) = Just AInteger
-  parseNameOrConst (PPrimVal _ Bits8Type)   = Just ABits8
-  parseNameOrConst (PPrimVal _ Bits16Type)  = Just ABits16
-  parseNameOrConst (PPrimVal _ Bits32Type)  = Just ABits32
-  parseNameOrConst (PPrimVal _ Bits64Type)  = Just ABits64
-  parseNameOrConst (PPrimVal _ StringType)  = Just AString
-  parseNameOrConst (PPrimVal _ CharType)    = Just AChar
-  parseNameOrConst (PPrimVal _ DoubleType)  = Just ADouble
-  parseNameOrConst (PPrimVal _ WorldType)   = Just AWorld
-  parseNameOrConst (PType _)                = Just AType
-  parseNameOrConst _                        = Nothing
-
-  parseExpr' : PTerm -> Maybe (List NameOrConst)
-  parseExpr' (PApp _ f x) =
-    [| parseNameOrConst x :: parseExpr' f |]
-  parseExpr' x = (:: []) <$> parseNameOrConst x
-
-  parseExpr : PTerm -> Maybe (List NameOrConst, List NameOrConst)
-  parseExpr (PPi _ _ _ _ a (PImplicit _)) = do
-    a' <- parseExpr' a
-    pure (a', [])
-  parseExpr (PPi _ _ _ _ a b) = do
-    a' <- parseExpr' a
-    b' <- parseExpr' b
-    pure (a', b')
-  parseExpr b = do
-    b' <- parseExpr' b
-    pure ([], b')
-
-  isApproximationOf : (given : Name)
-                   -> (candidate : Name)
-                   -> Bool
-  isApproximationOf (NS ns n) (NS ns' n') =
-    n == n' && Namespace.isApproximationOf ns ns'
-  isApproximationOf (UN n) (NS ns' (UN n')) =
-    n == n'
-  isApproximationOf (NS ns n) _ =
-    False
-  isApproximationOf (UN n) (UN n') =
-    n == n'
-  isApproximationOf _ _ =
-    False
-
-  isApproximationOf' : (given : NameOrConst)
-                    -> (candidate : NameOrConst)
-                    -> Bool
-  isApproximationOf' (AName x) (AName y) =
-    isApproximationOf x y
-  isApproximationOf' a b = eqConst a b
-
-  ||| Find all name and type literal occurrences.
-  export
-  doFind : List NameOrConst -> Term vars -> List NameOrConst
-  doFind ns (Local fc x idx y) = ns
-  doFind ns (Ref fc x name) = AName name :: ns
-  doFind ns (Meta fc n i xs)
-      = foldl doFind ns xs
-  doFind ns (Bind fc x (Let _ c val ty) scope)
-      = doFind (doFind (doFind ns val) ty) scope
-  doFind ns (Bind fc x b scope)
-      = doFind (doFind ns (binderType b)) scope
-  doFind ns (App fc fn arg)
-      = doFind (doFind ns fn) arg
-  doFind ns (As fc s as tm) = doFind ns tm
-  doFind ns (TDelayed fc x y) = doFind ns y
-  doFind ns (TDelay fc x t y)
-      = doFind (doFind ns t) y
-  doFind ns (TForce fc r x) = doFind ns x
-  doFind ns (PrimVal fc c) =
-    fromMaybe [] ((:: []) <$> parseNameOrConst (PPrimVal fc c)) ++ ns
-  doFind ns (Erased fc i) = ns
-  doFind ns (TType fc) = AType :: ns
-
-  toFullNames' : NameOrConst -> Core NameOrConst
-  toFullNames' (AName x) = AName <$> toFullNames x
-  toFullNames' x = pure x
-
-  fuzzyMatch : (neg : List NameOrConst)
-            -> (pos : List NameOrConst)
-            -> Term vars
-            -> Core Bool
-  fuzzyMatch neg pos (Bind _ _ b sc) = do
-    let refsB = doFind [] (binderType b)
-    refsB <- traverse toFullNames' refsB
-    let neg' = diffBy isApproximationOf' neg refsB
-    fuzzyMatch neg' pos sc
-  fuzzyMatch (_ :: _) pos tm = pure False
-  fuzzyMatch [] pos tm = do
-    let refsB = doFind [] tm
-    refsB <- traverse toFullNames' refsB
-    pure (isNil $ diffBy isApproximationOf' pos refsB)
+process (FuzzyTypeSearch expr) = fuzzySearch expr
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->

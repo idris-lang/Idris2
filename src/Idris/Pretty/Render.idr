@@ -2,7 +2,7 @@ module Idris.Pretty.Render
 
 import Core.Core
 
-import Idris.REPLOpts
+import Idris.REPL.Opts
 
 import Libraries.Control.ANSI.SGR
 import Libraries.Text.PrettyPrint.Prettyprinter

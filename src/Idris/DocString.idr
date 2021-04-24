@@ -6,7 +6,7 @@ import Core.Env
 import Core.TT
 
 import Idris.Pretty.Render
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 
