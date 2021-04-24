@@ -20,6 +20,8 @@ import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
+import Parser.Lexer.Source
+
 %default covering
 
 public export

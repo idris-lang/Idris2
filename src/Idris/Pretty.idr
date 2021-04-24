@@ -5,6 +5,8 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Control.ANSI.SGR
 
+import Parser.Lexer.Source
+
 import public Idris.Pretty.Render
 
 import public Libraries.Text.PrettyPrint.Prettyprinter

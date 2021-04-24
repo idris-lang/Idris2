@@ -238,6 +238,16 @@ export
 isOpChar : Char -> Bool
 isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
 
+export
+||| Test whether a user name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName n = let Just n = userNameRoot n
+                 | Nothing => False
+             in let n' = unpack n
+             in case n' of
+                  []     => False
+                  c :: _ => isOpChar c
+
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 

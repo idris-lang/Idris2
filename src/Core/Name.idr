@@ -76,16 +76,6 @@ isUserName (DN _ n) = isUserName n
 isUserName _ = True
 
 export
-||| Test whether a user name begins with an operator symbol.
-isOpName : Name -> Bool
-isOpName n = let Just n = userNameRoot n
-                 | Nothing => False
-             in let n' = unpack n
-             in case n' of
-                  []     => False
-                  c :: _ => c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
-
-export
 isUN : Name -> Maybe String
 isUN (UN str) = Just str
 isUN _ = Nothing
