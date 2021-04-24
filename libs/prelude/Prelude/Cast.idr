@@ -17,7 +17,7 @@ interface Cast from to where
   ||| Perform a (potentially lossy!) cast operation.
   ||| @ orig The original type
   cast : (orig : from) -> to
-  
+
 export
 Cast a a where
   cast = id
