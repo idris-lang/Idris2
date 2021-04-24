@@ -39,32 +39,13 @@ htmlEscape s = fastAppend $ reverse $ go [] s
 
 export
 htmlPreamble : String -> String -> String -> String
-htmlPreamble title root class = """
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>
-""" ++ htmlEscape title ++ """
-    </title>
-    <link rel="stylesheet" href="
-""" ++ root ++ """
-styles.css">
-  </head>
-  <body class="
-""" ++ class ++ """
-">
-    <header>
-      <strong>Idris2Doc</strong> :
-""" ++ " " ++ htmlEscape title ++ """
-      <nav>
-        <a href="
-""" ++ root ++ """
-index.html">Index</a>
-      </nav>
-    </header>
-    <div class="container">
-"""
+htmlPreamble title root class = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+  ++ "<title>" ++ htmlEscape title ++ "</title>"
+  ++ "<link rel=\"stylesheet\" href=\"" ++ root ++ "styles.css\"></head>"
+  ++ "<body class=\"" ++ class ++ "\">"
+  ++ "<header><strong>Idris2Doc</strong> : " ++ htmlEscape title
+  ++ "<nav><a href=\"" ++ root ++ "index.html\">Index</a></nav></header>"
+  ++ "<div class=\"container\">"
 
 export
 htmlFooter : String
