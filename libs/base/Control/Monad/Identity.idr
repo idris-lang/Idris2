@@ -75,7 +75,7 @@ public export
 Bits a => Bits (Identity a) where
   Index = Index {a}
   Id x .&. Id y = Id (x .&. y)
-  Id x .|. Id y = Id (x .&. y)
+  Id x .|. Id y = Id (x .|. y)
   Id x `xor` Id y = Id (x `xor` y)
   shiftL (Id v) ix = Id (shiftL v ix)
   shiftR (Id v) ix = Id (shiftR v ix)
@@ -87,3 +87,7 @@ Bits a => Bits (Identity a) where
   clearBit (Id v) ix = Id (clearBit v ix)
   testBit (Id v) ix = testBit v ix
   setBit (Id v) ix = Id (setBit v ix)
+
+public export
+FromString a => FromString (Identity a) where
+  fromString = Id . fromString
