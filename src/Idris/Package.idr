@@ -25,6 +25,7 @@ import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
+import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
@@ -414,10 +415,6 @@ check pkg opts =
     runScript (postbuild pkg)
     pure []
 
-removeAllExceptLink : IdrisAnn -> List IdrisAnn
-removeAllExceptLink x@(Link _) = [x]
-removeAllExceptLink _ = []
-
 getNS : Name -> String
 getNS (NS ns _) = show ns
 getNS _ = ""
@@ -444,41 +441,39 @@ packageInternal (NS ns _) =
 packageInternal _ = pure False
 
 renderHtml : {auto c : Ref Ctxt Defs} ->
-             SimpleDocStream IdrisAnn ->
+             SimpleDocTree IdrisAnn ->
              Core String
-renderHtml doc = go [] doc where
-  ignoreAnn : Nat -> SimpleDocStream IdrisAnn -> SimpleDocStream IdrisAnn
-  ignoreAnn 0 ds = ds
-  ignoreAnn n SEmpty = SEmpty
-  ignoreAnn n (SAnnPush _ rest) = ignoreAnn (S n) rest
-  ignoreAnn (S n) (SAnnPop rest) = ignoreAnn n rest
-  ignoreAnn n (SChar _ rest) = ignoreAnn n rest
-  ignoreAnn n (SText _ _ rest) = ignoreAnn n rest
-  ignoreAnn n (SLine _ rest) = ignoreAnn n rest
-
-  go : List String -> SimpleDocStream IdrisAnn -> Core String
-  go _ SEmpty = pure neutral
-  go t (SChar c rest) = pure $ (htmlEscape $ singleton c) <+> !(go t rest)
-  go ts (SText l t rest) = pure $ (htmlEscape t) <+> !(go ts rest)
-  go t (SLine l rest) = pure $ "<br>" <+> !(go t rest)
-  go ts (SAnnPush (Link n) rest) =
-    do Just cName <- tryCanonicalName emptyFC n
-       | Nothing => pure $ "<span class=\"implicit\">" <+> !(go ("span"::ts) rest)
-
-       True <- packageInternal cName
-       | False => pure $ "<span class=\"type resolved\" title=\"" <+> (htmlEscape $ show cName) <+> "\">" <+> (htmlEscape $ nameRoot cName) <+> "</span>" <+> !(go ts (ignoreAnn 1 rest))
-       pure $ "<a class=\"type\" href=\"" ++ (htmlEscape $ getNS cName) ++ ".html#" ++ (htmlEscape $ show cName) ++ "\">" <+> (htmlEscape $ nameRoot cName) <+> "</a>" <+> !(go ts (ignoreAnn 1 rest))
-  go t (SAnnPush _ rest) = pure $ "<a href=\"#\" class=\"thisshouldneverhappen\">" <+> !(go ("a"::t) rest)
-  go (t::ts) (SAnnPop rest) = pure $ "</" ++ t ++ ">" <+> !(go ts rest)
-  go [] (SAnnPop rest) = pure $ "TAG INBALANCE" <+> !(go [] rest)
+renderHtml STEmpty = pure neutral
+renderHtml (STChar c) = pure $ cast c
+renderHtml (STText _ text) = pure text
+renderHtml (STLine _) = pure "<br>"
+renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
+renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
+renderHtml (STAnn Documentation rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
+renderHtml (STAnn (TermName n) rest) = do
+  pure $ "<span class=\"name function\">" <+> nameRoot n <+> "</span>"
+renderHtml (STAnn Header rest) = do
+  resthtml <- renderHtml rest
+  pure $ "<b>" <+> resthtml <+> "</b>"
+renderHtml (STAnn (Link n) rest) = do
+  resthtml <- renderHtml rest
+  Just cName <- tryCanonicalName emptyFC n
+    | Nothing => pure $ "<span class=\"implicit\">" <+> resthtml <+> "</span>"
+  True <- packageInternal cName
+    | False => pure $ "<span class=\"type resolved\" title=\"" <+> (htmlEscape $ show cName) <+> "\">" <+> (htmlEscape $ nameRoot cName) <+> "</span>"
+  pure $ "<a class=\"type\" href=\"" ++ (htmlEscape $ getNS cName) ++ ".html#" ++ (htmlEscape $ show cName) ++ "\">" <+> (htmlEscape $ nameRoot cName) <+> "</a>"
+renderHtml (STAnn ann rest) = do
+  resthtml <- renderHtml rest
+  pure $ "<!-- ann ignored START -->" ++ resthtml ++ "<!-- ann END -->"
+renderHtml (STConcat docs) = pure $ fastConcat !(traverse renderHtml docs)
 
 docDocToHtml : {auto c : Ref Ctxt Defs} ->
                Doc IdrisAnn ->
                Core String
 docDocToHtml doc =
-  let altered = alterAnnotations removeAllExceptLink doc in
-  let ds = layoutPretty (MkLayoutOptions Unbounded) altered in
-      renderHtml ds
+  let ds = layoutUnbounded doc
+      dt = SimpleDocTree.fromStream ds in
+      renderHtml dt
 
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
@@ -520,7 +515,7 @@ makeDoc pkg opts =
                let typeDoc = prettyTerm typeTm
                typeStr <- docDocToHtml typeDoc
                let pname = stripNS ns name
-               writeHtml ("<dt id=\"" ++ (htmlEscape $ show name) ++ "\">")
+               writeHtml ("<dt style=\"opacity: 0.3;\" id=\"" ++ (htmlEscape $ show name) ++ "\">")
                writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")
                writeHtml ("</dt><dd>")
                doc <- getDocsForName emptyFC name

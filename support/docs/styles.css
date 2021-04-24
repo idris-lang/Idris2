@@ -101,19 +101,13 @@ p {
   font-family: "Lucida Console", Monaco, monospace;
   font-size: 10pt;
   line-height: 20px;
-  padding: 2px 0;
+  padding: 2px 6px;
   border: 1px solid #ccc;
   background-color: #f0f0f0;
   display: table;
   width: 100%;
-}
-
-.decls > dt > :first-child {
-  padding-left: 6px;
-}
-
-.decls > dt > :last-child {
-  padding-right: 6px;
+  box-sizing: border-box;
+  white-space: pre-wrap;
 }
 
 .decls > dd {
