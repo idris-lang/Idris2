@@ -1,5 +1,7 @@
 module Data.Morphisms
 
+import Data.Contravariant
+
 public export
 record Morphism a b where
   constructor Mor
@@ -20,6 +22,11 @@ public export
 record Kleislimorphism (f : Type -> Type) a b where
   constructor Kleisli
   applyKleisli : a -> f b
+
+public export
+record Op b a where
+  constructor MkOp
+  applyOp : a -> b
 
 export
 Functor (Morphism r) where
@@ -65,6 +72,11 @@ Monad f => Monad (Kleislimorphism f a) where
     k1 <- f r
     applyKleisli (g k1) r
 
+public export
+Contravariant (Op b) where
+  contramap f (MkOp g) = MkOp (g . f)
+  v >$ (MkOp f) = MkOp \_ => f v
+
 -- Applicative is a bit too strong, but there is no suitable superclass
 export
 (Semigroup a, Applicative f) => Semigroup (Kleislimorphism f r a) where
@@ -89,3 +101,27 @@ Cast (Morphism a (f b)) (Kleislimorphism f a b) where
 export
 Cast (Kleislimorphism f a b) (Morphism a (f b)) where
   cast (Kleisli f) = Mor f
+
+export
+Cast (Endomorphism a) (Op a a) where
+  cast (Endo f) = MkOp f
+
+export
+Cast (Op a a) (Endomorphism a) where
+  cast (MkOp f) = Endo f
+
+export
+Cast (Op (f b) a) (Kleislimorphism f a b) where
+  cast (MkOp f) = Kleisli f
+
+export
+Cast (Kleislimorphism f a b) (Op (f b) a) where
+  cast (Kleisli f) = MkOp f
+
+export
+Cast (Morphism a b) (Op b a) where
+  cast (Mor f) = MkOp f
+
+export
+Cast (Op b a) (Morphism a b) where
+  cast (MkOp f) = Mor f

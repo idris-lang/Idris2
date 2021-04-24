@@ -1,5 +1,6 @@
 module Control.Applicative.Const
 
+import Data.Contravariant
 import Data.Bits
 
 public export
@@ -76,6 +77,10 @@ FromString a => FromString (Const a b) where
 public export
 Functor (Const a) where
   map _ (MkConst v) = MkConst v
+
+public export
+Contravariant (Const a) where
+  contramap _ (MkConst v) = MkConst v
 
 public export
 Monoid a => Applicative (Const a) where
