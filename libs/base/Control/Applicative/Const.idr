@@ -6,15 +6,15 @@ import Data.Bits
 public export
 record Const (a : Type) (b : Type) where
   constructor MkConst
-  value : a
+  runConst : a
 
 public export
 Eq a => Eq (Const a b) where
-  (==) = (==) `on` value
+  (==) = (==) `on` runConst
 
 public export
 Ord a => Ord (Const a b) where
-  compare = compare `on` value
+  compare = compare `on` runConst
 
 export
 Show a => Show (Const a b) where
