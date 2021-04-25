@@ -238,6 +238,15 @@ export
 isOpChar : Char -> Bool
 isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
 
+export
+||| Test whether a user name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName n = fromMaybe False $ do
+   n <- userNameRoot n
+   c <- fst <$> strUncons n
+   guard (isOpChar c)
+   pure True
+
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
 

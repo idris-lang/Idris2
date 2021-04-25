@@ -182,7 +182,9 @@ idrisTests = MkTestPool []
        -- The 'with' rule
        "with001", "with002", "with004", "with005",
        -- with-disambiguation
-       "with003"]
+       "with003",
+       -- pretty printing
+       "pretty001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool []

@@ -20,6 +20,8 @@ import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
+import Parser.Lexer.Source
+
 %default covering
 
 public export
@@ -598,10 +600,10 @@ mutual
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
-    showPrec d (POp _ op x y) = showPrec d x ++ " " ++ showPrec d op ++ " " ++ showPrec d y
+    showPrec d (POp _ op x y) = showPrec d x ++ " " ++ showPrecOp d op ++ " " ++ showPrec d y
     showPrec d (PPrefixOp _ op x) = showPrec d op ++ showPrec d x
-    showPrec d (PSectionL _ op x) = "(" ++ showPrec d op ++ " " ++ showPrec d x ++ ")"
-    showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
+    showPrec d (PSectionL _ op x) = "(" ++ showPrecOp d op ++ " " ++ showPrec d x ++ ")"
+    showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrecOp d op ++ ")"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
     showPrec d (PString _ xs) = join " ++ " $ show <$> xs
@@ -649,6 +651,11 @@ mutual
         = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
+
+  showPrecOp : Prec -> OpStr -> String
+  showPrecOp d op = if isOpName op
+    then        showPrec d op
+    else "`" ++ showPrec d op ++ "`"
 
 public export
 record Method where

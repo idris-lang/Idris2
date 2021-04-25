@@ -5,6 +5,8 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Control.ANSI.SGR
 
+import Parser.Lexer.Source
+
 import public Idris.Pretty.Render
 
 import public Libraries.Text.PrettyPrint.Prettyprinter
@@ -155,6 +157,10 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
+      prettyOp : OpStr -> Doc ann
+      prettyOp op = if isOpName op
+        then pretty op
+        else Chara '`' <+> pretty op <+> Chara '`'
 
       go : Prec -> PTerm -> Doc IdrisAnn
       go d (PRef _ n) = pretty n
@@ -276,10 +282,10 @@ mutual
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
-      go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> pretty op <++> go startPrec y
+      go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
       go d (PPrefixOp _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
-      go d (PSectionL _ op x) = parens (pretty op <++> go startPrec x)
-      go d (PSectionR _ x op) = parens (go startPrec x <++> pretty op)
+      go d (PSectionL _ op x) = parens (prettyOp op <++> go startPrec x)
+      go d (PSectionR _ x op) = parens (go startPrec x <++> prettyOp op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
       go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
