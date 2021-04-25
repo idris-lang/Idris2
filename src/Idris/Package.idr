@@ -31,8 +31,8 @@ import Idris.CommandLine
 import Idris.ModTree
 import Idris.ProcessIdr
 import Idris.REPL
-import Idris.REPLCommon
-import Idris.REPLOpts
+import Idris.REPL.Common
+import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version

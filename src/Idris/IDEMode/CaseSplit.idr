@@ -14,7 +14,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Idris.IDEMode.TokenLine
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 

@@ -453,6 +453,7 @@ data REPLCmd : Type where
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
      TypeSearch : PTerm -> REPLCmd
+     FuzzyTypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
@@ -472,6 +473,7 @@ data REPLCmd : Type where
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
+     ImportPackage : String -> REPLCmd
 
 public export
 record Import where

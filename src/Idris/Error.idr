@@ -7,7 +7,7 @@ import Core.Env
 import Core.Options
 import Core.Value
 
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
