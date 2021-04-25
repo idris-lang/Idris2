@@ -43,6 +43,7 @@ exceptions. The most notable user visible differences, which might cause Idris
   Notably, elaborator reflection will exist, but most likely in a slightly
   different form because the internal details of the elaborator are different.
 + The `Prelude` is much smaller (and easier to replace with an alternative).
+  Command-line option `--no-prelude` can be used to not implicitly import `Prelude`.
 + `let x = val in e` no longer computes with `x` in `e`, instead being
   essentially equivalent to `(\x => e) val`. This is to make the
   behaviour of `let` consistent in the presence of `case` and `with` (where
