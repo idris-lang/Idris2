@@ -203,7 +203,17 @@ The following keys are available:
   ``implicit``
     provides a Boolean value that is True if the region is the name of an implicit argument
   ``decor``
-    describes the category of a token, which can be ``type``, ``function``, ``data``, ``keyword``, or ``bound``.
+    describes the category of a token, which can be:
+
+     ``type``: type constructors
+
+     ``function``: defined functions
+
+     ``data``: data constructors
+
+     ``bound``: bound variables, or
+
+     ``keyword``
 
   ``source-loc``
     states that the region refers to a source code location. Its body is a collection of key-value pairs, with the following possibilities:
