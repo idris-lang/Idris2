@@ -12,6 +12,7 @@ modules =
     Compiler.CompileExpr,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Separate,
     Compiler.VMCode,
 
     Compiler.ES.ES,
