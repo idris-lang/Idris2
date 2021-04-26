@@ -97,8 +97,8 @@ castInt from to x =
        (Just $ Unsigned m, Just $ Signed $ P n) =>
          if P n > m then x else op "blodwen-toSignedInt" [x,show (n-1)]
 
-       (Just $ Signed m, Just $ Unsigned $ P n) =>
-         if P n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
+       (Just $ Signed _, Just $ Unsigned $ P n) =>
+         op "blodwen-toUnsignedInt" [x,show n]
 
        (Just $ Unsigned m, Just $ Unsigned $ P n) =>
          if P n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
