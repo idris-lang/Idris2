@@ -29,7 +29,8 @@ import System.File
 
 -- Output informational messages, unless quiet flag is set
 export
-iputStrLn : {auto o : Ref ROpts REPLOpts} ->
+iputStrLn : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Doc IdrisAnn -> Core ()
 iputStrLn msg
     = do opts <- get ROpts

@@ -1,6 +1,7 @@
 module Idris.IDEMode.SyntaxHighlight
 
 import Core.Context
+import Core.Context.Log
 import Core.InitPrimitives
 import Core.Metadata
 import Core.TT
@@ -10,6 +11,8 @@ import Idris.IDEMode.Commands
 
 import Data.List
 
+import Libraries.Data.PosMap
+
 %default covering
 
 data Decoration : Type where
@@ -18,6 +21,13 @@ data Decoration : Type where
   Data : Decoration
   Keyword : Decoration
   Bound : Decoration
+
+Show Decoration where
+  show Typ      = "type    "
+  show Function = "function"
+  show Data     = "data    "
+  show Keyword  = "keyword "
+  show Bound    = "bound   "
 
 SExpable Decoration where
   toSExp Typ = SymbolAtom "type"
@@ -41,7 +51,7 @@ SExpable FC where
   toSExp (MkFC fname (startLine, startCol) (endLine, endCol))
     = SExpList [ SExpList [ SymbolAtom "filename", StringAtom fname ]
                , SExpList [ SymbolAtom "start", IntegerAtom (cast startLine + 1), IntegerAtom (cast startCol + 1) ]
-               , SExpList [ SymbolAtom "end", IntegerAtom (cast endLine + 1), IntegerAtom (cast endCol + 1) ]
+               , SExpList [ SymbolAtom "end", IntegerAtom (cast endLine + 1), IntegerAtom (cast endCol) ]
                ]
   toSExp EmptyFC = SExpList []
 
@@ -58,12 +68,13 @@ SExpable Highlight where
                           ]
                ]
 
-inFile : String -> (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Bool
+inFile : String -> (NonEmptyFC, a) -> Bool
 inFile fname ((file, _, _), _) = file == fname
 
 ||| Output some data using current dialog index
 export
-printOutput : {auto o : Ref ROpts REPLOpts} ->
+printOutput : {auto c : Ref Ctxt Defs} ->
+              {auto o : Ref ROpts REPLOpts} ->
               SExp -> Core ()
 printOutput msg
   =  do opts <- get ROpts
@@ -74,7 +85,8 @@ printOutput msg
                               msg, toSExp i])
 
 
-outputHighlight : {auto opts : Ref ROpts REPLOpts} ->
+outputHighlight : {auto c : Ref Ctxt Defs} ->
+                  {auto opts : Ref ROpts REPLOpts} ->
                   Highlight -> Core ()
 outputHighlight h =
   printOutput $ SExpList [ SymbolAtom "ok"
@@ -86,37 +98,60 @@ outputHighlight h =
     hlt : List Highlight
     hlt = [h]
 
-outputNameSyntax : {auto opts : Ref ROpts REPLOpts} ->
-                   (NonEmptyFC, (Name, Nat, ClosedTerm)) -> Core ()
-outputNameSyntax (fc, (name, _, term)) =
-  let dec = case term of
-                 (Local fc x idx y) => Just Bound
+isPrimType : Constant -> Bool
+isPrimType (I   x)  = False
+isPrimType (BI  x)  = False
+isPrimType (B8  x)  = False
+isPrimType (B16 x)  = False
+isPrimType (B32 x)  = False
+isPrimType (B64 x)  = False
+isPrimType (Str x)  = False
+isPrimType (Ch  x)  = False
+isPrimType (Db  x)  = False
+isPrimType WorldVal = False
+isPrimType IntType     = True
+isPrimType IntegerType = True
+isPrimType Bits8Type   = True
+isPrimType Bits16Type  = True
+isPrimType Bits32Type  = True
+isPrimType Bits64Type  = True
+isPrimType StringType  = True
+isPrimType CharType    = True
+isPrimType DoubleType  = True
+isPrimType WorldType   = True
 
-                 -- See definition of NameType in Core.TT for possible values of Ref's nametype field
-                 -- data NameType : Type where
-                 -- Bound   : NameType
-                 -- Func    : NameType
-                 -- DataCon : (tag : Int) -> (arity : Nat) -> NameType
-                 -- TyCon   : (tag : Int) -> (arity : Nat) -> NameType
-                 (Ref fc Bound name) => Just Bound
-                 (Ref fc Func name) => Just Function
-                 (Ref fc (DataCon tag arity) name) => Just Data
-                 (Ref fc (TyCon tag arity) name) => Just Typ
-                 (Meta fc x y xs) => Just Bound
-                 (Bind fc x b scope) => Just Bound
-                 (App fc fn arg) => Just Bound
-                 (As fc x as pat) => Just Bound
-                 (TDelayed fc x y) => Nothing
-                 (TDelay fc x ty arg) => Nothing
-                 (TForce fc x y) => Nothing
-                 (PrimVal fc c) => Just Typ
-                 (Erased fc imp) => Just Bound
-                 (TType fc) => Just Typ
-      hilite = Prelude.map (\ d => MkHighlight fc name False "" d "" (show term) "") dec
-  in maybe (pure ()) outputHighlight hilite
+
+outputNameSyntax : {auto c : Ref Ctxt Defs} ->
+                   {auto opts : Ref ROpts REPLOpts} ->
+                   (NonEmptyFC, Name) -> Core ()
+outputNameSyntax (nfc, name) = do
+      defs <- get Ctxt
+      let decor = case !(lookupCtxtExact name (gamma defs)) of
+            Nothing => Bound
+            Just ndef =>
+               case definition ndef of
+                 None => Bound  -- Surely impossible?
+                 PMDef _ _ _ _ _ => Function
+                 ExternDef 0 => Data
+                 ExternDef (S _) => Function
+                 ForeignDef 0 _ => Data
+                 ForeignDef (S k) _ => Function
+                 Builtin _ => Function
+                 DCon _ _ _ => Data
+                 TCon _ _ _ _ _ _ _ _ => Typ
+                 Hole _ _ => Bound
+                 BySearch _ _ _ => Bound
+                 Guess _ _ _ => Bound
+                 ImpBind => Bound
+                 Delayed => Bound
+      log "ide-mode.highlight" 20 $ "highlighting at " ++ show nfc
+                                 ++ ": " ++ show name
+                                 ++ "\nAs: " ++ show decor
+      outputHighlight $ MkHighlight nfc name False "" decor "" "" ""
 
 export
-outputSyntaxHighlighting : {auto m : Ref MD Metadata} ->
+outputSyntaxHighlighting : {auto c : Ref Ctxt Defs} ->
+                           {auto m : Ref MD Metadata} ->
                            {auto opts : Ref ROpts REPLOpts} ->
                            String ->
                            REPLResult ->
@@ -124,7 +159,7 @@ outputSyntaxHighlighting : {auto m : Ref MD Metadata} ->
 outputSyntaxHighlighting fname loadResult = do
   opts <- get ROpts
   when (opts.synHighlightOn) $ do
-    allNames <- the (Core ?) $ filter (inFile fname) . names <$> get MD
+    allNames <- the (Core ?) $ filter (inFile fname) . toList . nameLocMap <$> get MD
     --  decls <- filter (inFile fname) . tydecls <$> get MD
     _ <- traverse outputNameSyntax allNames -- ++ decls)
     pure ()
