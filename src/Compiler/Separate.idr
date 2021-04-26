@@ -1,5 +1,11 @@
 module Compiler.Separate
 
+import public Core.Name
+import public Libraries.Data.SortedMap
+
+import Core.Hash
+import Core.Name.Namespace
+
 public export
 ContentHash : Type
 ContentHash = Int
@@ -22,9 +28,9 @@ record CompilationUnit def where
   constructor MkCompilationUnit
   id : CompilationUnitId
   contentHash : ContentHash
-  imports : List CompilationUnitId
+  dependencies : List CompilationUnitId
   definitions : List Name
 
 export
-mkCompilationUnits : List (Name, def) -> SortedMap CompilationUnitId CompilationUnit
+mkCompilationUnits : List (Name, def) -> SortedMap CompilationUnitId (CompilationUnit def)
 mkCompilationUnits defs = ?rhs
