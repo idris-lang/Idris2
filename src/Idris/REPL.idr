@@ -742,6 +742,12 @@ process (Check itm)
          ty <- getTerm gty
          ity <- resugar [] !(normaliseScope defs [] ty)
          pure (TermChecked itm ity)
+process (CheckWithImplicits itm)
+    = do showImplicits <- showImplicits <$> getPPrint
+         setOpt (ShowImplicits True)
+         result <- process (Check itm)
+         setOpt (ShowImplicits showImplicits)
+         pure result
 process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
@@ -1094,7 +1100,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 16 12 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 20 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->
