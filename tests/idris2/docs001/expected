@@ -17,7 +17,7 @@ Main> Prelude.List : Type -> Type
   Constructors:
     Nil : List a
       Empty list
-    :: : a -> List a -> List a
+    (::) : a -> List a -> List a
       A non-empty list, consisting of a head element and the rest of the list.
 Main> Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
@@ -65,7 +65,7 @@ Main> Prelude.Monad : (Type -> Type) -> Type
   Parameters: m
   Constraints: Applicative m
   Methods:
-    >>= : m a -> (a -> m b) -> m b
+    (>>=) : m a -> (a -> m b) -> m b
       Also called `bind`.
     join : m (m a) -> m a
       Also called `flatten` or mu.
