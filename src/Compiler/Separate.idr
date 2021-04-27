@@ -201,13 +201,15 @@ public export
 record CompilationUnitInfo def where
   constructor MkCompilationUnitInfo
   compilationUnits : List (CompilationUnit def)  -- ordered by the number of imports, ascending
+  byId : SortedMap CompilationUnitId (CompilationUnit def)
   namespaceMap : SortedMap Namespace CompilationUnitId
 
 export
 getCompilationUnits : HasNamespaces def => List (Name, def) -> CompilationUnitInfo def
 getCompilationUnits {def} defs =
   MkCompilationUnitInfo
-    [mkUnit cuid nss | (cuid, nss) <- withCUID components]
+    units
+    (SortedMap.fromList [(unit.id, unit) | unit <- units])
     nsMap
   where
     defsByNS : SortedMap Namespace (List (Name, def))
@@ -253,3 +255,7 @@ getCompilationUnits {def} defs =
       definitions =
         (concat
           [fromMaybe [] $ SortedMap.lookup ns defsByNS | ns <- nss])
+
+
+    units : List (CompilationUnit def)
+    units = [mkUnit cuid nss | (cuid, nss) <- withCUID components]

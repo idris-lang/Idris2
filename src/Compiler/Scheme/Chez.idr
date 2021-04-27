@@ -451,7 +451,17 @@ compileToSS c chez appdir tm = do
 
     -- create header + footer
     let exports = unwords [schName dn | (dn, _) <- cu.definitions]
-    let header = "(library (" ++ chezLib ++ ") (export " ++ exports ++ ") (import (rnrs))\n"
+    let imports = unwords
+          [ maybe
+              "unqualified"
+              chezLibraryName
+              (SortedMap.lookup cuid cui.byId)
+          | cuid <- SortedSet.toList cu.dependencies
+          ]
+    let header =
+          "(library (" ++ chezLib ++ ") "
+          ++ "(export " ++ exports ++ ") "
+          ++ "(import (rnrs) (support) " ++ imports ++ ")\n"
     let footer = ")"
 
     -- code = header + foreign defs + compiled defs + footer
