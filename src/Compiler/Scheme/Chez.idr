@@ -379,21 +379,21 @@ startChezWinSh chez appdir target = unlines
     ]
 
 compileChezLibrary : (chez : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez ssFile = coreLift $ system $ unwords
+compileChezLibrary chez ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
   , "|", chez, "-q"
   ]
 
 compileChezProgram : (chez : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez ssFile = coreLift $ system $ unwords
+compileChezProgram chez ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ show ssFile ++ "))'"
   , "|", chez, "-q"
   ]
 
 writeFileCore : (fname : String) -> (content : String) -> Core ()
-writeFileCore =
+writeFileCore fname content =
   coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
@@ -437,15 +437,17 @@ compileToSS c appdir tm outfile = do
     let code = fastAppend (map snd fgndefs ++ compdefs)
 
     -- write the file
-    writeFileCore (appdir </> chezLibraryName cu <.> "ss") code
+    let chezLib = chezLibraryName cu
+    writeFileCore (appdir </> chezLib <.> "ss") code
+
+    pure chezLib
 
   -- main module
+  -- TODO: use chezLibs
   main <- schExp chezExtPrim chezString 0 ctm
   chez <- coreLift findChez
   writeFileCore (appdir </> "main.ss") $ unlines $
     [ schHeader chez (map snd libs)
-    , support ++ extraRuntime ++ code ++
-    , concat (map fst fgndefs) ++
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
     , schFooter
