@@ -247,7 +247,8 @@ ideModeTests = MkTestPool []
 
 preludeTests : TestPool
 preludeTests = MkTestPool []
-  [ "reg001"
+  [ "reg001",
+    "show001"
   ]
 
 templateTests : TestPool

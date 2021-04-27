@@ -141,12 +141,11 @@ showLitChar '\v'   = ("\\v" ++)
 showLitChar '\SO'  = protectEsc (== 'H') "\\SO"
 showLitChar '\DEL' = ("\\DEL" ++)
 showLitChar '\\'   = ("\\\\" ++)
+
 showLitChar c
     = case getAt (fromInteger (prim__cast_CharInteger c)) asciiTab of
            Just k => strCons '\\' . (k ++)
-           Nothing => if (c > '\DEL')
-                         then strCons '\\' . protectEsc isDigit (show (prim__cast_CharInt c))
-                         else strCons c
+           Nothing => strCons c
   where
     asciiTab : List String
     asciiTab
