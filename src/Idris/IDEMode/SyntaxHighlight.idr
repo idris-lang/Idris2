@@ -15,20 +15,6 @@ import Libraries.Data.PosMap
 
 %default covering
 
-data Decoration : Type where
-  Typ : Decoration
-  Function : Decoration
-  Data : Decoration
-  Keyword : Decoration
-  Bound : Decoration
-
-Show Decoration where
-  show Typ      = "type    "
-  show Function = "function"
-  show Data     = "data    "
-  show Keyword  = "keyword "
-  show Bound    = "bound   "
-
 SExpable Decoration where
   toSExp Typ = SymbolAtom "type"
   toSExp Function = SymbolAtom "function"

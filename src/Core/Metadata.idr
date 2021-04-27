@@ -17,7 +17,35 @@ import Libraries.Utils.Binary
 
 %default covering
 
--- Additional data we keep about the context to support interactive editing
+public export
+data Decoration : Type where
+  Typ : Decoration
+  Function : Decoration
+  Data : Decoration
+  Keyword : Decoration
+  Bound : Decoration
+public export
+Show Decoration where
+  show Typ      = "type"
+  show Function = "function"
+  show Data     = "data"
+  show Keyword  = "keyword"
+  show Bound    = "bound"
+
+TTC Decoration where
+  toBuf b Typ      = tag 0
+  toBuf b Function = tag 1
+  toBuf b Data     = tag 2
+  toBuf b Keyword  = tag 3
+  toBuf b Bound    = tag 4
+  fromBuf b
+    = case !getTag of
+        0 => pure Typ
+        1 => pure Function
+        2 => pure Data
+        3 => pure Keyword
+        4 => pure Bound
+        _ => corrupt "Decoration"
 
 public export
 record Metadata where
@@ -43,17 +71,18 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
-       --semanticHighlighting : PosMap (NonEmptyFC, Either
+       semanticHighlighting : PosMap (NonEmptyFC, Decoration)
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap semanticHighlighting)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
       " type declarations: " ++ show tydecls ++ "\n" ++
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap
+      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
+      " nameLocMap: " ++ show semanticHighlighting
 
 export
 initMetadata : Metadata
@@ -64,6 +93,7 @@ initMetadata = MkMetadata
   , currentLHS = Nothing
   , holeLHS = []
   , nameLocMap = empty
+  , semanticHighlighting = empty
   }
 
 -- A label for metadata in the global state
@@ -77,6 +107,7 @@ TTC Metadata where
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
            toBuf b (nameLocMap m)
+           toBuf b (semanticHighlighting m)
 
   fromBuf b
       = do apps <- fromBuf b
@@ -84,7 +115,8 @@ TTC Metadata where
            tys <- fromBuf b
            hlhs <- fromBuf b
            dlocs <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs dlocs)
+           semhl <- fromBuf b
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs semhl)
 
 export
 addLHS : {vars : _} ->
@@ -250,13 +282,14 @@ TTC TTMFile where
            pure (MkTTMFile ver md)
 
 HasNames Metadata where
-  full gam (MkMetadata lhs ns tys clhs hlhs dlocs)
-      = pure $ MkMetadata !(traverse fullLHS lhs)
-                          !(traverse fullTy ns)
-                          !(traverse fullTy tys)
-                          Nothing
-                          !(traverse fullHLHS hlhs)
-                          (fromList !(traverse fullDecls (toList dlocs)))
+  full gam md
+      = pure $ record { lhsApps = !(traverse fullLHS $ md.lhsApps)
+                      , names   = !(traverse fullTy $ md.names)
+                      , tydecls = !(traverse fullTy $ md.tydecls)
+                      , currentLHS = Nothing
+                      , holeLHS = !(traverse fullHLHS $ md.holeLHS)
+                      , nameLocMap = fromList !(traverse fullDecls (toList $ md.nameLocMap))
+                      } md
     where
       fullLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       fullLHS (fc, (i, tm)) = pure (fc, (i, !(full gam tm)))
@@ -270,13 +303,14 @@ HasNames Metadata where
       fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
       fullDecls (fc, n) = pure (fc, !(full gam n))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs)
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs semhl)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
                           Nothing
                           !(traverse resolvedHLHS hlhs)
                           (fromList !(traverse resolvedDecls (toList dlocs)))
+                          semhl
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))
