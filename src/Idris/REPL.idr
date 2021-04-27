@@ -644,9 +644,6 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-emode : REPLEval -> ElabMode
-emode EvalTC = InType
-emode _ = InExpr
 
 nfun : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
@@ -662,29 +659,34 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto s : Ref Syn SyntaxInfo} ->
   {auto m : Ref MD Metadata} ->
   {auto o : Ref ROpts REPLOpts} ->
-  (norm : Defs -> Env Term [] -> Term [] -> Core (Term [])) ->
-  PTerm -> Core (Term [], PTerm, Term [])
-inferAndNormalize norm itm =
-  do opts <- get ROpts
-     ttimp <- desugar AnyExpr [] itm
-     let ttimpWithIt = ILocal replFC !getItDecls ttimp
-     inidx <- resolveName (UN "[input]")
-     -- a TMP HACK to prioritise list syntax for List: hide
-     -- foreign argument lists. TODO: once the new FFI is fully
-     -- up and running we won't need this. Also, if we add
-     -- 'with' disambiguation we can use that instead.
-     catch (do hide replFC (NS primIONS (UN "::"))
-               hide replFC (NS primIONS (UN "Nil")))
-                       (\err => pure ())
-     (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
-                                       [] ttimpWithIt Nothing
-     logTerm "repl.eval" 10 "Elaborated input" tm
-     defs <- get Ctxt
-     ntm <- norm defs [] tm
-     logTermNF "repl.eval" 5 "Normalised" [] ntm
-     itm <- resugar [] ntm
-     ty <- getTerm gty
-     pure (ty, itm, ntm)
+  REPLEval ->
+  PTerm ->
+  Core (Term [], PTerm, Term [])
+inferAndNormalize emode itm
+  = do ttimp <- desugar AnyExpr [] itm
+       let ttimpWithIt = ILocal replFC !getItDecls ttimp
+       inidx <- resolveName (UN "[input]")
+       -- a TMP HACK to prioritise list syntax for List: hide
+       -- foreign argument lists. TODO: once the new FFI is fully
+       -- up and running we won't need this. Also, if we add
+       -- 'with' disambiguation we can use that instead.
+       catch (do hide replFC (NS primIONS (UN "::"))
+                 hide replFC (NS primIONS (UN "Nil")))
+             (\err => pure ())
+       (tm, gty) <- elabTerm inidx (elabMode emode) [] (MkNested [])
+                 [] ttimpWithIt Nothing
+       logTerm "repl.eval" 10 "Elaborated input" tm
+       defs <- get Ctxt
+       let norm = nfun emode
+       ntm <- norm defs [] tm
+       logTermNF "repl.eval" 5 "Normalised" [] ntm
+       itm <- resugar [] ntm
+       ty <- getTerm gty
+       pure (ty , itm , ntm)
+  where
+    elabMode : REPLEval -> ElabMode
+    elabMode EvalTC = InType
+    elabMode _ = InExpr
 
 
 ||| Process a single `REPLCmd`
@@ -701,14 +703,15 @@ process : {auto c : Ref Ctxt Defs} ->
 process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
-         case evalMode opts of
+         let emode = evalMode opts
+         case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
               do
+                 (ty, itm, ntm) <- inferAndNormalize emode itm
                  defs <- get Ctxt
                  opts <- get ROpts
-                 let norm = nfun (evalMode opts)
-                 (ty, itm, ntm) <- inferAndNormalize norm itm
+                 let norm = nfun emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
                    $ newDef replFC evalResultName top [] ty Private
@@ -719,7 +722,15 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
+  -- where
+  --   emode : REPLEval -> ElabMode
+  --   emode EvalTC = InType
+  --   emode _ = InExpr
 
+  --   nfun : {vs : _} ->
+  --          REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
+  --   nfun NormaliseAll = normaliseAll
+  --   nfun _ = normalise
 process (Check (PRef fc (UN "it")))
     = do opts <- get ROpts
          case evalResultName opts of
