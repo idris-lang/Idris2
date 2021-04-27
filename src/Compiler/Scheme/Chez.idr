@@ -65,11 +65,11 @@ escapeString s = pack $ foldr escape [] $ unpack s
     escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
-schHeader : String -> List String -> String
-schHeader chez libs
+schHeader : String -> List String -> List String -> String
+schHeader chez libs compilationUnits
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
     "; @generated\n" ++
-    "(import (chezscheme))\n" ++
+    "(import (chezscheme) " ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] ++ ")\n" ++
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
@@ -399,13 +399,18 @@ writeFileCore fname content = do
     Right () => pure ()
     Left err => throw $ FileErr fname err
 
+chezNS : Namespace -> String
+chezNS ns = case showNSWithSep "-" ns of
+  "" => "unqualified"
+  nss => nss
+
+-- arbitrarily name the compilation unit
+-- after the alphabetically first namespace contained within
 chezLibraryName : CompilationUnit def -> String
 chezLibraryName cu =
   case SortedSet.toList cu.namespaces of
-    [] => "unknown"
-    ns::_ => case showNSWithSep "-" ns of
-      "" => "unqualified"
-      nss => nss
+    [] => "unknown"  -- this will never happen because the Tarjan algorithm won't produce an empty SCC
+    ns::_ => chezNS ns
 
 record ChezLib where
   constructor MkChezLib
@@ -426,10 +431,13 @@ compileToSS c chez appdir tm = do
   let ndefs = namedDefs cdata
   let cui = getCompilationUnits ndefs
 
-  -- generate the support module
+  -- copy the support library
   support <- readDataFile "chez/support.ss"
-  extraRuntime <- getExtraRuntime ds
-  writeFileCore (appdir </> "support.ss") (support ++ extraRuntime)
+  writeFileCore (appdir </> "support.ss") support
+
+  -- TODO: add extraRuntime
+  -- the problem with this is that it's unclear what to put in the (export) clause of the library
+  -- extraRuntime <- getExtraRuntime ds
 
   -- for each compilation unit, generate code
   chezLibs <- for cui.compilationUnits $ \cu => do
@@ -460,7 +468,7 @@ compileToSS c chez appdir tm = do
   -- TODO: use chezLibs
   main <- schExp chezExtPrim chezString 0 ctm
   writeFileCore (appdir </> "mainprog.ss") $ unlines $
-    [ schHeader chez (map snd libs)
+    [ schHeader chez (map snd libs) [lib.name | lib <- chezLibs]
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
     , schFooter

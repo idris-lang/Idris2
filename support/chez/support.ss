@@ -1,3 +1,44 @@
+(library (support)
+
+  (export
+    blodwen-os blodwen-read-args b+ b- b* b/ integer->bits8 integer->bits16
+    integer->bits32 integer->bits64 bits16->bits8 bits32->bits8 bits32->bits16
+    bits64->bits8 bits64->bits16 bits64->bits32 truncate-bits
+    blodwen-bits-shl-signed blodwen-bits-shl blodwen-shl blodwen-shr
+    blodwen-and blodwen-or blodwen-xor cast-num destroy-prefix exact-floor
+    cast-string-int cast-int-char cast-string-double from-idris-list
+    string-pack to-idris-list-rev string-unpack string-concat string-cons
+    get-tag string-reverse string-substr blodwen-string-iterator-new
+    blodwen-string-iterator-to-string blodwen-string-iterator-next either-left
+    either-right blodwen-error-quit blodwen-get-line blodwen-get-char
+    blodwen-new-buffer blodwen-buffer-size blodwen-buffer-setbyte
+    blodwen-buffer-getbyte blodwen-buffer-setbits16 blodwen-buffer-getbits16
+    blodwen-buffer-setbits32 blodwen-buffer-getbits32 blodwen-buffer-setbits64
+    blodwen-buffer-getbits64 blodwen-buffer-setint32 blodwen-buffer-getint32
+    blodwen-buffer-setint blodwen-buffer-getint blodwen-buffer-setdouble
+    blodwen-buffer-getdouble blodwen-stringbytelen blodwen-buffer-setstring
+    blodwen-buffer-getstring blodwen-buffer-copydata thread-handle
+    blodwen-thread blodwen-thread-wait blodwen-thread-data
+    blodwen-get-thread-data blodwen-set-thread-data semaphore
+    blodwen-make-semaphore blodwen-semaphore-post blodwen-semaphore-wait
+    barrier blodwen-make-barrier blodwen-barrier-wait channel
+    blodwen-make-channel blodwen-channel-get blodwen-channel-put
+    blodwen-make-mutex blodwen-mutex-acquire blodwen-mutex-release
+    blodwen-make-condition blodwen-condition-wait
+    blodwen-condition-wait-timeout blodwen-condition-signal
+    blodwen-condition-broadcast future-internal blodwen-make-future
+    blodwen-await-future blodwen-sleep blodwen-usleep blodwen-time
+    blodwen-clock-time-utc blodwen-clock-time-monotonic
+    blodwen-clock-time-duration blodwen-clock-time-process
+    blodwen-clock-time-thread blodwen-clock-time-gccpu
+    blodwen-clock-time-gcreal blodwen-is-time? blodwen-clock-second
+    blodwen-clock-nanosecond blodwen-arg-count blodwen-arg blodwen-hasenv
+    blodwen-system random-seed-register initialize-random-seed-once
+    blodwen-random-seed blodwen-random blodwen-finaliser
+    blodwen-register-object blodwen-run-finalisers)
+
+  (import (rnrs))
+
 (define (blodwen-os)
   (case (machine-type)
     [(i3le ti3le a6le ta6le) "unix"]  ; GNU/Linux
@@ -410,3 +451,5 @@
         (when x
           (((cdr x) (car x)) 'erased)
           (run))))))
+
+) ; end of (library)
