@@ -12,10 +12,6 @@ import Data.List
 import Data.Vect
 import Data.Maybe
 
-public export
-ContentHash : Type
-ContentHash = Int
-
 export
 record CompilationUnitId where
   constructor CUID
@@ -31,7 +27,7 @@ Ord CompilationUnitId where
 
 export
 Hashable CompilationUnitId where
-  hashWithSalt h cuid = hashWithSalt h cuid.int
+  hashWithSalt h (CUID int) = hashWithSalt h int
 
 public export
 record CompilationUnit def where
