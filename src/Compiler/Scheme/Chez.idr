@@ -449,14 +449,22 @@ compileToSS c chez appdir tm = do
     l <- newRef {t = List String} Loaded ["libc", "libc 6"]
     s <- newRef {t = List String} Structs []
 
-    -- create header + footer
-    let exports = unwords [schName dn | (dn, _) <- cu.definitions]
+    -- create imports + exports + header + footer
     let imports = unwords
           [ maybe
               "unqualified"
               chezLibraryName
               (SortedMap.lookup cuid cui.byId)
           | cuid <- SortedSet.toList cu.dependencies
+          ]
+    let exports = unwords $ concat
+          -- export only the defs that generate Scheme definitions
+          [ case d of
+              MkNmFun args exp => [schName dn]
+              MkNmError exp => [schName dn]
+              MkNmForeign _ _ _ => []
+              MkNmCon _ _ _ => []
+          | (dn, fc, d) <- cu.definitions
           ]
     let header =
           "(library (" ++ chezLib ++ ") "
