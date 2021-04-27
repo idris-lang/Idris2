@@ -69,7 +69,7 @@ schHeader : String -> List String -> List String -> String
 schHeader chez libs compilationUnits
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
     "; @generated\n" ++
-    "(import (chezscheme) " ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] ++ ")\n" ++
+    "(import (chezscheme) (support) " ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] ++ ")\n" ++
     "(case (machine-type)\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
