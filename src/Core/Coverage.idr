@@ -165,7 +165,7 @@ getCons defs (NTCon _ tn _ _ _)
            Just (TCon _ _ _ _ _ _ cons _) =>
                 do cs' <- traverse addTy cons
                    pure (mapMaybe id cs')
-           _ => pure []
+           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
     addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
     addTy cn
