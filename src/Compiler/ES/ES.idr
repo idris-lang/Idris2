@@ -241,7 +241,7 @@ castInt from to x =
        (Just $ Unsigned m, Just $ Unsigned $ P n) =>
          if P n >= m then pure x else boundedUInt n x
 
-       _ => jsCrashExp $ jsString $ "invalid cast: + " ++ show from ++ " + ' -> ' + " ++ show to
+       _ => throw $ InternalError $ "invalid cast: + " ++ show from ++ " + ' -> ' + " ++ show to
 
 jsOp : {auto c : Ref ESs ESSt} -> PrimFn arity -> Vect arity String -> Core String
 jsOp (Add ty) [x, y] = arithOp (intKind ty) "+" x y
