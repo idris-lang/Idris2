@@ -451,10 +451,12 @@ compileToSS c chez appdir tm = do
 
     -- create imports + exports + header + footer
     let imports = unwords
-          [ maybe
-              "unqualified"
-              chezLibraryName
-              (SortedMap.lookup cuid cui.byId)
+          [ "(" ++
+              maybe
+                "unqualified"
+                chezLibraryName
+                (SortedMap.lookup cuid cui.byId)
+            ++ ")"
           | cuid <- SortedSet.toList cu.dependencies
           ]
     let exports = unwords $ concat
