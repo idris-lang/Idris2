@@ -43,6 +43,7 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
+       --semanticHighlighting : PosMap (NonEmptyFC, Either
 
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap)

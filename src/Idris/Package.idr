@@ -156,7 +156,7 @@ field fname
              pure [LT (MkPkgVersion (fromInteger <$> vs)) True,
                    GT (MkPkgVersion (fromInteger <$> vs)) True]
 
-    mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
+    mkBound : List Bound -> PkgVersionBounds -> EmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
         = maybe (mkBound bs (record { upperBound = Just b,
                                       upperInclusive = i } pkgbs))

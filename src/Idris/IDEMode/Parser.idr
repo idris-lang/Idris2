@@ -76,7 +76,7 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            (fname : String) -> String -> Grammar Token e ty -> Either Error ty
+            (fname : String) -> String -> Grammar () Token e ty -> Either Error ty
 ideParser fname str p
     = do toks   <- mapError (fromLexError fname) $ idelex str
          parsed <- mapError (fromParsingError fname) $ parse p toks

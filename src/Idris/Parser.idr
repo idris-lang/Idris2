@@ -150,7 +150,7 @@ mutual
   argExpr q fname indents
       = do continue indents
            arg <- simpleExpr fname indents
-           the (SourceEmptyRule _) $ case arg of
+           the (EmptyRule _) $ case arg of
                 PHole loc _ n => pure [UnnamedExpArg (PHole loc True n)]
                 t => pure [UnnamedExpArg t]
     <|> do continue indents
@@ -294,7 +294,7 @@ mutual
            ts <- bounds (nonEmptyTuple fname s indents var)
            pure (PLam fc top Explicit var (PInfer fc) ts.val)
 
-  getInitRange : List PTerm -> SourceEmptyRule (PTerm, Maybe PTerm)
+  getInitRange : List PTerm -> EmptyRule (PTerm, Maybe PTerm)
   getInitRange [x] = pure (x, Nothing)
   getInitRange [x, y] = pure (x, Just y)
   getInitRange _ = fatalError "Invalid list range syntax"
@@ -426,7 +426,7 @@ mutual
            (lvl, e) <- pure b.val
            pure (PUnifyLog (boundToFC fname b) lvl e)
 
-  multiplicity : SourceEmptyRule RigCount
+  multiplicity : EmptyRule RigCount
   multiplicity
       = case !(optional $ intLit) of
           (Just 0) => pure erased
@@ -680,7 +680,7 @@ mutual
            commit
            pure (PDoBlock (boundToFC fname b) Nothing (concat b.val))
     <|> do nsdo <- bounds namespacedIdent
-           the (SourceEmptyRule PTerm) $ case nsdo.val of
+           the (EmptyRule PTerm) $ case nsdo.val of
                 (ns, "do") =>
                    do commit
                       actions <- Core.bounds (block (doAct fname))
@@ -688,7 +688,7 @@ mutual
                       pure (PDoBlock fc ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
-  validPatternVar : Name -> SourceEmptyRule ()
+  validPatternVar : Name -> EmptyRule ()
   validPatternVar (UN n)
       = if lowerFirst n then pure ()
                         else fail "Not a pattern variable"
@@ -816,7 +816,7 @@ visOption
   <|> (keyword "export" $> Export)
   <|> (keyword "private" $> Private)
 
-visibility : SourceEmptyRule Visibility
+visibility : EmptyRule Visibility
 visibility
     = visOption
   <|> pure Private
@@ -832,7 +832,7 @@ tyDecls declName predoc fname indents
          pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
                     bs
 
-withFlags : SourceEmptyRule (List WithFlag)
+withFlags : EmptyRule (List WithFlag)
 withFlags
     = pragma "syntactic" *> (Syntactic ::) <$> withFlags
   <|> pure []
@@ -934,7 +934,7 @@ dataOpt
   <|> (exactIdent "noNewtype" $> NoNewtype)
 
 dataBody : FileName -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
-          SourceEmptyRule PDataDecl
+          EmptyRule PDataDecl
 dataBody fname mincol start n indents ty
     = do atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
@@ -1200,7 +1200,7 @@ visOpt fname
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility PFnOpt) ->
-                SourceEmptyRule Visibility
+                EmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs
@@ -1214,7 +1214,7 @@ recordConstructor
        n <- mustWork dataConstructorName
        pure n
 
-constraints : FileName -> IndentInfo -> SourceEmptyRule (List (Maybe Name, PTerm))
+constraints : FileName -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
          symbol "=>"
@@ -1230,7 +1230,7 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : FileName -> IndentInfo -> SourceEmptyRule (List (Name, RigCount, PTerm))
+implBinds : FileName -> IndentInfo -> EmptyRule (List (Name, RigCount, PTerm))
 implBinds fname indents
     = do symbol "{"
          rig <- multiplicity
@@ -1327,7 +1327,7 @@ typedArg fname indents
          pure $ map (\(c, n, tm) => (n.val, c, Explicit, tm)) params
   <|> do symbol "{"
          commit
-         info <- the (SourceEmptyRule (PiInfo PTerm))
+         info <- the (EmptyRule (PiInfo PTerm))
                  (pure  AutoImplicit <* keyword "auto"
               <|> (keyword "default" *> DefImplicit <$> simpleExpr fname indents)
               <|> pure      Implicit)
@@ -1504,7 +1504,7 @@ import_ fname indents
          pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
-prog : FileName -> SourceEmptyRule Module
+prog : FileName -> EmptyRule Module
 prog fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
@@ -1518,7 +1518,7 @@ prog fname
                         nspace imports doc (collectDefs (concat ds)))
 
 export
-progHdr : FileName -> SourceEmptyRule Module
+progHdr : FileName -> EmptyRule Module
 progHdr fname
     = do b <- bounds (do doc    <- option "" documentation
                          nspace <- option (nsAsModuleIdent mainNS)
@@ -1910,7 +1910,7 @@ eval = do
   pure (Eval tm)
 
 export
-command : SourceEmptyRule REPLCmd
+command : EmptyRule REPLCmd
 command
     = eoi $> NOP
   <|> nonEmptyCommand

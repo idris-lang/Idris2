@@ -14,7 +14,7 @@ export
 runParserTo : {e : _} ->
               (fname : String) ->
               Maybe LiterateStyle -> Lexer ->
-              String -> Grammar Token e ty -> Either Error ty
+              String -> Grammar () Token e ty -> Either Error ty
 runParserTo fname lit reject str p
     = do str    <- mapError (fromLitError fname) $ unlit lit str
          toks   <- mapError (fromLexError fname) $ lexTo reject str
@@ -24,7 +24,7 @@ runParserTo fname lit reject str p
 export
 runParser : {e : _} ->
             (fname : String) -> Maybe LiterateStyle -> String ->
-            Grammar Token e ty -> Either Error ty
+            Grammar () Token e ty -> Either Error ty
 runParser fname lit = runParserTo fname lit (pred $ const False)
 
 export covering

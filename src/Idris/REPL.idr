@@ -922,10 +922,10 @@ processCatch cmd
                            pure $ REPLError msg
                            )
 
-parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
+parseEmptyCmd : EmptyRule (Maybe REPLCmd)
 parseEmptyCmd = eoi *> (pure Nothing)
 
-parseCmd : SourceEmptyRule (Maybe REPLCmd)
+parseCmd : EmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
