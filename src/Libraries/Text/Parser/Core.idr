@@ -337,9 +337,6 @@ doParse s com (Act action) xs = Res (s <+> action) com (irrelevantBounds ()) xs
 public export
 data ParsingError tok = Error String (Maybe Bounds)
 
-[foo] Semigroup () where
-  (<+>) _ _ = ()
-
 ||| Parse a list of tokens according to the given grammar. If successful,
 ||| returns a pair of the parse result and the unparsed tokens (the remaining
 ||| input).
@@ -347,7 +344,7 @@ export
 parse : {c : Bool} -> (act : Grammar () tok c ty) -> (xs : List (WithBounds tok)) ->
         Either (ParsingError tok) (ty, List (WithBounds tok))
 parse act xs
-    = case doParse @{foo} neutral False act xs of
+    = case doParse neutral False act xs of
            Failure _ _ msg ts => Left (Error msg ts)
            Res _ _ v rest => Right (v.val, rest)
 
