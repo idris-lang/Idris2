@@ -10,6 +10,7 @@ import public Libraries.Data.StringMap
 import Core.Hash
 import Data.List
 import Data.Vect
+import Data.Maybe
 
 public export
 ContentHash : Type
@@ -18,7 +19,7 @@ ContentHash = Int
 export
 record CompilationUnitId where
   constructor CUID
-  id : Int
+  int : Int
 
 export
 Eq CompilationUnitId where
@@ -28,14 +29,23 @@ export
 Ord CompilationUnitId where
   compare (CUID x) (CUID y) = compare x y
 
+export
+Hashable CompilationUnitId where
+  hashWithSalt h cuid = hashWithSalt h cuid.int
+
 public export
 record CompilationUnit def where
   constructor MkCompilationUnit
   id : CompilationUnitId
-  contentHash : ContentHash
   namespaces : SortedSet Namespace
   dependencies : SortedSet CompilationUnitId
-  definitions : List Name
+  definitions : List (Name, def)
+
+export
+Hashable def => Hashable (CompilationUnit def) where
+  hashWithSalt h cu =
+    h `hashWithSalt` SortedSet.toList cu.dependencies
+      `hashWithSalt` cu.definitions
 
 private
 getNS : Name -> Namespace
@@ -187,29 +197,49 @@ mutual
 -- compilation units sorted by number of imports, ascending
 export
 mkCompilationUnits : HasNamespaces def => List (Name, def) -> List (CompilationUnit def)
-mkCompilationUnits {def} defs = unitsFrom 0 components
+mkCompilationUnits {def} defs =
+    [mkUnit cuid nss | (cuid, nss) <- withCUID components]
   where
     defsByNS : SortedMap Namespace (List (Name, def))
     defsByNS = SortedMap.fromList $ splitByNS defs
 
-    defDepsRaw : List (SortedMap Namespace (SortedSet Namespace))
-    defDepsRaw = [SortedMap.singleton (getNS n) (SortedSet.delete (getNS n) (nsRefs d)) | (n, d) <- defs]
+    nsDepsRaw : List (SortedMap Namespace (SortedSet Namespace))
+    nsDepsRaw = [SortedMap.singleton (getNS n) (SortedSet.delete (getNS n) (nsRefs d)) | (n, d) <- defs]
 
-    defDeps : SortedMap Namespace (SortedSet Namespace)
-    defDeps = foldl (SortedMap.mergeWith SortedSet.union) SortedMap.empty defDepsRaw
+    nsDeps : SortedMap Namespace (SortedSet Namespace)
+    nsDeps = foldl (SortedMap.mergeWith SortedSet.union) SortedMap.empty nsDepsRaw
 
     -- strongly connected components of the NS dep graph
     -- each SCC will become a compilation unit
     components : List (List Namespace)
-    components = List.reverse $ tarjan defDeps  -- tarjan generates reverse toposort
+    components = List.reverse $ tarjan nsDeps  -- tarjan generates reverse toposort
 
-    unitsFrom : Int -> List (List Namespace) -> List (CompilationUnit def)
-    unitsFrom i [] = []
-    unitsFrom i (nss :: nsss) =
-      MkCompilationUnit
-        (CUID i)
-        ?hash
-        (SortedSet.fromList nss)
-        ?dependencies
-        ?definitions
-      :: unitsFrom (i+1) nsss
+    withCUID : List a -> List (CompilationUnitId, a)
+    withCUID xs = [(CUID $ cast i, x) | (i, x) <- zip [0..length xs] xs]
+
+    nsMap : SortedMap Namespace CompilationUnitId
+    nsMap = SortedMap.fromList
+      [(ns, cuid) | (cuid, nss) <- withCUID components, ns <- nss]
+
+    mkUnit : CompilationUnitId -> List Namespace -> CompilationUnit def
+    mkUnit cuid nss = MkCompilationUnit
+      cuid
+      (SortedSet.fromList nss)
+      dependencies
+      definitions
+     where
+      dependencies : SortedSet CompilationUnitId
+      dependencies = SortedSet.fromList $ do
+        ns <- nss  -- NS contained within
+        depsNS <- SortedSet.toList $  -- NS we depend on
+          fromMaybe SortedSet.empty $
+            SortedMap.lookup ns nsDeps
+
+        case SortedMap.lookup depsNS nsMap of
+          Nothing => []
+          Just depCUID => [depCUID]
+
+      definitions : List (Name, def)
+      definitions =
+        (concat
+          [fromMaybe [] $ SortedMap.lookup ns defsByNS | ns <- nss])

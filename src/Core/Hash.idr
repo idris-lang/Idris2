@@ -57,6 +57,10 @@ Hashable a => Hashable (Maybe a) where
   hashWithSalt h (Just x) = hashWithSalt h x
 
 export
+Hashable a => Hashable b => Hashable (a, b) where
+  hashWithSalt h (x, y) = h `hashWithSalt` x `hashWithSalt` y
+
+export
 Hashable String where
   hashWithSalt h = String.Iterator.foldl hashWithSalt h
 
