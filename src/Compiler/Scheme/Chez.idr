@@ -404,10 +404,14 @@ chezLibraryName cu =
     [] => "unknown"
     ns::_ => showNSWithSep "-" ns
 
+record ChezLib where
+  constructor MkChezLib
+  name : String
+  isOutdated : Bool  -- needs recompiling
+
 ||| Compile a TT expression to a bunch of Chez Scheme files
-compileToSS : Ref Ctxt Defs ->
-              String -> ClosedTerm -> (outfile : String) -> Core ()
-compileToSS c appdir tm outfile = do
+compileToSS : Ref Ctxt Defs -> String -> String -> ClosedTerm -> Core (List ChezLib)
+compileToSS c chez appdir tm = do
   -- process native libraries
   ds <- getDirectives Chez
   libs <- findLibs ds
@@ -426,6 +430,8 @@ compileToSS c appdir tm outfile = do
 
   -- for each compilation unit, generate code
   chezLibs <- for cui.compilationUnits $ \cu => do
+    -- TODO: skip this if hash is up to date
+
     -- initialise context
     defs <- get Ctxt
     l <- newRef {t = List String} Loaded ["libc", "libc 6"]
@@ -440,12 +446,11 @@ compileToSS c appdir tm outfile = do
     let chezLib = chezLibraryName cu
     writeFileCore (appdir </> chezLib <.> "ss") code
 
-    pure chezLib
+    pure (MkChezLib chezLib True)  -- TODO: isOutdated
 
   -- main module
   -- TODO: use chezLibs
   main <- schExp chezExtPrim chezString 0 ctm
-  chez <- coreLift findChez
   writeFileCore (appdir </> "main.ss") $ unlines $
     [ schHeader chez (map snd libs)
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
@@ -453,7 +458,7 @@ compileToSS c appdir tm outfile = do
     , schFooter
     ]
 
-  -- todo: write something into `outfile`
+  pure chezLibs
 
 makeSh : String -> String -> String -> Core ()
 makeSh outShRel appdir outAbs
@@ -474,25 +479,39 @@ makeShWindows chez outShRel appdir outAbs
 ||| Chez Scheme implementation of the `compileExpr` interface.
 compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
               ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile
-    = do let appDirRel = outfile ++ "_app" -- relative to build dir
-         let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift_ $ mkdirAll appDirGen
-         Just cwd <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
-         let outSsFile = appDirRel </> outfile <.> "ss"
-         let outSoFile = appDirRel </> outfile <.> "so"
-         let outSsAbs = cwd </> outputDir </> outSsFile
-         let outSoAbs = cwd </> outputDir </> outSoFile
-         chez <- coreLift $ findChez
-         compileToSS c appDirGen tm outSsAbs
-         logTime "++ Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
-         let outShRel = outputDir </> outfile
-         if isWindows
-            then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
-            else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
-         coreLift_ $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+compileExpr makeitso c tmpDir outputDir tm outfile = do
+  -- set up paths
+  Just cwd <- coreLift currentDir
+       | Nothing => throw (InternalError "Can't get current directory")
+  let appDirAbs = cwd </> outputDir </> outfile ++ "_sep"
+  let appDirRel = outputDir </> outfile ++ "_sep" -- relative to CWD
+  coreLift_ $ mkdirAll appDirRel
+
+  -- generate the code
+  chez <- coreLift $ findChez
+  chezLibs <- compileToSS c chez appDirRel tm
+
+  -- compile the code
+  logTime "++ Make SO" $ when makeitso $ do
+    -- compile the support code
+    compileChezLibrary chez (appDirRel </> "support.ss")
+
+    -- compile every compilation unit
+    for_ chezLibs $ \lib =>
+      when lib.isOutdated $
+        compileChezLibrary chez (appDirRel </> lib.name <.> "ss")
+
+    -- compile the main program
+    compileChezProgram chez (appDirRel </> "main.ss")
+
+  -- generate the launch script
+  let outShRel = outputDir </> outfile
+  let launchTarget = appDirRel </> "main" <.> (if makeitso then "so" else "ss")
+  if isWindows
+     then makeShWindows chez outShRel appDirRel launchTarget
+     else makeSh outShRel appDirRel launchTarget
+  coreLift_ $ chmodRaw outShRel 0o755
+  pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.

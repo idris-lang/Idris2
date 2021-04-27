@@ -610,6 +610,10 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = Core.do ignore (f x)
               traverse_ f xs
+%inline
+export
+for_ : List a -> (a -> Core ()) -> Core ()
+for_ = flip traverse_
 
 %inline
 export
