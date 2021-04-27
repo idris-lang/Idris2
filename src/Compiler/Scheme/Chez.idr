@@ -378,18 +378,18 @@ startChezWinSh chez appdir target = unlines
     , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
-compileChezLibrary : (chez : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez ssFile = ignore $ coreLift $ system $ unwords
+compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
+compileChezLibrary chez libDir ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
-  , "|", chez, "-q"
+  , "|", chez, "-q", "--libdirs", libDir
   ]
 
-compileChezProgram : (chez : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez ssFile = ignore $ coreLift $ system $ unwords
+compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
+compileChezProgram chez libDir ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ show ssFile ++ "))'"
-  , "|", chez, "-q"
+  , "|", chez, "-q", "--libdirs", libDir
   ]
 
 writeFileCore : Ref Ctxt Defs => (fname : String) -> (content : String) -> Core ()
@@ -520,15 +520,15 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   -- compile the code
   logTime "++ Make SO" $ when makeitso $ do
     -- compile the support code
-    compileChezLibrary chez (appDirRel </> "support.ss")
+    compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
 
     -- compile every compilation unit
     for_ chezLibs $ \lib =>
       when lib.isOutdated $
-        compileChezLibrary chez (appDirRel </> lib.name <.> "ss")
+        compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
 
     -- compile the main program
-    compileChezProgram chez (appDirRel </> "mainprog.ss")
+    compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
 
   -- generate the launch script
   let outShRel = outputDir </> outfile
