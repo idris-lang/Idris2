@@ -65,17 +65,21 @@ escapeString s = pack $ foldr escape [] $ unpack s
     escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
+nativeHeader : String
+nativeHeader =
+  "(define foreign-init (case (machine-type)\n" ++
+  "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
+  "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
+  "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")\n" ++
+  "                           (load-shared-object \"ws2_32.dll\")]\n" ++
+  "  [else (load-shared-object \"libc.so\")]))\n"
+
 schHeader : String -> List String -> List String -> String
 schHeader chez libs compilationUnits
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
     "; @generated\n" ++
     "(import (chezscheme) (support) " ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] ++ ")\n" ++
-    "(case (machine-type)\n" ++
-    "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
-    "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
-    "                           (load-shared-object \"ws2_32.dll\")]\n" ++
-    "  [else (load-shared-object \"libc.so\")])\n\n" ++
+    nativeHeader ++
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
@@ -469,9 +473,10 @@ compileToSS c chez appdir tm = do
           | (dn, fc, d) <- cu.definitions
           ]
     let header =
-          "(library (" ++ chezLib ++ ") "
-          ++ "(export " ++ exports ++ ") "
-          ++ "(import (chezscheme) (support) " ++ imports ++ ")\n"
+          "(library (" ++ chezLib ++ ")\n"
+          ++ "  (export " ++ exports ++ ")\n"
+          ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
+          ++ nativeHeader ++ "\n"
     let footer = ")"
 
     -- code = header + foreign defs + compiled defs + footer
