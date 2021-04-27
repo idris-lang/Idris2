@@ -1,5 +1,6 @@
 module Compiler.Separate
 
+import public Core.FC
 import public Core.Name
 import public Core.Name.Namespace
 import public Core.CompileExpr
@@ -29,6 +30,7 @@ export
 Hashable CompilationUnitId where
   hashWithSalt h (CUID int) = hashWithSalt h int
 
+-- A compilation unit is a set of namespaces.
 public export
 record CompilationUnit def where
   constructor MkCompilationUnit
@@ -190,11 +192,23 @@ mutual
     nsRefs (MkNmForeign ccs fargs rty) = SortedSet.empty
     nsRefs (MkNmError rhs) = nsRefs rhs
 
--- compilation units sorted by number of imports, ascending
+-- a slight hack for convenient use with CompileData.namedDefs
 export
-mkCompilationUnits : HasNamespaces def => List (Name, def) -> List (CompilationUnit def)
-mkCompilationUnits {def} defs =
+HasNamespaces a => HasNamespaces (FC, a) where
+  nsRefs (_, x) = nsRefs x
+
+public export
+record CompilationUnitInfo def where
+  constructor MkCompilationUnitInfo
+  compilationUnits : List (CompilationUnit def)  -- ordered by the number of imports, ascending
+  namespaceMap : SortedMap Namespace CompilationUnitId
+
+export
+getCompilationUnits : HasNamespaces def => List (Name, def) -> CompilationUnitInfo def
+getCompilationUnits {def} defs =
+  MkCompilationUnitInfo
     [mkUnit cuid nss | (cuid, nss) <- withCUID components]
+    nsMap
   where
     defsByNS : SortedMap Namespace (List (Name, def))
     defsByNS = SortedMap.fromList $ splitByNS defs

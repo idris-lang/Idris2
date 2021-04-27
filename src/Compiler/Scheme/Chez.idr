@@ -387,6 +387,7 @@ compileToSS c appdir tm outfile
          traverse_ copyLib libs
          cdata <- getCompileData False Cases tm
          let ndefs = namedDefs cdata
+         let cui = getCompilationUnits ndefs  -- TODO
          let ctm = forget (mainExpr cdata)
 
          defs <- get Ctxt
