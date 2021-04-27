@@ -469,7 +469,7 @@ compileToSS c chez appdir tm = do
     let header =
           "(library (" ++ chezLib ++ ") "
           ++ "(export " ++ exports ++ ") "
-          ++ "(import (rnrs) (support) " ++ imports ++ ")\n"
+          ++ "(import (chezscheme) (support) " ++ imports ++ ")\n"
     let footer = ")"
 
     -- code = header + foreign defs + compiled defs + footer
