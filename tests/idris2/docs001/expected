@@ -18,6 +18,7 @@ Main> Prelude.List : Type -> Type
     Nil : List a
       Empty list
     :: : a -> List a -> List a
+      A non-empty list, consisting of a head element and the rest of the list.
 Main> Prelude.Show : Type -> Type
   Things that have a canonical `String` representation.
   Parameters: ty

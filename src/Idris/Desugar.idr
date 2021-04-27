@@ -953,7 +953,12 @@ mutual
            mds' <- traverse (desugarDecl ps) mds
            pure (concat mds')
   desugarDecl ps (PNamespace fc ns decls)
-      = do ds <- traverse (desugarDecl ps) decls
+      = do defs <- get Ctxt
+           let cns = currentNS defs
+           extendNS ns
+           ds <- traverse (desugarDecl ps) decls
+           defs <- get Ctxt
+           put Ctxt (record { currentNS = cns } defs)
            pure [INamespace fc ns (concat ds)]
   desugarDecl ps (PTransform fc n lhs rhs)
       = do (bound, blhs) <- bindNames False !(desugar LHS ps lhs)
