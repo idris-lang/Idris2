@@ -37,7 +37,7 @@
     blodwen-random-seed blodwen-random blodwen-finaliser
     blodwen-register-object blodwen-run-finalisers)
 
-  (import (rnrs))
+  (import (chezscheme))
 
 (define (blodwen-os)
   (case (machine-type)
