@@ -392,8 +392,9 @@ compileChezProgram chez ssFile = ignore $ coreLift $ system $ unwords
   , "|", chez, "-q"
   ]
 
-writeFileCore : (fname : String) -> (content : String) -> Core ()
-writeFileCore fname content =
+writeFileCore : Ref Ctxt Defs => (fname : String) -> (content : String) -> Core ()
+writeFileCore fname content = do
+  log "compiler.scheme.chez" 2 $ "Generating code for " ++ show fname
   coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
@@ -402,7 +403,9 @@ chezLibraryName : CompilationUnit def -> String
 chezLibraryName cu =
   case SortedSet.toList cu.namespaces of
     [] => "unknown"
-    ns::_ => showNSWithSep "-" ns
+    ns::_ => case showNSWithSep "-" ns of
+      "" => "unqualified"
+      nss => nss
 
 record ChezLib where
   constructor MkChezLib
@@ -430,6 +433,7 @@ compileToSS c chez appdir tm = do
 
   -- for each compilation unit, generate code
   chezLibs <- for cui.compilationUnits $ \cu => do
+    let chezLib = chezLibraryName cu
     -- TODO: skip this if hash is up to date
 
     -- initialise context
@@ -437,13 +441,17 @@ compileToSS c chez appdir tm = do
     l <- newRef {t = List String} Loaded ["libc", "libc 6"]
     s <- newRef {t = List String} Structs []
 
-    -- code = foreign defs + compiled defs
+    -- create header + footer
+    let exports = unwords [schName dn | (dn, _) <- cu.definitions]
+    let header = "(library (" ++ chezLib ++ ") (export " ++ exports ++ ") (import (rnrs))\n"
+    let footer = ")"
+
+    -- code = header + foreign defs + compiled defs + footer
     fgndefs <- traverse (getFgnCall appdir) cu.definitions
     compdefs <- traverse (getScheme chezExtPrim chezString) cu.definitions
-    let code = fastAppend (map snd fgndefs ++ compdefs)
+    let code = fastAppend (header :: map snd fgndefs ++ compdefs ++ [footer])
 
     -- write the file
-    let chezLib = chezLibraryName cu
     writeFileCore (appdir </> chezLib <.> "ss") code
 
     pure (MkChezLib chezLib True)  -- TODO: isOutdated
@@ -451,7 +459,7 @@ compileToSS c chez appdir tm = do
   -- main module
   -- TODO: use chezLibs
   main <- schExp chezExtPrim chezString 0 ctm
-  writeFileCore (appdir </> "main.ss") $ unlines $
+  writeFileCore (appdir </> "mainprog.ss") $ unlines $
     [ schHeader chez (map snd libs)
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
@@ -502,11 +510,11 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
         compileChezLibrary chez (appDirRel </> lib.name <.> "ss")
 
     -- compile the main program
-    compileChezProgram chez (appDirRel </> "main.ss")
+    compileChezProgram chez (appDirRel </> "mainprog.ss")
 
   -- generate the launch script
   let outShRel = outputDir </> outfile
-  let launchTarget = appDirRel </> "main" <.> (if makeitso then "so" else "ss")
+  let launchTarget = appDirRel </> "mainprog" <.> (if makeitso then "so" else "ss")
   if isWindows
      then makeShWindows chez outShRel appDirRel launchTarget
      else makeSh outShRel appDirRel launchTarget
