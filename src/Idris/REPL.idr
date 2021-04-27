@@ -644,6 +644,49 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
+emode : REPLEval -> ElabMode
+emode EvalTC = InType
+emode _ = InExpr
+
+nfun : {auto c : Ref Ctxt Defs} ->
+  {vs : _} ->
+  REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
+nfun NormaliseAll = normaliseAll
+nfun _ = normalise
+
+
+||| Infer the type of a PTerm and normalize it
+||| Returns the type, the resugared normal form, and the normal form term
+inferAndNormalize : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  (norm : Defs -> Env Term [] -> Term [] -> Core (Term [])) ->
+  PTerm -> Core (Term [], PTerm, Term [])
+inferAndNormalize norm itm =
+  do opts <- get ROpts
+     ttimp <- desugar AnyExpr [] itm
+     let ttimpWithIt = ILocal replFC !getItDecls ttimp
+     inidx <- resolveName (UN "[input]")
+     -- a TMP HACK to prioritise list syntax for List: hide
+     -- foreign argument lists. TODO: once the new FFI is fully
+     -- up and running we won't need this. Also, if we add
+     -- 'with' disambiguation we can use that instead.
+     catch (do hide replFC (NS primIONS (UN "::"))
+               hide replFC (NS primIONS (UN "Nil")))
+                       (\err => pure ())
+     (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
+                                       [] ttimpWithIt Nothing
+     logTerm "repl.eval" 10 "Elaborated input" tm
+     defs <- get Ctxt
+     ntm <- norm defs [] tm
+     logTermNF "repl.eval" 5 "Normalised" [] ntm
+     itm <- resugar [] ntm
+     ty <- getTerm gty
+     pure (ty, itm, ntm)
+
+
 ||| Process a single `REPLCmd`
 |||
 ||| Returns `REPLResult` for display by the higher level shell which
@@ -661,26 +704,11 @@ process (Eval itm)
          case evalMode opts of
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
-              do ttimp <- desugar AnyExpr [] itm
-                 let ttimpWithIt = ILocal replFC !getItDecls ttimp
-                 inidx <- resolveName (UN "[input]")
-                 -- a TMP HACK to prioritise list syntax for List: hide
-                 -- foreign argument lists. TODO: once the new FFI is fully
-                 -- up and running we won't need this. Also, if we add
-                 -- 'with' disambiguation we can use that instead.
-                 catch (do hide replFC (NS primIONS (UN "::"))
-                           hide replFC (NS primIONS (UN "Nil")))
-                       (\err => pure ())
-                 (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
-                                       [] ttimpWithIt Nothing
-                 logTerm "repl.eval" 10 "Elaborated input" tm
+              do
                  defs <- get Ctxt
                  opts <- get ROpts
                  let norm = nfun (evalMode opts)
-                 ntm <- norm defs [] tm
-                 logTermNF "repl.eval" 5 "Normalised" [] ntm
-                 itm <- resugar [] ntm
-                 ty <- getTerm gty
+                 (ty, itm, ntm) <- inferAndNormalize norm itm
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
                    $ newDef replFC evalResultName top [] ty Private
@@ -691,15 +719,7 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-  where
-    emode : REPLEval -> ElabMode
-    emode EvalTC = InType
-    emode _ = InExpr
 
-    nfun : {vs : _} ->
-           REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-    nfun NormaliseAll = normaliseAll
-    nfun _ = normalise
 process (Check (PRef fc (UN "it")))
     = do opts <- get ROpts
          case evalResultName opts of
