@@ -378,50 +378,80 @@ startChezWinSh chez appdir target = unlines
     , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
-||| Compile a TT expression to Chez Scheme
+compileChezLibrary : (chez : String) -> (ssFile : String) -> Core ()
+compileChezLibrary chez ssFile = coreLift $ system $ unwords
+  [ "echo"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
+  , "|", chez, "-q"
+  ]
+
+compileChezProgram : (chez : String) -> (ssFile : String) -> Core ()
+compileChezProgram chez ssFile = coreLift $ system $ unwords
+  [ "echo"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ show ssFile ++ "))'"
+  , "|", chez, "-q"
+  ]
+
+writeFileCore : (fname : String) -> (content : String) -> Core ()
+writeFileCore =
+  coreLift (writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+chezLibraryName : CompilationUnit def -> String
+chezLibraryName cu =
+  case SortedSet.toList cu.namespaces of
+    [] => "unknown"
+    ns::_ => showNSWithSep "-" ns
+
+||| Compile a TT expression to a bunch of Chez Scheme files
 compileToSS : Ref Ctxt Defs ->
               String -> ClosedTerm -> (outfile : String) -> Core ()
-compileToSS c appdir tm outfile
-    = do ds <- getDirectives Chez
-         libs <- findLibs ds
-         traverse_ copyLib libs
-         cdata <- getCompileData False Cases tm
-         let ndefs = namedDefs cdata
-         let cui = getCompilationUnits ndefs  -- TODO
-         let ctm = forget (mainExpr cdata)
+compileToSS c appdir tm outfile = do
+  -- process native libraries
+  ds <- getDirectives Chez
+  libs <- findLibs ds
+  traverse_ copyLib libs
 
-         defs <- get Ctxt
-         l <- newRef {t = List String} Loaded ["libc", "libc 6"]
-         s <- newRef {t = List String} Structs []
-         fgndefs <- traverse (getFgnCall appdir) ndefs
-         compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
-         let code = fastAppend (map snd fgndefs ++ compdefs)
-         main <- schExp chezExtPrim chezString 0 ctm
-         chez <- coreLift findChez
-         support <- readDataFile "chez/support.ss"
-         extraRuntime <- getExtraRuntime ds
-         let scm = schHeader chez (map snd libs) ++
-                   support ++ extraRuntime ++ code ++
-                   concat (map fst fgndefs) ++
-                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
-                   main ++ schFooter
-         Right () <- coreLift $ writeFile outfile scm
-            | Left err => throw (FileErr outfile err)
-         coreLift_ $ chmodRaw outfile 0o755
-         pure ()
+  -- get the material for compilation
+  cdata <- getCompileData False Cases tm
+  let ctm = forget (mainExpr cdata)
+  let ndefs = namedDefs cdata
+  let cui = getCompilationUnits ndefs
 
-||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
-compileToSO : {auto c : Ref Ctxt Defs} ->
-              String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
-compileToSO chez appDirRel outSsAbs
-    = do let tmpFileAbs = appDirRel </> "compileChez"
-         let build = "(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++
-                    show outSsAbs ++ "))"
-         Right () <- coreLift $ writeFile tmpFileAbs build
-            | Left err => throw (FileErr tmpFileAbs err)
-         coreLift_ $ chmodRaw tmpFileAbs 0o755
-         coreLift_ $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
-         pure ()
+  -- generate the support module
+  support <- readDataFile "chez/support.ss"
+  extraRuntime <- getExtraRuntime ds
+  writeFileCore (appdir </> "support.ss") (support ++ extraRuntime)
+
+  -- for each compilation unit, generate code
+  chezLibs <- for cui.compilationUnits $ \cu => do
+    -- initialise context
+    defs <- get Ctxt
+    l <- newRef {t = List String} Loaded ["libc", "libc 6"]
+    s <- newRef {t = List String} Structs []
+
+    -- code = foreign defs + compiled defs
+    fgndefs <- traverse (getFgnCall appdir) cu.definitions
+    compdefs <- traverse (getScheme chezExtPrim chezString) cu.definitions
+    let code = fastAppend (map snd fgndefs ++ compdefs)
+
+    -- write the file
+    writeFileCore (appdir </> chezLibraryName cu <.> "ss") code
+
+  -- main module
+  main <- schExp chezExtPrim chezString 0 ctm
+  chez <- coreLift findChez
+  writeFileCore (appdir </> "main.ss") $ unlines $
+    [ schHeader chez (map snd libs)
+    , support ++ extraRuntime ++ code ++
+    , concat (map fst fgndefs) ++
+    , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
+    , main
+    , schFooter
+    ]
+
+  -- todo: write something into `outfile`
 
 makeSh : String -> String -> String -> Core ()
 makeSh outShRel appdir outAbs
