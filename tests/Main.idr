@@ -202,6 +202,7 @@ chezTests = MkTestPool [Chez]
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
     , "chez031", "chez032"
     , "futures001"
+    , "newints"
     , "semaphores001"
     , "semaphores002"
     , "perf001"

@@ -58,24 +58,24 @@ boolop : String -> List String -> String
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 add : Maybe IntKind -> String -> String -> String
-add (Just $ Signed $ P n)   x y = op "b+" [x, y, show (n-1)]
-add (Just $ Unsigned $ P n) x y = op "b+" [x, y, show n]
+add (Just $ Signed $ P n)   x y = op "bs+" [x, y, show (n-1)]
+add (Just $ Unsigned $ P n) x y = op "bu+" [x, y, show n]
 add _                       x y = op "+" [x, y]
 
 sub : Maybe IntKind -> String -> String -> String
-sub (Just $ Signed $ P n)   x y = op "b-" [x, y, show (n-1)]
-sub (Just $ Unsigned $ P n) x y = op "b-" [x, y, show n]
+sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, show (n-1)]
+sub (Just $ Unsigned $ P n) x y = op "bu-" [x, y, show n]
 sub _                       x y = op "-" [x, y]
 
 mul : Maybe IntKind -> String -> String -> String
-mul (Just $ Signed $ P n)   x y = op "b*" [x, y, show (n-1)]
-mul (Just $ Unsigned $ P n) x y = op "b*" [x, y, show n]
+mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, show (n-1)]
+mul (Just $ Unsigned $ P n) x y = op "bu*" [x, y, show n]
 mul _                       x y = op "*" [x, y]
 
 div : Maybe IntKind -> String -> String -> String
 div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
-div (Just $ Signed $ P n)     x y = op "b/" [x, y, show (n-1)]
-div (Just $ Unsigned $ P n)   x y = op "b/" [x, y, show n]
+div (Just $ Signed $ P n)     x y = op "bs/" [x, y, show (n-1)]
+div (Just $ Unsigned $ P n)   x y = op "bu/" [x, y, show n]
 div _                         x y = op "/" [x, y]
 
 shl : Maybe IntKind -> String -> String -> String
@@ -109,13 +109,13 @@ castInt from to x =
 
        -- we allow Double casts to all integers but have
        -- to check the bounds
-       ((DoubleType, _), (_, Just $ Signed Unlimited)) => op "exact-floor" [x]
+       ((DoubleType, _), (_, Just $ Signed Unlimited)) => op "exact-truncate" [x]
 
        ((DoubleType, _), (_, Just $ Signed $ P n)) =>
-         op "exact-floor-boundedInt" [x, show (n-1)]
+         op "exact-truncate-boundedInt" [x, show (n-1)]
 
        ((DoubleType, _), (_, Just $ Unsigned $ P n)) =>
-         op "exact-floor-boundedUInt" [x,show n]
+         op "exact-truncate-boundedUInt" [x,show n]
 
        -- we allow casts from all integer types to Char (cast-int-char does bounds checking)
        ((_, Just _), (CharType, _)) => op "cast-int-char" [x]
