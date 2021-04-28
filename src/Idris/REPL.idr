@@ -651,8 +651,12 @@ nfun : {auto c : Ref Ctxt Defs} ->
 nfun NormaliseAll = normaliseAll
 nfun _ = normalise
 
-||| Infer the type of a PTerm and elaborate it to a Term
-||| Returns a pair containing the term and its type
+record TermWithType where
+  constructor WithType
+  termOf : Term []
+  typeOf : Term []
+
+||| Produce the elaboration of a PTerm, along with its inferred type
 inferAndElab : {auto c : Ref Ctxt Defs} ->
   {auto u : Ref UST UState} ->
   {auto s : Ref Syn SyntaxInfo} ->
@@ -660,7 +664,7 @@ inferAndElab : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   ElabMode ->
   PTerm ->
-  Core (Term [], Term [])
+  Core TermWithType
 inferAndElab emode itm
   = do ttimp <- desugar AnyExpr [] itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
@@ -675,10 +679,9 @@ inferAndElab emode itm
        (tm , gty) <- elabTerm inidx emode [] (MkNested [])
                    [] ttimpWithIt Nothing
        ty <- getTerm gty
-       pure (tm , ty)
+       pure (tm `WithType` ty)
 
-||| Infer the type of a PTerm and normalize it
-||| Returns a pair with the type and the given term's normal form
+||| Produce the normal form of a PTerm, along with its inferred type
 inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto u : Ref UST UState} ->
   {auto s : Ref Syn SyntaxInfo} ->
@@ -686,15 +689,15 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   REPLEval ->
   PTerm ->
-  Core (Term [], Term [])
+  Core TermWithType
 inferAndNormalize emode itm
-  = do (tm , ty) <- inferAndElab (elabMode emode) itm
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
        let norm = nfun emode
        ntm <- norm defs [] tm
        logTermNF "repl.eval" 5 "Normalised" [] ntm
-       pure (ty, ntm)
+       pure $ ntm `WithType` ty
   where
     elabMode : REPLEval -> ElabMode
     elabMode EvalTC = InType
@@ -720,7 +723,7 @@ process (Eval itm)
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
               do
-                 (ty, ntm) <- inferAndNormalize emode itm
+                 (ntm `WithType` ty) <- inferAndNormalize emode itm
                  itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
@@ -747,7 +750,7 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType defs) ts
                        pure (Printed $ vsep tys)
 process (Check itm)
-    = do (tm, ty) <- inferAndElab InExpr itm
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
          -- ty <- getTerm gty
