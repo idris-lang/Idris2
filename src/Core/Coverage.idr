@@ -214,16 +214,18 @@ getMissingAlts fc defs (NPrimVal _ WorldType) alts
          then pure [DefaultCase (Unmatched "Coverage check")]
          else pure []
 getMissingAlts fc defs (NPrimVal _ c) alts
-    = if any isDefault alts
+  = do log "coverage.missing" 50 $ "Looking for missing alts at type " ++ show c
+       if any isDefault alts
          then do log "coverage.missing" 20 "Found default"
                  pure []
          else pure [DefaultCase (Unmatched "Coverage check")]
 -- Similarly for types
 getMissingAlts fc defs (NType _) alts
-    = if any isDefault alts
-         then do log "coverage.missing" 20 "Found default"
-                 pure []
-         else pure [DefaultCase (Unmatched "Coverage check")]
+    = do log "coverage.missing" 50 "Looking for missing alts at type Type"
+         if any isDefault alts
+           then do log "coverage.missing" 20 "Found default"
+                   pure []
+           else pure [DefaultCase (Unmatched "Coverage check")]
 getMissingAlts fc defs nfty alts
     = do log "coverage.missing" 50 $ "Getting constructors for: " ++ show nfty
          logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
