@@ -24,6 +24,11 @@ data Decoration : Type where
   Data : Decoration
   Keyword : Decoration
   Bound : Decoration
+
+public export
+SemanticDecorations : Type
+SemanticDecorations = List (NonEmptyFC, Decoration)
+
 public export
 Show Decoration where
   show Typ      = "type"
@@ -245,6 +250,18 @@ findHoleLHS : {auto m : Ref MD Metadata} ->
 findHoleLHS hn
     = do meta <- get MD
          pure (lookupBy (\x, y => dropNS x == dropNS y) hn (holeLHS meta))
+
+
+export
+addSemanticDecorations : {auto m : Ref MD Metadata} ->
+                         {auto ctx : Ref Ctxt Defs} ->
+   SemanticDecorations -> Core ()
+addSemanticDecorations decors
+    = do meta <- get MD
+         let newDecors = fromList decors
+         put MD $ record {semanticHighlighting $=  (newDecors `union`)} meta
+         pure ()
+
 
 -- Normalise all the types of the names, since they might have had holes
 -- when added and the holes won't necessarily get saved

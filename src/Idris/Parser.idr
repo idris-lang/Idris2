@@ -1,6 +1,7 @@
 module Idris.Parser
 
 import        Core.Options
+import        Core.Metadata
 import        Idris.Syntax
 import public Parser.Source
 import        Parser.Lexer.Source
@@ -488,7 +489,10 @@ mutual
       = do symbol "("
            binders <- pibindList fname indents
            symbol ")"
+           locKwd <- location
            exp <- bindSymbol
+           locKwd' <- location
+           act [((fname, (locKwd, locKwd')), Typ)]
            scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname exp binders scope)
 
@@ -606,6 +610,7 @@ mutual
                            pure (scr, alts))
            (scr, alts) <- pure b.val
            pure (PCase (boundToFC fname b) scr alts)
+
 
   caseAlt : FileName -> IndentInfo -> Rule PClause
   caseAlt fname indents
@@ -1313,7 +1318,12 @@ fieldDecl fname indents
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p
         = do b <- bounds (do rig <- multiplicity
-                             ns <- sepBy1 (symbol ",") name
+                             ns <- sepBy1 (symbol ",") (do
+                                     locKwd <- location
+                                     n <- name
+                                     locKwd' <- location
+                                     act [((fname, (locKwd, locKwd')), Function)]
+                                     pure n)
                              symbol ":"
                              ty <- expr pdef fname indents
                              pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
@@ -1346,7 +1356,10 @@ recordDecl fname indents
     = do b <- bounds (do doc   <- option "" documentation
                          vis   <- visibility
                          col   <- column
+                         locKwd <- location
                          keyword "record"
+                         locKwd' <- location
+                         act [((fname, (locKwd, locKwd')), Data)]
                          n       <- mustWork dataTypeName
                          paramss <- many (recordParam fname indents)
                          let params = concat paramss

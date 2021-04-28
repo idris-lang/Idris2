@@ -165,6 +165,10 @@ export %inline
        Grammar state tok (c1 || c2) b
 (*>) x y = map (const id) x <*> y
 
+export %inline
+act : state -> Grammar state tok False ()
+act = Act
+
 ||| Produce a grammar that can parse a different type of token by providing a
 ||| function converting the new token type into the original one.
 export

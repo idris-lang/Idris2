@@ -197,7 +197,7 @@ readHeader path
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
-         let Right mod = runParserTo path (isLitFile path) (is ':') res (progHdr path)
+         let Right (decor, mod) = runParserTo path (isLitFile path) (is ':') res (progHdr path)
             | Left err => throw err
          pure mod
 
@@ -259,9 +259,10 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("++ Parsing " ++ srcf) $
+                Right (decor, mod) <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser srcf (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [err])
+                addSemanticDecorations decor
                 initHash
                 traverse_ addPublicHash (sort hs)
                 resetNextVar

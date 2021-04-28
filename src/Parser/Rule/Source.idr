@@ -4,6 +4,7 @@ import public Parser.Lexer.Source
 import public Parser.Support
 
 import Core.TT
+import Core.Metadata
 import Data.List1
 import Data.Strings
 import Libraries.Data.List.Extra
@@ -18,11 +19,11 @@ import Libraries.Data.String.Extra
 
 public export
 Rule : Type -> Type
-Rule ty = Grammar () Token True ty
+Rule ty = Grammar SemanticDecorations Token True ty
 
 public export
 EmptyRule : Type -> Type
-EmptyRule ty = Grammar () Token False ty
+EmptyRule ty = Grammar SemanticDecorations Token False ty
 
 export
 eoi : EmptyRule ()

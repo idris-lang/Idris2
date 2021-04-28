@@ -16,11 +16,11 @@ import Libraries.Data.PosMap
 %default covering
 
 SExpable Decoration where
-  toSExp Typ = SymbolAtom "type"
-  toSExp Function = SymbolAtom "function"
-  toSExp Data = SymbolAtom "data"
-  toSExp Keyword = SymbolAtom "keyword"
-  toSExp Bound = SymbolAtom "bound"
+  toSExp Typ      = SExpList [ SymbolAtom "decor", SymbolAtom "type"]
+  toSExp Function = SExpList [ SymbolAtom "decor", SymbolAtom "function"]
+  toSExp Data     = SExpList [ SymbolAtom "decor", SymbolAtom "data"]
+  toSExp Keyword  = SExpList [ SymbolAtom "decor", SymbolAtom "keyword"]
+  toSExp Bound    = SExpList [ SymbolAtom "decor", SymbolAtom "bound"]
 
 record Highlight where
   constructor MkHighlight
@@ -46,7 +46,7 @@ SExpable Highlight where
     = SExpList [ toSExp $ justFC loc
                , SExpList [ SExpList [ SymbolAtom "name", StringAtom (show nam) ]
                           , SExpList [ SymbolAtom "namespace", StringAtom ns ]
-                          , SExpList [ SymbolAtom "decor", toSExp dec ]
+                          , toSExp dec
                           , SExpList [ SymbolAtom "implicit", toSExp impl ]
                           , SExpList [ SymbolAtom "key", StringAtom k ]
                           , SExpList [ SymbolAtom "doc-overview", StringAtom doc ]
@@ -83,6 +83,22 @@ outputHighlight h =
   where
     hlt : List Highlight
     hlt = [h]
+
+lwOutputHighlight :
+  {auto c : Ref Ctxt Defs} ->
+  {auto opts : Ref ROpts REPLOpts} ->
+  (NonEmptyFC, Decoration) -> Core ()
+lwOutputHighlight (nfc,decor) =
+  printOutput $ SExpList [ SymbolAtom "ok"
+                         , SExpList [ SymbolAtom "highlight-source"
+                                    , toSExp $ the (List _) [MkHighlight nfc (UN "") False "" decor "" "" ""]
+                                    ]
+                         ]
+  where
+    decorSExp : SExp
+    decorSExp = toSExp (justFC nfc, toSExp decor)
+
+
 
 isPrimType : Constant -> Bool
 isPrimType (I   x)  = False
@@ -145,9 +161,12 @@ outputSyntaxHighlighting : {auto c : Ref Ctxt Defs} ->
 outputSyntaxHighlighting fname loadResult = do
   opts <- get ROpts
   when (opts.synHighlightOn) $ do
-    allNames <- the (Core ?) $ filter (inFile fname) . toList . nameLocMap <$> get MD
+    meta <- get MD
+    let allNames = filter (inFile fname) $ toList meta.nameLocMap
     --  decls <- filter (inFile fname) . tydecls <$> get MD
-    _ <- traverse outputNameSyntax allNames -- ++ decls)
+    --_ <- traverse outputNameSyntax allNames -- ++ decls)
+    log "ide-mode.highlight" 19 $ "Semantic metadata is: " ++ show meta.semanticHighlighting
+    traverse_ lwOutputHighlight (toList meta.semanticHighlighting)
     pure ()
 
   pure loadResult

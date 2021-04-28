@@ -2,6 +2,7 @@ module TTImp.Parser
 
 import Core.Context
 import Core.Core
+import Core.Metadata
 import Core.Env
 import Core.TT
 import Parser.Source
