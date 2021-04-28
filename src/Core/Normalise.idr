@@ -226,13 +226,17 @@ parameters (defs : Defs, topopts : EvalOpts)
               FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalRef env meta fc (DataCon tag arity) fn stk def
-        = pure $ NDCon fc fn tag arity stk
+        = do logC "eval.ref.data" 50 $ pure $ "Found data constructor:" ++ show !(toFullNames fn)
+             pure $ NDCon fc fn tag arity stk
     evalRef env meta fc (TyCon tag arity) fn stk def
-        = pure $ NTCon fc fn tag arity stk
+        = do logC "eval.ref.type" 50 $ pure $ "Found type constructor:" ++ show !(toFullNames fn)
+             pure $ ntCon fc fn tag arity stk
     evalRef env meta fc Bound fn stk def
-        = pure def
+        = do logC "eval.ref.bound" 50 $ pure $ "Found bound variable:" ++ show !(toFullNames fn)
+             pure def
     evalRef env meta fc nt@Func n stk def
-        = do Just res <- lookupCtxtExact n (gamma defs)
+        = do logC "eval.ref.func" 50 $ pure $ "Found function:" ++ show !(toFullNames n)
+             Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)

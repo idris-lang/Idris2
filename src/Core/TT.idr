@@ -55,6 +55,22 @@ data Constant
     | WorldType
 
 export
+isConstantType : Name -> Maybe Constant
+isConstantType (UN n) = case n of
+  "Int"     => Just IntType
+  "Integer" => Just IntegerType
+  "Bits8"   => Just Bits8Type
+  "Bits16"  => Just Bits16Type
+  "Bits32"  => Just Bits32Type
+  "Bits64"  => Just Bits64Type
+  "String"  => Just StringType
+  "Char"    => Just CharType
+  "Double"  => Just DoubleType
+  "%World"  => Just WorldType
+  _ => Nothing
+isConstantType _ = Nothing
+
+export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
