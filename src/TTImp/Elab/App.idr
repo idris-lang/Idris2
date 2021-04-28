@@ -312,6 +312,22 @@ mutual
   needsDelay (InLHS _) _ tm = needsDelayLHS tm
   needsDelay _ kr tm = needsDelayExpr kr tm
 
+  checkValidPattern :
+    {vars : _} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto m : Ref MD Metadata} ->
+    {auto u : Ref UST UState} ->
+    {auto e : Ref EST (EState vars)} ->
+    RigCount -> Env Term vars -> FC ->
+    Term vars -> Glued vars ->
+    Core (Term vars, Glued vars)
+  checkValidPattern rig env fc tm ty
+    = do log "elab.app.lhs" 50 $ "Checking that " ++ show tm ++ " is a valid pattern"
+         case tm of
+           Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
+           _ => pure (tm, ty)
+
+
   checkPatTyValid : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     FC -> Defs -> Env Term vars ->
@@ -417,10 +433,15 @@ mutual
              defs <- get Ctxt
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
-             (argv, argt) <- check argRig elabinfo
-                                   nest env arg (Just (glueBack defs env aty'))
-             when (onLHS (elabMode elabinfo)) $
-                  checkPatTyValid fc defs env aty' argv argt
+
+             res <- check argRig elabinfo nest env arg (Just $ glueBack defs env aty')
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkPatTyValid fc defs env aty' argv argt
+                         checkValidPattern rig env fc argv argt
+
              defs <- get Ctxt
              -- If we're on the LHS, reinstantiate it with 'argv' because it
              -- *may* have as patterns in it and we need to retain them.
@@ -454,8 +475,14 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             (argv, argt) <- check argRig elabinfo
+             res <- check argRig elabinfo
                                    nest env arg (Just (glueBack defs env aty))
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkValidPattern rig env fc argv argt
+
              logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
              let fntm = App fc tm argv
