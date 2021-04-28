@@ -57,12 +57,45 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
+
 (define exact-floor
   (lambda (x)
     (inexact->exact (floor x))))
+
+(define exact-floor-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt
+      ((exact-floor (x)) y))))
+
+(define exact-floor-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt
+      ((exact-floor (x)) y))))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt
+      ((char->integer (x)) y))))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt
+      ((char->integer (x)) y))))
+
 (define cast-string-int
   (lambda (x)
     (exact-floor (cast-num (string->number (destroy-prefix x))))))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt
+      ((cast-string-int (x)) y))))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt
+      ((cast-string-int (x)) y))))
+
 (define cast-int-char
   (lambda (x)
     (if (and (>= x 0)
