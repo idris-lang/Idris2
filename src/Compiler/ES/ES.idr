@@ -237,6 +237,17 @@ castInt from to x =
        ((CharType, _), (_, Just $ Unsigned $ P n)) =>
          boundedUInt n $ x ++ ".codePointAt(0)"
 
+       -- we allow casts from String to all integers but have
+       -- to check the bounds
+       ((StringType, _), (_, Just $ Signed Unlimited)) =>
+         jsIntegerOfString x
+
+       ((StringType, _), (_, Just $ Signed $ P n)) =>
+         boundedInt (n-1) $ !(jsIntegerOfString x)
+
+       ((StringType, _), (_, Just $ Unsigned $ P n)) =>
+         boundedUInt n $ !(jsIntegerOfString x)
+
        ((_, Just _), (_, Just $ Signed Unlimited)) => pure x
 
        ((_, Just $ Signed m), (_, Just $ Signed $ P n)) =>
