@@ -18,8 +18,8 @@
 (define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
 (define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
 
-(define blodwen-toSignedInt (lambda (x y) (modulo x (expt 2 y))))
-(define blodwen-toUnsignedInt (lambda (x y) (modulo x (expt 2 y))))
+(define blodwen-toSignedInt (lambda (x bits) (remainder x (ash 1 bits))))
+(define blodwen-toUnsignedInt (lambda (x bits) (modulo x (ash 1 bits))))
 
 (define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
