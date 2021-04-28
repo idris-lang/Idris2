@@ -441,7 +441,7 @@ packageInternal (NS ns _) =
 packageInternal _ = pure False
 
 renderHtml : {auto c : Ref Ctxt Defs} ->
-             SimpleDocTree IdrisAnn ->
+             SimpleDocTree IdrisDocAnn ->
              Core String
 renderHtml STEmpty = pure neutral
 renderHtml (STChar c) = pure $ cast c
@@ -449,13 +449,15 @@ renderHtml (STText _ text) = pure text
 renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
-renderHtml (STAnn Documentation rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
-renderHtml (STAnn (TermName n) rest) = do
-  pure $ "<span class=\"name function\">" <+> nameRoot n <+> "</span>"
+renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
+renderHtml (STAnn Fun rest) = do
+  -- TODO: check if we need to take `nameRoot` here
+  resthtml <- renderHtml rest
+  pure $ "<span class=\"name function\">" <+> resthtml <+> "</span>"
 renderHtml (STAnn Header rest) = do
   resthtml <- renderHtml rest
   pure $ "<b>" <+> resthtml <+> "</b>"
-renderHtml (STAnn (Link n) rest) = do
+renderHtml (STAnn (Syntax (SynRef n)) rest) = do
   resthtml <- renderHtml rest
   Just cName <- tryCanonicalName emptyFC n
     | Nothing => pure $ "<span class=\"implicit\">" <+> resthtml <+> "</span>"
@@ -468,7 +470,7 @@ renderHtml (STAnn ann rest) = do
 renderHtml (STConcat docs) = pure $ fastConcat !(traverse renderHtml docs)
 
 docDocToHtml : {auto c : Ref Ctxt Defs} ->
-               Doc IdrisAnn ->
+               Doc IdrisDocAnn ->
                Core String
 docDocToHtml doc =
   let ds = layoutUnbounded doc
@@ -513,7 +515,7 @@ makeDoc pkg opts =
                  | Nothing => writeHtml ("ERROR: lookup failed: " ++ show name)
                typeTm <- resugar [] !(normaliseHoles defs [] (type gdef))
                let typeDoc = prettyTerm typeTm
-               typeStr <- docDocToHtml typeDoc
+               typeStr <- docDocToHtml $ reAnnotate Syntax typeDoc
                let pname = stripNS ns name
                writeHtml ("<dt style=\"opacity: 0.3;\" id=\"" ++ (htmlEscape $ show name) ++ "\">")
                writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")

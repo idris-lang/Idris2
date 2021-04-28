@@ -5,6 +5,7 @@ import Core.Core
 import Core.Env
 import Core.TT
 
+import Idris.Pretty
 import Idris.Pretty.Render
 import Idris.REPL.Opts
 import Idris.Resugar
@@ -33,6 +34,10 @@ data IdrisDocAnn
   | DCon
   | Fun
   | Header
+  | Declarations
+  | Decl Name
+  | DocStringBody
+  | Syntax IdrisSyntax
 
 export
 styleAnn : IdrisDocAnn -> AnsiStyle
@@ -40,6 +45,7 @@ styleAnn TCon = color BrightBlue
 styleAnn DCon = color BrightRed
 styleAnn Fun = color BrightGreen
 styleAnn Header = underline
+styleAnn _ = []
 
 export
 tCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
