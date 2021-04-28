@@ -162,7 +162,7 @@ outputSyntaxHighlighting fname loadResult = do
     meta <- get MD
     let allNames = filter (inFile fname) $ toList meta.nameLocMap
     --decls <- filter (inFile fname) . tydecls <$> get MD
-    --_ <- traverse outputNameSyntax allNames -- ++ decls)
+    _ <- traverse outputNameSyntax allNames -- ++ decls)
     log "ide-mode.highlight" 19 $ "Semantic metadata is: " ++ show meta.semanticHighlighting
     traverse_ lwOutputHighlight (toList meta.semanticHighlighting)
     pure ()
