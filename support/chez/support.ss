@@ -64,23 +64,19 @@
 
 (define exact-floor-boundedInt
   (lambda (x y)
-    (blodwen-toSignedInt
-      ((exact-floor (x)) y))))
+    (blodwen-toSignedInt (exact-floor x) y)))
 
 (define exact-floor-boundedUInt
   (lambda (x y)
-    (blodwen-toUnsignedInt
-      ((exact-floor (x)) y))))
+    (blodwen-toUnsignedInt (exact-floor x) y)))
 
 (define cast-char-boundedInt
   (lambda (x y)
-    (blodwen-toSignedInt
-      ((char->integer (x)) y))))
+    (blodwen-toSignedInt (char->integer x) y)))
 
 (define cast-char-boundedUInt
   (lambda (x y)
-    (blodwen-toUnsignedInt
-      ((char->integer (x)) y))))
+    (blodwen-toUnsignedInt (char->integer x) y)))
 
 (define cast-string-int
   (lambda (x)
@@ -88,13 +84,11 @@
 
 (define cast-string-boundedInt
   (lambda (x y)
-    (blodwen-toSignedInt
-      ((cast-string-int (x)) y))))
+    (blodwen-toSignedInt (cast-string-int x) y)))
 
 (define cast-string-boundedUInt
   (lambda (x y)
-    (blodwen-toUnsignedInt
-      ((cast-string-int (x)) y))))
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
 
 (define cast-int-char
   (lambda (x)
