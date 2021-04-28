@@ -164,6 +164,36 @@ constTag DoubleType = 11
 constTag WorldType = 12
 constTag _ = 0
 
+||| Precision of integral types.
+public export
+data Precision = P Int | Unlimited
+
+export
+Eq Precision where
+  (P m) == (P n)         = m == n
+  Unlimited == Unlimited = True
+  _         == _         = False
+
+export
+Ord Precision where
+  compare (P m) (P n)         = compare m n
+  compare Unlimited Unlimited = EQ
+  compare Unlimited _         = GT
+  compare _         Unlimited = LT
+
+public export
+data IntKind = Signed Precision | Unsigned Precision
+
+public export
+intKind : Constant -> Maybe IntKind
+intKind IntegerType = Just $ Signed Unlimited
+intKind IntType     = Just . Signed   $ P 64
+intKind Bits8Type   = Just . Unsigned $ P 8
+intKind Bits16Type  = Just . Unsigned $ P 16
+intKind Bits32Type  = Just . Unsigned $ P 32
+intKind Bits64Type  = Just . Unsigned $ P 64
+intKind _           = Nothing
+
 -- All the internal operators, parameterised by their arity
 public export
 data PrimFn : Nat -> Type where
