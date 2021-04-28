@@ -15,6 +15,7 @@ import Data.Maybe
 import Data.Strings
 import Data.These
 
+import Parser.Lexer.Source
 import Parser.Package
 import System
 import System.Directory
@@ -440,6 +441,12 @@ packageInternal (NS ns _) =
      catch ((const True) <$> nsToSource emptyFC mi) (\_ => pure False)
 packageInternal _ = pure False
 
+prettyNameRoot : Name -> String
+prettyNameRoot n =
+  let root = nameRoot n in
+  if isOpName n then "(" ++ root ++ ")" else root
+
+
 renderHtml : {auto c : Ref Ctxt Defs} ->
              SimpleDocTree IdrisDocAnn ->
              Core String
@@ -451,13 +458,12 @@ renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(rende
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
 renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
 renderHtml (STAnn DCon rest) = do
-  -- TODO: check if we need to take `nameRoot` here
   resthtml <- renderHtml rest
   pure $ "<span class=\"name constructor\">" <+> resthtml <+> "</span>"
 renderHtml (STAnn (TCon n) rest) = do
-  pure $ "<span class=\"name type\">" <+> (nameRoot n) <+> "</span>"
+  pure $ "<span class=\"name type\">" <+> (prettyNameRoot n) <+> "</span>"
 renderHtml (STAnn (Fun n) rest) = do
-  pure $ "<span class=\"name function\">" <+> (nameRoot n) <+> "</span>"
+  pure $ "<span class=\"name function\">" <+> (prettyNameRoot n) <+> "</span>"
 renderHtml (STAnn Header rest) = do
   resthtml <- renderHtml rest
   pure $ "<b>" <+> resthtml <+> "</b>"
