@@ -434,8 +434,16 @@ record ChezLib where
   name : String
   isOutdated : Bool  -- needs recompiling
 
+-- if this becomes too inefficient, we may make it tail-recursive
+forState : List a -> st -> (st -> a -> Core (st, b)) -> Core (List b)
+forState [] st f = pure []
+forState (x :: xs) st f = do
+  (st', y) <- f st x
+  ys <- forState xs st' f
+  pure (y :: ys)
+
 ||| Compile a TT expression to a bunch of Chez Scheme files
-compileToSS : Ref Ctxt Defs -> String -> String -> ClosedTerm -> Core (List ChezLib)
+compileToSS : Ref Ctxt Defs -> String -> String -> ClosedTerm -> Core (Bool, List ChezLib)
 compileToSS c chez appdir tm = do
   -- process native libraries
   ds <- getDirectives Chez
@@ -450,14 +458,21 @@ compileToSS c chez appdir tm = do
 
   -- copy the support library
   support <- readDataFile "chez/support.ss"
-  writeFileCore (appdir </> "support.ss") support
+  let supportHash = show $ hash support
+  supportChanged <-
+    coreLift (readFile (appdir </> "support.hash")) >>= \case
+      Left err => pure True
+      Right fileHash => pure (fileHash /= supportHash)
+  when supportChanged $ do
+    writeFileCore (appdir </> "support.ss") support
+    writeFileCore (appdir </> "support.hash") supportHash
 
   -- TODO: add extraRuntime
   -- the problem with this is that it's unclear what to put in the (export) clause of the library
   -- extraRuntime <- getExtraRuntime ds
 
   -- for each compilation unit, generate code
-  chezLibs <- for cui.compilationUnits $ \cu => do
+  chezLibs <- forState cui.compilationUnits SortedSet.empty $ \outdatedCuids, cu => do
     let chezLib = chezLibraryName cu
 
     -- run this only if the hash has changed
@@ -466,8 +481,10 @@ compileToSS c chez appdir tm = do
       coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
         Left err       => pure True
         Right fileHash => pure (fileHash /= cuHash)
+    let depsOutdated = not $ null (SortedSet.intersection outdatedCuids cu.dependencies)
+    let isOutdated = hashChanged || depsOutdated || supportChanged
 
-    when hashChanged $ do
+    when isOutdated $ do
       -- initialise context
       defs <- get Ctxt
       l <- newRef {t = List String} Loaded ["libc", "libc 6"]
@@ -512,7 +529,12 @@ compileToSS c chez appdir tm = do
 
       writeFileCore (appdir </> chezLib <.> "hash") cuHash
 
-    pure $ MkChezLib chezLib hashChanged
+    pure
+      ( if isOutdated
+          then SortedSet.insert cu.id outdatedCuids
+          else outdatedCuids
+      , MkChezLib chezLib isOutdated
+      )
 
   -- main module
   main <- schExp chezExtPrim chezString 0 ctm
@@ -523,7 +545,7 @@ compileToSS c chez appdir tm = do
     , schFooter
     ]
 
-  pure chezLibs
+  pure (supportChanged, chezLibs)
 
 makeSh : String -> String -> String -> String -> Core ()
 makeSh chez outShRel appDirSh targetSh
@@ -555,12 +577,14 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
   -- generate the code
   chez <- coreLift $ findChez
-  chezLibs <- compileToSS c chez appDirRel tm
+  (supportChanged, chezLibs) <- compileToSS c chez appDirRel tm
 
   -- compile the code
   logTime "++ Make SO" $ when makeitso $ do
     -- compile the support code
-    compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
+    when supportChanged $ do
+      log "compiler.scheme.chez" 3 $ "Compiling support"
+      compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
 
     -- compile every compilation unit
     for_ chezLibs $ \lib =>
