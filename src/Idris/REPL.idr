@@ -651,18 +651,17 @@ nfun : {auto c : Ref Ctxt Defs} ->
 nfun NormaliseAll = normaliseAll
 nfun _ = normalise
 
-
-||| Infer the type of a PTerm and normalize it
-||| Returns the type, the resugared normal form, and the normal form term
-inferAndNormalize : {auto c : Ref Ctxt Defs} ->
+||| Infer the type of a PTerm and elaborate it to a Term
+||| Returns a pair containing the term and its type
+inferAndElab : {auto c : Ref Ctxt Defs} ->
   {auto u : Ref UST UState} ->
   {auto s : Ref Syn SyntaxInfo} ->
   {auto m : Ref MD Metadata} ->
   {auto o : Ref ROpts REPLOpts} ->
-  REPLEval ->
+  ElabMode ->
   PTerm ->
-  Core (Term [], PTerm, Term [])
-inferAndNormalize emode itm
+  Core (Term [], Term [])
+inferAndElab emode itm
   = do ttimp <- desugar AnyExpr [] itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
        inidx <- resolveName (UN "[input]")
@@ -673,16 +672,29 @@ inferAndNormalize emode itm
        catch (do hide replFC (NS primIONS (UN "::"))
                  hide replFC (NS primIONS (UN "Nil")))
              (\err => pure ())
-       (tm, gty) <- elabTerm inidx (elabMode emode) [] (MkNested [])
-                 [] ttimpWithIt Nothing
+       (tm , gty) <- elabTerm inidx emode [] (MkNested [])
+                   [] ttimpWithIt Nothing
+       ty <- getTerm gty
+       pure (tm , ty)
+
+||| Infer the type of a PTerm and normalize it
+||| Returns a pair with the type and the given term's normal form
+inferAndNormalize : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  REPLEval ->
+  PTerm ->
+  Core (Term [], Term [])
+inferAndNormalize emode itm
+  = do (tm , ty) <- inferAndElab (elabMode emode) itm
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
        let norm = nfun emode
        ntm <- norm defs [] tm
        logTermNF "repl.eval" 5 "Normalised" [] ntm
-       itm <- resugar [] ntm
-       ty <- getTerm gty
-       pure (ty , itm , ntm)
+       pure (ty, ntm)
   where
     elabMode : REPLEval -> ElabMode
     elabMode EvalTC = InType
@@ -708,7 +720,8 @@ process (Eval itm)
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
               do
-                 (ty, itm, ntm) <- inferAndNormalize emode itm
+                 (ty, ntm) <- inferAndNormalize emode itm
+                 itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
                  let norm = nfun emode
@@ -722,15 +735,6 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-  -- where
-  --   emode : REPLEval -> ElabMode
-  --   emode EvalTC = InType
-  --   emode _ = InExpr
-
-  --   nfun : {vs : _} ->
-  --          REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-  --   nfun NormaliseAll = normaliseAll
-  --   nfun _ = normalise
 process (Check (PRef fc (UN "it")))
     = do opts <- get ROpts
          case evalResultName opts of
@@ -743,14 +747,10 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType defs) ts
                        pure (Printed $ vsep tys)
 process (Check itm)
-    = do inidx <- resolveName (UN "[input]")
-         ttimp <- desugar AnyExpr [] itm
-         let ttimpWithIt = ILocal replFC !getItDecls ttimp
-         (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                                  [] ttimpWithIt Nothing
+    = do (tm, ty) <- inferAndElab InExpr itm
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
-         ty <- getTerm gty
+         -- ty <- getTerm gty
          ity <- resugar [] !(normaliseScope defs [] ty)
          pure (TermChecked itm ity)
 process (CheckWithImplicits itm)
