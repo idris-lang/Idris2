@@ -319,13 +319,11 @@ mutual
   checkPatTyValid fc defs env (NApp _ (NMeta n i _) _) arg got
       = do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
                 | Nothing => pure ()
-           if isErased (multiplicity gdef)
-              then do -- Argument is only valid if gotnf is not a concrete type
-                      gotnf <- getNF got
-                      if !(concrete defs env gotnf)
-                         then throw (MatchTooSpecific fc env arg)
-                         else pure ()
-              else pure ()
+           when (isErased (multiplicity gdef)) $ do
+             -- Argument is only valid if gotnf is not a concrete type
+             gotnf <- getNF got
+             when !(concrete defs env gotnf) $
+               throw (MatchTooSpecific fc env arg)
   checkPatTyValid fc defs env _ _ _ = pure ()
 
   dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
