@@ -225,20 +225,31 @@ castInt :  {auto c : Ref ESs ESSt}
         -> String
         -> Core String
 castInt from to x =
-  case (intKind from, intKind to) of
-       (Just _, Just $ Signed Unlimited) => pure x
+  case ((from, intKind from), (to, intKind to)) of
+       -- we allow character casts to all integers but have
+       -- to check the bounds
+       ((CharType, _), (_, Just $ Signed Unlimited)) =>
+         pure $ toBigInt $ x ++ ".codePointAt(0)"
 
-       (Just $ Signed m, Just $ Signed $ P n) =>
+       ((CharType, _), (_, Just $ Signed $ P n)) =>
+         boundedInt (n-1) $ x ++ ".codePointAt(0)"
+
+       ((CharType, _), (_, Just $ Unsigned $ P n)) =>
+         boundedUInt n $ x ++ ".codePointAt(0)"
+
+       ((_, Just _), (_, Just $ Signed Unlimited)) => pure x
+
+       ((_, Just $ Signed m), (_, Just $ Signed $ P n)) =>
          if P n >= m then pure x else boundedInt (n-1) x
 
        -- Only if the precision of the target is greater
        -- than the one of the source, there is no need to cast.
-       (Just $ Unsigned m, Just $ Signed $ P n) =>
+       ((_, Just $ Unsigned m), (_, Just $ Signed $ P n)) =>
          if P n > m then pure x else boundedInt (n-1) x
 
-       (Just $ Signed _, Just $ Unsigned $ P n) => boundedUInt n x
+       ((_, Just $ Signed _), (_, Just $ Unsigned $ P n)) => boundedUInt n x
 
-       (Just $ Unsigned m, Just $ Unsigned $ P n) =>
+       ((_, Just $ Unsigned m), (_, Just $ Unsigned $ P n)) =>
          if P n >= m then pure x else boundedUInt n x
 
        _ => throw $ InternalError $ "invalid cast: + " ++ show from ++ " + ' -> ' + " ++ show to
@@ -284,17 +295,19 @@ jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
 
-jsOp (Cast CharType IntType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
-jsOp (Cast CharType IntegerType) [x] = pure $ toBigInt $ x ++ ".codePointAt(0)"
+jsOp (Cast DoubleType Int32Type) [x] = boundedInt 31 $ "BigInt(Math.floor(" ++ x ++ "))"
+jsOp (Cast DoubleType Int64Type) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
 jsOp (Cast DoubleType IntType) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
 jsOp (Cast DoubleType IntegerType) [x] = pure $ "BigInt(Math.floor(" ++ x ++ "))"
 jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
+jsOp (Cast Int32Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
+jsOp (Cast Int32Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
+jsOp (Cast Int64Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
+jsOp (Cast Int64Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
 jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
 jsOp (Cast IntegerType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
-jsOp (Cast StringType IntType) [x] = boundedInt 63 $ !(jsIntegerOfString x)
-jsOp (Cast StringType IntegerType) [x] = jsIntegerOfString x
 
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x]        = castInt ty ty2 x
