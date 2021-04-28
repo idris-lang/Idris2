@@ -65,8 +65,8 @@ escapeString s = pack $ foldr escape [] $ unpack s
     escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
-schHeader : String -> List String -> List String -> String
-schHeader chez libs compilationUnits = unlines
+schHeader : List String -> List String -> String
+schHeader libs compilationUnits = unlines
   [ "(import (chezscheme) (support) "
       ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
       ++ ")"
@@ -333,8 +333,8 @@ getFgnCall : {auto c : Ref Ctxt Defs} ->
              String -> (Name, FC, NamedDef) -> Core (String, String)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
-startChez : String -> String -> String
-startChez appdir target = unlines
+startChez : String -> String -> String -> String
+startChez chez appDirSh targetSh = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
@@ -355,28 +355,38 @@ startChez appdir target = unlines
     , "fi                                                         "
     , ""
     , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
-    , "\"$DIR/" ++ target ++ "\" \"$@\""
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ "\":$LD_LIBRARY_PATH"
+    , "\"" ++ chez ++ "\" -q "
+        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
+        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
+        ++ "\"$@\""
     ]
 
 startChezCmd : String -> String -> String -> String
-startChezCmd chez appdir target = unlines
+startChezCmd chez appDirSh targetSh = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
+    , "set PATH=%APPDIR%\\" ++ appDirSh ++ ";%PATH%"
+    , "\"" ++ chez ++ "\" -q "
+        ++ "--libdirs \"%APPDIR%/" ++ appDirSh ++ "\" "
+        ++ "--program \"%APPDIR%/" ++ targetSh ++ "\" "
+        ++ "%*"
     ]
 
 startChezWinSh : String -> String -> String -> String
-startChezWinSh chez appdir target = unlines
+startChezWinSh chez appDirSh targetSh = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
     , ""
     , "DIR=$(dirname \"$(realpath \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
-    , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
+    , "export PATH=\"$DIR/" ++ appDirSh ++ "\":$PATH"
+    , "\"$CHEZ\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
+    , "\"$CHEZ\" -q "
+        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
+        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
+        ++ "\"$@\""
     ]
 
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
@@ -491,7 +501,7 @@ compileToSS c chez appdir tm = do
   -- main module
   main <- schExp chezExtPrim chezString 0 ctm
   writeFileCore (appdir </> "mainprog.ss") $ unlines $
-    [ schHeader chez (map snd libs) [lib.name | lib <- chezLibs]
+    [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
     , schFooter
@@ -499,19 +509,19 @@ compileToSS c chez appdir tm = do
 
   pure chezLibs
 
-makeSh : String -> String -> String -> Core ()
-makeSh outShRel appdir outAbs
-    = do Right () <- coreLift $ writeFile outShRel (startChez appdir outAbs)
+makeSh : String -> String -> String -> String -> Core ()
+makeSh chez outShRel appDirSh targetSh
+    = do Right () <- coreLift $ writeFile outShRel (startChez chez appDirSh targetSh)
             | Left err => throw (FileErr outShRel err)
          pure ()
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> Core ()
-makeShWindows chez outShRel appdir outAbs
+makeShWindows chez outShRel appDirSh targetSh
     = do let cmdFile = outShRel ++ ".cmd"
-         Right () <- coreLift $ writeFile cmdFile (startChezCmd chez appdir outAbs)
+         Right () <- coreLift $ writeFile cmdFile (startChezCmd chez appDirSh targetSh)
             | Left err => throw (FileErr cmdFile err)
-         Right () <- coreLift $ writeFile outShRel (startChezWinSh chez appdir outAbs)
+         Right () <- coreLift $ writeFile outShRel (startChezWinSh chez appDirSh targetSh)
             | Left err => throw (FileErr outShRel err)
          pure ()
 
@@ -522,8 +532,9 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   -- set up paths
   Just cwd <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
-  let appDirAbs = cwd </> outputDir </> outfile ++ "_sep"
-  let appDirRel = outputDir </> outfile ++ "_sep" -- relative to CWD
+  let appDirSh  = outfile ++ "_sep"  -- relative to the launcher shell script
+  let appDirRel = outputDir </> appDirSh  -- relative to CWD
+  let appDirAbs = cwd </> appDirRel
   coreLift_ $ mkdirAll appDirRel
 
   -- generate the code
@@ -537,7 +548,8 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
     -- compile every compilation unit
     for_ chezLibs $ \lib =>
-      when lib.isOutdated $
+      when lib.isOutdated $ do
+        log "compiler.scheme.chez" 3 $ "Compiling " ++ lib.name
         compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
 
     -- compile the main program
@@ -545,10 +557,10 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
   -- generate the launch script
   let outShRel = outputDir </> outfile
-  let launchTarget = appDirRel </> "mainprog" <.> (if makeitso then "so" else "ss")
+  let launchTargetSh = appDirSh </> "mainprog" <.> (if makeitso then "so" else "ss")
   if isWindows
-     then makeShWindows chez outShRel appDirRel launchTarget
-     else makeSh outShRel appDirRel launchTarget
+     then makeShWindows chez outShRel appDirSh launchTargetSh
+     else makeSh        chez outShRel appDirSh launchTargetSh
   coreLift_ $ chmodRaw outShRel 0o755
   pure (Just outShRel)
 
