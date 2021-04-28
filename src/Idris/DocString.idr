@@ -1,6 +1,7 @@
 module Idris.DocString
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.TT
@@ -68,6 +69,8 @@ addDocString : {auto c : Ref Ctxt Defs} ->
                Core ()
 addDocString n_in doc
     = do n <- inCurrentNS n_in
+         log "doc.record" 50 $
+           "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
          syn <- get Syn
          put Syn (record { docstrings $= addName n doc,
                            saveDocstrings $= insert n () } syn)
