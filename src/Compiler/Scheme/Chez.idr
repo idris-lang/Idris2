@@ -405,7 +405,7 @@ compileChezProgram chez libDir ssFile = ignore $ coreLift $ system $ unwords
 
 writeFileCore : Ref Ctxt Defs => (fname : String) -> (content : String) -> Core ()
 writeFileCore fname content = do
-  log "compiler.scheme.chez" 2 $ "Generating code for " ++ show fname
+  log "compiler.scheme.chez" 3 $ "Generating code in " ++ show fname
   coreLift (writeFile fname content) >>= \case
     Right () => pure ()
     Left err => throw $ FileErr fname err
