@@ -481,18 +481,20 @@ compileToSS c chez appdir tm = do
           ++ nativeHeader (map snd libs) ++ "\n"
     let footer = ")"
 
-    -- code = header + foreign defs + compiled defs + footer
     fgndefs <- traverse (getFgnCall appdir) cu.definitions
     compdefs <- traverse (getScheme chezExtPrim chezString) cu.definitions
-    let code = fastAppend (header :: map snd fgndefs ++ compdefs ++ [footer])
 
     -- write the file
-    writeFileCore (appdir </> chezLib <.> "ss") code
+    writeFileCore (appdir </> chezLib <.> "ss") $ fastAppend $
+      [header]
+      ++ map snd fgndefs  -- definitions using foreign libs
+      ++ compdefs
+      ++ map fst fgndefs  -- foreign library load statements
+      ++ [footer]
 
     pure (MkChezLib chezLib True)  -- TODO: isOutdated
 
   -- main module
-  -- TODO: use chezLibs
   main <- schExp chezExtPrim chezString 0 ctm
   writeFileCore (appdir </> "mainprog.ss") $ unlines $
     [ schHeader chez (map snd libs) [lib.name | lib <- chezLibs]
