@@ -12,3 +12,11 @@ export
 ||| Hello!
 hello : Int -> Int
 hello x = x*2
+
+namespace NS
+
+  namespace NestedNS
+
+    ||| A type of Foo
+    Foo : Type
+    Foo = ()

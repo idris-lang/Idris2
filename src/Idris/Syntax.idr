@@ -446,6 +446,7 @@ data REPLCmd : Type where
      NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
+     CheckWithImplicits : PTerm -> REPLCmd
      PrintDef : Name -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd

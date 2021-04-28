@@ -1,0 +1,53 @@
+1/1: Building Issue1169 (Issue1169.idr)
+LOG coverage.missing:50: Getting constructors for: $resolved1926 [2 closures]
+LOG coverage.missing:20: Getting constructors for: (Builtin.Pair String Builtin.Unit)
+LOG coverage.missing:50: Getting constructors for: $resolved1923 [0 closures]
+LOG coverage.missing:20: Getting constructors for: Builtin.Unit
+LOG coverage.missing:20: (Builtin.MkPair {e:0} {e:1} {e:2} {e:3})
+LOG coverage.empty:10: Checking type: TyCon 100 0 params: [] constructors: [$resolved1927] mutual with: [] detaggable by: Just []
+LOG coverage:5: Checking coverage for: (Main.test (Builtin.MkPair String Builtin.Unit {_:368} {_:369}))
+LOG coverage:10: (raw term: (Main.test (Builtin.MkPair String Builtin.Unit {_:368} {_:369})))
+LOG coverage:5: Erased to: (Main.test (Builtin.MkPair [__] [__] {_:368} {_:369}))
+LOG coverage:5: Against clauses:
+  []: (Main.test (Builtin.MkPair String Builtin.Unit "a" Builtin.MkUnit)) = Builtin.MkUnit
+LOG coverage:10: No match: (Main.test (Builtin.MkPair String Builtin.Unit "a" Builtin.MkUnit))
+LOG coverage:10: Nothing matches: (Main.test (Builtin.MkPair [__] [__] {_:368} {_:369}))
+Error: test is not covering.
+
+Issue1169.idr:8:1--8:26
+ 4 | -- %logging "compile.casetree" 50
+ 5 | -- %logging "eval.ref" 50
+ 6 | %logging "coverage" 50
+ 7 | 
+ 8 | test : (String, ()) -> ()
+     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    test (_, _)
+
+Error: test' is not covering.
+
+Issue1169.idr:13:1--13:24
+ 09 | test ("a", ()) = ()
+ 10 | 
+ 11 | %logging off
+ 12 | 
+ 13 | test' : (Int, ()) -> ()
+      ^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    test' (_, _)
+
+Error: test'' is not covering.
+
+Issue1169.idr:16:1--16:22
+ 12 | 
+ 13 | test' : (Int, ()) -> ()
+ 14 | test' (1, ()) = ()
+ 15 | 
+ 16 | test'' : Type -> Type
+      ^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    test'' _
+

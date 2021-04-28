@@ -1998,6 +1998,20 @@ extendNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS $= (<.> ns) } defs)
 
+export
+withExtendedNS : {auto c : Ref Ctxt Defs} ->
+                 Namespace -> Core a -> Core a
+withExtendedNS ns act
+    = do defs <- get Ctxt
+         let cns = currentNS defs
+         put Ctxt (record { currentNS = cns <.> ns } defs)
+         ma <- catch (Right <$> act) (pure . Left)
+         defs <- get Ctxt
+         put Ctxt (record { currentNS = cns } defs)
+         case ma of
+           Left err => throw err
+           Right a  => pure a
+
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
 -- otherwise leave it alone

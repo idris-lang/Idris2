@@ -92,6 +92,13 @@ mutual
        NType    : FC -> NF vars
 
 export
+ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon fc n tag Z [] = case isConstantType n of
+  Just c => NPrimVal fc c
+  Nothing => NTCon fc n tag Z []
+ntCon fc n tag arity args = NTCon fc n tag arity args
+
+export
 getLoc : NF vars -> FC
 getLoc (NBind fc _ _ _) = fc
 getLoc (NApp fc _ _) = fc

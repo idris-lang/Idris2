@@ -367,7 +367,7 @@ findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (mea
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
-      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sr2)
+      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
@@ -726,6 +726,12 @@ process (Check itm)
          ty <- getTerm gty
          ity <- resugar [] !(normaliseScope defs [] ty)
          pure (TermChecked itm ity)
+process (CheckWithImplicits itm)
+    = do showImplicits <- showImplicits <$> getPPrint
+         setOpt (ShowImplicits True)
+         result <- process (Check itm)
+         setOpt (ShowImplicits showImplicits)
+         pure result
 process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
@@ -1078,7 +1084,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 16 12 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 20 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->

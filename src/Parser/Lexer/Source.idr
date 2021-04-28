@@ -270,7 +270,7 @@ fromBinLit str
       fromBin : List Integer -> Integer
       fromBin [] = 0
       fromBin (0 :: xs) = 2 * fromBin xs
-      fromBin (1 :: xs) = 1 + (2 * fromBin xs)
+      fromBin (x :: xs) = x + (2 * fromBin xs)
 
 fromHexLit : String -> Integer
 fromHexLit str
