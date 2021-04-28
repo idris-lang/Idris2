@@ -65,28 +65,26 @@ escapeString s = pack $ foldr escape [] $ unpack s
     escape '\\' cs = '\\' :: '\\' :: cs
     escape c   cs = c :: cs
 
-nativeHeader : (libs : List String) -> String
-nativeHeader libs =
-  "(define foreign-init\n" ++
-  "  (case (machine-type)\n" ++
-  "    [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
-  "    [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
-  "    [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")\n" ++
-  "                             (load-shared-object \"ws2_32.dll\")]\n" ++
-  "    [else (load-shared-object \"libc.so\")])\n" ++
-  unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs] ++
-  ")"
-
 schHeader : String -> List String -> List String -> String
-schHeader chez libs compilationUnits
-  = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
-    "; @generated\n" ++
-    "(import (chezscheme) (support) " ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] ++ ")\n" ++
-    nativeHeader libs ++
-    "(let ()\n"
+schHeader chez libs compilationUnits = unlines
+  [ (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "")
+  , "; @generated\n"
+  , "(import (chezscheme) (support) "
+      ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
+      ++ ")\n"
+  , "(define foreign-init\n"
+  , "  (case (machine-type)\n"
+  , "    [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n"
+  , "    [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n"
+  , "    [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")\n"
+  , "                             (load-shared-object \"ws2_32.dll\")]\n"
+  , "    [else (load-shared-object \"libc.so\")])\n"
+  , unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs]
+  , ")"
+  ]
 
 schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers))\n"
+schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -478,7 +476,6 @@ compileToSS c chez appdir tm = do
           "(library (" ++ chezLib ++ ")\n"
           ++ "  (export " ++ exports ++ ")\n"
           ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
-          ++ nativeHeader (map snd libs) ++ "\n"
     let footer = ")"
 
     fgndefs <- traverse (getFgnCall appdir) cu.definitions
