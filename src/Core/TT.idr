@@ -62,6 +62,8 @@ export
 isConstantType : Name -> Maybe Constant
 isConstantType (UN n) = case n of
   "Int"     => Just IntType
+  "Int32"   => Just Int32Type
+  "Int64"   => Just Int64Type
   "Integer" => Just IntegerType
   "Bits8"   => Just Bits8Type
   "Bits16"  => Just Bits16Type
@@ -229,12 +231,19 @@ data IntKind = Signed Precision | Unsigned Precision
 public export
 intKind : Constant -> Maybe IntKind
 intKind IntegerType = Just $ Signed Unlimited
+intKind Int32Type   = Just . Signed   $ P 32
+intKind Int64Type   = Just . Signed   $ P 64
 intKind IntType     = Just . Signed   $ P 64
 intKind Bits8Type   = Just . Unsigned $ P 8
 intKind Bits16Type  = Just . Unsigned $ P 16
 intKind Bits32Type  = Just . Unsigned $ P 32
 intKind Bits64Type  = Just . Unsigned $ P 64
 intKind _           = Nothing
+
+public export
+precision : IntKind -> Precision
+precision (Signed p)   = p
+precision (Unsigned p) = p
 
 -- All the internal operators, parameterised by their arity
 public export
