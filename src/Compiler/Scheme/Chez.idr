@@ -67,18 +67,15 @@ escapeString s = pack $ foldr escape [] $ unpack s
 
 schHeader : String -> List String -> List String -> String
 schHeader chez libs compilationUnits = unlines
-  [ (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "")
-  , "; @generated\n"
-  , "(import (chezscheme) (support) "
+  [ "(import (chezscheme) (support) "
       ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
-      ++ ")\n"
-  , "(define foreign-init\n"
-  , "  (case (machine-type)\n"
-  , "    [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n"
-  , "    [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n"
-  , "    [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")\n"
-  , "                             (load-shared-object \"ws2_32.dll\")]\n"
-  , "    [else (load-shared-object \"libc.so\")])\n"
+      ++ ")"
+  , "(case (machine-type)"
+  , "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]"
+  , "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]"
+  , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
+  , "                           (load-shared-object \"ws2_32.dll\")]"
+  , "  [else (load-shared-object \"libc.so\")]"
   , unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs]
   , ")"
   ]
