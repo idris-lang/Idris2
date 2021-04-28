@@ -54,7 +54,7 @@ SExpable Highlight where
                           ]
                ]
 
-inFile : String -> (NonEmptyFC, a) -> Bool
+inFile : (s : String) -> (NonEmptyFC, a) -> Bool
 inFile fname ((file, _, _), _) = file == fname
 
 ||| Output some data using current dialog index
@@ -91,12 +91,10 @@ lwOutputHighlight :
 lwOutputHighlight (nfc,decor) =
   printOutput $ SExpList [ SymbolAtom "ok"
                          , SExpList [ SymbolAtom "highlight-source"
-                                    , toSExp $ the (List _) [MkHighlight nfc (UN "") False "" decor "" "" ""]
-                                    ]
-                         ]
-  where
-    decorSExp : SExp
-    decorSExp = toSExp (justFC nfc, toSExp decor)
+                                    , toSExp $ the (List _) [
+                                    SExpList [ toSExp $ justFC nfc
+               , SExpList [ toSExp decor]
+               ]]]]
 
 
 
@@ -163,7 +161,7 @@ outputSyntaxHighlighting fname loadResult = do
   when (opts.synHighlightOn) $ do
     meta <- get MD
     let allNames = filter (inFile fname) $ toList meta.nameLocMap
-    --  decls <- filter (inFile fname) . tydecls <$> get MD
+    --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)
     log "ide-mode.highlight" 19 $ "Semantic metadata is: " ++ show meta.semanticHighlighting
     traverse_ lwOutputHighlight (toList meta.semanticHighlighting)
