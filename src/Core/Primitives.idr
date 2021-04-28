@@ -274,7 +274,7 @@ mod _ _ = Nothing
 -- is set, treat the result as a negative number, computing its
 -- twos complement, otherwise treat it as a positive number,
 -- truncating all bits above the highest one.
-signedShift : (i : Integer) -> (max : Integer) -> Integer 
+signedShift : (i : Integer) -> (max : Integer) -> Integer
 signedShift i max =
   if prim__and_Integer i max == 0
      then prim__and_Integer i (max - 1) -- treat as positive number: highest bit unset

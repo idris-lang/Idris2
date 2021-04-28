@@ -232,4 +232,3 @@ equivTypes ty1 ty2 =
            (\err => pure False)
      when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
      pure b
-

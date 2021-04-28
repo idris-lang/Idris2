@@ -86,21 +86,60 @@ shl _                       x y = op "blodwen-shl" [x, y]
 
 castInt : Constant -> Constant -> String -> String
 castInt from to x =
-  case (intKind from, intKind to) of
-       (Just _, Just $ Signed Unlimited) => x
+  case ((from, intKind from), (to, intKind to)) of
+       -- we allow character casts to all integers but have
+       -- to check the bounds
+       ((CharType, _), (_, Just $ Signed Unlimited)) => op "char->integer" [x]
 
-       (Just $ Signed m, Just $ Signed $ P n) =>
+       ((CharType, _), (_, Just $ Signed $ P n)) =>
+         op "cast-char-boundedInt" [x, show (n-1)]
+
+       ((CharType, _), (_, Just $ Unsigned $ P n)) =>
+         op "cast-char-boundedUInt" [x,show n]
+
+       -- we allow String casts to all integers but have
+       -- to check the bounds
+       ((StringType, _), (_, Just $ Signed Unlimited)) => op "cast-string-int" [x]
+
+       ((StringType, _), (_, Just $ Signed $ P n)) =>
+         op "cast-string-boundedInt" [x, show (n-1)]
+
+       ((StringType, _), (_, Just $ Unsigned $ P n)) =>
+         op "cast-string-boundedUInt" [x,show n]
+
+       -- we allow Double casts to all integers but have
+       -- to check the bounds
+       ((DoubleType, _), (_, Just $ Signed Unlimited)) => op "exact-floor" [x]
+
+       ((DoubleType, _), (_, Just $ Signed $ P n)) =>
+         op "exact-floor-boundedInt" [x, show (n-1)]
+
+       ((DoubleType, _), (_, Just $ Unsigned $ P n)) =>
+         op "exact-floor-boundedUInt" [x,show n]
+
+       -- we allow casts from all integer types to Char (cast-int-char does bounds checking)
+       ((_, Just _), (CharType, _)) => op "cast-int-char" [x]
+
+       -- we allow casts from all integer types to Double
+       ((_, Just _), (DoubleType, _)) => op "exact->inexact" [x]
+
+       -- we allow casts from all integer types to String
+       ((_, Just _), (StringType, _)) => op "number->string" [x]
+
+       ((_, Just _), (_, Just $ Signed Unlimited)) => x
+
+       ((_, Just $ Signed m), (_, Just $ Signed $ P n)) =>
          if P n >= m then x else op "blodwen-toSignedInt" [x,show (n-1)]
 
        -- Only if the precision of the target is greater
        -- than the one of the source, there is no need to cast.
-       (Just $ Unsigned m, Just $ Signed $ P n) =>
+       ((_, Just $ Unsigned m), (_, Just $ Signed $ P n)) =>
          if P n > m then x else op "blodwen-toSignedInt" [x,show (n-1)]
 
-       (Just $ Signed _, Just $ Unsigned $ P n) =>
+       ((_, Just $ Signed _), (_, Just $ Unsigned $ P n)) =>
          op "blodwen-toUnsignedInt" [x,show n]
 
-       (Just $ Unsigned m, Just $ Unsigned $ P n) =>
+       ((_, Just $ Unsigned m), (_, Just $ Unsigned $ P n)) =>
          if P n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
 
        _ => "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
@@ -155,24 +194,10 @@ schOp DoubleSqrt [x] = op "flsqrt" [x]
 schOp DoubleFloor [x] = op "flfloor" [x]
 schOp DoubleCeiling [x] = op "flceiling" [x]
 
-schOp (Cast Bits16Type StringType)  [x] = op "number->string" [x]
-schOp (Cast Bits32Type StringType)  [x] = op "number->string" [x]
-schOp (Cast Bits64Type StringType)  [x] = op "number->string" [x]
-schOp (Cast Bits8Type StringType)   [x] = op "number->string" [x]
-schOp (Cast CharType IntType)       [x] = op "char->integer" [x]
-schOp (Cast CharType IntegerType)   [x] = op "char->integer" [x]
-schOp (Cast CharType StringType)    [x] = op "string" [x]
-schOp (Cast DoubleType IntType)     [x] = op "exact-floor" [x]
-schOp (Cast DoubleType IntegerType) [x] = op "exact-floor" [x]
 schOp (Cast DoubleType StringType)  [x] = op "number->string" [x]
-schOp (Cast IntType CharType)       [x] = op "cast-int-char" [x]
-schOp (Cast IntType DoubleType)     [x] = op "exact->inexact" [x]
-schOp (Cast IntType StringType)     [x] = op "number->string" [x]
-schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
-schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
+schOp (Cast CharType StringType)    [x] = op "string" [x]
 schOp (Cast StringType DoubleType)  [x] = op "cast-string-double" [x]
-schOp (Cast StringType IntType)     [x] = op "cast-string-int" [x]
-schOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
+
 schOp (Cast from to)                [x] = castInt from to x
 
 schOp BelieveMe [_,_,x] = x
