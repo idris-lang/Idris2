@@ -644,12 +644,14 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-
-nfun : {auto c : Ref Ctxt Defs} ->
+||| Given a REPLEval mode for evaluation,
+||| produce the normalization function that normalizes terms
+||| using that evaluation mode
+replEval : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
   REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-nfun NormaliseAll = normaliseAll
-nfun _ = normalise
+replEval NormaliseAll = normaliseAll
+replEval _ = normalise
 
 record TermWithType where
   constructor WithType
@@ -694,7 +696,7 @@ inferAndNormalize emode itm
   = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
-       let norm = nfun emode
+       let norm = replEval emode
        ntm <- norm defs [] tm
        logTermNF "repl.eval" 5 "Normalised" [] ntm
        pure $ ntm `WithType` ty
@@ -727,7 +729,7 @@ process (Eval itm)
                  itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
-                 let norm = nfun emode
+                 let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
                    $ newDef replFC evalResultName top [] ty Private
