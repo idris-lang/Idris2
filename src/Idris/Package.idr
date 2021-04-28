@@ -450,10 +450,14 @@ renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
 renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
-renderHtml (STAnn Fun rest) = do
+renderHtml (STAnn DCon rest) = do
   -- TODO: check if we need to take `nameRoot` here
   resthtml <- renderHtml rest
-  pure $ "<span class=\"name function\">" <+> resthtml <+> "</span>"
+  pure $ "<span class=\"name constructor\">" <+> resthtml <+> "</span>"
+renderHtml (STAnn (TCon n) rest) = do
+  pure $ "<span class=\"name type\">" <+> (nameRoot n) <+> "</span>"
+renderHtml (STAnn (Fun n) rest) = do
+  pure $ "<span class=\"name function\">" <+> (nameRoot n) <+> "</span>"
 renderHtml (STAnn Header rest) = do
   resthtml <- renderHtml rest
   pure $ "<b>" <+> resthtml <+> "</b>"
@@ -511,18 +515,8 @@ makeDoc pkg opts =
            writeHtml ("<h1>" ++ show mod ++ "</h1>")
            writeHtml ("<dl class=\"decls\">")
            ignore $ for (sort allNs) (\name => do
-               Just gdef <- lookupCtxtExact name (gamma defs)
-                 | Nothing => writeHtml ("ERROR: lookup failed: " ++ show name)
-               typeTm <- resugar [] !(normaliseHoles defs [] (type gdef))
-               let typeDoc = prettyTerm typeTm
-               typeStr <- docDocToHtml $ reAnnotate Syntax typeDoc
-               let pname = stripNS ns name
-               writeHtml ("<dt style=\"opacity: 0.3;\" id=\"" ++ (htmlEscape $ show name) ++ "\">")
-               writeHtml ("<span class=\"name function\">" ++ (htmlEscape $ show pname) ++ "</span><span class=\"word\">&nbsp;:&nbsp;</span><span class=\"signature\">" ++ typeStr ++ "</span>")
-               writeHtml ("</dt><dd>")
                doc <- getDocsForName emptyFC name
-               writeHtml !(docDocToHtml $ pretty doc)
-               writeHtml ("</dd>")
+               writeHtml !(docDocToHtml doc)
              )
            writeHtml ("</dl>")
            writeHtml htmlFooter
@@ -557,7 +551,11 @@ makeDoc pkg opts =
     visible defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure False
-             pure (visibility def /= Private)
+             -- TODO: if we can find out, wheter a def has been declared as
+             -- part of an interface, hide it here
+             pure $ case definition def of
+                         (DCon _ _ _) => False
+                         _ => (visibility def /= Private)
 
     inNS : Namespace -> Name -> Bool
     inNS ns (NS xns (UN _)) = ns == xns

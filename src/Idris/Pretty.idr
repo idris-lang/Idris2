@@ -179,10 +179,10 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
-      prettyOp : OpStr -> Doc ann
+      prettyOp : OpStr -> Doc IdrisSyntax
       prettyOp op = if isOpName op
-        then pretty op
-        else Chara '`' <+> pretty op <+> Chara '`'
+        then annotate (SynRef op) $ pretty op
+        else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
       go : Prec -> PTerm -> Doc IdrisSyntax
       go d (PRef _ n) = annotate (SynRef n) $ pretty n
