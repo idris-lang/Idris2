@@ -6,6 +6,7 @@ import Compiler.Inline
 import Compiler.Scheme.Common
 import Compiler.Separate
 
+import Core.Hash
 import Core.Context
 import Core.Context.Log
 import Core.Directory
@@ -403,11 +404,16 @@ compileChezProgram chez libDir ssFile = ignore $ coreLift $ system $ unwords
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
-writeFileCore : Ref Ctxt Defs => (fname : String) -> (content : String) -> Core ()
-writeFileCore fname content = do
-  log "compiler.scheme.chez" 3 $ "Generating code in " ++ show fname
+writeFileCore : (fname : String) -> (content : String) -> Core ()
+writeFileCore fname content =
   coreLift (writeFile fname content) >>= \case
     Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+readFileCore : (fname : String) -> Core String
+readFileCore fname =
+  coreLift (readFile fname) >>= \case
+    Right content => pure content
     Left err => throw $ FileErr fname err
 
 chezNS : Namespace -> String
@@ -453,50 +459,60 @@ compileToSS c chez appdir tm = do
   -- for each compilation unit, generate code
   chezLibs <- for cui.compilationUnits $ \cu => do
     let chezLib = chezLibraryName cu
-    -- TODO: skip this if hash is up to date
 
-    -- initialise context
-    defs <- get Ctxt
-    l <- newRef {t = List String} Loaded ["libc", "libc 6"]
-    s <- newRef {t = List String} Structs []
+    -- run this only if the hash has changed
+    let cuHash = show (hash cu)
+    hashChanged <-
+      coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
+        Left err       => pure True
+        Right fileHash => pure (fileHash /= cuHash)
 
-    -- create imports + exports + header + footer
-    let imports = unwords
-          [ "(" ++
-              maybe
-                "unqualified"
-                chezLibraryName
-                (SortedMap.lookup cuid cui.byId)
-            ++ ")"
-          | cuid <- SortedSet.toList cu.dependencies
-          ]
-    let exports = unwords $ concat
-          -- export only the defs that generate Scheme definitions
-          [ case d of
-              MkNmFun args exp => [schName dn]
-              MkNmError exp => [schName dn]
-              MkNmForeign _ _ _ => []
-              MkNmCon _ _ _ => []
-          | (dn, fc, d) <- cu.definitions
-          ]
-    let header =
-          "(library (" ++ chezLib ++ ")\n"
-          ++ "  (export " ++ exports ++ ")\n"
-          ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
-    let footer = ")"
+    when hashChanged $ do
+      -- initialise context
+      defs <- get Ctxt
+      l <- newRef {t = List String} Loaded ["libc", "libc 6"]
+      s <- newRef {t = List String} Structs []
 
-    fgndefs <- traverse (getFgnCall appdir) cu.definitions
-    compdefs <- traverse (getScheme chezExtPrim chezString) cu.definitions
+      -- create imports + exports + header + footer
+      let imports = unwords
+            [ "(" ++
+                maybe
+                  "unqualified"
+                  chezLibraryName
+                  (SortedMap.lookup cuid cui.byId)
+              ++ ")"
+            | cuid <- SortedSet.toList cu.dependencies
+            ]
+      let exports = unwords $ concat
+            -- export only the defs that generate Scheme definitions
+            [ case d of
+                MkNmFun args exp => [schName dn]
+                MkNmError exp => [schName dn]
+                MkNmForeign _ _ _ => []
+                MkNmCon _ _ _ => []
+            | (dn, fc, d) <- cu.definitions
+            ]
+      let header =
+            "(library (" ++ chezLib ++ ")\n"
+            ++ "  (export " ++ exports ++ ")\n"
+            ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
+      let footer = ")"
 
-    -- write the file
-    writeFileCore (appdir </> chezLib <.> "ss") $ fastAppend $
-      [header]
-      ++ map snd fgndefs  -- definitions using foreign libs
-      ++ compdefs
-      ++ map fst fgndefs  -- foreign library load statements
-      ++ [footer]
+      fgndefs <- traverse (getFgnCall appdir) cu.definitions
+      compdefs <- traverse (getScheme chezExtPrim chezString) cu.definitions
 
-    pure (MkChezLib chezLib True)  -- TODO: isOutdated
+      -- write the files
+      log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
+      writeFileCore (appdir </> chezLib <.> "ss") $ fastAppend $
+        [header]
+        ++ map snd fgndefs  -- definitions using foreign libs
+        ++ compdefs
+        ++ map fst fgndefs  -- foreign library load statements
+        ++ [footer]
+
+      writeFileCore (appdir </> chezLib <.> "hash") cuHash
+
+    pure $ MkChezLib chezLib hashChanged
 
   -- main module
   main <- schExp chezExtPrim chezString 0 ctm

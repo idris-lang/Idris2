@@ -197,6 +197,12 @@ export
 HasNamespaces a => HasNamespaces (FC, a) where
   nsRefs (_, x) = nsRefs x
 
+-- another slight hack for convenient use with CompileData.namedDefs
+export
+Hashable def => Hashable (FC, def) where
+  -- ignore FC in hash
+  hashWithSalt h (fc, x) = hashWithSalt h x
+
 public export
 record CompilationUnitInfo def where
   constructor MkCompilationUnitInfo
