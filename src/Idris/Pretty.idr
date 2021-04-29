@@ -282,10 +282,10 @@ mutual
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
-      go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
-      go d (PPrefixOp _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
-      go d (PSectionL _ op x) = parens (prettyOp op <++> go startPrec x)
-      go d (PSectionR _ x op) = parens (go startPrec x <++> prettyOp op)
+      go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
+      go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
+      go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)
+      go d (PSectionR _ _ x op) = parens (go startPrec x <++> prettyOp op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
       go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)

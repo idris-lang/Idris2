@@ -85,7 +85,7 @@ mkPrec Prefix p = Prefix p
 
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
             PTerm -> Core (List (Tok OpStr PTerm))
-toTokList (POp fc opn l r)
+toTokList (POp fc opFC opn l r)
     = do syn <- get Syn
          let op = nameRoot opn
          case lookup op (infixes syn) of
@@ -93,16 +93,16 @@ toTokList (POp fc opn l r)
                   if any isOpChar (fastUnpack op)
                      then throw (GenericMsg fc $ "Unknown operator '" ++ op ++ "'")
                      else do rtoks <- toTokList r
-                             pure (Expr l :: Op fc opn backtickPrec :: rtoks)
+                             pure (Expr l :: Op fc opFC opn backtickPrec :: rtoks)
               Just (Prefix, _) =>
                       throw (GenericMsg fc $ "'" ++ op ++ "' is a prefix operator")
               Just (fix, prec) =>
                    do rtoks <- toTokList r
-                      pure (Expr l :: Op fc opn (mkPrec fix prec) :: rtoks)
+                      pure (Expr l :: Op fc opFC opn (mkPrec fix prec) :: rtoks)
   where
     backtickPrec : OpPrec
     backtickPrec = NonAssoc 1
-toTokList (PPrefixOp fc opn arg)
+toTokList (PPrefixOp fc opFC opn arg)
     = do syn <- get Syn
          let op = nameRoot opn
          case lookup op (prefixes syn) of
@@ -110,7 +110,7 @@ toTokList (PPrefixOp fc opn arg)
                    throw (GenericMsg fc $ "'" ++ op ++ "' is not a prefix operator")
               Just prec =>
                    do rtoks <- toTokList arg
-                      pure (Op fc opn (Prefix prec) :: rtoks)
+                      pure (Op fc opFC opn (Prefix prec) :: rtoks)
 toTokList t = pure [Expr t]
 
 record BangData where
@@ -248,24 +248,24 @@ mutual
                      [apply (IVar fc (UN "===")) [l', r'],
                       apply (IVar fc (UN "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  desugarB side ps (POp fc op l r)
-      = do ts <- toTokList (POp fc op l r)
+  desugarB side ps (POp fc opFC op l r)
+      = do ts <- toTokList (POp fc opFC op l r)
            desugarTree side ps !(parseOps ts)
-  desugarB side ps (PPrefixOp fc op arg)
-      = do ts <- toTokList (PPrefixOp fc op arg)
+  desugarB side ps (PPrefixOp fc opFC op arg)
+      = do ts <- toTokList (PPrefixOp fc opFC op arg)
            desugarTree side ps !(parseOps ts)
-  desugarB side ps (PSectionL fc op arg)
+  desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
            -- so check that first, otherwise desugar as a lambda
            case lookup (nameRoot op) (prefixes syn) of
                 Nothing =>
                    desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                               (POp fc op (PRef fc (MN "arg" 0)) arg))
-                Just prec => desugarB side ps (PPrefixOp fc op arg)
-  desugarB side ps (PSectionR fc arg op)
+                               (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
+                Just prec => desugarB side ps (PPrefixOp fc opFC op arg)
+  desugarB side ps (PSectionR fc opFC arg op)
       = desugarB side ps (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                 (POp fc op arg (PRef fc (MN "arg" 0))))
+                 (POp fc opFC op arg (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -582,28 +582,28 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 Side -> List Name -> Tree OpStr PTerm -> Core RawImp
-  desugarTree side ps (Infix loc (UN "=") l r) -- special case since '=' is special syntax
+  desugarTree side ps (Infix loc eqFC (UN "=") l r) -- special case since '=' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IAlternative loc FirstSuccess
-                     [apply (IVar loc (UN "===")) [l', r'],
-                      apply (IVar loc (UN "~=~")) [l', r']])
-  desugarTree side ps (Infix loc (UN "$") l r) -- special case since '$' is special syntax
+                     [apply (IVar eqFC (UN "===")) [l', r'],
+                      apply (IVar eqFC (UN "~=~")) [l', r']])
+  desugarTree side ps (Infix loc _ (UN "$") l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc l' r')
-  desugarTree side ps (Infix loc op l r)
+  desugarTree side ps (Infix loc opFC op l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (IApp loc (IApp loc (IVar loc op) l') r')
+           pure (IApp loc (IApp loc (IVar opFC op) l') r')
   -- negation is a special case, since we can't have an operator with
   -- two meanings otherwise
-  desugarTree side ps (Pre loc (UN "-") arg)
+  desugarTree side ps (Pre loc opFC (UN "-") arg)
       = do arg' <- desugarTree side ps arg
-           pure (IApp loc (IVar loc (UN "negate")) arg')
-  desugarTree side ps (Pre loc op arg)
+           pure (IApp loc (IVar opFC (UN "negate")) arg')
+  desugarTree side ps (Pre loc opFC op arg)
       = do arg' <- desugarTree side ps arg
-           pure (IApp loc (IVar loc op) arg')
+           pure (IApp loc (IVar opFC op) arg')
   desugarTree side ps (Leaf t) = desugarB side ps t
 
   desugarType : {auto s : Ref Syn SyntaxInfo} ->

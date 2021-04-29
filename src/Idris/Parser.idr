@@ -177,9 +177,9 @@ mutual
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
-    <|> do b <- bounds (MkPair <$> iOperator <*> expr pdef fname indents)
+    <|> do b <- bounds (MkPair <$> bounds iOperator <*> expr pdef fname indents)
            (op, arg) <- pure b.val
-           pure (PPrefixOp (boundToFC fname b) op arg)
+           pure (PPrefixOp (boundToFC fname b) (boundToFC fname op) op.val arg)
     <|> fail "Expected 'case', 'if', 'do', application or operator expression"
     where
       applyExpImp : FilePos -> FilePos -> PTerm ->
@@ -271,17 +271,22 @@ mutual
       = do l <- bounds (appExpr q fname indents)
            (if eqOK q
                then do r <- bounds (continue indents *> decoratedSymbol fname "=" *> opExpr q fname indents)
-                       pure (POp (boundToFC fname (mergeBounds l r)) (UN "=") l.val r.val)
+                       pure $
+                         let fc = boundToFC fname (mergeBounds l r)
+                             opFC = virtualiseFC fc -- already been highlighted: we don't care
+                         in POp fc opFC (UN "=") l.val r.val
                else fail "= not allowed")
              <|>
-             (do b <- bounds [| MkPair (continue indents *> iOperator) (opExpr q fname indents) |]
+             (do b <- bounds [| MkPair (continue indents *> bounds iOperator) (opExpr q fname indents) |]
                  (op, r) <- pure b.val
-                 pure (POp (boundToFC fname (mergeBounds l b)) op l.val r))
+                 let fc = boundToFC fname (mergeBounds l b)
+                 let opFC = boundToFC fname op
+                 pure (POp fc opFC op.val l.val r))
                <|> pure l.val
 
   dpairType : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
-      = do loc <- bounds (do x <- unqualifiedName
+      = do loc <- bounds (do x <- decorate fname Bound unqualifiedName
                              decoratedSymbol fname ":"
                              ty <- expr pdef fname indents
                              pure (x, ty))
@@ -309,13 +314,15 @@ mutual
       -- left section. This may also be a prefix operator, but we'll sort
       -- that out when desugaring: if the operator is infix, treat it as a
       -- section otherwise treat it as prefix
-      = do b <- bounds (do op <- iOperator
+      = do b <- bounds (do op <- bounds iOperator
                            e <- expr pdef fname indents
                            continueWith indents ")"
                            pure (op, e))
            (op, e) <- pure b.val
            act [(toNonEmptyFC $ boundToFC fname s, Keyword)]
-           pure (PSectionL (boundToFC fname (mergeBounds s b)) op e)
+           let fc = boundToFC fname (mergeBounds s b)
+           let opFC = boundToFC fname op
+           pure (PSectionL fc opFC op.val e)
     <|> do  -- (.y.z)  -- section of projection (chain)
            b <- bounds $ forget <$> some postfixProj
            decoratedSymbol fname ")"
@@ -336,9 +343,11 @@ mutual
                             (PImplicit (boundToFC fname (mergeBounds s rest)))
                             rest.val)) <|>
              -- right sections
-             ((do op <- bounds (iOperator <* decoratedSymbol fname ")")
+             ((do op <- bounds (bounds iOperator <* decoratedSymbol fname ")")
                   act [(toNonEmptyFC $ boundToFC fname s, Keyword)]
-                  pure (PSectionR (boundToFC fname (mergeBounds s op)) e.val op.val)
+                  let fc = boundToFC fname (mergeBounds s op)
+                  let opFC = boundToFC fname op.val
+                  pure (PSectionR fc opFC e.val op.val.val)
                <|>
               -- all the other bracketed expressions
               tuple fname s indents e.val))

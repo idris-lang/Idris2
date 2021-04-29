@@ -29,11 +29,11 @@ unbracketApp tm = tm
 -- TODO: Deal with precedences
 mkOp : {auto s : Ref Syn SyntaxInfo} ->
        PTerm -> Core PTerm
-mkOp tm@(PApp fc (PApp _ (PRef _ n) x) y)
+mkOp tm@(PApp fc (PApp _ (PRef opFC n) x) y)
     = do syn <- get Syn
          case StringMap.lookup (nameRoot n) (infixes syn) of
               Nothing => pure tm
-              Just _ => pure (POp fc n (unbracketApp x) (unbracketApp y))
+              Just _ => pure (POp fc opFC n (unbracketApp x) (unbracketApp y))
 mkOp tm = pure tm
 
 export
@@ -464,14 +464,14 @@ cleanPTerm ptm
     cleanNode : PTerm -> Core PTerm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanName nm
-    cleanNode (POp fc op x y) =
-      (\ op => POp fc op x y) <$> cleanName op
-    cleanNode (PPrefixOp fc op x) =
-      (\ op => PPrefixOp fc op x) <$> cleanName op
-    cleanNode (PSectionL fc op x) =
-      (\ op => PSectionL fc op x) <$> cleanName op
-    cleanNode (PSectionR fc x op) =
-      PSectionR fc x <$> cleanName op
+    cleanNode (POp fc opFC op x y) =
+      (\ op => POp fc opFC op x y) <$> cleanName op
+    cleanNode (PPrefixOp fc opFC op x) =
+      (\ op => PPrefixOp fc opFC op x) <$> cleanName op
+    cleanNode (PSectionL fc opFC op x) =
+      (\ op => PSectionL fc opFC op x) <$> cleanName op
+    cleanNode (PSectionR fc opFC x op) =
+      PSectionR fc opFC x <$> cleanName op
     cleanNode tm = pure tm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->
