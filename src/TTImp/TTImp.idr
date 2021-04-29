@@ -542,7 +542,7 @@ implicitsAs n defs ns tm
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++
                     "\n  Found implicits: " ++ show implicits
-                  pure $ impAs loc implicits (IVar loc nm)
+                  pure $ impAs (virtualiseFC loc) implicits (IVar loc nm)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
