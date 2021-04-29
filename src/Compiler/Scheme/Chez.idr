@@ -390,6 +390,7 @@ startChezWinSh chez appDirSh targetSh = unlines
         ++ "\"$@\""
     ]
 
+-- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
 compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
   [ "echo"
@@ -582,7 +583,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
       log "compiler.scheme.chez" 3 $ "Compiling support"
       compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
 
-    -- compile every compilation unit in parallel
+    -- compile every compilation unit
     compileChezLibraries chez appDirRel
       [appDirRel </> lib.name <.> "ss" | lib <- chezLibs, lib.isOutdated]
 
