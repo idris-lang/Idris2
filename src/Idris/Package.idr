@@ -426,15 +426,12 @@ makeDoc pkg opts =
        let build = build_dir (dirs (options defs))
        let docBase = build </> "docs"
        let docDir = docBase </> "docs"
-       ignore $ coreLift $ mkdirAll docDir
+       Right () <- coreLift $ mkdirAll docDir
+         | Left err => fileError docDir err
        u <- newRef UST initUState
        setPPrint (MkPPOpts False False True)
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
-           let outputFileName = (show mod) ++ ".html"
-           Right outFile <- coreLift $ openFile (docDir </> outputFileName) WriteTruncate
-             | Left err => pure [InternalError $ ("error opening file \"" ++ (docDir </> outputFileName) ++ "\": " ++ (show err))]
-           let writeHtml = \s => (coreLift_ $ fPutStrLn outFile s)
            let ns = miAsNamespace mod
            addImport (MkImport emptyFC False mod ns)
            defs <- get Ctxt
@@ -442,38 +439,21 @@ makeDoc pkg opts =
            let allInNamespace = filter (inNS ns) names
            visibleNames <- filterM (visible defs) allInNamespace
 
-           writeHtml $ htmlPreamble (show mod) "../" "namespace"
-           writeHtml ("<h1>" ++ show mod ++ "</h1>")
-           writeHtml ("<dl class=\"decls\">")
-           ignore $ for (sort visibleNames) (\name => do
-               doc <- getDocsForName emptyFC name
-               writeHtml !(docDocToHtml doc)
-             )
-           writeHtml ("</dl>")
-           writeHtml htmlFooter
-           coreLift $ closeFile outFile
+           let outputFilePath = docDir </> (show mod ++ ".html")
+           allDocs <- annotate Declarations <$> vcat <$> for (sort visibleNames) (getDocsForName emptyFC)
+           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDocs)
+             | Left err => fileError (docBase </> "index.html") err
+
            pure $ the (List Error) []
          )
          | errs => pure errs
 
-       Right outFile <- coreLift $ openFile (docBase </> "index.html") WriteTruncate
-         | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "index.html") ++ "\": " ++ (show err))]
-       let writeHtml = \s => (coreLift_ $ fPutStrLn outFile s)
-       writeHtml $ htmlPreamble (name pkg) "" "index"
-       writeHtml ("<h1>Package " ++ name pkg ++ " - Namespaces</h1>")
-       writeHtml "<ul class=\"names\">"
-       ignore $ for (modules pkg) (\(mod, filename) => do
-         writeHtml ("<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>")
-         )
-       writeHtml "</ul>"
-       writeHtml htmlFooter
-       coreLift_ $ closeFile outFile
+       Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
+         | Left err => fileError (docBase </> "index.html") err
 
        css <- readDataFile "docs/styles.css"
-       Right outFile <- coreLift $ openFile (docBase </> "styles.css") WriteTruncate
-         | Left err => pure [InternalError $ ("error opening file \"" ++ (docBase </> "styles.css") ++ "\": " ++ (show err))]
-       coreLift_ $ fPutStr outFile css
-       coreLift_ $ closeFile outFile
+       Right () <- coreLift $ writeFile (docBase </> "styles.css") css
+         | Left err => fileError (docBase </> "styles.css") err
 
        runScript (postbuild pkg)
        pure []
@@ -482,7 +462,7 @@ makeDoc pkg opts =
     visible defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure False
-             -- TODO: if we can find out, wheter a def has been declared as
+             -- TODO: if we can find out, whether a def has been declared as
              -- part of an interface, hide it here
              pure $ case definition def of
                          (DCon _ _ _) => False
@@ -496,6 +476,9 @@ makeDoc pkg opts =
     stripNS ns full@(NS xns n) = if ns == xns then n
                                               else full
     stripNS _ x = x
+
+    fileError : String -> FileError -> Core (List Error)
+    fileError filename err = pure [FileErr filename err]
 
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)

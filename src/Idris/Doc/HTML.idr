@@ -13,6 +13,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 
 import Idris.DocString
+import Idris.Package.Types
 import Idris.Pretty
 import Idris.Version
 
@@ -78,7 +79,6 @@ renderHtml (STAnn ann rest) = do
   pure $ "<!-- ann ignored START -->" ++ resthtml ++ "<!-- ann END -->"
 renderHtml (STConcat docs) = pure $ fastConcat !(traverse renderHtml docs)
 
-export
 docDocToHtml : {auto c : Ref Ctxt Defs} ->
                Doc IdrisDocAnn ->
                Core String
@@ -86,7 +86,6 @@ docDocToHtml doc =
   let dt = SimpleDocTree.fromStream $ layoutUnbounded doc in
       renderHtml dt
 
-export
 htmlPreamble : String -> String -> String -> String
 htmlPreamble title root class = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"
   ++ "<title>" ++ htmlEscape title ++ "</title>"
@@ -96,6 +95,32 @@ htmlPreamble title root class = "<!DOCTYPE html><html lang=\"en\"><head><meta ch
   ++ "<nav><a href=\"" ++ root ++ "index.html\">Index</a></nav></header>"
   ++ "<div class=\"container\">"
 
-export
 htmlFooter : String
 htmlFooter = "</div><footer>Produced by Idris 2 version " ++ (showVersion True version) ++ "</footer></body></html>"
+
+export
+renderDocIndex : PkgDesc -> String
+renderDocIndex pkg = fastConcat $
+  [ htmlPreamble (name pkg) "" "index"
+  , "<h1>Package ", name pkg, " - Namespaces</h1>"
+  , "<ul class=\"names\">"] ++
+  (map moduleLink $ modules pkg) ++
+  [ "</ul>"
+  , htmlFooter
+  ]
+    where
+      moduleLink : (ModuleIdent, String) -> String
+      moduleLink (mod, filename) =
+         "<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>"
+
+export
+renderModuleDoc : {auto c : Ref Ctxt Defs} ->
+                  ModuleIdent ->
+                  Doc IdrisDocAnn ->
+                  Core String
+renderModuleDoc mod allModuleDocs = pure $ fastConcat
+  [ htmlPreamble (show mod) "../" "namespace"
+  , "<h1>", show mod, "</h1>"
+  , !(docDocToHtml allModuleDocs)
+  , htmlFooter
+  ]
