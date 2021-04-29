@@ -558,7 +558,7 @@ Reflect FC where
       = do fn' <- reflect fc defs lhs env fn
            start' <- reflect fc defs lhs env start
            end' <- reflect fc defs lhs env end
-           appCon fc defs (reflectiontt "MkVirtualFC") [fn', start', end']
+           appCon fc defs (reflectiontt "MkFC") [fn', start', end']
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
 {-

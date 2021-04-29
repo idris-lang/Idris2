@@ -306,7 +306,7 @@ mutual
   nestedDpair fname start indents
       = dpairType fname start indents
     <|> do l <- expr pdef fname indents
-           loc <- bounds (decoratedSymbol fname "**")
+           loc <- bounds (symbol "**")
            rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
            pure (PDPair (boundToFC fname (mergeBounds start rest))
                         (boundToFC fname loc)
@@ -341,7 +341,7 @@ mutual
                                      <* act [(toNonEmptyFC $ boundToFC fname s, Typ)]
     <|> do e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
-           (do loc <- bounds (decoratedSymbol fname "**")
+           (do loc <- bounds (symbol "**")
                rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* decoratedSymbol fname ")")
                pure (PDPair (boundToFC fname (mergeBounds s rest))
                             (boundToFC fname loc)

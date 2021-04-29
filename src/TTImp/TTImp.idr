@@ -718,7 +718,9 @@ getFC (IWithUnambigNames x _ _) = x
 export
 apply : RawImp -> List RawImp -> RawImp
 apply f [] = f
-apply f (x :: xs) = apply (IApp (getFC f) f x) xs
+apply f (x :: xs) =
+  let fFC = getFC f in
+  apply (IApp (fromMaybe fFC (mergeFC fFC (getFC x))) f x) xs
 
 export
 gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
