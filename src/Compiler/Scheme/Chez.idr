@@ -390,6 +390,16 @@ startChezWinSh chez appDirSh targetSh = unlines
         ++ "\"$@\""
     ]
 
+compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
+compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
+  [ "echo"
+  , unwords
+    [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
+    | ssFile <- ssFiles
+    ]
+  , "|", chez, "-q", "--libdirs", libDir
+  ]
+
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
 compileChezLibrary chez libDir ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
@@ -572,15 +582,15 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
       log "compiler.scheme.chez" 3 $ "Compiling support"
       compileChezLibrary chez appDirRel (appDirRel </> "support.ss")
 
-    -- compile every compilation unit
-    for_ chezLibs $ \lib =>
-      if lib.isOutdated
-        then do
-          log "compiler.scheme.chez" 3 $ "Compiling " ++ lib.name
-          compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
-        else do
-          log "compiler.scheme.chez" 3 $ "Touching " ++ lib.name
-          touch (appDirRel </> lib.name <.> "so")
+    -- compile every compilation unit in parallel
+    compileChezLibraries chez appDirRel
+      [appDirRel </> lib.name <.> "ss" | lib <- chezLibs, lib.isOutdated]
+
+    -- touch them in the right order to make the timestamps right
+    -- even for the libraries that were not recompiled
+    for_ chezLibs $ \lib => do
+      log "compiler.scheme.chez" 3 $ "Touching " ++ lib.name
+      touch (appDirRel </> lib.name <.> "so")
 
     -- compile the main program
     compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
