@@ -8,6 +8,7 @@ modules =
     Algebra.ZeroOneOmega,
 
     Compiler.ANF,
+    Compiler.CaseOpts,
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Inline,
