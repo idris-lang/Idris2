@@ -32,7 +32,9 @@ isCon _ = Nothing
 public export
 data Constant
     = I Int
-    | I32 Integer -- reuse code from I64 with fewer casts
+    | I8 Integer -- reuse code from I64 with fewer casts
+    | I16 Integer
+    | I32 Integer
     | I64 Integer
     | BI Integer
     | B8 Int -- For now, since we don't have Bits types. We need to
@@ -46,6 +48,8 @@ data Constant
     | WorldVal
 
     | IntType
+    | Int8Type
+    | Int16Type
     | Int32Type
     | Int64Type
     | IntegerType
@@ -62,6 +66,8 @@ export
 isConstantType : Name -> Maybe Constant
 isConstantType (UN n) = case n of
   "Int"     => Just IntType
+  "Int8"    => Just Int8Type
+  "Int16"   => Just Int16Type
   "Int32"   => Just Int32Type
   "Int64"   => Just Int64Type
   "Integer" => Just IntegerType
@@ -81,6 +87,12 @@ constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
                               No contra => Nothing
+constantEq (I8 x) (I8 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I16 x) (I16 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
 constantEq (I32 x) (I32 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
@@ -99,6 +111,8 @@ constantEq (Ch x) (Ch y) = case decEq x y of
 constantEq (Db x) (Db y) = Nothing -- no DecEq for Doubles!
 constantEq WorldVal WorldVal = Just Refl
 constantEq IntType IntType = Just Refl
+constantEq Int8Type Int8Type = Just Refl
+constantEq Int16Type Int16Type = Just Refl
 constantEq Int32Type Int32Type = Just Refl
 constantEq Int64Type Int64Type = Just Refl
 constantEq IntegerType IntegerType = Just Refl
@@ -111,6 +125,8 @@ constantEq _ _ = Nothing
 export
 Show Constant where
   show (I x) = show x
+  show (I8 x) = show x
+  show (I16 x) = show x
   show (I32 x) = show x
   show (I64 x) = show x
   show (BI x) = show x
@@ -123,6 +139,8 @@ Show Constant where
   show (Db x) = show x
   show WorldVal = "%MkWorld"
   show IntType = "Int"
+  show Int8Type = "Int8"
+  show Int16Type = "Int16"
   show Int32Type = "Int32"
   show Int64Type = "Int64"
   show IntegerType = "Integer"
@@ -138,6 +156,8 @@ Show Constant where
 export
 Pretty Constant where
   pretty (I x) = pretty x
+  pretty (I8 x) = pretty x
+  pretty (I16 x) = pretty x
   pretty (I32 x) = pretty x
   pretty (I64 x) = pretty x
   pretty (BI x) = pretty x
@@ -150,6 +170,8 @@ Pretty Constant where
   pretty (Db x) = pretty x
   pretty WorldVal = pretty "%MkWorld"
   pretty IntType = pretty "Int"
+  pretty Int8Type = pretty "Int8"
+  pretty Int16Type = pretty "Int16"
   pretty Int32Type = pretty "Int32"
   pretty Int64Type = pretty "Int64"
   pretty IntegerType = pretty "Integer"
@@ -165,6 +187,8 @@ Pretty Constant where
 export
 Eq Constant where
   (I x) == (I y) = x == y
+  (I8 x) == (I8 y) = x == y
+  (I16 x) == (I16 y) = x == y
   (I32 x) == (I32 y) = x == y
   (I64 x) == (I64 y) = x == y
   (BI x) == (BI y) = x == y
@@ -177,6 +201,8 @@ Eq Constant where
   (Db x) == (Db y) = x == y
   WorldVal == WorldVal = True
   IntType == IntType = True
+  Int8Type == Int8Type = True
+  Int16Type == Int16Type = True
   Int32Type == Int32Type = True
   Int64Type == Int64Type = True
   IntegerType == IntegerType = True
@@ -204,8 +230,10 @@ constTag StringType = 9
 constTag CharType = 10
 constTag DoubleType = 11
 constTag WorldType = 12
-constTag Int32Type = 13
-constTag Int64Type = 14
+constTag Int8Type = 13
+constTag Int16Type = 14
+constTag Int32Type = 15
+constTag Int64Type = 16
 constTag _ = 0
 
 ||| Precision of integral types.
@@ -231,6 +259,8 @@ data IntKind = Signed Precision | Unsigned Precision
 public export
 intKind : Constant -> Maybe IntKind
 intKind IntegerType = Just $ Signed Unlimited
+intKind Int8Type    = Just . Signed   $ P 8
+intKind Int16Type   = Just . Signed   $ P 16
 intKind Int32Type   = Just . Signed   $ P 32
 intKind Int64Type   = Just . Signed   $ P 64
 intKind IntType     = Just . Signed   $ P 64

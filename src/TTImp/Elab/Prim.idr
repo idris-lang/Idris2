@@ -7,6 +7,8 @@ import Core.TT
 export
 checkPrim : FC -> Constant -> (Term vars, Term vars)
 checkPrim fc (I i) = (PrimVal fc (I i), PrimVal fc IntType)
+checkPrim fc (I8 i) = (PrimVal fc (I8 i), PrimVal fc Int8Type)
+checkPrim fc (I16 i) = (PrimVal fc (I16 i), PrimVal fc Int16Type)
 checkPrim fc (I32 i) = (PrimVal fc (I32 i), PrimVal fc Int32Type)
 checkPrim fc (I64 i) = (PrimVal fc (I64 i), PrimVal fc Int64Type)
 checkPrim fc (BI i) = (PrimVal fc (BI i), PrimVal fc IntegerType)
@@ -20,6 +22,8 @@ checkPrim fc (Db d) = (PrimVal fc (Db d), PrimVal fc DoubleType)
 checkPrim fc WorldVal = (PrimVal fc WorldVal, PrimVal fc WorldType)
 
 checkPrim fc IntType = (PrimVal fc IntType, TType fc)
+checkPrim fc Int8Type = (PrimVal fc Int8Type, TType fc)
+checkPrim fc Int16Type = (PrimVal fc Int16Type, TType fc)
 checkPrim fc Int32Type = (PrimVal fc Int32Type, TType fc)
 checkPrim fc Int64Type = (PrimVal fc Int64Type, TType fc)
 checkPrim fc IntegerType = (PrimVal fc IntegerType, TType fc)

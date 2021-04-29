@@ -46,6 +46,8 @@ constant
                            Ident "Char"    => Just CharType
                            Ident "Double"  => Just DoubleType
                            Ident "Int"     => Just IntType
+                           Ident "Int8"    => Just Int8Type
+                           Ident "Int16"   => Just Int16Type
                            Ident "Int32"   => Just Int32Type
                            Ident "Int64"   => Just Int64Type
                            Ident "Integer" => Just IntegerType
@@ -252,7 +254,7 @@ holeName
 
 reservedNames : List String
 reservedNames
-    = [ "Type", "Int", "Int32", "Int64", "Integer"
+    = [ "Type", "Int", "Int8", "Int16", "Int32", "Int64", "Integer"
       , "Bits8", "Bits16", "Bits32", "Bits64"
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]

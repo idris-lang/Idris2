@@ -341,6 +341,12 @@ Reify Constant where
              (NS _ (UN "I"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (I x')
+             (NS _ (UN "I8"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I8 x')
+             (NS _ (UN "I16"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I16 x')
              (NS _ (UN "I32"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (I32 x')
@@ -375,6 +381,10 @@ Reify Constant where
                   => pure WorldVal
              (NS _ (UN "IntType"), [])
                   => pure IntType
+             (NS _ (UN "Int8Type"), [])
+                  => pure Int8Type
+             (NS _ (UN "Int16Type"), [])
+                  => pure Int16Type
              (NS _ (UN "Int32Type"), [])
                   => pure Int32Type
              (NS _ (UN "Int64Type"), [])
@@ -405,6 +415,12 @@ Reflect Constant where
   reflect fc defs lhs env (I x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "I") [x']
+  reflect fc defs lhs env (I8 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I8") [x']
+  reflect fc defs lhs env (I16 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I16") [x']
   reflect fc defs lhs env (I32 x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "I32") [x']
@@ -439,6 +455,10 @@ Reflect Constant where
       = getCon fc defs (reflectiontt "WorldVal")
   reflect fc defs lhs env IntType
       = getCon fc defs (reflectiontt "IntType")
+  reflect fc defs lhs env Int8Type
+      = getCon fc defs (reflectiontt "Int8Type")
+  reflect fc defs lhs env Int16Type
+      = getCon fc defs (reflectiontt "Int16Type")
   reflect fc defs lhs env Int32Type
       = getCon fc defs (reflectiontt "Int32Type")
   reflect fc defs lhs env Int64Type
