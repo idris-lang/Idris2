@@ -156,6 +156,13 @@ truncateInt bits e =
                        , ")"
                        ]
 
+-- Valid unicode code poing range is [0,1114111], therefore,
+-- we calculate the remainder modulo 1114112 (= 17 * 2^16).
+truncChar : {auto c : Ref ESs ESSt} -> String -> Core String
+truncChar e =
+  do fn <- addConstToPreamble ("truncToChar") ("x=>{const m = x%1114112;return m>=0?m:m+1114112}")
+     pure $ "String.fromCodePoint(" ++ fn ++ "(" ++ fromBigInt e ++ "))"
+
 boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 boundedInt bits e =
   do
@@ -253,6 +260,23 @@ castInt from to x =
        ((StringType, _), (_, Just $ Unsigned $ P n)) =>
          boundedUInt n $ !(jsIntegerOfString x)
 
+       -- we allow Double casts to all integers but have
+       -- to check the bounds
+       ((DoubleType, _), (_, Just $ Signed Unlimited)) =>
+         pure $ "BigInt(Math.floor(" ++ x ++ "))"
+
+       ((DoubleType, _), (_, Just $ Signed $ P n)) =>
+         boundedInt (n-1) $ "BigInt(Math.floor(" ++ x ++ "))"
+
+       ((DoubleType, _), (_, Just $ Unsigned $ P n)) =>
+         boundedUInt n $ "BigInt(Math.floor(" ++ x ++ "))"
+
+       -- we allow casts from all integer types to Double
+       ((_, Just _), (DoubleType, _)) => pure $ "Number(" ++ x ++ ")"
+
+       -- we allow casts from all integer types to Char
+       ((_, Just _), (CharType, _)) => truncChar x
+
        ((_, Just _), (_, Just $ Signed Unlimited)) => pure x
 
        ((_, Just $ Signed m), (_, Just $ Signed $ P n)) =>
@@ -311,26 +335,7 @@ jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
 
-jsOp (Cast DoubleType Int8Type) [x] = boundedInt 7 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType Int16Type) [x] = boundedInt 15 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType Int32Type) [x] = boundedInt 31 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType Int64Type) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType IntType) [x] = boundedInt 63 $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast DoubleType IntegerType) [x] = pure $ "BigInt(Math.floor(" ++ x ++ "))"
-jsOp (Cast IntType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast IntType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
-jsOp (Cast Int8Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast Int8Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
-jsOp (Cast Int16Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast Int16Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
-jsOp (Cast Int32Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast Int32Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
-jsOp (Cast Int64Type CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast Int64Type DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
-jsOp (Cast IntegerType CharType) [x] = pure $ "String.fromCodePoint(" ++ fromBigInt x ++ ")"
-jsOp (Cast IntegerType DoubleType) [x] = pure $ "Number(" ++ x ++ ")"
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
-
 jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
 jsOp (Cast ty ty2) [x]        = castInt ty ty2 x
 jsOp BelieveMe [_,_,x] = pure x
