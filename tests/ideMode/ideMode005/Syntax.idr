@@ -5,7 +5,7 @@
 -}
 
 showMaybe : {0 a : Type} -> (assumption : Show a) => Maybe a -> String
-showMaybe ma = case ma of
+showMaybe x@ma = case ma of
     Nothing => "Nothing"
     Just a => "Just " ++ show a
 
@@ -18,8 +18,19 @@ doBlock
        f <- [| Nothing + Just d |]
        pure $ sum [a,b,c,d,e,f]
 
-anonLam : Maybe Nat
-anonLam = map (uncurry $ \ m, n => m + n)
+parameters (x, y, z : Nat)
+
+  add3 : Nat
+  add3 = x + y + z
+
+parameters (x, y : Nat) (z, a : Nat)
+
+  add4 : Nat
+  add4 = x + y + z + a
+
+anonLam : Maybe (m : Nat ** n : Nat ** m === n)
+anonLam = map (\m => (m ** m ** Refl))
+        $ map (uncurry $ \ m, n => m + n)
         $ map (\ (m, n) => (n, m))
         $ map (\ m => (m, m))
         $ map (\ m => S m)

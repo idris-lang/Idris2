@@ -44,6 +44,9 @@ decoratedDataTypeName fname = decorate fname Typ dataTypeName
 decoratedDataConstructorName : FileName -> Rule Name
 decoratedDataConstructorName fname = decorate fname Data dataConstructorName
 
+decoratedSimpleBinderName : FileName -> Rule String
+decoratedSimpleBinderName fname = decorate fname Bound unqualifiedName
+
 -- Forward declare since they're used in the parser
 topDecl : FileName -> IndentInfo -> Rule (List PDecl)
 collectDefs : List PDecl -> List PDecl
@@ -219,7 +222,7 @@ mutual
       braceArgs fname indents
           = do start <- bounds (decoratedSymbol fname "{")
                list <- sepBy (decoratedSymbol fname ",")
-                        $ do x <- bounds unqualifiedName
+                        $ do x <- bounds (decoratedSimpleBinderName fname)
                              let fc = boundToFC fname x
                              option (NamedArg (UN x.val) $ PRef fc (UN x.val))
                               $ do tm <- decoratedSymbol fname "=" *> expr pdef fname indents
@@ -286,7 +289,7 @@ mutual
 
   dpairType : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
-      = do loc <- bounds (do x <- decorate fname Bound unqualifiedName
+      = do loc <- bounds (do x <- decoratedSimpleBinderName fname
                              decoratedSymbol fname ":"
                              ty <- expr pdef fname indents
                              pure (x, ty))
@@ -448,7 +451,7 @@ mutual
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do b <- bounds (do x <- bounds unqualifiedName
+      = do b <- bounds (do x <- bounds (decoratedSimpleBinderName fname)
                            decoratedSymbol fname "@"
                            commit
                            expr <- simpleExpr fname indents
@@ -526,7 +529,7 @@ mutual
             pure (map (\n => (rig, map UN n, ty)) (forget ns))
      <|> forget <$> sepBy1 (decoratedSymbol fname ",")
                            (do rig <- multiplicity fname
-                               n <- bounds binderName
+                               n <- bounds (decorate fname Bound binderName)
                                decoratedSymbol fname ":"
                                ty <- expr pdef fname indents
                                pure (rig, map UN n, ty))
@@ -582,7 +585,8 @@ mutual
   forall_ fname indents
       = do decoratedKeyword fname "forall"
            commit
-           ns <- sepBy1 (decoratedSymbol fname ",") (bounds unqualifiedName)
+           ns <- sepBy1 (decoratedSymbol fname ",")
+                        (bounds (decoratedSimpleBinderName fname))
            let binders = map (\n => ( erased {a=RigCount}
                                     , map (Just . UN) n
                                     , PImplicit (boundToFC fname n))
@@ -1141,7 +1145,8 @@ directive fname indents
          pure (PrimDouble n)
   <|> do decorate fname Keyword $ pragma "name"
          n <- name
-         ns <- sepBy1 (decoratedSymbol fname ",") unqualifiedName
+         ns <- sepBy1 (decoratedSymbol fname ",")
+                       (decoratedSimpleBinderName fname)
          atEnd indents
          pure (Names n (forget ns))
   <|> do decorate fname Keyword $ pragma "start"
@@ -1451,7 +1456,7 @@ paramDecls fname indents
     oldParamDecls fname indents
         = do decoratedSymbol fname "("
              ps <- sepBy (decoratedSymbol fname ",")
-                         (do x <- decorate fname Bound unqualifiedName
+                         (do x <- decoratedSimpleBinderName fname
                              decoratedSymbol fname ":"
                              ty <- typeExpr pdef fname indents
                              pure (UN x, top, Explicit, ty))
