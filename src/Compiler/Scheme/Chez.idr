@@ -394,7 +394,7 @@ compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List S
 compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
   [ "echo"
   , unwords
-    [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
+    [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
     | ssFile <- ssFiles
     ]
   , "|", chez, "-q", "--libdirs", libDir
@@ -403,14 +403,14 @@ compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
 compileChezLibrary chez libDir ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
-  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ show ssFile ++ "))'"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
 compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
 compileChezProgram chez libDir ssFile = ignore $ coreLift $ system $ unwords
   [ "echo"
-  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ show ssFile ++ "))'"
+  , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
