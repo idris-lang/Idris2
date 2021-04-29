@@ -112,11 +112,11 @@ prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
-              Core (Doc IdrisSyntax)
+              Core (Doc IdrisAnn)
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
                 pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
-            (\num => prettyHole defs [] n num (type gdef))
+            (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
 getEnvTerm : {vars : _} ->
@@ -131,7 +131,7 @@ getEnvTerm _ env tm = (_ ** (env, tm))
 displayTerm : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> ClosedTerm ->
-              Core (Doc IdrisSyntax)
+              Core (Doc IdrisAnn)
 displayTerm defs tm
     = do ptm <- resugar [] !(normaliseHoles defs [] tm)
          pure (prettyTerm ptm)
@@ -147,7 +147,7 @@ displayPatTerm defs tm
 displayClause : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 Defs -> (vs ** (Env Term vs, Term vs, Term vs)) ->
-                Core (Doc IdrisSyntax)
+                Core (Doc IdrisAnn)
 displayClause defs (vs ** (env, lhs, rhs))
     = do lhstm <- resugar env !(normaliseHoles defs env lhs)
          rhstm <- resugar env !(normaliseHoles defs env rhs)
@@ -156,7 +156,7 @@ displayClause defs (vs ** (env, lhs, rhs))
 displayPats : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
-              Core (Doc IdrisSyntax)
+              Core (Doc IdrisAnn)
 displayPats defs (n, idx, gdef)
     = case definition gdef of
            PMDef _ _ _ _ pats
@@ -390,7 +390,7 @@ processEdit (TypeAt line col name)
          globals <- lookupCtxtName name (gamma defs)
 
          -- Get the Doc for the result
-         globalResult <- the (Core $ Maybe $ Doc IdrisSyntax) $ case globals of
+         globalResult <- the (Core $ Maybe $ Doc IdrisAnn) $ case globals of
            [] => pure Nothing
            ts => do tys <- traverse (displayType defs) ts
                     pure $ Just (vsep tys)
@@ -400,10 +400,9 @@ processEdit (TypeAt line col name)
 
          case (globalResult, localResult) of
               -- Give precedence to the local name, as it shadows the others
-              (_, Just (n, _, type)) => pure $ DisplayEdit $ reAnnotate Syntax $
+              (_, Just (n, _, type)) => pure $ DisplayEdit $
                 pretty (nameRoot n) <++> colon <++> !(displayTerm defs type)
-              (Just globalDoc, Nothing) => pure $ DisplayEdit $ reAnnotate Syntax $
-                globalDoc
+              (Just globalDoc, Nothing) => pure $ DisplayEdit $ globalDoc
               (Nothing, Nothing) => undefinedName replFC name
 
 processEdit (CaseSplit upd line col name)
@@ -714,7 +713,7 @@ process (Check (PRef fc fn))
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName fc fn
               ts => do tys <- traverse (displayType defs) ts
-                       pure (Printed $ reAnnotate Syntax $ vsep tys)
+                       pure (Printed $ vsep tys)
 process (Check itm)
     = do inidx <- resolveName (UN "[input]")
          ttimp <- desugar AnyExpr [] itm
@@ -737,7 +736,7 @@ process (PrintDef fn)
          case !(lookupCtxtName fn (gamma defs)) of
               [] => undefinedName replFC fn
               ts => do defs <- traverse (displayPats defs) ts
-                       pure (Printed $ reAnnotate Syntax $ vsep defs)
+                       pure (Printed $ vsep defs)
 process Reload
     = do opts <- get ROpts
          case mainfile opts of
