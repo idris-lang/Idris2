@@ -143,6 +143,7 @@ endif
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_sep
 	install ${TARGETDIR}/${NAME}_sep/* ${PREFIX}/bin/${NAME}_sep
+	rm "${TARGETDIR}/${NAME}_sep/"*.ss
 
 install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
