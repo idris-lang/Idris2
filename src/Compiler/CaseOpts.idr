@@ -39,7 +39,7 @@ shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
 shiftVar : {outer, args : _} ->
-           {idx : _} -> 
+           {idx : _} ->
            (0 p : IsVar n idx (outer ++ (x :: args ++ vars))) ->
            NVar n (outer ++ (args ++ x :: vars))
 shiftVar {outer = []} p = shiftUnder p
