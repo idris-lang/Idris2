@@ -141,12 +141,6 @@ fromBigInt e = "Number(" ++ e ++ ")"
 makeIntBound : {auto c : Ref ESs ESSt} -> Int -> Core String
 makeIntBound bits = addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
 
-boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
-boundedInt bits e =
-  do
-    n <- makeIntBound bits
-    pure $ "(" ++ e ++ " % " ++ n ++ ")"
-
 truncateInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 truncateInt bits e =
   let bs = show bits
@@ -162,10 +156,17 @@ truncateInt bits e =
                        , ")"
                        ]
 
+boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
+boundedInt bits e =
+  do
+    n  <- makeIntBound bits
+    fn <- addConstToPreamble ("truncToInt"++show bits) ("x=>(x<(-" ++ n ++ ")||(x>=" ++ n ++ "))?x%" ++ n ++ ":x")
+    pure $ fn ++ "(" ++ e ++ ")"
+
 boundedUInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 boundedUInt bits e =
   do
-    n <- makeIntBound bits
+    n  <- makeIntBound bits
     fn <- addConstToPreamble ("truncToUInt"++show bits) ("x=>{const m = x%" ++ n ++ ";return m>=0?m:m+" ++ n ++ "}")
     pure $ fn ++ "(" ++ e ++ ")"
 
@@ -183,6 +184,10 @@ boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? BigInt(1) : BigInt(0))"
 
 jsConstant : {auto c : Ref ESs ESSt} -> Constant -> Core String
 jsConstant (I i) = pure $ show i ++ "n"
+jsConstant (I8 i) = pure $ show i ++ "n"
+jsConstant (I16 i) = pure $ show i ++ "n"
+jsConstant (I32 i) = pure $ show i ++ "n"
+jsConstant (I64 i) = pure $ show i ++ "n"
 jsConstant (BI i) = pure $ show i ++ "n"
 jsConstant (Str s) = pure $ jsString s
 jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
