@@ -121,21 +121,39 @@ record BangData where
 initBangs : BangData
 initBangs = MkBangData 0 []
 
+addNS : Maybe Namespace -> Name -> Name
+addNS (Just ns) n@(NS _ _) = n
+addNS (Just ns) n = NS ns n
+addNS _ n = n
+
+bindFun : FC -> Maybe Namespace -> RawImp -> RawImp -> RawImp
+bindFun fc ns ma f =
+  let fc = virtualiseFC fc in
+  IApp fc (IApp fc (IVar fc (addNS ns $ UN ">>=")) ma) f
+
+seqFun : FC -> Maybe Namespace -> RawImp -> RawImp -> RawImp
+seqFun fc ns ma mb =
+  let fc = virtualiseFC fc in
+  IApp fc (IApp fc (IVar fc (addNS ns (UN ">>"))) ma) mb
+
 bindBangs : List (Name, FC, RawImp) -> RawImp -> RawImp
 bindBangs [] tm = tm
 bindBangs ((n, fc, btm) :: bs) tm
-    = bindBangs bs $ IApp fc (IApp fc (IVar fc (UN ">>=")) btm)
-                          (ILam EmptyFC top Explicit (Just n)
-                                (Implicit fc False) tm)
+    = bindBangs bs
+    $ bindFun fc Nothing btm
+    $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
 
 idiomise : FC -> RawImp -> RawImp
 idiomise fc (IAlternative afc u alts)
   = IAlternative afc (mapAltType (idiomise afc) u) (idiomise afc <$> alts)
 idiomise fc (IApp afc f a)
-    = IApp fc (IApp fc (IVar fc (UN "<*>"))
-                    (idiomise afc f))
-                    a
-idiomise fc fn = IApp fc (IVar fc (UN "pure")) fn
+    = let fc = virtualiseFC fc in
+      IApp fc (IApp fc (IVar fc (UN "<*>"))
+                       (idiomise afc f))
+              a
+idiomise fc fn
+  = let fc = virtualiseFC fc in
+    IApp fc (IVar fc (UN "pure")) fn
 
 pairname : Name
 pairname = NS builtinNS (UN "Pair")
@@ -164,9 +182,10 @@ mutual
             pure $ IPi fc rig !(traverse (desugar side ps') p)
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
-  desugarB side ps (PLam fc rig p pat@(PRef _ n@(UN nm)) argTy scope)
+  desugarB side ps (PLam fc rig p pat@(PRef prefFC n@(UN nm)) argTy scope)
       =  if lowerFirst nm || nm == "_"
-           then pure $ ILam fc rig !(traverse (desugar side ps) p)
+           then do whenJust (isConcreteFC prefFC) \nfc => addSemanticDecorations [(nfc, Bound)]
+                   pure $ ILam fc rig !(traverse (desugar side ps) p)
                            (Just n) !(desugarB side ps argTy)
                                     !(desugar side (n :: ps) scope)
            else pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
@@ -410,11 +429,6 @@ mutual
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
 
-  addNS : Maybe Namespace -> Name -> Name
-  addNS (Just ns) n@(NS _ _) = n
-  addNS (Just ns) n = NS ns n
-  addNS _ n = n
-
   addFromString : {auto c : Ref Ctxt Defs} ->
                   FC -> RawImp -> Core RawImp
   addFromString fc tm
@@ -508,13 +522,13 @@ mutual
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc ns rest
            gam <- get Ctxt
-           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>"))) tm') rest'
+           pure $ seqFun fc ns tm' rest'
   expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
       = do tm' <- desugar side ps tm
            rest' <- expandDo side ps topfc ns rest
-           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) tm')
-                     (ILam nameFC top Explicit (Just n)
-                           (Implicit fc False) rest')
+           whenJust (isConcreteFC nameFC) \nfc => addSemanticDecorations [(nfc, Bound)]
+           pure $ bindFun fc ns tm'
+                $ ILam nameFC top Explicit (Just n) (Implicit fc False) rest'
   expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat
            (newps, bpat) <- bindNames False pat'
@@ -522,20 +536,20 @@ mutual
            alts' <- traverse (map snd . desugarClause ps True) alts
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
-           pure $ IApp fc (IApp fc (IVar fc (addNS ns (UN ">>="))) exp')
-                    (ILam EmptyFC top Explicit (Just (MN "_" 0))
+           pure $ bindFun fc ns exp'
+                $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
                           (ICase fc (IVar EmptyFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fc bpat rest'
-                                  :: alts')))
+                                  :: alts'))
   expandDo side ps topfc ns (DoLet fc lhsFC n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
            rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC lhsFC) \nfc => addSemanticDecorations [(nfc, Bound)]
-           let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
+           let bind = ILet fc lhsFC rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)

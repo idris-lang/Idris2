@@ -621,7 +621,7 @@ mutual
            b <- bounds (forget <$> nonEmptyBlock (caseAlt fname))
            pure
             (let fc = boundToFC fname b
-                 fcCase = boundToFC fname endCase
+                 fcCase = virtualiseFC $ boundToFC fname endCase
                  n = MN "lcase" 0 in
               PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
                 PCase fc (PRef fcCase n) b.val)
@@ -1286,7 +1286,7 @@ constraints fname indents
          more <- constraints fname indents
          pure ((Nothing, tm) :: more)
   <|> do decoratedSymbol fname "("
-         n <- name
+         n <- decorate fname Bound name
          decoratedSymbol fname ":"
          tm <- expr pdef fname indents
          decoratedSymbol fname ")"
@@ -1299,7 +1299,7 @@ implBinds : FileName -> IndentInfo -> EmptyRule (List (Name, RigCount, PTerm))
 implBinds fname indents
     = do decoratedSymbol fname "{"
          rig <- multiplicity fname
-         n <- name
+         n <- decorate fname Bound name
          decoratedSymbol fname ":"
          tm <- expr pdef fname indents
          decoratedSymbol fname "}"
