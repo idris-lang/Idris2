@@ -235,6 +235,7 @@ nodeTests = MkTestPool [Node]
     , "node017", "node018", "node019", "node021", "node022", "node023"
     , "node024", "node025"
     -- , "node14", "node020"
+    , "newints"
     , "reg001"
     , "syntax001"
     , "tailrec001"
