@@ -161,5 +161,6 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Symbols,
           Text.PrettyPrint.Prettyprinter.Util,
           Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Render.HTML,
           Text.PrettyPrint.Prettyprinter.Render.String,
           Text.PrettyPrint.Prettyprinter.Render.Terminal
