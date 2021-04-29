@@ -273,20 +273,23 @@ mutual
                 pure $ IAlternative fc (UniqueDefault (IPrimVal fc (BI x)))
                                 [IPrimVal fc (BI x),
                                  IPrimVal fc (I (fromInteger x))]
-             Just fi => pure $ IApp fc (IVar fc fi)
-                                       (IPrimVal fc (BI x))
+             Just fi =>
+               let vfc = virtualiseFC fc in
+               pure $ IApp vfc (IVar vfc fi) (IPrimVal fc (BI x))
   desugarB side ps (PPrimVal fc (Ch x))
       = case !fromCharName of
              Nothing =>
                 pure $ IPrimVal fc (Ch x)
-             Just f => pure $ IApp fc (IVar fc f)
-                                      (IPrimVal fc (Ch x))
+             Just f =>
+               let vfc = virtualiseFC fc in
+               pure $ IApp vfc (IVar vfc f) (IPrimVal fc (Ch x))
   desugarB side ps (PPrimVal fc (Db x))
       = case !fromDoubleName of
              Nothing =>
                 pure $ IPrimVal fc (Db x)
-             Just f => pure $ IApp fc (IVar fc f)
-                                      (IPrimVal fc (Db x))
+             Just f =>
+               let vfc = virtualiseFC fc in
+               pure $ IApp vfc (IVar vfc f) (IPrimVal fc (Db x))
   desugarB side ps (PPrimVal fc x) = pure $ IPrimVal fc x
   desugarB side ps (PQuote fc tm)
       = pure $ IQuote fc !(desugarB side ps tm)
@@ -434,7 +437,9 @@ mutual
   addFromString fc tm
       = pure $ case !fromStringName of
                     Nothing => tm
-                    Just f => IApp fc (IVar fc f) tm
+                    Just f =>
+                      let fc = virtualiseFC fc in
+                      IApp fc (IVar fc f) tm
 
   expandString : {auto s : Ref Syn SyntaxInfo} ->
                  {auto b : Ref Bang BangData} ->
