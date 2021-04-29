@@ -1565,6 +1565,8 @@ setOption set
          pure (ShowNamespace set)
   <|> do exactIdent "showtypes"
          pure (ShowTypes set)
+  <|> do exactIdent "profile"
+         pure (Profile set)
   <|> if set then setVarOption else fatalError "Unrecognised option"
 
 replCmd : List String -> Rule ()
