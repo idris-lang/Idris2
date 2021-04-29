@@ -1,5 +1,6 @@
 module Compiler.Inline
 
+import Compiler.CaseOpts
 import Compiler.CompileExpr
 
 import Core.CompileExpr
@@ -454,9 +455,12 @@ compileAndInlineAll
 
          traverse_ inlineDef cns
          traverse_ mergeLamDef cns
+         traverse_ caseLamDef cns
          traverse_ fixArityDef cns
+
          traverse_ inlineDef cns
          traverse_ mergeLamDef cns
+         traverse_ caseLamDef cns
          traverse_ fixArityDef cns
   where
     nonErased : Name -> Core Bool
