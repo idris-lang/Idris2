@@ -534,7 +534,8 @@ mutual
            rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC nameFC) \nfc => addSemanticDecorations [(nfc, Bound)]
            pure $ bindFun fc ns tm'
-                $ ILam nameFC top Explicit (Just n) (Implicit fc False) rest'
+                $ ILam nameFC top Explicit (Just n)
+                       (Implicit (virtualiseFC fc) False) rest'
   expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
       = do pat' <- desugar LHS ps pat
            (newps, bpat) <- bindNames False pat'

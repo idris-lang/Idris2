@@ -491,7 +491,7 @@ mutual
     <|> do start <- bounds (symbol "[")
            listExpr fname start indents
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
-           pure (PBang (boundToFC fname b) b.val)
+           pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
     <|> do b <- bounds (decoratedSymbol fname "[|" *> expr pdef fname indents <* decoratedSymbol fname "|]")
            pure (PIdiom (boundToFC fname b) b.val)
     <|> do b <- bounds (pragma "runElab" *> expr pdef fname indents)
@@ -684,7 +684,7 @@ mutual
                            alts <- block (caseAlt fname)
                            pure (scr, alts))
            (scr, alts) <- pure b.val
-           pure (PCase (boundToFC fname b) scr alts)
+           pure (PCase (virtualiseFC $ boundToFC fname b) scr alts)
 
 
   caseAlt : FileName -> IndentInfo -> Rule PClause
@@ -760,14 +760,15 @@ mutual
   doBlock fname indents
       = do b <- bounds $ keyword "do" *> block (doAct fname)
            commit
-           pure (PDoBlock (boundToFC fname b) Nothing (concat b.val))
+           pure (PDoBlock (virtualiseFC $ boundToFC fname b) Nothing (concat b.val))
     <|> do nsdo <- bounds namespacedIdent
            -- TODO: need to attach metadata correctly here
            the (EmptyRule PTerm) $ case nsdo.val of
                 (ns, "do") =>
                    do commit
                       actions <- Core.bounds (block (doAct fname))
-                      let fc = boundToFC fname (mergeBounds nsdo actions)
+                      let fc = virtualiseFC $
+                               boundToFC fname (mergeBounds nsdo actions)
                       pure (PDoBlock fc ns (concat actions.val))
                 _ => fail "Not a namespaced 'do'"
 
@@ -798,11 +799,11 @@ mutual
            atEnd indents
            pure [DoRewrite (boundToFC fname b) b.val]
     <|> do e <- bounds (expr plhs fname indents)
-           (atEnd indents $> [DoExp (boundToFC fname e) e.val])
+           (atEnd indents $> [DoExp (virtualiseFC $ boundToFC fname e) e.val])
              <|> (do b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
                      atEnd indents
                      let (v, alts) = b.val
-                     let fc = boundToFC fname (mergeBounds e b)
+                     let fc = virtualiseFC $ boundToFC fname (mergeBounds e b)
                      pure [DoBindPat fc e.val v alts])
 
   patAlt : FileName -> IndentInfo -> Rule PClause
