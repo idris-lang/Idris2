@@ -119,8 +119,7 @@ emitWarnings
          put Ctxt (record { warnings = [] } defs)
 
 getFCLine : FC -> Maybe Int
-getFCLine (MkFC _ (line, _) _) = Just line
-getFCLine EmptyFC = Nothing
+getFCLine = map startLine . isNonEmptyFC
 
 export
 updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
@@ -233,4 +232,3 @@ equivTypes ty1 ty2 =
            (\err => pure False)
      when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
      pure b
-

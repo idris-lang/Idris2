@@ -2,6 +2,7 @@ module Core.Name
 
 import Data.List
 import Data.Strings
+import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -74,6 +75,21 @@ isUserName (MN _ _) = False
 isUserName (NS _ n) = isUserName n
 isUserName (DN _ n) = isUserName n
 isUserName _ = True
+
+||| True iff name can be traced back to a source name.
+||| Used to determine whether it needs semantic highlighting.
+export
+isSourceName : Name -> Bool
+isSourceName (NS _ n) = isSourceName n
+isSourceName (UN _) = True
+isSourceName (MN _ _) = False
+isSourceName (PV n _) = isSourceName n
+isSourceName (DN _ n) = isSourceName n
+isSourceName (RF _) = True
+isSourceName (Nested _ n) = isSourceName n
+isSourceName (CaseBlock _ _) = False
+isSourceName (WithBlock _ _) = False
+isSourceName (Resolved _) = False
 
 export
 isUN : Name -> Maybe String

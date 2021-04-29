@@ -267,8 +267,8 @@ processMod srcf ttcf msg sourcecode
                 traverse_ addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
-                   do let MkFC fname _ _ = headerloc mod
-                          | EmptyFC => throw (InternalError "No file name")
+                   do let Just fname = map file (isNonEmptyFC $ headerloc mod)
+                          | Nothing => throw (InternalError "No file name")
                       d <- getDirs
                       ns' <- pathToNS (working_dir d) (source_dir d) fname
                       when (ns /= ns') $

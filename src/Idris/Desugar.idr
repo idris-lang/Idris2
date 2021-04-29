@@ -187,8 +187,9 @@ mutual
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
-      = pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
-                                    !(desugar side (n :: ps) scope)
+      = do whenJust (isConcreteFC prefFC) \nfc => addSemanticDecorations [(nfc, Bound)]
+           pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
+                                       !(desugar side (n :: ps) scope)
   desugarB side ps (PLet fc rig pat nTy nVal scope alts)
       = pure $ ICase fc !(desugarB side ps nVal) !(desugarB side ps nTy)
                         !(traverse (map snd . desugarClause ps True)
@@ -344,7 +345,8 @@ mutual
                [IVar fc (UN "Unit"),
                 IVar fc (UN "MkUnit")]
   desugarB side ps (PIfThenElse fc x t e)
-      = pure $ ICase fc !(desugarB side ps x) (IVar fc (UN "Bool"))
+      = let fc = virtualiseFC fc in
+        pure $ ICase fc !(desugarB side ps x) (IVar fc (UN "Bool"))
                    [PatClause fc (IVar fc (UN "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN "False")) !(desugar side ps e)]
   desugarB side ps (PComprehension fc ret conds)
@@ -532,7 +534,8 @@ mutual
            tm' <- desugarB side ps tm
            ty' <- desugar side ps ty
            rest' <- expandDo side ps topfc ns rest
-           let bind = ILet fc lhsFC rig n ty' tm' rest'
+           whenJust (isConcreteFC lhsFC) \nfc => addSemanticDecorations [(nfc, Bound)]
+           let bind = ILet fc (virtualiseFC lhsFC) rig n ty' tm' rest'
            bd <- get Bang
            pure $ bindBangs (bangNames bd) bind
   expandDo side ps topfc ns (DoLetPat fc pat ty tm alts :: rest)
@@ -545,6 +548,7 @@ mutual
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
            bd <- get Bang
+           let fc = virtualiseFC fc
            pure $ bindBangs (bangNames bd) $
                     ICase fc tm' ty'
                        (PatClause fc bpat rest'

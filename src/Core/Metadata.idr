@@ -25,6 +25,13 @@ data Decoration : Type where
   Keyword : Decoration
   Bound : Decoration
 
+export
+nameTypeDecoration : NameType -> Decoration
+nameTypeDecoration Bound         = Bound
+nameTypeDecoration Func          = Function
+nameTypeDecoration (DataCon _ _) = Data
+nameTypeDecoration (TyCon _ _  ) = Typ
+
 public export
 SemanticDecorations : Type
 SemanticDecorations = List (NonEmptyFC, Decoration)
