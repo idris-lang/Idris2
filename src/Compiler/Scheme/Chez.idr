@@ -580,7 +580,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
           compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
         else do
           log "compiler.scheme.chez" 3 $ "Touching " ++ lib.name
-          touch (appDirRel </> lib.name <.> "ss")
+          touch (appDirRel </> lib.name <.> "so")
 
     -- compile the main program
     compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
