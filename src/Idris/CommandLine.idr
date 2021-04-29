@@ -66,6 +66,8 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
@@ -191,6 +193,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]

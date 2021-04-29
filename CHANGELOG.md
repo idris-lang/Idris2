@@ -24,6 +24,8 @@ Compiler changes:
 
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
+* Added `--profile` flag, which generates profile data if supported by a back
+  end. Currently supported by the Chez and Racket back ends.
 
 Library changes:
 

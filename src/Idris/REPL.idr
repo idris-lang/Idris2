@@ -185,6 +185,9 @@ setOpt (CG e)
          case getCG (options defs) e of
             Just cg => setCG cg
             Nothing => iputStrLn (reflow "No such code generator available")
+setOpt (Profile t)
+    = do pp <- getSession
+         setSession (record { profile = t } pp)
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->

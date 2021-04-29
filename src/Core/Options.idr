@@ -151,6 +151,7 @@ record Session where
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
+  profile : Bool -- generate profiling information, if supported
 
 public export
 record PPrinter where
@@ -198,7 +199,7 @@ export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing
+                               Nothing Nothing False
 
 export
 defaultElab : ElabDirectives

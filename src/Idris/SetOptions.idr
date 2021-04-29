@@ -135,6 +135,9 @@ preOptions (IdeModeSocket _ :: opts)
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
+preOptions (Profile :: opts)
+    = do setSession (record { profile = True } !getSession)
+         preOptions opts
 preOptions (Quiet :: opts)
     = do setOutput (REPL True)
          preOptions opts
