@@ -272,7 +272,6 @@ getDocsForName fc n
              extra <- getExtra n def
              fixes <- getFixityDoc n
              let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
-             --pure (vcat (doc :: map (indent 2) (extra ++ fixes)))
              pure (vcat [docDecl, docBody])
 
 export

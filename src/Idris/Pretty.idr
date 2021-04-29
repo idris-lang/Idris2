@@ -20,10 +20,7 @@ import Idris.Syntax
 
 public export
 data IdrisSyntax
-  = SynDecl Name
-  | SynDCon Name
-  | SynDocumentation
-  | SynHole
+  = SynHole
   | SynKeyword
   | SynPragma
   | SynRef Name
@@ -36,11 +33,6 @@ data IdrisAnn
   | FileCtxt
   | Code
   | Meta
-  | Keyword
-  | Pragma
-  | Link Name
-  | Header
-  | Declarations
   | Syntax IdrisSyntax
 
 export
@@ -50,13 +42,11 @@ colorAnn Error = color BrightRed <+> bold
 colorAnn ErrorDesc = bold
 colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
-colorAnn Keyword = color Red
-colorAnn Pragma = color BrightMagenta
 colorAnn Meta = color Green
-colorAnn (Syntax _) = [] -- TODO: add color
-colorAnn (Link _) = []
-colorAnn Header = bold
-colorAnn Declarations = []
+colorAnn (Syntax SynHole) = color Green
+colorAnn (Syntax SynKeyword) = color Red
+colorAnn (Syntax SynPragma) = color BrightMagenta
+colorAnn (Syntax (SynRef _)) = []
 
 export
 error : Doc IdrisAnn -> Doc IdrisAnn
