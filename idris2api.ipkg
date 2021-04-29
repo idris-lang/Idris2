@@ -68,6 +68,7 @@ modules =
     Idris.CommandLine,
     Idris.Desugar,
     Idris.Env,
+    Idris.Doc.HTML,
     Idris.DocString,
     Idris.Driver,
     Idris.Error,
