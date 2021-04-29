@@ -429,18 +429,13 @@ chezLibraryName cu =
     [] => "unknown"  -- this will never happen because the Tarjan algorithm won't produce an empty SCC
     ns::_ => chezNS ns
 
+touch : String -> Core ()
+touch s = ignore $ coreLift $ system ("touch \"" ++ s ++ "\"")
+
 record ChezLib where
   constructor MkChezLib
   name : String
   isOutdated : Bool  -- needs recompiling
-
--- if this becomes too inefficient, we may make it tail-recursive
-forState : List a -> st -> (st -> a -> Core (st, b)) -> Core (List b)
-forState [] st f = pure []
-forState (x :: xs) st f = do
-  (st', y) <- f st x
-  ys <- forState xs st' f
-  pure (y :: ys)
 
 ||| Compile a TT expression to a bunch of Chez Scheme files
 compileToSS : Ref Ctxt Defs -> String -> String -> ClosedTerm -> Core (Bool, List ChezLib)
@@ -472,20 +467,18 @@ compileToSS c chez appdir tm = do
   -- extraRuntime <- getExtraRuntime ds
 
   -- for each compilation unit, generate code
-  chezLibs <- forState cui.compilationUnits SortedSet.empty $ \outdatedCuids, cu => do
+  chezLibs <- for cui.compilationUnits $ \cu => do
     let chezLib = chezLibraryName cu
 
-    -- run this only if the hash has changed
+    -- check if the hash has changed
     let cuHash = show (hash cu)
     hashChanged <-
       coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
         Left err       => pure True
         Right fileHash => pure (fileHash /= cuHash)
-    let depsOutdated = not $ null (SortedSet.intersection outdatedCuids cu.dependencies)
-    let isOutdated = hashChanged || depsOutdated || supportChanged
 
-    when isOutdated $ do
-      -- initialise context
+    -- generate code only when necessary
+    when hashChanged $ do
       defs <- get Ctxt
       l <- newRef {t = List String} Loaded ["libc", "libc 6"]
       s <- newRef {t = List String} Structs []
@@ -527,12 +520,7 @@ compileToSS c chez appdir tm = do
 
       writeFileCore (appdir </> chezLib <.> "hash") cuHash
 
-    pure
-      ( if isOutdated
-          then SortedSet.insert cu.id outdatedCuids
-          else outdatedCuids
-      , MkChezLib chezLib isOutdated
-      )
+    pure (MkChezLib chezLib hashChanged)
 
   -- main module
   main <- schExp chezExtPrim chezString 0 ctm
@@ -586,9 +574,13 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
 
     -- compile every compilation unit
     for_ chezLibs $ \lib =>
-      when lib.isOutdated $ do
-        log "compiler.scheme.chez" 3 $ "Compiling " ++ lib.name
-        compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
+      if lib.isOutdated
+        then do
+          log "compiler.scheme.chez" 3 $ "Compiling " ++ lib.name
+          compileChezLibrary chez appDirRel (appDirRel </> lib.name <.> "ss")
+        else do
+          log "compiler.scheme.chez" 3 $ "Touching " ++ lib.name
+          touch (appDirRel </> lib.name <.> "ss")
 
     -- compile the main program
     compileChezProgram chez appDirRel (appDirRel </> "mainprog.ss")
