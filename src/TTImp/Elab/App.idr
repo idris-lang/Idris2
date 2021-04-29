@@ -56,7 +56,8 @@ getNameType rigc env fc x
                          put EST
                             (record { linearUsed $= ((MkVar lv) :: ) } est)
                  log "ide-mode.highlight" 8
-                     $ "getNameType is trying to add Bound: " ++ show x
+                     $ "getNameType is trying to add Bound: "
+                      ++ show x ++ " (" ++ show fc ++ ")"
                  when (isSourceName x) $
                    whenJust (isConcreteFC fc) \nfc => do
                      log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
@@ -75,6 +76,10 @@ getNameType rigc env fc x
                                DCon t a _ => DataCon t a
                                TCon t a _ _ _ _ _ _ => TyCon t a
                                _ => Func
+
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add something for: "
+                      ++ show def.fullname ++ " (" ++ show fc ++ ")"
 
                  when (isSourceName def.fullname) $
                    whenJust (isConcreteFC fc) \nfc => do

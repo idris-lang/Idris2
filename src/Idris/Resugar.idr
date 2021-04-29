@@ -47,7 +47,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PDPair _ _ _ _ _) = False
     needed (PUnit _) = False
     needed (PComprehension _ _ _) = False
-    needed (PList _ _) = False
+    needed (PList _ _ _) = False
     needed (PPrimVal _ _) = False
     needed tm = True
 
@@ -127,8 +127,8 @@ mutual
          _        => Nothing
        else if nameRoot nm == "::"
                then case sugarApp (unbracket r) of
-                 PList fc xs => pure $ PList fc (unbracketApp l :: xs)
-                 _           => Nothing
+                 PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
+                 _ => Nothing
                else Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
@@ -142,7 +142,7 @@ mutual
                "MkUnit" => pure $ PUnit fc
                _           => Nothing
              else if nameRoot nm == "Nil"
-                     then pure $ PList fc []
+                     then pure $ PList fc fc []
                      else Nothing
         _ => Nothing
 

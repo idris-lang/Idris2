@@ -5,18 +5,26 @@
 -}
 
 showMaybe : {0 a : Type} -> (assumption : Show a) => Maybe a -> String
-showMaybe x@ma = case ma of
+showMaybe x@ma = case map (id . id) ma of
     Nothing => "Nothing"
     Just a => "Just " ++ show a
+
+nats : List Nat
+nats =
+  let n = 5
+      m = 7
+      xs = [id $ id 0]
+      ys = [1, 2, m, n, 3] ++ xs
+  in [n,id $ id m] ++ [1, 2, m, n, 3] ++ xs
 
 doBlock : Maybe Nat
 doBlock
   = do let a = 3
        let b = 5
-       c <- Just 7
+       (c, _) <- Just (7, 9)
        let (d, e) = (c, c)
        f <- [| Nothing + Just d |]
-       pure $ sum [a,b,c,d,e,f]
+       Just $ sum [a,b,c,d,e,f]
 
 parameters (x, y, z : Nat)
 

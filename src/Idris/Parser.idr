@@ -368,15 +368,15 @@ mutual
   getInitRange [x, y] = pure (x, Just y)
   getInitRange _ = fatalError "Invalid list range syntax"
 
-  listRange : FileName -> WithBounds t -> IndentInfo -> List PTerm -> Rule PTerm
+  listRange : FileName -> WithBounds t -> IndentInfo -> List (FC, PTerm) -> Rule PTerm
   listRange fname s indents xs
       = do b <- bounds (decoratedSymbol fname "]")
            let fc = boundToFC fname (mergeBounds s b)
-           rstate <- getInitRange xs
+           rstate <- getInitRange (map snd xs) -- TODO: fix ranges
            pure (PRangeStream fc (fst rstate) (snd rstate))
     <|> do y <- bounds (expr pdef fname indents <* decoratedSymbol fname "]")
            let fc = boundToFC fname (mergeBounds s y)
-           rstate <- getInitRange xs
+           rstate <- getInitRange (map snd xs) -- TODO: fix ranges
            pure (PRange fc (fst rstate) (snd rstate) y.val)
 
   listExpr : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
@@ -388,11 +388,20 @@ mutual
                            pure (ret, conds))
            (ret, conds) <- pure b.val
            pure (PComprehension (boundToFC fname (mergeBounds s b)) ret (concat conds))
-    <|> do xs <- sepBy (decoratedSymbol fname ",") (expr pdef fname indents)
+    <|> do xs <- option [] $ do
+                     hd <- expr pdef fname indents
+                     tl <- many $ do b <- bounds (decoratedSymbol fname ",")
+                                     x <- expr pdef fname indents
+                                     pure (x <$ b)
+                     pure $ map (\ t => (boundToFC fname t, t.val))
+                          $ (hd <$ s) :: tl
            (do decoratedSymbol fname ".."
                listRange fname s indents xs)
              <|> (do b <- bounds (decoratedSymbol fname "]")
-                     pure (PList (boundToFC fname (mergeBounds s b)) xs))
+                     pure $
+                       let fc = boundToFC fname (mergeBounds s b)
+                           nilFC = if null xs then fc else boundToFC fname b
+                       in PList fc nilFC xs)
 
   nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   nonEmptyTuple fname s indents e

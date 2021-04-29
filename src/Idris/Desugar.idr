@@ -334,8 +334,8 @@ mutual
            let val = idiomise fc itm
            logRaw "desugar.idiom" 10 "Desugared to" val
            pure val
-  desugarB side ps (PList fc args)
-      = expandList side ps fc args
+  desugarB side ps (PList fc nilFC args)
+      = expandList side ps nilFC args
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -426,11 +426,12 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
-               Side -> List Name -> FC -> List PTerm -> Core RawImp
-  expandList side ps fc [] = pure (IVar fc (UN "Nil"))
-  expandList side ps fc (x :: xs)
-      = pure $ apply (IVar fc (UN "::"))
-                [!(desugarB side ps x), !(expandList side ps fc xs)]
+               Side -> List Name ->
+               (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
+  expandList side ps nilFC [] = pure (IVar nilFC (UN "Nil"))
+  expandList side ps nilFC ((consFC, x) :: xs)
+      = pure $ apply (IVar consFC (UN "::"))
+                [!(desugarB side ps x), !(expandList side ps nilFC xs)]
 
   addFromString : {auto c : Ref Ctxt Defs} ->
                   FC -> RawImp -> Core RawImp
