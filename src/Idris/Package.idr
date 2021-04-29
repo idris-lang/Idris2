@@ -15,7 +15,6 @@ import Data.Maybe
 import Data.Strings
 import Data.These
 
-import Parser.Lexer.Source
 import Parser.Package
 import System
 import System.Directory
@@ -25,21 +24,18 @@ import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Text.Parser
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
-import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 import Libraries.Utils.Binary
 import Libraries.Utils.String
 import Libraries.Utils.Path
 
 import Idris.CommandLine
+import Idris.Doc.HTML
 import Idris.DocString
 import Idris.ModTree
-import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
 import Idris.REPL.Common
 import Idris.REPL.Opts
-import Idris.Resugar
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
@@ -416,77 +412,6 @@ check pkg opts =
     runScript (postbuild pkg)
     pure []
 
-getNS : Name -> String
-getNS (NS ns _) = show ns
-getNS _ = ""
-
-hasNS : Name -> Bool
-hasNS (NS _ _) = True
-hasNS _ = False
-
-tryCanonicalName : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core (Maybe Name)
-tryCanonicalName fc n with (hasNS n)
-  tryCanonicalName fc n | True
-      = do defs <- get Ctxt
-           case !(lookupCtxtName n (gamma defs)) of
-                [(n, _, _)] => pure $ Just n
-                _ => pure Nothing
-  tryCanonicalName fc n | False = pure Nothing
-
-packageInternal : {auto c : Ref Ctxt Defs} ->
-                  Name -> Core Bool
-packageInternal (NS ns _) =
-  do let mi = nsAsModuleIdent ns
-     catch ((const True) <$> nsToSource emptyFC mi) (\_ => pure False)
-packageInternal _ = pure False
-
-prettyNameRoot : Name -> String
-prettyNameRoot n =
-  let root = nameRoot n in
-  if isOpName n then "(" ++ root ++ ")" else root
-
-
-renderHtml : {auto c : Ref Ctxt Defs} ->
-             SimpleDocTree IdrisDocAnn ->
-             Core String
-renderHtml STEmpty = pure neutral
-renderHtml (STChar c) = pure $ cast c
-renderHtml (STText _ text) = pure text
-renderHtml (STLine _) = pure "<br>"
-renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
-renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
-renderHtml (STAnn DocStringBody rest) = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
-renderHtml (STAnn DCon rest) = do
-  resthtml <- renderHtml rest
-  pure $ "<span class=\"name constructor\">" <+> resthtml <+> "</span>"
-renderHtml (STAnn (TCon n) rest) = do
-  pure $ "<span class=\"name type\">" <+> (prettyNameRoot n) <+> "</span>"
-renderHtml (STAnn (Fun n) rest) = do
-  pure $ "<span class=\"name function\">" <+> (prettyNameRoot n) <+> "</span>"
-renderHtml (STAnn Header rest) = do
-  resthtml <- renderHtml rest
-  pure $ "<b>" <+> resthtml <+> "</b>"
-renderHtml (STAnn (Syntax (SynRef n)) rest) = do
-  resthtml <- renderHtml rest
-  Just cName <- tryCanonicalName emptyFC n
-    | Nothing => pure $ "<span class=\"implicit\">" <+> resthtml <+> "</span>"
-  True <- packageInternal cName
-    | False => pure $ "<span class=\"type resolved\" title=\"" <+> (htmlEscape $ show cName) <+> "\">" <+> (htmlEscape $ nameRoot cName) <+> "</span>"
-  pure $ "<a class=\"type\" href=\"" ++ (htmlEscape $ getNS cName) ++ ".html#" ++ (htmlEscape $ show cName) ++ "\">" <+> (htmlEscape $ nameRoot cName) <+> "</a>"
-renderHtml (STAnn ann rest) = do
-  resthtml <- renderHtml rest
-  pure $ "<!-- ann ignored START -->" ++ resthtml ++ "<!-- ann END -->"
-renderHtml (STConcat docs) = pure $ fastConcat !(traverse renderHtml docs)
-
-docDocToHtml : {auto c : Ref Ctxt Defs} ->
-               Doc IdrisDocAnn ->
-               Core String
-docDocToHtml doc =
-  let ds = layoutUnbounded doc
-      dt = SimpleDocTree.fromStream ds in
-      renderHtml dt
-
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
@@ -514,13 +439,13 @@ makeDoc pkg opts =
            addImport (MkImport emptyFC False mod ns)
            defs <- get Ctxt
            names <- allNames (gamma defs)
-           let allNs = filter (inNS ns) names
-           allNs <- filterM (visible defs) allNs
+           let allInNamespace = filter (inNS ns) names
+           visibleNames <- filterM (visible defs) allInNamespace
 
            writeHtml $ htmlPreamble (show mod) "../" "namespace"
            writeHtml ("<h1>" ++ show mod ++ "</h1>")
            writeHtml ("<dl class=\"decls\">")
-           ignore $ for (sort allNs) (\name => do
+           ignore $ for (sort visibleNames) (\name => do
                doc <- getDocsForName emptyFC name
                writeHtml !(docDocToHtml doc)
              )
