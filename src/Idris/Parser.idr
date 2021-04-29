@@ -294,9 +294,10 @@ mutual
                              ty <- expr pdef fname indents
                              pure (x, ty))
            (x, ty) <- pure loc.val
-           (do symbol "**"
+           (do op <- bounds (symbol "**")
                rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
                pure (PDPair (boundToFC fname (mergeBounds start rest))
+                            (boundToFC fname op)
                             (PRef (boundToFC fname loc) (UN x))
                             ty
                             rest.val))
@@ -308,6 +309,7 @@ mutual
            loc <- bounds (decoratedSymbol fname "**")
            rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
            pure (PDPair (boundToFC fname (mergeBounds start rest))
+                        (boundToFC fname loc)
                         l
                         (PImplicit (boundToFC fname (mergeBounds start rest)))
                         rest.val)
@@ -342,6 +344,7 @@ mutual
            (do loc <- bounds (decoratedSymbol fname "**")
                rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* decoratedSymbol fname ")")
                pure (PDPair (boundToFC fname (mergeBounds s rest))
+                            (boundToFC fname loc)
                             e.val
                             (PImplicit (boundToFC fname (mergeBounds s rest)))
                             rest.val)) <|>

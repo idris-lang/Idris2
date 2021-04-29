@@ -5,7 +5,7 @@
 -}
 
 showMaybe : {0 a : Type} -> (assumption : Show a) => Maybe a -> String
-showMaybe x@ma = case ma of
+showMaybe x@ma =case ma of
     Nothing => "Nothing"
     Just a => "Just " ++ show a
 

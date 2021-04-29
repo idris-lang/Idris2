@@ -44,7 +44,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PBracketed _ _) = False
     needed (PRef _ _) = False
     needed (PPair _ _ _) = False
-    needed (PDPair _ _ _ _) = False
+    needed (PDPair _ _ _ _ _) = False
     needed (PUnit _) = False
     needed (PComprehension _ _ _) = False
     needed (PList _ _) = False
@@ -113,13 +113,13 @@ mutual
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
   sugarAppM : PTerm -> Maybe PTerm
-  sugarAppM (PApp fc (PApp _ (PRef _ (NS ns nm)) l) r) =
+  sugarAppM (PApp fc (PApp _ (PRef opFC (NS ns nm)) l) r) =
     if builtinNS == ns
        then case nameRoot nm of
          "Pair"   => pure $ PPair fc (unbracket l) (unbracket r)
          "MkPair" => pure $ PPair fc (unbracket l) (unbracket r)
          "DPair"  => case unbracket r of
-            PLam _ _ _ n _ r' => pure $ PDPair fc n (unbracket l) (unbracket r')
+            PLam _ _ _ n _ r' => pure $ PDPair fc opFC n (unbracket l) (unbracket r')
             _                 => Nothing
          "Equal"  => pure $ PEq fc (unbracket l) (unbracket r)
          "==="    => pure $ PEq fc (unbracket l) (unbracket r)

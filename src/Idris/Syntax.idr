@@ -97,7 +97,7 @@ mutual
        PIdiom : FC -> PTerm -> PTerm
        PList : FC -> List PTerm -> PTerm
        PPair : FC -> PTerm -> PTerm -> PTerm
-       PDPair : FC -> PTerm -> PTerm -> PTerm -> PTerm
+       PDPair : (full, opFC : FC) -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
        PIfThenElse : FC -> PTerm -> PTerm -> PTerm -> PTerm
        PComprehension : FC -> PTerm -> List PDo -> PTerm
@@ -159,7 +159,7 @@ mutual
   getPTermLoc (PIdiom fc _) = fc
   getPTermLoc (PList fc _) = fc
   getPTermLoc (PPair fc _ _) = fc
-  getPTermLoc (PDPair fc _ _ _) = fc
+  getPTermLoc (PDPair fc _ _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
   getPTermLoc (PIfThenElse fc _ _ _) = fc
   getPTermLoc (PComprehension fc _ _) = fc
@@ -616,8 +616,8 @@ mutual
     showPrec d (PList _ xs)
         = "[" ++ showSep ", " (map (showPrec d) xs) ++ "]"
     showPrec d (PPair _ l r) = "(" ++ showPrec d l ++ ", " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
+    showPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
+    showPrec d (PDPair _ _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
                                  " ** " ++ showPrec d r ++ ")"
     showPrec _ (PUnit _) = "()"
     showPrec d (PIfThenElse _ x t e) = "if " ++ showPrec d x ++ " then " ++ showPrec d t ++
@@ -981,8 +981,9 @@ mapPTermM f = goPTerm where
       PPair fc <$> goPTerm x
                <*> goPTerm y
       >>= f
-    goPTerm (PDPair fc x y z) =
-      PDPair fc <$> goPTerm x
+    goPTerm (PDPair fc opFC x y z) =
+      PDPair fc opFC
+                <$> goPTerm x
                 <*> goPTerm y
                 <*> goPTerm z
       >>= f
