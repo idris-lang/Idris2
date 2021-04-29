@@ -501,12 +501,10 @@ compileToSS c chez appdir tm = do
             | cuid <- SortedSet.toList cu.dependencies
             ]
       let exports = unwords $ concat
-            -- export only the defs that generate Scheme definitions
+            -- constructors don't generate Scheme definitions
             [ case d of
-                MkNmFun args exp => [schName dn]
-                MkNmError exp => [schName dn]
-                MkNmForeign _ _ _ => []
                 MkNmCon _ _ _ => []
+                _ => [schName dn]
             | (dn, fc, d) <- cu.definitions
             ]
       let header =
