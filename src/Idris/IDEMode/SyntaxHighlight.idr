@@ -98,29 +98,6 @@ lwOutputHighlight (nfc,decor) =
 
 
 
-isPrimType : Constant -> Bool
-isPrimType (I   x)  = False
-isPrimType (BI  x)  = False
-isPrimType (B8  x)  = False
-isPrimType (B16 x)  = False
-isPrimType (B32 x)  = False
-isPrimType (B64 x)  = False
-isPrimType (Str x)  = False
-isPrimType (Ch  x)  = False
-isPrimType (Db  x)  = False
-isPrimType WorldVal = False
-isPrimType IntType     = True
-isPrimType IntegerType = True
-isPrimType Bits8Type   = True
-isPrimType Bits16Type  = True
-isPrimType Bits32Type  = True
-isPrimType Bits64Type  = True
-isPrimType StringType  = True
-isPrimType CharType    = True
-isPrimType DoubleType  = True
-isPrimType WorldType   = True
-
-
 outputNameSyntax : {auto c : Ref Ctxt Defs} ->
                    {auto opts : Ref ROpts REPLOpts} ->
                    (NonEmptyFC, Name) -> Core ()
@@ -162,7 +139,7 @@ outputSyntaxHighlighting fname loadResult = do
     meta <- get MD
     let allNames = filter (inFile fname) $ toList meta.nameLocMap
     --decls <- filter (inFile fname) . tydecls <$> get MD
-    _ <- traverse outputNameSyntax allNames -- ++ decls)
+    --_ <- traverse outputNameSyntax allNames -- ++ decls)
     log "ide-mode.highlight" 19 $ "Semantic metadata is: " ++ show meta.semanticHighlighting
     traverse_ lwOutputHighlight (toList meta.semanticHighlighting)
     pure ()
