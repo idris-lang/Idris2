@@ -66,6 +66,12 @@ pairs = let -- [1,2,4,8,16,...,18446744073709551616]
             -- naturals paired with ints
          in [| (,) ints naturals |]
 
+filterTailRec : (a -> Bool) -> List a -> List a
+filterTailRec p = run Nil
+  where run : List a -> List a -> List a
+        run res [] = res
+        run res (h :: t) = if p h then run (h :: res) t else run res t
+
 -- This check does the following: For a given binary operation `op`,
 -- calculate the result of applying the operation to all passed pairs
 -- of integers in `pairs` and check, with the given bit size, if
@@ -79,7 +85,7 @@ pairs = let -- [1,2,4,8,16,...,18446744073709551616]
 check :  (Num a, Cast a Integer) => Op a -> List String
 check (MkOp name op opInt allowZero $ MkIntType type bits mi ma) =
   let ps = if allowZero then pairs
-           else filter ((0 /=) . checkBounds . snd) pairs
+           else filterTailRec ((0 /=) . checkBounds . snd) pairs
    in mapMaybe failing ps
 
   where
