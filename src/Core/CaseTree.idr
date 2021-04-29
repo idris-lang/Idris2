@@ -45,6 +45,11 @@ mutual
        ||| Catch-all case
        DefaultCase : CaseTree vars -> CaseAlt vars
 
+export
+isDefault : CaseAlt vars -> Bool
+isDefault (DefaultCase _) = True
+isDefault _ = False
+
 public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat

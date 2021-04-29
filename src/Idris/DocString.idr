@@ -1,6 +1,7 @@
 module Idris.DocString
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.TT
@@ -26,6 +27,8 @@ import Libraries.Data.String.Extra
 import Libraries.Control.ANSI.SGR
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
+
+import Parser.Lexer.Source
 
 public export
 data IdrisDocAnn
@@ -66,6 +69,8 @@ addDocString : {auto c : Ref Ctxt Defs} ->
                Core ()
 addDocString n_in doc
     = do n <- inCurrentNS n_in
+         log "doc.record" 50 $
+           "Adding doc for " ++ show n_in ++ " (aka " ++ show n ++ " in current NS)"
          syn <- get Syn
          put Syn (record { docstrings $= addName n doc,
                            saveDocstrings $= insert n () } syn)
@@ -126,6 +131,11 @@ getDocsForName fc n
                Unchecked => ""
                _ => header "Totality" <++> pretty tot
 
+    prettyName : Name -> Doc IdrisDocAnn
+    prettyName n =
+      let root = nameRoot n in
+      if isOpName n then parens (pretty root) else pretty root
+
     getDConDoc : Name -> Core (List (Doc IdrisDocAnn))
     getDConDoc con
         = do defs <- get Ctxt
@@ -136,7 +146,7 @@ getDocsForName fc n
                   | _ => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              pure $ pure $ vcat $
-               hsep [dCon (pretty (nameRoot n)), colon, pretty (show ty)]
+               hsep [dCon (prettyName n), colon, pretty (show ty)]
                :: reflowDoc str
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
@@ -153,9 +163,9 @@ getDocsForName fc n
              let [(n, str)] = lookupName meth.name (docstrings syn)
                   | _ => pure []
              ty <- pterm meth.type
-             let nm = nameRoot meth.name
+             let nm = prettyName meth.name
              pure $ pure $ vcat $
-               [hsep [fun (pretty nm), colon, pretty (show ty)]]
+               [hsep [fun nm, colon, pretty (show ty)]]
                ++ toList (indent 2 . pretty . show <$> meth.totalReq)
                ++ reflowDoc str
 

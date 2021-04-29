@@ -365,7 +365,7 @@ findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (mea
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
-      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sr2)
+      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
@@ -645,6 +645,68 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
+||| Given a REPLEval mode for evaluation,
+||| produce the normalization function that normalizes terms
+||| using that evaluation mode
+replEval : {auto c : Ref Ctxt Defs} ->
+  {vs : _} ->
+  REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
+replEval NormaliseAll = normaliseAll
+replEval _ = normalise
+
+record TermWithType where
+  constructor WithType
+  termOf : Term []
+  typeOf : Term []
+
+||| Produce the elaboration of a PTerm, along with its inferred type
+inferAndElab : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  ElabMode ->
+  PTerm ->
+  Core TermWithType
+inferAndElab emode itm
+  = do ttimp <- desugar AnyExpr [] itm
+       let ttimpWithIt = ILocal replFC !getItDecls ttimp
+       inidx <- resolveName (UN "[input]")
+       -- a TMP HACK to prioritise list syntax for List: hide
+       -- foreign argument lists. TODO: once the new FFI is fully
+       -- up and running we won't need this. Also, if we add
+       -- 'with' disambiguation we can use that instead.
+       catch (do hide replFC (NS primIONS (UN "::"))
+                 hide replFC (NS primIONS (UN "Nil")))
+             (\err => pure ())
+       (tm , gty) <- elabTerm inidx emode [] (MkNested [])
+                   [] ttimpWithIt Nothing
+       ty <- getTerm gty
+       pure (tm `WithType` ty)
+
+||| Produce the normal form of a PTerm, along with its inferred type
+inferAndNormalize : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  REPLEval ->
+  PTerm ->
+  Core TermWithType
+inferAndNormalize emode itm
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
+       logTerm "repl.eval" 10 "Elaborated input" tm
+       defs <- get Ctxt
+       let norm = replEval emode
+       ntm <- norm defs [] tm
+       logTermNF "repl.eval" 5 "Normalised" [] ntm
+       pure $ ntm `WithType` ty
+  where
+    elabMode : REPLEval -> ElabMode
+    elabMode EvalTC = InType
+    elabMode _ = InExpr
+
+
 ||| Process a single `REPLCmd`
 |||
 ||| Returns `REPLResult` for display by the higher level shell which
@@ -659,29 +721,16 @@ process : {auto c : Ref Ctxt Defs} ->
 process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
-         case evalMode opts of
+         let emode = evalMode opts
+         case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
-              do ttimp <- desugar AnyExpr [] itm
-                 let ttimpWithIt = ILocal replFC !getItDecls ttimp
-                 inidx <- resolveName (UN "[input]")
-                 -- a TMP HACK to prioritise list syntax for List: hide
-                 -- foreign argument lists. TODO: once the new FFI is fully
-                 -- up and running we won't need this. Also, if we add
-                 -- 'with' disambiguation we can use that instead.
-                 catch (do hide replFC (NS primIONS (UN "::"))
-                           hide replFC (NS primIONS (UN "Nil")))
-                       (\err => pure ())
-                 (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
-                                       [] ttimpWithIt Nothing
-                 logTerm "repl.eval" 10 "Elaborated input" tm
+              do
+                 (ntm `WithType` ty) <- inferAndNormalize emode itm
+                 itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
-                 let norm = nfun (evalMode opts)
-                 ntm <- norm defs [] tm
-                 logTermNF "repl.eval" 5 "Normalised" [] ntm
-                 itm <- resugar [] ntm
-                 ty <- getTerm gty
+                 let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
                    $ newDef replFC evalResultName top [] ty Private
@@ -692,15 +741,6 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-  where
-    emode : REPLEval -> ElabMode
-    emode EvalTC = InType
-    emode _ = InExpr
-
-    nfun : {vs : _} ->
-           REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-    nfun NormaliseAll = normaliseAll
-    nfun _ = normalise
 process (Check (PRef fc (UN "it")))
     = do opts <- get ROpts
          case evalResultName opts of
@@ -713,16 +753,18 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType defs) ts
                        pure (Printed $ vsep tys)
 process (Check itm)
-    = do inidx <- resolveName (UN "[input]")
-         ttimp <- desugar AnyExpr [] itm
-         let ttimpWithIt = ILocal replFC !getItDecls ttimp
-         (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                                  [] ttimpWithIt Nothing
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
-         ty <- getTerm gty
+         -- ty <- getTerm gty
          ity <- resugar [] !(normaliseScope defs [] ty)
          pure (TermChecked itm ity)
+process (CheckWithImplicits itm)
+    = do showImplicits <- showImplicits <$> getPPrint
+         setOpt (ShowImplicits True)
+         result <- process (Check itm)
+         setOpt (ShowImplicits showImplicits)
+         pure result
 process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
@@ -1077,7 +1119,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 16 12 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 20 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->

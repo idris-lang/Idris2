@@ -3,4 +3,7 @@ Doc> hello : Int -> Int
 	Hello!
 world : Nat -> Nat
 	World!
+Doc> Doc.NS.NestedNS.Foo : Type
+  A type of Foo
+  
 Doc> Bye for now!
