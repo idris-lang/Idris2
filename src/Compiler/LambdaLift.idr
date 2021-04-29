@@ -165,6 +165,18 @@ record Used (vars : List Name) where
 initUsed : {vars : _} -> Used vars
 initUsed {vars} = MkUsed (replicate (length vars) False)
 
+lengthDistributesOverAppend
+  : (xs, ys : List a)
+  -> length (xs ++ ys) = length xs + length ys
+lengthDistributesOverAppend [] ys = Refl
+lengthDistributesOverAppend (x :: xs) ys =
+  cong S $ lengthDistributesOverAppend xs ys
+
+weakenUsed : {outer : _} -> Used vars -> Used (outer ++ vars)
+weakenUsed {outer} (MkUsed xs) =
+  MkUsed (rewrite lengthDistributesOverAppend outer vars in
+         (replicate (length outer) False ++ xs))
+
 contractUsed : (Used (x::vars)) -> Used vars
 contractUsed (MkUsed xs) = MkUsed (tail xs)
 
@@ -188,9 +200,6 @@ markUsed {vars} {prf} idx (MkUsed us) =
                Fin (length vars)
     finIdx {idx=Z} First = FZ
     finIdx {idx=S x} (Later l) = FS (finIdx l)
-
-mergeUsed : Used vars -> Used vars -> Used vars
-mergeUsed (MkUsed xs) (MkUsed ys) = MkUsed (zipWith (\x, y => x || y) xs ys)
 
 getUnused : Used vars ->
             Vect (length vars) Bool
@@ -216,7 +225,7 @@ mutual
       = do scl <- liftExp {doLazyAnnots} {lazy} sc
            -- Find out which variables aren't used in the new definition, and
            -- do not abstract over them in the new definition.
-           let scUsedL = usedVars scl
+           let scUsedL = usedVars initUsed scl
                unusedContracted = contractUsedMany {remove=bound} scUsedL
                unused = getUnused unusedContracted
                scl' = dropUnused {outer=bound} unused scl
@@ -285,59 +294,48 @@ mutual
 
   usedVars : {vars : _} ->
              {auto l : Ref Lifts LDefs} ->
+             Used vars ->
              Lifted vars ->
              Used vars
-  usedVars (LLocal {idx} fc prf) =
-    markUsed {prf} idx initUsed
-  usedVars (LAppName fc lazy n args) =
-    let allUsed = map (usedVars {vars}) args in
-    foldl mergeUsed initUsed allUsed
-  usedVars (LUnderApp fc n miss args) =
-    let allUsed = map (usedVars {vars}) args in
-    foldl mergeUsed initUsed allUsed
-  usedVars (LApp fc lazy c arg) =
-    mergeUsed (usedVars c) (usedVars arg)
-  usedVars (LLet fc x val sc) =
-    let valUsed = usedVars val
-        inner = usedVars sc in
-    mergeUsed (contractUsed inner) valUsed
-  usedVars (LCon fc n tag args) =
-    let allUsed = map (usedVars {vars}) args in
-    foldl mergeUsed initUsed allUsed
-  usedVars (LOp fc lazy fn args) =
-    let allUsed = map (usedVars {vars}) args in
-    foldl mergeUsed initUsed allUsed
-  usedVars (LExtPrim fc lazy fn args) =
-    let allUsed = map (usedVars {vars}) args in
-    foldl mergeUsed initUsed allUsed
-  usedVars (LConCase fc sc alts def) =
-      let scUsed = usedVars sc
-          defUsed = map (usedVars {vars}) def
-          altsUsed = map usedConAlt alts
-          mergedAlts = foldl mergeUsed initUsed altsUsed
-          scDefUsed = mergeUsed scUsed (maybe initUsed id defUsed) in
-      mergeUsed scDefUsed mergedAlts
+  usedVars used (LLocal {idx} fc prf) =
+    markUsed {prf} idx used
+  usedVars used (LAppName fc lazy n args) =
+    foldl (usedVars {vars}) used args
+  usedVars used (LUnderApp fc n miss args) =
+    foldl (usedVars {vars}) used args
+  usedVars used (LApp fc lazy c arg) =
+    usedVars (usedVars used arg) c
+  usedVars used (LLet fc x val sc) =
+    let innerUsed = contractUsed $ usedVars (weakenUsed {outer=[x]} used) sc in
+        usedVars innerUsed val
+  usedVars used (LCon fc n tag args) =
+    foldl (usedVars {vars}) used args
+  usedVars used (LOp fc lazy fn args) =
+    foldl (usedVars {vars}) used args
+  usedVars used (LExtPrim fc lazy fn args) =
+    foldl (usedVars {vars}) used args
+  usedVars used (LConCase fc sc alts def) =
+      let defUsed = maybe used (usedVars used {vars}) def
+          scDefUsed = usedVars defUsed sc in
+          foldl usedConAlt scDefUsed alts
     where
       usedConAlt : {default Nothing lazy : Maybe LazyReason} ->
-                   LiftedConAlt vars -> Used vars
-      usedConAlt (MkLConAlt n tag args sc) =
-        contractUsedMany {remove=args} (usedVars sc)
+                   Used vars -> LiftedConAlt vars -> Used vars
+      usedConAlt used (MkLConAlt n tag args sc) =
+        contractUsedMany {remove=args} (usedVars (weakenUsed used) sc)
 
-  usedVars (LConstCase fc sc alts def) =
-      let scUsed = usedVars sc
-          defUsed = map (usedVars {vars}) def
-          altsUsed = map usedConstAlt alts
-          mergedAlts = foldl mergeUsed initUsed altsUsed
-          scDefUsed = mergeUsed scUsed (maybe initUsed id defUsed) in
-      mergeUsed scDefUsed mergedAlts
+  usedVars used (LConstCase fc sc alts def) =
+      let defUsed = maybe used (usedVars used {vars}) def
+          scDefUsed = usedVars defUsed sc in
+          foldl usedConstAlt scDefUsed alts
     where
       usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
-                     LiftedConstAlt vars -> Used vars
-      usedConstAlt (MkLConstAlt c sc) = usedVars sc
+                     Used vars -> LiftedConstAlt vars -> Used vars
+      usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
 
-  usedVars (LPrimVal _ _) = initUsed
-  usedVars (LErased _) = initUsed
-  usedVars (LCrash _ _) = initUsed
+  usedVars used (LPrimVal _ _) = used
+  usedVars used (LErased _) = used
+  usedVars used (LCrash _ _) = used
 
   dropIdx : {vars : _} ->
             {idx : _} ->
