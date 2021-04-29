@@ -215,7 +215,7 @@ mutual
                             (MkPatClause fc pat scope [] :: alts))
   desugarB side ps (PCase fc x xs)
       = pure $ ICase fc !(desugarB side ps x)
-                        (Implicit fc False)
+                        (Implicit (virtualiseFC fc) False)
                         !(traverse (map snd . desugarClause ps True) xs)
   desugarB side ps (PLocal fc xs scope)
       = let ps' = definedIn xs ++ ps in
@@ -541,12 +541,14 @@ mutual
            alts' <- traverse (map snd . desugarClause ps True) alts
            let ps' = newps ++ ps
            rest' <- expandDo side ps' topfc ns rest
+           let fcOriginal = fc
+           let fc = virtualiseFC fc
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
                           (ICase fc (IVar EmptyFC (MN "_" 0))
                                (Implicit fc False)
-                               (PatClause fc bpat rest'
+                               (PatClause fcOriginal bpat rest'
                                   :: alts'))
   expandDo side ps topfc ns (DoLet fc lhsFC n rig ty tm :: rest)
       = do b <- newRef Bang initBangs
