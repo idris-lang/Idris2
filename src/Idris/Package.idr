@@ -472,11 +472,6 @@ makeDoc pkg opts =
     inNS ns (NS xns (UN _)) = ns == xns
     inNS _ _ = False
 
-    stripNS : Namespace -> Name -> Name
-    stripNS ns full@(NS xns n) = if ns == xns then n
-                                              else full
-    stripNS _ x = x
-
     fileError : String -> FileError -> Core (List Error)
     fileError filename err = pure [FileErr filename err]
 
