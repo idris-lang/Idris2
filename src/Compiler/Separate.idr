@@ -176,6 +176,9 @@ interface HasNamespaces a where
   ||| Return the set of namespaces mentioned within
   nsRefs : a -> SortedSet Namespace
 
+-- For now, we have instances only for NamedCExp.
+-- For other IR representations, we'll have to add more instances.
+-- This is not hard, just a bit of tedious mechanical work.
 mutual
   export
   HasNamespaces NamedCExp where
@@ -305,4 +308,3 @@ getCompilationUnits {def} defs =
 
       definitions : List (Name, def)
       definitions = concat [fromMaybe [] $ SortedMap.lookup ns defsByNS | ns <- nss]
-
