@@ -263,13 +263,13 @@ castInt from to x =
        -- we allow Double casts to all integers but have
        -- to check the bounds
        ((DoubleType, _), (_, Just $ Signed Unlimited)) =>
-         pure $ "BigInt(Math.floor(" ++ x ++ "))"
+         pure $ "BigInt(Math.trunc(" ++ x ++ "))"
 
        ((DoubleType, _), (_, Just $ Signed $ P n)) =>
-         boundedInt (n-1) $ "BigInt(Math.floor(" ++ x ++ "))"
+         boundedInt (n-1) $ "BigInt(Math.trunc(" ++ x ++ "))"
 
        ((DoubleType, _), (_, Just $ Unsigned $ P n)) =>
-         boundedUInt n $ "BigInt(Math.floor(" ++ x ++ "))"
+         boundedUInt n $ "BigInt(Math.trunc(" ++ x ++ "))"
 
        -- we allow casts from all integer types to Double
        ((_, Just _), (DoubleType, _)) => pure $ "Number(" ++ x ++ ")"
