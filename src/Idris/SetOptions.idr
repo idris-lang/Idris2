@@ -202,7 +202,8 @@ preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
          preOptions opts
 preOptions (Logging n :: opts)
-    = do setSession (record { logLevel $= insertLogLevel n } !getSession)
+    = do setSession (record { logEnabled = True,
+                              logLevel $= insertLogLevel n } !getSession)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n

@@ -219,6 +219,9 @@ parameters (defs : Defs, topopts : EvalOpts)
         = evalRef env True fc Func (Resolved i) (map (EmptyFC,) args ++ stk)
                   (NApp fc (NMeta nm i args) stk)
 
+    -- The commented out logging here might still be useful one day, but
+    -- evalRef is used a lot and even these tiny checks turn out to be
+    -- worth skipping if we can
     evalRef : {auto c : Ref Ctxt Defs} ->
               {free : _} ->
               Env Term free ->
@@ -243,12 +246,16 @@ parameters (defs : Defs, topopts : EvalOpts)
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
-             let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
+--              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
+--                                          (fullname res)
+--                                          (visibility res)
+             -- want to shortcut that second check, if we're evaluating
+             -- everything, so don't let bind unless we need that log!
+             let redok = redok1 || reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
                                          (visibility res)
-             let redok = redok1 || redok2
-             unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
-                                                      pure $ "Stuck function: " ++ show n'
+--              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
+--                                                       pure $ "Stuck function: " ++ show n'
              if redok
                 then do
                    Just opts' <- useMeta (noCycles res) fc n defs topopts
@@ -1171,8 +1178,8 @@ logNF : {vars : _} ->
         String -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
 logNF str n msg env tmnf
     = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
+         let lvl = mkLogLevel (logEnabled opts) str n
+         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
             do defs <- get Ctxt
                tm <- quote defs env tmnf
                tm' <- toFullNames tm
@@ -1187,7 +1194,7 @@ logTermNF' : {vars : _} ->
              LogLevel -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF' lvl msg env tm
     = do opts <- getSession
-         when (keepLog lvl (logLevel opts)) $
+         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
             do defs <- get Ctxt
                tmnf <- normaliseHoles defs env tm
                tm' <- toFullNames tmnf
@@ -1199,7 +1206,7 @@ logTermNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             String -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF str n msg env tm
-    = do let lvl = mkLogLevel str n
+    = do let lvl = mkLogLevel (logEnabled !getSession) str n
          logTermNF' lvl msg env tm
 
 export
@@ -1208,8 +1215,8 @@ logGlue : {vars : _} ->
           String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlue str n msg env gtm
     = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
+         let lvl = mkLogLevel (logEnabled opts) str n
+         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
             do defs <- get Ctxt
                tm <- getTerm gtm
                tm' <- toFullNames tm
@@ -1222,8 +1229,8 @@ logGlueNF : {vars : _} ->
             String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlueNF str n msg env gtm
     = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
+         let lvl = mkLogLevel (logEnabled opts) str n
+         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
             do defs <- get Ctxt
                tm <- getTerm gtm
                tmnf <- normaliseHoles defs env tm
@@ -1237,13 +1244,14 @@ logEnv : {vars : _} ->
          String -> Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
     = do opts <- getSession
-         when (keepLog lvl (logLevel opts)) $ do
+         when (logEnabled opts &&
+                   keepLog lvl (logEnabled opts) (logLevel opts)) $ do
            coreLift (putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg)
            dumpEnv env
 
   where
     lvl : LogLevel
-    lvl = mkLogLevel str n
+    lvl = mkLogLevel True str n
 
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()

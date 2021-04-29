@@ -141,6 +141,8 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  logEnabled : Bool -- do we check logging flags at all? This is 'False' until
+                    -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
   ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
@@ -197,7 +199,7 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
+defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
                                Nothing Nothing False
 
