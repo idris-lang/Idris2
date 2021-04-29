@@ -14,6 +14,12 @@ intType : String -> Integer -> IntType a
 intType n p = let ma = prim__shl_Integer 1 (p - 1)
                in MkIntType n p (negate ma) (ma - 1)
 
+int8 : IntType Int8
+int8 = intType "Int8" 8
+
+int16 : IntType Int16
+int16 = intType "Int16" 16
+
 int32 : IntType Int32
 int32 = intType "Int32" 32
 
@@ -90,6 +96,52 @@ check (MkOp name op opInt allowZero $ MkIntType type bits mi ma) =
              else Just #"Error when calculating \#{show x} \#{name} \#{show y} for \#{type}: Expected \#{show resMod} but got \#{show resA} (unrounded: \#{show resInteger})"#
 
 --------------------------------------------------------------------------------
+--          Int8
+--------------------------------------------------------------------------------
+
+Show Int8 where
+  show = prim__cast_Int8String
+
+Cast Int8 Integer where
+  cast = prim__cast_Int8Integer
+
+Num Int8 where
+  (+) = prim__add_Int8
+  (*) = prim__mul_Int8
+  fromInteger = prim__cast_IntegerInt8
+
+Neg Int8 where
+  (-)    = prim__sub_Int8
+  negate = prim__sub_Int8 0
+
+Integral Int8 where
+  div = prim__div_Int8
+  mod = prim__mod_Int8
+
+--------------------------------------------------------------------------------
+--          Int16
+--------------------------------------------------------------------------------
+
+Show Int16 where
+  show = prim__cast_Int16String
+
+Cast Int16 Integer where
+  cast = prim__cast_Int16Integer
+
+Num Int16 where
+  (+) = prim__add_Int16
+  (*) = prim__mul_Int16
+  fromInteger = prim__cast_IntegerInt16
+
+Neg Int16 where
+  (-)    = prim__sub_Int16
+  negate = prim__sub_Int16 0
+
+Integral Int16 where
+  div = prim__div_Int16
+  mod = prim__mod_Int16
+
+--------------------------------------------------------------------------------
 --          Int32
 --------------------------------------------------------------------------------
 
@@ -140,7 +192,19 @@ Integral Int64 where
 --------------------------------------------------------------------------------
 
 main : IO ()
-main = do traverse_ putStrLn . check $ add int32
+main = do traverse_ putStrLn . check $ add int8
+          traverse_ putStrLn . check $ sub int8
+          traverse_ putStrLn . check $ mul int8
+          traverse_ putStrLn . check $ div int8
+          traverse_ putStrLn . check $ mod int8
+
+          traverse_ putStrLn . check $ add int16
+          traverse_ putStrLn . check $ sub int16
+          traverse_ putStrLn . check $ mul int16
+          traverse_ putStrLn . check $ div int16
+          traverse_ putStrLn . check $ mod int16
+
+          traverse_ putStrLn . check $ add int32
           traverse_ putStrLn . check $ sub int32
           traverse_ putStrLn . check $ mul int32
           traverse_ putStrLn . check $ div int32
