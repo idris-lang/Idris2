@@ -226,16 +226,20 @@ parameters (defs : Defs, topopts : EvalOpts)
               FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalRef env meta fc (DataCon tag arity) fn stk def
-        = do logC "eval.ref.data" 50 $ pure $ "Found data constructor: " ++ show !(toFullNames fn)
+        = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
+             --                             pure $ "Found data constructor: " ++ show fn'
              pure $ NDCon fc fn tag arity stk
     evalRef env meta fc (TyCon tag arity) fn stk def
-        = do logC "eval.ref.type" 50 $ pure $ "Found type constructor: " ++ show !(toFullNames fn)
+        = do -- logC "eval.ref.type" 50 $ do fn' <- toFullNames fn
+             --                             pure $ "Found type constructor: " ++ show fn'
              pure $ ntCon fc fn tag arity stk
     evalRef env meta fc Bound fn stk def
-        = do logC "eval.ref.bound" 50 $ pure $ "Found bound variable: " ++ show !(toFullNames fn)
+        = do -- logC "eval.ref.bound" 50 $ do fn' <- toFullNames fn
+             --                              pure $ "Found bound variable: " ++ show fn'
              pure def
     evalRef env meta fc nt@Func n stk def
-        = do logC "eval.ref.func" 50 $ pure $ "Found function: " ++ show !(toFullNames n)
+        = do -- logC "eval.ref.func" 50 $ do n' <- toFullNames n
+             --                             pure $ "Found function: " ++ show n'
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
@@ -243,7 +247,8 @@ parameters (defs : Defs, topopts : EvalOpts)
                                          (fullname res)
                                          (visibility res)
              let redok = redok1 || redok2
-             unless redok2 $ logC "eval.stuck" 5 $ pure $ "Stuck function: " ++ show !(toFullNames n)
+             unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
+                                                      pure $ "Stuck function: " ++ show n'
              if redok
                 then do
                    Just opts' <- useMeta (noCycles res) fc n defs topopts
