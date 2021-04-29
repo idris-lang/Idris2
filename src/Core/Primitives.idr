@@ -107,9 +107,9 @@ int64max = 0x8000000000000000
 
 intCastWrap : (i : Integer) -> (max : Integer) -> Integer
 intCastWrap i max
-    = if (-i) == max -- support lowest negative number
-         then i
-         else i `mod` max
+    = if i < negate max || i >= max
+         then i `mod` max
+         else i
 
 int8CastWrap : (i : Integer) -> Integer
 int8CastWrap i = intCastWrap i int8max
