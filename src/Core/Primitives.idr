@@ -677,37 +677,40 @@ opName (Cast x y) = prim $ "cast_" ++ show x ++ show y
 opName BelieveMe = prim $ "believe_me"
 opName Crash = prim $ "crash"
 
+integralTypes : List Constant
+integralTypes = [ IntType
+                , Int8Type
+                , Int16Type
+                , Int32Type
+                , Int64Type
+                , IntegerType
+                , Bits8Type
+                , Bits16Type
+                , Bits32Type
+                , Bits64Type
+                ]
+
+numTypes : List Constant
+numTypes = integralTypes ++ [DoubleType]
+
 primTypes : List Constant
-primTypes = [ IntType
-            , Int8Type
-            , Int16Type
-            , Int32Type
-            , Int64Type
-            , IntegerType
-            , Bits8Type
-            , Bits16Type
-            , Bits32Type
-            , Bits64Type
-            , StringType
-            , CharType
-            , DoubleType
-            ]
+primTypes = numTypes ++ [StringType, CharType]
 
 export
 allPrimitives : List Prim
 allPrimitives =
-    map (\t => MkPrim (Add t) (arithTy t) isTotal)     [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Sub t) (arithTy t) isTotal)     [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType] ++
-    map (\t => MkPrim (Mul t) (arithTy t) isTotal)     [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
-    map (\t => MkPrim (Div t) (arithTy t) notCovering) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, DoubleType] ++
-    map (\t => MkPrim (Mod t) (arithTy t) notCovering) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (Neg t) (predTy t t) isTotal)    [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, DoubleType] ++
-    map (\t => MkPrim (ShiftL t) (arithTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (ShiftR t) (arithTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (Add t) (arithTy t) isTotal)     numTypes ++
+    map (\t => MkPrim (Sub t) (arithTy t) isTotal)     numTypes ++
+    map (\t => MkPrim (Mul t) (arithTy t) isTotal)     numTypes ++
+    map (\t => MkPrim (Neg t) (predTy t t) isTotal)    numTypes ++
+    map (\t => MkPrim (Div t) (arithTy t) notCovering) numTypes ++
+    map (\t => MkPrim (Mod t) (arithTy t) notCovering) integralTypes ++
 
-    map (\t => MkPrim (BAnd t) (arithTy t) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (BOr t) (arithTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (ShiftL t) (arithTy t) isTotal)  integralTypes ++
+    map (\t => MkPrim (ShiftR t) (arithTy t) isTotal)  integralTypes ++
+    map (\t => MkPrim (BAnd t) (arithTy t) isTotal)    integralTypes ++
+    map (\t => MkPrim (BOr t) (arithTy t) isTotal)     integralTypes ++
+    map (\t => MkPrim (BXOr t) (arithTy t) isTotal)    integralTypes ++
 
     map (\t => MkPrim (LT t) (cmpTy t) isTotal)  primTypes ++
     map (\t => MkPrim (LTE t) (cmpTy t) isTotal) primTypes ++

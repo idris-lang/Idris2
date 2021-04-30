@@ -1,33 +1,88 @@
--- Test arithmetic operations for signed integers and casts.
-
+--
+-- Specification
+--
+-- a. Unsigned integers
+--
+--    Unsigned integers with a precision of x bit have a valid
+--    range of [0,2^x - 1]. They support all the usual arithmetic
+--    operations: +,*,-,div, and mod. If the result y of an operation
+--    is outside the valid range, the unsigned remainder modulo 2^x of y
+--    is returned instead. The same kind of truncation happens when
+--    other numeric types are cast to one of the unsigned integer
+--    types.
+--
+--    Example: For `Bits8` the valid range is [0,255]. Below are some
+--             example calculations. All numbers are considered to be of type `Bits8`
+--             unless specified otherwise:
+--
+--               255 + 7 = 6
+--               3 * 128 = 128
+--               (-1)    = 255
+--               7 - 10  = 253
+--
+-- b. Signed integers
+--
+--    Signed integers with a precision of x bit have a valid
+--    range of [-2^(x-1),2^(x-1) - 1]. They support all the usual arithmetic
+--    operations: +,*,-,div, and mod. If the result `y` of an operation
+--    is outside the valid range, the signed remainder modulo 2^x of `y`
+--    is returned instead. The same kind of truncation happens when
+--    other numeric types are cast to one of the signed integer
+--    types.
+--
+--    Example: For `Int8` the valid range is [-128,127]. Below are some
+--             example calculations. All numbers are considered to be of type `Int8`
+--             unless specified otherwise:
+--
+--               127 + 7   = 6
+--               3 * 64    = 64
+--               2 * (-64) = (-128)
+--               (-129)    = (-1)
+--               7 - 10    = (-3)
+--
 import Data.List
 import Data.Stream
 
 record IntType (a : Type) where
   constructor MkIntType
   name      : String
+  signed    : Bool
   precision : Integer
   min       : Integer
   max       : Integer
 
-intType : String -> Integer -> IntType a
-intType n p = let ma = prim__shl_Integer 1 (p - 1)
-               in MkIntType n p (negate ma) (ma - 1)
+intType : Bool -> String -> Integer -> IntType a
+intType True  n p = let ma = prim__shl_Integer 1 (p - 1)
+                     in MkIntType n True p (negate ma) (ma - 1)
+intType False n p = let ma = prim__shl_Integer 1 p
+                     in MkIntType n False p 0 (ma - 1)
+
+bits8 : IntType Bits8
+bits8 = intType False "Bits8" 8
+
+bits16 : IntType Bits16
+bits16 = intType False "Bits16" 16
+
+bits32 : IntType Bits32
+bits32 = intType False "Bits32" 32
+
+bits64 : IntType Bits64
+bits64 = intType False "Bits64" 64
 
 int8 : IntType Int8
-int8 = intType "Int8" 8
+int8 = intType True "Int8" 8
 
 int16 : IntType Int16
-int16 = intType "Int16" 16
+int16 = intType True "Int16" 16
 
 int32 : IntType Int32
-int32 = intType "Int32" 32
+int32 = intType True "Int32" 32
 
 int64 : IntType Int64
-int64 = intType "Int64" 64
+int64 = intType True "Int64" 64
 
 int : IntType Int
-int = intType "Int" 64
+int = intType True "Int" 64
 
 record Op a where
   constructor MkOp
@@ -78,19 +133,22 @@ filterTailRec p = run Nil
 -- the result is out of bounds. If it is, calculate the result
 -- modulo 2^bits. This gives the reference result as an `Integer`.
 --
--- Not perform the same operation with the same input but for
+-- Now perform the same operation with the same input but for
 -- the integer type we'd like to check and cast the result back
 -- to an `Integer`. Create a nice error message for every pair
 -- that fails (returns an empty list if all goes well).
 check :  (Num a, Cast a Integer) => Op a -> List String
-check (MkOp name op opInt allowZero $ MkIntType type bits mi ma) =
+check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
   let ps = if allowZero then pairs
            else filterTailRec ((0 /=) . checkBounds . snd) pairs
    in mapMaybe failing ps
 
   where
     checkBounds : Integer -> Integer
-    checkBounds n = if n < mi || n > ma then n `mod` (ma + 1) else n
+    checkBounds n = let r1 = if n < mi || n > ma then n `mod` (ma + 1) else n
+                     in if not signed && r1 < 0
+                           then ma + r1 + 1
+                           else r1
 
     failing : (Integer,Integer) -> Maybe String
     failing (x,y) =
@@ -194,6 +252,54 @@ Integral Int64 where
   mod = prim__mod_Int64
 
 --------------------------------------------------------------------------------
+--          Bits8
+--------------------------------------------------------------------------------
+
+Neg Bits8 where
+  (-)    = prim__sub_Bits8
+  negate = prim__sub_Bits8 0
+
+Integral Bits8 where
+  div = prim__div_Bits8
+  mod = prim__mod_Bits8
+
+--------------------------------------------------------------------------------
+--          Bits16
+--------------------------------------------------------------------------------
+
+Neg Bits16 where
+  (-)    = prim__sub_Bits16
+  negate = prim__sub_Bits16 0
+
+Integral Bits16 where
+  div = prim__div_Bits16
+  mod = prim__mod_Bits16
+
+--------------------------------------------------------------------------------
+--          Bits32
+--------------------------------------------------------------------------------
+
+Neg Bits32 where
+  (-)    = prim__sub_Bits32
+  negate = prim__sub_Bits32 0
+
+Integral Bits32 where
+  div = prim__div_Bits32
+  mod = prim__mod_Bits32
+
+--------------------------------------------------------------------------------
+--          Bits64
+--------------------------------------------------------------------------------
+
+Neg Bits64 where
+  (-)    = prim__sub_Bits64
+  negate = prim__sub_Bits64 0
+
+Integral Bits64 where
+  div = prim__div_Bits64
+  mod = prim__mod_Bits64
+
+--------------------------------------------------------------------------------
 --          Main
 --------------------------------------------------------------------------------
 
@@ -227,3 +333,27 @@ main = do traverse_ putStrLn . check $ add int8
           traverse_ putStrLn . check $ mul int
           traverse_ putStrLn . check $ div int
           traverse_ putStrLn . check $ mod int
+
+          traverse_ putStrLn . check $ add bits8
+          traverse_ putStrLn . check $ sub bits8
+          traverse_ putStrLn . check $ mul bits8
+          traverse_ putStrLn . check $ div bits8
+          traverse_ putStrLn . check $ mod bits8
+
+          traverse_ putStrLn . check $ add bits16
+          traverse_ putStrLn . check $ sub bits16
+          traverse_ putStrLn . check $ mul bits16
+          traverse_ putStrLn . check $ div bits16
+          traverse_ putStrLn . check $ mod bits16
+
+          traverse_ putStrLn . check $ add bits32
+          traverse_ putStrLn . check $ sub bits32
+          traverse_ putStrLn . check $ mul bits32
+          traverse_ putStrLn . check $ div bits32
+          traverse_ putStrLn . check $ mod bits32
+
+          traverse_ putStrLn . check $ add bits64
+          traverse_ putStrLn . check $ sub bits64
+          traverse_ putStrLn . check $ mul bits64
+          traverse_ putStrLn . check $ div bits64
+          traverse_ putStrLn . check $ mod bits64
