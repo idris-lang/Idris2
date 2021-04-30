@@ -306,9 +306,10 @@ getCompilationUnits {def} defs =
       = [mkUnit nsDeps nsMap defsByNS cuid nss | (cuid, nss) <- withCUID components]
 
   in MkCompilationUnitInfo
-      units
-      (SortedMap.fromList [(unit.id, unit) | unit <- units])
-      nsMap
+      { compilationUnits = units
+      , byId = SortedMap.fromList [(unit.id, unit) | unit <- units]
+      , namespaceMap = nsMap
+      }
 
   where
     withCUID : List a -> List (CompilationUnitId, a)
@@ -320,11 +321,13 @@ getCompilationUnits {def} defs =
       -> SortedMap Namespace CompilationUnitId
       -> SortedMap Namespace (List (Name, def))
       -> CompilationUnitId -> List Namespace -> CompilationUnit def
-    mkUnit nsDeps nsMap defsByNS cuid nss = MkCompilationUnit
-      cuid
-      (SortedSet.fromList nss)
-      (SortedSet.delete cuid dependencies)
-      definitions
+    mkUnit nsDeps nsMap defsByNS cuid nss =
+      MkCompilationUnit
+      { id = cuid
+      , namespaces = SortedSet.fromList nss
+      , dependencies = SortedSet.delete cuid dependencies
+      , definitions = definitions
+      }
      where
       dependencies : SortedSet CompilationUnitId
       dependencies = SortedSet.fromList $ do
