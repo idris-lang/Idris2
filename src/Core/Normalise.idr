@@ -246,16 +246,14 @@ parameters (defs : Defs, topopts : EvalOpts)
              Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
---              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
---                                          (fullname res)
---                                          (visibility res)
-             -- want to shortcut that second check, if we're evaluating
-             -- everything, so don't let bind unless we need that log!
-             let redok = redok1 || reducibleInAny (currentNS defs :: nestedNS defs)
+             let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
                                          (visibility res)
---              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
---                                                       pure $ "Stuck function: " ++ show n'
+             -- want to shortcut that second check, if we're evaluating
+             -- everything, so don't let bind unless we need that log!
+             let redok = redok1 || redok2
+             unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
+                                                      pure $ "Stuck function: " ++ show n'
              if redok
                 then do
                    Just opts' <- useMeta (noCycles res) fc n defs topopts
