@@ -9,6 +9,8 @@ import public Libraries.Data.SortedSet
 import public Libraries.Data.StringMap
 
 import Core.Hash
+import Core.TT
+import Compiler.VMCode
 import Data.List
 import Data.Vect
 import Data.Maybe
@@ -214,6 +216,35 @@ mutual
     nsRefs (MkNmCon tag arity nt) = SortedSet.empty
     nsRefs (MkNmForeign ccs fargs rty) = SortedSet.empty
     nsRefs (MkNmError rhs) = nsRefs rhs
+
+export
+HasNamespaces VMInst where
+  nsRefs (DECLARE x) = empty
+  nsRefs START = empty
+  nsRefs (ASSIGN x y) = empty
+  nsRefs (MKCON x tag args) = either (const empty) (singleton . getNS) tag
+  nsRefs (MKCLOSURE x n missing args) = singleton $ getNS n
+  nsRefs (MKCONSTANT x y) = empty
+  nsRefs (APPLY x f a) = empty
+  nsRefs (CALL x tailpos n args) = singleton $ getNS n
+  nsRefs (OP x y xs) = empty
+  nsRefs (EXTPRIM x n xs) = singleton $ getNS n
+  nsRefs (CASE x alts def) =
+    maybe empty (concatMap nsRefs) def <+>
+    concatMap ((concatMap nsRefs) . snd) alts <+>
+    concatMap ((either (const empty) (singleton . getNS)) . fst) alts
+  nsRefs (CONSTCASE x alts def) =
+    maybe empty (concatMap nsRefs) def <+>
+    concatMap ((concatMap nsRefs) . snd) alts
+  nsRefs (PROJECT x value pos) = empty
+  nsRefs (NULL x) = empty
+  nsRefs (ERROR x) = empty
+
+export
+HasNamespaces VMDef where
+  nsRefs (MkVMFun args is) = concatMap nsRefs is
+  nsRefs (MkVMError is) = concatMap nsRefs is
+
 
 -- a slight hack for convenient use with CompileData.namedDefs
 export
