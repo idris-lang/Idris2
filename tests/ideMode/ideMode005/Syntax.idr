@@ -17,14 +17,23 @@ nats =
       ys = [1, 2, m, n, 3] ++ xs
   in [n,id $ id m] ++ [1, 2, m, n, 3] ++ xs
 
-doBlock : Maybe Nat
+
+%logging "ide-mode" 8
+
+record ANat where
+  constructor MkANat
+  aNat : Nat
+
+%logging off
+
+doBlock : Maybe ANat
 doBlock
   = do let a = 3
        let b = 5
        (c, _) <- Just (7, 9)
        let (d, e) = (c, c)
        f <- [| Nothing + Just d |]
-       Just $ sum [a,b,c,d,e,f]
+       pure $ MkANat $ sum [a,b,c,d,e,f]
 
 parameters (x, y, z : Nat)
 
@@ -41,5 +50,5 @@ anonLam = map (\m => (m ** m ** Refl))
         $ map (uncurry $ \ m, n => m + n)
         $ map (\ (m, n) => (n, m))
         $ map (\ m => (m, m))
-        $ map (\ m => S m)
+        $ map (\ m => S m.aNat)
         doBlock
