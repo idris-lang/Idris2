@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Name
 import Core.Env
 import Core.Metadata
 import Core.TT
@@ -484,7 +485,7 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
                    "elabDefault is trying to add Function: " ++ show n ++ " (" ++ show vfc ++")"
                  whenJust (isConcreteFC vfc) \nfc => do
                    log "ide-mode.highlight" 7 $ "elabDefault is adding Function: " ++ show n
-                   addSemanticDecorations [(nfc, Function)]
+                   addSemanticDecorations [(nfc, Function, Just n)]
                  pure (IVar fc dn)
         changeNameTerm dn (IApp fc f arg)
             = IApp fc <$> changeNameTerm dn f <*> pure arg
