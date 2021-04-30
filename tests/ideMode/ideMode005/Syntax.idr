@@ -18,13 +18,9 @@ nats =
   in [n,id $ id m] ++ [1, 2, m, n, 3] ++ xs
 
 
-%logging "ide-mode" 8
-
 record ANat where
   constructor MkANat
   aNat : Nat
-
-%logging off
 
 doBlock : Maybe ANat
 doBlock
