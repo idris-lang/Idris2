@@ -1,2 +1,1 @@
-00001e((:load-file "Syntax.idr") 1)
-((:load-file "Syntax.idr") 3)
+00001d((:load-file "Syntax.idr") 1)

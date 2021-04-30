@@ -1,4 +1,5 @@
 000018(:protocol-version 2 0)
+000062(:write-string "1/1: Building ideMode.ideMode006.Ambiguity (ideMode/ideMode006/Ambiguity.idr)" 1)
 000088(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode006/Ambiguity.idr") (:start 3 3) (:end 3 6)) ((:decor :function)))))) 1)
 000087(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode006/Ambiguity.idr") (:start 3 8) (:end 3 8)) ((:decor :keyword)))))) 1)
 000086(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode006/Ambiguity.idr") (:start 3 10) (:end 3 13)) ((:decor :type)))))) 1)
