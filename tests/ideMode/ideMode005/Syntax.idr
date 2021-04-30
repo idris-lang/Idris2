@@ -1,3 +1,5 @@
+module Syntax
+
 %default total
 
 {- -- interfaces don't work yet

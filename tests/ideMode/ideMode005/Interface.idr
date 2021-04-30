@@ -1,3 +1,5 @@
+module Interface
+
 interface Show a => Pretty (0 a : Type) where
   constructor MkPretty
 

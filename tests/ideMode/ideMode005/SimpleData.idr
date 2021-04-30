@@ -1,3 +1,5 @@
+module SimpleData
+
 data Fwd a = FNil | (<|) a (Fwd a)
 data Bwd a = BNil | (|>) (Bwd a) a
 
