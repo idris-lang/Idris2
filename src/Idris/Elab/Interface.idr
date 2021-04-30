@@ -111,7 +111,7 @@ mkIfaceData : {vars : _} ->
               List (Maybe Name, RigCount, RawImp) ->
               Name -> Name -> List (Name, (RigCount, RawImp)) ->
               List Name -> List (Name, RigCount, RawImp) -> Core ImpDecl
-mkIfaceData {vars} fc vis env constraints n conName ps dets meths
+mkIfaceData {vars} ifc vis env constraints n conName ps dets meths
     = let opts = if isNil dets
                     then [NoHints, UniqueSearch]
                     else [NoHints, UniqueSearch, SearchBy dets]
@@ -125,6 +125,10 @@ mkIfaceData {vars} fc vis env constraints n conName ps dets meths
                                                   (mkDataTy fc ps))
                                   opts [con])
   where
+
+    fc : FC
+    fc = virtualiseFC ifc
+
     jname : (Name, (RigCount, RawImp)) -> (Maybe Name, RigCount, RawImp)
     jname (n, rig, t) = (Just n, rig, t)
 
@@ -195,7 +199,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
                               (map (IBindVar EmptyFC) (map bindName allmeths))
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
-         let fnclause = PatClause fc (INamedApp fc (IVar fc cn)
+         let fnclause = PatClause fc (INamedApp fc (IVar sig.location cn)
                                                    (UN "__con")
                                                    conapp)
                                   (mkLam argns
@@ -205,7 +209,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          pure [tydecl, fndef]
   where
     fc : FC
-    fc = sig.location
+    fc = virtualiseFC sig.location
 
     -- Bind the type parameters given explicitly - there might be information
     -- in there that we can't infer after all
@@ -337,7 +341,7 @@ elabInterface : {vars : _} ->
                 (conName : Maybe Name) ->
                 List ImpDecl ->
                 Core ()
-elabInterface {vars} fc vis env nest constraints iname params dets mcon body
+elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
          ns_iname <- inCurrentNS fullIName
          let conName_in = maybe (mkCon fc fullIName) id mcon
@@ -364,6 +368,9 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                         implParams paramNames (map snd constraints)
                         ns_meths ds
   where
+    fc : FC
+    fc = virtualiseFC ifc
+
     paramNames : List Name
     paramNames = map fst params
 
@@ -418,6 +425,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
                   Core (Name, List ImpClause)
     elabDefault tydecls (fc, opts, n, cs)
         = do -- orig <- branch
+
              let dn_in = MN ("Default implementation of " ++ show n) 0
              dn <- inCurrentNS dn_in
 
@@ -447,7 +455,7 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
 
              processDecl [] nest env dtydecl
 
-             let cs' = map (changeName dn) cs
+             cs' <- traverse (changeName dn) cs
              log "elab.interface.default" 5 $ "Default method body " ++ show cs'
 
              processDecl [] nest env (IDef fc dn cs')
@@ -469,25 +477,35 @@ elabInterface {vars} fc vis env nest constraints iname params dets mcon body
             = applyParams (INamedApp fc tm (UN n) (IBindVar fc n)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
-        changeNameTerm : Name -> RawImp -> RawImp
-        changeNameTerm dn (IVar fc n')
-            = if n == n' then IVar fc dn else IVar fc n'
+        changeNameTerm : Name -> RawImp -> Core RawImp
+        changeNameTerm dn (IVar vfc n')
+            = do if n /= n' then pure (IVar vfc n') else do
+                 log "ide-mode.highlight" 7 $
+                   "elabDefault is trying to add Function: " ++ show n ++ " (" ++ show vfc ++")"
+                 whenJust (isConcreteFC vfc) \nfc => do
+                   log "ide-mode.highlight" 7 $ "elabDefault is adding Function: " ++ show n
+                   addSemanticDecorations [(nfc, Function)]
+                 pure (IVar fc dn)
         changeNameTerm dn (IApp fc f arg)
-            = IApp fc (changeNameTerm dn f) arg
+            = IApp fc <$> changeNameTerm dn f <*> pure arg
         changeNameTerm dn (IAutoApp fc f arg)
-            = IAutoApp fc (changeNameTerm dn f) arg
+            = IAutoApp fc <$> changeNameTerm dn f <*> pure arg
         changeNameTerm dn (INamedApp fc f x arg)
-            = INamedApp fc (changeNameTerm dn f) x arg
-        changeNameTerm dn tm = tm
+            = INamedApp fc <$> changeNameTerm dn f <*> pure x <*> pure arg
+        changeNameTerm dn tm = pure tm
 
-        changeName : Name -> ImpClause -> ImpClause
+        changeName : Name -> ImpClause -> Core ImpClause
         changeName dn (PatClause fc lhs rhs)
-            = PatClause fc (changeNameTerm dn lhs) rhs
+            = PatClause fc <$> changeNameTerm dn lhs <*> pure rhs
         changeName dn (WithClause fc lhs wval prf flags cs)
-            = WithClause fc (changeNameTerm dn lhs) wval
-                         prf flags (map (changeName dn) cs)
+            = WithClause fc
+                 <$> changeNameTerm dn lhs
+                 <*> pure wval
+                 <*> pure prf
+                 <*> pure flags
+                 <*> traverse (changeName dn) cs
         changeName dn (ImpossibleClause fc lhs)
-            = ImpossibleClause fc (changeNameTerm dn lhs)
+            = ImpossibleClause fc <$> changeNameTerm dn lhs
 
     elabConstraintHints : (conName : Name) -> List Name ->
                           Core ()
