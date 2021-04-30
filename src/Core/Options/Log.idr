@@ -50,9 +50,10 @@ mkLogLevel' ps n = MkLogLevel (maybe [] forget ps) n
 ||| list. This bypasses the fact that the function `split` returns a non-empty
 ||| list no matter what.
 export
-mkLogLevel : String -> Nat -> LogLevel
-mkLogLevel "" = mkLogLevel' Nothing
-mkLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
+mkLogLevel : Bool -> String -> Nat -> LogLevel
+mkLogLevel False _ = mkLogLevel' Nothing
+mkLogLevel _ "" = mkLogLevel' Nothing
+mkLogLevel _ ps = mkLogLevel' (Just (split (== '.') ps))
 
 ||| The unsafe constructor should only be used in places where the topic has already
 ||| been appropriately processed.
@@ -98,7 +99,7 @@ parseLogLevel str = do
                 ns = tail nns in
                 case ns of
                      [] => pure (MkLogLevel [], n)
-                     [ns] => pure (mkLogLevel n, ns)
+                     [ns] => pure (mkLogLevel True n, ns)
                      _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
@@ -127,8 +128,9 @@ insertLogLevel (MkLogLevel ps n) = insert ps n
 ||| We keep a log if there is a prefix of its path associated to a larger number
 ||| in the LogLevels.
 export
-keepLog : LogLevel -> LogLevels -> Bool
-keepLog (MkLogLevel path n) levels = go path levels where
+keepLog : LogLevel -> Bool -> LogLevels -> Bool
+keepLog (MkLogLevel _ Z) _ _ = True
+keepLog (MkLogLevel path n) enabled levels = enabled && go path levels where
 
   go : List String -> StringTrie Nat -> Bool
   go path (MkStringTrie current) = here || there where
