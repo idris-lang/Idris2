@@ -977,10 +977,12 @@ mutual
                tm <- bounds (expr plhs fname indents)
                pure (boundToFC fname tm, tm.val)
 
-mkTyConType : FC -> List Name -> PTerm
-mkTyConType fc [] = PType fc
-mkTyConType fc (x :: xs)
-   = PPi fc top Explicit Nothing (PType fc) (mkTyConType fc xs)
+mkTyConType : FileName -> FC -> List (WithBounds Name) -> PTerm
+mkTyConType fname fc [] = PType (virtualiseFC fc)
+mkTyConType fname fc (x :: xs)
+   = let bfc = boundToFC fname x in
+     PPi bfc top Explicit Nothing (PType (virtualiseFC fc))
+     $ mkTyConType fname fc xs
 
 mkDataConType : FC -> PTerm -> List ArgType -> Maybe PTerm
 mkDataConType fc ret [] = Just ret
@@ -1003,17 +1005,20 @@ simpleCon fname ret indents
          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
                    (pure . MkPTy cfc cnameFC cname cdoc <$> mkDataConType cfc ret (concat params))
 
-simpleData : FileName -> WithBounds t -> Name -> IndentInfo -> Rule PDataDecl
-simpleData fname start n indents
-    = do b <- bounds (do params <- many name
+simpleData : FileName -> WithBounds t ->
+             WithBounds Name -> IndentInfo -> Rule PDataDecl
+simpleData fname start tyName indents
+    = do b <- bounds (do params <- many (bounds $ decorate fname Bound name)
                          tyend <- bounds (decoratedSymbol fname "=")
                          let tyfc = boundToFC fname (mergeBounds start tyend)
-                         let conRetTy = papply tyfc (PRef tyfc n) (map (PRef tyfc) params)
+                         let tyCon = PRef (boundToFC fname tyName) tyName.val
+                         let toPRef = \ t => PRef (boundToFC fname t) t.val
+                         let conRetTy = papply tyfc tyCon (map toPRef params)
                          cons <- sepBy1 (decoratedSymbol fname "|") (simpleCon fname conRetTy indents)
                          pure (params, tyfc, forget cons))
          (params, tyfc, cons) <- pure b.val
-         pure (MkPData (boundToFC fname (mergeBounds start b)) n
-                       (mkTyConType tyfc params) [] cons)
+         pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
+                       (mkTyConType fname tyfc params) [] cons)
 
 dataOpt : Rule DataOpt
 dataOpt
@@ -1035,18 +1040,19 @@ dataBody fname mincol start n indents ty
          (opts, cs) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
-gadtData : FileName -> Int -> WithBounds t -> Name -> IndentInfo -> Rule PDataDecl
-gadtData fname mincol start n indents
+gadtData : FileName -> Int -> WithBounds t ->
+           WithBounds Name -> IndentInfo -> Rule PDataDecl
+gadtData fname mincol start tyName indents
     = do decoratedSymbol fname ":"
          commit
          ty <- expr pdef fname indents
-         dataBody fname mincol start n indents ty
+         dataBody fname mincol start tyName.val indents ty
 
 dataDeclBody : FileName -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
                          decoratedKeyword fname "data"
-                         n <- mustWork (decoratedDataTypeName fname)
+                         n <- mustWork (bounds $ decoratedDataTypeName fname)
                          pure (col, n))
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
