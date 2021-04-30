@@ -33,8 +33,13 @@ nameTypeDecoration (DataCon _ _) = Data
 nameTypeDecoration (TyCon _ _  ) = Typ
 
 public export
+ASemanticDecoration : Type
+ASemanticDecoration = (NonEmptyFC, Decoration, Maybe Name)
+
+
+public export
 SemanticDecorations : Type
-SemanticDecorations = List (NonEmptyFC, Decoration)
+SemanticDecorations = List ASemanticDecoration
 
 public export
 Show Decoration where
@@ -83,7 +88,7 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
-       semanticHighlighting : PosMap (NonEmptyFC, Decoration)
+       semanticHighlighting : PosMap ASemanticDecoration
 
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap semanticHighlighting)

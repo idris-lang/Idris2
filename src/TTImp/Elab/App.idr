@@ -61,7 +61,7 @@ getNameType rigc env fc x
                  when (isSourceName x) $
                    whenJust (isConcreteFC fc) \nfc => do
                      log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
-                     addSemanticDecorations [(nfc, Bound)]
+                     addSemanticDecorations [(nfc, Bound, Just x)]
 
                  pure (Local fc (Just (isLet binder)) _ lv, gnf env bty)
            Nothing =>
@@ -86,7 +86,7 @@ getNameType rigc env fc x
                      let decor = nameTypeDecoration nt
                      log "ide-mode.highlight" 7
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
-                     addSemanticDecorations [(nfc, decor)]
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
 
                  pure (Ref fc nt (Resolved i), gnf env (embed (type def)))
   where
@@ -136,7 +136,7 @@ getVarType rigc nest env fc x
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname
-                                    addSemanticDecorations [(toNonEmptyFC fc, decor)]
+                                    addSemanticDecorations [(toNonEmptyFC fc, decor, Just ndef.fullname)]
 
                                 pure (tm, arglen, gnf env tyenv)
     where

@@ -23,13 +23,27 @@ import Idris.Parser.Let
 decorate : FileName -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
-  act [((fname, (start res, end res)), decor)]
+  act [((fname, (start res, end res)), decor, Nothing)]
   pure res.val
+
+
+boundedNameDecoration : FileName -> Decoration -> WithBounds Name -> ASemanticDecoration
+boundedNameDecoration fname decor bstr = ((toNonEmptyFC $ boundToFC fname bstr)
+                                         , decor
+                                         , Just bstr.val)
+
+decorateBoundedNames : FileName -> Decoration -> List (WithBounds Name) -> EmptyRule ()
+decorateBoundedNames fname decor bns = act $ map (boundedNameDecoration fname decor) bns
+
+decorateBoundedName : FileName -> Decoration -> WithBounds Name -> EmptyRule ()
+decorateBoundedName fname decor bn = act [boundedNameDecoration fname decor bn]
+
+
 
 dependentDecorate : FileName -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
   res <- bounds rule
-  act [((fname, (start res, end res)), decor res.val)]
+  act [((fname, (start res, end res)), decor res.val, Nothing)]
   pure res.val
 
 decoratedKeyword : FileName -> String -> Rule ()
@@ -324,21 +338,21 @@ mutual
                            continueWith indents ")"
                            pure (op, e))
            (op, e) <- pure b.val
-           act [(toNonEmptyFC $ boundToFC fname s, Keyword)]
+           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
            let fc = boundToFC fname (mergeBounds s b)
            let opFC = boundToFC fname op
            pure (PSectionL fc opFC op.val e)
     <|> do  -- (.y.z)  -- section of projection (chain)
            b <- bounds $ forget <$> some postfixProj
            decoratedSymbol fname ")"
-           act [(toNonEmptyFC $ boundToFC fname s, Keyword)]
+           act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
            pure $ PPostfixAppPartial (boundToFC fname b) b.val
       -- unit type/value
     <|> do b <- bounds (continueWith indents ")")
            pure (PUnit (boundToFC fname (mergeBounds s b)))
       -- dependent pairs with type annotation (so, the type form)
     <|> do dpairType fname s indents <* (decorate fname Typ $ symbol ")")
-                                     <* act [(toNonEmptyFC $ boundToFC fname s, Typ)]
+                                     <* act [(toNonEmptyFC $ boundToFC fname s, Typ, Nothing)]
     <|> do e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
            (do loc <- bounds (symbol "**")
@@ -350,7 +364,7 @@ mutual
                             rest.val)) <|>
              -- right sections
              ((do op <- bounds (bounds iOperator <* decoratedSymbol fname ")")
-                  act [(toNonEmptyFC $ boundToFC fname s, Keyword)]
+                  act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
                   let fc = boundToFC fname (mergeBounds s op)
                   let opFC = boundToFC fname op.val
                   pure (PSectionR fc opFC e.val op.val.val)
@@ -534,11 +548,13 @@ mutual
                    Rule (List (RigCount, WithBounds Name, PTerm))
   pibindListName fname indents
        = do rig <- multiplicity fname
-            ns <- sepBy1 (decoratedSymbol fname ",") (bounds $ decorate fname Bound binderName)
+            ns <- sepBy1 (decoratedSymbol fname ",") (bounds binderName)
+            let ns = forget $ map (map UN) ns
+            decorateBoundedNames fname Bound ns
             decoratedSymbol fname ":"
             ty <- expr pdef fname indents
             atEnd indents
-            pure (map (\n => (rig, map UN n, ty)) (forget ns))
+            pure (map (\n => (rig, n, ty)) ns)
      <|> forget <$> sepBy1 (decoratedSymbol fname ",")
                            (do rig <- multiplicity fname
                                n <- bounds (decorate fname Bound binderName)

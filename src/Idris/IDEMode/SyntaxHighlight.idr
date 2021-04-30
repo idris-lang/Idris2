@@ -7,6 +7,8 @@ import Core.Metadata
 import Core.TT
 
 import Idris.REPL
+import Idris.Syntax
+import Idris.DocString
 import Idris.IDEMode.Commands
 
 import Data.List
@@ -106,36 +108,30 @@ lwOutputHighlight (nfc,decor) =
 
 
 outputNameSyntax : {auto c : Ref Ctxt Defs} ->
+                   {auto s : Ref Syn SyntaxInfo} ->
                    {auto opts : Ref ROpts REPLOpts} ->
-                   (NonEmptyFC, Name) -> Core ()
-outputNameSyntax (nfc, name) = do
+                   (NonEmptyFC, Decoration, Name) -> Core ()
+outputNameSyntax (nfc, decor, name) = do
       defs <- get Ctxt
-      let decor = case !(lookupCtxtExact name (gamma defs)) of
-            Nothing => Bound
-            Just ndef =>
-               case definition ndef of
-                 None => Bound  -- Surely impossible?
-                 PMDef _ _ _ _ _ => Function
-                 ExternDef 0 => Data
-                 ExternDef (S _) => Function
-                 ForeignDef 0 _ => Data
-                 ForeignDef (S k) _ => Function
-                 Builtin _ => Function
-                 DCon _ _ _ => Data
-                 TCon _ _ _ _ _ _ _ _ => Typ
-                 Hole _ _ => Bound
-                 BySearch _ _ _ => Bound
-                 Guess _ _ _ => Bound
-                 ImpBind => Bound
-                 Delayed => Bound
       log "ide-mode.highlight" 20 $ "highlighting at " ++ show nfc
                                  ++ ": " ++ show name
                                  ++ "\nAs: " ++ show decor
-      outputHighlight $ MkHighlight nfc name False "" decor "" "" ""
+      let fc = justFC nfc
+      outputHighlight $ MkHighlight
+         { location = nfc
+         , name = !(canonicalName fc name)
+         , isImplicit = False
+         , key = ""
+         , decor
+         , docOverview = !(getDocsForName fc name)
+         , typ = maybe "" show !(lookupTyExact name (gamma defs))
+         , ns = "" --TODO: extract namespace
+         }
 
 export
 outputSyntaxHighlighting : {auto c : Ref Ctxt Defs} ->
                            {auto m : Ref MD Metadata} ->
+                           {auto s : Ref Syn SyntaxInfo} ->
                            {auto opts : Ref ROpts REPLOpts} ->
                            String ->
                            REPLResult ->
@@ -148,7 +144,10 @@ outputSyntaxHighlighting fname loadResult = do
     --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)
     log "ide-mode.highlight" 19 $ "Semantic metadata is: " ++ show meta.semanticHighlighting
-    traverse_ lwOutputHighlight (toList meta.semanticHighlighting)
-    pure ()
-
+    traverse_ {b = Unit}
+         (\(nfc, decor, mn) =>
+           case mn of
+             Nothing => lwOutputHighlight (nfc, decor)
+             Just n  => outputNameSyntax  (nfc, decor, n))
+         (toList meta.semanticHighlighting)
   pure loadResult

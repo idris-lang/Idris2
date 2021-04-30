@@ -5,6 +5,7 @@ import public Parser.Rule.Source
 import public Parser.Unlit
 
 import Core.Core
+import Core.Name
 import Core.Metadata
 import Core.FC
 import System.File
