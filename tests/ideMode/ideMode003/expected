@@ -43,7 +43,6 @@
 0000d2(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 5 47) (:end 5 47)) ((:name "{P:a:1943}") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d4(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 1) (:end 6 6)) ((:name "Main.append") (:namespace "") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000cd(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 8) (:end 6 9)) ((:name "Main.Nil") (:namespace "") (:decor :data) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
-000072(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 9) (:end 6 9)) ((:decor :keyword)))))) 1)
 0000d3(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 11) (:end 6 12)) ((:name "{P:ys:1943}") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000074(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 14) (:end 6 14)) ((:decor :keyword)))))) 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "LocType.idr") (:start 6 16) (:end 6 17)) ((:name "ys") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

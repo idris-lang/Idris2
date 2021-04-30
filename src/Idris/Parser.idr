@@ -404,14 +404,14 @@ mutual
            pure (PComprehension (boundToFC fname (mergeBounds s b)) ret (concat conds))
     <|> do xs <- option [] $ do
                      hd <- expr pdef fname indents
-                     tl <- many $ do b <- bounds (decoratedSymbol fname ",")
+                     tl <- many $ do b <- bounds (symbol ",")
                                      x <- expr pdef fname indents
                                      pure (x <$ b)
                      pure $ map (\ t => (boundToFC fname t, t.val))
                           $ (hd <$ s) :: tl
            (do decoratedSymbol fname ".."
                listRange fname s indents xs)
-             <|> (do b <- bounds (decoratedSymbol fname "]")
+             <|> (do b <- bounds (symbol "]")
                      pure $
                        let fc = boundToFC fname (mergeBounds s b)
                            nilFC = if null xs then fc else boundToFC fname b
