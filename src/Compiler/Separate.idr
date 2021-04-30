@@ -4,13 +4,13 @@ import public Core.FC
 import public Core.Name
 import public Core.Name.Namespace
 import public Core.CompileExpr
+import public Compiler.VMCode
 import public Libraries.Data.SortedMap
 import public Libraries.Data.SortedSet
 import public Libraries.Data.StringMap
 
 import Core.Hash
 import Core.TT
-import Compiler.VMCode
 import Data.List
 import Data.Vect
 import Data.Maybe
