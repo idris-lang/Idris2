@@ -119,12 +119,12 @@ outputNameSyntax (nfc, decor, name) = do
       let fc = justFC nfc
       outputHighlight $ MkHighlight
          { location = nfc
-         , name = !(canonicalName fc name)
+         , name
          , isImplicit = False
          , key = ""
          , decor
-         , docOverview = !(getDocsForName fc name)
-         , typ = maybe "" show !(lookupTyExact name (gamma defs))
+         , docOverview = "" --!(getDocsForName fc name)
+         , typ = "" -- TODO: extract type maybe "" show !(lookupTyExact name (gamma defs))
          , ns = "" --TODO: extract namespace
          }
 
