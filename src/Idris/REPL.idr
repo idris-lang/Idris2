@@ -106,6 +106,9 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
+prettyTerm : PTerm -> Doc IdrisAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
@@ -113,7 +116,7 @@ displayType : {auto c : Ref Ctxt Defs} ->
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
                 pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
-            (\num => prettyHole defs [] n num (type gdef))
+            (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
 getEnvTerm : {vars : _} ->
