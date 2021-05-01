@@ -6,6 +6,7 @@ import Libraries.Data.Bool.Extra
 import Libraries.Data.NameMap
 import Data.List
 
+import Core.CaseTree
 import Core.Core
 import Core.Context
 import Core.Context.Log
@@ -16,24 +17,60 @@ import Core.UnifyState
 
 import TTImp.TTImp
 
+showDefType : Def -> String
+showDefType None = "undefined"
+showDefType (PMDef {}) = "function"
+showDefType (ExternDef {}) = "external function"
+showDefType (ForeignDef {}) = "foreign function"
+showDefType (Builtin {}) = "builtin function"
+showDefType (DCon {}) = "data constructor"
+showDefType (TCon {}) = "type constructor"
+showDefType (Hole {}) = "hole"
+showDefType (BySearch {}) = "search"
+showDefType (Guess {}) = "guess"
+showDefType ImpBind = "bound name"
+showDefType Delayed = "delayed"
+
 ||| Get the return type.
-getRetTy : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
-getRetTy tm@(Bind _ x b scope) = case b of
-    Lam _ _ _ _ => Nothing
-    Let _ _ val _ => getRetTy $ subst {x} val scope
-    Pi _ _ _ _ => getRetTy scope
+getRetType : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
+getRetType tm@(Bind _ x b scope) = case b of
+    Let _ _ val _ => getRetType $ subst {x} val scope
+    Pi _ _ _ _ => getRetType scope
     _ => Nothing
-getRetTy tm = Just (vars ** tm)
+getRetType tm = Just (vars ** tm)
+
+||| Get the top level type constructor if there is one.
+getTypeCons : {vars : _} -> Term vars -> Maybe Name
+getTypeCons (Local _ _ _ p) = Just $ nameAt p
+getTypeCons (Ref _ _ name) = Just name
+getTypeCons (Meta {}) = Nothing
+getTypeCons (Bind _ x b scope) = case b of
+    Let _ _ val _ => getTypeCons $ subst {x} val scope
+    _ => Nothing
+getTypeCons (App _ fn _) = getTypeCons fn
+getTypeCons _ = Nothing
+
+getTypeArgs : {vars : _} -> Term vars -> List (vars ** Term vars)
+getTypeArgs (Bind _ x b tm) = case b of
+    Let _ _ val _ => getTypeArgs $ subst {x} val tm
+    Pi _ _ _ arg => (_ ** arg) :: getTypeArgs tm
+    _ => []
+getTypeArgs _ = []
+
+getNEArgs : {vars : _} -> Term vars -> List (vars ** Term vars)
+getNEArgs (Bind _ x b tm) = case b of
+    Let _ _ val _ => getNEArgs $ subst {x} val tm
+    Pi _ mul _ arg => if isErased mul
+        then getNEArgs tm
+        else (_ ** arg) :: getNEArgs tm
+    _ => []
+getNEArgs _ = []
 
 ||| Get the first non-erased argument type.
-getFirstNETy : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
-getFirstNETy (Bind _ x b tm) = case b of
-    Let _ _ val _ => getFirstNETy $ subst {x} val tm
-    Pi _ mul _ arg => if isErased mul
-        then getFirstNETy tm
-        else Just (_ ** arg)
-    _ => Nothing
-getFirstNETy tm = Nothing
+getFirstNEType : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
+getFirstNEType tm = case getNEArgs tm of
+    [] => Nothing
+    arg :: _ => Just arg
 
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
@@ -72,6 +109,15 @@ isStrict (PrimVal _ _) = True
 isStrict (Erased _ _) = True
 isStrict (TType _) = True
 
+getNatConType : Ref Ctxt Defs => Name -> Core (Maybe (Either ZERO SUCC))
+getNatConType n = do
+    bts <- builtinTransforms <$> get Ctxt
+    case lookup n bts.natZNames of
+        Just MkZERO => pure $ Just $ Left MkZERO
+        Nothing => case lookup n bts.natSNames of
+            Just MkSUCC => pure $ Just $ Right MkSUCC
+            Nothing => pure $ Nothing
+
 ||| Get the name and arity (of non-erased arguments only) of a list of names.
 ||| `cons` should all be data constructors (`DCon`) otherwise it will throw an error.
 getConsGDef : Context -> FC -> (cons : List Name) -> Core $ List (Name, GlobalDef)
@@ -84,8 +130,8 @@ getConsGDef c fc = traverse \n => do
 ||| Check a list of constructors has exactly
 ||| 1 'Z'-like constructor
 ||| and 1 `S`-like constructor, which has type `ty -> ty` or `ty arg -> `ty (f arg)`.
-checkCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core NatBuiltin
-checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) of
+checkNatCons : Context -> (cons : List (Name, GlobalDef)) -> (dataType : Name) -> FC -> Core NatBuiltin
+checkNatCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) of
     (Just zero, Just succ) => pure $ MkNatBuiltin {zero, succ}
     (Nothing, _) => throw $ GenericMsg fc $ "No 'Z'-like constructors for " ++ show ty ++ "."
     (_, Nothing) => throw $ GenericMsg fc $ "No 'S'-like constructors for " ++ show ty ++ "."
@@ -102,12 +148,12 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) o
     checkTyS n gdef = do
         let type = gdef.type
             erase = gdef.eraseArgs
-        let Just (_ ** arg) = getFirstNETy type
+        let Just (_ ** arg) = getFirstNEType type
             | Nothing => throw $ InternalError "Expected a non-erased argument, found none."
-        let Just (_ ** ret) = getRetTy type
+        let Just (_ ** ret) = getRetType type
             | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
         unless (termConMatch arg ret) $ throw $ GenericMsg fc $ "Incorrect type for 'S'-like constructor for " ++ show ty ++ "."
-        unless (isStrict arg) $ throw $ GenericMsg fc $ "Natural builtin does not support lazy types, as they can be potentially infinite."
+        unless (isStrict arg) $ throw $ GenericMsg fc $ "Natural builtin does not support lazy types."
         pure ()
 
     ||| Check a constructor's arity and type.
@@ -116,7 +162,7 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) o
     checkCon (n, gdef) cons = do
         (zero, succ) <- cons
         let DCon _ arity _ = gdef.definition
-            | def => throw $ GenericMsg fc $ "Expected data constructor, found:\n" ++ show def
+            | def => throw $ GenericMsg fc $ "Expected data constructor, found:" ++ showDefType def
         case arity `minus` length gdef.eraseArgs of
             0 => case zero of
                 Just _ => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
@@ -128,46 +174,147 @@ checkCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons) o
                     pure (zero, Just n)
             _ => throw $ GenericMsg fc $ "Constructor " ++ show n ++ " doesn't match any pattern for Natural."
 
+getNatArgs :
+    Ref Ctxt Defs =>
+    ClosedTerm -> Core (NameMap Nat)
+getNatArgs type = do
+    nats <- (natTyNames . builtinTransforms) <$> get Ctxt
+    let args : List (Maybe Name)
+        args = (\(vars ** tm) => getTypeCons {vars} tm) <$> getTypeArgs type
+    let numArgs = number args
+    pure $ foldl (addOne nats) empty numArgs
+  where
+    number' : Nat -> List (Maybe Name) -> List (Nat, Name)
+    number' idx [] = []
+    number' idx (Just x :: xs) = (idx, x) :: number' (S idx) xs
+    number' idx (Nothing :: xs) = number' (S idx) xs
+    number : List (Maybe Name) -> List (Nat, Name)
+    number xs = number' 0 xs
+
+    addOne : NameMap NatBuiltin -> NameMap Nat -> (Nat, Name) -> NameMap Nat
+    addOne nats args (idx, n) = do
+        case lookup n nats of
+            Just _ => insert n idx args
+            Nothing => args
+
+||| Check the definition of a naturalToInteger function is correct.
+||| It must be in the form:
+||| ```
+||| natToInteger : Nat -> Integer
+||| natToInteger k = case k of
+|||                       Z => 0
+|||                       S k' => 1 + natToInteger k'
+||| ```
+||| Returns the index of the nat that is inducted on.
+checkNatToIntDef :
+    {vars : _} ->
+    Ref Ctxt Defs =>
+    FC ->
+    (natArgs : NameMap Nat) ->
+    CaseTree vars ->
+    Core Nat
+checkNatToIntDef fc natArgs ct = case ct of
+    Case idx _ _ alts => checkAlts False False alts *> pure idx
+    _ => throw $ GenericMsg fc $ "Unexpected definition."
+  where
+    checkZBranch : {vars : _} -> CaseTree vars -> Core ()
+    checkZBranch (Case {}) = throw $ GenericMsg fc "Unexpected case statement."
+    checkZBranch (STerm _ tm) = case tm of
+        PrimVal _ (BI 0) => pure ()
+        _ => throw $ GenericMsg fc "Unexpected definition for right hand side of 'Z' branch"
+    checkZBranch (Unmatched {}) = throw $ GenericMsg fc "Unexpected unmatched case."
+    checkZBranch Impossible = throw $ GenericMsg fc "Unexpected impossible case."
+
+    checkSBranch : {vars : _} -> CaseTree vars -> Core ()
+    checkSBranch (Case {}) = throw $ GenericMsg fc "Unexpected case statement."
+    checkSBranch (STerm _ tm) = pure ()
+    checkSBranch (Unmatched {}) = throw $ GenericMsg fc "Unexpected unmatched case."
+    checkSBranch Impossible = throw $ GenericMsg fc "Unexpected impossible case."
+
+    checkAlts :
+        {vars : _} ->
+        (hasZBranch : Bool) ->
+        (hasSBranch : Bool) ->
+        List (CaseAlt vars) ->
+        Core ()
+    -- check no non-'Nat' alts are present
+    checkAlts _ _ (DelayCase _ _ _ :: _) = throw $ GenericMsg fc "Unexpected laziness."
+    checkAlts _ _ (ConstCase _ _ :: _) = throw $ GenericMsg fc "Unexpected constant."
+    checkAlts True True _ = pure () -- if both already handled, then it is correct
+    -- check both cases handled
+    checkAlts False _ [] = throw $ GenericMsg fc "'Z' case not handled."
+    checkAlts _ False [] = throw $ GenericMsg fc "'S' case not handled."
+    -- check there isn't a catch-all for both 'Z' and 'S'
+    checkAlts False False (DefaultCase _ :: _) = throw $ GenericMsg fc "Unexpected catch-all case."
+    checkAlts True _ (DefaultCase zbranch :: _) = checkZBranch zbranch
+    checkAlts False _ (DefaultCase sbranch :: _) = checkSBranch sbranch
+    checkAlts zero succ (ConCase con _ args ct :: alts) = case !(getNatConType con) of
+        Nothing => throw $ GenericMsg fc $ "Unexpected match on non 'Nat'-like constructor " ++ show con ++ "."
+        Just (Left MkZERO) => case zero of
+            False => checkZBranch ct *> checkAlts True succ alts
+            True => checkAlts zero succ alts
+        Just (Right MkSUCC) => case succ of
+            False => checkSBranch ct *> checkAlts True zero alts
+            True => checkAlts zero succ alts
+
 addBuiltinNat :
-    {auto c : Ref Ctxt Defs} ->
+    Ref Ctxt Defs =>
     (ty : Name) -> NatBuiltin -> Core ()
 addBuiltinNat type cons = do
-    log "builtin.Natural.addTransform" 10 $ "Add Builtin Natural transform for " ++ show type
+    log "builtin.Natural.addTransform" 10 $ "Add %builtin Natural transform for " ++ show type ++ "."
     update Ctxt $ record
         { builtinTransforms.natTyNames $= insert type cons
         , builtinTransforms.natZNames $= insert cons.zero MkZERO
         , builtinTransforms.natSNames $= insert cons.succ MkSUCC
         }
 
+addNatToInteger :
+    Ref Ctxt Defs =>
+    (fn : Name) -> Core ()
+
 ||| Check a `%builtin Natural` pragma is correct.
 processBuiltinNatural :
-    {auto c : Ref Ctxt Defs} ->
-    {auto m : Ref MD Metadata} ->
-    {auto u : Ref UST UState} ->
+    Ref Ctxt Defs =>
     Defs -> FC -> Name -> Core ()
 processBuiltinNatural ds fc name = do
-    log "builtin.Natural" 5 $ "Processing Builtin Natural pragma for " ++ show name
+    log "builtin.Natural" 5 $ "Processing %builtin Natural pragma for " ++ show name ++ "."
     [(n, _, gdef)] <- lookupCtxtName name ds.gamma
         | [] => throw $ UndefinedName fc name
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
-        | def => throw $ GenericMsg fc $ "Expected a type constructor, found:\n" ++ show def
+        | def => throw $ GenericMsg fc $ "Expected a type constructor, found " ++ showDefType def ++ "."
     cons <- getConsGDef ds.gamma fc dcons
-    cons <- checkCons ds.gamma cons n fc
+    cons <- checkNatCons ds.gamma cons n fc
     zero <- getFullName cons.zero
     succ <- getFullName cons.succ
     n <- getFullName name
     addBuiltinNat n $ MkNatBuiltin {zero, succ}
 
+processNatToInteger :
+    Ref Ctxt Defs =>
+    Defs -> FC -> Name -> Core ()
+processNatToInteger ds fc name = do
+    log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger for " ++ show name ++ "."
+    [(n, _, gdef)] <- lookupCtxtName name ds.gamma
+        | [] => throw $ UndefinedName fc name
+        | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+    let PMDef _ args _ cases _ = gdef.definition
+        | def => throw $ GenericMsg fc $ "Expected function definition, found " ++ showDefType def ++ "."
+    natArgs <- getNatArgs gdef.type
+    when (null natArgs) $ throw $ GenericMsg fc $ "No 'Nat'-like arguments found for " ++ show name ++ "."
+    natIdx <- checkNatToIntDef fc natArgs cases
+    addNatToInteger name
+    pure ()
+
 ||| Check a `%builtin` pragma is correct.
 export
 processBuiltin :
-    {auto c : Ref Ctxt Defs} ->
-    {auto m : Ref MD Metadata} ->
-    {auto u : Ref UST UState} ->
+    Ref Ctxt Defs =>
     NestedNames vars -> Env Term vars -> FC -> BuiltinType -> Name -> Core ()
 processBuiltin nest env fc type name = do
     ds <- get Ctxt
-    case type of
-        BuiltinNatural => processBuiltinNatural ds fc name
-        _ => throw $ InternalError $ "%builtin " ++ show type ++ " not yet implemented."
+    let MkBuiltinType typeStr = type
+    case typeStr of
+        "Nat" => processBuiltinNatural ds fc name
+        "NatToInteger" => processNatToInteger ds fc name
+        _ => throw $ InternalError $ "unexpected %builtin " ++ typeStr ++ "."
