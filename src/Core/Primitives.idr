@@ -677,6 +677,22 @@ opName (Cast x y) = prim $ "cast_" ++ show x ++ show y
 opName BelieveMe = prim $ "believe_me"
 opName Crash = prim $ "crash"
 
+primTypes : List Constant
+primTypes = [ IntType
+            , Int8Type
+            , Int16Type
+            , Int32Type
+            , Int64Type
+            , IntegerType
+            , Bits8Type
+            , Bits16Type
+            , Bits32Type
+            , Bits64Type
+            , StringType
+            , CharType
+            , DoubleType
+            ]
+
 export
 allPrimitives : List Prim
 allPrimitives =
@@ -693,11 +709,11 @@ allPrimitives =
     map (\t => MkPrim (BOr t) (arithTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
     map (\t => MkPrim (BXOr t) (arithTy t) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
 
-    map (\t => MkPrim (LT t) (cmpTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (LTE t) (cmpTy t) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (EQ t) (cmpTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (GTE t) (cmpTy t) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (GT t) (cmpTy t) isTotal)  [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, CharType, DoubleType, StringType, Bits8Type, Bits16Type, Bits32Type, Bits64Type] ++
+    map (\t => MkPrim (LT t) (cmpTy t) isTotal)  primTypes ++
+    map (\t => MkPrim (LTE t) (cmpTy t) isTotal) primTypes ++
+    map (\t => MkPrim (EQ t) (cmpTy t) isTotal)  primTypes ++
+    map (\t => MkPrim (GTE t) (cmpTy t) isTotal) primTypes ++
+    map (\t => MkPrim (GT t) (cmpTy t) isTotal)  primTypes ++
 
     [MkPrim StrLength (predTy StringType IntType) isTotal,
      MkPrim StrHead (predTy StringType CharType) notCovering,
@@ -722,18 +738,13 @@ allPrimitives =
      MkPrim DoubleFloor doubleTy isTotal,
      MkPrim DoubleCeiling doubleTy isTotal] ++
 
-    map (\t => MkPrim (Cast t StringType) (predTy t StringType) isTotal)   [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t IntegerType) (predTy t IntegerType) isTotal) [StringType, Int8Type, Int16Type, Int32Type, Int64Type, IntType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t IntType) (predTy t IntType) isTotal)         [StringType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t DoubleType) (predTy t DoubleType) isTotal)   [StringType, IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType] ++
-    map (\t => MkPrim (Cast t CharType) (predTy t CharType) isTotal)       [StringType, IntType, Int8Type, Int16Type, Int32Type, Int64Type] ++
-
-    map (\t => MkPrim (Cast t Int8Type) (predTy t Int8Type) isTotal) [StringType, IntType, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t Int16Type) (predTy t Int16Type) isTotal) [StringType, IntType, Int8Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t Int32Type) (predTy t Int32Type) isTotal) [StringType, IntType, Int8Type, Int16Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-    map (\t => MkPrim (Cast t Int64Type) (predTy t Int64Type) isTotal) [StringType, IntType, Int8Type, Int16Type, Int32Type, IntegerType, Bits8Type, Bits16Type, Bits32Type, Bits64Type, CharType, DoubleType] ++
-
-    map (\t => MkPrim (Cast t Bits8Type) (predTy t Bits8Type) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits16Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (Cast t Bits16Type) (predTy t Bits16Type) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits32Type, Bits64Type] ++
-    map (\t => MkPrim (Cast t Bits32Type) (predTy t Bits32Type) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits64Type] ++
-    map (\t => MkPrim (Cast t Bits64Type) (predTy t Bits64Type) isTotal) [IntType, Int8Type, Int16Type, Int32Type, Int64Type, IntegerType, Bits8Type, Bits16Type, Bits32Type]
+    -- support all combinations of primitive casts with the following
+    -- exceptions: String -> Char, Double -> Char, Char -> Double
+    [ MkPrim (Cast t1 t2) (predTy t1 t2) isTotal
+    | t1 <- primTypes
+    , t2 <- primTypes
+    , t1 /= t2                         &&
+      (t1,t2) /= (StringType,CharType) &&
+      (t1,t2) /= (DoubleType,CharType) &&
+      (t1,t2) /= (CharType,DoubleType)
+    ]
