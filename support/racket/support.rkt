@@ -114,10 +114,12 @@
 
 (define cast-int-char
   (lambda (x)
-    (if (and (>= x 0)
-             (<= x #x10ffff))
+    (if (or
+          (and (>= x 0) (<= x #xd7ff))
+          (and (>= x #xe000) (<= x #x10ffff)))
         (integer->char x)
-        0)))
+        (integer->char 0))))
+
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))

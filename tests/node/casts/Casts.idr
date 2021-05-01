@@ -1,3 +1,66 @@
+--
+-- Primitive casts: Specification
+--
+-- a. Unsigned integers
+--
+--    Unsigned integers with a precision of x bit have a valid
+--    range of [0,2^x - 1]. When casting from another integral type of value y,
+--    the value is checked for being in bounds, and if it is not, the
+--    unsigned remainder modulo 2^x of y is returned.
+--
+--    When casting from a `Double`, the value is first truncated towards 0,
+--    before applying the inbounds check and (if necessary) calculating
+--    the unsigned remainder modulo 2^x.
+--
+--    When casting from a `String`, the value is first converted to a floating
+--    point number by the backend and then truncated as described above.
+--
+--    Example: For `Bits8` the valid range is [0,255]. Below are some
+--             example casts.
+--
+--               cast {from = Integer} {to = Bits8} 12   = 12
+--               cast {from = Integer} {to = Bits8} 256  = 0
+--               cast {from = Integer} {to = Bits8} 259  = 3
+--               cast {from = Integer} {to = Bits8} (-2) = 254
+--               cast {from = Double} {to = Bits8} (-12.001) = 244
+--               cast {from = Double} {to = Bits8} ("-12.001") = 244
+--
+-- b. Signed integers
+--
+--    Signed integers with a precision of x bit have a valid
+--    range of [-2^(x-1),2^(x-1) - 1]. When casting from another
+--    integral type of value y, the value is checked for being in bounds,
+--    and if it is not, the signed remainder modulo 2^(x-1) of y is returned.
+--
+--    When casting from a `Double`, the value is first truncated towards 0,
+--    before applying the inbounds check and (if necessary) calculating
+--    the signed remainder modulo 2^(x-1).
+--
+--    When casting from a `String`, the value is first converted to a floating
+--    point number by the backend and then truncated as described above.
+--
+--    Example: For `Int8` the valid range is [-128,127]. Below are some
+--             example casts.
+--
+--               cast {from = Integer} {to = Int8} 12   = 12
+--               cast {from = Integer} {to = Int8} 256  = 0
+--               cast {from = Integer} {to = Int8} 259  = 4
+--               cast {from = Integer} {to = Int8} (-128) = (-128)
+--               cast {from = Integer} {to = Int8} (-129) = (-1)
+--               cast {from = Double}  {to = Int8} (-12.001) = (-12)
+--               cast {from = Double}  {to = Int8} ("-12.001") = (-12)
+--
+-- b. Characters
+--
+--    Casts from all integral types to `Char` are supported. Note however,
+--    that only casts in the non-surrogate range are supported, that is
+--    values in the ranges [0,0xd7ff] and [0xe000,0x10ffff], or, in decimal
+--    notation, [0,55295] and [57344,1114111].
+--
+--    All casts from integer types to `Char` are therefore submitted to a
+--    bounds check, and, in case the value is out of bounds, are converted to `'\0'`.
+--
+--
 -- Test all casts from and to integral types.
 -- The `Cast` implementations in here should go to `Prelude`, once
 -- a new minor version of the compiler is released.
@@ -265,6 +328,9 @@ Cast Integer Int32 where
 
 Cast Integer Int64 where
   cast = prim__cast_IntegerInt64
+
+Cast Integer Char where
+  cast = prim__cast_IntegerChar
 
 --------------------------------------------------------------------------------
 --          Bits8
@@ -604,6 +670,17 @@ results =  testCasts Int8 Int16   [(-129,-1),(-128,-128),(0,0),(127,127),(128,0)
         ++ testCasts Double Bits16  [(0.0,0),(65535.0,65535), (65536.0,0)]
         ++ testCasts Double Bits32  [(0.0,0),(4294967295.0,4294967295), (4294967296.0,0)]
         ++ testCasts Double Bits64  [(0.0,0),(18446744073709551616.0,0)]
+
+        ++ testCasts Int8 Char    [(-1, '\x0'), (80, 'P')]
+        ++ testCasts Int16 Char   [(-1, '\x0'), (80, 'P')]
+        ++ testCasts Int32 Char   [(-1, '\x0'), (80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
+        ++ testCasts Int64 Char   [(-1, '\x0'), (80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
+        ++ testCasts Int   Char   [(-1, '\x0'), (80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
+        ++ testCasts Bits8 Char   [(80, 'P')]
+        ++ testCasts Bits16 Char  [(80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000')]
+        ++ testCasts Bits32 Char  [(80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
+        ++ testCasts Bits64 Char  [(80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
+        ++ testCasts Integer Char [(-1, '\x0'), (80, 'P'), (55295, '\xd7ff'), (55296, '\x0'), (57344, '\xe000'), (1114111, '\x10ffff'), (1114112, '\x0')]
 
 --------------------------------------------------------------------------------
 --          Main

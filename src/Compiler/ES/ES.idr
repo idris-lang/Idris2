@@ -160,7 +160,7 @@ truncateInt bits e =
 -- we calculate the remainder modulo 1114112 (= 17 * 2^16).
 truncChar : {auto c : Ref ESs ESSt} -> String -> Core String
 truncChar e =
-  do fn <- addConstToPreamble ("truncToChar") ("x=>{const m = x%1114112;return m>=0?m:m+1114112}")
+  do fn <- addConstToPreamble ("truncToChar") ("x=>(x >= 0 && x <= 55295) || (x >= 57344 && x <= 1114111) ? x : 0")
      pure $ "String.fromCodePoint(" ++ fn ++ "(" ++ fromBigInt e ++ "))"
 
 boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
