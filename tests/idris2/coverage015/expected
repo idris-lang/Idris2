@@ -1,11 +1,11 @@
 1/1: Building Issue1169 (Issue1169.idr)
-LOG coverage.missing:50: Getting constructors for: $resolved2100 [2 closures]
+LOG coverage.missing:50: Getting constructors for: $resolved2102 [2 closures]
 LOG coverage.missing:20: Getting constructors for: (Builtin.Pair String Builtin.Unit)
 LOG coverage.missing:50: Looking for missing alts at type String
-LOG coverage.missing:50: Getting constructors for: $resolved2097 [0 closures]
+LOG coverage.missing:50: Getting constructors for: $resolved2099 [0 closures]
 LOG coverage.missing:20: Getting constructors for: Builtin.Unit
 LOG coverage.missing:20: (Builtin.MkPair {e:0} {e:1} {e:2} {e:3})
-LOG coverage.empty:10: Checking type: TyCon 100 0 params: [] constructors: [$resolved2101] mutual with: [] detaggable by: Just []
+LOG coverage.empty:10: Checking type: TyCon 100 0 params: [] constructors: [$resolved2103] mutual with: [] detaggable by: Just []
 LOG coverage:5: Checking coverage for: (Main.test (Builtin.MkPair String Builtin.Unit {_:368} {_:369}))
 LOG coverage:10: (raw term: (Main.test (Builtin.MkPair String Builtin.Unit {_:368} {_:369})))
 LOG coverage:5: Erased to: (Main.test (Builtin.MkPair [__] [__] {_:368} {_:369}))
