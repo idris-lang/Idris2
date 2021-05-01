@@ -60,7 +60,7 @@ jobs:
         run: make all && make install
         shell: bash
       - name: Test self-hosted
-        run: make test INTERACTIVE='' threads=1
+        run: make test INTERACTIVE=''
         shell: bash
 
   # this gambit test is really slow so se run it separately
