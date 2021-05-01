@@ -12,6 +12,7 @@ import Idris.DocString
 import Idris.IDEMode.Commands
 
 import Data.List
+import Data.Maybe
 
 import Libraries.Data.PosMap
 
@@ -27,7 +28,7 @@ SExpable Decoration where
 record Highlight where
   constructor MkHighlight
   location : NonEmptyFC
-  name : Name
+  name : String
   isImplicit : Bool
   key : String
   decor : Decoration
@@ -53,7 +54,7 @@ SExpable FC where
 SExpable Highlight where
   toSExp (MkHighlight loc nam impl k dec doc t ns)
     = SExpList [ toSExp $ justFC loc
-               , SExpList [ SExpList [ SymbolAtom "name", StringAtom (show nam) ]
+               , SExpList [ SExpList [ SymbolAtom "name", StringAtom nam ]
                           , SExpList [ SymbolAtom "namespace", StringAtom ns ]
                           , toSExp dec
                           , SExpList [ SymbolAtom "implicit", toSExp impl ]
@@ -111,21 +112,22 @@ outputNameSyntax : {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
                    {auto opts : Ref ROpts REPLOpts} ->
                    (NonEmptyFC, Decoration, Name) -> Core ()
-outputNameSyntax (nfc, decor, name) = do
+outputNameSyntax (nfc, decor, nm) = do
       defs <- get Ctxt
       log "ide-mode.highlight" 20 $ "highlighting at " ++ show nfc
-                                 ++ ": " ++ show name
+                                 ++ ": " ++ show nm
                                  ++ "\nAs: " ++ show decor
       let fc = justFC nfc
+      let (mns, name) = displayName nm
       outputHighlight $ MkHighlight
          { location = nfc
          , name
          , isImplicit = False
          , key = ""
          , decor
-         , docOverview = "" --!(getDocsForName fc name)
-         , typ = "" -- TODO: extract type maybe "" show !(lookupTyExact name (gamma defs))
-         , ns = "" --TODO: extract namespace
+         , docOverview = "" --!(getDocsForName fc nm)
+         , typ = "" -- TODO: extract type maybe "" show !(lookupTyExact nm (gamma defs))
+         , ns = maybe "" show mns
          }
 
 export

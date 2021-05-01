@@ -109,6 +109,19 @@ nameRoot (CaseBlock n _) = "$" ++ show n
 nameRoot (WithBlock n _) = "$" ++ show n
 nameRoot (Resolved i) = "$" ++ show i
 
+export
+displayName : Name -> (Maybe Namespace, String)
+displayName (NS ns n) = mapFst (pure . maybe ns (ns <.>)) $ displayName n
+displayName (UN n) = (Nothing, n)
+displayName (MN n _) = (Nothing, n)
+displayName (PV n _) = displayName n
+displayName (DN n _) = (Nothing, n)
+displayName (RF n) = (Nothing, n)
+displayName (Nested _ n) = displayName n
+displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
+displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
+displayName (Resolved i) = (Nothing, "$resolved" ++ show i)
+
 --- Drop a namespace from a name
 export
 dropNS : Name -> Name
@@ -145,7 +158,8 @@ Pretty Name where
   pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
   pretty (DN str _) = pretty str
   pretty (RF n) = "." <+> pretty n
-  pretty (Nested (outer, idx) inner) = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+  pretty (Nested (outer, idx) inner)
+    = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
   pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
   pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
   pretty (Resolved x) = pretty "$resolved" <+> pretty x
