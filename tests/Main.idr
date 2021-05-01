@@ -243,7 +243,6 @@ nodeTests = MkTestPool [Node]
 ideModeTests : TestPool
 ideModeTests = MkTestPool []
   [ "ideMode001", "ideMode002", "ideMode003", "ideMode004", "ideMode005"
-  , "ideMode006", "ideMode007"
   ]
 
 preludeTests : TestPool
