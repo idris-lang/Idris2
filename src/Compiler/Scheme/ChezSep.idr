@@ -567,7 +567,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile = do
   -- set up paths
   Just cwd <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")
-  let appDirSh  = outfile ++ "_sep"  -- relative to the launcher shell script
+  let appDirSh  = outfile ++ "_app"  -- relative to the launcher shell script
   let appDirRel = outputDir </> appDirSh  -- relative to CWD
   let appDirAbs = cwd </> appDirRel
   coreLift_ $ mkdirAll appDirRel
