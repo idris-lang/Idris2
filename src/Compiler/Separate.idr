@@ -80,7 +80,7 @@ splitByNS = SortedMap.toList . foldl addOne SortedMap.empty
         (SortedMap.singleton (getNS n) [ndef])
         nss
 
--- Mechanically transcribed the algorithm from
+-- Mechanically transcribed from
 -- https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm#The_algorithm_in_pseudocode
 namespace Tarjan
   private
@@ -178,7 +178,7 @@ interface HasNamespaces a where
   ||| Return the set of namespaces mentioned within
   nsRefs : a -> SortedSet Namespace
 
--- For now, we have instances only for NamedCExp.
+-- For now, we have instances only for NamedDef and VMDef.
 -- For other IR representations, we'll have to add more instances.
 -- This is not hard, just a bit of tedious mechanical work.
 mutual
@@ -254,7 +254,7 @@ HasNamespaces a => HasNamespaces (FC, a) where
 -- another slight hack for convenient use with CompileData.namedDefs
 export
 Hashable def => Hashable (FC, def) where
-  -- ignore FC in hash
+  -- ignore FC in hash, like everywhere else
   hashWithSalt h (fc, x) = hashWithSalt h x
 
 ||| Output of the codegen separation algorithm.
@@ -264,7 +264,7 @@ record CompilationUnitInfo def where
   constructor MkCompilationUnitInfo
 
   ||| Compilation units computed from the given definitions,
-  ||| ordered by the number of imports, ascending.
+  ||| ordered topologically, starting from units depending on no other unit.
   compilationUnits : List (CompilationUnit def)
 
   ||| Mapping from ID to CompilationUnit.
