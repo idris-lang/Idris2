@@ -4,5 +4,6 @@ $1 --no-color --console-width 0 --ide-mode < input3
 $1 --no-color --console-width 0 --ide-mode < input4
 $1 --no-color --console-width 0 --ide-mode < input5
 $1 --no-color --console-width 0 --ide-mode < input6
+$1 --no-color --console-width 0 --ide-mode < input7
 
 rm -rf build

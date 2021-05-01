@@ -665,7 +665,7 @@ mutual
                  fcCase = virtualiseFC $ boundToFC fname endCase
                  n = MN "lcase" 0 in
               PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
-                PCase fc (PRef fcCase n) b.val)
+                PCase (virtualiseFC fc) (PRef fcCase n) b.val)
 
   letBlock : FileName -> IndentInfo -> Rule (WithBounds (Either LetBinder LetDecl))
   letBlock fname indents = bounds (letBinder <||> letDecl) where
