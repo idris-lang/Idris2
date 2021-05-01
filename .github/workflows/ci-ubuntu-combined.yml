@@ -125,7 +125,7 @@ jobs:
       - name: Build self-hosted
         run: make all && make install
       - name: Test self-hosted
-        run: make test INTERACTIVE=''
+        run: make test INTERACTIVE='' threads=1
 
   self-host-racket:
     needs: build-bootstrap-racket
@@ -149,7 +149,7 @@ jobs:
       - name: Build self-hosted
         run: make all && make install
       - name: Test self-hosted
-        run: make test INTERACTIVE=''
+        run: make test INTERACTIVE='' threads=1
 
   self-host-previous-version:
     needs: build-previous-version
@@ -175,7 +175,7 @@ jobs:
       - name: Build self-hosted from previous version
         run: make all && make install
       - name: Test self-hosted from previous version
-        run: make test INTERACTIVE=''
+        run: make test INTERACTIVE='' threads=1
       - name: Artifact Idris2
         uses: actions/upload-artifact@v2
         with:
