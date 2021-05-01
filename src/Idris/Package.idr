@@ -415,10 +415,6 @@ bitraverseC f g (This a)   = [| This (f a) |]
 bitraverseC f g (That b)   = [| That (g b) |]
 bitraverseC f g (Both a b) = [| Both (f a) (g b) |]
 
--- Prelude.Monad.foldlM hand specialised for Core
-foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
-foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
-
 -- Data.StringTrie.foldWithKeysM hand specialised for Core
 foldWithKeysC : Monoid b => (List String -> Core b) -> (List String -> a -> Core b) -> StringTrie a -> Core b
 foldWithKeysC {a} {b} fk fv = go []
