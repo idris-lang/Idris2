@@ -38,8 +38,6 @@ decorateBoundedNames fname decor bns = act $ map (boundedNameDecoration fname de
 decorateBoundedName : FileName -> Decoration -> WithBounds Name -> EmptyRule ()
 decorateBoundedName fname decor bn = act [boundedNameDecoration fname decor bn]
 
-
-
 dependentDecorate : FileName -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
   res <- bounds rule
@@ -745,7 +743,7 @@ mutual
 
   field : Bool -> FileName -> IndentInfo -> Rule PFieldUpdate
   field kw fname indents
-      = do path <- map fieldName <$> [| name :: many recFieldCompat |]
+      = do path <- map fieldName <$> [| decorate fname Function name :: many recFieldCompat |]
            upd <- (ifThenElse kw (decoratedSymbol fname "=") (decoratedSymbol fname ":=") $> PSetField)
                       <|>
                   (decoratedSymbol fname "$=" $> PSetFieldApp)
@@ -760,7 +758,9 @@ mutual
       -- this allows the dotted syntax .field
       -- but also the arrowed syntax ->field for compatibility with Idris 1
       recFieldCompat : Rule Name
-      recFieldCompat = postfixProj <|> (decoratedSymbol fname "->" *> name)
+      recFieldCompat = decorate fname Function postfixProj
+                  <|> (decoratedSymbol fname "->"
+                       *> decorate fname Function name)
 
   rewrite_ : FileName -> IndentInfo -> Rule PTerm
   rewrite_ fname indents

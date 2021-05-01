@@ -227,8 +227,10 @@ mutual
       = pure $ IUpdate pfc !(traverse (desugarUpdate side ps) fs)
                            !(desugarB side ps rec)
   desugarB side ps (PUpdate fc fs)
-      = desugarB side ps (PLam fc top Explicit (PRef fc (MN "rec" 0)) (PImplicit fc)
-                            (PApp fc (PUpdate fc fs) (PRef fc (MN "rec" 0))))
+      = desugarB side ps
+      $ let vfc = virtualiseFC fc in
+      PLam vfc top Explicit (PRef vfc (MN "rec" 0)) (PImplicit vfc)
+      $ PApp vfc (PUpdate fc fs) (PRef vfc (MN "rec" 0))
   desugarB side ps (PApp fc x y)
       = pure $ IApp fc !(desugarB side ps x) !(desugarB side ps y)
   desugarB side ps (PAutoApp fc x y)
