@@ -1,10 +1,23 @@
-$1 --no-color --console-width 0 --ide-mode < input
-$1 --no-color --console-width 0 --ide-mode < input2
-$1 --no-color --console-width 0 --ide-mode < input3
-$1 --no-color --console-width 0 --ide-mode < input4
-$1 --no-color --console-width 0 --ide-mode < input5
-$1 --no-color --console-width 0 --ide-mode < input6
-$1 --no-color --console-width 0 --ide-mode < input7
-sed -i "s|\\\\\\\\|/|g" output
+$1 --no-color --console-width 0 --ide-mode < input1 > output1
+diff expected1 output1 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input2 > output2
+diff expected2 output2 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input3 > output3
+diff expected3 output3 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input4 > output4
+diff expected4 output4 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input5 > output5
+diff expected5 output5 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input6 > output6
+sed -i "s|\\\\\\\\|/|g" output6
+diff expected6 output6 >> output
+
+$1 --no-color --console-width 0 --ide-mode < input7 > output7
+diff expected7 output7 >> output
 
 rm -rf build
