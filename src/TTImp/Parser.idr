@@ -662,10 +662,6 @@ logLevel
            lvl <- intLit
            pure (Just (topic, fromInteger lvl))
 
-builtinType : Rule BuiltinType
-builtinType =
-    BuiltinNatural <$ exactIdent "Natural"
-
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"

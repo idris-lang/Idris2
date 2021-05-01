@@ -1176,10 +1176,6 @@ fnDirectOpt fname
          cs <- block (expr pdef fname)
          pure $ PForeign cs
 
-builtinType : Rule BuiltinType
-builtinType =
-    BuiltinNatural <$ exactIdent "Natural"
-
 builtinDecl : FileName -> IndentInfo -> Rule PDecl
 builtinDecl fname indents
     = do b <- bounds (do pragma "builtin"

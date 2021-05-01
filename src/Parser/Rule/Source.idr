@@ -4,6 +4,7 @@ import public Parser.Lexer.Source
 import public Parser.Rule.Common
 import public Parser.Support
 
+import Core.Context
 import Core.TT
 import Data.List1
 import Data.Strings
@@ -186,6 +187,13 @@ pragma n =
           then Just ()
           else Nothing
       _ => Nothing)
+
+export
+builtinType : Rule BuiltinType
+builtinType =
+    MkBuiltinType "Nat" <$ exactIdent "Natural"
+    <|> MkBuiltinType "NatToInteger" <$ exactIdent "NaturalToInteger"
+    <|> MkBuiltinType "IntegerToNat" <$ exactIdent "IntegerToNatural"
 
 export
 operator : Rule Name
