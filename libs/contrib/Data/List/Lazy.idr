@@ -31,6 +31,22 @@ public export
 bindLazy : (a -> LazyList b) -> LazyList a -> LazyList b
 bindLazy f = foldrLazy ((++) . f) []
 
+public export
+choice : Alternative f => LazyList (f a) -> f a
+choice = foldrLazy (<|>) empty
+
+public export
+choiceMap : Alternative f => (a -> f b) -> LazyList a -> f b
+choiceMap g = foldrLazy ((<|>) . g) empty
+
+public export
+any : (a -> Bool) -> LazyList a -> Bool
+any p = foldrLazy ((||) . p) False
+
+public export
+all : (a -> Bool) -> LazyList a -> Bool
+all p = foldrLazy ((&&) . p) True
+
 --- Interface implementations ---
 
 public export
@@ -44,7 +60,7 @@ Ord a => Ord (LazyList a) where
   compare [] [] = EQ
   compare [] (x :: xs) = LT
   compare (x :: xs) [] = GT
-  compare (x :: xs) (y ::ys)
+  compare (x :: xs) (y :: ys)
      = case compare x y of
             EQ => compare xs ys
             c => c
@@ -77,6 +93,8 @@ Foldable LazyList where
   foldl op acc [] = acc
   foldl op acc (x :: xs) = foldl op (acc `op` x) xs
 
+  foldlM fm init xs = foldrLazy (\x, k, z => fm z x >>= k) pure xs init
+
   null []     = True
   null (_::_) = False
 
@@ -107,9 +125,30 @@ traverse : Applicative f => (a -> f b) -> LazyList a -> f (List b)
 traverse g [] = pure []
 traverse g (x :: xs) = [| g x :: traverse g xs |]
 
+public export %inline
+for : Applicative f => LazyList a -> (a -> f b) -> f (List b)
+for = flip traverse
+
 public export
 sequence : Applicative f => LazyList (f a) -> f (List a)
 sequence = traverse id
+
+public export
+Zippable LazyList where
+  zipWith _ [] _ = []
+  zipWith _ _ [] = []
+  zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+
+  zipWith3 _ [] _ _ = []
+  zipWith3 _ _ [] _ = []
+  zipWith3 _ _ _ [] = []
+  zipWith3 f (x::xs) (y::ys) (z::zs) = f x y z :: zipWith3 f xs ys zs
+
+  unzip xs = (fst <$> xs, snd <$> xs)
+  unzipWith = unzip .: map
+
+  unzip3 xs = (fst <$> xs, fst . snd <$> xs, snd . snd <$> xs)
+  unzipWith3 = unzip3 .: map
 
 --- Lists creation ---
 
@@ -149,7 +188,7 @@ head' : LazyList a -> Maybe a
 head' []     = Nothing
 head' (x::_) = Just x
 
-export
+public export
 tail' : LazyList a -> Maybe (LazyList a)
 tail' []      = Nothing
 tail' (_::xs) = Just xs
@@ -209,3 +248,26 @@ namespace Colist1
   public export
   take : Fuel -> Colist1 a -> LazyList a
   take fuel as = take fuel (forget as)
+
+--- Functions for extending lists ---
+
+public export
+mergeReplicate : a -> LazyList a -> LazyList a
+mergeReplicate sep []      = []
+mergeReplicate sep (y::ys) = sep :: y :: mergeReplicate sep ys
+
+public export
+intersperse : a -> LazyList a -> LazyList a
+intersperse sep []      = []
+intersperse sep (x::xs) = x :: mergeReplicate sep xs
+
+public export
+intercalate : (sep : LazyList a) -> (xss : LazyList (LazyList a)) -> LazyList a
+intercalate sep xss = choice $ intersperse sep xss
+
+--- Functions converting lazy lists to something ---
+
+public export
+toColist : LazyList a -> Colist a
+toColist [] = []
+toColist (x::xs) = x :: toColist xs
