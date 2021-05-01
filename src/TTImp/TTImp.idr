@@ -715,6 +715,22 @@ getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
 
+namespace ImpDecl
+
+  public export
+  getFC : ImpDecl -> FC
+  getFC (IClaim fc _ _ _ _) = fc
+  getFC (IData fc _ _) = fc
+  getFC (IDef fc _ _) = fc
+  getFC (IParameters fc _ _) = fc
+  getFC (IRecord fc _ _ _ ) = fc
+  getFC (INamespace fc _ _) = fc
+  getFC (ITransform fc _ _ _) = fc
+  getFC (IRunElabDecl fc _) = fc
+  getFC (IPragma _ _) = EmptyFC
+  getFC (ILog _) = EmptyFC
+  getFC (IBuiltin fc _ _) = fc
+
 export
 apply : RawImp -> List RawImp -> RawImp
 apply f [] = f
