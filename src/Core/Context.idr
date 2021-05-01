@@ -649,22 +649,22 @@ data Transform : Type where
 ||| during codegen.
 public export
 data BuiltinType : Type where
-    ||| A built-in 'Nat'-like type
-    ||| 'NatLike : [index ->] Type'
-    ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
-    ||| 'ZLike : {0 _ : index} -> NatLike [index]'
-    BuiltinNatural : BuiltinType
-    -- All the following aren't implemented yet
-    -- but are here to reduce number of TTC version changes
-    NaturalPlus : BuiltinType
-    NaturalMult : BuiltinType
-    NaturalToInteger : BuiltinType
-    IntegerToNatural : BuiltinType
+    -- ||| A built-in 'Nat'-like type
+    -- ||| 'NatLike : [index ->] Type'
+    -- ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
+    -- ||| 'ZLike : {0 _ : index} -> NatLike [index]'
+    -- BuiltinNatural : BuiltinType
+    -- -- All the following aren't implemented yet
+    -- -- but are here to reduce number of TTC version changes
+    -- NaturalPlus : BuiltinType
+    -- NaturalMult : BuiltinType
+    -- NaturalToInteger : BuiltinType
+    -- IntegerToNatural : BuiltinType
+    MkBuiltinType : String -> BuiltinType
 
 export
 Show BuiltinType where
-    show BuiltinNatural = "Natural"
-    show _ = "Not yet implemented"
+    show (MkBuiltinType str) = str
 
 -- Token types to make it harder to get the constructor names
 -- the wrong way round.
@@ -685,8 +685,8 @@ public export
 record BuiltinTransforms where
     constructor MkBuiltinTransforms
     natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
-    natZNames : NameMap ZERO -- map from Z-like names to their type constructor
-    natSNames : NameMap SUCC -- map from S-like names to their type constructor
+    natZNames : NameMap ZERO -- set of Z-like names
+    natSNames : NameMap SUCC -- set of S-like names
 
 -- TODO: After next release remove nat from here and use %builtin pragma instead
 initBuiltinTransforms : BuiltinTransforms
