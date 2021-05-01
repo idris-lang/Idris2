@@ -482,6 +482,7 @@ compileToSS c chez appdir tm = do
     let chezLib = chezLibraryName cu
 
     -- check if the hash has changed
+    -- TODO: also check that the .so file exists
     let cuHash = show (hash cu)
     hashChanged <-
       coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
