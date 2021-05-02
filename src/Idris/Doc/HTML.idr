@@ -44,7 +44,7 @@ packageInternal _ = pure False
 
 prettyNameRoot : Name -> String
 prettyNameRoot n =
-  let root = nameRoot n in
+  let root = htmlEscape $ nameRoot n in
   if isOpName n then "(" ++ root ++ ")" else root
 
 renderHtml : {auto c : Ref Ctxt Defs} ->
@@ -53,7 +53,7 @@ renderHtml : {auto c : Ref Ctxt Defs} ->
 renderHtml STEmpty = pure neutral
 renderHtml (STChar ' ') = pure "&ensp;"
 renderHtml (STChar c) = pure $ cast c
-renderHtml (STText _ text) = pure text
+renderHtml (STText _ text) = pure $ htmlEscape text
 renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest) = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
 renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\">" <+> !(renderHtml rest) <+> "</dt>"
