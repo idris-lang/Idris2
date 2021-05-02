@@ -17,7 +17,7 @@ idris2docs_venv
 /libs/**/build
 
 /tests/**/build
-/tests/**/output
+/tests/**/output*
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
@@ -39,9 +39,16 @@ idris2docs_venv
 /result
 
 # Editor/IDE Related
-*~        # Vim swap file
-.\#*      # Emacs swap file
-.vscode/* # VS Code
+# WARNING:
+#   do not put comments on the same line as a regex
+#   git seems to ignore the pattern in this case
+
+# Vim swap file
+*~
+# Emacs swap file
+.\#*
+# VS Code
+.vscode/*
 
 # macOS
 .DS_Store
