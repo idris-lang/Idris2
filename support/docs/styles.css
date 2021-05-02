@@ -157,7 +157,6 @@ dd.fixity {
 }
 
 .name {
-  display: table-cell;
   white-space: nowrap;
   width: 0;
 }
