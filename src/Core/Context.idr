@@ -649,17 +649,6 @@ data Transform : Type where
 ||| during codegen.
 public export
 data BuiltinType : Type where
-    -- ||| A built-in 'Nat'-like type
-    -- ||| 'NatLike : [index ->] Type'
-    -- ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
-    -- ||| 'ZLike : {0 _ : index} -> NatLike [index]'
-    -- BuiltinNatural : BuiltinType
-    -- -- All the following aren't implemented yet
-    -- -- but are here to reduce number of TTC version changes
-    -- NaturalPlus : BuiltinType
-    -- NaturalMult : BuiltinType
-    -- NaturalToInteger : BuiltinType
-    -- IntegerToNatural : BuiltinType
     MkBuiltinType : String -> BuiltinType
 
 export
@@ -670,6 +659,7 @@ Show BuiltinType where
 -- the wrong way round.
 public export data ZERO = MkZERO
 public export data SUCC = MkSUCC
+public export data NatToInt = MkNatToInt
 
 ||| Record containing names of 'Nat'-like constructors.
 public export
@@ -684,9 +674,11 @@ record NatBuiltin where
 public export
 record BuiltinTransforms where
     constructor MkBuiltinTransforms
+    -- Nat
     natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
     natZNames : NameMap ZERO -- set of Z-like names
     natSNames : NameMap SUCC -- set of S-like names
+    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `believe_me`
 
 -- TODO: After next release remove nat from here and use %builtin pragma instead
 initBuiltinTransforms : BuiltinTransforms
@@ -698,6 +690,7 @@ initBuiltinTransforms =
         { natTyNames = singleton type (MkNatBuiltin {zero, succ})
         , natZNames = singleton zero MkZERO
         , natSNames = singleton succ MkSUCC
+        , natToIntegerFns = empty
         }
 
 export
