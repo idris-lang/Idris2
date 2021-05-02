@@ -208,7 +208,6 @@ processBuiltinNatural ds fc name = do
     cons <- checkNatCons ds.gamma cons n fc
     zero <- getFullName cons.zero
     succ <- getFullName cons.succ
-    n <- getFullName name
     addBuiltinNat n $ MkNatBuiltin {zero, succ}
 
 ||| Check a `%builtin NaturalToInteger` pragma is correct.
@@ -229,11 +228,8 @@ processNatToInteger ds fc fn = do
     let Just tyCon = getTypeCons arg
         | Nothing => throw $ GenericMsg fc
             $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
-    log "builtin.NaturalToInteger.dumpNats" 25 $
-        "Existing naturals:\n" ++ show (keys $ natTyNames $ builtinTransforms !(get Ctxt))
-    tyCon' <- getFullName tyCon
-    Just _ <- getNatBuiltin n
-        | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type. (" ++ show tyCon' ++ ")"
+    Just _ <- getNatBuiltin tyCon
+        | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
     addNatToInteger n
     pure ()
 
