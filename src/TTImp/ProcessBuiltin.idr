@@ -109,14 +109,10 @@ isStrict (PrimVal _ _) = True
 isStrict (Erased _ _) = True
 isStrict (TType _) = True
 
-getNatConType : Ref Ctxt Defs => Name -> Core (Maybe (Either ZERO SUCC))
-getNatConType n = do
-    bts <- builtinTransforms <$> get Ctxt
-    case lookup n bts.natZNames of
-        Just MkZERO => pure $ Just $ Left MkZERO
-        Nothing => case lookup n bts.natSNames of
-            Just MkSUCC => pure $ Just $ Right MkSUCC
-            Nothing => pure $ Nothing
+getNatBuiltin : Ref Ctxt Defs => Name -> Core (Maybe NatBuiltin)
+getNatBuiltin n = do
+    n' <- getFullName n
+    lookup n' . natTyNames . builtinTransforms <$> get Ctxt
 
 ||| Get the name and arity (of non-erased arguments only) of a list of names.
 ||| `cons` should all be data constructors (`DCon`) otherwise it will throw an error.
@@ -174,94 +170,12 @@ checkNatCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons
                     pure (zero, Just n)
             _ => throw $ GenericMsg fc $ "Constructor " ++ show n ++ " doesn't match any pattern for Natural."
 
-getNatArgs :
-    Ref Ctxt Defs =>
-    ClosedTerm -> Core (NameMap Nat)
-getNatArgs type = do
-    nats <- (natTyNames . builtinTransforms) <$> get Ctxt
-    let args : List (Maybe Name)
-        args = (\(vars ** tm) => getTypeCons {vars} tm) <$> getTypeArgs type
-    let numArgs = number args
-    pure $ foldl (addOne nats) empty numArgs
-  where
-    number' : Nat -> List (Maybe Name) -> List (Nat, Name)
-    number' idx [] = []
-    number' idx (Just x :: xs) = (idx, x) :: number' (S idx) xs
-    number' idx (Nothing :: xs) = number' (S idx) xs
-    number : List (Maybe Name) -> List (Nat, Name)
-    number xs = number' 0 xs
-
-    addOne : NameMap NatBuiltin -> NameMap Nat -> (Nat, Name) -> NameMap Nat
-    addOne nats args (idx, n) = do
-        case lookup n nats of
-            Just _ => insert n idx args
-            Nothing => args
-
-||| Check the definition of a naturalToInteger function is correct.
-||| It must be in the form:
-||| ```
-||| natToInteger : Nat -> Integer
-||| natToInteger k = case k of
-|||                       Z => 0
-|||                       S k' => 1 + natToInteger k'
-||| ```
-||| Returns the index of the nat that is inducted on.
-checkNatToIntDef :
-    {vars : _} ->
-    Ref Ctxt Defs =>
-    FC ->
-    (natArgs : NameMap Nat) ->
-    CaseTree vars ->
-    Core Nat
-checkNatToIntDef fc natArgs ct = case ct of
-    Case idx _ _ alts => checkAlts False False alts *> pure idx
-    _ => throw $ GenericMsg fc $ "Unexpected definition."
-  where
-    checkZBranch : {vars : _} -> CaseTree vars -> Core ()
-    checkZBranch (Case {}) = throw $ GenericMsg fc "Unexpected case statement."
-    checkZBranch (STerm _ tm) = case tm of
-        PrimVal _ (BI 0) => pure ()
-        _ => throw $ GenericMsg fc "Unexpected definition for right hand side of 'Z' branch"
-    checkZBranch (Unmatched {}) = throw $ GenericMsg fc "Unexpected unmatched case."
-    checkZBranch Impossible = throw $ GenericMsg fc "Unexpected impossible case."
-
-    checkSBranch : {vars : _} -> CaseTree vars -> Core ()
-    checkSBranch (Case {}) = throw $ GenericMsg fc "Unexpected case statement."
-    checkSBranch (STerm _ tm) = pure ()
-    checkSBranch (Unmatched {}) = throw $ GenericMsg fc "Unexpected unmatched case."
-    checkSBranch Impossible = throw $ GenericMsg fc "Unexpected impossible case."
-
-    checkAlts :
-        {vars : _} ->
-        (hasZBranch : Bool) ->
-        (hasSBranch : Bool) ->
-        List (CaseAlt vars) ->
-        Core ()
-    -- check no non-'Nat' alts are present
-    checkAlts _ _ (DelayCase _ _ _ :: _) = throw $ GenericMsg fc "Unexpected laziness."
-    checkAlts _ _ (ConstCase _ _ :: _) = throw $ GenericMsg fc "Unexpected constant."
-    checkAlts True True _ = pure () -- if both already handled, then it is correct
-    -- check both cases handled
-    checkAlts False _ [] = throw $ GenericMsg fc "'Z' case not handled."
-    checkAlts _ False [] = throw $ GenericMsg fc "'S' case not handled."
-    -- check there isn't a catch-all for both 'Z' and 'S'
-    checkAlts False False (DefaultCase _ :: _) = throw $ GenericMsg fc "Unexpected catch-all case."
-    checkAlts True _ (DefaultCase zbranch :: _) = checkZBranch zbranch
-    checkAlts False _ (DefaultCase sbranch :: _) = checkSBranch sbranch
-    checkAlts zero succ (ConCase con _ args ct :: alts) = case !(getNatConType con) of
-        Nothing => throw $ GenericMsg fc $ "Unexpected match on non 'Nat'-like constructor " ++ show con ++ "."
-        Just (Left MkZERO) => case zero of
-            False => checkZBranch ct *> checkAlts True succ alts
-            True => checkAlts zero succ alts
-        Just (Right MkSUCC) => case succ of
-            False => checkSBranch ct *> checkAlts True zero alts
-            True => checkAlts zero succ alts
-
 addBuiltinNat :
     Ref Ctxt Defs =>
     (ty : Name) -> NatBuiltin -> Core ()
 addBuiltinNat type cons = do
-    log "builtin.Natural.addTransform" 10 $ "Add %builtin Natural transform for " ++ show type ++ "."
+    log "builtin.Natural.addTransform" 10
+        $ "Add %builtin Natural transform for " ++ show type ++ "."
     update Ctxt $ record
         { builtinTransforms.natTyNames $= insert type cons
         , builtinTransforms.natZNames $= insert cons.zero MkZERO
@@ -271,13 +185,19 @@ addBuiltinNat type cons = do
 addNatToInteger :
     Ref Ctxt Defs =>
     (fn : Name) -> Core ()
+addNatToInteger fn = do
+    log "builtin.NaturalToInteger.addTransforms" 10
+        $ "Add %builtin NaturalToInteger transform for " ++ show fn ++ "."
+    update Ctxt $ record
+        { builtinTransforms.natToIntegerFns $= insert fn MkNatToInt
+        }
 
 ||| Check a `%builtin Natural` pragma is correct.
 processBuiltinNatural :
     Ref Ctxt Defs =>
     Defs -> FC -> Name -> Core ()
 processBuiltinNatural ds fc name = do
-    log "builtin.Natural" 5 $ "Processing %builtin Natural pragma for " ++ show name ++ "."
+    log "builtin.Natural" 5 $ "Processing %builtin Natural " ++ show name ++ "."
     [(n, _, gdef)] <- lookupCtxtName name ds.gamma
         | [] => throw $ UndefinedName fc name
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
@@ -290,20 +210,28 @@ processBuiltinNatural ds fc name = do
     n <- getFullName name
     addBuiltinNat n $ MkNatBuiltin {zero, succ}
 
+||| Check a `%builtin NaturalToInteger` pragma is correct.
 processNatToInteger :
     Ref Ctxt Defs =>
     Defs -> FC -> Name -> Core ()
-processNatToInteger ds fc name = do
-    log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger for " ++ show name ++ "."
-    [(n, _, gdef)] <- lookupCtxtName name ds.gamma
-        | [] => throw $ UndefinedName fc name
+processNatToInteger ds fc fn = do
+    log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show fn ++ "."
+    [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
+        | [] => throw $ UndefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let PMDef _ args _ cases _ = gdef.definition
         | def => throw $ GenericMsg fc $ "Expected function definition, found " ++ showDefType def ++ "."
-    natArgs <- getNatArgs gdef.type
-    when (null natArgs) $ throw $ GenericMsg fc $ "No 'Nat'-like arguments found for " ++ show name ++ "."
-    natIdx <- checkNatToIntDef fc natArgs cases
-    addNatToInteger name
+    let [(_ ** arg)] = getNEArgs gdef.type
+        | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
+        | _ => throw $ GenericMsg fc $ "More than 1 arguments found for " ++ show n ++ "."
+    let Just tyCon = getTypeCons arg
+        | Nothing => throw $ GenericMsg fc $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
+    log "builtin.NaturalToInteger.dumpNats" 25 $
+        "Existing naturals:\n" ++ show (keys $ natTyNames $ builtinTransforms !(get Ctxt))
+    tyCon' <- getFullName tyCon
+    Just _ <- getNatBuiltin n
+        | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type. (" ++ show tyCon' ++ ")" 
+    addNatToInteger n
     pure ()
 
 ||| Check a `%builtin` pragma is correct.
