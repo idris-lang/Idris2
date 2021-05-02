@@ -136,7 +136,7 @@ getVarType rigc nest env fc x
                                     log "ide-mode.highlight" 7
                                        $ "getNameType is adding "++ show decor ++": "
                                                                  ++ show ndef.fullname
-                                    addSemanticDecorations [(toNonEmptyFC fc, decor, Just ndef.fullname)]
+                                    addSemanticDecorations [(nfc, decor, Just ndef.fullname)]
 
                                 pure (tm, arglen, gnf env tyenv)
     where

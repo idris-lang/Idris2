@@ -2,7 +2,9 @@ module TTImp.WithClause
 
 import Core.Context
 import Core.Context.Log
+import Core.Metadata
 import Core.TT
+
 import TTImp.BindImplicits
 import TTImp.TTImp
 import TTImp.Elab.Check
@@ -14,6 +16,15 @@ import Data.Maybe
 
 matchFail : FC -> Core a
 matchFail loc = throw (GenericMsg loc "With clause does not match parent")
+
+-- To be used on the lhs of a nested with clause to figure out a tight location
+-- information to give to the generated LHS
+getHeadLoc : RawImp -> Core FC
+getHeadLoc (IVar fc _) = pure fc
+getHeadLoc (IApp _ f _) = getHeadLoc f
+getHeadLoc (IAutoApp _ f _) = getHeadLoc f
+getHeadLoc (INamedApp _ f _ _) = getHeadLoc f
+getHeadLoc t = throw (InternalError $ "Could not find head of LHS: " ++ show t)
 
 mutual
   export
@@ -29,16 +40,9 @@ mutual
   getMatch lhs (IVar _ n) (IVar loc n')
       = if n == n' then pure [] else matchFail loc
   getMatch lhs (IPi _ c p n arg ret) (IPi loc c' p' n' arg' ret')
-      = if c == c' && samePiInfo p p' && n == n'
+      = if c == c' && eqPiInfoBy (\_, _ => True) p p' && n == n'
            then matchAll lhs [(arg, arg'), (ret, ret')]
            else matchFail loc
-    where
-      samePiInfo : PiInfo RawImp -> PiInfo RawImp -> Bool
-      samePiInfo Explicit Explicit = True
-      samePiInfo Implicit Implicit = True
-      samePiInfo AutoImplicit AutoImplicit = True
-      samePiInfo (DefImplicit _) (DefImplicit _) = True
-      samePiInfo _ _ = False
   -- TODO: Lam, Let, Case, Local, Update
   getMatch lhs (IApp _ f a) (IApp loc f' a')
       = matchAll lhs [(f, f'), (a, a')]
@@ -138,11 +142,13 @@ getArgMatch ploc mode search warg ms (Just (_, nm))
 
 export
 getNewLHS : {auto c : Ref Ctxt Defs} ->
+            {auto m : Ref MD Metadata} ->
             FC -> (drop : Nat) -> NestedNames vars ->
             Name -> List (Maybe (PiInfo RawImp, Name)) ->
             RawImp -> RawImp -> Core RawImp
-getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
-    = do (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
+    = do let vploc = virtualiseFC iploc
+         (mlhs_raw, wrest) <- dropWithArgs drop patlhs
 
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
@@ -154,15 +160,25 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
          log "declare.def.clause.with" 20 $ "Modified LHS (with implicits): " ++ show mlhs
 
          let (warg :: rest) = reverse wrest
-             | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
+             | _ => throw (GenericMsg iploc "Badly formed 'with' clause")
          log "declare.def.clause.with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
          log "declare.def.clause.with" 5 $ "Matches: " ++ show ms
-         let params = map (getArgMatch ploc (InLHS top) False warg ms) wargnames
+         let params = map (getArgMatch vploc (InLHS top) False warg ms) wargnames
          log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
 
-         let newlhs = apply (IVar ploc wname) (params ++ rest)
+         -- The name of the generated with function is *not* a source name so it
+         -- will not be added to the posmap. But we do need this information to
+         -- be there for the head of the LHS of the nested with clause to be
+         -- highlighted properly.
+         -- We deliberately attach the `wname` because `f ps | qs` is indeed the
+         -- (source) name of the internally used wname!
+         hdloc <- getHeadLoc patlhs
+         whenJust (isConcreteFC hdloc) \ nfc => do
+           addSemanticDecorations [(nfc, Function, Just wname)]
+
+         let newlhs = apply (IVar hdloc wname) (params ++ rest)
          log "declare.def.clause.with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
@@ -174,7 +190,7 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
              pure (tm, arg :: rest)
     -- Shouldn't happen if parsed correctly, but there's no guarantee that
     -- inputs come from parsed source so throw an error.
-    dropWithArgs _ _ = throw (GenericMsg ploc "Badly formed 'with' clause")
+    dropWithArgs _ _ = throw (GenericMsg iploc "Badly formed 'with' clause")
 
 -- Find a 'with' application on the RHS and update it
 export

@@ -958,7 +958,8 @@ mutual
                             flags <- bounds (withFlags)
                             decoratedSymbol fname "("
                             wval <- bracketedExpr fname flags indents
-                            prf <- optional (decoratedKeyword fname "proof" *> name)
+                            prf <- optional (decoratedKeyword fname "proof"
+                                             *> UN <$> decoratedSimpleBinderName fname)
                             ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
                             pure (prf, flags, wval, forget ws))
             (prf, flags, wval, ws) <- pure b.val
