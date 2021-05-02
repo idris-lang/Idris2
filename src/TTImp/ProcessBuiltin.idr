@@ -202,7 +202,8 @@ processBuiltinNatural ds fc name = do
         | [] => throw $ UndefinedName fc name
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
-        | def => throw $ GenericMsg fc $ "Expected a type constructor, found " ++ showDefType def ++ "."
+        | def => throw $ GenericMsg fc
+            $ "Expected a type constructor, found " ++ showDefType def ++ "."
     cons <- getConsGDef ds.gamma fc dcons
     cons <- checkNatCons ds.gamma cons n fc
     zero <- getFullName cons.zero
@@ -220,17 +221,19 @@ processNatToInteger ds fc fn = do
         | [] => throw $ UndefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let PMDef _ args _ cases _ = gdef.definition
-        | def => throw $ GenericMsg fc $ "Expected function definition, found " ++ showDefType def ++ "."
+        | def => throw $ GenericMsg fc
+            $ "Expected function definition, found " ++ showDefType def ++ "."
     let [(_ ** arg)] = getNEArgs gdef.type
         | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
         | _ => throw $ GenericMsg fc $ "More than 1 arguments found for " ++ show n ++ "."
     let Just tyCon = getTypeCons arg
-        | Nothing => throw $ GenericMsg fc $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
+        | Nothing => throw $ GenericMsg fc
+            $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
     log "builtin.NaturalToInteger.dumpNats" 25 $
         "Existing naturals:\n" ++ show (keys $ natTyNames $ builtinTransforms !(get Ctxt))
     tyCon' <- getFullName tyCon
     Just _ <- getNatBuiltin n
-        | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type. (" ++ show tyCon' ++ ")" 
+        | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type. (" ++ show tyCon' ++ ")"
     addNatToInteger n
     pure ()
 
