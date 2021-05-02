@@ -51,6 +51,7 @@ renderHtml : {auto c : Ref Ctxt Defs} ->
              SimpleDocTree IdrisDocAnn ->
              Core String
 renderHtml STEmpty = pure neutral
+renderHtml (STChar ' ') = pure "&ensp;"
 renderHtml (STChar c) = pure $ cast c
 renderHtml (STText _ text) = pure text
 renderHtml (STLine _) = pure "<br>"
