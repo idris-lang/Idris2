@@ -145,6 +145,9 @@ idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool []
       [ -- Evaluator
        "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       -- Unfortunately the behaviour of Double is platform dependent so the
+       -- following test is turned off.
+       -- "evaluator005",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
        "interpreter005", "interpreter006", "interpreter007"]
@@ -153,9 +156,8 @@ idrisTests : TestPool
 idrisTests = MkTestPool []
        -- Documentation strings
       ["docs001", "docs002",
-       -- Unfortunately the behaviour of Double is platform dependent so the
-       -- following test is turned off.
-       -- "evaluator005",
+       -- Eta equality
+       "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Implicit laziness, lazy evaluation

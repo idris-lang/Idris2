@@ -1228,28 +1228,6 @@ mutual
       isDelay (NDelayed _ _ _) = True
       isDelay _ = False
 
-  -- Try to get the type of the application inside the given term, to use in
-  -- eta expansion. If there's no application, return Nothing
-  getEtaType : {vars : _} ->
-               {auto c : Ref Ctxt Defs} ->
-               {auto u : Ref UST UState} ->
-               Env Term vars -> Term vars ->
-               Core (Maybe (Term vars))
-  getEtaType env (Bind fc n b sc)
-      = do Just ty <- getEtaType (b :: env) sc
-               | Nothing => pure Nothing
-           pure (shrinkTerm ty (DropCons SubRefl))
-  getEtaType env (App fc f _)
-      = do fty <- getType env f
-           logGlue "unify.eta" 10 "Function type" env fty
-           case !(getNF fty) of
-                NBind _ _ (Pi _ _ _ ty) sc =>
-                    do defs <- get Ctxt
-                       empty <- clearDefs defs
-                       pure (Just !(quote empty env ty))
-                _ => pure Nothing
-  getEtaType env _ = pure Nothing
-
   isHoleApp : NF vars -> Bool
   isHoleApp (NApp _ (NMeta _ _ _) _) = True
   isHoleApp _ = False
@@ -1265,17 +1243,13 @@ mutual
              if isHoleApp tmy
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
-                        ety <- getEtaType env !(quote empty env tmx)
-                        case ety of
-                             Just argty =>
-                               do etay <- nf defs env
-                                             (Bind xfc x (Lam fcx cx Explicit argty)
-                                                     (App xfc
-                                                          (weaken !(quote empty env tmy))
-                                                          (Local xfc Nothing 0 First)))
-                                  logNF "unify" 10 "Expand" env etay
-                                  unify mode loc env tmx etay
-                             _ => unifyNoEta mode loc env tmx tmy
+                        domty <- quote empty env tx
+                        etay <- nf defs env
+                                  $ Bind xfc x (Lam fcx cx Explicit domty)
+                                  $ App xfc (weaken !(quote empty env tmy))
+                                            (Local xfc Nothing 0 First)
+                        logNF "unify" 10 "Expand" env etay
+                        unify (lower mode) loc env tmx etay
     unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam fcy cy iy ty) scy)
         = do defs <- get Ctxt
              logNF "unify" 10 "EtaL" env tmx
@@ -1283,17 +1257,13 @@ mutual
              if isHoleApp tmx
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
-                        ety <- getEtaType env !(quote empty env tmy)
-                        case ety of
-                             Just argty =>
-                               do etax <- nf defs env
-                                             (Bind yfc y (Lam fcy cy Explicit argty)
-                                                     (App yfc
-                                                          (weaken !(quote empty env tmx))
-                                                          (Local yfc Nothing 0 First)))
-                                  logNF "unify" 10 "Expand" env etax
-                                  unify (lower mode) loc env etax tmy
-                             _ => unifyNoEta (lower mode) loc env tmx tmy
+                        domty <- quote empty env ty
+                        etax <- nf defs env
+                                 $ Bind yfc y (Lam fcy cy Explicit domty)
+                                 $ App yfc (weaken !(quote empty env tmx))
+                                           (Local yfc Nothing 0 First)
+                        logNF "unify" 10 "Expand" env etax
+                        unify (lower mode) loc env etax tmy
     unifyD _ _ mode loc env tmx tmy = unifyNoEta mode loc env tmx tmy
 
     unifyWithLazyD _ _ mode loc env (NDelayed _ _ tmx) (NDelayed _ _ tmy)
