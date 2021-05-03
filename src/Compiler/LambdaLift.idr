@@ -332,7 +332,6 @@ mutual
       usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
                      Used vars -> LiftedConstAlt vars -> Used vars
       usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
-
   usedVars used (LPrimVal _ _) = used
   usedVars used (LErased _) = used
   usedVars used (LCrash _ _) = used

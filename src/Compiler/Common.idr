@@ -57,9 +57,9 @@ Ord UsePhase where
     where
       tag : UsePhase -> Int
       tag Cases = 0
-      tag Lifted = 0
-      tag ANF = 0
-      tag VMCode = 0
+      tag Lifted = 1
+      tag ANF = 2
+      tag VMCode = 3
 
 public export
 record CompileData where

@@ -31,12 +31,21 @@ numArgs defs (Ref _ _ n)
          case definition gdef of
            DCon _ arity Nothing => pure (EraseArgs arity (eraseArgs gdef))
            DCon _ arity (Just (_, pos)) => pure (NewTypeBy arity pos)
-           PMDef _ args _ _ _ => pure (Arity (length args))
+           PMDef _ args _ _ _ => pure (EraseArgs (length args) (eraseArgs gdef))
            ExternDef arity => pure (Arity arity)
            ForeignDef arity _ => pure (Arity arity)
            Builtin {arity} f => pure (Arity arity)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
+
+mkSub : Nat -> (ns : List Name) -> List Nat -> (ns' ** SubVars ns' ns)
+mkSub i _ [] = (_ ** SubRefl)
+mkSub i [] ns = (_ ** SubRefl)
+mkSub i (x :: xs) es
+    = let (ns' ** p) = mkSub (S i) xs es in
+          if i `elem` es
+             then (ns' ** DropCons p)
+             else (x :: ns' ** KeepCons p)
 
 weakenVar : Var ns -> Var (a :: ns)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -98,23 +107,28 @@ applyNewType arity pos fn args
     keepArg (CCon fc _ _ args) = keep 0 args
     keepArg tm = CErased (getFC fn)
 
+dropFrom : List Nat -> Nat -> List (CExp vs) -> List (CExp vs)
+dropFrom epos i [] = []
+dropFrom epos i (x :: xs)
+    = if i `elem` epos
+         then dropFrom epos (1 + i) xs
+         else x :: dropFrom epos (1 + i) xs
+
 dropPos : List Nat -> CExp vs -> CExp vs
 dropPos epos (CLam fc x sc) = CLam fc x (dropPos epos sc)
-dropPos epos (CCon fc c a args) = CCon fc c a (drop 0 args)
-  where
-    drop : Nat -> List (CExp vs) -> List (CExp vs)
-    drop i [] = []
-    drop i (x :: xs)
-        = if i `elem` epos
-             then drop (1 + i) xs
-             else x :: drop (1 + i) xs
+dropPos epos (CApp fc tm@(CApp _ _ _) args')
+    = CApp fc (dropPos epos tm) args'
+dropPos epos (CApp fc f args) = CApp fc f (dropFrom epos 0 args)
+dropPos epos (CCon fc c a args) = CCon fc c a (dropFrom epos 0 args)
 dropPos epos tm = tm
 
 eraseConArgs : {vars : _} ->
                Nat -> List Nat -> CExp vars -> List (CExp vars) -> CExp vars
 eraseConArgs arity epos fn args
     = let fn' = expandToArity arity fn args in
-          dropPos epos fn' -- fn' might be lambdas, after eta expansion
+          if not (isNil epos)
+             then dropPos epos fn' -- fn' might be lambdas, after eta expansion
+             else fn'
 
 mkDropSubst : Nat -> List Nat ->
               (rest : List Name) ->
@@ -638,13 +652,17 @@ getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
 toCDef : {auto c : Ref Ctxt Defs} ->
-         Name -> ClosedTerm -> Def ->
+         Name -> ClosedTerm -> List Nat -> Def ->
          Core CDef
-toCDef n ty None
+toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
-toCDef n ty (PMDef _ args _ tree _)
-    = pure $ MkFun _ !(toCExpTree n tree)
-toCDef n ty (ExternDef arity)
+toCDef n ty erased (PMDef _ args _ tree _)
+    = do let (args' ** p) = mkSub 0 args erased
+         comptree <- toCExpTree n tree
+         if isNil erased
+            then pure $ MkFun args comptree
+            else pure $ MkFun args' (shrinkCExp p comptree)
+toCDef n ty _ (ExternDef arity)
     = let (ns ** args) = mkArgList 0 arity in
           pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (map toArgExp (getVars args)))
   where
@@ -654,11 +672,11 @@ toCDef n ty (ExternDef arity)
     getVars : ArgList k ns -> List (Var ns)
     getVars NoArgs = []
     getVars (ConsArg a rest) = MkVar First :: map weakenVar (getVars rest)
-toCDef n ty (ForeignDef arity cs)
+toCDef n ty _ (ForeignDef arity cs)
     = do defs <- get Ctxt
          (atys, retty) <- getCFTypes [] !(nf defs [] ty)
          pure $ MkForeign cs atys retty
-toCDef n ty (Builtin {arity} op)
+toCDef n ty _ (Builtin {arity} op)
     = let (ns ** args) = mkArgList 0 arity in
           pure $ MkFun _ (COp emptyFC op (map toArgExp (getVars args)))
   where
@@ -668,7 +686,7 @@ toCDef n ty (Builtin {arity} op)
     getVars : ArgList k ns -> Vect k (Var ns)
     getVars NoArgs = []
     getVars (ConsArg a rest) = MkVar First :: map weakenVar (getVars rest)
-toCDef n _ (DCon tag arity pos)
+toCDef n _ _ (DCon tag arity pos)
     = do let nt = snd <$> pos
          defs <- get Ctxt
          args <- numArgs {vars = []} defs (Ref EmptyFC (DataCon tag arity) n)
@@ -677,20 +695,20 @@ toCDef n _ (DCon tag arity pos)
                  EraseArgs ar erased => ar `minus` length erased
                  Arity ar => ar
          pure $ MkCon (Just tag) arity' nt
-toCDef n _ (TCon tag arity _ _ _ _ _ _)
+toCDef n _ _ (TCon tag arity _ _ _ _ _ _)
     = pure $ MkCon Nothing arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
 -- (and, TODO: warn at compile time)
-toCDef n ty (Hole _ _)
+toCDef n ty _ (Hole _ _)
     = pure $ MkError $ CCrash emptyFC ("Encountered unimplemented hole " ++
                                        show !(getFullName n))
-toCDef n ty (Guess _ _ _)
+toCDef n ty _ (Guess _ _ _)
     = pure $ MkError $ CCrash emptyFC ("Encountered constrained hole " ++
                                        show !(getFullName n))
-toCDef n ty (BySearch _ _ _)
+toCDef n ty _ (BySearch _ _ _)
     = pure $ MkError $ CCrash emptyFC ("Encountered incomplete proof search " ++
                                        show !(getFullName n))
-toCDef n ty def
+toCDef n ty _ def
     = pure $ MkError $ CCrash emptyFC ("Encountered uncompilable name " ++
                                        show (!(getFullName n), def))
 
@@ -709,7 +727,7 @@ compileDef n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (InternalError ("Trying to compile unknown name " ++ show n))
-         ce <- toCDef n (type gdef)
+         ce <- toCDef n (type gdef) (eraseArgs gdef)
                              !(toFullNames (definition gdef))
          setCompiled n ce
 

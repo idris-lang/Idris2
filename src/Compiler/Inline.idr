@@ -150,7 +150,7 @@ mutual
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
       = case (n == NS primIONS (UN "io_bind"), stk) of
-          (True, _ :: _ :: act :: cont :: world :: stk) =>
+          (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
