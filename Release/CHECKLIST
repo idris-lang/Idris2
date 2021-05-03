@@ -3,4 +3,5 @@
 [ ] Change version numbers in prelude, base, contrib, network, and test ipkgs
 [ ] Update bootstrap chez and racket
 [ ] Tag on github with version number (in the form vX.Y.Z)
+[ ] make libdocs and upload to idris-lang.org
 [ ] Run release script

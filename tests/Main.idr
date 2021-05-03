@@ -159,7 +159,7 @@ idrisTests = MkTestPool []
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Implicit laziness, lazy evaluation
-       "lazy001",
+       "lazy001", "lazy002",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
