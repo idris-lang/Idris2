@@ -43,19 +43,9 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           Ident "Char"    => Just CharType
-                           Ident "Double"  => Just DoubleType
-                           Ident "Int"     => Just IntType
-                           Ident "Int8"    => Just Int8Type
-                           Ident "Int16"   => Just Int16Type
-                           Ident "Int32"   => Just Int32Type
-                           Ident "Int64"   => Just Int64Type
-                           Ident "Integer" => Just IntegerType
-                           Ident "Bits8"   => Just Bits8Type
-                           Ident "Bits16"  => Just Bits16Type
-                           Ident "Bits32"  => Just Bits32Type
-                           Ident "Bits64"  => Just Bits64Type
-                           Ident "String"  => Just StringType
+                           Ident s      => isConstantType (UN s) >>=
+                                             \case WorldType => Nothing
+                                                   c         => Just c
                            _ => Nothing)
 
 documentation' : Rule String
