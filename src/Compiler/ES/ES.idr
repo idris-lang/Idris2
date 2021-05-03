@@ -1,5 +1,6 @@
 module Compiler.ES.ES
 
+import Compiler.Common
 import Compiler.ES.Imperative
 import Libraries.Utils.Hex
 import Data.List1
@@ -137,6 +138,15 @@ toBigInt e = "BigInt(" ++ e ++ ")"
 fromBigInt : String -> String
 fromBigInt e = "Number(" ++ e ++ ")"
 
+jsIntegerOfChar : String -> String
+jsIntegerOfChar s = toBigInt (s++ ".codePointAt(0)")
+
+jsIntegerOfDouble : String -> String
+jsIntegerOfDouble s = toBigInt $ "Math.trunc(" ++ s ++ ")"
+
+jsAnyToString : String -> String
+jsAnyToString s = "(''+" ++ s ++ ")"
+
 
 makeIntBound : {auto c : Ref ESs ESSt} -> Int -> Core String
 makeIntBound bits = addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
@@ -215,9 +225,9 @@ arithOp :  {auto c : Ref ESs ESSt}
         -> (x : String)
         -> (y : String)
         -> Core String
-arithOp (Just $ Signed $ P n)   op x y = boundedIntOp (n-1) op x y
-arithOp (Just $ Unsigned $ P n) op x y = boundedUIntOp n op x y
-arithOp _                       op x y = pure $ binOp op x y
+arithOp (Just $ Signed $ P n) op x y = boundedIntOp (n-1) op x y
+arithOp (Just $ Unsigned n)   op x y = boundedUIntOp n op x y
+arithOp _                     op x y = pure $ binOp op x y
 
 -- Same as `arithOp` but for bitwise operations that might
 -- go out of the valid range.
@@ -227,72 +237,34 @@ bitOp :  {auto c : Ref ESs ESSt}
       -> (x : String)
       -> (y : String)
       -> Core String
-bitOp (Just $ Signed $ P n)   op x y = boundedIntBitOp (n-1) op x y
-bitOp (Just $ Unsigned $ P n) op x y = boundedUIntOp n op x y
-bitOp _                       op x y = pure $ binOp op x y
+bitOp (Just $ Signed $ P n) op x y = boundedIntBitOp (n-1) op x y
+bitOp (Just $ Unsigned n)   op x y = boundedUIntOp n op x y
+bitOp _                     op x y = pure $ binOp op x y
 
-castInt :  {auto c : Ref ESs ESSt}
-        -> Constant
-        -> Constant
-        -> String
-        -> Core String
-castInt from to x =
-  case ((from, intKind from), (to, intKind to)) of
-       -- we allow character casts to all integers but have
-       -- to check the bounds
-       ((CharType, _), (_, Just $ Signed Unlimited)) =>
-         pure $ toBigInt $ x ++ ".codePointAt(0)"
+constPrimitives : {auto c : Ref ESs ESSt} -> ConstantPrimitives
+constPrimitives = MkConstantPrimitives {
+    charToInt    = \k => truncInt k . jsIntegerOfChar
+  , intToChar    = \_ => truncChar
+  , stringToInt  = \k,s => jsIntegerOfString s >>= truncInt k
+  , intToString  = \_   => pure . jsAnyToString
+  , doubleToInt  = \k => truncInt k . jsIntegerOfDouble
+  , intToDouble  = \_ => pure . fromBigInt
+  , intToInt     = intImpl
+  }
+  where truncInt : IntKind -> String -> Core String
+        truncInt (Signed Unlimited) = pure
+        truncInt (Signed $ P n)     = boundedInt (n-1)
+        truncInt (Unsigned n)       = boundedUInt n
 
-       ((CharType, _), (_, Just $ Signed $ P n)) =>
-         boundedInt (n-1) $ x ++ ".codePointAt(0)"
+        intImpl : IntKind -> IntKind -> String -> Core String
+        intImpl _ (Signed Unlimited) = pure
+        intImpl (Signed m) k@(Signed n) = if n >= m then pure else truncInt k
+        intImpl (Signed _)  k@(Unsigned n) = truncInt k
+        intImpl (Unsigned m) k@(Unsigned n) = if n >= m then pure else truncInt k
 
-       ((CharType, _), (_, Just $ Unsigned $ P n)) =>
-         boundedUInt n $ x ++ ".codePointAt(0)"
-
-       -- we allow casts from String to all integers but have
-       -- to check the bounds
-       ((StringType, _), (_, Just $ Signed Unlimited)) =>
-         jsIntegerOfString x
-
-       ((StringType, _), (_, Just $ Signed $ P n)) =>
-         boundedInt (n-1) $ !(jsIntegerOfString x)
-
-       ((StringType, _), (_, Just $ Unsigned $ P n)) =>
-         boundedUInt n $ !(jsIntegerOfString x)
-
-       -- we allow Double casts to all integers but have
-       -- to check the bounds
-       ((DoubleType, _), (_, Just $ Signed Unlimited)) =>
-         pure $ "BigInt(Math.trunc(" ++ x ++ "))"
-
-       ((DoubleType, _), (_, Just $ Signed $ P n)) =>
-         boundedInt (n-1) $ "BigInt(Math.trunc(" ++ x ++ "))"
-
-       ((DoubleType, _), (_, Just $ Unsigned $ P n)) =>
-         boundedUInt n $ "BigInt(Math.trunc(" ++ x ++ "))"
-
-       -- we allow casts from all integer types to Double
-       ((_, Just _), (DoubleType, _)) => pure $ "Number(" ++ x ++ ")"
-
-       -- we allow casts from all integer types to Char
-       ((_, Just _), (CharType, _)) => truncChar x
-
-       ((_, Just _), (_, Just $ Signed Unlimited)) => pure x
-
-       ((_, Just $ Signed m), (_, Just $ Signed $ P n)) =>
-         if P n >= m then pure x else boundedInt (n-1) x
-
-       -- Only if the precision of the target is greater
-       -- than the one of the source, there is no need to cast.
-       ((_, Just $ Unsigned m), (_, Just $ Signed $ P n)) =>
-         if P n > m then pure x else boundedInt (n-1) x
-
-       ((_, Just $ Signed _), (_, Just $ Unsigned $ P n)) => boundedUInt n x
-
-       ((_, Just $ Unsigned m), (_, Just $ Unsigned $ P n)) =>
-         if P n >= m then pure x else boundedUInt n x
-
-       _ => throw $ InternalError $ "invalid cast: + " ++ show from ++ " + ' -> ' + " ++ show to
+        -- Only if the precision of the target is greater
+        -- than the one of the source, there is no need to cast.
+        intImpl (Unsigned m) k@(Signed n) = if n > P m then pure else truncInt k
 
 jsOp : {auto c : Ref ESs ESSt} -> PrimFn arity -> Vect arity String -> Core String
 jsOp (Add ty) [x, y] = arithOp (intKind ty) "+" x y
@@ -336,8 +308,8 @@ jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
 
 jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
-jsOp (Cast ty StringType) [x] = pure $ "(''+" ++ x ++ ")"
-jsOp (Cast ty ty2) [x]        = castInt ty ty2 x
+jsOp (Cast ty StringType) [x] = pure $ jsAnyToString x
+jsOp (Cast ty ty2) [x]        = castInt constPrimitives ty ty2 x
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = jsCrashExp msg
 

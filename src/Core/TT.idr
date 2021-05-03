@@ -253,8 +253,10 @@ Ord Precision where
   compare Unlimited _         = GT
   compare _         Unlimited = LT
 
+-- so far, we only support limited precision
+-- unsigned integers
 public export
-data IntKind = Signed Precision | Unsigned Precision
+data IntKind = Signed Precision | Unsigned Int
 
 public export
 intKind : Constant -> Maybe IntKind
@@ -264,16 +266,16 @@ intKind Int16Type   = Just . Signed   $ P 16
 intKind Int32Type   = Just . Signed   $ P 32
 intKind Int64Type   = Just . Signed   $ P 64
 intKind IntType     = Just . Signed   $ P 64
-intKind Bits8Type   = Just . Unsigned $ P 8
-intKind Bits16Type  = Just . Unsigned $ P 16
-intKind Bits32Type  = Just . Unsigned $ P 32
-intKind Bits64Type  = Just . Unsigned $ P 64
+intKind Bits8Type   = Just $ Unsigned 8
+intKind Bits16Type  = Just $ Unsigned 16
+intKind Bits32Type  = Just $ Unsigned 32
+intKind Bits64Type  = Just $ Unsigned 64
 intKind _           = Nothing
 
 public export
 precision : IntKind -> Precision
 precision (Signed p)   = p
-precision (Unsigned p) = p
+precision (Unsigned p) = P p
 
 -- All the internal operators, parameterised by their arity
 public export
