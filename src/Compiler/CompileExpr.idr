@@ -186,7 +186,7 @@ builtinMagic = do
     let b = defs.builtinTransforms
     let nats = foldMap builtinMagicNat $ values $ natTyNames b
     let natToInts = map natToIntMagic $ toList $ natToIntegerFns b
-    pure $ magic $ natHack ++ nats ++ natToIntMagic
+    pure $ magic $ natHack ++ nats ++ natToInts
   where
     builtinMagicNat : NatBuiltin -> List Magic
     builtinMagicNat cons =
