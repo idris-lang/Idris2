@@ -27,8 +27,12 @@ decorate fname decor rule = do
   pure res.val
 
 
+decorationFromBounded : FileName -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Nothing)
+
 boundedNameDecoration : FileName -> Decoration -> WithBounds Name -> ASemanticDecoration
-boundedNameDecoration fname decor bstr = ((toNonEmptyFC $ boundToFC fname bstr)
+boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
                                          , decor
                                          , Just bstr.val)
 
@@ -37,6 +41,9 @@ decorateBoundedNames fname decor bns = act $ map (boundedNameDecoration fname de
 
 decorateBoundedName : FileName -> Decoration -> WithBounds Name -> EmptyRule ()
 decorateBoundedName fname decor bn = act [boundedNameDecoration fname decor bn]
+
+decorateKeywords : FileName -> List (WithBounds a) -> EmptyRule ()
+decorateKeywords fname = act . map (decorationFromBounded fname Keyword)
 
 dependentDecorate : FileName -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
@@ -375,20 +382,22 @@ mutual
            ts <- bounds (nonEmptyTuple fname s indents var)
            pure (PLam fc top Explicit var (PInfer fc) ts.val)
 
-  getInitRange : List PTerm -> EmptyRule (PTerm, Maybe PTerm)
-  getInitRange [x] = pure (x, Nothing)
-  getInitRange [x, y] = pure (x, Just y)
+  getInitRange : List (WithBounds PTerm) -> EmptyRule (PTerm, Maybe PTerm)
+  getInitRange [x] = pure (x.val, Nothing)
+  getInitRange [x,y] = pure (x.val, Just y.val)
   getInitRange _ = fatalError "Invalid list range syntax"
 
-  listRange : FileName -> WithBounds t -> IndentInfo -> List (FC, PTerm) -> Rule PTerm
+  listRange : FileName -> WithBounds t -> IndentInfo -> List (WithBounds PTerm) -> Rule PTerm
   listRange fname s indents xs
       = do b <- bounds (decoratedSymbol fname "]")
            let fc = boundToFC fname (mergeBounds s b)
-           rstate <- getInitRange (map snd xs) -- TODO: fix ranges
+           rstate <- getInitRange xs
+           decorateKeywords fname xs
            pure (PRangeStream fc (fst rstate) (snd rstate))
     <|> do y <- bounds (expr pdef fname indents <* decoratedSymbol fname "]")
            let fc = boundToFC fname (mergeBounds s y)
-           rstate <- getInitRange (map snd xs) -- TODO: fix ranges
+           rstate <- getInitRange xs
+           decorateKeywords fname xs
            pure (PRange fc (fst rstate) (snd rstate) y.val)
 
   listExpr : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
@@ -405,15 +414,14 @@ mutual
                      tl <- many $ do b <- bounds (symbol ",")
                                      x <- expr pdef fname indents
                                      pure (x <$ b)
-                     pure $ map (\ t => (boundToFC fname t, t.val))
-                          $ (hd <$ s) :: tl
+                     pure ((hd <$ s) :: tl)
            (do decoratedSymbol fname ".."
                listRange fname s indents xs)
              <|> (do b <- bounds (symbol "]")
                      pure $
                        let fc = boundToFC fname (mergeBounds s b)
                            nilFC = if null xs then fc else boundToFC fname b
-                       in PList fc nilFC xs)
+                       in PList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs))
 
   nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   nonEmptyTuple fname s indents e

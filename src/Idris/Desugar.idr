@@ -387,22 +387,15 @@ mutual
   desugarB side ps (PRewrite fc rule tm)
       = pure $ IRewrite fc !(desugarB side ps rule) !(desugarB side ps tm)
   desugarB side ps (PRange fc start next end)
-      = case next of
-             Nothing =>
-                desugarB side ps (PApp fc
-                                    (PApp fc (PRef fc (UN "rangeFromTo"))
-                                          start) end)
-             Just n =>
-                desugarB side ps (PApp fc
-                                    (PApp fc
-                                        (PApp fc (PRef fc (UN "rangeFromThenTo"))
-                                              start) n) end)
+      = let fc = virtualiseFC fc in
+        desugarB side ps $ case next of
+           Nothing => papply fc (PRef fc (UN "rangeFromTo")) [start,end]
+           Just n  => papply fc (PRef fc (UN "rangeFromThenTo")) [start, n, end]
   desugarB side ps (PRangeStream fc start next)
-      = case next of
-             Nothing =>
-                desugarB side ps (PApp fc (PRef fc (UN "rangeFrom")) start)
-             Just n =>
-                desugarB side ps (PApp fc (PApp fc (PRef fc (UN "rangeFromThen")) start) n)
+      = let fc = virtualiseFC fc in
+        desugarB side ps $ case next of
+           Nothing => papply fc (PRef fc (UN "rangeFrom")) [start]
+           Just n  => papply fc (PRef fc (UN "rangeFromThen")) [start, n]
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
   desugarB side ps (PPostfixApp fc rec projs)
