@@ -659,7 +659,6 @@ Show BuiltinType where
 -- the wrong way round.
 public export data ZERO = MkZERO
 public export data SUCC = MkSUCC
-public export data NatToInt = MkNatToInt
 
 ||| Record containing names of 'Nat'-like constructors.
 public export
@@ -667,6 +666,13 @@ record NatBuiltin where
     constructor MkNatBuiltin
     zero : Name
     succ : Name
+
+||| Record containing information about a natToInteger function.
+public export
+record NatToInt where
+    constructor MkNatToInt
+    arity : Nat -- total number of arguments
+    natIdx : Nat -- index into arguments of the 'Nat'-like argument
 
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements

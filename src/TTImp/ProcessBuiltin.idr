@@ -72,6 +72,16 @@ getFirstNEType tm = case getNEArgs tm of
     [] => Nothing
     arg :: _ => Just arg
 
+||| Get the index of the first non-erased argument if it exists.
+getNEIndex : Term vars -> Maybe Nat
+getNEIndex (Bind _ x b tm) = case b of
+    Let _ _ val _ => getNEIndex $ subst {x} val tm
+    Pi _ mul _ arg => if isErased mul
+        then (+ 1) <$> getNEIndex tm
+        else Just 0
+    _ => Nothing
+getNEIndex _ = Nothing
+
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
 termConMatch (Local _ _ x _) (Local _ _ y _) = x == y
@@ -184,12 +194,14 @@ addBuiltinNat type cons = do
 
 addNatToInteger :
     Ref Ctxt Defs =>
-    (fn : Name) -> Core ()
-addNatToInteger fn = do
+    (fn : Name) ->
+    NatToInt ->
+    Core ()
+addNatToInteger fn nToI = do
     log "builtin.NaturalToInteger.addTransforms" 10
         $ "Add %builtin NaturalToInteger transform for " ++ show fn ++ "."
     update Ctxt $ record
-        { builtinTransforms.natToIntegerFns $= insert fn MkNatToInt
+        { builtinTransforms.natToIntegerFns $= insert fn nToI
         }
 
 ||| Check a `%builtin Natural` pragma is correct.
@@ -224,13 +236,16 @@ processNatToInteger ds fc fn = do
             $ "Expected function definition, found " ++ showDefType def ++ "."
     let [(_ ** arg)] = getNEArgs gdef.type
         | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
-        | _ => throw $ GenericMsg fc $ "More than 1 arguments found for " ++ show n ++ "."
+        | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show n ++ "."
     let Just tyCon = getTypeCons arg
         | Nothing => throw $ GenericMsg fc
             $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
     Just _ <- getNatBuiltin tyCon
         | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
-    addNatToInteger n
+    let arity = length $ getTypeArgs gdef.type
+    let Just natIdx = getNEIndex gdef.type
+        | Nothing => throw $ InternalError "Couldn't find non-erased argument."
+    addNatToInteger n (MkNatToInt {arity, natIdx})
     pure ()
 
 ||| Check a `%builtin` pragma is correct.
