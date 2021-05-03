@@ -172,8 +172,8 @@ TTC Constant where
              21 => do x <- fromBuf b; pure (I64 x)
              22 => pure Int32Type
              23 => pure Int64Type
-             24 => do x <- fromBuf b; pure (I16 x)
-             25 => do x <- fromBuf b; pure (I32 x)
+             24 => do x <- fromBuf b; pure (I8 x)
+             25 => do x <- fromBuf b; pure (I16 x)
              26 => pure Int8Type
              27 => pure Int16Type
              _ => corrupt "Constant"
