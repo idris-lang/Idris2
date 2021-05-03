@@ -3,6 +3,7 @@
 module TTImp.ProcessBuiltin
 
 import Libraries.Data.Bool.Extra
+import Data.Fin
 import Libraries.Data.NameMap
 import Data.List
 
@@ -73,14 +74,17 @@ getFirstNEType tm = case getNEArgs tm of
     arg :: _ => Just arg
 
 ||| Get the index of the first non-erased argument if it exists.
-getNEIndex : Term vars -> Maybe Nat
-getNEIndex (Bind _ x b tm) = case b of
-    Let _ _ val _ => getNEIndex $ subst {x} val tm
+getNEIndex : (arity : Nat) -> Term vars -> Maybe (Fin arity)
+getNEIndex ar (Bind _ x b tm) = case b of
+    Let _ _ val _ => getNEIndex ar $ subst {x} val tm
     Pi _ mul _ arg => if isErased mul
-        then (+ 1) <$> getNEIndex tm
-        else Just 0
+        then getNEIndex ar tm >>=
+            \k => case strengthen (FS k) of
+                Left _ => Nothing
+                Right k' => Just k'
+        else natToFin 0 ar
     _ => Nothing
-getNEIndex _ = Nothing
+getNEIndex _ _ = Nothing
 
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
@@ -243,7 +247,7 @@ processNatToInteger ds fc fn = do
     Just _ <- getNatBuiltin tyCon
         | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
     let arity = length $ getTypeArgs gdef.type
-    let Just natIdx = getNEIndex gdef.type
+    let Just natIdx = getNEIndex arity gdef.type
         | Nothing => throw $ InternalError "Couldn't find non-erased argument."
     addNatToInteger n (MkNatToInt {arity, natIdx})
     pure ()

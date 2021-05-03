@@ -12,6 +12,7 @@ import public Core.TT
 
 import Libraries.Utils.Binary
 
+import Data.Fin
 import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
@@ -672,7 +673,7 @@ public export
 record NatToInt where
     constructor MkNatToInt
     arity : Nat -- total number of arguments
-    natIdx : Nat -- index into arguments of the 'Nat'-like argument
+    natIdx : Fin arity -- index into arguments of the 'Nat'-like argument
 
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements
