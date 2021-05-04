@@ -6,6 +6,7 @@ import Core.Core
 import Core.Env
 import Core.TT
 
+import Idris.Pretty
 import Idris.Pretty.Render
 import Idris.REPL.Opts
 import Idris.Resugar
@@ -32,29 +33,34 @@ import Parser.Lexer.Source
 
 public export
 data IdrisDocAnn
-  = TCon
+  = TCon Name
   | DCon
-  | Fun
+  | Fun Name
   | Header
+  | Declarations
+  | Decl Name
+  | DocStringBody
+  | Syntax IdrisSyntax
 
 export
 styleAnn : IdrisDocAnn -> AnsiStyle
-styleAnn TCon = color BrightBlue
+styleAnn (TCon _) = color BrightBlue
 styleAnn DCon = color BrightRed
-styleAnn Fun = color BrightGreen
+styleAnn (Fun _) = color BrightGreen
 styleAnn Header = underline
+styleAnn _ = []
 
 export
-tCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
-tCon = annotate TCon
+tCon : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+tCon n = annotate (TCon n)
 
 export
 dCon : Doc IdrisDocAnn -> Doc IdrisDocAnn
 dCon = annotate DCon
 
 export
-fun : Doc IdrisDocAnn -> Doc IdrisDocAnn
-fun = annotate Fun
+fun : Name -> Doc IdrisDocAnn -> Doc IdrisDocAnn
+fun n = annotate (Fun n)
 
 export
 header : Doc IdrisDocAnn -> Doc IdrisDocAnn
@@ -100,11 +106,14 @@ getDocsForPrimitive constant = do
     let typeString = show constant ++ " : " ++ show !(resugar [] type)
     pure [typeString ++ "\n\tPrimitive"]
 
+prettyTerm : PTerm -> Doc IdrisDocAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
 export
 getDocsForName : {auto o : Ref ROpts REPLOpts} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 FC -> Name -> Core String
+                 FC -> Name -> Core (Doc IdrisDocAnn)
 getDocsForName fc n
     = do syn <- get Syn
          defs <- get Ctxt
@@ -115,9 +124,9 @@ getDocsForName fc n
          let all@(_ :: _) = extra ++ map fst resolved
              | _ => undefinedName fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn)) all
-             | [] => pure ("No documentation for " ++ show n)
+             | [] => pure $ pretty ("No documentation for " ++ show n)
          docs <- traverse showDoc ns
-         render styleAnn (vcat (punctuate Line docs))
+         pure $ vcat (punctuate Line docs)
   where
 
     -- Avoid generating too much whitespace by not returning a single empty line
@@ -146,7 +155,7 @@ getDocsForName fc n
                   | _ => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              pure $ pure $ vcat $
-               hsep [dCon (prettyName n), colon, pretty (show ty)]
+               annotate (Decl con) (hsep [dCon (prettyName n), colon, prettyTerm ty])
                :: reflowDoc str
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
@@ -155,7 +164,7 @@ getDocsForName fc n
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure [pretty (show ty)]
+             pure [annotate (Decl n) $ prettyTerm ty]
 
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
@@ -164,10 +173,12 @@ getDocsForName fc n
                   | _ => pure []
              ty <- pterm meth.type
              let nm = prettyName meth.name
-             pure $ pure $ vcat $
-               [hsep [fun nm, colon, pretty (show ty)]]
-               ++ toList (indent 2 . pretty . show <$> meth.totalReq)
-               ++ reflowDoc str
+             pure $ pure $ vcat [
+               annotate (Decl meth.name) (hsep [fun (meth.name) nm, colon, prettyTerm ty])
+               , annotate DocStringBody $ vcat (
+                 toList (indent 2 . pretty . show <$> meth.totalReq)
+                 ++ reflowDoc str)
+               ]
 
     getInfixDoc : Name -> Core (List (Doc IdrisDocAnn))
     getInfixDoc n
@@ -207,16 +218,16 @@ getDocsForName fc n
              mdocs <- traverse getMethDoc (methods iface)
              let meths = case concat mdocs of
                            [] => []
-                           docs => [vcat (header "Methods" :: map (indent 2) docs)]
+                           docs => [vcat [header "Methods", annotate Declarations $ vcat $ map (indent 2) docs]]
              sd <- getSearchData fc False n
              idocs <- case hintGroups sd of
                            [] => pure (the (List (List (Doc IdrisDocAnn))) [])
                            ((_, tophs) :: _) => traverse getImplDoc tophs
              let insts = case concat idocs of
                            [] => []
-                           [doc] => [header "Implementation" <++> doc]
-                           docs => [vcat (header "Implementations"
-                                           :: map (indent 2) docs)]
+                           [doc] => [header "Implementation" <++> annotate Declarations doc]
+                           docs => [vcat [header "Implementations"
+                                   , annotate Declarations $ vcat $ map (indent 2) docs]]
              pure (vcat (params ++ constraints ++ meths ++ insts))
 
     getExtra : Name -> GlobalDef -> Core (List (Doc IdrisDocAnn))
@@ -233,18 +244,19 @@ getDocsForName fc n
                          cdocs <- traverse (getDConDoc <=< toFullNames) cons
                          let cdoc = case concat cdocs of
                               [] => []
-                              [doc] => [header "Constructor" <++>  doc]
-                              docs => [vcat (header "Constructors" :: map (indent 2) docs)]
+                              [doc] => [header "Constructor" <++> annotate Declarations doc]
+                              docs => [vcat [header "Constructors"
+                                      , annotate Declarations $ vcat $ map (indent 2) docs]]
                          pure (tot ++ cdoc)
                _ => pure []
 
     showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
     showCategory d = case definition d of
-      TCon _ _ _ _ _ _ _ _ => tCon
+      TCon _ _ _ _ _ _ _ _ => tCon (fullname d)
       DCon _ _ _ => dCon
-      PMDef _ _ _ _ _ => fun
-      ForeignDef _ _ => fun
-      Builtin _ => fun
+      PMDef _ _ _ _ _ => fun (fullname d)
+      ForeignDef _ _ => fun (fullname d)
+      Builtin _ => fun (fullname d)
       _ => id
 
     showDoc : (Name, String) -> Core (Doc IdrisDocAnn)
@@ -255,19 +267,19 @@ getDocsForName fc n
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
              let cat = showCategory def
              nm <- aliasName n
-             let doc = vcat $
-                    (hsep [cat (pretty (show nm)), colon, pretty (show ty)])
-                    :: reflowDoc str
+             let docDecl = annotate (Decl n) (hsep [cat (pretty (show nm)), colon, prettyTerm ty])
+             let docText = reflowDoc str
              extra <- getExtra n def
              fixes <- getFixityDoc n
-             pure (vcat (doc :: map (indent 2) (extra ++ fixes)))
+             let docBody = annotate DocStringBody $ vcat $ docText ++ (map (indent 2) (extra ++ fixes))
+             pure (vcat [docDecl, docBody])
 
 export
 getDocsForPTerm : {auto o : Ref ROpts REPLOpts} ->
                   {auto c : Ref Ctxt Defs} ->
                   {auto s : Ref Syn SyntaxInfo} ->
                   PTerm -> Core (List String)
-getDocsForPTerm (PRef fc name) = pure <$> getDocsForName fc name
+getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc name))]
 getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
 getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
 getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]

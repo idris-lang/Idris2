@@ -141,7 +141,7 @@ prettyHole : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-             Core (Doc IdrisAnn)
+             Core (Doc IdrisSyntax)
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of

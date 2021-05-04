@@ -22,6 +22,7 @@ public export
 data PkgCommand
       = Build
       | Install
+      | MkDoc
       | Typecheck
       | Clean
       | REPL
@@ -31,6 +32,7 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
@@ -66,6 +68,8 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
@@ -191,6 +195,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -209,6 +215,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
               (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
+              (Just "Build documentation for the given package"),
            MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
            MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])

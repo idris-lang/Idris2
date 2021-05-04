@@ -566,6 +566,11 @@ Catchable Core Error where
                          Right val => pure (Right val))
   throw = coreFail
 
+-- Prelude.Monad.foldlM hand specialised for Core
+export
+foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
+foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
 traverse' f [] acc = pure (reverse acc)

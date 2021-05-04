@@ -2479,8 +2479,10 @@ addLogLevel : {auto c : Ref Ctxt Defs} ->
 addLogLevel lvl
     = do defs <- get Ctxt
          case lvl of
-           Nothing => put Ctxt (record { options->session->logLevel = defaultLogLevel } defs)
-           Just l  => put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
+           Nothing => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel = defaultLogLevel } defs)
+           Just l  => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel $= insertLogLevel l } defs)
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->

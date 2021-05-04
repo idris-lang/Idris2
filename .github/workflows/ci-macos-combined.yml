@@ -65,26 +65,26 @@ jobs:
 
   # this gambit test is really slow so se run it separately
 
-  test-gambit:
-    needs: build-bootstrap-chez
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: installed-bootstrapped-idris2-chez
-          path: ~/.idris2/
-      - name: Install build dependencies
-        run: |
-          brew install chezscheme
-          brew install coreutils
-          brew install gambit-scheme
-          CURRENTDIR=$(find /usr/local/Cellar/gambit-scheme -type l -name current)
-          echo "::add-path::${CURRENTDIR}/bin"
-          echo "::add-path::$HOME/.idris2/bin"
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
-      - name: Test gambit
-        run: cd tests/gambit/bitops001/ && ./run idris2
-        shell: bash
+  # test-gambit:
+  #   needs: build-bootstrap-chez
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Download Idris2 Artifact
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: installed-bootstrapped-idris2-chez
+  #         path: ~/.idris2/
+  #     - name: Install build dependencies
+  #       run: |
+  #         brew install chezscheme
+  #         brew install coreutils
+  #         brew install gambit-scheme
+  #         CURRENTDIR=$(find /usr/local/Cellar/gambit-scheme -type l -name current)
+  #         echo "::add-path::${CURRENTDIR}/bin"
+  #         echo "::add-path::$HOME/.idris2/bin"
+  #         chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+  #     - name: Test gambit
+  #       run: cd tests/gambit/bitops001/ && ./run idris2
+  #       shell: bash

@@ -663,7 +663,8 @@ dumpHole' : {auto u : Ref UST UState} ->
 dumpHole' lvl hole
     = do ust <- get UST
          defs <- get Ctxt
-         when (keepLog lvl (logLevel $ session $ options defs)) $ do
+         sopts <- getSession
+         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $ do
                defs <- get Ctxt
                case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
                  Nothing => pure ()
@@ -723,8 +724,9 @@ dumpConstraints : {auto u : Ref UST UState} ->
 dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel $ session $ options defs)) $
+         sopts <- getSession
+         let lvl = mkLogLevel (logEnabled sopts) str n
+         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $
             do let hs = toList (guesses ust) ++
                         toList (if all then holes ust else currentHoles ust)
                case hs of
