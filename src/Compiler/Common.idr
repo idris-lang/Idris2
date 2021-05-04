@@ -449,3 +449,37 @@ pathLookup candidates
                                                 x <- candidates,
                                                 y <- extensions ]
          firstExists candidates
+
+||| Cast implementations. Values of `ConstantPrimitives` can
+||| be used in a call to `castInt`, which then determines
+||| the cast implementation based on the given pair of
+||| constants.
+public export
+record ConstantPrimitives where
+  constructor MkConstantPrimitives
+  charToInt    : IntKind -> String -> Core String
+  intToChar    : IntKind -> String -> Core String
+  stringToInt  : IntKind -> String -> Core String
+  intToString  : IntKind -> String -> Core String
+  doubleToInt  : IntKind -> String -> Core String
+  intToDouble  : IntKind -> String -> Core String
+  intToInt     : IntKind -> IntKind -> String -> Core String
+
+||| Implements casts from and to integral types by using
+||| the implementations from the provided `ConstantPrimitives`.
+export
+castInt :  ConstantPrimitives
+        -> Constant
+        -> Constant
+        -> String
+        -> Core String
+castInt p from to x =
+  case ((from, intKind from), (to, intKind to)) of
+       ((CharType, _)  , (_, Just k)) => p.charToInt k x
+       ((StringType, _), (_, Just k)) => p.stringToInt k x
+       ((DoubleType, _), (_, Just k)) => p.doubleToInt k x
+       ((_, Just k), (CharType, _))   => p.intToChar k x
+       ((_, Just k), (StringType, _)) => p.intToString k x
+       ((_, Just k), (DoubleType, _)) => p.intToDouble k x
+       ((_, Just k1), (_, Just k2))   => p.intToInt k1 k2 x
+       _ => throw $ InternalError $ "invalid cast: + " ++ show from ++ " + ' -> ' + " ++ show to

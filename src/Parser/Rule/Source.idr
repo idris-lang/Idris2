@@ -43,15 +43,9 @@ constant
                                              Just c' => Just (Ch c')
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
-                           Ident "Char"    => Just CharType
-                           Ident "Double"  => Just DoubleType
-                           Ident "Int"     => Just IntType
-                           Ident "Integer" => Just IntegerType
-                           Ident "Bits8"   => Just Bits8Type
-                           Ident "Bits16"  => Just Bits16Type
-                           Ident "Bits32"  => Just Bits32Type
-                           Ident "Bits64"  => Just Bits64Type
-                           Ident "String"  => Just StringType
+                           Ident s      => isConstantType (UN s) >>=
+                                             \case WorldType => Nothing
+                                                   c         => Just c
                            _ => Nothing)
 
 documentation' : Rule String
@@ -250,8 +244,10 @@ holeName
 
 reservedNames : List String
 reservedNames
-    = ["Type", "Int", "Integer", "Bits8", "Bits16", "Bits32", "Bits64",
-       "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"]
+    = [ "Type", "Int", "Int8", "Int16", "Int32", "Int64", "Integer"
+      , "Bits8", "Bits16", "Bits32", "Bits64"
+      , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
+      ]
 
 isNotReservedIdent : WithBounds String -> SourceEmptyRule ()
 isNotReservedIdent x

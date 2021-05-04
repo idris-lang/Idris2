@@ -9,6 +9,8 @@ import Core.Options
 import Core.TT
 import Core.Unify
 
+import Data.Maybe
+
 import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
@@ -578,11 +580,33 @@ mutual
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc (IApp loc (IVar loc op) l') r')
+
   -- negation is a special case, since we can't have an operator with
   -- two meanings otherwise
+  --
+  -- Note: In case of negated signed integer literals, we apply the
+  -- negation directly. Otherwise, the literal might be
+  -- truncated to 0 before being passed on to `negate`.
+  desugarTree side ps (Pre loc (UN "-") $ Leaf $ PPrimVal fc c)
+    = let newFC    = fromMaybe EmptyFC (mergeFC loc fc)
+          continue = desugarTree side ps . Leaf . PPrimVal newFC
+       in case c of
+            I   x => continue $ I (-x)
+            I8  x => continue $ I8 (-x)
+            I16 x => continue $ I16 (-x)
+            I32 x => continue $ I32 (-x)
+            I64 x => continue $ I64 (-x)
+            BI  x => continue $ BI (-x)
+
+            -- not a signed integer literal. proceed by desugaring
+            -- and applying to `negate`.
+            _     => do arg' <- desugarTree side ps (Leaf $ PPrimVal fc c)
+                        pure (IApp loc (IVar loc (UN "negate")) arg')
+
   desugarTree side ps (Pre loc (UN "-") arg)
-      = do arg' <- desugarTree side ps arg
-           pure (IApp loc (IVar loc (UN "negate")) arg')
+    = do arg' <- desugarTree side ps arg
+         pure (IApp loc (IVar loc (UN "negate")) arg')
+
   desugarTree side ps (Pre loc op arg)
       = do arg' <- desugarTree side ps arg
            pure (IApp loc (IVar loc op) arg')

@@ -5,9 +5,9 @@ Main> 12
 Main> 12
 Main> "Negative Int"
 Main> -12
-Main> -13
-Main> -13
-Main> -13
+Main> -12
+Main> -12
+Main> -12
 Main> "Integer"
 Main> 12
 Main> 12
@@ -15,9 +15,9 @@ Main> 12
 Main> 12
 Main> "Negative Integer"
 Main> -12
-Main> -13
-Main> -13
-Main> -13
+Main> -12
+Main> -12
+Main> -12
 Main> "Double"
 Main> 12.0
 Main> 12.3
