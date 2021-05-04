@@ -59,6 +59,7 @@ mutual
   measureAlts (ConstCase x y) = 1 + (measure y)
   measureAlts (DefaultCase x) = 1 + (measure x)
 
+export
 isDefault : CaseAlt vars -> Bool
 isDefault (DefaultCase _) = True
 isDefault _ = False
