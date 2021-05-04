@@ -1,5 +1,7 @@
 module Control.Monad.Identity
 
+import Data.Bits
+
 public export
 record Identity (a : Type) where
   constructor Id
@@ -43,3 +45,49 @@ public export
 public export
 (Monoid a) => Monoid (Identity a) where
   neutral = Id (neutral)
+
+public export
+Num a => Num (Identity a) where
+  Id x + Id y = Id (x + y)
+  Id x * Id y = Id (x * y)
+  fromInteger = Id . fromInteger
+
+public export
+Neg a => Neg (Identity a) where
+  negate (Id x)    = Id (negate x)
+  Id x - Id y = Id (x - y)
+
+public export
+Abs a => Abs (Identity a) where
+  abs (Id x)    = Id (abs x)
+
+public export
+Fractional a => Fractional (Identity a) where
+  recip (Id x)     = Id (recip x)
+  Id x / Id y = Id (x / y)
+
+public export
+Integral a => Integral (Identity a) where
+  Id x `div` Id y = Id (x `div` y)
+  Id x `mod` Id y = Id (x `mod` y)
+
+public export
+Bits a => Bits (Identity a) where
+  Index = Index {a}
+  Id x .&. Id y = Id (x .&. y)
+  Id x .|. Id y = Id (x .|. y)
+  Id x `xor` Id y = Id (x `xor` y)
+  shiftL (Id v) ix = Id (shiftL v ix)
+  shiftR (Id v) ix = Id (shiftR v ix)
+  bit = Id . bit
+  zeroBits = Id zeroBits
+  complement (Id v) = Id (complement v)
+  oneBits = Id oneBits
+  complementBit (Id v) ix = Id (complementBit v ix)
+  clearBit (Id v) ix = Id (clearBit v ix)
+  testBit (Id v) ix = testBit v ix
+  setBit (Id v) ix = Id (setBit v ix)
+
+public export
+FromString a => FromString (Identity a) where
+  fromString = Id . fromString

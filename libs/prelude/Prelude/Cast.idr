@@ -18,6 +18,10 @@ interface Cast from to where
   ||| @ orig The original type
   cast : (orig : from) -> to
 
+export
+Cast a a where
+  cast = id
+
 -- To String
 
 export

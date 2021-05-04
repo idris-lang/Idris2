@@ -59,6 +59,10 @@ mutual
   measureAlts (ConstCase x y) = 1 + (measure y)
   measureAlts (DefaultCase x) = 1 + (measure x)
 
+isDefault : CaseAlt vars -> Bool
+isDefault (DefaultCase _) = True
+isDefault _ = False
+
 public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat

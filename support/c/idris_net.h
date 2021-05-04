@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #endif
 
 struct sockaddr_storage;
@@ -27,6 +28,16 @@ typedef struct idrnet_recvfrom_result {
     void* payload;
     struct sockaddr_storage* remote_addr;
 } idrnet_recvfrom_result;
+
+#ifdef _WIN32
+// mingw-w64 is currently missing the afunix.h header even though windows
+// supports unix sockets so we have to define the unix sockaddr structure
+// ourselves
+struct sockaddr_un {
+    u_short sun_family;
+    char sun_path[108];
+};
+#endif
 
 // Memory management functions
 void* idrnet_malloc(int size);
@@ -58,6 +69,7 @@ int idrnet_connect(int sockfd, int family, int socket_type, char* host, int port
 int idrnet_sockaddr_family(void* sockaddr);
 char* idrnet_sockaddr_ipv4(void* sockaddr);
 int idrnet_sockaddr_ipv4_port(void* sockaddr);
+char* idrnet_sockaddr_unix(void *sockaddr);
 void* idrnet_create_sockaddr();
 
 int idrnet_sockaddr_port(int sockfd);

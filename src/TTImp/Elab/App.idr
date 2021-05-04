@@ -312,6 +312,22 @@ mutual
   needsDelay (InLHS _) _ tm = needsDelayLHS tm
   needsDelay _ kr tm = needsDelayExpr kr tm
 
+  checkValidPattern :
+    {vars : _} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto m : Ref MD Metadata} ->
+    {auto u : Ref UST UState} ->
+    {auto e : Ref EST (EState vars)} ->
+    RigCount -> Env Term vars -> FC ->
+    Term vars -> Glued vars ->
+    Core (Term vars, Glued vars)
+  checkValidPattern rig env fc tm ty
+    = do log "elab.app.lhs" 50 $ "Checking that " ++ show tm ++ " is a valid pattern"
+         case tm of
+           Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
+           _ => pure (tm, ty)
+
+
   checkPatTyValid : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     FC -> Defs -> Env Term vars ->
@@ -319,13 +335,11 @@ mutual
   checkPatTyValid fc defs env (NApp _ (NMeta n i _) _) arg got
       = do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
                 | Nothing => pure ()
-           if isErased (multiplicity gdef)
-              then do -- Argument is only valid if gotnf is not a concrete type
-                      gotnf <- getNF got
-                      if !(concrete defs env gotnf)
-                         then throw (MatchTooSpecific fc env arg)
-                         else pure ()
-              else pure ()
+           when (isErased (multiplicity gdef)) $ do
+             -- Argument is only valid if gotnf is not a concrete type
+             gotnf <- getNF got
+             when !(concrete defs env gotnf) $
+               throw (MatchTooSpecific fc env arg)
   checkPatTyValid fc defs env _ _ _ = pure ()
 
   dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
@@ -419,10 +433,15 @@ mutual
              defs <- get Ctxt
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
-             (argv, argt) <- check argRig elabinfo
-                                   nest env arg (Just (glueBack defs env aty'))
-             when (onLHS (elabMode elabinfo)) $
-                  checkPatTyValid fc defs env aty' argv argt
+
+             res <- check argRig elabinfo nest env arg (Just $ glueBack defs env aty')
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkPatTyValid fc defs env aty' argv argt
+                         checkValidPattern rig env fc argv argt
+
              defs <- get Ctxt
              -- If we're on the LHS, reinstantiate it with 'argv' because it
              -- *may* have as patterns in it and we need to retain them.
@@ -456,8 +475,14 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             (argv, argt) <- check argRig elabinfo
+             res <- check argRig elabinfo
                                    nest env arg (Just (glueBack defs env aty))
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkValidPattern rig env fc argv argt
+
              logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
              let fntm = App fc tm argv
@@ -710,6 +735,8 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         nty <- getNF nty_in
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims (elabMode elabinfo) n expargs elabinfo
+
+        addNameLoc fc' n
 
         logC "elab" 10
                 (do defs <- get Ctxt

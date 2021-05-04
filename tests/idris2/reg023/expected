@@ -1,11 +1,11 @@
 1/1: Building boom (boom.idr)
 Error: While processing right hand side of with block in eraseVar. Can't solve constraint between: S (countGreater thr xs) and countGreater thr xs.
 
-boom.idr:23:42--23:66
+boom.idr:23:42--23:44
  19 | eraseVar : (thr : Int) -> (ctx : Vect n Int) -> Fin n -> Maybe (Fin (countGreater thr ctx))
  20 | eraseVar thr (x :: xs) j with (x .<=. thr)
  21 |   eraseVar thr (x :: xs) FZ | True = Nothing
  22 |   eraseVar thr (x :: xs) FZ | False = Just FZ
  23 |   eraseVar thr (x :: xs) (FS i) | True = FS <$> eraseVar thr xs i
-                                               ^^^^^^^^^^^^^^^^^^^^^^^^
+                                               ^^
 

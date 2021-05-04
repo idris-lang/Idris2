@@ -40,6 +40,10 @@ prim__idrnet_sockaddr_family : (sockaddr : AnyPtr) -> PrimIO Int
 export
 prim__idrnet_sockaddr_ipv4 : (sockaddr : AnyPtr) -> PrimIO String
 
+%foreign "C:idrnet_sockaddr_unix,libidris2_support"
+export
+prim__idrnet_sockaddr_unix : (sockaddr : AnyPtr) -> PrimIO String
+
 %foreign "C:idrnet_sockaddr_ipv4_port,libidris2_support"
 export
 prim__idrnet_sockaddr_ipv4_port : (sockaddr : AnyPtr) -> PrimIO Int

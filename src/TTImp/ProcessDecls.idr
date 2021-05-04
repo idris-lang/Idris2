@@ -13,6 +13,7 @@ import Parser.Source
 import TTImp.BindImplicits
 import TTImp.Elab.Check
 import TTImp.Parser
+import TTImp.ProcessBuiltin
 import TTImp.ProcessData
 import TTImp.ProcessDef
 import TTImp.ProcessParams
@@ -46,12 +47,8 @@ process eopts nest env (IParameters fc ps decls)
 process eopts nest env (IRecord fc ns vis rec)
     = processRecord eopts nest env ns vis rec
 process eopts nest env (INamespace fc ns decls)
-    = do defs <- get Ctxt
-         let cns = currentNS defs
-         extendNS ns
+    = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
-         defs <- get Ctxt
-         put Ctxt (record { currentNS = cns } defs)
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)
@@ -60,6 +57,8 @@ process eopts nest env (IPragma _ act)
     = act nest env
 process eopts nest env (ILog lvl)
     = addLogLevel (uncurry unsafeMkLogLevel <$> lvl)
+process eopts nest env (IBuiltin fc type name)
+    = processBuiltin nest env fc type name
 
 TTImp.Elab.Check.processDecl = process
 
@@ -96,7 +95,7 @@ checkTotalityOK n
 
     checkTotality : FC -> Core (Maybe Error)
     checkTotality fc
-        = do ignore $ checkTotal fc n
+        = do ignore $ logTime ("+++ Checking Termination " ++ show n) (checkTotal fc n)
              -- ^ checked lazily, so better calculate here
              t <- getTotality fc n
              err <- checkCovering fc (isCovering t)

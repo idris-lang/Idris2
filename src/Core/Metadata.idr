@@ -12,6 +12,7 @@ import Core.TTC
 
 import Data.List
 import System.File
+import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 
 %default covering
@@ -41,15 +42,17 @@ record Metadata where
        -- to know what the recursive call is, if applicable)
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
+       nameLocMap : PosMap (NonEmptyFC, Name)
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
       " type declarations: " ++ show tydecls ++ "\n" ++
       " current LHS: " ++ show currentLHS ++ "\n" ++
-      " holes: " ++ show holeLHS
+      " holes: " ++ show holeLHS ++ "\n" ++
+      " nameLocMap: " ++ show nameLocMap
 
 export
 initMetadata : Metadata
@@ -59,6 +62,7 @@ initMetadata = MkMetadata
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
+  , nameLocMap = empty
   }
 
 -- A label for metadata in the global state
@@ -71,13 +75,15 @@ TTC Metadata where
            toBuf b (names m)
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
+           toBuf b (nameLocMap m)
 
   fromBuf b
       = do apps <- fromBuf b
            ns <- fromBuf b
            tys <- fromBuf b
            hlhs <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs)
+           dlocs <- fromBuf b
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs)
 
 export
 addLHS : {vars : _} ->
@@ -137,6 +143,16 @@ addTyDecl loc n env tm
          -- Add the type declaration to the metadata if the file context is not empty
          whenJust (isNonEmptyFC loc) $ \ neloc =>
            put MD $ record { tydecls $= ( (neloc, (n', length env, bindEnv loc env tm)) ::) } meta
+
+export
+addNameLoc : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             FC -> Name -> Core ()
+addNameLoc loc n
+    = do meta <- get MD
+         n' <- getFullName n
+         whenJust (isNonEmptyFC loc) $ \neloc =>
+           put MD $ record { nameLocMap $= insert (neloc, n') } meta
 
 export
 setHoleLHS : {auto m : Ref MD Metadata} ->
@@ -233,12 +249,13 @@ TTC TTMFile where
            pure (MkTTMFile ver md)
 
 HasNames Metadata where
-  full gam (MkMetadata lhs ns tys clhs hlhs)
+  full gam (MkMetadata lhs ns tys clhs hlhs dlocs)
       = pure $ MkMetadata !(traverse fullLHS lhs)
                           !(traverse fullTy ns)
                           !(traverse fullTy tys)
                           Nothing
                           !(traverse fullHLHS hlhs)
+                          (fromList !(traverse fullDecls (toList dlocs)))
     where
       fullLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       fullLHS (fc, (i, tm)) = pure (fc, (i, !(full gam tm)))
@@ -249,12 +266,16 @@ HasNames Metadata where
       fullHLHS : (Name, ClosedTerm) -> Core (Name, ClosedTerm)
       fullHLHS (n, tm) = pure (!(full gam n), !(full gam tm))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs)
+      fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
+      fullDecls (fc, n) = pure (fc, !(full gam n))
+
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
                           Nothing
                           !(traverse resolvedHLHS hlhs)
+                          (fromList !(traverse resolvedDecls (toList dlocs)))
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))
@@ -264,6 +285,9 @@ HasNames Metadata where
 
       resolvedHLHS : (Name, ClosedTerm) -> Core (Name, ClosedTerm)
       resolvedHLHS (n, tm) = pure (!(resolved gam n), !(resolved gam tm))
+
+      resolvedDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
+      resolvedDecls (fc, n) = pure (fc, !(resolved gam n))
 
 export
 writeToTTM : {auto c : Ref Ctxt Defs} ->

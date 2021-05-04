@@ -9,6 +9,7 @@ import Libraries.Utils.Path
 import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
+import Idris.Package.Types
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -28,7 +29,7 @@ import System.Directory
 -- in a given path. Return an empty list on file error (e.g. path not existing)
 export
 candidateDirs : String -> String -> PkgVersionBounds ->
-                IO (List (String, PkgVersion))
+                IO (List (String, Maybe PkgVersion))
 candidateDirs dname pkg bounds
     = do Right d <- openDir dname
              | Left err => pure []
@@ -37,10 +38,9 @@ candidateDirs dname pkg bounds
     toVersion : String -> Maybe PkgVersion
     toVersion = map MkPkgVersion
               . traverse parsePositive
-              . forget
               . split (== '.')
 
-    getVersion : String -> (String, PkgVersion)
+    getVersion : String -> (String, Maybe PkgVersion)
     getVersion str =
       -- Split the dir name into parts concatenated by "-"
       -- treating the last part as the version number
@@ -49,18 +49,18 @@ candidateDirs dname pkg bounds
       -- accept hyphenated directory names without a part
       -- corresponding to a version number.
       case Lib.unsnoc $ split (== '-') str of
-        (Nil, last) => (last, MkPkgVersion [0])
+        (Nil, last) => (last, Nothing)
         (init,last) =>
           case toVersion last of
-            Just v  => (concat $ intersperse "-" init, v)
-            Nothing => (str, MkPkgVersion [0])
+            Just v  => (concat $ intersperse "-" init, Just v)
+            Nothing => (str, Nothing)
 
     -- Return a list of paths that match the version spec
     -- (full name, version string)
     -- We'll order by version string that the highest version number is the
     -- one we use
-    getFiles : Directory -> List (String, PkgVersion) ->
-               IO (List (String, PkgVersion))
+    getFiles : Directory -> List (String, Maybe PkgVersion) ->
+               IO (List (String, Maybe PkgVersion))
     getFiles d acc
         = do Right str <- dirEntry d
                    | Left err => pure (reverse acc)
@@ -135,6 +135,9 @@ preOptions (IdeModeSocket _ :: opts)
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
+preOptions (Profile :: opts)
+    = do setSession (record { profile = True } !getSession)
+         preOptions opts
 preOptions (Quiet :: opts)
     = do setOutput (REPL True)
          preOptions opts
@@ -199,7 +202,8 @@ preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
          preOptions opts
 preOptions (Logging n :: opts)
-    = do setSession (record { logLevel $= insertLogLevel n } !getSession)
+    = do setSession (record { logEnabled = True,
+                              logLevel $= insertLogLevel n } !getSession)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n

@@ -423,8 +423,10 @@ mutual
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PParameters fc
-                !(traverse (\ntm => do tm' <- toPTerm startPrec (snd ntm)
-                                       pure (fst ntm, tm')) ps)
+                        !(traverse (\(n, rig, info, tpe) =>
+                            do info' <- traverse (toPTerm startPrec) info
+                               tpe' <- toPTerm startPrec tpe
+                               pure (n, rig, info', tpe')) ps)
                 (mapMaybe id ds')))
   toPDecl (IRecord fc _ vis r)
       = do (n, ps, con, fs) <- toPRecord r
@@ -440,6 +442,7 @@ mutual
       = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
   toPDecl (IPragma _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
+  toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->

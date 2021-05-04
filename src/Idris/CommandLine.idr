@@ -9,6 +9,7 @@ import Core.Name.Namespace
 import Core.Options
 
 import Data.List
+import Data.List1
 import Data.Maybe
 import Data.Strings
 import Data.Either
@@ -21,17 +22,21 @@ public export
 data PkgCommand
       = Build
       | Install
+      | MkDoc
       | Typecheck
       | Clean
       | REPL
+      | Init
 
 export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
+  show Init = "--init"
 
 public export
 data DirCommand
@@ -40,62 +45,6 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
-
-public export
-data PkgVersion = MkPkgVersion (List Nat)
-
-export
-Show PkgVersion where
-  show (MkPkgVersion vs) = showSep "." (map show vs)
-
-export
-Eq PkgVersion where
-  MkPkgVersion p == MkPkgVersion q = p == q
-
-export
-Ord PkgVersion where
-  -- list ordering gives us what we want
-  compare (MkPkgVersion p) (MkPkgVersion q) = compare p q
-
--- version must be >= lowerBound and <= upperBound
--- Do we want < and > as well?
-public export
-record PkgVersionBounds where
-  constructor MkPkgVersionBounds
-  lowerBound : Maybe PkgVersion
-  lowerInclusive : Bool -- >= if true
-  upperBound : Maybe PkgVersion
-  upperInclusive : Bool -- <= if true
-
-export
-Show PkgVersionBounds where
-  show p = if noBounds p then "any"
-              else maybe "" (\v => (if p.lowerInclusive then ">= " else "> ")
-                                       ++ show v ++ " ") p.lowerBound ++
-                   maybe "" (\v => (if p.upperInclusive then "<= " else "< ") ++ show v) p.upperBound
-    where
-      noBounds : PkgVersionBounds -> Bool
-      noBounds p = isNothing p.lowerBound && isNothing p.upperBound
-
-export
-anyBounds : PkgVersionBounds
-anyBounds = MkPkgVersionBounds Nothing True Nothing True
-
-export
-current : PkgVersionBounds
-current = let (maj,min,patch) = semVer version
-              version = Just (MkPkgVersion [maj, min, patch]) in
-              MkPkgVersionBounds version True version True
-
-export
-inBounds : PkgVersion -> PkgVersionBounds -> Bool
-inBounds v bounds
-   = maybe True (\v' => if bounds.lowerInclusive
-                           then v >= v'
-                           else v > v') bounds.lowerBound &&
-     maybe True (\v' => if bounds.upperInclusive
-                           then v <= v'
-                           else v < v') bounds.upperBound
 
 ||| CLOpt - possible command line options
 public export
@@ -119,6 +68,8 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
@@ -244,6 +195,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -254,10 +207,16 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Show library directory"),
 
            optSeparator,
+           MkOpt ["--init"] [Optional "package file"]
+              (\ f => [Package Init (fromMaybe "" f)])
+              (Just "Interactively initialise a new project"),
+
            MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
               (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
+              (Just "Build documentation for the given package"),
            MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
            MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])

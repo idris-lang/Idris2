@@ -1,5 +1,6 @@
 ##### Options which a user might set before building go here #####
 
+# Where to install idris2 binaries and libraries
 PREFIX ?= $(HOME)/.idris2
 
 # For Windows targets. Set to 1 to support Windows 7.

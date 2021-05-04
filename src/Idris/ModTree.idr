@@ -15,7 +15,7 @@ import Idris.Desugar
 import Idris.Error
 import Idris.Parser
 import Idris.ProcessIdr
-import Idris.REPLCommon
+import Idris.REPL.Common
 import Idris.Syntax
 import Idris.Pretty
 

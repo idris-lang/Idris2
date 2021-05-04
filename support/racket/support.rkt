@@ -15,6 +15,9 @@
 (define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
 (define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (arithmetic-shift 1 bits))))
 
+(define blodwen-toSignedInt (lambda (x y) (modulo x (expt 2 y))))
+(define blodwen-toUnsignedInt (lambda (x y) (modulo x (expt 2 y))))
+
 (define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
@@ -409,14 +412,15 @@
 (define (blodwen-clock-second time) (time-second time))
 (define (blodwen-clock-nanosecond time) (time-nanosecond time))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-    (blodwen-build-args
-      (cons (path->string (find-system-path 'run-file))
-            (vector->list (current-command-line-arguments)))))
+(define (blodwen-arg-count)
+  (+ (vector-length (current-command-line-arguments)) 1))
+
+(define (blodwen-arg n)
+  (cond
+    ((= n 0) (path->string (find-system-path 'run-file)))
+    ((< n (+ (vector-length (current-command-line-arguments)) 1))
+        (vector-ref (current-command-line-arguments) (- n 1)))
+     (else "")))
 
 (define (blodwen-system cmd)
   (if (system cmd)

@@ -31,6 +31,9 @@
       `(remainder (floor (/ ,x ,y)) ,(arithmetic-shift 1 bits))
       `(remainder (floor (/ ,x ,y)) (arithmetic-shift 1 ,bits))))
 
+(define blodwen-toSignedInt (lambda (x y) (modulo x (expt 2 y))))
+(define blodwen-toUnsignedInt (lambda (x y) (modulo x (expt 2 y))))
+
 (define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define integer->bits32 (lambda (x) (modulo x (expt 2 32))))
@@ -174,12 +177,12 @@
 (define (blodwen-time)
   (exact-floor (time->seconds (current-time))))
 
-(define (blodwen-args)
-  (define (blodwen-build-args args)
-    (if (null? args)
-        (vector 0) ; Prelude.List
-        (vector 1 (car args) (blodwen-build-args (cdr args)))))
-  (blodwen-build-args (cdr (command-line))))
+
+(define (blodwen-arg-count)
+  (length (command-line)))
+
+(define (blodwen-arg n)
+  (if (< n (length (command-line))) (list-ref (command-line) n) ""))
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))

@@ -13,10 +13,19 @@ REPL/IDE mode changes:
 * Added `:search` command, which searches for functions by type
 * `:load`/`:l` and `:cd` commands now only accept paths surrounded by double quotes
 
+Syntax changes:
+
+* The syntax for parameter blocks has been updated. It now allows to declare
+  implicit parameters and give multiplicities for parameters. The old syntax
+  is still available for compatibility purposes but will be removed in the
+  future.
+
 Compiler changes:
 
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
+* Added `--profile` flag, which generates profile data if supported by a back
+  end. Currently supported by the Chez and Racket back ends.
 
 Library changes:
 
@@ -26,18 +35,6 @@ Library changes:
   asynchronous channels, which worked apart from `broadcast`. The rework fixes
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
-
-Other changes:
-
-* The `version` field in `.ipkg` files is now used. Packages are installed into
-  a directory which includes its version number, and dependencies can have
-  version number ranges using `<=`, `<`, `>=`, `>`, `==` to express version
-  constraints. Version numbers must be in the form of integers, separated by
-  dots (e.g. `1.0`, `0.3.0`, `3.1.4.1.5` etc)
-* Idris now looks in the current working directory, under a subdirectory
-  `depends` for local installations of packages before looking globally.
-* Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
-  look for packages.
 
 Other changes:
 

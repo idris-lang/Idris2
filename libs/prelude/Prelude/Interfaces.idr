@@ -81,6 +81,14 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Flipped version of `<$>`, an infix alias for `map`, applying a function across
+||| everything of type 'a' in a parameterised type.
+||| @ f the parameterised type
+||| @ func the function to apply
+public export
+(<&>) : Functor f => f a -> (func : a -> b) -> f b
+(<&>) x func = map func x
+
 ||| Run something for effects, replacing the return value with a given parameter.
 public export
 (<$) : Functor f => b -> f a -> f b
@@ -243,11 +251,11 @@ interface Foldable t where
   null : t elem -> Lazy Bool
   null = foldr {acc = Lazy Bool} (\ _,_ => False) True
 
-||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
-||| Consequently, the final value is wrapped in the same `Monad`.
-public export
-foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
-foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+  ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
+  ||| Consequently, the final value is wrapped in the same `Monad`.
+  public export
+  foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
+  foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
 
 ||| Maps each element to a value and combine them
 public export

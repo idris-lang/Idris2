@@ -4,7 +4,7 @@ Error: While processing right hand side of fsprf. Can't solve constraint between
 CongErr.idr:4:11--4:19
  1 | import Data.Fin
  2 | 
- 3 | fsprf : x === y -> FS x = FS y
+ 3 | fsprf : x === y -> Fin.FS x = FS y
  4 | fsprf p = cong _ p
                ^^^^^^^^
 

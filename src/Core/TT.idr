@@ -55,6 +55,22 @@ data Constant
     | WorldType
 
 export
+isConstantType : Name -> Maybe Constant
+isConstantType (UN n) = case n of
+  "Int"     => Just IntType
+  "Integer" => Just IntegerType
+  "Bits8"   => Just Bits8Type
+  "Bits16"  => Just Bits16Type
+  "Bits32"  => Just Bits32Type
+  "Bits64"  => Just Bits64Type
+  "String"  => Just StringType
+  "Char"    => Just CharType
+  "Double"  => Just DoubleType
+  "%World"  => Just WorldType
+  _ => Nothing
+isConstantType _ = Nothing
+
+export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
@@ -163,6 +179,36 @@ constTag CharType = 10
 constTag DoubleType = 11
 constTag WorldType = 12
 constTag _ = 0
+
+||| Precision of integral types.
+public export
+data Precision = P Int | Unlimited
+
+export
+Eq Precision where
+  (P m) == (P n)         = m == n
+  Unlimited == Unlimited = True
+  _         == _         = False
+
+export
+Ord Precision where
+  compare (P m) (P n)         = compare m n
+  compare Unlimited Unlimited = EQ
+  compare Unlimited _         = GT
+  compare _         Unlimited = LT
+
+public export
+data IntKind = Signed Precision | Unsigned Precision
+
+public export
+intKind : Constant -> Maybe IntKind
+intKind IntegerType = Just $ Signed Unlimited
+intKind IntType     = Just . Signed   $ P 64
+intKind Bits8Type   = Just . Unsigned $ P 8
+intKind Bits16Type  = Just . Unsigned $ P 16
+intKind Bits32Type  = Just . Unsigned $ P 32
+intKind Bits64Type  = Just . Unsigned $ P 64
+intKind _           = Nothing
 
 -- All the internal operators, parameterised by their arity
 public export
@@ -387,6 +433,20 @@ Functor PiInfo where
   map func Implicit = Implicit
   map func AutoImplicit = AutoImplicit
   map func (DefImplicit t) = (DefImplicit (func t))
+
+export
+Foldable PiInfo where
+  foldr f acc Implicit = acc
+  foldr f acc Explicit = acc
+  foldr f acc AutoImplicit = acc
+  foldr f acc (DefImplicit x) = f x acc
+
+export
+Traversable PiInfo where
+  traverse f Implicit = pure Implicit
+  traverse f Explicit = pure Explicit
+  traverse f AutoImplicit = pure AutoImplicit
+  traverse f (DefImplicit x) = map DefImplicit (f x)
 
 export
 Functor Binder where

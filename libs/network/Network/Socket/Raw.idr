@@ -70,6 +70,7 @@ getSockAddr (SAPtr ptr) = do
 
       pure $ parseIPv4 ipv4_addr
     Just AF_INET6 => pure IPv6Addr
+    Just AF_UNIX => map Hostname $ primIO (prim__idrnet_sockaddr_unix ptr)
     Just AF_UNSPEC => pure InvalidAddress)
 
 export

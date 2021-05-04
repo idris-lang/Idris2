@@ -21,8 +21,8 @@ import TTImp.TTImp
 
 import Idris.Desugar
 import Idris.Parser
-import Idris.REPLCommon
-import Idris.REPLOpts
+import Idris.REPL.Common
+import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Pretty
 

@@ -5,6 +5,9 @@
 , fetchFromGitHub
 , makeWrapper
 , idris2-version
+, racket
+, gambit
+, nodejs
 }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -28,7 +31,8 @@ stdenv.mkDerivation rec {
   # The name of the main executable of pkgs.chez is `scheme`
   buildFlags = [ "bootstrap" "SCHEME=scheme" ];
 
-  checkTarget = "test";
+  checkInputs = [ gambit nodejs ]; # racket ];
+  checkFlags = [ "INTERACTIVE=" ];
 
   # TODO: Move this into its own derivation, such that this can be changed
   #       without having to recompile idris2 every time.

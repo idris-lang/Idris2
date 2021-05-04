@@ -57,41 +57,63 @@ op o args = "(" ++ o ++ " " ++ showSep " " args ++ ")"
 boolop : String -> List String -> String
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
+add : Maybe IntKind -> String -> String -> String
+add (Just $ Signed $ P n)   x y = op "b+" [x, y, show (n-1)]
+add (Just $ Unsigned $ P n) x y = op "b+" [x, y, show n]
+add _                       x y = op "+" [x, y]
+
+sub : Maybe IntKind -> String -> String -> String
+sub (Just $ Signed $ P n)   x y = op "b-" [x, y, show (n-1)]
+sub (Just $ Unsigned $ P n) x y = op "b-" [x, y, show n]
+sub _                       x y = op "-" [x, y]
+
+mul : Maybe IntKind -> String -> String -> String
+mul (Just $ Signed $ P n)   x y = op "b*" [x, y, show (n-1)]
+mul (Just $ Unsigned $ P n) x y = op "b*" [x, y, show n]
+mul _                       x y = op "*" [x, y]
+
+div : Maybe IntKind -> String -> String -> String
+div (Just $ Signed Unlimited) x y = op "quotient" [x, y]
+div (Just $ Signed $ P n)     x y = op "b/" [x, y, show (n-1)]
+div (Just $ Unsigned $ P n)   x y = op "b/" [x, y, show n]
+div _                         x y = op "/" [x, y]
+
+shl : Maybe IntKind -> String -> String -> String
+shl (Just $ Signed $ P n)   x y = op "blodwen-bits-shl-signed"
+                                     [x, y, show (n-1)]
+shl (Just $ Unsigned $ P n) x y = op "blodwen-bits-shl" [x, y, show n]
+shl _                       x y = op "blodwen-shl" [x, y]
+
+castInt : Constant -> Constant -> String -> String
+castInt from to x =
+  case (intKind from, intKind to) of
+       (Just _, Just $ Signed Unlimited) => x
+
+       (Just $ Signed m, Just $ Signed $ P n) =>
+         if P n >= m then x else op "blodwen-toSignedInt" [x,show (n-1)]
+
+       -- Only if the precision of the target is greater
+       -- than the one of the source, there is no need to cast.
+       (Just $ Unsigned m, Just $ Signed $ P n) =>
+         if P n > m then x else op "blodwen-toSignedInt" [x,show (n-1)]
+
+       (Just $ Signed _, Just $ Unsigned $ P n) =>
+         op "blodwen-toUnsignedInt" [x,show n]
+
+       (Just $ Unsigned m, Just $ Unsigned $ P n) =>
+         if P n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
+
+       _ => "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
+
 ||| Generate scheme for a primitive function.
 schOp : PrimFn arity -> Vect arity String -> String
-schOp (Add IntType) [x, y] = op "b+" [x, y, "63"]
-schOp (Sub IntType) [x, y] = op "b-" [x, y, "63"]
-schOp (Mul IntType) [x, y] = op "b*" [x, y, "63"]
-schOp (Div IntType) [x, y] = op "b/" [x, y, "63"]
-schOp (Add Bits8Type) [x, y] = op "b+" [x, y, "8"]
-schOp (Sub Bits8Type) [x, y] = op "b-" [x, y, "8"]
-schOp (Mul Bits8Type) [x, y] = op "b*" [x, y, "8"]
-schOp (Div Bits8Type) [x, y] = op "b/" [x, y, "8"]
-schOp (Add Bits16Type) [x, y] = op "b+" [x, y, "16"]
-schOp (Sub Bits16Type) [x, y] = op "b-" [x, y, "16"]
-schOp (Mul Bits16Type) [x, y] = op "b*" [x, y, "16"]
-schOp (Div Bits16Type) [x, y] = op "b/" [x, y, "16"]
-schOp (Add Bits32Type) [x, y] = op "b+" [x, y, "32"]
-schOp (Sub Bits32Type) [x, y] = op "b-" [x, y, "32"]
-schOp (Mul Bits32Type) [x, y] = op "b*" [x, y, "32"]
-schOp (Div Bits32Type) [x, y] = op "b/" [x, y, "32"]
-schOp (Add Bits64Type) [x, y] = op "b+" [x, y, "64"]
-schOp (Sub Bits64Type) [x, y] = op "b-" [x, y, "64"]
-schOp (Mul Bits64Type) [x, y] = op "b*" [x, y, "64"]
-schOp (Div Bits64Type) [x, y] = op "b/" [x, y, "64"]
-schOp (Add ty) [x, y] = op "+" [x, y]
-schOp (Sub ty) [x, y] = op "-" [x, y]
-schOp (Mul ty) [x, y] = op "*" [x, y]
-schOp (Div IntegerType) [x, y] = op "quotient" [x, y]
-schOp (Div ty) [x, y] = op "/" [x, y]
+schOp (Add ty) [x, y] = add (intKind ty) x y
+schOp (Sub ty) [x, y] = sub (intKind ty) x y
+schOp (Mul ty) [x, y] = mul (intKind ty) x y
+schOp (Div ty) [x, y] = div (intKind ty) x y
 schOp (Mod ty) [x, y] = op "remainder" [x, y]
 schOp (Neg ty) [x] = op "-" [x]
-schOp (ShiftL IntType) [x, y] = op "blodwen-bits-shl-signed" [x, y, "63"]
-schOp (ShiftL Bits8Type) [x, y] = op "blodwen-bits-shl" [x, y, "8"]
-schOp (ShiftL Bits16Type) [x, y] = op "blodwen-bits-shl" [x, y, "16"]
-schOp (ShiftL Bits32Type) [x, y] = op "blodwen-bits-shl" [x, y, "32"]
-schOp (ShiftL Bits64Type) [x, y] = op "blodwen-bits-shl" [x, y, "64"]
-schOp (ShiftL ty) [x, y] = op "blodwen-shl" [x, y]
+schOp (ShiftL ty) [x, y] = shl (intKind ty) x y
 schOp (ShiftR ty) [x, y] = op "blodwen-shr" [x, y]
 schOp (BAnd ty) [x, y] = op "blodwen-and" [x, y]
 schOp (BOr ty) [x, y] = op "blodwen-or" [x, y]
@@ -133,67 +155,25 @@ schOp DoubleSqrt [x] = op "flsqrt" [x]
 schOp DoubleFloor [x] = op "flfloor" [x]
 schOp DoubleCeiling [x] = op "flceiling" [x]
 
-schOp (Cast IntType StringType) [x] = op "number->string" [x]
-schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
-schOp (Cast Bits8Type StringType) [x] = op "number->string" [x]
-schOp (Cast Bits16Type StringType) [x] = op "number->string" [x]
-schOp (Cast Bits32Type StringType) [x] = op "number->string" [x]
-schOp (Cast Bits64Type StringType) [x] = op "number->string" [x]
-schOp (Cast DoubleType StringType) [x] = op "number->string" [x]
-schOp (Cast CharType StringType) [x] = op "string" [x]
-
-schOp (Cast IntType IntegerType) [x] = x
-schOp (Cast Bits8Type IntegerType) [x] = x
-schOp (Cast Bits16Type IntegerType) [x] = x
-schOp (Cast Bits32Type IntegerType) [x] = x
-schOp (Cast Bits64Type IntegerType) [x] = x
+schOp (Cast Bits16Type StringType)  [x] = op "number->string" [x]
+schOp (Cast Bits32Type StringType)  [x] = op "number->string" [x]
+schOp (Cast Bits64Type StringType)  [x] = op "number->string" [x]
+schOp (Cast Bits8Type StringType)   [x] = op "number->string" [x]
+schOp (Cast CharType IntType)       [x] = op "char->integer" [x]
+schOp (Cast CharType IntegerType)   [x] = op "char->integer" [x]
+schOp (Cast CharType StringType)    [x] = op "string" [x]
+schOp (Cast DoubleType IntType)     [x] = op "exact-floor" [x]
 schOp (Cast DoubleType IntegerType) [x] = op "exact-floor" [x]
-schOp (Cast CharType IntegerType) [x] = op "char->integer" [x]
-schOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
-
-schOp (Cast IntegerType IntType) [x] = x
-schOp (Cast Bits8Type IntType) [x] = x
-schOp (Cast Bits16Type IntType) [x] = x
-schOp (Cast Bits32Type IntType) [x] = x
-schOp (Cast Bits64Type IntType) [x] = x
-schOp (Cast DoubleType IntType) [x] = op "exact-floor" [x]
-schOp (Cast StringType IntType) [x] = op "cast-string-int" [x]
-schOp (Cast CharType IntType) [x] = op "char->integer" [x]
-
-schOp (Cast IntType Bits8Type) [x] = op "integer->bits8" [x]
-schOp (Cast IntType Bits16Type) [x] = op "integer->bits16" [x]
-schOp (Cast IntType Bits32Type) [x] = op "integer->bits32" [x]
-schOp (Cast IntType Bits64Type) [x] = op "integer->bits64" [x]
-
-schOp (Cast IntegerType Bits8Type) [x] = op "integer->bits8" [x]
-schOp (Cast IntegerType Bits16Type) [x] = op "integer->bits16" [x]
-schOp (Cast IntegerType Bits32Type) [x] = op "integer->bits32" [x]
-schOp (Cast IntegerType Bits64Type) [x] = op "integer->bits64" [x]
-
-schOp (Cast Bits8Type Bits16Type) [x] = x
-schOp (Cast Bits8Type Bits32Type) [x] = x
-schOp (Cast Bits8Type Bits64Type) [x] = x
-
-schOp (Cast Bits16Type Bits8Type) [x] = op "bits16->bits8" [x]
-schOp (Cast Bits16Type Bits32Type) [x] = x
-schOp (Cast Bits16Type Bits64Type) [x] = x
-
-schOp (Cast Bits32Type Bits8Type) [x] = op "bits32->bits8" [x]
-schOp (Cast Bits32Type Bits16Type) [x] = op "bits32->bits16" [x]
-schOp (Cast Bits32Type Bits64Type) [x] = x
-
-schOp (Cast Bits64Type Bits8Type) [x] = op "bits64->bits8" [x]
-schOp (Cast Bits64Type Bits16Type) [x] = op "bits64->bits16" [x]
-schOp (Cast Bits64Type Bits32Type) [x] = op "bits64->bits32" [x]
-
-
+schOp (Cast DoubleType StringType)  [x] = op "number->string" [x]
+schOp (Cast IntType CharType)       [x] = op "cast-int-char" [x]
+schOp (Cast IntType DoubleType)     [x] = op "exact->inexact" [x]
+schOp (Cast IntType StringType)     [x] = op "number->string" [x]
 schOp (Cast IntegerType DoubleType) [x] = op "exact->inexact" [x]
-schOp (Cast IntType DoubleType) [x] = op "exact->inexact" [x]
-schOp (Cast StringType DoubleType) [x] = op "cast-string-double" [x]
-
-schOp (Cast IntType CharType) [x] = op "cast-int-char" [x]
-
-schOp (Cast from to) [x] = "(blodwen-error-quit \"Invalid cast " ++ show from ++ "->" ++ show to ++ "\")"
+schOp (Cast IntegerType StringType) [x] = op "number->string" [x]
+schOp (Cast StringType DoubleType)  [x] = op "cast-string-double" [x]
+schOp (Cast StringType IntType)     [x] = op "cast-string-int" [x]
+schOp (Cast StringType IntegerType) [x] = op "cast-string-int" [x]
+schOp (Cast from to)                [x] = castInt from to x
 
 schOp BelieveMe [_,_,x] = x
 schOp Crash [_,msg] = "(blodwen-error-quit (string-append \"ERROR: \" " ++ msg ++ "))"

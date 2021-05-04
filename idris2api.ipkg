@@ -8,6 +8,7 @@ modules =
     Algebra.ZeroOneOmega,
 
     Compiler.ANF,
+    Compiler.CaseOpts,
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Inline,
@@ -22,6 +23,7 @@ modules =
     Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC.CC,
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
@@ -67,18 +69,22 @@ modules =
     Idris.CommandLine,
     Idris.Desugar,
     Idris.Env,
+    Idris.Doc.HTML,
     Idris.DocString,
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,
+
     Idris.Package,
+    Idris.Package.Init,
+    Idris.Package.Types,
+
     Idris.Parser,
     Idris.Parser.Let,
     Idris.Pretty,
+    Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,
-    Idris.REPLCommon,
-    Idris.REPLOpts,
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
@@ -96,6 +102,10 @@ modules =
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
 
+    Idris.REPL.Common,
+    Idris.REPL.Opts,
+    Idris.REPL.FuzzySearch,
+
     Libraries.Control.ANSI,
     Libraries.Control.ANSI.CSI,
     Libraries.Control.ANSI.SGR,
@@ -112,12 +122,15 @@ modules =
     Libraries.Data.List.Lazy,
     Libraries.Data.List1,
     Libraries.Data.NameMap,
+    Libraries.Data.PosMap,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
     Libraries.Data.String.Extra,
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+
+    Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
     Libraries.Text.Distance.Levenshtein,
@@ -129,6 +142,7 @@ modules =
     Libraries.Text.Parser.Core,
     Libraries.Text.PrettyPrint.Prettyprinter,
     Libraries.Text.PrettyPrint.Prettyprinter.Doc,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.String,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal,
     Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree,
@@ -164,6 +178,7 @@ modules =
     TTImp.Impossible,
     TTImp.Parser,
     TTImp.PartialEval,
+    TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
     TTImp.ProcessDef,

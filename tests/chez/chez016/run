@@ -1,20 +1,8 @@
-# This test needs to run `idris2` from a sub-folder.
-# Split path to `idris2` executable into dirname and basename.
-# If the path is relative, add `..` to compensate for running `idris2` in a sub-folder.
-case "$1" in
-  /*)
-    # Absolute path
-    IDRIS2_DIR="$(dirname "$1")"
-    ;;
-  *)
-    # Relative path
-    IDRIS2_DIR="../$(dirname "$1")"
-    ;;
-esac
+# This test needs to run `idris2` from a sub-folder. Get the absolute path.
 
-IDRIS2_EXEC="$(basename "$1")"
+IDRIS2_EXEC="$(realpath "$1")"
 
 cd "folder with spaces" || exit
 
-"$IDRIS2_DIR/$IDRIS2_EXEC" --no-color --console-width 0 --no-banner Main.idr < ../input
+"$IDRIS2_EXEC" --no-color --console-width 0 --no-banner Main.idr < ../input
 rm -rf build

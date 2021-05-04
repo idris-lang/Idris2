@@ -1,5 +1,6 @@
 module Compiler.Inline
 
+import Compiler.CaseOpts
 import Compiler.CompileExpr
 
 import Core.CompileExpr
@@ -149,7 +150,7 @@ mutual
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n)
       = case (n == NS primIONS (UN "io_bind"), stk) of
-          (True, _ :: _ :: act :: cont :: world :: stk) =>
+          (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
                     sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
@@ -415,6 +416,43 @@ mergeLam (MkFun args def)
          pure $ MkFun args' exp'
 mergeLam d = pure d
 
+mutual
+  addRefs : NameMap Bool -> CExp vars -> NameMap Bool
+  addRefs ds (CRef _ n) = insert n False ds
+  addRefs ds (CLam _ _ sc) = addRefs ds sc
+  addRefs ds (CLet _ _ _ val sc) = addRefs (addRefs ds val) sc
+  addRefs ds (CApp _ f args) = addRefsArgs (addRefs ds f) args
+  addRefs ds (CCon _ _ _ args) = addRefsArgs ds args
+  addRefs ds (COp _ _ args) = addRefsArgs ds (toList args)
+  addRefs ds (CExtPrim _ _ args) = addRefsArgs ds args
+  addRefs ds (CForce _ _ e) = addRefs ds e
+  addRefs ds (CDelay _ _ e) = addRefs ds e
+  addRefs ds (CConCase _ sc alts def)
+      = let ds' = maybe ds (addRefs ds) def in
+            addRefsConAlts (addRefs ds' sc) alts
+  addRefs ds (CConstCase _ sc alts def)
+      = let ds' = maybe ds (addRefs ds) def in
+            addRefsConstAlts (addRefs ds' sc) alts
+  addRefs ds tm = ds
+
+  addRefsArgs : NameMap Bool -> List (CExp vars) -> NameMap Bool
+  addRefsArgs ds [] = ds
+  addRefsArgs ds (a :: as) = addRefsArgs (addRefs ds a) as
+
+  addRefsConAlts : NameMap Bool -> List (CConAlt vars) -> NameMap Bool
+  addRefsConAlts ds [] = ds
+  addRefsConAlts ds (MkConAlt _ _ _ sc :: rest)
+      = addRefsConAlts (addRefs ds sc) rest
+
+  addRefsConstAlts : NameMap Bool -> List (CConstAlt vars) -> NameMap Bool
+  addRefsConstAlts ds [] = ds
+  addRefsConstAlts ds (MkConstAlt _ sc :: rest)
+      = addRefsConstAlts (addRefs ds sc) rest
+
+getRefs : CDef -> NameMap Bool
+getRefs (MkFun args exp) = addRefs empty exp
+getRefs _ = empty
+
 export
 inlineDef : {auto c : Ref Ctxt Defs} ->
             Name -> Core ()
@@ -423,6 +461,17 @@ inlineDef n
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
          let Just cexpr =  compexpr def             | Nothing => pure ()
          setCompiled n !(inline n cexpr)
+
+-- Update the names a function refers to at runtime based on the transformation
+-- results (saves generating code unnecessarily).
+updateCallGraph : {auto c : Ref Ctxt Defs} ->
+                  Name -> Core ()
+updateCallGraph n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
+         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let refs = getRefs cexpr
+         ignore $ addDef n (record { refersToRuntimeM = Just refs } def)
 
 export
 fixArityDef : {auto c : Ref Ctxt Defs} ->
@@ -454,10 +503,15 @@ compileAndInlineAll
 
          traverse_ inlineDef cns
          traverse_ mergeLamDef cns
+         traverse_ caseLamDef cns
          traverse_ fixArityDef cns
+
          traverse_ inlineDef cns
          traverse_ mergeLamDef cns
+         traverse_ caseLamDef cns
          traverse_ fixArityDef cns
+
+         traverse_ updateCallGraph cns
   where
     nonErased : Name -> Core Bool
     nonErased n

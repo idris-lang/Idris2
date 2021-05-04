@@ -55,7 +55,7 @@ idrisTestsCoverage = MkTestPool []
       ["coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
        "coverage009", "coverage010", "coverage011", "coverage012",
-       "coverage013", "coverage014"]
+       "coverage013", "coverage014", "coverage015", "coverage016"]
 
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool []
@@ -68,7 +68,7 @@ idrisTestsError = MkTestPool []
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
-       "error016",
+       "error016", "error017",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008"]
@@ -83,7 +83,7 @@ idrisTestsInteractive = MkTestPool []
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
-       "interactive029"]
+       "interactive029", "interactive030"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool []
@@ -136,28 +136,37 @@ idrisTestsData = MkTestPool []
        "record001", "record002", "record003", "record004", "record005",
        "record006", "record007"]
 
+idrisTestsBuiltin : TestPool
+idrisTestsBuiltin = MkTestPool []
+      -- %builtin related tests for the frontend (type-checking)
+      ["builtin001", "builtin002", "builtin003", "builtin004"]
+
+idrisTestsEvaluator : TestPool
+idrisTestsEvaluator = MkTestPool []
+      [ -- Evaluator
+       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       -- Miscellaneous REPL
+       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
+       "interpreter005", "interpreter006", "interpreter007"]
+
 idrisTests : TestPool
 idrisTests = MkTestPool []
        -- Documentation strings
       ["docs001", "docs002",
-       -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
        -- "evaluator005",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
-       -- Miscellaneous REPL
-       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007",
        -- Implicit laziness, lazy evaluation
-       "lazy001",
+       "lazy001", "lazy002",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
-       "params001",
+       "params001","params002",
        -- Packages and ipkg files
-       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006",
+       "pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
+       "pkg008", "pkg009",
        -- Positivity checking
        "positivity001", "positivity002", "positivity003",
        -- Larger programs arising from real usage. Typically things with
@@ -173,7 +182,9 @@ idrisTests = MkTestPool []
        -- The 'with' rule
        "with001", "with002", "with004", "with005",
        -- with-disambiguation
-       "with003"]
+       "with003",
+       -- pretty printing
+       "pretty001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool []
@@ -256,9 +267,16 @@ baseLibraryTests = MkTestPool [Chez, Node]
   , "system_info001"
   ]
 
+-- same behavior as `baseLibraryTests`
+contribLibraryTests : TestPool
+contribLibraryTests = MkTestPool [Chez, Node]
+  [ "json_001"
+  ]
+
 codegenTests : TestPool
 codegenTests = MkTestPool []
   [ "con001"
+  , "builtin001"
   ]
 
 main : IO ()
@@ -275,11 +293,14 @@ main = runner
   , testPaths "idris2" idrisTestsPerformance
   , testPaths "idris2" idrisTestsRegression
   , testPaths "idris2" idrisTestsData
+  , testPaths "idris2" idrisTestsBuiltin
+  , testPaths "idris2" idrisTestsEvaluator
   , testPaths "idris2" idrisTests
   , testPaths "typedd-book" typeddTests
   , testPaths "ideMode" ideModeTests
   , testPaths "prelude" preludeTests
   , testPaths "base" baseLibraryTests
+  , testPaths "contrib" contribLibraryTests
   , testPaths "chez" chezTests
   , testPaths "refc" refcTests
   , testPaths "racket" racketTests
