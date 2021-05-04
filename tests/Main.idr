@@ -140,7 +140,7 @@ idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool []
       -- %builtin related tests for the frontend (type-checking)
       ["builtin001", "builtin002", "builtin003", "builtin004", "builtin005",
-       "builtin006", "builtin007", "builtin008"]
+       "builtin006", "builtin007", "builtin008", "builtin009"]
 
 idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool []
