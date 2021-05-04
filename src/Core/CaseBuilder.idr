@@ -658,7 +658,10 @@ data ScoredPats : List Name -> List Name -> Type where
 {ps : _} -> Show (ScoredPats ns ps) where
   show (Scored xs ys) = (show ps) ++ "//" ++ (show ys)
 
-||| Get proof that a value `v` inserted in the middle of a list with
+zeroedScore : {ps : _} -> List (NamedPats ns (p :: ps)) -> ScoredPats ns (p :: ps)
+zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
+
+||| Proof that a value `v` inserted in the middle of a list with
 ||| prefix `ps` and suffix `qs` can equivalently be snoced with
 ||| `ps` or consed with `qs` before appending `qs` to `ps`.
 elemInsertedMiddle : (v : a) -> (ps,qs : List a) -> (ps ++ (v :: qs)) = ((ps `snoc` v) ++ qs)
@@ -713,6 +716,8 @@ headConsPenalty p (PDelay _ _ _ w)   = headConsPenalty p w
 headConsPenalty _ (PLoc _ _)         = 0
 headConsPenalty _ (PUnmatchable _ _) = 0
 
+||| Apply the given function that scores a pattern to all patterns and then
+||| sum up the column scores and add to the ScoredPats passed in.
 consScoreHeuristic : {ps : _} -> (scorePat : Pat -> Int) -> ScoredPats ns ps -> ScoredPats ns ps
 consScoreHeuristic _ sps@(Scored [] _) = sps -- can't update scores without any patterns
 consScoreHeuristic scorePat (Scored xs ys) = 
@@ -735,9 +740,6 @@ consScoreHeuristic scorePat (Scored xs ys) =
           (rest' ** prf) = toList' rest
       in  firstCol :: (rewrite sym $ prf in scoreColumns rest')
 
-zeroed : {ps : _} -> List (NamedPats ns (p :: ps)) -> ScoredPats ns (p :: ps)
-zeroed _ = Scored [] (replicate (S $ length ps) 0)
-
 ||| Add 1 to each non-default pat in the first row.
 ||| This favors constructive matching first and reduces tree depth on average.
 heuristicF : {ps : _} -> ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)
@@ -745,7 +747,7 @@ heuristicF sps@(Scored [] _) = sps
 heuristicF (Scored (x :: xs) ys) = 
   let columnScores = scores x
       ys' = zipWith (+) ys columnScores
-  in  Scored (x :: xs) (scores x)
+  in  Scored (x :: xs) ys'
   where
     isBlank : Pat -> Bool
     isBlank (PLoc _ _) = True
@@ -759,25 +761,22 @@ heuristicF (Scored (x :: xs) ys) =
 ||| Subtract 1 from each column for each pat that represents a head constructor.
 ||| This favors pats that produce less branching.
 heuristicB : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
-heuristicB = consScoreHeuristic (headConsPenalty (const $ -1))
+heuristicB = consScoreHeuristic (headConsPenalty (\arity => if arity == 0 then 0 else -1))
 
 ||| Subtract the sum of the arities of constructors in each column.
 heuristicA : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
 heuristicA = consScoreHeuristic (headConsPenalty (negate . cast))
 
+applyHeuristics : {p : _} -> {ps : _} -> ScoredPats ns (p :: ps) -> List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) -> Maybe (n ** NVar n (p :: ps))
+applyHeuristics x [] = highScoreIdx x
+applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
+
 ||| Based only on the heuristic-score of columns, get the index of
 ||| the column that should be processed next.
 nextIdx : {p : _} -> {ps : _} -> List (NamedPats ns (p :: ps)) -> (n ** NVar n (p :: ps))
 nextIdx xs = 
-  let scored = heuristicF $ zeroed xs
-  in  case highScoreIdx scored of
-           Just s  => s
-           Nothing =>
-             let scored' = heuristicB scored
-             in  case highScoreIdx scored' of
-                      Just s  => s
-                      Nothing =>
-                        fromMaybe (_ ** (MkNVar First)) $ highScoreIdx $ heuristicA scored'
+  fromMaybe (_ ** (MkNVar First)) $
+    applyHeuristics (zeroedScore xs) [heuristicF, heuristicB, heuristicA]
 
 -- Check whether all the initial patterns have the same concrete, known
 -- and matchable type, which is multiplicity > 0.
@@ -942,12 +941,13 @@ mutual
   -- has the most distinct constructors (via pickNext)
   match {todo = (_ :: _)} fc fn phase clauses err
       = do let nps = getNPs <$> clauses
-           let scores = heuristicF $ zeroed nps
-           log "compile.casetree.debug" 1 ("\nF: " ++ (show scores))
-           let scores' = heuristicB scores
-           log "compile.casetree.debug" 1 ("\nB: " ++ (show scores'))
-           let (n ** (MkNVar next)) = nextIdx nps
-           log "compile.casetree" 26 $ "Want " ++ show n ++ " as the next split based on alphabet heuristics"
+--            let scores = heuristicF $ zeroedScore nps
+--            log "compile.casetree.debug" 1 ("\nF: " ++ (show scores))
+--            let scores' = heuristicB scores
+--            log "compile.casetree.debug" 1 ("\nB: " ++ (show scores'))
+--            let scores'' = heuristicA scores'
+--            log "compile.casetree.debug" 1 ("\nA: " ++ (show scores''))
+           let (_ ** (MkNVar next)) = nextIdx nps
            let prioritizedClauses = shuffleVars next <$> clauses
            (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> prioritizedClauses)
            -- (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> clauses)
