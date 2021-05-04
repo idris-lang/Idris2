@@ -103,28 +103,6 @@ plhs = MkParseOpts False False
 %hide Prelude.(<*>)
 %hide Core.Core.(<*>)
 
-isPrimType : Constant -> Bool
-isPrimType (I   x)  = False
-isPrimType (BI  x)  = False
-isPrimType (B8  x)  = False
-isPrimType (B16 x)  = False
-isPrimType (B32 x)  = False
-isPrimType (B64 x)  = False
-isPrimType (Str x)  = False
-isPrimType (Ch  x)  = False
-isPrimType (Db  x)  = False
-isPrimType WorldVal = False
-isPrimType IntType     = True
-isPrimType IntegerType = True
-isPrimType Bits8Type   = True
-isPrimType Bits16Type  = True
-isPrimType Bits32Type  = True
-isPrimType Bits64Type  = True
-isPrimType StringType  = True
-isPrimType CharType    = True
-isPrimType DoubleType  = True
-isPrimType WorldType   = True
-
 atom : FileName -> Rule PTerm
 atom fname
     = do x <- bounds $ decorate fname Typ $ exactIdent "Type"
