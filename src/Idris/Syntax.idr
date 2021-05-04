@@ -361,10 +361,15 @@ mutual
   getPDeclLoc (PDirective fc _) = fc
   getPDeclLoc (PBuiltin fc _ _) = fc
 
-  export
-  isPDef : PDecl -> Maybe (FC, List PClause)
-  isPDef (PDef annot cs) = Just (annot, cs)
-  isPDef _ = Nothing
+export
+isStrInterp : PStr -> Maybe FC
+isStrInterp (StrInterp fc _) = Just fc
+isStrInterp (StrLiteral _ _) = Nothing
+
+export
+isPDef : PDecl -> Maybe (FC, List PClause)
+isPDef (PDef annot cs) = Just (annot, cs)
+isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name

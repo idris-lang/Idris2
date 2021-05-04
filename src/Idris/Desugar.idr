@@ -445,9 +445,11 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
                  Side -> List Name -> FC -> List PStr -> Core RawImp
-  expandString side ps fc xs = pure $ case !(traverse toRawImp (filter notEmpty $ mergeStrLit xs)) of
-                                   [] => IPrimVal fc (Str "")
-                                   xs@(_::_) => foldr1 concatStr xs
+  expandString side ps fc xs
+    = do xs <- traverse toRawImp (filter notEmpty $ mergeStrLit xs)
+         pure $ case xs of
+           [] => IPrimVal fc (Str "")
+           (_ :: _) => foldr1 concatStr xs
     where
       toRawImp : PStr -> Core RawImp
       toRawImp (StrLiteral fc str) = pure $ IPrimVal fc (Str str)
@@ -466,7 +468,10 @@ mutual
       notEmpty (StrInterp _ _) = True
 
       concatStr : RawImp -> RawImp -> RawImp
-      concatStr a b = IApp (getFC a) (IApp (getFC b) (IVar (getFC b) (UN "++")) a) b
+      concatStr a b =
+        let aFC = virtualiseFC (getFC a)
+            bFC = virtualiseFC (getFC b)
+        in IApp aFC (IApp bFC (IVar bFC (UN "++")) a) b
 
   trimMultiline : FC -> Nat -> List (List PStr) -> Core (List PStr)
   trimMultiline fc indent lines
@@ -486,8 +491,7 @@ mutual
                      then throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
                      else pure initLines
         trimLast _ (initLines `snoc` xs) | Snoc xs initLines _
-            = let fc = fromMaybe fc $ findBy (\case StrInterp fc _ => Just fc;
-                                                    StrLiteral _ _ => Nothing) xs in
+            = let fc = fromMaybe fc $ findBy isStrInterp xs in
                   throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
 
       dropLastNL : List PStr -> List PStr
