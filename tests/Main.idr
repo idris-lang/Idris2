@@ -160,7 +160,7 @@ idrisTests = MkTestPool []
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Implicit laziness, lazy evaluation
-       "lazy001",
+       "lazy001", "lazy002",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
@@ -203,6 +203,8 @@ chezTests = MkTestPool [Chez]
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
     , "chez031", "chez032"
     , "futures001"
+    , "casts"
+    , "newints"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
@@ -235,6 +237,8 @@ nodeTests = MkTestPool [Node]
     , "node017", "node018", "node019", "node021", "node022", "node023"
     , "node024", "node025"
     -- , "node14", "node020"
+    , "casts"
+    , "newints"
     , "reg001"
     , "syntax001"
     , "tailrec001"

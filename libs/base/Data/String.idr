@@ -18,25 +18,6 @@ partial
 foldl1 : (a -> a -> a) -> List a -> a
 foldl1 f (x::xs) = foldl f x xs
 
--- This function runs fast when compiled but won't compute at compile time.
--- If you need to unpack strings at compile time, use Prelude.unpack.
-%foreign
-  "scheme:string-unpack"
-  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
-export
-fastUnpack : String -> List Char
-
--- This works quickly because when string-concat builds the result, it allocates
--- enough room in advance so there's only one allocation, rather than lots!
---
--- Like fastUnpack, this function won't reduce at compile time.
--- If you need to concatenate strings at compile time, use Prelude.concat.
-%foreign
-  "scheme:string-concat"
-  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
-export
-fastConcat : List String -> String
-
 -- This uses fastConcat internally so it won't compute at compile time.
 export
 fastUnlines : List String -> String
@@ -131,6 +112,8 @@ unlines' (l::ls) = l ++ '\n' :: unlines' ls
 export
 unlines : List String -> String
 unlines = pack . unlines' . map unpack
+
+%transform "fastUnlines" unlines = fastUnlines
 
 ||| A view checking whether a string is empty
 ||| and, if not, returning its head and tail

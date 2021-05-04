@@ -49,7 +49,7 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec testenv testenv-clean support support-clean clean FORCE
+.PHONY: all idris2-exec libdocs testenv testenv-clean support support-clean clean FORCE
 
 all: support ${TARGET} libs
 
@@ -83,6 +83,12 @@ test-lib: contrib
 	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 libs : prelude base contrib network test-lib
+
+libdocs:
+	${MAKE} -C libs/prelude docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 ${TEST_PREFIX}/${NAME_VERSION} :
 	${MAKE} install-support PREFIX=${TEST_PREFIX}
@@ -146,10 +152,12 @@ endif
 
 install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
 	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
+	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
 	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
