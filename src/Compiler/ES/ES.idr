@@ -203,7 +203,7 @@ truncateIntWithBitMask bits e =
 -- We can't determine `isBigInt` from the given number of bits, since
 -- when casting from BigInt to Number we need to truncate the BigInt
 -- first, otherwise we might lose precision
-boundedInt : {auto c : Ref ESs ESSt} -> 
+boundedInt : {auto c : Ref ESs ESSt} ->
              (isBigInt : Bool) -> Int -> String -> Core String
 boundedInt isBigInt bits e =
    let name = if isBigInt then "truncToBigInt" else "truncToInt"
@@ -282,7 +282,7 @@ div :  {auto c : Ref ESs ESSt}
        -> Core String
 div (Just k) x y =
   if useBigInt k then pure $ binOp "/" x y
-                 else pure $ jsIntOfDouble k (x ++ " / " ++ y) 
+                 else pure $ jsIntOfDouble k (x ++ " / " ++ y)
 div Nothing x y = pure $ binOp "/" x y
 
 
