@@ -1,3 +1,6 @@
+README
+======
+
 Structure of this test
 ----------------------
 
