@@ -97,3 +97,5 @@ This can be used with ``%transform`` to allow many other operations to be O(1) t
     eqNat _ _ = False
 
     %transform "eqNat" eqNat j k = natToInteger j == natToInteger k
+
+For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.
