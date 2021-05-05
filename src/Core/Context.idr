@@ -650,11 +650,15 @@ data Transform : Type where
 ||| during codegen.
 public export
 data BuiltinType : Type where
-    MkBuiltinType : String -> BuiltinType
+    BuiltinNatural : BuiltinType
+    NaturalToInteger : BuiltinType
+    IntegerToNatural : BuiltinType
 
 export
 Show BuiltinType where
-    show (MkBuiltinType str) = str
+    show BuiltinNatural = "Natural"
+    show NaturalToInteger = "NaturalToInteger"
+    show IntegerToNatural = "IntegerToNatural"
 
 -- Token types to make it harder to get the constructor names
 -- the wrong way round.
