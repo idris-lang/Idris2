@@ -4,5 +4,8 @@ all:
 install:
 	${IDRIS2} --install prelude.ipkg
 
+docs:
+	${IDRIS2} --mkdoc prelude.ipkg
+
 clean:
 	$(RM) -r build

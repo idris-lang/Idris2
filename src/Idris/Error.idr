@@ -34,6 +34,9 @@ import Libraries.Data.String.Extra
 
 %default covering
 
+keyword : Doc IdrisAnn -> Doc IdrisAnn
+keyword = annotate (Syntax SynKeyword)
+
 -- | Add binding site information if the term is simply a machine-inserted name
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
@@ -50,7 +53,7 @@ pshow env tm
     = do defs <- get Ctxt
          ntm <- normaliseHoles defs env tm
          itm <- resugar env ntm
-         pure (pShowMN ntm env $ prettyTerm itm)
+         pure (pShowMN ntm env $ reAnnotate Syntax $ prettyTerm itm)
 
 pshowNoNorm : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -59,7 +62,7 @@ pshowNoNorm : {vars : _} ->
 pshowNoNorm env tm
     = do defs <- get Ctxt
          itm <- resugar env tm
-         pure (pShowMN tm env $ prettyTerm itm)
+         pure (pShowMN tm env $ reAnnotate Syntax $ prettyTerm itm)
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)

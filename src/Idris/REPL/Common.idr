@@ -203,7 +203,7 @@ docsOrSignature fc n
          let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
                                      (map fst all)
              | [] => typeSummary defs
-         pure <$> getDocsForName fc n
+         pure [!(render styleAnn !(getDocsForName fc n))]
   where
     typeSummary : Defs -> Core (List String)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
@@ -232,4 +232,3 @@ equivTypes ty1 ty2 =
            (\err => pure False)
      when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
      pure b
-
