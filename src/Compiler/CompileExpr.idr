@@ -210,7 +210,7 @@ builtinMagic = do
              (\ fc, [k] => CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k])
         ] -- TODO: add builtin pragmas for Nat related functions (to/from Integer, add, mult, minus, compare)
     natToIntMagic : (Name, NatToInt) -> Magic
-    natToIntMagic (fn, MkNatToInt {arity, natIdx}) =
+    natToIntMagic (fn, MkNatToInt arity natIdx) =
         MagicCRef fn arity
             (\ _, _, args => index natIdx args)
 
