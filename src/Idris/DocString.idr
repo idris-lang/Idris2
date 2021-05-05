@@ -149,13 +149,15 @@ getDocsForName fc n
     getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
+                  -- should never happen, since we know that the DCon exists:
                   | Nothing => pure Empty
              syn <- get Syn
-             let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure Empty
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
+             let [(n, str)] = lookupName con (docstrings syn)
+                  | _ => pure conWithTypeDoc
              pure $ vcat
-               [ annotate (Decl con) (hsep [dCon (prettyName n), colon, prettyTerm ty])
+               [ conWithTypeDoc
                , annotate DocStringBody $ vcat $ reflowDoc str
                ]
 
