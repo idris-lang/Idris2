@@ -32,4 +32,7 @@ diff expectedA outputA >> output
 $1 --no-color --console-width 0 --ide-mode < inputB > outputB
 diff expectedB outputB >> output
 
+$1 --no-color --console-width 0 --ide-mode < inputC > outputC
+diff expectedC outputC >> output
+
 rm -rf build

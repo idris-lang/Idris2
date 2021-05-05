@@ -195,6 +195,7 @@ getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
 -- Find a 'with' application on the RHS and update it
 export
 withRHS : {auto c : Ref Ctxt Defs} ->
+          {auto m : Ref MD Metadata} ->
           FC -> (drop : Nat) -> Name -> List (Maybe (PiInfo RawImp, Name)) ->
           RawImp -> RawImp ->
           Core RawImp
@@ -212,8 +213,12 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm (arg :: args)
         = do log "declare.def.clause.with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
+             hdloc <- getHeadLoc tm
+             whenJust (isConcreteFC hdloc) \ nfc => do
+               addSemanticDecorations [(nfc, Function, Just wname)]
+
              log "declare.def.clause.with" 10 $ "Result: " ++ show ms
-             let newrhs = apply (IVar fc wname)
+             let newrhs = apply (IVar hdloc wname)
                                 (map (getArgMatch fc InExpr True arg ms) wargnames)
              log "declare.def.clause.with" 10 $ "With args for RHS: " ++ show wargnames
              log "declare.def.clause.with" 10 $ "New RHS: " ++ show newrhs
