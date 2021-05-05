@@ -136,14 +136,15 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
+               (source : String) ->
                Core ()
-resetContext
+resetContext fname
     = do defs <- get Ctxt
          put Ctxt (record { options = clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
-         put MD initMetadata
+         put MD (initMetadata fname)
 
 public export
 data EditResult : Type where

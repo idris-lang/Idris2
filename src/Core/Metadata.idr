@@ -88,10 +88,11 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
+       sourcefile : String
        semanticHighlighting : PosMap ASemanticDecoration
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap semanticHighlighting)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap fname semanticHighlighting)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
@@ -99,17 +100,19 @@ Show Metadata where
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
       " nameLocMap: " ++ show nameLocMap ++ "\n" ++
+      " sourcefile: " ++ fname ++
       " nameLocMap: " ++ show semanticHighlighting
 
 export
-initMetadata : Metadata
-initMetadata = MkMetadata
+initMetadata : String -> Metadata
+initMetadata fname = MkMetadata
   { lhsApps = []
   , names = []
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
   , nameLocMap = empty
+  , sourcefile = fname
   , semanticHighlighting = empty
   }
 
@@ -124,6 +127,7 @@ TTC Metadata where
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
            toBuf b (nameLocMap m)
+           toBuf b (sourcefile m)
            toBuf b (semanticHighlighting m)
 
   fromBuf b
@@ -132,8 +136,9 @@ TTC Metadata where
            tys <- fromBuf b
            hlhs <- fromBuf b
            dlocs <- fromBuf b
+           fname <- fromBuf b
            semhl <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs dlocs semhl)
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl)
 
 export
 addLHS : {vars : _} ->
@@ -270,8 +275,16 @@ addSemanticDecorations : {auto m : Ref MD Metadata} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
-         let newDecors = fromList decors
-         put MD $ record {semanticHighlighting $=  (newDecors `union`)} meta
+         let posmap = meta.semanticHighlighting
+         let (newDecors,droppedDecors) = span
+                                           ((meta.sourcefile ==)
+                                            . (\((fn, _), _) => fn))
+                                           decors
+         when (not $ isNil droppedDecors)
+           $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
+               ++ meta.sourcefile ++ ": " ++ show droppedDecors
+         put MD $ record {semanticHighlighting
+                            = (fromList newDecors) `union` posmap} meta
          pure ()
 
 
@@ -332,13 +345,14 @@ HasNames Metadata where
       fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
       fullDecls (fc, n) = pure (fc, !(full gam n))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs semhl)
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
                           Nothing
                           !(traverse resolvedHLHS hlhs)
                           (fromList !(traverse resolvedDecls (toList dlocs)))
+                          fname
                           semhl
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
