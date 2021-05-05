@@ -261,4 +261,5 @@ processBuiltin nest env fc type name = do
     case type of
         BuiltinNatural => processBuiltinNatural ds fc name
         NaturalToInteger => processNatToInteger ds fc name
-        IntegerToNatural => throw $ InternalError "%builtin NaturalToInteger not yet implemented"
+        IntegerToNatural => throw $ InternalError "%builtin NaturalToInteger not yet implemented."
+        BuiltinEnum => throw $ InternalError "%builtin Enum not yet implemented."
