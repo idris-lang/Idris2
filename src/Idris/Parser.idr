@@ -114,7 +114,7 @@ atom fname
                        then Typ
                        else Data
          pure (PPrimVal (boundToFC fname x) x.val)
-  <|> do x <- bounds $ symbol "_"
+  <|> do x <- bounds $ decoratedSymbol fname "_"
          pure (PImplicit (boundToFC fname x))
   <|> do x <- bounds $ symbol "?"
          pure (PInfer (boundToFC fname x))

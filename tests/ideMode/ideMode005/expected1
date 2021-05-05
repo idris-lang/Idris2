@@ -128,6 +128,7 @@
 0000d4(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 8) (:end 31 13)) ((:name "MkPair") (:namespace "Builtin") (:decor :data) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000c8(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 9) (:end 31 9)) ((:name "c") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 10) (:end 31 10)) ((:decor :keyword)))))) 1)
+000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 12) (:end 31 12)) ((:decor :keyword)))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 15) (:end 31 16)) ((:decor :keyword)))))) 1)
 0000d9(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 18) (:end 31 21)) ((:name "Just") (:namespace "Prelude.Types") (:decor :data) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000d5(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 31 23) (:end 31 28)) ((:name "MkPair") (:namespace "Builtin") (:decor :data) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
