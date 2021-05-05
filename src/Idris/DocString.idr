@@ -145,18 +145,19 @@ getDocsForName fc n
       let root = nameRoot n in
       if isOpName n then parens (pretty root) else pretty root
 
-    getDConDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getDConDoc : Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
-                  | Nothing => pure []
+                  | Nothing => pure Empty
              syn <- get Syn
              let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure []
+                  | _ => pure Empty
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure $ pure $ vcat $
-               annotate (Decl con) (hsep [dCon (prettyName n), colon, prettyTerm ty])
-               :: reflowDoc str
+             pure $ vcat
+               [ annotate (Decl con) (hsep [dCon (prettyName n), colon, prettyTerm ty])
+               , annotate DocStringBody $ vcat $ reflowDoc str
+               ]
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
@@ -242,7 +243,7 @@ getDocsForName fc n
                TCon _ _ _ _ _ _ cons _
                    => do let tot = [showTotal n (totality d)]
                          cdocs <- traverse (getDConDoc <=< toFullNames) cons
-                         let cdoc = case concat cdocs of
+                         let cdoc = case cdocs of
                               [] => []
                               [doc] => [header "Constructor" <++> annotate Declarations doc]
                               docs => [vcat [header "Constructors"
