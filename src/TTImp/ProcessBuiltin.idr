@@ -215,7 +215,7 @@ processBuiltinNatural :
 processBuiltinNatural ds fc name = do
     log "builtin.Natural" 5 $ "Processing %builtin Natural " ++ show name ++ "."
     [(n, _, gdef)] <- lookupCtxtName name ds.gamma
-        | [] => throw $ UndefinedName fc name
+        | [] => undefinedName fc name
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc
@@ -233,7 +233,7 @@ processNatToInteger :
 processNatToInteger ds fc fn = do
     log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show fn ++ "."
     [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
-        | [] => throw $ UndefinedName fc fn
+        | [] => undefinedName fc fn
         | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
     let PMDef _ args _ cases _ = gdef.definition
         | def => throw $ GenericMsg fc
@@ -250,7 +250,6 @@ processNatToInteger ds fc fn = do
     let Just natIdx = getNEIndex arity gdef.type
         | Nothing => throw $ InternalError "Couldn't find non-erased argument."
     addNatToInteger n (MkNatToInt {arity, natIdx})
-    pure ()
 
 ||| Check a `%builtin` pragma is correct.
 export
@@ -259,8 +258,7 @@ processBuiltin :
     NestedNames vars -> Env Term vars -> FC -> BuiltinType -> Name -> Core ()
 processBuiltin nest env fc type name = do
     ds <- get Ctxt
-    let MkBuiltinType typeStr = type
-    case typeStr of
-        "Nat" => processBuiltinNatural ds fc name
-        "NatToInteger" => processNatToInteger ds fc name
-        _ => throw $ InternalError $ "unexpected %builtin " ++ typeStr ++ "."
+    case type of
+        BuiltinNatural => processBuiltinNatural ds fc name
+        NaturalToInteger => processNatToInteger ds fc name
+        IntegerToNatural => throw $ InternalError "%builtin NaturalToInteger not yet implemented"
