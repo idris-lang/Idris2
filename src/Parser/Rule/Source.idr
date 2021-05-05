@@ -191,9 +191,9 @@ pragma n =
 export
 builtinType : Rule BuiltinType
 builtinType =
-    MkBuiltinType "Nat" <$ exactIdent "Natural"
-    <|> MkBuiltinType "NatToInteger" <$ exactIdent "NaturalToInteger"
-    <|> MkBuiltinType "IntegerToNat" <$ exactIdent "IntegerToNatural"
+    BuiltinNatural <$ exactIdent "Natural"
+    <|> NaturalToInteger <$ exactIdent "NaturalToInteger"
+    <|> IntegerToNatural <$ exactIdent "IntegerToNatural"
 
 export
 operator : Rule Name
