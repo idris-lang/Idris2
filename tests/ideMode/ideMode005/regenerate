@@ -1,38 +1,19 @@
+rm -rf build
+
 $1 --no-color --console-width 0 --ide-mode < input1 > expected1
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input2 > expected2
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input3 > expected3
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input4 > expected4
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input5 > expected5
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input6 > expected6
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input7 > expected7
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input8 > expected8
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < input9 > expected9
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < inputA > expectedA
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < inputB > expectedB
-rm -rf build
-
 $1 --no-color --console-width 0 --ide-mode < inputC > expectedC
-rm -rf build
+$1 --no-color --console-width 0 --ide-mode < inputD > expectedD
 
-rm -f expected output
+rm -f expected output*
 touch expected
+rm -rf build
