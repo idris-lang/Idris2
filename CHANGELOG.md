@@ -7,6 +7,16 @@ Library changes:
   - Moved `tests/Lib.idr` into new `test` package as `Test/Golden.idr`.
 
   - Removed `contrib/Test/Golden.idr` which duplicated the test framework now in the `test` package.
+* Added `System.Console.GetOpt`,a library for specifying and parsing
+  command line options, to `contrib`.
+* Monad transformers in `Control.Monad` where restructured
+  and several new transformer types where added.
+* `Data.Colist` and `Data.Colist1` where added to `base`.
+* `Data.Bits`, an interface for bitwise operations, was added to `base`.
+* Interfaces `Bifoldable` and `Bitraversable` were added to the `prelude`.
+* Interface `Data.Contravariant` for contravariant functors was added
+  to base.
+* `Control.Applicative.Const` was added to `base`.
 
 REPL/IDE mode changes:
 
@@ -51,6 +61,14 @@ API changes:
 
 * The API now exposes `Compiler.Separate.getCompilationUnits`, which
   can be used for separate code generation by any backend.
+* New fixed precision signed integer types `Int8`, `Int16`, `Int32`,
+  and `Int64` where added. In addition, all integral types now properly support
+  all arithmetic and bitwise operations.
+* The compiler now provides primitive cast operations for all combinations
+  of primitives with the exception of going from `Double` to `Char` and
+  back, and going from `String` to `Char`.
+* A new pragma `%doubleLit` to support overloaded floating point literals
+  was added.
 
 Library changes:
 
@@ -60,6 +78,9 @@ Library changes:
   asynchronous channels, which worked apart from `broadcast`. The rework fixes
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
+* The JS backends now use `Number` instead of `BigInt` to represent up to 32 bit fixed
+  precision signed and unsigned integers. This should make interop
+  with the FFI more straight forward, and might also improve performance.
 
 Other changes:
 
@@ -72,6 +93,7 @@ Other changes:
   `depends` for local installations of packages before looking globally.
 * Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
   look for packages.
+* Support for auto-completion in bash-like shells was added.
 
 Changes since Idris 2 v0.2.1
 ----------------------------
