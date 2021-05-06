@@ -94,7 +94,7 @@ p {
 }
 
 .decls {
-  margin-top: 15px;
+  margin-top: 5px;
 }
 
 .decls > dt {
@@ -111,7 +111,7 @@ p {
 }
 
 .decls > dd {
-  margin: 10px 0 10px 20px;
+  margin: 10px 0 20px 20px;
   font-family: Arial, sans-serif;
   font-size: 10pt;
 }
