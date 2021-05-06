@@ -902,15 +902,15 @@ mutual
                                                          ((acc `snoc` (line `snoc` (StrLiteral (boundToFC fname x) str))) ++
                                                                ((\str => [StrLiteral (boundToFC fname x) str]) <$> (init strs)))
 
-visOption : Rule Visibility
-visOption
-    = (keyword "public" *> keyword "export" $> Public)
-  <|> (keyword "export" $> Export)
-  <|> (keyword "private" $> Private)
+visOption : FileName ->  Rule Visibility
+visOption fname
+    = (decoratedKeyword fname "public" *> decoratedKeyword fname "export" $> Public)
+  <|> (decoratedKeyword fname "export" $> Export)
+  <|> (decoratedKeyword fname "private" $> Private)
 
-visibility : EmptyRule Visibility
-visibility
-    = visOption
+visibility : FileName -> EmptyRule Visibility
+visibility fname
+    = visOption fname
   <|> pure Private
 
 tyDecls : Rule Name -> String -> FileName -> IndentInfo -> Rule (List1 PTypeDecl)
@@ -1063,7 +1063,7 @@ dataDeclBody fname indents
 dataDecl : FileName -> IndentInfo -> Rule PDecl
 dataDecl fname indents
     = do b <- bounds (do doc   <- option "" documentation
-                         vis   <- visibility
+                         vis   <- visibility fname
                          dat   <- dataDeclBody fname indents
                          pure (doc, vis, dat))
          (doc, vis, dat) <- pure b.val
@@ -1293,7 +1293,7 @@ builtinDecl fname indents
 
 visOpt : FileName -> Rule (Either Visibility PFnOpt)
 visOpt fname
-    = do vis <- visOption
+    = do vis <- visOption fname
          pure (Left vis)
   <|> do tot <- fnOpt fname
          pure (Right tot)
@@ -1359,7 +1359,7 @@ ifaceParam fname indents
 ifaceDecl : FileName -> IndentInfo -> Rule PDecl
 ifaceDecl fname indents
     = do b <- bounds (do doc   <- option "" documentation
-                         vis   <- visibility
+                         vis   <- visibility fname
                          col   <- column
                          decoratedKeyword fname "interface"
                          commit
@@ -1450,7 +1450,7 @@ recordParam fname indents
 recordDecl : FileName -> IndentInfo -> Rule PDecl
 recordDecl fname indents
     = do b <- bounds (do doc   <- option "" documentation
-                         vis   <- visibility
+                         vis   <- visibility fname
                          col   <- column
                          decoratedKeyword fname "record"
                          n       <- mustWork (decoratedDataTypeName fname)
