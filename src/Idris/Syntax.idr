@@ -96,6 +96,7 @@ mutual
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
        PList : FC -> List PTerm -> PTerm
+       PSnocList : FC -> List PTerm -> PTerm
        PPair : FC -> PTerm -> PTerm -> PTerm
        PDPair : FC -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
@@ -158,6 +159,7 @@ mutual
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _) = fc
   getPTermLoc (PList fc _) = fc
+  getPTermLoc (PSnocList fc _) = fc
   getPTermLoc (PPair fc _ _) = fc
   getPTermLoc (PDPair fc _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
@@ -618,6 +620,8 @@ mutual
     showPrec d (PIdiom _ tm) = "[|" ++ showPrec d tm ++ "|]"
     showPrec d (PList _ xs)
         = "[" ++ showSep ", " (map (showPrec d) xs) ++ "]"
+    showPrec d (PSnocList _ xs)
+        = "[<" ++ showSep ", " (map (showPrec d) xs) ++ "]"
     showPrec d (PPair _ l r) = "(" ++ showPrec d l ++ ", " ++ showPrec d r ++ ")"
     showPrec d (PDPair _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
     showPrec d (PDPair _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
@@ -979,6 +983,9 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm (PList fc xs) =
       PList fc <$> goPTerms xs
+      >>= f
+    goPTerm (PSnocList fc xs) =
+      PSnocList fc <$> goPTerms xs
       >>= f
     goPTerm (PPair fc x y) =
       PPair fc <$> goPTerm x

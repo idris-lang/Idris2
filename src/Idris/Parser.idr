@@ -325,6 +325,25 @@ mutual
              <|> (do b <- bounds (symbol "]")
                      pure (PList (boundToFC fname (mergeBounds s b)) xs))
 
+  snocListExpr : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
+  snocListExpr fname s indents
+      = {- TODO: comprehension
+        do b <- bounds (do ret <- expr pnowith fname indents
+                           symbol "|"
+                           conds <- sepBy1 (symbol ",") (doAct fname indents)
+                           symbol "]"
+                           pure (ret, conds))
+           (ret, conds) <- pure b.val
+           pure (PComprehension (boundToFC fname (mergeBounds s b)) ret (concat conds))
+    <|> -}
+        do xs <- sepBy (symbol ",") (expr pdef fname indents)
+           {- TODO: reverse ranges
+           (do symbol ".."
+               listRange fname s indents xs)
+             <|> (do -}
+           b <- bounds (symbol "]")
+           pure (PSnocList (boundToFC fname (mergeBounds s b)) xs) --)
+
   nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   nonEmptyTuple fname s indents e
       = do rest <- bounds (forget <$> some (bounds (symbol "," *> optional (bounds (expr pdef fname indents))))
@@ -410,7 +429,9 @@ mutual
            pure (PUnquote (boundToFC fname b) b.val)
     <|> do start <- bounds (symbol "(")
            bracketedExpr fname start indents
-    <|> do start <- bounds (symbol "[")
+    <|> do start <- bounds (symbol "[<")
+           snocListExpr fname start indents
+    <|> do start <- bounds (symbol "[>" <|> symbol "[")
            listExpr fname start indents
     <|> do b <- bounds (symbol "!" *> simpleExpr fname indents)
            pure (PBang (boundToFC fname b) b.val)

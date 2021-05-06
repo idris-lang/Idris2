@@ -315,6 +315,8 @@ mutual
            pure val
   desugarB side ps (PList fc args)
       = expandList side ps fc args
+  desugarB side ps (PSnocList fc args)
+      = expandSnocList side ps fc (reverse args)
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -409,6 +411,19 @@ mutual
   expandList side ps fc (x :: xs)
       = pure $ apply (IVar fc (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps fc xs)]
+
+  expandSnocList
+             : {auto s : Ref Syn SyntaxInfo} ->
+               {auto b : Ref Bang BangData} ->
+               {auto c : Ref Ctxt Defs} ->
+               {auto u : Ref UST UState} ->
+               {auto m : Ref MD Metadata} ->
+               Side -> List Name -> FC -> List PTerm -> Core RawImp
+  expandSnocList side ps fc [] = pure (IVar fc (UN "Empty"))
+  expandSnocList side ps fc (x :: xs)
+      = pure $ apply (IVar fc (UN ":<"))
+                [!(expandSnocList side ps fc xs) , !(desugarB side ps x)]
+
 
   addNS : Maybe Namespace -> Name -> Name
   addNS (Just ns) n@(NS _ _) = n
