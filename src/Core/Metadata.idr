@@ -42,6 +42,15 @@ SemanticDecorations : Type
 SemanticDecorations = List ASemanticDecoration
 
 public export
+Eq Decoration where
+  Typ      == Typ      = True
+  Function == Function = True
+  Data     == Data     = True
+  Keyword  == Keyword  = True
+  Bound    == Bound    = True
+  _        == _        = False
+
+public export
 Show Decoration where
   show Typ      = "type"
   show Function = "function"
