@@ -14,7 +14,4 @@ The diffs for each pair is then appended to the main `output` file. So the
 How to fix this test?
 ---------------------
 
-1. Identify the file that caused the issue by looking at the produced diff
-2. Remove the `build/` directory if it exists
-3. Run `idris2 --no-color --console-width 0 --ide-mode < inputN > expectedN`
-   where `inputN` is the input file loading the file that caused the issue.
+Run `./regenerate PATH/TO/IDRIS2`
