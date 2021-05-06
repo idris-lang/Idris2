@@ -16,6 +16,7 @@ import Prelude.Ops
 ||| The Num interface defines basic numerical arithmetic.
 public export
 interface Num ty where
+  constructor MkNum
   (+) : ty -> ty -> ty
   (*) : ty -> ty -> ty
   ||| Conversion from Integer.
@@ -26,6 +27,7 @@ interface Num ty where
 ||| The `Neg` interface defines operations on numbers which can be negative.
 public export
 interface Num ty => Neg ty where
+  constructor MkNeg
   ||| The underlying of unary minus. `-5` desugars to `negate (fromInteger 5)`.
   negate : ty -> ty
   (-) : ty -> ty -> ty
@@ -33,11 +35,13 @@ interface Num ty => Neg ty where
 ||| Numbers for which the absolute value is defined should implement `Abs`.
 public export
 interface Num ty => Abs ty where
+  constructor MkAbs
   ||| Absolute value.
   abs : ty -> ty
 
 public export
 interface Num ty => Fractional ty where
+  constructor MkFractional
   partial
   (/) : ty -> ty -> ty
   partial
@@ -47,6 +51,7 @@ interface Num ty => Fractional ty where
 
 public export
 interface Num ty => Integral ty where
+  constructor MkIntegral
   partial
   div : ty -> ty -> ty
   partial
