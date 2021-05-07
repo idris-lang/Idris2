@@ -153,8 +153,10 @@ outputSyntaxHighlighting fname loadResult = do
     let aliases
           : List ASemanticDecoration
           = flip foldMap meta.semanticAliases $ \ (from, to) =>
-              let decors = uncurry inRange (snd to) semHigh
-              in map (mapFst (mapSnd (const (snd from)))) decors
+              let candidates = uncurry inRange (snd to) semHigh in
+              flip mapMaybe candidates $ \ ((fnm, loc), rest) =>
+                do guard (loc == snd to)
+                   pure ((fnm, snd from), rest)
     log "ide-mode.highlight.alias" 19 $
       "Semantic metadata from aliases is: " ++ show aliases
 
