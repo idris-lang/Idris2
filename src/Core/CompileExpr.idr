@@ -471,6 +471,10 @@ export
 Weaken CExp where
   weakenNs ns tm = insertNames zero ns tm
 
+export
+Weaken CConAlt where
+  weakenNs ns tm = insertNamesConAlt zero ns tm
+
 -- Substitute some explicit terms for names in a term, and remove those
 -- names from the scope
 namespace SubstCEnv

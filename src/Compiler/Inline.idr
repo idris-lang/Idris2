@@ -204,16 +204,30 @@ mutual
       = pure $ unload stk (CDelay fc lr !(eval rec env [] e))
   eval rec env stk (CConCase fc sc alts def)
       = do sc' <- eval rec env [] sc
-           Nothing <- pickAlt rec env stk sc' alts def | Just val => pure val
-           def' <- traverseOpt (eval rec env stk) def
-           pure $ CConCase fc sc'
-                     !(traverse (evalAlt fc rec env stk) alts)
+           let env' = update sc env sc'
+           Nothing <- pickAlt rec env' stk sc' alts def | Just val => pure val
+           def' <- traverseOpt (eval rec env' stk) def
+           pure $ caseOfCase $ CConCase fc sc'
+                     !(traverse (evalAlt fc rec env' stk) alts)
                      def'
+    where
+      updateLoc : {idx, vs : _} ->
+                  (0 p : IsVar x idx (vs ++ free)) ->
+                  EEnv free vs -> CExp free -> EEnv free vs
+      updateLoc {vs = []} p env val = env
+      updateLoc {vs = (x::xs)} First (e :: env) val = val :: env
+      updateLoc {vs = (y::xs)} (Later p) (e :: env) val = e :: updateLoc p env val
+
+      update : {vs : _} ->
+               CExp (vs ++ free) -> EEnv free vs -> CExp free -> EEnv free vs
+      update (CLocal _ p) env sc = updateLoc p env sc
+      update _ env _ = env
+
   eval rec env stk (CConstCase fc sc alts def)
       = do sc' <- eval rec env [] sc
            Nothing <- pickConstAlt rec env stk sc' alts def | Just val => pure val
            def' <- traverseOpt (eval rec env stk) def
-           pure $ CConstCase fc sc'
+           pure $ caseOfCase $ CConstCase fc sc'
                          !(traverse (evalConstAlt rec env stk) alts)
                          def'
   eval rec env stk (CPrimVal fc c) = pure $ unload stk $ CPrimVal fc c
@@ -500,19 +514,20 @@ compileAndInlineAll
          cns <- filterM nonErased ns
 
          traverse_ compileDef cns
-
-         traverse_ inlineDef cns
-         traverse_ mergeLamDef cns
-         traverse_ caseLamDef cns
-         traverse_ fixArityDef cns
-
-         traverse_ inlineDef cns
-         traverse_ mergeLamDef cns
-         traverse_ caseLamDef cns
-         traverse_ fixArityDef cns
-
+         transform 3 cns -- number of rounds to run transformations.
+                         -- This seems to be the point where not much useful
+                         -- happens any more.
          traverse_ updateCallGraph cns
   where
+    transform : Nat -> List Name -> Core ()
+    transform Z cns = pure ()
+    transform (S k) cns
+        = do traverse_ inlineDef cns
+             traverse_ mergeLamDef cns
+             traverse_ caseLamDef cns
+             traverse_ fixArityDef cns
+             transform k cns
+
     nonErased : Name -> Core Bool
     nonErased n
         = do defs <- get Ctxt
