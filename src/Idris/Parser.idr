@@ -296,13 +296,13 @@ mutual
                              ty <- expr pdef fname indents
                              pure (x, ty))
            (x, ty) <- pure loc.val
-           (do op <- bounds (symbol "**")
-               rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
-               pure (PDPair (boundToFC fname (mergeBounds start rest))
-                            (boundToFC fname op)
-                            (PRef (boundToFC fname loc) (UN x))
-                            ty
-                            rest.val))
+           op <- bounds (symbol "**")
+           rest <- bounds (nestedDpair fname loc indents <|> expr pdef fname indents)
+           pure (PDPair (boundToFC fname (mergeBounds start rest))
+                        (boundToFC fname op)
+                        (PRef (boundToFC fname loc) (UN x))
+                        ty
+                        rest.val)
 
   nestedDpair : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
   nestedDpair fname start indents
