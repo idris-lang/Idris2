@@ -464,6 +464,10 @@ export %inline
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
 export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
+
+export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 

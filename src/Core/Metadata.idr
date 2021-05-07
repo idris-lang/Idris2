@@ -36,7 +36,6 @@ public export
 ASemanticDecoration : Type
 ASemanticDecoration = (NonEmptyFC, Decoration, Maybe Name)
 
-
 public export
 SemanticDecorations : Type
 SemanticDecorations = List ASemanticDecoration
@@ -98,10 +97,17 @@ record Metadata where
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
        sourcefile : String
+
+       -- Semantic Highlighting
+       -- Posmap of known semantic decorations
        semanticHighlighting : PosMap ASemanticDecoration
+       -- Posmap of aliases (in `with` clauses the LHS disapear during
+       -- elaboration after making sure that they match their parents'
+       semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap fname semanticHighlighting)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
+                   fname semanticHighlighting semanticAliases)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
@@ -110,7 +116,8 @@ Show Metadata where
       " holes: " ++ show holeLHS ++ "\n" ++
       " nameLocMap: " ++ show nameLocMap ++ "\n" ++
       " sourcefile: " ++ fname ++
-      " nameLocMap: " ++ show semanticHighlighting
+      " semanticHighlighting: " ++ show semanticHighlighting ++
+      " semanticAliases: " ++ show semanticAliases
 
 export
 initMetadata : String -> Metadata
@@ -123,6 +130,7 @@ initMetadata fname = MkMetadata
   , nameLocMap = empty
   , sourcefile = fname
   , semanticHighlighting = empty
+  , semanticAliases = empty
   }
 
 -- A label for metadata in the global state
@@ -138,6 +146,7 @@ TTC Metadata where
            toBuf b (nameLocMap m)
            toBuf b (sourcefile m)
            toBuf b (semanticHighlighting m)
+           toBuf b (semanticAliases m)
 
   fromBuf b
       = do apps <- fromBuf b
@@ -147,7 +156,8 @@ TTC Metadata where
            dlocs <- fromBuf b
            fname <- fromBuf b
            semhl <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl)
+           semal <- fromBuf b
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl semal)
 
 export
 addLHS : {vars : _} ->
@@ -277,10 +287,16 @@ findHoleLHS hn
     = do meta <- get MD
          pure (lookupBy (\x, y => dropNS x == dropNS y) hn (holeLHS meta))
 
+export
+addSemanticAlias : {auto m : Ref MD Metadata} ->
+                   NonEmptyFC -> NonEmptyFC -> Core ()
+addSemanticAlias from to
+  = do meta <- get MD
+       put MD $ { semanticAliases $= insert (from, to) } meta
 
 export
 addSemanticDecorations : {auto m : Ref MD Metadata} ->
-                         {auto ctx : Ref Ctxt Defs} ->
+                         {auto c : Ref Ctxt Defs} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
@@ -289,12 +305,11 @@ addSemanticDecorations decors
                                            ((meta.sourcefile ==)
                                             . (\((fn, _), _) => fn))
                                            decors
-         when (not $ isNil droppedDecors)
+         unless (isNil droppedDecors)
            $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
                ++ meta.sourcefile ++ ": " ++ show droppedDecors
          put MD $ record {semanticHighlighting
                             = (fromList newDecors) `union` posmap} meta
-         pure ()
 
 
 -- Normalise all the types of the names, since they might have had holes
@@ -354,7 +369,7 @@ HasNames Metadata where
       fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
       fullDecls (fc, n) = pure (fc, !(full gam n))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl)
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl semal)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
@@ -363,6 +378,7 @@ HasNames Metadata where
                           (fromList !(traverse resolvedDecls (toList dlocs)))
                           fname
                           semhl
+                          semal
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))

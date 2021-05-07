@@ -582,6 +582,7 @@ greater k NoInterval = False
 -- however the remaining interval are not necessarily adjacent in
 -- the sequence, thus it drops elements until the next intersecting
 -- interval with dropUntil.
+export
 inRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
 inRange low high t = matches (takeUntil (greater high) t)
   where matches : PosMap a -> List a

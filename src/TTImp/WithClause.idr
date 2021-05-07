@@ -17,8 +17,8 @@ import Data.Maybe
 matchFail : FC -> Core a
 matchFail loc = throw (GenericMsg loc "With clause does not match parent")
 
--- To be used on the lhs of a nested with clause to figure out a tight location
--- information to give to the generated LHS
+--- To be used on the lhs of a nested with clause to figure out a tight location
+--- information to give to the generated LHS
 getHeadLoc : RawImp -> Core FC
 getHeadLoc (IVar fc _) = pure fc
 getHeadLoc (IApp _ f _) = getHeadLoc f
@@ -26,19 +26,37 @@ getHeadLoc (IAutoApp _ f _) = getHeadLoc f
 getHeadLoc (INamedApp _ f _ _) = getHeadLoc f
 getHeadLoc t = throw (InternalError $ "Could not find head of LHS: " ++ show t)
 
+addAlias : {auto m : Ref MD Metadata} ->
+           {auto c : Ref Ctxt Defs} ->
+           FC -> FC -> Core ()
+addAlias from to =
+  whenJust (isConcreteFC from) $ \ from =>
+    whenJust (isConcreteFC to) $ \ to => do
+      log "ide-mode.highlighting.alias" 25 $
+        "Adding alias: " ++ show from ++ " -> " ++ show to
+      addSemanticAlias from to
+
 mutual
   export
-  getMatch : (lhs : Bool) -> RawImp -> RawImp ->
+  getMatch : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             (lhs : Bool) -> RawImp -> RawImp ->
              Core (List (String, RawImp))
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
   getMatch lhs (Implicit _ _) tm = pure []
 
-  getMatch lhs (IVar _ (NS ns n)) (IVar loc (NS ns' n'))
-      = if n == n' && isParentOf ns' ns then pure [] else matchFail loc
-  getMatch lhs (IVar _ (NS ns n)) (IVar loc n')
-      = if n == n' then pure [] else matchFail loc
-  getMatch lhs (IVar _ n) (IVar loc n')
-      = if n == n' then pure [] else matchFail loc
+  getMatch lhs (IVar to (NS ns n)) (IVar from (NS ns' n'))
+      = if n == n' && isParentOf ns' ns
+          then [] <$ addAlias from to -- <$ decorateName loc nm
+          else matchFail from
+  getMatch lhs (IVar to (NS ns n)) (IVar from n')
+      = if n == n'
+          then [] <$ addAlias from to -- <$ decorateName loc (NS ns n')
+          else matchFail from
+  getMatch lhs (IVar to n) (IVar from n')
+      = if n == n'
+          then [] <$ addAlias from to -- <$ decorateName loc n'
+          else matchFail from
   getMatch lhs (IPi _ c p n arg ret) (IPi loc c' p' n' arg' ret')
       = if c == c' && eqPiInfoBy (\_, _ => True) p p' && n == n'
            then matchAll lhs [(arg, arg'), (ret, ret')]
@@ -91,14 +109,18 @@ mutual
     else matchFail fc
   getMatch lhs pat spec = matchFail (getFC pat)
 
-  matchAny : FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
+  matchAny : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
              Core (List (String, RawImp))
   matchAny fc lhs [] = matchFail fc
   matchAny fc lhs ((x, y) :: ms)
       = catch (getMatch lhs x y)
               (\err => matchAny fc lhs ms)
 
-  matchAll : (lhs : Bool) -> List (RawImp, RawImp) ->
+  matchAll : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             (lhs : Bool) -> List (RawImp, RawImp) ->
              Core (List (String, RawImp))
   matchAll lhs [] = pure []
   matchAll lhs ((x, y) :: ms)
@@ -106,7 +128,9 @@ mutual
            mxy <- getMatch lhs x y
            mergeMatches lhs (mxy ++ matches)
 
-  mergeMatches : (lhs : Bool) -> List (String, RawImp) ->
+  mergeMatches : {auto m : Ref MD Metadata} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 (lhs : Bool) -> List (String, RawImp) ->
                  Core (List (String, RawImp))
   mergeMatches lhs [] = pure []
   mergeMatches lhs ((n, tm) :: rest)
@@ -168,16 +192,7 @@ getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
          let params = map (getArgMatch vploc (InLHS top) False warg ms) wargnames
          log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
 
-         -- The name of the generated with function is *not* a source name so it
-         -- will not be added to the posmap. But we do need this information to
-         -- be there for the head of the LHS of the nested with clause to be
-         -- highlighted properly.
-         -- We deliberately attach the `wname` because `f ps | qs` is indeed the
-         -- (source) name of the internally used wname!
          hdloc <- getHeadLoc patlhs
-         whenJust (isConcreteFC hdloc) \ nfc => do
-           addSemanticDecorations [(nfc, Function, Just wname)]
-
          let newlhs = apply (IVar hdloc wname) (params ++ rest)
          log "declare.def.clause.with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
@@ -214,9 +229,6 @@ withRHS fc drop wname wargnames tm toplhs
         = do log "declare.def.clause.with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
              hdloc <- getHeadLoc tm
-             whenJust (isConcreteFC hdloc) \ nfc => do
-               addSemanticDecorations [(nfc, Function, Just wname)]
-
              log "declare.def.clause.with" 10 $ "Result: " ++ show ms
              let newrhs = apply (IVar hdloc wname)
                                 (map (getArgMatch fc InExpr True arg ms) wargnames)
