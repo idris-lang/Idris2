@@ -342,17 +342,18 @@ data List a =
 
 %name List xs, ys, zs
 
-||| Snoc lists.
-public export
-data SnocList a =
-  ||| Empty snoc-list
-  Empty
+namespace Data.SnocList
+  ||| Snoc lists.
+  public export
+  data SnocList a =
+    ||| Empty snoc-list
+    Lin
 
-  | ||| A non-empty snoc-list, consisting of the rest of the snoc-list and the final element.
-  (:<) (SnocList a) a
+    | ||| A non-empty snoc-list, consisting of the rest of the snoc-list and the final element.
+    (:<) (SnocList a) a
 
-%name SnocList sx, sy, sz
--- The rest is in base/Data.SnocList
+  %name SnocList sx, sy, sz
+  -- The rest is in base/Data.SnocList
 
 public export
 Eq a => Eq (List a) where

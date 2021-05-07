@@ -419,7 +419,7 @@ mutual
                {auto u : Ref UST UState} ->
                {auto m : Ref MD Metadata} ->
                Side -> List Name -> FC -> List PTerm -> Core RawImp
-  expandSnocList side ps fc [] = pure (IVar fc (UN "Empty"))
+  expandSnocList side ps fc [] = pure (IVar fc (UN "Lin"))
   expandSnocList side ps fc (x :: xs)
       = pure $ apply (IVar fc (UN ":<"))
                 [!(expandSnocList side ps fc xs) , !(desugarB side ps x)]

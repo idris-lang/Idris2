@@ -15,13 +15,13 @@ sx <>< (x :: xs) = sx :< x <>< xs
 ||| 'chips': Action of snoc-lists on lists
 public export
 (<>>) : SnocList a -> List a -> List a
-Empty     <>> xs = xs
+Lin       <>> xs = xs
 (sx :< x) <>> xs = sx <>> x :: xs
 
 ||| Reverse the snoc-list and make a list.
 public export
 toList : SnocList type -> List type
-toList Empty = Nil
+toList Lin       = Nil
 toList (sx :< x) = x :: toList sx
 
 ||| Transform to a list but keeping the contents in the 'correct' order (term depth).
@@ -32,41 +32,41 @@ asList = (reverse . toList)
 
 public export
 Eq a => Eq (SnocList a) where
-  (==) Empty Empty = True
+  (==) Lin Lin = True
   (==) (sx :< x) (sy :< y) = x == y && sx == sy
   (==) _ _ = False
 
 
 public export
 Ord a => Ord (SnocList a) where
-  compare Empty Empty = EQ
-  compare Empty (sx :< x) = LT
-  compare (sx :< x) Empty = GT
+  compare Lin Lin = EQ
+  compare Lin (sx :< x) = LT
+  compare (sx :< x) Lin = GT
   compare (sx :< x) (sy :< y)
     = case compare sx sy of
         EQ => compare x y
         c  => c
 
-||| True iff input is Empty
+||| True iff input is Lin
 public export
-isEmpty : SnocList a -> Bool
-isEmpty Empty = True
-isEmpty (sx :< x) = False
+isLin : SnocList a -> Bool
+isLin Lin = True
+isLin (sx :< x) = False
 
 ||| True iff input is (:<)
 public export
 isSnoc : SnocList a -> Bool
-isSnoc Empty     = False
+isSnoc Lin     = False
 isSnoc (sx :< x) = True
 
 public export
 (++) : (sx, sy : SnocList a) -> SnocList a
-(++) sx Empty = sx
+(++) sx Lin = sx
 (++) sx (sy :< y) = (sx ++ sy) :< y
 
 public export
 length : SnocList a -> Nat
-length Empty = Z
+length Lin = Z
 length (sx :< x) = length sx + 1
 
 export
@@ -74,14 +74,14 @@ Show a => Show (SnocList a) where
   show xs = "[< " ++ show' "" xs ++ "]"
     where
       show' : String -> SnocList a -> String
-      show' acc Empty     = acc
+      show' acc Lin     = acc
       show' acc [< x]     = show x ++ acc
       show' acc (xs :< x) = show' (", " ++ show x ++ acc) xs
 
 
 public export
 Functor SnocList where
-  map f Empty = Empty
+  map f Lin = Lin
   map f (sx :< x) = (map f sx) :< (f x)
 
 
@@ -91,11 +91,11 @@ Semigroup (SnocList a) where
 
 public export
 Monoid (SnocList a) where
-  neutral = Empty
+  neutral = Lin
 
 
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
 elem : Eq a => a -> SnocList a -> Bool
-elem x Empty = False
+elem x Lin = False
 elem x (sx :< y) = x == y || elem x sx

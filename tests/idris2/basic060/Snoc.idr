@@ -3,7 +3,7 @@ import Data.SnocList
 A, B, C, D, E : SnocList Nat
 A = [<]
 
-B = Empty :< 1 :< 2 :< 3
+B = Lin :< 1 :< 2 :< 3
 
 C = [< 1, 2, 3]
 

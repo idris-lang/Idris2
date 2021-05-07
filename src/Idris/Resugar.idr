@@ -126,14 +126,16 @@ mutual
          "==="    => pure $ PEq fc (unbracket l) (unbracket r)
          "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
          _        => Nothing
-       else if nameRoot nm == ":<"
-               then case sugarApp (unbracket r) of
-                 PList fc xs => pure $ PList fc (unbracketApp l :: xs)
-                 PSnocList fc xs
-                             => pure $ PSnocList
-                                             fc (unbracketApp l :: xs)
-                 _           => Nothing
-               else Nothing
+       else case nameRoot nm of
+              "::" => case sugarApp (unbracket r) of
+                PList fc xs => pure $ PList fc (unbracketApp l :: xs)
+                _           => Nothing
+              ":<" => case sugarApp (unbracket r) of
+                        PSnocList fc xs => pure $ PSnocList fc
+                                                  -- use a snoc list here in a future version
+                                                  (xs ++ [unbracketApp l])
+                        _               => Nothing
+              _    => Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
     case extractNat 0 tm of
@@ -147,7 +149,7 @@ mutual
                _           => Nothing
              else case nameRoot nm of
                "Nil"   => pure $ PList fc []
-               "Empty" => pure $ PSnocList fc []
+               "Lin"   => pure $ PSnocList fc []
                _       =>  Nothing
         _ => Nothing
 
