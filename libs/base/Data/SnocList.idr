@@ -18,16 +18,16 @@ public export
 Lin       <>> xs = xs
 (sx :< x) <>> xs = sx <>> x :: xs
 
-||| Reverse the snoc-list and make a list.
-public export
-toList : SnocList type -> List type
-toList Lin       = Nil
-toList (sx :< x) = x :: toList sx
+Cast (SnocList a) (List a) where
+  cast sx = sx <>> []
 
-||| Transform to a list but keeping the contents in the 'correct' order (term depth).
+Cast (List a) (SnocList a) where
+  cast xs = Lin <>< xs
+
+||| Transform to a list but keeping the contents in the spine order (term depth).
 public export
 asList : SnocList type -> List type
-asList = (reverse . toList)
+asList = (reverse . cast)
 
 
 public export
