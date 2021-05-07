@@ -74,8 +74,8 @@ Show a => Show (SnocList a) where
   show xs = "[< " ++ show' "" xs ++ "]"
     where
       show' : String -> SnocList a -> String
-      show' acc Lin     = acc
-      show' acc [< x]     = show x ++ acc
+      show' acc Lin       = acc
+      show' acc (Lin :< x)= show x ++ acc
       show' acc (xs :< x) = show' (", " ++ show x ++ acc) xs
 
 
