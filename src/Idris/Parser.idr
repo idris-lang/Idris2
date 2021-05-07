@@ -145,6 +145,11 @@ commitSymbol req
     = symbol req
        <|> fatalError ("Expected '" ++ req ++ "'")
 
+continueWithDecorated : FileName -> IndentInfo -> String -> Rule ()
+continueWithDecorated fname indents req
+    = mustContinue indents (Just req) *> decoratedSymbol fname req
+
+
 continueWith : IndentInfo -> String -> Rule ()
 continueWith indents req
     = mustContinue indents (Just req) *> symbol req
@@ -318,7 +323,7 @@ mutual
       -- section otherwise treat it as prefix
       = do b <- bounds (do op <- bounds iOperator
                            e <- expr pdef fname indents
-                           continueWith indents ")"
+                           continueWithDecorated fname indents ")"
                            pure (op, e))
            (op, e) <- pure b.val
            act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
@@ -339,7 +344,7 @@ mutual
     <|> do e <- bounds (expr pdef fname indents)
            -- dependent pairs with no type annotation
            (do loc <- bounds (symbol "**")
-               rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* decoratedSymbol fname ")")
+               rest <- bounds ((nestedDpair fname loc indents <|> expr pdef fname indents) <* symbol ")")
                pure (PDPair (boundToFC fname (mergeBounds s rest))
                             (boundToFC fname loc)
                             e.val
@@ -437,7 +442,8 @@ mutual
   tuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   tuple fname s indents e
      =   nonEmptyTuple fname s indents e
-     <|> do end <- bounds (continueWith indents ")")
+     <|> do end <- bounds (continueWithDecorated fname indents ")")
+            act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
             pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
 
   postfixProjection : FileName -> IndentInfo -> Rule PTerm
@@ -941,16 +947,16 @@ mutual
             pure (MkPatClause fc lhs rhs ws)
      <|> do b <- bounds (do decoratedKeyword fname "with"
                             commit
-                            flags <- bounds (withFlags)
-                            decoratedSymbol fname "("
-                            wval <- bracketedExpr fname flags indents
+                            flags <- withFlags
+                            start <- bounds (decoratedSymbol fname "(")
+                            wval <- bracketedExpr fname start indents
                             prf <- optional (decoratedKeyword fname "proof"
                                              *> UN <$> decoratedSimpleBinderName fname)
                             ws <- mustWork $ nonEmptyBlockAfter col (clause (S withArgs) fname)
                             pure (prf, flags, wval, forget ws))
             (prf, flags, wval, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc lhs wval prf flags.val ws)
+            pure (MkWithClause fc lhs wval prf flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure (MkImpossible (boundToFC fname (mergeBounds start end)) lhs)
