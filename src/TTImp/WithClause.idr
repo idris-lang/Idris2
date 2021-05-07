@@ -42,6 +42,8 @@ mutual
              {auto c : Ref Ctxt Defs} ->
              (lhs : Bool) -> RawImp -> RawImp ->
              Core (List (String, RawImp))
+  getMatch lhs (IBindVar to n) tm@(IBindVar from _)
+      = [(n, tm)] <$ addAlias from to
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
   getMatch lhs (Implicit _ _) tm = pure []
 
@@ -94,7 +96,7 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ _ (UN n) p) (IAs fc _ _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN n) p) (IAs _ fc _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
   getMatch lhs (IAs _ _ _ (UN n) p) p'
@@ -138,8 +140,9 @@ mutual
            case lookup n rest' of
                 Nothing => pure ((n, tm) :: rest')
                 Just tm' =>
-                   do ignore $ getMatch lhs tm tm' -- just need to know it succeeds
-                      mergeMatches lhs rest
+                   do ignore $ getMatch lhs tm tm'
+                      -- ^ just need to know it succeeds
+                      pure rest'
 
 -- Get the arguments for the rewritten pattern clause of a with by looking
 -- up how the argument names matched

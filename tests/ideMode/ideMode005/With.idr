@@ -20,3 +20,11 @@ nested m with (m)
         nested m | Z | S k | S l | Z = 3
         nested m | Z | S k | S l | S p = 4
   nested m | S k = 5
+
+data ANat : Nat -> Type where
+  MkANat : (n : Nat) -> ANat n
+
+someNats : Nat -> Nat
+someNats n with (MkANat n)
+  someNats n | m@(MkANat n) with (MkANat n)
+    someNats n | p@(MkANat n) | MkANat n = Z

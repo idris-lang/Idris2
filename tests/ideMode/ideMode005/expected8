@@ -26,6 +26,7 @@
 000079(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 8 28) (:end 8 28)) ((:decor :keyword)))))) 1)
 0000e6(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 8 29) (:end 8 30)) ((:name "++") (:namespace "Prelude.Types.String") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000076(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 8 32) (:end 8 37)) ((:decor :data)))))) 1)
+000079(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 8 38) (:end 8 38)) ((:decor :keyword)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 9 18) (:end 9 18)) ((:decor :keyword)))))) 1)
 00007a(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 9 20) (:end 9 23)) ((:decor :function)))))) 1)
 000079(:output (:ok (:highlight-source ((((:filename "RecordUpdate.idr") (:start 9 25) (:end 9 25)) ((:decor :keyword)))))) 1)
