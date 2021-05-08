@@ -68,8 +68,8 @@ mutual
                            $ shiftBinder {outer = n :: outer} new sc
   shiftBinder new (CApp fc f args)
       = CApp fc (shiftBinder new f) $ map (shiftBinder new) args
-  shiftBinder new (CCon fc c tag args)
-      = CCon fc c tag $ map (shiftBinder new) args
+  shiftBinder new (CCon fc ci c tag args)
+      = CCon fc ci c tag $ map (shiftBinder new) args
   shiftBinder new (COp fc op args) = COp fc op $ map (shiftBinder new) args
   shiftBinder new (CExtPrim fc p args)
       = CExtPrim fc p $ map (shiftBinder new) args
@@ -91,10 +91,10 @@ mutual
                 (new : Name) ->
                 CConAlt (outer ++ (x :: args ++ vars)) ->
                 CConAlt (outer ++ (args ++ new :: vars))
-  shiftBinderConAlt new (MkConAlt n t args' sc)
+  shiftBinderConAlt new (MkConAlt n ci t args' sc)
       = let sc' : CExp ((args' ++ outer) ++ (x :: args ++ vars))
                 = rewrite sym (appendAssociative args' outer (x :: args ++ vars)) in sc in
-        MkConAlt n t args' $
+        MkConAlt n ci t args' $
            rewrite (appendAssociative args' outer (args ++ new :: vars))
              in shiftBinder new {outer = args' ++ outer} sc'
 
@@ -118,10 +118,10 @@ tryLiftOut : (new : Name) ->
              List (CConAlt vars) ->
              Maybe (List (CConAlt (new :: vars)))
 tryLiftOut new [] = Just []
-tryLiftOut new (MkConAlt n t args (CLam fc x sc) :: as)
+tryLiftOut new (MkConAlt n ci t args (CLam fc x sc) :: as)
     = do as' <- tryLiftOut new as
          let sc' = liftOutLambda new sc
-         pure (MkConAlt n t args sc' :: as')
+         pure (MkConAlt n ci t args sc' :: as')
 tryLiftOut _ _ = Nothing
 
 tryLiftOutConst : (new : Name) ->
@@ -145,7 +145,7 @@ tryLiftDef _ _ = Nothing
 
 allLams : List (CConAlt vars) -> Bool
 allLams [] = True
-allLams (MkConAlt n t args (CLam _ _ _) :: as)
+allLams (MkConAlt n ci t args (CLam _ _ _) :: as)
    = allLams as
 allLams _ = False
 
@@ -227,8 +227,8 @@ mutual
       = CLet fc x inl <$> caseLam val <*> caseLam sc
   caseLam (CApp fc f args)
       = CApp fc <$> caseLam f <*> traverse caseLam args
-  caseLam (CCon fc n t args)
-      = CCon fc n t <$> traverse caseLam args
+  caseLam (CCon fc n ci t args)
+      = CCon fc n ci t <$> traverse caseLam args
   caseLam (COp fc op args)
       = COp fc op <$> traverseVect caseLam args
   caseLam (CExtPrim fc p args)
@@ -242,8 +242,8 @@ mutual
 
   caseLamConAlt : {auto n : Ref NextName Int} ->
                   CConAlt vars -> Core (CConAlt vars)
-  caseLamConAlt (MkConAlt n tag args sc)
-      = MkConAlt n tag args <$> caseLam sc
+  caseLamConAlt (MkConAlt n ci tag args sc)
+      = MkConAlt n ci tag args <$> caseLam sc
 
   caseLamConstAlt : {auto n : Ref NextName Int} ->
                     CConstAlt vars -> Core (CConstAlt vars)

@@ -615,6 +615,21 @@ export
                  100 => pure BelieveMe
                  _ => corrupt "PrimFn 3"
 
+export
+TTC ConInfo where
+  toBuf b DATACON = tag 0
+  toBuf b TYCON = tag 1
+  toBuf b NIL = tag 2
+  toBuf b CONS = tag 3
+
+  fromBuf b
+      = case !getTag of
+             0 => pure DATACON
+             1 => pure TYCON
+             2 => pure NIL
+             3 => pure CONS
+             _ => corrupt "ConInfo"
+
 mutual
   export
   {vars : _} -> TTC (CExp vars) where
@@ -623,7 +638,7 @@ mutual
     toBuf b (CLam fc x sc) = do tag 2; toBuf b fc; toBuf b x; toBuf b sc
     toBuf b (CLet fc x inl val sc) = do tag 3; toBuf b fc; toBuf b x; toBuf b inl; toBuf b val; toBuf b sc
     toBuf b (CApp fc f as) = assert_total $ do tag 4; toBuf b fc; toBuf b f; toBuf b as
-    toBuf b (CCon fc t n as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b as
+    toBuf b (CCon fc t n ci as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b ci; toBuf b as
     toBuf b (COp {arity} fc op as) = assert_total $ do tag 6; toBuf b fc; toBuf b arity; toBuf b op; toBuf b as
     toBuf b (CExtPrim fc f as) = assert_total $ do tag 7; toBuf b fc; toBuf b f; toBuf b as
     toBuf b (CForce fc lr x) = assert_total $ do tag 8; toBuf b fc; toBuf b lr; toBuf b x
@@ -654,8 +669,8 @@ mutual
                        f <- fromBuf b; as <- fromBuf b
                        pure (CApp fc f as)
                5 => do fc <- fromBuf b
-                       t <- fromBuf b; n <- fromBuf b; as <- fromBuf b
-                       pure (CCon fc t n as)
+                       t <- fromBuf b; n <- fromBuf b; ci <- fromBuf b; as <- fromBuf b
+                       pure (CCon fc t n ci as)
                6 => do fc <- fromBuf b
                        arity <- fromBuf b; op <- fromBuf b; args <- fromBuf b
                        pure (COp {arity} fc op args)
@@ -688,12 +703,12 @@ mutual
 
   export
   {vars : _} -> TTC (CConAlt vars) where
-    toBuf b (MkConAlt n t as sc) = do toBuf b n; toBuf b t; toBuf b as; toBuf b sc
+    toBuf b (MkConAlt n ci t as sc) = do toBuf b n; toBuf b ci; toBuf b t; toBuf b as; toBuf b sc
 
     fromBuf b
-        = do n <- fromBuf b; t <- fromBuf b
+        = do n <- fromBuf b; ci <- fromBuf b; t <- fromBuf b
              as <- fromBuf b; sc <- fromBuf b
-             pure (MkConAlt n t as sc)
+             pure (MkConAlt n ci t as sc)
 
   export
   {vars : _} -> TTC (CConstAlt vars) where

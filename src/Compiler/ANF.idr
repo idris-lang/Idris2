@@ -29,7 +29,7 @@ mutual
     AUnderApp : FC -> Name -> (missing : Nat) -> (args : List AVar) -> ANF
     AApp : FC -> (lazy : Maybe LazyReason) -> (closure : AVar) -> (arg : AVar) -> ANF
     ALet : FC -> (var : Int) -> ANF -> ANF -> ANF
-    ACon : FC -> Name -> (tag : Maybe Int) -> List AVar -> ANF
+    ACon : FC -> Name -> ConInfo -> (tag : Maybe Int) -> List AVar -> ANF
     AOp : FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity AVar -> ANF
     AExtPrim : FC -> (lazy : Maybe LazyReason) -> Name -> List AVar -> ANF
     AConCase : FC -> AVar -> List AConAlt -> Maybe ANF -> ANF
@@ -40,7 +40,7 @@ mutual
 
   public export
   data AConAlt : Type where
-       MkAConAlt : Name -> (tag : Maybe Int) -> (args : List Int) ->
+       MkAConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Int) ->
                    ANF -> AConAlt
 
   public export
@@ -76,7 +76,7 @@ mutual
         = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (ALet fc x val sc)
         = "%let v" ++ show x ++ " = (" ++ show val ++ ") in (" ++ show sc ++ ")"
-    show (ACon fc n t args)
+    show (ACon fc n _ t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AOp fc lazy op args)
         = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
@@ -94,7 +94,7 @@ mutual
 
   export
   Show AConAlt where
-    show (MkAConAlt n t args sc)
+    show (MkAConAlt n _ t args sc)
         = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
       where
@@ -193,8 +193,8 @@ mutual
       = do i <- nextVar
            let vs' = i :: vs
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
-  anf vs (LCon fc n t args)
-      = anfArgs fc vs args (ACon fc n t)
+  anf vs (LCon fc n ci t args)
+      = anfArgs fc vs args (ACon fc n ci t)
   anf vs (LOp {arity} fc lazy op args)
       = do args' <- traverse (anf vs) (toList args)
            letBind fc args'
@@ -220,9 +220,9 @@ mutual
   anfConAlt : {vars : _} ->
               {auto v : Ref Next Int} ->
               AVars vars -> LiftedConAlt vars -> Core AConAlt
-  anfConAlt vs (MkLConAlt n t args sc)
+  anfConAlt vs (MkLConAlt n ci t args sc)
       = do (is, vs') <- bindArgs args vs
-           pure $ MkAConAlt n t is !(anf vs' sc)
+           pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
       bindArgs : (args : List Name) -> AVars vars' ->
                  Core (List Int, AVars (args ++ vars'))
