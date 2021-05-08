@@ -307,7 +307,7 @@ doCaseOfCase fc x xalts alts def
     updateAlt : CConAlt vars -> CConAlt vars
     updateAlt (MkConAlt n ci t args sc)
         = MkConAlt n ci t args $
-              CConCase fc sc 
+              CConCase fc sc
                        (map (weakenNs (mkSizeOf args)) alts)
                        (map (weakenNs (mkSizeOf args)) def)
 
