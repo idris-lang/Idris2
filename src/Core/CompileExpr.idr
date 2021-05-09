@@ -21,6 +21,21 @@ data ConInfo = DATACON -- normal data constructor
              | NIL -- nil of a list shaped thing
              | CONS -- cons of a list shaped thing
 
+export
+Show ConInfo where
+  show DATACON = "[datacon]"
+  show TYCON   = "[tycon]"
+  show NIL     = "[nil]"
+  show CONS    = "[cons]"
+
+export
+Eq ConInfo where
+  DATACON == DATACON = True
+  TYCON == TYCON = True
+  NIL == NIL = True
+  CONS == CONS = True
+  _ == _ = False
+
 mutual
   ||| CExp - an expression ready for compiling.
   public export

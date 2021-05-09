@@ -422,10 +422,16 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         getConsCode n [] = pure Nothing
         getConsCode n (MkNConAlt _ CONS _ [x,xs] sc :: _)
             = do sc' <- schExp (i + 1) sc
-                 pure (Just ("(let ((" ++ schName x  ++ " (car " ++ n ++ ")) " ++
-                                   "(" ++ schName xs ++ " (cdr " ++ n ++ "))) " ++
-                             sc' ++ ")"))
-        getConsCode n (_ :: xs) = getConsCode n xs
+                 pure $ Just $ bindArgs [(x, "car"), (xs, "cdr")] sc'
+          where
+            bindArgs : (ns : List (Name, String)) -> String -> String
+            bindArgs [] body = body
+            bindArgs ((x, get) :: ns) body
+                = if used x sc
+                     then "(let ((" ++ schName x ++ " " ++ "(" ++ get ++ " " ++ n ++ "))) "
+                        ++ bindArgs ns body ++ ")"
+                     else bindArgs ns body
+        getConsCode x (_ :: xs) = getConsCode x xs
 
     export
     schExp : Int -> NamedCExp -> Core String
@@ -459,8 +465,8 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
     schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
     schExp i (NmConCase fc sc alts def)
         = cond [(listCase alts, schListCase i sc alts def)]
-               -- probably more to come here...
-               (schCaseTree i sc alts def)
+                -- probably more to come here...
+                (schCaseTree i sc alts def)
       where
         listCase : List NamedConAlt -> Bool
         listCase (MkNConAlt _ NIL _ _ _ :: _) = True

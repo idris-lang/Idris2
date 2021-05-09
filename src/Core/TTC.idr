@@ -948,6 +948,7 @@ TTC DefFlag where
   toBuf b Macro = tag 8
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
   toBuf b AllGuarded = tag 10
+  toBuf b (ConType ci) = do tag 11; toBuf b ci
 
   fromBuf b
       = case !getTag of
@@ -960,6 +961,7 @@ TTC DefFlag where
              8 => pure Macro
              9 => pure (PartialEval [])
              10 => pure AllGuarded
+             11 => do ci <- fromBuf b; pure (ConType ci)
              _ => corrupt "DefFlag"
 
 export

@@ -295,19 +295,20 @@ boolHackTree (CConCase fc sc alts def)
     toBool _ = Nothing
 boolHackTree t = t
 
--- See if the constructor is a list constructor.
--- TODO: Currently just the known List type. Extend to anything list shaped,
--- which we can detect during elaboration.
-dconFlag : Name -> ConInfo
-dconFlag (NS ns (UN "Nil"))
-    = if ns == typesNS
-         then NIL
-         else DATACON
-dconFlag (NS ns (UN "::"))
-    = if ns == typesNS
-         then CONS
-         else DATACON
-dconFlag _ = DATACON
+-- See if the constructor is a special constructor type, e.g a nil or cons
+-- shaped thing.
+dconFlag : {auto c : Ref Ctxt Defs} ->
+           Name -> Core ConInfo
+dconFlag n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => throw (InternalError ("Can't find " ++ show n))
+         pure (ciFlags (flags def))
+  where
+    ciFlags : List DefFlag -> ConInfo
+    ciFlags [] = DATACON
+    ciFlags (ConType ci :: xs) = ci
+    ciFlags (x :: xs) = ciFlags xs
 
 mutual
   toCExpTm : {vars : _} ->
@@ -323,7 +324,7 @@ mutual
         then pure $ CPrimVal fc (I tag)
         else -- get full name for readability, and %builtin Natural
               do cn <- getFullName fn
-                 pure $ CCon fc cn (dconFlag cn) (Just tag) []
+                 pure $ CCon fc cn !(dconFlag cn) (Just tag) []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
       = pure $ CCon fc fn TYCON Nothing []
   toCExpTm m n (Ref fc _ fn)
@@ -404,8 +405,8 @@ mutual
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn (dconFlag xn) (Just tag) args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn TYCON Nothing args' (shrinkCExp sub sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp sub sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon _ _ _) = True
