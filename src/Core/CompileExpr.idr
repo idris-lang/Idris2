@@ -18,9 +18,12 @@ import Data.Vect
 public export
 data ConInfo = DATACON -- normal data constructor
              | TYCON -- normal type constructor
-             | NIL -- nil of a list shaped thing
+             | NIL -- nil of a list or option shaped thing
              | CONS -- cons of a list shaped thing
              | ENUM -- part of an enumeration
+             | NOTHING -- nothing of an option shaped thing
+             | JUST -- just of an option shaped thing
+             | RECORD -- record constructor (no tag)
 
 export
 Show ConInfo where
@@ -29,6 +32,9 @@ Show ConInfo where
   show NIL     = "[nil]"
   show CONS    = "[cons]"
   show ENUM    = "[enum]"
+  show NOTHING = "[nothing]"
+  show JUST    = "[just]"
+  show RECORD  = "[record]"
 
 export
 Eq ConInfo where
@@ -37,6 +43,9 @@ Eq ConInfo where
   NIL == NIL = True
   CONS == CONS = True
   ENUM == ENUM = True
+  NOTHING == NOTHING = True
+  JUST == JUST = True
+  RECORD == RECORD = True
   _ == _ = False
 
 mutual

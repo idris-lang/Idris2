@@ -242,24 +242,17 @@ findNewtype [con]
                            _ => Nothing)
 findNewtype _ = pure ()
 
-asNil : Term vs -> Bool
-asNil (Bind _ _ (Pi _ c _ _) sc)
+hasArgs : Nat -> Term vs -> Bool
+hasArgs (S k) (Bind _ _ (Pi _ c _ _) sc)
     = if isErased c
-         then asNil sc
+         then hasArgs (S k) sc
+         else hasArgs k sc
+hasArgs (S k) _ = False
+hasArgs Z (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then hasArgs Z sc
          else False
-asNil _ = True
-
-asCons : Nat -> Term vs -> Bool
-asCons (S k) (Bind _ _ (Pi _ c _ _) sc)
-    = if isErased c
-         then asCons (S k) sc
-         else asCons k sc
-asCons (S k) _ = False
-asCons Z (Bind _ _ (Pi _ c _ _) sc)
-    = if isErased c
-         then asCons Z sc
-         else False
-asCons Z _ = True
+hasArgs Z _ = True
 
 shaped : {auto c : Ref Ctxt Defs} ->
          (forall vs . Term vs -> Bool) ->
@@ -281,19 +274,33 @@ shaped as (c :: cs)
 calcListy : {auto c : Ref Ctxt Defs} ->
             FC -> List Constructor -> Core Bool
 calcListy fc cs@[_]
-    = do Just cons <- shaped (asCons 2) cs
+    = do Just cons <- shaped (hasArgs 2) cs
               | Nothing => pure False
          setFlag fc cons (ConType CONS)
          pure True
 calcListy fc cs@[_, _]
-    = do Just nil <- shaped asNil cs
+    = do Just nil <- shaped (hasArgs 0) cs
               | Nothing => pure False
-         Just cons <- shaped (asCons 2) cs
+         Just cons <- shaped (hasArgs 2) cs
               | Nothing => pure False
          setFlag fc nil (ConType NIL)
          setFlag fc cons (ConType CONS)
          pure True
 calcListy _ _ = pure False
+
+-- It's option type shaped if there's two constructors, one of which has
+-- zero arguments, and one of which has one.
+calcMaybe : {auto c : Ref Ctxt Defs} ->
+            FC -> List Constructor -> Core Bool
+calcMaybe fc cs@[_, _]
+    = do Just nothing <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         Just just <- shaped (hasArgs 1) cs
+              | Nothing => pure False
+         setFlag fc nothing (ConType NOTHING)
+         setFlag fc just (ConType JUST)
+         pure True
+calcMaybe _ _ = pure False
 
 calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
@@ -306,14 +313,25 @@ calcEnum fc cs
     isNullary : Constructor -> Core Bool
     isNullary c
         = do defs <- get Ctxt
-             pure $ asNil !(normalise defs [] (type c))
+             pure $ hasArgs 0 !(normalise defs [] (type c))
+
+calcRecord : {auto c : Ref Ctxt Defs} ->
+             FC -> List Constructor -> Core Bool
+calcRecord fc [c]
+    = do setFlag fc (name c) (ConType RECORD)
+         pure True
+calcRecord _ _ = pure False
 
 calcConInfo : {auto c : Ref Ctxt Defs} ->
               FC -> List Constructor -> Core ()
 calcConInfo fc cons
    = do False <- calcListy fc cons
            | True => pure ()
+        False <- calcMaybe fc cons
+           | True => pure ()
         False <- calcEnum fc cons
+           | True => pure ()
+        False <- calcRecord fc cons
            | True => pure ()
         pure ()
      -- ... maybe more to come? The Bool just says when to stop looking
