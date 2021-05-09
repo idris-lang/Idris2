@@ -1,7 +1,7 @@
 1/1: Building Door (Door.lidr)
 Main> >               (val # y) => ?now_4
-Main> >               (True # d) => ?now_4
->               (False # d) => ?now_5
+Main> >               (False # d) => ?now_4
+>               (True # d) => ?now_5
 Main>  0 m : Type -> Type
  1 d : Door Open
    x : Integer

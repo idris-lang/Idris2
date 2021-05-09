@@ -119,7 +119,7 @@ irrelevantEq Refl = Refl
 
 ||| Boolean Data Type.
 public export
-data Bool = True | False
+data Bool = False | True
 
 ||| Boolean NOT.
 %inline
@@ -129,18 +129,21 @@ not True = False
 not False = True
 
 ||| Boolean AND only evaluates the second argument if the first is `True`.
+%inline
 public export
 (&&) : (b : Bool) -> Lazy Bool -> Bool
 (&&) True x = x
 (&&) False x = False
 
 ||| Boolean OR only evaluates the second argument if the first is `False`.
+%inline
 public export
 (||) : (b : Bool) -> Lazy Bool -> Bool
 (||) True x = True
 (||) False x = x
 
 ||| Non-dependent if-then-else
+%inline
 public export
 ifThenElse : (b : Bool) -> Lazy a -> Lazy a -> a
 ifThenElse True l r = l
