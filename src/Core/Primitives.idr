@@ -102,8 +102,12 @@ int16max = 0x8000
 int32max : Integer
 int32max = 0x80000000
 
+-- older versions of the compiler still struggle with
+-- 0x8000000000000000 (they happily truncate this to 0
+-- leading to division by 0 errors during unification
+-- of Int64 literals). Hence, we use the decimal number here.
 int64max : Integer
-int64max = 0x8000000000000000
+int64max = 9223372036854775808
 
 intCastWrap : (i : Integer) -> (max : Integer) -> Integer
 intCastWrap i max
