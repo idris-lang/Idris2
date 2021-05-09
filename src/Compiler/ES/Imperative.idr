@@ -31,7 +31,7 @@ mutual
     || any (isNameUsedConstAlt name) alts
     || maybe False (isNameUsed name) def
   isNameUsed name (NmExtPrim fc p args) = any (isNameUsed name) args
-  isNameUsed name (NmCon fc x t args) = any (isNameUsed name) args
+  isNameUsed name (NmCon fc x _ t args) = any (isNameUsed name) args
   isNameUsed name (NmDelay fc _ t) = isNameUsed name t
   isNameUsed name (NmForce fc _ t) = isNameUsed name t
   isNameUsed name (NmLet fc x val sc) =
@@ -41,7 +41,7 @@ mutual
   isNameUsed name (NmCrash fc msg) = False
 
   isNameUsedConAlt : Name -> NamedConAlt -> Bool
-  isNameUsedConAlt name (MkNConAlt n t args exp) = isNameUsed name exp
+  isNameUsedConAlt name (MkNConAlt n _ t args exp) = isNameUsed name exp
 
   isNameUsedConstAlt : Name -> NamedConstAlt -> Bool
   isNameUsedConstAlt name (MkNConstAlt c exp) = isNameUsed name exp
@@ -147,7 +147,7 @@ mutual
     do
       (s, a) <- impListExp args
       pairToReturn toReturn (s, IEPrimFnExt p a)
-  impExp toReturn (NmCon fc x tag args) =
+  impExp toReturn (NmCon fc x _ tag args) =
     do
       (s, a) <- impListExp args
       pairToReturn toReturn (s, IEConstructor (impTag x tag) a)
@@ -184,13 +184,13 @@ mutual
   impTag n (Just i) = Left i
 
   impConAlt : {auto c : Ref Imps ImpSt} -> Maybe Name -> ImperativeExp -> NamedConAlt -> Core (ImperativeExp, ImperativeStatement)
-  impConAlt (Just res) target (MkNConAlt n tag args exp) =
+  impConAlt (Just res) target (MkNConAlt n _ tag args exp) =
     do
       (s, r) <- impExp False exp
       let nargs = length args
       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
       pure (IEConstructorTag (impTag n tag), replaceNamesExpS reps $ s <+> MutateStatement res r)
-  impConAlt Nothing target (MkNConAlt n tag args exp) =
+  impConAlt Nothing target (MkNConAlt n _ tag args exp) =
     do
       (s, r) <- impExp False exp
       let nargs = length args
