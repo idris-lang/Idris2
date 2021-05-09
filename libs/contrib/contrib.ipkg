@@ -2,6 +2,7 @@ package contrib
 version = 0.3.0
 
 opts = "--ignore-missing-ipkg --no-shadowing-warning"
+depends = network >= 0.3.0
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
@@ -10,6 +11,7 @@ modules = Control.ANSI,
           Control.Delayed,
 
           Control.Linear.LIO,
+          Control.Linear.Network,
 
           Control.Monad.Algebra,
 

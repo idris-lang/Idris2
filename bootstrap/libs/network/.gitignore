@@ -1,0 +1,10 @@
+/network-tests
+
+*.d
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
