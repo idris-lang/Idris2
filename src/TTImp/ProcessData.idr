@@ -295,10 +295,27 @@ calcListy fc cs@[_, _]
          pure True
 calcListy _ _ = pure False
 
+calcEnum : {auto c : Ref Ctxt Defs} ->
+           FC -> List Constructor -> Core Bool
+calcEnum fc cs
+    = if !(allM isNullary cs)
+         then do traverse_ (\c => setFlag fc c (ConType ENUM)) (map name cs)
+                 pure True
+         else pure False
+  where
+    isNullary : Constructor -> Core Bool
+    isNullary c
+        = do defs <- get Ctxt
+             pure $ asNil !(normalise defs [] (type c))
+
 calcConInfo : {auto c : Ref Ctxt Defs} ->
               FC -> List Constructor -> Core ()
 calcConInfo fc cons
-   = ignore $ calcListy fc cons
+   = do False <- calcListy fc cons
+           | True => pure ()
+        False <- calcEnum fc cons
+           | True => pure ()
+        pure ()
      -- ... maybe more to come? The Bool just says when to stop looking
 
 export

@@ -20,6 +20,7 @@ data ConInfo = DATACON -- normal data constructor
              | TYCON -- normal type constructor
              | NIL -- nil of a list shaped thing
              | CONS -- cons of a list shaped thing
+             | ENUM -- part of an enumeration
 
 export
 Show ConInfo where
@@ -27,6 +28,7 @@ Show ConInfo where
   show TYCON   = "[tycon]"
   show NIL     = "[nil]"
   show CONS    = "[cons]"
+  show ENUM    = "[enum]"
 
 export
 Eq ConInfo where
@@ -34,6 +36,7 @@ Eq ConInfo where
   TYCON == TYCON = True
   NIL == NIL = True
   CONS == CONS = True
+  ENUM == ENUM = True
   _ == _ = False
 
 mutual

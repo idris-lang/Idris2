@@ -273,27 +273,18 @@ builtinNatTree = do
     let b = defs.builtinTransforms
     pure $ builtinNatTree' b.natZNames b.natSNames
 
--- Rewrite case trees on Bool/Ord to be case trees on Integer
--- TODO: Generalise to all finite enumerations
-isFiniteEnum : Name -> Bool
-isFiniteEnum (NS ns (UN n))
-   =  ((n == "True" || n == "False") && ns == basicsNS) -- booleans
-   || ((n == "LT" || n == "EQ" || n == "GT") && ns == eqOrdNS) -- comparison
-isFiniteEnum _ = False
-
-boolHackTree : CExp vars -> CExp vars
-boolHackTree (CConCase fc sc alts def)
-   = let x = traverse toBool alts
+enumTree : CExp vars -> CExp vars
+enumTree (CConCase fc sc alts def)
+   = let x = traverse toEnum alts
          Just alts' = x
               | Nothing => CConCase fc sc alts def in
          CConstCase fc sc alts' def
   where
-    toBool : CConAlt vars -> Maybe (CConstAlt vars)
-    toBool (MkConAlt nm _ (Just tag) [] sc)
-        = do guard (isFiniteEnum nm)
-             pure $ MkConstAlt (I tag) sc
-    toBool _ = Nothing
-boolHackTree t = t
+    toEnum : CConAlt vars -> Maybe (CConstAlt vars)
+    toEnum (MkConAlt nm ENUM (Just tag) [] sc)
+        = pure $ MkConstAlt (I tag) sc
+    toEnum _ = Nothing
+enumTree t = t
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
@@ -318,13 +309,13 @@ mutual
              Core (CExp vars)
   toCExpTm m n (Local fc _ _ prf)
       = pure $ CLocal fc prf
-  -- TMP HACK: extend this to all types which look like enumerations after erasure
   toCExpTm m n (Ref fc (DataCon tag arity) fn)
-      = if arity == Z && isFiniteEnum fn
-        then pure $ CPrimVal fc (I tag)
-        else -- get full name for readability, and %builtin Natural
-              do cn <- getFullName fn
-                 pure $ CCon fc cn !(dconFlag cn) (Just tag) []
+      = do -- get full name for readability, and %builtin Natural
+           cn <- getFullName fn
+           fl <- dconFlag cn
+           case fl of
+                ENUM => pure $ CPrimVal fc (I tag)
+                _ => pure $ CCon fc cn fl (Just tag) []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
       = pure $ CCon fc fn TYCON Nothing []
   toCExpTm m n (Ref fc _ fn)
@@ -518,7 +509,7 @@ mutual
                def <- getDef n alts
                if isNil cases
                   then pure (fromMaybe (CErased fc) def)
-                  else pure $ boolHackTree $ !builtinNatTree $
+                  else pure $ enumTree $ !builtinNatTree $
                             CConCase fc (CLocal fc x) cases def
   toCExpTree' n (Case _ x scTy alts@(DelayCase _ _ _ :: _))
       = throw (InternalError "Unexpected DelayCase")

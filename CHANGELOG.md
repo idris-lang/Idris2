@@ -23,7 +23,8 @@ Syntax changes:
 Compiler changes:
 
 * Added more optimisations and transformations, particularly on case blocks,
-  and on list-shaped types, so generated code will often be slightly faster.
+  list-shaped types, and enumerations, so generated code will often be slightly
+  faster.
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
 * Added `--profile` flag, which generates profile data if supported by a back

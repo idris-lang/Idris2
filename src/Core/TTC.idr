@@ -621,6 +621,7 @@ TTC ConInfo where
   toBuf b TYCON = tag 1
   toBuf b NIL = tag 2
   toBuf b CONS = tag 3
+  toBuf b ENUM = tag 4
 
   fromBuf b
       = case !getTag of
@@ -628,6 +629,7 @@ TTC ConInfo where
              1 => pure TYCON
              2 => pure NIL
              3 => pure CONS
+             4 => pure ENUM
              _ => corrupt "ConInfo"
 
 mutual
