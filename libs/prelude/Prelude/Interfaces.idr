@@ -221,11 +221,16 @@ public export
 guard : Alternative f => Bool -> f ()
 guard x = if x then pure () else empty
 
-||| Conditionally execute an applicative expression.
+||| Conditionally execute an applicative expression when the boolean is true.
 public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
 when True f = f
 when False f = pure ()
+
+||| Execute an applicative expression unless the boolean is true.
+%inline public export
+unless : Applicative f => Bool -> Lazy (f ()) -> f ()
+unless = when . not
 
 ---------------------------
 -- FOLDABLE, TRAVERSABLE --

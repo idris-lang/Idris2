@@ -94,6 +94,8 @@ record Options where
   timing       : Bool
   ||| How many threads should we use?
   threads      : Nat
+  ||| Should we write the list of failing cases from a file?
+  failureFile     : Maybe String
 
 export
 initOptions : String -> Options
@@ -104,6 +106,7 @@ initOptions exe
               False
               False
               1
+              Nothing
 
 export
 usage : String -> String
@@ -114,6 +117,7 @@ usage exe = unwords
   , "[--interactive]"
   , "[--cg CODEGEN]"
   , "[--threads N]"
+  , "[--failure-file PATH]"
   , "[--only [NAMES]]"
   ]
 
@@ -128,13 +132,14 @@ options args = case args of
 
     go : List String -> Options -> Maybe Options
     go rest opts = case rest of
-      []                       => pure opts
-      ("--timing" :: xs)       => go xs (record { timing = True} opts)
-      ("--interactive" :: xs)  => go xs (record { interactive = True } opts)
-      ("--cg" :: cg :: xs)     => go xs (record { codegen = Just cg } opts)
-      ("--threads" :: n :: xs) => do let pos : Nat = !(parsePositive n)
-                                     go xs (record { threads = pos } opts)
-      ("--only" :: xs)         => pure $ record { onlyNames = xs } opts
+      []                            => pure opts
+      ("--timing" :: xs)            => go xs (record { timing = True} opts)
+      ("--interactive" :: xs)       => go xs (record { interactive = True } opts)
+      ("--cg" :: cg :: xs)          => go xs (record { codegen = Just cg } opts)
+      ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
+                                          go xs (record { threads = pos } opts)
+      ("--failure-file" :: p :: xs) => go xs (record { failureFile = Just p } opts)
+      ("--only" :: xs)              => pure $ record { onlyNames = xs } opts
       _ => Nothing
 
 -- [ Core ]
@@ -144,7 +149,6 @@ fail : String -> IO ()
 fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
-
 
 ||| Normalise strings between different OS.
 |||
@@ -398,8 +402,13 @@ runner tests
          let ntotal = nsucc + nfail
          putStrLn (show nsucc ++ "/" ++ show ntotal ++ " tests successful")
          if nfail == 0 then exitWith ExitSuccess else
-           do putStrLn "Failing tests:"
-              putStrLn $ unlines res.failure
+           do let list = fastUnlines res.failure
+              putStrLn "Failing tests:"
+              putStrLn list
+              whenJust opts.failureFile $ \ path =>
+                do Right _ <- writeFile path list
+                     | Left err => fail (show err)
+                   pure ()
               exitWith (ExitFailure 1)
 
 -- [ EOF ]

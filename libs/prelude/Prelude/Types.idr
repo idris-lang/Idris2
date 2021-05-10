@@ -157,6 +157,12 @@ maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
 
+||| Execute an applicative expression when the Maybe is Just
+%inline public export
+whenJust : Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 public export
 Eq a => Eq (Maybe a) where
   Nothing  == Nothing  = True
