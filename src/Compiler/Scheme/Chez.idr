@@ -341,8 +341,9 @@ getFgnCall : {auto c : Ref Ctxt Defs} ->
              String -> (Name, FC, NamedDef) -> Core (String, String)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
-startChez : String -> String -> String
-startChez appdir target = unlines
+export
+startChezPreamble : String
+startChezPreamble = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
@@ -363,7 +364,11 @@ startChez appdir target = unlines
     , "fi                                                         "
     , ""
     , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    ]
+
+startChez : String -> String -> String
+startChez appdir target = startChezPreamble ++ unlines
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 

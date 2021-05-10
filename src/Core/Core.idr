@@ -755,3 +755,18 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content =
+  coreLift (File.writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+export
+readFile : (fname : String) -> Core String
+readFile fname =
+  coreLift (File.readFile fname) >>= \case
+    Right content => pure content
+    Left err => throw $ FileErr fname err
+

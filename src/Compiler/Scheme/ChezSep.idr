@@ -7,6 +7,7 @@ import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
 import Compiler.Separate
 
+import Core.Core
 import Core.Hash
 import Core.Context
 import Core.Context.Log
@@ -52,28 +53,8 @@ schFooter : String
 schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
 
 startChez : String -> String -> String -> String
-startChez chez appDirSh targetSh = unlines
-    [ "#!/bin/sh"
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "case $(uname -s) in            "
-    , "    OpenBSD | FreeBSD | NetBSD)"
-    , "        REALPATH=\"grealpath\" "
-    , "        ;;                     "
-    , "                               "
-    , "    *)                         "
-    , "        REALPATH=\"realpath\"  "
-    , "        ;;                     "
-    , "esac                           "
-    , ""
-    , "if ! command -v \"$REALPATH\" >/dev/null; then             "
-    , "    echo \"$REALPATH is required for Chez code generator.\""
-    , "    exit 1                                                 "
-    , "fi                                                         "
-    , ""
-    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ "\":$LD_LIBRARY_PATH"
+startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ "\":$LD_LIBRARY_PATH"
     , "\"" ++ chez ++ "\" -q "
         ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
         ++ "--program \"$DIR/" ++ targetSh ++ "\" "
@@ -109,7 +90,7 @@ startChezWinSh chez appDirSh targetSh = unlines
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
-compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
+compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
   [ "echo"
   , unwords
     [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
@@ -119,30 +100,18 @@ compileChezLibraries chez libDir ssFiles = ignore $ coreLift $ system $ unwords
   ]
 
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez libDir ssFile = ignore $ coreLift $ system $ unwords
+compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
 compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez libDir ssFile = ignore $ coreLift $ system $ unwords
+compileChezProgram chez libDir ssFile = coreLift_ $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
-
-writeFileCore : (fname : String) -> (content : String) -> Core ()
-writeFileCore fname content =
-  coreLift (writeFile fname content) >>= \case
-    Right () => pure ()
-    Left err => throw $ FileErr fname err
-
-readFileCore : (fname : String) -> Core String
-readFileCore fname =
-  coreLift (readFile fname) >>= \case
-    Right content => pure content
-    Left err => throw $ FileErr fname err
 
 chezNS : Namespace -> String
 chezNS ns = case showNSWithSep "-" ns of
@@ -158,7 +127,7 @@ chezLibraryName cu =
     ns::_ => chezNS ns
 
 touch : String -> Core ()
-touch s = ignore $ coreLift $ system ("touch \"" ++ s ++ "\"")
+touch s = coreLift_ $ system ("touch \"" ++ s ++ "\"")
 
 record ChezLib where
   constructor MkChezLib
@@ -183,12 +152,12 @@ compileToSS c chez appdir tm = do
   support <- readDataFile "chez/support-sep.ss"
   let supportHash = show $ hash support
   supportChanged <-
-    coreLift (readFile (appdir </> "support.hash")) >>= \case
+    coreLift (File.readFile (appdir </> "support.hash")) >>= \case
       Left err => pure True
       Right fileHash => pure (fileHash /= supportHash)
   when supportChanged $ do
-    writeFileCore (appdir </> "support.ss") support
-    writeFileCore (appdir </> "support.hash") supportHash
+    Core.writeFile (appdir </> "support.ss") support
+    Core.writeFile (appdir </> "support.hash") supportHash
 
   -- TODO: add extraRuntime
   -- the problem with this is that it's unclear what to put in the (export) clause of the library
@@ -202,7 +171,7 @@ compileToSS c chez appdir tm = do
     -- TODO: also check that the .so file exists
     let cuHash = show (hash cu)
     hashChanged <-
-      coreLift (readFile (appdir </> chezLib <.> "hash")) >>= \case
+      coreLift (File.readFile (appdir </> chezLib <.> "hash")) >>= \case
         Left err       => pure True
         Right fileHash => pure (fileHash /= cuHash)
 
@@ -240,20 +209,20 @@ compileToSS c chez appdir tm = do
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      writeFileCore (appdir </> chezLib <.> "ss") $ fastAppend $
+      Core.writeFile (appdir </> chezLib <.> "ss") $ fastAppend $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs
         ++ map fst fgndefs  -- foreign library load statements
         ++ [footer]
 
-      writeFileCore (appdir </> chezLib <.> "hash") cuHash
+      Core.writeFile (appdir </> chezLib <.> "hash") cuHash
 
     pure (MkChezLib chezLib hashChanged)
 
   -- main module
   main <- schExp Chez.chezExtPrim Chez.chezString 0 ctm
-  writeFileCore (appdir </> "mainprog.ss") $ unlines $
+  Core.writeFile (appdir </> "mainprog.ss") $ unlines $
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
     , main
@@ -263,20 +232,15 @@ compileToSS c chez appdir tm = do
   pure (supportChanged, chezLibs)
 
 makeSh : String -> String -> String -> String -> Core ()
-makeSh chez outShRel appDirSh targetSh
-    = do Right () <- coreLift $ writeFile outShRel (startChez chez appDirSh targetSh)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+makeSh chez outShRel appDirSh targetSh =
+  Core.writeFile outShRel (startChez chez appDirSh targetSh)
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> Core ()
-makeShWindows chez outShRel appDirSh targetSh
-    = do let cmdFile = outShRel ++ ".cmd"
-         Right () <- coreLift $ writeFile cmdFile (startChezCmd chez appDirSh targetSh)
-            | Left err => throw (FileErr cmdFile err)
-         Right () <- coreLift $ writeFile outShRel (startChezWinSh chez appDirSh targetSh)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+makeShWindows chez outShRel appDirSh targetSh = do
+  let cmdFile = outShRel ++ ".cmd"
+  Core.writeFile cmdFile (startChezCmd chez appDirSh targetSh)
+  Core.writeFile outShRel (startChezWinSh chez appDirSh targetSh)
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
 compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
@@ -330,7 +294,6 @@ executeExpr c tmpDir tm
     = do Just sh <- compileExpr False c tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
          coreLift_ $ system sh
-         pure ()
 
 ||| Codegen wrapper for Chez scheme implementation.
 export
