@@ -409,18 +409,27 @@ runner tests
                    Just _ => pure opts
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests
+
+         -- report the result
          let nsucc  = length res.success
          let nfail  = length res.failure
          let ntotal = nsucc + nfail
          putStrLn (show nsucc ++ "/" ++ show ntotal ++ " tests successful")
-         if nfail == 0 then exitWith ExitSuccess else
-           do let list = fastUnlines res.failure
-              putStrLn "Failing tests:"
+
+         -- deal with failures
+         let list = fastUnlines res.failure
+         when (nfail > 0) $
+           do putStrLn "Failing tests:"
               putStrLn list
-              whenJust opts.failureFile $ \ path =>
-                do Right _ <- writeFile path list
-                     | Left err => fail (show err)
-                   pure ()
-              exitWith (ExitFailure 1)
+         -- always overwrite the failure file, if it is given
+         whenJust opts.failureFile $ \ path =>
+           do Right _ <- writeFile path list
+                | Left err => fail (show err)
+              pure ()
+
+         -- exit
+         if nfail == 0
+           then exitWith ExitSuccess
+           else exitWith (ExitFailure 1)
 
 -- [ EOF ]
