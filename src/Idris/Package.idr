@@ -159,7 +159,7 @@ field fname
              pure [LT (MkPkgVersion (fromInteger <$> vs)) True,
                    GT (MkPkgVersion (fromInteger <$> vs)) True]
 
-    mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
+    mkBound : List Bound -> PkgVersionBounds -> EmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
         = maybe (mkBound bs (record { upperBound = Just b,
                                       upperInclusive = i } pkgbs))
@@ -285,7 +285,7 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
 compileMain mainn mmod exec
-    = do m <- newRef MD initMetadata
+    = do m <- newRef MD (initMetadata mmod)
          u <- newRef UST initUState
          ignore $ loadMainFile mmod
          ignore $ compileExp (PRef replFC mainn) exec
@@ -559,7 +559,7 @@ runRepl : {auto c : Ref Ctxt Defs} ->
           Core ()
 runRepl fname = do
   u <- newRef UST initUState
-  m <- newRef MD initMetadata
+  m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
   the (Core ()) $
       case fname of
           Nothing => pure ()
@@ -655,6 +655,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType (DumpVMCode f)   = POpt
     optType DebugElabCheck   = POpt
     optType (SetCG f)        = POpt
+    optType (Directive d)    = POpt
     optType (BuildDir f)     = POpt
     optType (OutputDir f)    = POpt
     optType (ConsoleWidth n) = PIgnore
@@ -682,6 +683,7 @@ errorMsg = unlines
   , "    --dumpvmcode <file>"
   , "    --debug-elab-check"
   , "    --codegen <cg>"
+  , "    --directive <directive>"
   , "    --build-dir <dir>"
   , "    --output-dir <dir>"
   ]

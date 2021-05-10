@@ -167,7 +167,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do Right tti <- logTime "Parsing" $ coreLift $ parseFile fname
+    = do Right (decor, tti) <- logTime "Parsing" $ coreLift $ parseFile fname
                             (do decls <- prog fname
                                 eoi
                                 pure decls)

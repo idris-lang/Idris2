@@ -122,6 +122,7 @@ public export
 data Bool = True | False
 
 ||| Boolean NOT.
+%inline
 public export
 not : (b : Bool) -> Bool
 not True = False

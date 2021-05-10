@@ -577,17 +577,26 @@ greater : FilePos -> Interval -> Bool
 greater k (MkInterval (MkRange low _)) = fst low > k
 greater k NoInterval = False
 
--- Finds all the interval that overlaps with the given interval.
--- takeUntil selects all the intervals within the given upper bound,
--- however the remaining interval are not necessarily adjacent in
--- the sequence, thus it drops elements until the next intersecting
--- interval with dropUntil.
+||| Finds all the intervals that overlap with the given interval.
+export
 inRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
 inRange low high t = matches (takeUntil (greater high) t)
+  -- takeUntil selects all the intervals within the given upper bound,
+  -- however the remaining interval are not necessarily adjacent in
+  -- the sequence, thus it drops elements until the next intersecting
+  -- interval with dropUntil.
   where matches : PosMap a -> List a
         matches xs = case viewl (dropUntil (atleast low) xs) of
                           EmptyL => []
                           x <: xs' => x :: assert_total (matches xs')
+
+||| Finds the values matching the exact interval input
+export
+exactRange : MeasureRM a => FilePos -> FilePos -> PosMap a -> List a
+exactRange low high t = flip mapMaybe (inRange low high t) $ \ a =>
+  do let (MkRange rng _) = measureRM a
+     guard (rng == (low, high))
+     pure a
 
 ||| Returns all the interval that contains the given point.
 export

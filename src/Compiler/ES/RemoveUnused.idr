@@ -22,7 +22,7 @@ mutual
   usedNames (NmConCase fc sc alts def) = (usedNames sc `union` concat (usedNamesConAlt <$> alts)) `union` maybe empty usedNames def
   usedNames (NmConstCase fc sc alts def) = (usedNames sc `union` concat (usedNamesConstAlt <$> alts)) `union` maybe empty usedNames def
   usedNames (NmExtPrim fc p args) = concat $ usedNames <$> args
-  usedNames (NmCon fc x t args) = concat $ usedNames <$> args
+  usedNames (NmCon fc x _ t args) = concat $ usedNames <$> args
   usedNames (NmDelay fc _ t) = usedNames t
   usedNames (NmForce fc _ t) = usedNames t
   usedNames (NmLet fc x val sc) = usedNames val `union` usedNames sc
@@ -30,7 +30,7 @@ mutual
   usedNames (NmCrash fc msg) = empty
 
   usedNamesConAlt : NamedConAlt -> SortedSet Name
-  usedNamesConAlt (MkNConAlt n t args exp) = usedNames exp
+  usedNamesConAlt (MkNConAlt n _ t args exp) = usedNames exp
 
   usedNamesConstAlt : NamedConstAlt -> SortedSet Name
   usedNamesConstAlt (MkNConstAlt c exp) = usedNames exp

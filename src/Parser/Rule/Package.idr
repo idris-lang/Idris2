@@ -1,7 +1,6 @@
 module Parser.Rule.Package
 
 import public Parser.Lexer.Package
-import public Parser.Rule.Common
 
 import Data.List
 import Data.List1
@@ -12,11 +11,11 @@ import Core.Name.Namespace
 
 public export
 Rule : Type -> Type
-Rule = Rule Token
+Rule = Grammar () Token True
 
 public export
-PackageEmptyRule : Type -> Type
-PackageEmptyRule = EmptyRule Token
+EmptyRule : Type -> Type
+EmptyRule = Grammar () Token False
 
 export
 equals : Rule ()

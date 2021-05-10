@@ -80,12 +80,23 @@ renderHtml (STAnn ann rest) = do
   pure $ "<!-- ann ignored START -->" ++ resthtml ++ "<!-- ann END -->"
 renderHtml (STConcat docs) = pure $ fastConcat !(traverse renderHtml docs)
 
+removeNewlinesFromDeclarations : SimpleDocTree IdrisDocAnn -> SimpleDocTree IdrisDocAnn
+removeNewlinesFromDeclarations = go False
+  where
+    go : Bool -> SimpleDocTree IdrisDocAnn -> SimpleDocTree IdrisDocAnn
+    go False l@(STLine i) = l
+    go True l@(STLine i) = STEmpty
+    go ignoring (STConcat docs) = STConcat $ map (go ignoring) docs
+    go _ (STAnn Declarations rest) = STAnn Declarations $ go True rest
+    go _ (STAnn ann rest) = STAnn ann $ go False rest
+    go _ doc = doc
+
 docDocToHtml : {auto c : Ref Ctxt Defs} ->
                Doc IdrisDocAnn ->
                Core String
 docDocToHtml doc =
   let dt = SimpleDocTree.fromStream $ layoutUnbounded doc in
-      renderHtml dt
+      renderHtml $ removeNewlinesFromDeclarations dt
 
 htmlPreamble : String -> String -> String -> String
 htmlPreamble title root class = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">"

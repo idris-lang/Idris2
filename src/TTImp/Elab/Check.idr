@@ -515,7 +515,7 @@ successful : {vars : _} ->
              Bool -> -- constraints allowed
              List (Maybe Name, Core a) ->
              Core (List (Either (Maybe Name, Error)
-                                (Nat, a, Defs, UState, EState vars)))
+                                (Nat, a, Defs, UState, EState vars, Metadata)))
 successful allowCons [] = pure []
 successful allowCons ((tm, elab) :: elabs)
     = do ust <- get UST
@@ -555,7 +555,7 @@ successful allowCons ((tm, elab) :: elabs)
                    elabs' <- successful allowCons elabs
                    -- Record success, and the state we ended at
                    pure (Right (minus ncons' ncons,
-                                res, defs', ust', est') :: elabs'))
+                                res, defs', ust', est', md') :: elabs'))
                (\err => do put UST ust
                            put EST est
                            put MD md
@@ -576,9 +576,10 @@ exactlyOne' allowCons fc env [(tm, elab)] = elab
 exactlyOne' {vars} allowCons fc env all
     = do elabs <- successful allowCons all
          case getRight elabs of
-              Right (res, defs, ust, est) =>
+              Right (res, defs, ust, est, md) =>
                     do put UST ust
                        put EST est
+                       put MD  md
                        put Ctxt defs
                        commit
                        pure res

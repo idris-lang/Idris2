@@ -192,6 +192,9 @@ data DefFlag
     | AllGuarded -- safe to treat as a constructor for the purposes of
          -- productivity checking. All clauses are guarded by constructors,
          -- and there are no other function applications
+    | ConType ConInfo
+         -- Is it a special type of constructor, e.g. a nil or cons shaped
+         -- thing, that can be compiled specially?
 
 export
 Eq DefFlag where
@@ -204,6 +207,7 @@ Eq DefFlag where
     (==) Macro Macro = True
     (==) (PartialEval x) (PartialEval y) = x == y
     (==) AllGuarded AllGuarded = True
+    (==) (ConType x) (ConType y) = x == y
     (==) _ _ = False
 
 export
@@ -217,6 +221,7 @@ Show DefFlag where
   show Macro = "macro"
   show (PartialEval _) = "partialeval"
   show AllGuarded = "allguarded"
+  show (ConType ci) = "contype " ++ show ci
 
 public export
 data SizeChange = Smaller | Same | Unknown

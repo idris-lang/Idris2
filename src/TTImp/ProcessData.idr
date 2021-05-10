@@ -1,5 +1,6 @@
 module TTImp.ProcessData
 
+import Core.CompileExpr
 import Core.Context
 import Core.Context.Data
 import Core.Context.Log
@@ -241,6 +242,82 @@ findNewtype [con]
                            _ => Nothing)
 findNewtype _ = pure ()
 
+asNil : Term vs -> Bool
+asNil (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then asNil sc
+         else False
+asNil _ = True
+
+asCons : Nat -> Term vs -> Bool
+asCons (S k) (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then asCons (S k) sc
+         else asCons k sc
+asCons (S k) _ = False
+asCons Z (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then asCons Z sc
+         else False
+asCons Z _ = True
+
+shaped : {auto c : Ref Ctxt Defs} ->
+         (forall vs . Term vs -> Bool) ->
+         List Constructor -> Core (Maybe Name)
+shaped as [] = pure Nothing
+shaped as (c :: cs)
+    = do defs <- get Ctxt
+         if as !(normalise defs [] (type c))
+            then pure (Just (name c))
+            else shaped as cs
+
+-- Calculate whether the list of constructors gives a list-shaped type
+-- If there's two constructors, one with no unerased arguments and one
+-- with two unerased arguments, then it's listy.
+-- If there's one constructor, with two unerased arugments, we can also
+-- treat that as a cons cell, which will be cheaper for pairs.
+-- Note they don't have to be recursive! It's just about whether we can
+-- pair cheaply.
+calcListy : {auto c : Ref Ctxt Defs} ->
+            FC -> List Constructor -> Core Bool
+calcListy fc cs@[_]
+    = do Just cons <- shaped (asCons 2) cs
+              | Nothing => pure False
+         setFlag fc cons (ConType CONS)
+         pure True
+calcListy fc cs@[_, _]
+    = do Just nil <- shaped asNil cs
+              | Nothing => pure False
+         Just cons <- shaped (asCons 2) cs
+              | Nothing => pure False
+         setFlag fc nil (ConType NIL)
+         setFlag fc cons (ConType CONS)
+         pure True
+calcListy _ _ = pure False
+
+calcEnum : {auto c : Ref Ctxt Defs} ->
+           FC -> List Constructor -> Core Bool
+calcEnum fc cs
+    = if !(allM isNullary cs)
+         then do traverse_ (\c => setFlag fc c (ConType ENUM)) (map name cs)
+                 pure True
+         else pure False
+  where
+    isNullary : Constructor -> Core Bool
+    isNullary c
+        = do defs <- get Ctxt
+             pure $ asNil !(normalise defs [] (type c))
+
+calcConInfo : {auto c : Ref Ctxt Defs} ->
+              FC -> List Constructor -> Core ()
+calcConInfo fc cons
+   = do False <- calcListy fc cons
+           | True => pure ()
+        False <- calcEnum fc cons
+           | True => pure ()
+        pure ()
+     -- ... maybe more to come? The Bool just says when to stop looking
+
 export
 processData : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -364,4 +441,5 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
+         calcConInfo fc cons
          traverse_ updateErasable (Resolved tidx :: connames)

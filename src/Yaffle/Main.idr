@@ -47,7 +47,7 @@ yaffleMain : String -> List String -> Core ()
 yaffleMain fname args
     = do defs <- initDefs
          c <- newRef Ctxt defs
-         m <- newRef MD initMetadata
+         m <- newRef MD (initMetadata fname)
          u <- newRef UST initUState
          d <- getDirs
          t <- processArgs args

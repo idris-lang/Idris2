@@ -31,7 +31,8 @@ mutual
        LApp : FC -> (lazy : Maybe LazyReason) -> (closure : Lifted vars) -> (arg : Lifted vars) -> Lifted vars
        LLet : FC -> (x : Name) -> Lifted vars ->
               Lifted (x :: vars) -> Lifted vars
-       LCon : FC -> Name -> (tag : Maybe Int) -> List (Lifted vars) -> Lifted vars
+       LCon : FC -> Name -> ConInfo -> (tag : Maybe Int) ->
+              List (Lifted vars) -> Lifted vars
        LOp : {arity : _} ->
              FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity (Lifted vars) -> Lifted vars
        LExtPrim : FC -> (lazy : Maybe LazyReason) -> (p : Name) -> List (Lifted vars) -> Lifted vars
@@ -47,7 +48,7 @@ mutual
 
   public export
   data LiftedConAlt : List Name -> Type where
-       MkLConAlt : Name -> (tag : Maybe Int) -> (args : List Name) ->
+       MkLConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                    Lifted (args ++ vars) -> LiftedConAlt vars
 
   public export
@@ -89,7 +90,7 @@ mutual
         = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (LLet fc x val sc)
         = "%let " ++ show x ++ " = " ++ show val ++ " in " ++ show sc
-    show (LCon fc n t args)
+    show (LCon fc n _ t args)
         = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LOp fc lazy op args)
         = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
@@ -107,7 +108,7 @@ mutual
 
   export
   {vs : _} -> Show (LiftedConAlt vs) where
-    show (MkLConAlt n t args sc)
+    show (MkLConAlt n _ t args sc)
         = "%conalt " ++ show n ++
              "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
@@ -260,7 +261,7 @@ mutual
       = pure $ LAppName fc lazy n !(traverse (liftExp {doLazyAnnots}) args)
   liftExp (CApp fc f args)
       = unload fc lazy !(liftExp {doLazyAnnots} f) !(traverse (liftExp {doLazyAnnots}) args)
-  liftExp (CCon fc n t args) = pure $ LCon fc n t !(traverse (liftExp {doLazyAnnots}) args)
+  liftExp (CCon fc n ci t args) = pure $ LCon fc n ci t !(traverse (liftExp {doLazyAnnots}) args)
   liftExp (COp fc op args)
       = pure $ LOp fc lazy op !(traverseArgs args)
     where
@@ -280,7 +281,7 @@ mutual
     where
       liftConAlt : {default Nothing lazy : Maybe LazyReason} ->
                    CConAlt vars -> Core (LiftedConAlt vars)
-      liftConAlt (MkConAlt n t args sc) = pure $ MkLConAlt n t args !(liftExp {doLazyAnnots} {lazy} sc)
+      liftConAlt (MkConAlt n ci t args sc) = pure $ MkLConAlt n ci t args !(liftExp {doLazyAnnots} {lazy} sc)
   liftExp (CConstCase fc sc alts def)
       = pure $ LConstCase fc !(liftExp {doLazyAnnots} sc) !(traverse liftConstAlt alts)
                              !(traverseOpt (liftExp {doLazyAnnots}) def)
@@ -308,7 +309,7 @@ mutual
   usedVars used (LLet fc x val sc) =
     let innerUsed = contractUsed $ usedVars (weakenUsed {outer=[x]} used) sc in
         usedVars innerUsed val
-  usedVars used (LCon fc n tag args) =
+  usedVars used (LCon fc n ci tag args) =
     foldl (usedVars {vars}) used args
   usedVars used (LOp fc lazy fn args) =
     foldl (usedVars {vars}) used args
@@ -321,7 +322,7 @@ mutual
     where
       usedConAlt : {default Nothing lazy : Maybe LazyReason} ->
                    Used vars -> LiftedConAlt vars -> Used vars
-      usedConAlt used (MkLConAlt n tag args sc) =
+      usedConAlt used (MkLConAlt n ci tag args sc) =
         contractUsedMany {remove=args} (usedVars (weakenUsed used) sc)
 
   usedVars used (LConstCase fc sc alts def) =
@@ -361,9 +362,9 @@ mutual
   dropUnused _ (LCrash fc msg) = LCrash fc msg
   dropUnused {outer} unused (LLocal fc p) =
     let (MkVar p') = dropIdx outer unused p in LLocal fc p'
-  dropUnused unused (LCon fc n tag args) =
+  dropUnused unused (LCon fc n ci tag args) =
     let args' = map (dropUnused unused) args in
-        LCon fc n tag args'
+        LCon fc n ci tag args'
   dropUnused {outer} unused (LLet fc n val sc) =
     let val' = dropUnused unused val
         sc' = dropUnused {outer=n::outer} (unused) sc in
@@ -390,10 +391,10 @@ mutual
     where
       dropConCase : LiftedConAlt (outer ++ vars) ->
                     LiftedConAlt (outer ++ (dropped vars unused))
-      dropConCase (MkLConAlt n t args sc) =
+      dropConCase (MkLConAlt n ci t args sc) =
         let sc' = (rewrite sym $ appendAssociative args outer vars in sc)
             droppedSc = dropUnused {vars=vars} {outer=args++outer} unused sc' in
-        MkLConAlt n t args (rewrite appendAssociative args outer (dropped vars unused) in droppedSc)
+        MkLConAlt n ci t args (rewrite appendAssociative args outer (dropped vars unused) in droppedSc)
   dropUnused {vars} {outer} unused (LConstCase fc sc alts def) =
     let alts' = map dropConstCase alts in
         LConstCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)

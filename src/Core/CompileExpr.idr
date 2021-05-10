@@ -12,6 +12,33 @@ import Data.Vect
 
 %default covering
 
+-- Backends might be able to treat some 'shapes' of data type specially,
+-- e.g. enumerations or lists.
+-- They can use or ignore this information as they see fit.
+public export
+data ConInfo = DATACON -- normal data constructor
+             | TYCON -- normal type constructor
+             | NIL -- nil of a list shaped thing
+             | CONS -- cons of a list shaped thing
+             | ENUM -- part of an enumeration
+
+export
+Show ConInfo where
+  show DATACON = "[datacon]"
+  show TYCON   = "[tycon]"
+  show NIL     = "[nil]"
+  show CONS    = "[cons]"
+  show ENUM    = "[enum]"
+
+export
+Eq ConInfo where
+  DATACON == DATACON = True
+  TYCON == TYCON = True
+  NIL == NIL = True
+  CONS == CONS = True
+  ENUM == ENUM = True
+  _ == _ = False
+
 mutual
   ||| CExp - an expression ready for compiling.
   public export
@@ -28,7 +55,10 @@ mutual
        -- lambdas if necessary, or overapply with additional CApps)
        CApp : FC -> CExp vars -> List (CExp vars) -> CExp vars
        -- A saturated constructor application
-       CCon : FC -> Name -> (tag : Maybe Int) -> List (CExp vars) -> CExp vars
+       -- 'ConInfo' gives additional information about the constructor that
+       -- a back end might be able to use. It is ignorable.
+       CCon : FC -> Name -> ConInfo -> (tag : Maybe Int) ->
+              List (CExp vars) -> CExp vars
        -- Internally defined primitive operations
        COp : {arity : _} ->
              FC -> PrimFn arity -> Vect arity (CExp vars) -> CExp vars
@@ -52,7 +82,7 @@ mutual
   data CConAlt : List Name -> Type where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       MkConAlt : Name -> (tag : Maybe Int) -> (args : List Name) ->
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                   CExp (args ++ vars) -> CConAlt vars
 
   public export
@@ -78,7 +108,10 @@ mutual
        -- lambdas if necessary, or overapply with additional CApps)
        NmApp : FC -> NamedCExp -> List NamedCExp -> NamedCExp
        -- A saturated constructor application
-       NmCon : FC -> Name -> (tag : Maybe Int) -> List NamedCExp -> NamedCExp
+       -- 'ConInfo' gives additional information about the constructor that
+       -- a back end might be able to use. It is ignoreable.
+       NmCon : FC -> Name -> ConInfo -> (tag : Maybe Int) ->
+               List NamedCExp -> NamedCExp
        -- Internally defined primitive operations
        NmOp : {arity : _ } -> FC -> PrimFn arity -> Vect arity NamedCExp -> NamedCExp
        -- Externally defined primitive operations
@@ -99,7 +132,7 @@ mutual
 
   public export
   data NamedConAlt : Type where
-       MkNConAlt : Name -> (tag : Maybe Int) -> (args : List Name) ->
+       MkNConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                    NamedCExp -> NamedConAlt
 
   public export
@@ -166,8 +199,13 @@ mutual
     show (NmLet _ x y z) = "(%let " ++ show x ++ " " ++ show y ++ " " ++ show z ++ ")"
     show (NmApp _ x xs)
         = assert_total $ "(" ++ show x ++ " " ++ show xs ++ ")"
-    show (NmCon _ x tag xs)
-        = assert_total $ "(%con " ++ show x ++ " " ++ show tag ++ " " ++ show xs ++ ")"
+    show (NmCon _ x ci tag xs)
+        = assert_total $ "(%con " ++ showFlag ci ++ show x ++ " " ++ show tag ++ " " ++ show xs ++ ")"
+      where
+        showFlag : ConInfo -> String
+        showFlag NIL = "[nil] "
+        showFlag CONS = "[cons] "
+        showFlag _ = ""
     show (NmOp _ op xs)
         = assert_total $ "(" ++ show op ++ " " ++ show xs ++ ")"
     show (NmExtPrim _ p xs)
@@ -184,9 +222,14 @@ mutual
 
   export
   Show NamedConAlt where
-    show (MkNConAlt x tag args exp)
-         = "(%concase " ++ show x ++ " " ++ show tag ++ " " ++
+    show (MkNConAlt x ci tag args exp)
+         = "(%concase " ++ showFlag ci ++ show x ++ " " ++ show tag ++ " " ++
              show args ++ " " ++ show exp ++ ")"
+      where
+        showFlag : ConInfo -> String
+        showFlag NIL = "[nil] "
+        showFlag CONS = "[cons] "
+        showFlag _ = ""
 
   export
   Show NamedConstAlt where
@@ -243,8 +286,8 @@ mutual
                      (forgetExp locs' sc)
   forgetExp locs (CApp fc f args)
       = NmApp fc (forgetExp locs f) (map (forgetExp locs) args)
-  forgetExp locs (CCon fc n t args)
-      = NmCon fc n t (map (forgetExp locs) args)
+  forgetExp locs (CCon fc n ci t args)
+      = NmCon fc n ci t (map (forgetExp locs) args)
   forgetExp locs (COp fc op args)
       = NmOp fc op (map (forgetExp locs) args)
   forgetExp locs (CExtPrim fc p args)
@@ -264,9 +307,9 @@ mutual
   forgetExp locs (CCrash fc msg) = NmCrash fc msg
 
   forgetConAlt : Names vars -> CConAlt vars -> NamedConAlt
-  forgetConAlt locs (MkConAlt n t args exp)
+  forgetConAlt locs (MkConAlt n ci t args exp)
       = let args' = addLocs args locs in
-            MkNConAlt n t (conArgs args args') (forgetExp args' exp)
+            MkNConAlt n ci t (conArgs args args') (forgetExp args' exp)
 
   forgetConstAlt : Names vars -> CConstAlt vars -> NamedConstAlt
   forgetConstAlt locs (MkConstAlt c exp)
@@ -352,8 +395,8 @@ mutual
             CLet fc x inl (insertNames outer ns val) sc'
   insertNames outer ns (CApp fc x xs)
       = CApp fc (insertNames outer ns x) (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (CCon fc x tag xs)
-      = CCon fc x tag (assert_total (map (insertNames outer ns) xs))
+  insertNames outer ns (CCon fc ci x tag xs)
+      = CCon fc ci x tag (assert_total (map (insertNames outer ns) xs))
   insertNames outer ns (COp fc x xs)
       = COp fc x (assert_total (map (insertNames outer ns) xs))
   insertNames outer ns (CExtPrim fc p xs)
@@ -374,10 +417,10 @@ mutual
                       SizeOf ns ->
                       CConAlt (outer ++ inner) ->
                       CConAlt (outer ++ (ns ++ inner))
-  insertNamesConAlt {outer} {ns} p q (MkConAlt x tag args sc)
+  insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
         = let sc' : CExp ((args ++ outer) ++ inner)
                   = rewrite sym (appendAssociative args outer inner) in sc in
-              MkConAlt x tag args
+              MkConAlt x ci tag args
                (rewrite appendAssociative args outer (ns ++ inner) in
                         insertNames (mkSizeOf args + p) q sc')
 
@@ -440,8 +483,8 @@ mutual
             CLet fc x inl (shrinkCExp sub val) sc'
   shrinkCExp sub (CApp fc x xs)
       = CApp fc (shrinkCExp sub x) (assert_total (map (shrinkCExp sub) xs))
-  shrinkCExp sub (CCon fc x tag xs)
-      = CCon fc x tag (assert_total (map (shrinkCExp sub) xs))
+  shrinkCExp sub (CCon fc x ci tag xs)
+      = CCon fc x ci tag (assert_total (map (shrinkCExp sub) xs))
   shrinkCExp sub (COp fc x xs)
       = COp fc x (assert_total (map (shrinkCExp sub) xs))
   shrinkCExp sub (CExtPrim fc p xs)
@@ -461,8 +504,8 @@ mutual
   shrinkCExp _ (CCrash fc x) = CCrash fc x
 
   shrinkConAlt : SubVars newvars vars -> CConAlt vars -> CConAlt newvars
-  shrinkConAlt sub (MkConAlt x tag args sc)
-        = MkConAlt x tag args (shrinkCExp (subExtend args sub) sc)
+  shrinkConAlt sub (MkConAlt x ci tag args sc)
+        = MkConAlt x ci tag args (shrinkCExp (subExtend args sub) sc)
 
   shrinkConstAlt : SubVars newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
@@ -470,6 +513,10 @@ mutual
 export
 Weaken CExp where
   weakenNs ns tm = insertNames zero ns tm
+
+export
+Weaken CConAlt where
+  weakenNs ns tm = insertNamesConAlt zero ns tm
 
 -- Substitute some explicit terms for names in a term, and remove those
 -- names from the scope
@@ -514,8 +561,8 @@ mutual
             CLet fc x inl (substEnv outer env val) sc'
   substEnv outer env (CApp fc x xs)
       = CApp fc (substEnv outer env x) (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CCon fc x tag xs)
-      = CCon fc x tag (assert_total (map (substEnv outer env) xs))
+  substEnv outer env (CCon fc x ci tag xs)
+      = CCon fc x ci tag (assert_total (map (substEnv outer env) xs))
   substEnv outer env (COp fc x xs)
       = COp fc x (assert_total (map (substEnv outer env) xs))
   substEnv outer env (CExtPrim fc p xs)
@@ -538,8 +585,8 @@ mutual
                 SubstCEnv drop vars ->
                 CConAlt (outer ++ (drop ++ vars)) ->
                 CConAlt (outer ++ vars)
-  substConAlt {vars} {outer} {drop} p env (MkConAlt x tag args sc)
-      = MkConAlt x tag args
+  substConAlt {vars} {outer} {drop} p env (MkConAlt x ci tag args sc)
+      = MkConAlt x ci tag args
            (rewrite appendAssociative args outer vars in
                     substEnv (mkSizeOf args + p) env
                       (rewrite sym (appendAssociative args outer (drop ++ vars)) in
@@ -587,8 +634,8 @@ mutual
             CLet fc x inl (mkLocals later bs val) sc'
   mkLocals later bs (CApp fc f xs)
       = CApp fc (mkLocals later bs f) (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (CCon fc x tag xs)
-      = CCon fc x tag (assert_total (map (mkLocals later bs) xs))
+  mkLocals later bs (CCon fc ci x tag xs)
+      = CCon fc ci x tag (assert_total (map (mkLocals later bs) xs))
   mkLocals later bs (COp fc x xs)
       = COp fc x (assert_total (map (mkLocals later bs) xs))
   mkLocals later bs (CExtPrim fc x xs)
@@ -613,10 +660,10 @@ mutual
                    Bounds bound ->
                    CConAlt (later ++ vars) ->
                    CConAlt (later ++ (bound ++ vars))
-  mkLocalsConAlt {bound} {later} {vars} p bs (MkConAlt x tag args sc)
+  mkLocalsConAlt {bound} {later} {vars} p bs (MkConAlt x ci tag args sc)
         = let sc' : CExp ((args ++ later) ++ vars)
                   = rewrite sym (appendAssociative args later vars) in sc in
-              MkConAlt x tag args
+              MkConAlt x ci tag args
                (rewrite appendAssociative args later (bound ++ vars) in
                         mkLocals (mkSizeOf args + p) bs sc')
 
@@ -638,7 +685,7 @@ getFC (CRef fc _) = fc
 getFC (CLam fc _ _) = fc
 getFC (CLet fc _ _ _ _) = fc
 getFC (CApp fc _ _) = fc
-getFC (CCon fc _ _ _) = fc
+getFC (CCon fc _ _ _ _) = fc
 getFC (COp fc _ _) = fc
 getFC (CExtPrim fc _ _) = fc
 getFC (CForce fc _ _) = fc
@@ -657,7 +704,7 @@ namespace NamedCExp
   getFC (NmLam fc _ _) = fc
   getFC (NmLet fc _ _ _) = fc
   getFC (NmApp fc _ _) = fc
-  getFC (NmCon fc _ _ _) = fc
+  getFC (NmCon fc _ _ _ _) = fc
   getFC (NmOp fc _ _) = fc
   getFC (NmExtPrim fc _ _) = fc
   getFC (NmForce fc _ _) = fc

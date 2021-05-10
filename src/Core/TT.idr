@@ -83,6 +83,38 @@ isConstantType (UN n) = case n of
 isConstantType _ = Nothing
 
 export
+isPrimType : Constant -> Bool
+isPrimType (I   x)  = False
+isPrimType (I8  x)  = False
+isPrimType (I16 x)  = False
+isPrimType (I32 x)  = False
+isPrimType (I64 x)  = False
+isPrimType (BI  x)  = False
+isPrimType (B8  x)  = False
+isPrimType (B16 x)  = False
+isPrimType (B32 x)  = False
+isPrimType (B64 x)  = False
+isPrimType (Str x)  = False
+isPrimType (Ch  x)  = False
+isPrimType (Db  x)  = False
+isPrimType WorldVal = False
+
+isPrimType Int8Type    = True
+isPrimType Int16Type   = True
+isPrimType Int32Type   = True
+isPrimType Int64Type   = True
+isPrimType IntType     = True
+isPrimType IntegerType = True
+isPrimType Bits8Type   = True
+isPrimType Bits16Type  = True
+isPrimType Bits32Type  = True
+isPrimType Bits64Type  = True
+isPrimType StringType  = True
+isPrimType CharType    = True
+isPrimType DoubleType  = True
+isPrimType WorldType   = True
+
+export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl

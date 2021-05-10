@@ -229,7 +229,7 @@ namespace Equality
 
   ||| The actual proof used by cast is irrelevant
   export
-  congCast : {n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
+  congCast : {0 n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
              {0 eq1 : m = n} -> {0 eq2 : p = q} ->
              k ~~~ l ->
              cast eq1 k ~~~ cast eq2 l
@@ -237,9 +237,8 @@ namespace Equality
 
   ||| Last is congruent wrt index equality
   export
-  congLast : {m, n : Nat} -> (0 _ : m = n) -> last {n=m} ~~~ last {n}
-  congLast {m = Z} {n = Z} eq = reflexive
-  congLast {m = S _} {n = S _} eq = FS (congLast (succInjective _ _ eq))
+  congLast : {m : Nat} -> (0 _ : m = n) -> last {n=m} ~~~ last {n}
+  congLast Refl = reflexive
 
   export
   congShift : (m : Nat) -> k ~~~ l -> shift m k ~~~ shift m l
@@ -263,7 +262,7 @@ namespace Equality
   export
   hetPointwiseIsTransport :
      {0 k : Fin m} -> {0 l : Fin n} ->
-     (eq : m === n) -> k ~~~ l -> k === rewrite eq in l
+     (0 eq : m === n) -> k ~~~ l -> k === rewrite eq in l
   hetPointwiseIsTransport Refl = homoPointwiseIsEqual
 
   export

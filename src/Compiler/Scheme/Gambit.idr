@@ -76,14 +76,14 @@ mutual
   -- Primitive types have been converted to names for the purpose of matching
   -- on types
   tySpec : NamedCExp -> Core String
-  tySpec (NmCon fc (UN "Int") _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ []) = pure "UTF-8-string"
-  tySpec (NmCon fc (UN "Double") _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ [_])
+  tySpec (NmCon fc (UN "Int") _ _ []) = pure "int"
+  tySpec (NmCon fc (UN "String") _ _ []) = pure "UTF-8-string"
+  tySpec (NmCon fc (UN "Double") _ _ []) = pure "double"
+  tySpec (NmCon fc (UN "Char") _ _ []) = pure "char"
+  tySpec (NmCon fc (NS _ n) _ _ [_])
      = cond [(n == UN "Ptr", pure "(pointer void)")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ [])
+  tySpec (NmCon fc (NS _ n) _ _ [])
      = cond [(n == UN "Unit", pure "void"),
              (n == UN "AnyPtr", pure "(pointer void)")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
@@ -94,8 +94,8 @@ mutual
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
   gambitPrim : Int -> ExtPrim -> List NamedCExp -> Core String

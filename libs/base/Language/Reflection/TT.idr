@@ -14,8 +14,8 @@ FilePos = (Int, Int)
 -- the second 'FilePos' indicates the start of the next term.
 public export
 data FC : Type where
-     MkFC : String -> FilePos -> FilePos -> FC
-     EmptyFC : FC
+   MkFC : String -> FilePos -> FilePos -> FC
+   EmptyFC : FC
 
 public export
 emptyFC : FC
