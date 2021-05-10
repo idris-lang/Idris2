@@ -653,14 +653,12 @@ data BuiltinType : Type where
     BuiltinNatural : BuiltinType
     NaturalToInteger : BuiltinType
     IntegerToNatural : BuiltinType
-    BuiltinEnum : BuiltinType
 
 export
 Show BuiltinType where
     show BuiltinNatural = "Natural"
     show NaturalToInteger = "NaturalToInteger"
     show IntegerToNatural = "IntegerToNatural"
-    show BuiltinEnum = "Enum"
 
 -- Token types to make it harder to get the constructor names
 -- the wrong way round.
