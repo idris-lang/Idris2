@@ -164,6 +164,7 @@ install-support:
 	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
+	@${MAKE} -C support/chez install
 
 install-libs:
 	${MAKE} -C libs/prelude install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
