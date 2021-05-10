@@ -773,8 +773,9 @@ applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 
 ||| Based only on the heuristic-score of columns, get the index of
 ||| the column that should be processed next.
-nextIdx : {p : _} -> {ps : _} -> List (NamedPats ns (p :: ps)) -> (n ** NVar n (p :: ps))
-nextIdx xs = 
+nextIdx : {p : _} -> {ps : _} -> Phase -> List (NamedPats ns (p :: ps)) -> (n ** NVar n (p :: ps))
+nextIdx (CompileTime _) _  = (_ ** (MkNVar First))
+nextIdx RunTime         xs = 
   fromMaybe (_ ** (MkNVar First)) $
     applyHeuristics (zeroedScore xs) [heuristicF, heuristicB, heuristicA]
 
@@ -947,7 +948,7 @@ mutual
 --            log "compile.casetree.debug" 1 ("\nB: " ++ (show scores'))
 --            let scores'' = heuristicA scores'
 --            log "compile.casetree.debug" 1 ("\nA: " ++ (show scores''))
-           let (_ ** (MkNVar next)) = nextIdx nps
+           let (_ ** (MkNVar next)) = nextIdx phase nps
            let prioritizedClauses = shuffleVars next <$> clauses
            (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> prioritizedClauses)
            -- (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> clauses)
