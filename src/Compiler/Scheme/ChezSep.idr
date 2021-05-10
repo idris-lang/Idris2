@@ -94,6 +94,9 @@ compileChezLibraries chez libDir ssFiles = coreLift_ $ system $ unwords
   [ "echo"
   , unwords
     [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
+      ++ " '(delete-file " ++ chezString ssFile ++ ")'"
+      -- we must delete the SS file to prevent it from interfering with the SO files
+      -- we keep the .hash file, though, so we still keep track of what to rebuild
     | ssFile <- ssFiles
     ]
   , "|", chez, "-q", "--libdirs", libDir
@@ -103,6 +106,7 @@ compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -
 compileChezLibrary chez libDir ssFile = coreLift_ $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ chezString ssFile ++ "))'"
+  , "'(delete-file " ++ chezString ssFile ++ ")'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
@@ -110,6 +114,7 @@ compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -
 compileChezProgram chez libDir ssFile = coreLift_ $ system $ unwords
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ chezString ssFile ++ "))'"
+  , "'(delete-file " ++ chezString ssFile ++ ")'"
   , "|", chez, "-q", "--libdirs", libDir
   ]
 
