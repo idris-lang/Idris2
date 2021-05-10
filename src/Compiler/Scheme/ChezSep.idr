@@ -121,7 +121,7 @@ chezNS ns = case showNSWithSep "-" ns of
 -- arbitrarily name the compilation unit
 -- after the alphabetically first namespace contained within
 chezLibraryName : CompilationUnit def -> String
-chezLibraryName cu = chezNS $ foldl1 min cu.namespaces
+chezLibraryName cu = chezNS $ List1.foldl1 min cu.namespaces
 
 -- TODO: use a proper exec function without shell injection
 touch : String -> Core ()
