@@ -670,17 +670,17 @@ elemInsertedMiddle v (x :: xs) qs = rewrite elemInsertedMiddle v xs qs in Refl
 
 ||| Helper to find a single highest scoring name (or none at all) while
 ||| retaining the context of all names processed.
-highScore : {prev : List Name} -> 
-            (names : List Name) -> 
-            (scores : Vect (length names) Int) -> 
-            (highVal : Int) -> 
-            (highIdx : (n ** NVar n (prev ++ names))) -> 
-            (duped : Bool) -> 
+highScore : {prev : List Name} ->
+            (names : List Name) ->
+            (scores : Vect (length names) Int) ->
+            (highVal : Int) ->
+            (highIdx : (n ** NVar n (prev ++ names))) ->
+            (duped : Bool) ->
             Maybe (n ** NVar n (prev ++ names))
 highScore [] [] high idx True = Nothing
 highScore [] [] high idx False = Just idx
-highScore (x :: xs) (y :: ys) high idx duped = 
-  let next = highScore {prev = prev `snoc` x} xs ys 
+highScore (x :: xs) (y :: ys) high idx duped =
+  let next = highScore {prev = prev `snoc` x} xs ys
       prf = elemInsertedMiddle x prev xs
   in  rewrite prf in
         case compare y high of
@@ -700,7 +700,7 @@ highScoreIdx (Scored xs (y :: ys)) = highScore {prev = []} (p :: ps) (y :: ys) (
 ||| length is the same as the vector's length was.
 toList' : Vect l a -> (res : List a ** length res = l)
 toList' [] = ([] ** Refl)
-toList' (x :: xs) = 
+toList' (x :: xs) =
   let (rest ** prf) = toList' xs
   in  (x :: rest ** cong S prf)
 
@@ -720,7 +720,7 @@ headConsPenalty _ (PUnmatchable _ _) = 0
 ||| sum up the column scores and add to the ScoredPats passed in.
 consScoreHeuristic : {ps : _} -> (scorePat : Pat -> Int) -> ScoredPats ns ps -> ScoredPats ns ps
 consScoreHeuristic _ sps@(Scored [] _) = sps -- can't update scores without any patterns
-consScoreHeuristic scorePat (Scored xs ys) = 
+consScoreHeuristic scorePat (Scored xs ys) =
   let columnScores = sum <$> scoreColumns xs
       ys' = zipWith (+) ys columnScores
   in  Scored xs ys'
@@ -729,13 +729,13 @@ consScoreHeuristic scorePat (Scored xs ys) =
     -- scoring the first column.
     scoreFirstColumn : (nps : List (NamedPats ns (p' :: ps'))) -> (Vect (length nps) (NamedPats ns ps'), Vect (length nps) Int)
     scoreFirstColumn [] = ([], [])
-    scoreFirstColumn ((w :: ws) :: nps) = 
+    scoreFirstColumn ((w :: ws) :: nps) =
       let (ws', scores) = scoreFirstColumn nps
       in  (ws :: ws', scorePat (pat w) :: scores)
 
     scoreColumns : {ps' : _} -> (nps : List (NamedPats ns ps')) -> Vect (length ps') (Vect (length nps) Int)
     scoreColumns {ps' = []} nps = []
-    scoreColumns {ps' = (w :: ws)} nps = 
+    scoreColumns {ps' = (w :: ws)} nps =
       let (rest, firstCol) = scoreFirstColumn nps
           (rest' ** prf) = toList' rest
       in  firstCol :: (rewrite sym $ prf in scoreColumns rest')
@@ -744,7 +744,7 @@ consScoreHeuristic scorePat (Scored xs ys) =
 ||| This favors constructive matching first and reduces tree depth on average.
 heuristicF : {ps : _} -> ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)
 heuristicF sps@(Scored [] _) = sps
-heuristicF (Scored (x :: xs) ys) = 
+heuristicF (Scored (x :: xs) ys) =
   let columnScores = scores x
       ys' = zipWith (+) ys columnScores
   in  Scored (x :: xs) ys'
@@ -775,7 +775,7 @@ applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 ||| the column that should be processed next.
 nextIdx : {p : _} -> {ps : _} -> Phase -> List (NamedPats ns (p :: ps)) -> (n ** NVar n (p :: ps))
 nextIdx (CompileTime _) _  = (_ ** (MkNVar First))
-nextIdx RunTime         xs = 
+nextIdx RunTime         xs =
   fromMaybe (_ ** (MkNVar First)) $
     applyHeuristics (zeroedScore xs) [heuristicF, heuristicB, heuristicA]
 
