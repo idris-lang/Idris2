@@ -12,6 +12,7 @@ import public Libraries.Data.StringMap
 import Core.Hash
 import Core.TT
 import Data.List
+import Data.List1
 import Data.Vect
 import Data.Maybe
 
@@ -46,7 +47,7 @@ record CompilationUnit def where
   id : CompilationUnitId
 
   ||| Namespaces contained within the compilation unit.
-  namespaces : SortedSet Namespace
+  namespaces : List1 Namespace
 
   ||| Other units that this unit depends on.
   dependencies : SortedSet CompilationUnitId
@@ -96,7 +97,7 @@ namespace Tarjan
     vertices : SortedMap cuid TarjanVertex
     stack : List cuid
     nextIndex : Int
-    components : List (List cuid)
+    components : List (List1 cuid)
     impossibleHappened : Bool  -- we should get at least some indication of broken assumptions
 
   ||| Find strongly connected components in the given graph.
@@ -104,7 +105,7 @@ namespace Tarjan
   ||| Input: map from vertex X to all vertices Y such that there is edge X->Y
   ||| Output: list of strongly connected components, ordered by output degree descending
   export
-  tarjan : Ord cuid => SortedMap cuid (SortedSet cuid) -> List (List cuid)
+  tarjan : Ord cuid => SortedMap cuid (SortedSet cuid) -> List (List1 cuid)
   tarjan {cuid} deps = loop initialState (SortedMap.keys deps)
     where
       initialState : TarjanState cuid
@@ -138,7 +139,7 @@ namespace Tarjan
                         stack = ws
                       } ts
                   in if w == v
-                    then record { components $= ((v :: acc) ::) } ts'  -- that's it
+                    then record { components $= ((v ::: acc) ::) } ts'  -- that's it
                     else createComponent ts' v (w :: acc)
 
           loop : TarjanState cuid -> List cuid -> TarjanState cuid
@@ -163,7 +164,7 @@ namespace Tarjan
               nextIndex $= (1+)
             } ts
 
-      loop : TarjanState cuid -> List cuid -> List (List cuid)
+      loop : TarjanState cuid -> List cuid -> List (List1 cuid)
       loop ts [] =
         if ts.impossibleHappened
           then []
@@ -294,12 +295,12 @@ getCompilationUnits {def} defs =
     -- ordered by output degree ascending.
     --
     -- Each SCC will become a compilation unit.
-    components : List (List Namespace)
+    components : List (List1 Namespace)
       = List.reverse $ tarjan nsDeps  -- tarjan generates reverse toposort
 
     -- Maps a namespace to the compilation unit that contains it.
     nsMap : SortedMap Namespace CompilationUnitId
-      = SortedMap.fromList [(ns, cuid) | (cuid, nss) <- withCUID components, ns <- nss]
+      = SortedMap.fromList [(ns, cuid) | (cuid, nss) <- withCUID components, ns <- toList nss]
 
     -- List of all compilation units, ordered by number of dependencies, ascending.
     units : List (CompilationUnit def)
@@ -320,18 +321,18 @@ getCompilationUnits {def} defs =
       SortedMap Namespace (SortedSet Namespace)
       -> SortedMap Namespace CompilationUnitId
       -> SortedMap Namespace (List (Name, def))
-      -> CompilationUnitId -> List Namespace -> CompilationUnit def
+      -> CompilationUnitId -> List1 Namespace -> CompilationUnit def
     mkUnit nsDeps nsMap defsByNS cuid nss =
       MkCompilationUnit
       { id = cuid
-      , namespaces = SortedSet.fromList nss
+      , namespaces = nss
       , dependencies = SortedSet.delete cuid dependencies
       , definitions = definitions
       }
      where
       dependencies : SortedSet CompilationUnitId
       dependencies = SortedSet.fromList $ do
-        ns <- nss  -- NS contained within
+        ns <- toList nss  -- NS contained within
         depsNS <- SortedSet.toList $  -- NS we depend on
           fromMaybe SortedSet.empty $
             SortedMap.lookup ns nsDeps

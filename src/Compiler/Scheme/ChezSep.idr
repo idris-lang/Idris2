@@ -121,10 +121,7 @@ chezNS ns = case showNSWithSep "-" ns of
 -- arbitrarily name the compilation unit
 -- after the alphabetically first namespace contained within
 chezLibraryName : CompilationUnit def -> String
-chezLibraryName cu =
-  case SortedSet.toList cu.namespaces of
-    [] => "unknown"  -- this will never happen because the Tarjan algorithm won't produce an empty SCC
-    ns::_ => chezNS ns
+chezLibraryName cu = chezNS $ foldl1 min cu.namespaces
 
 touch : String -> Core ()
 touch s = coreLift_ $ system ("touch \"" ++ s ++ "\"")
