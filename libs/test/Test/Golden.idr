@@ -385,7 +385,7 @@ poolRunner opts pool
     banner : String
     banner =
       let separator = fastPack $ replicate 72 '-' in
-      fastUnlines [ separator, pool.poolName, separator, "" ]
+      fastUnlines [ "", separator, pool.poolName, separator, "" ]
 
     loop : Summary -> List String -> IO Summary
     loop acc [] = pure acc
