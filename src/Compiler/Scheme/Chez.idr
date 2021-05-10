@@ -364,6 +364,7 @@ startChezPreamble = unlines
     , "fi                                                         "
     , ""
     , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
+    , ""  -- so that the preamble ends with a newline
     ]
 
 startChez : String -> String -> String
