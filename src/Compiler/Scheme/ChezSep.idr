@@ -123,6 +123,7 @@ chezNS ns = case showNSWithSep "-" ns of
 chezLibraryName : CompilationUnit def -> String
 chezLibraryName cu = chezNS $ foldl1 min cu.namespaces
 
+-- TODO: use a proper exec function without shell injection
 touch : String -> Core ()
 touch s = coreLift_ $ system ("touch \"" ++ s ++ "\"")
 
