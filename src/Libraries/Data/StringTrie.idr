@@ -3,7 +3,6 @@ module Libraries.Data.StringTrie
 import Data.These
 import Libraries.Data.StringMap
 
-%hide Prelude.toList
 %default total
 
 -- prefix tree specialised to use `String`s as keys
@@ -63,5 +62,5 @@ foldWithKeysM {a} {m} {b} fk fv = go []
                                              z <- fk ks'
                                              pure $ x <+> y <+> z)
                           neutral
-                          (toList sm))
+                          (StringMap.toList sm))
                 nd
