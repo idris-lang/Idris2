@@ -274,6 +274,16 @@ Hashable Constant where
     WorldType =>
       h `hashWithSalt` 19
 
+    I8 x => h `hashWithSalt` 20 `hashWithSalt` x
+    I16 x => h `hashWithSalt` 21 `hashWithSalt` x
+    I32 x => h `hashWithSalt` 22 `hashWithSalt` x
+    I64 x => h `hashWithSalt` 23 `hashWithSalt` x
+
+    Int8Type => h `hashWithSalt` 24
+    Int16Type => h `hashWithSalt` 25
+    Int32Type => h `hashWithSalt` 26
+    Int64Type => h `hashWithSalt` 27
+
 export
 Hashable LazyReason where
   hashWithSalt h = \case
@@ -366,6 +376,16 @@ Hashable (PrimFn arity) where
     Crash =>
       h `hashWithSalt` 37
 
+export
+Hashable ConInfo where
+  hashWithSalt h = \case
+    DATACON => h `hashWithSalt` 0
+    TYCON => h `hashWithSalt` 1
+    NIL => h `hashWithSalt` 2
+    CONS => h `hashWithSalt` 3
+    ENUM => h `hashWithSalt` 4
+
+
 mutual
   export
   Hashable NamedCExp where
@@ -380,8 +400,8 @@ mutual
         h `hashWithSalt` 3 `hashWithSalt` x `hashWithSalt` val `hashWithSalt` rhs
       NmApp fc f xs =>
         h `hashWithSalt` 4 `hashWithSalt` f `hashWithSalt` xs
-      NmCon fc cn t args =>
-        h `hashWithSalt` 5 `hashWithSalt` cn `hashWithSalt` t `hashWithSalt` args
+      NmCon fc cn ci t args =>
+        h `hashWithSalt` 5 `hashWithSalt` cn `hashWithSalt` ci `hashWithSalt` t `hashWithSalt` args
       NmOp fc fn args =>
         h `hashWithSalt` 6 `hashWithSalt` fn `hashWithSalt` args
       NmExtPrim fc p args =>
@@ -403,8 +423,8 @@ mutual
 
   export
   Hashable NamedConAlt where
-    hashWithSalt h (MkNConAlt n tag args rhs) =
-      h `hashWithSalt` n `hashWithSalt` tag `hashWithSalt` args `hashWithSalt` rhs
+    hashWithSalt h (MkNConAlt n ci tag args rhs) =
+      h `hashWithSalt` n `hashWithSalt` ci `hashWithSalt` tag `hashWithSalt` args `hashWithSalt` rhs
 
   export
   Hashable NamedConstAlt where
