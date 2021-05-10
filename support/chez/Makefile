@@ -21,7 +21,7 @@ support-sep.ss: support.ss
 	cat support.ss \
 		| sed -n 's|(define (\?\([^ )]*\).*|\1|p' \
 		>> $@
-	echo ") (import chezscheme)" >> $@
+	echo ") (import (chezscheme))" >> $@
 
 	# copy the code
 	cat $< >> $@
