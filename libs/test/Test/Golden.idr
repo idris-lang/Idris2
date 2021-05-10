@@ -43,9 +43,11 @@
 ||| + `idris2`       The path of the executable we are testing.
 ||| + `codegen`      The backend to use for code generation.
 ||| + `onlyNames`    The tests to run relative to the generated executable.
+||| + `onlyFile`     The file listing the tests to run relative to the generated executable.
 ||| + `interactive`  Whether to offer to update the expected file or not.
 ||| + `timing`       Whether to display time taken for each test.
 ||| + `threads`      The maximum numbers to use (default: number of cores).
+||| + `failureFile`  The file in which to write the list of failing tests.
 |||
 ||| We provide an options parser (`options`) that takes the list of command line
 ||| arguments and constructs this for you.
@@ -118,37 +120,47 @@ usage exe = unwords
   , "[--cg CODEGEN]"
   , "[--threads N]"
   , "[--failure-file PATH]"
+  , "[--only-file PATH]"
   , "[--only [NAMES]]"
   ]
 
-||| Process the command line options.
 export
-options : List String -> Maybe Options
-options args = case args of
-    (_ :: exe :: rest) => go rest (initOptions exe)
-    _ => Nothing
-
-  where
-
-    go : List String -> Options -> Maybe Options
-    go rest opts = case rest of
-      []                            => pure opts
-      ("--timing" :: xs)            => go xs (record { timing = True} opts)
-      ("--interactive" :: xs)       => go xs (record { interactive = True } opts)
-      ("--cg" :: cg :: xs)          => go xs (record { codegen = Just cg } opts)
-      ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
-                                          go xs (record { threads = pos } opts)
-      ("--failure-file" :: p :: xs) => go xs (record { failureFile = Just p } opts)
-      ("--only" :: xs)              => pure $ record { onlyNames = xs } opts
-      _ => Nothing
-
--- [ Core ]
-
-export
-fail : String -> IO ()
+fail : String -> IO a
 fail err
     = do putStrLn err
          exitWith (ExitFailure 1)
+
+||| Process the command line options.
+export
+options : List String -> IO (Maybe Options)
+options args = case args of
+    (_ :: exe :: rest) => mkOptions exe rest
+    _ => pure Nothing
+
+  where
+
+    go : List String -> Maybe String -> Options -> Maybe (Maybe String, Options)
+    go rest only opts = case rest of
+      []                            => pure (only, opts)
+      ("--timing" :: xs)            => go xs only (record { timing = True} opts)
+      ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
+      ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
+      ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
+                                          go xs only (record { threads = pos } opts)
+      ("--failure-file" :: p :: xs) => go  xs only (record { failureFile = Just p } opts)
+      ("--only" :: xs)              => pure (only, record { onlyNames = xs } opts)
+      ("--only-file" :: p :: xs)    => go xs (Just p) opts
+      _ => Nothing
+
+    mkOptions : String -> List String -> IO (Maybe Options)
+    mkOptions exe rest
+      = do let Just (mfp, opts) = go rest Nothing (initOptions exe)
+                 | Nothing => pure Nothing
+           let Just fp = mfp
+                 | Nothing => pure (Just opts)
+           Right only <- readFile fp
+             | Left err => fail (show err)
+           pure $ Just $ record { onlyNames $= (forget (lines only) ++) } opts
 
 ||| Normalise strings between different OS.
 |||
@@ -388,9 +400,9 @@ export
 runner : List TestPool -> IO ()
 runner tests
     = do args <- getArgs
-         let (Just opts) = options args
-              | _ => do print args
-                        putStrLn (usage "runtests")
+         Just opts <- options args
+            | _ => do print args
+                      putStrLn (usage "runtests")
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
                    Nothing => pure $ record { codegen = !findCG } opts
