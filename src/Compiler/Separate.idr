@@ -189,7 +189,7 @@ mutual
     nsRefs (NmLam fc n rhs) = nsRefs rhs
     nsRefs (NmLet fc n val rhs) = nsRefs val <+> nsRefs rhs
     nsRefs (NmApp fc f args) = nsRefs f <+> concatMap nsRefs args
-    nsRefs (NmCon fc cn tag args) = concatMap nsRefs args
+    nsRefs (NmCon fc cn ci tag args) = concatMap nsRefs args
     nsRefs (NmForce fc reason rhs) = nsRefs rhs
     nsRefs (NmDelay fc reason rhs) = nsRefs rhs
     nsRefs (NmErased fc) = SortedSet.empty
@@ -204,7 +204,7 @@ mutual
 
   export
   HasNamespaces NamedConAlt where
-    nsRefs (MkNConAlt n tag args rhs) = nsRefs rhs
+    nsRefs (MkNConAlt n ci tag args rhs) = nsRefs rhs
 
   export
   HasNamespaces NamedConstAlt where
