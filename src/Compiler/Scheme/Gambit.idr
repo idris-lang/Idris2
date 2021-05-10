@@ -301,15 +301,14 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
-useCC fc [] args ret = throw (NoForeignCC fc)
-useCC fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC fc ccs args ret
+useCC fc ccs args ret
+    = case parseCC ["scheme,gambit", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc)
            Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           _ => useCC fc ccs args ret
+           _ => throw (NoForeignCC fc)
   where
     fnWrapName : String -> String -> String
     fnWrapName cfn schemeArgName = schemeArgName ++ "-" ++ cfn ++ "-cFunWrap"
