@@ -3,6 +3,7 @@ module Parser.Rule.Source
 import public Parser.Lexer.Source
 import public Parser.Support
 
+import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
@@ -180,6 +181,13 @@ pragma n =
           then Just ()
           else Nothing
       _ => Nothing)
+
+export
+builtinType : Rule BuiltinType
+builtinType =
+    BuiltinNatural <$ exactIdent "Natural"
+    <|> NaturalToInteger <$ exactIdent "NaturalToInteger"
+    <|> IntegerToNatural <$ exactIdent "IntegerToNatural"
 
 export
 operator : Rule Name
