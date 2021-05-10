@@ -1,11 +1,13 @@
 include ../../config.mk
 
-all: support-sep.ss
+all: build
 
 clean:
 	$(RM) support-sep.ss
 
-.PHONY: install
+.PHONY: install  build
+
+build: support-sep.ss
 
 install: build
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
