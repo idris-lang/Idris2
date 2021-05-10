@@ -186,22 +186,6 @@ makeIntBound isBigInt bits =
       name = if isBigInt then "bigint_bound_" else "int_bound_"
    in addConstToPreamble (name ++ show bits) (f "2" ++ " ** "++ f (show bits))
 
--- In JS, 1 << 32 = 1, but we expect this to be 0. Therefore,
--- left shifts with a value > 31 are set to 0.
-jsShl32 : {auto c : Ref ESs ESSt} -> String -> String -> Core String
-jsShl32 x y =
-  do f <- addConstToPreamble "shl32" "(x,y)=>y>=32?0:x<<y"
-     pure $ f ++ "(" ++ x ++ "," ++ y ++ ")"
-
--- In JS, 13 >> 32 = 13, but we expect this to be 0.
--- Likewise, -13 >> 32 = -13, but we expect this to be -1.
--- Therefore, left shifts with a value > 31 are set to 0 in case of
--- a positive argument and -1 otherwise.
-jsShr32 : {auto c : Ref ESs ESSt} -> String -> String -> Core String
-jsShr32 x y =
-  do f <- addConstToPreamble "shr32" "(x,y)=>y>=32?(x<0?-1:0):x>>y"
-     pure $ f ++ "(" ++ x ++ "," ++ y ++ ")"
-
 truncateIntWithBitMask : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
 truncateIntWithBitMask bits e =
   let bs = show bits
@@ -389,9 +373,9 @@ jsOp (Mul ty) [x, y] = mult (intKind ty) x y
 jsOp (Div ty) [x, y] = div (intKind ty) x y
 jsOp (Mod ty) [x, y] = arithOp (intKind ty) "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
-jsOp (ShiftL Int32Type) [x, y] = jsShl32 x y
+jsOp (ShiftL Int32Type) [x, y] = pure $ binOp "<<" x y
 jsOp (ShiftL ty) [x, y] = bitOp (intKind ty) "<<" x y
-jsOp (ShiftR Int32Type) [x, y] = jsShr32 x y
+jsOp (ShiftR Int32Type) [x, y] = pure $ binOp ">>" x y
 jsOp (ShiftR ty) [x, y] = bitOp (intKind ty) ">>" x y
 jsOp (BAnd Bits32Type) [x, y] = pure . fromBigInt $ binOp "&" (toBigInt x) (toBigInt y)
 jsOp (BOr Bits32Type) [x, y] = pure . fromBigInt $ binOp "|" (toBigInt x) (toBigInt y)
