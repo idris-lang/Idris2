@@ -116,10 +116,12 @@ test: testenv
 support:
 	@${MAKE} -C support/c
 	@${MAKE} -C support/refc
+	@${MAKE} -C support/chez
 
 support-clean:
 	@${MAKE} -C support/c clean
 	@${MAKE} -C support/refc clean
+	@${MAKE} -C support/chez clean
 
 clean-libs:
 	${MAKE} -C libs/prelude clean
@@ -149,15 +151,13 @@ endif
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
-	$(RM) -f "${PREFIX}/bin/${NAME}_app"/*.ss  # SS files interfere with separately compiled idris
+	-$(RM) "${PREFIX}/bin/${NAME}_app"/*.ss  # SS files interfere with separately compiled idris
 
 install-support:
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
 	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
 	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
