@@ -300,7 +300,7 @@ getCompilationUnits {def} defs =
 
     -- Maps a namespace to the compilation unit that contains it.
     nsMap : SortedMap Namespace CompilationUnitId
-      = SortedMap.fromList [(ns, cuid) | (cuid, nss) <- withCUID components, ns <- toList nss]
+      = SortedMap.fromList [(ns, cuid) | (cuid, nss) <- withCUID components, ns <- List1.forget nss]
 
     -- List of all compilation units, ordered by number of dependencies, ascending.
     units : List (CompilationUnit def)
@@ -332,7 +332,7 @@ getCompilationUnits {def} defs =
      where
       dependencies : SortedSet CompilationUnitId
       dependencies = SortedSet.fromList $ do
-        ns <- toList nss  -- NS contained within
+        ns <- List1.forget nss  -- NS contained within
         depsNS <- SortedSet.toList $  -- NS we depend on
           fromMaybe SortedSet.empty $
             SortedMap.lookup ns nsDeps
