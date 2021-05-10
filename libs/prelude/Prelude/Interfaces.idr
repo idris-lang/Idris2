@@ -265,6 +265,10 @@ interface Foldable t where
   foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
   foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
 
+  ||| Produce a list of the elements contained in the parametrised type.
+  toList : t elem -> List elem
+  toList = foldr (::) []
+
 ||| Maps each element to a value and combine them
 public export
 foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m

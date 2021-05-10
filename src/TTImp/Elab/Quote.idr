@@ -245,7 +245,7 @@ checkQuoteDecl rig elabinfo nest env fc ds exp
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
          qd <- getCon fc defs (reflectionttimp "Decl")
-         qty <- appCon fc defs (preludetypes "List") [qd]
+         qty <- appCon fc defs (basics "List") [qd]
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qds)
                   (gnf env qty) exp

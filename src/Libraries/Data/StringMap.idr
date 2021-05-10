@@ -4,6 +4,7 @@ module Libraries.Data.StringMap
 
 import Core.Name
 
+%hide Prelude.toList
 %default total
 
 Key : Type

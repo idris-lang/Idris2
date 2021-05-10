@@ -1,6 +1,6 @@
 1/1: Building refprims (refprims.idr)
 LOG 0: Name: Prelude.Types.List.++
-LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Types.List a) (%pi RigW Explicit (Just ys) (Prelude.Types.List a) (Prelude.Types.List a))))
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Basics.List a) (%pi RigW Explicit (Just ys) (Prelude.Basics.List a) (Prelude.Basics.List a))))
 LOG 0: Name: Prelude.Types.String.++
 LOG 0: Type: (%pi RigW Explicit (Just x) String (%pi RigW Explicit (Just y) String String))
 LOG 0: Resolved name: Prelude.Types.Nat

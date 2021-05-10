@@ -459,11 +459,6 @@ toList1' : (l : List a) -> Maybe (List1 a)
 toList1' [] = Nothing
 toList1' (x :: xs) = Just (x ::: xs)
 
-||| Convert any Foldable structure to a list.
-public export
-toList : Foldable t => t a -> List a
-toList = foldr (::) []
-
 ||| Prefix every element in the list with the given element
 |||
 ||| ```idris example
@@ -631,11 +626,11 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
 --------------------------------------------------------------------------------
 
 export
-Uninhabited ([] = Prelude.(::) x xs) where
+Uninhabited ([] = x :: xs) where
   uninhabited Refl impossible
 
 export
-Uninhabited (Prelude.(::) x xs = []) where
+Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
 
 ||| (::) is injective

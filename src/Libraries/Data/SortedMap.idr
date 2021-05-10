@@ -1,5 +1,7 @@
 module Libraries.Data.SortedMap
 
+%hide Prelude.toList
+
 -- TODO: write split
 
 private

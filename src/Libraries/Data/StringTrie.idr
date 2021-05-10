@@ -3,6 +3,7 @@ module Libraries.Data.StringTrie
 import Data.These
 import Libraries.Data.StringMap
 
+%hide Prelude.toList
 %default total
 
 -- prefix tree specialised to use `String`s as keys

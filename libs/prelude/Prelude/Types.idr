@@ -331,17 +331,6 @@ Traversable (Either e) where
 -- LISTS --
 -----------
 
-||| Generic lists.
-public export
-data List a =
-  ||| Empty list
-  Nil
-
-  | ||| A non-empty list, consisting of a head element and the rest of the list.
-  (::) a (List a)
-
-%name List xs, ys, zs
-
 public export
 Eq a => Eq (List a) where
   [] == [] = True
@@ -392,6 +381,8 @@ Foldable List where
 
   null [] = True
   null (_::_) = False
+
+  toList = id
 
 public export
 Applicative List where
