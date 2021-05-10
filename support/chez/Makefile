@@ -3,7 +3,7 @@ include ../../config.mk
 all: build
 
 clean:
-	$(RM) support-sep.ss
+	-$(RM) support-sep.ss
 
 .PHONY: install  build
 
