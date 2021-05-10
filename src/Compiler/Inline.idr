@@ -436,7 +436,7 @@ mutual
   addRefs ds (CLam _ _ sc) = addRefs ds sc
   addRefs ds (CLet _ _ _ val sc) = addRefs (addRefs ds val) sc
   addRefs ds (CApp _ f args) = addRefsArgs (addRefs ds f) args
-  addRefs ds (CCon _ _ _ _ args) = addRefsArgs ds args
+  addRefs ds (CCon _ n _ _ args) = addRefsArgs (insert n False ds) args
   addRefs ds (COp _ _ args) = addRefsArgs ds (toList args)
   addRefs ds (CExtPrim _ _ args) = addRefsArgs ds args
   addRefs ds (CForce _ _ e) = addRefs ds e
@@ -473,7 +473,7 @@ inlineDef : {auto c : Ref Ctxt Defs} ->
 inlineDef n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
-         let Just cexpr =  compexpr def             | Nothing => pure ()
+         let Just cexpr = compexpr def              | Nothing => pure ()
          setCompiled n !(inline n cexpr)
 
 -- Update the names a function refers to at runtime based on the transformation
