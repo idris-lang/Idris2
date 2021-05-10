@@ -342,23 +342,20 @@ exists f
              | Left err => pure False
          closeFile ok
          pure True
-
--- Parse a calling convention into a backend/target for the call, and
--- a comma separated list of any other location data.
+-- Select the most preferred target from an ordered list of choices and
+-- parse the calling convention into a backend/target for the call, and
+-- a comma separated list of any other location data. For example
+-- the chez backend would supply ["scheme,chez", "scheme", "C"]. For a function with
+-- more than one string, a string with "scheme" would be preferred over one
+-- with "C" and "scheme,chez" would be preferred to both.
 -- e.g. "scheme:display" - call the scheme function 'display'
 --      "C:puts,libc,stdio.h" - call the C function 'puts' which is in
 --      the library libc and the header stdio.h
--- Returns Nothing if the string is empty (which a backend can interpret
--- however it likes)
+-- Returns Nothing if there is no match.
 export
-parseCC : String -> Maybe (String, List String)
-parseCC "" = Nothing
-parseCC str
-    = case span (/= ':') str of
-           (target, "") => Just (trim target, [])
-           (target, opts) => Just (trim target,
-                                   map trim (getOpts
-                                       (assert_total (strTail opts))))
+parseCC : List String -> List String -> Maybe (String, List String)
+parseCC [] _ = Nothing
+parseCC (target::ts) strs = findTarget target strs <|> parseCC ts strs
   where
     getOpts : String -> List String
     getOpts "" = []
@@ -366,6 +363,17 @@ parseCC str
         = case span (/= ',') str of
                (opt, "") => [opt]
                (opt, rest) => opt :: getOpts (assert_total (strTail rest))
+    hasTarget : String -> String -> Bool
+    hasTarget target str = case span (/= ':') str of
+                            (targetSpec, _) => targetSpec == target
+    findTarget : String -> List String -> Maybe (String, List String)
+    findTarget target [] = Nothing
+    findTarget target (s::xs) = if hasTarget target s
+                                  then case span (/= ':') s of
+                                        (t, "") => Just (trim t, [])
+                                        (t, opts) => Just (trim t, map trim (getOpts
+                                                                  (assert_total (strTail opts))))
+                                  else findTarget target xs
 
 export
 dylib_suffix : String
