@@ -62,6 +62,7 @@
 
 module Test.Golden
 
+import Data.Either
 import Data.Maybe
 import Data.List
 import Data.List1
@@ -156,13 +157,18 @@ normalize str =
       then pack $ filter (\ch => ch /= '/' && ch /= '\\') (unpack str)
       else str
 
+||| The result of a test run
+||| `Left` corresponds to a failure, and `Right` to a success
+Result : Type
+Result = Either String String
+
 ||| Run the specified Golden test with the supplied options.
 |||
 ||| See the module documentation for more information.
 |||
 ||| @testPath the directory that contains the test.
 export
-runTest : Options -> String -> IO (Future Bool)
+runTest : Options -> String -> IO (Future Result)
 runTest opts testPath = forkIO $ do
   start <- clockTime Thread
   let cg = case codegen opts of
@@ -174,16 +180,16 @@ runTest opts testPath = forkIO $ do
 
   Right out <- readFile $ testPath ++ "/output"
     | Left err => do print err
-                     pure False
+                     pure (Left testPath)
 
   Right exp <- readFile $ testPath ++ "/expected"
     | Left FileNotFound => do
         if interactive opts
           then mayOverwrite Nothing out
           else print FileNotFound
-        pure False
+        pure (Left testPath)
     | Left err => do print err
-                     pure False
+                     pure (Left testPath)
 
   let result = normalize out == normalize exp
   let time = timeDifference end start
@@ -196,7 +202,7 @@ runTest opts testPath = forkIO $ do
         then mayOverwrite (Just exp) out
         else putStrLn . unlines $ expVsOut exp out
 
-  pure result
+  pure $ if result then Right testPath else Left testPath
 
   where
     getAnswer : IO Bool
@@ -298,6 +304,7 @@ findCG
 public export
 record TestPool where
   constructor MkTestPool
+  poolName : String
   constraints : List Requirement
   testCases : List String
 
@@ -308,14 +315,43 @@ filterTests opts = case onlyNames opts of
   [] => id
   xs => filter (\ name => any (`isInfixOf` name) xs)
 
+||| The summary of a test pool run
+public export
+record Summary where
+  constructor MkSummary
+  success : List String
+  failure : List String
+
+export
+initSummary : Summary
+initSummary = MkSummary [] []
+
+export
+updateSummary : List (Either String String) -> Summary -> Summary
+updateSummary res =
+  let (ls, ws) = partitionEithers res in
+  { success $= (ws ++)
+  , failure $= (ls ++)
+  }
+
+export
+Semigroup Summary where
+  MkSummary ws1 ls1 <+> MkSummary ws2 ls2
+    = MkSummary (ws1 ++ ws2) (ls1 ++ ls2)
+
+export
+Monoid Summary where
+  neutral = initSummary
+
 ||| A runner for a test pool
 export
-poolRunner : Options -> TestPool -> IO (List Bool)
+poolRunner : Options -> TestPool -> IO Summary
 poolRunner opts pool
   = do -- check that we indeed want to run some of these tests
        let tests = filterTests opts (testCases pool)
        let (_ :: _) = tests
-             | [] => pure []
+             | [] => pure initSummary
+       putStrLn banner
        -- if so make sure the constraints are satisfied
        cs <- for (constraints pool) $ \ req => do
           mfp <- checkRequirement req
@@ -324,17 +360,23 @@ poolRunner opts pool
             Just fp => "Found " ++ show req ++ " at " ++ fp
           pure mfp
        let Just _ = the (Maybe (List String)) (sequence cs)
-             | Nothing => pure []
+             | Nothing => pure initSummary
        -- if so run them all!
-       loop [] tests
+       loop initSummary tests
 
   where
-    loop : List (List Bool) -> List String -> IO (List Bool)
-    loop acc [] = pure (concat $ reverse acc)
+
+    banner : String
+    banner =
+      let separator = fastPack $ replicate 72 '-' in
+      fastUnlines [ separator, pool.poolName, separator, "" ]
+
+    loop : Summary -> List String -> IO Summary
+    loop acc [] = pure acc
     loop acc tests
       = do let (now, later) = splitAt opts.threads tests
            bs <- map await <$> traverse (runTest opts) now
-           loop (bs :: acc) later
+           loop (updateSummary bs acc) later
 
 
 ||| A runner for a whole test suite
@@ -351,10 +393,13 @@ runner tests
                    Just _ => pure opts
          -- run the tests
          res <- concat <$> traverse (poolRunner opts) tests
-         putStrLn (show (length (filter id res)) ++ "/" ++ show (length res)
-                       ++ " tests successful")
-         if (any not res)
-            then exitWith (ExitFailure 1)
-            else exitWith ExitSuccess
+         let nsucc  = length res.success
+         let nfail  = length res.failure
+         let ntotal = nsucc + nfail
+         putStrLn (show nsucc ++ "/" ++ show ntotal ++ " tests successful")
+         if nfail == 0 then exitWith ExitSuccess else
+           do putStrLn "Failing tests:"
+              putStrLn $ unlines res.failure
+              exitWith (ExitFailure 1)
 
 -- [ EOF ]
