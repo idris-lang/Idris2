@@ -25,7 +25,10 @@ FileName = String
 ||| file or by the compiler. That makes it useful to have the notion of
 ||| `EmptyFC` as part of the type.
 public export
-data FC = MkFC FileName FilePos FilePos
+data FC = MkFC        FileName FilePos FilePos
+        | ||| Virtual FCs are FC attached to desugared/generated code. They can help with marking
+          ||| errors, but we shouldn't attach semantic highlighting metadata to them.
+          MkVirtualFC FileName FilePos FilePos
         | EmptyFC
 
 ||| A version of a file context that cannot be empty
@@ -45,7 +48,21 @@ justFC (fname, start, end) = MkFC fname start end
 export
 isNonEmptyFC : FC -> Maybe NonEmptyFC
 isNonEmptyFC (MkFC fn start end) = Just (fn, start, end)
+isNonEmptyFC (MkVirtualFC fn start end) = Just (fn, start, end)
 isNonEmptyFC EmptyFC = Nothing
+
+||| A view checking whether an arbitrary FC originates from a source location
+export
+isConcreteFC : FC -> Maybe NonEmptyFC
+isConcreteFC (MkFC fn start end) = Just (fn, start, end)
+isConcreteFC _ = Nothing
+
+||| Turn an FC into a virtual one
+export
+virtualiseFC : FC -> FC
+virtualiseFC (MkFC fn start end) = MkVirtualFC fn start end
+virtualiseFC fc = fc
+
 
 export
 defaultFC : NonEmptyFC
@@ -140,6 +157,7 @@ mergeFC _ _ = Nothing
 export
 Eq FC where
   (==) (MkFC n s e) (MkFC n' s' e') = n == n' && s == s' && e == e'
+  (==) (MkVirtualFC n s e) (MkVirtualFC n' s' e') = n == n' && s == s' && e == e'
   (==) EmptyFC EmptyFC = True
   (==) _ _ = False
 
@@ -149,6 +167,12 @@ Show FC where
   show (MkFC file startPos endPos) = file ++ ":" ++
              showPos startPos ++ "--" ++
              showPos endPos
+  show (MkVirtualFC file startPos endPos) = file ++ ":" ++
+             showPos startPos ++ "--" ++
+             showPos endPos
+
+prettyPos : FilePos -> Doc ann
+prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
 
 export
 Pretty FC where
@@ -156,6 +180,6 @@ Pretty FC where
   pretty (MkFC file startPos endPos) = pretty file <+> colon
                  <+> prettyPos startPos <+> pretty "--"
                  <+> prettyPos endPos
-    where
-      prettyPos : FilePos -> Doc ann
-      prettyPos (l, c) = pretty (l + 1) <+> colon <+> pretty (c + 1)
+  pretty (MkVirtualFC file startPos endPos) = pretty file <+> colon
+                 <+> prettyPos startPos <+> pretty "--"
+                 <+> prettyPos endPos

@@ -56,7 +56,7 @@ mkLets : FileName ->
          List1 (WithBounds (Either LetBinder LetDecl)) ->
          PTerm -> PTerm
 mkLets fname = letFactory buildLets
-  (\ decls, scope => PLocal (boundToFC fname decls) decls.val scope)
+  (\ decls, scope => PLocal (virtualiseFC $ boundToFC fname decls) decls.val scope)
 
   where
 

@@ -2,6 +2,7 @@ module Core.Name
 
 import Data.List
 import Data.Strings
+import Data.Maybe
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -75,6 +76,21 @@ isUserName (NS _ n) = isUserName n
 isUserName (DN _ n) = isUserName n
 isUserName _ = True
 
+||| True iff name can be traced back to a source name.
+||| Used to determine whether it needs semantic highlighting.
+export
+isSourceName : Name -> Bool
+isSourceName (NS _ n) = isSourceName n
+isSourceName (UN _) = True
+isSourceName (MN _ _) = False
+isSourceName (PV n _) = isSourceName n
+isSourceName (DN _ n) = isSourceName n
+isSourceName (RF _) = True
+isSourceName (Nested _ n) = isSourceName n
+isSourceName (CaseBlock _ _) = False
+isSourceName (WithBlock _ _) = False
+isSourceName (Resolved _) = False
+
 export
 isUN : Name -> Maybe String
 isUN (UN str) = Just str
@@ -92,6 +108,19 @@ nameRoot (Nested _ inner) = nameRoot inner
 nameRoot (CaseBlock n _) = "$" ++ show n
 nameRoot (WithBlock n _) = "$" ++ show n
 nameRoot (Resolved i) = "$" ++ show i
+
+export
+displayName : Name -> (Maybe Namespace, String)
+displayName (NS ns n) = mapFst (pure . maybe ns (ns <.>)) $ displayName n
+displayName (UN n) = (Nothing, n)
+displayName (MN n _) = (Nothing, n)
+displayName (PV n _) = displayName n
+displayName (DN n _) = (Nothing, n)
+displayName (RF n) = (Nothing, n)
+displayName (Nested _ n) = displayName n
+displayName (CaseBlock outer _) = (Nothing, "case block in " ++ show outer)
+displayName (WithBlock outer _) = (Nothing, "with block in " ++ show outer)
+displayName (Resolved i) = (Nothing, "$resolved" ++ show i)
 
 --- Drop a namespace from a name
 export
@@ -129,7 +158,8 @@ Pretty Name where
   pretty (PV n d) = braces (pretty 'P' <+> colon <+> pretty n <+> colon <+> pretty d)
   pretty (DN str _) = pretty str
   pretty (RF n) = "." <+> pretty n
-  pretty (Nested (outer, idx) inner) = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
+  pretty (Nested (outer, idx) inner)
+    = pretty outer <+> colon <+> pretty idx <+> colon <+> pretty inner
   pretty (CaseBlock outer _) = reflow "case block in" <++> pretty outer
   pretty (WithBlock outer _) = reflow "with block in" <++> pretty outer
   pretty (Resolved x) = pretty "$resolved" <+> pretty x

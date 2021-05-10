@@ -416,6 +416,12 @@ checkBindVar rig elabinfo nest env fc str topexp
          noteLHSPatVar elabmode (UN str)
          notePatVar n
          est <- get EST
+
+         whenJust (isConcreteFC fc) \nfc => do
+           log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show n
+           addSemanticDecorations [(nfc, Bound, Just n)]
+
+
          case lookup n (boundNames est) of
               Nothing =>
                 do (tm, exp, bty) <- mkPatternHole fc rig n env

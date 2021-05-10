@@ -22,6 +22,8 @@ export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
+  toBuf b (MkVirtualFC file startPos endPos)
+      = do tag 2; toBuf b file; toBuf b startPos; toBuf b endPos
   toBuf b EmptyFC = tag 1
 
   fromBuf b
@@ -30,6 +32,9 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkFC f s e)
              1 => pure EmptyFC
+             2 => do f <- fromBuf b;
+                     s <- fromBuf b; e <- fromBuf b
+                     pure (MkVirtualFC f s e)
              _ => corrupt "FC"
 export
 TTC Namespace where

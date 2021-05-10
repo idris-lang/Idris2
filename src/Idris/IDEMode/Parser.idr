@@ -5,6 +5,9 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 import Core.Core
+import Core.Name
+import Core.Metadata
+import Core.FC
 
 import Data.Maybe
 import Data.List
@@ -76,11 +79,11 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            (fname : String) -> String -> Grammar Token e ty -> Either Error ty
+            (fname : String) -> String -> Grammar SemanticDecorations Token e ty -> Either Error ty
 ideParser fname str p
     = do toks   <- mapError (fromLexError fname) $ idelex str
-         parsed <- mapError (fromParsingError fname) $ parse p toks
-         Right (fst parsed)
+         (decor, (parsed, _)) <- mapError (fromParsingError fname) $ parseWith p toks
+         Right parsed
 
 
 export

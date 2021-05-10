@@ -231,7 +231,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- This will be the case either if the scrutinee is a variable, in
          -- which case the duplication won't hurt, or if (TODO) none of the
          -- case patterns in alts are just a variable
-         maybe (pure ()) (const (setFlag fc casen Inline)) splitOn
+         whenJust splitOn $ \ _ => setFlag fc casen Inline
 
          let applyEnv = applyToFull fc caseRef env
          let appTm : Term vars
