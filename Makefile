@@ -149,7 +149,7 @@ endif
 	install support/c/${IDRIS2_SUPPORT} ${PREFIX}/lib
 	mkdir -p ${PREFIX}/bin/${NAME}_app
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
-	-rm -f "${PREFIX}/bin/${NAME}_app"/*.ss  # SS files interfere with separately compiled idris
+	$(RM) -f "${PREFIX}/bin/${NAME}_app"/*.ss  # SS files interfere with separately compiled idris
 
 install-support:
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
