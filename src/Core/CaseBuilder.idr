@@ -691,7 +691,7 @@ highScore (x :: xs) (y :: ys) high idx duped =
 ||| Get the index of the highest scoring column if there is one.
 ||| If no column has a higher score than all other columns then
 ||| the result is Nothing indicating we need to apply more scoring
-||| to break the tie. 
+||| to break the tie.
 ||| Suggested heuristic application order: f, b, a.
 highScoreIdx : {p : _} -> {ps : _} -> ScoredPats ns (p :: ps) -> Maybe (n ** NVar n (p :: ps))
 highScoreIdx (Scored xs (y :: ys)) = highScore {prev = []} (p :: ps) (y :: ys) (y - 1) (p ** MkNVar First) False
