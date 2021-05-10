@@ -144,6 +144,8 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  logEnabled : Bool -- do we check logging flags at all? This is 'False' until
+                    -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
   ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
@@ -154,6 +156,7 @@ record Session where
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
+  profile : Bool -- generate profiling information, if supported
 
 public export
 record PPrinter where
@@ -200,9 +203,9 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
+defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing
+                               Nothing Nothing False
 
 export
 defaultElab : ElabDirectives

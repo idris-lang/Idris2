@@ -55,6 +55,14 @@ getNameType rigc env fc x
                       do est <- get EST
                          put EST
                             (record { linearUsed $= ((MkVar lv) :: ) } est)
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add Bound: "
+                      ++ show x ++ " (" ++ show fc ++ ")"
+                 when (isSourceName x) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
+                     addSemanticDecorations [(nfc, Bound, Just x)]
+
                  pure (Local fc (Just (isLet binder)) _ lv, gnf env bty)
            Nothing =>
               do defs <- get Ctxt
@@ -68,6 +76,18 @@ getNameType rigc env fc x
                                DCon t a _ => DataCon t a
                                TCon t a _ _ _ _ _ _ => TyCon t a
                                _ => Func
+
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add something for: "
+                      ++ show def.fullname ++ " (" ++ show fc ++ ")"
+
+                 when (isSourceName def.fullname) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     let decor = nameTypeDecoration nt
+                     log "ide-mode.highlight" 7
+                       $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
+
                  pure (Ref fc nt (Resolved i), gnf env (embed (type def)))
   where
     rigSafe : RigCount -> RigCount -> Core ()
@@ -89,7 +109,7 @@ getVarType rigc nest env fc x
            Just (nestn, argns, tmf) =>
               do defs <- get Ctxt
                  let arglen = length argns
-                 let n' = maybe x id nestn
+                 let n' = fromMaybe x nestn
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
@@ -109,6 +129,14 @@ getVarType rigc nest env fc x
                                 -- Add the type to the metadata
                                 log "metadata.names" 7 $ "getVarType is adding ↓"
                                 addNameType fc x env tyenv
+
+                                when (isSourceName ndef.fullname) $
+                                  whenJust (isConcreteFC fc) \nfc => do
+                                    let decor = nameTypeDecoration nt
+                                    log "ide-mode.highlight" 7
+                                       $ "getNameType is adding "++ show decor ++": "
+                                                                 ++ show ndef.fullname
+                                    addSemanticDecorations [(nfc, decor, Just ndef.fullname)]
 
                                 pure (tm, arglen, gnf env tyenv)
     where
@@ -312,6 +340,22 @@ mutual
   needsDelay (InLHS _) _ tm = needsDelayLHS tm
   needsDelay _ kr tm = needsDelayExpr kr tm
 
+  checkValidPattern :
+    {vars : _} ->
+    {auto c : Ref Ctxt Defs} ->
+    {auto m : Ref MD Metadata} ->
+    {auto u : Ref UST UState} ->
+    {auto e : Ref EST (EState vars)} ->
+    RigCount -> Env Term vars -> FC ->
+    Term vars -> Glued vars ->
+    Core (Term vars, Glued vars)
+  checkValidPattern rig env fc tm ty
+    = do log "elab.app.lhs" 50 $ "Checking that " ++ show tm ++ " is a valid pattern"
+         case tm of
+           Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
+           _ => pure (tm, ty)
+
+
   checkPatTyValid : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     FC -> Defs -> Env Term vars ->
@@ -319,13 +363,11 @@ mutual
   checkPatTyValid fc defs env (NApp _ (NMeta n i _) _) arg got
       = do Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
                 | Nothing => pure ()
-           if isErased (multiplicity gdef)
-              then do -- Argument is only valid if gotnf is not a concrete type
-                      gotnf <- getNF got
-                      if !(concrete defs env gotnf)
-                         then throw (MatchTooSpecific fc env arg)
-                         else pure ()
-              else pure ()
+           when (isErased (multiplicity gdef)) $ do
+             -- Argument is only valid if gotnf is not a concrete type
+             gotnf <- getNF got
+             when !(concrete defs env gotnf) $
+               throw (MatchTooSpecific fc env arg)
   checkPatTyValid fc defs env _ _ _ = pure ()
 
   dotErased : {auto c : Ref Ctxt Defs} -> (argty : NF vars) ->
@@ -419,10 +461,15 @@ mutual
              defs <- get Ctxt
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
-             (argv, argt) <- check argRig elabinfo
-                                   nest env arg (Just (glueBack defs env aty'))
-             when (onLHS (elabMode elabinfo)) $
-                  checkPatTyValid fc defs env aty' argv argt
+
+             res <- check argRig elabinfo nest env arg (Just $ glueBack defs env aty')
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkPatTyValid fc defs env aty' argv argt
+                         checkValidPattern rig env fc argv argt
+
              defs <- get Ctxt
              -- If we're on the LHS, reinstantiate it with 'argv' because it
              -- *may* have as patterns in it and we need to retain them.
@@ -456,8 +503,14 @@ mutual
                                      (\t => pure (Just !(toFullNames!(getTerm t))))
                                      expty
                          pure ("Overall expected type: " ++ show ety))
-             (argv, argt) <- check argRig elabinfo
+             res <- check argRig elabinfo
                                    nest env arg (Just (glueBack defs env aty))
+             (argv, argt) <-
+               if not (onLHS (elabMode elabinfo))
+                 then pure res
+                 else do let (argv, argt) = res
+                         checkValidPattern rig env fc argv argt
+
              logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
              let fntm = App fc tm argv

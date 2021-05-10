@@ -464,6 +464,10 @@ export %inline
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
 export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
+
+export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 
@@ -565,6 +569,11 @@ Catchable Core Error where
                          Left e => let MkCore he = h e in he
                          Right val => pure (Right val))
   throw = coreFail
+
+-- Prelude.Monad.foldlM hand specialised for Core
+export
+foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
+foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)

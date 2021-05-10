@@ -5,6 +5,7 @@ import Compiler.Common
 import Core.Context
 import Core.Core
 import Core.Directory
+import Core.Env
 import Core.Metadata
 import Core.Options
 import Core.Unify
@@ -28,6 +29,8 @@ import Libraries.Utils.String
 import Libraries.Utils.Path
 
 import Idris.CommandLine
+import Idris.Doc.HTML
+import Idris.DocString
 import Idris.ModTree
 import Idris.ProcessIdr
 import Idris.REPL
@@ -156,7 +159,7 @@ field fname
              pure [LT (MkPkgVersion (fromInteger <$> vs)) True,
                    GT (MkPkgVersion (fromInteger <$> vs)) True]
 
-    mkBound : List Bound -> PkgVersionBounds -> PackageEmptyRule PkgVersionBounds
+    mkBound : List Bound -> PkgVersionBounds -> EmptyRule PkgVersionBounds
     mkBound (LT b i :: bs) pkgbs
         = maybe (mkBound bs (record { upperBound = Just b,
                                       upperInclusive = i } pkgbs))
@@ -282,7 +285,7 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
 compileMain mainn mmod exec
-    = do m <- newRef MD initMetadata
+    = do m <- newRef MD (initMetadata mmod)
          u <- newRef UST initUState
          ignore $ loadMainFile mmod
          ignore $ compileExp (PRef replFC mainn) exec
@@ -409,15 +412,74 @@ check pkg opts =
     runScript (postbuild pkg)
     pure []
 
+makeDoc : {auto c : Ref Ctxt Defs} ->
+          {auto s : Ref Syn SyntaxInfo} ->
+          {auto o : Ref ROpts REPLOpts} ->
+          PkgDesc ->
+          List CLOpt ->
+          Core (List Error)
+makeDoc pkg opts =
+    do [] <- prepareCompilation pkg opts
+         | errs => pure errs
+
+       defs <- get Ctxt
+       let build = build_dir (dirs (options defs))
+       let docBase = build </> "docs"
+       let docDir = docBase </> "docs"
+       Right () <- coreLift $ mkdirAll docDir
+         | Left err => fileError docDir err
+       u <- newRef UST initUState
+       setPPrint (MkPPOpts False False True)
+
+       [] <- concat <$> for (modules pkg) (\(mod, filename) => do
+           let ns = miAsNamespace mod
+           addImport (MkImport emptyFC False mod ns)
+           defs <- get Ctxt
+           names <- allNames (gamma defs)
+           let allInNamespace = filter (inNS ns) names
+           visibleNames <- filterM (visible defs) allInNamespace
+
+           let outputFilePath = docDir </> (show mod ++ ".html")
+           allDocs <- annotate Declarations <$> vcat <$> for (sort visibleNames) (getDocsForName emptyFC)
+           Right () <- coreLift $ writeFile outputFilePath !(renderModuleDoc mod allDocs)
+             | Left err => fileError (docBase </> "index.html") err
+
+           pure $ the (List Error) []
+         )
+         | errs => pure errs
+
+       Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
+         | Left err => fileError (docBase </> "index.html") err
+
+       css <- readDataFile "docs/styles.css"
+       Right () <- coreLift $ writeFile (docBase </> "styles.css") css
+         | Left err => fileError (docBase </> "styles.css") err
+
+       runScript (postbuild pkg)
+       pure []
+  where
+    visible : Defs -> Name -> Core Bool
+    visible defs n
+        = do Just def <- lookupCtxtExact n (gamma defs)
+                  | Nothing => pure False
+             -- TODO: if we can find out, whether a def has been declared as
+             -- part of an interface, hide it here
+             pure $ case definition def of
+                         (DCon _ _ _) => False
+                         _ => (visibility def /= Private)
+
+    inNS : Namespace -> Name -> Bool
+    inNS ns (NS xns (UN _)) = ns == xns
+    inNS _ _ = False
+
+    fileError : String -> FileError -> Core (List Error)
+    fileError filename err = pure [FileErr filename err]
+
 -- Data.These.bitraverse hand specialised for Core
 bitraverseC : (a -> Core c) -> (b -> Core d) -> These a b -> Core (These c d)
 bitraverseC f g (This a)   = [| This (f a) |]
 bitraverseC f g (That b)   = [| That (g b) |]
 bitraverseC f g (Both a b) = [| Both (f a) (g b) |]
-
--- Prelude.Monad.foldlM hand specialised for Core
-foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
-foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 
 -- Data.StringTrie.foldWithKeysM hand specialised for Core
 foldWithKeysC : Monoid b => (List String -> Core b) -> (List String -> a -> Core b) -> StringTrie a -> Core b
@@ -497,7 +559,7 @@ runRepl : {auto c : Ref Ctxt Defs} ->
           Core ()
 runRepl fname = do
   u <- newRef UST initUState
-  m <- newRef MD initMetadata
+  m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
   the (Core ()) $
       case fname of
           Nothing => pure ()
@@ -551,6 +613,9 @@ processPackage opts (cmd, file)
                   Build => do [] <- build pkg opts
                                  | errs => coreLift (exitWith (ExitFailure 1))
                               pure ()
+                  MkDoc => do [] <- makeDoc pkg opts
+                                 | errs => coreLift (exitWith (ExitFailure 1))
+                              pure ()
                   Install => do [] <- build pkg opts
                                    | errs => coreLift (exitWith (ExitFailure 1))
                                 install pkg opts
@@ -590,6 +655,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType (DumpVMCode f)   = POpt
     optType DebugElabCheck   = POpt
     optType (SetCG f)        = POpt
+    optType (Directive d)    = POpt
     optType (BuildDir f)     = POpt
     optType (OutputDir f)    = POpt
     optType (ConsoleWidth n) = PIgnore
@@ -617,6 +683,7 @@ errorMsg = unlines
   , "    --dumpvmcode <file>"
   , "    --debug-elab-check"
   , "    --codegen <cg>"
+  , "    --directive <directive>"
   , "    --build-dir <dir>"
   , "    --output-dir <dir>"
   ]

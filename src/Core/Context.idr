@@ -12,6 +12,7 @@ import public Core.TT
 
 import Libraries.Utils.Binary
 
+import Data.Fin
 import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
@@ -192,6 +193,9 @@ data DefFlag
     | AllGuarded -- safe to treat as a constructor for the purposes of
          -- productivity checking. All clauses are guarded by constructors,
          -- and there are no other function applications
+    | ConType ConInfo
+         -- Is it a special type of constructor, e.g. a nil or cons shaped
+         -- thing, that can be compiled specially?
 
 export
 Eq DefFlag where
@@ -204,6 +208,7 @@ Eq DefFlag where
     (==) Macro Macro = True
     (==) (PartialEval x) (PartialEval y) = x == y
     (==) AllGuarded AllGuarded = True
+    (==) (ConType x) (ConType y) = x == y
     (==) _ _ = False
 
 export
@@ -217,6 +222,7 @@ Show DefFlag where
   show Macro = "macro"
   show (PartialEval _) = "partialeval"
   show AllGuarded = "allguarded"
+  show (ConType ci) = "contype " ++ show ci
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -649,22 +655,15 @@ data Transform : Type where
 ||| during codegen.
 public export
 data BuiltinType : Type where
-    ||| A built-in 'Nat'-like type
-    ||| 'NatLike : [index ->] Type'
-    ||| 'SLike : {0 _ : index} -> NatLike [index] -> NatLike [f index]'
-    ||| 'ZLike : {0 _ : index} -> NatLike [index]'
     BuiltinNatural : BuiltinType
-    -- All the following aren't implemented yet
-    -- but are here to reduce number of TTC version changes
-    NaturalPlus : BuiltinType
-    NaturalMult : BuiltinType
     NaturalToInteger : BuiltinType
     IntegerToNatural : BuiltinType
 
 export
 Show BuiltinType where
     show BuiltinNatural = "Natural"
-    show _ = "Not yet implemented"
+    show NaturalToInteger = "NaturalToInteger"
+    show IntegerToNatural = "IntegerToNatural"
 
 -- Token types to make it harder to get the constructor names
 -- the wrong way round.
@@ -678,15 +677,24 @@ record NatBuiltin where
     zero : Name
     succ : Name
 
+||| Record containing information about a natToInteger function.
+public export
+record NatToInt where
+    constructor MkNatToInt
+    arity : Nat -- total number of arguments
+    natIdx : Fin arity -- index into arguments of the 'Nat'-like argument
+
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements
 ||| behaviour should remain the same after this transform
 public export
 record BuiltinTransforms where
     constructor MkBuiltinTransforms
+    -- Nat
     natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
-    natZNames : NameMap ZERO -- map from Z-like names to their type constructor
-    natSNames : NameMap SUCC -- map from S-like names to their type constructor
+    natZNames : NameMap ZERO -- set of Z-like names
+    natSNames : NameMap SUCC -- set of S-like names
+    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `believe_me`
 
 -- TODO: After next release remove nat from here and use %builtin pragma instead
 initBuiltinTransforms : BuiltinTransforms
@@ -698,6 +706,7 @@ initBuiltinTransforms =
         { natTyNames = singleton type (MkNatBuiltin {zero, succ})
         , natZNames = singleton zero MkZERO
         , natSNames = singleton succ MkSUCC
+        , natToIntegerFns = empty
         }
 
 export
@@ -1998,6 +2007,20 @@ extendNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS $= (<.> ns) } defs)
 
+export
+withExtendedNS : {auto c : Ref Ctxt Defs} ->
+                 Namespace -> Core a -> Core a
+withExtendedNS ns act
+    = do defs <- get Ctxt
+         let cns = currentNS defs
+         put Ctxt (record { currentNS = cns <.> ns } defs)
+         ma <- catch (Right <$> act) (pure . Left)
+         defs <- get Ctxt
+         put Ctxt (record { currentNS = cns } defs)
+         case ma of
+           Left err => throw err
+           Right a  => pure a
+
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
 -- otherwise leave it alone
@@ -2465,8 +2488,10 @@ addLogLevel : {auto c : Ref Ctxt Defs} ->
 addLogLevel lvl
     = do defs <- get Ctxt
          case lvl of
-           Nothing => put Ctxt (record { options->session->logLevel = defaultLogLevel } defs)
-           Just l  => put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
+           Nothing => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel = defaultLogLevel } defs)
+           Just l  => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel $= insertLogLevel l } defs)
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->

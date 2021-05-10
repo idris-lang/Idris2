@@ -22,8 +22,19 @@ Syntax changes:
 
 Compiler changes:
 
+* Added more optimisations and transformations, particularly on case blocks,
+  list-shaped types, and enumerations, so generated code will often be slightly
+  faster.
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
+* Added `--profile` flag, which generates profile data if supported by a back
+  end. Currently supported by the Chez and Racket back ends.
+* Javascript codegens now use `Number` to represent up to 32 bit precision
+  signed and unsigned integers. `Int32` still goes via `BigInt` for
+  multiplication to avoid precision issues when getting results larger
+  than `Number.MAX_SAFE_INTEGER`. `Bits32` goes via `BigInt` for
+  multiplication for the same reason as well as for all bitops, since `Number`
+  uses signed 32 bit integers for those.
 
 Library changes:
 

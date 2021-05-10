@@ -135,6 +135,9 @@ preOptions (IdeModeSocket _ :: opts)
 preOptions (CheckOnly :: opts)
     = do setSession (record { nobanner = True } !getSession)
          preOptions opts
+preOptions (Profile :: opts)
+    = do setSession (record { profile = True } !getSession)
+         preOptions opts
 preOptions (Quiet :: opts)
     = do setOutput (REPL True)
          preOptions opts
@@ -199,7 +202,8 @@ preOptions (DumpVMCode f :: opts)
     = do setSession (record { dumpvmcode = Just f } !getSession)
          preOptions opts
 preOptions (Logging n :: opts)
-    = do setSession (record { logLevel $= insertLogLevel n } !getSession)
+    = do setSession (record { logEnabled = True,
+                              logLevel $= insertLogLevel n } !getSession)
          preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n

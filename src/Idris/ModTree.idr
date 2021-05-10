@@ -178,7 +178,7 @@ buildMod loc num len mod
                     Nothing => True
                     Just t => any (\x => x > t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
-        m <- newRef MD initMetadata
+        m <- newRef MD (initMetadata src)
         put Syn initSyntax
 
         if needsBuilding
@@ -220,7 +220,7 @@ buildDeps fname
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       put MD initMetadata
+                       put MD (initMetadata fname)
                        mainttc <- getTTCFileName fname "ttc"
                        log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc

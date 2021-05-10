@@ -47,12 +47,8 @@ process eopts nest env (IParameters fc ps decls)
 process eopts nest env (IRecord fc ns vis rec)
     = processRecord eopts nest env ns vis rec
 process eopts nest env (INamespace fc ns decls)
-    = do defs <- get Ctxt
-         let cns = currentNS defs
-         extendNS ns
+    = withExtendedNS ns $
          traverse_ (processDecl eopts nest env) decls
-         defs <- get Ctxt
-         put Ctxt (record { currentNS = cns } defs)
 process eopts nest env (ITransform fc n lhs rhs)
     = processTransform eopts nest env fc n lhs rhs
 process eopts nest env (IRunElabDecl fc tm)
@@ -171,7 +167,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do Right tti <- logTime "Parsing" $ coreLift $ parseFile fname
+    = do Right (decor, tti) <- logTime "Parsing" $ coreLift $ parseFile fname
                             (do decls <- prog fname
                                 eoi
                                 pure decls)

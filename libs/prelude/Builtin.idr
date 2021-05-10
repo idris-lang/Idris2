@@ -207,6 +207,7 @@ force x = Force x
 ||| Interface for types that can be constructed from string literals.
 public export
 interface FromString ty where
+  constructor MkFromString
   ||| Conversion from String.
   fromString : String -> ty
 

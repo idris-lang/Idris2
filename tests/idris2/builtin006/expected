@@ -1,0 +1,12 @@
+1/1: Building Test (Test.idr)
+Error: Non-erased argument is not a 'Nat'-like type.
+
+Test.idr:9:1--9:35
+ 5 | natToInt : MyNat -> Integer
+ 6 | natToInt Z = 0
+ 7 | natToInt (S k) = 1 + natToInt k
+ 8 | 
+ 9 | %builtin NaturalToInteger natToInt
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Main> Bye for now!
