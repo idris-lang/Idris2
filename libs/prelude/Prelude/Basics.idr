@@ -151,3 +151,18 @@ public export
 intToBool : Int -> Bool
 intToBool 0 = False
 intToBool x = True
+
+--------------
+-- LISTS    --
+--------------
+
+||| Generic lists.
+public export
+data List a =
+  ||| Empty list
+  Nil
+
+  | ||| A non-empty list, consisting of a head element and the rest of the list.
+  (::) a (List a)
+
+%name List xs, ys, zs

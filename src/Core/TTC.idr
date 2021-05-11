@@ -1000,14 +1000,14 @@ TTC GlobalDef where
       = -- Only write full details for user specified names. The others will
         -- be holes where all we will ever need after loading is the definition
         do toBuf b (compexpr gdef)
-           toBuf b (map toList (refersToRuntimeM gdef))
+           toBuf b (map NameMap.toList (refersToRuntimeM gdef))
            toBuf b (location gdef)
            -- We don't need any of the rest for code generation, so if
            -- we're decoding then, we can skip these (see Compiler.Common
            -- for how it's decoded minimally there)
            toBuf b (multiplicity gdef)
            toBuf b (fullname gdef)
-           toBuf b (map toList (refersToM gdef))
+           toBuf b (map NameMap.toList (refersToM gdef))
            toBuf b (definition gdef)
            when (isUserName (fullname gdef) || cwName (fullname gdef)) $
               do toBuf b (type gdef)
