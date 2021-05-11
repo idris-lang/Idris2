@@ -71,10 +71,13 @@ diffBy f (x :: xs) ys =
     Just _  =>      diffBy f xs ys'
     Nothing => x :: diffBy f xs ys'
 
+||| Remove adjacent duplicates
+export
+dedup : Eq a => List a -> List a
+dedup (a :: xs@(b :: _)) = if a == b then dedup xs else a :: dedup xs
+dedup xs                = xs
+
 ||| O(n * log(n)). Sort a list and remove duplicates
 export
 sortedNub : Ord a => List a -> List a
-sortedNub = go . sort
-  where go : List a -> List a
-        go (a :: t@(b :: _)) = if a == b then go t else a :: go t
-        go xs                = xs
+sortedNub = dedup . sort

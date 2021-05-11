@@ -83,9 +83,8 @@ candidateDirs dname pkg bounds =
 
   where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
         checkBounds (MkPkgDir dirName pkgName ver) =
-          if pkgName == pkg && inBounds ver bounds
-             then Just ((dname </> dirName), ver)
-             else Nothing
+          do guard (pkgName == pkg && inBounds ver bounds)
+             pure ((dname </> dirName), ver)
 
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
