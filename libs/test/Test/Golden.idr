@@ -343,7 +343,7 @@ initSummary : Summary
 initSummary = MkSummary [] []
 
 export
-updateSummary : List (Either String String) -> Summary -> Summary
+updateSummary : List Result -> Summary -> Summary
 updateSummary res =
   let (ls, ws) = partitionEithers res in
   { success $= (ws ++)
