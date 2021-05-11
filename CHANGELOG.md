@@ -45,6 +45,11 @@ Compiler changes:
   potential but at the moment, it is significantly slower for a full rebuild of
   a large code base (the code generation stage takes about 3x longer).
 
+API changes:
+
+* The API now exposes `Compiler.Separate.getCompilationUnits`, which
+  can be used for separate code generation by any backend.
+
 Library changes:
 
 * Redid condition variables in the Racket codegen based on page 5 of the
