@@ -384,6 +384,9 @@ Hashable ConInfo where
     NIL => h `hashWithSalt` 2
     CONS => h `hashWithSalt` 3
     ENUM => h `hashWithSalt` 4
+    NOTHING => h `hashWithSalt` 5
+    JUST => h `hashWithSalt` 6
+    RECORD => h `hashWithSalt` 7
 
 
 mutual
