@@ -13,6 +13,7 @@ modules =
     Compiler.CompileExpr,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Separate,
     Compiler.VMCode,
 
     Compiler.ES.ES,
@@ -27,6 +28,7 @@ modules =
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
+    Compiler.Scheme.ChezSep,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
     Compiler.Scheme.Common,

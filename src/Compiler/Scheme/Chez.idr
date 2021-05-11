@@ -30,6 +30,7 @@ import System.Info
 
 %default covering
 
+export
 findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
@@ -43,6 +44,7 @@ findChez
 --     of the library paths managed by Idris
 -- If it can't be found, we'll assume it's a system library and that chez
 -- will thus be able to find it.
+export
 findLibs : {auto c : Ref Ctxt Defs} ->
            List String -> Core (List (String, String))
 findLibs ds
@@ -55,7 +57,7 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-
+export
 escapeString : String -> String
 escapeString s = pack $ foldr escape [] $ unpack s
   where
@@ -97,6 +99,7 @@ showChezString [] = id
 showChezString ('"'::cs) = ("\\\"" ++) . showChezString cs
 showChezString (c ::cs) = (showChezChar c) . showChezString cs
 
+export
 chezString : String -> String
 chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
@@ -129,6 +132,7 @@ mutual
   getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
+  export
   chezExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
@@ -162,9 +166,11 @@ mutual
       = schExtCommon chezExtPrim chezString i prim args
 
 -- Reference label for keeping track of loaded external libraries
+export
 data Loaded : Type where
 
 -- Label for noting which struct types are declared
+export
 data Structs : Type where
 
 cftySpec : FC -> CFType -> Core String
@@ -328,14 +334,16 @@ schFgnDef appdir fc n (MkNmForeign cs args ret)
                 body ++ "))\n")
 schFgnDef _ _ _ _ = pure ("", "")
 
+export
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
              String -> (Name, FC, NamedDef) -> Core (String, String)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
-startChez : String -> String -> String
-startChez appdir target = unlines
+export
+startChezPreamble : String
+startChezPreamble = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
@@ -356,7 +364,12 @@ startChez appdir target = unlines
     , "fi                                                         "
     , ""
     , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , ""  -- so that the preamble ends with a newline
+    ]
+
+startChez : String -> String -> String
+startChez appdir target = startChezPreamble ++ unlines
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 

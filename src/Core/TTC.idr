@@ -788,6 +788,7 @@ TTC CDef where
 export
 TTC CG where
   toBuf b Chez = tag 0
+  toBuf b ChezSep = tag 1
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
@@ -798,6 +799,7 @@ TTC CG where
   fromBuf b
       = case !getTag of
              0 => pure Chez
+             1 => pure ChezSep
              2 => pure Racket
              3 => pure Gambit
              4 => do s <- fromBuf b

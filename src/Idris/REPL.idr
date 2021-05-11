@@ -1,6 +1,7 @@
 module Idris.REPL
 
 import Compiler.Scheme.Chez
+import Compiler.Scheme.ChezSep
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
 import Compiler.ES.Node
@@ -211,6 +212,7 @@ findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
               Chez => pure codegenChez
+              ChezSep => pure codegenChezSep
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
               Node => pure codegenNode

@@ -1,5 +1,5 @@
 Error: The given specifier was not accepted by any backend. Available backends:
-  chez, racket, node, javascript, refc, gambit
+  chez, chez-sep, racket, node, javascript, refc, gambit
 Some backends have additional specifier rules, refer to their documentation.
 
 Specifiers.idr:29:1--30:35
@@ -7,7 +7,7 @@ Specifiers.idr:29:1--30:35
  30 | plusRacketFail : Int -> Int -> Int
 
 Error: The given specifier was not accepted by any backend. Available backends:
-  chez, racket, node, javascript, refc, gambit
+  chez, chez-sep, racket, node, javascript, refc, gambit
 Some backends have additional specifier rules, refer to their documentation.
 
 Specifiers.idr:29:1--30:35
@@ -16,13 +16,13 @@ Specifiers.idr:29:1--30:35
 
 Main> Loaded file Specifiers.idr
 Specifiers> Error: The given specifier was not accepted by any backend. Available backends:
-  chez, racket, node, javascript, refc, gambit
+  chez, chez-sep, racket, node, javascript, refc, gambit
 Some backends have additional specifier rules, refer to their documentation.
 
 Specifiers.idr:29:1--30:35
 
 Specifiers> [exec] Specifiers> Error: The given specifier was not accepted by any backend. Available backends:
-  chez, racket, node, javascript, refc, gambit
+  chez, chez-sep, racket, node, javascript, refc, gambit
 Some backends have additional specifier rules, refer to their documentation.
 
 Specifiers.idr:29:1--30:35

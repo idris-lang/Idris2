@@ -315,6 +315,13 @@ mergeLeft : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeLeft = mergeWith const
 
 export
+adjust : k -> (v -> v) -> SortedMap k v -> SortedMap k v
+adjust k f m =
+  case lookup k m of
+    Nothing => m
+    Just v => insert k (f v) m
+
+export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ toList m)
 
