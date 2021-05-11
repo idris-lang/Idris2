@@ -5,7 +5,6 @@ import Core.Directory
 import Core.Metadata
 import Core.Options
 import Core.Unify
-import Libraries.System.Directory.Tree
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
 import Libraries.Data.List1 as Lib
@@ -34,7 +33,7 @@ record PkgDir where
   dirName : String
   ||| Package name. Example "contrib"
   pkgName : String
-  ||| Package version. Example `Just $ MkPkgVersion (0 ::: [3,0])` 
+  ||| Package version. Example `Just $ MkPkgVersion (0 ::: [3,0])`
   version : Maybe PkgVersion
 
 -- dissects a directory name, trying to extract
