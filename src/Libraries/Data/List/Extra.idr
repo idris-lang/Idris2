@@ -70,3 +70,11 @@ diffBy f (x :: xs) ys =
   case mb of
     Just _  =>      diffBy f xs ys'
     Nothing => x :: diffBy f xs ys'
+
+||| O(n * log(n)). Sort a list and remove duplicates
+export
+sortedNub : Ord a => List a -> List a
+sortedNub = go . sort
+  where go : List a -> List a
+        go (a :: t@(b :: _)) = if a == b then go t else a :: go t
+        go xs                = xs
