@@ -21,6 +21,7 @@ idris2docs_venv
 /tests/**/*.so
 /tests/**/*.dylib
 /tests/**/*.dll
+/tests/failures
 
 /benchmark/**/build
 /benchmark/*.csv
