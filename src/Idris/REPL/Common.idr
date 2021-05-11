@@ -29,7 +29,8 @@ import System.File
 
 -- Output informational messages, unless quiet flag is set
 export
-iputStrLn : {auto o : Ref ROpts REPLOpts} ->
+iputStrLn : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Doc IdrisAnn -> Core ()
 iputStrLn msg
     = do opts <- get ROpts
@@ -118,8 +119,7 @@ emitWarnings
          put Ctxt (record { warnings = [] } defs)
 
 getFCLine : FC -> Maybe Int
-getFCLine (MkFC _ (line, _) _) = Just line
-getFCLine EmptyFC = Nothing
+getFCLine = map startLine . isNonEmptyFC
 
 export
 updateErrorLine : {auto o : Ref ROpts REPLOpts} ->
@@ -136,14 +136,15 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
+               (source : String) ->
                Core ()
-resetContext
+resetContext fname
     = do defs <- get Ctxt
          put Ctxt (record { options = clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
-         put MD initMetadata
+         put MD (initMetadata fname)
 
 public export
 data EditResult : Type where

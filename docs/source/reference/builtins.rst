@@ -70,3 +70,32 @@ Here are the specifics for the conversion:
     case k of
         0 => zexp
         _ => let k' = k - 1 in sexp
+
+``%builtin NaturalToInteger``
+=============================
+
+The ``%builtin NaturalToInteger`` pragma allows O(1) conversion of naturals to ``Integer`` s.
+For example
+
+.. code-block:: idris
+
+    natToInteger : Nat -> Integer
+    natToInteger Z = 0
+    natToInteger (S k) = 1 + natToInteger k
+
+    %builtin NaturalToInteger natToInteger
+
+Please note, this only checks the type, not that the type is correct.
+
+This can be used with ``%transform`` to allow many other operations to be O(1) too.
+
+.. code-block:: idris
+
+    eqNat : Nat -> Nat -> Bool
+    eqNat Z Z = True
+    eqNat (S j) (S k) = eqNat j k
+    eqNat _ _ = False
+
+    %transform "eqNat" eqNat j k = natToInteger j == natToInteger k
+
+For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.

@@ -464,6 +464,10 @@ export %inline
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
 export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
+
+export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 
@@ -615,6 +619,10 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = Core.do ignore (f x)
               traverse_ f xs
+%inline
+export
+for_ : List a -> (a -> Core ()) -> Core ()
+for_ = flip traverse_
 
 %inline
 export
@@ -747,3 +755,18 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content =
+  coreLift (File.writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+export
+readFile : (fname : String) -> Core String
+readFile fname =
+  coreLift (File.readFile fname) >>= \case
+    Right content => pure content
+    Left err => throw $ FileErr fname err
+

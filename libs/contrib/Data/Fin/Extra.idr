@@ -213,7 +213,7 @@ finToNatMultHomo {m = S _} (FS x) y = Calc $
   ~~ finToNat (y + x * y)                 ...( Refl )
   ~~ finToNat y + finToNat (x * y)        ...( finToNatPlusHomo y (x * y) )
   ~~ finToNat y + finToNat x * finToNat y ...( cong (finToNat y +) (finToNatMultHomo x y) )
-  ~~ finToNat (FS x) * finToNat y         ...( Refl)
+  ~~ finToNat (FS x) * finToNat y         ...( Refl )
 
 -- Relations to `Fin`'s `last`
 
@@ -292,7 +292,7 @@ plusZeroRightNeutral (FS k) = FS (plusZeroRightNeutral k)
 
 export
 congPlusRight : {m, n, p : Nat} -> {k : Fin (S n)} -> {l : Fin (S p)} ->
-               (c : Fin m) -> k ~~~ l -> c + k ~~~ c + l
+                (c : Fin m) -> k ~~~ l -> c + k ~~~ c + l
 congPlusRight c FZ
   = transitive (plusZeroRightNeutral c)
                (symmetric $ plusZeroRightNeutral c)

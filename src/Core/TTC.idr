@@ -22,6 +22,8 @@ export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
+  toBuf b (MkVirtualFC file startPos endPos)
+      = do tag 2; toBuf b file; toBuf b startPos; toBuf b endPos
   toBuf b EmptyFC = tag 1
 
   fromBuf b
@@ -30,6 +32,9 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkFC f s e)
              1 => pure EmptyFC
+             2 => do f <- fromBuf b;
+                     s <- fromBuf b; e <- fromBuf b
+                     pure (MkVirtualFC f s e)
              _ => corrupt "FC"
 export
 TTC Namespace where
@@ -789,6 +794,7 @@ TTC CDef where
 export
 TTC CG where
   toBuf b Chez = tag 0
+  toBuf b ChezSep = tag 1
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
@@ -799,6 +805,7 @@ TTC CG where
   fromBuf b
       = case !getTag of
              0 => pure Chez
+             1 => pure ChezSep
              2 => pure Racket
              3 => pure Gambit
              4 => do s <- fromBuf b
@@ -999,14 +1006,14 @@ TTC GlobalDef where
       = -- Only write full details for user specified names. The others will
         -- be holes where all we will ever need after loading is the definition
         do toBuf b (compexpr gdef)
-           toBuf b (map toList (refersToRuntimeM gdef))
+           toBuf b (map NameMap.toList (refersToRuntimeM gdef))
            toBuf b (location gdef)
            -- We don't need any of the rest for code generation, so if
            -- we're decoding then, we can skip these (see Compiler.Common
            -- for how it's decoded minimally there)
            toBuf b (multiplicity gdef)
            toBuf b (fullname gdef)
-           toBuf b (map toList (refersToM gdef))
+           toBuf b (map NameMap.toList (refersToM gdef))
            toBuf b (definition gdef)
            when (isUserName (fullname gdef) || cwName (fullname gdef)) $
               do toBuf b (type gdef)

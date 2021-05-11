@@ -16,37 +16,39 @@ import public Libraries.Text.Bounded
 ||| to be non-empty - that is, successfully parsing the language is guaranteed
 ||| to consume some input.
 export
-data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
-     Empty : (val : ty) -> Grammar tok False ty
-     Terminal : String -> (tok -> Maybe a) -> Grammar tok True a
-     NextIs : String -> (tok -> Bool) -> Grammar tok False tok
-     EOF : Grammar tok False ()
+data Grammar : (state : Type) -> (tok : Type) -> (consumes : Bool) -> Type -> Type where
+     Empty : (val : ty) -> Grammar state tok False ty
+     Terminal : String -> (tok -> Maybe a) -> Grammar state tok True a
+     NextIs : String -> (tok -> Bool) -> Grammar state tok False tok
+     EOF : Grammar state tok False ()
 
-     Fail : (location : Maybe Bounds) -> Bool -> String -> Grammar tok c ty
-     Try : Grammar tok c ty -> Grammar tok c ty
+     Fail : (location : Maybe Bounds) -> Bool -> String -> Grammar state tok c ty
+     Try : Grammar state tok c ty -> Grammar state tok c ty
 
-     Commit : Grammar tok False ()
-     MustWork : Grammar tok c a -> Grammar tok c a
+     Commit : Grammar state tok False ()
+     MustWork : Grammar state tok c a -> Grammar state tok c a
 
      SeqEat : {c2 : Bool} ->
-              Grammar tok True a -> Inf (a -> Grammar tok c2 b) ->
-              Grammar tok True b
+              Grammar state tok True a -> Inf (a -> Grammar state tok c2 b) ->
+              Grammar state tok True b
      SeqEmpty : {c1, c2 : Bool} ->
-                Grammar tok c1 a -> (a -> Grammar tok c2 b) ->
-                Grammar tok (c1 || c2) b
+                Grammar state tok c1 a -> (a -> Grammar state tok c2 b) ->
+                Grammar state tok (c1 || c2) b
 
      ThenEat : {c2 : Bool} ->
-               Grammar tok True () -> Inf (Grammar tok c2 a) ->
-               Grammar tok True a
+               Grammar state tok True () -> Inf (Grammar state tok c2 a) ->
+               Grammar state tok True a
      ThenEmpty : {c1, c2 : Bool} ->
-                 Grammar tok c1 () -> Grammar tok c2 a ->
-                 Grammar tok (c1 || c2) a
+                 Grammar state tok c1 () -> Grammar state tok c2 a ->
+                 Grammar state tok (c1 || c2) a
 
      Alt : {c1, c2 : Bool} ->
-           Grammar tok c1 ty -> Lazy (Grammar tok c2 ty) ->
-           Grammar tok (c1 && c2) ty
-     Bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
-     Position : Grammar tok False Bounds
+           Grammar state tok c1 ty -> Lazy (Grammar state tok c2 ty) ->
+           Grammar state tok (c1 && c2) ty
+     Bounds : Grammar state tok c ty -> Grammar state tok c (WithBounds ty)
+     Position : Grammar state tok False Bounds
+
+     Act : state -> Grammar state tok False ()
 
 ||| Sequence two grammars. If either consumes some input, the sequence is
 ||| guaranteed to consume some input. If the first one consumes input, the
@@ -54,9 +56,9 @@ data Grammar : (tok : Type) -> (consumes : Bool) -> Type -> Type where
 ||| consumed and therefore the input is smaller)
 export %inline
 (>>=) : {c1, c2 : Bool} ->
-        Grammar tok c1 a ->
-        inf c1 (a -> Grammar tok c2 b) ->
-        Grammar tok (c1 || c2) b
+        Grammar state tok c1 a ->
+        inf c1 (a -> Grammar state tok c2 b) ->
+        Grammar state tok (c1 || c2) b
 (>>=) {c1 = False} = SeqEmpty
 (>>=) {c1 = True}  = SeqEat
 
@@ -66,9 +68,9 @@ export %inline
 ||| consumed and therefore the input is smaller)
 public export %inline %tcinline
 (>>) : {c1, c2 : Bool} ->
-        Grammar tok c1 () ->
-        inf c1 (Grammar tok c2 a) ->
-        Grammar tok (c1 || c2) a
+        Grammar state tok c1 () ->
+        inf c1 (Grammar state tok c2 a) ->
+        Grammar state tok (c1 || c2) a
 (>>) {c1 = False} = ThenEmpty
 (>>) {c1 = True} = ThenEat
 
@@ -77,23 +79,23 @@ public export %inline %tcinline
 ||| of `>>=`.
 export %inline
 seq : {c1,c2 : Bool} ->
-      Grammar tok c1 a ->
-      (a -> Grammar tok c2 b) ->
-      Grammar tok (c1 || c2) b
+      Grammar state tok c1 a ->
+      (a -> Grammar state tok c2 b) ->
+      Grammar state tok (c1 || c2) b
 seq = SeqEmpty
 
 ||| Sequence a grammar followed by the grammar it returns.
 export %inline
 join : {c1,c2 : Bool} ->
-       Grammar tok c1 (Grammar tok c2 a) ->
-       Grammar tok (c1 || c2) a
+       Grammar state tok c1 (Grammar state tok c2 a) ->
+       Grammar state tok (c1 || c2) a
 join {c1 = False} p = SeqEmpty p id
 join {c1 = True} p = SeqEat p id
 
 ||| Allows the result of a grammar to be mapped to a different value.
 export
 {c : _} ->
-Functor (Grammar tok c) where
+Functor (Grammar state tok c) where
   map f (Empty val)  = Empty (f val)
   map f (Fail bd fatal msg) = Fail bd fatal msg
   map f (Try g) = Try (map f g)
@@ -119,9 +121,9 @@ Functor (Grammar tok c) where
 ||| guaranteed to consume.
 export %inline
 (<|>) : {c1,c2 : Bool} ->
-        Grammar tok c1 ty ->
-        Lazy (Grammar tok c2 ty) ->
-        Grammar tok (c1 && c2) ty
+        Grammar state tok c1 ty ->
+        Lazy (Grammar state tok c2 ty) ->
+        Grammar state tok (c1 && c2) ty
 (<|>) = Alt
 
 infixr 2 <||>
@@ -129,9 +131,9 @@ infixr 2 <||>
 ||| combination is guaranteed to consume.
 export
 (<||>) : {c1,c2 : Bool} ->
-        Grammar tok c1 a ->
-        Lazy (Grammar tok c2 b) ->
-        Grammar tok (c1 && c2) (Either a b)
+        Grammar state tok c1 a ->
+        Lazy (Grammar state tok c2 b) ->
+        Grammar state tok (c1 && c2) (Either a b)
 (<||>) p q = (Left <$> p) <|> (Right <$> q)
 
 ||| Sequence a grammar with value type `a -> b` and a grammar
@@ -140,33 +142,37 @@ export
 ||| Guaranteed to consume if either grammar consumes.
 export %inline
 (<*>) : {c1, c2 : Bool} ->
-        Grammar tok c1 (a -> b) ->
-        Grammar tok c2 a ->
-        Grammar tok (c1 || c2) b
+        Grammar state tok c1 (a -> b) ->
+        Grammar state tok c2 a ->
+        Grammar state tok (c1 || c2) b
 (<*>) x y = SeqEmpty x (\f => map f y)
 
 ||| Sequence two grammars. If both succeed, use the value of the first one.
 ||| Guaranteed to consume if either grammar consumes.
 export %inline
 (<*) : {c1,c2 : Bool} ->
-       Grammar tok c1 a ->
-       Grammar tok c2 b ->
-       Grammar tok (c1 || c2) a
+       Grammar state tok c1 a ->
+       Grammar state tok c2 b ->
+       Grammar state tok (c1 || c2) a
 (<*) x y = map const x <*> y
 
 ||| Sequence two grammars. If both succeed, use the value of the second one.
 ||| Guaranteed to consume if either grammar consumes.
 export %inline
 (*>) : {c1,c2 : Bool} ->
-       Grammar tok c1 a ->
-       Grammar tok c2 b ->
-       Grammar tok (c1 || c2) b
+       Grammar state tok c1 a ->
+       Grammar state tok c2 b ->
+       Grammar state tok (c1 || c2) b
 (*>) x y = map (const id) x <*> y
+
+export %inline
+act : state -> Grammar state tok False ()
+act = Act
 
 ||| Produce a grammar that can parse a different type of token by providing a
 ||| function converting the new token type into the original one.
 export
-mapToken : (a -> b) -> Grammar b c ty -> Grammar a c ty
+mapToken : (a -> b) -> Grammar state b c ty -> Grammar state a c ty
 mapToken f (Empty val) = Empty val
 mapToken f (Terminal msg g) = Terminal msg (g . f)
 mapToken f (NextIs msg g) = SeqEmpty (NextIs msg (g . f)) (Empty . f)
@@ -186,149 +192,151 @@ mapToken f (ThenEmpty act next)
 mapToken f (Alt x y) = Alt (mapToken f x) (mapToken f y)
 mapToken f (Bounds act) = Bounds (mapToken f act)
 mapToken f Position = Position
+mapToken f (Act action) = Act action
 
 ||| Always succeed with the given value.
 export %inline
-pure : (val : ty) -> Grammar tok False ty
+pure : (val : ty) -> Grammar state tok False ty
 pure = Empty
 
 ||| Check whether the next token satisfies a predicate
 export %inline
-nextIs : String -> (tok -> Bool) -> Grammar tok False tok
+nextIs : String -> (tok -> Bool) -> Grammar state tok False tok
 nextIs = NextIs
 
 ||| Look at the next token in the input
 export %inline
-peek : Grammar tok False tok
+peek : Grammar state tok False tok
 peek = nextIs "Unrecognised token" (const True)
 
 ||| Succeeds if running the predicate on the next token returns Just x,
 ||| returning x. Otherwise fails.
 export %inline
-terminal : String -> (tok -> Maybe a) -> Grammar tok True a
+terminal : String -> (tok -> Maybe a) -> Grammar state tok True a
 terminal = Terminal
 
 ||| Always fail with a message
 export %inline
-fail : String -> Grammar tok c ty
+fail : String -> Grammar state tok c ty
 fail = Fail Nothing False
 
 ||| Always fail with a message and a location
 export %inline
-failLoc : Bounds -> String -> Grammar tok c ty
+failLoc : Bounds -> String -> Grammar state tok c ty
 failLoc b = Fail (Just b) False
 
 export %inline
-fatalError : String -> Grammar tok c ty
+fatalError : String -> Grammar state tok c ty
 fatalError = Fail Nothing True
 
 export %inline
-fatalLoc : Bounds -> String -> Grammar tok c ty
+fatalLoc : Bounds -> String -> Grammar state tok c ty
 fatalLoc b = Fail (Just b) True
 
 ||| Catch a fatal error
 export %inline
-try : Grammar tok c ty -> Grammar tok c ty
+try : Grammar state tok c ty -> Grammar state tok c ty
 try = Try
 
 ||| Succeed if the input is empty
 export %inline
-eof : Grammar tok False ()
+eof : Grammar state tok False ()
 eof = EOF
 
 ||| Commit to an alternative; if the current branch of an alternative
 ||| fails to parse, no more branches will be tried
 export %inline
-commit : Grammar tok False ()
+commit : Grammar state tok False ()
 commit = Commit
 
 ||| If the parser fails, treat it as a fatal error
 export %inline
-mustWork : {c : Bool} -> Grammar tok c ty -> Grammar tok c ty
+mustWork : {c : Bool} -> Grammar state tok c ty -> Grammar state tok c ty
 mustWork = MustWork
 
 export %inline
-bounds : Grammar tok c ty -> Grammar tok c (WithBounds ty)
+bounds : Grammar state tok c ty -> Grammar state tok c (WithBounds ty)
 bounds = Bounds
 
 export %inline
-position : Grammar tok False Bounds
+position : Grammar state tok False Bounds
 position = Position
 
-data ParseResult : Type -> Type -> Type where
+data ParseResult : Type -> Type -> Type -> Type where
      Failure : (committed : Bool) -> (fatal : Bool) ->
-               (err : String) -> (location : Maybe Bounds) -> ParseResult tok ty
-     Res : (committed : Bool) ->
-           (val : WithBounds ty) -> (more : List (WithBounds tok)) -> ParseResult tok ty
+               (err : String) -> (location : Maybe Bounds) -> ParseResult state tok ty
+     Res : state -> (committed : Bool) ->
+           (val : WithBounds ty) -> (more : List (WithBounds tok)) -> ParseResult state tok ty
 
-mergeWith : WithBounds ty -> ParseResult tok sy -> ParseResult tok sy
-mergeWith x (Res committed val more) = Res committed (mergeBounds x val) more
+mergeWith : WithBounds ty -> ParseResult state tok sy -> ParseResult state tok sy
+mergeWith x (Res s committed val more) = Res s committed (mergeBounds x val) more
 mergeWith x v = v
 
-doParse : (commit : Bool) ->
-          (act : Grammar tok c ty) ->
+doParse : Semigroup state => state -> (commit : Bool) ->
+          (act : Grammar state tok c ty) ->
           (xs : List (WithBounds tok)) ->
-          ParseResult tok ty
-doParse com (Empty val) xs = Res com (irrelevantBounds val) xs
-doParse com (Fail location fatal str) xs = Failure com fatal str (maybe (bounds <$> head' xs) Just location)
-doParse com (Try g) xs = case doParse com g xs of
+          ParseResult state tok ty
+doParse s com (Empty val) xs = Res s com (irrelevantBounds val) xs
+doParse s com (Fail location fatal str) xs = Failure com fatal str (maybe (bounds <$> head' xs) Just location)
+doParse s com (Try g) xs = case doParse s com g xs of
   -- recover from fatal match but still propagate the 'commit'
   Failure com _ msg ts => Failure com False msg ts
   res => res
-doParse com Commit xs = Res True (irrelevantBounds ()) xs
-doParse com (MustWork g) xs =
-  case assert_total (doParse com g xs) of
+doParse s com Commit xs = Res s True (irrelevantBounds ()) xs
+doParse s com (MustWork g) xs =
+  case assert_total (doParse s com g xs) of
        Failure com' _ msg ts => Failure com' True msg ts
        res => res
-doParse com (Terminal err f) [] = Failure com False "End of input" Nothing
-doParse com (Terminal err f) (x :: xs) =
+doParse s com (Terminal err f) [] = Failure com False "End of input" Nothing
+doParse s com (Terminal err f) (x :: xs) =
   case f x.val of
        Nothing => Failure com False err (Just x.bounds)
-       Just a => Res com (const a <$> x) xs
-doParse com EOF [] = Res com (irrelevantBounds ()) []
-doParse com EOF (x :: xs) = Failure com False "Expected end of input" (Just x.bounds)
-doParse com (NextIs err f) [] = Failure com False "End of input" Nothing
-doParse com (NextIs err f) (x :: xs)
+       Just a => Res s com (const a <$> x) xs
+doParse s com EOF [] = Res s com (irrelevantBounds ()) []
+doParse s com EOF (x :: xs) = Failure com False "Expected end of input" (Just x.bounds)
+doParse s com (NextIs err f) [] = Failure com False "End of input" Nothing
+doParse s com (NextIs err f) (x :: xs)
       = if f x.val
-           then Res com (removeIrrelevance x) (x :: xs)
+           then Res s com (removeIrrelevance x) (x :: xs)
            else Failure com False err (Just x.bounds)
-doParse com (Alt {c1} {c2} x y) xs
-    = case doParse False x xs of
+doParse s com (Alt {c1} {c2} x y) xs
+    = case doParse s False x xs of
            Failure com' fatal msg ts
               => if com' || fatal
                         -- If the alternative had committed, don't try the
                         -- other branch (and reset commit flag)
                    then Failure com fatal msg ts
-                   else assert_total (doParse False y xs)
+                   else assert_total (doParse s False y xs)
            -- Successfully parsed the first option, so use the outer commit flag
-           Res _ val xs => Res com val xs
-doParse com (SeqEmpty act next) xs
-    = case assert_total (doParse com act xs) of
+           Res s _ val xs => Res s com val xs
+doParse s com (SeqEmpty act next) xs
+    = case assert_total (doParse s com act xs) of
            Failure com fatal msg ts => Failure com fatal msg ts
-           Res com v xs =>
-             mergeWith v (assert_total $ doParse com (next v.val) xs)
-doParse com (SeqEat act next) xs
-    = case assert_total (doParse com act xs) of
+           Res s com v xs =>
+             mergeWith v (assert_total $ doParse s com (next v.val) xs)
+doParse s com (SeqEat act next) xs
+    = case assert_total (doParse s com act xs) of
            Failure com fatal msg ts => Failure com fatal msg ts
-           Res com v xs =>
-             mergeWith v (assert_total $ doParse com (next v.val) xs)
-doParse com (ThenEmpty act next) xs
-    = case assert_total (doParse com act xs) of
+           Res s com v xs =>
+             mergeWith v (assert_total $ doParse s com (next v.val) xs)
+doParse s com (ThenEmpty act next) xs
+    = case assert_total (doParse s com act xs) of
            Failure com fatal msg ts => Failure com fatal msg ts
-           Res com v xs =>
-             mergeWith v (assert_total $ doParse com next xs)
-doParse com (ThenEat act next) xs
-    = case assert_total (doParse com act xs) of
+           Res s com v xs =>
+             mergeWith v (assert_total $ doParse s com next xs)
+doParse s com (ThenEat act next) xs
+    = case assert_total (doParse s com act xs) of
            Failure com fatal msg ts => Failure com fatal msg ts
-           Res com v xs =>
-             mergeWith v (assert_total $ doParse com next xs)
-doParse com (Bounds act) xs
-    = case assert_total (doParse com act xs) of
+           Res s com v xs =>
+             mergeWith v (assert_total $ doParse s com next xs)
+doParse s com (Bounds act) xs
+    = case assert_total (doParse s com act xs) of
            Failure com fatal msg ts => Failure com fatal msg ts
-           Res com v xs => Res com (const v <$> v) xs
-doParse com Position [] = Failure com False "End of input" Nothing
-doParse com Position (x :: xs)
-    = Res com (irrelevantBounds x.bounds) (x :: xs)
+           Res s com v xs => Res s com (const v <$> v) xs
+doParse s com Position [] = Failure com False "End of input" Nothing
+doParse s com Position (x :: xs)
+    = Res s com (irrelevantBounds x.bounds) (x :: xs)
+doParse s com (Act action) xs = Res (s <+> action) com (irrelevantBounds ()) xs
 
 public export
 data ParsingError tok = Error String (Maybe Bounds)
@@ -337,9 +345,17 @@ data ParsingError tok = Error String (Maybe Bounds)
 ||| returns a pair of the parse result and the unparsed tokens (the remaining
 ||| input).
 export
-parse : {c : Bool} -> (act : Grammar tok c ty) -> (xs : List (WithBounds tok)) ->
+parse : {c : Bool} -> (act : Grammar () tok c ty) -> (xs : List (WithBounds tok)) ->
         Either (ParsingError tok) (ty, List (WithBounds tok))
 parse act xs
-    = case doParse False act xs of
+    = case doParse neutral False act xs of
            Failure _ _ msg ts => Left (Error msg ts)
-           Res _ v rest => Right (v.val, rest)
+           Res _ _ v rest => Right (v.val, rest)
+
+export
+parseWith : Monoid state => {c : Bool} -> (act : Grammar state tok c ty) -> (xs : List (WithBounds tok)) ->
+        Either (ParsingError tok) (state, ty, List (WithBounds tok))
+parseWith act xs
+    = case doParse neutral False act xs of
+           Failure _ _ msg ts => Left (Error msg ts)
+           Res s _ v rest => Right (s, v.val, rest)

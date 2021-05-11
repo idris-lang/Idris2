@@ -112,14 +112,23 @@ test: testenv
 	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
 
+retest: testenv
+	@echo
+	@echo "NOTE: \`${MAKE} retest\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
+	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
+	@echo
+	@${MAKE} -C tests retest only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+
 
 support:
 	@${MAKE} -C support/c
 	@${MAKE} -C support/refc
+	@${MAKE} -C support/chez
 
 support-clean:
 	@${MAKE} -C support/c clean
 	@${MAKE} -C support/refc clean
+	@${MAKE} -C support/chez clean
 
 clean-libs:
 	${MAKE} -C libs/prelude clean
@@ -151,18 +160,17 @@ endif
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
 install-support:
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
 	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
 	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
+	@${MAKE} -C support/chez install
 
 install-libs:
 	${MAKE} -C libs/prelude install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}

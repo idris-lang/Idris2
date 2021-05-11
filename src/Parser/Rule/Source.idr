@@ -1,10 +1,11 @@
 module Parser.Rule.Source
 
 import public Parser.Lexer.Source
-import public Parser.Rule.Common
 import public Parser.Support
 
+import Core.Context
 import Core.TT
+import Core.Metadata
 import Data.List1
 import Data.Strings
 import Libraries.Data.List.Extra
@@ -19,14 +20,14 @@ import Libraries.Data.String.Extra
 
 public export
 Rule : Type -> Type
-Rule = Rule Token
+Rule ty = Grammar SemanticDecorations Token True ty
 
 public export
-SourceEmptyRule : Type -> Type
-SourceEmptyRule = EmptyRule Token
+EmptyRule : Type -> Type
+EmptyRule ty = Grammar SemanticDecorations Token False ty
 
 export
-eoi : SourceEmptyRule ()
+eoi : EmptyRule ()
 eoi = ignore $ nextIs "Expected end of input" isEOI
   where
     isEOI : Token -> Bool
@@ -182,6 +183,13 @@ pragma n =
       _ => Nothing)
 
 export
+builtinType : Rule BuiltinType
+builtinType =
+    BuiltinNatural <$ exactIdent "Natural"
+    <|> NaturalToInteger <$ exactIdent "NaturalToInteger"
+    <|> IntegerToNatural <$ exactIdent "IntegerToNatural"
+
+export
 operator : Rule Name
 operator
     = terminal "Expected operator"
@@ -208,11 +216,11 @@ namespacedIdent
             Ident i => Just (Nothing, i)
             _ => Nothing)
 
-isCapitalisedIdent : WithBounds String -> SourceEmptyRule ()
+isCapitalisedIdent : WithBounds String -> EmptyRule ()
 isCapitalisedIdent str =
   let val = str.val
       loc = str.bounds
-      err : SourceEmptyRule ()
+      err : EmptyRule ()
           = failLoc loc ("Expected a capitalised identifier, got: " ++ val)
   in case strM val of
        StrNil => err
@@ -249,7 +257,7 @@ reservedNames
       , "String", "Char", "Double", "Lazy", "Inf", "Force", "Delay"
       ]
 
-isNotReservedIdent : WithBounds String -> SourceEmptyRule ()
+isNotReservedIdent : WithBounds String -> EmptyRule ()
 isNotReservedIdent x
     = if x.val `elem` reservedNames
       then failLoc x.bounds $ "can't use reserved name " ++ x.val
@@ -260,7 +268,7 @@ opNonNS : Rule Name
 opNonNS = symbol "(" *> (operator <|> postfixProj) <* symbol ")"
 
 identWithCapital : (capitalised : Bool) -> WithBounds String ->
-                   SourceEmptyRule ()
+                   EmptyRule ()
 identWithCapital b x = if b then isCapitalisedIdent x else pure ()
 
 nameWithCapital : (capitalised : Bool) -> Rule Name
@@ -269,7 +277,7 @@ nameWithCapital b = opNonNS <|> do
   opNS nsx <|> nameNS nsx
  where
 
-  nameNS : WithBounds (Maybe Namespace, String) -> SourceEmptyRule Name
+  nameNS : WithBounds (Maybe Namespace, String) -> EmptyRule Name
   nameNS nsx = do
     let id = snd <$> nsx
     identWithCapital b id
@@ -317,23 +325,22 @@ export
 init : IndentInfo
 init = 0
 
-continueF : SourceEmptyRule () -> (indent : IndentInfo) -> SourceEmptyRule ()
+continueF : EmptyRule () -> (indent : IndentInfo) -> EmptyRule ()
 continueF err indent
     = do eoi; err
   <|> do keyword "where"; err
-  <|> do col <- Common.column
-         if col <= indent
-            then err
-            else pure ()
+  <|> do col <- column
+         when (col <= indent)
+            err
 
 ||| Fail if this is the end of a block entry or end of file
 export
-continue : (indent : IndentInfo) -> SourceEmptyRule ()
+continue : (indent : IndentInfo) -> EmptyRule ()
 continue = continueF (fail "Unexpected end of expression")
 
 ||| As 'continue' but failing is fatal (i.e. entire parse fails)
 export
-mustContinue : (indent : IndentInfo) -> Maybe String -> SourceEmptyRule ()
+mustContinue : (indent : IndentInfo) -> Maybe String -> EmptyRule ()
 mustContinue indent Nothing
    = continueF (fatalError "Unexpected end of expression") indent
 mustContinue indent (Just req)
@@ -355,7 +362,7 @@ Show ValidIndent where
   show (AfterPos i) = "[after " ++ show i ++ "]"
   show EndOfBlock = "[EOB]"
 
-checkValid : ValidIndent -> Int -> SourceEmptyRule ()
+checkValid : ValidIndent -> Int -> EmptyRule ()
 checkValid AnyIndent c = pure ()
 checkValid (AtPos x) c = if c == x
                             then pure ()
@@ -386,29 +393,27 @@ isTerminator _ = False
 ||| It's the end if we have a terminating token, or the next token starts
 ||| in or before indent. Works by looking ahead but not consuming.
 export
-atEnd : (indent : IndentInfo) -> SourceEmptyRule ()
+atEnd : (indent : IndentInfo) -> EmptyRule ()
 atEnd indent
     = eoi
   <|> do ignore $ nextIs "Expected end of block" isTerminator
-  <|> do col <- Common.column
-         if (col <= indent)
-            then pure ()
-            else fail "Not the end of a block entry"
+  <|> do col <- column
+         when (not (col <= indent))
+            $ fail "Not the end of a block entry"
 
 -- Check we're at the end, but only by looking at indentation
 export
-atEndIndent : (indent : IndentInfo) -> SourceEmptyRule ()
+atEndIndent : (indent : IndentInfo) -> EmptyRule ()
 atEndIndent indent
     = eoi
-  <|> do col <- Common.column
-         if col <= indent
-            then pure ()
-            else fail "Not the end of a block entry"
+  <|> do col <- column
+         when (not (col <= indent))
+            $ fail "Not the end of a block entry"
 
 
 -- Parse a terminator, return where the next block entry
 -- must start, given where the current block entry started
-terminator : ValidIndent -> Int -> SourceEmptyRule ValidIndent
+terminator : ValidIndent -> Int -> EmptyRule ValidIndent
 terminator valid laststart
     = do eoi
          pure EndOfBlock
@@ -430,7 +435,7 @@ terminator valid laststart
    -- Expected indentation for the next token can either be anything (if
    -- we're inside a brace delimited block) or in exactly the initial column
    -- (if we're inside an indentation delimited block)
-   afterDedent : ValidIndent -> Int -> SourceEmptyRule ValidIndent
+   afterDedent : ValidIndent -> Int -> EmptyRule ValidIndent
    afterDedent AnyIndent col
        = if col <= laststart
             then pure AnyIndent
@@ -456,7 +461,7 @@ blockEntry valid rule
          pure (p, valid')
 
 blockEntries : ValidIndent -> (IndentInfo -> Rule ty) ->
-               SourceEmptyRule (List ty)
+               EmptyRule (List ty)
 blockEntries valid rule
      = do eoi; pure []
    <|> do res <- blockEntry valid rule
@@ -465,7 +470,7 @@ blockEntries valid rule
    <|> pure []
 
 export
-block : (IndentInfo -> Rule ty) -> SourceEmptyRule (List ty)
+block : (IndentInfo -> Rule ty) -> EmptyRule (List ty)
 block item
     = do symbol "{"
          commit
@@ -481,35 +486,35 @@ block item
 ||| by curly braces). `rule` is a function of the actual indentation
 ||| level.
 export
-blockAfter : Int -> (IndentInfo -> Rule ty) -> SourceEmptyRule (List ty)
+blockAfter : Int -> (IndentInfo -> Rule ty) -> EmptyRule (List ty)
 blockAfter mincol item
     = do symbol "{"
          commit
          ps <- blockEntries AnyIndent item
          symbol "}"
          pure ps
-  <|> do col <- Common.column
-         if col <= mincol
-            then pure []
-            else blockEntries (AtPos col) item
+  <|> do col <- column
+         ifThenElse (col <= mincol)
+            (pure [])
+            $ blockEntries (AtPos col) item
 
 export
 blockWithOptHeaderAfter :
    (column : Int) ->
    (header : IndentInfo -> Rule hd) ->
    (item : IndentInfo -> Rule ty) ->
-   SourceEmptyRule (Maybe hd, List ty)
+   EmptyRule (Maybe hd, List ty)
 blockWithOptHeaderAfter {ty} mincol header item
     = do symbol "{"
          commit
          hidt <- optional $ blockEntry AnyIndent header
          restOfBlock hidt
-  <|> do col <- Common.column
-         if col <= mincol
-            then pure (Nothing, [])
-            else do hidt <- optional $ blockEntry (AtPos col) header
-                    ps <- blockEntries (AtPos col) item
-                    pure (map fst hidt, ps)
+  <|> do col <- column
+         ifThenElse (col <= mincol)
+            (pure (Nothing, []))
+            $ do hidt <- optional $ blockEntry (AtPos col) header
+                 ps <- blockEntries (AtPos col) item
+                 pure (map fst hidt, ps)
   where
   restOfBlock : Maybe (hd, ValidIndent) -> Rule (Maybe hd, List ty)
   restOfBlock (Just (h, idt)) = do ps <- blockEntries idt item

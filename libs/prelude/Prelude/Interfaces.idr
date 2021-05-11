@@ -222,11 +222,16 @@ public export
 guard : Alternative f => Bool -> f ()
 guard x = if x then pure () else empty
 
-||| Conditionally execute an applicative expression.
+||| Conditionally execute an applicative expression when the boolean is true.
 public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
 when True f = f
 when False f = pure ()
+
+||| Execute an applicative expression unless the boolean is true.
+%inline public export
+unless : Applicative f => Bool -> Lazy (f ()) -> f ()
+unless = when . not
 
 ---------------------------
 -- FOLDABLE, TRAVERSABLE --
@@ -265,6 +270,10 @@ interface Foldable t where
   public export
   foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
   foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
+
+  ||| Produce a list of the elements contained in the parametrised type.
+  toList : t elem -> List elem
+  toList = foldr (::) []
 
 ||| Maps each element to a value and combine them
 public export

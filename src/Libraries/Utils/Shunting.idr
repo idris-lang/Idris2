@@ -21,8 +21,10 @@ data OpPrec
 -- Tokens are either operators or already parsed expressions in some
 -- higher level language
 public export
-data Tok op a = Op FC op OpPrec
-              | Expr a
+data Tok op a
+  = ||| The second FC is for the operator alone
+    Op FC FC op OpPrec
+  | Expr a
 
 -- The result of shunting is a parse tree with the precedences made explicit
 -- in the tree.
@@ -34,14 +36,14 @@ data Tok op a = Op FC op OpPrec
 -- there's a better way though!
 
 public export
-data Tree op a = Infix FC op (Tree op a) (Tree op a)
-               | Pre FC op (Tree op a)
+data Tree op a = Infix FC FC op (Tree op a) (Tree op a)
+               | Pre FC FC op (Tree op a)
                | Leaf a
 
 export
 (Show op, Show a) => Show (Tree op a) where
-  show (Infix _ op l r) = "(" ++ show op ++ " " ++ show l ++ " " ++ show r ++ ")"
-  show (Pre _ op l) = "(" ++  show op ++ " " ++ show l ++ ")"
+  show (Infix _ _ op l r) = "(" ++ show op ++ " " ++ show l ++ " " ++ show r ++ ")"
+  show (Pre _ _ op l) = "(" ++  show op ++ " " ++ show l ++ ")"
   show (Leaf val) = show val
 
 Show OpPrec where
@@ -52,7 +54,7 @@ Show OpPrec where
 
 export
 (Show op, Show a) => Show (Tok op a) where
-  show (Op _ op p) = show op ++ " " ++ show p
+  show (Op _ _ op p) = show op ++ " " ++ show p
   show (Expr val) = show val
 
 -- Label for the output queue state
@@ -60,9 +62,9 @@ data Out : Type where
 
 output : List (Tree op a) -> Tok op a ->
          Core (List (Tree op a))
-output [] (Op _ _ _) = throw (InternalError "Invalid input to shunting")
-output (x :: stk) (Op loc str (Prefix _)) = pure $ Pre loc str x :: stk
-output (x :: y :: stk) (Op loc str _) = pure $ Infix loc str y x :: stk
+output [] (Op _ _ _ _) = throw (InternalError "Invalid input to shunting")
+output (x :: stk) (Op loc opFC str (Prefix _)) = pure $ Pre loc opFC str x :: stk
+output (x :: y :: stk) (Op loc opFC str _) = pure $ Infix loc opFC str y x :: stk
 output stk (Expr a) = pure $ Leaf a :: stk
 output _ _ = throw (InternalError "Invalid input to shunting")
 
@@ -101,36 +103,32 @@ higher loc opl l opr r
              ((getPrec l == getPrec r) && isLAssoc l)
 
 processStack : Show op => {auto o : Ref Out (List (Tree op a))} ->
-               List (FC, op, OpPrec) -> op -> OpPrec ->
-               Core (List (FC, op, OpPrec))
+               List (FC, FC, op, OpPrec) -> op -> OpPrec ->
+               Core (List (FC, FC, op, OpPrec))
 processStack [] op prec = pure []
-processStack ((loc, opx, sprec) :: xs) opy prec
+processStack (x@(loc, opFC, opx, sprec) :: xs) opy prec
     = if !(higher loc opx sprec opy prec)
-         then do emit (Op loc opx sprec)
+         then do emit (Op loc opFC opx sprec)
                  processStack xs opy prec
-         else pure ((loc, opx, sprec) :: xs)
+         else pure (x :: xs)
 
 shunt : Show op => {auto o : Ref Out (List (Tree op a))} ->
-        (opstk : List (FC, op, OpPrec)) ->
+        (opstk : List (FC, FC, op, OpPrec)) ->
         List (Tok op a) -> Core (Tree op a)
 shunt stk (Expr x :: rest)
     = do emit (Expr x)
          shunt stk rest
-shunt stk (Op loc op prec :: rest)
+shunt stk (Op loc opFC op prec :: rest)
     = do stk' <- processStack stk op prec
-         shunt ((loc, op, prec) :: stk') rest
+         shunt ((loc, opFC, op, prec) :: stk') rest
 shunt stk []
-    = do traverse_ (\s => emit (Op (sloc s) (sop s) (sprec s))) stk
+    = do traverse_ (emit . mkOp) stk
          [out] <- get Out
              | out => throw (InternalError "Invalid input to shunting")
          pure out
   where
-    sloc : (annot, b, c) -> annot
-    sloc (x, y, z) = x
-    sop : (annot, b, c) -> b
-    sop (x, y, z) = y
-    sprec : (annot, b, c) -> c
-    sprec (x, y, z) = z
+    mkOp : (FC, FC, op, OpPrec) -> Tok op a
+    mkOp (loc, opFC, op, prec) = Op loc opFC op prec
 
 export
 parseOps : Show op => List (Tok op a) -> Core (Tree op a)
