@@ -238,11 +238,11 @@ processMod srcf ttcf msg sourcecode
 
         hs <- traverse readHash imps
         defs <- get Ctxt
-        log "" 5 $ "Current hash " ++ show (ifaceHash defs)
-        log "" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Current hash " ++ show (ifaceHash defs)
+        log "module.hash" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
                 show (sort (map snd hs))
         imphs <- readImportHashes ttcf
-        log "" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
+        log "module.hash" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
 
         -- If the old hashes are the same as the hashes we've just
         -- read from the imports, and the source file is older than

@@ -37,7 +37,6 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 public export
 knownTopics : List (String,String)
 knownTopics = [
-    ("", "some documentation of this option"),
     ("auto", "some documentation of this option"),
     ("builtin.Natural", "some documentation of this option"),
     ("builtin.Natural.addTransform", "some documentation of this option"),
@@ -107,6 +106,7 @@ knownTopics = [
     ("interaction.generate", "some documentation of this option"),
     ("interaction.search", "some documentation of this option"),
     ("metadata.names", "some documentation of this option"),
+    ("module.hash", "some documentation of this option"),
     ("quantity", "some documentation of this option"),
     ("quantity.hole", "some documentation of this option"),
     ("quantity.hole.update", "some documentation of this option"),
@@ -125,6 +125,8 @@ knownTopics = [
     ("totality.termination.sizechange.inPath", "some documentation of this option"),
     ("totality.termination.sizechange.isTerminating", "some documentation of this option"),
     ("totality.termination.sizechange.needsChecking", "some documentation of this option"),
+    ("transform.lhs", "some documentation of this option"),
+    ("transform.rhs", "some documentation of this option"),
     ("ttc.read", "some documentation of this option"),
     ("ttc.write", "some documentation of this option"),
     ("typesearch.equiv", "some documentation of this option"),
