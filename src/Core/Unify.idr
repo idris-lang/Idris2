@@ -1135,14 +1135,14 @@ mutual
   dumpArg env (MkClosure opts loc lenv tm)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           logTerm "" 0 "Term: " tm
+           logTerm "unify" 20 "Term: " tm
            nf <- evalClosure empty (MkClosure opts loc lenv tm)
-           logNF "" 0 "  " env nf
+           logNF "unify" 20 "  " env nf
   dumpArg env cl
       = do defs <- get Ctxt
            empty <- clearDefs defs
            nf <- evalClosure empty cl
-           logNF "" 0 "  " env nf
+           logNF "unify" 20 "  " env nf
 
   export
   unifyNoEta : {auto c : Ref Ctxt Defs} ->
@@ -1161,11 +1161,11 @@ mutual
                      -- may prove useful again...
                      {-
                      when (logging ust) $
-                        do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                           log "" 0 "ARGUMENTS:"
+                        do log "unify" 20 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
+                           log "unify" 20 "ARGUMENTS:"
                            defs <- get Ctxt
                            traverse_ (dumpArg env) xs
-                           log "" 0 "WITH:"
+                           log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
                      unifyArgs mode loc env (map snd xs) (map snd ys)

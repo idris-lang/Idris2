@@ -13,7 +13,9 @@ import System.Clock
 export
 logTerm : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          String -> Nat -> Lazy String -> Term vars -> Core ()
+          (s : String) ->
+          {auto 0 _ : KnownTopic s} ->
+          Nat -> Lazy String -> Term vars -> Core ()
 logTerm str n msg tm
     = do opts <- getSession
          let lvl = mkLogLevel (logEnabled opts) str n
@@ -35,21 +37,31 @@ log' lvl msg
 ||| high log level numbers for more granular logging.
 export
 log : {auto c : Ref Ctxt Defs} ->
-      String -> Nat -> Lazy String -> Core ()
+      (s : String) ->
+      {auto 0 _ : KnownTopic s} ->
+      Nat -> Lazy String -> Core ()
 log str n msg
     = do let lvl = mkLogLevel (logEnabled !getSession) str n
          log' lvl msg
 
 export
-logC : {auto c : Ref Ctxt Defs} ->
-       String -> Nat -> Core String -> Core ()
-logC str n cmsg
+unverifiedLogC : {auto c : Ref Ctxt Defs} ->
+                 (s : String) ->
+                 Nat -> Core String -> Core ()
+unverifiedLogC str n cmsg
     = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
+         let lvl = mkUnverifiedLogLevel (logEnabled opts) str n
          if keepLog lvl (logEnabled opts) (logLevel opts)
             then do msg <- cmsg
                     coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
             else pure ()
+
+export
+logC : {auto c : Ref Ctxt Defs} ->
+       (s : String) ->
+       {auto 0 _ : KnownTopic s} ->
+       Nat -> Core String -> Core ()
+logC str = unverifiedLogC str
 
 export
 logTimeOver : Integer -> Core String -> Core a -> Core a

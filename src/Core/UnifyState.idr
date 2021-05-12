@@ -718,7 +718,9 @@ dumpHole' lvl hole
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (topics : String) -> (verbosity : Nat) ->
+                  (topics : String) ->
+                  {auto 0 _ : KnownTopic topics} ->
+                  (verbosity : Nat) ->
                   (all : Bool) ->
                   Core ()
 dumpConstraints str n all

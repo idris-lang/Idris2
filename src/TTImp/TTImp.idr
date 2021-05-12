@@ -1175,7 +1175,9 @@ mutual
 -- Log message with a RawImp
 export
 logRaw : {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> Lazy String -> RawImp -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> Lazy String -> RawImp -> Core ()
 logRaw str n msg tm
     = do opts <- getSession
          let lvl = mkLogLevel (logEnabled opts) str n

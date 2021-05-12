@@ -32,7 +32,7 @@ addAlias : {auto m : Ref MD Metadata} ->
 addAlias from to =
   whenJust (isConcreteFC from) $ \ from =>
     whenJust (isConcreteFC to) $ \ to => do
-      log "ide-mode.highlighting.alias" 25 $
+      log "ide-mode.highlight.alias" 25 $
         "Adding alias: " ++ show from ++ " -> " ++ show to
       addSemanticAlias from to
 
