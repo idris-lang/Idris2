@@ -104,10 +104,11 @@ record Metadata where
        -- Posmap of aliases (in `with` clauses the LHS disapear during
        -- elaboration after making sure that they match their parents'
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
+       semanticDefaults : PosMap ASemanticDecoration
 
 Show Metadata where
   show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
-                   fname semanticHighlighting semanticAliases)
+                   fname semanticHighlighting semanticAliases semanticDefaults)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
@@ -117,7 +118,8 @@ Show Metadata where
       " nameLocMap: " ++ show nameLocMap ++ "\n" ++
       " sourcefile: " ++ fname ++
       " semanticHighlighting: " ++ show semanticHighlighting ++
-      " semanticAliases: " ++ show semanticAliases
+      " semanticAliases: " ++ show semanticAliases ++
+      " semanticDefaults: " ++ show semanticDefaults
 
 export
 initMetadata : String -> Metadata
@@ -131,6 +133,7 @@ initMetadata fname = MkMetadata
   , sourcefile = fname
   , semanticHighlighting = empty
   , semanticAliases = empty
+  , semanticDefaults = empty
   }
 
 -- A label for metadata in the global state
@@ -147,6 +150,7 @@ TTC Metadata where
            toBuf b (sourcefile m)
            toBuf b (semanticHighlighting m)
            toBuf b (semanticAliases m)
+           toBuf b (semanticDefaults m)
 
   fromBuf b
       = do apps <- fromBuf b
@@ -157,7 +161,8 @@ TTC Metadata where
            fname <- fromBuf b
            semhl <- fromBuf b
            semal <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl semal)
+           semdef <- fromBuf b
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl semal semdef)
 
 export
 addLHS : {vars : _} ->
@@ -288,6 +293,13 @@ findHoleLHS hn
          pure (lookupBy (\x, y => dropNS x == dropNS y) hn (holeLHS meta))
 
 export
+addSemanticDefault : {auto m : Ref MD Metadata} ->
+                     ASemanticDecoration -> Core ()
+addSemanticDefault asem
+  = do meta <- get MD
+       put MD $ { semanticDefaults $= insert asem } meta
+
+export
 addSemanticAlias : {auto m : Ref MD Metadata} ->
                    NonEmptyFC -> NonEmptyFC -> Core ()
 addSemanticAlias from to
@@ -369,7 +381,7 @@ HasNames Metadata where
       fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
       fullDecls (fc, n) = pure (fc, !(full gam n))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl semal)
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl semal semdef)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
@@ -379,6 +391,7 @@ HasNames Metadata where
                           fname
                           semhl
                           semal
+                          semdef
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))

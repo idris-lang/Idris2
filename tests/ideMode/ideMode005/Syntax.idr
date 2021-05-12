@@ -43,7 +43,7 @@ parameters (x, y : Nat) (z, a : Nat)
   add4 : Nat
   add4 = x + y + z + a
 
-anonLam : Maybe (m : Nat ** n : Nat ** m === n)
+anonLam : Maybe (m : Nat ** n ** m === n)
 anonLam = map (\m => (m ** m ** Refl))
         $ map (uncurry $ \ m, n => m + n)
         $ map (\ (m, n) => (n, m))
