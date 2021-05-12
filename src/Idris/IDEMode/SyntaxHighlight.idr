@@ -158,11 +158,18 @@ outputSyntaxHighlighting fname loadResult = do
     log "ide-mode.highlight.alias" 19 $
       "Semantic metadata from aliases is: " ++ show aliases
 
+    let defaults
+         : List ASemanticDecoration
+         = flip foldMap meta.semanticDefaults $ \ decor@((_, range), _) =>
+             case uncurry exactRange range semHigh of
+               [] => [decor]
+               _ => []
+
     traverse_ {b = Unit}
          (\(nfc, decor, mn) =>
            case mn of
              Nothing => lwOutputHighlight (nfc, decor)
              Just n  => outputNameSyntax  (nfc, decor, n))
-         (aliases ++ toList semHigh)
+         (defaults ++ aliases ++ toList semHigh)
 
   pure loadResult
