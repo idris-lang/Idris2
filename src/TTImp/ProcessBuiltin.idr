@@ -89,23 +89,23 @@ getNEIndex ar (Bind _ x b tm) = case b of
 getNEIndex _ _ = Nothing
 
 ||| Get the index of all non-erased Integer argument.
-getNEIntegerIndex : (arity : Nat) -> Term vars -> List (Fin arity)
+getNEIntegerIndex : (arity : Nat) -> Term vars -> Maybe (List (Fin arity))
 getNEIntegerIndex ar (Bind _ x b tm) = case b of
     Let _ _ val _ => getNEIntegerIndex ar $ subst {x} val tm
     Pi _ mul _ arg => if isRigOther mul && isInteger arg
         then case natToFin 0 ar of
-            Nothing => []
-            Just idx => idx :: go ar tm
+            Nothing => Nothing
+            Just idx => map (Prelude.(::) idx) $ go ar tm
         else go ar tm
-    _ => []
+    _ => Nothing
   where
     isInteger : forall vars. Term vars -> Bool
     isInteger (PrimVal _ IntegerType) = True
     isInteger _ = False
-    go : forall vars. (sarity : Nat) -> Term vars -> List (Fin sarity)
-    go (S ar) tm = FS <$> getNEIntegerIndex ar tm
-    go Z _ = []
-getNEIntegerIndex _ _ = []
+    go : forall vars. (sarity : Nat) -> Term vars -> Maybe (List (Fin sarity))
+    go (S ar) tm = map FS <$> getNEIntegerIndex ar tm
+    go Z _ = Just []
+getNEIntegerIndex _ _ = Just []
 
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
@@ -301,9 +301,11 @@ processIntegerToNat ds fc fn = do
             $ "Expected function definition, found " ++ showDefType def ++ "."
     let arity = length $ getTypeArgs type
     logTerm "builtin.IntegerToNatural" 25 ("Type of " ++ show fn) type
-    let [intIdx] = getNEIntegerIndex arity type
-        | [] => throw $ GenericMsg fc $ "No unrestricted arguments of type `Integer` found for " ++ show n ++ "."
-        | _ => throw $ GenericMsg fc $ "More than one unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+    let Just [intIdx] = getNEIntegerIndex arity type
+        | Just [] => throw $ GenericMsg fc $ "No unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+        | Just _ => throw $ GenericMsg fc $ "More than one unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+        | Nothing => throw $ InternalError
+            $ "Unexpected arity while processing %builtin IntegerToNatural " ++ show n ++ " (getNEIntegerIndex returned Nothing)"
     let Just (_ ** retTy) = getReturnType type
         | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
     let Just retCon = getTypeCons retTy
