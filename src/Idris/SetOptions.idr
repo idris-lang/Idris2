@@ -176,7 +176,10 @@ codegens : {auto c : Ref Ctxt Defs} -> Core (List String)
 codegens = map fst . availableCGs . options <$> get Ctxt
 
 logLevels : List String
-logLevels = map fst knownTopics
+logLevels = map fst knownTopics >>= prefixes . forget . split (== '.')
+  where prefixes : List String -> List String
+        prefixes [] = []
+        prefixes (x :: xs) = x :: map (x ++ "." ++) (prefixes xs)
 
 -- given a pair of strings, the first representing the word
 -- actually being edited, the second representing the word
