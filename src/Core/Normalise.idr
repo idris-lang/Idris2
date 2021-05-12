@@ -1173,7 +1173,9 @@ getArity defs env tm = getValArity defs env !(nf defs env tm)
 export
 logNF : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
-        String -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
+        (s : String) ->
+        {auto 0 _ : KnownTopic s} ->
+        Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
 logNF str n msg env tmnf
     = do opts <- getSession
          let lvl = mkLogLevel (logEnabled opts) str n
@@ -1202,7 +1204,9 @@ logTermNF' lvl msg env tm
 export
 logTermNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF str n msg env tm
     = do let lvl = mkLogLevel (logEnabled !getSession) str n
          logTermNF' lvl msg env tm
@@ -1210,7 +1214,9 @@ logTermNF str n msg env tm
 export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+          (s : String) ->
+          {auto 0 _ : KnownTopic s} ->
+          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlue str n msg env gtm
     = do opts <- getSession
          let lvl = mkLogLevel (logEnabled opts) str n
@@ -1224,7 +1230,9 @@ logGlue str n msg env gtm
 export
 logGlueNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlueNF str n msg env gtm
     = do opts <- getSession
          let lvl = mkLogLevel (logEnabled opts) str n
@@ -1239,7 +1247,9 @@ logGlueNF str n msg env gtm
 export
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> String -> Env Term vars -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
     = do opts <- getSession
          when (logEnabled opts &&
