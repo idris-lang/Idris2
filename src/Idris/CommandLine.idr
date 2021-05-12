@@ -118,7 +118,9 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths
+  BlodwenPaths |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -197,6 +199,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set output directory"),
            MkOpt ["--profile"] [] [Profile]
               (Just "Generate profile data when compiling, if supported"),
+
+           optSeparator,
+           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]

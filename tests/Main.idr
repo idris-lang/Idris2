@@ -62,6 +62,10 @@ idrisTestsCasetree = MkTestPool "Case tree building" []
        -- Case tree building
       ["casetree001"]
 
+idrisTestsWarning : TestPool
+idrisTestsWarning = MkTestPool "Warnings" []
+     ["warning001"]
+
 idrisTestsError : TestPool
 idrisTestsError = MkTestPool "Error messages" []
        -- Error messages
@@ -295,6 +299,7 @@ main = runner
   , testPaths "idris2" idrisTestsCoverage
   , testPaths "idris2" idrisTestsCasetree
   , testPaths "idris2" idrisTestsError
+  , testPaths "idris2" idrisTestsWarning
   , testPaths "idris2" idrisTestsInteractive
   , testPaths "idris2" idrisTestsInterface
   , testPaths "idris2" idrisTestsLiterate

@@ -211,6 +211,9 @@ preOptions (ConsoleWidth n :: opts)
 preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
+preOptions (IgnoreShadowingWarnings :: opts)
+    = do setSession (record { showShadowingWarning = False } !getSession)
+         preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution

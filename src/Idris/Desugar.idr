@@ -648,7 +648,7 @@ mutual
   desugarType ps (MkPTy fc nameFC n d ty)
       = do addDocString n d
            syn <- get Syn
-           pure $ MkImpTy fc nameFC n !(bindTypeNames (usingImpl syn)
+           pure $ MkImpTy fc nameFC n !(bindTypeNames fc (usingImpl syn)
                                                ps !(desugar AnyExpr ps ty))
 
   getClauseFn : RawImp -> Core Name
@@ -722,14 +722,14 @@ mutual
       = do addDocString n doc
            syn <- get Syn
            pure $ MkImpData fc n
-                              !(bindTypeNames (usingImpl syn)
+                              !(bindTypeNames fc (usingImpl syn)
                                               ps !(desugar AnyExpr ps tycon))
                               opts
                               !(traverse (desugarType ps) datacons)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn
-           pure $ MkImpLater fc n !(bindTypeNames (usingImpl syn)
+           pure $ MkImpLater fc n !(bindTypeNames fc (usingImpl syn)
                                                   ps !(desugar AnyExpr ps tycon))
 
   desugarField : {auto s : Ref Syn SyntaxInfo} ->
@@ -742,7 +742,7 @@ mutual
       = do addDocStringNS ns n doc
            syn <- get Syn
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
-                          n !(bindTypeNames (usingImpl syn)
+                          n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
 
   -- Get the declaration to process on each pass of a mutual block
@@ -839,11 +839,11 @@ mutual
                                                         i' <- traverse (desugar AnyExpr ps) i
                                                         pure (n, rig, i', tm')) params
            -- Look for implicitly bindable names in the parameters
-           let pnames = ifThenElse !isUnboundImplicits
-                          (concatMap (findBindableNames True
-                                         (ps ++ map Builtin.fst params) [])
-                                       (map (Builtin.snd . Builtin.snd . Builtin.snd) params'))
-                          []
+           pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
+             $ map concat
+             $ for (map (Builtin.snd . Builtin.snd . Builtin.snd) params')
+             $ findUniqueBindableNames fc True (ps ++ map Builtin.fst params) []
+
            let paramsb = map (\(n, rig, info, tm) =>
                                  (n, rig, info, doBind pnames tm)) params'
            pure [IParameters fc paramsb (concat pds')]
@@ -851,7 +851,7 @@ mutual
       = do syn <- get Syn
            let oldu = usingImpl syn
            uimpls' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
-                                            btm <- bindTypeNames oldu ps tm'
+                                            btm <- bindTypeNames fc oldu ps tm'
                                             pure (fst ntm, btm)) uimpls
            put Syn (record { usingImpl = uimpls' ++ oldu } syn)
            uds' <- traverse (desugarDecl ps) uds
@@ -875,14 +875,11 @@ mutual
                       params
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn body)
-           let bnames = ifThenElse !isUnboundImplicits
-                          (concatMap (findBindableNames True
-                                      (ps ++ mnames ++ paramNames) [])
-                                  (map Builtin.snd cons') ++
-                           concatMap (findBindableNames True
-                                      (ps ++ mnames ++ paramNames) [])
-                                  (map (snd . snd) params'))
-                          []
+           bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
+             $ map concat
+             $ for (map Builtin.snd cons' ++ map (snd . snd) params')
+             $ findUniqueBindableNames fc True (ps ++ mnames ++ paramNames) []
+
            let paramsb = map (\ (nm, (rig, tm)) =>
                                  let tm' = doBind bnames tm in
                                  (nm, (rig, tm')))
@@ -919,11 +916,10 @@ mutual
            params' <- traverse (desugar AnyExpr ps) params
            let _ = the (List RawImp) params'
            -- Look for bindable names in all the constraints and parameters
-           let bnames = if !isUnboundImplicits
-                        then
-                        concatMap (findBindableNames True ps []) (map snd cons') ++
-                        concatMap (findBindableNames True ps []) params'
-                        else []
+           bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
+             $ map concat
+             $ for (map snd cons' ++ params')
+             $ findUniqueBindableNames fc True ps []
 
            let paramsb = map (doBind bnames) params'
            let isb = map (\ (n, r, tm) => (n, r, doBind bnames tm)) is'

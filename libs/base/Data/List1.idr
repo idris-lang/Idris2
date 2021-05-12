@@ -19,6 +19,11 @@ record List1 a where
 -- Basic functions
 
 public export
+fromList : List a -> Maybe (List1 a)
+fromList [] = Nothing
+fromList (x :: xs) = Just (x ::: xs)
+
+public export
 singleton : (x : a) -> List1 a
 singleton a = a ::: []
 
