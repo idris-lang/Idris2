@@ -44,6 +44,8 @@ Compiler changes:
   developing Idris2 code generators.  The codegen has a large parallelisation
   potential but at the moment, it is significantly slower for a full rebuild of
   a large code base (the code generation stage takes about 3x longer).
+* New `%builtin` pragma for compiling user defined natural numbers to
+  primitive `Integer`s (see the [docs](https://idris2.readthedocs.io/en/latest/reference/builtins.html))
 
 API changes:
 
