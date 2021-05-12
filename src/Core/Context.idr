@@ -677,12 +677,19 @@ record NatBuiltin where
     zero : Name
     succ : Name
 
-||| Record containing information about a natToInteger function.
+||| Record containing information about a NatToInteger function.
 public export
 record NatToInt where
     constructor MkNatToInt
-    arity : Nat -- total number of arguments
-    natIdx : Fin arity -- index into arguments of the 'Nat'-like argument
+    natToIntArity : Nat -- total number of arguments
+    natIdx : Fin natToIntArity -- index into arguments of the 'Nat'-like argument
+
+||| Record containing information about a IntegerToNat function.
+public export
+record IntToNat where
+    constructor MkIntToNat
+    intToNatArity : Nat
+    intIdx : Fin intToNatArity
 
 ||| Rewrite rules for %builtin pragmas
 ||| Seperate to 'Transform' because it must also modify case statements
@@ -690,11 +697,11 @@ record NatToInt where
 public export
 record BuiltinTransforms where
     constructor MkBuiltinTransforms
-    -- Nat
     natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
     natZNames : NameMap ZERO -- set of Z-like names
     natSNames : NameMap SUCC -- set of S-like names
-    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `believe_me`
+    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `id`
+    integerToNatFns : NameMap IntToNat -- set of functions to transform to `max 0`
 
 -- TODO: After next release remove nat from here and use %builtin pragma instead
 initBuiltinTransforms : BuiltinTransforms
@@ -707,6 +714,7 @@ initBuiltinTransforms =
         , natZNames = singleton zero MkZERO
         , natSNames = singleton succ MkSUCC
         , natToIntegerFns = empty
+        , integerToNatFns = empty
         }
 
 export
