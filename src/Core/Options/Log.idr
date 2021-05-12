@@ -34,7 +34,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 ----------------------------------------------------------------------------------
 -- INDIVIDUAL LOG LEVEL
 
-public export 
+public export
 knownTopics : List (String,String)
 knownTopics = [
     ("", "some documentation of this option"),

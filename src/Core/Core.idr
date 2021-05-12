@@ -769,4 +769,3 @@ readFile fname =
   coreLift (File.readFile fname) >>= \case
     Right content => pure content
     Left err => throw $ FileErr fname err
-
