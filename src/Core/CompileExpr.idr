@@ -212,9 +212,8 @@ mutual
         = assert_total $ "(%con " ++ showFlag ci ++ show x ++ " " ++ show tag ++ " " ++ show xs ++ ")"
       where
         showFlag : ConInfo -> String
-        showFlag NIL = "[nil] "
-        showFlag CONS = "[cons] "
-        showFlag _ = ""
+        showFlag DATACON = ""
+        showFlag f = show f ++ " "
     show (NmOp _ op xs)
         = assert_total $ "(" ++ show op ++ " " ++ show xs ++ ")"
     show (NmExtPrim _ p xs)
@@ -236,9 +235,8 @@ mutual
              show args ++ " " ++ show exp ++ ")"
       where
         showFlag : ConInfo -> String
-        showFlag NIL = "[nil] "
-        showFlag CONS = "[cons] "
-        showFlag _ = ""
+        showFlag DATACON = ""
+        showFlag f = show f ++ " "
 
   export
   Show NamedConstAlt where
