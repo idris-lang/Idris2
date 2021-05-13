@@ -33,12 +33,12 @@ showDefType ImpBind = "bound name"
 showDefType Delayed = "delayed"
 
 ||| Get the return type.
-getRetType : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
-getRetType tm@(Bind _ x b scope) = case b of
-    Let _ _ val _ => getRetType $ subst {x} val scope
-    Pi _ _ _ _ => getRetType scope
+getReturnType : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
+getReturnType tm@(Bind _ x b scope) = case b of
+    Let _ _ val _ => getReturnType $ subst {x} val scope
+    Pi _ _ _ _ => getReturnType scope
     _ => Nothing
-getRetType tm = Just (vars ** tm)
+getReturnType tm = Just (vars ** tm)
 
 ||| Get the top level type constructor if there is one.
 getTypeCons : {vars : _} -> Term vars -> Maybe Name
@@ -51,6 +51,7 @@ getTypeCons (Bind _ x b scope) = case b of
 getTypeCons (App _ fn _) = getTypeCons fn
 getTypeCons _ = Nothing
 
+||| Get the arguments of a `Term` representing a type.
 getTypeArgs : {vars : _} -> Term vars -> List (vars ** Term vars)
 getTypeArgs (Bind _ x b tm) = case b of
     Let _ _ val _ => getTypeArgs $ subst {x} val tm
@@ -58,6 +59,7 @@ getTypeArgs (Bind _ x b tm) = case b of
     _ => []
 getTypeArgs _ = []
 
+||| Get all non-erased aruments.
 getNEArgs : {vars : _} -> Term vars -> List (vars ** Term vars)
 getNEArgs (Bind _ x b tm) = case b of
     Let _ _ val _ => getNEArgs $ subst {x} val tm
@@ -85,6 +87,25 @@ getNEIndex ar (Bind _ x b tm) = case b of
         else natToFin 0 ar
     _ => Nothing
 getNEIndex _ _ = Nothing
+
+||| Get the index of all non-erased Integer argument.
+getNEIntegerIndex : (arity : Nat) -> Term vars -> Maybe (List (Fin arity))
+getNEIntegerIndex ar (Bind _ x b tm) = case b of
+    Let _ _ val _ => getNEIntegerIndex ar $ subst {x} val tm
+    Pi _ mul _ arg => if isRigOther mul && isInteger arg
+        then case natToFin 0 ar of
+            Nothing => Nothing
+            Just idx => map (Prelude.(::) idx) $ go ar tm
+        else go ar tm
+    _ => Nothing
+  where
+    isInteger : forall vars. Term vars -> Bool
+    isInteger (PrimVal _ IntegerType) = True
+    isInteger _ = False
+    go : forall vars. (sarity : Nat) -> Term vars -> Maybe (List (Fin sarity))
+    go (S ar) tm = map FS <$> getNEIntegerIndex ar tm
+    go Z _ = Just []
+getNEIntegerIndex _ _ = Just []
 
 ||| Do the terms match ignoring arguments to type constructors.
 termConMatch : Term vs -> Term vs' -> Bool
@@ -160,7 +181,7 @@ checkNatCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons
             erase = gdef.eraseArgs
         let Just (_ ** arg) = getFirstNEType type
             | Nothing => throw $ InternalError "Expected a non-erased argument, found none."
-        let Just (_ ** ret) = getRetType type
+        let Just (_ ** ret) = getReturnType type
             | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
         unless (termConMatch arg ret) $ throw $ GenericMsg fc $ "Incorrect type for 'S'-like constructor for " ++ show ty ++ "."
         unless (isStrict arg) $ throw $ GenericMsg fc $ "Natural builtin does not support lazy types."
@@ -238,7 +259,9 @@ processNatToInteger ds fc fn = do
     let PMDef _ args _ cases _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
-    let [(_ ** arg)] = getNEArgs gdef.type
+    type <- toFullNames gdef.type
+    logTerm "builtin.NaturalToInteger" 25 ("Type of " ++ show fn) type
+    let [(_ ** arg)] = getNEArgs type
         | [] => throw $ GenericMsg fc $ "No arguments found for " ++ show n ++ "."
         | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show n ++ "."
     let Just tyCon = getTypeCons arg
@@ -246,10 +269,51 @@ processNatToInteger ds fc fn = do
             $ "No type constructor found for non-erased arguement of " ++ show n ++ "."
     Just _ <- getNatBuiltin tyCon
         | Nothing => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
-    let arity = length $ getTypeArgs gdef.type
-    let Just natIdx = getNEIndex arity gdef.type
+    let arity = length $ getTypeArgs type
+    let Just natIdx = getNEIndex arity type
         | Nothing => throw $ InternalError "Couldn't find non-erased argument."
-    addNatToInteger n (MkNatToInt {arity, natIdx})
+    addNatToInteger n (MkNatToInt arity natIdx)
+
+addIntegerToNat :
+    Ref Ctxt Defs =>
+    (fn : Name) ->
+    IntToNat ->
+    Core ()
+addIntegerToNat fn iToN = do
+    log "builtin.NaturalToInteger.addTransforms" 10
+        $ "Add %builtin IntegerToNatural transform for " ++ show fn ++ "."
+    update Ctxt $ record
+        { builtinTransforms.integerToNatFns $= insert fn iToN
+        }
+
+||| Check a `%builtin IntegerToNatural` pragma is correct.
+processIntegerToNat :
+    Ref Ctxt Defs =>
+    Defs -> FC -> Name -> Core ()
+processIntegerToNat ds fc fn = do
+    log "builtin.IntegerToNatural" 5 $ "Processing %builtin IntegerToNatural " ++ show fn ++ "."
+    [(n, _, gdef)] <- lookupCtxtName fn ds.gamma
+        | [] => undefinedName fc fn
+        | ns => throw $ AmbiguousName fc $ (\(n, _, _) => n) <$> ns
+    type <- toFullNames gdef.type
+    let PMDef _ args _ cases _ = gdef.definition
+        | def => throw $ GenericMsg fc
+            $ "Expected function definition, found " ++ showDefType def ++ "."
+    let arity = length $ getTypeArgs type
+    logTerm "builtin.IntegerToNatural" 25 ("Type of " ++ show fn) type
+    let Just [intIdx] = getNEIntegerIndex arity type
+        | Just [] => throw $ GenericMsg fc $ "No unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+        | Just _ => throw $ GenericMsg fc $ "More than one unrestricted arguments of type `Integer` found for " ++ show n ++ "."
+        | Nothing => throw $ InternalError
+            $ "Unexpected arity while processing %builtin IntegerToNatural " ++ show n ++ " (getNEIntegerIndex returned Nothing)"
+    let Just (_ ** retTy) = getReturnType type
+        | Nothing => throw $ InternalError $ "Unexpected type " ++ show type
+    let Just retCon = getTypeCons retTy
+        | Nothing => throw $ GenericMsg fc
+            $ "No type constructor found for return type of " ++ show n ++ "."
+    Just _ <- getNatBuiltin retCon
+        | Nothing => throw $ GenericMsg fc $ "Return type is not a 'Nat'-like type"
+    addIntegerToNat n (MkIntToNat arity intIdx)
 
 ||| Check a `%builtin` pragma is correct.
 export
@@ -261,4 +325,4 @@ processBuiltin nest env fc type name = do
     case type of
         BuiltinNatural => processBuiltinNatural ds fc name
         NaturalToInteger => processNatToInteger ds fc name
-        IntegerToNatural => throw $ InternalError "%builtin IntegerToNatural not yet implemented."
+        IntegerToNatural => processIntegerToNat ds fc name

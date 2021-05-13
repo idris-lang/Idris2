@@ -198,9 +198,10 @@ builtinMagic : Ref Ctxt Defs => Core (forall vars. CExp vars -> CExp vars)
 builtinMagic = do
     defs <- get Ctxt
     let b = defs.builtinTransforms
-    let nats = foldMap builtinMagicNat $ values $ natTyNames b
-    let natToInts = map natToIntMagic $ toList $ natToIntegerFns b
-    pure $ magic $ natHack ++ nats ++ natToInts
+    let nats = foldMap builtinMagicNat $ values b.natTyNames
+    let natToInts = map natToIntMagic $ toList b.natToIntegerFns
+    let intToNats = map intToNatMagic $ toList b.integerToNatFns
+    pure $ magic $ natHack ++ nats ++ natToInts ++ intToNats
   where
     builtinMagicNat : NatBuiltin -> List Magic
     builtinMagicNat cons =
@@ -213,6 +214,10 @@ builtinMagic = do
     natToIntMagic (fn, MkNatToInt arity natIdx) =
         MagicCRef fn arity
             (\ _, _, args => index natIdx args)
+    intToNatMagic : (Name, IntToNat) -> Magic
+    intToNatMagic (fn, MkIntToNat arity intIdx) =
+        MagicCRef fn arity
+            (\ fc, fc', args => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [index intIdx args])
 
 isNatCon : (zeroMap : NameMap ZERO) ->
            (succMap : NameMap SUCC) ->

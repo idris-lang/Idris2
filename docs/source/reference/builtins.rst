@@ -85,7 +85,24 @@ For example
 
     %builtin NaturalToInteger natToInteger
 
-Please note, this only checks the type, not that the type is correct.
+For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.
+
+``%builtin IntegerToNatural``
+=============================
+
+The ``%builtin IntegerToNatural`` pragma allows O(1) conversion of ``Integer`` s to naturals.
+For example
+
+.. code-block:: idris
+
+    integerToNat : Integer -> Nat
+    integerToNat x = if x <= 0
+        then Z
+        else S $ integerToNat (x - 1)
+
+Any ``IntegerToNatural`` function must have exactly 1 unrestricted ``Integer`` argument and the return type must be a natural.
+
+Please note, ``NaturalToInteger`` and ``IntegerToNatural`` only check the type, not that the function is correct.
 
 This can be used with ``%transform`` to allow many other operations to be O(1) too.
 
@@ -98,4 +115,8 @@ This can be used with ``%transform`` to allow many other operations to be O(1) t
 
     %transform "eqNat" eqNat j k = natToInteger j == natToInteger k
 
-For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.
+    plus : Nat -> Nat -> Nat
+    plus Z y = y
+    plus (S x) y = S $ plus x y
+
+    %transform "plus" plus j k = integerToNat (natToInteger j + natToInteger j)
