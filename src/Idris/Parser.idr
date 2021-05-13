@@ -331,10 +331,11 @@ mutual
            let opFC = boundToFC fname op
            pure (PSectionL fc opFC op.val e)
     <|> do  -- (.y.z)  -- section of projection (chain)
-           b <- bounds $ forget <$> some postfixProj
+           b <- bounds $ forget <$> some (bounds postfixProj)
            decoratedSymbol fname ")"
            act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
-           pure $ PPostfixAppPartial (boundToFC fname b) b.val
+           let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val
+           pure $ PPostfixAppPartial (boundToFC fname b) projs
       -- unit type/value
     <|> do b <- bounds (continueWith indents ")")
            pure (PUnit (boundToFC fname (mergeBounds s b)))
@@ -446,24 +447,20 @@ mutual
             act [(toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)]
             pure (PBracketed (boundToFC fname (mergeBounds s end)) e)
 
-  postfixProjection : FileName -> IndentInfo -> Rule PTerm
-  postfixProjection fname indents
-    = do di <- bounds postfixProj
-         pure $ PRef (boundToFC fname di) di.val
-
   simpleExpr : FileName -> IndentInfo -> Rule PTerm
   simpleExpr fname indents
     = do  -- x.y.z
           b <- bounds (do root <- simplerExpr fname indents
-                          projs <- many postfixProj
+                          projs <- many (bounds postfixProj)
                           pure (root, projs))
           (root, projs) <- pure b.val
+          let projs = map (\ proj => (boundToFC fname proj, proj.val)) projs
           pure $ case projs of
             [] => root
             _  => PPostfixApp (boundToFC fname b) root projs
-    <|> do
-          b <- bounds (forget <$> some postfixProj)
-          pure $ PPostfixAppPartial (boundToFC fname b) b.val
+    <|> do b <- bounds (forget <$> some (bounds postfixProj))
+           pure $ let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val in
+                  PPostfixAppPartial (boundToFC fname b) projs
 
   simplerExpr : FileName -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
