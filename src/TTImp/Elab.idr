@@ -249,6 +249,10 @@ checkTermSub defining mode opts nest env env' sub tm ty
                                                    env env' sub
                                                    tm' (Just ty)
                               _ => throw err)
+         case mode of
+              InType => commit -- bracket the 'branch' above
+              _ => pure ()
+
          pure (fst res)
   where
     bindImps' : {vs : _} ->
