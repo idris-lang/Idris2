@@ -42,6 +42,8 @@ knownTopics = [
     ("builtin.Natural.addTransform", "some documentation of this option"),
     ("builtin.NaturalToInteger", "some documentation of this option"),
     ("builtin.NaturalToInteger.addTransforms", "some documentation of this option"),
+    ("builtin.IntegerToNatural", "some documentation of this option"),
+    ("builtin.IntegerToNatural.addTransforms", "some documentation of this option"),
     ("compile.casetree", "some documentation of this option"),
     ("compiler.inline.eval", "some documentation of this option"),
     ("compiler.refc", "some documentation of this option"),
