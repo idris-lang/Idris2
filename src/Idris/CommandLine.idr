@@ -120,7 +120,7 @@ data CLOpt
   DebugElabCheck |
   BlodwenPaths |
   ||| Do not print shadowing warnings
-  IgnoreShadowingWarnings
+  IgnoreShadowingWarnings |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
