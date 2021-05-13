@@ -36,7 +36,9 @@ data VMInst : Type where
 
      APPLY : Reg -> (f : Reg) -> (a : Reg) -> VMInst
      CALL : Reg -> (tailpos : Bool) -> Name -> (args : List Reg) -> VMInst
-     OP : Reg -> PrimFn arity -> Vect arity Reg -> VMInst
+     OP : {0 arity : Nat} -> Reg -> PrimFn arity -> Vect arity Reg -> VMInst
+       --  ^ we explicitly bind arity here to silence the warnings it is shadowing
+       -- an existing global definition
      EXTPRIM : Reg -> Name -> List Reg -> VMInst
 
      CASE : Reg -> -- scrutinee

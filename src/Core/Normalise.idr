@@ -182,7 +182,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 {free, vars : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
-                (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+                (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                 Stack free ->
                 LocalEnv free vars ->
                 Core (NF free)
@@ -203,7 +203,7 @@ parameters (defs : Defs, topopts : EvalOpts)
               env fc mrig (S idx) (Later p) stk (_ :: locs)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
-    updateLocal : (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+    updateLocal : (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                   LocalEnv free vars -> NF free ->
                   LocalEnv free vars
     updateLocal Z First (x :: locs) nf = MkNFClosure nf :: locs

@@ -628,7 +628,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     -- If it's 'KeepCons/SubRefl' in 'outprf', that means it was in the outer
     -- environment so we need to keep it in the same place in the 'with'
     -- function. Hence, turn it to KeepCons whatever
-    keepOldEnv : {vs : _} ->
+    keepOldEnv : {0 outer : _} -> {vs : _} ->
                  (outprf : SubVars outer vs) -> SubVars vs' vs ->
                  (vs'' : List Name ** SubVars vs'' vs)
     keepOldEnv {vs} SubRefl p = (vs ** SubRefl)

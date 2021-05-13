@@ -152,12 +152,12 @@ substInPats fc n tm (p :: ps)
          pure (p' :: !(substInPats fc n tm ps'))
 
 getPat : {idx : Nat} ->
-         (0 el : IsVar name idx ps) -> NamedPats ns ps -> PatInfo name ns
+         (0 el : IsVar nm idx ps) -> NamedPats ns ps -> PatInfo nm ns
 getPat First (x :: xs) = x
 getPat (Later p) (x :: xs) = getPat p xs
 
 dropPat : {idx : Nat} ->
-          (0 el : IsVar name idx ps) ->
+          (0 el : IsVar nm idx ps) ->
           NamedPats ns ps -> NamedPats ns (dropVar ps el)
 dropPat First (x :: xs) = xs
 dropPat (Later p) (x :: xs) = x :: dropPat p xs
@@ -600,7 +600,7 @@ groupCons fc fn pvars cs
                pure (g :: gs')
 
     addGroup : {vars, todo, idx : _} ->
-               Pat -> (0 p : IsVar name idx vars) ->
+               Pat -> (0 p : IsVar nm idx vars) ->
                NamedPats vars todo -> Int -> Term vars ->
                List (Group vars todo) ->
                Core (List (Group vars todo))
@@ -778,12 +778,12 @@ pickNext {ps = q :: qs} fc phase fn npss
                     _ => do (_ ** MkNVar var) <- pickNext fc phase fn (map tail npss)
                             pure (_ ** MkNVar (Later var))
 
-moveFirst : {idx : Nat} -> (0 el : IsVar name idx ps) -> NamedPats ns ps ->
-            NamedPats ns (name :: dropVar ps el)
+moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
+            NamedPats ns (nm :: dropVar ps el)
 moveFirst el nps = getPat el nps :: dropPat el nps
 
-shuffleVars : {idx : Nat} -> (0 el : IsVar name idx todo) -> PatClause vars todo ->
-              PatClause vars (name :: dropVar todo el)
+shuffleVars : {idx : Nat} -> (0 el : IsVar nm idx todo) -> PatClause vars todo ->
+              PatClause vars (nm :: dropVar todo el)
 shuffleVars el (MkPatClause pvars lhs pid rhs)
     = MkPatClause pvars (moveFirst el lhs) pid rhs
 
