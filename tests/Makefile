@@ -1,5 +1,10 @@
 INTERACTIVE ?= --interactive
-threads ?= `nproc`
+ifeq ($(shell uname), FreeBSD)
+	NPROC = sysctl -n hw.ncpu
+else
+	NPROC = nproc
+endif
+threads ?= `$(NPROC)`
 
 .PHONY: testbin test
 
