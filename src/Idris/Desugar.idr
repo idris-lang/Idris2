@@ -403,11 +403,14 @@ mutual
   desugarB side ps (PUnifyLog fc lvl tm)
       = pure $ IUnifyLog fc lvl !(desugarB side ps tm)
   desugarB side ps (PPostfixApp fc rec projs)
-      = desugarB side ps $ foldl (\x, proj => PApp fc (PRef fc proj) x) rec projs
+      = desugarB side ps
+      $ foldl (\x, (fc, proj) => PApp fc (PRef fc proj) x) rec projs
   desugarB side ps (PPostfixAppPartial fc projs)
-      = desugarB side ps $
-          PLam fc top Explicit (PRef fc (MN "paRoot" 0)) (PImplicit fc) $
-            foldl (\r, proj => PApp fc (PRef fc proj) r) (PRef fc (MN "paRoot" 0)) projs
+      = do let vfc = virtualiseFC fc
+           let var = PRef vfc (MN "paRoot" 0)
+           desugarB side ps $
+             PLam fc top Explicit var (PImplicit vfc) $
+               foldl (\r, (fc, proj) => PApp fc (PRef fc proj) r) var projs
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
 

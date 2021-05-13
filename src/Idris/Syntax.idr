@@ -108,9 +108,9 @@ mutual
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
        -- r.x.y
-       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       PPostfixApp : FC -> PTerm -> List (FC, Name) -> PTerm
        -- .x.y
-       PPostfixAppPartial : FC -> List Name -> PTerm
+       PPostfixAppPartial : FC -> List (FC, Name) -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> LogLevel -> PTerm -> PTerm

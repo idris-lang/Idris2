@@ -292,7 +292,7 @@
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 20) (:end 51 21)) ((:decor :keyword)))))) 1)
 0000d6(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 23) (:end 51 23)) ((:name "S") (:namespace "Prelude.Types") (:decor :data) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 0000ca(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 25) (:end 51 25)) ((:name "m") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
-0000db(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 25) (:end 51 30)) ((:name "aNat") (:namespace "Syntax.ANat") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+0000db(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 26) (:end 51 30)) ((:name "aNat") (:namespace "Syntax.ANat") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000075(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 51 31) (:end 51 31)) ((:decor :keyword)))))) 1)
 0000d8(:output (:ok (:highlight-source ((((:filename "Syntax.idr") (:start 52 9) (:end 52 15)) ((:name "doBlock") (:namespace "Syntax") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
 000015(:return (:ok ()) 1)
