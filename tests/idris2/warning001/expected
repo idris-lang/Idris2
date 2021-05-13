@@ -12,3 +12,7 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   fst is shadowing Builtin.fst, Builtin.DPair.DPair.fst
   dup is shadowing Prelude.Basics.dup
+1/1: Building PR1407 (PR1407.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.Hoo.f
