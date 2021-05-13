@@ -2,6 +2,8 @@ module Language.Reflection.TT
 
 import public Data.List
 
+%default total
+
 -- 'FilePos' represents the position of
 -- the source information in the file (or REPL).
 -- in the form of '(line-no, column-no)'.
