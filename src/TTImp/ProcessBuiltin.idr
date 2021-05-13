@@ -280,7 +280,7 @@ addIntegerToNat :
     IntToNat ->
     Core ()
 addIntegerToNat fn iToN = do
-    log "builtin.NaturalToInteger.addTransforms" 10
+    log "builtin.IntegerToNatural.addTransforms" 10
         $ "Add %builtin IntegerToNatural transform for " ++ show fn ++ "."
     update Ctxt $ record
         { builtinTransforms.integerToNatFns $= insert fn iToN
