@@ -61,7 +61,7 @@ processDecl decl
 processDecls decls
     = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (err :: xs)
+             | Just err => pure (if null xs then [err] else xs)
          errs <- getTotalityErrors
          pure (xs ++ errs)
 
