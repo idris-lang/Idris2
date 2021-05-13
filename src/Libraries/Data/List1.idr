@@ -4,7 +4,7 @@ import public Data.List1
 
 %default total
 
--- TODO: Remove this, once Data.List1.unsnoc from base is available
+-- TODO: Remove this, once Data.List1.fromList from base is available
 --       to the compiler
 
 public export
