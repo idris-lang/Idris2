@@ -103,6 +103,7 @@ public export
 ($>) fa b = map (const b) fa
 
 ||| Run something for effects, throwing away the return value.
+%inline
 public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())

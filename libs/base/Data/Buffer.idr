@@ -19,7 +19,7 @@ data Buffer : Type where [external]
          "node:lambda:b => BigInt(b.length)"
 prim__bufferSize : Buffer -> Int
 
-export
+export %inline
 rawSize : HasIO io => Buffer -> io Int
 rawSize buf = pure (prim__bufferSize buf)
 
@@ -50,12 +50,12 @@ prim__setByte : Buffer -> Int -> Int -> PrimIO ()
 prim__setBits8 : Buffer -> Int -> Bits8 -> PrimIO ()
 
 -- Assumes val is in the range 0-255
-export
+export %inline
 setByte : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setByte buf loc val
     = primIO (prim__setByte buf loc val)
 
-export
+export %inline
 setBits8 : HasIO io => Buffer -> (loc : Int) -> (val : Bits8) -> io ()
 setBits8 buf loc val
     = primIO (prim__setBits8 buf loc val)
@@ -68,12 +68,12 @@ prim__getByte : Buffer -> Int -> PrimIO Int
          "node:lambda:(buf,offset)=>BigInt(buf.readUInt8(Number(offset)))"
 prim__getBits8 : Buffer -> Int -> PrimIO Bits8
 
-export
+export %inline
 getByte : HasIO io => Buffer -> (loc : Int) -> io Int
 getByte buf loc
     = primIO (prim__getByte buf loc)
 
-export
+export %inline
 getBits8 : HasIO io => Buffer -> (loc : Int) -> io Bits8
 getBits8 buf loc
     = primIO (prim__getBits8 buf loc)
@@ -82,7 +82,7 @@ getBits8 buf loc
          "node:lambda:(buf,offset,value)=>buf.writeUInt16LE(Number(value), Number(offset))"
 prim__setBits16 : Buffer -> Int -> Bits16 -> PrimIO ()
 
-export
+export %inline
 setBits16 : HasIO io => Buffer -> (loc : Int) -> (val : Bits16) -> io ()
 setBits16 buf loc val
     = primIO (prim__setBits16 buf loc val)
@@ -91,7 +91,7 @@ setBits16 buf loc val
          "node:lambda:(buf,offset)=>BigInt(buf.readUInt16LE(Number(offset)))"
 prim__getBits16 : Buffer -> Int -> PrimIO Bits16
 
-export
+export %inline
 getBits16 : HasIO io => Buffer -> (loc : Int) -> io Bits16
 getBits16 buf loc
     = primIO (prim__getBits16 buf loc)
@@ -100,7 +100,7 @@ getBits16 buf loc
          "node:lambda:(buf,offset,value)=>buf.writeUInt32LE(Number(value), Number(offset))"
 prim__setBits32 : Buffer -> Int -> Bits32 -> PrimIO ()
 
-export
+export %inline
 setBits32 : HasIO io => Buffer -> (loc : Int) -> (val : Bits32) -> io ()
 setBits32 buf loc val
     = primIO (prim__setBits32 buf loc val)
@@ -109,7 +109,7 @@ setBits32 buf loc val
          "node:lambda:(buf,offset)=>BigInt(buf.readUInt32LE(Number(offset)))"
 prim__getBits32 : Buffer -> Int -> PrimIO Bits32
 
-export
+export %inline
 getBits32 : HasIO io => Buffer -> (loc : Int) -> io Bits32
 getBits32 buf loc
     = primIO (prim__getBits32 buf loc)
@@ -117,7 +117,7 @@ getBits32 buf loc
 %foreign "scheme:blodwen-buffer-setbits64"
 prim__setBits64 : Buffer -> Int -> Bits64 -> PrimIO ()
 
-export
+export %inline
 setBits64 : HasIO io => Buffer -> (loc : Int) -> (val : Bits64) -> io ()
 setBits64 buf loc val
     = primIO (prim__setBits64 buf loc val)
@@ -125,7 +125,7 @@ setBits64 buf loc val
 %foreign "scheme:blodwen-buffer-getbits64"
 prim__getBits64 : Buffer -> Int -> PrimIO Bits64
 
-export
+export %inline
 getBits64 : HasIO io => Buffer -> (loc : Int) -> io Bits64
 getBits64 buf loc
     = primIO (prim__getBits64 buf loc)
@@ -134,7 +134,7 @@ getBits64 buf loc
          "node:lambda:(buf,offset,value)=>buf.writeInt32LE(Number(value), Number(offset))"
 prim__setInt32 : Buffer -> Int -> Int -> PrimIO ()
 
-export
+export %inline
 setInt32 : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setInt32 buf loc val
     = primIO (prim__setInt32 buf loc val)
@@ -143,7 +143,7 @@ setInt32 buf loc val
          "node:lambda:(buf,offset)=>BigInt(buf.readInt32LE(Number(offset)))"
 prim__getInt32 : Buffer -> Int -> PrimIO Int
 
-export
+export %inline
 getInt32 : HasIO io => Buffer -> (loc : Int) -> io Int
 getInt32 buf loc
     = primIO (prim__getInt32 buf loc)
@@ -152,7 +152,7 @@ getInt32 buf loc
          "node:lambda:(buf,offset,value)=>buf.writeInt64(Number(value), Number(offset))"
 prim__setInt : Buffer -> Int -> Int -> PrimIO ()
 
-export
+export %inline
 setInt : HasIO io => Buffer -> (loc : Int) -> (val : Int) -> io ()
 setInt buf loc val
     = primIO (prim__setInt buf loc val)
@@ -161,7 +161,7 @@ setInt buf loc val
          "node:lambda:(buf,offset)=>BigInt(buf.readInt64(Number(offset)))"
 prim__getInt : Buffer -> Int -> PrimIO Int
 
-export
+export %inline
 getInt : HasIO io => Buffer -> (loc : Int) -> io Int
 getInt buf loc
     = primIO (prim__getInt buf loc)
@@ -170,7 +170,7 @@ getInt buf loc
          "node:lambda:(buf,offset,value)=>buf.writeDoubleLE(value, Number(offset))"
 prim__setDouble : Buffer -> Int -> Double -> PrimIO ()
 
-export
+export %inline
 setDouble : HasIO io => Buffer -> (loc : Int) -> (val : Double) -> io ()
 setDouble buf loc val
     = primIO (prim__setDouble buf loc val)
@@ -179,7 +179,7 @@ setDouble buf loc val
          "node:lambda:(buf,offset)=>buf.readDoubleLE(Number(offset))"
 prim__getDouble : Buffer -> Int -> PrimIO Double
 
-export
+export %inline
 getDouble : HasIO io => Buffer -> (loc : Int) -> io Double
 getDouble buf loc
     = primIO (prim__getDouble buf loc)
@@ -193,7 +193,7 @@ stringByteLength : String -> Int
          "node:lambda:(buf,offset,value)=>buf.write(value, Number(offset),buf.length - Number(offset), 'utf-8')"
 prim__setString : Buffer -> Int -> String -> PrimIO ()
 
-export
+export %inline
 setString : HasIO io => Buffer -> (loc : Int) -> (val : String) -> io ()
 setString buf loc val
     = primIO (prim__setString buf loc val)
@@ -202,12 +202,10 @@ setString buf loc val
          "node:lambda:(buf,offset,len)=>buf.slice(Number(offset), Number(offset+len)).toString('utf-8')"
 prim__getString : Buffer -> Int -> Int -> PrimIO String
 
-export
+export %inline
 getString : HasIO io => Buffer -> (loc : Int) -> (len : Int) -> io String
 getString buf loc len
     = primIO (prim__getString buf loc len)
-
-
 
 export
 bufferData : HasIO io => Buffer -> io (List Int)

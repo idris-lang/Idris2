@@ -753,7 +753,22 @@ mkRunTime fc n
            ignore $ addDef n $
                        record { definition = PMDef r rargs tree_ct tree_rt pats
                               } gdef
+           -- If it's a case block, and not already set as inlinable,
+           -- check if it's safe to inline
+           when (caseName !(toFullNames n) && noInline (flags gdef)) $
+             do inl <- canInlineCaseBlock n
+                when inl $ setFlag fc n Inline
   where
+    noInline : List DefFlag -> Bool
+    noInline (Inline :: _) = False
+    noInline (x :: xs) = noInline xs
+    noInline _ = True
+
+    caseName : Name -> Bool
+    caseName (CaseBlock _ _) = True
+    caseName (NS _ n) = caseName n
+    caseName _ = False
+
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
        = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))

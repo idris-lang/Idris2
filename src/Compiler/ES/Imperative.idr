@@ -103,7 +103,7 @@ mutual
     do
       (s1, exp) <- impExp False sc
       res <- genName
-      swalts <- traverse (impConAlt (Just res) exp) alts
+      swalts <- traverse (impConAltFalse res exp) alts
       swdef <- case def of
                 Nothing => pure $ ErrorStatement $ "unhandled con case on " ++ show fc
                 Just x =>
@@ -115,7 +115,7 @@ mutual
   impExp True (NmConCase fc sc alts def) =
     do
       (s1, exp) <- impExp False sc
-      swalts <- traverse (impConAlt Nothing exp) alts
+      swalts <- traverse (impConAltTrue exp) alts
       swdef <- case def of
                 Nothing => pure $ ErrorStatement $ "unhandled con case on " ++ show fc
                 Just x => impExp True x
@@ -125,7 +125,7 @@ mutual
     do
       (s1, exp) <- impExp False sc
       res <- genName
-      swalts <- traverse (impConstAlt $ Just res) alts
+      swalts <- traverse (impConstAltFalse res) alts
       swdef <- case def of
                 Nothing => pure $ ErrorStatement $ "unhandled const case on " ++ show fc
                 Just x =>
@@ -137,7 +137,7 @@ mutual
   impExp True (NmConstCase fc sc alts def) =
     do
       (s1, exp) <- impExp False sc
-      swalts <- traverse (impConstAlt Nothing) alts
+      swalts <- traverse impConstAltTrue alts
       swdef <- case def of
                 Nothing => pure $ ErrorStatement $ "unhandled const case on " ++ show fc
                 Just x => impExp True x
@@ -183,29 +183,54 @@ mutual
   impTag n Nothing = Right $ show n
   impTag n (Just i) = Left i
 
-  impConAlt : {auto c : Ref Imps ImpSt} -> Maybe Name -> ImperativeExp -> NamedConAlt -> Core (ImperativeExp, ImperativeStatement)
-  impConAlt (Just res) target (MkNConAlt n _ tag args exp) =
-    do
-      (s, r) <- impExp False exp
-      let nargs = length args
-      let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
-      pure (IEConstructorTag (impTag n tag), replaceNamesExpS reps $ s <+> MutateStatement res r)
-  impConAlt Nothing target (MkNConAlt n _ tag args exp) =
-    do
-      (s, r) <- impExp False exp
-      let nargs = length args
-      let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
-      pure (IEConstructorTag (impTag n tag), replaceNamesExpS reps $ s <+> ReturnStatement r)
+  -- a single alternative in a case statement.
+  -- In JS, this will be a single alternative of
+  -- a switch statement.
+  -- TODO: Use ConInfo
+  --
+  -- @ res : name of the local var (from a `let` statement)
+  --         to which the result should be assigned (if any)
+  -- @ target : The value against which to match
+  -- @ con : The constructor to use
+  impConAltFalse :  {auto c : Ref Imps ImpSt}
+                 -> (res : Name)
+                 -> (target : ImperativeExp)
+                 -> (con : NamedConAlt)
+                 -> Core (ImperativeExp, ImperativeStatement)
+  impConAltFalse res target (MkNConAlt n _ tag args exp) =
+    do (s, r) <- impExp False exp
+       let nargs = length args
+       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
+       pure ( IEConstructorTag (impTag n tag)
+            , replaceNamesExpS reps $ s <+> MutateStatement res r
+            )
 
-  impConstAlt : {auto c : Ref Imps ImpSt} -> Maybe Name -> NamedConstAlt -> Core (ImperativeExp, ImperativeStatement)
-  impConstAlt (Just res) (MkNConstAlt c exp) =
-    do
-      (s, r) <- impExp False exp
-      pure (IEConstant c, s <+> MutateStatement res r)
-  impConstAlt Nothing (MkNConstAlt c exp) =
-    do
-      (s, r) <- impExp False exp
-      pure (IEConstant c, s <+> ReturnStatement r)
+  impConAltTrue :  {auto c : Ref Imps ImpSt}
+                -> (target : ImperativeExp)
+                -> (con : NamedConAlt)
+                -> Core (ImperativeExp, ImperativeStatement)
+  impConAltTrue target (MkNConAlt n _ tag args exp) =
+    do s <- impExp True exp
+       let nargs = length args
+       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
+       pure ( IEConstructorTag (impTag n tag)
+            , replaceNamesExpS reps s
+            )
+
+  impConstAltFalse :  {auto c : Ref Imps ImpSt}
+                   -> Name
+                   -> NamedConstAlt
+                   -> Core (ImperativeExp, ImperativeStatement)
+  impConstAltFalse res (MkNConstAlt c exp) =
+    do (s, r) <- impExp False exp
+       pure (IEConstant c, s <+> MutateStatement res r)
+
+  impConstAltTrue :  {auto c : Ref Imps ImpSt}
+                  -> NamedConstAlt
+                  -> Core (ImperativeExp, ImperativeStatement)
+  impConstAltTrue (MkNConstAlt c exp) =
+    do s <- impExp True exp
+       pure (IEConstant c, s)
 
 getImp : {auto c : Ref Imps ImpSt} -> (Name, FC, NamedDef) -> Core ImperativeStatement
 getImp (n, fc, MkNmFun args exp) =

@@ -50,6 +50,10 @@ schConstructor _ _ (Just t) args
 schConstructor schString n Nothing args
     = "(vector " ++ schString (show n) ++ " " ++ showSep " " args ++ ")"
 
+export
+schRecordCon : (String -> String) -> Name -> List String -> String
+schRecordCon _ _ args = "(vector " ++ showSep " " args ++ ")"
+
 ||| Generate scheme for a plain function.
 op : String -> List String -> String
 op o args = "(" ++ o ++ " " ++ showSep " " args ++ ")"
@@ -310,6 +314,10 @@ mutual
   usedConst : Name -> NamedConstAlt -> Bool
   usedConst n (MkNConstAlt _ sc) = used n sc
 
+var : NamedCExp -> Bool
+var (NmLocal _ _) = True
+var _ = False
+
 parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
             schString : String -> String)
   showTag : Name -> Maybe Int -> String
@@ -357,19 +365,27 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         = do tcode <- schExp (i+1) sc
              defc <- maybe (pure "'erased") (schExp i) def
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) "
-                     ++ defc ++ ")"
+             if var sc
+                then pure defc
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) "
+                             ++ defc ++ ")"
     schCaseTree i sc [alt] Nothing
         = do tcode <- schExp (i+1) sc
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
-                    !(schConUncheckedAlt (i+1) n alt) ++ ")"
+             if var sc
+                then pure !(schConUncheckedAlt (i+1) tcode alt)
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
+                        !(schConUncheckedAlt (i+1) n alt) ++ ")"
     schCaseTree i sc alts Nothing
         = do tcode <- schExp (i+1) sc
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (vector-ref " ++ n ++ " 0) "
-                     ++ !(showAlts n alts) ++
-                     "))"
+             if var sc
+                then pure $ "(case (vector-ref " ++ tcode ++ " 0) "
+                       ++ !(showAlts tcode alts) ++
+                       ")"
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (vector-ref " ++ n ++ " 0) "
+                       ++ !(showAlts n alts) ++
+                       "))"
       where
         showAlts : String -> List NamedConAlt -> Core String
         showAlts n [] = pure ""
@@ -382,9 +398,38 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         = do tcode <- schExp (i+1) sc
              defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (vector-ref " ++ n ++ " 0) "
-                     ++ showSep " " !(traverse (schConAlt (i+1) n) alts)
-                     ++ schCaseDef defc ++ "))"
+             if var sc
+                then pure $ "(case (vector-ref " ++ tcode ++ " 0) "
+                               ++ showSep " " !(traverse (schConAlt (i+1) tcode) alts)
+                               ++ schCaseDef defc ++ ")"
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (case (vector-ref " ++ n ++ " 0) "
+                       ++ showSep " " !(traverse (schConAlt (i+1) n) alts)
+                       ++ schCaseDef defc ++ "))"
+
+    schRecordCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                    Core String
+    schRecordCase i sc [] _ = pure "#f" -- suggests empty case block!
+    schRecordCase i sc (alt :: _) _
+        = do tcode <- schExp (i+1) sc
+             let n = "sc" ++ show i
+             if var sc
+                then getAltCode tcode alt
+                else do alt' <- getAltCode n alt
+                        pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
+                                     alt' ++ ")"
+      where
+        bindArgs : Int -> String -> (ns : List Name) -> String ->
+                   NamedCExp -> String
+        bindArgs i target [] body sc = body
+        bindArgs i target (n :: ns) body sc
+            = if used n sc
+                 then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ show i ++ "))) "
+                    ++ bindArgs (i + 1) target ns body sc ++ ")"
+                 else bindArgs (i + 1) target ns body sc
+
+        getAltCode : String -> NamedConAlt -> Core String
+        getAltCode n (MkNConAlt _ _ _ args sc)
+            = pure $ bindArgs 0 n args !(schExp i sc) sc
 
     schListCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
                   Core String
@@ -394,9 +439,12 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
              defc <- maybe (pure Nothing)
                            (\v => pure (Just !(schExp (i + 1) v))) def
              nil <- getNilCode alts
-             cons <- getConsCode n alts
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
-                    buildCase n nil cons defc ++ ")"
+             if var sc
+                then do cons <- getConsCode tcode alts
+                        pure $ buildCase tcode nil cons defc
+                else do cons <- getConsCode n alts
+                        pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
+                            buildCase n nil cons defc ++ ")"
       where
         buildCase : String ->
                     Maybe String -> Maybe String -> Maybe String ->
@@ -433,6 +481,55 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
                      else bindArgs ns body
         getConsCode x (_ :: xs) = getConsCode x xs
 
+    schMaybeCase : Int -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
+                   Core String
+    schMaybeCase i sc alts def
+        = do tcode <- schExp (i+1) sc
+             let n = "sc" ++ show i
+             defc <- maybe (pure Nothing)
+                           (\v => pure (Just !(schExp (i + 1) v))) def
+             nothing <- getNothingCode alts
+             if var sc
+                then do just <- getJustCode tcode alts
+                        pure $ buildCase tcode nothing just defc
+                else do just <- getJustCode n alts
+                        pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) " ++
+                            buildCase n nothing just defc ++ ")"
+      where
+        buildCase : String ->
+                    Maybe String -> Maybe String -> Maybe String ->
+                    String
+        buildCase n (Just nothing) (Just just) _
+            = "(if (null? " ++ n ++ ") " ++ nothing ++ " " ++ just ++ ")"
+        buildCase n (Just nothing) Nothing Nothing = nothing
+        buildCase n Nothing (Just just) Nothing = just
+        buildCase n (Just nothing) Nothing (Just def)
+            = "(if (null? " ++ n ++ ") " ++ nothing ++ " " ++ def ++ ")"
+        buildCase n Nothing (Just just) (Just def)
+            = "(if (null? " ++ n ++ ") " ++ def ++ " " ++ just ++ ")"
+        buildCase n Nothing Nothing (Just def) = def
+        buildCase n Nothing Nothing Nothing = "#f"
+
+        getNothingCode : List NamedConAlt -> Core (Maybe String)
+        getNothingCode [] = pure Nothing
+        getNothingCode (MkNConAlt _ NOTHING _ _ sc :: _)
+            = pure (Just !(schExp (i + 1) sc))
+        getNothingCode (_ :: xs) = getNothingCode xs
+
+        getJustCode : String -> List NamedConAlt -> Core (Maybe String)
+        getJustCode n [] = pure Nothing
+        getJustCode n (MkNConAlt _ JUST _ [x] sc :: _)
+            = do sc' <- schExp (i + 1) sc
+                 pure $ Just $ bindArg x sc'
+          where
+            bindArg : Name -> String -> String
+            bindArg x body
+                = if used x sc
+                     then "(let ((" ++ schName x ++ " " ++ "(unbox " ++ n ++ "))) "
+                        ++ body ++ ")"
+                     else body
+        getJustCode x (_ :: xs) = getJustCode x xs
+
     export
     schExp : Int -> NamedCExp -> Core String
     schExp i (NmLocal fc n) = pure $ schName n
@@ -455,6 +552,14 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
              xs' <- schExp i xs
              pure $ "(cons " ++ x' ++ " " ++ xs' ++ ")"
     schExp i (NmCon fc _ CONS tag _) = throw (InternalError "Bad CONS")
+    schExp i (NmCon fc _ NOTHING tag []) = pure $ "'()"
+    schExp i (NmCon fc _ NOTHING tag _) = throw (InternalError "Bad NOTHING")
+    schExp i (NmCon fc _ JUST tag [x])
+        = do x' <- schExp i x
+             pure $ "(box " ++ x' ++ ")"
+    schExp i (NmCon fc _ JUST tag _) = throw (InternalError "Bad JUST")
+    schExp i (NmCon fc x RECORD tag args)
+        = pure $ schRecordCon schString x !(traverse (schExp i) args)
     schExp i (NmCon fc x ci tag args)
         = pure $ schConstructor schString x tag !(traverse (schExp i) args)
     schExp i (NmOp fc op args)
@@ -464,7 +569,9 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
     schExp i (NmForce fc lr t) = pure $ "(" ++ !(schExp i t) ++ ")"
     schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
     schExp i (NmConCase fc sc alts def)
-        = cond [(listCase alts, schListCase i sc alts def)]
+        = cond [(recordCase alts, schRecordCase i sc alts def),
+                (maybeCase alts, schMaybeCase i sc alts def),
+                (listCase alts, schListCase i sc alts def)]
                 -- probably more to come here...
                 (schCaseTree i sc alts def)
       where
@@ -473,12 +580,25 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         listCase (MkNConAlt _ CONS _ _ _ :: _) = True
         listCase _ = False
 
+        maybeCase : List NamedConAlt -> Bool
+        maybeCase (MkNConAlt _ NOTHING _ _ _ :: _) = True
+        maybeCase (MkNConAlt _ JUST _ _ _ :: _) = True
+        maybeCase _ = False
+
+        recordCase : List NamedConAlt -> Bool
+        recordCase (MkNConAlt _ RECORD _ _ _ :: _) = True
+        recordCase _ = False
+
     schExp i (NmConstCase fc sc alts Nothing)
         = do tcode <- schExp (i+1) sc
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
-                      ++ !(showConstAlts n alts)
-                      ++ "))"
+             if var sc
+                then pure $ "(cond "
+                          ++ !(showConstAlts tcode alts)
+                          ++ ")"
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
+                          ++ !(showConstAlts n alts)
+                          ++ "))"
       where
         showConstAlts : String -> List NamedConstAlt -> Core String
         showConstAlts n [] = pure ""
@@ -491,9 +611,13 @@ parameters (schExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String,
         = do defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
              tcode <- schExp (i+1) sc
              let n = "sc" ++ show i
-             pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
-                      ++ showSep " " !(traverse (schConstAlt (i+1) n) alts)
-                      ++ schCaseDef defc ++ "))"
+             if var sc
+                then pure $ "(cond "
+                          ++ showSep " " !(traverse (schConstAlt (i+1) tcode) alts)
+                          ++ schCaseDef defc ++ ")"
+                else pure $ "(let ((" ++ n ++ " " ++ tcode ++ ")) (cond "
+                          ++ showSep " " !(traverse (schConstAlt (i+1) n) alts)
+                          ++ schCaseDef defc ++ "))"
     schExp i (NmPrimVal fc c) = pure $ schConstant schString c
     schExp i (NmErased fc) = pure "'erased"
     schExp i (NmCrash fc msg) = pure $ "(blodwen-error-quit " ++ show msg ++ ")"

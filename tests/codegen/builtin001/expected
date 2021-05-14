@@ -5,10 +5,8 @@ prim__mul_Integer = [{arg:N}, {arg:N}]: (*Integer [!{arg:N}, !{arg:N}])
 Main.plus = [{arg:N}, {arg:N}]: (%case !{arg:N} [(%constcase 0 !{arg:N})] Just (%let {e:N} (-Integer [!{arg:N}, 1]) (+Integer [1, (Main.plus [!{e:N}, !{arg:N}])])))
 Main.main = [{ext:N}]: (Main.plus [(+Integer [1, 0]), (+Integer [1, (+Integer [1, 0])])])
 Builtin.believe_me = [{ext:N}]: (believe_me [___, ___, !{ext:N}])
-Prelude.Types.case block in prim__integerToNat = [{arg:N}, {arg:N}]: (%case !{arg:N} [(%constcase 0 (Builtin.believe_me [!{arg:N}])), (%constcase 1 0)] Nothing)
-Prelude.Types.prim__integerToNat = [{arg:N}]: (Prelude.Types.case block in prim__integerToNat [!{arg:N}, (%case (<=Integer [0, !{arg:N}]) [(%constcase 0 1)] Just 0)])
-PrimIO.case block in unsafePerformIO = [{arg:N}, {arg:N}]: (PrimIO.unsafeDestroyWorld [___, !{arg:N}])
-PrimIO.unsafePerformIO = [{arg:N}]: (PrimIO.unsafeCreateWorld [(%lam w (PrimIO.case block in unsafePerformIO [!{arg:N}, (!{arg:N} [!w])]))])
+Prelude.Types.prim__integerToNat = [{arg:N}]: (%case (%case (<=Integer [0, !{arg:N}]) [(%constcase 0 0)] Just 1) [(%constcase 1 (Builtin.believe_me [!{arg:N}])), (%constcase 0 0)] Nothing)
+PrimIO.unsafePerformIO = [{arg:N}]: (PrimIO.unsafeCreateWorld [(%lam w (PrimIO.unsafeDestroyWorld [___, (!{arg:N} [!w])]))])
 PrimIO.unsafeDestroyWorld = [{arg:N}, {arg:N}]: !{arg:N}
 PrimIO.unsafeCreateWorld = [{arg:N}]: (!{arg:N} [%MkWorld])
 

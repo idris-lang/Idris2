@@ -1,5 +1,6 @@
 module TTImp.Elab.Case
 
+import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core
@@ -226,13 +227,6 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          setFlag fc (Resolved cidx) (SetTotal PartialOK)
          let caseRef : Term vars = Ref fc Func (Resolved cidx)
 
-         -- If there's no duplication of the scrutinee in the block,
-         -- inline it.
-         -- This will be the case either if the scrutinee is a variable, in
-         -- which case the duplication won't hurt, or if (TODO) none of the
-         -- case patterns in alts are just a variable
-         whenJust splitOn $ \ _ => setFlag fc casen Inline
-
          let applyEnv = applyToFull fc caseRef env
          let appTm : Term vars
                    = maybe (App fc applyEnv scrtm)
@@ -254,6 +248,17 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          let olddelayed = delayedElab ust
          put UST (record { delayedElab = [] } ust)
          processDecl [InCase] nest' [] (IDef fc casen alts')
+
+         -- If there's no duplication of the scrutinee in the block,
+         -- flag it as inlinable.
+         -- This will be the case either if the scrutinee is a variable, in
+         -- which case the duplication won't hurt, or if there's no variable
+         -- duplicated in the body (what ghc calls W-safe)
+         -- We'll check that second condition later, after generating the
+         -- runtime (erased) case trees
+         let inlineOK = maybe False (const True) splitOn
+         when inlineOK $ setFlag fc casen Inline
+
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
 
