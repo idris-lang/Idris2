@@ -164,7 +164,7 @@ stMain cgs opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL False
          let fname = findInput opts
-         o <- newRef ROpts (REPLOpts.defaultOpts fname outmode cgs)
+         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
 
          finish <- showInfo opts
          when (not finish) $ do
@@ -178,7 +178,7 @@ stMain cgs opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD initMetadata
+                 m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do

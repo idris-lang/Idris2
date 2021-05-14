@@ -513,7 +513,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple _ = False
 
     updateIVar : {v : Nat} ->
-                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar name v newvars) ->
+                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar nm v newvars) ->
                  Maybe (Var vs)
     updateIVar {v} (ICons Nothing rest) prf
         = do MkVar prf' <- updateIVar rest prf
@@ -1135,14 +1135,14 @@ mutual
   dumpArg env (MkClosure opts loc lenv tm)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           logTerm "" 0 "Term: " tm
+           logTerm "unify" 20 "Term: " tm
            nf <- evalClosure empty (MkClosure opts loc lenv tm)
-           logNF "" 0 "  " env nf
+           logNF "unify" 20 "  " env nf
   dumpArg env cl
       = do defs <- get Ctxt
            empty <- clearDefs defs
            nf <- evalClosure empty cl
-           logNF "" 0 "  " env nf
+           logNF "unify" 20 "  " env nf
 
   export
   unifyNoEta : {auto c : Ref Ctxt Defs} ->
@@ -1161,11 +1161,11 @@ mutual
                      -- may prove useful again...
                      {-
                      when (logging ust) $
-                        do log "" 0 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
-                           log "" 0 "ARGUMENTS:"
+                        do log "unify" 20 $ "Constructor " ++ show !(toFullNames x) ++ " " ++ show loc
+                           log "unify" 20 "ARGUMENTS:"
                            defs <- get Ctxt
                            traverse_ (dumpArg env) xs
-                           log "" 0 "WITH:"
+                           log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
                      unifyArgs mode loc env (map snd xs) (map snd ys)
@@ -1228,28 +1228,6 @@ mutual
       isDelay (NDelayed _ _ _) = True
       isDelay _ = False
 
-  -- Try to get the type of the application inside the given term, to use in
-  -- eta expansion. If there's no application, return Nothing
-  getEtaType : {vars : _} ->
-               {auto c : Ref Ctxt Defs} ->
-               {auto u : Ref UST UState} ->
-               Env Term vars -> Term vars ->
-               Core (Maybe (Term vars))
-  getEtaType env (Bind fc n b sc)
-      = do Just ty <- getEtaType (b :: env) sc
-               | Nothing => pure Nothing
-           pure (shrinkTerm ty (DropCons SubRefl))
-  getEtaType env (App fc f _)
-      = do fty <- getType env f
-           logGlue "unify.eta" 10 "Function type" env fty
-           case !(getNF fty) of
-                NBind _ _ (Pi _ _ _ ty) sc =>
-                    do defs <- get Ctxt
-                       empty <- clearDefs defs
-                       pure (Just !(quote empty env ty))
-                _ => pure Nothing
-  getEtaType env _ = pure Nothing
-
   isHoleApp : NF vars -> Bool
   isHoleApp (NApp _ (NMeta _ _ _) _) = True
   isHoleApp _ = False
@@ -1265,17 +1243,13 @@ mutual
              if isHoleApp tmy
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
-                        ety <- getEtaType env !(quote empty env tmx)
-                        case ety of
-                             Just argty =>
-                               do etay <- nf defs env
-                                             (Bind xfc x (Lam fcx cx Explicit argty)
-                                                     (App xfc
-                                                          (weaken !(quote empty env tmy))
-                                                          (Local xfc Nothing 0 First)))
-                                  logNF "unify" 10 "Expand" env etay
-                                  unify mode loc env tmx etay
-                             _ => unifyNoEta mode loc env tmx tmy
+                        domty <- quote empty env tx
+                        etay <- nf defs env
+                                  $ Bind xfc x (Lam fcx cx Explicit domty)
+                                  $ App xfc (weaken !(quote empty env tmy))
+                                            (Local xfc Nothing 0 First)
+                        logNF "unify" 10 "Expand" env etay
+                        unify (lower mode) loc env tmx etay
     unifyD _ _ mode loc env tmx tmy@(NBind yfc y (Lam fcy cy iy ty) scy)
         = do defs <- get Ctxt
              logNF "unify" 10 "EtaL" env tmx
@@ -1283,17 +1257,13 @@ mutual
              if isHoleApp tmx
                 then unifyNoEta (lower mode) loc env tmx tmy
                 else do empty <- clearDefs defs
-                        ety <- getEtaType env !(quote empty env tmy)
-                        case ety of
-                             Just argty =>
-                               do etax <- nf defs env
-                                             (Bind yfc y (Lam fcy cy Explicit argty)
-                                                     (App yfc
-                                                          (weaken !(quote empty env tmx))
-                                                          (Local yfc Nothing 0 First)))
-                                  logNF "unify" 10 "Expand" env etax
-                                  unify (lower mode) loc env etax tmy
-                             _ => unifyNoEta (lower mode) loc env tmx tmy
+                        domty <- quote empty env ty
+                        etax <- nf defs env
+                                 $ Bind yfc y (Lam fcy cy Explicit domty)
+                                 $ App yfc (weaken !(quote empty env tmx))
+                                           (Local yfc Nothing 0 First)
+                        logNF "unify" 10 "Expand" env etax
+                        unify (lower mode) loc env etax tmy
     unifyD _ _ mode loc env tmx tmy = unifyNoEta mode loc env tmx tmy
 
     unifyWithLazyD _ _ mode loc env (NDelayed _ _ tmx) (NDelayed _ _ tmy)

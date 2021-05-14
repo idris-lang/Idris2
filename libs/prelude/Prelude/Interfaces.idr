@@ -19,6 +19,7 @@ import Prelude.Ops
 |||     forall a b c, a <+> (b <+> c) == (a <+> b) <+> c
 public export
 interface Semigroup ty where
+  constructor MkSemigroup
   (<+>) : ty -> ty -> ty
 
 ||| Sets equipped with a single binary operation that is associative, along with
@@ -32,6 +33,7 @@ interface Semigroup ty where
 |||     forall a, neutral <+> a == a
 public export
 interface Semigroup ty => Monoid ty where
+  constructor MkMonoid
   neutral : ty
 
 public export
@@ -68,6 +70,7 @@ Monoid b => Monoid (a -> b) where
 ||| @ f a parameterised type
 public export
 interface Functor f where
+  constructor MkFunctor
   ||| Apply a function across everything of type 'a' in a parameterised type
   ||| @ f the parameterised type
   ||| @ func the function to apply
@@ -81,6 +84,14 @@ public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
+||| Flipped version of `<$>`, an infix alias for `map`, applying a function across
+||| everything of type 'a' in a parameterised type.
+||| @ f the parameterised type
+||| @ func the function to apply
+public export
+(<&>) : Functor f => f a -> (func : a -> b) -> f b
+(<&>) x func = map func x
+
 ||| Run something for effects, replacing the return value with a given parameter.
 public export
 (<$) : Functor f => b -> f a -> f b
@@ -92,6 +103,7 @@ public export
 ($>) fa b = map (const b) fa
 
 ||| Run something for effects, throwing away the return value.
+%inline
 public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
@@ -106,6 +118,7 @@ namespace Functor
 ||| @f The action of the Bifunctor on pairs of objects
 public export
 interface Bifunctor f where
+  constructor MkBifunctor
   ||| The action of the Bifunctor on pairs of morphisms
   |||
   ||| ````idris example
@@ -139,6 +152,7 @@ mapHom f = bimap f f
 
 public export
 interface Functor f => Applicative f where
+  constructor MkApplicative
   pure : a -> f a
   (<*>) : f (a -> b) -> f a -> f b
 
@@ -164,11 +178,13 @@ namespace Applicative
 
 public export
 interface Applicative f => Alternative f where
+  constructor MkAlternative
   empty : f a
   (<|>) : f a -> Lazy (f a) -> f a
 
 public export
 interface Applicative m => Monad m where
+  constructor MkMonad
   ||| Also called `bind`.
   (>>=) : m a -> (a -> m b) -> m b
 
@@ -206,11 +222,16 @@ public export
 guard : Alternative f => Bool -> f ()
 guard x = if x then pure () else empty
 
-||| Conditionally execute an applicative expression.
+||| Conditionally execute an applicative expression when the boolean is true.
 public export
 when : Applicative f => Bool -> Lazy (f ()) -> f ()
 when True f = f
 when False f = pure ()
+
+||| Execute an applicative expression unless the boolean is true.
+%inline public export
+unless : Applicative f => Bool -> Lazy (f ()) -> f ()
+unless = when . not
 
 ---------------------------
 -- FOLDABLE, TRAVERSABLE --
@@ -222,6 +243,7 @@ when False f = pure ()
 ||| @ t The type of the 'Foldable' parameterised type.
 public export
 interface Foldable t where
+  constructor MkFoldable
   ||| Successively combine the elements in a parameterised type using the
   ||| provided function, starting with the element that is in the final position
   ||| i.e. the right-most position.
@@ -243,11 +265,15 @@ interface Foldable t where
   null : t elem -> Lazy Bool
   null = foldr {acc = Lazy Bool} (\ _,_ => False) True
 
-||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
-||| Consequently, the final value is wrapped in the same `Monad`.
-public export
-foldlM : (Foldable t, Monad m) => (funcM: a -> b -> m a) -> (init: a) -> (input: t b) -> m a
-foldlM fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+  ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
+  ||| Consequently, the final value is wrapped in the same `Monad`.
+  public export
+  foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
+  foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
+
+  ||| Produce a list of the elements contained in the parametrised type.
+  toList : t elem -> List elem
+  toList = foldr (::) []
 
 ||| Maps each element to a value and combine them
 public export
@@ -377,6 +403,7 @@ namespace Foldable
 ||| Common examples are `Either` and `Pair`.
 public export
 interface Bifoldable p where
+  constructor MkBifoldable
   bifoldr : (a -> acc -> acc) -> (b -> acc -> acc) -> acc -> p a b -> acc
 
   bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
@@ -387,6 +414,7 @@ interface Bifoldable p where
 
 public export
 interface (Functor t, Foldable t) => Traversable t where
+  constructor MkTraversable
   ||| Map each element of a structure to a computation, evaluate those
   ||| computations and combine the results.
   traverse : Applicative f => (a -> f b) -> t a -> f (t b)
@@ -403,6 +431,7 @@ for = flip traverse
 
 public export
 interface (Bifunctor p, Bifoldable p) => Bitraversable p where
+  constructor MkBitraversable
   ||| Map each element of a structure to a computation, evaluate those
   ||| computations and combine the results.
   bitraverse : Applicative f => (a -> f c) -> (b -> f d) -> p a b -> f (p c d)

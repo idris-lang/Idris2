@@ -1,4 +1,7 @@
 1/4: Building DoorJam (DoorJam.idr)
 2/4: Building ATM (ATM.idr)
 3/4: Building Hangman (Hangman.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  letters is shadowing Main.letters
 4/4: Building All (All.idr)

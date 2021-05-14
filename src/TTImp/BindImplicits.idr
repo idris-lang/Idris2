@@ -162,29 +162,30 @@ addUsing uimpls tm
 
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->
-                List (Maybe Name, RawImp) ->
+                FC -> List (Maybe Name, RawImp) ->
                 List Name -> RawImp-> Core RawImp
-bindTypeNames uimpls env tm
+bindTypeNames fc uimpls env tm
     = if !isUnboundImplicits
-             then let ns = nub (findBindableNames True env [] tm)
-                      btm = doBind ns tm in
-                      pure (addUsing uimpls btm)
+             then do ns <- findUniqueBindableNames fc True env [] tm
+                     let btm = doBind ns tm
+                     pure (addUsing uimpls btm)
              else pure tm
 
 export
 bindTypeNamesUsed : {auto c : Ref Ctxt Defs} ->
-                    List String -> List Name -> RawImp -> Core RawImp
-bindTypeNamesUsed used env tm
+                    FC -> List String -> List Name -> RawImp -> Core RawImp
+bindTypeNamesUsed fc used env tm
     = if !isUnboundImplicits
-         then do let ns = nub (findBindableNames True env used tm)
+         then do ns <- findUniqueBindableNames fc True env used tm
                  pure (doBind ns tm)
          else pure tm
 
 export
-piBindNames : FC -> List Name -> RawImp -> RawImp
+piBindNames : {auto c : Ref Ctxt Defs} ->
+              FC -> List Name -> RawImp -> Core RawImp
 piBindNames loc env tm
-    = let ns = nub (findBindableNames True env [] tm) in
-          piBind (map fst ns) tm
+    = do ns <- findUniqueBindableNames loc True env [] tm
+         pure $ piBind (map fst ns) tm
   where
     piBind : List String -> RawImp -> RawImp
     piBind [] ty = ty

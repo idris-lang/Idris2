@@ -1,0 +1,22 @@
+1/1: Building Test (Test.idr)
+Error: No unrestricted arguments of type `Integer` found for Main.natToMyNat.
+
+Test.idr:20:1--20:37
+ 16 | natToMyNat : Nat -> MyNat
+ 17 | natToMyNat Z = Z
+ 18 | natToMyNat (S k) = S $ natToMyNat k
+ 19 | 
+ 20 | %builtin IntegerToNatural natToMyNat
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Return type is not a 'Nat'-like type
+
+Test.idr:25:1--25:42
+ 21 | 
+ 22 | integerToNotNat : Integer -> Maybe String
+ 23 | integerToNotNat x = Just "Boo"
+ 24 | 
+ 25 | %builtin IntegerToNatural integerToNotNat
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Main> Bye for now!

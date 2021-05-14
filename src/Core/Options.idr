@@ -53,6 +53,7 @@ toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
 
 public export
 data CG = Chez
+        | ChezSep
         | Racket
         | Gambit
         | Node
@@ -63,6 +64,7 @@ data CG = Chez
 export
 Eq CG where
   Chez == Chez = True
+  ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
   Node == Node = True
@@ -74,6 +76,7 @@ Eq CG where
 export
 Show CG where
   show Chez = "chez"
+  show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
   show Node = "node"
@@ -141,6 +144,8 @@ record Session where
   findipkg : Bool
   codegen : CG
   directives : List String
+  logEnabled : Bool -- do we check logging flags at all? This is 'False' until
+                    -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Bool
   ignoreMissingPkg : Bool -- fail silently on missing packages. This is because
@@ -151,6 +156,8 @@ record Session where
   dumplifted : Maybe String -- file to output lambda lifted definitions
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
+  profile : Bool -- generate profiling information, if supported
+  showShadowingWarning : Bool
 
 public export
 record PPrinter where
@@ -177,6 +184,7 @@ export
 availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
+       ("chez-sep", ChezSep),
        ("racket", Racket),
        ("node", Node),
        ("javascript", Javascript),
@@ -196,9 +204,9 @@ defaultPPrint = MkPPOpts False True False
 
 export
 defaultSession : Session
-defaultSession = MkSessionOpts False False False Chez [] defaultLogLevel
+defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing
+                               Nothing Nothing False True
 
 export
 defaultElab : ElabDirectives

@@ -165,7 +165,7 @@ getCons defs (NTCon _ tn _ _ _)
            Just (TCon _ _ _ _ _ _ cons _) =>
                 do cs' <- traverse addTy cons
                    pure (mapMaybe id cs')
-           _ => pure []
+           _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")
   where
     addTy : Name -> Core (Maybe (NF [], Name, Int, Nat))
     addTy cn
@@ -214,24 +214,22 @@ getMissingAlts fc defs (NPrimVal _ WorldType) alts
          then pure [DefaultCase (Unmatched "Coverage check")]
          else pure []
 getMissingAlts fc defs (NPrimVal _ c) alts
-    = if any isDefault alts
-         then pure []
+  = do log "coverage.missing" 50 $ "Looking for missing alts at type " ++ show c
+       if any isDefault alts
+         then do log "coverage.missing" 20 "Found default"
+                 pure []
          else pure [DefaultCase (Unmatched "Coverage check")]
-  where
-    isDefault : CaseAlt vars -> Bool
-    isDefault (DefaultCase _) = True
-    isDefault _ = False
 -- Similarly for types
 getMissingAlts fc defs (NType _) alts
-    = if any isDefault alts
-         then pure []
-         else pure [DefaultCase (Unmatched "Coverage check")]
-  where
-    isDefault : CaseAlt vars -> Bool
-    isDefault (DefaultCase _) = True
-    isDefault _ = False
+    = do log "coverage.missing" 50 "Looking for missing alts at type Type"
+         if any isDefault alts
+           then do log "coverage.missing" 20 "Found default"
+                   pure []
+           else pure [DefaultCase (Unmatched "Coverage check")]
 getMissingAlts fc defs nfty alts
-    = do allCons <- getCons defs nfty
+    = do log "coverage.missing" 50 $ "Getting constructors for: " ++ show nfty
+         logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
+         allCons <- getCons defs nfty
          pure (filter (noneOf alts)
                  (map (mkAlt fc (Unmatched "Coverage check") . snd) allCons))
   where
@@ -396,12 +394,13 @@ getMissing : {vars : _} ->
 getMissing fc n ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
-        pats <- buildArgs fc defs [] [] psIn ctree
-        logC "coverage.missing" 20 $ map unlines $
-          flip traverse (concat pats) $ \ pat =>
-            do pat' <- toFullNames pat
-               pure (show pat')
-        pure (map (apply fc (Ref fc Func n)) pats)
+        patss <- buildArgs fc defs [] [] psIn ctree
+        let pats = concat patss
+        unless (null pats) $
+          logC "coverage.missing" 20 $ map unlines $
+            flip traverse pats $ \ pat =>
+              show <$> toFullNames pat
+        pure (map (apply fc (Ref fc Func n)) patss)
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.

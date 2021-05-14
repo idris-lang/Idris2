@@ -26,9 +26,9 @@ Main> [] : List ?a
 Main> Error: When unifying Vect 0 ?elem and List ?a.
 Mismatch between: Vect 0 ?elem and List ?a.
 
-(interactive):1:34--1:41
+(interactive):1:40--1:41
  1 | :t with [Vect.Nil, Prelude.(::)] [1,2,3]
-                                      ^^^^^^^
+                                            ^
 
 Main> the (Maybe Integer) (pure 4) : Maybe Integer
 Main> Expected 'case', 'if', 'do', application or operator expression.

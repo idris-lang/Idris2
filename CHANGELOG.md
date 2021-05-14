@@ -13,10 +13,44 @@ REPL/IDE mode changes:
 * Added `:search` command, which searches for functions by type
 * `:load`/`:l` and `:cd` commands now only accept paths surrounded by double quotes
 
+Syntax changes:
+
+* The syntax for parameter blocks has been updated. It now allows to declare
+  implicit parameters and give multiplicities for parameters. The old syntax
+  is still available for compatibility purposes but will be removed in the
+  future.
+
 Compiler changes:
 
+* Added more optimisations and transformations, particularly on case blocks,
+  list-shaped types, and enumerations, so generated code will often be slightly
+  faster.
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
+* Added `--profile` flag, which generates profile data if supported by a back
+  end. Currently supported by the Chez and Racket back ends.
+* Javascript codegens now use `Number` to represent up to 32 bit precision
+  signed and unsigned integers. `Int32` still goes via `BigInt` for
+  multiplication to avoid precision issues when getting results larger
+  than `Number.MAX_SAFE_INTEGER`. `Bits32` goes via `BigInt` for
+  multiplication for the same reason as well as for all bitops, since `Number`
+  uses signed 32 bit integers for those.
+* New code generator: `chez-sep`. This code generator produces many Chez Scheme
+  files and compiles them separately instead of producing one huge Scheme
+  program. This significantly reduces the amount of memory needed to build
+  large programs. Since this backend will skip calling the Chez compiler on
+  modules that haven't changed, it also leads to shorter compilation times in
+  large codebases where only some files have changed -- for example when
+  developing Idris2 code generators.  The codegen has a large parallelisation
+  potential but at the moment, it is significantly slower for a full rebuild of
+  a large code base (the code generation stage takes about 3x longer).
+* New `%builtin` pragma for compiling user defined natural numbers to
+  primitive `Integer`s (see the [docs](https://idris2.readthedocs.io/en/latest/reference/builtins.html))
+
+API changes:
+
+* The API now exposes `Compiler.Separate.getCompilationUnits`, which
+  can be used for separate code generation by any backend.
 
 Library changes:
 
@@ -26,18 +60,6 @@ Library changes:
   asynchronous channels, which worked apart from `broadcast`. The rework fixes
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
-
-Other changes:
-
-* The `version` field in `.ipkg` files is now used. Packages are installed into
-  a directory which includes its version number, and dependencies can have
-  version number ranges using `<=`, `<`, `>=`, `>`, `==` to express version
-  constraints. Version numbers must be in the form of integers, separated by
-  dots (e.g. `1.0`, `0.3.0`, `3.1.4.1.5` etc)
-* Idris now looks in the current working directory, under a subdirectory
-  `depends` for local installations of packages before looking globally.
-* Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
-  look for packages.
 
 Other changes:
 

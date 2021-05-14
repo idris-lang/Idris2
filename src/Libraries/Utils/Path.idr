@@ -13,7 +13,7 @@ import Libraries.Text.Quantity
 
 import System.Info
 
-infixr 5 </>
+infixr 5 </>, />
 infixr 7 <.>
 
 
@@ -136,6 +136,9 @@ Eq PathTokenKind where
 PathToken : Type
 PathToken = Token PathTokenKind
 
+PathGrammar : Bool -> Type -> Type
+PathGrammar = Grammar () PathToken
+
 TokenKind PathTokenKind where
   TokType PTText = String
   TokType (PTPunct _) = ()
@@ -156,7 +159,7 @@ lexPath : String -> List (WithBounds PathToken)
 lexPath str = let (tokens, _, _, _) = lex pathTokenMap str in tokens
 
 -- match both '/' and '\\' regardless of the platform.
-bodySeparator : Grammar PathToken True ()
+bodySeparator : PathGrammar True ()
 bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 
 -- Windows will automatically translate '/' to '\\'. And the verbatim prefix,
@@ -164,7 +167,7 @@ bodySeparator = (match $ PTPunct '\\') <|> (match $ PTPunct '/')
 -- However, we just parse it and ignore it.
 --
 -- Example: \\?\
-verbatim : Grammar PathToken True ()
+verbatim : PathGrammar True ()
 verbatim =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -173,7 +176,7 @@ verbatim =
     pure ()
 
 -- Example: \\server\share
-unc : Grammar PathToken True Volume
+unc : PathGrammar True Volume
 unc =
   do
     ignore $ count (exactly 2) $ match $ PTPunct '\\'
@@ -183,7 +186,7 @@ unc =
     pure $ UNC server share
 
 -- Example: \\?\server\share
-verbatimUnc : Grammar PathToken True Volume
+verbatimUnc : PathGrammar True Volume
 verbatimUnc =
   do
     verbatim
@@ -193,7 +196,7 @@ verbatimUnc =
     pure $ UNC server share
 
 -- Example: C:
-disk : Grammar PathToken True Volume
+disk : PathGrammar True Volume
 disk =
   do
     text <- match PTText
@@ -204,31 +207,31 @@ disk =
     pure $ Disk (toUpper disk)
 
 -- Example: \\?\C:
-verbatimDisk : Grammar PathToken True Volume
+verbatimDisk : PathGrammar True Volume
 verbatimDisk =
   do
     verbatim
     disk <- disk
     pure disk
 
-parseVolume : Grammar PathToken True Volume
+parseVolume : PathGrammar True Volume
 parseVolume =
       verbatimUnc
   <|> verbatimDisk
   <|> unc
   <|> disk
 
-parseBody : Grammar PathToken True Body
+parseBody : PathGrammar True Body
 parseBody =
   do
     text <- match PTText
-    the (Grammar _ False _) $
+    the (PathGrammar False _) $
       case text of
         ".." => pure ParentDir
         "." => pure CurDir
         normal => pure (Normal normal)
 
-parsePath : Grammar PathToken False Path
+parsePath : PathGrammar False Path
 parsePath =
   do
     vol <- optional parseVolume
@@ -340,6 +343,7 @@ setFileName' name path =
   else
     append' path (parse name)
 
+export
 splitFileName : String -> (String, String)
 splitFileName name =
   case break (== '.') $ reverse $ unpack name of
@@ -380,11 +384,29 @@ isRelative = not . isAbsolute
 ||| - If the right path has a volume but no root, it replaces left.
 |||
 ||| ```idris example
+||| parse "/usr" /> "local/etc" == "/usr/local/etc"
+||| ```
+export
+(/>) : (left : Path) -> (right : String) -> Path
+(/>) left right = append' left (parse right)
+
+||| Appends the right path to the left path.
+|||
+||| If the path on the right is absolute, it replaces the left path.
+|||
+||| On Windows:
+|||
+||| - If the right path has a root but no volume (e.g., `\windows`), it replaces
+|||   everything except for the volume (if any) of left.
+||| - If the right path has a volume but no root, it replaces left.
+|||
+||| ```idris example
 ||| "/usr" </> "local/etc" == "/usr/local/etc"
 ||| ```
 export
 (</>) : (left : String) -> (right : String) -> String
-(</>) left right = show $ append' (parse left) (parse right)
+(</>) left right = show $ parse left /> right
+
 
 ||| Joins path components into one.
 |||
@@ -393,7 +415,7 @@ export
 ||| ```
 export
 joinPath : List String -> String
-joinPath xs = foldl (</>) "" xs
+joinPath xs = show $ foldl (/>) (parse "") xs
 
 ||| Splits path into components.
 |||
@@ -501,7 +523,14 @@ fileStem path = pure $ fst $ splitFileName !(fileName path)
 ||| - Otherwise, the portion of the file name after the last ".".
 export
 extension : String -> Maybe String
-extension path = pure $ snd $ splitFileName !(fileName path)
+extension path = fileName path >>=
+  filter (/= "") . Just . snd . splitFileName
+ where
+  -- TODO Use Data.Maybe.filter instead when next minor
+  -- release comes out.
+  filter : forall a. (a -> Bool) -> Maybe a -> Maybe a
+  filter f Nothing = Nothing
+  filter f (Just x) = toMaybe (f x) x
 
 ||| Updates the file name in the path.
 |||

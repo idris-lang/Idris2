@@ -40,8 +40,8 @@ findRacoExe =
   do env <- idrisGetEnv "RACKET_RACO"
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
-schHeader : String -> String
-schHeader libs
+schHeader : Bool -> String -> String
+schHeader prof libs
   = "#lang racket/base\n" ++
     "; @generated\n" ++
     "(require racket/async-channel)\n" ++ -- for asynchronous channels
@@ -52,6 +52,7 @@ schHeader libs
     "(require rnrs/io/ports-6)\n" ++ -- for files
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
+    (if prof then "(require profile)\n" else "") ++
     "(require racket/flonum)" ++ -- for float-typed transcendental functions
     libs ++
     "(let ()\n"
@@ -143,6 +144,7 @@ cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t +
                          " to foreign function"))
 
 loadlib : String -> String -> String
+loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))"
 loadlib libn ver
     = "(define-ffi-definer define-" ++ libn ++
       " (ffi-lib \"" ++ libn ++ "\" " ++ ver ++ "))\n"
@@ -259,10 +261,9 @@ useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret = throw (NoForeignCC fc)
-useCC appdir fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC appdir fc ccs args ret
+useCC appdir fc ccs args ret
+    = case parseCC ["scheme,racket", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc)
            Just ("scheme,racket", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -271,7 +272,7 @@ useCC appdir fc (cc :: ccs) args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => useCC appdir fc ccs args ret
+           _ => throw (NoForeignCC fc)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -386,10 +387,14 @@ compileToRKT c appdir tm outfile
          support <- readDataFile "racket/support.rkt"
          ds <- getDirectives Racket
          extraRuntime <- getExtraRuntime ds
-         let scm = schHeader (concat (map fst fgndefs)) ++
+         let prof = profile !getSession
+         let runmain
+                = if prof
+                     then "(profile (void " ++ main ++ ") #:order 'self)\n"
+                     else "(void " ++ main ++ ")\n"
+         let scm = schHeader prof (concat (map fst fgndefs)) ++
                    support ++ extraRuntime ++ code ++
-                   "(void " ++ main ++ ")\n" ++
-                   schFooter
+                   runmain ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
@@ -431,7 +436,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          racket <- coreLift findRacket
 
          ok <- the (Core Int) $ if mkexec
-                  then logTime "Build racket" $
+                  then logTime "+ Build racket" $
                          coreLift $
                            system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
                   else pure 0

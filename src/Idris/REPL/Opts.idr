@@ -1,4 +1,4 @@
-module Idris.REPLOpts
+module Idris.REPL.Opts
 
 import Compiler.Common
 import Idris.Syntax
@@ -78,6 +78,10 @@ defaultOpts fname outmode cgs
 
 export
 data ROpts : Type where
+
+export
+withROpts : {auto o : Ref ROpts REPLOpts} -> Core a -> Core a
+withROpts = wrapRef ROpts (\_ => pure ())
 
 export
 replFC : FC

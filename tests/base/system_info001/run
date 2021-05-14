@@ -1,5 +1,9 @@
 rm -f expected
-echo "$(nproc) processors" > expected
+if [ "FreeBSD" = "$(uname)" ]; then
+  echo "$(sysctl -n hw.ncpu) processors" > expected
+else
+  echo "$(nproc) processors" > expected
+fi
 
 $1 --no-banner --no-color --console-width 0 NumProcessors.idr --exec main
 

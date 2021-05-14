@@ -160,6 +160,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
      Deprecated : String -> Warning
 
 export
@@ -412,6 +413,7 @@ getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
 getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.
@@ -464,6 +466,10 @@ export %inline
 (<$>) f (MkCore a) = MkCore (map (map f) a)
 
 export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
+
+export %inline
 ignore : Core a -> Core ()
 ignore = map (\ _ => ())
 
@@ -491,6 +497,18 @@ infixr 1 =<<
 export %inline
 (=<<) : (a -> Core b) -> Core a -> Core b
 (=<<) = flip (>>=)
+
+-- Kleisli compose
+infixr 1 >=>
+export %inline
+(>=>) : (a -> Core b) -> (b -> Core c) -> (a -> Core c)
+f >=> g = (g =<<) . f
+
+-- Flipped kleisli compose
+infixr 1 <=<
+export %inline
+(<=<) : (b -> Core c) -> (a -> Core b) -> (a -> Core c)
+(<=<) = flip (>=>)
 
 -- Applicative (specialised)
 export %inline
@@ -554,6 +572,11 @@ Catchable Core Error where
                          Right val => pure (Right val))
   throw = coreFail
 
+-- Prelude.Monad.foldlM hand specialised for Core
+export
+foldlC : Foldable t => (a -> b -> Core a) -> a -> t b -> Core a
+foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
+
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
 traverse' f [] acc = pure (reverse acc)
@@ -598,6 +621,10 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = Core.do ignore (f x)
               traverse_ f xs
+%inline
+export
+for_ : List a -> (a -> Core ()) -> Core ()
+for_ = flip traverse_
 
 %inline
 export
@@ -706,6 +733,21 @@ update x f
        put x (f v)
 
 export
+wrapRef : (x : label) -> {auto ref : Ref x a} ->
+          (a -> Core ()) ->
+          Core b ->
+          Core b
+wrapRef x onClose op
+  = do v <- get x
+       o <- catch op $ \err =>
+              do onClose v
+                 put x v
+                 throw err
+       onClose v
+       put x v
+       pure o
+
+export
 cond : List (Lazy Bool, Lazy a) -> a -> a
 cond [] def = def
 cond ((x, y) :: xs) def = if x then y else cond xs def
@@ -715,3 +757,17 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content =
+  coreLift (File.writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+export
+readFile : (fname : String) -> Core String
+readFile fname =
+  coreLift (File.readFile fname) >>= \case
+    Right content => pure content
+    Left err => throw $ FileErr fname err

@@ -157,6 +157,12 @@ maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
 
+||| Execute an applicative expression when the Maybe is Just
+%inline public export
+whenJust : Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 public export
 Eq a => Eq (Maybe a) where
   Nothing  == Nothing  = True
@@ -331,17 +337,6 @@ Traversable (Either e) where
 -- LISTS --
 -----------
 
-||| Generic lists.
-public export
-data List a =
-  ||| Empty list
-  Nil
-
-  | ||| A non-empty list, consisting of a head element and the rest of the list.
-  (::) a (List a)
-
-%name List xs, ys, zs
-
 public export
 Eq a => Eq (List a) where
   [] == [] = True
@@ -393,6 +388,8 @@ Foldable List where
   null [] = True
   null (_::_) = False
 
+  toList = id
+
 public export
 Applicative List where
   pure x = [x]
@@ -411,6 +408,19 @@ public export
 Traversable List where
   traverse f [] = pure []
   traverse f (x::xs) = pure (::) <*> (f x) <*> (traverse f xs)
+
+-- This works quickly because when string-concat builds the result, it allocates
+-- enough room in advance so there's only one allocation, rather than lots!
+--
+-- Like fastUnpack, this function won't reduce at compile time.
+-- If you need to concatenate strings at compile time, use Prelude.concat.
+%foreign
+  "scheme:string-concat"
+  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+export
+fastConcat : List String -> String
+
+%transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
@@ -537,6 +547,9 @@ pack (x :: xs) = strCons x (pack xs)
 export
 fastPack : List Char -> String
 
+-- always use 'fastPack' at run time
+%transform "fastPack" pack = fastPack
+
 ||| Turns a string into a list of characters.
 |||
 ||| ```idris example
@@ -551,6 +564,17 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
         = if pos < 0
              then acc
              else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+
+-- This function runs fast when compiled but won't compute at compile time.
+-- If you need to unpack strings at compile time, use Prelude.unpack.
+%foreign
+  "scheme:string-unpack"
+  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
+export
+fastUnpack : String -> List Char
+
+-- always use 'fastPack' at run time
+%transform "fastUnpack" unpack = fastUnpack
 
 public export
 Semigroup String where
@@ -754,6 +778,7 @@ takeBefore p (x :: xs)
 
 public export
 interface Range a where
+  constructor MkRange
   rangeFromTo : a -> a -> List a
   rangeFromThenTo : a -> a -> a -> List a
 

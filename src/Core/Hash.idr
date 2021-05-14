@@ -2,12 +2,14 @@ module Core.Hash
 
 import Core.CaseTree
 import Core.TT
+import Core.CompileExpr
 
 import Data.List
 import Data.List1
 import Libraries.Data.List.Lazy
 import Data.Strings
 import Libraries.Data.String.Iterator
+import Data.Vect
 
 %default covering
 
@@ -43,6 +45,11 @@ Hashable Char where
   hash = cast
 
 export
+Hashable a => Hashable (Vect n a) where
+  hashWithSalt h [] = abs h
+  hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
+
+export
 Hashable a => Hashable (List a) where
   hashWithSalt h [] = abs h
   hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
@@ -57,8 +64,16 @@ Hashable a => Hashable (Maybe a) where
   hashWithSalt h (Just x) = hashWithSalt h x
 
 export
+Hashable a => Hashable b => Hashable (a, b) where
+  hashWithSalt h (x, y) = h `hashWithSalt` x `hashWithSalt` y
+
+export
 Hashable String where
   hashWithSalt h = String.Iterator.foldl hashWithSalt h
+
+export
+Hashable Double where
+  hash = hash . show
 
 export
 Hashable Namespace where
@@ -174,3 +189,259 @@ mutual
         = h `hashWithSalt` 3 `hashWithSalt` (show x) `hashWithSalt` y
     hashWithSalt h (DefaultCase x)
         = h `hashWithSalt` 4 `hashWithSalt` x
+
+export
+Hashable CFType where
+  hashWithSalt h = \case
+    CFUnit =>
+      h `hashWithSalt` 0
+    CFInt =>
+      h `hashWithSalt` 1
+    CFUnsigned8 =>
+      h `hashWithSalt` 2
+    CFUnsigned16 =>
+      h `hashWithSalt` 3
+    CFUnsigned32 =>
+      h `hashWithSalt` 4
+    CFUnsigned64 =>
+      h `hashWithSalt` 5
+    CFString =>
+      h `hashWithSalt` 6
+    CFDouble =>
+      h `hashWithSalt` 7
+    CFChar =>
+      h `hashWithSalt` 8
+    CFPtr =>
+      h `hashWithSalt` 9
+    CFGCPtr =>
+      h `hashWithSalt` 10
+    CFBuffer =>
+      h `hashWithSalt` 11
+    CFWorld =>
+      h `hashWithSalt` 12
+    CFFun a b =>
+      h `hashWithSalt` 13 `hashWithSalt` a `hashWithSalt` b
+    CFIORes a =>
+      h `hashWithSalt` 14 `hashWithSalt` a
+    CFStruct n fs =>
+      h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
+    CFUser n xs =>
+      h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
+
+export
+Hashable Constant where
+  hashWithSalt h = \case
+    I i =>
+      h `hashWithSalt` 0 `hashWithSalt` i
+    BI x =>
+      h `hashWithSalt` 1 `hashWithSalt` x
+    B8 x =>
+      h `hashWithSalt` 2 `hashWithSalt` x
+    B16 x =>
+      h `hashWithSalt` 3 `hashWithSalt` x
+    B32 x =>
+      h `hashWithSalt` 4 `hashWithSalt` x
+    B64 x =>
+      h `hashWithSalt` 5 `hashWithSalt` x
+    Str x =>
+      h `hashWithSalt` 6 `hashWithSalt` x
+    Ch x =>
+      h `hashWithSalt` 7 `hashWithSalt` x
+    Db x =>
+      h `hashWithSalt` 8 `hashWithSalt` x
+
+    WorldVal =>
+      h `hashWithSalt` 9
+
+    IntType =>
+      h `hashWithSalt` 10
+    IntegerType =>
+      h `hashWithSalt` 11
+    Bits8Type =>
+      h `hashWithSalt` 12
+    Bits16Type =>
+      h `hashWithSalt` 13
+    Bits32Type =>
+      h `hashWithSalt` 14
+    Bits64Type =>
+      h `hashWithSalt` 15
+    StringType =>
+      h `hashWithSalt` 16
+    CharType =>
+      h `hashWithSalt` 17
+    DoubleType =>
+      h `hashWithSalt` 18
+    WorldType =>
+      h `hashWithSalt` 19
+
+    I8 x => h `hashWithSalt` 20 `hashWithSalt` x
+    I16 x => h `hashWithSalt` 21 `hashWithSalt` x
+    I32 x => h `hashWithSalt` 22 `hashWithSalt` x
+    I64 x => h `hashWithSalt` 23 `hashWithSalt` x
+
+    Int8Type => h `hashWithSalt` 24
+    Int16Type => h `hashWithSalt` 25
+    Int32Type => h `hashWithSalt` 26
+    Int64Type => h `hashWithSalt` 27
+
+export
+Hashable LazyReason where
+  hashWithSalt h = \case
+    LInf => h `hashWithSalt` 0
+    LLazy => h `hashWithSalt` 1
+    LUnknown => h `hashWithSalt` 2
+
+export
+Hashable (PrimFn arity) where
+  hashWithSalt h = \case
+    Add ty =>
+      h `hashWithSalt` 0 `hashWithSalt` ty
+    Sub ty =>
+      h `hashWithSalt` 1 `hashWithSalt` ty
+    Mul ty =>
+      h `hashWithSalt` 2 `hashWithSalt` ty
+    Div ty =>
+      h `hashWithSalt` 3 `hashWithSalt` ty
+    Mod ty =>
+      h `hashWithSalt` 4 `hashWithSalt` ty
+    Neg ty =>
+      h `hashWithSalt` 5 `hashWithSalt` ty
+    ShiftL ty =>
+      h `hashWithSalt` 6 `hashWithSalt` ty
+    ShiftR ty =>
+      h `hashWithSalt` 7 `hashWithSalt` ty
+
+    BAnd ty =>
+      h `hashWithSalt` 8 `hashWithSalt` ty
+    BOr ty =>
+      h `hashWithSalt` 9 `hashWithSalt` ty
+    BXOr ty =>
+      h `hashWithSalt` 10 `hashWithSalt` ty
+
+    LT ty =>
+      h `hashWithSalt` 11 `hashWithSalt` ty
+    LTE ty =>
+      h `hashWithSalt` 12 `hashWithSalt` ty
+    EQ ty =>
+      h `hashWithSalt` 13 `hashWithSalt` ty
+    GTE ty =>
+      h `hashWithSalt` 14 `hashWithSalt` ty
+    GT ty =>
+      h `hashWithSalt` 15 `hashWithSalt` ty
+
+    StrLength =>
+      h `hashWithSalt` 16
+    StrHead =>
+      h `hashWithSalt` 17
+    StrTail =>
+      h `hashWithSalt` 18
+    StrIndex =>
+      h `hashWithSalt` 19
+    StrCons =>
+      h `hashWithSalt` 20
+    StrAppend =>
+      h `hashWithSalt` 21
+    StrReverse =>
+      h `hashWithSalt` 22
+    StrSubstr =>
+      h `hashWithSalt` 23
+
+    DoubleExp =>
+      h `hashWithSalt` 24
+    DoubleLog =>
+      h `hashWithSalt` 25
+    DoubleSin =>
+      h `hashWithSalt` 26
+    DoubleCos =>
+      h `hashWithSalt` 27
+    DoubleTan =>
+      h `hashWithSalt` 28
+    DoubleASin =>
+      h `hashWithSalt` 29
+    DoubleACos =>
+      h `hashWithSalt` 30
+    DoubleATan =>
+      h `hashWithSalt` 31
+    DoubleSqrt =>
+      h `hashWithSalt` 32
+    DoubleFloor =>
+      h `hashWithSalt` 33
+    DoubleCeiling =>
+      h `hashWithSalt` 34
+
+    Cast f t =>
+      h `hashWithSalt` 35 `hashWithSalt` f `hashWithSalt` t
+    BelieveMe =>
+      h `hashWithSalt` 36
+    Crash =>
+      h `hashWithSalt` 37
+
+export
+Hashable ConInfo where
+  hashWithSalt h = \case
+    DATACON => h `hashWithSalt` 0
+    TYCON => h `hashWithSalt` 1
+    NIL => h `hashWithSalt` 2
+    CONS => h `hashWithSalt` 3
+    ENUM => h `hashWithSalt` 4
+    NOTHING => h `hashWithSalt` 5
+    JUST => h `hashWithSalt` 6
+    RECORD => h `hashWithSalt` 7
+
+
+mutual
+  export
+  Hashable NamedCExp where
+    hashWithSalt h = \case
+      NmLocal fc n =>
+        h `hashWithSalt` 0 `hashWithSalt` n
+      NmRef fc n =>
+        h `hashWithSalt` 1 `hashWithSalt` n
+      NmLam fc x rhs =>
+        h `hashWithSalt` 2 `hashWithSalt` x `hashWithSalt` rhs
+      NmLet fc x val rhs =>
+        h `hashWithSalt` 3 `hashWithSalt` x `hashWithSalt` val `hashWithSalt` rhs
+      NmApp fc f xs =>
+        h `hashWithSalt` 4 `hashWithSalt` f `hashWithSalt` xs
+      NmCon fc cn ci t args =>
+        h `hashWithSalt` 5 `hashWithSalt` cn `hashWithSalt` ci `hashWithSalt` t `hashWithSalt` args
+      NmOp fc fn args =>
+        h `hashWithSalt` 6 `hashWithSalt` fn `hashWithSalt` args
+      NmExtPrim fc p args =>
+        h `hashWithSalt` 7 `hashWithSalt` p `hashWithSalt` args
+      NmForce fc r x =>
+        h `hashWithSalt` 8 `hashWithSalt` r `hashWithSalt` x
+      NmDelay fc r x =>
+        h `hashWithSalt` 9 `hashWithSalt` r `hashWithSalt` x
+      NmConCase fc sc alts df =>
+        h `hashWithSalt` 10 `hashWithSalt` sc `hashWithSalt` alts `hashWithSalt` df
+      NmConstCase fc sc alts df =>
+        h `hashWithSalt` 11 `hashWithSalt` sc `hashWithSalt` alts `hashWithSalt` df
+      NmPrimVal fc c =>
+        h `hashWithSalt` 12 `hashWithSalt` c
+      NmErased fc =>
+        h `hashWithSalt` 13
+      NmCrash fc msg =>
+        h `hashWithSalt` 14 `hashWithSalt` msg
+
+  export
+  Hashable NamedConAlt where
+    hashWithSalt h (MkNConAlt n ci tag args rhs) =
+      h `hashWithSalt` n `hashWithSalt` ci `hashWithSalt` tag `hashWithSalt` args `hashWithSalt` rhs
+
+  export
+  Hashable NamedConstAlt where
+    hashWithSalt h (MkNConstAlt c rhs) =
+      h `hashWithSalt` c `hashWithSalt` rhs
+
+export
+Hashable NamedDef where
+  hashWithSalt h = \case
+    MkNmFun args ce =>
+      h `hashWithSalt` 0 `hashWithSalt` args `hashWithSalt` ce
+    MkNmCon tag arity nt =>
+      h `hashWithSalt` 1 `hashWithSalt` tag `hashWithSalt` arity `hashWithSalt` nt
+    MkNmForeign ccs fargs cft =>
+      h `hashWithSalt` 2 `hashWithSalt` ccs `hashWithSalt` fargs `hashWithSalt` cft
+    MkNmError e =>
+      h `hashWithSalt` 3 `hashWithSalt` e

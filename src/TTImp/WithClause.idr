@@ -2,7 +2,9 @@ module TTImp.WithClause
 
 import Core.Context
 import Core.Context.Log
+import Core.Metadata
 import Core.TT
+
 import TTImp.BindImplicits
 import TTImp.TTImp
 import TTImp.Elab.Check
@@ -15,30 +17,52 @@ import Data.Maybe
 matchFail : FC -> Core a
 matchFail loc = throw (GenericMsg loc "With clause does not match parent")
 
+--- To be used on the lhs of a nested with clause to figure out a tight location
+--- information to give to the generated LHS
+getHeadLoc : RawImp -> Core FC
+getHeadLoc (IVar fc _) = pure fc
+getHeadLoc (IApp _ f _) = getHeadLoc f
+getHeadLoc (IAutoApp _ f _) = getHeadLoc f
+getHeadLoc (INamedApp _ f _ _) = getHeadLoc f
+getHeadLoc t = throw (InternalError $ "Could not find head of LHS: " ++ show t)
+
+addAlias : {auto m : Ref MD Metadata} ->
+           {auto c : Ref Ctxt Defs} ->
+           FC -> FC -> Core ()
+addAlias from to =
+  whenJust (isConcreteFC from) $ \ from =>
+    whenJust (isConcreteFC to) $ \ to => do
+      log "ide-mode.highlight.alias" 25 $
+        "Adding alias: " ++ show from ++ " -> " ++ show to
+      addSemanticAlias from to
+
 mutual
   export
-  getMatch : (lhs : Bool) -> RawImp -> RawImp ->
+  getMatch : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             (lhs : Bool) -> RawImp -> RawImp ->
              Core (List (String, RawImp))
+  getMatch lhs (IBindVar to n) tm@(IBindVar from _)
+      = [(n, tm)] <$ addAlias from to
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
   getMatch lhs (Implicit _ _) tm = pure []
 
-  getMatch lhs (IVar _ (NS ns n)) (IVar loc (NS ns' n'))
-      = if n == n' && isParentOf ns' ns then pure [] else matchFail loc
-  getMatch lhs (IVar _ (NS ns n)) (IVar loc n')
-      = if n == n' then pure [] else matchFail loc
-  getMatch lhs (IVar _ n) (IVar loc n')
-      = if n == n' then pure [] else matchFail loc
+  getMatch lhs (IVar to (NS ns n)) (IVar from (NS ns' n'))
+      = if n == n' && isParentOf ns' ns
+          then [] <$ addAlias from to -- <$ decorateName loc nm
+          else matchFail from
+  getMatch lhs (IVar to (NS ns n)) (IVar from n')
+      = if n == n'
+          then [] <$ addAlias from to -- <$ decorateName loc (NS ns n')
+          else matchFail from
+  getMatch lhs (IVar to n) (IVar from n')
+      = if n == n'
+          then [] <$ addAlias from to -- <$ decorateName loc n'
+          else matchFail from
   getMatch lhs (IPi _ c p n arg ret) (IPi loc c' p' n' arg' ret')
-      = if c == c' && samePiInfo p p' && n == n'
+      = if c == c' && eqPiInfoBy (\_, _ => True) p p' && n == n'
            then matchAll lhs [(arg, arg'), (ret, ret')]
            else matchFail loc
-    where
-      samePiInfo : PiInfo RawImp -> PiInfo RawImp -> Bool
-      samePiInfo Explicit Explicit = True
-      samePiInfo Implicit Implicit = True
-      samePiInfo AutoImplicit AutoImplicit = True
-      samePiInfo (DefImplicit _) (DefImplicit _) = True
-      samePiInfo _ _ = False
   -- TODO: Lam, Let, Case, Local, Update
   getMatch lhs (IApp _ f a) (IApp loc f' a')
       = matchAll lhs [(f, f'), (a, a')]
@@ -72,7 +96,7 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ _ (UN n) p) (IAs fc _ _ (UN n') p')
+  getMatch lhs (IAs _ _ _ (UN n) p) (IAs _ fc _ (UN n') p')
       = do ms <- getMatch lhs p p'
            mergeMatches lhs ((n, IBindVar fc n') :: ms)
   getMatch lhs (IAs _ _ _ (UN n) p) p'
@@ -87,14 +111,18 @@ mutual
     else matchFail fc
   getMatch lhs pat spec = matchFail (getFC pat)
 
-  matchAny : FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
+  matchAny : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
              Core (List (String, RawImp))
   matchAny fc lhs [] = matchFail fc
   matchAny fc lhs ((x, y) :: ms)
       = catch (getMatch lhs x y)
               (\err => matchAny fc lhs ms)
 
-  matchAll : (lhs : Bool) -> List (RawImp, RawImp) ->
+  matchAll : {auto m : Ref MD Metadata} ->
+             {auto c : Ref Ctxt Defs} ->
+             (lhs : Bool) -> List (RawImp, RawImp) ->
              Core (List (String, RawImp))
   matchAll lhs [] = pure []
   matchAll lhs ((x, y) :: ms)
@@ -102,7 +130,9 @@ mutual
            mxy <- getMatch lhs x y
            mergeMatches lhs (mxy ++ matches)
 
-  mergeMatches : (lhs : Bool) -> List (String, RawImp) ->
+  mergeMatches : {auto m : Ref MD Metadata} ->
+                 {auto c : Ref Ctxt Defs} ->
+                 (lhs : Bool) -> List (String, RawImp) ->
                  Core (List (String, RawImp))
   mergeMatches lhs [] = pure []
   mergeMatches lhs ((n, tm) :: rest)
@@ -110,8 +140,9 @@ mutual
            case lookup n rest' of
                 Nothing => pure ((n, tm) :: rest')
                 Just tm' =>
-                   do ignore $ getMatch lhs tm tm' -- just need to know it succeeds
-                      mergeMatches lhs rest
+                   do ignore $ getMatch lhs tm tm'
+                      -- ^ just need to know it succeeds
+                      pure rest'
 
 -- Get the arguments for the rewritten pattern clause of a with by looking
 -- up how the argument names matched
@@ -138,11 +169,13 @@ getArgMatch ploc mode search warg ms (Just (_, nm))
 
 export
 getNewLHS : {auto c : Ref Ctxt Defs} ->
+            {auto m : Ref MD Metadata} ->
             FC -> (drop : Nat) -> NestedNames vars ->
             Name -> List (Maybe (PiInfo RawImp, Name)) ->
             RawImp -> RawImp -> Core RawImp
-getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
-    = do (mlhs_raw, wrest) <- dropWithArgs drop patlhs
+getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
+    = do let vploc = virtualiseFC iploc
+         (mlhs_raw, wrest) <- dropWithArgs drop patlhs
 
          autoimp <- isUnboundImplicits
          setUnboundImplicits True
@@ -154,15 +187,16 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
          log "declare.def.clause.with" 20 $ "Modified LHS (with implicits): " ++ show mlhs
 
          let (warg :: rest) = reverse wrest
-             | _ => throw (GenericMsg ploc "Badly formed 'with' clause")
+             | _ => throw (GenericMsg iploc "Badly formed 'with' clause")
          log "declare.def.clause.with" 5 $ show lhs ++ " against " ++ show mlhs ++
                  " dropping " ++ show (warg :: rest)
          ms <- getMatch True lhs mlhs
          log "declare.def.clause.with" 5 $ "Matches: " ++ show ms
-         let params = map (getArgMatch ploc (InLHS top) False warg ms) wargnames
+         let params = map (getArgMatch vploc (InLHS top) False warg ms) wargnames
          log "declare.def.clause.with" 5 $ "Parameters: " ++ show params
 
-         let newlhs = apply (IVar ploc wname) (params ++ rest)
+         hdloc <- getHeadLoc patlhs
+         let newlhs = apply (IVar hdloc wname) (params ++ rest)
          log "declare.def.clause.with" 5 $ "New LHS: " ++ show newlhs
          pure newlhs
   where
@@ -174,11 +208,12 @@ getNewLHS ploc drop nest wname wargnames lhs_raw patlhs
              pure (tm, arg :: rest)
     -- Shouldn't happen if parsed correctly, but there's no guarantee that
     -- inputs come from parsed source so throw an error.
-    dropWithArgs _ _ = throw (GenericMsg ploc "Badly formed 'with' clause")
+    dropWithArgs _ _ = throw (GenericMsg iploc "Badly formed 'with' clause")
 
 -- Find a 'with' application on the RHS and update it
 export
 withRHS : {auto c : Ref Ctxt Defs} ->
+          {auto m : Ref MD Metadata} ->
           FC -> (drop : Nat) -> Name -> List (Maybe (PiInfo RawImp, Name)) ->
           RawImp -> RawImp ->
           Core RawImp
@@ -196,8 +231,9 @@ withRHS fc drop wname wargnames tm toplhs
     updateWith fc tm (arg :: args)
         = do log "declare.def.clause.with" 10 $ "With-app: Matching " ++ show toplhs ++ " against " ++ show tm
              ms <- getMatch False toplhs tm
+             hdloc <- getHeadLoc tm
              log "declare.def.clause.with" 10 $ "Result: " ++ show ms
-             let newrhs = apply (IVar fc wname)
+             let newrhs = apply (IVar hdloc wname)
                                 (map (getArgMatch fc InExpr True arg ms) wargnames)
              log "declare.def.clause.with" 10 $ "With args for RHS: " ++ show wargnames
              log "declare.def.clause.with" 10 $ "New RHS: " ++ show newrhs

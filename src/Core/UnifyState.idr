@@ -1,3 +1,4 @@
+
 module Core.UnifyState
 
 import Core.CaseTree
@@ -312,11 +313,6 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
@@ -339,11 +335,6 @@ mkConstantAppArgsSub {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
@@ -366,12 +357,6 @@ mkConstantAppArgsOthers {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
-
 
 export
 applyTo : {vars : _} ->
@@ -663,9 +648,8 @@ dumpHole' : {auto u : Ref UST UState} ->
 dumpHole' lvl hole
     = do ust <- get UST
          defs <- get Ctxt
-         if keepLog lvl (logLevel $ session $ options defs)
-            then pure ()
-            else do
+         sopts <- getSession
+         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $ do
                defs <- get Ctxt
                case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
                  Nothing => pure ()
@@ -719,14 +703,17 @@ dumpHole' lvl hole
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (topics : String) -> (verbosity : Nat) ->
+                  (topics : String) ->
+                  {auto 0 _ : KnownTopic topics} ->
+                  (verbosity : Nat) ->
                   (all : Bool) ->
                   Core ()
 dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel $ session $ options defs)) $
+         sopts <- getSession
+         let lvl = mkLogLevel (logEnabled sopts) str n
+         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $
             do let hs = toList (guesses ust) ++
                         toList (if all then holes ust else currentHoles ust)
                case hs of

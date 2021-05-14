@@ -1,0 +1,9 @@
+1/1: Building ParamsPrint (ParamsPrint.idr)
+Main>    {n : Nat}
+   a : Int
+   i : Int
+   b : Bool
+   i1 : func a b
+------------------------------
+whut : func a b
+Main> Bye for now!

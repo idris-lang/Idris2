@@ -45,3 +45,39 @@ zipMaybe : List a -> List b -> Maybe (List (a, b))
 zipMaybe [] [] = pure []
 zipMaybe (a::as) (b::bs) = ((a, b) ::) <$> zipMaybe as bs
 zipMaybe _ _ = Nothing
+
+export
+findBy' : (a -> Bool) -> List a -> (List a, Maybe a, List a)
+findBy' f [] = ([], Nothing, [])
+findBy' f (x :: xs) =
+  case f x of
+    True  => ([], Just x, xs)
+    False =>
+      let (pre, mb, post) = findBy' f xs in
+      (x :: pre, mb, post)
+
+||| Compute the difference of two lists by the given predicate.
+||| Lists are treated as bags.
+export
+diffBy : (a -> a -> Bool)
+      -> List a
+      -> List a
+      -> List a
+diffBy f [] ys = []
+diffBy f (x :: xs) ys =
+  let whole@(pre, mb, post) = findBy' (f x) ys
+      ys' = pre ++ post in
+  case mb of
+    Just _  =>      diffBy f xs ys'
+    Nothing => x :: diffBy f xs ys'
+
+||| Remove adjacent duplicates
+export
+dedup : Eq a => List a -> List a
+dedup (a :: xs@(b :: _)) = if a == b then dedup xs else a :: dedup xs
+dedup xs                = xs
+
+||| O(n * log(n)). Sort a list and remove duplicates
+export
+sortedNub : Ord a => List a -> List a
+sortedNub = dedup . sort

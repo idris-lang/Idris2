@@ -12,6 +12,7 @@ import public Core.TT
 
 import Libraries.Utils.Binary
 
+import Data.Fin
 import Libraries.Data.IntMap
 import Data.IOArray
 import Data.List
@@ -192,6 +193,9 @@ data DefFlag
     | AllGuarded -- safe to treat as a constructor for the purposes of
          -- productivity checking. All clauses are guarded by constructors,
          -- and there are no other function applications
+    | ConType ConInfo
+         -- Is it a special type of constructor, e.g. a nil or cons shaped
+         -- thing, that can be compiled specially?
 
 export
 Eq DefFlag where
@@ -204,6 +208,7 @@ Eq DefFlag where
     (==) Macro Macro = True
     (==) (PartialEval x) (PartialEval y) = x == y
     (==) AllGuarded AllGuarded = True
+    (==) (ConType x) (ConType y) = x == y
     (==) _ _ = False
 
 export
@@ -217,6 +222,7 @@ Show DefFlag where
   show Macro = "macro"
   show (PartialEval _) = "partialeval"
   show AllGuarded = "allguarded"
+  show (ConType ci) = "contype " ++ show ci
 
 public export
 data SizeChange = Smaller | Same | Unknown
@@ -265,7 +271,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  vars : List Name -- environment name is defined in
+  localVars : List Name -- environment name is defined in
   visibility : Visibility
   totality : Totality
   flags : List DefFlag
@@ -618,7 +624,7 @@ newDef fc n rig vars ty vis def
         , specArgs = []
         , inferrable = []
         , multiplicity = rig
-        , vars = vars
+        , localVars = vars
         , visibility = vis
         , totality = unchecked
         , flags = []
@@ -644,6 +650,72 @@ data Transform : Type where
      MkTransform : {vars : _} ->
                    Name -> -- name for identifying the rule
                    Env Term vars -> Term vars -> Term vars -> Transform
+
+||| Types that are transformed into a faster representation
+||| during codegen.
+public export
+data BuiltinType : Type where
+    BuiltinNatural : BuiltinType
+    NaturalToInteger : BuiltinType
+    IntegerToNatural : BuiltinType
+
+export
+Show BuiltinType where
+    show BuiltinNatural = "Natural"
+    show NaturalToInteger = "NaturalToInteger"
+    show IntegerToNatural = "IntegerToNatural"
+
+-- Token types to make it harder to get the constructor names
+-- the wrong way round.
+public export data ZERO = MkZERO
+public export data SUCC = MkSUCC
+
+||| Record containing names of 'Nat'-like constructors.
+public export
+record NatBuiltin where
+    constructor MkNatBuiltin
+    zero : Name
+    succ : Name
+
+||| Record containing information about a NatToInteger function.
+public export
+record NatToInt where
+    constructor MkNatToInt
+    natToIntArity : Nat -- total number of arguments
+    natIdx : Fin natToIntArity -- index into arguments of the 'Nat'-like argument
+
+||| Record containing information about a IntegerToNat function.
+public export
+record IntToNat where
+    constructor MkIntToNat
+    intToNatArity : Nat
+    intIdx : Fin intToNatArity
+
+||| Rewrite rules for %builtin pragmas
+||| Seperate to 'Transform' because it must also modify case statements
+||| behaviour should remain the same after this transform
+public export
+record BuiltinTransforms where
+    constructor MkBuiltinTransforms
+    natTyNames : NameMap NatBuiltin -- map from Nat-like names to their constructors
+    natZNames : NameMap ZERO -- set of Z-like names
+    natSNames : NameMap SUCC -- set of S-like names
+    natToIntegerFns : NameMap NatToInt -- set of functions to transform to `id`
+    integerToNatFns : NameMap IntToNat -- set of functions to transform to `max 0`
+
+-- TODO: After next release remove nat from here and use %builtin pragma instead
+initBuiltinTransforms : BuiltinTransforms
+initBuiltinTransforms =
+    let type = NS typesNS (UN "Nat")
+        zero = NS typesNS (UN "Z")
+        succ = NS typesNS (UN "S")
+    in MkBuiltinTransforms
+        { natTyNames = singleton type (MkNatBuiltin {zero, succ})
+        , natZNames = singleton zero MkZERO
+        , natSNames = singleton succ MkSUCC
+        , natToIntegerFns = empty
+        , integerToNatFns = empty
+        }
 
 export
 getFnName : Transform -> Maybe Name
@@ -987,6 +1059,10 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  builtinTransforms : BuiltinTransforms
+     -- ^ A mapping from names to transformations resulting from a %builtin pragma
+     -- seperate to `transforms` because these must always fire globally so run these
+     -- when compiling to `CExp`.
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1046,6 +1122,7 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , builtinTransforms = initBuiltinTransforms
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
@@ -1252,7 +1329,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , vars = []
+         , localVars = []
          , visibility = Public
          , totality = tot
          , flags = [Inline]
@@ -1938,6 +2015,20 @@ extendNS ns
     = do defs <- get Ctxt
          put Ctxt (record { currentNS $= (<.> ns) } defs)
 
+export
+withExtendedNS : {auto c : Ref Ctxt Defs} ->
+                 Namespace -> Core a -> Core a
+withExtendedNS ns act
+    = do defs <- get Ctxt
+         let cns = currentNS defs
+         put Ctxt (record { currentNS = cns <.> ns } defs)
+         ma <- catch (Right <$> act) (pure . Left)
+         defs <- get Ctxt
+         put Ctxt (record { currentNS = cns } defs)
+         case ma of
+           Left err => throw err
+           Right a  => pure a
+
 -- Get the name as it would be defined in the current namespace
 -- i.e. if it doesn't have an explicit namespace already, add it,
 -- otherwise leave it alone
@@ -2142,6 +2233,14 @@ getWorkingDir
     = do Just d <- coreLift $ currentDir
               | Nothing => throw (InternalError "Can't get current directory")
          pure d
+
+export
+withCtxt : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+withCtxt = wrapRef Ctxt resetCtxt
+  where
+    resetCtxt : Defs -> Core ()
+    resetCtxt defs = do let dir = defs.options.dirs.working_dir
+                        coreLift_ $ changeDir dir
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
@@ -2397,8 +2496,10 @@ addLogLevel : {auto c : Ref Ctxt Defs} ->
 addLogLevel lvl
     = do defs <- get Ctxt
          case lvl of
-           Nothing => put Ctxt (record { options->session->logLevel = defaultLogLevel } defs)
-           Just l  => put Ctxt (record { options->session->logLevel $= insertLogLevel l } defs)
+           Nothing => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel = defaultLogLevel } defs)
+           Just l  => put Ctxt (record { options->session->logEnabled = True,
+                                         options->session->logLevel $= insertLogLevel l } defs)
 
 export
 withLogLevel : {auto c : Ref Ctxt Defs} ->

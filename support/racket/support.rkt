@@ -5,11 +5,28 @@
     [(windows) "windows"]
     [else "unknown"]))
 
-(define blodwen-read-args (lambda (desc)
-  (case (vector-ref desc 0)
-    ((0) '())
-    ((1) (cons (vector-ref desc 2)
-               (blodwen-read-args (vector-ref desc 3)))))))
+(define blodwen-toSignedInt
+  (lambda (x bits)
+    (let ((ma (arithmetic-shift 1 bits)))
+      (if (or (< x (- 0 ma))
+              (>= x ma))
+          (remainder x ma)
+          x))))
+
+(define blodwen-toUnsignedInt
+  (lambda (x bits)
+    (modulo x (arithmetic-shift 1 bits))))
+
+(define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
+
+(define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
 (define b+ (lambda (x y bits) (remainder (+ x y) (arithmetic-shift 1 bits))))
 (define b- (lambda (x y bits) (remainder (- x y) (arithmetic-shift 1 bits))))
 (define b* (lambda (x y bits) (remainder (* x y) (arithmetic-shift 1 bits))))
@@ -34,6 +51,10 @@
 (define blodwen-or (lambda (x y) (bitwise-ior x y)))
 (define blodwen-xor (lambda (x y) (bitwise-xor x y)))
 
+(define exact-floor
+  (lambda (x)
+    (inexact->exact (floor x))))
+
 (define truncate-bits
   (lambda (x bits)
     (if (bitwise-bit-set? x bits)
@@ -42,6 +63,38 @@
 
 (define blodwen-bits-shl-signed
   (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+
+(define exact-truncate
+  (lambda (x)
+    (inexact->exact (truncate x))))
+
+(define exact-truncate-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (exact-truncate x) y)))
+
+(define exact-truncate-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (exact-truncate x) y)))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (char->integer x) y)))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (char->integer x) y)))
+
+(define cast-string-int
+  (lambda (x)
+    (exact-truncate (cast-num (string->number (destroy-prefix x))))))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (cast-string-int x) y)))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
 
 (define cast-num
   (lambda (x)
@@ -52,31 +105,22 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
-(define cast-string-int
-  (lambda (x)
-    (exact-floor (cast-num (string->number (destroy-prefix x))))))
+
 (define cast-int-char
   (lambda (x)
-    (if (and (>= x 0)
-             (<= x #x10ffff))
+    (if (or
+          (and (>= x 0) (<= x #xd7ff))
+          (and (>= x #xe000) (<= x #x10ffff)))
         (integer->char x)
-        0)))
+        (integer->char 0))))
+
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
-(define (from-idris-list xs)
-  (if (= (vector-ref xs 0) 0)
-    '()
-    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
-(define (to-idris-list-rev acc xs)
-  (if (null? xs)
-    acc
-    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
-(define (string-concat xs) (apply string-append (from-idris-list xs)))
-(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
-(define (string-pack xs) (list->string (from-idris-list xs)))
+(define (string-concat xs) (apply string-append xs))
+(define (string-unpack s) (string->list s))
+(define (string-pack xs) (list->string xs))
 (define string-cons (lambda (x y) (string-append (string x) y)))
-(define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
   (list->string (reverse (string->list x)))))
 (define (string-substr off len s)
@@ -94,8 +138,8 @@
 
 (define (blodwen-string-iterator-next s ofs)
   (if (>= ofs (string-length s))
-      (vector 0)  ; EOF
-      (vector 1 (string-ref s ofs) (+ ofs 1))))
+      '() ; EOF
+      (cons (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)
