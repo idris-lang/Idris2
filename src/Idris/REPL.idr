@@ -819,7 +819,7 @@ process (TypeSearch searchTerm)
          let curr = currentNS defs
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
-         let bound = piBindNames replFC [] rawTy
+         bound <- piBindNames replFC [] rawTy
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-

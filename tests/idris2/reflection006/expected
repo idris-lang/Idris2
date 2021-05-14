@@ -2,6 +2,12 @@
 LOG 0: [x, y]
 LOG 0: Left: ((Prelude.Types.plus x) y)
 LOG 0: Right: ((Prelude.Types.plus y) x)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  any is shadowing Prelude.Interfaces.any
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  any is shadowing Prelude.Interfaces.any
 Error: While processing right hand side of commutes. Error during reflection: Not done
 
 refleq.idr:24:16--24:21

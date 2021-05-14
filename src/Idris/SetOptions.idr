@@ -340,6 +340,9 @@ preOptions (ConsoleWidth n :: opts)
 preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
+preOptions (IgnoreShadowingWarnings :: opts)
+    = do setSession (record { showShadowingWarning = False } !getSession)
+         preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os

@@ -70,6 +70,7 @@ modules =
 
     Idris.CommandLine,
     Idris.Desugar,
+    Idris.Desugar.Mutual,
     Idris.Env,
     Idris.Doc.HTML,
     Idris.DocString,

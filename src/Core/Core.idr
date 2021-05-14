@@ -160,6 +160,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
      Deprecated : String -> Warning
 
 export
@@ -412,6 +413,7 @@ getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
 getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.

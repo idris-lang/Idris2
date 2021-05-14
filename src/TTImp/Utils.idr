@@ -1,12 +1,14 @@
 module TTImp.Utils
 
 import Core.Context
+import Core.Options
 import Core.TT
 import TTImp.TTImp
 
 import Data.List
 import Data.Strings
 
+import Libraries.Data.List1 as Lib
 import Libraries.Utils.String
 
 %default covering
@@ -65,6 +67,22 @@ findBindableNames arg env used (IAlternative fc u alts)
 -- We've skipped case, let and local - rather than guess where the
 -- name should be bound, leave it to the programmer
 findBindableNames arg env used tm = []
+
+export
+findUniqueBindableNames :
+  {auto c : Ref Ctxt Defs} ->
+  FC -> (arg : Bool) -> (env : List Name) -> (used : List String) ->
+  RawImp -> Core (List (String, String))
+findUniqueBindableNames fc arg env used t
+  = do let assoc = nub (findBindableNames arg env used t)
+       when (showShadowingWarning !getSession) $
+         do defs <- get Ctxt
+            let ctxt = gamma defs
+            ns <- map catMaybes $ for assoc $ \ (n, _) => do
+                    ns <- lookupCtxtName (UN n) ctxt
+                    pure $ MkPair n . map fst <$> Lib.fromList ns
+            whenJust (Lib.fromList ns) $ recordWarning . ShadowingGlobalDefs fc
+       pure assoc
 
 export
 findAllNames : (env : List Name) -> RawImp -> List Name

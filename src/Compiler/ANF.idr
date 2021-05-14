@@ -30,7 +30,9 @@ mutual
     AApp : FC -> (lazy : Maybe LazyReason) -> (closure : AVar) -> (arg : AVar) -> ANF
     ALet : FC -> (var : Int) -> ANF -> ANF -> ANF
     ACon : FC -> Name -> ConInfo -> (tag : Maybe Int) -> List AVar -> ANF
-    AOp : FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity AVar -> ANF
+    AOp : {0 arity : Nat} -> FC -> (lazy : Maybe LazyReason) -> PrimFn arity -> Vect arity AVar -> ANF
+        -- ^ we explicitly bind arity here to silence the warning that it shadows
+        --   existing functions called arity.
     AExtPrim : FC -> (lazy : Maybe LazyReason) -> Name -> List AVar -> ANF
     AConCase : FC -> AVar -> List AConAlt -> Maybe ANF -> ANF
     AConstCase : FC -> AVar -> List AConstAlt -> Maybe ANF -> ANF

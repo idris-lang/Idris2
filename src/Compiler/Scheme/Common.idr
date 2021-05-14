@@ -131,7 +131,7 @@ constPrimitives = MkConstantPrimitives {
           if n >= m then x else op "blodwen-toUnsignedInt" [x,show n]
 
 ||| Generate scheme for a primitive function.
-schOp : PrimFn arity -> Vect arity String -> Core String
+schOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> Core String
 schOp (Add ty) [x, y] = pure $ add (intKind ty) x y
 schOp (Sub ty) [x, y] = pure $ sub (intKind ty) x y
 schOp (Mul ty) [x, y] = pure $ mul (intKind ty) x y

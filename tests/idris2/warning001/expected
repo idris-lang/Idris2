@@ -1,18 +1,21 @@
-1/6: Building Album (Album.idr)
-2/6: Building Eq (Eq.idr)
-3/6: Building Expr (Expr.idr)
-4/6: Building Fold (Fold.idr)
-5/6: Building Tree (Tree.idr)
+1/1: Building Issue539 (Issue539.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Prelude.Types.elem
+  idF is shadowing Main.idF
+1/1: Building Issue621 (Issue621.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Prelude.Types.elem
+  a1 is shadowing Main.a1
+  a2 is shadowing Main.a2
+1/1: Building Issue1401 (Issue1401.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Prelude.Types.elem
+  fst is shadowing Builtin.fst, Builtin.DPair.DPair.fst
+  dup is shadowing Prelude.Basics.dup
+1/1: Building PR1407 (PR1407.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
-  elem is shadowing Prelude.Types.elem
-6/6: Building All (All.idr)
+  f is shadowing Main.Hoo.f
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  g is shadowing Main.g

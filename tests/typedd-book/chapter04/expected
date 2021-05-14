@@ -1,4 +1,13 @@
 1/12: Building BSTree (BSTree.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
 2/12: Building DataStore (DataStore.idr)
 3/12: Building Direction (Direction.idr)
 4/12: Building Generic (Generic.idr)
@@ -6,7 +15,19 @@
 6/12: Building Shape (Shape.idr)
 7/12: Building SumInputs (SumInputs.idr)
 8/12: Building Tree (Tree.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
 9/12: Building TryIndex (TryIndex.idr)
 10/12: Building Vect (Vect.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
 11/12: Building Vehicle (Vehicle.idr)
 12/12: Building All (All.idr)

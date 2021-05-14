@@ -1,4 +1,45 @@
 1/1: Building Fld (Fld.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+  b is shadowing Main.Other.b
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+  b is shadowing Main.Other.b
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR
     Main.R1.MkR Type

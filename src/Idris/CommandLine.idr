@@ -119,6 +119,8 @@ data CLOpt
   Timing |
   DebugElabCheck |
   BlodwenPaths |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
@@ -201,6 +203,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set output directory"),
            MkOpt ["--profile"] [] [Profile]
               (Just "Generate profile data when compiling, if supported"),
+
+           optSeparator,
+           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]

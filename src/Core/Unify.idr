@@ -513,7 +513,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple _ = False
 
     updateIVar : {v : Nat} ->
-                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar name v newvars) ->
+                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar nm v newvars) ->
                  Maybe (Var vs)
     updateIVar {v} (ICons Nothing rest) prf
         = do MkVar prf' <- updateIVar rest prf

@@ -1,5 +1,17 @@
 1/10: Building ArithState (ArithState.idr)
 2/10: Building DataStore (DataStore.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  schema is shadowing Main.DataStore.schema
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  schema is shadowing Main.DataStore.schema
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  schema is shadowing Main.DataStore.schema
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  schema is shadowing Main.DataStore.schema
 3/10: Building Record (Record.idr)
 4/10: Building State (State.idr)
 5/10: Building StateMonad (StateMonad.idr)

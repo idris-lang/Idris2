@@ -1021,7 +1021,7 @@ TTC GlobalDef where
                  toBuf b (safeErase gdef)
                  toBuf b (specArgs gdef)
                  toBuf b (inferrable gdef)
-                 toBuf b (vars gdef)
+                 toBuf b (localVars gdef)
                  toBuf b (visibility gdef)
                  toBuf b (totality gdef)
                  toBuf b (flags gdef)
