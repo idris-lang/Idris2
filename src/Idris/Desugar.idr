@@ -22,6 +22,8 @@ import Idris.Syntax
 import Idris.Elab.Implementation
 import Idris.Elab.Interface
 
+import Idris.Desugar.Mutual
+
 import Parser.Lexer.Source
 
 import TTImp.BindImplicits
@@ -745,50 +747,6 @@ mutual
                           n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
 
-  -- Get the declaration to process on each pass of a mutual block
-  -- Essentially: types on the first pass
-  --    i.e. type constructors of data declarations
-  --         function types
-  --         interfaces (in full, since it includes function types)
-  --         records (just the generated type constructor)
-  --         implementation headers (i.e. note their existence, but not the bodies)
-  -- Everything else on the second pass
-  getDecl : Pass -> PDecl -> Maybe PDecl
-  getDecl p (PImplementation fc vis opts _ is cons n ps iname nusing ds)
-      = Just (PImplementation fc vis opts p is cons n ps iname nusing ds)
-
-  getDecl p (PNamespace fc ns ds)
-      = Just (PNamespace fc ns (mapMaybe (getDecl p) ds))
-
-  getDecl AsType d@(PClaim _ _ _ _ _) = Just d
-  getDecl AsType (PData fc doc vis (MkPData dfc tyn tyc _ _))
-      = Just (PData fc doc vis (MkPLater dfc tyn tyc))
-  getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
-  getDecl AsType d@(PRecord fc doc vis n ps _ _)
-      = Just (PData fc doc vis (MkPLater fc n (mkRecType ps)))
-    where
-      mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
-      mkRecType [] = PType fc
-      mkRecType ((n, c, p, t) :: ts) = PPi fc c p (Just n) t (mkRecType ts)
-  getDecl AsType d@(PFixity _ _ _ _) = Just d
-  getDecl AsType d@(PDirective _ _) = Just d
-  getDecl AsType d = Nothing
-
-  getDecl AsDef (PClaim _ _ _ _ _) = Nothing
-  getDecl AsDef d@(PData _ _ _ (MkPLater _ _ _)) = Just d
-  getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
-  getDecl AsDef d@(PRecord _ _ _ _ _ _ _) = Just d
-  getDecl AsDef (PFixity _ _ _ _) = Nothing
-  getDecl AsDef (PDirective _ _) = Nothing
-  getDecl AsDef d = Just d
-
-  getDecl p (PParameters fc ps pds)
-      = Just (PParameters fc ps (mapMaybe (getDecl p) pds))
-  getDecl p (PUsing fc ps pds)
-      = Just (PUsing fc ps (mapMaybe (getDecl p) pds))
-
-  getDecl Single d = Just d
-
   export
   desugarFnOpt : {auto s : Ref Syn SyntaxInfo} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -997,8 +955,8 @@ mutual
   desugarDecl ps (PFixity fc _ _ _)
       = throw (GenericMsg fc "Fixity declarations must be for unqualified names")
   desugarDecl ps (PMutual fc ds)
-      = do let mds = mapMaybe (getDecl AsType) ds ++ mapMaybe (getDecl AsDef) ds
-           mds' <- traverse (desugarDecl ps) mds
+      = do let (tys, defs) = splitMutual ds
+           mds' <- traverse (desugarDecl ps) (tys ++ defs)
            pure (concat mds')
   desugarDecl ps (PNamespace fc ns decls)
       = withExtendedNS ns $ do

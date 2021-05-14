@@ -16,3 +16,6 @@ You may be unintentionally shadowing the associated global definitions:
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.Hoo.f
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  g is shadowing Main.g
