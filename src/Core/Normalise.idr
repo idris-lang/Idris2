@@ -708,6 +708,26 @@ export
 Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
+-- Resume a previously blocked normalisation with a new environment
+export
+continueNF : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
+             Defs -> Env Term vars -> NF vars -> Core (NF vars)
+continueNF defs env stuck@(NApp fc (NRef nt fn) stk)
+    = evalRef defs defaultOpts env False fc nt fn stk stuck
+continueNF defs env (NApp fc (NMeta name idx args) stk)
+    = evalMeta defs defaultOpts env fc name idx args stk
+-- Next batch are already in normal form
+continueNF defs env nf@(NDCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NTCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NPrimVal fc x) = pure nf
+continueNF defs env nf@(NErased fc imp) = pure nf
+continueNF defs env nf@(NType fc) = pure nf
+-- For the rest, easiest just to quote and reevaluate
+continueNF defs env tm
+    = do empty <- clearDefs defs
+         nf defs env !(quote empty env tm)
+
 export
 glueBack : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->

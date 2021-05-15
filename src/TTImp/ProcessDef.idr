@@ -445,7 +445,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
 
-         rhstm <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
+         rhstm <- logTime ("+++ Check RHS " ++ show fc) $
+                    wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
 

@@ -66,7 +66,7 @@ processDecls decls
     = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
              | Just err => pure (if null xs then [err] else xs)
-         errs <- getTotalityErrors
+         errs <- logTime ("+++ Totality check overall") getTotalityErrors
          pure (xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
