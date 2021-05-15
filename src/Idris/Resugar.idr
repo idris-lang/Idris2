@@ -329,7 +329,7 @@ mutual
                                let args'
                                      = if fenv
                                           then args
-                                          else drop (length (vars def)) args
+                                          else drop (length (localVars def)) args
                                mkApp fn' args'
   toPTermApp fn args
       = do fn' <- toPTerm appPrec fn

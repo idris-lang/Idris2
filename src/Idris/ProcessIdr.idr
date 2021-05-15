@@ -20,6 +20,7 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 
 import Idris.Desugar
+import Idris.Desugar.Mutual
 import Idris.Parser
 import Idris.REPL.Common
 import Idris.REPL.Opts
@@ -33,31 +34,40 @@ import System.File
 
 %default covering
 
-processDecl : {auto c : Ref Ctxt Defs} ->
-              {auto u : Ref UST UState} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              {auto m : Ref MD Metadata} ->
-              PDecl -> Core (Maybe Error)
-processDecl decl
-    = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
-                pure Nothing)
-            (\err => do giveUpConstraints -- or we'll keep trying...
-                        pure (Just err))
-
 processDecls : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
                List PDecl -> Core (List Error)
+
+processDecl : {auto c : Ref Ctxt Defs} ->
+              {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto m : Ref MD Metadata} ->
+              PDecl -> Core (List Error)
+
+-- Special cases to avoid treating these big blocks as units
+-- This should give us better error recovery (the whole block won't fail
+-- as soon as one of the definitions fails)
+processDecl (PNamespace fc ns ps)
+    = withExtendedNS ns $ processDecls ps
+processDecl (PMutual fc ps)
+    = let (tys, defs) = splitMutual ps in
+      processDecls (tys ++ defs)
+
+processDecl decl
+    = catch (do impdecls <- desugarDecl [] decl
+                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
+                pure [])
+            (\err => do giveUpConstraints -- or we'll keep trying...
+                        pure [err])
+
 processDecls decls
-    = do xs <- traverse processDecl decls
+    = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (case mapMaybe id xs of
-                                      [] => [err]
-                                      errs => errs)
+             | Just err => pure (if null xs then [err] else xs)
          errs <- logTime ("+++ Totality check overall") getTotalityErrors
-         pure (mapMaybe id xs ++ errs)
+         pure (xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->

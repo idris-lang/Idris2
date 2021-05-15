@@ -38,9 +38,9 @@ import Data.List
 -- of the LHS. Only recursive calls with a different structure are okay.
 record RecData where
   constructor MkRecData
-  {vars : List Name}
+  {localVars : List Name}
   recname : Name -- resolved name
-  lhsapp : Term vars
+  lhsapp : Term localVars
 
 -- Additional definitions required to support the result
 ExprDefs : Type

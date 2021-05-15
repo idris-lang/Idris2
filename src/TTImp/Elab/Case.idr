@@ -53,14 +53,14 @@ findLater {older} x (_ :: xs)
     = let MkVar p = findLater {older} x xs in
           MkVar (Later p)
 
-toRig1 : {idx : Nat} -> (0 p : IsVar name idx vs) -> Env Term vs -> Env Term vs
+toRig1 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig1 First (b :: bs)
     = if isErased (multiplicity b)
          then setMultiplicity b linear :: bs
          else b :: bs
 toRig1 (Later p) (b :: bs) = b :: toRig1 p bs
 
-toRig0 : {idx : Nat} -> (0 p : IsVar name idx vs) -> Env Term vs -> Env Term vs
+toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig0 First (b :: bs) = setMultiplicity b erased :: bs
 toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
 

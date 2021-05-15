@@ -271,7 +271,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  vars : List Name -- environment name is defined in
+  localVars : List Name -- environment name is defined in
   visibility : Visibility
   totality : Totality
   flags : List DefFlag
@@ -624,7 +624,7 @@ newDef fc n rig vars ty vis def
         , specArgs = []
         , inferrable = []
         , multiplicity = rig
-        , vars = vars
+        , localVars = vars
         , visibility = vis
         , totality = unchecked
         , flags = []
@@ -1329,7 +1329,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , vars = []
+         , localVars = []
          , visibility = Public
          , totality = tot
          , flags = [Inline]

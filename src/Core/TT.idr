@@ -556,10 +556,20 @@ Functor Binder where
   map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
   map func (PVTy fc c ty) = PVTy fc c (func ty)
 
+
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+
+export
+dropLater : IsVar nm (S idx) (v :: vs) -> IsVar nm idx vs
+dropLater (Later p) = p
+
+export
+mkVar : (wkns : List Name) -> IsVar nm (length wkns) (wkns ++ nm :: vars)
+mkVar [] = First
+mkVar (w :: ws) = Later (mkVar ws)
 
 public export
 dropVar : (ns : List Name) -> {idx : Nat} -> (0 p : IsVar name idx ns) -> List Name
@@ -1328,49 +1338,49 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf later -> Bounds bound ->
-          NVar name (later ++ vars) ->
-          NVar name (later ++ (bound ++ vars))
+addVars : SizeOf outer -> Bounds bound ->
+          NVar name (outer ++ vars) ->
+          NVar name (outer ++ (bound ++ vars))
 addVars p = insertNVarNames p . sizeOf
 
-resolveRef : SizeOf later -> SizeOf done -> Bounds bound -> FC -> Name ->
-             Maybe (Term (later ++ (done ++ bound ++ vars)))
+resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
+             Maybe (Term (outer ++ (done ++ bound ++ vars)))
 resolveRef p q None fc n = Nothing
-resolveRef {later} {done} p q (Add {xs} new old bs) fc n
+resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative later done (new :: xs ++ vars) in
+         then rewrite appendAssociative outer done (new :: xs ++ vars) in
               let MkNVar p = weakenNVar (p + q) (MkNVar First) in
                      Just (Local fc Nothing _ p)
          else rewrite appendAssociative done [new] (xs ++ vars)
                 in resolveRef p (sucR q) bs fc n
 
-mkLocals : SizeOf later -> Bounds bound ->
-           Term (later ++ vars) -> Term (later ++ (bound ++ vars))
-mkLocals later bs (Local fc r idx p)
-    = let MkNVar p' = addVars later bs (MkNVar p) in Local fc r _ p'
-mkLocals later bs (Ref fc Bound name)
-    = maybe (Ref fc Bound name) id (resolveRef later zero bs fc name)
-mkLocals later bs (Ref fc nt name)
+mkLocals : SizeOf outer -> Bounds bound ->
+           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
+mkLocals outer bs (Local fc r idx p)
+    = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
+mkLocals outer bs (Ref fc Bound name)
+    = maybe (Ref fc Bound name) id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Ref fc nt name)
     = Ref fc nt name
-mkLocals later bs (Meta fc name y xs)
-    = maybe (Meta fc name y (map (mkLocals later bs) xs))
-            id (resolveRef later zero bs fc name)
-mkLocals later bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals later bs) b)
-           (mkLocals (suc later) bs scope)
-mkLocals later bs (App fc fn arg)
-    = App fc (mkLocals later bs fn) (mkLocals later bs arg)
-mkLocals later bs (As fc s as tm)
-    = As fc s (mkLocals later bs as) (mkLocals later bs tm)
-mkLocals later bs (TDelayed fc x y)
-    = TDelayed fc x (mkLocals later bs y)
-mkLocals later bs (TDelay fc x t y)
-    = TDelay fc x (mkLocals later bs t) (mkLocals later bs y)
-mkLocals later bs (TForce fc r x)
-    = TForce fc r (mkLocals later bs x)
-mkLocals later bs (PrimVal fc c) = PrimVal fc c
-mkLocals later bs (Erased fc i) = Erased fc i
-mkLocals later bs (TType fc) = TType fc
+mkLocals outer bs (Meta fc name y xs)
+    = maybe (Meta fc name y (map (mkLocals outer bs) xs))
+            id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Bind fc x b scope)
+    = Bind fc x (map (mkLocals outer bs) b)
+           (mkLocals (suc outer) bs scope)
+mkLocals outer bs (App fc fn arg)
+    = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
+mkLocals outer bs (As fc s as tm)
+    = As fc s (mkLocals outer bs as) (mkLocals outer bs tm)
+mkLocals outer bs (TDelayed fc x y)
+    = TDelayed fc x (mkLocals outer bs y)
+mkLocals outer bs (TDelay fc x t y)
+    = TDelay fc x (mkLocals outer bs t) (mkLocals outer bs y)
+mkLocals outer bs (TForce fc r x)
+    = TForce fc r (mkLocals outer bs x)
+mkLocals outer bs (PrimVal fc c) = PrimVal fc c
+mkLocals outer bs (Erased fc i) = Erased fc i
+mkLocals outer bs (TType fc) = TType fc
 
 export
 refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
@@ -1429,8 +1439,8 @@ namespace SubstEnv
               SubstEnv ds vars -> SubstEnv (d :: ds) vars
 
   findDrop : FC -> Maybe Bool ->
-             Var (drop ++ vars) ->
-             SubstEnv drop vars ->
+             Var (dropped ++ vars) ->
+             SubstEnv dropped vars ->
              Term vars
   findDrop fc r (MkVar var) [] = Local fc r _ var
   findDrop fc r (MkVar First) (tm :: env) = tm
@@ -1439,8 +1449,8 @@ namespace SubstEnv
 
   find : FC -> Maybe Bool ->
          SizeOf outer ->
-         Var (outer ++ (drop ++ vars)) ->
-         SubstEnv drop vars ->
+         Var (outer ++ (dropped ++ vars)) ->
+         SubstEnv dropped vars ->
          Term (outer ++ vars)
   find fc r outer var env = case sizedView outer of
     Z       => findDrop fc r var env
@@ -1450,8 +1460,8 @@ namespace SubstEnv
        -- TODO: refactor to only weaken once?
 
   substEnv : SizeOf outer ->
-             SubstEnv drop vars ->
-             Term (outer ++ (drop ++ vars)) ->
+             SubstEnv dropped vars ->
+             Term (outer ++ (dropped ++ vars)) ->
              Term (outer ++ vars)
   substEnv outer env (Local fc r _ prf)
       = find fc r outer (MkVar prf) env
@@ -1474,7 +1484,7 @@ namespace SubstEnv
   substEnv outer env (TType fc) = TType fc
 
   export
-  substs : SubstEnv drop vars -> Term (drop ++ vars) -> Term vars
+  substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
   substs env tm = substEnv zero env tm
 
   export

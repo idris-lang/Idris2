@@ -174,7 +174,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 
 ||| Generate scheme for a primitive function.
-cOp : PrimFn arity -> Vect arity String -> String
+cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
 cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
@@ -427,7 +427,7 @@ showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
 
-cArgsVectANF : Vect arity AVar -> Core (Vect arity String)
+cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
 cArgsVectANF [] = pure []
 cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 

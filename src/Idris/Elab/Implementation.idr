@@ -407,7 +407,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                          mty_params
              let ibound = findImplicits mbase
 
-             mty <- bindTypeNamesUsed ibound vars mbase
+             mty <- bindTypeNamesUsed ifc ibound vars mbase
 
              log "elab.implementation" 3 $
                      "Method " ++ show meth.name ++ " ==> " ++

@@ -1,3 +1,4 @@
+
 module Core.UnifyState
 
 import Core.CaseTree
@@ -292,11 +293,6 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
@@ -319,11 +315,6 @@ mkConstantAppArgsSub {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
@@ -346,12 +337,6 @@ mkConstantAppArgsOthers {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
-
 
 export
 applyTo : {vars : _} ->

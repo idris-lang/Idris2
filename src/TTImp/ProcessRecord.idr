@@ -99,9 +99,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
         = do let fc = virtualiseFC fc
              let conty = mkTy paramTelescope $
                          mkTy (map farg fields) recTy
-             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames [] (map fst params ++
+             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames fc [] (map fst params ++
                                            map fname fields ++ vars) conty)
-             let dt = MkImpData fc tn !(bindTypeNames [] (map fst params ++
+             let dt = MkImpData fc tn !(bindTypeNames fc [] (map fst params ++
                                            map fname fields ++ vars)
                                          (mkDataTy fc params)) [] [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
@@ -144,7 +144,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    let rname = MN "rec" 0
 
                    -- Claim the projection type
-                   projTy <- bindTypeNames []
+                   projTy <- bindTypeNames fc []
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
                                       IPi bfc top Explicit (Just rname) recTy ty'
