@@ -16,12 +16,12 @@ mutual
   ||| This is converted to ES code in function
   ||| `Compiler.ES.ES.impExp2es`.
   public export
-  data ImperativeExp : Type where 
+  data ImperativeExp : Type where
     ||| A variable of the given name
     IEVar : (name : Name) -> ImperativeExp
 
     ||| A lambda expression : `(args) => { body }`
-    IELambda :  (args : List Name) 
+    IELambda :  (args : List Name)
              -> (body : ImperativeStatement)
              -> ImperativeExp
 
@@ -35,12 +35,12 @@ mutual
 
     ||| A primitive function. This will be converted to
     ||| ES code in `Compiler.ES.ES.jsOp`.
-    IEPrimFn :  (function : PrimFn arity) 
+    IEPrimFn :  (function : PrimFn arity)
              -> (args : Vect arity ImperativeExp)
              -> ImperativeExp
 
     ||| A primitive external function. Example `prim__newIORef`
-    IEPrimFnExt :  (function : Name) 
+    IEPrimFnExt :  (function : Name)
                 -> (args : List ImperativeExp)
                 -> ImperativeExp
 
@@ -93,7 +93,7 @@ mutual
 
     ||| A sequence of statements. These will be processed
     ||| individually and separated by a line break.
-    SeqStatement :  (fstStmt : ImperativeStatement) 
+    SeqStatement :  (fstStmt : ImperativeStatement)
                  -> (sndStmt : ImperativeStatement)
                  -> ImperativeStatement
 
@@ -106,8 +106,8 @@ mutual
     ||| }
     ||| ```
     FunDecl :  (fc : FC)
-            -> (funName : Name) 
-            -> (args : List Name) 
+            -> (funName : Name)
+            -> (args : List Name)
             -> (body : ImperativeStatement)
             -> ImperativeStatement
 
@@ -122,7 +122,7 @@ mutual
     ||| The argtypes and returnType will be ignored when generating
     ||| ES code.
     ForeignDecl :  (fc : FC)
-                -> (funName : Name) 
+                -> (funName : Name)
                 -> (ffiImpls : List String)
                 -> (argTypes : List CFType)
                 -> (returnType : CFType)
@@ -138,17 +138,17 @@ mutual
     |||  case altExp1 : {
     |||    altImpl1
     |||    break;
-    |||  } 
+    |||  }
     |||  case altExp2 : {
     |||    altImpl2
     |||    break;
-    |||  } 
+    |||  }
     |||  default:
     |||    deflt
     ||| }
     ||| ```
     SwitchStatement :  (expr  : ImperativeExp)
-                    -> (alts  : List (ImperativeExp, ImperativeStatement)) 
+                    -> (alts  : List (ImperativeExp, ImperativeStatement))
                     -> (deflt : Maybe ImperativeStatement)
                     -> ImperativeStatement
 
