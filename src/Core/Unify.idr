@@ -226,24 +226,21 @@ postpone blockedMetas loc mode logstr env x y
          checkDefined defs x
          checkDefined defs y
 
-         xtm <- quote empty env x
-         ytm <- quote empty env y
          -- Need to find all the metas in the constraint since solving any one
          -- of them might stop the constraint being blocked.
          metas <-
              if blockedMetas
-                then let xmetas = getMetas xtm in
-                         chaseMetas (keys (addMetas xmetas ytm)) NameMap.empty
+                then do let xmetas = getMetas x
+                        let ymetas = addMetas xmetas y
+                        chaseMetas (keys ymetas) NameMap.empty
                 else pure []
          blocked <- filterM undefinedN metas
-         c <- addConstraint (MkConstraint loc (atTop mode) blocked env
-                                          xtm
-                                          ytm)
+         c <- addConstraint (MkConstraint loc (atTop mode) blocked env x y)
          log "unify.postpone" 10 $
                  show c ++ " NEW CONSTRAINT " ++ show loc ++
                  " blocked on " ++ show metas
-         logTerm "unify.postpone" 10 "X" xtm
-         logTerm "unify.postpone" 10 "Y" ytm
+         logNF "unify.postpone" 10 "X" env x
+         logNF "unify.postpone" 10 "Y" env y
          pure (constrain c)
   where
     checkDefined : Defs -> NF vars -> Core ()
@@ -1203,6 +1200,12 @@ mutual
       = do cs <- unify (lower mode) loc env x y
            cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
            pure (union cs cs')
+  unifyNoEta mode loc env x@(NApp xfc fx@(NMeta _ _ _) axs)
+                          y@(NApp yfc fy@(NMeta _ _ _) ays)
+      = do defs <- get Ctxt
+           if !(convert defs env x y)
+               then pure success
+               else unifyBothApps (lower mode) loc env xfc fx axs yfc fy ays
   unifyNoEta mode loc env (NApp xfc fx axs) (NApp yfc fy ays)
       = unifyBothApps (lower mode) loc env xfc fx axs yfc fy ays
   unifyNoEta mode loc env (NApp xfc hd args) y
@@ -1241,7 +1244,9 @@ mutual
              logNF "unify" 10 "EtaR" env tmx
              logNF "unify" 10 "...with" env tmy
              if isHoleApp tmy
-                then unifyNoEta (lower mode) loc env tmx tmy
+                then if not !(convert defs env tmx tmy)
+                        then unifyNoEta (lower mode) loc env tmx tmy
+                        else pure success
                 else do empty <- clearDefs defs
                         domty <- quote empty env tx
                         etay <- nf defs env
@@ -1255,7 +1260,9 @@ mutual
              logNF "unify" 10 "EtaL" env tmx
              logNF "unify" 10 "...with" env tmy
              if isHoleApp tmx
-                then unifyNoEta (lower mode) loc env tmx tmy
+                then if not !(convert defs env tmx tmy)
+                        then unifyNoEta (lower mode) loc env tmx tmy
+                        else pure success
                 else do empty <- clearDefs defs
                         domty <- quote empty env ty
                         etax <- nf defs env
@@ -1287,7 +1294,7 @@ mutual
     unifyD _ _ mode loc env x y
           = do defs <- get Ctxt
                empty <- clearDefs defs
-               if !(convert empty env x y)
+               if x == y
                   then do log "unify.equal" 10 $
                                  "Skipped unification (equal already): "
                                  ++ show x ++ " and " ++ show y
@@ -1298,7 +1305,7 @@ mutual
     unifyWithLazyD _ _ mode loc env x y
           = do defs <- get Ctxt
                empty <- clearDefs defs
-               if !(convert empty env x y)
+               if x == y
                   then do log "unify.equal" 10 $
                                  "Skipped unification (equal already): "
                                  ++ show x ++ " and " ++ show y
@@ -1348,14 +1355,17 @@ retry mode c
          case lookup c (constraints ust) of
               Nothing => pure success
               Just Resolved => pure success
-              Just (MkConstraint loc withLazy blocked env x y)
-                => if umode mode /= InTerm ||
+              Just (MkConstraint loc withLazy blocked env xold yold)
+               => do defs <- get Ctxt
+                     x <- continueNF defs env xold
+                     y <- continueNF defs env yold
+                     if umode mode /= InTerm ||
                          !(anyM definedN blocked) || isNil blocked
                       -- only go if any of the blocked names are defined now
                       then
                         catch
-                           (do logTermNF "unify.retry" 5 ("Retrying " ++ show c ++ " " ++ show (umode mode)) env x
-                               logTermNF "unify.retry" 5 "....with" env y
+                           (do logNF "unify.retry" 5 ("Retrying " ++ show c ++ " " ++ show (umode mode)) env x
+                               logNF "unify.retry" 5 "....with" env y
                                log "unify.retry" 5 $ if withLazy
                                           then "(lazy allowed)"
                                           else "(no lazy)"
@@ -1368,14 +1378,19 @@ retry mode c
                                           pure cs
                                  _ => do log "unify.retry" 5 $ "Constraints " ++ show (addLazy cs)
                                          pure cs)
-                          (\err => throw (WhenUnifying loc env x y err))
+                          (\err => do defs <- get Ctxt
+                                      empty <- clearDefs defs
+                                      throw (WhenUnifying loc env !(quote empty env x) !(quote empty env y) err))
                       else
                         do log "unify.retry" 10 $ show c ++ " still blocked on " ++ show blocked
-                           logTermNF "unify.retry" 10 "X" env x
-                           logTermNF "unify.retry" 10 "Y" env y
+                           logNF "unify.retry" 10 "X" env x
+                           logNF "unify.retry" 10 "Y" env y
                            pure (constrain c)
-              Just (MkSeqConstraint loc env xs ys)
-                  => do cs <- unifyArgs mode loc env xs ys
+              Just (MkSeqConstraint loc env xsold ysold)
+                  => do defs <- get Ctxt
+                        xs <- traverse (continueNF defs env) xsold
+                        ys <- traverse (continueNF defs env) ysold
+                        cs <- unifyArgs mode loc env xs ys
                         case constraints cs of
                              [] => do deleteConstraint c
                                       pure cs
@@ -1578,9 +1593,12 @@ checkDots
              pure (Just n')
 
     checkConstraint : (Name, DotReason, Constraint) -> Core ()
-    checkConstraint (n, reason, MkConstraint fc wl blocked env x y)
-        = do logTermNF "unify.constraint" 10 "Dot" env y
-             logTermNF "unify.constraint" 10 "  =" env x
+    checkConstraint (n, reason, MkConstraint fc wl blocked env xold yold)
+        = do defs <- get Ctxt
+             x <- continueNF defs env xold
+             y <- continueNF defs env yold
+             logNF "unify.constraint" 10 "Dot" env y
+             logNF "unify.constraint" 10 "  =" env x
              -- A dot is okay if the constraint is solvable *without solving
              -- any additional holes*
              ust <- get UST
@@ -1628,9 +1646,10 @@ checkDots
                               -- Clear constraints so we don't report again
                               -- later
                               put UST (record { dotConstraints = [] } ust)
+                              empty <- clearDefs defs
                               throw (BadDotPattern fc env reason
-                                      !(normaliseHoles defs env x)
-                                      !(normaliseHoles defs env y))
+                                      !(quote empty env x)
+                                      !(quote empty env y))
                          _ => do put UST (record { dotConstraints = [] } ust)
                                  throw err)
     checkConstraint _ = pure ()

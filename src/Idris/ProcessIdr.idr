@@ -56,7 +56,7 @@ processDecls decls
              | Just err => pure (case mapMaybe id xs of
                                       [] => [err]
                                       errs => errs)
-         errs <- getTotalityErrors
+         errs <- logTime ("+++ Totality check overall") getTotalityErrors
          pure (mapMaybe id xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
