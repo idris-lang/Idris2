@@ -69,7 +69,7 @@ getNameType rigc env fc x
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
                       | [] => undefinedName fc x
                       | ns => throw (AmbiguousName fc (map fst ns))
-                 checkVisibleNS fc !(getFullName pname) (visibility def)
+                 checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
                  let nt = case definition def of
                                PMDef _ _ _ _ _ => Func

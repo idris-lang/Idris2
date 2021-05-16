@@ -216,8 +216,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = evalRef env True fc Func (Resolved i) (map (EmptyFC,) args ++ stk)
-                  (NApp fc (NMeta nm i args) stk)
+        = let args' = if isNil stk then map (EmptyFC,) args
+                         else map (EmptyFC,) args ++ stk
+                        in
+              evalRef env True fc Func (Resolved i) args'
+                          (NApp fc (NMeta nm i args) stk)
 
     -- The commented out logging here might still be useful one day, but
     -- evalRef is used a lot and even these tiny checks turn out to be

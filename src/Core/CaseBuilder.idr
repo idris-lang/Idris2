@@ -194,6 +194,10 @@ Weaken ArgType where
   weaken (Stuck fty) = Stuck (weaken fty)
   weaken Unknown = Unknown
 
+  weakenNs s (Known c ty) = Known c (weakenNs s ty)
+  weakenNs s (Stuck fty) = Stuck (weakenNs s fty)
+  weakenNs s Unknown = Unknown
+
 Weaken (PatInfo p) where
   weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
 

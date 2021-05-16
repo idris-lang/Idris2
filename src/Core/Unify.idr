@@ -865,7 +865,7 @@ mutual
   unifyHole swap mode loc env fc mname mref margs margs' tmnf
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           let args = margs ++ margs'
+           let args = if isNil margs' then margs else margs ++ margs'
            logC "unify.hole" 10
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
