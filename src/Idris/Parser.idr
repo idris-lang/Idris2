@@ -663,7 +663,7 @@ mutual
     letBinder : Rule LetBinder
     letBinder = do s <- bounds (MkPair <$> multiplicity fname <*> expr plhs fname indents)
                    (rig, pat) <- pure s.val
-                   ty <- option (PImplicit (boundToFC fname s))
+                   ty <- option (PImplicit (virtualiseFC $ boundToFC fname s))
                                 (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
                    (decoratedSymbol fname "=" <|> decoratedSymbol fname ":=")
                    val <- expr pnowith fname indents
