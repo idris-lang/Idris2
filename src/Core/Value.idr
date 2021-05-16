@@ -100,64 +100,6 @@ ntCon fc n tag Z [] = case isConstantType n of
   Nothing => NTCon fc n tag Z []
 ntCon fc n tag arity args = NTCon fc n tag arity args
 
--- Look for metavariables which, if later defined, will help unblock
--- reduction
-mutual
-  export
-  addMetas : NameMap Bool -> NF vars -> NameMap Bool
-  addMetas ns (NBind fc x b sc)
-      = addMetas ns (binderType b) -- we won't be blocked on the scope
-  -- Arguments might be the cause of the blockage here
-  addMetas ns (NApp fc (NMeta n i args) xs)
-     = addMetaArgs (insert n False ns) (args ++ map snd xs)
-  addMetas ns (NApp fc x xs)
-     = addMetaArgs ns (map snd xs)
-  addMetas ns (NDCon fc x tag arity xs)
-     = addMetaArgs ns (map snd xs)
-  addMetas ns (NTCon fc x tag arity xs)
-     = addMetaArgs ns (map snd xs)
-  addMetas ns (NAs fc _ p t)
-    = addMetas (addMetas ns p) t
-  addMetas ns (NDelayed fc x tm)
-    = addMetas ns tm
-  addMetas ns (NDelay fc x t y)
-    = addMetaC (addMetaC ns t) y
-  addMetas ns (NForce fc x t xs)
-    = addMetas (addMetaArgs ns (map snd xs)) t
-  addMetas ns (NPrimVal fc x) = ns
-  addMetas ns (NErased fc imp) = ns
-  addMetas ns (NType fc) = ns
-
-  addEnvMetas : NameMap Bool -> Env Term vars -> NameMap Bool
-  addEnvMetas ns [] = ns
-  addEnvMetas ns (Let _ _ val _ :: env) = addEnvMetas (addMetas ns val) env
-  addEnvMetas ns (_ :: env) = addEnvMetas ns env
-
-  addMetaC : NameMap Bool -> Closure vars ->
-             NameMap Bool
-  addMetaC ns (MkClosure {vars=tvars} opts locs env' tm) = addMetas ns tm
-  addMetaC ns (MkNFClosure x) = addMetas ns x
-
-  addMetaLocalEnv : NameMap Bool -> List (Closure vars) -> NameMap Bool
-  addMetaLocalEnv ns (MkClosure _ locs _ _ :: _)
-      = addMetaArgs ns (getClosures locs)
-    where
-      getClosures : LocalEnv f vs -> List (Closure f)
-      getClosures [] = []
-      getClosures (c :: ls) = c :: getClosures ls
-  addMetaLocalEnv ns (_ :: cs) = addMetaLocalEnv ns cs
-  addMetaLocalEnv ns [] = ns
-
-  addMetaArgs : NameMap Bool -> List (Closure vars) ->
-                NameMap Bool
-  addMetaArgs ns [] = ns
-  addMetaArgs ns (c :: xs)
-      = addMetaLocalEnv (addMetaArgs (addMetaC ns c) xs) (c :: xs)
-
-export
-getMetas : NF vars -> NameMap Bool
-getMetas tm = addMetas empty tm
-
 export
 getLoc : NF vars -> FC
 getLoc (NBind fc _ _ _) = fc
