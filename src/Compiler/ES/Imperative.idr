@@ -59,11 +59,10 @@ record ImpSt where
 
 genName : {auto c : Ref Imps ImpSt} -> Core Name
 genName =
-  do
-    s <- get Imps
-    let i = nextName s
-    put Imps (record { nextName = i + 1 } s)
-    pure $ MN "imp_gen" i
+  do s <- get Imps
+     let i = nextName s
+     put Imps (record { nextName = i + 1 } s)
+     pure $ MN "imp_gen" i
 
 -- Processing an Idris2 expression results in
 -- an `ImperativeStatement` (since this is a monoid,

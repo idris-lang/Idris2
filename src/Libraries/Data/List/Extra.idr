@@ -81,3 +81,20 @@ dedup xs                = xs
 export
 sortedNub : Ord a => List a -> List a
 sortedNub = dedup . sort
+
+||| Groups elements in a list according to the given
+||| relation.
+export
+groupBy : (a -> a -> Bool) -> List a -> List (List a)
+groupBy _ [] = []
+groupBy p (x'::xs') =
+    let (ys',zs') = go x' xs'
+    in (x' :: ys') :: zs'
+    where
+        go : a -> List a -> (List a, List (List a))
+        go z (x::xs) =
+          let (ys,zs) = go x xs
+           in case p z x of
+                True  => (x :: ys, zs)
+                False => ([], (x :: ys) :: zs)
+        go _ [] = ([], [])
