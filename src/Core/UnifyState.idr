@@ -28,7 +28,6 @@ data Constraint : Type where
      MkConstraint : {vars : _} ->
                     FC ->
                     (withLazy : Bool) ->
-                    (blockedOn : List Name) ->
                     (env : Env Term vars) ->
                     (x : NF vars) -> (y : NF vars) ->
                     Constraint
@@ -279,7 +278,7 @@ addDot fc env dotarg x reason y
          xnf <- nf defs env x
          ynf <- nf defs env y
          put UST (record { dotConstraints $=
-                             ((dotarg, reason, MkConstraint fc False [] env xnf ynf) ::)
+                             ((dotarg, reason, MkConstraint fc False env xnf ynf) ::)
                          } ust)
 
 mkConstantAppArgs : {vars : _} ->
@@ -562,7 +561,7 @@ checkValidHole base (idx, (fc, n))
                      let Just c = lookup con (constraints ust)
                           | Nothing => pure ()
                      case c of
-                          MkConstraint fc l blocked env x y =>
+                          MkConstraint fc l env x y =>
                              do put UST (record { guesses = empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
@@ -672,7 +671,7 @@ dumpHole' lvl hole
              case lookup n (constraints ust) of
                   Nothing => pure ()
                   Just Resolved => log' lvl "\tResolved"
-                  Just (MkConstraint _ lazy _ env x y) =>
+                  Just (MkConstraint _ lazy env x y) =>
                     do log' lvl $ "\t  " ++ show !(toFullNames !(quote defs env x))
                                        ++ " =?= " ++ show !(toFullNames !(quote defs env y))
                        empty <- clearDefs defs
