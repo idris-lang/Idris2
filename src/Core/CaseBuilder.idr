@@ -773,9 +773,15 @@ applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 
 ||| Based only on the heuristic-score of columns, get the index of
 ||| the column that should be processed next.
-nextIdx : {p : _} -> {ps : _} -> Phase -> List (NamedPats ns (p :: ps)) -> (n ** NVar n (p :: ps))
-nextIdx (CompileTime _) _  = (_ ** (MkNVar First))
-nextIdx RunTime         xs =
+nextIdxByScore : {p : _} ->
+                 {ps : _} ->
+                 (useHeuristics : Bool) ->
+                 Phase ->
+                 List (NamedPats ns (p :: ps)) ->
+                 (n ** NVar n (p :: ps))
+nextIdxByScore False _ _            = (_ ** (MkNVar First))
+nextIdxByScore _ (CompileTime _) _  = (_ ** (MkNVar First))
+nextIdxByScore True RunTime xs      =
   fromMaybe (_ ** (MkNVar First)) $
     applyHeuristics (zeroedScore xs) [heuristicF, heuristicB, heuristicA]
 
@@ -893,26 +899,26 @@ getScore fc phase name npss
                              CaseCompile _ _ err => pure (Left err)
                              _ => throw err)
 
--- Pick the leftmost matchable thing with all constructors in the
--- same family, or all variables, or all the same type constructor.
-pickNext : {p, ns, ps : _} ->
+||| Pick the leftmost matchable thing with all constructors in the
+||| same family, or all variables, or all the same type constructor.
+pickNextViable : {p, ns, ps : _} ->
            {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name -> List (NamedPats ns (p :: ps)) ->
            Core (n ** NVar n (p :: ps))
 -- last possible variable
-pickNext {ps = []} fc phase fn npss
+pickNextViable {ps = []} fc phase fn npss
     = if samePat npss
          then pure (_ ** MkNVar First)
          else do Right () <- getScore fc phase fn npss
                        | Left err => throw (CaseCompile fc fn err)
                  pure (_ ** MkNVar First)
-pickNext {ps = q :: qs} fc phase fn npss
+pickNextViable {ps = q :: qs} fc phase fn npss
     = if samePat npss
          then pure (_ ** MkNVar First)
          else  case !(getScore fc phase fn npss) of
                     Right () => pure (_ ** MkNVar First)
-                    _ => do (_ ** MkNVar var) <- pickNext fc phase fn (map tail npss)
+                    _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map tail npss)
                             pure (_ ** MkNVar (Later var))
 
 moveFirst : {idx : Nat} -> (0 el : IsVar name idx ps) -> NamedPats ns ps ->
@@ -939,7 +945,7 @@ mutual
           Core (CaseTree vars)
   -- Before 'partition', reorder the arguments so that the one we
   -- inspect next has a concrete type that is the same in all cases, and
-  -- has the most distinct constructors (via pickNext)
+  -- has the most distinct constructors (via pickNextViable)
   match {todo = (_ :: _)} fc fn phase clauses err
       = do let nps = getNPs <$> clauses
 --            let scores = heuristicF $ zeroedScore nps
@@ -948,13 +954,11 @@ mutual
 --            log "compile.casetree.debug" 1 ("\nB: " ++ (show scores'))
 --            let scores'' = heuristicA scores'
 --            log "compile.casetree.debug" 1 ("\nA: " ++ (show scores''))
-           let (_ ** (MkNVar next)) = nextIdx phase nps
+           let (_ ** (MkNVar next)) = nextIdxByScore True phase nps
            let prioritizedClauses = shuffleVars next <$> clauses
-           (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> prioritizedClauses)
-           -- (n ** MkNVar next') <- pickNext fc phase fn (getNPs <$> clauses)
+           (n ** MkNVar next') <- pickNextViable fc phase fn (getNPs <$> prioritizedClauses)
            log "compile.casetree" 25 $ "Picked " ++ show n ++ " as the next split"
            let clauses' = shuffleVars next' <$> prioritizedClauses
-           -- let clauses' = shuffleVars next' <$> clauses
            log "compile.casetree" 25 $ "Using clauses " ++ show clauses'
            let ps = partition phase clauses'
            log "compile.casetree" 25 $ "Got Partition " ++ show ps
