@@ -94,6 +94,7 @@ jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
   where
     okchar : Char -> String
+    okchar '_' = "_"
     okchar c = if isAlphaNum c
                   then cast c
                   else "$" ++ the (String) (asHex (cast {to=Int} c))
