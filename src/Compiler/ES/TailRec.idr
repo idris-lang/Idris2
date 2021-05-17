@@ -3,8 +3,9 @@ module Compiler.ES.TailRec
 
 import Data.Maybe
 import Data.List
+import Data.List1
 import Data.Strings
-import Libraries.Data.List.Extra
+import Libraries.Data.List.Extra as L
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Core.Name
@@ -165,16 +166,12 @@ kosaraju graph =
 
 recursiveTailCallGroups : CallGraph -> List (List Name)
 recursiveTailCallGroups graph =
-    let roots = kosaraju graph
-        groups = map (map fst)
-               . groupBy (\x,y => snd x == snd y)
-               . sortBy (comparing snd)
-               $ toList roots
-    in [x | x<-groups, hasTailCalls x]
+    let roots  = kosaraju graph
+        groups = map (map fst) . L.groupAllWith snd $ toList roots
+    in [forget x | x<-groups, hasTailCalls x]
 
-    where hasTailCalls : List Name -> Bool
-          hasTailCalls []  = False
-          hasTailCalls [x] =
+    where hasTailCalls : List1 Name -> Bool
+          hasTailCalls (x ::: Nil) =
             case lookupList x (graph.calls) of
               [n] => n == x
               _   => False
