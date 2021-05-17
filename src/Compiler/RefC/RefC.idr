@@ -775,8 +775,7 @@ extractValue CFPtr           varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 extractValue CFGCPtr         varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CFBuffer        varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
 extractValue CFWorld         varName = "(Value_World*)" ++ varName
-extractValue (CFFun x y)     varName = assert_total $ idris_crash ("INTERNAL ERROR: Function pointer not implemented: " ++ varName)
--- not really total but this way this internal error does not contaminate everything else
+extractValue (CFFun x y)     varName = "(Value_Closure*)" ++ varName
 extractValue (CFIORes x)     varName = extractValue x varName
 extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
