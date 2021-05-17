@@ -75,46 +75,15 @@ cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C bac
 -- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
-escapeChar '\DEL' = "127"
-escapeChar '\NUL' = "0"
-escapeChar '\SOH' = "1"
-escapeChar '\STX' = "2"
-escapeChar '\ETX' = "3"
-escapeChar '\EOT' = "4"
-escapeChar '\ENQ' = "5"
-escapeChar '\ACK' = "6"
-escapeChar '\BEL' = "7"
-escapeChar '\BS' = "8"
-escapeChar '\HT' = "9"
-escapeChar '\LF' = "10"
-escapeChar '\VT' = "11"
-escapeChar '\FF' = "12"
-escapeChar '\CR' = "13"
-escapeChar '\SO' = "14"
-escapeChar '\SI' = "15"
-escapeChar '\DLE' = "16"
-escapeChar '\DC1' = "17"
-escapeChar '\DC2' = "18"
-escapeChar '\DC3' = "19"
-escapeChar '\DC4' = "20"
-escapeChar '\NAK' = "21"
-escapeChar '\SYN' = "22"
-escapeChar '\ETB' = "23"
-escapeChar '\CAN' = "24"
-escapeChar '\EM' = "25"
-escapeChar '\SUB' = "26"
-escapeChar '\ESC' = "27"
-escapeChar '\FS' = "28"
-escapeChar '\GS' = "29"
-escapeChar '\RS' = "30"
-escapeChar '\US' = "31"
-escapeChar c = show c
+escapeChar c = if isAlphaNum c || isNL c
+                  then show c
+                  else "(char)" ++ show (ord c)
 
 cStringQuoted : String -> String
 cStringQuoted cs = strCons '"' (showCString (unpack cs) "\"")
 where
     showCChar : Char -> String -> String
-    showCChar '\\' = ("bkslash" ++)
+    showCChar '\\' = ("\\\\" ++)
     showCChar c
        = if c < chr 32
             then (("\\x" ++ leftPad '0' 2 (asHex (cast c))) ++ "\"\"" ++)
