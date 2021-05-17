@@ -99,14 +99,14 @@ groupBy eq (h :: t) = let (ys,zs) = go h t
 ||| TODO: use the version in `Data.List1` in base after the next release.
 export
 group : Eq a => List a -> List (List1 a)
-group = groupBy (==)
+group = Libraries.Data.List.Extra.groupBy (==)
 
 ||| TODO: use the version in `Data.List1` in base after the next release.
 export
 groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
-groupWith f = groupBy (\x,y => f x == f y)
+groupWith f = Libraries.Data.List.Extra.groupBy (\x,y => f x == f y)
 
 ||| TODO: use the version in `Data.List1` in base after the next release.
 export
 groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
-groupAllWith f = groupWith f . sortBy (comparing f)
+groupAllWith f = Libraries.Data.List.Extra.groupWith f . sortBy (comparing f)
