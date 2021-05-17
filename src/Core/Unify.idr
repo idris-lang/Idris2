@@ -1157,9 +1157,10 @@ mutual
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
   unifyNoEta mode loc env (NTCon xfc x tagx ax xs) (NTCon yfc y tagy ay ys)
-   = do x <- toFullNames x
-        y <- toFullNames y
-        log "unify" 20 $ "Comparing type constructors " ++ show x ++ " and " ++ show y
+   = do logC "unify" 20 $ do
+          x <- toFullNames x
+          y <- toFullNames y
+          pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
            then do let xs = map snd xs
                    let ys = map snd ys
