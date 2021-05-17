@@ -38,8 +38,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
   where
     failWith : Defs -> Core a
     failWith defs
-      = do defs <- get Ctxt
-           empty <- clearDefs defs
+      = do empty <- clearDefs defs
            throw (BadRunElab fc env !(quote empty env (NDCon nfc nm t ar args)))
 
     scriptRet : Reflect a => a -> Core (NF vars)
