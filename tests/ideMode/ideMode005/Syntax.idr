@@ -2,10 +2,6 @@ module Syntax
 
 %default total
 
-{- -- interfaces don't work yet
-{0 a : Type} -> (foo : Show a) => Show (Maybe a) where
--}
-
 showMaybe : {0 a : Type} -> (assumption : Show a) => Maybe a -> String
 showMaybe x@ma = case map (id . id) ma of
     Nothing => "Nothing"
