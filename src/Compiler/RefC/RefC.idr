@@ -780,7 +780,7 @@ extractValue (CFFun x y)     varName = assert_total $ idris_crash ("INTERNAL ERR
 extractValue (CFIORes x)     varName = extractValue x varName
 extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
-extractValue (CFUser x xs)   varName = "Value* " ++ varName
+extractValue (CFUser x xs)   varName = "(Value*)" ++ varName
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
@@ -799,7 +799,7 @@ packCFType CFWorld         varName = "makeWorld(" ++ varName ++ ")"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
-packCFType (CFUser x xs)   varName = "makeCustomUser(" ++ varName ++ ")"
+packCFType (CFUser x xs)   varName = varName
 
 discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
