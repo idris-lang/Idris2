@@ -4,6 +4,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 import Core.Hash
+import Core.Name.Namespace
 import Core.Normalise
 import Core.Options
 import Core.TT
@@ -31,7 +32,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 52
+ttcVersion = 53
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -177,11 +178,12 @@ writeTTCFile b file_in
            toBuf b (version file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
+           toBuf b (imported file)
+           toBuf b (extraData file)
            toBuf b (context file)
            toBuf b (userHoles file)
            toBuf b (autoHints file)
            toBuf b (typeHints file)
-           toBuf b (imported file)
            toBuf b (nextVar file)
            toBuf b (currentNS file)
            toBuf b (nestedNS file)
@@ -191,13 +193,12 @@ writeTTCFile b file_in
            toBuf b (namedirectives file)
            toBuf b (cgdirectives file)
            toBuf b (transforms file)
-           toBuf b (extraData file)
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
-              String -> Maybe (Namespace) ->
+              Bool -> String -> Maybe (Namespace) ->
               Ref Bin Binary -> Core (TTCFile extra)
-readTTCFile file as b
+readTTCFile readall file as b
       = do hdr <- fromBuf b
            chunk <- get Bin
            when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
@@ -205,27 +206,32 @@ readTTCFile file as b
            checkTTCVersion file ver ttcVersion
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
-           defs <- fromBuf b
-           uholes <- fromBuf b
-           autohs <- fromBuf b
-           typehs <- fromBuf b
---            coreLift $ putStrLn ("Hints: " ++ show typehs)
---            coreLift $ putStrLn $ "Read " ++ show (length (map fullname defs)) ++ " defs"
            imp <- fromBuf b
-           nextv <- fromBuf b
-           cns <- fromBuf b
-           nns <- fromBuf b
-           pns <- fromBuf b
-           rws <- fromBuf b
-           prims <- fromBuf b
-           nds <- fromBuf b
-           cgds <- fromBuf b
-           trans <- fromBuf b
            ex <- fromBuf b
-           pure (MkTTCFile ver ifaceHash importHashes
-                           defs uholes
-                           autohs typehs imp nextv cns nns
-                           pns rws prims nds cgds trans ex)
+           if not readall
+              then pure (MkTTCFile ver ifaceHash importHashes [] [] [] [] []
+                                   0 (mkNamespace "") [] Nothing
+                                   Nothing
+                                   (MkPrimNs Nothing Nothing Nothing Nothing)
+                                   [] [] [] ex)
+              else do
+                 defs <- fromBuf b
+                 uholes <- fromBuf b
+                 autohs <- fromBuf b
+                 typehs <- fromBuf b
+                 nextv <- fromBuf b
+                 cns <- fromBuf b
+                 nns <- fromBuf b
+                 pns <- fromBuf b
+                 rws <- fromBuf b
+                 prims <- fromBuf b
+                 nds <- fromBuf b
+                 cgds <- fromBuf b
+                 trans <- fromBuf b
+                 pure (MkTTCFile ver ifaceHash importHashes
+                                 defs uholes
+                                 autohs typehs imp nextv cns nns
+                                 pns rws prims nds cgds trans ex)
 
 -- Pull out the list of GlobalDefs that we want to save
 getSaveDefs : List Name -> List (Name, Binary) -> Defs ->
@@ -422,15 +428,17 @@ readFromTTC nestedns loc reexp fname modNS importAs
          let as = if importAs == miAsNamespace modNS
                      then Nothing
                      else Just importAs
-         ttc <- readTTCFile fname as bin
 
          -- If it's already imported, but without reexporting, then all we're
          -- interested in is returning which other modules to load.
          -- Otherwise, add the data
-         let ex = extraData ttc
          if alreadyDone modNS importAs (allImported defs)
-            then pure (Just (ex, ifaceHash ttc, imported ttc))
+            then do ttc <- readTTCFile False fname as bin
+                    let ex = extraData ttc
+                    pure (Just (ex, ifaceHash ttc, imported ttc))
             else do
+               ttc <- readTTCFile True fname as bin
+               let ex = extraData ttc
                traverse_ (addGlobalDef modNS as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)

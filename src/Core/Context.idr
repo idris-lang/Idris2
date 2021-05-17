@@ -492,8 +492,7 @@ lookupCtxtExactI (Resolved idx) ctxt
            Just val =>
                  pure $ returnDef (inlineOnly ctxt) idx !(decode ctxt idx True val)
            Nothing =>
-              do let a = content ctxt
-                 arr <- get Arr
+              do arr <- get Arr @{content ctxt}
                  Just def <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  pure $ returnDef (inlineOnly ctxt) idx !(decode ctxt idx True def)
@@ -512,8 +511,7 @@ lookupCtxtExact (Resolved idx) ctxt
                         Nothing => pure Nothing
                         Just (_, def) => pure (Just def)
            Nothing =>
-              do let a = content ctxt
-                 arr <- get Arr
+              do arr <- get Arr @{content ctxt}
                  Just res <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  def <- decode ctxt idx True res
