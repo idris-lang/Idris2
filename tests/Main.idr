@@ -55,7 +55,8 @@ idrisTestsCoverage = MkTestPool "Coverage checking" []
       ["coverage001", "coverage002", "coverage003", "coverage004",
        "coverage005", "coverage006", "coverage007", "coverage008",
        "coverage009", "coverage010", "coverage011", "coverage012",
-       "coverage013", "coverage014", "coverage015", "coverage016"]
+       "coverage013", "coverage014", "coverage015", "coverage016",
+       "coverage017"]
 
 idrisTestsCasetree : TestPool
 idrisTestsCasetree = MkTestPool "Case tree building" []
