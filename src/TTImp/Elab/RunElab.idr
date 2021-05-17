@@ -28,7 +28,7 @@ elabScript : {vars : _} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
-elabScript fc nest env (NDCon nfc nm t ar args) exp
+elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
@@ -41,7 +41,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
     failWith : Defs -> String -> Core a
     failWith defs desc
       = do empty <- clearDefs defs
-           throw (BadRunElab fc env !(quote empty env (NDCon nfc nm t ar args)) desc)
+           throw (BadRunElab fc env !(quote empty env script) desc)
 
     scriptRet : Reflect a => a -> Core (NF vars)
     scriptRet tm
