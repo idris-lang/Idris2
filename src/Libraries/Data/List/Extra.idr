@@ -82,19 +82,31 @@ export
 sortedNub : Ord a => List a -> List a
 sortedNub = dedup . sort
 
-||| Groups elements in a list according to the given
-||| relation.
+||| TODO: use the version in `Data.List1` in base after the next release.
 export
-groupBy : (a -> a -> Bool) -> List a -> List (List a)
+groupBy : (a -> a -> Bool) -> List a -> List (List1 a)
 groupBy _ [] = []
-groupBy p (x'::xs') =
-    let (ys',zs') = go x' xs'
-    in (x' :: ys') :: zs'
-    where
-        go : a -> List a -> (List a, List (List a))
-        go z (x::xs) =
-          let (ys,zs) = go x xs
-           in case p z x of
-                True  => (x :: ys, zs)
-                False => ([], (x :: ys) :: zs)
-        go _ [] = ([], [])
+groupBy eq (h :: t) = let (ys,zs) = go h t
+                       in ys :: zs
+
+  where go : a -> List a -> (List1 a, List (List1 a))
+        go v [] = (singleton v,[])
+        go v (x :: xs) = let (ys,zs) = go x xs
+                          in if eq v x
+                                then (cons v ys, zs)
+                                else (singleton v, ys :: zs)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+group : Eq a => List a -> List (List1 a)
+group = groupBy (==)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
+groupWith f = groupBy (\x,y => f x == f y)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
+groupAllWith f = groupWith f . sortBy (comparing f)
