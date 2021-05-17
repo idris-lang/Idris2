@@ -1,0 +1,5 @@
+$1 --no-banner --no-color --console-width 0 --cg refc -o refc_args TestArgs.idr > /dev/null
+./build/exec/refc_args a b
+./build/exec/refc_args c
+
+rm -rf build

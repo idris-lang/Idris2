@@ -224,7 +224,7 @@ refcTests : TestPool
 refcTests = MkTestPool "Reference counting C backend" [C]
     [ "refc001" , "refc002"
     , "strings", "doubles"
-    , "buffer", "clock"
+    , "buffer", "clock", "args"
     ]
 
 racketTests : TestPool

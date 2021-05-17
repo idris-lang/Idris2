@@ -31,11 +31,13 @@ usleep sec = primIO (prim__usleep sec)
 
 -- Get the number of arguments
 %foreign "scheme:blodwen-arg-count"
+         support "idris2_getArgCount"
          "node:lambda:() => process.argv.length"
 prim__getArgCount : PrimIO Int
 
 -- Get argument number `n`
 %foreign "scheme:blodwen-arg"
+         support "idris2_getArg"
          "node:lambda:n => process.argv[n]"
 prim__getArg : Int -> PrimIO String
 
