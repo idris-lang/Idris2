@@ -928,12 +928,18 @@ header = do
     fns <- get FunctionDefinitions
     update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
-footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText Output} -> Core ()
+footer : {auto il : Ref IndentLevel Nat}
+      -> {auto f : Ref OutfileText Output}
+      -> {auto h : Ref HeaderFiles (SortedSet String)}
+      -> Core ()
 footer = do
     emit EmptyFC ""
     emit EmptyFC " // main function"
-    emit EmptyFC "int main()"
+    emit EmptyFC "int main(int argc, char *argv[])"
     emit EmptyFC "{"
+    if contains "idris_support.h" !(get HeaderFiles)
+       then emit EmptyFC "   idris2_setArgs(argc, argv);"
+       else pure ()
     emit EmptyFC "   Value *mainExprVal = __mainExpression_0();"
     emit EmptyFC "   trampoline(mainExprVal);"
     emit EmptyFC "   return 0; // bye bye"
