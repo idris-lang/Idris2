@@ -167,7 +167,7 @@ recursiveTailCallGroups : CallGraph -> List (List Name)
 recursiveTailCallGroups graph =
     let roots = kosaraju graph
         groups = map (map fst)
-               . groupBy ((==) `on` snd)
+               . groupBy (\x,y => snd x == snd y)
                . sortBy (comparing snd)
                $ toList roots
     in [x | x<-groups, hasTailCalls x]
