@@ -1,0 +1,18 @@
+Hello, world
+12
+dlrow ,olleH
+el
+'e'
+abc
+Just ('a', "bc")
+pack
+['u', 'n', 'p', 'a', 'c', 'k']
+concatenate
+[False, True, False, False, False, False, False]
+[True, False, False, False, False, False, False]
+[False, False, False, True, False, False, False]
+[False, False, False, False, True, True, False]
+[False, False, False, False, False, True, False]
+[False, False, False, False, False, True, True]
+['a', 'A', '~', '0', ' ', '\LF', '\159']
+[97, 65, 126, 48, 32, 10, 159]
