@@ -23,6 +23,7 @@ Value_String *makeString(char *);
 
 Value_Pointer *makePointer(void *);
 Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
+Value_Buffer *makeBuffer(void *buf);
 Value_Array *makeArray(int length);
 Value_World *makeWorld(void);
 
