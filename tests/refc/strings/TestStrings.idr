@@ -1,6 +1,14 @@
 module TestStrings
 
 import Data.String
+import Data.String.Iterator
+
+iteratorTail : String -> String
+iteratorTail str = withString str $ \it => unconsTail str (uncons str it)
+  where
+    unconsTail : (str : String) -> (1 _ : UnconsResult str) -> String
+    unconsTail str EOF = ""
+    unconsTail str (Character _ tailIt) = withIteratorString str tailIt id
 
 main : IO ()
 main = do
@@ -20,7 +28,7 @@ main = do
     putStrLn $ show $ fastUnpack "unpack"
     putStrLn $ fastConcat ["con", "cat", "en", "ate"]
 
-    let chars = ['a', 'A', '~', '0', ' ', '\n', '\x9f']
+    let chars = the (List Char) ['a', 'A', '~', '0', ' ', '\n', '\x9f']
     putStrLn $ show $ map isUpper chars
     putStrLn $ show $ map isLower chars
     putStrLn $ show $ map isDigit chars
@@ -28,5 +36,8 @@ main = do
     putStrLn $ show $ map isNL chars
     putStrLn $ show $ map isControl chars
 
-    putStrLn $ show $ map chr [97, 65, 126, 48, 32, 10, 159]
+    putStrLn $ show $ map {f = List} chr [97, 65, 126, 48, 32, 10, 159]
     putStrLn $ show $ map ord chars
+
+    putStrLn $ show $ Data.String.Iterator.unpack "iterator unpack"
+    putStrLn $ show $ iteratorTail "iterator tail"

@@ -185,3 +185,65 @@ char *fastConcat(Value *strList)
 
     return retVal;
 }
+
+typedef struct
+{
+    char *str;
+    int pos;
+} String_Iterator;
+
+Value *stringIteratorNew(char *str)
+{
+    int l = strlen(str);
+
+    String_Iterator *it = (String_Iterator *)malloc(sizeof(String_Iterator));
+    it->str = (char *)malloc(l + 1);
+    it->pos = 0;
+    memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
+
+    Value_Arglist *arglist = newArglist(2, 2);
+    Value *(*onCollectRaw)(Value_Arglist*) = onCollectStringIterator_arglist;
+    Value_Closure *onCollect = makeClosureFromArglist(onCollectRaw, arglist);
+
+    return (Value *)makeGCPointer(it, onCollect);
+}
+
+Value *onCollectStringIterator(Value_Pointer *ptr, void *null)
+{
+    String_Iterator *it = (String_Iterator *)ptr->p;
+    free(it->str);
+    free(it);
+    return NULL;
+}
+
+Value *onCollectStringIterator_arglist(Value_Arglist *arglist)
+{
+    return onCollectStringIterator(
+        (Value_Pointer *)arglist->args[0],
+        arglist->args[1]
+    );
+}
+
+Value *stringIteratorToString(void *a, char *str, Value *it_p, Value_Closure *f)
+{
+    String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
+    return apply_closure((Value *)f, (Value *)makeString(it->str + it->pos));
+}
+
+Value *stringIteratorNext(char *s, Value *it_p)
+{
+    String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
+    char c = it->str[it->pos];
+
+    if (c == '\0') {
+        return (Value *)newConstructor(0, 0, "Data_String_Iterator_EOF");
+    }
+
+    it->pos ++; // Ok to do this as StringIterator linear
+
+    Value_Constructor *retVal = newConstructor(2, 1, "Data_String_Iterator_Character");
+    retVal->args[0] = (Value *)makeChar(c);
+    retVal->args[1] = newReference(it_p);
+
+    return (Value *)retVal;
+}
