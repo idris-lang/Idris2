@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --cg refc -o refc003 stringOps.idr > /dev/null
+./build/exec/refc003
+
+rm -rf build
