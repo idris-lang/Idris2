@@ -133,7 +133,7 @@ data Error : Type where
                      FC -> Env Term vars -> DotReason -> Term vars -> Term vars -> Error
      BadImplicit : FC -> String -> Error
      BadRunElab : {vars : _} ->
-                  FC -> Env Term vars -> Term vars -> Error
+                  FC -> Env Term vars -> Term vars -> (description : String) -> Error
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
@@ -303,7 +303,7 @@ Show Error where
            " (" ++ show reason ++ ")" ++
            " - it elaborates to " ++ show y
   show (BadImplicit fc str) = show fc ++ ":" ++ str ++ " can't be bound here"
-  show (BadRunElab fc env script) = show fc ++ ":Bad elaborator script " ++ show script
+  show (BadRunElab fc env script desc) = show fc ++ ":Bad elaborator script " ++ show script ++ " (" ++ desc ++ ")"
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
@@ -389,7 +389,7 @@ getErrorLoc (CaseCompile loc _ _) = Just loc
 getErrorLoc (MatchTooSpecific loc _ _) = Just loc
 getErrorLoc (BadDotPattern loc _ _ _ _) = Just loc
 getErrorLoc (BadImplicit loc _) = Just loc
-getErrorLoc (BadRunElab loc _ _) = Just loc
+getErrorLoc (BadRunElab loc _ _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
