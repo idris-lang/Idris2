@@ -62,7 +62,7 @@ compileCFile {asShared} objectFile outFile =
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
                        clibdirs (lib_dirs dirs) ++
-                       "-lm"
+                       "-lgmp -lm"
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc

@@ -73,6 +73,11 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg)
 
 int extractInt(Value *v)
 {
+  if (v->header.tag == INTEGER_TAG)
+  {
+    return (int)mpz_get_si(((Value_Integer *)v)->i);
+  }
+
   if (v->header.tag == INT_TAG)
   {
     return (int)((Value_Int *)v)->i64;

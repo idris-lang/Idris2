@@ -5,6 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <gmp.h>
 
 #define NO_TAG 0
 #define BITS8_TAG 1
@@ -12,9 +13,10 @@
 #define BITS32_TAG 3
 #define BITS64_TAG 4
 #define INT_TAG 5
-#define DOUBLE_TAG 6
-#define CHAR_TAG 7
-#define STRING_TAG 8
+#define INTEGER_TAG 6
+#define DOUBLE_TAG 7
+#define CHAR_TAG 8
+#define STRING_TAG 9
 
 #define CLOSURE_TAG 10
 #define ARGLIST_TAG 11
@@ -73,6 +75,12 @@ typedef struct
     Value_header header;
     int64_t i64;
 } Value_Int;
+
+typedef struct
+{
+    Value_header header;
+    mpz_t i;
+} Value_Integer;
 
 typedef struct
 {

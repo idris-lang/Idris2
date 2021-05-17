@@ -215,6 +215,11 @@ void removeReference(Value *elem)
         case INT_TAG:
             /* nothing to delete, added for sake of completeness */
             break;
+        case INTEGER_TAG:
+        {
+            mpz_clear(((Value_Integer *)elem)->i);
+            break;
+        }
         case DOUBLE_TAG:
             /* nothing to delete, added for sake of completeness */
             break;

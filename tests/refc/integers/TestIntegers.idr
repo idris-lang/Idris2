@@ -27,7 +27,9 @@ main = do
         the Bits64 18446744073709551615, -- Bits64 max
         the Int $ -9223372036854775808, -- Int min
         the Int 1000000000000000000,
-        the Int 9223372036854775807 -- Int max
+        the Int 9223372036854775807, -- Int max
+        the Integer $ -9223372036854775809, -- Int min - 1
+        the Integer 9223372036854775808 -- Int max + 1
     ]
 
     putStrLn "Cast to String:"
@@ -47,3 +49,6 @@ main = do
 
     putStrLn "Cast to Int:"
     put $ castAllTo Int ints
+
+    putStrLn "Cast to Integer:"
+    put $ castAllTo Integer ints

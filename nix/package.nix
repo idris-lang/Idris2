@@ -2,6 +2,7 @@
 , lib
 , chez
 , clang
+, gmp
 , fetchFromGitHub
 , makeWrapper
 , idris2-version
@@ -19,7 +20,7 @@ stdenv.mkDerivation rec {
 
   strictDeps = true;
   nativeBuildInputs = [ makeWrapper clang chez ];
-  buildInputs = [ chez ];
+  buildInputs = [ chez gmp ];
 
   prePatch = ''
     patchShebangs --build tests

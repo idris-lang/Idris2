@@ -99,13 +99,13 @@ where
 
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt("++ show x ++")"
-cConstant (BI x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant WorldVal = "(Value*)makeWorld()"
 cConstant IntType = "Int"
-cConstant IntegerType = "i64"
+cConstant IntegerType = "Integer"
 cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
