@@ -1,5 +1,6 @@
 module Core.Binary
 
+import Core.CaseTree
 import Core.Context
 import Core.Context.Log
 import Core.Core

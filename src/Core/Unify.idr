@@ -489,14 +489,28 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
                Hole _ p => precisetype p
                _ => False
 
+    -- A solution is deemed simple enough to inline if either:
+    --   * It is smaller than some threshold and has no metavariables in it
+    --   * It's just a metavariable itself
+    noMeta : Term vs -> Nat -> Bool
+    noMeta (App _ f a) (S k) = noMeta f k && noMeta a k
+    noMeta (Bind _ _ b sc) (S k) = noMeta (binderType b) k && noMeta sc k
+    noMeta (Meta _ _ _ _) d = False
+    noMeta (TDelayed _ _ t) d = noMeta t d
+    noMeta (TDelay _ _ t a) d = noMeta t d && noMeta a d
+    noMeta (TForce _ _ t) d = noMeta t d
+    noMeta (As _ _ a p) d = noMeta a d && noMeta p d
+    noMeta (Local _ _ _ _) _ = True
+    noMeta (Ref _ _ _) _ = True
+    noMeta (PrimVal _ _) _ = True
+    noMeta (TType _) _ = True
+    noMeta _ _ = False
+
     isSimple : Term vs -> Bool
-    isSimple (Local _ _ _ _) = True
-    isSimple (Ref _ _ _) = True
     isSimple (Meta _ _ _ _) = True
     isSimple (Bind _ _ (Lam _ _ _ _) sc) = isSimple sc
-    isSimple (PrimVal _ _) = True
-    isSimple (TType _) = True
-    isSimple _ = False
+    isSimple (App _ f a) = noMeta f 6 && noMeta a 3
+    isSimple tm = noMeta tm 0
 
     updateIVar : {v : Nat} ->
                  forall vs, newvars . IVars vs newvars -> (0 p : IsVar nm v newvars) ->
