@@ -39,8 +39,7 @@ compileExpr :  Ref Ctxt Defs
 compileExpr c tmpDir outputDir tm outfile =
   do es <- compileToNode c tm
      let out = outputDir </> outfile
-     Right () <- coreLift (writeFile out es)
-        | Left err => throw (FileErr out err)
+     Core.writeFile out es
      pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
