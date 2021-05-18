@@ -311,7 +311,8 @@ data Arr : Type where
 -- binary blob yet, so decode it first time
 public export
 data ContextEntry : Type where
-     Coded : Binary -> ContextEntry
+     Coded : Namespace -> -- namespace for decoding into, with restoreNS
+             Binary -> ContextEntry
      Decoded : GlobalDef -> ContextEntry
 
 data PossibleName : Type where
@@ -791,7 +792,6 @@ HasNames (Term vars) where
 
 export
 HasNames Pat where
-
   full gam (PAs fc n p)
      = [| PAs (pure fc) (full gam n) (full gam p) |]
   full gam (PCon fc n i ar ps)
@@ -917,6 +917,31 @@ HasNames Def where
   resolved gam (Guess tm b cs)
       = pure $ Guess !(resolved gam tm) b cs
   resolved gam t = pure t
+
+export
+StripNamespace Def where
+  trimNS ns (PMDef i args ct rt pats)
+      = PMDef i args (trimNS ns ct) rt (map trimNSpat pats)
+    where
+      trimNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
+                  (vs ** (Env Term vs, Term vs, Term vs))
+      trimNSpat (vs ** (env, lhs, rhs))
+          = (vs ** (env, trimNS ns lhs, trimNS ns rhs))
+  trimNS ns d = d
+
+  restoreNS ns (PMDef i args ct rt pats)
+      = PMDef i args (restoreNS ns ct) rt (map restoreNSpat pats)
+    where
+      restoreNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
+                  (vs ** (Env Term vs, Term vs, Term vs))
+      restoreNSpat (vs ** (env, lhs, rhs))
+          = (vs ** (env, restoreNS ns lhs, restoreNS ns rhs))
+  restoreNS ns d = d
+
+export
+StripNamespace GlobalDef where
+  trimNS ns def = record { definition $= trimNS ns } def
+  restoreNS ns def = record { definition $= restoreNS ns } def
 
 HasNames (NameMap a) where
   full gam nmap
@@ -1294,10 +1319,10 @@ addDef n def
 
 export
 addContextEntry : {auto c : Ref Ctxt Defs} ->
-                  Name -> Binary -> Core Int
-addContextEntry n def
+                  Namespace -> Name -> Binary -> Core Int
+addContextEntry ns n def
     = do defs <- get Ctxt
-         (idx, gam') <- addEntry n (Coded def) (gamma defs)
+         (idx, gam') <- addEntry n (Coded ns def) (gamma defs)
          put Ctxt (record { gamma = gam' } defs)
          pure idx
 

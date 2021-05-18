@@ -251,13 +251,13 @@ getSaveDefs modns (n :: ns) acc defs
          case definition gdef of
               Builtin _ => getSaveDefs modns ns acc defs
               _ => do bin <- initBinaryS 16384
-                      toBuf bin !(full (gamma defs) gdef)
+                      toBuf bin (trimNS modns !(full (gamma defs) gdef))
                       b <- get Bin
-                      getSaveDefs modns ns ((trimNS (fullname gdef), b) :: acc) defs
+                      getSaveDefs modns ns ((trimName (fullname gdef), b) :: acc) defs
   where
-    trimNS : Name -> Name
-    trimNS n@(NS defns d) = if defns == modns then d else n
-    trimNS n = n
+    trimName : Name -> Name
+    trimName n@(NS defns d) = if defns == modns then d else n
+    trimName n = n
 
 -- Write out the things in the context which have been defined in the
 -- current source file
@@ -295,9 +295,10 @@ writeToTTC extradata fname
          pure ()
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
-               (modns : ModuleIdent) -> (importAs : Maybe Namespace) ->
+               (modns : ModuleIdent) -> Namespace ->
+               (importAs : Maybe Namespace) ->
                (Name, Binary) -> Core ()
-addGlobalDef modns asm (n, def)
+addGlobalDef modns filens asm (n, def)
     = do defs <- get Ctxt
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
@@ -307,7 +308,7 @@ addGlobalDef modns asm (n, def)
                                    pure (Just x))
                         codedentry
          unless (completeDef entry) $
-           ignore $ addContextEntry n def
+           ignore $ addContextEntry filens n def
 
          whenJust asm $ \ as => addContextAlias (asName modns as n) n
 
@@ -450,7 +451,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
             else do
                ttc <- readTTCFile True fname as bin
                let ex = extraData ttc
-               traverse_ (addGlobalDef modNS as) (context ttc)
+               traverse_ (addGlobalDef modNS (currentNS ttc) as) (context ttc)
                traverse_ addUserHole (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)
