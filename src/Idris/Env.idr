@@ -28,6 +28,7 @@ envs = [
          MkEnvDesc "CHEZ"          "chez executable used in Chez codegen",
          MkEnvDesc "RACKET"        "racket executable used in Racket codegen",
          MkEnvDesc "RACKET_RACO"   "raco executable used in Racket codegen",
+         MkEnvDesc "RACKET_VARIANT" "variant of Racket used in generating an executable",
          MkEnvDesc "GAMBIT_GSI"    "gsi executable used in Gambit codegen",
          MkEnvDesc "GAMBIT_GSC"    "gsc executable used in Gambit codegen",
          MkEnvDesc "GAMBIT_GSC_BACKEND" "gsc executable backend argument",

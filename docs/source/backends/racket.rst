@@ -69,3 +69,12 @@ Racket Directives
   .. code-block::
 
     $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
+
+Racket Variant
+==============
+
+Variable `RACKET_VARIANT` is used to set the proper Racket variant that you want to use in
+code generation. For example, you may want to use Chez Scheme by setting it to
+`RACKET_VARIANT=cs`, similar to `3m` (the default variant before Racket v8.0).
+In addition, a `debug` option is available to configure `raco exe` to `raco exe --3m --gui`.
+See [there](https://github.com/NixOS/nixpkgs/issues/11698).

@@ -53,10 +53,20 @@ installed (or, alternatively, Racket). To do this, enter one of the following:
 - `make bootstrap SCHEME=chez`
 - `make bootstrap-racket`
 
-`chez` is the executable name of the Chez Scheme compiler. You may need to
+The name `chez` is the executable name of the Chez Scheme compiler. You may need to
 replace this with the executable for Chez Scheme on your system. This could be
 `scheme`, `chezscheme` or `chezscheme9.5` or something else, depending on your
 system and the Chez Scheme version.
+
+If you are using Racket to do bootstrap steps, please make sure you have Racket
+dependencies installed, such as `compiler-lib` (required by the command `raco exe`)
+and `r6rs-lib`.
+
+Variable `RACKET_VARIANT` is used to set the proper Racket variant that you want to use in
+code generation. For example, you may want to use Chez Scheme by setting it to
+`RACKET_VARIANT=cs`, similar to `3m` (the default variant before Racket v8.0).
+In addition, a `debug` option is available to configure `raco exe` to `raco exe --3m --gui`.
+See [there](https://github.com/NixOS/nixpkgs/issues/11698).
 
 This builds an Idris 2 compiler from scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to

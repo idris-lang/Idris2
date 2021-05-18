@@ -29,7 +29,7 @@ Compiler changes:
   order to not block the Racket runtime when `sleep` is called.
 * Added `--profile` flag, which generates profile data if supported by a back
   end. Currently supported by the Chez and Racket back ends.
-* Javascript codegens now use `Number` to represent up to 32 bit precision
+* JavaScript codegens now use `Number` to represent up to 32 bit precision
   signed and unsigned integers. `Int32` still goes via `BigInt` for
   multiplication to avoid precision issues when getting results larger
   than `Number.MAX_SAFE_INTEGER`. `Bits32` goes via `BigInt` for

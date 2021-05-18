@@ -32,13 +32,18 @@ import System.Info
 
 findRacket : IO String
 findRacket =
-  do env <- idrisGetEnv "RACKET"
-     pure $ fromMaybe "/usr/bin/env racket" env
+  do pure $ fromMaybe "/usr/bin/env racket" !(idrisGetEnv "RACKET")
 
 findRacoExe : IO String
 findRacoExe =
-  do env <- idrisGetEnv "RACKET_RACO"
-     pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
+  do pure $ (fromMaybe "/usr/bin/env raco" !(idrisGetEnv "RACKET_RACO"))
+                ++ " exe" ++ h !(idrisGetEnv "RACKET_VARIANT")
+     where
+        h : Maybe String -> String
+        h (Just str) = case str of
+            "debug" => " --3m --gui"
+            str     => " --" ++ str
+        h Nothing = ""
 
 schHeader : Bool -> String -> String
 schHeader prof libs
