@@ -51,6 +51,7 @@ jobs:
         uses: github/super-linter@v3
         env:
           VALIDATE_ALL_CODEBASE: false
+          VALIDATE_CPP: false # C files predate linting
           VALIDATE_JSCPD: false  # erroneously complains about docs/requirements.txt
           VALIDATE_JAVASCRIPT_STANDARD: false #requires camel-casing
           DEFAULT_BRANCH: master
