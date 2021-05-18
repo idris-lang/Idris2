@@ -1,3 +1,4 @@
+||| The `Javascript` code generator.
 module Compiler.ES.Javascript
 
 import Compiler.ES.ES
@@ -16,11 +17,10 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Data.String.Extra
 
-
 ||| Compile a TT expression to Javascript
 compileToJS : Ref Ctxt Defs ->
               ClosedTerm -> Core String
-compileToJS c tm = do
+compileToJS c tm =
   compileToES c tm ["browser", "javascript"]
 
 htmlHeader : String
@@ -47,15 +47,18 @@ addHeaderAndFooter outfile es =
     _ => es
 
 ||| Javascript implementation of the `compileExpr` interface.
-compileExpr : Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr c tmpDir outputDir tm outfile
-    = do es <- compileToJS c tm
-         let res = addHeaderAndFooter outfile es
-         let out = outputDir </> outfile
-         Right () <- coreLift (writeFile out res)
-            | Left err => throw (FileErr out err)
-         pure (Just out)
+compileExpr :  Ref Ctxt Defs
+            -> (tmpDir : String)
+            -> (outputDir : String)
+            -> ClosedTerm
+            -> (outfile : String)
+            -> Core (Maybe String)
+compileExpr c tmpDir outputDir tm outfile =
+  do es <- compileToJS c tm
+     let res = addHeaderAndFooter outfile es
+     let out = outputDir </> outfile
+     Core.writeFile out res
+     pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()

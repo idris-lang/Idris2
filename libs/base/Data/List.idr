@@ -621,6 +621,45 @@ transpose (heads :: tails) = spreadHeads heads (transpose tails) where
   spreadHeads (head :: heads) []              = [head] :: spreadHeads heads []
   spreadHeads (head :: heads) (tail :: tails) = (head :: tail) :: spreadHeads heads tails
 
+------------------------------------------------------------------------
+-- Grouping
+
+||| `groupBy` operates like `group`, but uses the provided equality
+||| predicate instead of `==`.
+public export
+groupBy : (a -> a -> Bool) -> List a -> List (List1 a)
+groupBy _ [] = []
+groupBy eq (h :: t) = let (ys,zs) = go h t
+                       in ys :: zs
+
+  where go : a -> List a -> (List1 a, List (List1 a))
+        go v [] = (singleton v,[])
+        go v (x :: xs) = let (ys,zs) = go x xs
+                          in if eq v x
+                                then (cons v ys, zs)
+                                else (singleton v, ys :: zs)
+
+||| The `group` function takes a list of values and returns a list of
+||| lists such that flattening the resulting list is equal to the
+||| argument.  Moreover, each list in the resulting list
+||| contains only equal elements.
+public export
+group : Eq a => List a -> List (List1 a)
+group = groupBy (==)
+
+||| `groupWith` operates like `group`, but uses the provided projection when
+||| comparing for equality
+public export
+groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
+groupWith f = groupBy (\x,y => f x == f y)
+
+||| `groupAllWith` operates like `groupWith`, but sorts the list
+||| first so that each equivalence class has, at most, one list in the
+||| output
+public export
+groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
+groupAllWith f = groupWith f . sortBy (comparing f)
+
 --------------------------------------------------------------------------------
 -- Properties
 --------------------------------------------------------------------------------
