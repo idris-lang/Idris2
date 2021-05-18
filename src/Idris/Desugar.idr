@@ -70,6 +70,12 @@ public export
 data Side = LHS | AnyExpr
 
 export
+Eq Side where
+  LHS == LHS = True
+  AnyExpr == AnyExpr = True
+  _ == _ = False
+
+export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
             SyntaxInfo -> Core ()
 extendSyn newsyn
@@ -190,24 +196,24 @@ mutual
       =  if lowerFirst nm || nm == "_"
            then do whenJust (isConcreteFC prefFC) \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
-                   pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           (Just n) !(desugarB side ps argTy)
-                                    !(desugar side (n :: ps) scope)
-           else pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
-                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+                   pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           (Just n) !(desugarB AnyExpr ps argTy)
+                                    !(desugar AnyExpr (n :: ps) scope)
+           else pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           (Just n) !(desugarB side ps argTy)
-                                    !(desugar side (n :: ps) scope)
+      = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           (Just n) !(desugarB AnyExpr ps argTy)
+                                    !(desugar AnyExpr (n :: ps) scope)
   desugarB side ps (PLam fc rig p (PImplicit _) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           Nothing !(desugarB side ps argTy)
-                                   !(desugar side ps scope)
+      = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           Nothing !(desugarB AnyExpr ps argTy)
+                                   !(desugar AnyExpr ps scope)
   desugarB side ps (PLam fc rig p pat argTy scope)
-      = pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
-                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+      = pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
@@ -321,7 +327,10 @@ mutual
   desugarB side ps (PDotted fc x)
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
-  desugarB side ps (PInfer fc) = pure $ Implicit fc False
+  desugarB side ps (PInfer fc)
+    = do when (side == LHS) $
+           throw (GenericMsg fc "? is not a valid pattern")
+         pure $ Implicit fc False
   desugarB side ps (PMultiline fc indent lines)
       = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
   desugarB side ps (PString fc strs)
