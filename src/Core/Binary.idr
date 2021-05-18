@@ -230,24 +230,34 @@ readTTCFile readall file as b
                  cgds <- fromBuf b
                  trans <- fromBuf b
                  pure (MkTTCFile ver ifaceHash importHashes
-                                 defs uholes
+                                 (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
                                  pns rws prims nds cgds trans ex)
+  where
+    -- We don't store full names in 'defs' - we remove the namespace if it's
+    -- the same as the current namespace. So, this puts it back.
+    replaceNS : Namespace -> (Name, a) -> (Name, a)
+    replaceNS ns n@(NS _ _, d) = n
+    replaceNS ns (n, d) = (NS ns n, d)
 
 -- Pull out the list of GlobalDefs that we want to save
-getSaveDefs : List Name -> List (Name, Binary) -> Defs ->
+getSaveDefs : Namespace -> List Name -> List (Name, Binary) -> Defs ->
               Core (List (Name, Binary))
-getSaveDefs [] acc _ = pure acc
-getSaveDefs (n :: ns) acc defs
+getSaveDefs modns [] acc _ = pure acc
+getSaveDefs modns (n :: ns) acc defs
     = do Just gdef <- lookupCtxtExact n (gamma defs)
-              | Nothing => getSaveDefs ns acc defs -- 'n' really should exist though!
+              | Nothing => getSaveDefs modns ns acc defs -- 'n' really should exist though!
          -- No need to save builtins
          case definition gdef of
-              Builtin _ => getSaveDefs ns acc defs
+              Builtin _ => getSaveDefs modns ns acc defs
               _ => do bin <- initBinaryS 16384
                       toBuf bin !(full (gamma defs) gdef)
                       b <- get Bin
-                      getSaveDefs ns ((fullname gdef, b) :: acc) defs
+                      getSaveDefs modns ns ((trimNS (fullname gdef), b) :: acc) defs
+  where
+    trimNS : Name -> Name
+    trimNS n@(NS defns d) = if defns == modns then d else n
+    trimNS n = n
 
 -- Write out the things in the context which have been defined in the
 -- current source file
@@ -260,7 +270,7 @@ writeToTTC extradata fname
     = do bin <- initBinary
          defs <- get Ctxt
          ust <- get UST
-         gdefs <- getSaveDefs (keys (toSave defs)) [] defs
+         gdefs <- getSaveDefs (currentNS defs) (keys (toSave defs)) [] defs
          log "ttc.write" 5 $ "Writing " ++ fname ++ " with hash " ++ show (ifaceHash defs)
          writeTTCFile bin
                    (MkTTCFile ttcVersion (ifaceHash defs) (importHashes defs)
