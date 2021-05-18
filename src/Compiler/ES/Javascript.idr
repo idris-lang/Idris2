@@ -57,8 +57,7 @@ compileExpr c tmpDir outputDir tm outfile =
   do es <- compileToJS c tm
      let res = addHeaderAndFooter outfile es
      let out = outputDir </> outfile
-     Right () <- coreLift (writeFile out res)
-        | Left err => throw (FileErr out err)
+     Core.writeFile out res
      pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.

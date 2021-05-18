@@ -49,8 +49,9 @@ mutual
     ||| this specific object represents.
     IEConstructorHead : (object : ImperativeExp) -> ImperativeExp
 
-    ||| Tag representing a data type's constructer (either as an
-    ||| index or as a name)
+    ||| Tag representing either a data constructor (in that case
+    ||| an integer is used as its index) or a type constructor
+    ||| (these come up when pattern matching on types).
     IEConstructorTag : (tag : Either Int String) -> ImperativeExp
 
     ||| Argument of a data constructor applied to the given JS object.
@@ -68,11 +69,18 @@ mutual
                   -> (args : List ImperativeExp)
                   -> ImperativeExp
 
-    ||| Wraps the given delayed expression in a zero-argument lambda:
+    ||| A delayed calculation coming either from a `Lazy`
+    ||| or infinite (`Inf`) value.
+    |||
+    ||| In the JS backends, these are wrapped zero-argument lambdas:
     ||| `(() => expr)`.
     IEDelay : (expr : ImperativeExp) -> ImperativeExp
 
-    ||| Forces the given delayed expression:
+    ||| Forces the evaluation of a delayed (`Lazy` or `Inf`)
+    ||| value.
+    |||
+    ||| In the JS backends, these just invoke the corresponding
+    ||| zero-argument lambdas:
     ||| `expr()`.
     IEForce : (expr : ImperativeExp) -> ImperativeExp
 

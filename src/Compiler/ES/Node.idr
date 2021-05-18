@@ -47,8 +47,7 @@ executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c tmpDir tm =
   do let outn = tmpDir </> "_tmp_node" ++ ".js"
      js <- compileToNode c tm
-     Right () <- coreLift $ writeFile outn js
-        | Left err => throw (FileErr outn err)
+     Core.writeFile outn js
      node <- coreLift findNode
      quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
      coreLift_ $ system (quoted_node ++ " " ++ outn)

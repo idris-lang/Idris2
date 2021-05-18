@@ -88,9 +88,9 @@ ImperativeResult False = (ImperativeStatement, ImperativeExp)
 -- by `toReturn`.
 pairToReturn :  (toReturn : Bool)
              -> (ImperativeStatement, ImperativeExp)
-             -> Core (ImperativeResult toReturn)
-pairToReturn False (s, e) = pure (s, e)
-pairToReturn True (s, e)  = pure $ s <+> ReturnStatement e
+             -> (ImperativeResult toReturn)
+pairToReturn False (s, e) = (s, e)
+pairToReturn True (s, e)  = s <+> ReturnStatement e
 
 -- when invoking `impExp`, in some cases we
 -- generate just an expression.
@@ -99,9 +99,9 @@ pairToReturn True (s, e)  = pure $ s <+> ReturnStatement e
 -- by `toReturn`.
 expToReturn :  (toReturn : Bool)
             -> ImperativeExp
-            -> Core (ImperativeResult toReturn)
-expToReturn False e = pure $ (DoNothing, e)
-expToReturn True e  = pure $ ReturnStatement e
+            -> (ImperativeResult toReturn)
+expToReturn False e = (DoNothing, e)
+expToReturn True e  = ReturnStatement e
 
 impTag : Name -> Maybe Int -> Either Int String
 impTag n Nothing = Right $ show n
@@ -132,17 +132,17 @@ mutual
          -> Core (ImperativeResult toReturn)
   -- convert local names to vars
   impExp toReturn (NmLocal fc n) =
-    expToReturn toReturn $ IEVar n
+    pure . expToReturn toReturn $ IEVar n
 
   impExp toReturn (NmRef fc n) =
-    expToReturn toReturn $ IEVar n
+    pure . expToReturn toReturn $ IEVar n
 
   -- TODO: right now, nested lambda expressions are curried
   -- (or are they?).
   -- It might be more efficient (and more readable!) to uncurry
   -- these, at least in the most simple cases.
   impExp toReturn (NmLam fc n e) =
-    expToReturn toReturn $ IELambda [n] !(impExp True e)
+    pure . expToReturn toReturn $ IELambda [n] !(impExp True e)
 
   -- Function application: Statements for the
   -- implementation of the function and the arguments are
@@ -150,16 +150,16 @@ mutual
   impExp toReturn (NmApp fc x args) =
     do (s1, f) <- impExp False x
        (s2, a) <- impListExp args
-       pairToReturn toReturn (s1 <+> s2, IEApp f a)
+       pure $ pairToReturn toReturn (s1 <+> s2, IEApp f a)
 
   -- primitive values
   impExp toReturn (NmPrimVal fc c) =
-    expToReturn toReturn $ IEConstant c
+    pure . expToReturn toReturn $ IEConstant c
 
   -- primitive operations
   impExp toReturn (NmOp fc op args) =
     do (s, a) <- impVectExp args
-       pairToReturn toReturn (s, IEPrimFn op a)
+       pure $ pairToReturn toReturn (s, IEPrimFn op a)
 
   -- a pattern match on a constructor
   -- is converted to a switch statement in JS.
@@ -230,24 +230,24 @@ mutual
   -- `prim__newIORef`
   impExp toReturn (NmExtPrim fc p args) =
     do (s, a) <- impListExp args
-       pairToReturn toReturn (s, IEPrimFnExt p a)
+       pure $ pairToReturn toReturn (s, IEPrimFnExt p a)
 
   -- A saturated constructor
   -- TODO: Use ConInfo
   impExp toReturn (NmCon fc x _ tag args) =
     do (s, a) <- impListExp args
-       pairToReturn toReturn
+       pure $ pairToReturn toReturn
          (s, IEConstructor (impTag x tag) a)
 
   -- a delayed computation
   impExp toReturn (NmDelay fc _ t) =
     do (s, x) <- impExp False t
-       pairToReturn toReturn (s, IEDelay x)
+       pure $ pairToReturn toReturn (s, IEDelay x)
 
   -- a forced computation
   impExp toReturn (NmForce fc _ t) =
     do (s, x) <- impExp False t
-       pairToReturn toReturn (s, IEForce x)
+       pure $ pairToReturn toReturn (s, IEForce x)
 
   -- a let statement of the form
   -- ```idris
@@ -287,19 +287,19 @@ mutual
            let s2_  = replaceNamesExpS reps s2
            let sc__ = replaceNamesExp reps sc_
            let decl = ConstDecl x_ v
-           pairToReturn toReturn (s1 <+> decl <+> s2_, sc__)
+           pure $ pairToReturn toReturn (s1 <+> decl <+> s2_, sc__)
          else do
            let decl = EvalExpStatement v
-           pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
+           pure $ pairToReturn toReturn (s1 <+> decl <+> s2, sc_)
 
   -- an erased argument is converted to `undefined`
   impExp toReturn (NmErased fc) =
-    expToReturn toReturn $ IENull
+    pure . expToReturn toReturn $ IENull
 
   -- an error is converted to a `throw new Error`
   -- statement. It's result is `undefined` (`IENull`).
   impExp toReturn (NmCrash fc msg) =
-    pairToReturn toReturn (ErrorStatement msg, IENull)
+    pure $ pairToReturn toReturn (ErrorStatement msg, IENull)
 
   -- a single alternative in a case statement.
   -- In JS, this will be a single alternative of
