@@ -755,7 +755,7 @@ export
 StripNamespace (Term vars) where
   trimNS ns tm@(Ref fc x (NS tns n))
       = if ns == tns then Ref fc x (NS (unsafeFoldNamespace []) n) else tm
-        -- ^ A blank namespace, rather than a UN, so we don't catch primitive 
+        -- ^ A blank namespace, rather than a UN, so we don't catch primitive
         -- names which are represented as UN.
   trimNS ns (Meta fc x y xs)
       = Meta fc x y (map (trimNS ns) xs)
