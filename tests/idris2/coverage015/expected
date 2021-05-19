@@ -37,6 +37,15 @@ Missing cases:
     test'' _
 
 1/1: Building Issue1366 (Issue1366.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.f
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.f
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.f
 Error: decode is not covering.
 
 Issue1366.idr:33:1--33:45

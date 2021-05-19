@@ -445,7 +445,8 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          log "declare.def.clause" 5 $ "Checking RHS " ++ show rhs
          logEnv "declare.def.clause" 5 "In env" env'
 
-         rhstm <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
+         rhstm <- logTime ("+++ Check RHS " ++ show fc) $
+                    wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
                        checkTermSub n rhsMode opts nest' env' env sub' rhs (gnf env' lhsty')
          clearHoleLHS
 
@@ -464,13 +465,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          pure (Right (MkClause env' lhstm' rhstm))
 -- TODO: (to decide) With is complicated. Move this into its own module?
 checkClause {vars} mult vis totreq hashit n opts nest env
-    (WithClause fc lhs_in wval_raw mprf flags cs)
+    (WithClause ifc lhs_in wval_raw mprf flags cs)
     = do (lhs, (vars'  ** (sub', env', nest', lhspat, reqty))) <-
-             checkLHS False mult hashit n opts nest env fc lhs_in
+             checkLHS False mult hashit n opts nest env ifc lhs_in
          let wmode
                = if isErased mult then InType else InExpr
 
-         (wval, gwvalTy) <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
+         (wval, gwvalTy) <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
                 elabTermSub n wmode opts nest' env' env sub' wval_raw Nothing
          clearHoleLHS
 
@@ -498,7 +499,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          -- to get the 'magic with' behaviour
          (wargs ** (scenv, var, binder)) <- bindWithArgs wvalTy ((,wval) <$> mprf) wvalEnv
 
-         let bnr = bindNotReq fc 0 env' withSub [] reqty
+         let bnr = bindNotReq vfc 0 env' withSub [] reqty
          let notreqns = fst bnr
          let notreqty = snd bnr
 
@@ -511,7 +512,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                                  (weakenNs (mkSizeOf wargs) notreqty))
          let bNotReq = binder wtyScope
 
-         let Just (reqns, envns, wtype) = bindReq fc env' withSub [] bNotReq
+         let Just (reqns, envns, wtype) = bindReq vfc env' withSub [] bNotReq
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #4")
 
          -- list of argument names - 'Just' means we need to match the name
@@ -526,11 +527,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname (record {flags $= (SetTotal totreq ::)}
-                                    (newDef fc wname (if isErased mult then erased else top)
+                                    (newDef vfc wname (if isErased mult then erased else top)
                                       vars wtype vis None))
 
          let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
-               := flip maybe (\pn => [(Nothing, IVar fc (snd pn))]) $
+               := flip maybe (\pn => [(Nothing, IVar vfc (snd pn))]) $
                     (Nothing, wval_raw) ::
                     case mprf of
                       Nothing => []
@@ -539,12 +540,12 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                        let refl = IVar fc (NS builtinNS (UN "Refl")) in
                        [(mprf, INamedApp fc refl (UN "x") wval_raw)]
 
-         let rhs_in = gapply (IVar fc wname)
-                    $ map (\ nm => (Nothing, IVar fc nm)) envns
+         let rhs_in = gapply (IVar vfc wname)
+                    $ map (\ nm => (Nothing, IVar vfc nm)) envns
                    ++ concatMap toWarg wargNames
 
          log "declare.def.clause" 3 $ "Applying to with argument " ++ show rhs_in
-         rhs <- wrapErrorC opts (InRHS fc !(getFullName (Resolved n))) $
+         rhs <- wrapErrorC opts (InRHS ifc !(getFullName (Resolved n))) $
              checkTermSub n wmode opts nest' env' env sub' rhs_in
                           (gnf env' reqty)
 
@@ -556,11 +557,14 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          nestname <- applyEnv env wname
          let nest'' = record { names $= (nestname ::) } nest
 
-         let wdef = IDef fc wname cs'
+         let wdef = IDef ifc wname cs'
          processDecl [] nest'' env wdef
 
          pure (Right (MkClause env' lhspat rhs))
   where
+    vfc : FC
+    vfc = virtualiseFC ifc
+
     bindWithArgs :
        (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
        (wvalEnv : Env Term xs) ->
@@ -576,13 +580,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
           wargs = [wargn]
 
           scenv : Env Term (wargs ++ xs)
-                := Pi fc top Explicit wvalTy :: wvalEnv
+                := Pi vfc top Explicit wvalTy :: wvalEnv
 
           var : Term (wargs ++ xs)
-              := Local fc (Just False) Z First
+              := Local vfc (Just False) Z First
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := Bind fc wargn (Pi fc top Explicit wvalTy)
+                 := Bind vfc wargn (Pi vfc top Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
 
@@ -592,7 +596,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let eqName = NS builtinNS (UN "Equal")
       Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
         | _ => throw (InternalError "Cannot find builtin Equal")
-      let eqTyCon = Ref fc (TyCon t ar) eqName
+      let eqTyCon = Ref vfc (TyCon t ar) !(toResolvedNames eqName)
 
       let wargn : Name
           wargn = MN "warg" 0
@@ -601,31 +605,31 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
           wvalTy' := weaken wvalTy
           eqTy : Term (MN "warg" 0 :: xs)
-               := apply fc eqTyCon
+               := apply vfc eqTyCon
                            [ wvalTy'
                            , wvalTy'
                            , weaken wval
-                           , Local fc (Just False) Z First
+                           , Local vfc (Just False) Z First
                            ]
 
           scenv : Env Term (wargs ++ xs)
-                := Pi fc top Implicit eqTy
-                :: Pi fc top Explicit wvalTy
+                := Pi vfc top Implicit eqTy
+                :: Pi vfc top Explicit wvalTy
                 :: wvalEnv
 
           var : Term (wargs ++ xs)
-              := Local fc (Just False) (S Z) (Later First)
+              := Local vfc (Just False) (S Z) (Later First)
 
           binder : Term (wargs ++ xs) -> Term xs
-                 := \ t => Bind fc wargn (Pi fc top Explicit wvalTy)
-                         $ Bind fc name  (Pi fc top Implicit eqTy) t
+                 := \ t => Bind vfc wargn (Pi vfc top Explicit wvalTy)
+                         $ Bind vfc name  (Pi vfc top Implicit eqTy) t
 
       pure (wargs ** (scenv, var, binder))
 
     -- If it's 'KeepCons/SubRefl' in 'outprf', that means it was in the outer
     -- environment so we need to keep it in the same place in the 'with'
     -- function. Hence, turn it to KeepCons whatever
-    keepOldEnv : {vs : _} ->
+    keepOldEnv : {0 outer : _} -> {vs : _} ->
                  (outprf : SubVars outer vs) -> SubVars vs' vs ->
                  (vs'' : List Name ** SubVars vs'' vs)
     keepOldEnv {vs} SubRefl p = (vs ** SubRefl)
@@ -750,7 +754,22 @@ mkRunTime fc n
            ignore $ addDef n $
                        record { definition = PMDef r rargs tree_ct tree_rt pats
                               } gdef
+           -- If it's a case block, and not already set as inlinable,
+           -- check if it's safe to inline
+           when (caseName !(toFullNames n) && noInline (flags gdef)) $
+             do inl <- canInlineCaseBlock n
+                when inl $ setFlag fc n Inline
   where
+    noInline : List DefFlag -> Bool
+    noInline (Inline :: _) = False
+    noInline (x :: xs) = noInline xs
+    noInline _ = True
+
+    caseName : Name -> Bool
+    caseName (CaseBlock _ _) = True
+    caseName (NS _ n) = caseName n
+    caseName _ = False
+
     mkCrash : {vars : _} -> String -> Term vars
     mkCrash msg
        = apply fc (Ref fc Func (NS builtinNS (UN "idris_crash")))
@@ -965,7 +984,9 @@ processDef opts nest env fc n_in cs_in
                     Core Covering
     checkCoverage n ty mult cs
         = do covcs' <- traverse getClause cs -- Make stand in LHS for impossible clauses
-             log "declare.def" 5 $ "Using clauses :" ++ show !(traverse toFullNames covcs')
+             log "declare.def" 5 $ unlines
+               $ "Using clauses :"
+               :: map (("  " ++) . show) !(traverse toFullNames covcs')
              let covcs = mapMaybe id covcs'
              (_ ** (ctree, _)) <-
                  getPMDef fc (CompileTime mult) (Resolved n) ty covcs

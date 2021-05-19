@@ -32,10 +32,12 @@ Monad IO where
 
 public export
 interface Monad io => HasIO io where
+  constructor MkHasIO
   liftIO : IO a -> io a
 
 public export
 interface Monad io => HasLinearIO io where
+  constructor MkHasLinearIO
   liftIO1 : (1 _ : IO a) -> io a
 
 public export %inline

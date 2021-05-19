@@ -219,11 +219,6 @@ strengthenedEState {n} {vars} c e fc env
     dropSub (DropCons sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
 
-    -- This helps persuade the erasure checker that it can erase IsVar,
-    -- because there's no matching on it in removeArgVars below.
-    dropLater : IsVar name (S idx) (v :: vs) -> IsVar name idx vs
-    dropLater (Later p) = p
-
     -- Remove any instance of the top level local variable from an
     -- application. Fail if it turns out to be necessary.
     -- NOTE: While this isn't strictly correct given the type of the hole
@@ -515,7 +510,7 @@ successful : {vars : _} ->
              Bool -> -- constraints allowed
              List (Maybe Name, Core a) ->
              Core (List (Either (Maybe Name, Error)
-                                (Nat, a, Defs, UState, EState vars)))
+                                (Nat, a, Defs, UState, EState vars, Metadata)))
 successful allowCons [] = pure []
 successful allowCons ((tm, elab) :: elabs)
     = do ust <- get UST
@@ -555,7 +550,7 @@ successful allowCons ((tm, elab) :: elabs)
                    elabs' <- successful allowCons elabs
                    -- Record success, and the state we ended at
                    pure (Right (minus ncons' ncons,
-                                res, defs', ust', est') :: elabs'))
+                                res, defs', ust', est', md') :: elabs'))
                (\err => do put UST ust
                            put EST est
                            put MD md
@@ -576,9 +571,10 @@ exactlyOne' allowCons fc env [(tm, elab)] = elab
 exactlyOne' {vars} allowCons fc env all
     = do elabs <- successful allowCons all
          case getRight elabs of
-              Right (res, defs, ust, est) =>
+              Right (res, defs, ust, est, md) =>
                     do put UST ust
                        put EST est
+                       put MD  md
                        put Ctxt defs
                        commit
                        pure res

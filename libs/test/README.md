@@ -26,14 +26,17 @@ main = do
 You populate the `TestPool` list that the `runner` expects with one entry per pool of tests you want to run. Within each pool, tests are run concurrently.
 ```idris
 tests : TestPool
-tests = MkTestPool [] [
+tests = MkTestPool "Description of the test pool" [] [
   "my_great_test"
 ]
 ```
 
-The first argument to `MkTestPool` (empty in the above example) is a list of codegen backends required to run the tests in the given pool. Any empty list means no requirements. If your tests required the Racket backend, you could instead specify `[Racket]`. See the [`Requirement` type](./Test/Golden.idr#L228) for more.
+The first argument to `MkTestPool` is a description of the whole test pool.
+It will be printed before the tests from this pool are started.
 
-The second argument to `MkTestPool` is a list of directory names that can be found relative to your `Main.idr` file. This directory will have some combination of the following files.
+The second argument to `MkTestPool` (empty in the above example) is a list of codegen backends required to run the tests in the given pool. Any empty list means no requirements. If your tests required the Racket backend, you could instead specify `[Racket]`. See the [`Requirement` type](./Test/Golden.idr#L228) for more.
+
+The third argument to `MkTestPool` is a list of directory names that can be found relative to your `Main.idr` file. This directory will have some combination of the following files.
 ```Shell
 my_great_test/
   Test.idr

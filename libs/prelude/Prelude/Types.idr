@@ -157,6 +157,12 @@ maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
 
+||| Execute an applicative expression when the Maybe is Just
+%inline public export
+whenJust : Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 public export
 Eq a => Eq (Maybe a) where
   Nothing  == Nothing  = True
@@ -331,29 +337,6 @@ Traversable (Either e) where
 -- LISTS --
 -----------
 
-||| Generic lists.
-public export
-data List a =
-  ||| Empty list
-  Nil
-
-  | ||| A non-empty list, consisting of a head element and the rest of the list.
-  (::) a (List a)
-
-%name List xs, ys, zs
-
-||| Snoc lists.
-public export
-data SnocList a =
-  ||| Empty snoc-list
-  Lin
-
-  | ||| A non-empty snoc-list, consisting of the rest of the snoc-list and the final element.
-  (:<) (SnocList a) a
-
-%name SnocList sx, sy, sz
--- The rest is in base/Data.SnocList
-
 public export
 Eq a => Eq (List a) where
   [] == [] = True
@@ -404,6 +387,8 @@ Foldable List where
 
   null [] = True
   null (_::_) = False
+
+  toList = id
 
 public export
 Applicative List where
@@ -793,6 +778,7 @@ takeBefore p (x :: xs)
 
 public export
 interface Range a where
+  constructor MkRange
   rangeFromTo : a -> a -> List a
   rangeFromThenTo : a -> a -> a -> List a
 

@@ -139,22 +139,22 @@ processTTImpDecls {vars} nest env decls
   where
     bindConNames : ImpTy -> Core ImpTy
     bindConNames (MkImpTy fc nameFC n ty)
-        = do ty' <- bindTypeNames [] vars ty
+        = do ty' <- bindTypeNames fc [] vars ty
              pure (MkImpTy fc nameFC n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
-        = do t' <- bindTypeNames [] vars t
+        = do t' <- bindTypeNames fc [] vars t
              cons' <- traverse bindConNames cons
              pure (MkImpData fc n t' opts cons')
     bindDataNames (MkImpLater fc n t)
-        = do t' <- bindTypeNames [] vars t
+        = do t' <- bindTypeNames fc [] vars t
              pure (MkImpLater fc n t')
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
     bindNames (IClaim fc c vis opts (MkImpTy tfc nameFC n ty))
-        = do ty' <- bindTypeNames [] vars ty
+        = do ty' <- bindTypeNames fc [] vars ty
              pure (IClaim fc c vis opts (MkImpTy tfc nameFC n ty'))
     bindNames (IData fc vis d)
         = do d' <- bindDataNames d
@@ -167,7 +167,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do Right tti <- logTime "Parsing" $ coreLift $ parseFile fname
+    = do Right (decor, tti) <- logTime "Parsing" $ coreLift $ parseFile fname
                             (do decls <- prog fname
                                 eoi
                                 pure decls)

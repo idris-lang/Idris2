@@ -286,10 +286,10 @@ getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc n
 getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
 getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
 getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
-getDocsForPTerm (PList _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
-getDocsForPTerm (PSnocList _ _) = pure ["SnocList Literal\n\tDesugars to (:<) and Empty"]
+getDocsForPTerm (PList _ _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
+getDocsForPTerm (PSnocList _ _ _) = pure ["SnocList Literal\n\tDesugars to (:<) and Empty"]
 getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
-getDocsForPTerm (PDPair _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
+getDocsForPTerm (PDPair _ _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
 getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
 getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
 

@@ -3,6 +3,8 @@ module Data.SortedSet
 import Data.Maybe
 import Data.SortedMap
 
+%hide Prelude.toList
+
 export
 data SortedSet k = SetWrapper (Data.SortedMap.SortedMap k ())
 

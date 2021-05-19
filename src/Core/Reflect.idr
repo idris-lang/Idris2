@@ -177,11 +177,11 @@ Reify a => Reify (List a) where
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs lhs env [] = appCon fc defs (preludetypes "Nil") [Erased fc False]
+  reflect fc defs lhs env [] = appCon fc defs (basics "Nil") [Erased fc False]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (preludetypes "::") [Erased fc False, x', xs']
+           appCon fc defs (basics "::") [Erased fc False, x', xs']
 
 export
 Reify a => Reify (List1 a) where
@@ -590,6 +590,11 @@ export
 Reflect FC where
   reflect fc defs True env _ = pure $ Erased fc False
   reflect fc defs lhs env (MkFC fn start end)
+      = do fn' <- reflect fc defs lhs env fn
+           start' <- reflect fc defs lhs env start
+           end' <- reflect fc defs lhs env end
+           appCon fc defs (reflectiontt "MkFC") [fn', start', end']
+  reflect fc defs lhs env (MkVirtualFC fn start end)
       = do fn' <- reflect fc defs lhs env fn
            start' <- reflect fc defs lhs env start
            end' <- reflect fc defs lhs env end

@@ -3,4 +3,16 @@
 3/6: Building Expr (Expr.idr)
 4/6: Building Fold (Fold.idr)
 5/6: Building Tree (Tree.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  elem is shadowing Prelude.Types.elem
 6/6: Building All (All.idr)

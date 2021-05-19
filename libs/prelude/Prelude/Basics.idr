@@ -119,27 +119,31 @@ irrelevantEq Refl = Refl
 
 ||| Boolean Data Type.
 public export
-data Bool = True | False
+data Bool = False | True
 
 ||| Boolean NOT.
+%inline
 public export
 not : (b : Bool) -> Bool
 not True = False
 not False = True
 
 ||| Boolean AND only evaluates the second argument if the first is `True`.
+%inline
 public export
 (&&) : (b : Bool) -> Lazy Bool -> Bool
 (&&) True x = x
 (&&) False x = False
 
 ||| Boolean OR only evaluates the second argument if the first is `False`.
+%inline
 public export
 (||) : (b : Bool) -> Lazy Bool -> Bool
 (||) True x = True
 (||) False x = x
 
 ||| Non-dependent if-then-else
+%inline
 public export
 ifThenElse : (b : Bool) -> Lazy a -> Lazy a -> a
 ifThenElse True l r = l
@@ -150,3 +154,29 @@ public export
 intToBool : Int -> Bool
 intToBool 0 = False
 intToBool x = True
+
+--------------
+-- LISTS    --
+--------------
+
+||| Generic lists.
+public export
+data List a =
+  ||| Empty list
+  Nil
+
+  | ||| A non-empty list, consisting of a head element and the rest of the list.
+  (::) a (List a)
+
+%name List xs, ys, zs
+
+||| Snoc lists.
+public export
+data SnocList a =
+  ||| Empty snoc-list
+  Lin
+
+  | ||| A non-empty snoc-list, consisting of the rest of the snoc-list and the final element.
+  (:<) (SnocList a) a
+
+%name SnocList sx, sy, sz

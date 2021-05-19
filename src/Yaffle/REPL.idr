@@ -153,4 +153,4 @@ repl
          case runParser "(interactive)" Nothing inp command of
               Left err => do coreLift_ (printLn err)
                              repl
-              Right cmd => when !(processCatch cmd) repl
+              Right (decor, cmd) => when !(processCatch cmd) repl

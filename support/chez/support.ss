@@ -8,12 +8,6 @@
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-read-args (lambda (desc)
-  (case (vector-ref desc 0)
-    ((0) '())
-    ((1) (cons (vector-ref desc 2)
-               (blodwen-read-args (vector-ref desc 3)))))))
-
 (define blodwen-toSignedInt
   (lambda (x bits)
     (let ((ma (ash 1 bits)))
@@ -127,19 +121,11 @@
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
 
-(define (from-idris-list xs)
-  (if (= (vector-ref xs 0) 0)
-    '()
-    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
-(define (string-pack xs) (apply string (from-idris-list xs)))
-(define (to-idris-list-rev acc xs)
-  (if (null? xs)
-    acc
-    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
-(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
-(define (string-concat xs) (apply string-append (from-idris-list xs)))
+(define (string-concat xs) (apply string-append xs))
+(define (string-unpack s) (string->list s))
+(define (string-pack xs) (list->string xs))
+
 (define string-cons (lambda (x y) (string-append (string x) y)))
-(define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
   (list->string (reverse (string->list x)))))
 (define (string-substr off len s)
@@ -159,8 +145,8 @@
 
 (define (blodwen-string-iterator-next s ofs)
   (if (>= ofs (string-length s))
-      (vector 0)  ; EOF
-      (vector 1 (string-ref s ofs) (+ ofs 1))))
+      '() ; EOF
+      (cons (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)

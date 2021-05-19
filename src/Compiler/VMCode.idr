@@ -36,7 +36,9 @@ data VMInst : Type where
 
      APPLY : Reg -> (f : Reg) -> (a : Reg) -> VMInst
      CALL : Reg -> (tailpos : Bool) -> Name -> (args : List Reg) -> VMInst
-     OP : Reg -> PrimFn arity -> Vect arity Reg -> VMInst
+     OP : {0 arity : Nat} -> Reg -> PrimFn arity -> Vect arity Reg -> VMInst
+       --  ^ we explicitly bind arity here to silence the warnings it is shadowing
+       -- an existing global definition
      EXTPRIM : Reg -> Name -> List Reg -> VMInst
 
      CASE : Reg -> -- scrutinee
@@ -117,9 +119,9 @@ toVM t res (AApp fc _ f a)
     = [APPLY res (toReg f) (toReg a)]
 toVM t res (ALet fc var val body)
     = toVM False (Loc var) val ++ toVM t res body
-toVM t res (ACon fc n (Just tag) args)
+toVM t res (ACon fc n ci (Just tag) args)
     = [MKCON res (Left tag) (map toReg args)]
-toVM t res (ACon fc n Nothing args)
+toVM t res (ACon fc n ci Nothing args)
     = [MKCON res (Right n) (map toReg args)]
 toVM t res (AOp fc _ op args)
     = [OP res op (map toReg args)]
@@ -134,9 +136,9 @@ toVM t res (AConCase fc (ALocal scr) alts def)
         = PROJECT (Loc arg) (Loc scr) i :: projectArgs (i + 1) args
 
     toVMConAlt : AConAlt -> (Either Int Name, List VMInst)
-    toVMConAlt (MkAConAlt n (Just tag) args code)
+    toVMConAlt (MkAConAlt n ci (Just tag) args code)
         = (Left tag, projectArgs 0 args ++ toVM t res code)
-    toVMConAlt (MkAConAlt n Nothing args code)
+    toVMConAlt (MkAConAlt n ci Nothing args code)
         = (Right n, projectArgs 0 args ++ toVM t res code)
 toVM t res (AConstCase fc (ALocal scr) alts def)
     = [CONSTCASE (Loc scr) (map toVMConstAlt alts) (map (toVM t res) def)]

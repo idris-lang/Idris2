@@ -152,12 +152,12 @@ substInPats fc n tm (p :: ps)
          pure (p' :: !(substInPats fc n tm ps'))
 
 getPat : {idx : Nat} ->
-         (0 el : IsVar name idx ps) -> NamedPats ns ps -> PatInfo name ns
+         (0 el : IsVar nm idx ps) -> NamedPats ns ps -> PatInfo nm ns
 getPat First (x :: xs) = x
 getPat (Later p) (x :: xs) = getPat p xs
 
 dropPat : {idx : Nat} ->
-          (0 el : IsVar name idx ps) ->
+          (0 el : IsVar nm idx ps) ->
           NamedPats ns ps -> NamedPats ns (dropVar ps el)
 dropPat First (x :: xs) = xs
 dropPat (Later p) (x :: xs) = x :: dropPat p xs
@@ -193,6 +193,10 @@ Weaken ArgType where
   weaken (Known c ty) = Known c (weaken ty)
   weaken (Stuck fty) = Stuck (weaken fty)
   weaken Unknown = Unknown
+
+  weakenNs s (Known c ty) = Known c (weakenNs s ty)
+  weakenNs s (Stuck fty) = Stuck (weakenNs s fty)
+  weakenNs s Unknown = Unknown
 
 Weaken (PatInfo p) where
   weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
@@ -263,8 +267,12 @@ data Partitions : List (PatClause vars todo) -> Type where
      NoClauses : Partitions []
 
 {ps : _} -> Show (Partitions ps) where
-  show (ConClauses cs rest) = "CON " ++ show cs ++ ", " ++ show rest
-  show (VarClauses vs rest) = "VAR " ++ show vs ++ ", " ++ show rest
+  show (ConClauses cs rest)
+    = unlines ("CON" :: map (("  " ++) . show) cs)
+    ++ "\n, " ++ show rest
+  show (VarClauses vs rest)
+    = unlines ("VAR" :: map (("  " ++) . show) vs)
+    ++ "\n, " ++ show rest
   show NoClauses = "NONE"
 
 data ClauseType = ConClause | VarClause
@@ -600,7 +608,7 @@ groupCons fc fn pvars cs
                pure (g :: gs')
 
     addGroup : {vars, todo, idx : _} ->
-               Pat -> (0 p : IsVar name idx vars) ->
+               Pat -> (0 p : IsVar nm idx vars) ->
                NamedPats vars todo -> Int -> Term vars ->
                List (Group vars todo) ->
                Core (List (Group vars todo))
@@ -778,12 +786,12 @@ pickNext {ps = q :: qs} fc phase fn npss
                     _ => do (_ ** MkNVar var) <- pickNext fc phase fn (map tail npss)
                             pure (_ ** MkNVar (Later var))
 
-moveFirst : {idx : Nat} -> (0 el : IsVar name idx ps) -> NamedPats ns ps ->
-            NamedPats ns (name :: dropVar ps el)
+moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
+            NamedPats ns (nm :: dropVar ps el)
 moveFirst el nps = getPat el nps :: dropPat el nps
 
-shuffleVars : {idx : Nat} -> (0 el : IsVar name idx todo) -> PatClause vars todo ->
-              PatClause vars (name :: dropVar todo el)
+shuffleVars : {idx : Nat} -> (0 el : IsVar nm idx todo) -> PatClause vars todo ->
+              PatClause vars (nm :: dropVar todo el)
 shuffleVars el (MkPatClause pvars lhs pid rhs)
     = MkPatClause pvars (moveFirst el lhs) pid rhs
 
@@ -805,18 +813,19 @@ mutual
   -- has the most distinct constructors (via pickNext)
   match {todo = (_ :: _)} fc fn phase clauses err
       = do (n ** MkNVar next) <- pickNext fc phase fn (map getNPs clauses)
-           log "compile.casetree" 25 $ "Picked " ++ show n ++ " as the next split"
+           log "compile.casetree.pick" 25 $ "Picked " ++ show n ++ " as the next split"
            let clauses' = map (shuffleVars next) clauses
-           log "compile.casetree" 25 $ "Using clauses " ++ show clauses'
+           log "compile.casetree.clauses" 25 $
+             unlines ("Using clauses:" :: map (("  " ++) . show) clauses')
            let ps = partition phase clauses'
-           log "compile.casetree" 25 $ "Got Partition " ++ show ps
+           log "compile.casetree.partition" 25 $ "Got Partition:\n" ++ show ps
            mix <- mixture fc fn phase ps err
            case mix of
              Nothing =>
-               do log "compile.casetree" 25 "match: No clauses"
+               do log "compile.casetree.intermediate" 25 "match: No clauses"
                   pure (Unmatched "No clauses")
              Just m =>
-               do log "compile.casetree" 25 $ "match: new case tree " ++ show m
+               do log "compile.casetree.intermediate" 25 $ "match: new case tree " ++ show m
                   Core.pure m
   match {todo = []} fc fn phase [] err
        = maybe (pure (Unmatched "No patterns"))
@@ -1094,7 +1103,7 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 -- for the type, which we can use in coverage checking to ensure that one of
 -- the arguments has an empty type
 getPMDef fc phase fn ty []
-    = do log "compile.casetree" 20 "getPMDef: No clauses!"
+    = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
          pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
   where
@@ -1108,7 +1117,7 @@ getPMDef fc phase fn ty clauses
     = do defs <- get Ctxt
          let cs = map (toClosed defs) (labelPat 0 clauses)
          (_ ** t) <- simpleCase fc phase fn ty Nothing cs
-         logC "compile.casetree" 20 $
+         logC "compile.casetree.getpmdef" 20 $
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
          pure (_ ** (t, getUnreachable 0 reached clauses))

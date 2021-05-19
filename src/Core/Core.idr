@@ -133,7 +133,7 @@ data Error : Type where
                      FC -> Env Term vars -> DotReason -> Term vars -> Term vars -> Error
      BadImplicit : FC -> String -> Error
      BadRunElab : {vars : _} ->
-                  FC -> Env Term vars -> Term vars -> Error
+                  FC -> Env Term vars -> Term vars -> (description : String) -> Error
      GenericMsg : FC -> String -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
@@ -160,6 +160,7 @@ public export
 data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
      Deprecated : String -> Warning
 
 export
@@ -302,7 +303,7 @@ Show Error where
            " (" ++ show reason ++ ")" ++
            " - it elaborates to " ++ show y
   show (BadImplicit fc str) = show fc ++ ":" ++ str ++ " can't be bound here"
-  show (BadRunElab fc env script) = show fc ++ ":Bad elaborator script " ++ show script
+  show (BadRunElab fc env script desc) = show fc ++ ":Bad elaborator script " ++ show script ++ " (" ++ desc ++ ")"
   show (GenericMsg fc str) = show fc ++ ":" ++ str
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
@@ -388,7 +389,7 @@ getErrorLoc (CaseCompile loc _ _) = Just loc
 getErrorLoc (MatchTooSpecific loc _ _) = Just loc
 getErrorLoc (BadDotPattern loc _ _ _ _) = Just loc
 getErrorLoc (BadImplicit loc _) = Just loc
-getErrorLoc (BadRunElab loc _ _) = Just loc
+getErrorLoc (BadRunElab loc _ _ _) = Just loc
 getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
@@ -412,6 +413,7 @@ getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 export
 getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
 getWarningLoc (Deprecated _) = Nothing
 
 -- Core is a wrapper around IO that is specialised for efficiency.
@@ -462,6 +464,10 @@ map f (MkCore a) = MkCore (map (map f) a)
 export %inline
 (<$>) : (a -> b) -> Core a -> Core b
 (<$>) f (MkCore a) = MkCore (map (map f) a)
+
+export %inline
+(<$) : b -> Core a -> Core b
+(<$) = (<$>) . const
 
 export %inline
 ignore : Core a -> Core ()
@@ -615,6 +621,10 @@ traverse_ f [] = pure ()
 traverse_ f (x :: xs)
     = Core.do ignore (f x)
               traverse_ f xs
+%inline
+export
+for_ : List a -> (a -> Core ()) -> Core ()
+for_ = flip traverse_
 
 %inline
 export
@@ -747,3 +757,17 @@ condC : List (Core Bool, Core a) -> Core a -> Core a
 condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
+
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content =
+  coreLift (File.writeFile fname content) >>= \case
+    Right () => pure ()
+    Left err => throw $ FileErr fname err
+
+export
+readFile : (fname : String) -> Core String
+readFile fname =
+  coreLift (File.readFile fname) >>= \case
+    Right content => pure content
+    Left err => throw $ FileErr fname err

@@ -2,6 +2,7 @@ module TTImp.Parser
 
 import Core.Context
 import Core.Core
+import Core.Metadata
 import Core.Env
 import Core.TT
 import Parser.Source
@@ -81,7 +82,7 @@ visOption
   <|> do keyword "private"
          pure Private
 
-visibility : SourceEmptyRule Visibility
+visibility : EmptyRule Visibility
 visibility
     = visOption
   <|> pure Private
@@ -124,7 +125,7 @@ visOpt
          pure (Right opt)
 
 getVisibility : Maybe Visibility -> List (Either Visibility FnOpt) ->
-                SourceEmptyRule Visibility
+                EmptyRule Visibility
 getVisibility Nothing [] = pure Private
 getVisibility (Just vis) [] = pure vis
 getVisibility Nothing (Left x :: xs) = getVisibility (Just x) xs
@@ -216,13 +217,13 @@ mutual
            symbol ")"
            pure e
 
-  multiplicity : SourceEmptyRule (Maybe Integer)
+  multiplicity : EmptyRule (Maybe Integer)
   multiplicity
       = do c <- intLit
            pure (Just c)
     <|> pure Nothing
 
-  getMult : Maybe Integer -> SourceEmptyRule RigCount
+  getMult : Maybe Integer -> EmptyRule RigCount
   getMult (Just 0) = pure erased
   getMult (Just 1) = pure linear
   getMult Nothing = pure top
@@ -522,7 +523,7 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), ImpossibleClause fc lhs)
     where
-      getFn : RawImp -> SourceEmptyRule Name
+      getFn : RawImp -> EmptyRule Name
       getFn (IVar _ n) = pure n
       getFn (IApp _ f a) = getFn f
       getFn (IAutoApp _ f a) = getFn f
@@ -593,7 +594,7 @@ recordParam fname indents
   <|> do symbol "{"
          commit
          start <- location
-         info <- the (SourceEmptyRule (PiInfo RawImp))
+         info <- the (EmptyRule (PiInfo RawImp))
                  (pure  AutoImplicit <* keyword "auto"
               <|>(do
                   keyword "default"
@@ -661,10 +662,6 @@ logLevel
     <|> do topic <- option [] ((::) <$> unqualifiedName <*> many aDotIdent)
            lvl <- intLit
            pure (Just (topic, fromInteger lvl))
-
-builtinType : Rule BuiltinType
-builtinType =
-    BuiltinNatural <$ exactIdent "Natural"
 
 directive : FileName -> IndentInfo -> Rule ImpDecl
 directive fname indents

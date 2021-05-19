@@ -1,4 +1,7 @@
 1/1: Building Deps (Deps.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  card is shadowing Main.card
 Error: While processing right hand side of badcard. k is not accessible in this context.
 
 Deps.idr:18:13--18:14

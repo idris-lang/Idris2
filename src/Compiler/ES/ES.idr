@@ -22,7 +22,6 @@ record ESSt where
   preamble : SortedMap String String
   ccTypes : List String
 
-
 jsString : String -> String
 jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
   where
@@ -90,10 +89,12 @@ addStringIteratorToPreamble =
     let newName = esName name
     addToPreamble name newName defs
 
+
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
   where
     okchar : Char -> String
+    okchar '_' = "_"
     okchar c = if isAlphaNum c
                   then cast c
                   else "$" ++ the (String) (asHex (cast {to=Int} c))
@@ -120,11 +121,31 @@ jsCrashExp message  =
     n <- addConstToPreamble "crashExp" "x=>{throw new IdrisError(x)}"
     pure $ n ++ "("++ message ++ ")"
 
-jsIntegerOfString : {auto c : Ref ESs ESSt} -> String -> Core String
-jsIntegerOfString x =
+toBigInt : String -> String
+toBigInt e = "BigInt(" ++ e ++ ")"
+
+fromBigInt : String -> String
+fromBigInt e = "Number(" ++ e ++ ")"
+
+useBigInt' : Int -> Bool
+useBigInt' = (> 32)
+
+useBigInt : IntKind -> Bool
+useBigInt (Signed $ P x)     = useBigInt' x
+useBigInt (Signed Unlimited) = True
+useBigInt (Unsigned x)       = useBigInt' x
+
+jsBigIntOfString : {auto c : Ref ESs ESSt} -> String -> Core String
+jsBigIntOfString x =
   do
-    n <- addConstToPreamble "integerOfString" "s=>{const idx = s.indexOf('.'); return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx));}"
+    n <- addConstToPreamble "bigIntOfString" "s=>{const idx = s.indexOf('.'); return idx === -1 ? BigInt(s) : BigInt(s.slice(0, idx));}"
     pure $ n ++ "(" ++ x ++ ")"
+
+jsNumberOfString : {auto c : Ref ESs ESSt} -> String -> Core String
+jsNumberOfString x = pure $ "parseFloat(" ++ x ++ ")"
+
+jsIntOfString : {auto c : Ref ESs ESSt} -> IntKind -> String -> Core String
+jsIntOfString k = if useBigInt k then jsBigIntOfString else jsNumberOfString
 
 nSpaces : Nat -> String
 nSpaces n = pack $ List.replicate n ' '
@@ -132,89 +153,138 @@ nSpaces n = pack $ List.replicate n ' '
 binOp : String -> String -> String -> String
 binOp o lhs rhs = "(" ++ lhs ++ " " ++ o ++ " " ++ rhs ++ ")"
 
-toBigInt : String -> String
-toBigInt e = "BigInt(" ++ e ++ ")"
+adjInt : Int -> String -> String
+adjInt bits = if useBigInt' bits then toBigInt else id
 
-fromBigInt : String -> String
-fromBigInt e = "Number(" ++ e ++ ")"
+toInt : IntKind -> String -> String
+toInt k = if useBigInt k then toBigInt else id
 
-jsIntegerOfChar : String -> String
-jsIntegerOfChar s = toBigInt (s++ ".codePointAt(0)")
+fromInt : IntKind -> String -> String
+fromInt k = if useBigInt k then fromBigInt else id
 
-jsIntegerOfDouble : String -> String
-jsIntegerOfDouble s = toBigInt $ "Math.trunc(" ++ s ++ ")"
+jsIntOfChar : IntKind -> String -> String
+jsIntOfChar k s = toInt k $ s ++ ".codePointAt(0)"
+
+jsIntOfDouble : IntKind -> String -> String
+jsIntOfDouble k s = toInt k $ "Math.trunc(" ++ s ++ ")"
 
 jsAnyToString : String -> String
 jsAnyToString s = "(''+" ++ s ++ ")"
 
+-- Valid unicode code poing range is [0,1114111], therefore,
+-- we calculate the remainder modulo 1114112 (= 17 * 2^16).
+jsCharOfInt : {auto c : Ref ESs ESSt} -> IntKind -> String -> Core String
+jsCharOfInt k e =
+  do fn <- addConstToPreamble
+             ("truncToChar")
+             ("x=>(x >= 0 && x <= 55295) || (x >= 57344 && x <= 1114111) ? x : 0")
+     pure $ "String.fromCodePoint(" ++ fn ++ "(" ++ fromInt k e ++ "))"
 
-makeIntBound : {auto c : Ref ESs ESSt} -> Int -> Core String
-makeIntBound bits = addConstToPreamble ("int_bound_" ++ show bits) ("BigInt(2) ** BigInt("++ show bits ++") ")
+makeIntBound : {auto c : Ref ESs ESSt} ->
+               (isBigInt : Bool) -> Int -> Core String
+makeIntBound isBigInt bits =
+  let f    = if isBigInt then toBigInt else id
+      name = if isBigInt then "bigint_bound_" else "int_bound_"
+   in addConstToPreamble (name ++ show bits) (f "2" ++ " ** "++ f (show bits))
 
-truncateInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
-truncateInt bits e =
+truncateIntWithBitMask : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
+truncateIntWithBitMask bits e =
   let bs = show bits
-   in do
-         mn <- addConstToPreamble ("int_mask_neg_" ++ bs)
-                                  ("BigInt(-1) << BigInt(" ++ bs ++")")
-         mp <- addConstToPreamble ("int_mask_pos_" ++ bs)
-                                  ("(BigInt(1) << BigInt(" ++ bs ++")) - BigInt(1)")
+      f  = adjInt bits
+   in do ib <- makeIntBound (useBigInt' bits) bits
+         mn <- addConstToPreamble ("int_mask_neg_" ++ bs) ("-" ++ ib)
+         mp <- addConstToPreamble ("int_mask_pos_" ++ bs) (ib ++ " - " ++ f "1")
          pure $ concat {t = List}
-                       [ "((", mn, " & ", e, ") == BigInt(0) ? "
-                       , "(", e, " & ", mp, ") : "
-                       , "(", e, " | ", mn, ")"
+                       [ "((", ib, " & ", e, ") == " ++ ib ++ " ? "
+                       , "(", e, " | ", mn, ") : "
+                       , "(", e, " & ", mp, ")"
                        , ")"
                        ]
 
--- Valid unicode code poing range is [0,1114111], therefore,
--- we calculate the remainder modulo 1114112 (= 17 * 2^16).
-truncChar : {auto c : Ref ESs ESSt} -> String -> Core String
-truncChar e =
-  do fn <- addConstToPreamble ("truncToChar") ("x=>(x >= 0 && x <= 55295) || (x >= 57344 && x <= 1114111) ? x : 0")
-     pure $ "String.fromCodePoint(" ++ fn ++ "(" ++ fromBigInt e ++ "))"
+-- We can't determine `isBigInt` from the given number of bits, since
+-- when casting from BigInt to Number we need to truncate the BigInt
+-- first, otherwise we might lose precision
+boundedInt : {auto c : Ref ESs ESSt} ->
+             (isBigInt : Bool) -> Int -> String -> Core String
+boundedInt isBigInt bits e =
+   let name = if isBigInt then "truncToBigInt" else "truncToInt"
+    in do n  <- makeIntBound isBigInt bits
+          fn <- addConstToPreamble
+                  (name ++ show bits)
+                  ("x=>(x<(-" ++ n ++ ")||(x>=" ++ n ++ "))?x%" ++ n ++ ":x")
+          pure $ fn ++ "(" ++ e ++ ")"
 
-boundedInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
-boundedInt bits e =
-  do
-    n  <- makeIntBound bits
-    fn <- addConstToPreamble ("truncToInt"++show bits) ("x=>(x<(-" ++ n ++ ")||(x>=" ++ n ++ "))?x%" ++ n ++ ":x")
-    pure $ fn ++ "(" ++ e ++ ")"
+boundedUInt : {auto c : Ref ESs ESSt} ->
+              (isBigInt : Bool) -> Int -> String -> Core String
+boundedUInt isBigInt bits e =
+   let name = if isBigInt then "truncToUBigInt" else "truncToUInt"
+    in do n  <- makeIntBound isBigInt bits
+          fn <- addConstToPreamble
+                  (name ++ show bits)
+                  ("x=>{const m = x%" ++ n ++ ";return m>=0?m:m+" ++ n ++ "}")
+          pure $ fn ++ "(" ++ e ++ ")"
 
-boundedUInt : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
-boundedUInt bits e =
-  do
-    n  <- makeIntBound bits
-    fn <- addConstToPreamble ("truncToUInt"++show bits) ("x=>{const m = x%" ++ n ++ ";return m>=0?m:m+" ++ n ++ "}")
-    pure $ fn ++ "(" ++ e ++ ")"
+boundedIntOp : {auto c : Ref ESs ESSt} ->
+               Int -> String -> String -> String -> Core String
+boundedIntOp bits o lhs rhs =
+  boundedInt (useBigInt' bits) bits (binOp o lhs rhs)
 
-boundedIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
-boundedIntOp bits o lhs rhs = boundedInt bits (binOp o lhs rhs)
+boundedIntBitOp : {auto c : Ref ESs ESSt} ->
+                  Int -> String -> String -> String -> Core String
+boundedIntBitOp bits o lhs rhs = truncateIntWithBitMask bits (binOp o lhs rhs)
 
-boundedIntBitOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
-boundedIntBitOp bits o lhs rhs = truncateInt bits (binOp o lhs rhs)
-
-boundedUIntOp : {auto c : Ref ESs ESSt} -> Int -> String -> String -> String -> Core String
-boundedUIntOp bits o lhs rhs = boundedUInt bits (binOp o lhs rhs)
+boundedUIntOp : {auto c : Ref ESs ESSt} ->
+                Int -> String -> String -> String -> Core String
+boundedUIntOp bits o lhs rhs =
+  boundedUInt (useBigInt' bits) bits (binOp o lhs rhs)
 
 boolOp : String -> String -> String -> String
 boolOp o lhs rhs = "(" ++ binOp o lhs rhs ++ " ? BigInt(1) : BigInt(0))"
 
 jsConstant : {auto c : Ref ESs ESSt} -> Constant -> Core String
 jsConstant (I i) = pure $ show i ++ "n"
-jsConstant (I8 i) = pure $ show i ++ "n"
-jsConstant (I16 i) = pure $ show i ++ "n"
-jsConstant (I32 i) = pure $ show i ++ "n"
+jsConstant (I8 i) = pure $ show i
+jsConstant (I16 i) = pure $ show i
+jsConstant (I32 i) = pure $ show i
 jsConstant (I64 i) = pure $ show i ++ "n"
 jsConstant (BI i) = pure $ show i ++ "n"
 jsConstant (Str s) = pure $ jsString s
 jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
 jsConstant (Db f) = pure $ show f
 jsConstant WorldVal = addConstToPreamble "idrisworld" "Symbol('idrisworld')";
-jsConstant (B8 i) = pure $ show i ++ "n"
-jsConstant (B16 i) = pure $ show i ++ "n"
-jsConstant (B32 i) = pure $ show i ++ "n"
+jsConstant (B8 i) = pure $ show i
+jsConstant (B16 i) = pure $ show i
+jsConstant (B32 i) = pure $ show i
 jsConstant (B64 i) = pure $ show i ++ "n"
 jsConstant ty = throw (InternalError $ "Unsuported constant " ++ show ty)
+
+-- For multiplication of 32bit integers (signed or unsigned),
+-- we go via BigInt and back, otherwise the calculation is
+-- susceptible to rounding error, since we might exceed `MAX_SAFE_INTEGER`.
+mult :  {auto c : Ref ESs ESSt}
+        -> Maybe IntKind
+        -> (x : String)
+        -> (y : String)
+        -> Core String
+mult (Just $ Signed $ P 32) x y =
+  fromBigInt <$> boundedInt True 31 (binOp "*" (toBigInt x) (toBigInt y))
+
+mult (Just $ Unsigned 32)   x y =
+  fromBigInt <$> boundedUInt True 32 (binOp "*" (toBigInt x) (toBigInt y))
+
+mult (Just $ Signed $ P n) x y = boundedIntOp (n-1) "*" x y
+mult (Just $ Unsigned n)   x y = boundedUIntOp n "*" x y
+mult _                     x y = pure $ binOp "*" x y
+
+div :  {auto c : Ref ESs ESSt}
+       -> Maybe IntKind
+       -> (x : String)
+       -> (y : String)
+       -> Core String
+div (Just k) x y =
+  if useBigInt k then pure $ binOp "/" x y
+                 else pure $ jsIntOfDouble k (x ++ " / " ++ y)
+div Nothing x y = pure $ binOp "/" x y
 
 -- Creates the definition of a binary arithmetic operation.
 -- Rounding / truncation behavior is determined from the
@@ -231,6 +301,9 @@ arithOp _                     op x y = pure $ binOp op x y
 
 -- Same as `arithOp` but for bitwise operations that might
 -- go out of the valid range.
+-- Note: Bitwise operations on `Number` work correctly for
+-- 32bit *signed* integers. For `Bits32` we therefore go via `BigInt`
+-- in order not having to deal with all kinds of negativity nastiness.
 bitOp :  {auto c : Ref ESs ESSt}
       -> Maybe IntKind
       -> (op : String)
@@ -238,43 +311,76 @@ bitOp :  {auto c : Ref ESs ESSt}
       -> (y : String)
       -> Core String
 bitOp (Just $ Signed $ P n) op x y = boundedIntBitOp (n-1) op x y
+bitOp (Just $ Unsigned 32)  op x y =
+  fromBigInt <$> boundedUInt True 32 (binOp op (toBigInt x) (toBigInt y))
 bitOp (Just $ Unsigned n)   op x y = boundedUIntOp n op x y
 bitOp _                     op x y = pure $ binOp op x y
 
 constPrimitives : {auto c : Ref ESs ESSt} -> ConstantPrimitives
 constPrimitives = MkConstantPrimitives {
-    charToInt    = \k => truncInt k . jsIntegerOfChar
-  , intToChar    = \_ => truncChar
-  , stringToInt  = \k,s => jsIntegerOfString s >>= truncInt k
+    charToInt    = \k => truncInt (useBigInt k) k . jsIntOfChar k
+  , intToChar    = \k => jsCharOfInt k
+  , stringToInt  = \k,s => jsIntOfString k s >>= truncInt (useBigInt k) k
   , intToString  = \_   => pure . jsAnyToString
-  , doubleToInt  = \k => truncInt k . jsIntegerOfDouble
-  , intToDouble  = \_ => pure . fromBigInt
+  , doubleToInt  = \k => truncInt (useBigInt k) k . jsIntOfDouble k
+  , intToDouble  = \k => pure . fromInt k
   , intToInt     = intImpl
   }
-  where truncInt : IntKind -> String -> Core String
-        truncInt (Signed Unlimited) = pure
-        truncInt (Signed $ P n)     = boundedInt (n-1)
-        truncInt (Unsigned n)       = boundedUInt n
+  where truncInt : (isBigInt : Bool) -> IntKind -> String -> Core String
+        truncInt b (Signed Unlimited) = pure
+        truncInt b (Signed $ P n)     = boundedInt b (n-1)
+        truncInt b (Unsigned n)       = boundedUInt b n
 
+        shrink : IntKind -> IntKind -> String -> String
+        shrink k1 k2 = case (useBigInt k1, useBigInt k2) of
+                            (True, False) => fromBigInt
+                            _             => id
+
+        expand : IntKind -> IntKind -> String -> String
+        expand k1 k2 = case (useBigInt k1, useBigInt k2) of
+                            (False,True) => toBigInt
+                            _            => id
+
+        -- when going from BigInt to Number, we must make
+        -- sure to first truncate the BigInt, otherwise we
+        -- might get rounding issues
         intImpl : IntKind -> IntKind -> String -> Core String
-        intImpl _ (Signed Unlimited) = pure
-        intImpl (Signed m) k@(Signed n) = if n >= m then pure else truncInt k
-        intImpl (Signed _)  k@(Unsigned n) = truncInt k
-        intImpl (Unsigned m) k@(Unsigned n) = if n >= m then pure else truncInt k
+        intImpl k1 k2 s =
+          let expanded = expand k1 k2 s
+              shrunk   = shrink k1 k2 <$> truncInt (useBigInt k1) k2 s
+           in case (k1,k2) of
+                (_, Signed Unlimited)    => pure $ expanded
+                (Signed m, Signed n)     =>
+                  if n >= m then pure expanded else shrunk
 
-        -- Only if the precision of the target is greater
-        -- than the one of the source, there is no need to cast.
-        intImpl (Unsigned m) k@(Signed n) = if n > P m then pure else truncInt k
+                (Signed _, Unsigned n)   =>
+                  case (useBigInt k1, useBigInt k2) of
+                       (False,True)  => truncInt True k2 (toBigInt s)
+                       _             => shrunk
 
-jsOp : {auto c : Ref ESs ESSt} -> PrimFn arity -> Vect arity String -> Core String
+                (Unsigned m, Unsigned n) =>
+                  if n >= m then pure expanded else shrunk
+
+                -- Only if the precision of the target is greater
+                -- than the one of the source, there is no need to cast.
+                (Unsigned m, Signed n)   =>
+                  if n > P m then pure expanded else shrunk
+
+jsOp : {0 arity : Nat} -> {auto c : Ref ESs ESSt} ->
+       PrimFn arity -> Vect arity String -> Core String
 jsOp (Add ty) [x, y] = arithOp (intKind ty) "+" x y
 jsOp (Sub ty) [x, y] = arithOp (intKind ty) "-" x y
-jsOp (Mul ty) [x, y] = arithOp (intKind ty) "*" x y
-jsOp (Div ty) [x, y] = arithOp (intKind ty) "/" x y
+jsOp (Mul ty) [x, y] = mult (intKind ty) x y
+jsOp (Div ty) [x, y] = div (intKind ty) x y
 jsOp (Mod ty) [x, y] = arithOp (intKind ty) "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" ++ x ++ "))"
+jsOp (ShiftL Int32Type) [x, y] = pure $ binOp "<<" x y
 jsOp (ShiftL ty) [x, y] = bitOp (intKind ty) "<<" x y
+jsOp (ShiftR Int32Type) [x, y] = pure $ binOp ">>" x y
 jsOp (ShiftR ty) [x, y] = bitOp (intKind ty) ">>" x y
+jsOp (BAnd Bits32Type) [x, y] = pure . fromBigInt $ binOp "&" (toBigInt x) (toBigInt y)
+jsOp (BOr Bits32Type) [x, y] = pure . fromBigInt $ binOp "|" (toBigInt x) (toBigInt y)
+jsOp (BXOr Bits32Type) [x, y] = pure . fromBigInt $ binOp "^" (toBigInt x) (toBigInt y)
 jsOp (BAnd ty) [x, y] = pure $ binOp "&" x y
 jsOp (BOr ty) [x, y] = pure $ binOp "|" x y
 jsOp (BXOr ty) [x, y] = pure $ binOp "^" x y
@@ -307,7 +413,7 @@ jsOp DoubleSqrt [x] = pure $ "Math.sqrt(" ++ x ++ ")"
 jsOp DoubleFloor [x] = pure $ "Math.floor(" ++ x ++ ")"
 jsOp DoubleCeiling [x] = pure $ "Math.ceil(" ++ x ++ ")"
 
-jsOp (Cast StringType DoubleType) [x] = pure $ "parseFloat(" ++ x ++ ")"
+jsOp (Cast StringType DoubleType) [x] = jsNumberOfString x
 jsOp (Cast ty StringType) [x] = pure $ jsAnyToString x
 jsOp (Cast ty ty2) [x]        = castInt constPrimitives ty ty2 x
 jsOp BelieveMe [_,_,x] = pure x

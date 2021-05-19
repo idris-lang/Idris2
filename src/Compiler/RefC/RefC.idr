@@ -174,7 +174,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 
 ||| Generate scheme for a primitive function.
-cOp : PrimFn arity -> Vect arity String -> String
+cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
 cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
@@ -427,7 +427,7 @@ showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
 
-cArgsVectANF : Vect arity AVar -> Core (Vect arity String)
+cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
 cArgsVectANF [] = pure []
 cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 
@@ -487,7 +487,7 @@ mutual
                     -> Nat
                     -> Core $ ()
     copyConstructors _ [] _ _ _ = pure ()
-    copyConstructors sc ((MkAConAlt n mTag args body) :: xs) constrFieldVar retValVar k = do
+    copyConstructors sc ((MkAConAlt n _ mTag args body) :: xs) constrFieldVar retValVar k = do
         --(restConstructionCopy, restBody) <- copyConstructors sc xs constrFieldVar retValVar (S k)
         (tag', name') <- getNameTag mTag n
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].tag = " ++ tag' ++ ";"
@@ -509,7 +509,7 @@ mutual
              -> (nrConBlock:Nat)
              -> Core ()
     conBlocks _ [] _ _ = pure ()
-    conBlocks sc ((MkAConAlt n mTag args body) :: xs) retValVar k = do
+    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k = do
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
@@ -608,7 +608,7 @@ mutual
 
     checkTags : List AConAlt -> Core Bool
     checkTags [] = pure False
-    checkTags ((MkAConAlt n Nothing args sc) :: xs) = pure False
+    checkTags ((MkAConAlt n _ Nothing args sc) :: xs) = pure False
     checkTags _ = pure True
 
 
@@ -655,7 +655,7 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n tag args) = do
+    cStatementsFromANF (ACon fc n _ tag args) = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
         emit fc $ "Value_Constructor* "

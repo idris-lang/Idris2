@@ -253,7 +253,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     ambig (AmbiguousSearch _ _ _ _) = True
     ambig _ = False
 
-    clearEnvType : {idx : Nat} -> (0 p : IsVar name idx vs) ->
+    clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
     clearEnvType First fc (b :: env)
         = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc False) :: env

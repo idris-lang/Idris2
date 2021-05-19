@@ -28,19 +28,20 @@ elabScript : {vars : _} ->
              FC -> NestedNames vars ->
              Env Term vars -> NF vars -> Maybe (Glued vars) ->
              Core (NF vars)
-elabScript fc nest env (NDCon nfc nm t ar args) exp
+elabScript fc nest env script@(NDCon nfc nm t ar args) exp
     = do defs <- get Ctxt
          fnm <- toFullNames nm
          case fnm of
               NS ns (UN n)
-                 => if ns == reflectionNS then elabCon defs n (map snd args) else failWith defs
-              _ => failWith defs
+                 => if ns == reflectionNS
+                      then elabCon defs n (map snd args)
+                      else failWith defs $ "bad reflection namespace " ++ show ns
+              _ => failWith defs $ "bad fullnames " ++ show fnm
   where
-    failWith : Defs -> Core a
-    failWith defs
-      = do defs <- get Ctxt
-           empty <- clearDefs defs
-           throw (BadRunElab fc env !(quote empty env (NDCon nfc nm t ar args)))
+    failWith : Defs -> String -> Core a
+    failWith defs desc
+      = do empty <- clearDefs defs
+           throw (BadRunElab fc env !(quote empty env script) desc)
 
     scriptRet : Reflect a => a -> Core (NF vars)
     scriptRet tm
@@ -59,7 +60,7 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
                       elabScript fc nest env
                               !(sc defs (toClosure withAll env
                                               !(quote defs env act'))) exp
-                  _ => failWith defs
+                  x => failWith defs $ "non-function RHS of a Bind: " ++ show x
     elabCon defs "Fail" [_,msg]
         = do msg' <- evalClosure defs msg
              throw (GenericMsg fc ("Error during reflection: " ++
@@ -67,14 +68,14 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
     elabCon defs "LogMsg" [topic, verb, str]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
-             logC !(reify defs topic') !(reify defs verb') $
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      reify defs str'
              scriptRet ()
     elabCon defs "LogTerm" [topic, verb, str, tm]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
-             logC !(reify defs topic') !(reify defs verb') $
+             unverifiedLogC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      tm' <- evalClosure defs tm
                      pure $ !(reify defs str') ++ ": " ++
@@ -161,11 +162,12 @@ elabScript fc nest env (NDCon nfc nm t ar args) exp
              decls <- reify defs d'
              traverse_ (processDecl [] (MkNested []) []) decls
              scriptRet ()
-    elabCon defs n args = failWith defs
+    elabCon defs n args = failWith defs $ "unexpected Elab constructor " ++ n ++
+                                          ", or incorrect count of arguments: " ++ show (length args)
 elabScript fc nest env script exp
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         throw (BadRunElab fc env !(quote empty env script))
+         throw (BadRunElab fc env !(quote empty env script) "script is not a data value")
 
 export
 checkRunElab : {vars : _} ->

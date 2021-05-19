@@ -30,6 +30,7 @@ import System.Info
 
 %default covering
 
+export
 findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
@@ -43,6 +44,7 @@ findChez
 --     of the library paths managed by Idris
 -- If it can't be found, we'll assume it's a system library and that chez
 -- will thus be able to find it.
+export
 findLibs : {auto c : Ref Ctxt Defs} ->
            List String -> Core (List (String, String))
 findLibs ds
@@ -55,7 +57,7 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-
+export
 escapeString : String -> String
 escapeString s = pack $ foldr escape [] $ unpack s
   where
@@ -70,6 +72,7 @@ schHeader chez libs
     "; @generated\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
+    "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
@@ -97,6 +100,7 @@ showChezString [] = id
 showChezString ('"'::cs) = ("\\\"" ++) . showChezString cs
 showChezString (c ::cs) = (showChezChar c) . showChezString cs
 
+export
 chezString : String -> String
 chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
@@ -104,16 +108,16 @@ mutual
   tySpec : NamedCExp -> Core String
   -- Primitive types have been converted to names for the purpose of matching
   -- on types
-  tySpec (NmCon fc (UN "Int") _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ []) = pure "string"
-  tySpec (NmCon fc (UN "Double") _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ [_])
+  tySpec (NmCon fc (UN "Int") _ _ []) = pure "int"
+  tySpec (NmCon fc (UN "String") _ _ []) = pure "string"
+  tySpec (NmCon fc (UN "Double") _ _ []) = pure "double"
+  tySpec (NmCon fc (UN "Char") _ _ []) = pure "char"
+  tySpec (NmCon fc (NS _ n) _ _ [_])
      = cond [(n == UN "Ptr", pure "void*"),
              (n == UN "GCPtr", pure "void*"),
              (n == UN "Buffer", pure "u8*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ [])
+  tySpec (NmCon fc (NS _ n) _ _ [])
      = cond [(n == UN "Unit", pure "void"),
              (n == UN "AnyPtr", pure "void*"),
              (n == UN "GCAnyPtr", pure "void*")]
@@ -125,10 +129,11 @@ mutual
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
+  export
   chezExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
@@ -162,9 +167,11 @@ mutual
       = schExtCommon chezExtPrim chezString i prim args
 
 -- Reference label for keeping track of loaded external libraries
+export
 data Loaded : Type where
 
 -- Label for noting which struct types are declared
+export
 data Structs : Type where
 
 cftySpec : FC -> CFType -> Core String
@@ -272,10 +279,9 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret = throw (NoForeignCC fc)
-useCC appdir fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC appdir fc ccs args ret
+useCC appdir fc ccs args ret
+    = case parseCC ["scheme,chez", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc)
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -284,7 +290,7 @@ useCC appdir fc (cc :: ccs) args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => useCC appdir fc ccs args ret
+           _ => throw (NoForeignCC fc)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -329,14 +335,16 @@ schFgnDef appdir fc n (MkNmForeign cs args ret)
                 body ++ "))\n")
 schFgnDef _ _ _ _ = pure ("", "")
 
+export
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
              String -> (Name, FC, NamedDef) -> Core (String, String)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
-startChez : String -> String -> String
-startChez appdir target = unlines
+export
+startChezPreamble : String
+startChezPreamble = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
@@ -357,7 +365,12 @@ startChez appdir target = unlines
     , "fi                                                         "
     , ""
     , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , ""  -- so that the preamble ends with a newline
+    ]
+
+startChez : String -> String -> String
+startChez appdir target = startChezPreamble ++ unlines
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 

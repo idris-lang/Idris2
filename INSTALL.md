@@ -99,6 +99,31 @@ The API will only work if you've completed the self-hosting step, step 4, since
 the intermediate code versions need to be consistent throughout. Otherwise, you
 will get an `Error in TTC: TTC data is in an older format` error.
 
+### 7: (Optional) Shell Auto-completion
+
+Idris2 supports tab auto-completion for Bash-like shells.
+
+#### For Bash Users
+
+From within bash, run the following command:
+
+```sh
+eval "$(idris2 --bash-completion-script idris2)"
+```
+
+You can also add it to your `.bashrc` file.
+
+#### For ZSH Users
+From within ZSH, run the following commands:
+
+```sh
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+eval "$(idris2 --bash-completion-script idris2)"
+```
+
+You can also add them to your `.zshrc` file.
+
 ### Troubleshooting
 
 If you get the message `variable make-thread-parameter is not bound` while
@@ -113,20 +138,26 @@ Racket, then your copy of Chez Scheme was built without thread support. Pass
 If you are Homebrew user you can install Idris 2 together with all the requirements
 by running the following command:
 
-    brew install idris2
+```sh
+brew install idris2
+```
 
 ### Installing from nix
 
 If you are a [nix](https://nixos.org/features.html) user you can install Idris 2 together with all the requirements
 by running the following command:
 
-    nix-env -i idris2
+```sh
+nix-env -i idris2
+```
 
 ### Install from nix flakes
 
 If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
 
-    nix profile install github:idris-lang/Idris2
+```sh
+nix profile install github:idris-lang/Idris2
+```
 
 ## Running in text editor
 
@@ -134,4 +165,6 @@ If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install I
 
 If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
 
-    nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
+```sh
+nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
+```

@@ -41,6 +41,7 @@ Ord Prec where
 ||| Things that have a canonical `String` representation.
 public export
 interface Show ty where
+  constructor MkShow
   ||| Convert a value to its `String` representation.
   ||| @ x the value to convert
   show : (x : ty) -> String

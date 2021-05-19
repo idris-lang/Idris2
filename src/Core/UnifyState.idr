@@ -1,3 +1,4 @@
+
 module Core.UnifyState
 
 import Core.CaseTree
@@ -10,6 +11,7 @@ import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.TTC
+import Core.Value
 import Libraries.Utils.Binary
 
 import Libraries.Data.IntMap
@@ -26,9 +28,8 @@ data Constraint : Type where
      MkConstraint : {vars : _} ->
                     FC ->
                     (withLazy : Bool) ->
-                    (blockedOn : List Name) ->
                     (env : Env Term vars) ->
-                    (x : Term vars) -> (y : Term vars) ->
+                    (x : NF vars) -> (y : NF vars) ->
                     Constraint
      -- An unsolved sequence of constraints, arising from arguments in an
      -- application where solving later constraints relies on solving earlier
@@ -36,36 +37,11 @@ data Constraint : Type where
      MkSeqConstraint : {vars : _} ->
                        FC ->
                        (env : Env Term vars) ->
-                       (xs : List (Term vars)) ->
-                       (ys : List (Term vars)) ->
+                       (xs : List (NF vars)) ->
+                       (ys : List (NF vars)) ->
                        Constraint
      -- A resolved constraint
      Resolved : Constraint
-
-export
-TTC Constraint where
-  toBuf b (MkConstraint {vars} fc l block env x y)
-     = do tag 0; toBuf b vars; toBuf b l
-          toBuf b block
-          toBuf b fc; toBuf b env; toBuf b x; toBuf b y
-  toBuf b (MkSeqConstraint {vars} fc env xs ys)
-     = do tag 1; toBuf b vars; toBuf b fc; toBuf b env; toBuf b xs; toBuf b ys
-  toBuf b Resolved = tag 2
-
-  fromBuf b
-      = case !getTag of
-             0 => do vars <- fromBuf b
-                     fc <- fromBuf b; l <- fromBuf b
-                     block <- fromBuf b
-                     env <- fromBuf b
-                     x <- fromBuf b; y <- fromBuf b
-                     pure (MkConstraint {vars} fc l block env x y)
-             1 => do vars <- fromBuf b
-                     fc <- fromBuf b; env <- fromBuf b
-                     xs <- fromBuf b; ys <- fromBuf b
-                     pure (MkSeqConstraint {vars} fc env xs ys)
-             2 => pure Resolved
-             _ => corrupt "Constraint"
 
 public export
 record UState where
@@ -292,13 +268,17 @@ addConstraint constr
 
 export
 addDot : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          FC -> Env Term vars -> Name -> Term vars -> DotReason -> Term vars ->
          Core ()
 addDot fc env dotarg x reason y
     = do ust <- get UST
+         defs <- get Ctxt
+         xnf <- nf defs env x
+         ynf <- nf defs env y
          put UST (record { dotConstraints $=
-                             ((dotarg, reason, MkConstraint fc False [] env x y) ::)
+                             ((dotarg, reason, MkConstraint fc False env xnf ynf) ::)
                          } ust)
 
 mkConstantAppArgs : {vars : _} ->
@@ -312,11 +292,6 @@ mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
@@ -339,11 +314,6 @@ mkConstantAppArgsSub {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
@@ -366,12 +336,6 @@ mkConstantAppArgsOthers {done} {vars = x :: xs}
              then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
-  where
-    mkVar : (wkns : List Name) ->
-            IsVar name (length wkns) (wkns ++ name :: vars ++ done)
-    mkVar [] = First
-    mkVar (w :: ws) = Later (mkVar ws)
-
 
 export
 applyTo : {vars : _} ->
@@ -597,15 +561,17 @@ checkValidHole base (idx, (fc, n))
                      let Just c = lookup con (constraints ust)
                           | Nothing => pure ()
                      case c of
-                          MkConstraint fc l blocked env x y =>
+                          MkConstraint fc l env x y =>
                              do put UST (record { guesses = empty } ust)
-                                xnf <- normaliseHoles defs env x
-                                ynf <- normaliseHoles defs env y
+                                empty <- clearDefs defs
+                                xnf <- quote empty env x
+                                ynf <- quote empty env y
                                 throw (CantSolveEq fc env xnf ynf)
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST (record { guesses = empty } ust)
-                                xnf <- normaliseHoles defs env x
-                                ynf <- normaliseHoles defs env y
+                                empty <- clearDefs defs
+                                xnf <- quote empty env x
+                                ynf <- quote empty env y
                                 throw (CantSolveEq fc env xnf ynf)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
@@ -705,12 +671,13 @@ dumpHole' lvl hole
              case lookup n (constraints ust) of
                   Nothing => pure ()
                   Just Resolved => log' lvl "\tResolved"
-                  Just (MkConstraint _ lazy _ env x y) =>
-                    do log' lvl $ "\t  " ++ show !(toFullNames !(normalise defs env x))
-                                       ++ " =?= " ++ show !(toFullNames !(normalise defs env y))
+                  Just (MkConstraint _ lazy env x y) =>
+                    do log' lvl $ "\t  " ++ show !(toFullNames !(quote defs env x))
+                                       ++ " =?= " ++ show !(toFullNames !(quote defs env y))
+                       empty <- clearDefs defs
                        log' (withVerbosity 5 lvl)
-                                $ "\t    from " ++ show !(toFullNames x)
-                                      ++ " =?= " ++ show !(toFullNames y) ++
+                                $ "\t    from " ++ show !(toFullNames !(quote empty env x))
+                                      ++ " =?= " ++ show !(toFullNames !(quote empty env y)) ++
                                if lazy then "\n\t(lazy allowed)" else ""
                   Just (MkSeqConstraint _ _ xs ys) =>
                        log' lvl $ "\t\t" ++ show xs ++ " =?= " ++ show ys
@@ -718,7 +685,9 @@ dumpHole' lvl hole
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (topics : String) -> (verbosity : Nat) ->
+                  (topics : String) ->
+                  {auto 0 _ : KnownTopic topics} ->
+                  (verbosity : Nat) ->
                   (all : Bool) ->
                   Core ()
 dumpConstraints str n all

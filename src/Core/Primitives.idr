@@ -586,7 +586,7 @@ castTo DoubleType = castDouble
 castTo _ = const Nothing
 
 export
-getOp : PrimFn arity ->
+getOp : {0 arity : Nat} -> PrimFn arity ->
         {vars : List Name} -> Vect arity (NF vars) -> Maybe (NF vars)
 getOp (Add ty) = binOp add
 getOp (Sub ty) = binOp sub
@@ -637,7 +637,7 @@ prim : String -> Name
 prim str = UN $ "prim__" ++ str
 
 export
-opName : PrimFn arity -> Name
+opName : {0 arity : Nat} -> PrimFn arity -> Name
 opName (Add ty) = prim $ "add_" ++ show ty
 opName (Sub ty) = prim $ "sub_" ++ show ty
 opName (Mul ty) = prim $ "mul_" ++ show ty

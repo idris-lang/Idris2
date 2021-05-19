@@ -68,27 +68,38 @@ isPConst : Pat -> Maybe Constant
 isPConst (PConst _ c) = Just c
 isPConst _ = Nothing
 
-mutual
-  export
-  {vars : _} -> Show (CaseTree vars) where
-    show (Case {name} idx prf ty alts)
-        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of\n { " ++
-                showSep "\n | " (assert_total (map show alts)) ++ "\n }"
-    show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
-    show (Unmatched msg) = "Error: " ++ show msg
-    show Impossible = "Impossible"
+showCT : {vars : _} -> (indent : String) -> CaseTree vars -> String
+showCA : {vars : _} -> (indent : String) -> CaseAlt vars  -> String
 
-  export
-  {vars : _} -> Show (CaseAlt vars) where
-    show (ConCase n tag args sc)
+showCT indent (Case {name} idx prf ty alts)
+  = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
+  ++ "\n" ++ indent ++ " { "
+  ++ showSep ("\n" ++ indent ++ " | ")
+             (assert_total (map (showCA ("  " ++ indent)) alts))
+  ++ "\n" ++ indent ++ " }"
+showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
+showCT indent (Unmatched msg) = "Error: " ++ show msg
+showCT indent Impossible = "Impossible"
+
+showCA indent (ConCase n tag args sc)
         = showSep " " (map show (n :: args)) ++ " => " ++
-          show sc
-    show (DelayCase _ arg sc)
-        = "Delay " ++ show arg ++ " => " ++ show sc
-    show (ConstCase c sc)
-        = "Constant " ++ show c ++ " => " ++ show sc
-    show (DefaultCase sc)
-        = "_ => " ++ show sc
+          showCT indent sc
+showCA indent (DelayCase _ arg sc)
+        = "Delay " ++ show arg ++ " => " ++ showCT indent sc
+showCA indent (ConstCase c sc)
+        = "Constant " ++ show c ++ " => " ++ showCT indent sc
+showCA indent (DefaultCase sc)
+        = "_ => " ++ showCT indent sc
+
+export
+{vars : _} -> Show (CaseTree vars) where
+  show = showCT ""
+
+export
+{vars : _} -> Show (CaseAlt vars) where
+  show = showCA ""
+
+
 
 mutual
   export

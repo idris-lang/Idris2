@@ -13,6 +13,7 @@ import Prelude.Ops
 ||| The Eq interface defines inequality and equality.
 public export
 interface Eq ty where
+  constructor MkEq
   (==) : ty -> ty -> Bool
   (/=) : ty -> ty -> Bool
 
@@ -86,6 +87,7 @@ Eq Ordering where
 ||| The Ord interface defines comparison operations on ordered data types.
 public export
 interface Eq ty => Ord ty where
+  constructor MkOrd
   compare : ty -> ty -> Ordering
 
   (<) : ty -> ty -> Bool
