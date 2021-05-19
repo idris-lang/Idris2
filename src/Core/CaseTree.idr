@@ -50,6 +50,32 @@ isDefault : CaseAlt vars -> Bool
 isDefault (DefaultCase _) = True
 isDefault _ = False
 
+mutual
+  export
+  StripNamespace (CaseTree vars) where
+    trimNS ns (Case idx p scTy xs)
+        = Case idx p (trimNS ns scTy) (map (trimNS ns) xs)
+    trimNS ns (STerm x t) = STerm x (trimNS ns t)
+    trimNS ns c = c
+
+    restoreNS ns (Case idx p scTy xs)
+        = Case idx p (restoreNS ns scTy) (map (restoreNS ns) xs)
+    restoreNS ns (STerm x t) = STerm x (restoreNS ns t)
+    restoreNS ns c = c
+
+  export
+  StripNamespace (CaseAlt vars) where
+    trimNS ns (ConCase x tag args t) = ConCase x tag args (trimNS ns t)
+    trimNS ns (DelayCase ty arg t) = DelayCase ty arg (trimNS ns t)
+    trimNS ns (ConstCase x t) = ConstCase x (trimNS ns t)
+    trimNS ns (DefaultCase t) = DefaultCase (trimNS ns t)
+
+    restoreNS ns (ConCase x tag args t) = ConCase x tag args (restoreNS ns t)
+    restoreNS ns (DelayCase ty arg t) = DelayCase ty arg (restoreNS ns t)
+    restoreNS ns (ConstCase x t) = ConstCase x (restoreNS ns t)
+    restoreNS ns (DefaultCase t) = DefaultCase (restoreNS ns t)
+
+
 public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat

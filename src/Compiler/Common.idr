@@ -110,9 +110,9 @@ execute {c} cg tm
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're
 -- done (so that we don't obliterate the definition)
-getMinimalDef : ContextEntry -> Core (GlobalDef, Maybe Binary)
+getMinimalDef : ContextEntry -> Core (GlobalDef, Maybe (Namespace, Binary))
 getMinimalDef (Decoded def) = pure (def, Nothing)
-getMinimalDef (Coded bin)
+getMinimalDef (Coded ns bin)
     = do b <- newRef Bin bin
          cdef <- fromBuf b
          refsRList <- fromBuf b
@@ -125,12 +125,12 @@ getMinimalDef (Coded bin)
                            [] Public (MkTotality Unchecked IsCovering)
                            [] Nothing refsR False False True
                            None cdef Nothing []
-         pure (def, Just bin)
+         pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition
 getAllDesc : {auto c : Ref Ctxt Defs} ->
              List Name -> -- calls to check
-             IOArray (Int, Maybe Binary) ->
+             IOArray (Int, Maybe (Namespace, Binary)) ->
                             -- which nodes have been visited. If the entry is
                             -- present, it's visited. Keep the binary entry, if
                             -- we partially decoded it, so that we can put back
@@ -174,10 +174,10 @@ getNamedDef n
                                             pure (Just (n, location def, d))
 
 replaceEntry : {auto c : Ref Ctxt Defs} ->
-               (Int, Maybe Binary) -> Core ()
+               (Int, Maybe (Namespace, Binary)) -> Core ()
 replaceEntry (i, Nothing) = pure ()
-replaceEntry (i, Just b)
-    = ignore $ addContextEntry (Resolved i) b
+replaceEntry (i, Just (ns, b))
+    = ignore $ addContextEntry ns (Resolved i) b
 
 natHackNames : List Name
 natHackNames

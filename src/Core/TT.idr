@@ -743,6 +743,56 @@ data Term : List Name -> Type where
               Term vars
      TType : FC -> Term vars
 
+-- Remove/restore the given namespace from all Refs. This is to allow
+-- writing terms and case trees to disk without repeating the same namespace
+-- all over the place.
+public export
+interface StripNamespace a where
+  trimNS : Namespace -> a -> a
+  restoreNS : Namespace -> a -> a
+
+export
+StripNamespace (Term vars) where
+  trimNS ns tm@(Ref fc x (NS tns n))
+      = if ns == tns then Ref fc x (NS (unsafeFoldNamespace []) n) else tm
+        -- ^ A blank namespace, rather than a UN, so we don't catch primitive
+        -- names which are represented as UN.
+  trimNS ns (Meta fc x y xs)
+      = Meta fc x y (map (trimNS ns) xs)
+  trimNS ns (Bind fc x b scope)
+      = Bind fc x (map (trimNS ns) b) (trimNS ns scope)
+  trimNS ns (App fc fn arg)
+      = App fc (trimNS ns fn) (trimNS ns arg)
+  trimNS ns (As fc s p tm)
+      = As fc s (trimNS ns p) (trimNS ns tm)
+  trimNS ns (TDelayed fc x y)
+      = TDelayed fc x (trimNS ns y)
+  trimNS ns (TDelay fc x t y)
+      = TDelay fc x (trimNS ns t) (trimNS ns y)
+  trimNS ns (TForce fc r y)
+      = TForce fc r (trimNS ns y)
+  trimNS ns tm = tm
+
+  restoreNS ns tm@(Ref fc x (NS tmns n))
+      = if isNil (unsafeUnfoldNamespace tmns)
+            then Ref fc x (NS ns n)
+            else tm
+  restoreNS ns (Meta fc x y xs)
+      = Meta fc x y (map (restoreNS ns) xs)
+  restoreNS ns (Bind fc x b scope)
+      = Bind fc x (map (restoreNS ns) b) (restoreNS ns scope)
+  restoreNS ns (App fc fn arg)
+      = App fc (restoreNS ns fn) (restoreNS ns arg)
+  restoreNS ns (As fc s p tm)
+      = As fc s (restoreNS ns p) (restoreNS ns tm)
+  restoreNS ns (TDelayed fc x y)
+      = TDelayed fc x (restoreNS ns y)
+  restoreNS ns (TDelay fc x t y)
+      = TDelay fc x (restoreNS ns t) (restoreNS ns y)
+  restoreNS ns (TForce fc r y)
+      = TForce fc r (restoreNS ns y)
+  restoreNS ns tm = tm
+
 export
 isErased : Term vars -> Bool
 isErased (Erased _ _) = True
