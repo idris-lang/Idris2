@@ -261,8 +261,8 @@ mutual
   export
   {vars : _} -> TTC (Term vars) where
     toBuf b (Local {name} fc c idx y)
-        = if idx < 244
-             then do tag (12 + cast idx)
+        = if idx < 243
+             then do tag (13 + cast idx)
                      toBuf b c
              else do tag 0
                      toBuf b c
@@ -278,11 +278,14 @@ mutual
              toBuf b x;
              toBuf b bnd; toBuf b scope
     toBuf b (App fc fn arg)
-        = do tag 4;
-             toBuf b fn; toBuf b arg
---              let (fn, args) = getFnArgs (App fc fn arg)
---              toBuf b fn; -- toBuf b p;
---              toBuf b args
+        = do let (fn, args) = getFnArgs (App fc fn arg)
+             case args of
+                  [arg] => do tag 4
+                              toBuf b fn
+                              toBuf b arg
+                  args => do tag 12
+                             toBuf b fn
+                             toBuf b args
     toBuf b (As fc s as tm)
         = do tag 5;
              toBuf b as; toBuf b s; toBuf b tm
@@ -334,8 +337,11 @@ mutual
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
                11 => pure (TType emptyFC)
+               12 => do fn <- fromBuf b
+                        args <- fromBuf b
+                        pure (apply emptyFC fn args)
                idxp => do c <- fromBuf b
-                          let idx : Nat = fromInteger (cast (idxp - 12))
+                          let idx : Nat = fromInteger (cast (idxp - 13))
                           let Just name = getName idx vars
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
