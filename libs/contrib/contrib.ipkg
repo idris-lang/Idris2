@@ -113,7 +113,12 @@ modules = Control.ANSI,
           Data.Validated,
 
           Data.Vect.Binary,
-
+          Data.Vect.Properties,
+          Data.Vect.Properties.Tabulate,
+          Data.Vect.Properties.Index,
+          Data.Vect.Properties.Foldr,
+          Data.Vect.Properties.Map,
+          Data.Vect.Extra,
           Data.Vect.Sort,
 
           Data.Void,
