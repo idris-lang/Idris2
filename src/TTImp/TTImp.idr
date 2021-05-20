@@ -1179,9 +1179,5 @@ logRaw : {auto c : Ref Ctxt Defs} ->
          {auto 0 _ : KnownTopic s} ->
          Nat -> Lazy String -> RawImp -> Core ()
 logRaw str n msg tm
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         if keepLog lvl (logEnabled opts) (logLevel opts)
-            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm
-            else pure ()
+    = when !(logging str n) $
+        do logString str n (msg ++ ": " ++ show tm)

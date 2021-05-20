@@ -184,16 +184,15 @@ mkLogLevel' ps n = MkLogLevel (maybe [] forget ps) n
 ||| Use this function to create user defined loglevels, for instance, during
 ||| elaborator reflection.
 export
-mkUnverifiedLogLevel : Bool -> (s : String) -> Nat -> LogLevel
-mkUnverifiedLogLevel False _ = mkLogLevel' Nothing
-mkUnverifiedLogLevel _ "" = mkLogLevel' Nothing
-mkUnverifiedLogLevel _ ps = mkLogLevel' (Just (split (== '.') ps))
+mkUnverifiedLogLevel : (s : String) -> Nat -> LogLevel
+mkUnverifiedLogLevel "" = mkLogLevel' Nothing
+mkUnverifiedLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
 
 ||| Like `mkUnverifiedLogLevel` but with a compile time check that
 ||| the passed string is a known topic.
 export
-mkLogLevel : Bool -> (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
-mkLogLevel b s = mkUnverifiedLogLevel b s
+mkLogLevel : (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
+mkLogLevel s = mkUnverifiedLogLevel s
 
 ||| The unsafe constructor should only be used in places where the topic has already
 ||| been appropriately processed.
@@ -239,7 +238,7 @@ parseLogLevel str = do
                 ns = tail nns in
                 case ns of
                      [] => pure (MkLogLevel [], n)
-                     [ns] => pure (mkUnverifiedLogLevel True n, ns)
+                     [ns] => pure (mkUnverifiedLogLevel n, ns)
                      _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
@@ -268,9 +267,9 @@ insertLogLevel (MkLogLevel ps n) = insert ps n
 ||| We keep a log if there is a prefix of its path associated to a larger number
 ||| in the LogLevels.
 export
-keepLog : LogLevel -> Bool -> LogLevels -> Bool
-keepLog (MkLogLevel _ Z) _ _ = True
-keepLog (MkLogLevel path n) enabled levels = enabled && go path levels where
+keepLog : LogLevel -> LogLevels -> Bool
+keepLog (MkLogLevel _ Z) _ = True
+keepLog (MkLogLevel path n) levels = go path levels where
 
   go : List String -> StringTrie Nat -> Bool
   go path (MkStringTrie current) = here || there where
