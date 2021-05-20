@@ -167,7 +167,7 @@ char *fastConcat(Value *strList)
     }
 
     char *retVal = malloc(totalLength + 1);
-    retVal[totalLength + 1] = '\0';
+    retVal[totalLength] = '\0';
 
     char *currentStr;
     int currentStrLen;

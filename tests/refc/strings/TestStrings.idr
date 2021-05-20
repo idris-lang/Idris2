@@ -16,17 +16,26 @@ main = do
 
     putStrLn helloWorld
     putStrLn $ show $ length helloWorld
+    putStrLn $ show $ String.length ""
 
     putStrLn $ reverse helloWorld
+    putStrLn $ reverse ""
     putStrLn $ substr 1 2 helloWorld
+    putStrLn $ substr 10 10 helloWorld
+    putStrLn $ substr 1 2 ""
     putStrLn $ show $ assert_total $ strIndex helloWorld 1
 
     putStrLn $ strCons 'a' "bc"
+    putStrLn $ strCons 'a' ""
     putStrLn $ show $ strUncons "abc"
+    putStrLn $ show $ strUncons ""
 
     putStrLn $ fastPack ['p', 'a', 'c', 'k']
+    putStrLn $ fastPack []
     putStrLn $ show $ fastUnpack "unpack"
+    putStrLn $ show $ fastUnpack ""
     putStrLn $ fastConcat ["con", "cat", "en", "ate"]
+    putStrLn $ fastConcat []
 
     let chars = the (List Char) ['a', 'A', '~', '0', ' ', '\n', '\x9f']
     putStrLn $ show $ map isUpper chars
