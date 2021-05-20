@@ -695,14 +695,6 @@ highScore (x :: xs) (y :: ys) high idx duped =
 highScoreIdx : {p : _} -> {ps : _} -> ScoredPats ns (p :: ps) -> Maybe (n ** NVar n (p :: ps))
 highScoreIdx (Scored xs (y :: ys)) = highScore {prev = []} (p :: ps) (y :: ys) (y - 1) (p ** MkNVar First) False
 
-||| Turn a Vect into a list and proof that the list's
-||| length is the same as the vector's length was.
-toList' : Vect l a -> (res : List a ** length res = l)
-toList' [] = ([] ** Refl)
-toList' (x :: xs) =
-  let (rest ** prf) = toList' xs
-  in  (x :: rest ** cong S prf)
-
 ||| Apply the penalty function to the head constructor's
 ||| arity. Produces 0 for all non-head-constructors.
 headConsPenalty : (penality : Nat -> Int) -> Pat -> Int
@@ -726,18 +718,17 @@ consScoreHeuristic scorePat (Scored xs ys) =
   where
     -- also returns NamePats of remaining columns while its in there
     -- scoring the first column.
-    scoreFirstColumn : (nps : List (NamedPats ns (p' :: ps'))) -> (Vect (length nps) (NamedPats ns ps'), Vect (length nps) Int)
-    scoreFirstColumn [] = ([], [])
-    scoreFirstColumn ((w :: ws) :: nps) =
-      let (ws', scores) = scoreFirstColumn nps
-      in  (ws :: ws', scorePat (pat w) :: scores)
+    scoreFirstColumn : (nps : List (NamedPats ns (p' :: ps'))) -> (res : List (NamedPats ns ps') ** (LengthMatch nps res, Vect (length nps) Int))
+    scoreFirstColumn [] = ([] ** (NilMatch, []))
+    scoreFirstColumn ((w :: ws) :: nps) = 
+      let (ws' ** (prf, scores)) = scoreFirstColumn nps
+      in  (ws :: ws' ** (ConsMatch prf, scorePat (pat w) :: scores))
 
     scoreColumns : {ps' : _} -> (nps : List (NamedPats ns ps')) -> Vect (length ps') (Vect (length nps) Int)
     scoreColumns {ps' = []} nps = []
     scoreColumns {ps' = (w :: ws)} nps =
-      let (rest, firstCol) = scoreFirstColumn nps
-          (rest' ** prf) = toList' rest
-      in  firstCol :: (rewrite sym $ prf in scoreColumns rest')
+      let (rest ** (prf, firstColScore)) = scoreFirstColumn nps
+      in  firstColScore :: (rewrite lengthsMatch prf in scoreColumns rest)
 
 ||| Add 1 to each non-default pat in the first row.
 ||| This favors constructive matching first and reduces tree depth on average.
@@ -766,12 +757,19 @@ heuristicB = consScoreHeuristic (headConsPenalty (\arity => if arity == 0 then 0
 heuristicA : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
 heuristicA = consScoreHeuristic (headConsPenalty (negate . cast))
 
-applyHeuristics : {p : _} -> {ps : _} -> ScoredPats ns (p :: ps) -> List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) -> Maybe (n ** NVar n (p :: ps))
+applyHeuristics : {p : _} -> 
+                  {ps : _} -> 
+                  ScoredPats ns (p :: ps) -> 
+                  List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) -> 
+                  Maybe (n ** NVar n (p :: ps))
 applyHeuristics x [] = highScoreIdx x
 applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 
 ||| Based only on the heuristic-score of columns, get the index of
 ||| the column that should be processed next.
+|||
+||| The scoring is inspired by results from the paper:
+||| http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf
 nextIdxByScore : {p : _} ->
                  {ps : _} ->
                  (useHeuristics : Bool) ->
@@ -926,6 +924,7 @@ moveFirst el nps = getPat el nps :: dropPat el nps
 
 shuffleVars : {idx : Nat} -> (0 el : IsVar name idx todo) -> PatClause vars todo ->
               PatClause vars (name :: dropVar todo el)
+shuffleVars First orig@(MkPatClause pvars lhs pid rhs) = orig -- no-op
 shuffleVars el (MkPatClause pvars lhs pid rhs)
     = MkPatClause pvars (moveFirst el lhs) pid rhs
 
