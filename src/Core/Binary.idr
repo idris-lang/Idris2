@@ -33,7 +33,7 @@ import Data.Buffer
 -- TTC files can only be compatible if the version number is the same
 export
 ttcVersion : Int
-ttcVersion = 54
+ttcVersion = 55
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -176,7 +176,7 @@ writeTTCFile : (HasNames extra, TTC extra) =>
 writeTTCFile b file_in
       = do file <- toFullNames file_in
            toBuf b "TT2"
-           toBuf b (version file)
+           toBuf @{Wasteful} b (version file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
            toBuf b (imported file)
@@ -203,7 +203,7 @@ readTTCFile readall file as b
       = do hdr <- fromBuf b
            chunk <- get Bin
            when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-           ver <- fromBuf b
+           ver <- fromBuf @{Wasteful} b
            checkTTCVersion file ver ttcVersion
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
