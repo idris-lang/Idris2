@@ -403,6 +403,7 @@ jsOp StrSubstr [offset, length, str] =
   pure $ str ++ ".slice(" ++ fromBigInt offset ++ ", " ++ fromBigInt offset ++ " + " ++ fromBigInt length ++ ")"
 jsOp DoubleExp [x] = pure $ "Math.exp(" ++ x ++ ")"
 jsOp DoubleLog [x] = pure $ "Math.log(" ++ x ++ ")"
+jsOp DoublePow [x, y] = pure $ "Math.pow(" ++ x ++ ", " ++ y ++ ")"
 jsOp DoubleSin [x] = pure $ "Math.sin(" ++ x ++ ")"
 jsOp DoubleCos [x] = pure $ "Math.cos(" ++ x ++ ")"
 jsOp DoubleTan [x] = pure $ "Math.tan(" ++ x ++ ")"

@@ -350,31 +350,33 @@ Hashable (PrimFn arity) where
       h `hashWithSalt` 24
     DoubleLog =>
       h `hashWithSalt` 25
-    DoubleSin =>
+    DoublePow =>
       h `hashWithSalt` 26
-    DoubleCos =>
+    DoubleSin =>
       h `hashWithSalt` 27
-    DoubleTan =>
+    DoubleCos =>
       h `hashWithSalt` 28
-    DoubleASin =>
+    DoubleTan =>
       h `hashWithSalt` 29
-    DoubleACos =>
+    DoubleASin =>
       h `hashWithSalt` 30
-    DoubleATan =>
+    DoubleACos =>
       h `hashWithSalt` 31
-    DoubleSqrt =>
+    DoubleATan =>
       h `hashWithSalt` 32
-    DoubleFloor =>
+    DoubleSqrt =>
       h `hashWithSalt` 33
-    DoubleCeiling =>
+    DoubleFloor =>
       h `hashWithSalt` 34
+    DoubleCeiling =>
+      h `hashWithSalt` 35
 
     Cast f t =>
-      h `hashWithSalt` 35 `hashWithSalt` f `hashWithSalt` t
+      h `hashWithSalt` 36 `hashWithSalt` f `hashWithSalt` t
     BelieveMe =>
-      h `hashWithSalt` 36
-    Crash =>
       h `hashWithSalt` 37
+    Crash =>
+      h `hashWithSalt` 38
 
 export
 Hashable ConInfo where
