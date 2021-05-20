@@ -9,7 +9,36 @@ import System.Clock
 
 %default covering
 
--- Log message with a term, translating back to human readable names first
+logString' : LogLevel -> String -> Core ()
+logString' lvl str = coreLift $ putStrLn
+    $ "LOG " ++ show lvl ++ ": " ++ str
+
+-- if this function is called, then logging must be enabled.
+logString : String -> Nat -> String -> Core ()
+logString str n = logString' (mkUnverifiedLogLevel True str n)
+
+export
+logging' : {auto c : Ref Ctxt Defs} ->
+           LogLevel -> Core Bool
+logging' lvl = do
+    opts <- getSession
+    pure $ keepLog lvl (logEnabled opts) (logLevel opts)
+
+export
+unverifiedLogging : {auto c : Ref Ctxt Defs} ->
+                    String -> Nat -> Core Bool
+unverifiedLogging str n = do
+    opts <- getSession
+    let lvl = mkUnverifiedLogLevel (logEnabled opts) str n
+    logging' lvl
+
+export
+logging : {auto c : Ref Ctxt Defs} ->
+          (s : String) -> {auto 0 _ : KnownTopic s} ->
+          Nat -> Core Bool
+logging str n = unverifiedLogging str n
+
+||| Log message with a term, translating back to human readable names first.
 export
 logTerm : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
@@ -17,21 +46,16 @@ logTerm : {vars : _} ->
           {auto 0 _ : KnownTopic s} ->
           Nat -> Lazy String -> Term vars -> Core ()
 logTerm str n msg tm
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         if keepLog lvl (logEnabled opts) (logLevel opts)
-            then do tm' <- toFullNames tm
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
-            else pure ()
+    = when !(logging str n)
+        $ do tm' <- toFullNames tm
+             logString str n $ msg ++ ": " ++ show tm'
+
 export
 log' : {auto c : Ref Ctxt Defs} ->
        LogLevel -> Lazy String -> Core ()
 log' lvl msg
-    = do opts <- getSession
-         if keepLog lvl (logEnabled opts) (logLevel opts)
-            then coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
+    = when !(logging' lvl)
+        $ logString' lvl msg
 
 ||| Log a message with the given log level. Use increasingly
 ||| high log level numbers for more granular logging.
@@ -41,20 +65,17 @@ log : {auto c : Ref Ctxt Defs} ->
       {auto 0 _ : KnownTopic s} ->
       Nat -> Lazy String -> Core ()
 log str n msg
-    = do let lvl = mkLogLevel (logEnabled !getSession) str n
-         log' lvl msg
+    = when !(logging str n)
+        $ logString str n msg
 
 export
 unverifiedLogC : {auto c : Ref Ctxt Defs} ->
                  (s : String) ->
                  Nat -> Core String -> Core ()
 unverifiedLogC str n cmsg
-    = do opts <- getSession
-         let lvl = mkUnverifiedLogLevel (logEnabled opts) str n
-         if keepLog lvl (logEnabled opts) (logLevel opts)
-            then do msg <- cmsg
-                    coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-            else pure ()
+    = when !(unverifiedLogging str n)
+        $ do msg <- cmsg
+             logString str n msg
 
 export
 logC : {auto c : Ref Ctxt Defs} ->
@@ -63,11 +84,16 @@ logC : {auto c : Ref Ctxt Defs} ->
        Nat -> Core String -> Core ()
 logC str = unverifiedLogC str
 
+nano : Integer
+nano = 1000000000
+
+micro : Integer
+micro = 1000000
+
 export
 logTimeOver : Integer -> Core String -> Core a -> Core a
 logTimeOver nsecs str act
     = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
          let t = seconds clock * nano + nanoseconds clock
          res <- act
          clock <- coreLift (clockTime Process)
@@ -78,7 +104,7 @@ logTimeOver nsecs str act
               do str' <- str
                  coreLift $ putStrLn $ "TIMING " ++ str' ++ ": " ++
                           show (time `div` nano) ++ "." ++
-                          addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
+                          addZeros (unpack (show ((time `mod` nano) `div` micro))) ++
                           "s"
          pure res
   where
@@ -94,7 +120,6 @@ logTimeWhen : {auto c : Ref Ctxt Defs} ->
 logTimeWhen p str act
     = if p
          then do clock <- coreLift (clockTime Process)
-                 let nano = 1000000000
                  let t = seconds clock * nano + nanoseconds clock
                  res <- act
                  clock <- coreLift (clockTime Process)
@@ -103,7 +128,7 @@ logTimeWhen p str act
                  assert_total $ -- We're not dividing by 0
                     coreLift $ putStrLn $ "TIMING " ++ str ++ ": " ++
                              show (time `div` nano) ++ "." ++
-                             addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
+                             addZeros (unpack (show ((time `mod` nano) `div` micro))) ++
                              "s"
                  pure res
          else act
@@ -118,7 +143,6 @@ logTimeRecord' : {auto c : Ref Ctxt Defs} ->
                  String -> Core a -> Core a
 logTimeRecord' key act
     = do clock <- coreLift (clockTime Process)
-         let nano = 1000000000
          let t = seconds clock * nano + nanoseconds clock
          res <- act
          clock <- coreLift (clockTime Process)
@@ -163,10 +187,9 @@ showTimeRecord
     showTimeLog : (String, (Bool, Integer)) -> Core ()
     showTimeLog (key, (_, time))
         = do coreLift $ putStr (key ++ ": ")
-             let nano = 1000000000
              assert_total $ -- We're not dividing by 0
                     coreLift $ putStrLn $ show (time `div` nano) ++ "." ++
-                               addZeros (unpack (show ((time `mod` nano) `div` 1000000))) ++
+                               addZeros (unpack (show ((time `mod` nano) `div` micro))) ++
                                "s"
 
 export
