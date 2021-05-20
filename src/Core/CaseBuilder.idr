@@ -6,14 +6,13 @@ import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Normalise
+import Core.Options
 import Core.TT
 import Core.Value
 
 import Libraries.Data.LengthMatch
 import Data.List
 import Data.Vect
-
-import Debug.Trace
 
 import Decidable.Equality
 
@@ -948,13 +947,7 @@ mutual
   -- has the most distinct constructors (via pickNextViable)
   match {todo = (_ :: _)} fc fn phase clauses err
       = do let nps = getNPs <$> clauses
---            let scores = heuristicF $ zeroedScore nps
---            log "compile.casetree.debug" 1 ("\nF: " ++ (show scores))
---            let scores' = heuristicB scores
---            log "compile.casetree.debug" 1 ("\nB: " ++ (show scores'))
---            let scores'' = heuristicA scores'
---            log "compile.casetree.debug" 1 ("\nA: " ++ (show scores''))
-           let (_ ** (MkNVar next)) = nextIdxByScore True phase nps
+           let (_ ** (MkNVar next)) = nextIdxByScore (caseTreeHeuristics !getSession) phase nps
            let prioritizedClauses = shuffleVars next <$> clauses
            (n ** MkNVar next') <- pickNextViable fc phase fn (getNPs <$> prioritizedClauses)
            log "compile.casetree" 25 $ "Picked " ++ show n ++ " as the next split"

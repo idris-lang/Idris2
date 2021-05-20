@@ -118,7 +118,11 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths
+  BlodwenPaths |
+   ||| Apply experimental heuristics to case tree generation that
+   ||| sometimes improves performance and reduces compiled code
+   ||| size.
+  CaseTreeHeuristics
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -197,6 +201,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set output directory"),
            MkOpt ["--profile"] [] [Profile]
               (Just "Generate profile data when compiling, if supported"),
+           MkOpt ["--case-tree-opt"] [] [CaseTreeHeuristics]
+              (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
