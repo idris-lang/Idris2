@@ -107,7 +107,7 @@ idrisTestsLinear = MkTestPool "Quantities" []
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
         "linear009", "linear010", "linear011", "linear012",
-        "linear013"]
+        "linear013", "linear014"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool "Literate programming" []
