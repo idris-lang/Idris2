@@ -720,7 +720,7 @@ consScoreHeuristic scorePat (Scored xs ys) =
     -- scoring the first column.
     scoreFirstColumn : (nps : List (NamedPats ns (p' :: ps'))) -> (res : List (NamedPats ns ps') ** (LengthMatch nps res, Vect (length nps) Int))
     scoreFirstColumn [] = ([] ** (NilMatch, []))
-    scoreFirstColumn ((w :: ws) :: nps) = 
+    scoreFirstColumn ((w :: ws) :: nps) =
       let (ws' ** (prf, scores)) = scoreFirstColumn nps
       in  (ws :: ws' ** (ConsMatch prf, scorePat (pat w) :: scores))
 
@@ -757,10 +757,10 @@ heuristicB = consScoreHeuristic (headConsPenalty (\arity => if arity == 0 then 0
 heuristicA : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
 heuristicA = consScoreHeuristic (headConsPenalty (negate . cast))
 
-applyHeuristics : {p : _} -> 
-                  {ps : _} -> 
-                  ScoredPats ns (p :: ps) -> 
-                  List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) -> 
+applyHeuristics : {p : _} ->
+                  {ps : _} ->
+                  ScoredPats ns (p :: ps) ->
+                  List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) ->
                   Maybe (n ** NVar n (p :: ps))
 applyHeuristics x [] = highScoreIdx x
 applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
