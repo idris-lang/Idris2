@@ -65,7 +65,7 @@ mapExtensional f g prf xs = mapRestrictedExtensional f g xs (\i => prf (index i 
 
 ||| map-fusion property for vectors up to function extensionality
 export
-mapFusionVect : (f : b -> c) -> (g : a -> b) -> (xs : Vect n a)
+mapFusion : (f : b -> c) -> (g : a -> b) -> (xs : Vect n a)
   -> map f (map g xs) = map (f . g) xs
-mapFusionVect f g    []     = Refl
-mapFusionVect f g (x :: xs) = cong (f $ g x ::) $ mapFusionVect f g xs
+mapFusion f g    []     = Refl
+mapFusion f g (x :: xs) = cong (f $ g x ::) $ mapFusion f g xs

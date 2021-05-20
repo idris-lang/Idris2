@@ -23,8 +23,7 @@ tabulateExtensional
  -> tabulate f = tabulate g
 tabulateExtensional {n = 0  } f g ext = Refl
 tabulateExtensional {n = S n} f g ext =
-  rewrite ext FZ in
-  cong (g FZ ::) (tabulateExtensional (f . FS) (g . FS) (\ i => ext $ FS i))
+  cong2 (::) (ext FZ) (tabulateExtensional (f . FS) (g . FS) (\ i => ext $ FS i))
 
 ||| Taking an index amounts to applying the tabulated function
 export
