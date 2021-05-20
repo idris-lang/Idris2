@@ -2,6 +2,7 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
+import Data.Strings
 
 import Libraries.Data.StringMap
 
@@ -9,29 +10,38 @@ import System.Clock
 
 %default covering
 
-logString' : LogLevel -> String -> Core ()
-logString' lvl str = coreLift $ putStrLn
-    $ "LOG " ++ show lvl ++ ": " ++ str
-
 -- if this function is called, then logging must be enabled.
+%inline
+export
 logString : String -> Nat -> String -> Core ()
-logString str n = logString' (mkUnverifiedLogLevel True str n)
+logString "" n msg = coreLift $ putStrLn
+    $ "LOG " ++ show n ++ ": " ++ msg
+logString str n msg = coreLift $ putStrLn
+    $ "LOG " ++ str ++ ":" ++ show n ++ ": " ++ msg
+
+%inline
+export
+logString' : LogLevel -> String -> Core ()
+logString' lvl =
+  logString (fastAppend (intersperse "." (topics lvl)) ++ ":")
+            (verbosity lvl)
 
 export
 logging' : {auto c : Ref Ctxt Defs} ->
            LogLevel -> Core Bool
 logging' lvl = do
     opts <- getSession
-    pure $ keepLog lvl (logEnabled opts) (logLevel opts)
+    pure $ verbosity lvl == 0 || (logEnabled opts && keepLog lvl (logLevel opts))
 
 export
 unverifiedLogging : {auto c : Ref Ctxt Defs} ->
                     String -> Nat -> Core Bool
+unverifiedLogging str Z = pure True
 unverifiedLogging str n = do
     opts <- getSession
-    let lvl = mkUnverifiedLogLevel (logEnabled opts) str n
-    logging' lvl
+    pure $ logEnabled opts && keepLog (mkUnverifiedLogLevel str n) (logLevel opts)
 
+%inline
 export
 logging : {auto c : Ref Ctxt Defs} ->
           (s : String) -> {auto 0 _ : KnownTopic s} ->
@@ -77,6 +87,7 @@ unverifiedLogC str n cmsg
         $ do msg <- cmsg
              logString str n msg
 
+%inline
 export
 logC : {auto c : Ref Ctxt Defs} ->
        (s : String) ->

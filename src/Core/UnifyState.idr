@@ -623,64 +623,70 @@ checkNoGuards : {auto u : Ref UST UState} ->
 checkNoGuards = checkUserHoles False
 
 export
-dumpHole' : {auto u : Ref UST UState} ->
-            {auto c : Ref Ctxt Defs} ->
-            LogLevel -> (hole : Int) -> Core ()
-dumpHole' lvl hole
+dumpHole : {auto u : Ref UST UState} ->
+           {auto c : Ref Ctxt Defs} ->
+           (s : String) ->
+           {auto 0 _ : KnownTopic s} ->
+           Nat -> (hole : Int) -> Core ()
+dumpHole str n hole
     = do ust <- get UST
          defs <- get Ctxt
          sopts <- getSession
-         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $ do
-               defs <- get Ctxt
-               case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
-                 Nothing => pure ()
-                 Just gdef => case (definition gdef, type gdef) of
-                    (Guess tm envb constraints, ty) =>
-                         do log' lvl $ "!" ++ show !(getFullName (Resolved hole)) ++ " : " ++
-                                              show !(toFullNames !(normaliseHoles defs [] ty))
-                            log' lvl $ "\t  = " ++ show !(normaliseHoles defs [] tm)
-                                            ++ "\n\twhen"
-                            traverse_ dumpConstraint constraints
-                    (Hole _ p, ty) =>
-                         log' lvl $ "?" ++ show (fullname gdef) ++ " : " ++
-                                           show !(normaliseHoles defs [] ty)
-                                           ++ if implbind p then " (ImplBind)" else ""
-                                           ++ if invertible gdef then " (Invertible)" else ""
-                    (BySearch _ _ _, ty) =>
-                         log' lvl $ "Search " ++ show hole ++ " : " ++
-                                           show !(toFullNames !(normaliseHoles defs [] ty))
-                    (PMDef _ args t _ _, ty) =>
-                         log' (withVerbosity 4 lvl) $
-                            "Solved: " ++ show hole ++ " : " ++
-                            show !(normalise defs [] ty) ++
-                            " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
-                    (ImpBind, ty) =>
-                         log' (withVerbosity 4 lvl) $
-                             "Bound: " ++ show hole ++ " : " ++
-                             show !(normalise defs [] ty)
-                    (Delayed, ty) =>
-                         log' (withVerbosity 4 lvl) $
-                            "Delayed elaborator : " ++
-                            show !(normalise defs [] ty)
-                    _ => pure ()
+         defs <- get Ctxt
+         case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
+          Nothing => pure ()
+          Just gdef => case (definition gdef, type gdef) of
+             (Guess tm envb constraints, ty) =>
+                  do logString str n $
+                       "!" ++ show !(getFullName (Resolved hole)) ++ " : "
+                           ++ show !(toFullNames !(normaliseHoles defs [] ty))
+                       ++ "\n\t  = "
+                           ++ show !(normaliseHoles defs [] tm)
+                           ++ "\n\twhen"
+                     traverse_ dumpConstraint constraints
+             (Hole _ p, ty) =>
+                  logString str n $
+                    "?" ++ show (fullname gdef) ++ " : "
+                        ++ show !(normaliseHoles defs [] ty)
+                        ++ if implbind p then " (ImplBind)" else ""
+                        ++ if invertible gdef then " (Invertible)" else ""
+             (BySearch _ _ _, ty) =>
+                  logString str n $
+                     "Search " ++ show hole ++ " : " ++
+                     show !(toFullNames !(normaliseHoles defs [] ty))
+             (PMDef _ args t _ _, ty) =>
+                  log str 4 $
+                     "Solved: " ++ show hole ++ " : " ++
+                     show !(normalise defs [] ty) ++
+                     " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
+             (ImpBind, ty) =>
+                  log str 4 $
+                      "Bound: " ++ show hole ++ " : " ++
+                      show !(normalise defs [] ty)
+             (Delayed, ty) =>
+                  log str 4 $
+                     "Delayed elaborator : " ++
+                     show !(normalise defs [] ty)
+             _ => pure ()
   where
     dumpConstraint : Int -> Core ()
-    dumpConstraint n
+    dumpConstraint cid
         = do ust <- get UST
              defs <- get Ctxt
-             case lookup n (constraints ust) of
+             case lookup cid (constraints ust) of
                   Nothing => pure ()
-                  Just Resolved => log' lvl "\tResolved"
+                  Just Resolved => logString str n "\tResolved"
                   Just (MkConstraint _ lazy env x y) =>
-                    do log' lvl $ "\t  " ++ show !(toFullNames !(quote defs env x))
-                                       ++ " =?= " ++ show !(toFullNames !(quote defs env y))
+                    do logString str n $
+                         "\t  " ++ show !(toFullNames !(quote defs env x))
+                                ++ " =?= " ++ show !(toFullNames !(quote defs env y))
                        empty <- clearDefs defs
-                       log' (withVerbosity 5 lvl)
-                                $ "\t    from " ++ show !(toFullNames !(quote empty env x))
-                                      ++ " =?= " ++ show !(toFullNames !(quote empty env y)) ++
-                               if lazy then "\n\t(lazy allowed)" else ""
+                       log str 5 $
+                         "\t    from " ++ show !(toFullNames !(quote empty env x))
+                            ++ " =?= " ++ show !(toFullNames !(quote empty env y))
+                            ++ if lazy then "\n\t(lazy allowed)" else ""
                   Just (MkSeqConstraint _ _ xs ys) =>
-                       log' lvl $ "\t\t" ++ show xs ++ " =?= " ++ show ys
+                       logString str n $ "\t\t" ++ show xs ++ " =?= " ++ show ys
 
 export
 dumpConstraints : {auto u : Ref UST UState} ->
@@ -694,11 +700,9 @@ dumpConstraints str n all
     = do ust <- get UST
          defs <- get Ctxt
          sopts <- getSession
-         let lvl = mkLogLevel (logEnabled sopts) str n
-         when (keepLog lvl (logEnabled sopts) (logLevel sopts)) $
-            do let hs = toList (guesses ust) ++
-                        toList (if all then holes ust else currentHoles ust)
-               case hs of
-                    [] => pure ()
-                    _ => do log' lvl "--- CONSTRAINTS AND HOLES ---"
-                            traverse_ (dumpHole' lvl) (map fst hs)
+         when !(logging str n) $ do
+           let hs = toList (guesses ust) ++
+                    toList (if all then holes ust else currentHoles ust)
+           unless (isNil hs) $
+             do logString str n "--- CONSTRAINTS AND HOLES ---"
+                traverse_ (dumpHole str n) (map fst hs)
