@@ -6,6 +6,9 @@ import Data.List
 
 %default total
 
+infixl 7 <><
+infixr 6 <>>
+
 ||| 'fish': Action of lists on snoc-lists
 public export
 (<><) : SnocList a -> List a -> SnocList a

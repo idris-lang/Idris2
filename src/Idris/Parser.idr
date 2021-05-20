@@ -410,12 +410,12 @@ mutual
   snocListExpr : FileName -> WithBounds () -> IndentInfo -> Rule PTerm
   snocListExpr fname s indents
       = {- TODO: comprehension -}
-        do mHeadTail <- option Nothing $ do
+        do mHeadTail <- optional $ do
              hd <- many $ do x <- expr pdef fname indents
                              b <- bounds (symbol ",")
                              pure (x <$ b)
              tl <- expr pdef fname indents
-             pure $ Just (hd, tl)
+             pure (hd, tl)
            {- TODO: reverse ranges -}
            b <- bounds (symbol "]")
            pure $
