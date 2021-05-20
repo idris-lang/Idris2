@@ -117,6 +117,8 @@ modules = Control.ANSI,
           Data.Vect.Properties.Tabulate,
           Data.Vect.Properties.Index,
           Data.Vect.Properties.Foldr,
+          Data.Vect.Properties.Map,
+          Data.Vect.Extra,
           Data.Vect.Sort,
 
           Data.Void,

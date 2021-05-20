@@ -22,13 +22,6 @@ recallElemSpec : (pos : x `Elem` xs) -> recallElem pos = x
 recallElemSpec  Here         = Refl
 recallElemSpec (There later) = recallElemSpec later
 
-||| map-fusion property for vectors up to function extensionality
-export
-mapFusionVect : (f : b -> c) -> (g : a -> b) -> (xs : Vect n a)
-  -> map f (map g xs) = map (f . g) xs
-mapFusionVect f g    []     = Refl
-mapFusionVect f g (x :: xs) = cong (f $ g x ::) $ mapFusionVect f g xs
-
 ||| `index i : Vect n a -> a` is a natural transformation
 export
 indexNaturality : (i : Fin n) -> (f : a -> b) -> (xs : Vect n a)
