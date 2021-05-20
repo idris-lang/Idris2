@@ -1,5 +1,5 @@
-data SnocList ty = Empty | Snoc (SnocList ty) ty
+data SnocList ty = Empty | Snoc (Main.SnocList ty) ty
 
-reverseSnoc : SnocList ty -> List ty
+reverseSnoc : Main.SnocList ty -> List ty
 reverseSnoc Empty = []
 reverseSnoc (Snoc xs x) = x :: reverseSnoc xs

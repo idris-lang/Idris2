@@ -96,7 +96,8 @@ mutual
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
        PList : (full, nilFC : FC) -> List (FC, PTerm) -> PTerm
-                                        -- ^ location of the conses
+                                        -- ^   v location of the conses/snocs
+       PSnocList : (full, nilFC : FC) -> List ((FC, PTerm)) -> PTerm
        PPair : FC -> PTerm -> PTerm -> PTerm
        PDPair : (full, opFC : FC) -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
@@ -159,6 +160,7 @@ mutual
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _) = fc
   getPTermLoc (PList fc _ _) = fc
+  getPTermLoc (PSnocList fc _ _) = fc
   getPTermLoc (PPair fc _ _) = fc
   getPTermLoc (PDPair fc _ _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
@@ -624,6 +626,8 @@ mutual
     showPrec d (PIdiom _ tm) = "[|" ++ showPrec d tm ++ "|]"
     showPrec d (PList _ _ xs)
         = "[" ++ showSep ", " (map (showPrec d . snd) xs) ++ "]"
+    showPrec d (PSnocList _ _ xs)
+        = "[<" ++ showSep ", " (map (showPrec d . snd) xs) ++ "]"
     showPrec d (PPair _ l r) = "(" ++ showPrec d l ++ ", " ++ showPrec d r ++ ")"
     showPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
     showPrec d (PDPair _ _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
@@ -985,6 +989,9 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm (PList fc nilFC xs) =
       PList fc nilFC <$> goPairedPTerms xs
+      >>= f
+    goPTerm (PSnocList fc nilFC xs) =
+      PSnocList fc nilFC <$> goPairedPTerms xs
       >>= f
     goPTerm (PPair fc x y) =
       PPair fc <$> goPTerm x

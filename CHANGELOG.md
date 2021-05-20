@@ -11,7 +11,8 @@ Library changes:
   command line options, to `contrib`.
 * Monad transformers in `Control.Monad` where restructured
   and several new transformer types where added.
-* `Data.Colist` and `Data.Colist1` where added to `base`.
+* `Data.Colist` and `Data.Colist1` were added to `base`.
+* Add `Data.SnocList` to base and `data SnocList` to `Prelude.Types`.
 * `Data.Bits`, an interface for bitwise operations, was added to `base`.
 * Interfaces `Bifoldable` and `Bitraversable` were added to the `prelude`.
 * Interface `Data.Contravariant` for contravariant functors was added
@@ -29,6 +30,8 @@ Syntax changes:
   implicit parameters and give multiplicities for parameters. The old syntax
   is still available for compatibility purposes but will be removed in the
   future.
+* Add support for SnocList syntax: `[< 1, 2, 3]` desugars into `Lin :< 1 :< 2 :< 3`
+  and their semantic highlighting.
 
 Compiler changes:
 
