@@ -60,7 +60,7 @@ etaExpand i Z exp args = mkApp exp (map (mkLocal (getFC exp)) (reverse args))
     mkApp : CExp vars -> List (CExp vars) -> CExp vars
     mkApp tm [] = tm
     mkApp (CApp fc f args) args' = CApp fc f (args ++ args')
-    mkApp (CCon fc n t args) args' = CCon fc n t (args ++ args')
+    mkApp (CCon fc n ci t args) args' = CCon fc n ci t (args ++ args')
     mkApp (CExtPrim fc p args) args' = CExtPrim fc p (args ++ args')
     mkApp tm args = CApp (getFC tm) tm args
 etaExpand i (S k) exp args
@@ -83,7 +83,7 @@ expandToArity (S k) f (a :: args) = expandToArity k (addArg f a) args
   where
     addArg : CExp vars -> CExp vars -> CExp vars
     addArg (CApp fc fn args) a = CApp fc fn (args ++ [a])
-    addArg (CCon fc n tag args) a = CCon fc n tag (args ++ [a])
+    addArg (CCon fc n ci tag args) a = CCon fc n ci tag (args ++ [a])
     addArg (CExtPrim fc p args) a = CExtPrim fc p (args ++ [a])
     addArg f a = CApp (getFC f) f [a]
 -- Underapplied, saturate with lambdas
@@ -104,7 +104,7 @@ applyNewType arity pos fn args
 
     keepArg : CExp vs -> CExp vs
     keepArg (CLam fc x sc) = CLam fc x (keepArg sc)
-    keepArg (CCon fc _ _ args) = keep 0 args
+    keepArg (CCon fc _ _ _ args) = keep 0 args
     keepArg tm = CErased (getFC fn)
 
 dropFrom : List Nat -> Nat -> List (CExp vs) -> List (CExp vs)
@@ -119,7 +119,7 @@ dropPos epos (CLam fc x sc) = CLam fc x (dropPos epos sc)
 dropPos epos (CApp fc tm@(CApp _ _ _) args')
     = CApp fc (dropPos epos tm) args'
 dropPos epos (CApp fc f args) = CApp fc f (dropFrom epos 0 args)
-dropPos epos (CCon fc c a args) = CCon fc c a (dropFrom epos 0 args)
+dropPos epos (CCon fc c ci a args) = CCon fc c ci a (dropFrom epos 0 args)
 dropPos epos tm = tm
 
 eraseConArgs : {vars : _} ->
@@ -162,7 +162,7 @@ magic ms (CLam fc x exp) = CLam fc x (magic ms exp)
 magic ms e = go ms e where
 
   fire : Magic -> CExp vars -> Maybe (CExp vars)
-  fire (MagicCCon n arity f) (CCon fc n' _ es)
+  fire (MagicCCon n arity f) (CCon fc n' _ _ es)
     = do guard (n == n')
          map (f fc) (toVect arity es)
   fire (MagicCRef n arity f) (CApp fc (CRef fc' n') es)
@@ -198,8 +198,10 @@ builtinMagic : Ref Ctxt Defs => Core (forall vars. CExp vars -> CExp vars)
 builtinMagic = do
     defs <- get Ctxt
     let b = defs.builtinTransforms
-    let nats = concatMap builtinMagicNat $ values $ natTyNames b
-    pure $ magic $ natHack ++ nats
+    let nats = foldMap builtinMagicNat $ values b.natTyNames
+    let natToInts = map natToIntMagic $ toList b.natToIntegerFns
+    let intToNats = map intToNatMagic $ toList b.integerToNatFns
+    pure $ magic $ natHack ++ nats ++ natToInts ++ intToNats
   where
     builtinMagicNat : NatBuiltin -> List Magic
     builtinMagicNat cons =
@@ -208,6 +210,14 @@ builtinMagic = do
         , MagicCCon cons.succ 1
              (\ fc, [k] => CApp fc (CRef fc (UN "prim__add_Integer")) [CPrimVal fc (BI 1), k])
         ] -- TODO: add builtin pragmas for Nat related functions (to/from Integer, add, mult, minus, compare)
+    natToIntMagic : (Name, NatToInt) -> Magic
+    natToIntMagic (fn, MkNatToInt arity natIdx) =
+        MagicCRef fn arity
+            (\ _, _, args => index natIdx args)
+    intToNatMagic : (Name, IntToNat) -> Magic
+    intToNatMagic (fn, MkIntToNat arity intIdx) =
+        MagicCRef fn arity
+            (\ fc, fc', args => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [index intIdx args])
 
 isNatCon : (zeroMap : NameMap ZERO) ->
            (succMap : NameMap SUCC) ->
@@ -217,14 +227,14 @@ isNatCon zs ss n = isJust (lookup n zs) || isJust (lookup n ss)
 natBranch : (zeroMap : NameMap ZERO) ->
            (succMap : NameMap SUCC) ->
            CConAlt vars -> Bool
-natBranch zs ss (MkConAlt n _ _ _) = isNatCon zs ss n
+natBranch zs ss (MkConAlt n _ _ _ _) = isNatCon zs ss n
 
 trySBranch :
     (succMap : NameMap SUCC) ->
     CExp vars ->
     CConAlt vars ->
     Maybe (CExp vars)
-trySBranch ss n (MkConAlt nm _ [arg] sc)
+trySBranch ss n (MkConAlt nm _ _ [arg] sc)
   = do guard $ isJust $ lookup nm ss
        let fc = getFC n
        pure (CLet fc arg True (natMinus fc fc [n, CPrimVal fc (BI 1)]) sc)
@@ -234,7 +244,7 @@ tryZBranch :
     (zeroMap : NameMap ZERO) ->
     CConAlt vars ->
     Maybe (CExp vars)
-tryZBranch zs (MkConAlt n _ [] sc)
+tryZBranch zs (MkConAlt n _ _ [] sc)
    = do guard $ isJust $ lookup n zs
         pure sc
 tryZBranch _ _ = Nothing
@@ -273,27 +283,33 @@ builtinNatTree = do
     let b = defs.builtinTransforms
     pure $ builtinNatTree' b.natZNames b.natSNames
 
--- Rewrite case trees on Bool/Ord to be case trees on Integer
--- TODO: Generalise to all finite enumerations
-isFiniteEnum : Name -> Bool
-isFiniteEnum (NS ns (UN n))
-   =  ((n == "True" || n == "False") && ns == basicsNS) -- booleans
-   || ((n == "LT" || n == "EQ" || n == "GT") && ns == eqOrdNS) -- comparison
-isFiniteEnum _ = False
-
-boolHackTree : CExp vars -> CExp vars
-boolHackTree (CConCase fc sc alts def)
-   = let x = traverse toBool alts
+enumTree : CExp vars -> CExp vars
+enumTree (CConCase fc sc alts def)
+   = let x = traverse toEnum alts
          Just alts' = x
               | Nothing => CConCase fc sc alts def in
          CConstCase fc sc alts' def
   where
-    toBool : CConAlt vars -> Maybe (CConstAlt vars)
-    toBool (MkConAlt nm (Just tag) [] sc)
-        = do guard (isFiniteEnum nm)
-             pure $ MkConstAlt (I tag) sc
-    toBool _ = Nothing
-boolHackTree t = t
+    toEnum : CConAlt vars -> Maybe (CConstAlt vars)
+    toEnum (MkConAlt nm ENUM (Just tag) [] sc)
+        = pure $ MkConstAlt (I tag) sc
+    toEnum _ = Nothing
+enumTree t = t
+
+-- See if the constructor is a special constructor type, e.g a nil or cons
+-- shaped thing.
+dconFlag : {auto c : Ref Ctxt Defs} ->
+           Name -> Core ConInfo
+dconFlag n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => throw (InternalError ("Can't find " ++ show n))
+         pure (ciFlags (flags def))
+  where
+    ciFlags : List DefFlag -> ConInfo
+    ciFlags [] = DATACON
+    ciFlags (ConType ci :: xs) = ci
+    ciFlags (x :: xs) = ciFlags xs
 
 mutual
   toCExpTm : {vars : _} ->
@@ -303,14 +319,15 @@ mutual
              Core (CExp vars)
   toCExpTm m n (Local fc _ _ prf)
       = pure $ CLocal fc prf
-  -- TMP HACK: extend this to all types which look like enumerations after erasure
   toCExpTm m n (Ref fc (DataCon tag arity) fn)
-      = if arity == Z && isFiniteEnum fn
-        then pure $ CPrimVal fc (I tag)
-        else -- get full name for readability, and %builtin Natural
-             pure $ CCon fc !(getFullName fn) (Just tag) []
+      = do -- get full name for readability, and %builtin Natural
+           cn <- getFullName fn
+           fl <- dconFlag cn
+           case fl of
+                ENUM => pure $ CPrimVal fc (I tag)
+                _ => pure $ CCon fc cn fl (Just tag) []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
-      = pure $ CCon fc fn Nothing []
+      = pure $ CCon fc fn TYCON Nothing []
   toCExpTm m n (Ref fc _ fn)
       = do full <- getFullName fn
                -- ^ For readability of output code, and the Nat hack,
@@ -325,7 +342,7 @@ mutual
                           (CLet fc x True !(toCExp m n val) sc')
                           rig
   toCExpTm m n (Bind fc x (Pi _ c e ty) sc)
-      = pure $ CCon fc (UN "->") Nothing [!(toCExp m n ty),
+      = pure $ CCon fc (UN "->") TYCON Nothing [!(toCExp m n ty),
                                     CLam fc x !(toCExp m n sc)]
   toCExpTm m n (Bind fc x b tm) = pure $ CErased fc
   -- We'd expect this to have been dealt with in toCExp, but for completeness...
@@ -343,9 +360,9 @@ mutual
       = let t = constTag c in
             if t == 0
                then pure $ CPrimVal fc c
-               else pure $ CCon fc (UN (show c)) Nothing []
+               else pure $ CCon fc (UN (show c)) TYCON Nothing []
   toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") Nothing []
+  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON Nothing []
 
   toCExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -379,7 +396,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn Nothing args !(toCExpTree n sc)
+                        pure $ MkConAlt xn TYCON Nothing args !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
@@ -389,8 +406,8 @@ mutual
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn (Just tag) args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn Nothing args' (shrinkCExp sub sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp sub sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon _ _ _) = True
@@ -502,7 +519,7 @@ mutual
                def <- getDef n alts
                if isNil cases
                   then pure (fromMaybe (CErased fc) def)
-                  else pure $ boolHackTree $ !builtinNatTree $
+                  else pure $ enumTree $ !builtinNatTree $
                             CConCase fc (CLocal fc x) cases def
   toCExpTree' n (Case _ x scTy alts@(DelayCase _ _ _ :: _))
       = throw (InternalError "Unexpected DelayCase")

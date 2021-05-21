@@ -8,7 +8,7 @@ Inferrable args: []
 Compiled: Constructor tag Just 0 arity 1 (newtype by 0)
 Refers to: []
 Refers to (runtime): []
-Flags: []
+Flags: [contype [record]]
 Main> Main.MkBar ==> DataCon 0 1
 RigW
 Erasable args: []
@@ -18,5 +18,5 @@ Inferrable args: []
 Compiled: Constructor tag Just 0 arity 1
 Refers to: []
 Refers to (runtime): []
-Flags: []
+Flags: [contype [record]]
 Main> Bye for now!

@@ -152,7 +152,7 @@ bindUnsolved {vars} fc elabmode _
                          _ => inTerm)
                    fc env tm bindtm
 
-swapIsVarH : {idx : Nat} -> (0 p : IsVar name idx (x :: y :: xs)) ->
+swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (x :: y :: xs)) ->
              Var (y :: x :: xs)
 swapIsVarH First = MkVar (Later First)
 swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
@@ -165,7 +165,7 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : List Name) ->
-            {idx : Nat} -> (0 p : IsVar name idx (vs ++ x :: y :: xs)) ->
+            {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
             Var (vs ++ y :: x :: xs)
 swapIsVar [] prf = swapIsVarH prf
 swapIsVar (x :: xs) First = MkVar First
@@ -416,6 +416,12 @@ checkBindVar rig elabinfo nest env fc str topexp
          noteLHSPatVar elabmode (UN str)
          notePatVar n
          est <- get EST
+
+         whenJust (isConcreteFC fc) \nfc => do
+           log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show n
+           addSemanticDecorations [(nfc, Bound, Just n)]
+
+
          case lookup n (boundNames est) of
               Nothing =>
                 do (tm, exp, bty) <- mkPatternHole fc rig n env

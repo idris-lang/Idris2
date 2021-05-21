@@ -66,8 +66,9 @@ pshowNoNorm env tm
 
 ploc : {auto o : Ref ROpts REPLOpts} ->
        FC -> Core (Doc IdrisAnn)
-ploc EmptyFC = pure emptyDoc
-ploc fc@(MkFC fn s e) = do
+ploc fc = do
+    let Just (fn, s, e) = isNonEmptyFC fc
+        | Nothing => pure emptyDoc
     let (sr, sc) = mapHom (fromInteger . cast) s
     let (er, ec) = mapHom (fromInteger . cast) e
     let nsize = length $ show (er + 1)
@@ -91,10 +92,12 @@ ploc fc@(MkFC fn s e) = do
 -- Assumes the two FCs are sorted
 ploc2 : {auto o : Ref ROpts REPLOpts} ->
         FC -> FC -> Core (Doc IdrisAnn)
-ploc2 fc EmptyFC = ploc fc
-ploc2 EmptyFC fc = ploc fc
-ploc2 (MkFC fn1 s1 e1) (MkFC fn2 s2 e2) =
-    do let (sr1, sc1) = mapHom (fromInteger . cast) s1
+ploc2 fc1 fc2 =
+    do let Just (fn1, s1, e1) = isNonEmptyFC fc1
+           | Nothing => ploc fc2
+       let Just (fn2, s2, e2) = isNonEmptyFC fc2
+           | Nothing => ploc fc1
+       let (sr1, sc1) = mapHom (fromInteger . cast) s1
        let (sr2, sc2) = mapHom (fromInteger . cast) s2
        let (er1, ec1) = mapHom (fromInteger . cast) e1
        let (er2, ec2) = mapHom (fromInteger . cast) e2
@@ -179,10 +182,12 @@ perror (PatternVariableUnifies fc env n tm)
     prettyVar (PV n _) = prettyVar n
     prettyVar n = pretty n
     order : FC -> FC -> (FC, FC)
-    order EmptyFC fc2 = (EmptyFC, fc2)
-    order fc1 EmptyFC = (fc1, EmptyFC)
-    order fc1@(MkFC _ sr1 sc1) fc2@(MkFC _ sr2 sc2) =
-      if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
+    order fc1 fc2 =
+      let Just (_, sr1, sc1) = isNonEmptyFC fc1
+           | Nothing => (EmptyFC, fc2)
+          Just (_, sr2, sc2) = isNonEmptyFC fc2
+           | Nothing => (fc1, EmptyFC)
+      in if sr1 < sr2 then (fc1, fc2) else if sr1 == sr2 && sc1 < sc2 then (fc1, fc2) else (fc2, fc1)
 perror (CyclicMeta fc env n tm)
     = pure $ errorDesc (reflow "Cycle detected in solution of metavariable" <++> meta (pretty !(prettyName n)) <++> equals
         <++> code !(pshow env tm)) <+> line <+> !(ploc fc)
@@ -406,8 +411,8 @@ perror (MatchTooSpecific fc env tm)
 perror (BadImplicit fc str)
     = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
         <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
-perror (BadRunElab fc env script)
-    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <+> dot)
+perror (BadRunElab fc env script desc)
+    = pure $ errorDesc (reflow "Bad elaborator script" <++> code !(pshow env script) <++> parens (pretty desc) <+> dot)
         <+> line <+> !(ploc fc)
 perror (GenericMsg fc str) = pure $ pretty str <+> line <+> !(ploc fc)
 perror (TTCError msg)
@@ -473,6 +478,15 @@ pwarning (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
         <++> code !(pshow env tm))
         <+> line <+> !(ploc fc)
+pwarning (ShadowingGlobalDefs _ ns)
+    = pure $ vcat
+    $ reflow "We are about to implicitly bind the following lowercase names."
+   :: reflow "You may be unintentionally shadowing the associated global definitions:"
+   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
+                            :: reflow "is shadowing"
+                            :: punctuate comma (map pretty (forget ns)))
+          (forget ns)
+
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s
 

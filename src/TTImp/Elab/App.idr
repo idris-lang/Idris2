@@ -55,19 +55,39 @@ getNameType rigc env fc x
                       do est <- get EST
                          put EST
                             (record { linearUsed $= ((MkVar lv) :: ) } est)
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add Bound: "
+                      ++ show x ++ " (" ++ show fc ++ ")"
+                 when (isSourceName x) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     log "ide-mode.highlight" 7 $ "getNameType is adding Bound: " ++ show x
+                     addSemanticDecorations [(nfc, Bound, Just x)]
+
                  pure (Local fc (Just (isLet binder)) _ lv, gnf env bty)
            Nothing =>
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
                       | [] => undefinedName fc x
                       | ns => throw (AmbiguousName fc (map fst ns))
-                 checkVisibleNS fc !(getFullName pname) (visibility def)
+                 checkVisibleNS fc (fullname def) (visibility def)
                  rigSafe (multiplicity def) rigc
                  let nt = case definition def of
                                PMDef _ _ _ _ _ => Func
                                DCon t a _ => DataCon t a
                                TCon t a _ _ _ _ _ _ => TyCon t a
                                _ => Func
+
+                 log "ide-mode.highlight" 8
+                     $ "getNameType is trying to add something for: "
+                      ++ show def.fullname ++ " (" ++ show fc ++ ")"
+
+                 when (isSourceName def.fullname) $
+                   whenJust (isConcreteFC fc) \nfc => do
+                     let decor = nameTypeDecoration nt
+                     log "ide-mode.highlight" 7
+                       $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
+                     addSemanticDecorations [(nfc, decor, Just def.fullname)]
+
                  pure (Ref fc nt (Resolved i), gnf env (embed (type def)))
   where
     rigSafe : RigCount -> RigCount -> Core ()
@@ -89,7 +109,7 @@ getVarType rigc nest env fc x
            Just (nestn, argns, tmf) =>
               do defs <- get Ctxt
                  let arglen = length argns
-                 let n' = maybe x id nestn
+                 let n' = fromMaybe x nestn
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
@@ -109,6 +129,14 @@ getVarType rigc nest env fc x
                                 -- Add the type to the metadata
                                 log "metadata.names" 7 $ "getVarType is adding ↓"
                                 addNameType fc x env tyenv
+
+                                when (isSourceName ndef.fullname) $
+                                  whenJust (isConcreteFC fc) \nfc => do
+                                    let decor = nameTypeDecoration nt
+                                    log "ide-mode.highlight" 7
+                                       $ "getNameType is adding "++ show decor ++": "
+                                                                 ++ show ndef.fullname
+                                    addSemanticDecorations [(nfc, decor, Just ndef.fullname)]
 
                                 pure (tm, arglen, gnf env tyenv)
     where

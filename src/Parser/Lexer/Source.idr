@@ -219,7 +219,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
-    "@{", "[|", "(", "{", "[", "`(", "`{{", "`["]
+    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{{", "`["]
 
 export
 groupClose : String -> String
@@ -228,6 +228,8 @@ groupClose "@{" = "}"
 groupClose "[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
+groupClose "[<" = "]"
+groupClose "[>" = "]"
 groupClose "{" = "}"
 groupClose "`(" = ")"
 groupClose "`{{" = "}}"

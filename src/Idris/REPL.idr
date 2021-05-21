@@ -1,6 +1,7 @@
 module Idris.REPL
 
 import Compiler.Scheme.Chez
+import Compiler.Scheme.ChezSep
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
 import Compiler.ES.Node
@@ -18,6 +19,7 @@ import Core.Env
 import Core.InitPrimitives
 import Core.LinearCheck
 import Core.Metadata
+import Core.FC
 import Core.Normalise
 import Core.Options
 import Core.Termination
@@ -210,6 +212,7 @@ findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
               Chez => pure codegenChez
+              ChezSep => pure codegenChezSep
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
               Node => pure codegenNode
@@ -638,7 +641,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         resetContext
+         resetContext f
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -816,7 +819,7 @@ process (TypeSearch searchTerm)
          let curr = currentNS defs
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
-         let bound = piBindNames replFC [] rawTy
+         bound <- piBindNames replFC [] rawTy
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-
@@ -970,16 +973,18 @@ processCatch cmd
                            pure $ REPLError msg
                            )
 
-parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
+parseEmptyCmd : EmptyRule (Maybe REPLCmd)
 parseEmptyCmd = eoi *> (pure Nothing)
 
-parseCmd : SourceEmptyRule (Maybe REPLCmd)
+parseCmd : EmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd)
+    = case runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd) of
+        Left err => Left err
+        Right (decor, result) => Right result
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->

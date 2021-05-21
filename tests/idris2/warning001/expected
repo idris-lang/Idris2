@@ -1,0 +1,21 @@
+1/1: Building Issue539 (Issue539.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  idF is shadowing Main.idF
+1/1: Building Issue621 (Issue621.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a1 is shadowing Main.a1
+  a2 is shadowing Main.a2
+1/1: Building Issue1401 (Issue1401.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  fst is shadowing Builtin.fst, Builtin.DPair.DPair.fst
+  dup is shadowing Prelude.Basics.dup
+1/1: Building PR1407 (PR1407.idr)
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  f is shadowing Main.Hoo.f
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  g is shadowing Main.g

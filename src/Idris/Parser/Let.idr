@@ -56,7 +56,7 @@ mkLets : FileName ->
          List1 (WithBounds (Either LetBinder LetDecl)) ->
          PTerm -> PTerm
 mkLets fname = letFactory buildLets
-  (\ decls, scope => PLocal (boundToFC fname decls) decls.val scope)
+  (\ decls, scope => PLocal (virtualiseFC $ boundToFC fname decls) decls.val scope)
 
   where
 
@@ -64,7 +64,7 @@ mkLets fname = letFactory buildLets
     buildLets [] sc = sc
     buildLets (b :: rest) sc
       = let (MkLetBinder rig pat ty val alts) = b.val
-            fc = boundToFC fname b
+            fc = virtualiseFC $ boundToFC fname b
         in PLet fc rig pat ty val (buildLets rest sc) alts
 
 export

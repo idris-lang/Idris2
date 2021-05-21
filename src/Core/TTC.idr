@@ -22,6 +22,8 @@ export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
+  toBuf b (MkVirtualFC file startPos endPos)
+      = do tag 2; toBuf b file; toBuf b startPos; toBuf b endPos
   toBuf b EmptyFC = tag 1
 
   fromBuf b
@@ -30,6 +32,9 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkFC f s e)
              1 => pure EmptyFC
+             2 => do f <- fromBuf b;
+                     s <- fromBuf b; e <- fromBuf b
+                     pure (MkVirtualFC f s e)
              _ => corrupt "FC"
 export
 TTC Namespace where
@@ -137,6 +142,15 @@ TTC Constant where
   toBuf b DoubleType = tag 18
   toBuf b WorldType = tag 19
 
+  toBuf b (I32 x) = do tag 20; toBuf b x
+  toBuf b (I64 x) = do tag 21; toBuf b x
+  toBuf b Int32Type = tag 22
+  toBuf b Int64Type = tag 23
+  toBuf b (I8 x) = do tag 24; toBuf b x
+  toBuf b (I16 x) = do tag 25; toBuf b x
+  toBuf b Int8Type = tag 26
+  toBuf b Int16Type = tag 27
+
   fromBuf b
       = case !getTag of
              0 => do x <- fromBuf b; pure (I x)
@@ -159,6 +173,14 @@ TTC Constant where
              17 => pure CharType
              18 => pure DoubleType
              19 => pure WorldType
+             20 => do x <- fromBuf b; pure (I32 x)
+             21 => do x <- fromBuf b; pure (I64 x)
+             22 => pure Int32Type
+             23 => pure Int64Type
+             24 => do x <- fromBuf b; pure (I8 x)
+             25 => do x <- fromBuf b; pure (I16 x)
+             26 => pure Int8Type
+             27 => pure Int16Type
              _ => corrupt "Constant"
 
 export
@@ -239,8 +261,8 @@ mutual
   export
   {vars : _} -> TTC (Term vars) where
     toBuf b (Local {name} fc c idx y)
-        = if idx < 244
-             then do tag (12 + cast idx)
+        = if idx < 243
+             then do tag (13 + cast idx)
                      toBuf b c
              else do tag 0
                      toBuf b c
@@ -256,11 +278,14 @@ mutual
              toBuf b x;
              toBuf b bnd; toBuf b scope
     toBuf b (App fc fn arg)
-        = do tag 4;
-             toBuf b fn; toBuf b arg
---              let (fn, args) = getFnArgs (App fc fn arg)
---              toBuf b fn; -- toBuf b p;
---              toBuf b args
+        = do let (fn, args) = getFnArgs (App fc fn arg)
+             case args of
+                  [arg] => do tag 4
+                              toBuf b fn
+                              toBuf b arg
+                  args => do tag 12
+                             toBuf b fn
+                             toBuf b args
     toBuf b (As fc s as tm)
         = do tag 5;
              toBuf b as; toBuf b s; toBuf b tm
@@ -312,8 +337,11 @@ mutual
                        pure (PrimVal emptyFC c)
                10 => pure (Erased emptyFC False)
                11 => pure (TType emptyFC)
+               12 => do fn <- fromBuf b
+                        args <- fromBuf b
+                        pure (apply emptyFC fn args)
                idxp => do c <- fromBuf b
-                          let idx : Nat = fromInteger (cast (idxp - 12))
+                          let idx : Nat = fromInteger (cast (idxp - 13))
                           let Just name = getName idx vars
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
@@ -598,6 +626,29 @@ export
                  100 => pure BelieveMe
                  _ => corrupt "PrimFn 3"
 
+export
+TTC ConInfo where
+  toBuf b DATACON = tag 0
+  toBuf b TYCON = tag 1
+  toBuf b NIL = tag 2
+  toBuf b CONS = tag 3
+  toBuf b ENUM = tag 4
+  toBuf b NOTHING = tag 5
+  toBuf b JUST = tag 6
+  toBuf b RECORD = tag 7
+
+  fromBuf b
+      = case !getTag of
+             0 => pure DATACON
+             1 => pure TYCON
+             2 => pure NIL
+             3 => pure CONS
+             4 => pure ENUM
+             5 => pure NOTHING
+             6 => pure JUST
+             7 => pure RECORD
+             _ => corrupt "ConInfo"
+
 mutual
   export
   {vars : _} -> TTC (CExp vars) where
@@ -606,7 +657,7 @@ mutual
     toBuf b (CLam fc x sc) = do tag 2; toBuf b fc; toBuf b x; toBuf b sc
     toBuf b (CLet fc x inl val sc) = do tag 3; toBuf b fc; toBuf b x; toBuf b inl; toBuf b val; toBuf b sc
     toBuf b (CApp fc f as) = assert_total $ do tag 4; toBuf b fc; toBuf b f; toBuf b as
-    toBuf b (CCon fc t n as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b as
+    toBuf b (CCon fc t n ci as) = assert_total $ do tag 5; toBuf b fc; toBuf b t; toBuf b n; toBuf b ci; toBuf b as
     toBuf b (COp {arity} fc op as) = assert_total $ do tag 6; toBuf b fc; toBuf b arity; toBuf b op; toBuf b as
     toBuf b (CExtPrim fc f as) = assert_total $ do tag 7; toBuf b fc; toBuf b f; toBuf b as
     toBuf b (CForce fc lr x) = assert_total $ do tag 8; toBuf b fc; toBuf b lr; toBuf b x
@@ -637,8 +688,8 @@ mutual
                        f <- fromBuf b; as <- fromBuf b
                        pure (CApp fc f as)
                5 => do fc <- fromBuf b
-                       t <- fromBuf b; n <- fromBuf b; as <- fromBuf b
-                       pure (CCon fc t n as)
+                       t <- fromBuf b; n <- fromBuf b; ci <- fromBuf b; as <- fromBuf b
+                       pure (CCon fc t n ci as)
                6 => do fc <- fromBuf b
                        arity <- fromBuf b; op <- fromBuf b; args <- fromBuf b
                        pure (COp {arity} fc op args)
@@ -671,12 +722,12 @@ mutual
 
   export
   {vars : _} -> TTC (CConAlt vars) where
-    toBuf b (MkConAlt n t as sc) = do toBuf b n; toBuf b t; toBuf b as; toBuf b sc
+    toBuf b (MkConAlt n ci t as sc) = do toBuf b n; toBuf b ci; toBuf b t; toBuf b as; toBuf b sc
 
     fromBuf b
-        = do n <- fromBuf b; t <- fromBuf b
+        = do n <- fromBuf b; ci <- fromBuf b; t <- fromBuf b
              as <- fromBuf b; sc <- fromBuf b
-             pure (MkConAlt n t as sc)
+             pure (MkConAlt n ci t as sc)
 
   export
   {vars : _} -> TTC (CConstAlt vars) where
@@ -749,6 +800,7 @@ TTC CDef where
 export
 TTC CG where
   toBuf b Chez = tag 0
+  toBuf b ChezSep = tag 1
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
@@ -759,6 +811,7 @@ TTC CG where
   fromBuf b
       = case !getTag of
              0 => pure Chez
+             1 => pure ChezSep
              2 => pure Racket
              3 => pure Gambit
              4 => do s <- fromBuf b
@@ -916,6 +969,7 @@ TTC DefFlag where
   toBuf b Macro = tag 8
   toBuf b (PartialEval x) = tag 9 -- names not useful any more
   toBuf b AllGuarded = tag 10
+  toBuf b (ConType ci) = do tag 11; toBuf b ci
 
   fromBuf b
       = case !getTag of
@@ -928,6 +982,7 @@ TTC DefFlag where
              8 => pure Macro
              9 => pure (PartialEval [])
              10 => pure AllGuarded
+             11 => do ci <- fromBuf b; pure (ConType ci)
              _ => corrupt "DefFlag"
 
 export
@@ -957,14 +1012,14 @@ TTC GlobalDef where
       = -- Only write full details for user specified names. The others will
         -- be holes where all we will ever need after loading is the definition
         do toBuf b (compexpr gdef)
-           toBuf b (map toList (refersToRuntimeM gdef))
+           toBuf b (map NameMap.toList (refersToRuntimeM gdef))
            toBuf b (location gdef)
            -- We don't need any of the rest for code generation, so if
            -- we're decoding then, we can skip these (see Compiler.Common
            -- for how it's decoded minimally there)
            toBuf b (multiplicity gdef)
            toBuf b (fullname gdef)
-           toBuf b (map toList (refersToM gdef))
+           toBuf b (map NameMap.toList (refersToM gdef))
            toBuf b (definition gdef)
            when (isUserName (fullname gdef) || cwName (fullname gdef)) $
               do toBuf b (type gdef)
@@ -972,7 +1027,7 @@ TTC GlobalDef where
                  toBuf b (safeErase gdef)
                  toBuf b (specArgs gdef)
                  toBuf b (inferrable gdef)
-                 toBuf b (vars gdef)
+                 toBuf b (localVars gdef)
                  toBuf b (visibility gdef)
                  toBuf b (totality gdef)
                  toBuf b (flags gdef)
@@ -1030,12 +1085,12 @@ TTC Transform where
            pure (MkTransform {vars} n env lhs rhs)
 
 -- decode : Context -> Int -> (update : Bool) -> ContextEntry -> Core GlobalDef
-Core.Context.decode gam idx update (Coded bin)
+Core.Context.decode gam idx update (Coded ns bin)
     = do b <- newRef Bin bin
          def <- fromBuf b
          let a = getContent gam
          arr <- get Arr
-         def' <- resolved gam def
+         def' <- resolved gam (restoreNS ns def)
          when update $ coreLift $ writeArray arr idx (Decoded def')
          pure def'
 Core.Context.decode gam idx update (Decoded def) = pure def

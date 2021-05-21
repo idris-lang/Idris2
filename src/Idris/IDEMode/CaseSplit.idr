@@ -48,7 +48,8 @@ toStrUpdate (UN n, term)
   where
     bracket : PTerm -> PTerm
     bracket tm@(PRef _ _) = tm
-    bracket tm@(PList _ _) = tm
+    bracket tm@(PList _ _ _) = tm
+    bracket tm@(PSnocList _ _ _) = tm
     bracket tm@(PPair _ _ _) = tm
     bracket tm@(PUnit _) = tm
     bracket tm@(PComprehension _ _ _) = tm

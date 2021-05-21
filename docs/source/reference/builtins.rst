@@ -70,3 +70,53 @@ Here are the specifics for the conversion:
     case k of
         0 => zexp
         _ => let k' = k - 1 in sexp
+
+``%builtin NaturalToInteger``
+=============================
+
+The ``%builtin NaturalToInteger`` pragma allows O(1) conversion of naturals to ``Integer`` s.
+For example
+
+.. code-block:: idris
+
+    natToInteger : Nat -> Integer
+    natToInteger Z = 0
+    natToInteger (S k) = 1 + natToInteger k
+
+    %builtin NaturalToInteger natToInteger
+
+For now, any ``NaturalToInteger`` function must have exactly 1 non-erased argument, which must be a natural.
+
+``%builtin IntegerToNatural``
+=============================
+
+The ``%builtin IntegerToNatural`` pragma allows O(1) conversion of ``Integer`` s to naturals.
+For example
+
+.. code-block:: idris
+
+    integerToNat : Integer -> Nat
+    integerToNat x = if x <= 0
+        then Z
+        else S $ integerToNat (x - 1)
+
+Any ``IntegerToNatural`` function must have exactly 1 unrestricted ``Integer`` argument and the return type must be a natural.
+
+Please note, ``NaturalToInteger`` and ``IntegerToNatural`` only check the type, not that the function is correct.
+
+This can be used with ``%transform`` to allow many other operations to be O(1) too.
+
+.. code-block:: idris
+
+    eqNat : Nat -> Nat -> Bool
+    eqNat Z Z = True
+    eqNat (S j) (S k) = eqNat j k
+    eqNat _ _ = False
+
+    %transform "eqNat" eqNat j k = natToInteger j == natToInteger k
+
+    plus : Nat -> Nat -> Nat
+    plus Z y = y
+    plus (S x) y = S $ plus x y
+
+    %transform "plus" plus j k = integerToNat (natToInteger j + natToInteger j)

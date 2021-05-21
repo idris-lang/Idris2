@@ -32,6 +32,10 @@ isCon _ = Nothing
 public export
 data Constant
     = I Int
+    | I8 Integer -- reuse code from I64 with fewer casts
+    | I16 Integer
+    | I32 Integer
+    | I64 Integer
     | BI Integer
     | B8 Int -- For now, since we don't have Bits types. We need to
                 -- make sure the Integer remains in range
@@ -44,6 +48,10 @@ data Constant
     | WorldVal
 
     | IntType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
     | IntegerType
     | Bits8Type
     | Bits16Type
@@ -58,6 +66,10 @@ export
 isConstantType : Name -> Maybe Constant
 isConstantType (UN n) = case n of
   "Int"     => Just IntType
+  "Int8"    => Just Int8Type
+  "Int16"   => Just Int16Type
+  "Int32"   => Just Int32Type
+  "Int64"   => Just Int64Type
   "Integer" => Just IntegerType
   "Bits8"   => Just Bits8Type
   "Bits16"  => Just Bits16Type
@@ -71,10 +83,54 @@ isConstantType (UN n) = case n of
 isConstantType _ = Nothing
 
 export
+isPrimType : Constant -> Bool
+isPrimType (I   x)  = False
+isPrimType (I8  x)  = False
+isPrimType (I16 x)  = False
+isPrimType (I32 x)  = False
+isPrimType (I64 x)  = False
+isPrimType (BI  x)  = False
+isPrimType (B8  x)  = False
+isPrimType (B16 x)  = False
+isPrimType (B32 x)  = False
+isPrimType (B64 x)  = False
+isPrimType (Str x)  = False
+isPrimType (Ch  x)  = False
+isPrimType (Db  x)  = False
+isPrimType WorldVal = False
+
+isPrimType Int8Type    = True
+isPrimType Int16Type   = True
+isPrimType Int32Type   = True
+isPrimType Int64Type   = True
+isPrimType IntType     = True
+isPrimType IntegerType = True
+isPrimType Bits8Type   = True
+isPrimType Bits16Type  = True
+isPrimType Bits32Type  = True
+isPrimType Bits64Type  = True
+isPrimType StringType  = True
+isPrimType CharType    = True
+isPrimType DoubleType  = True
+isPrimType WorldType   = True
+
+export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
                               No contra => Nothing
+constantEq (I8 x) (I8 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I16 x) (I16 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I32 x) (I32 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
+constantEq (I64 x) (I64 y) = case decEq x y of
+                                  Yes Refl => Just Refl
+                                  No contra => Nothing
 constantEq (BI x) (BI y) = case decEq x y of
                                 Yes Refl => Just Refl
                                 No contra => Nothing
@@ -87,6 +143,10 @@ constantEq (Ch x) (Ch y) = case decEq x y of
 constantEq (Db x) (Db y) = Nothing -- no DecEq for Doubles!
 constantEq WorldVal WorldVal = Just Refl
 constantEq IntType IntType = Just Refl
+constantEq Int8Type Int8Type = Just Refl
+constantEq Int16Type Int16Type = Just Refl
+constantEq Int32Type Int32Type = Just Refl
+constantEq Int64Type Int64Type = Just Refl
 constantEq IntegerType IntegerType = Just Refl
 constantEq StringType StringType = Just Refl
 constantEq CharType CharType = Just Refl
@@ -97,6 +157,10 @@ constantEq _ _ = Nothing
 export
 Show Constant where
   show (I x) = show x
+  show (I8 x) = show x
+  show (I16 x) = show x
+  show (I32 x) = show x
+  show (I64 x) = show x
   show (BI x) = show x
   show (B8 x) = show x
   show (B16 x) = show x
@@ -107,6 +171,10 @@ Show Constant where
   show (Db x) = show x
   show WorldVal = "%MkWorld"
   show IntType = "Int"
+  show Int8Type = "Int8"
+  show Int16Type = "Int16"
+  show Int32Type = "Int32"
+  show Int64Type = "Int64"
   show IntegerType = "Integer"
   show Bits8Type = "Bits8"
   show Bits16Type = "Bits16"
@@ -120,6 +188,10 @@ Show Constant where
 export
 Pretty Constant where
   pretty (I x) = pretty x
+  pretty (I8 x) = pretty x
+  pretty (I16 x) = pretty x
+  pretty (I32 x) = pretty x
+  pretty (I64 x) = pretty x
   pretty (BI x) = pretty x
   pretty (B8 x) = pretty x
   pretty (B16 x) = pretty x
@@ -130,6 +202,10 @@ Pretty Constant where
   pretty (Db x) = pretty x
   pretty WorldVal = pretty "%MkWorld"
   pretty IntType = pretty "Int"
+  pretty Int8Type = pretty "Int8"
+  pretty Int16Type = pretty "Int16"
+  pretty Int32Type = pretty "Int32"
+  pretty Int64Type = pretty "Int64"
   pretty IntegerType = pretty "Integer"
   pretty Bits8Type = pretty "Bits8"
   pretty Bits16Type = pretty "Bits16"
@@ -143,6 +219,10 @@ Pretty Constant where
 export
 Eq Constant where
   (I x) == (I y) = x == y
+  (I8 x) == (I8 y) = x == y
+  (I16 x) == (I16 y) = x == y
+  (I32 x) == (I32 y) = x == y
+  (I64 x) == (I64 y) = x == y
   (BI x) == (BI y) = x == y
   (B8 x) == (B8 y) = x == y
   (B16 x) == (B16 y) = x == y
@@ -153,6 +233,10 @@ Eq Constant where
   (Db x) == (Db y) = x == y
   WorldVal == WorldVal = True
   IntType == IntType = True
+  Int8Type == Int8Type = True
+  Int16Type == Int16Type = True
+  Int32Type == Int32Type = True
+  Int64Type == Int64Type = True
   IntegerType == IntegerType = True
   Bits8Type == Bits8Type = True
   Bits16Type == Bits16Type = True
@@ -178,6 +262,10 @@ constTag StringType = 9
 constTag CharType = 10
 constTag DoubleType = 11
 constTag WorldType = 12
+constTag Int8Type = 13
+constTag Int16Type = 14
+constTag Int32Type = 15
+constTag Int64Type = 16
 constTag _ = 0
 
 ||| Precision of integral types.
@@ -197,18 +285,29 @@ Ord Precision where
   compare Unlimited _         = GT
   compare _         Unlimited = LT
 
+-- so far, we only support limited precision
+-- unsigned integers
 public export
-data IntKind = Signed Precision | Unsigned Precision
+data IntKind = Signed Precision | Unsigned Int
 
 public export
 intKind : Constant -> Maybe IntKind
 intKind IntegerType = Just $ Signed Unlimited
+intKind Int8Type    = Just . Signed   $ P 8
+intKind Int16Type   = Just . Signed   $ P 16
+intKind Int32Type   = Just . Signed   $ P 32
+intKind Int64Type   = Just . Signed   $ P 64
 intKind IntType     = Just . Signed   $ P 64
-intKind Bits8Type   = Just . Unsigned $ P 8
-intKind Bits16Type  = Just . Unsigned $ P 16
-intKind Bits32Type  = Just . Unsigned $ P 32
-intKind Bits64Type  = Just . Unsigned $ P 64
+intKind Bits8Type   = Just $ Unsigned 8
+intKind Bits16Type  = Just $ Unsigned 16
+intKind Bits32Type  = Just $ Unsigned 32
+intKind Bits64Type  = Just $ Unsigned 64
 intKind _           = Nothing
+
+public export
+precision : IntKind -> Precision
+precision (Signed p)   = p
+precision (Unsigned p) = P p
 
 -- All the internal operators, parameterised by their arity
 public export
@@ -457,10 +556,20 @@ Functor Binder where
   map func (PLet fc c val ty) = PLet fc c (func val) (func ty)
   map func (PVTy fc c ty) = PVTy fc c (func ty)
 
+
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+
+export
+dropLater : IsVar nm (S idx) (v :: vs) -> IsVar nm idx vs
+dropLater (Later p) = p
+
+export
+mkVar : (wkns : List Name) -> IsVar nm (length wkns) (wkns ++ nm :: vars)
+mkVar [] = First
+mkVar (w :: ws) = Later (mkVar ws)
 
 public export
 dropVar : (ns : List Name) -> {idx : Nat} -> (0 p : IsVar name idx ns) -> List Name
@@ -633,6 +742,56 @@ data Term : List Name -> Type where
      Erased : FC -> (imp : Bool) -> -- True == impossible term, for coverage checker
               Term vars
      TType : FC -> Term vars
+
+-- Remove/restore the given namespace from all Refs. This is to allow
+-- writing terms and case trees to disk without repeating the same namespace
+-- all over the place.
+public export
+interface StripNamespace a where
+  trimNS : Namespace -> a -> a
+  restoreNS : Namespace -> a -> a
+
+export
+StripNamespace (Term vars) where
+  trimNS ns tm@(Ref fc x (NS tns n))
+      = if ns == tns then Ref fc x (NS (unsafeFoldNamespace []) n) else tm
+        -- ^ A blank namespace, rather than a UN, so we don't catch primitive
+        -- names which are represented as UN.
+  trimNS ns (Meta fc x y xs)
+      = Meta fc x y (map (trimNS ns) xs)
+  trimNS ns (Bind fc x b scope)
+      = Bind fc x (map (trimNS ns) b) (trimNS ns scope)
+  trimNS ns (App fc fn arg)
+      = App fc (trimNS ns fn) (trimNS ns arg)
+  trimNS ns (As fc s p tm)
+      = As fc s (trimNS ns p) (trimNS ns tm)
+  trimNS ns (TDelayed fc x y)
+      = TDelayed fc x (trimNS ns y)
+  trimNS ns (TDelay fc x t y)
+      = TDelay fc x (trimNS ns t) (trimNS ns y)
+  trimNS ns (TForce fc r y)
+      = TForce fc r (trimNS ns y)
+  trimNS ns tm = tm
+
+  restoreNS ns tm@(Ref fc x (NS tmns n))
+      = if isNil (unsafeUnfoldNamespace tmns)
+            then Ref fc x (NS ns n)
+            else tm
+  restoreNS ns (Meta fc x y xs)
+      = Meta fc x y (map (restoreNS ns) xs)
+  restoreNS ns (Bind fc x b scope)
+      = Bind fc x (map (restoreNS ns) b) (restoreNS ns scope)
+  restoreNS ns (App fc fn arg)
+      = App fc (restoreNS ns fn) (restoreNS ns arg)
+  restoreNS ns (As fc s p tm)
+      = As fc s (restoreNS ns p) (restoreNS ns tm)
+  restoreNS ns (TDelayed fc x y)
+      = TDelayed fc x (restoreNS ns y)
+  restoreNS ns (TDelay fc x t y)
+      = TDelay fc x (restoreNS ns t) (restoreNS ns y)
+  restoreNS ns (TForce fc r y)
+      = TForce fc r (restoreNS ns y)
+  restoreNS ns tm = tm
 
 export
 isErased : Term vars -> Bool
@@ -1229,49 +1388,49 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf later -> Bounds bound ->
-          NVar name (later ++ vars) ->
-          NVar name (later ++ (bound ++ vars))
+addVars : SizeOf outer -> Bounds bound ->
+          NVar name (outer ++ vars) ->
+          NVar name (outer ++ (bound ++ vars))
 addVars p = insertNVarNames p . sizeOf
 
-resolveRef : SizeOf later -> SizeOf done -> Bounds bound -> FC -> Name ->
-             Maybe (Term (later ++ (done ++ bound ++ vars)))
+resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
+             Maybe (Term (outer ++ (done ++ bound ++ vars)))
 resolveRef p q None fc n = Nothing
-resolveRef {later} {done} p q (Add {xs} new old bs) fc n
+resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative later done (new :: xs ++ vars) in
+         then rewrite appendAssociative outer done (new :: xs ++ vars) in
               let MkNVar p = weakenNVar (p + q) (MkNVar First) in
                      Just (Local fc Nothing _ p)
          else rewrite appendAssociative done [new] (xs ++ vars)
                 in resolveRef p (sucR q) bs fc n
 
-mkLocals : SizeOf later -> Bounds bound ->
-           Term (later ++ vars) -> Term (later ++ (bound ++ vars))
-mkLocals later bs (Local fc r idx p)
-    = let MkNVar p' = addVars later bs (MkNVar p) in Local fc r _ p'
-mkLocals later bs (Ref fc Bound name)
-    = maybe (Ref fc Bound name) id (resolveRef later zero bs fc name)
-mkLocals later bs (Ref fc nt name)
+mkLocals : SizeOf outer -> Bounds bound ->
+           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
+mkLocals outer bs (Local fc r idx p)
+    = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
+mkLocals outer bs (Ref fc Bound name)
+    = maybe (Ref fc Bound name) id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Ref fc nt name)
     = Ref fc nt name
-mkLocals later bs (Meta fc name y xs)
-    = maybe (Meta fc name y (map (mkLocals later bs) xs))
-            id (resolveRef later zero bs fc name)
-mkLocals later bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals later bs) b)
-           (mkLocals (suc later) bs scope)
-mkLocals later bs (App fc fn arg)
-    = App fc (mkLocals later bs fn) (mkLocals later bs arg)
-mkLocals later bs (As fc s as tm)
-    = As fc s (mkLocals later bs as) (mkLocals later bs tm)
-mkLocals later bs (TDelayed fc x y)
-    = TDelayed fc x (mkLocals later bs y)
-mkLocals later bs (TDelay fc x t y)
-    = TDelay fc x (mkLocals later bs t) (mkLocals later bs y)
-mkLocals later bs (TForce fc r x)
-    = TForce fc r (mkLocals later bs x)
-mkLocals later bs (PrimVal fc c) = PrimVal fc c
-mkLocals later bs (Erased fc i) = Erased fc i
-mkLocals later bs (TType fc) = TType fc
+mkLocals outer bs (Meta fc name y xs)
+    = maybe (Meta fc name y (map (mkLocals outer bs) xs))
+            id (resolveRef outer zero bs fc name)
+mkLocals outer bs (Bind fc x b scope)
+    = Bind fc x (map (mkLocals outer bs) b)
+           (mkLocals (suc outer) bs scope)
+mkLocals outer bs (App fc fn arg)
+    = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
+mkLocals outer bs (As fc s as tm)
+    = As fc s (mkLocals outer bs as) (mkLocals outer bs tm)
+mkLocals outer bs (TDelayed fc x y)
+    = TDelayed fc x (mkLocals outer bs y)
+mkLocals outer bs (TDelay fc x t y)
+    = TDelay fc x (mkLocals outer bs t) (mkLocals outer bs y)
+mkLocals outer bs (TForce fc r x)
+    = TForce fc r (mkLocals outer bs x)
+mkLocals outer bs (PrimVal fc c) = PrimVal fc c
+mkLocals outer bs (Erased fc i) = Erased fc i
+mkLocals outer bs (TType fc) = TType fc
 
 export
 refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
@@ -1330,8 +1489,8 @@ namespace SubstEnv
               SubstEnv ds vars -> SubstEnv (d :: ds) vars
 
   findDrop : FC -> Maybe Bool ->
-             Var (drop ++ vars) ->
-             SubstEnv drop vars ->
+             Var (dropped ++ vars) ->
+             SubstEnv dropped vars ->
              Term vars
   findDrop fc r (MkVar var) [] = Local fc r _ var
   findDrop fc r (MkVar First) (tm :: env) = tm
@@ -1340,8 +1499,8 @@ namespace SubstEnv
 
   find : FC -> Maybe Bool ->
          SizeOf outer ->
-         Var (outer ++ (drop ++ vars)) ->
-         SubstEnv drop vars ->
+         Var (outer ++ (dropped ++ vars)) ->
+         SubstEnv dropped vars ->
          Term (outer ++ vars)
   find fc r outer var env = case sizedView outer of
     Z       => findDrop fc r var env
@@ -1351,8 +1510,8 @@ namespace SubstEnv
        -- TODO: refactor to only weaken once?
 
   substEnv : SizeOf outer ->
-             SubstEnv drop vars ->
-             Term (outer ++ (drop ++ vars)) ->
+             SubstEnv dropped vars ->
+             Term (outer ++ (dropped ++ vars)) ->
              Term (outer ++ vars)
   substEnv outer env (Local fc r _ prf)
       = find fc r outer (MkVar prf) env
@@ -1375,7 +1534,7 @@ namespace SubstEnv
   substEnv outer env (TType fc) = TType fc
 
   export
-  substs : SubstEnv drop vars -> Term (drop ++ vars) -> Term vars
+  substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
   substs env tm = substEnv zero env tm
 
   export

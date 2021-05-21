@@ -182,7 +182,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 {free, vars : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
-                (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+                (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                 Stack free ->
                 LocalEnv free vars ->
                 Core (NF free)
@@ -203,7 +203,7 @@ parameters (defs : Defs, topopts : EvalOpts)
               env fc mrig (S idx) (Later p) stk (_ :: locs)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
-    updateLocal : (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+    updateLocal : (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                   LocalEnv free vars -> NF free ->
                   LocalEnv free vars
     updateLocal Z First (x :: locs) nf = MkNFClosure nf :: locs
@@ -216,8 +216,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = evalRef env True fc Func (Resolved i) (map (EmptyFC,) args ++ stk)
-                  (NApp fc (NMeta nm i args) stk)
+        = let args' = if isNil stk then map (EmptyFC,) args
+                         else map (EmptyFC,) args ++ stk
+                        in
+              evalRef env True fc Func (Resolved i) args'
+                          (NApp fc (NMeta nm i args) stk)
 
     -- The commented out logging here might still be useful one day, but
     -- evalRef is used a lot and even these tiny checks turn out to be
@@ -708,6 +711,26 @@ export
 Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
+-- Resume a previously blocked normalisation with a new environment
+export
+continueNF : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
+             Defs -> Env Term vars -> NF vars -> Core (NF vars)
+continueNF defs env stuck@(NApp fc (NRef nt fn) stk)
+    = evalRef defs defaultOpts env False fc nt fn stk stuck
+continueNF defs env (NApp fc (NMeta name idx args) stk)
+    = evalMeta defs defaultOpts env fc name idx args stk
+-- Next batch are already in normal form
+continueNF defs env nf@(NDCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NTCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NPrimVal fc x) = pure nf
+continueNF defs env nf@(NErased fc imp) = pure nf
+continueNF defs env nf@(NType fc) = pure nf
+-- For the rest, easiest just to quote and reevaluate
+continueNF defs env tm
+    = do empty <- clearDefs defs
+         nf defs env !(quote empty env tm)
+
 export
 glueBack : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
@@ -1173,95 +1196,89 @@ getArity defs env tm = getValArity defs env !(nf defs env tm)
 export
 logNF : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
-        String -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
+        (s : String) ->
+        {auto 0 _ : KnownTopic s} ->
+        Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
 logNF str n msg env tmnf
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- quote defs env tmnf
-               tm' <- toFullNames tm
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- quote defs env tmnf
+           tm' <- toFullNames tm
+           logString str n (msg ++ ": " ++ show tm')
 
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
 export
 logTermNF' : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             LogLevel -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF' lvl msg env tm
-    = do opts <- getSession
-         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
-            do defs <- get Ctxt
-               tmnf <- normaliseHoles defs env tm
-               tm' <- toFullNames tmnf
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+             (s : String) ->
+             {auto 0 _ : KnownTopic s} ->
+             Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF' str n msg env tm
+    = do defs <- get Ctxt
+         tmnf <- normaliseHoles defs env tm
+         tm' <- toFullNames tmnf
+         logString str n (msg ++ ": " ++ show tm')
 
 export
 logTermNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF str n msg env tm
-    = do let lvl = mkLogLevel (logEnabled !getSession) str n
-         logTermNF' lvl msg env tm
+    = when !(logging str n) $ logTermNF' str n msg env tm
 
 export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+          (s : String) ->
+          {auto 0 _ : KnownTopic s} ->
+          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlue str n msg env gtm
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- getTerm gtm
-               tm' <- toFullNames tm
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- getTerm gtm
+           tm' <- toFullNames tm
+           logString str n (msg ++ ": " ++ show tm')
 
 export
 logGlueNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlueNF str n msg env gtm
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         when (keepLog lvl (logEnabled opts) (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- getTerm gtm
-               tmnf <- normaliseHoles defs env tm
-               tm' <- toFullNames tmnf
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- getTerm gtm
+           tmnf <- normaliseHoles defs env tm
+           tm' <- toFullNames tmnf
+           logString str n (msg ++ ": " ++ show tm')
 
 export
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> String -> Env Term vars -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
-    = do opts <- getSession
-         when (logEnabled opts &&
-                   keepLog lvl (logEnabled opts) (logLevel opts)) $ do
-           coreLift (putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg)
+    = when !(logging str n) $
+        do logString str n msg
            dumpEnv env
 
   where
-    lvl : LogLevel
-    lvl = mkLogLevel True str n
 
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
-        = do logTermNF' lvl (msg ++ ": let " ++ show x) bs val
-             logTermNF' lvl (msg ++ ":" ++ show c ++ " " ++
-                             show x) bs ty
+        = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
+             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
     dumpEnv {vs = x :: _} (b :: bs)
-        = do logTermNF' lvl (msg ++ ":" ++ show (multiplicity b) ++ " " ++
-                             show (piInfo b) ++ " " ++
-                             show x) bs (binderType b)
+        = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                           show (piInfo b) ++ " " ++
+                           show x) bs (binderType b)
              dumpEnv bs
 replace' : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->

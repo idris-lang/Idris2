@@ -70,3 +70,43 @@ diffBy f (x :: xs) ys =
   case mb of
     Just _  =>      diffBy f xs ys'
     Nothing => x :: diffBy f xs ys'
+
+||| Remove adjacent duplicates
+export
+dedup : Eq a => List a -> List a
+dedup (a :: xs@(b :: _)) = if a == b then dedup xs else a :: dedup xs
+dedup xs                = xs
+
+||| O(n * log(n)). Sort a list and remove duplicates
+export
+sortedNub : Ord a => List a -> List a
+sortedNub = dedup . sort
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+groupBy : (a -> a -> Bool) -> List a -> List (List1 a)
+groupBy _ [] = []
+groupBy eq (h :: t) = let (ys,zs) = go h t
+                       in ys :: zs
+
+  where go : a -> List a -> (List1 a, List (List1 a))
+        go v [] = (singleton v,[])
+        go v (x :: xs) = let (ys,zs) = go x xs
+                          in if eq v x
+                                then (cons v ys, zs)
+                                else (singleton v, ys :: zs)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+group : Eq a => List a -> List (List1 a)
+group = Libraries.Data.List.Extra.groupBy (==)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+groupWith : Eq b => (a -> b) -> List a -> List (List1 a)
+groupWith f = Libraries.Data.List.Extra.groupBy (\x,y => f x == f y)
+
+||| TODO: use the version in `Data.List1` in base after the next release.
+export
+groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
+groupAllWith f = Libraries.Data.List.Extra.groupWith f . sortBy (comparing f)

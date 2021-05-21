@@ -8,18 +8,32 @@
     [(i3nt ti3nt a6nt ta6nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-read-args (lambda (desc)
-  (case (vector-ref desc 0)
-    ((0) '())
-    ((1) (cons (vector-ref desc 2)
-               (blodwen-read-args (vector-ref desc 3)))))))
+(define blodwen-toSignedInt
+  (lambda (x bits)
+    (let ((ma (ash 1 bits)))
+      (if (or (< x (- 0 ma))
+              (>= x ma))
+          (remainder x ma)
+          x))))
+
+(define blodwen-toUnsignedInt
+  (lambda (x bits)
+    (modulo x (ash 1 bits))))
+
+(define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
+
+(define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
 (define b+ (lambda (x y bits) (remainder (+ x y) (ash 1 bits))))
 (define b- (lambda (x y bits) (remainder (- x y) (ash 1 bits))))
 (define b* (lambda (x y bits) (remainder (* x y) (ash 1 bits))))
 (define b/ (lambda (x y bits) (remainder (exact-floor (/ x y)) (ash 1 bits))))
-
-(define blodwen-toSignedInt (lambda (x y) (modulo x (expt 2 y))))
-(define blodwen-toUnsignedInt (lambda (x y) (modulo x (expt 2 y))))
 
 (define integer->bits8 (lambda (x) (modulo x (expt 2 8))))
 (define integer->bits16 (lambda (x) (modulo x (expt 2 16))))
@@ -42,6 +56,7 @@
 (define blodwen-bits-shl-signed (lambda (x y bits) (truncate-bits (ash x y) bits)))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
+
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))
 (define blodwen-and (lambda (x y) (logand x y)))
@@ -57,35 +72,60 @@
       ((equal? x "") "")
       ((equal? (string-ref x 0) #\#) "")
       (else x))))
+
 (define exact-floor
   (lambda (x)
     (inexact->exact (floor x))))
+
+(define exact-truncate
+  (lambda (x)
+    (inexact->exact (truncate x))))
+
+(define exact-truncate-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (exact-truncate x) y)))
+
+(define exact-truncate-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (exact-truncate x) y)))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (char->integer x) y)))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (char->integer x) y)))
+
 (define cast-string-int
   (lambda (x)
-    (exact-floor (cast-num (string->number (destroy-prefix x))))))
+    (exact-truncate (cast-num (string->number (destroy-prefix x))))))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (cast-string-int x) y)))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
+
 (define cast-int-char
   (lambda (x)
-    (if (and (>= x 0)
-             (<= x #x10ffff))
+    (if (or
+          (and (>= x 0) (<= x #xd7ff))
+          (and (>= x #xe000) (<= x #x10ffff)))
         (integer->char x)
-        0)))
+        (integer->char 0))))
+
 (define cast-string-double
   (lambda (x)
     (cast-num (string->number (destroy-prefix x)))))
 
-(define (from-idris-list xs)
-  (if (= (vector-ref xs 0) 0)
-    '()
-    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
-(define (string-pack xs) (apply string (from-idris-list xs)))
-(define (to-idris-list-rev acc xs)
-  (if (null? xs)
-    acc
-    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
-(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
-(define (string-concat xs) (apply string-append (from-idris-list xs)))
+(define (string-concat xs) (apply string-append xs))
+(define (string-unpack s) (string->list s))
+(define (string-pack xs) (list->string xs))
+
 (define string-cons (lambda (x y) (string-append (string x) y)))
-(define get-tag (lambda (x) (vector-ref x 0)))
 (define string-reverse (lambda (x)
   (list->string (reverse (string->list x)))))
 (define (string-substr off len s)
@@ -105,8 +145,8 @@
 
 (define (blodwen-string-iterator-next s ofs)
   (if (>= ofs (string-length s))
-      (vector 0)  ; EOF
-      (vector 1 (string-ref s ofs) (+ ofs 1))))
+      '() ; EOF
+      (cons (string-ref s ofs) (+ ofs 1))))
 
 (define either-left
   (lambda (x)
@@ -145,6 +185,9 @@
 
 (define (blodwen-buffer-size buf)
   (bytevector-length buf))
+
+(define (blodwen-buffer-free buf)
+  (void))  ; Rely on built-in memory management
 
 (define (blodwen-buffer-setbyte buf loc val)
   (bytevector-u8-set! buf loc val))

@@ -14,6 +14,7 @@ import Data.List
 import Libraries.Data.DList
 import Data.Nat
 import Data.Strings
+import Libraries.Data.SortedSet
 import Data.Vect
 
 import System
@@ -74,49 +75,15 @@ cName n = assert_total $ idris_crash ("INTERNAL ERROR: Unsupported name in C bac
 -- not really total but this way this internal error does not contaminate everything else
 
 escapeChar : Char -> String
-escapeChar '\DEL' = "127"
-escapeChar '\NUL' = "0"
-escapeChar '\SOH' = "1"
-escapeChar '\STX' = "2"
-escapeChar '\ETX' = "3"
-escapeChar '\EOT' = "4"
-escapeChar '\ENQ' = "5"
-escapeChar '\ACK' = "6"
-escapeChar '\BEL' = "7"
-escapeChar '\BS' = "8"
-escapeChar '\HT' = "9"
-escapeChar '\LF' = "10"
-escapeChar '\VT' = "11"
-escapeChar '\FF' = "12"
-escapeChar '\CR' = "13"
-escapeChar '\SO' = "14"
-escapeChar '\SI' = "15"
-escapeChar '\DLE' = "16"
-escapeChar '\DC1' = "17"
-escapeChar '\DC2' = "18"
-escapeChar '\DC3' = "19"
-escapeChar '\DC4' = "20"
-escapeChar '\NAK' = "21"
-escapeChar '\SYN' = "22"
-escapeChar '\ETB' = "23"
-escapeChar '\CAN' = "24"
-escapeChar '\EM' = "25"
-escapeChar '\SUB' = "26"
-escapeChar '\ESC' = "27"
-escapeChar '\FS' = "28"
-escapeChar '\GS' = "29"
-escapeChar '\RS' = "30"
-escapeChar '\US' = "31"
-escapeChar c = show c
-
--- escapeChar '\\' = "'\\\\'"
--- escapeChar c = show c
+escapeChar c = if isAlphaNum c || isNL c
+                  then show c
+                  else "(char)" ++ show (ord c)
 
 cStringQuoted : String -> String
 cStringQuoted cs = strCons '"' (showCString (unpack cs) "\"")
 where
     showCChar : Char -> String -> String
-    showCChar '\\' = ("bkslash" ++)
+    showCChar '\\' = ("\\\\" ++)
     showCChar c
        = if c < chr 32
             then (("\\x" ++ leftPad '0' 2 (asHex (cast c))) ++ "\"\"" ++)
@@ -131,12 +98,11 @@ where
 
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt32("++ show x ++")" -- (constant #:type 'i32 #:val " ++ show x ++ ")"
-cConstant (BI x) = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"--"(constant #:type 'double #:val " ++ show x ++ ")"
-cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")" --"(constant #:type 'char #:val " ++ escapeChar x ++  ")"
+cConstant (I x) = "(Value*)makeInt32("++ show x ++")"
+cConstant (BI x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
+cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
-  -- = "(constant #:type 'string #:val " ++ cStringQuoted x ++ ")"
 cConstant WorldVal = "(Value*)makeWorld()"
 cConstant IntType = "i32"
 cConstant IntegerType = "i64"
@@ -144,10 +110,10 @@ cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
-cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")" --"(constant #:type 'i64 #:val " ++ show x ++ ")"
+cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")"
+cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")"
+cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")"
+cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
@@ -165,8 +131,8 @@ extractConstant (B8 x)  = show x
 extractConstant (B16 x)  = show x
 extractConstant (B32 x)  = show x
 extractConstant (B64 x)  = show x
-extractConstant c = "unable_to_extract constant >>" ++ cConstant c ++ "<<"
-
+extractConstant c = assert_total $ idris_crash ("INTERNAL ERROR: Unable to extract constant: " ++ cConstant c)
+-- not really total but this way this internal error does not contaminate everything else
 
 ||| Generate scheme for a plain function.
 plainOp : String -> List String -> String
@@ -174,7 +140,7 @@ plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
 
 
 ||| Generate scheme for a primitive function.
-cOp : PrimFn arity -> Vect arity String -> String
+cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
 cOp (Neg ty)      [x]       = "negate_"  ++  cConstant ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
@@ -211,7 +177,7 @@ cOp StrIndex      [x, i]    = "strIndex(" ++ x ++ ", " ++ i ++ ")"
 cOp StrCons       [x, y]    = "strCons(" ++ x ++ ", " ++ y ++ ")"
 cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
 cOp StrSubstr     [x, y, z] =  "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
-cOp BelieveMe     [_, _, x] = x
+cOp BelieveMe     [_, _, x] = "newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = plainOp (show fn) (toList args)
 
@@ -261,7 +227,8 @@ toPrim pn@(NS _ n)
             (n == UN "prim__onCollectAny", OnCollectAny)
             ]
            (Unknown pn)
-toPrim pn = Unknown pn -- todo: crash rather than generate garbage?
+toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
+-- not really total but this way this internal error does not contaminate everything else
 
 
 varName : AVar -> String
@@ -272,7 +239,7 @@ data ArgCounter : Type where
 data FunctionDefinitions : Type where
 data TemporaryVariableTracker : Type where
 data IndentLevel : Type where
-data ExternalLibs : Type where
+data HeaderFiles : Type where
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -370,15 +337,12 @@ freeTmpVars = do
         [] => pure ()
 
 
-addExternalLib : {auto e : Ref ExternalLibs (List String)}
-              -> String
-              -> Core ()
-addExternalLib extLib = do
-    libs <- get ExternalLibs
-    case elem extLib libs of
-        True => pure () -- library already in list
-        False => do
-            put ExternalLibs (extLib :: libs)
+addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
+         -> String
+         -> Core ()
+addHeader header = do
+    headerFiles <- get HeaderFiles
+    put HeaderFiles $ insert header headerFiles
 
 
 
@@ -427,17 +391,9 @@ showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
 
-cArgsVectANF : Vect arity AVar -> Core (Vect arity String)
+cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
 cArgsVectANF [] = pure []
 cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
-
-showEitherStringInt : Either String Int -> String
-showEitherStringInt (Left s) = s
-showEitherStringInt (Right i) = show i
-
-toIntEitherStringInt : Either String Int -> Int -> Int
-toIntEitherStringInt (Left s) k = k
-toIntEitherStringInt (Right i) _ = i
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -487,8 +443,7 @@ mutual
                     -> Nat
                     -> Core $ ()
     copyConstructors _ [] _ _ _ = pure ()
-    copyConstructors sc ((MkAConAlt n mTag args body) :: xs) constrFieldVar retValVar k = do
-        --(restConstructionCopy, restBody) <- copyConstructors sc xs constrFieldVar retValVar (S k)
+    copyConstructors sc ((MkAConAlt n _ mTag args body) :: xs) constrFieldVar retValVar k = do
         (tag', name') <- getNameTag mTag n
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].tag = " ++ tag' ++ ";"
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].name = " ++ name' ++ ";"
@@ -509,7 +464,7 @@ mutual
              -> (nrConBlock:Nat)
              -> Core ()
     conBlocks _ [] _ _ = pure ()
-    conBlocks sc ((MkAConAlt n mTag args body) :: xs) retValVar k = do
+    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k = do
         emit EmptyFC $ "  case " ++ show k ++ ":"
         emit EmptyFC $ "  {"
         increaseIndentation
@@ -608,7 +563,7 @@ mutual
 
     checkTags : List AConAlt -> Core Bool
     checkTags [] = pure False
-    checkTags ((MkAConAlt n Nothing args sc) :: xs) = pure False
+    checkTags ((MkAConAlt n _ Nothing args sc) :: xs) = pure False
     checkTags _ = pure True
 
 
@@ -646,7 +601,6 @@ mutual
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AApp fc _ closure arg) =
-        -- pure $ "apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")"
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
                     ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
     cStatementsFromANF (ALet fc var value body) = do
@@ -655,7 +609,7 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n tag args) = do
+    cStatementsFromANF (ACon fc n _ tag args) = do
         c <- getNextCounter
         let constr = "constructor_" ++ (show c)
         emit fc $ "Value_Constructor* "
@@ -668,8 +622,6 @@ mutual
 
         fillConstructorArgs constr args 0
         pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
-        --fillingStatements <- fillConstructorArgs constr args 0
-        --pure $ (statement1 :: fillingStatements, "(Value*)" ++ constr ++ ";")
     cStatementsFromANF (AOp fc _ op args) = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
@@ -707,15 +659,11 @@ mutual
                 increaseIndentation
                 newTemporaryVariableLevel
                 defaultAssignment <- cStatementsFromANF d
-                -- traverse_ (\l => emit EmptyFC (l) ) defaultBody
                 emit EmptyFC $ switchReturnVar ++ " = " ++ nonTailCall defaultAssignment ++ ";"
                 freeTmpVars
                 decreaseIndentation
                 emit EmptyFC $ "  }"
                 emit EmptyFC $ "}"
-                -- let defaultBlock = []
-                --                 ++ (map (\s => s) defaultBody)
-                --                 ++ [defaultLastLine1, defaultLastLine2]
                 emit EmptyFC $ "free(" ++ constructorField ++ ");"
                 pure $ MkRS switchReturnVar switchReturnVar
     cStatementsFromANF (AConstCase fc sc alts def) = do
@@ -747,25 +695,6 @@ mutual
 
 
 
-readCCPart : Char -> String -> (String, String)
-readCCPart b x =
-    let (cc, def) = break (== b) x
-    in (cc, drop 1 def)
-  where
-      drop : Int -> String -> String
-      drop headLength s =
-          let len = cast (length s)
-              subStrLen = len - headLength in
-          strSubstr headLength subStrLen s
-
-extractFFILocation : (lang:String) -> List String -> Maybe (String, String)
-extractFFILocation targetLang [] = Nothing
-extractFFILocation targetLang (def :: defs) =
-    let (thisLang,pos) = readCCPart ':' def in
-    case targetLang == thisLang of
-        True => Just (readCCPart ',' pos)
-        False => extractFFILocation targetLang defs
-
 addCommaToList : List String -> List String
 addCommaToList [] = []
 addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
@@ -788,24 +717,24 @@ getArgsNrList [] _ = []
 getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 
-cTypeOfCFType : CFType -> Core $ String
-cTypeOfCFType CFUnit          = pure $ "void"
-cTypeOfCFType CFInt           = pure $ "int"
-cTypeOfCFType CFUnsigned8     = pure $ "uint8_t"
-cTypeOfCFType CFUnsigned16    = pure $ "uint16_t"
-cTypeOfCFType CFUnsigned32    = pure $ "uint32_t"
-cTypeOfCFType CFUnsigned64    = pure $ "uint64_t"
-cTypeOfCFType CFString        = pure $ "char *"
-cTypeOfCFType CFDouble        = pure $ "double"
-cTypeOfCFType CFChar          = pure $ "char"
-cTypeOfCFType CFPtr           = pure $ "void *"
-cTypeOfCFType CFGCPtr         = pure $ "void *"
-cTypeOfCFType CFBuffer        = pure $ "void *"
-cTypeOfCFType CFWorld         = pure $ "void *"
-cTypeOfCFType (CFFun x y)     = pure $ "void *"
-cTypeOfCFType (CFIORes x)     = pure $ "void *"
-cTypeOfCFType (CFStruct x ys) = pure $ "void *"
-cTypeOfCFType (CFUser x ys)   = pure $ "void *"
+cTypeOfCFType : CFType -> String
+cTypeOfCFType CFUnit          = "void"
+cTypeOfCFType CFInt           = "int"
+cTypeOfCFType CFUnsigned8     = "uint8_t"
+cTypeOfCFType CFUnsigned16    = "uint16_t"
+cTypeOfCFType CFUnsigned32    = "uint32_t"
+cTypeOfCFType CFUnsigned64    = "uint64_t"
+cTypeOfCFType CFString        = "char *"
+cTypeOfCFType CFDouble        = "double"
+cTypeOfCFType CFChar          = "char"
+cTypeOfCFType CFPtr           = "void *"
+cTypeOfCFType CFGCPtr         = "void *"
+cTypeOfCFType CFBuffer        = "void *"
+cTypeOfCFType CFWorld         = "void *"
+cTypeOfCFType (CFFun x y)     = "void *"
+cTypeOfCFType (CFIORes x)     = "void *"
+cTypeOfCFType (CFStruct x ys) = "void *"
+cTypeOfCFType (CFUser x ys)   = "void *"
 
 varNamesFromList : List ty -> Nat -> List String
 varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
@@ -813,7 +742,7 @@ varNamesFromList str k = map (("var_" ++) . show) (getArgsNrList str k)
 createFFIArgList : List CFType
                 -> Core $ List (String, String, CFType)
 createFFIArgList cftypeList = do
-    sList <- traverse cTypeOfCFType cftypeList
+    let sList = map cTypeOfCFType cftypeList
     let varList = varNamesFromList cftypeList 1
     pure $ zip3 sList varList cftypeList
 
@@ -822,7 +751,7 @@ emitFDef : {auto oft : Ref OutfileText Output}
         -> (funcName:Name)
         -> (arglist:List (String, String, CFType))
         -> Core ()
-emitFDef funcName [] = emit EmptyFC $ cName funcName ++ "(void)"
+emitFDef funcName [] = emit EmptyFC $ "Value *" ++ cName funcName ++ "(void)"
 emitFDef funcName ((varType, varName, varCFType) :: xs) = do
     emit EmptyFC $ "Value *" ++ cName funcName
     emit EmptyFC "("
@@ -846,10 +775,11 @@ extractValue CFPtr           varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 extractValue CFGCPtr         varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CFBuffer        varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
 extractValue CFWorld         varName = "(Value_World*)" ++ varName
-extractValue (CFFun x y)     varName = "Value* " ++ varName ++ "/* function pointer not implemented */"
+extractValue (CFFun x y)     varName = "(Value_Closure*)" ++ varName
 extractValue (CFIORes x)     varName = extractValue x varName
-extractValue (CFStruct x xs) varName = "Value* " ++ varName ++ "/* struct access not implemented */"
-extractValue (CFUser x xs)   varName = "Value* " ++ varName
+extractValue (CFStruct x xs) varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+-- not really total but this way this internal error does not contaminate everything else
+extractValue (CFUser x xs)   varName = "(Value*)" ++ varName
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
@@ -868,7 +798,7 @@ packCFType CFWorld         varName = "makeWorld(" ++ varName ++ ")"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
-packCFType (CFUser x xs)   varName = "makeCustomUser(" ++ varName ++ ")"
+packCFType (CFUser x xs)   varName = varName
 
 discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
@@ -880,7 +810,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
-                -> {auto e : Ref ExternalLibs (List String)}
+                -> {auto h : Ref HeaderFiles (SortedSet String)}
                 -> Name
                 -> ANFDef
                 -> Core ()
@@ -923,13 +853,12 @@ createCFunctions n (MkACon tag arity nt) = do
   emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
-createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
-  case extractFFILocation "C" ccs of
-      Nothing => case extractFFILocation "scheme" ccs of
-          Nothing => pure ()
-          (Just (fctName, lib)) => emit EmptyFC $ "// call ffi to a scheme substitute for " ++ fctName
-      (Just (fctName, lib)) => do
-          addExternalLib lib
+createCFunctions n (MkAForeign ccs fargs ret) = do
+  case parseCC ["C"] ccs of
+      Just (_, fctName :: extLibOpts) => do
+          case extLibOpts of
+              [lib, header] => addHeader header
+              _ => pure ()
           otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
@@ -957,67 +886,59 @@ createCFunctions n (MkAForeign ccs fargs (CFIORes ret)) = do
           increaseIndentation
           emit EmptyFC $ " // ffi call to " ++ fctName
           case ret of
-              CFUnit => do
+              CFIORes CFUnit => do
                   emit EmptyFC $ fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
-                  decreaseIndentation
-                  emit EmptyFC "}\n"
-              _ => do
-                  emit EmptyFC $ !(cTypeOfCFType ret) ++ " retVal = " ++ fctName
+              CFIORes ret => do
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
-                  decreaseIndentation
-                  emit EmptyFC "}\n"
+              _ => do
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                              ++ "("
+                              ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
+                              ++ ");"
+                  emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
-          -- decreaseIndentation
-          -- emit EmptyFC "}"
+          decreaseIndentation
+          emit EmptyFC "}"
+      _ => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
+          -- not really total but this way this internal error does not contaminate everything else
 
-          --put FunctionDefinitions ((fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs)
-      --ffiString n fctName lib fargs (CFIORes ret)
-
-createCFunctions n (MkAForeign ccs fargs ret) = pure () -- unable to deal with return values that are not CFIORes
-createCFunctions n (MkAError exp) = do
-    fn <- functionDefSignature n []
-    fn' <- functionDefSignatureArglist n
-    otherDefs <- get FunctionDefinitions
-    put FunctionDefinitions (fn :: fn' :: otherDefs)
-    --(statements, assignment) <- cStatementsFromANF exp
-    emit EmptyFC $ fn
-        ++ "\n{"
-        ++ "fprintf(stderr, \"Error in "  ++ (cName n) ++ "\");\n"
-        ++ "exit(-1);\n"
-        ++ "return NULL;"
-        ++ "\n}"
-    pure ()
-
+createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
+-- not really total but this way this internal error does not contaminate everything else
 
 header : {auto c : Ref Ctxt Defs}
       -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
-      -> {auto e : Ref ExternalLibs (List String)}
+      -> {auto h : Ref HeaderFiles (SortedSet String)}
       -> Core ()
 header = do
     let initLines = [ "#include <runtime.h>"
-                    , "/* automatically generated using the Idris2 C Backend */"
-                    , "#include <idris_support.h> // for libidris2_support"]
-    extLibs <- get ExternalLibs
-    let extLibLines = map (\lib => "// add header(s) for library: " ++ lib ++ "\n") extLibs
-    traverse_ (\l => log "compiler.refc" 20 $ " header for " ++ l ++ " needed") extLibs
+                    , "/* automatically generated using the Idris2 C Backend */"]
+    let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
+    let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL (initLines ++ extLibLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText (appendL (initLines ++ headerLines ++ ["\n// function definitions"] ++ fns))
 
-footer : {auto il : Ref IndentLevel Nat} -> {auto f : Ref OutfileText Output} -> Core ()
+footer : {auto il : Ref IndentLevel Nat}
+      -> {auto f : Ref OutfileText Output}
+      -> {auto h : Ref HeaderFiles (SortedSet String)}
+      -> Core ()
 footer = do
     emit EmptyFC ""
     emit EmptyFC " // main function"
-    emit EmptyFC "int main()"
+    emit EmptyFC "int main(int argc, char *argv[])"
     emit EmptyFC "{"
+    if contains "idris_support.h" !(get HeaderFiles)
+       then emit EmptyFC "   idris2_setArgs(argc, argv);"
+       else pure ()
     emit EmptyFC "   Value *mainExprVal = __mainExpression_0();"
     emit EmptyFC "   trampoline(mainExprVal);"
     emit EmptyFC "   return 0; // bye bye"
@@ -1039,7 +960,7 @@ generateCSourceFile defs outn =
      _ <- newRef FunctionDefinitions []
      _ <- newRef TemporaryVariableTracker []
      _ <- newRef OutfileText DList.Nil
-     _ <- newRef ExternalLibs []
+     _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
      traverse_ (uncurry createCFunctions) defs
      header -- added after the definition traversal in order to add all encountered function defintions

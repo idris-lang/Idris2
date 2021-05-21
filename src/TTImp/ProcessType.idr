@@ -264,6 +264,8 @@ processType : {vars : _} ->
 processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_raw)
     = do n <- inCurrentNS n_in
 
+         addNameLoc nameFC n
+
          log "declare.type" 1 $ "Processing " ++ show n
          log "declare.type" 5 $ "Checking type decl " ++ show n ++ " : " ++ show ty_raw
          idx <- resolveName n

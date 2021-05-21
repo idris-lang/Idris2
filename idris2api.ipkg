@@ -13,6 +13,7 @@ modules =
     Compiler.CompileExpr,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Separate,
     Compiler.VMCode,
 
     Compiler.ES.ES,
@@ -27,6 +28,7 @@ modules =
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
+    Compiler.Scheme.ChezSep,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
     Compiler.Scheme.Common,
@@ -68,6 +70,7 @@ modules =
 
     Idris.CommandLine,
     Idris.Desugar,
+    Idris.Desugar.Mutual,
     Idris.Env,
     Idris.Doc.HTML,
     Idris.DocString,
@@ -169,7 +172,6 @@ modules =
     Parser.Lexer.Package,
     Parser.Lexer.Source,
 
-    Parser.Rule.Common,
     Parser.Rule.Package,
     Parser.Rule.Source,
 

@@ -122,7 +122,13 @@ data CLOpt
    ||| Apply experimental heuristics to case tree generation that
    ||| sometimes improves performance and reduces compiled code
    ||| size.
-  CaseTreeHeuristics
+  CaseTreeHeuristics |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
+  ||| Generate bash completion info
+  BashCompletion String String |
+  ||| Generate bash completion script
+  BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -205,6 +211,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Apply experimental optimizations to case tree generation"),
 
            optSeparator,
+           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
+
+           optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
@@ -284,7 +294,19 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--dumpvmcode"] [Required "output file"] (\f => [DumpVMCode f])
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
-              Nothing -- do more elaborator checks (currently conversion in LinearCheck)
+              Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+
+           optSeparator,
+           -- bash completion
+           MkOpt ["--bash-completion"]
+                 [ Required "input"
+                 , Required "previous input"]
+                 (\w1,w2 => [BashCompletion w1 w2])
+                 (Just "Print bash autocompletion information"),
+           MkOpt ["--bash-completion-script"]
+                 [ Required "function name" ]
+                 (\n => [BashCompletionScript n])
+                 (Just "Generate a bash script to activate autocompletion for Idris2")
            ]
 
 optShow : OptDesc -> (String, Maybe String)
@@ -406,3 +428,8 @@ getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
+
+||| List of all command line option flags.
+export
+optionFlags : List String
+optionFlags = options >>= flags

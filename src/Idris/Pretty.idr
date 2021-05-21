@@ -294,10 +294,10 @@ mutual
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
-      go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
-      go d (PPrefixOp _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
-      go d (PSectionL _ op x) = parens (prettyOp op <++> go startPrec x)
-      go d (PSectionR _ x op) = parens (go startPrec x <++> prettyOp op)
+      go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
+      go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
+      go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)
+      go d (PSectionR _ _ x op) = parens (go startPrec x <++> prettyOp op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
       go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
@@ -305,10 +305,12 @@ mutual
       go d (PDoBlock _ ns ds) = parenthesise (d > appPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
-      go d (PList _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec <$> xs))
+      go d (PList _ _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
+      go d (PSnocList _ _ xs) = brackets {ldelim = "[<"}
+                                   (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
-      go d (PDPair _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
-      go d (PDPair _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)
+      go d (PDPair _ _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
+      go d (PDPair _ _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)
       go d (PUnit _) = "()"
       go d (PIfThenElse _ x t e) =
         parenthesise (d > appPrec) $ group $ align $ hang 2 $ vsep

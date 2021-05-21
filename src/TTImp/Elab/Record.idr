@@ -177,18 +177,21 @@ recUpdate : {vars : _} ->
             List IFieldUpdate ->
             (rec : RawImp) -> (grecty : Glued vars) ->
             Core RawImp
-recUpdate rigc elabinfo loc nest env flds rec grecty
+recUpdate rigc elabinfo iloc nest env flds rec grecty
       = do defs <- get Ctxt
            rectynf <- getNF grecty
            let Just rectyn = getRecordType env rectynf
-                    | Nothing => throw (RecordTypeNeeded loc env)
+                    | Nothing => throw (RecordTypeNeeded iloc env)
            fldn <- genFieldName "__fld"
-           sides <- getAllSides loc flds rectyn rec
-                                (Field Nothing fldn (IVar loc (UN fldn)))
-           pure $ ICase loc rec (Implicit loc False) [mkClause sides]
+           sides <- getAllSides iloc flds rectyn rec
+                                (Field Nothing fldn (IVar vloc (UN fldn)))
+           pure $ ICase vloc rec (Implicit vloc False) [mkClause sides]
   where
+    vloc : FC
+    vloc = virtualiseFC iloc
+
     mkClause : Rec -> ImpClause
-    mkClause rec = PatClause loc (toLHS loc rec) (toRHS loc rec)
+    mkClause rec = PatClause vloc (toLHS vloc rec) (toRHS vloc rec)
 
 needType : Error -> Bool
 needType (RecordTypeNeeded _ _) = True

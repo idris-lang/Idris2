@@ -98,7 +98,7 @@ Term> Bye for now!
 LOG declare.type:1: Processing Vec.Vec
 LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1])
 LOG declare.type:1: Processing Vec.Nil
-LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] ?Vec.{t:N}_[{arg:N}[0]] Data.Fin.Uninhabited implementation at Data/Fin.idr:L:C--L:C)
+LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data/Fin.idr:L:C--L:C)
 LOG declare.type:1: Processing Vec.::
 LOG declare.def:2: Case tree for Vec.::: case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
  { Data.Fin.FZ {e:N} => [0] {arg:N}[3]
@@ -108,7 +108,7 @@ LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 2), ($resolvedN 2)] at Vec.idr:L:C--L:C
 With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration False [(($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil)), (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil)), (($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))] at Vec.idr:L:C--L:C
-Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Types.List Prelude.Types.Nat))
+Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Basics.List Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration False [$resolvedN, $resolvedN] at Vec.idr:L:C--L:C
 Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration False [(($resolvedN ((:: (fromInteger 0)) Nil)) Nil), (($resolvedN ((:: (fromInteger 0)) Nil)) Nil), (($resolvedN ((:: (fromInteger 0)) Nil)) Nil)] at Vec.idr:L:C--L:C
@@ -124,10 +124,10 @@ With default. Target type : ?Vec.{a:N}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration False [$resolvedN, $resolvedN] at Vec.idr:L:C--L:C
 Target type : ({arg:N} : (Data.Fin.Fin ?Vec.{n:N}_[])) -> ?Vec.{a:N}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration True [(($resolvedN (fromInteger 0)) Nil)] at Vec.idr:L:C--L:C
-Target type : (Prelude.Types.List Prelude.Types.Nat)
+Target type : (Prelude.Basics.List Prelude.Types.Nat)
 LOG elab.ambiguous:5: Ambiguous elaboration [($resolvedN 0), ($resolvedN 0)] at Vec.idr:L:C--L:C
 With default. Target type : Prelude.Types.Nat
 LOG elab.ambiguous:5: Ambiguous elaboration True [$resolvedN] at Vec.idr:L:C--L:C
-Target type : (Prelude.Types.List Prelude.Types.Nat)
-LOG declare.def:2: Case tree for Vec.test: [0] (Vec.:: ?Vec.{n:N}_[] ?Vec.{a:N}_[] (Prelude.Types.Nil Prelude.Types.Nat) (Vec.:: Prelude.Types.Z ?Vec.{a:N}_[] (Prelude.Types.:: Prelude.Types.Nat Prelude.Types.Z (Prelude.Types.Nil Prelude.Types.Nat)) (Vec.Nil ?Vec.{a:N}_[])))
+Target type : (Prelude.Basics.List Prelude.Types.Nat)
+LOG declare.def:2: Case tree for Vec.test: [0] (Vec.:: (Prelude.Types.S Prelude.Types.Z) (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.Nil Prelude.Types.Nat) (Vec.:: Prelude.Types.Z (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.:: Prelude.Types.Nat Prelude.Types.Z (Prelude.Basics.Nil Prelude.Types.Nat)) (Vec.Nil (Prelude.Basics.List Prelude.Types.Nat))))
 Vec> Bye for now!

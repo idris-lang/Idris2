@@ -22,7 +22,7 @@ Value *cast_i32_to_Bits16(Value *input)
 }
 Value *cast_i32_to_Bits32(Value *input)
 {
-	return input;
+	return newReference(input);
 }
 Value *cast_i32_to_Bits64(Value *input)
 {
@@ -97,7 +97,7 @@ Value *cast_i64_to_Bits32(Value *input)
 
 Value *cast_i64_to_Bits64(Value *input)
 {
-	return input;
+	return newReference(input);
 }
 
 Value *cast_i64_to_i32(Value *input)
@@ -535,7 +535,7 @@ Value *cast_Bits32_to_Bits64(Value *input)
 }
 Value *cast_Bits32_to_i32(Value *input)
 {
-	return input;
+	return newReference(input);
 }
 Value *cast_Bits32_to_i64(Value *input)
 {
@@ -617,7 +617,7 @@ Value *cast_Bits64_to_i32(Value *input)
 }
 Value *cast_Bits64_to_i64(Value *input)
 {
-	return input;
+	return newReference(input);
 }
 Value *cast_Bits64_to_double(Value *input)
 {

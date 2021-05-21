@@ -247,12 +247,12 @@ toList (M _ t) = treeToList t
 ||| Gets the keys of the map.
 export
 keys : SortedMap k v -> List k
-keys = map fst . toList
+keys = map fst . SortedMap.toList
 
 ||| Gets the values of the map. Could contain duplicates.
 export
 values : SortedMap k v -> List v
-values = map snd . toList
+values = map snd . SortedMap.toList
 
 treeMap : (a -> b) -> Tree n k a o -> Tree n k b o
 treeMap f (Leaf k v) = Leaf k (f v)
@@ -299,7 +299,7 @@ mergeWith : (v -> v -> v) -> SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeWith f x y = insertFrom inserted x where
   inserted : List (k, v)
   inserted = do
-    (k, v) <- toList y
+    (k, v) <- SortedMap.toList y
     let v' = (maybe id f $ lookup k x) v
     pure (k, v')
 
@@ -315,8 +315,15 @@ mergeLeft : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeLeft = mergeWith const
 
 export
+adjust : k -> (v -> v) -> SortedMap k v -> SortedMap k v
+adjust k f m =
+  case lookup k m of
+    Nothing => m
+    Just v => insert k (f v) m
+
+export
 (Show k, Show v) => Show (SortedMap k v) where
-   show m = "fromList " ++ (show $ toList m)
+   show m = "fromList " ++ (show $ SortedMap.toList m)
 
 -- TODO: is this the right variant of merge to use for this? I think it is, but
 -- I could also see the advantages of using `mergeLeft`. The current approach is

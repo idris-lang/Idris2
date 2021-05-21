@@ -9,6 +9,8 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 import Libraries.Utils.Term
 
+import System
+
 getPageWidth : {auto o : Ref ROpts REPLOpts} -> Core PageWidth
 getPageWidth = do
   consoleWidth <- getConsoleWidth
@@ -25,11 +27,16 @@ render : {auto o : Ref ROpts REPLOpts} ->
          Doc ann -> Core String
 render stylerAnn doc = do
   color <- getColor
+  isDumb <- (Just "dumb" ==) <$> coreLift (getEnv "TERM")
+  -- ^-- emacs sets the TERM variable to `dumb` and expects the compiler
+  --     to not emit any ANSI escape codes
   pageWidth <- getPageWidth
   let opts = MkLayoutOptions pageWidth
   let layout = layoutPretty opts doc
   pure $ renderString $
-    if color then reAnnotateS stylerAnn layout else unAnnotateS layout
+    if color && not isDumb
+      then reAnnotateS stylerAnn layout
+      else unAnnotateS layout
 
 export
 renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc ann -> Core String

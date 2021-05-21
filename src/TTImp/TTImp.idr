@@ -542,7 +542,7 @@ implicitsAs n defs ns tm
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++
                     "\n  Found implicits: " ++ show implicits
-                  pure $ impAs loc implicits (IVar loc nm)
+                  pure $ impAs (virtualiseFC loc) implicits (IVar loc nm)
       where
         -- If there's an @{c} in the list of given implicits, that's the next
         -- autoimplicit, so don't rewrite the LHS and update the list of given
@@ -715,10 +715,28 @@ getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x
 
+namespace ImpDecl
+
+  public export
+  getFC : ImpDecl -> FC
+  getFC (IClaim fc _ _ _ _) = fc
+  getFC (IData fc _ _) = fc
+  getFC (IDef fc _ _) = fc
+  getFC (IParameters fc _ _) = fc
+  getFC (IRecord fc _ _ _ ) = fc
+  getFC (INamespace fc _ _) = fc
+  getFC (ITransform fc _ _ _) = fc
+  getFC (IRunElabDecl fc _) = fc
+  getFC (IPragma _ _) = EmptyFC
+  getFC (ILog _) = EmptyFC
+  getFC (IBuiltin fc _ _) = fc
+
 export
 apply : RawImp -> List RawImp -> RawImp
 apply f [] = f
-apply f (x :: xs) = apply (IApp (getFC f) f x) xs
+apply f (x :: xs) =
+  let fFC = getFC f in
+  apply (IApp (fromMaybe fFC (mergeFC fFC (getFC x))) f x) xs
 
 export
 gapply : RawImp -> List (Maybe Name, RawImp) -> RawImp
@@ -745,18 +763,13 @@ getFn f = f
 export
 TTC BuiltinType where
     toBuf b BuiltinNatural = tag 0
-    toBuf b NaturalPlus = tag 1
-    toBuf b NaturalMult = tag 2
-    toBuf b NaturalToInteger = tag 3
-    toBuf b IntegerToNatural = tag 4
-
+    toBuf b NaturalToInteger = tag 1
+    toBuf b IntegerToNatural = tag 2
     fromBuf b = case !getTag of
-                     0 => pure BuiltinNatural
-                     1 => pure NaturalPlus
-                     2 => pure NaturalMult
-                     3 => pure NaturalToInteger
-                     4 => pure IntegerToNatural
-                     _ => corrupt "BuiltinType"
+        0 => pure BuiltinNatural
+        1 => pure NaturalToInteger
+        2 => pure IntegerToNatural
+        _ => corrupt "BuiltinType"
 
 mutual
   export
@@ -1162,11 +1175,9 @@ mutual
 -- Log message with a RawImp
 export
 logRaw : {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> Lazy String -> RawImp -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> Lazy String -> RawImp -> Core ()
 logRaw str n msg tm
-    = do opts <- getSession
-         let lvl = mkLogLevel (logEnabled opts) str n
-         if keepLog lvl (logEnabled opts) (logLevel opts)
-            then do coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm
-            else pure ()
+    = when !(logging str n) $
+        do logString str n (msg ++ ": " ++ show tm)

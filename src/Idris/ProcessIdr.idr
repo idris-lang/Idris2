@@ -20,6 +20,7 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 
 import Idris.Desugar
+import Idris.Desugar.Mutual
 import Idris.Parser
 import Idris.REPL.Common
 import Idris.REPL.Opts
@@ -33,31 +34,40 @@ import System.File
 
 %default covering
 
-processDecl : {auto c : Ref Ctxt Defs} ->
-              {auto u : Ref UST UState} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              {auto m : Ref MD Metadata} ->
-              PDecl -> Core (Maybe Error)
-processDecl decl
-    = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
-                pure Nothing)
-            (\err => do giveUpConstraints -- or we'll keep trying...
-                        pure (Just err))
-
 processDecls : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
                List PDecl -> Core (List Error)
+
+processDecl : {auto c : Ref Ctxt Defs} ->
+              {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto m : Ref MD Metadata} ->
+              PDecl -> Core (List Error)
+
+-- Special cases to avoid treating these big blocks as units
+-- This should give us better error recovery (the whole block won't fail
+-- as soon as one of the definitions fails)
+processDecl (PNamespace fc ns ps)
+    = withExtendedNS ns $ processDecls ps
+processDecl (PMutual fc ps)
+    = let (tys, defs) = splitMutual ps in
+      processDecls (tys ++ defs)
+
+processDecl decl
+    = catch (do impdecls <- desugarDecl [] decl
+                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
+                pure [])
+            (\err => do giveUpConstraints -- or we'll keep trying...
+                        pure [err])
+
 processDecls decls
-    = do xs <- traverse processDecl decls
+    = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (case mapMaybe id xs of
-                                      [] => [err]
-                                      errs => errs)
-         errs <- getTotalityErrors
-         pure (mapMaybe id xs ++ errs)
+             | Just err => pure (if null xs then [err] else xs)
+         errs <- logTime ("+++ Totality check overall") getTotalityErrors
+         pure (xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -197,7 +207,7 @@ readHeader path
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
-         let Right mod = runParserTo path (isLitFile path) (is ':') res (progHdr path)
+         let Right (decor, mod) = runParserTo path (isLitFile path) (is ':') res (progHdr path)
             | Left err => throw err
          pure mod
 
@@ -238,11 +248,11 @@ processMod srcf ttcf msg sourcecode
 
         hs <- traverse readHash imps
         defs <- get Ctxt
-        log "" 5 $ "Current hash " ++ show (ifaceHash defs)
-        log "" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Current hash " ++ show (ifaceHash defs)
+        log "module.hash" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
                 show (sort (map snd hs))
         imphs <- readImportHashes ttcf
-        log "" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
+        log "module.hash" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
 
         -- If the old hashes are the same as the hashes we've just
         -- read from the imports, and the source file is older than
@@ -259,15 +269,16 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("++ Parsing " ++ srcf) $
+                Right (decor, mod) <- logTime ("++ Parsing " ++ srcf) $
                             pure (runParser srcf (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
                       | Left err => pure (Just [err])
+                addSemanticDecorations decor
                 initHash
                 traverse_ addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
-                   do let MkFC fname _ _ = headerloc mod
-                          | EmptyFC => throw (InternalError "No file name")
+                   do let Just fname = map file (isNonEmptyFC $ headerloc mod)
+                          | Nothing => throw (InternalError "No file name")
                       d <- getDirs
                       ns' <- pathToNS (working_dir d) (source_dir d) fname
                       when (ns /= ns') $

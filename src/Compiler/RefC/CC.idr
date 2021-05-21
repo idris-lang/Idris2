@@ -33,7 +33,7 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
 
      let libraryFlag = if asLibrary then "-fpic " else ""
 
-     let runccobj = cc ++ " -c " ++ libraryFlag ++ sourceFile ++
+     let runccobj = cc ++ " -Werror -c " ++ libraryFlag ++ sourceFile ++
                        " -o " ++ objectFile ++ " " ++
                        "-I" ++ fullprefix_dir dirs "refc " ++
                        "-I" ++ fullprefix_dir dirs "include"
@@ -56,12 +56,13 @@ compileCFile {asShared} objectFile outFile =
 
      let sharedFlag = if asShared then "-shared " else ""
 
-     let runcc = cc ++ " " ++ sharedFlag ++ objectFile ++
+     let runcc = cc ++ " -Werror " ++ sharedFlag ++ objectFile ++
                        " -o " ++ outFile ++ " " ++
                        fullprefix_dir dirs "lib" </> "libidris2_support.a" ++ " " ++
                        "-lidris2_refc " ++
                        "-L" ++ fullprefix_dir dirs "refc " ++
-                       clibdirs (lib_dirs dirs)
+                       clibdirs (lib_dirs dirs) ++
+                       "-lm"
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc

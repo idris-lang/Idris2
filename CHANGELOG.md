@@ -7,6 +7,17 @@ Library changes:
   - Moved `tests/Lib.idr` into new `test` package as `Test/Golden.idr`.
 
   - Removed `contrib/Test/Golden.idr` which duplicated the test framework now in the `test` package.
+* Added `System.Console.GetOpt`,a library for specifying and parsing
+  command line options, to `contrib`.
+* Monad transformers in `Control.Monad` where restructured
+  and several new transformer types where added.
+* `Data.Colist` and `Data.Colist1` were added to `base`.
+* Add `Data.SnocList` to base and `data SnocList` to `Prelude.Types`.
+* `Data.Bits`, an interface for bitwise operations, was added to `base`.
+* Interfaces `Bifoldable` and `Bitraversable` were added to the `prelude`.
+* Interface `Data.Contravariant` for contravariant functors was added
+  to base.
+* `Control.Applicative.Const` was added to `base`.
 
 REPL/IDE mode changes:
 
@@ -19,13 +30,48 @@ Syntax changes:
   implicit parameters and give multiplicities for parameters. The old syntax
   is still available for compatibility purposes but will be removed in the
   future.
+* Add support for SnocList syntax: `[< 1, 2, 3]` desugars into `Lin :< 1 :< 2 :< 3`
+  and their semantic highlighting.
 
 Compiler changes:
 
+* Added more optimisations and transformations, particularly on case blocks,
+  list-shaped types, and enumerations, so generated code will often be slightly
+  faster.
 * Racket codegen now always uses `blodwen-sleep` instead of `idris2_sleep` in
   order to not block the Racket runtime when `sleep` is called.
 * Added `--profile` flag, which generates profile data if supported by a back
   end. Currently supported by the Chez and Racket back ends.
+* Javascript codegens now use `Number` to represent up to 32 bit precision
+  signed and unsigned integers. `Int32` still goes via `BigInt` for
+  multiplication to avoid precision issues when getting results larger
+  than `Number.MAX_SAFE_INTEGER`. `Bits32` goes via `BigInt` for
+  multiplication for the same reason as well as for all bitops, since `Number`
+  uses signed 32 bit integers for those.
+* New code generator: `chez-sep`. This code generator produces many Chez Scheme
+  files and compiles them separately instead of producing one huge Scheme
+  program. This significantly reduces the amount of memory needed to build
+  large programs. Since this backend will skip calling the Chez compiler on
+  modules that haven't changed, it also leads to shorter compilation times in
+  large codebases where only some files have changed -- for example when
+  developing Idris2 code generators.  The codegen has a large parallelisation
+  potential but at the moment, it is significantly slower for a full rebuild of
+  a large code base (the code generation stage takes about 3x longer).
+* New `%builtin` pragma for compiling user defined natural numbers to
+  primitive `Integer`s (see the [docs](https://idris2.readthedocs.io/en/latest/reference/builtins.html))
+
+API changes:
+
+* The API now exposes `Compiler.Separate.getCompilationUnits`, which
+  can be used for separate code generation by any backend.
+* New fixed precision signed integer types `Int8`, `Int16`, `Int32`,
+  and `Int64` where added. In addition, all integral types now properly support
+  all arithmetic and bitwise operations.
+* The compiler now provides primitive cast operations for all combinations
+  of primitives with the exception of going from `Double` to `Char` and
+  back, and going from `String` to `Char`.
+* A new pragma `%doubleLit` to support overloaded floating point literals
+  was added.
 
 Library changes:
 
@@ -35,6 +81,9 @@ Library changes:
   asynchronous channels, which worked apart from `broadcast`. The rework fixes
   `broadcast` at the cost of losing `wait-timeout` due to increased complexity
   of their internals and interactions between their associated functions.
+* The JS backends now use `Number` instead of `BigInt` to represent up to 32 bit fixed
+  precision signed and unsigned integers. This should make interop
+  with the FFI more straight forward, and might also improve performance.
 
 Other changes:
 
@@ -47,6 +96,7 @@ Other changes:
   `depends` for local installations of packages before looking globally.
 * Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
   look for packages.
+* Support for auto-completion in bash-like shells was added.
 
 Changes since Idris 2 v0.2.1
 ----------------------------

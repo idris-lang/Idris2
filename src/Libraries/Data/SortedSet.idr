@@ -71,3 +71,7 @@ keySet = SetWrapper . map (const ())
 export
 singleton : Ord k => k -> SortedSet k
 singleton k = insert k empty
+
+export
+toSortedMap : SortedSet k -> SortedMap k ()
+toSortedMap (SetWrapper m) = m

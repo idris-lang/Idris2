@@ -145,18 +145,21 @@ getDocsForName fc n
       let root = nameRoot n in
       if isOpName n then parens (pretty root) else pretty root
 
-    getDConDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getDConDoc : Name -> Core (Doc IdrisDocAnn)
     getDConDoc con
         = do defs <- get Ctxt
              Just def <- lookupCtxtExact con (gamma defs)
-                  | Nothing => pure []
+                  -- should never happen, since we know that the DCon exists:
+                  | Nothing => pure Empty
              syn <- get Syn
-             let [(n, str)] = lookupName con (docstrings syn)
-                  | _ => pure []
              ty <- resugar [] =<< normaliseHoles defs [] (type def)
-             pure $ pure $ vcat $
-               annotate (Decl con) (hsep [dCon (prettyName n), colon, prettyTerm ty])
-               :: reflowDoc str
+             let conWithTypeDoc = annotate (Decl con) (hsep [dCon (prettyName con), colon, prettyTerm ty])
+             let [(n, str)] = lookupName con (docstrings syn)
+                  | _ => pure conWithTypeDoc
+             pure $ vcat
+               [ conWithTypeDoc
+               , annotate DocStringBody $ vcat $ reflowDoc str
+               ]
 
     getImplDoc : Name -> Core (List (Doc IdrisDocAnn))
     getImplDoc n
@@ -242,7 +245,7 @@ getDocsForName fc n
                TCon _ _ _ _ _ _ cons _
                    => do let tot = [showTotal n (totality d)]
                          cdocs <- traverse (getDConDoc <=< toFullNames) cons
-                         let cdoc = case concat cdocs of
+                         let cdoc = case cdocs of
                               [] => []
                               [doc] => [header "Constructor" <++> annotate Declarations doc]
                               docs => [vcat [header "Constructors"
@@ -283,9 +286,10 @@ getDocsForPTerm (PRef fc name) = pure $ [!(render styleAnn !(getDocsForName fc n
 getDocsForPTerm (PPrimVal _ constant) = getDocsForPrimitive constant
 getDocsForPTerm (PType _) = pure ["Type : Type\n\tThe type of all types is Type. The type of Type is Type."]
 getDocsForPTerm (PString _ _) = pure ["String Literal\n\tDesugars to a fromString call"]
-getDocsForPTerm (PList _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
+getDocsForPTerm (PList _ _ _) = pure ["List Literal\n\tDesugars to (::) and Nil"]
+getDocsForPTerm (PSnocList _ _ _) = pure ["SnocList Literal\n\tDesugars to (:<) and Empty"]
 getDocsForPTerm (PPair _ _ _) = pure ["Pair Literal\n\tDesugars to MkPair or Pair"]
-getDocsForPTerm (PDPair _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
+getDocsForPTerm (PDPair _ _ _ _ _) = pure ["Dependant Pair Literal\n\tDesugars to MkDPair or DPair"]
 getDocsForPTerm (PUnit _) = pure ["Unit Literal\n\tDesugars to MkUnit or Unit"]
 getDocsForPTerm pterm = pure ["Docs not implemented for " ++ show pterm ++ " yet"]
 

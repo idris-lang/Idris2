@@ -14,7 +14,6 @@ env:
   SCHEME: scheme
   IDRIS2_TESTS_CG: chez
   CC: gcc
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
   build:
@@ -29,7 +28,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/cisco/ChezScheme
           c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make"
-          echo "::set-env name=PWD::$(c:\msys64\usr\bin\cygpath -u $(pwd))"
+          echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Configure and Build Chez Scheme
         run: |
           c:\msys64\usr\bin\bash -l -c "cd $env:PWD && cd ChezScheme && ./configure --threads && make"
@@ -37,10 +36,10 @@ jobs:
         run: |
           $chez="$(pwd)\ChezScheme\ta6nt\bin\ta6nt"
           $idris="$(pwd)\.idris2"
-          echo "::add-path::$chez"
-          echo "::add-path::$idris\bin"
-          echo "::set-env name=IDRIS_PREFIX::$idris"
-          echo "::set-env name=PREFIX::$(c:\msys64\usr\bin\cygpath -u $idris)"
+          echo "$chez" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "$idris\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo "IDRIS_PREFIX=$idris" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "PREFIX=$(c:\msys64\usr\bin\cygpath -u $idris)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Test Scheme
         run: |
           scheme --version

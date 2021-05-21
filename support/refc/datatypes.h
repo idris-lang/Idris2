@@ -76,7 +76,7 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    char c;
+    unsigned char c;
 } Value_Char;
 
 typedef struct

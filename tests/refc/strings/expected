@@ -1,0 +1,29 @@
+Hello, world
+12
+0
+dlrow ,olleH
+
+el
+ld
+
+'e'
+abc
+a
+Just ('a', "bc")
+Nothing
+pack
+
+['u', 'n', 'p', 'a', 'c', 'k']
+[]
+concatenate
+
+[False, True, False, False, False, False, False]
+[True, False, False, False, False, False, False]
+[False, False, False, True, False, False, False]
+[False, False, False, False, True, True, False]
+[False, False, False, False, False, True, False]
+[False, False, False, False, False, True, True]
+['a', 'A', '~', '0', ' ', '\LF', '\159']
+[97, 65, 126, 48, 32, 10, 159]
+['i', 't', 'e', 'r', 'a', 't', 'o', 'r', ' ', 'u', 'n', 'p', 'a', 'c', 'k']
+"terator tail"

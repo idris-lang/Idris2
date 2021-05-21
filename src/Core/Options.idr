@@ -53,6 +53,7 @@ toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) =
 
 public export
 data CG = Chez
+        | ChezSep
         | Racket
         | Gambit
         | Node
@@ -63,6 +64,7 @@ data CG = Chez
 export
 Eq CG where
   Chez == Chez = True
+  ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
   Node == Node = True
@@ -74,6 +76,7 @@ Eq CG where
 export
 Show CG where
   show Chez = "chez"
+  show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
   show Node = "node"
@@ -155,6 +158,7 @@ record Session where
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
   caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
+  showShadowingWarning : Bool
 
 public export
 record PPrinter where
@@ -181,6 +185,7 @@ export
 availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
+       ("chez-sep", ChezSep),
        ("racket", Racket),
        ("node", Node),
        ("javascript", Javascript),
@@ -202,7 +207,7 @@ export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing False False
+                               Nothing Nothing False False True
 
 export
 defaultElab : ElabDirectives

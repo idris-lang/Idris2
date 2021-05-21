@@ -737,12 +737,25 @@ Note that the constructor names are the same for each — constructor
 names (in fact, names in general) can be overloaded, provided that
 they are declared in different namespaces (see Section
 :ref:`sect-namespaces`), and will typically be resolved according to
-their type. As syntactic sugar, any type with the constructor names
+their type. As syntactic sugar, any implementation of the names
 ``Nil`` and ``::`` can be written in list form. For example:
 
 -  ``[]`` means ``Nil``
 
 -  ``[1,2,3]`` means ``1 :: 2 :: 3 :: Nil``
+
+Similarly, any implementation of the names ``Lin`` and ``:<`` can be
+written in **snoc**-list form:
+
+- ``[<]`` mean ``Lin``
+- ``[< 1, 2, 3]`` means ``Lin :< 1 :< 2 :< 3``.
+
+and the prelude includes a pre-defined datatype for snoc-lists:
+
+.. code-block:: idris
+
+    data SnocList a = Lin | (:<) (SnocList a) a
+
 
 The library also defines a number of functions for manipulating these
 types. ``map`` is overloaded both for ``List`` and ``Vect`` (we'll see more

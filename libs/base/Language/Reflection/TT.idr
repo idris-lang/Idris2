@@ -2,6 +2,8 @@ module Language.Reflection.TT
 
 import public Data.List
 
+%default total
+
 -- 'FilePos' represents the position of
 -- the source information in the file (or REPL).
 -- in the form of '(line-no, column-no)'.
@@ -14,8 +16,8 @@ FilePos = (Int, Int)
 -- the second 'FilePos' indicates the start of the next term.
 public export
 data FC : Type where
-     MkFC : String -> FilePos -> FilePos -> FC
-     EmptyFC : FC
+   MkFC : String -> FilePos -> FilePos -> FC
+   EmptyFC : FC
 
 public export
 emptyFC : FC

@@ -721,6 +721,25 @@ do this with a ``using`` clause in the implementation as follows:
 The ``using PlusNatSemi`` clause indicates that ``PlusNatMonoid`` should
 extend ``PlusNatSemi`` specifically.
 
+.. _InterfaceConstructors:
+
+Interface Constructors
+======================
+
+Interfaces, just like records, can be declared with a user-defined constructor.
+
+.. code-block:: idris
+
+    interface A a where
+      getA : a
+
+    interface A t => B t where
+      constructor MkB
+
+      getB : t
+
+Then ``MkB : A t => t -> B t``.
+
 .. _DeterminingParameters:
 
 Determining Parameters

@@ -330,7 +330,7 @@ mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
-    = do m <- newRef MD initMetadata
+    = do m <- newRef MD (initMetadata "(interactive)")
          defs <- get Ctxt
          ust <- get UST
          catch

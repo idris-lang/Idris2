@@ -157,6 +157,12 @@ maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
 
+||| Execute an applicative expression when the Maybe is Just
+%inline public export
+whenJust : Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 public export
 Eq a => Eq (Maybe a) where
   Nothing  == Nothing  = True
@@ -331,17 +337,6 @@ Traversable (Either e) where
 -- LISTS --
 -----------
 
-||| Generic lists.
-public export
-data List a =
-  ||| Empty list
-  Nil
-
-  | ||| A non-empty list, consisting of a head element and the rest of the list.
-  (::) a (List a)
-
-%name List xs, ys, zs
-
 public export
 Eq a => Eq (List a) where
   [] == [] = True
@@ -393,6 +388,8 @@ Foldable List where
   null [] = True
   null (_::_) = False
 
+  toList = id
+
 public export
 Applicative List where
   pure x = [x]
@@ -419,6 +416,7 @@ Traversable List where
 -- If you need to concatenate strings at compile time, use Prelude.concat.
 %foreign
   "scheme:string-concat"
+  "C:fastConcat"
   "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastConcat : List String -> String
@@ -546,6 +544,7 @@ pack (x :: xs) = strCons x (pack xs)
 
 %foreign
     "scheme:string-pack"
+    "C:fastPack"
     "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastPack : List Char -> String
@@ -572,6 +571,7 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
 -- If you need to unpack strings at compile time, use Prelude.unpack.
 %foreign
   "scheme:string-unpack"
+  "C:fastUnpack"
   "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
 export
 fastUnpack : String -> List Char
@@ -781,6 +781,7 @@ takeBefore p (x :: xs)
 
 public export
 interface Range a where
+  constructor MkRange
   rangeFromTo : a -> a -> List a
   rangeFromThenTo : a -> a -> a -> List a
 

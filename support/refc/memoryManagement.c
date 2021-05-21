@@ -122,6 +122,23 @@ Value_Pointer *makePointer(void *ptr_Raw)
     return p;
 }
 
+Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct)
+{
+    Value_GCPointer *p = (Value_GCPointer *)newValue();
+    p->header.tag = GC_POINTER_TAG;
+    p->p = makePointer(ptr_Raw);
+    p->onCollectFct = onCollectFct;
+    return p;
+}
+
+Value_Buffer *makeBuffer(void *buf)
+{
+    Value_Buffer *b = (Value_Buffer *)newValue();
+    b->header.tag = BUFFER_TAG;
+    b->buffer = buf;
+    return b;
+}
+
 Value_Array *makeArray(int length)
 {
     Value_Array *a = (Value_Array *)newValue();
