@@ -73,7 +73,7 @@ modules =
     Idris.Desugar.Mutual,
     Idris.Env,
     Idris.Doc.HTML,
-    Idris.DocString,
+    Idris.Doc.String,
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,

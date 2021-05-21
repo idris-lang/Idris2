@@ -16,7 +16,7 @@ import Core.TT
 import Core.Unify
 
 import Idris.Desugar
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Error
 import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands

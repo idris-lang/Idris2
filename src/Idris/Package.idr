@@ -30,7 +30,7 @@ import Libraries.Utils.Path
 
 import Idris.CommandLine
 import Idris.Doc.HTML
-import Idris.DocString
+import Idris.Doc.String
 import Idris.ModTree
 import Idris.ProcessIdr
 import Idris.REPL
