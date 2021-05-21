@@ -1,4 +1,4 @@
-module Idris.DocString
+module Idris.Doc.String
 
 import Core.Context
 import Core.Context.Log
