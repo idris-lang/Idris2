@@ -327,6 +327,18 @@ export
   neutral = empty
 
 
+treeFilterBy : (Key -> Bool) -> Tree n v -> NameMap v
+treeFilterBy test = loop empty where
+
+  loop : NameMap v -> Tree _ v -> NameMap v
+  loop acc (Leaf k v)
+    = let True = test k | _ => acc in
+      insert k v acc
+  loop acc (Branch2 t1 _ t2)
+    = loop (loop acc t1) t2
+  loop acc (Branch3 t1 _ t2 _ t3)
+    = loop (loop (loop acc t1) t2) t3
+
 treeFilterByM : Monad m => (Key -> m Bool) -> Tree n v -> m (NameMap v)
 treeFilterByM test = loop empty where
 
@@ -341,6 +353,11 @@ treeFilterByM test = loop empty where
     = do acc <- loop acc t1
          acc <- loop acc t2
          loop acc t3
+
+export
+filterBy : (Name -> Bool) -> NameMap v -> NameMap v
+filterBy test Empty = Empty
+filterBy test (M _ t) = treeFilterBy test t
 
 export
 filterByM : Monad m => (Name -> m Bool) -> NameMap v -> m (NameMap v)

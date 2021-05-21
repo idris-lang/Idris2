@@ -162,7 +162,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" []
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" []
        -- Documentation strings
-      ["docs001", "docs002",
+      ["docs001", "docs002", "docs003",
        -- Eta equality
        "eta001",
        -- Modules and imports
