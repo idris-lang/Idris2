@@ -96,11 +96,6 @@ data NamedPats : List Name -> -- pattern variables still to process
             -- refers to are explicit
             NamedPats vars ns -> NamedPats vars (pvar :: ns)
 
-length : NamedPats vars ps -> (n ** n = length ps)
-length [] = (0 ** Refl)
-length (_ :: xs) = let (n' ** prf) = length xs
-                   in  ((S n') ** cong S prf)
-
 getPatInfo : NamedPats vars todo -> List Pat
 getPatInfo [] = []
 getPatInfo (x :: xs) = pat x :: getPatInfo xs
