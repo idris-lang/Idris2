@@ -92,6 +92,12 @@ isSourceName (WithBlock _ _) = False
 isSourceName (Resolved _) = False
 
 export
+isRF : Name -> Maybe (Namespace, String)
+isRF (NS ns n) = map (mapFst (ns <.>)) (isRF n)
+isRF (RF n) = Just (emptyNS, n)
+isRF _ = Nothing
+
+export
 isUN : Name -> Maybe String
 isUN (UN str) = Just str
 isUN _ = Nothing
