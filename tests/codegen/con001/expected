@@ -22,8 +22,8 @@ Prelude.Types.prim__integerToNat = [{arg:N}]: (%case (%case (<=Integer [0, !{arg
 Prelude.Types.countFrom = [{arg:N}, {arg:N}]: (%con [cons] Prelude.Types.Stream.:: Just 0 [!{arg:N}, (%delay Inf (Prelude.Types.countFrom [(!{arg:N} [!{arg:N}]), !{arg:N}]))])
 Prelude.Types.Stream.:: = Constructor tag Just 0 arity 2
 Prelude.Num.negate = [{arg:N}]: (-Int [0, !{arg:N}])
-Prelude.Num.mod = [{arg:N}, {arg:N}]: (%case (Prelude.EqOrd.== [!{arg:N}, (cast-Integer-Int [0])]) [(%constcase 0 (%Int [!{arg:N}, !{arg:N}]))] Just (Builtin.idris_crash ["Unhandled input for Prelude.Num.case block in mod at Prelude/Num.idr:L:C--L:C"]))
-Prelude.Num.div = [{arg:N}, {arg:N}]: (%case (Prelude.EqOrd.== [!{arg:N}, (cast-Integer-Int [0])]) [(%constcase 0 (/Int [!{arg:N}, !{arg:N}]))] Just (Builtin.idris_crash ["Unhandled input for Prelude.Num.case block in div at Prelude/Num.idr:L:C--L:C"]))
+Prelude.Num.mod = [{arg:N}, {arg:N}]: (%case (Prelude.EqOrd.== [!{arg:N}, (cast-Integer-Int [0])]) [(%constcase 0 (%Int [!{arg:N}, !{arg:N}]))] Just (Builtin.idris_crash ["Unhandled input for Prelude.Num.case block in mod at Prelude.Num:L:C--L:C"]))
+Prelude.Num.div = [{arg:N}, {arg:N}]: (%case (Prelude.EqOrd.== [!{arg:N}, (cast-Integer-Int [0])]) [(%constcase 0 (/Int [!{arg:N}, !{arg:N}]))] Just (Builtin.idris_crash ["Unhandled input for Prelude.Num.case block in div at Prelude.Num:L:C--L:C"]))
 Prelude.Num.- = [{ext:N}, {ext:N}]: (-Int [!{ext:N}, !{ext:N}])
 Prelude.Num.MkNum = Constructor tag Just 0 arity 3
 Prelude.Num.MkNeg = Constructor tag Just 0 arity 3

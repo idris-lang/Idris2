@@ -5,7 +5,7 @@ Error: While processing right hand side of keepUnique. Ambiguous elaboration. Po
     Main.Set.toList ?arg
     Main.Vect.toList ?arg
 
-Ambig2.idr:26:21--26:27
+Ambig2:26:21--26:27
  22 |   export
  23 |   fromList : List a -> Set a
  24 | 

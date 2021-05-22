@@ -2,7 +2,7 @@
 Error: While processing right hand side of dolet2. When unifying Maybe Int and Maybe String.
 Mismatch between: Int and String.
 
-lets.idr:22:39--22:40
+lets:22:39--22:40
  18 |          pure (x' + y')
  19 | 
  20 | dolet2 : Maybe Int -> Maybe Int -> Maybe Int
