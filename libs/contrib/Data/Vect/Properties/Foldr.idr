@@ -14,8 +14,13 @@ module Data.Vect.Properties.Foldr
 import Data.Vect
 import Data.Vect.Elem
 import Data.Fin
+import Data.Nat
+import Data.Nat.Order
 
 import Syntax.PreorderReasoning
+import Syntax.PreorderReasoning.Generic
+
+import Decidable.Order
 
 ||| A function H : forall n. Vect n A -> B preserving the structure of vectors over A
 public export
@@ -80,3 +85,36 @@ export
 foldrUniqueness : (h : forall n . Vect n a -> b) -> VectHomomorphismProperty f e h -> (xs : Vect n a) -> h xs = foldr f e xs
 foldrUniqueness {f} h prf xs = irrelevantEq $
   nilConsInitiality f e h (foldr f e) prf foldrVectHomomorphism xs
+
+
+||| Each summand is `LTE` the sum
+export
+sumIsGTEtoParts : {x : Nat} -> (xs : Vect n Nat) -> (x `Elem` xs) -> sum xs `GTE` x
+sumIsGTEtoParts (x :: xs) Here
+  = CalcWith $
+  |~ x
+  ~~ x + 0 ...(sym $ plusZeroRightNeutral _)
+  <~ x + (sum xs)   ...(plusLteMonotoneLeft x 0 _ LTEZero)
+  ~~ sum (x :: xs)  ...(sym $ (foldrVectHomomorphism {f = plus} {e = 0}).cons _ _)
+
+sumIsGTEtoParts {x} (y :: xs) (There later)
+  = CalcWith $
+    |~ x
+    <~ sum xs       ...(sumIsGTEtoParts {x} xs later)
+    ~~ 0 + sum xs   ...(Refl)
+    <~ y + (sum xs) ...(plusLteMonotoneRight (sum xs) 0 y LTEZero)
+    ~~ sum (y :: xs) ...(sym $ (foldrVectHomomorphism {f = plus} {e = 0}).cons _ _)
+
+||| `sum : Vect n Nat -> Nat` is monotone
+export
+sumMonotone : {n : Nat} -> (xs, ys : Vect n Nat)
+  -> (prf : (i : Fin n) -> index i xs `LTE` index i ys)
+  -> (sum xs `LTE` sum ys)
+sumMonotone [] [] prf = LTEZero
+sumMonotone (x :: xs) (y :: ys) prf =
+  let prf' = sumMonotone xs ys (\i => prf (FS i))
+  in CalcWith $
+  |~ sum (x :: xs)
+  ~~ x + sum xs    ...((foldrVectHomomorphism {f = plus} {e = 0}).cons x xs)
+  <~ y + sum ys    ...(plusLteMonotone  (prf 0) prf')
+  ~~ sum (y :: ys) ...(sym $ (foldrVectHomomorphism {f = plus} {e = 0}).cons y ys)
