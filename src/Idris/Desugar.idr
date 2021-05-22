@@ -16,7 +16,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Syntax
 
 import Idris.Elab.Implementation

@@ -1,4 +1,4 @@
-module Idris.DocString
+module Idris.Doc.String
 
 import Core.Context
 import Core.Context.Log
@@ -233,25 +233,59 @@ getDocsForName fc n
                                    , annotate Declarations $ vcat $ map (indent 2) docs]]
              pure (vcat (params ++ constraints ++ meths ++ insts))
 
+    getFieldDoc : Name -> Core (Doc IdrisDocAnn)
+    getFieldDoc nm
+      = do syn <- get Syn
+           defs <- get Ctxt
+           Just def <- lookupCtxtExact nm (gamma defs)
+                -- should never happen, since we know that the DCon exists:
+                | Nothing => pure Empty
+           ty <- resugar [] =<< normaliseHoles defs [] (type def)
+           let prettyName = pretty (nameRoot nm)
+           let projDecl = hsep [ fun nm prettyName, colon, prettyTerm ty ]
+           let [(_, str)] = lookupName nm (docstrings syn)
+                  | _ => pure projDecl
+           pure $ annotate (Decl nm)
+                $ vcat [ projDecl
+                       , annotate DocStringBody $ vcat (reflowDoc str)
+                       ]
+
+    getFieldsDoc : Name -> Core (List (Doc IdrisDocAnn))
+    getFieldsDoc recName
+      = do let (Just ns, n) = displayName recName
+               | _ => pure []
+           let recNS = ns <.> mkNamespace n
+           defs <- get Ctxt
+           let fields = getFieldNames (gamma defs) recNS
+           syn <- get Syn
+           case fields of
+             [] => pure []
+             [proj] => pure [header "Projection" <++> annotate Declarations !(getFieldDoc proj)]
+             projs => pure [vcat [header "Projections"
+                                 , annotate Declarations $
+                                      vcat $ map (indent 2) $ !(traverse getFieldDoc projs)]]
+
     getExtra : Name -> GlobalDef -> Core (List (Doc IdrisDocAnn))
-    getExtra n d
-        = do syn <- get Syn
-             let [] = lookupName n (ifaces syn)
-                 | [ifacedata] => pure <$> getIFaceDoc ifacedata
-                 | _ => pure [] -- shouldn't happen, we've resolved ambiguity by now
-             case definition d of
-               PMDef _ _ _ _ _
-                   => pure [showTotal n (totality d)]
-               TCon _ _ _ _ _ _ cons _
-                   => do let tot = [showTotal n (totality d)]
-                         cdocs <- traverse (getDConDoc <=< toFullNames) cons
-                         let cdoc = case cdocs of
-                              [] => []
-                              [doc] => [header "Constructor" <++> annotate Declarations doc]
-                              docs => [vcat [header "Constructors"
-                                      , annotate Declarations $ vcat $ map (indent 2) docs]]
-                         pure (tot ++ cdoc)
-               _ => pure []
+    getExtra n d = do
+      do syn <- get Syn
+         let [] = lookupName n (ifaces syn)
+             | [ifacedata] => pure <$> getIFaceDoc ifacedata
+             | _ => pure [] -- shouldn't happen, we've resolved ambiguity by now
+         case definition d of
+           PMDef _ _ _ _ _ => pure [showTotal n (totality d)]
+           TCon _ _ _ _ _ _ cons _ =>
+             do let tot = [showTotal n (totality d)]
+                cdocs <- traverse (getDConDoc <=< toFullNames) cons
+                cdoc <- case cdocs of
+                  [] => pure []
+                  [doc] => pure
+                         $ (header "Constructor" <++> annotate Declarations doc)
+                         :: !(getFieldsDoc n)
+                  docs => pure [vcat [header "Constructors"
+                                     , annotate Declarations $
+                                         vcat $ map (indent 2) docs]]
+                pure (tot ++ cdoc)
+           _ => pure []
 
     showCategory : GlobalDef -> Doc IdrisDocAnn -> Doc IdrisDocAnn
     showCategory d = case definition d of

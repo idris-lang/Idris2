@@ -8,7 +8,7 @@ import Core.TT
 
 import Idris.REPL
 import Idris.Syntax
-import Idris.DocString
+import Idris.Doc.String
 import Idris.IDEMode.Commands
 
 import Data.List

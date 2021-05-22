@@ -19,4 +19,7 @@ Doc> Doc.WrappedInt : Type
 Doc> Doc.SimpleRec : Type
   Totality: total
   Constructor: MkSimpleRec : Int -> String -> SimpleRec
+  Projections:
+    a : SimpleRec -> Int
+    b : SimpleRec -> String
 Doc> Bye for now!
