@@ -4,9 +4,11 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
+import Core.Options
 import Core.TT
 import Core.TTC
 
@@ -96,7 +98,7 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
-       sourcefile : String
+       sourceIdent : Either VirtualIdent (SourceFileType, FileName)
 
        -- Semantic Highlighting
        -- Posmap of known semantic decorations
@@ -116,21 +118,21 @@ Show Metadata where
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
       " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourcefile: " ++ fname ++
+      " sourceIdent: " ++ show fname ++
       " semanticHighlighting: " ++ show semanticHighlighting ++
       " semanticAliases: " ++ show semanticAliases ++
       " semanticDefaults: " ++ show semanticDefaults
 
 export
-initMetadata : String -> Metadata
-initMetadata fname = MkMetadata
+initMetadata : Either VirtualIdent (SourceFileType, FileName) -> Metadata
+initMetadata finfo = MkMetadata
   { lhsApps = []
   , names = []
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
   , nameLocMap = empty
-  , sourcefile = fname
+  , sourceIdent = finfo
   , semanticHighlighting = empty
   , semanticAliases = empty
   , semanticDefaults = empty
@@ -147,7 +149,7 @@ TTC Metadata where
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
            toBuf b (nameLocMap m)
-           toBuf b (sourcefile m)
+           toBuf b (sourceIdent m)
            toBuf b (semanticHighlighting m)
            toBuf b (semanticAliases m)
            toBuf b (semanticDefaults m)
@@ -307,19 +309,37 @@ addSemanticAlias from to
        put MD $ { semanticAliases $= insert (from, to) } meta
 
 export
+compareOrigins : (wdir : String)
+              -> (sdir : Maybe String)
+              -> Either VirtualIdent (SourceFileType, FileName)
+              -> OriginDesc
+              -> Bool
+compareOrigins _ _ (Left ident) (Virtual ident') = ident == ident'
+compareOrigins wdir sdir (Right (IdrSrc, fname)) (PhysicalIdrSrc modIdent) =
+  pathToNS' wdir sdir fname == Just modIdent
+compareOrigins wdir sdir (Right (PkgSrc, fname)) (PhysicalPkgSrc fname') =
+  fname == fname'
+compareOrigins {} = False
+
+export
 addSemanticDecorations : {auto m : Ref MD Metadata} ->
                          {auto c : Ref Ctxt Defs} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
+         defs <- get Ctxt
          let posmap = meta.semanticHighlighting
-         let (newDecors,droppedDecors) = span
-                                           ((meta.sourcefile ==)
-                                            . (\((fn, _), _) => fn))
-                                           decors
+         let wdir = defs.options.dirs.working_dir
+         let sdir = defs.options.dirs.source_dir
+         let (newDecors,droppedDecors) =
+               span
+                 ( compareOrigins wdir sdir meta.sourceIdent
+                 . Builtin.fst
+                 . Builtin.fst )
+                 decors
          unless (isNil droppedDecors)
            $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
-               ++ meta.sourcefile ++ ": " ++ show droppedDecors
+               ++ show meta.sourceIdent ++ ": " ++ show droppedDecors
          put MD $ record {semanticHighlighting
                             = (fromList newDecors) `union` posmap} meta
 

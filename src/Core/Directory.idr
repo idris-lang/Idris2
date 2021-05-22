@@ -73,7 +73,7 @@ nsToPath : {auto c : Ref Ctxt Defs} ->
            FC -> ModuleIdent -> Core (Either Error String)
 nsToPath loc ns
     = do d <- getDirs
-         let fnameBase = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+         let fnameBase = ModuleIdent.toPath ns
          let fs = map (\p => p </> fnameBase <.> "ttc")
                       ((build_dir d </> "ttc") :: extra_dirs d)
          Just f <- firstAvailable fs
@@ -87,7 +87,7 @@ nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String
 nsToSource loc ns
     = do d <- getDirs
-         let fnameOrig = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+         let fnameOrig = ModuleIdent.toPath ns
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
          let fs = map (\ext => fnameBase <.> ext)
                       [".idr", ".lidr", ".yaff", ".org", ".md"]
@@ -112,6 +112,17 @@ pathToNS wdir sdir fname =
         ++ show (wdir </> sdir)))
       Just relPath =>
         pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
+
+export
+pathToNS' : String -> Maybe String -> String -> Maybe ModuleIdent
+pathToNS' wdir sdir fname =
+  let
+    sdir = fromMaybe "" sdir
+    base = if isAbsolute fname then wdir </> sdir else sdir
+  in
+    unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
+      <$> Path.dropBase base fname
+
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
@@ -167,7 +178,7 @@ getTTCFileName inp ext
          -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
          ns <- pathToNS (working_dir d) (source_dir d) inp
-         let fname = joinPath (reverse $ unsafeUnfoldModuleIdent ns) <.> ext
+         let fname = ModuleIdent.toPath ns <.> ext
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
 

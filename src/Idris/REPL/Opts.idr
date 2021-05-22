@@ -84,10 +84,6 @@ withROpts : {auto o : Ref ROpts REPLOpts} -> Core a -> Core a
 withROpts = wrapRef ROpts (\_ => pure ())
 
 export
-replFC : FC
-replFC = MkFC "(interactive)" (0, 0) (0, 0)
-
-export
 setOutput : {auto o : Ref ROpts REPLOpts} ->
             OutputMode -> Core ()
 setOutput m

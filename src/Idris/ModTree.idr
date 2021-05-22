@@ -78,7 +78,7 @@ mkModTree loc done modFP mod
                     case lookup mod all of
                          Nothing =>
                            do file <- maybe (nsToSource loc mod) pure modFP
-                              modInfo <- readHeader file
+                              modInfo <- readHeader file mod
                               let imps = map path (imports modInfo)
                               ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                               let mt = MkModTree mod (Just file) ms
@@ -162,6 +162,7 @@ buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
         let src = buildFile mod
+        let ident = buildNS mod
         mttc <- getTTCFileName src "ttc"
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
@@ -178,13 +179,13 @@ buildMod loc num len mod
                     Nothing => True
                     Just t => any (\x => x > t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
-        m <- newRef MD (initMetadata src)
+        m <- newRef MD (initMetadata (Right (IdrSrc, src)))
         put Syn initSyntax
 
         if needsBuilding
            then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
                                <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
-                   [] <- process {u} {m} msg src
+                   [] <- process {u} {m} msg src ident
                       | errs => do emitWarnings
                                    traverse_ emitError errs
                                    pure (ferrs ++ errs)
@@ -215,12 +216,12 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             (mainFile : String) ->
             Core (List Error)
 buildDeps fname
-    = do mods <- getBuildMods toplevelFC [] fname
-         ok <- buildMods toplevelFC 1 (length mods) mods
+    = do mods <- getBuildMods EmptyFC [] fname
+         ok <- buildMods EmptyFC 1 (length mods) mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       put MD (initMetadata fname)
+                       put MD (initMetadata (Right (IdrSrc, fname)))
                        mainttc <- getTTCFileName fname "ttc"
                        log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc
@@ -250,10 +251,10 @@ buildAll : {auto c : Ref Ctxt Defs} ->
            (allFiles : List String) ->
            Core (List Error)
 buildAll allFiles
-    = do mods <- getAllBuildMods toplevelFC [] allFiles
+    = do mods <- getAllBuildMods EmptyFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
-         buildMods toplevelFC 1 (length mods') mods'
+         buildMods EmptyFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod
     dropLater [] = []

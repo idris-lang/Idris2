@@ -2,6 +2,7 @@ module Idris.IDEMode.SyntaxHighlight
 
 import Core.Context
 import Core.Context.Log
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.TT
@@ -36,10 +37,16 @@ record Highlight where
   typ : String
   ns : String
 
+export
+sexpOriginDesc : OriginDesc -> String
+sexpOriginDesc (PhysicalIdrSrc mod) = ModuleIdent.toPath mod
+sexpOriginDesc (PhysicalPkgSrc fname) = fname
+sexpOriginDesc (Virtual Interactive) = "(Interactive)"
+
 SExpable FC where
   toSExp fc = case isNonEmptyFC fc of
-    Just (fname , (startLine, startCol),  (endLine, endCol)) =>
-      SExpList [ SExpList [ SymbolAtom "filename", StringAtom fname ]
+    Just (origin, (startLine, startCol), (endLine, endCol)) =>
+      SExpList [ SExpList [ SymbolAtom "filename", StringAtom (sexpOriginDesc origin) ]
                , SExpList [ SymbolAtom "start"
                           , IntegerAtom (cast startLine + 1)
                           , IntegerAtom (cast startCol + 1)
@@ -63,9 +70,6 @@ SExpable Highlight where
                           , SExpList [ SymbolAtom "type", StringAtom t ]
                           ]
                ]
-
-inFile : (s : String) -> (NonEmptyFC, a) -> Bool
-inFile fname ((file, _, _), _) = file == fname
 
 ||| Output some data using current dialog index
 export
@@ -142,7 +146,13 @@ outputSyntaxHighlighting fname loadResult = do
   opts <- get ROpts
   when (opts.synHighlightOn) $ do
     meta <- get MD
-    let allNames = filter (inFile fname) $ toList meta.nameLocMap
+    defs <- get Ctxt
+    let wdir = defs.options.dirs.working_dir
+    let sdir = defs.options.dirs.source_dir
+
+
+    let allNames = filter (compareOrigins wdir sdir (Right (IdrSrc, fname)) . fst . fst)
+                     $ toList meta.nameLocMap
     --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)
 

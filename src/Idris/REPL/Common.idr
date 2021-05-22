@@ -82,7 +82,7 @@ emitProblem a replDocCreator idemodeDocCreator getFC
                           Nothing => iputStrLn msg
                           Just (file, startPos, endPos) =>
                             send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp file,
+                                   SExpList [toSExp (show file),
                                             toSExp (addOne startPos),
                                               toSExp (addOne endPos),
                                               toSExp !(renderWithoutColor msg),
@@ -136,15 +136,15 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
-               (source : String) ->
+               (origin : Either VirtualIdent (SourceFileType, FileName)) ->
                Core ()
-resetContext fname
+resetContext origin
     = do defs <- get Ctxt
          put Ctxt (record { options = clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
-         put MD (initMetadata fname)
+         put MD (initMetadata origin)
 
 public export
 data EditResult : Type where
@@ -226,7 +226,7 @@ equivTypes ty1 ty2 =
        | False => pure False
      _ <- newRef UST initUState
      b <- catch
-           (do res <- unify inTerm replFC [] ty1 ty2
+           (do res <- unify inTerm EmptyFC [] ty1 ty2
                case res of
                  (MkUnifyResult [] _ [] NoLazy) => pure True
                  _ => pure False)

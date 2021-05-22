@@ -148,6 +148,9 @@ install: install-idris2 install-support install-libs
 install-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
 
+install-with-src-api: src/IdrisPaths.idr
+	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
+
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
@@ -179,6 +182,12 @@ install-libs:
 	${MAKE} -C libs/network install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/test  install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
+install-with-src-libs:
+	${MAKE} -C libs/prelude install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 

@@ -22,6 +22,7 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
       | MkDoc
       | Typecheck
       | Clean
@@ -32,6 +33,7 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
   show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
@@ -224,6 +226,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+              (Just "Install the given package"),
+           MkOpt ["--install-with-src"] [Required "package file"]
+                 (\f => [Package InstallWithSrc f])
               (Just "Install the given package"),
            MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
               (Just "Build documentation for the given package"),

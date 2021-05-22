@@ -79,10 +79,10 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            (fname : String) -> String -> Grammar SemanticDecorations Token e ty -> Either Error ty
-ideParser fname str p
-    = do toks   <- mapError (fromLexError fname) $ idelex str
-         (decor, (parsed, _)) <- mapError (fromParsingError fname) $ parseWith p toks
+            String -> Grammar SemanticDecorations Token e ty -> Either Error ty
+ideParser str p
+    = do toks   <- mapError (fromLexError (Virtual Interactive)) $ idelex str
+         (decor, (parsed, _)) <- mapError (fromParsingError (Virtual Interactive)) $ parseWith p toks
          Right parsed
 
 
@@ -90,4 +90,4 @@ export
 covering
 parseSExp : String -> Either Error SExp
 parseSExp inp
-    = ideParser "(interactive)" inp (do c <- sexp; eoi; pure c)
+    = ideParser inp (do c <- sexp; eoi; pure c)

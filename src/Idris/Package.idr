@@ -7,6 +7,7 @@ import Core.Core
 import Core.Directory
 import Core.Env
 import Core.Metadata
+import Core.Name.Namespace
 import Core.Options
 import Core.Unify
 
@@ -108,14 +109,14 @@ field fname
            equals
            vs <- sepBy1 dot' integerLit
            end <- location
-           pure (PVersion (MkFC fname start end)
+           pure (PVersion (MkFC (PhysicalPkgSrc fname) start end)
                           (MkPkgVersion (fromInteger <$> vs)))
     <|> do start <- location
            ignore $ exactProperty "version"
            equals
            v <- stringLit
            end <- location
-           pure (PVersionDep (MkFC fname start end) v)
+           pure (PVersionDep (MkFC (PhysicalPkgSrc fname) start end) v)
     <|> do ignore $ exactProperty "depends"
            equals
            ds <- sep depends
@@ -125,14 +126,14 @@ field fname
            ms <- sep (do start <- location
                          m <- moduleIdent
                          end <- location
-                         pure (MkFC fname start end, m))
+                         pure (MkFC (PhysicalPkgSrc fname) start end, m))
            pure (PModules ms)
     <|> do ignore $ exactProperty "main"
            equals
            start <- location
            m <- moduleIdent
            end <- location
-           pure (PMainMod (MkFC fname start end) m)
+           pure (PMainMod (MkFC (PhysicalPkgSrc fname) start end) m)
     <|> do ignore $ exactProperty "executable"
            equals
            e <- (stringLit <|> packageName)
@@ -186,7 +187,7 @@ field fname
              equals
              str <- stringLit
              end <- location
-             pure $ fieldConstructor (MkFC fname start end) str
+             pure $ fieldConstructor (MkFC (PhysicalPkgSrc fname) start end) str
 
 parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
@@ -285,10 +286,10 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
 compileMain mainn mmod exec
-    = do m <- newRef MD (initMetadata mmod)
+    = do m <- newRef MD (initMetadata (Right (IdrSrc, mmod)))
          u <- newRef UST initUState
          ignore $ loadMainFile mmod
-         ignore $ compileExp (PRef replFC mainn) exec
+         ignore $ compileExp (PRef (justFC defaultFC) mainn) exec
 
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
@@ -342,7 +343,7 @@ copyFile src dest
 installFrom : {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
 installFrom builddir destdir ns
-    = do let ttcfile = joinPath (reverse $ unsafeUnfoldModuleIdent ns)
+    = do let ttcfile = ModuleIdent.toPath ns
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
@@ -361,6 +362,32 @@ installFrom builddir destdir ns
                              , show err ]
          pure ()
 
+installSrcFrom : {auto c : Ref Ctxt Defs} ->
+                 String -> String -> ModuleIdent -> Core ()
+installSrcFrom srcdir destdir ns
+    = do let srcfile = ModuleIdent.toPath ns
+         -- TODO support literate files too
+         let srcPath = srcdir </> srcfile <.> "idr"
+
+         let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
+         let destNest = joinPath modPath
+         let destPath = destdir </> destNest
+         let destFile = destdir </> srcfile <.> "idr"
+
+         Right _ <- coreLift $ mkdirAll $ destNest
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't make directories " ++ show modPath
+                             , show err ]
+         coreLift $ putStrLn $ "Installing " ++ srcPath ++ " to " ++ destPath
+         Right _ <- coreLift $ copyFile srcPath destFile
+             | Left err => throw $ InternalError $ unlines
+                             [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
+                             , show err ]
+         -- Make the source read-only
+         Right _ <- coreLift $ chmod destFile (MkPermissions [Read] [Read] [Read])
+           | Left err => throw $ UserError (show err)
+         pure ()
+
 -- Install all the built modules in prefix/package/
 -- We've already built and checked for success, so if any don't exist that's
 -- an internal error.
@@ -368,15 +395,17 @@ install : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           PkgDesc ->
           List CLOpt ->
+          (installSrc : Bool) ->
           Core ()
-install pkg opts -- not used but might be in the future
+install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          let build = build_dir (dirs (options defs))
+         let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
          let toInstall = maybe (map fst (modules pkg))
                                (\ m => fst m :: map fst (modules pkg))
                                (mainmod pkg)
-         Just srcdir <- coreLift currentDir
+         Just wdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
          -- Make the package installation directory
          let installPrefix = prefix_dir (dirs (options defs)) </>
@@ -391,10 +420,13 @@ install pkg opts -- not used but might be in the future
              | False => throw $ InternalError $ "Can't change directory to " ++ installDir pkg
 
          -- We're in that directory now, so copy the files from
-         -- srcdir/build into it
-         traverse_ (installFrom (srcdir </> build)
+         -- wdir/build into it
+         traverse_ (installFrom (wdir </> build)
                                 (installPrefix </> installDir pkg)) toInstall
-         coreLift_ $ changeDir srcdir
+         when installSrc $ do
+           traverse_ (installSrcFrom (wdir </> fromMaybe "" src)
+                                     (installPrefix </> installDir pkg)) toInstall
+         coreLift_ $ changeDir wdir
          runScript (postinstall pkg)
 
 -- Check package without compiling anything.
@@ -559,7 +591,8 @@ runRepl : {auto c : Ref Ctxt Defs} ->
           Core ()
 runRepl fname = do
   u <- newRef UST initUState
-  m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
+  let origin = maybe (Left Interactive) (Right . (IdrSrc, )) fname
+  m <- newRef MD (initMetadata origin)
   the (Core ()) $
       case fname of
           Nothing => pure ()
@@ -618,7 +651,11 @@ processPackage opts (cmd, file)
                               pure ()
                   Install => do [] <- build pkg opts
                                    | errs => coreLift (exitWith (ExitFailure 1))
-                                install pkg opts
+                                install pkg opts {installSrc = False}
+                  InstallWithSrc =>
+                             do [] <- build pkg opts
+                                   | errs => coreLift (exitWith (ExitFailure 1))
+                                install pkg opts {installSrc = True}
                   Typecheck => do
                     [] <- check pkg opts
                       | errs => coreLift (exitWith (ExitFailure 1))

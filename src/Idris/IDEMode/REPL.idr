@@ -171,7 +171,7 @@ process (NameAt n (Just _))
     = do todoCmd "name-at <name> <line> <column>"
          pure $ REPL $ Edited $ DisplayEdit emptyDoc
 process (TypeOf n Nothing)
-    = replWrap $ Idris.REPL.process (Check (PRef replFC (UN n)))
+    = replWrap $ Idris.REPL.process (Check (PRef (justFC defaultFC) (UN n)))
 process (TypeOf n (Just (l, c)))
     = replWrap $ Idris.REPL.process (Editing (TypeAt (fromInteger l) (fromInteger c) (UN n)))
 process (CaseSplit l c n)
@@ -398,9 +398,9 @@ displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
   where
     constructSExp : (Name, NonEmptyFC) -> Core SExp
-    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
+    constructSExp (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom fname
+                 , StringAtom (sexpOriginDesc origin)
                  , IntegerAtom $ cast $ startLine
                  , IntegerAtom $ cast $ startCol
                  , IntegerAtom $ cast $ endLine

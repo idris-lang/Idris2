@@ -178,7 +178,8 @@ stMain cgs opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
+                 let origin = maybe (Left Interactive) (Right . (IdrSrc,)) fname
+                 m <- newRef MD (initMetadata origin)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do

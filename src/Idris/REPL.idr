@@ -641,7 +641,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         resetContext f
+         resetContext (Right (IdrSrc, f))
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -982,7 +982,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = case runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd) of
+    = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
         Right (decor, result) => Right result
 
