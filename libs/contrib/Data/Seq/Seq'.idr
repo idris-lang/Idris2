@@ -201,7 +201,7 @@ implementation Monoid (Seq' a) where
 public export
 implementation Applicative Seq' where
   pure = singleton
-  fs <*> xs = concat $ map (\f => map f xs) fs
+  fs <*> xs = foldMap (\f => map f xs) fs
 
 public export
 [ListLike] Alternative Seq' where
@@ -216,4 +216,4 @@ public export
 
 public export
 implementation Monad Seq' where
-  xs >>= f = concat $ map f xs
+  xs >>= f = foldMap f xs

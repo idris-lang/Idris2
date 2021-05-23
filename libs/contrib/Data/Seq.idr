@@ -5,6 +5,7 @@
 module Data.Seq
 
 import public Data.Fin
+import public Data.Nat
 import public Data.Vect
 import public Data.Zippable
 
@@ -114,15 +115,9 @@ toVect ft {n = S _} =
   let (x, ft') = viewl ft
   in x :: toVect ft'
 
-||| Proof that the first Nat is less than the second.
-public export
-data LessThan : Nat -> Nat -> Type where
-  LeftZero : LessThan Z (S k)
-  LessRec : LessThan a b -> LessThan (S a) (S b)
-
 ||| O(log(min(i, n-i))). The element at the specified position.
 export
-index : (i : Nat) -> (t : Seq n a) -> {auto ok : LessThan i n} -> a
+index : (i : Nat) -> (t : Seq n a) -> {auto ok : LT i n} -> a
 index i (MkSeq t) = let (_, MkElem a) = lookupTree i t in a
 
 ||| O(log(min(i, n-i))). The element at the specified position.
@@ -133,29 +128,29 @@ index' (MkSeq t) fn = let (_, MkElem a) = lookupTree (finToNat fn) t in a
 
 ||| O(log(min(i, n-i))). Update the element at the specified position.
 export
-adjust : (f : a -> a) -> (i : Nat) -> (t : Seq n a) -> {auto ok : LessThan i n} -> Seq n a
+adjust : (f : a -> a) -> (i : Nat) -> (t : Seq n a) -> {auto ok : LT i n} -> Seq n a
 adjust f i (MkSeq t) = MkSeq $ adjustTree (const (map f)) i t
 
 ||| O(log(min(i, n-i))). Replace the element at the specified position.
 export
-update : (i : Nat) -> a -> (t : Seq n a) -> {auto ok : LessThan i n} -> Seq n a
+update : (i : Nat) -> a -> (t : Seq n a) -> {auto ok : LT i n} -> Seq n a
 update i a t = adjust (const a) i t
 
 ||| O(log(min(i, n-i))). Split a sequence at a given position.
 export
-splitAt : (i : Nat) -> Seq n a -> {auto ok : LessThan i n} -> (Seq i a, Seq (n `minus` i) a)
+splitAt : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> (Seq i a, Seq (n `minus` i) a)
 splitAt i (MkSeq xs) = 
   let (l, r) = split i xs 
   in (MkSeq l, MkSeq r)
 
 ||| O(log(min(i, n-i))). The first i elements of a sequence.
 export 
-take : (i : Nat) -> Seq n a -> {auto ok : LessThan i n} -> Seq i a
+take : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> Seq i a
 take i seq = fst (splitAt i seq)
 
 ||| O(log(min(i, n-i))). Elements of a sequence after the first i.
 export 
-drop : (i : Nat) -> Seq n a -> {auto ok : LessThan i n} -> Seq (n `minus` i) a
+drop : (i : Nat) -> Seq n a -> {auto ok : LT i n} -> Seq (n `minus` i) a
 drop i seq = snd (splitAt i seq)
 
 ||| Dump the internal structure of the finger tree.
