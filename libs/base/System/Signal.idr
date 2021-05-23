@@ -158,7 +158,7 @@ defaultSignal sig = do
 ||| This replaces the existing handling of the given signal
 ||| and instead results in Idris collecting occurrences of
 ||| the signal until you call `handleNextCollectedSignal`.
-export 
+export
 collectSignal : HasIO io => Signal -> io (Either SignalError ())
 collectSignal sig = do
   res <- primIO $ prim__collectSignal (signalCode sig)
@@ -175,6 +175,5 @@ collectSignal sig = do
 ||| You get back Nothing if there are no pending signals.
 export
 handleNextCollectedSignal : HasIO io => io (Maybe Signal)
-handleNextCollectedSignal = 
+handleNextCollectedSignal =
   toSignal <$> primIO prim__handleNextCollectedSignal
-
