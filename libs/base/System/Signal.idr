@@ -120,7 +120,7 @@ prim__getErrorNo : PrimIO Int
 ||| An Error represented by a code. See
 ||| relevant `errno` documentation.
 ||| https://man7.org/linux/man-pages/man3/errno.3.html
-export
+public export
 data SignalError = Error Int
 
 getError : HasIO io => io SignalError
