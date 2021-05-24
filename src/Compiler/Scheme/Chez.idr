@@ -377,7 +377,7 @@ startChezWinSh chez appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""

@@ -75,7 +75,7 @@ Value *sysOS(void)
 #elif _WIN64
     return (Value *)makeString("windows");
 #elif __APPLE__ || __MACH__
-    return (Value *)makeString("Mac OSX");
+    return (Value *)makeString("macOS");
 #elif __linux__
     return (Value *)makeString("Linux");
 #elif __FreeBSD__

@@ -354,7 +354,7 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
