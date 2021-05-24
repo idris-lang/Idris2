@@ -72,6 +72,10 @@ int handle_next_collected_signal() {
   return next;
 }
 
+int send_signal(pid_t pid, int signum) {
+  return kill(pid, signum);
+}
+
 int sighup() {
   return SIGHUP;
 }

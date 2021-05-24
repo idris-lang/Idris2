@@ -1,6 +1,8 @@
 #ifndef __IDRIS_SIGNAL_H
 #define __IDRIS_SIGNAL_H
 
+#include <signal.h>
+
 int ignore_signal(int signum);
 int default_signal(int signum);
 
@@ -13,6 +15,9 @@ int collect_signal(int signum);
 // collected but not yet handled with this function.
 // Returns -1 to indicate no pending signals.
 int handle_next_collected_signal();
+
+// Send a signal to another process.
+int send_signal(pid_t pid, int signum);
 
 // available signals in a cross-platform compatible way;
 // omits SIGKILL and SIGSTOP because those signals cannot
