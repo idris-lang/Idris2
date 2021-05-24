@@ -2,7 +2,7 @@ import System.Signal
 import System
 
 main : IO ()
-main = do 
+main = do
   Right () <- ignoreSignal SigQUIT
     | Left (Error code) => putStrLn $ "error " ++ (show code)
   Right () <- defaultSignal SigQUIT
