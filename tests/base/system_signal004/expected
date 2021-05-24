@@ -1,0 +1,6 @@
+1/1: Building HandleManySignals (HandleManySignals.idr)
+Main> before
+after
+done.
+Main> 
+Bye for now!

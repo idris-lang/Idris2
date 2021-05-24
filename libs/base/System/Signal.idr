@@ -7,6 +7,10 @@
 ||| into appropriately named namespaces or data types.
 module System.Signal
 
+import Data.Fuel
+import Data.List
+import Data.List.Elem
+
 %default total
 
 signalFFI : String -> String
@@ -46,17 +50,17 @@ prim__sigusr1 : Int
 prim__sigusr2 : Int
 
 public export
-data PosSignal = ||| Hangup (i.e. controlling terminal closed)
-                 SigHUP
-               | ||| Quit
-                 SigQUIT
-               | ||| Trap (as used by debuggers)
-                 SigTRAP
-               | SigUser1
-               | SigUser2
+data PosixSignal = ||| Hangup (i.e. controlling terminal closed)
+                   SigHUP
+                 | ||| Quit
+                   SigQUIT
+                 | ||| Trap (as used by debuggers)
+                   SigTRAP
+                 | SigUser1
+                 | SigUser2
 
 export
-Eq PosSignal where
+Eq PosixSignal where
   SigHUP   == SigHUP   = True
   SigQUIT  == SigQUIT  = True
   SigTRAP  == SigTRAP  = True
@@ -76,7 +80,7 @@ data Signal = ||| Interrupt (e.g. ctrl+c pressed)
             | ||| Floating-point error
               SigFPE
             | ||| Signals only available on POSIX operating systems
-              SigPosix PosSignal
+              SigPosix PosixSignal
 
 export
 Eq Signal where
@@ -189,6 +193,18 @@ defaultSignal sig = do
 ||| This replaces the existing handling of the given signal
 ||| and instead results in Idris collecting occurrences of
 ||| the signal until you call `handleNextCollectedSignal`.
+|||
+||| First, call `collectSignal` for any number of signals.
+||| Then, call `handleNextCollectedSignal` in each main loop
+||| of your program to retrieve (and mark as handled) the next
+||| signal that was collected, if any.
+|||
+||| Multiple signals will be collected and can then be retrieved
+||| in the order they were received by multiple calls to
+||| `handleNextCollectedSignal`.
+|||
+||| You can call `handleManyCollectedSignals` to get a List of
+||| pending signals instead of retrieving them one at a time.
 export
 collectSignal : HasIO io => Signal -> io (Either SignalError ())
 collectSignal sig = do
@@ -208,6 +224,19 @@ export
 handleNextCollectedSignal : HasIO io => io (Maybe Signal)
 handleNextCollectedSignal =
   toSignal <$> primIO prim__handleNextCollectedSignal
+
+||| Get many collected signals and mark them as handled.
+|||
+||| Use `forever` as your fuel if you don't want or need to
+||| retain totality. Alternatively, pick a max number to
+||| retrieve and use `limit/1` as your fuel.
+export
+handleManyCollectedSignals : HasIO io => Fuel -> io (List Signal)
+handleManyCollectedSignals fuel = catMaybes <$> handleMany fuel
+  where
+    handleMany : Fuel -> io (List (Maybe Signal))
+    handleMany Dry = pure []
+    handleMany (More fuel) = [| handleNextCollectedSignal :: handleMany fuel |]
 
 ||| Send a signal to the current process.
 export
