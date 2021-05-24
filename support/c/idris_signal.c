@@ -92,7 +92,7 @@ int raise_signal(int signum) {
   return raise(signum);
 }
 
-int send_signal(pid_t pid, int signum) {
+int send_signal(int pid, int signum) {
 #ifdef _WIN32
   return raise_signal(signum);
 #else

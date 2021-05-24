@@ -23,7 +23,7 @@ int raise_signal(int signum);
 // IMPORTANT: On Windows you cannot send to other processes
 // so this is implemented as `raise_signal()` which sends the signal
 // to the calling process.
-int send_signal(pid_t pid, int signum);
+int send_signal(int pid, int signum);
 
 // available signals in a cross-platform compatible way;
 // omits SIGKILL and SIGSTOP because those signals cannot
