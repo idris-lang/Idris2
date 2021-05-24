@@ -55,7 +55,7 @@ data PosSignal = ||| Hangup (i.e. controlling terminal closed)
                | SigUser1
                | SigUser2
 
-export 
+export
 Eq PosSignal where
   SigHUP   == SigHUP   = True
   SigQUIT  == SigQUIT  = True
