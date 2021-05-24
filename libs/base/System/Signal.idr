@@ -1,3 +1,10 @@
+||| Signal raising and handling.
+|||
+||| NOTE that there are important differences between
+||| what can be done out-of-box in Windows and POSIX based
+||| operating systems. This module tries to honor both
+||| by putting things only available in POSIX environments
+||| into appropriately named namespaces or data types.
 module System.Signal
 
 %default total
@@ -13,6 +20,9 @@ prim__sighup : Int
 
 %foreign signalFFI "sigint"
 prim__sigint : Int
+
+%foreign signalFFI "sigabrt"
+prim__sigabrt : Int
 
 %foreign signalFFI "sigquit"
 prim__sigquit : Int
@@ -36,45 +46,59 @@ prim__sigusr1 : Int
 prim__sigusr2 : Int
 
 public export
-data Signal = ||| Hangup (i.e. controlling terminal closed)
-              SigHUP
-            | ||| Interrupt (e.g. ctrl+c pressed)
-              SigINT
-            | ||| Quit
-              SigQUIT
-            | ||| Ill-formed instruction
-              SigILL
-            | ||| Segmentation fault
-              SigSEGV
-            | ||| Trap (as used by debuggers)
-              SigTRAP
-            | ||| Floating-point error
-              SigFPE
-            | SigUser1
-            | SigUser2
+data PosSignal = ||| Hangup (i.e. controlling terminal closed)
+                 SigHUP
+               | ||| Quit
+                 SigQUIT
+               | ||| Trap (as used by debuggers)
+                 SigTRAP
+               | SigUser1
+               | SigUser2
 
-Eq Signal where
+export 
+Eq PosSignal where
   SigHUP   == SigHUP   = True
-  SigINT   == SigINT   = True
   SigQUIT  == SigQUIT  = True
-  SigILL   == SigILL   = True
-  SigSEGV  == SigSEGV  = True
   SigTRAP  == SigTRAP  = True
-  SigFPE   == SigFPE   = True
   SigUser1 == SigUser1 = True
   SigUser2 == SigUser2 = True
   _ == _ = False
 
+public export
+data Signal = ||| Interrupt (e.g. ctrl+c pressed)
+              SigINT
+            | ||| Abnormal termination
+              SigABRT
+            | ||| Ill-formed instruction
+              SigILL
+            | ||| Segmentation fault
+              SigSEGV
+            | ||| Floating-point error
+              SigFPE
+            | ||| Signals only available on POSIX operating systems
+              SigPosix PosSignal
+
+export
+Eq Signal where
+  SigINT   == SigINT   = True
+  SigABRT  == SigABRT  = True
+  SigILL   == SigILL   = True
+  SigSEGV  == SigSEGV  = True
+  SigFPE   == SigFPE   = True
+  SigPosix x == SigPosix y = x == y
+  _ == _ = False
+
 signalCode : Signal -> Int
-signalCode SigHUP   = prim__sighup
 signalCode SigINT   = prim__sigint
-signalCode SigQUIT  = prim__sigquit
+signalCode SigABRT  = prim__sigabrt
 signalCode SigILL   = prim__sigill
 signalCode SigSEGV  = prim__sigsegv
-signalCode SigTRAP  = prim__sigtrap
 signalCode SigFPE   = prim__sigfpe
-signalCode SigUser1 = prim__sigusr1
-signalCode SigUser2 = prim__sigusr2
+signalCode (SigPosix SigHUP  ) = prim__sighup
+signalCode (SigPosix SigQUIT ) = prim__sigquit
+signalCode (SigPosix SigTRAP ) = prim__sigtrap
+signalCode (SigPosix SigUser1) = prim__sigusr1
+signalCode (SigPosix SigUser2) = prim__sigusr2
 
 toSignal : Int -> Maybe Signal
 toSignal (-1) = Nothing
@@ -88,15 +112,16 @@ toSignal x    = foldr matchCode Nothing codes
 
     codes : List (Int, Signal)
     codes = [
-              (prim__sighup , SigHUP)
-            , (prim__sigint , SigINT)
-            , (prim__sigquit, SigQUIT)
+              (prim__sigint , SigINT)
+            , (prim__sigabrt, SigABRT)
             , (prim__sigill , SigILL)
             , (prim__sigsegv, SigSEGV)
-            , (prim__sigtrap, SigTRAP)
             , (prim__sigfpe , SigFPE)
-            , (prim__sigusr1, SigUser1)
-            , (prim__sigusr2, SigUser2)
+            , (prim__sighup , SigPosix SigHUP)
+            , (prim__sigquit, SigPosix SigQUIT)
+            , (prim__sigtrap, SigPosix SigTRAP)
+            , (prim__sigusr1, SigPosix SigUser1)
+            , (prim__sigusr2, SigPosix SigUser2)
             ]
 
 --
@@ -116,6 +141,9 @@ prim__handleNextCollectedSignal : PrimIO Int
 
 %foreign signalFFI "send_signal"
 prim__sendSignal : Int -> Int -> PrimIO Int
+
+%foreign signalFFI "raise_signal"
+prim__raiseSignal : Int -> PrimIO Int
 
 %foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
 prim__getErrorNo : PrimIO Int
@@ -181,12 +209,22 @@ handleNextCollectedSignal : HasIO io => io (Maybe Signal)
 handleNextCollectedSignal =
   toSignal <$> primIO prim__handleNextCollectedSignal
 
-||| Send a signal to a process using a PID to identify the process.
+||| Send a signal to the current process.
 export
-sendSignal : HasIO io => Signal -> (pid : Int) -> io (Either SignalError ())
-sendSignal sig pid = do
-  res <- primIO $ prim__sendSignal pid (signalCode sig)
+raiseSignal : HasIO io => Signal -> io (Either SignalError ())
+raiseSignal sig = do
+  res <- primIO $ prim__raiseSignal (signalCode sig)
   case isError res of
        False => pure $ Right ()
        True  => Left <$> getError
+
+namespace Posix
+  ||| Send a signal to a POSIX process using a PID to identify the process.
+  export
+  sendSignal : HasIO io => Signal -> (pid : Int) -> io (Either SignalError ())
+  sendSignal sig pid = do
+    res <- primIO $ prim__sendSignal pid (signalCode sig)
+    case isError res of
+         False => pure $ Right ()
+         True  => Left <$> getError
 

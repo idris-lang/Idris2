@@ -16,7 +16,13 @@ int collect_signal(int signum);
 // Returns -1 to indicate no pending signals.
 int handle_next_collected_signal();
 
+// Raise a signal to the current process.
+int raise_signal(int signum);
+
 // Send a signal to another process.
+// IMPORTANT: On Windows you cannot send to other processes
+// so this is implemented as `raise_signal()` which sends the signal
+// to the calling process.
 int send_signal(pid_t pid, int signum);
 
 // available signals in a cross-platform compatible way;
@@ -26,12 +32,11 @@ int sigint();
 int sigill();
 int sigsegv();
 int sigfpe();
+int sigabrt();
 
-// Following unavailable in Windows and so mostly defined as -1 in
+// Following unavailable in Windows and defined as -1 in
 // this implementation so that they can be unconditionally
 // defined in Idris.
-// NOTABLE EXCEPTION: SIGQUIT is given a novel code so that it can
-// be sent/received to/from Idris programs even under Windows.
 int sighup();
 int sigquit();
 int sigtrap();

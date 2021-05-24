@@ -88,8 +88,16 @@ int handle_next_collected_signal() {
   return next;
 }
 
+int raise_signal(int signum) {
+  return raise(signum);
+}
+
 int send_signal(pid_t pid, int signum) {
+#ifdef _WIN32
+  return raise_signal(signum);
+#else
   return kill(pid, signum);
+#endif
 }
 
 int sighup() {
@@ -104,9 +112,13 @@ int sigint() {
   return SIGINT;
 }
 
+int sigabrt() {
+  return SIGABRT;
+}
+
 int sigquit() {
 #ifdef _WIN32
-  return NSIG + 1;
+  return -1;
 #else
   return SIGQUIT;
 #endif
