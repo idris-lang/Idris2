@@ -113,6 +113,14 @@ export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
 
+%foreign support "idris2_getPID"
+prim__getPID : PrimIO Int
+
+||| Get the ID of the currently running process.
+export
+getPID : HasIO io => io Int
+getPID = primIO prim__getPID
+
 %foreign libc "exit"
          "node:lambda:c => process.exit(Number(c))"
 prim__exit : Int -> PrimIO ()

@@ -114,6 +114,9 @@ prim__collectSignal : Int -> PrimIO Int
 %foreign signalFFI "handle_next_collected_signal"
 prim__handleNextCollectedSignal : PrimIO Int
 
+%foreign signalFFI "send_signal"
+prim__sendSignal : Int -> Int -> PrimIO Int
+
 %foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
 prim__getErrorNo : PrimIO Int
 
@@ -177,3 +180,13 @@ export
 handleNextCollectedSignal : HasIO io => io (Maybe Signal)
 handleNextCollectedSignal =
   toSignal <$> primIO prim__handleNextCollectedSignal
+
+||| Send a signal to a process using a PID to identify the process.
+export
+sendSignal : HasIO io => Signal -> (pid : Int) -> io (Either SignalError ())
+sendSignal sig pid = do
+  res <- primIO $ prim__sendSignal pid (signalCode sig)
+  case isError res of
+       False => pure $ Right ()
+       True  => Left <$> getError
+
