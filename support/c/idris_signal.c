@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <signal.h>
 
-// TODO: offer Windows support.
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 // ring buffer style storage for collected
 // signals.
@@ -77,7 +79,11 @@ int send_signal(pid_t pid, int signum) {
 }
 
 int sighup() {
+#ifdef _WIN32
+  return -1;
+#else
   return SIGHUP;
+#endif
 }
 
 int sigint() {
@@ -85,7 +91,11 @@ int sigint() {
 }
 
 int sigquit() {
+#ifdef _WIN32
+  return NSIG + 1;
+#else
   return SIGQUIT;
+#endif
 }
 
 int sigill() {
@@ -97,7 +107,11 @@ int sigsegv() {
 }
 
 int sigtrap() {
+#ifdef _WIN32
+  return -1;
+#else
   return SIGTRAP;
+#endif
 }
 
 int sigfpe() {
@@ -105,10 +119,18 @@ int sigfpe() {
 }
 
 int sigusr1() {
+#ifdef _WIN32
+  return -1;
+#else
   return SIGUSR1;
+#endif
 }
 
 int sigusr2() {
+#ifdef _WIN32
+  return -1;
+#else
   return SIGUSR2;
+#endif
 }
 

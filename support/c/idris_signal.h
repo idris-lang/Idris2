@@ -22,13 +22,19 @@ int send_signal(pid_t pid, int signum);
 // available signals in a cross-platform compatible way;
 // omits SIGKILL and SIGSTOP because those signals cannot
 // be handled in a custom way.
-int sighup();
 int sigint();
-int sigquit();
 int sigill();
 int sigsegv();
-int sigtrap();
 int sigfpe();
+
+// Following unavailable in Windows and so mostly defined as -1 in
+// this implementation so that they can be unconditionally
+// defined in Idris.
+// NOTABLE EXCEPTION: SIGQUIT is given a novel code so that it can
+// be sent/received to/from Idris programs even under Windows.
+int sighup();
+int sigquit();
+int sigtrap();
 int sigusr1();
 int sigusr2();
 
