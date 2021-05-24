@@ -73,14 +73,9 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg)
 
 int extractInt(Value *v)
 {
-  if (v->header.tag == INT64_TAG)
+  if (v->header.tag == INT_TAG)
   {
-    return (int)((Value_Int64 *)v)->i64;
-  }
-
-  if (v->header.tag == INT32_TAG)
-  {
-    return ((Value_Int32 *)v)->i32;
+    return (int)((Value_Int *)v)->i64;
   }
 
   if (v->header.tag == DOUBLE_TAG)

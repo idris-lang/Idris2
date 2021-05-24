@@ -7,13 +7,14 @@
 #include <stdint.h>
 
 #define NO_TAG 0
-#define INT8_TAG 1
-#define INT16_TAG 2
-#define INT32_TAG 3
-#define INT64_TAG 4
-#define DOUBLE_TAG 5
-#define CHAR_TAG 6
-#define STRING_TAG 7
+#define BITS8_TAG 1
+#define BITS16_TAG 2
+#define BITS32_TAG 3
+#define BITS64_TAG 4
+#define INT_TAG 5
+#define DOUBLE_TAG 6
+#define CHAR_TAG 7
+#define STRING_TAG 8
 
 #define CLOSURE_TAG 10
 #define ARGLIST_TAG 11
@@ -46,26 +47,32 @@ typedef struct
 typedef struct
 {
     Value_header header;
-    uint8_t i8;
-} Value_Int8;
+    uint8_t ui8;
+} Value_Bits8;
 
 typedef struct
 {
     Value_header header;
-    uint16_t i16;
-} Value_Int16;
+    uint16_t ui16;
+} Value_Bits16;
 
 typedef struct
 {
     Value_header header;
-    int32_t i32;
-} Value_Int32;
+    uint32_t ui32;
+} Value_Bits32;
+
+typedef struct
+{
+    Value_header header;
+    uint64_t ui64;
+} Value_Bits64;
 
 typedef struct
 {
     Value_header header;
     int64_t i64;
-} Value_Int64;
+} Value_Int;
 
 typedef struct
 {
