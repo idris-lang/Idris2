@@ -38,6 +38,7 @@ void _collect_signal(int signum) {
   signals_in_buf += 1;
 }
 
+#ifndef _WIN32
 inline struct sigaction _simple_handler(void (*handler)(int)) {
   struct sigaction new_action;
 
@@ -47,20 +48,33 @@ inline struct sigaction _simple_handler(void (*handler)(int)) {
 
   return new_action;
 }
+#endif
 
 int ignore_signal(int signum) {
+#ifdef _WIN32
+  return signal(signum, SIG_IGN) == SIG_ERR ? -1 : 0;
+#else
   struct sigaction handler = _simple_handler(SIG_IGN);
   return sigaction(signum, &handler, NULL);
+#endif
 }
 
 int default_signal(int signum) {
+#ifdef _WIN32
+  return signal(signum, SIG_DFL) == SIG_ERR ? -1 : 0;
+#else
   struct sigaction handler = _simple_handler(SIG_DFL);
   return sigaction(signum, &handler, NULL);
+#endif
 }
 
 int collect_signal(int signum) {
+#ifdef _WIN32
+  return signal(signum, _collect_signal) == SIG_ERR ? -1 : 0;
+#else
   struct sigaction handler = _simple_handler(_collect_signal);
   return sigaction(signum, &handler, NULL);
+#endif
 }
 
 int handle_next_collected_signal() {
