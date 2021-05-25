@@ -226,11 +226,11 @@ handleNextCollectedSignal =
 ||| retrieve and use `limit/1` as your fuel.
 export
 handleManyCollectedSignals : HasIO io => Fuel -> io (List Signal)
-handleManyCollectedSignals fuel = catMaybes <$> handleMany fuel
-  where
-    handleMany : Fuel -> io (List (Maybe Signal))
-    handleMany Dry = pure []
-    handleMany (More fuel) = [| handleNextCollectedSignal :: handleMany fuel |]
+handleManyCollectedSignals Dry = pure []
+handleManyCollectedSignals (More fuel) = do
+  Just next <- handleNextCollectedSignal
+    | Nothing => pure []
+  pure $ next :: !(handleManyCollectedSignals fuel)
 
 ||| Send a signal to the current process.
 export
