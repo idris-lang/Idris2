@@ -36,6 +36,11 @@ void _collect_signal(int signum) {
   int write_idx = (signal_buf_next_read_idx + signals_in_buf) % signal_buf_cap;
   signal_buf[write_idx] = signum;
   signals_in_buf += 1;
+
+#ifdef _WIN32
+  //re-instate signal handler
+  signal(signum, _collect_signal);
+#endif
 }
 
 #ifndef _WIN32
