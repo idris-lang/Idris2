@@ -284,6 +284,7 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node]
   [ "system_file001"
   , "data_bits001"
   , "system_info001"
+  , "system_signal001", "system_signal002", "system_signal003", "system_signal004"
   ]
 
 -- same behavior as `baseLibraryTests`

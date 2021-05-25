@@ -22,6 +22,8 @@ void idris2_setArgs(int argc, char *argv[]);
 char* idris2_getArg(int n);
 char* idris2_getEnvPair(int i);
 
+int idris2_getPID();
+
 long idris2_getNProcessors();
 
 #endif
