@@ -6,6 +6,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+HANDLE ghMutex;
+#else
+#include <pthread.h>
+static pthread_mutex_t sig_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 // ring buffer style storage for collected
@@ -22,10 +26,44 @@ void _init_buf() {
   }
 }
 
-void _collect_signal(int signum) {
+// returns truthy or falsey (1 or 0)
+int _lock() {
+#ifdef _WIN32
+  if (ghMutex == NULL) {
+    ghMutex = CreateMutex(
+      NULL,
+      FALSE,
+      NULL);
+  }
+
+  DWORD dwWaitResult = WaitForSingleObject(
+    ghMutex,
+    INFINITE);
+
+  switch (dwWaitResult) 
+    {
+       case WAIT_OBJECT_0: 
+         return 1;
+
+       case WAIT_ABANDONED: 
+         return 0;
+    }
+#else
+  pthread_mutex_lock(&sig_mutex);
+  return 1;
+#endif
+}
+
+void _unlock() {
+#ifdef _WIN32
+  ReleaseMutex(ghMutex) 
+#else
+  pthread_mutex_unlock(&sig_mutex);
+#endif
+}
+
+void _collect_signal_core(int signum) {
   _init_buf();
-  
-  // TODO: mutex lock around rest of function
 
   // FIXME: allow for adjusting capacity of signal buffer
   // instead of ignoring new signals when at capacity.
@@ -41,6 +79,13 @@ void _collect_signal(int signum) {
   //re-instate signal handler
   signal(signum, _collect_signal);
 #endif
+}
+
+void _collect_signal(int signum) {
+  if (_lock()) {
+    _collect_signal_core(signum);
+    _unlock();
+  }
 }
 
 #ifndef _WIN32
@@ -83,14 +128,17 @@ int collect_signal(int signum) {
 }
 
 int handle_next_collected_signal() {
-  // TODO: mutex lock
-  if (signals_in_buf == 0) {
-    return -1;
+  if (_lock()) {
+    if (signals_in_buf == 0) {
+      return -1;
+    }
+    int next = signal_buf[signal_buf_next_read_idx];
+    signal_buf_next_read_idx = (signal_buf_next_read_idx + 1) % signal_buf_cap;
+    signals_in_buf -= 1;
+    _unlock();
+    return next;
   }
-  int next = signal_buf[signal_buf_next_read_idx];
-  signal_buf_next_read_idx = (signal_buf_next_read_idx + 1) % signal_buf_cap;
-  signals_in_buf -= 1;
-  return next;
+  return -1;
 }
 
 int raise_signal(int signum) {
