@@ -106,13 +106,7 @@ signalCode (SigPosix SigUser2) = prim__sigusr2
 
 toSignal : Int -> Maybe Signal
 toSignal (-1) = Nothing
-toSignal x    = foldr matchCode Nothing codes
-  where
-    matchCode : (Int, Signal) -> Maybe Signal -> Maybe Signal
-    matchCode x (Just y) = Just y
-    matchCode (code, sig) Nothing = case x == code of
-                                         True  => Just sig
-                                         False => Nothing
+toSignal x    = lookup x codes
 
     codes : List (Int, Signal)
     codes = [
@@ -256,4 +250,3 @@ namespace Posix
     case isError res of
          False => pure $ Right ()
          True  => Left <$> getError
-
