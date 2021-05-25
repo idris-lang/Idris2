@@ -107,7 +107,7 @@ signalCode (SigPosix SigUser2) = prim__sigusr2
 toSignal : Int -> Maybe Signal
 toSignal (-1) = Nothing
 toSignal x    = lookup x codes
-
+  where
     codes : List (Int, Signal)
     codes = [
               (prim__sigint , SigINT)
