@@ -247,8 +247,11 @@ quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
          pure False
-quitOpts (Help :: _)
+quitOpts (Help Nothing :: _)
     = do putStrLn usage
+         pure False
+quitOpts (Help (Just HelpLogging) :: _)
+    = do putStrLn helpTopics
          pure False
 quitOpts (ShowPrefix :: _)
     = do putStrLn yprefix
