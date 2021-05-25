@@ -25,7 +25,7 @@ coerce {n = Z} eq FZ impossible
 coerce {n = S _} eq (FS k) = FS (coerce (succInjective _ _ eq) k)
 coerce {n = Z} eq (FS k) impossible
 
-%transform "coerce-identity" coerce _ = believe_me
+%transform "coerce-identity" coerce = replace {p = Fin}
 
 export
 Uninhabited (Fin Z) where
