@@ -56,11 +56,13 @@ int _lock() {
 
 void _unlock() {
 #ifdef _WIN32
-  ReleaseMutex(ghMutex) 
+  ReleaseMutex(ghMutex);
 #else
   pthread_mutex_unlock(&sig_mutex);
 #endif
 }
+
+void _collect_signal(int signum);
 
 void _collect_signal_core(int signum) {
   _init_buf();
