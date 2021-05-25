@@ -177,6 +177,10 @@ data Structs : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
+cftySpec fc CFInt8 = pure "integer-8"
+cftySpec fc CFInt16 = pure "integer-16"
+cftySpec fc CFInt32 = pure "integer-32"
+cftySpec fc CFInt64 = pure "integer-64"
 cftySpec fc CFUnsigned8 = pure "unsigned-8"
 cftySpec fc CFUnsigned16 = pure "unsigned-16"
 cftySpec fc CFUnsigned32 = pure "unsigned-32"
