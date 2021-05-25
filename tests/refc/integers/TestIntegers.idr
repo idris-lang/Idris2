@@ -52,3 +52,15 @@ main = do
 
     putStrLn "Cast to Integer:"
     put $ castAllTo Integer ints
+
+    putStrLn "Add:"
+    put $ imapProperty Num (+ 1) ints
+
+    putStrLn "Subtract:"
+    put $ imapProperty Neg (flip (-) 1) ints
+
+    putStrLn "Negate:"
+    put $ imapProperty Neg negate ints
+
+    putStrLn "Multiply:"
+    put $ imapProperty Num (* 2) ints

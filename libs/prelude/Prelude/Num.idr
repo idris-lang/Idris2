@@ -131,6 +131,24 @@ Num Bits8 where
   (*) = prim__mul_Bits8
   fromInteger = prim__cast_IntegerBits8
 
+public export
+Neg Bits8 where
+  negate x = prim__sub_Bits8 0 x
+  (-) = prim__sub_Bits8
+
+public export
+Abs Bits8 where
+  abs = id
+
+public export
+Integral Bits8 where
+  div x y
+      = case y == 0 of
+             False => prim__div_Bits8 x y
+  mod x y
+      = case y == 0 of
+             False => prim__mod_Bits8 x y
+
 -- Bits16
 
 %inline
@@ -139,6 +157,24 @@ Num Bits16 where
   (+) = prim__add_Bits16
   (*) = prim__mul_Bits16
   fromInteger = prim__cast_IntegerBits16
+
+public export
+Neg Bits16 where
+  negate x = prim__sub_Bits16 0 x
+  (-) = prim__sub_Bits16
+
+public export
+Abs Bits16 where
+  abs = id
+
+public export
+Integral Bits16 where
+  div x y
+      = case y == 0 of
+             False => prim__div_Bits16 x y
+  mod x y
+      = case y == 0 of
+             False => prim__mod_Bits16 x y
 
 -- Bits32
 
@@ -149,6 +185,24 @@ Num Bits32 where
   (*) = prim__mul_Bits32
   fromInteger = prim__cast_IntegerBits32
 
+public export
+Neg Bits32 where
+  negate x = prim__sub_Bits32 0 x
+  (-) = prim__sub_Bits32
+
+public export
+Abs Bits32 where
+  abs = id
+
+public export
+Integral Bits32 where
+  div x y
+      = case y == 0 of
+             False => prim__div_Bits32 x y
+  mod x y
+      = case y == 0 of
+             False => prim__mod_Bits32 x y
+
 -- Bits64
 
 %inline
@@ -157,6 +211,24 @@ Num Bits64 where
   (+) = prim__add_Bits64
   (*) = prim__mul_Bits64
   fromInteger = prim__cast_IntegerBits64
+
+public export
+Neg Bits64 where
+  negate x = prim__sub_Bits64 0 x
+  (-) = prim__sub_Bits64
+
+public export
+Abs Bits64 where
+  abs = id
+
+public export
+Integral Bits64 where
+  div x y
+      = case y == 0 of
+             False => prim__div_Bits64 x y
+  mod x y
+      = case y == 0 of
+             False => prim__mod_Bits64 x y
 
 -- Double
 
