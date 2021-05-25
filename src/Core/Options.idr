@@ -157,6 +157,8 @@ record Session where
   dumpanf : Maybe String -- file to output ANF definitions
   dumpvmcode : Maybe String -- file to output VM code definitions
   profile : Bool -- generate profiling information, if supported
+  -- Warnings
+  warningsAsErrors : Bool
   showShadowingWarning : Bool
 
 public export
@@ -206,7 +208,7 @@ export
 defaultSession : Session
 defaultSession = MkSessionOpts False False False Chez [] False defaultLogLevel
                                False False False Nothing Nothing
-                               Nothing Nothing False True
+                               Nothing Nothing False False True
 
 export
 defaultElab : ElabDirectives

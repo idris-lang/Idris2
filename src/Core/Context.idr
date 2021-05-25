@@ -1114,6 +1114,8 @@ record Defs where
      -- ^ record of timings from logTimeRecord
   warnings : List Warning
      -- ^ as yet unreported warnings
+  errors : List Error
+     -- ^ as yet unreported errors
 
 -- Label for context references
 export
@@ -1158,6 +1160,7 @@ initDefs
            , peFailures = empty
            , timings = empty
            , warnings = []
+           , errors = []
            }
 
 -- Reset the context, except for the options
@@ -2574,8 +2577,16 @@ setSession sopts
          put Ctxt (record { options->session = sopts } defs)
 
 export
-recordWarning : {auto c : Ref Ctxt Defs} ->
-                Warning -> Core ()
+recordError : {auto c : Ref Ctxt Defs} -> Error -> Core ()
+recordError e
+    = do defs <- get Ctxt
+         put Ctxt $ record { errors $= (e ::) } defs
+
+export
+recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
-         put Ctxt (record { warnings $= (w ::) } defs)
+         session <- getSession
+         if (session.warningsAsErrors)
+           then recordError (WarningAsError w)
+           else put Ctxt $ record { warnings $= (w ::) } defs

@@ -59,6 +59,13 @@ Pretty DotReason where
   pretty UnknownDot = reflow "Unknown reason"
   pretty UnderAppliedCon = reflow "Under-applied constructor"
 
+public export
+data Warning : Type where
+     UnreachableClause : {vars : _} ->
+                         FC -> Env Term vars -> Term vars -> Warning
+     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     Deprecated : String -> Warning
+
 -- All possible errors, carrying a location
 public export
 data Error : Type where
@@ -75,6 +82,7 @@ data Error : Type where
                     FC -> Env Term vars -> Term vars -> Term vars -> Error -> Error
      ValidCase : {vars : _} ->
                  FC -> Env Term vars -> Either (Term vars) Error -> Error
+
      UndefinedName : FC -> Name -> Error
      InvisibleName : FC -> Name -> Maybe Namespace -> Error
      BadTypeConType : FC -> Name -> Error
@@ -155,13 +163,7 @@ data Error : Type where
      InRHS : FC -> Name -> Error -> Error
 
      MaybeMisspelling : Error -> List1 String -> Error
-
-public export
-data Warning : Type where
-     UnreachableClause : {vars : _} ->
-                         FC -> Env Term vars -> Term vars -> Warning
-     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
-     Deprecated : String -> Warning
+     WarningAsError : Warning -> Error
 
 export
 Show TTCErrorMsg where
@@ -173,6 +175,14 @@ Show TTCErrorMsg where
 
 -- Simplest possible display - higher level languages should unelaborate names
 -- and display annotations appropriately
+
+export
+Show Warning where
+    show (UnreachableClause _ _ _) = ":Unreachable clause"
+    show (ShadowingGlobalDefs _ _) = ":Shadowing names"
+    show (Deprecated name) = ":Deprecated " ++ name
+
+
 export
 Show Error where
   show (Fatal err) = show err
@@ -339,6 +349,14 @@ Show Error where
      = show err ++ "\nDid you mean" ++ case ns of
          (n ::: []) => ": " ++ n ++ "?"
          _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+  show (WarningAsError w) = show w
+
+export
+getWarningLoc : Warning -> Maybe FC
+getWarningLoc (UnreachableClause fc _ _) = Just fc
+getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
+getWarningLoc (Deprecated _) = Nothing
+
 export
 getErrorLoc : Error -> Maybe FC
 getErrorLoc (Fatal err) = getErrorLoc err
@@ -409,12 +427,7 @@ getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
-
-export
-getWarningLoc : Warning -> Maybe FC
-getWarningLoc (UnreachableClause fc _ _) = Just fc
-getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
-getWarningLoc (Deprecated _) = Nothing
+getErrorLoc (WarningAsError warn) = getWarningLoc warn
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export

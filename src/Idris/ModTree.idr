@@ -167,6 +167,9 @@ buildMod loc num len mod
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
+        -- To avoid duplicate emissions
+        -- TODO: Refactor to remove this filter
+        traverse_ recordError $ filter (not . isModuleNotFound) ferrs
         ttcTime <- catch (do t <- fnameModified mttc
                              pure (Just t))
                          (\err => pure Nothing)
@@ -181,19 +184,20 @@ buildMod loc num len mod
         m <- newRef MD (initMetadata src)
         put Syn initSyntax
 
-        if needsBuilding
-           then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
-                   [] <- process {u} {m} msg src
-                      | errs => do emitWarnings
-                                   traverse_ emitError errs
-                                   pure (ferrs ++ errs)
-                   emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
-           else do emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
+        when needsBuilding $
+           do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon <++>
+                pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
+              errs <- process {u} {m} msg src
+              traverse_ recordError errs
+
+        defs <- get Ctxt
+        emitWarningsAndErrors
+        pure (errors defs)
+  where
+    isModuleNotFound : Error -> Bool
+    isModuleNotFound e = case e of
+      (ModuleNotFound _ _) => True
+      _ => False
 
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

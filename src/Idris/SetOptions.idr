@@ -340,6 +340,9 @@ preOptions (ConsoleWidth n :: opts)
 preOptions (Color b :: opts)
     = do setColor b
          preOptions opts
+preOptions (WarningsAsErrors :: opts)
+    = do setSession (record { warningsAsErrors = True } !getSession)
+         preOptions opts
 preOptions (IgnoreShadowingWarnings :: opts)
     = do setSession (record { showShadowingWarning = False } !getSession)
          preOptions opts
