@@ -576,6 +576,8 @@ interface Catchable m t | m where
     throw : {0 a : Type} -> t -> m a
     catch : m a -> (t -> m a) -> m a
 
+    breakpoint : m a -> m (Either t a)
+
 export
 Catchable Core Error where
   catch (MkCore prog) h
@@ -583,6 +585,7 @@ Catchable Core Error where
                     case p' of
                          Left e => let MkCore he = h e in he
                          Right val => pure (Right val))
+  breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
 
 -- Prelude.Monad.foldlM hand specialised for Core
