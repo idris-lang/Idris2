@@ -23,7 +23,7 @@ Log levels are characterised by two things:
 
 If the user asks for some logs by writing::
 
-    %log scope 5
+    %logging "scope" 5
 
 they will get all of the logs whose path starts with `scope` and whose
 verbosity level is less or equal to `5`. By combining different logging
