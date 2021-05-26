@@ -121,7 +121,8 @@ idrisTestsPerformance : TestPool
 idrisTestsPerformance = MkTestPool "Performance" []
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
-      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006"]
+      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006",
+       "perf007"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" []
