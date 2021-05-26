@@ -367,14 +367,17 @@ poolRunner opts pool
        let tests = filterTests opts (testCases pool)
        let (_ :: _) = tests
              | [] => pure initSummary
-       putStrLn banner
        -- if so make sure the constraints are satisfied
        cs <- for (constraints pool) $ \ req => do
           mfp <- checkRequirement req
-          putStrLn $ case mfp of
-            Nothing => show req ++ " not found"
-            Just fp => "Found " ++ show req ++ " at " ++ fp
-          pure mfp
+          let msg = case mfp of
+                      Nothing => "✗ " ++ show req ++ " not found"
+                      Just fp => "✓ Found " ++ show req ++ " at " ++ fp
+          pure (mfp, msg)
+       let (cs, msgs) = unzip cs
+
+       putStrLn (banner msgs)
+
        let Just _ = the (Maybe (List String)) (sequence cs)
              | Nothing => pure initSummary
        -- if so run them all!
@@ -382,10 +385,14 @@ poolRunner opts pool
 
   where
 
-    banner : String
-    banner =
-      let separator = fastPack $ replicate 72 '-' in
-      fastUnlines [ "", separator, pool.poolName, separator, "" ]
+    separator : String
+    separator = fastPack $ replicate 72 '-'
+
+    banner : List String -> String
+    banner msgs = fastUnlines
+        $ [ "", separator, pool.poolName ]
+       ++ msgs
+       ++ [ separator, "" ]
 
     loop : Summary -> List String -> IO Summary
     loop acc [] = pure acc
