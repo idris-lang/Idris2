@@ -306,13 +306,13 @@ factNotSuccFact {p = S (S k)} pGt1 (CofactorExists q prf) =
 
 using (p : Nat)
   ||| The relation of common factor is symmetric, that is if p is a
-  ||| common factor of n and m, then it is also a common factor of m
-  ||| and n.
+  ||| common factor of n and m, then it is also a common factor of
+  ||| m and n.
   public export
   Symmetric Nat (CommonFactor p) where
     symmetric (CommonFactorExists p pfx pfy) = CommonFactorExists p pfy pfx
 
-  ||| The relation of greates common divisor is symmetric.
+  ||| The relation of greatest common divisor is symmetric.
   public export
   Symmetric Nat (GCD p) where
     symmetric {x = Z} {y = Z} (MkGCD {notBothZero} _ _) impossible

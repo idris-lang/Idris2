@@ -32,6 +32,9 @@ interface Euclidean ty rel where
   euclidean : {x, y, z : ty} -> rel x y -> rel x z -> rel y z
 
 public export
+interface (Reflexive ty rel, Symmetric ty rel) => Tolerance ty rel where
+
+public export
 interface (Reflexive ty rel, Transitive ty rel, Symmetric ty rel) => Equivalence ty rel where
 
 ----------------------------------------
