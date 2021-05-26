@@ -31,8 +31,8 @@ directives, users can request information about everything (with a low
 level of details) and at the same time focus on a particular subsystem
 they want to get a lot of information about. For instance:::
 
-    %log 1
-    %log scope.let 10
+    %logging 1
+    %logging "scope.let" 10
 
 will deliver basic information about the various phases the compiler goes
 through and deliver a lot of information about scope-checking let binders.
