@@ -187,32 +187,24 @@ makeIntBound isBigInt bits =
       name = if isBigInt then "bigint_bound_" else "int_bound_"
    in addConstToPreamble (name ++ show bits) (f "2" ++ " ** "++ f (show bits))
 
-truncateIntWithBitMask : {auto c : Ref ESs ESSt} -> Int -> String -> Core String
-truncateIntWithBitMask bits e =
-  let bs = show bits
-      f  = adjInt bits
-   in do ib <- makeIntBound (useBigInt' bits) bits
-         mn <- addConstToPreamble ("int_mask_neg_" ++ bs) ("-" ++ ib)
-         mp <- addConstToPreamble ("int_mask_pos_" ++ bs) (ib ++ " - " ++ f "1")
-         pure $ concat {t = List}
-                       [ "((", ib, " & ", e, ") == " ++ ib ++ " ? "
-                       , "(", e, " | ", mn, ") : "
-                       , "(", e, " & ", mp, ")"
-                       , ")"
-                       ]
-
--- We can't determine `isBigInt` from the given number of bits, since
--- when casting from BigInt to Number we need to truncate the BigInt
--- first, otherwise we might lose precision
-boundedInt : {auto c : Ref ESs ESSt} ->
-             (isBigInt : Bool) -> Int -> String -> Core String
-boundedInt isBigInt bits e =
-   let name = if isBigInt then "truncToBigInt" else "truncToInt"
-    in do n  <- makeIntBound isBigInt bits
-          fn <- addConstToPreamble
+boundedInt :  {auto c : Ref ESs ESSt}
+           -> (isBigInt : Bool)
+           -> Int
+           -> String
+           -> Core String
+boundedInt useBigInt bits e =
+  let bs   = show bits
+      f    = if useBigInt then toBigInt else id
+      name = if useBigInt then "truncToBigInt" else "truncToInt"
+   in do max  <- makeIntBound useBigInt bits
+         half <- makeIntBound useBigInt (bits - 1)
+         fn   <- addConstToPreamble
                   (name ++ show bits)
-                  ("x=>(x<(-" ++ n ++ ")||(x>=" ++ n ++ "))?x%" ++ n ++ ":x")
-          pure $ fn ++ "(" ++ e ++ ")"
+                  ( concat {t = List}
+                      [ "x=>{ const v = x<",f "0","?x%",max,"+",max,":x%",max,";"
+                      , "return v>=",half,"?","v-",max,":v}"
+                      ])
+         pure $ fn ++ "(" ++ e ++ ")"
 
 boundedUInt : {auto c : Ref ESs ESSt} ->
               (isBigInt : Bool) -> Int -> String -> Core String
@@ -228,10 +220,6 @@ boundedIntOp : {auto c : Ref ESs ESSt} ->
                Int -> String -> String -> String -> Core String
 boundedIntOp bits o lhs rhs =
   boundedInt (useBigInt' bits) bits (binOp o lhs rhs)
-
-boundedIntBitOp : {auto c : Ref ESs ESSt} ->
-                  Int -> String -> String -> String -> Core String
-boundedIntBitOp bits o lhs rhs = truncateIntWithBitMask bits (binOp o lhs rhs)
 
 boundedUIntOp : {auto c : Ref ESs ESSt} ->
                 Int -> String -> String -> String -> Core String
@@ -267,12 +255,12 @@ mult :  {auto c : Ref ESs ESSt}
         -> (y : String)
         -> Core String
 mult (Just $ Signed $ P 32) x y =
-  fromBigInt <$> boundedInt True 31 (binOp "*" (toBigInt x) (toBigInt y))
+  fromBigInt <$> boundedInt True 32 (binOp "*" (toBigInt x) (toBigInt y))
 
 mult (Just $ Unsigned 32)   x y =
   fromBigInt <$> boundedUInt True 32 (binOp "*" (toBigInt x) (toBigInt y))
 
-mult (Just $ Signed $ P n) x y = boundedIntOp (n-1) "*" x y
+mult (Just $ Signed $ P n) x y = boundedIntOp n "*" x y
 mult (Just $ Unsigned n)   x y = boundedUIntOp n "*" x y
 mult _                     x y = pure $ binOp "*" x y
 
@@ -281,7 +269,11 @@ div :  {auto c : Ref ESs ESSt}
        -> (x : String)
        -> (y : String)
        -> Core String
-div (Just k) x y =
+div (Just $ Signed $ Unlimited) x y = pure $ binOp "/" x y
+div (Just $ k@(Signed $ P n)) x y =
+  if useBigInt k then boundedIntOp n "/" x y
+                 else boundedInt False n (jsIntOfDouble k (x ++ " / " ++ y))
+div (Just $ k@(Unsigned n)) x y =
   if useBigInt k then pure $ binOp "/" x y
                  else pure $ jsIntOfDouble k (x ++ " / " ++ y)
 div Nothing x y = pure $ binOp "/" x y
@@ -295,7 +287,7 @@ arithOp :  {auto c : Ref ESs ESSt}
         -> (x : String)
         -> (y : String)
         -> Core String
-arithOp (Just $ Signed $ P n) op x y = boundedIntOp (n-1) op x y
+arithOp (Just $ Signed $ P n) op x y = boundedIntOp n op x y
 arithOp (Just $ Unsigned n)   op x y = boundedUIntOp n op x y
 arithOp _                     op x y = pure $ binOp op x y
 
@@ -310,7 +302,7 @@ bitOp :  {auto c : Ref ESs ESSt}
       -> (x : String)
       -> (y : String)
       -> Core String
-bitOp (Just $ Signed $ P n) op x y = boundedIntBitOp (n-1) op x y
+bitOp (Just $ Signed $ P n) op x y = boundedIntOp n op x y
 bitOp (Just $ Unsigned 32)  op x y =
   fromBigInt <$> boundedUInt True 32 (binOp op (toBigInt x) (toBigInt y))
 bitOp (Just $ Unsigned n)   op x y = boundedUIntOp n op x y
@@ -328,7 +320,7 @@ constPrimitives = MkConstantPrimitives {
   }
   where truncInt : (isBigInt : Bool) -> IntKind -> String -> Core String
         truncInt b (Signed Unlimited) = pure
-        truncInt b (Signed $ P n)     = boundedInt b (n-1)
+        truncInt b (Signed $ P n)     = boundedInt b n
         truncInt b (Unsigned n)       = boundedUInt b n
 
         shrink : IntKind -> IntKind -> String -> String

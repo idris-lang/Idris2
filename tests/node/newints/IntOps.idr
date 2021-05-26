@@ -136,10 +136,14 @@ check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
    in mapMaybe failing ps
 
   where
+    trueMod : Integer -> Integer -> Integer
+    trueMod x y = let res = x `mod` y
+                   in if res < 0 then res + y else res
+
     checkBounds : Integer -> Integer
-    checkBounds n = let r1 = if n < mi || n > ma then n `mod` (ma + 1) else n
-                     in if not signed && r1 < 0
-                           then ma + r1 + 1
+    checkBounds n = let r1 = trueMod n (ma + 1 - mi)
+                     in if r1 > ma
+                           then r1 - (ma + 1 - mi)
                            else r1
 
     failing : (Integer,Integer) -> Maybe String
