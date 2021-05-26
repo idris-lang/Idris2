@@ -26,7 +26,8 @@
 --    range of [-2^(x-1),2^(x-1) - 1]. They support all the usual arithmetic
 --    operations: +,*,-,div, and mod. If the result `y` of an operation
 --    is outside the valid range, the signed remainder modulo 2^x of `y`
---    is returned instead. The same kind of truncation happens when
+--    is calculated and 2^x subtracted from the result if it
+--    is still out of bounds. The same kind of truncation happens when
 --    other numeric types are cast to one of the signed integer
 --    types.
 --
@@ -34,11 +35,11 @@
 --             example calculations. All numbers are considered to be of type `Int8`
 --             unless specified otherwise:
 --
---               127 + 7   = 6
---               3 * 64    = 64
---               2 * (-64) = (-128)
---               (-129)    = (-1)
---               7 - 10    = (-3)
+--               127 + 7   = -122
+--               3 * 64    = -64
+--               2 * (-64) = -128
+--               (-129)    = 127
+--               7 - 10    = -3
 --
 import Data.List
 import Data.Stream

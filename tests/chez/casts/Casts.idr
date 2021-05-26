@@ -29,12 +29,13 @@
 --
 --    Signed integers with a precision of x bit have a valid
 --    range of [-2^(x-1),2^(x-1) - 1]. When casting from another
---    integral type of value y, the value is checked for being in bounds,
---    and if it is not, the signed remainder modulo 2^(x-1) of y is returned.
+--    integral type of value y, the unsigned remainder module 2^x
+--    is calculated. If the result is >= 2^(x-1), 2^x is subtracted
+--    from the result. This is the same behavior as for instance in Haskell.
 --
 --    When casting from a `Double`, the value is first truncated towards 0,
---    before applying the inbounds check and (if necessary) calculating
---    the signed remainder modulo 2^(x-1).
+--    before applying the inbounds check and (if necessary) truncating
+--    the value.
 --
 --    When casting from a `String`, the value is first converted to a floating
 --    point number by the backend and then truncated as described above.
@@ -46,11 +47,11 @@
 --               cast {from = Integer} {to = Int8} 256  = 0
 --               cast {from = Integer} {to = Int8} 259  = 4
 --               cast {from = Integer} {to = Int8} (-128) = (-128)
---               cast {from = Integer} {to = Int8} (-129) = (-1)
+--               cast {from = Integer} {to = Int8} (-129) = 127
 --               cast {from = Double}  {to = Int8} (-12.001) = (-12)
 --               cast {from = Double}  {to = Int8} ("-12.001") = (-12)
 --
--- b. Characters
+-- c. Characters
 --
 --    Casts from all integral types to `Char` are supported. Note however,
 --    that only casts in the non-surrogate range are supported, that is
