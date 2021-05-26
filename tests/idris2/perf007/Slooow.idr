@@ -16,7 +16,7 @@ data TTy : Nat -> Nat -> Nat -> Nat -> Bool -> Type where
 
 n : Nat -> Nat
 n = (+ 2)
-                
+
 showInd : (indent : Nat) -> TTy p1 r1 v3 r3 br -> String
 showInd i (TA x1 x2 x3) = if False
                             then (if False then show' i else show' i)
