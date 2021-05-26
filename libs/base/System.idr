@@ -5,7 +5,7 @@ import Data.List
 import Data.Strings
 
 support : String -> String
-support fn = "C:" ++ fn ++ ", libidris2_support"
+support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
 libc : String -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
@@ -15,12 +15,10 @@ libc fn = "C:" ++ fn ++ ", libc 6"
 
 %foreign "scheme,racket:blodwen-sleep"
          support "idris2_sleep"
---         "C:idris2_sleep, libidris2_support"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
          support "idris2_usleep"
---         "C:idris2_usleep, libidris2_support"
 prim__usleep : Int -> PrimIO ()
 
 export
@@ -33,12 +31,14 @@ usleep sec = primIO (prim__usleep sec)
 
 -- Get the number of arguments
 %foreign "scheme:blodwen-arg-count"
-         "node:lambda:() => process.argv.length"
+         support "idris2_getArgCount"
+         "node:lambda:() => BigInt(process.argv.length)"
 prim__getArgCount : PrimIO Int
 
 -- Get argument number `n`
 %foreign "scheme:blodwen-arg"
-         "node:lambda:n => process.argv[n]"
+         support "idris2_getArg"
+         "node:lambda:n => process.argv[(Number(n))]"
 prim__getArg : Int -> PrimIO String
 
 export
@@ -112,6 +112,14 @@ prim__time : PrimIO Int
 export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
+
+%foreign support "idris2_getPID"
+prim__getPID : PrimIO Int
+
+||| Get the ID of the currently running process.
+export
+getPID : HasIO io => io Int
+getPID = primIO prim__getPID
 
 %foreign libc "exit"
          "node:lambda:c => process.exit(Number(c))"

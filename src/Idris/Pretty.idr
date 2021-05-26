@@ -306,6 +306,8 @@ mutual
       go d (PBang _ tm) = "!" <+> go d tm
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
       go d (PList _ _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
+      go d (PSnocList _ _ xs) = brackets {ldelim = "[<"}
+                                   (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
       go d (PDPair _ _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
       go d (PDPair _ _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)

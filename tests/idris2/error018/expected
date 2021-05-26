@@ -1,0 +1,40 @@
+1/1: Building Issue1031 (Issue1031.idr)
+Error: ? is not a valid pattern
+
+Issue1031.idr:4:13--4:14
+ 1 | %default total
+ 2 | 
+ 3 | ohNo : Void
+ 4 | ohNo = let (? ** x) = the (a ** a) (Int ** 5) in x
+                 ^
+
+1/1: Building Issue1031-2 (Issue1031-2.idr)
+Error: ? is not a valid pattern
+
+Issue1031-2.idr:4:9--4:10
+ 1 | %default total
+ 2 | 
+ 3 | foo : (x : Bool) -> x === True
+ 4 | foo = \ ? => Refl
+             ^
+
+1/1: Building Issue1031-3 (Issue1031-3.idr)
+Error: ? is not a valid pattern
+
+Issue1031-3.idr:4:6--4:7
+ 1 | %default total
+ 2 | 
+ 3 | cool : (x : Bool) -> x === True
+ 4 | cool ? = Refl
+          ^
+
+1/1: Building Issue1031-4 (Issue1031-4.idr)
+Error: While processing left hand side of nice. Unsolved holes:
+Main.{dotTm:308} introduced at: 
+Issue1031-4.idr:4:6--4:10
+ 1 | %default total
+ 2 | 
+ 3 | nice : (x : Bool) -> x === True
+ 4 | nice .(_) = Refl
+          ^^^^
+

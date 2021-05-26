@@ -16,7 +16,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.String.Extra
 import Libraries.Data.ANameMap
 
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Syntax
 
 import Idris.Elab.Implementation
@@ -68,6 +68,12 @@ import Libraries.Data.String.Extra
 
 public export
 data Side = LHS | AnyExpr
+
+export
+Eq Side where
+  LHS == LHS = True
+  AnyExpr == AnyExpr = True
+  _ == _ = False
 
 export
 extendSyn : {auto s : Ref Syn SyntaxInfo} ->
@@ -190,24 +196,24 @@ mutual
       =  if lowerFirst nm || nm == "_"
            then do whenJust (isConcreteFC prefFC) \nfc
                      => addSemanticDecorations [(nfc, Bound, Just n)]
-                   pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           (Just n) !(desugarB side ps argTy)
-                                    !(desugar side (n :: ps) scope)
-           else pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
-                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+                   pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           (Just n) !(desugarB AnyExpr ps argTy)
+                                    !(desugar AnyExpr (n :: ps) scope)
+           else pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           (Just n) !(desugarB side ps argTy)
-                                    !(desugar side (n :: ps) scope)
+      = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           (Just n) !(desugarB AnyExpr ps argTy)
+                                    !(desugar AnyExpr (n :: ps) scope)
   desugarB side ps (PLam fc rig p (PImplicit _) argTy scope)
-      = pure $ ILam fc rig !(traverse (desugar side ps) p)
-                           Nothing !(desugarB side ps argTy)
-                                   !(desugar side ps scope)
+      = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
+                           Nothing !(desugarB AnyExpr ps argTy)
+                                   !(desugar AnyExpr ps scope)
   desugarB side ps (PLam fc rig p pat argTy scope)
-      = pure $ ILam EmptyFC rig !(traverse (desugar side ps) p)
-                   (Just (MN "lamc" 0)) !(desugarB side ps argTy) $
+      = pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
+                   (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
@@ -321,7 +327,10 @@ mutual
   desugarB side ps (PDotted fc x)
       = pure $ IMustUnify fc UserDotted !(desugarB side ps x)
   desugarB side ps (PImplicit fc) = pure $ Implicit fc True
-  desugarB side ps (PInfer fc) = pure $ Implicit fc False
+  desugarB side ps (PInfer fc)
+    = do when (side == LHS) $
+           throw (GenericMsg fc "? is not a valid pattern")
+         pure $ Implicit fc False
   desugarB side ps (PMultiline fc indent lines)
       = addFromString fc !(expandString side ps fc !(trimMultiline fc indent lines))
   desugarB side ps (PString fc strs)
@@ -344,6 +353,8 @@ mutual
            pure val
   desugarB side ps (PList fc nilFC args)
       = expandList side ps nilFC args
+  desugarB side ps (PSnocList fc nilFC args)
+      = expandSnocList side ps nilFC (reverse args)
   desugarB side ps (PPair fc l r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -438,6 +449,18 @@ mutual
   expandList side ps nilFC ((consFC, x) :: xs)
       = pure $ apply (IVar consFC (UN "::"))
                 [!(desugarB side ps x), !(expandList side ps nilFC xs)]
+
+  expandSnocList
+             : {auto s : Ref Syn SyntaxInfo} ->
+               {auto b : Ref Bang BangData} ->
+               {auto c : Ref Ctxt Defs} ->
+               {auto u : Ref UST UState} ->
+               {auto m : Ref MD Metadata} ->
+               Side -> List Name -> (nilFC : FC) -> List (FC, PTerm) -> Core RawImp
+  expandSnocList side ps nilFC [] = pure (IVar nilFC (UN "Lin"))
+  expandSnocList side ps nilFC ((consFC, x) :: xs)
+      = pure $ apply (IVar consFC (UN ":<"))
+                [!(expandSnocList side ps nilFC xs) , !(desugarB side ps x)]
 
   addFromString : {auto c : Ref Ctxt Defs} ->
                   FC -> RawImp -> Core RawImp

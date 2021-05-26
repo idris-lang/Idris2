@@ -169,3 +169,14 @@ data List a =
   (::) a (List a)
 
 %name List xs, ys, zs
+
+||| Snoc lists.
+public export
+data SnocList a =
+  ||| Empty snoc-list
+  Lin
+
+  | ||| A non-empty snoc-list, consisting of the rest of the snoc-list and the final element.
+  (:<) (SnocList a) a
+
+%name SnocList sx, sy, sz

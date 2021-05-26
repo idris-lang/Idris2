@@ -384,7 +384,7 @@ mutual
            decorateKeywords fname xs
            pure (PRange fc (fst rstate) (snd rstate) y.val)
 
-  listExpr : FileName -> WithBounds t -> IndentInfo -> Rule PTerm
+  listExpr : FileName -> WithBounds () -> IndentInfo -> Rule PTerm
   listExpr fname s indents
       = do b <- bounds (do ret <- expr pnowith fname indents
                            decoratedSymbol fname "|"
@@ -406,6 +406,26 @@ mutual
                        let fc = boundToFC fname (mergeBounds s b)
                            nilFC = if null xs then fc else boundToFC fname b
                        in PList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs))
+
+  snocListExpr : FileName -> WithBounds () -> IndentInfo -> Rule PTerm
+  snocListExpr fname s indents
+      = {- TODO: comprehension -}
+        do mHeadTail <- optional $ do
+             hd <- many $ do x <- expr pdef fname indents
+                             b <- bounds (symbol ",")
+                             pure (x <$ b)
+             tl <- expr pdef fname indents
+             pure (hd, tl)
+           {- TODO: reverse ranges -}
+           b <- bounds (symbol "]")
+           pure $
+             let xs : List (WithBounds PTerm)
+                    = case mHeadTail of
+                        Nothing      => []
+                        Just (hd,tl) => hd ++ [ tl <$ b]
+                 fc = boundToFC fname (mergeBounds s b)
+                 nilFC = ifThenElse (null xs) fc (boundToFC fname s)
+             in PSnocList fc nilFC (map (\ t => (boundToFC fname t, t.val)) xs) --)
 
   nonEmptyTuple : FileName -> WithBounds t -> IndentInfo -> PTerm -> Rule PTerm
   nonEmptyTuple fname s indents e
@@ -492,7 +512,9 @@ mutual
            pure (PUnquote (boundToFC fname b) b.val)
     <|> do start <- bounds (symbol "(")
            bracketedExpr fname start indents
-    <|> do start <- bounds (symbol "[")
+    <|> do start <- bounds (symbol "[<")
+           snocListExpr fname start indents
+    <|> do start <- bounds (symbol "[>" <|> symbol "[")
            listExpr fname start indents
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
            pure (PBang (virtualiseFC $ boundToFC fname b) b.val)

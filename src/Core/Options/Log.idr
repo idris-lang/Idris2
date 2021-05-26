@@ -8,6 +8,8 @@ import Libraries.Data.StringTrie
 import Data.Strings
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 
 %default total
 
@@ -35,127 +37,139 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 -- INDIVIDUAL LOG LEVEL
 
 public export
-knownTopics : List (String,String)
+knownTopics : List (String, Maybe String)
 knownTopics = [
-    ("auto", "some documentation of this option"),
-    ("builtin.Natural", "some documentation of this option"),
-    ("builtin.Natural.addTransform", "some documentation of this option"),
-    ("builtin.NaturalToInteger", "some documentation of this option"),
-    ("builtin.NaturalToInteger.addTransforms", "some documentation of this option"),
-    ("builtin.IntegerToNatural", "some documentation of this option"),
-    ("builtin.IntegerToNatural.addTransforms", "some documentation of this option"),
-    ("compile.casetree", "some documentation of this option"),
-    ("compile.casetree.clauses", "some documentation of this option"),
-    ("compile.casetree.getpmdef", "some documentation of this option"),
-    ("compile.casetree.intermediate", "some documentation of this option"),
-    ("compile.casetree.pick", "some documentation of this option"),
-    ("compile.casetree.partition", "some documentation of this option"),
-    ("compiler.inline.eval", "some documentation of this option"),
-    ("compiler.refc", "some documentation of this option"),
-    ("compiler.refc.cc", "some documentation of this option"),
-    ("compiler.scheme.chez", "some documentation of this option"),
-    ("coverage", "some documentation of this option"),
-    ("coverage.empty", "some documentation of this option"),
-    ("coverage.missing", "some documentation of this option"),
-    ("coverage.recover", "some documentation of this option"),
-    ("declare.data", "some documentation of this option"),
-    ("declare.data.constructor", "some documentation of this option"),
-    ("declare.data.parameters", "some documentation of this option"),
-    ("declare.def", "some documentation of this option"),
-    ("declare.def.clause", "some documentation of this option"),
-    ("declare.def.clause.impossible", "some documentation of this option"),
-    ("declare.def.clause.with", "some documentation of this option"),
-    ("declare.def.impossible", "some documentation of this option"),
-    ("declare.def.lhs", "some documentation of this option"),
-    ("declare.def.lhs.implicits", "some documentation of this option"),
-    ("declare.param", "some documentation of this option"),
-    ("declare.record", "some documentation of this option"),
-    ("declare.record.field", "some documentation of this option"),
-    ("declare.record.projection", "some documentation of this option"),
-    ("declare.record.projection.prefix", "some documentation of this option"),
-    ("declare.type", "some documentation of this option"),
-    ("desugar.idiom", "some documentation of this option"),
-    ("doc.record", "some documentation of this option"),
-    ("elab", "some documentation of this option"),
-    ("elab.ambiguous", "some documentation of this option"),
-    ("elab.app.lhs", "some documentation of this option"),
-    ("elab.as", "some documentation of this option"),
-    ("elab.bindnames", "some documentation of this option"),
-    ("elab.binder", "some documentation of this option"),
-    ("elab.case", "some documentation of this option"),
-    ("elab.def.local", "some documentation of this option"),
-    ("elab.delay", "some documentation of this option"),
-    ("elab.hole", "some documentation of this option"),
-    ("elab.implicits", "some documentation of this option"),
-    ("elab.implementation", "some documentation of this option"),
-    ("elab.interface", "some documentation of this option"),
-    ("elab.interface.default", "some documentation of this option"),
-    ("elab.local", "some documentation of this option"),
-    ("elab.prun", "some documentation of this option"),
-    ("elab.prune", "some documentation of this option"),
-    ("elab.record", "some documentation of this option"),
-    ("elab.retry", "some documentation of this option"),
-    ("elab.rewrite", "some documentation of this option"),
-    ("elab.unify", "some documentation of this option"),
-    ("elab.update", "some documentation of this option"),
-    ("elab.with", "some documentation of this option"),
-    ("eval.casetree", "some documentation of this option"),
-    ("eval.casetree.stuck", "some documentation of this option"),
-    ("eval.eta", "some documentation of this option"),
-    ("eval.stuck", "some documentation of this option"),
-    ("idemode.hole", "some documentation of this option"),
-    ("ide-mode.highlight", "some documentation of this option"),
-    ("ide-mode.highlight.alias", "some documentation of this option"),
-    ("ide-mode.send", "some documentation of this option"),
-    ("import", "some documentation of this option"),
-    ("import.file", "some documentation of this option"),
-    ("interaction.casesplit", "some documentation of this option"),
-    ("interaction.generate", "some documentation of this option"),
-    ("interaction.search", "some documentation of this option"),
-    ("metadata.names", "some documentation of this option"),
-    ("module.hash", "some documentation of this option"),
-    ("quantity", "some documentation of this option"),
-    ("quantity.hole", "some documentation of this option"),
-    ("quantity.hole.update", "some documentation of this option"),
-    ("repl.eval", "some documentation of this option"),
-    ("specialise", "some documentation of this option"),
-    ("totality", "some documentation of this option"),
-    ("totality.positivity", "some documentation of this option"),
-    ("totality.termination", "some documentation of this option"),
-    ("totality.termination.calc", "some documentation of this option"),
-    ("totality.termination.guarded", "some documentation of this option"),
-    ("totality.termination.sizechange", "some documentation of this option"),
-    ("totality.termination.sizechange.checkCall", "some documentation of this option"),
-    ("totality.termination.sizechange.checkCall.inPath", "some documentation of this option"),
-    ("totality.termination.sizechange.checkCall.inPathNot.restart", "some documentation of this option"),
-    ("totality.termination.sizechange.checkCall.inPathNot.return", "some documentation of this option"),
-    ("totality.termination.sizechange.inPath", "some documentation of this option"),
-    ("totality.termination.sizechange.isTerminating", "some documentation of this option"),
-    ("totality.termination.sizechange.needsChecking", "some documentation of this option"),
-    ("transform.lhs", "some documentation of this option"),
-    ("transform.rhs", "some documentation of this option"),
-    ("ttc.read", "some documentation of this option"),
-    ("ttc.write", "some documentation of this option"),
-    ("typesearch.equiv", "some documentation of this option"),
-    ("unelab.case", "some documentation of this option"),
-    ("unify", "some documentation of this option"),
-    ("unify.application", "some documentation of this option"),
-    ("unify.binder", "some documentation of this option"),
-    ("unify.constant", "some documentation of this option"),
-    ("unify.constraint", "some documentation of this option"),
-    ("unify.delay", "some documentation of this option"),
-    ("unify.equal", "some documentation of this option"),
-    ("unify.head", "some documentation of this option"),
-    ("unify.hole", "some documentation of this option"),
-    ("unify.instantiate", "some documentation of this option"),
-    ("unify.invertible", "some documentation of this option"),
-    ("unify.meta", "some documentation of this option"),
-    ("unify.noeta", "some documentation of this option"),
-    ("unify.postpone", "some documentation of this option"),
-    ("unify.retry", "some documentation of this option"),
-    ("unify.search", "some documentation of this option"),
-    ("unify.unsolved", "some documentation of this option")
+    ("auto", Nothing),
+    ("builtin.Natural", Nothing),
+    ("builtin.Natural.addTransform", Nothing),
+    ("builtin.NaturalToInteger", Nothing),
+    ("builtin.NaturalToInteger.addTransforms", Nothing),
+    ("builtin.IntegerToNatural", Nothing),
+    ("builtin.IntegerToNatural.addTransforms", Nothing),
+    ("compile.casetree", Nothing),
+    ("compile.casetree.clauses", Nothing),
+    ("compile.casetree.getpmdef", Nothing),
+    ("compile.casetree.intermediate", Nothing),
+    ("compile.casetree.pick", Nothing),
+    ("compile.casetree.partition", Nothing),
+    ("compiler.inline.eval", Nothing),
+    ("compiler.refc", Nothing),
+    ("compiler.refc.cc", Nothing),
+    ("compiler.scheme.chez", Nothing),
+    ("coverage", Nothing),
+    ("coverage.empty", Nothing),
+    ("coverage.missing", Nothing),
+    ("coverage.recover", Nothing),
+    ("declare.data", Nothing),
+    ("declare.data.constructor", Nothing),
+    ("declare.data.parameters", Nothing),
+    ("declare.def", Nothing),
+    ("declare.def.clause", Nothing),
+    ("declare.def.clause.impossible", Nothing),
+    ("declare.def.clause.with", Nothing),
+    ("declare.def.impossible", Nothing),
+    ("declare.def.lhs", Nothing),
+    ("declare.def.lhs.implicits", Nothing),
+    ("declare.param", Nothing),
+    ("declare.record", Nothing),
+    ("declare.record.field", Nothing),
+    ("declare.record.projection", Nothing),
+    ("declare.record.projection.prefix", Nothing),
+    ("declare.type", Nothing),
+    ("desugar.idiom", Nothing),
+    ("doc.record", Nothing),
+    ("elab", Nothing),
+    ("elab.ambiguous", Nothing),
+    ("elab.app.lhs", Nothing),
+    ("elab.as", Nothing),
+    ("elab.bindnames", Nothing),
+    ("elab.binder", Nothing),
+    ("elab.case", Nothing),
+    ("elab.def.local", Nothing),
+    ("elab.delay", Nothing),
+    ("elab.hole", Nothing),
+    ("elab.implicits", Nothing),
+    ("elab.implementation", Nothing),
+    ("elab.interface", Nothing),
+    ("elab.interface.default", Nothing),
+    ("elab.local", Nothing),
+    ("elab.prun", Nothing),
+    ("elab.prune", Nothing),
+    ("elab.record", Nothing),
+    ("elab.retry", Nothing),
+    ("elab.rewrite", Nothing),
+    ("elab.unify", Nothing),
+    ("elab.update", Nothing),
+    ("elab.with", Nothing),
+    ("eval.casetree", Nothing),
+    ("eval.casetree.stuck", Nothing),
+    ("eval.eta", Nothing),
+    ("eval.stuck", Nothing),
+    ("idemode.hole", Nothing),
+    ("ide-mode.highlight", Nothing),
+    ("ide-mode.highlight.alias", Nothing),
+    ("ide-mode.send", Nothing),
+    ("import", Nothing),
+    ("import.file", Nothing),
+    ("interaction.casesplit", Nothing),
+    ("interaction.generate", Nothing),
+    ("interaction.search", Nothing),
+    ("metadata.names", Nothing),
+    ("module.hash", Nothing),
+    ("quantity", Nothing),
+    ("quantity.hole", Nothing),
+    ("quantity.hole.update", Nothing),
+    ("repl.eval", Nothing),
+    ("specialise", Nothing),
+    ("totality", Nothing),
+    ("totality.positivity", Nothing),
+    ("totality.termination", Nothing),
+    ("totality.termination.calc", Nothing),
+    ("totality.termination.guarded", Nothing),
+    ("totality.termination.sizechange", Nothing),
+    ("totality.termination.sizechange.checkCall", Nothing),
+    ("totality.termination.sizechange.checkCall.inPath", Nothing),
+    ("totality.termination.sizechange.checkCall.inPathNot.restart", Nothing),
+    ("totality.termination.sizechange.checkCall.inPathNot.return", Nothing),
+    ("totality.termination.sizechange.inPath", Nothing),
+    ("totality.termination.sizechange.isTerminating", Nothing),
+    ("totality.termination.sizechange.needsChecking", Nothing),
+    ("transform.lhs", Nothing),
+    ("transform.rhs", Nothing),
+    ("ttc.read", Nothing),
+    ("ttc.write", Nothing),
+    ("typesearch.equiv", Nothing),
+    ("unelab.case", Nothing),
+    ("unify", Nothing),
+    ("unify.application", Nothing),
+    ("unify.binder", Nothing),
+    ("unify.constant", Nothing),
+    ("unify.constraint", Nothing),
+    ("unify.delay", Nothing),
+    ("unify.equal", Nothing),
+    ("unify.head", Nothing),
+    ("unify.hole", Nothing),
+    ("unify.instantiate", Nothing),
+    ("unify.invertible", Nothing),
+    ("unify.meta", Nothing),
+    ("unify.noeta", Nothing),
+    ("unify.postpone", Nothing),
+    ("unify.retry", Nothing),
+    ("unify.search", Nothing),
+    ("unify.unsolved", Nothing)
 ]
+
+export
+helpTopics : String
+helpTopics = show $ vcat $ map helpTopic knownTopics
+
+  where
+
+  helpTopic : (String, Maybe String) -> Doc ()
+  helpTopic (str, mblurb)
+    = let title = "+" <++> pretty str
+          blurb = maybe [] ((::[]) . indent 2 . reflow) mblurb
+      in vcat (title :: blurb)
 
 public export
 KnownTopic : String -> Type
@@ -184,16 +198,15 @@ mkLogLevel' ps n = MkLogLevel (maybe [] forget ps) n
 ||| Use this function to create user defined loglevels, for instance, during
 ||| elaborator reflection.
 export
-mkUnverifiedLogLevel : Bool -> (s : String) -> Nat -> LogLevel
-mkUnverifiedLogLevel False _ = mkLogLevel' Nothing
-mkUnverifiedLogLevel _ "" = mkLogLevel' Nothing
-mkUnverifiedLogLevel _ ps = mkLogLevel' (Just (split (== '.') ps))
+mkUnverifiedLogLevel : (s : String) -> Nat -> LogLevel
+mkUnverifiedLogLevel "" = mkLogLevel' Nothing
+mkUnverifiedLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
 
 ||| Like `mkUnverifiedLogLevel` but with a compile time check that
 ||| the passed string is a known topic.
 export
-mkLogLevel : Bool -> (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
-mkLogLevel b s = mkUnverifiedLogLevel b s
+mkLogLevel : (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
+mkLogLevel s = mkUnverifiedLogLevel s
 
 ||| The unsafe constructor should only be used in places where the topic has already
 ||| been appropriately processed.
@@ -239,7 +252,7 @@ parseLogLevel str = do
                 ns = tail nns in
                 case ns of
                      [] => pure (MkLogLevel [], n)
-                     [ns] => pure (mkUnverifiedLogLevel True n, ns)
+                     [ns] => pure (mkUnverifiedLogLevel n, ns)
                      _ => Nothing
   lvl <- parsePositive n
   pure $ c (fromInteger lvl)
@@ -268,9 +281,9 @@ insertLogLevel (MkLogLevel ps n) = insert ps n
 ||| We keep a log if there is a prefix of its path associated to a larger number
 ||| in the LogLevels.
 export
-keepLog : LogLevel -> Bool -> LogLevels -> Bool
-keepLog (MkLogLevel _ Z) _ _ = True
-keepLog (MkLogLevel path n) enabled levels = enabled && go path levels where
+keepLog : LogLevel -> LogLevels -> Bool
+keepLog (MkLogLevel _ Z) _ = True
+keepLog (MkLogLevel path n) levels = go path levels where
 
   go : List String -> StringTrie Nat -> Bool
   go path (MkStringTrie current) = here || there where

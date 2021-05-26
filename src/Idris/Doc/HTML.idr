@@ -12,7 +12,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
 
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Package.Types
 import Idris.Pretty
 import Idris.Version

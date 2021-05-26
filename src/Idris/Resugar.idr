@@ -48,6 +48,7 @@ addBracket fc tm = if needed tm then PBracketed fc tm else tm
     needed (PUnit _) = False
     needed (PComprehension _ _ _) = False
     needed (PList _ _ _) = False
+    needed (PSnocList _ _ _) = False
     needed (PPrimVal _ _) = False
     needed tm = True
 
@@ -125,11 +126,16 @@ mutual
          "==="    => pure $ PEq fc (unbracket l) (unbracket r)
          "~=~"    => pure $ PEq fc (unbracket l) (unbracket r)
          _        => Nothing
-       else if nameRoot nm == "::"
-               then case sugarApp (unbracket r) of
-                 PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
-                 _ => Nothing
-               else Nothing
+       else case nameRoot nm of
+              "::" => case sugarApp (unbracket r) of
+                PList fc nilFC xs => pure $ PList fc nilFC ((opFC, unbracketApp l) :: xs)
+                _           => Nothing
+              ":<" => case sugarApp (unbracket r) of
+                        PSnocList fc nilFC xs => pure $ PSnocList fc nilFC
+                                                  -- use a snoc list here in a future version
+                                                  (xs ++ [(opFC, unbracketApp l)])
+                        _                     => Nothing
+              _    => Nothing
   sugarAppM tm =
   -- refolding natural numbers if the expression is a constant
     case extractNat 0 tm of
@@ -141,9 +147,10 @@ mutual
                "Unit"   => pure $ PUnit fc
                "MkUnit" => pure $ PUnit fc
                _           => Nothing
-             else if nameRoot nm == "Nil"
-                     then pure $ PList fc fc []
-                     else Nothing
+             else case nameRoot nm of
+               "Nil" => pure $ PList fc fc []
+               "Lin" => pure $ PSnocList fc fc []
+               _     => Nothing
         _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax

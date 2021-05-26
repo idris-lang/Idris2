@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --cg refc -o refc_buffer TestBuffer.idr > /dev/null
+./build/exec/refc_buffer
+
+rm -rf build

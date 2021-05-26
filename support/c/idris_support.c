@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+int _argc;
+char **_argv;
+
 #ifdef _WIN32
 extern char **_environ;
 #include "windows/win_utils.h"
@@ -80,6 +83,19 @@ int idris2_time() {
     return time(NULL); // RTS needs to have 32 bit integers at least
 }
 
+void idris2_setArgs(int argc, char *argv[]) {
+    _argc = argc;
+    _argv = argv;
+}
+
+int idris2_getArgCount() {
+    return _argc;
+}
+
+char* idris2_getArg(int n) {
+    return _argv[n];
+}
+
 char* idris2_getEnvPair(int i) {
     return *(environ + i);
 }
@@ -97,6 +113,14 @@ int idris2_unsetenv(const char *name) {
     return win32_modenv(name, "", 1);
 #else
     return unsetenv(name);
+#endif
+}
+
+int idris2_getPID() {
+#ifdef _WIN32
+    return win32_getPID();
+#else
+    return getpid();
 #endif
 }
 

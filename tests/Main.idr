@@ -47,7 +47,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" []
        "basic041", "basic042", "basic043", "basic044", "basic045",
        "basic046", "basic047", "basic048", "basic049", "basic050",
        "basic051", "basic052", "basic053", "basic054", "basic055",
-       "basic056", "basic057", "basic058", "basic059"]
+       "basic056", "basic057", "basic058", "basic059", "basic060"]
 
 idrisTestsCoverage : TestPool
 idrisTestsCoverage = MkTestPool "Coverage checking" []
@@ -73,7 +73,7 @@ idrisTestsError = MkTestPool "Error messages" []
       ["error001", "error002", "error003", "error004", "error005",
        "error006", "error007", "error008", "error009", "error010",
        "error011", "error012", "error013", "error014", "error015",
-       "error016", "error017",
+       "error016", "error017", "error018",
        -- Parse errors
        "perror001", "perror002", "perror003", "perror004", "perror005",
        "perror006", "perror007", "perror008"]
@@ -88,7 +88,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" []
        "interactive017", "interactive018", "interactive019", "interactive020",
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
-       "interactive029", "interactive030"]
+       "interactive029", "interactive030", "interactive031"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" []
@@ -107,7 +107,7 @@ idrisTestsLinear = MkTestPool "Quantities" []
        ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
         "linear005", "linear006", "linear007", "linear008",
         "linear009", "linear010", "linear011", "linear012",
-        "linear013"]
+        "linear013", "linear014"]
 
 idrisTestsLiterate : TestPool
 idrisTestsLiterate = MkTestPool "Literate programming" []
@@ -121,7 +121,8 @@ idrisTestsPerformance : TestPool
 idrisTestsPerformance = MkTestPool "Performance" []
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
-      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006"]
+      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006",
+       "perf007"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" []
@@ -162,7 +163,7 @@ idrisTestsEvaluator = MkTestPool "Evaluation" []
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" []
        -- Documentation strings
-      ["docs001", "docs002",
+      ["docs001", "docs002", "docs003",
        -- Eta equality
        "eta001",
        -- Modules and imports
@@ -222,7 +223,10 @@ chezTests = MkTestPool "Chez backend" [Chez]
 
 refcTests : TestPool
 refcTests = MkTestPool "Reference counting C backend" [C]
-  [ "refc001" , "refc002" ]
+    [ "refc001" , "refc002"
+    , "strings", "doubles"
+    , "buffer", "clock", "args"
+    ]
 
 racketTests : TestPool
 racketTests = MkTestPool "Racket backend" [Racket]
@@ -246,6 +250,7 @@ nodeTests = MkTestPool "Node backend" [Node]
     , "node017", "node018", "node019", "node021", "node022", "node023"
     , "node024", "node025"
     -- , "node14", "node020"
+    , "args"
     , "bitops"
     , "casts"
     , "newints"
@@ -280,6 +285,7 @@ baseLibraryTests = MkTestPool "Base library" [Chez, Node]
   [ "system_file001"
   , "data_bits001"
   , "system_info001"
+  , "system_signal001", "system_signal002", "system_signal003", "system_signal004"
   ]
 
 -- same behavior as `baseLibraryTests`
