@@ -183,6 +183,7 @@ To see more debug information from the REPL there are several options one can se
    :widths: 20, 20
 
    ``:di <name>``, show debugging information for a name
+   ``:set showimplicits``, show values of implicit arguments
 
 Compiler Flags
 ==============
