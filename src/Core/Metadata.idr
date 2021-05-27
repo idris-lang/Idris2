@@ -98,7 +98,7 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
-       sourceIdent : Either VirtualIdent (SourceFileType, FileName)
+       sourceIdent : OriginDesc
 
        -- Semantic Highlighting
        -- Posmap of known semantic decorations
@@ -124,7 +124,7 @@ Show Metadata where
       " semanticDefaults: " ++ show semanticDefaults
 
 export
-initMetadata : Either VirtualIdent (SourceFileType, FileName) -> Metadata
+initMetadata : OriginDesc -> Metadata
 initMetadata finfo = MkMetadata
   { lhsApps = []
   , names = []
@@ -309,19 +309,6 @@ addSemanticAlias from to
        put MD $ { semanticAliases $= insert (from, to) } meta
 
 export
-compareOrigins : (wdir : String)
-              -> (sdir : Maybe String)
-              -> Either VirtualIdent (SourceFileType, FileName)
-              -> OriginDesc
-              -> Bool
-compareOrigins _ _ (Left ident) (Virtual ident') = ident == ident'
-compareOrigins wdir sdir (Right (IdrSrc, fname)) (PhysicalIdrSrc modIdent) =
-  pathToNS' wdir sdir fname == Just modIdent
-compareOrigins wdir sdir (Right (PkgSrc, fname)) (PhysicalPkgSrc fname') =
-  fname == fname'
-compareOrigins {} = False
-
-export
 addSemanticDecorations : {auto m : Ref MD Metadata} ->
                          {auto c : Ref Ctxt Defs} ->
    SemanticDecorations -> Core ()
@@ -329,11 +316,9 @@ addSemanticDecorations decors
     = do meta <- get MD
          defs <- get Ctxt
          let posmap = meta.semanticHighlighting
-         let wdir = defs.options.dirs.working_dir
-         let sdir = defs.options.dirs.source_dir
          let (newDecors,droppedDecors) =
                span
-                 ( compareOrigins wdir sdir meta.sourceIdent
+                 ( (meta.sourceIdent ==)
                  . Builtin.fst
                  . Builtin.fst )
                  decors

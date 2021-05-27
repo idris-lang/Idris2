@@ -180,7 +180,7 @@ buildMod loc num len mod
                     Nothing => True
                     Just t => any (\x => x > t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
-        m <- newRef MD (initMetadata (Right (IdrSrc, src)))
+        m <- newRef MD (initMetadata (PhysicalIdrSrc ident))
         put Syn initSyntax
 
         if needsBuilding
@@ -223,7 +223,11 @@ buildDeps fname
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       put MD (initMetadata (Right (IdrSrc, fname)))
+                       defs <- get Ctxt
+                       let wdir = defs.options.dirs.working_dir
+                       let sdir = defs.options.dirs.source_dir
+                       modIdent <- pathToNS wdir sdir fname
+                       put MD (initMetadata (PhysicalIdrSrc modIdent))
                        mainttc <- getTTCFileName fname "ttc"
                        log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc

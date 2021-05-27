@@ -149,9 +149,9 @@ outputSyntaxHighlighting fname loadResult = do
     defs <- get Ctxt
     let wdir = defs.options.dirs.working_dir
     let sdir = defs.options.dirs.source_dir
+    modIdent <- pathToNS wdir sdir fname
 
-
-    let allNames = filter (compareOrigins wdir sdir (Right (IdrSrc, fname)) . fst . fst)
+    let allNames = filter ((PhysicalIdrSrc modIdent ==) . fst . fst)
                      $ toList meta.nameLocMap
     --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)

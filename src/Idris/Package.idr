@@ -285,11 +285,15 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
-compileMain mainn mmod exec
-    = do m <- newRef MD (initMetadata (Right (IdrSrc, mmod)))
+compileMain mainn mfilename exec
+    = do defs <- get Ctxt
+         let wdir = defs.options.dirs.working_dir
+         let sdir = defs.options.dirs.source_dir
+         modIdent <- pathToNS wdir sdir mfilename
+         m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
-         ignore $ loadMainFile mmod
-         ignore $ compileExp (PRef (justFC defaultFC) mainn) exec
+         ignore $ loadMainFile mfilename
+         ignore $ compileExp (PRef replFC mainn) exec
 
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
@@ -591,7 +595,14 @@ runRepl : {auto c : Ref Ctxt Defs} ->
           Core ()
 runRepl fname = do
   u <- newRef UST initUState
-  let origin = maybe (Left Interactive) (Right . (IdrSrc, )) fname
+  origin <- maybe
+    (pure $ Virtual Interactive) (\fname => do
+      defs <- get Ctxt
+      let wdir = defs.options.dirs.working_dir
+      let sdir = defs.options.dirs.source_dir
+      modIdent <- pathToNS wdir sdir fname
+      pure (PhysicalIdrSrc modIdent)
+      ) fname
   m <- newRef MD (initMetadata origin)
   the (Core ()) $
       case fname of

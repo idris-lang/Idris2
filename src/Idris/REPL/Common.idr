@@ -136,7 +136,7 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
-               (origin : Either VirtualIdent (SourceFileType, FileName)) ->
+               (origin : OriginDesc) ->
                Core ()
 resetContext origin
     = do defs <- get Ctxt

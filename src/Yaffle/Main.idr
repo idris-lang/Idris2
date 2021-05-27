@@ -47,7 +47,10 @@ yaffleMain : String -> List String -> Core ()
 yaffleMain fname args
     = do defs <- initDefs
          c <- newRef Ctxt defs
-         m <- newRef MD (initMetadata (Right (IdrSrc, fname)))
+         let wdir = defs.options.dirs.working_dir
+         let sdir = defs.options.dirs.source_dir
+         modIdent <- pathToNS wdir sdir fname
+         m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
          d <- getDirs
          t <- processArgs args
