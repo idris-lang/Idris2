@@ -357,7 +357,7 @@ Hashable (PrimFn arity) where
     DoubleExp =>
       h `hashWithSalt` 24
     DoubleLog =>
-      h `hashWithSalt` 27
+      h `hashWithSalt` 25
     DoubleSin =>
       h `hashWithSalt` 26
     DoubleCos =>
