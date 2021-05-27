@@ -154,12 +154,31 @@ Value *div_Bits64(Value *x, Value *y)
 }
 Value *div_Int(Value *x, Value *y)
 {
-    return (Value *)makeInt(((Value_Int *)x)->i64 / ((Value_Int *)y)->i64);
+    // Correction term added to convert from truncated division (C default) to Euclidean division
+    // For proof of correctness, see Division and Modulus for Computer Scientists (Daan Leijen)
+    // https://www.microsoft.com/en-us/research/publication/division-and-modulus-for-computer-scientists/
+
+    int64_t num = ((Value_Int *)x)->i64;
+    int64_t denom = ((Value_Int *)y)->i64;
+    int64_t rem = num % denom;
+    return (Value *)makeInt(
+        num / denom
+        + ((rem < 0) ? (denom < 0) ? 1 : -1 : 0)
+    );
 }
 Value *div_Integer(Value *x, Value *y)
 {
+    mpz_t rem, yq;
+    mpz_inits(rem, yq, NULL);
+
+    mpz_mod(rem, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+    mpz_sub(yq, ((Value_Integer *)x)->i, rem);
+
     Value_Integer *retVal = makeInteger();
-    mpz_fdiv_q(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+    mpz_divexact(retVal->i, yq, ((Value_Integer *)y)->i);
+
+    mpz_clears(rem, yq, NULL);
+
     return (Value *)retVal;
 }
 Value *div_double(Value *x, Value *y)
@@ -186,7 +205,10 @@ Value *mod_Bits64(Value *x, Value *y)
 }
 Value *mod_Int(Value *x, Value *y)
 {
-    return (Value *)makeInt(((Value_Int *)x)->i64 % ((Value_Int *)y)->i64);
+    int64_t num = ((Value_Int *)x)->i64;
+    int64_t denom = ((Value_Int *)y)->i64;
+    denom = (denom < 0) ? - denom : denom;
+    return (Value *)makeInt(num % denom + (num < 0 ? denom : 0));
 }
 Value *mod_Integer(Value *x, Value *y)
 {
