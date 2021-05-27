@@ -1,7 +1,7 @@
 include config.mk
 
 # Idris 2 executable used to bootstrap
-export IDRIS2_BOOT ?= idris2 ${EXTRA_ARGS}
+export IDRIS2_BOOT ?= idris2
 
 # Idris 2 executable we're building
 NAME = idris2
