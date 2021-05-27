@@ -23,20 +23,6 @@ FileName : Type
 FileName = String
 
 public export
-data SourceFileType = IdrSrc | PkgSrc
-
-export
-Show SourceFileType where
-  show IdrSrc = "IdrisSrc"
-  show PkgSrc = "PkgSrc"
-
-export
-Eq SourceFileType where
-  IdrSrc == IdrSrc = True
-  PkgSrc == PkgSrc = True
-  _      == _      = False
-
-public export
 data VirtualIdent : Type where
   Interactive : VirtualIdent
 

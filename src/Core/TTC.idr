@@ -38,17 +38,6 @@ TTC VirtualIdent where
       _ => corrupt "VirtualIdent"
 
 export
-TTC SourceFileType where
-  toBuf b IdrSrc = tag 0
-  toBuf b PkgSrc = tag 1
-
-  fromBuf b =
-    case !getTag of
-      0 => pure IdrSrc
-      1 => pure PkgSrc
-      _ => corrupt "SourceFileType"
-
-export
 TTC OriginDesc where
   toBuf b (PhysicalIdrSrc ident) = do tag 0; toBuf b ident
   toBuf b (PhysicalPkgSrc fname) = do tag 1; toBuf b fname
