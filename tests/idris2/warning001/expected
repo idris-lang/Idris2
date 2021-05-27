@@ -19,3 +19,4 @@ You may be unintentionally shadowing the associated global definitions:
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   g is shadowing Main.g
+1/1: Building Holes (Holes.idr)
