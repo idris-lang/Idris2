@@ -32,6 +32,10 @@ SomeBits Int where
 SomeBits Integer where
     one = 1
 
+interface Num a => Ord a => NumOrd a where
+
+Num a => Ord a => NumOrd a where
+
 main : IO ()
 main = do
     let ints = the (HList _) [
@@ -51,6 +55,7 @@ main = do
         the Int 1000000000000000000,
         the Int 9223372036854775807, -- Int max
         the Integer $ -9223372036854775809, -- Int min - 1
+        the Integer 0,
         the Integer 9223372036854775808 -- Int max + 1
     ]
 
@@ -107,3 +112,14 @@ main = do
     put $ imapProperty SomeBits (.&. 0xAA) ints
     put $ imapProperty SomeBits (.|. 0xAA) ints
     put $ imapProperty SomeBits (`xor` 0xAA) ints
+
+    putStrLn "Comparisons:"
+    put $ imapProperty NumOrd (< 0) ints
+    put $ imapProperty NumOrd (< 1) ints
+    put $ imapProperty NumOrd (> 0) ints
+    put $ imapProperty NumOrd (> 1) ints
+    put $ imapProperty NumOrd (== 0) ints
+    put $ imapProperty NumOrd (<= 0) ints
+    put $ imapProperty NumOrd (<= 1) ints
+    put $ imapProperty NumOrd (>= 0) ints
+    put $ imapProperty NumOrd (>= 1) ints
