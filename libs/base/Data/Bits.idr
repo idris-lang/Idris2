@@ -118,6 +118,20 @@ Bits Bits32 where
   oneBits     = 0xffffffff
 
 public export %inline
+Bits Bits64 where
+  Index       = Subset Nat (`LT` 64)
+  (.&.)       = prim__and_Bits64
+  (.|.)       = prim__or_Bits64
+  xor         = prim__xor_Bits64
+  bit         = (1 `shiftL`)
+  zeroBits    = 0
+  testBit x i = (x .&. bit i) /= 0
+  shiftR x    = prim__shr_Bits64 x . fromInteger . cast . fst
+  shiftL x    = prim__shl_Bits64 x . fromInteger . cast . fst
+  complement  = xor 0xffffffffffffffff
+  oneBits     = 0xffffffffffffffff
+
+public export %inline
 Bits Int where
   Index       = Subset Nat (`LT` 64)
   (.&.)       = prim__and_Int
@@ -128,6 +142,20 @@ Bits Int where
   testBit x i = (x .&. bit i) /= 0
   shiftR x    = prim__shr_Int x . cast . fst
   shiftL x    = prim__shl_Int x . cast . fst
+  complement  = xor (-1)
+  oneBits     = (-1)
+
+public export %inline
+Bits Integer where
+  Index       = Nat
+  (.&.)       = prim__and_Integer
+  (.|.)       = prim__or_Integer
+  xor         = prim__xor_Integer
+  bit         = (1 `shiftL`)
+  zeroBits    = 0
+  testBit x i = (x .&. bit i) /= 0
+  shiftR x    = prim__shr_Integer x . cast
+  shiftL x    = prim__shl_Integer x . cast
   complement  = xor (-1)
   oneBits     = (-1)
 

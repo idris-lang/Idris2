@@ -1,5 +1,6 @@
 module TestIntegers
 
+import Data.Bits
 import Data.List.Quantifiers
 
 put : Show a => a -> IO ()
@@ -9,6 +10,27 @@ castAllTo : (to : Type)
          -> {0 types : List Type}
          -> All (flip Cast to) types => HList types -> List to
 castAllTo to = forget . imapProperty (flip Cast to) (cast {to})
+
+interface Num a => Bits a => SomeBits a where
+    one : Index {a}
+
+SomeBits Bits8 where
+    one = fromNat 1
+
+SomeBits Bits16 where
+    one = fromNat 1
+
+SomeBits Bits32 where
+    one = fromNat 1
+
+SomeBits Bits64 where
+    one = fromNat 1
+
+SomeBits Int where
+    one = fromNat 1
+
+SomeBits Integer where
+    one = 1
 
 main : IO ()
 main = do
@@ -76,3 +98,12 @@ main = do
     putStrLn "Division Euclidean:"
     put $ imapProperty Integral (\x => (x `div` 19) * 19 + (x `mod` 19)) ints
     put $ imapProperty Integral (\x => (x `div` -19) * -19 + (x `mod` -19)) ints
+
+    putStrLn "Shift:"
+    put $ imapProperty SomeBits (`shiftL` one) ints
+    put $ imapProperty SomeBits (`shiftR` one) ints
+
+    putStrLn "Bit Ops:"
+    put $ imapProperty SomeBits (.&. 0xAA) ints
+    put $ imapProperty SomeBits (.|. 0xAA) ints
+    put $ imapProperty SomeBits (`xor` 0xAA) ints
