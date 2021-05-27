@@ -112,23 +112,25 @@ export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               Core ()
+               Core (List Error)
 emitWarnings
     = do defs <- get Ctxt
          let ws = reverse (warnings defs)
          session <- getSession
          if (session.warningsAsErrors)
-           then traverse_ emitError (WarningAsError <$> ws)
-           else traverse_ emitWarning ws
+           then let errs = WarningAsError <$> ws in
+                errs <$ traverse_ emitError errs
+           else [] <$ traverse_ emitWarning ws
 
 export
 emitWarningsAndErrors : {auto c : Ref Ctxt Defs} ->
                         {auto o : Ref ROpts REPLOpts} ->
                         {auto s : Ref Syn SyntaxInfo} ->
-                        List Error -> Core ()
+                        List Error -> Core (List Error)
 emitWarningsAndErrors errs = do
-  emitWarnings
+  ws <- emitWarnings
   traverse_ emitError errs
+  pure ws
 
 getFCLine : FC -> Maybe Int
 getFCLine = map startLine . isNonEmptyFC

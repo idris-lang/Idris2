@@ -191,8 +191,8 @@ buildMod loc num len mod
               process {u} {m} msg src
 
         defs <- get Ctxt
-        emitWarningsAndErrors (if null errs then ferrs else errs)
-        pure (if null errs then ferrs else ferrs ++ errs)
+        ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
+        pure (ws ++ if null errs then ferrs else ferrs ++ errs)
   where
     isModuleNotFound : Error -> Bool
     isModuleNotFound e = case e of
