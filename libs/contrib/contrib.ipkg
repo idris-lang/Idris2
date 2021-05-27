@@ -1,7 +1,7 @@
 package contrib
 version = 0.3.0
 
-opts = "--ignore-missing-ipkg --no-shadowing-warning"
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
@@ -118,6 +118,7 @@ modules = Control.ANSI,
           Data.Vect.Properties.Index,
           Data.Vect.Properties.Foldr,
           Data.Vect.Properties.Map,
+          Data.Vect.Properties.Fin,
           Data.Vect.Extra,
           Data.Vect.Sort,
 

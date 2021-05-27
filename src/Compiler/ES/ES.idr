@@ -481,6 +481,10 @@ jsPrim (NS _ (UN "prim__os")) [] =
     pure sysos
 jsPrim (NS _ (UN "void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"  -- DEPRECATED. TODO: remove when bootstrap has been updated
 jsPrim (NS _ (UN "prim__void")) [_, _] = jsCrashExp $ jsString $ "Error: Executed 'void'"
+jsPrim (NS _ (UN "prim__codegen")) [] = do
+    (cg :: _) <- ccTypes <$> get ESs
+        | _ => pure "\"javascript\""
+    pure $ jsString cg
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 tag2es : Either Int String -> String

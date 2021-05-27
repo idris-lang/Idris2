@@ -1172,6 +1172,15 @@ clearCtxt
     resetElab : Options -> Options
     resetElab = record { elabDirectives = defaultElab }
 
+export
+getFieldNames : Context -> Namespace -> List Name
+getFieldNames ctxt recNS
+  = let nms = resolvedAs ctxt in
+    keys $ flip filterBy nms $ \ n =>
+      case isRF n of
+        Nothing => False
+        Just (ns, field) => ns == recNS
+
 -- Find similar looking names in the context
 getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
 getSimilarNames nm = case userNameRoot nm of
@@ -2565,8 +2574,8 @@ setSession sopts
          put Ctxt (record { options->session = sopts } defs)
 
 export
-recordWarning : {auto c : Ref Ctxt Defs} ->
-                Warning -> Core ()
+recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
-         put Ctxt (record { warnings $= (w ::) } defs)
+         session <- getSession
+         put Ctxt $ record { warnings $= (w ::) } defs

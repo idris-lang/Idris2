@@ -152,6 +152,10 @@ cType fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
+cftySpec fc CFInt8 = pure "char"
+cftySpec fc CFInt16 = pure "short"
+cftySpec fc CFInt32 = pure "int"
+cftySpec fc CFInt64 = pure "long"
 cftySpec fc CFUnsigned8 = pure "unsigned-char"
 cftySpec fc CFUnsigned16 = pure "unsigned-short"
 cftySpec fc CFUnsigned32 = pure "unsigned-int"

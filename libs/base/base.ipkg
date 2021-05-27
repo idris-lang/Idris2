@@ -1,7 +1,7 @@
 package base
 version = 0.3.0
 
-opts = "--ignore-missing-ipkg --no-shadowing-warning"
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.App,
           Control.App.Console,
@@ -83,10 +83,11 @@ modules = Control.App,
           Language.Reflection.TTImp,
 
           System,
-          System.Concurrency,
           System.Clock,
+          System.Concurrency,
           System.Directory,
-          System.File,
           System.FFI,
+          System.File,
           System.Info,
-          System.REPL
+          System.REPL,
+          System.Signal

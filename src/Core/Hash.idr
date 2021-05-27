@@ -227,6 +227,14 @@ Hashable CFType where
       h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
     CFUser n xs =>
       h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
+    CFInt8 =>
+      h `hashWithSalt` 17
+    CFInt16 =>
+      h `hashWithSalt` 18
+    CFInt32 =>
+      h `hashWithSalt` 19
+    CFInt64 =>
+      h `hashWithSalt` 20
 
 export
 Hashable Constant where

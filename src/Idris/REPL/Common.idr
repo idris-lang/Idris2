@@ -9,7 +9,7 @@ import Core.TT
 import Core.Unify
 import Core.UnifyState
 
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Error
 import Idris.IDEMode.Commands
 import Idris.IDEMode.Holes
@@ -93,13 +93,6 @@ emitProblem a replDocCreator idemodeDocCreator getFC
     addOne : (Int, Int) -> (Int, Int)
     addOne (l, c) = (l + 1, c + 1)
 
-export
-emitWarning : {auto c : Ref Ctxt Defs} ->
-              {auto o : Ref ROpts REPLOpts} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              Warning -> Core ()
-emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
-
 -- Display an error message from checking a source file
 export
 emitError : {auto c : Ref Ctxt Defs} ->
@@ -109,14 +102,35 @@ emitError : {auto c : Ref Ctxt Defs} ->
 emitError e = emitProblem e display perror getErrorLoc
 
 export
+emitWarning : {auto c : Ref Ctxt Defs} ->
+              {auto o : Ref ROpts REPLOpts} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              Warning -> Core ()
+emitWarning w = emitProblem w displayWarning pwarning getWarningLoc
+
+export
 emitWarnings : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                {auto s : Ref Syn SyntaxInfo} ->
-               Core ()
+               Core (List Error)
 emitWarnings
     = do defs <- get Ctxt
-         traverse_ emitWarning (reverse (warnings defs))
-         put Ctxt (record { warnings = [] } defs)
+         let ws = reverse (warnings defs)
+         session <- getSession
+         if (session.warningsAsErrors)
+           then let errs = WarningAsError <$> ws in
+                errs <$ traverse_ emitError errs
+           else [] <$ traverse_ emitWarning ws
+
+export
+emitWarningsAndErrors : {auto c : Ref Ctxt Defs} ->
+                        {auto o : Ref ROpts REPLOpts} ->
+                        {auto s : Ref Syn SyntaxInfo} ->
+                        List Error -> Core (List Error)
+emitWarningsAndErrors errs = do
+  ws <- emitWarnings
+  traverse_ emitError errs
+  pure ws
 
 getFCLine : FC -> Maybe Int
 getFCLine = map startLine . isNonEmptyFC

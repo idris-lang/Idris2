@@ -116,6 +116,14 @@ int idris2_unsetenv(const char *name) {
 #endif
 }
 
+int idris2_getPID() {
+#ifdef _WIN32
+    return win32_getPID();
+#else
+    return getpid();
+#endif
+}
+
 // get the number of processors configured
 long idris2_getNProcessors() {
 #ifdef _WIN32

@@ -80,7 +80,14 @@ findUniqueBindableNames fc arg env used t
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
                     ns <- lookupCtxtName (UN n) ctxt
-                    pure $ MkPair n . map fst <$> Lib.fromList ns
+                    let ns = flip mapMaybe ns $ \(n, _, d) =>
+                               case definition d of
+                                -- do not warn about holes: `?a` is not actually
+                                -- getting shadowed as it will not become a
+                                -- toplevel declaration
+                                 Hole _ _ => Nothing
+                                 _ => pure n
+                    pure $ MkPair n <$> Lib.fromList ns
             whenJust (Lib.fromList ns) $ recordWarning . ShadowingGlobalDefs fc
        pure assoc
 

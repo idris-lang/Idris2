@@ -17,13 +17,15 @@ data Fin : (n : Nat) -> Type where
     FZ : Fin (S k)
     FS : Fin k -> Fin (S k)
 
-||| Cast between Fins with equal indices
+||| Coerce between Fins with equal indices
 public export
-cast : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
-cast {n = S _} eq FZ = FZ
-cast {n = Z} eq FZ impossible
-cast {n = S _} eq (FS k) = FS (cast (succInjective _ _ eq) k)
-cast {n = Z} eq (FS k) impossible
+coerce : {n : Nat} -> (0 eq : m = n) -> Fin m -> Fin n
+coerce {n = S _} eq FZ = FZ
+coerce {n = Z} eq FZ impossible
+coerce {n = S _} eq (FS k) = FS (coerce (succInjective _ _ eq) k)
+coerce {n = Z} eq (FS k) impossible
+
+%transform "coerce-identity" coerce = replace {p = Fin}
 
 export
 Uninhabited (Fin Z) where
@@ -221,19 +223,21 @@ namespace Equality
   transitive FZ FZ = FZ
   transitive (FS prf) (FS prg) = FS (transitive prf prg)
 
-  ||| Pointwise equality is compatible with cast
+  ||| Pointwise equality is compatible with coerce
   export
-  castEq : {k : Fin m} -> (0 eq : m = n) -> cast eq k ~~~ k
-  castEq {k = FZ} Refl = FZ
-  castEq {k = FS k} Refl = FS (castEq _)
+  coerceEq : {k : Fin m} -> (0 eq : m = n) -> coerce eq k ~~~ k
+  coerceEq {k = FZ} Refl = FZ
+  coerceEq {k = FS k} Refl = FS (coerceEq _)
 
-  ||| The actual proof used by cast is irrelevant
+  ||| The actual proof used by coerce is irrelevant
   export
-  congCast : {0 n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
-             {0 eq1 : m = n} -> {0 eq2 : p = q} ->
-             k ~~~ l ->
-             cast eq1 k ~~~ cast eq2 l
-  congCast eq = transitive (castEq _) (transitive eq $ symmetric $ castEq _)
+  congCoerce : {0 n, q : Nat} -> {k : Fin m} -> {l : Fin p} ->
+               {0 eq1 : m = n} -> {0 eq2 : p = q} ->
+               k ~~~ l ->
+               coerce eq1 k ~~~ coerce eq2 l
+  congCoerce eq
+    = transitive (coerceEq _)
+    $ transitive eq $ symmetric $ coerceEq _
 
   ||| Last is congruent wrt index equality
   export

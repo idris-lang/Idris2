@@ -42,4 +42,3 @@ main = do totalChecks
           Right l8 <- readFile "test.txt"
             | Left err => putStrLn $ show err
           putStrLn l8
-

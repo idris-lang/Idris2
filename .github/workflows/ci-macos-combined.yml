@@ -56,7 +56,7 @@ jobs:
           echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
-        run: make all && make install
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
         shell: bash
       - name: Test self-hosted
         run: make test INTERACTIVE=''

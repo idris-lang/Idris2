@@ -180,7 +180,7 @@ natToFinToNat (S k) (LTESucc lte) = cong S (natToFinToNat k lte)
 ||| as illustated by the relations with the `last` function.
 public export
 (+) : {m, n : Nat} -> Fin m -> Fin (S n) -> Fin (m + n)
-(+) FZ y = cast (cong S $ plusCommutative n (pred m)) (weakenN (pred m) y)
+(+) FZ y = coerce (cong S $ plusCommutative n (pred m)) (weakenN (pred m) y)
 (+) (FS x) y = FS (x + y)
 
 ||| Multiplication of `Fin`s as bounded naturals.
@@ -200,7 +200,7 @@ finToNatPlusHomo : {m, n : Nat} -> (x : Fin m) -> (y : Fin (S n)) ->
                    finToNat (x + y) = finToNat x + finToNat y
 finToNatPlusHomo FZ _
   = finToNatQuotient $ transitive
-     (castEq _)
+     (coerceEq _)
      (weakenNNeutral _ _)
 finToNatPlusHomo (FS x) y = cong S (finToNatPlusHomo x y)
 
@@ -221,7 +221,7 @@ export
 plusPreservesLast : (m, n : Nat) -> Fin.last {n=m} + Fin.last {n} = Fin.last
 plusPreservesLast Z     n
   = homoPointwiseIsEqual $ transitive
-      (castEq _)
+      (coerceEq _)
       (weakenNNeutral _ _)
 plusPreservesLast (S m) n = cong FS (plusPreservesLast m n)
 
@@ -238,7 +238,7 @@ multPreservesLast (S m) n = Calc $
 export
 plusSuccRightSucc : {m, n : Nat} -> (left : Fin m) -> (right : Fin (S n)) ->
                     FS (left + right) ~~~ left + FS right
-plusSuccRightSucc FZ        right = FS $ congCast reflexive
+plusSuccRightSucc FZ        right = FS $ congCoerce reflexive
 plusSuccRightSucc (FS left) right = FS $ plusSuccRightSucc left right
 
 -- Relations to `Fin`-specific `shift` and `weaken`
@@ -247,7 +247,7 @@ export
 shiftAsPlus : {m, n : Nat} -> (k : Fin (S m)) ->
               shift n k ~~~ last {n} + k
 shiftAsPlus {n=Z}   k =
-  symmetric $ transitive (castEq _) (weakenNNeutral _ _)
+  symmetric $ transitive (coerceEq _) (weakenNNeutral _ _)
 shiftAsPlus {n=S n} k = FS (shiftAsPlus k)
 
 export
@@ -267,15 +267,15 @@ weakenNOfPlus :
   {m, n : Nat} -> (k : Fin m) -> (l : Fin (S n)) ->
   weakenN w (k + l) ~~~ weakenN w k + l
 weakenNOfPlus FZ l
-  = transitive (congWeakenN (castEq _))
+  = transitive (congWeakenN (coerceEq _))
   $ transitive (weakenNPlusHomo l)
-  $ symmetric (castEq _)
+  $ symmetric (coerceEq _)
 weakenNOfPlus (FS k) l = FS (weakenNOfPlus k l)
 -- General addition properties (continued)
 
 export
 plusZeroLeftNeutral : (k : Fin (S n)) -> FZ + k ~~~ k
-plusZeroLeftNeutral k = transitive (castEq _) (weakenNNeutral _ k)
+plusZeroLeftNeutral k = transitive (coerceEq _) (weakenNNeutral _ k)
 
 export
 congPlusLeft : {m, n, p : Nat} -> {k : Fin m} -> {l : Fin n} ->

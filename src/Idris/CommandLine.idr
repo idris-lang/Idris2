@@ -48,6 +48,17 @@ export
 Show DirCommand where
   show LibDir = "--libdir"
 
+||| Help topics
+public export
+data HelpTopic
+  =
+    ||| Interactive debugging topics
+   HelpLogging
+
+recogniseHelpTopic : String -> Maybe HelpTopic
+recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic _ = Nothing
+
 ||| CLOpt - possible command line options
 public export
 data CLOpt
@@ -77,7 +88,7 @@ data CLOpt
    ||| Display Idris version
   Version |
    ||| Display help text
-  Help |
+  Help (Maybe HelpTopic) |
    ||| Suppress the banner
   NoBanner |
    ||| Run Idris 2 in quiet mode
@@ -121,6 +132,8 @@ data CLOpt
   Timing |
   DebugElabCheck |
   BlodwenPaths |
+  ||| Treat warnings as errors
+  WarningsAsErrors |
   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
   ||| Generate bash completion info
@@ -207,7 +220,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
-           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
               (Just "Do not print shadowing warnings"),
 
            optSeparator,
@@ -276,7 +291,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [] [Help]
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
 
            -- Internal debugging options
