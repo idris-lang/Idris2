@@ -130,6 +130,8 @@ data CLOpt
   Timing |
   DebugElabCheck |
   BlodwenPaths |
+  ||| Treat warnings as errors
+  WarningsAsErrors |
   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
   ||| Generate bash completion info
@@ -216,7 +218,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Generate profile data when compiling, if supported"),
 
            optSeparator,
-           MkOpt ["--no-shadowing-warning"] [] [IgnoreShadowingWarnings]
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
               (Just "Do not print shadowing warnings"),
 
            optSeparator,

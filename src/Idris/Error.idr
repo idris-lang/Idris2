@@ -152,6 +152,27 @@ ploc2 fc1 fc2 =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
 
 export
+pwarning : {auto c : Ref Ctxt Defs} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
+           Warning -> Core (Doc IdrisAnn)
+pwarning (UnreachableClause fc env tm)
+    = pure $ errorDesc (reflow "Unreachable clause:"
+        <++> code !(pshow env tm))
+        <+> line <+> !(ploc fc)
+pwarning (ShadowingGlobalDefs _ ns)
+    = pure $ vcat
+    $ reflow "We are about to implicitly bind the following lowercase names."
+   :: reflow "You may be unintentionally shadowing the associated global definitions:"
+   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
+                            :: reflow "is shadowing"
+                            :: punctuate comma (map pretty (forget ns)))
+          (forget ns)
+
+pwarning (Deprecated s)
+    = pure $ pretty "Deprecation warning:" <++> pretty s
+
+export
 perror : {auto c : Ref Ctxt Defs} ->
          {auto s : Ref Syn SyntaxInfo} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -467,28 +488,7 @@ perror (MaybeMisspelling err ns) = pure $ !(perror err) <+> case ns of
        reflow "Did you mean any of:"
        <++> concatWith (surround (comma <+> space)) (map pretty xs)
        <+> comma <++> reflow "or" <++> pretty x <+> "?"
-
-
-export
-pwarning : {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           {auto o : Ref ROpts REPLOpts} ->
-           Warning -> Core (Doc IdrisAnn)
-pwarning (UnreachableClause fc env tm)
-    = pure $ errorDesc (reflow "Unreachable clause:"
-        <++> code !(pshow env tm))
-        <+> line <+> !(ploc fc)
-pwarning (ShadowingGlobalDefs _ ns)
-    = pure $ vcat
-    $ reflow "We are about to implicitly bind the following lowercase names."
-   :: reflow "You may be unintentionally shadowing the associated global definitions:"
-   :: map (\ (n, ns) => indent 2 $ hsep $ pretty n
-                            :: reflow "is shadowing"
-                            :: punctuate comma (map pretty (forget ns)))
-          (forget ns)
-
-pwarning (Deprecated s)
-    = pure $ pretty "Deprecation warning:" <++> pretty s
+perror (WarningAsError warn) = pwarning warn
 
 prettyMaybeLoc : Maybe FC -> Doc IdrisAnn
 prettyMaybeLoc Nothing = emptyDoc

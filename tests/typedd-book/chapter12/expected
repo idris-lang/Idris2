@@ -1,5 +1,5 @@
-1/10: Building ArithState (ArithState.idr)
-2/10: Building DataStore (DataStore.idr)
+1 /10: Building ArithState (ArithState.idr)
+2 /10: Building DataStore (DataStore.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
@@ -12,11 +12,11 @@ You may be unintentionally shadowing the associated global definitions:
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
-3/10: Building Record (Record.idr)
-4/10: Building State (State.idr)
-5/10: Building StateMonad (StateMonad.idr)
-6/10: Building Traverse (Traverse.idr)
-7/10: Building TreeLabel (TreeLabel.idr)
-8/10: Building TreeLabelState (TreeLabelState.idr)
-9/10: Building TreeLabelType (TreeLabelType.idr)
+3 /10: Building Record (Record.idr)
+4 /10: Building State (State.idr)
+5 /10: Building StateMonad (StateMonad.idr)
+6 /10: Building Traverse (Traverse.idr)
+7 /10: Building TreeLabel (TreeLabel.idr)
+8 /10: Building TreeLabelState (TreeLabelState.idr)
+9 /10: Building TreeLabelType (TreeLabelType.idr)
 10/10: Building All (All.idr)

@@ -658,6 +658,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType (Directive d)    = POpt
     optType (BuildDir f)     = POpt
     optType (OutputDir f)    = POpt
+    optType WarningsAsErrors = POpt
     optType (ConsoleWidth n) = PIgnore
     optType (Color b)        = PIgnore
     optType NoBanner         = PIgnore

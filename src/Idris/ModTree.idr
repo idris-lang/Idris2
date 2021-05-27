@@ -21,6 +21,7 @@ import Idris.Pretty
 
 import Data.List
 import Libraries.Data.StringMap
+import Libraries.Data.String.Extra as String
 
 import System.Directory
 import System.File
@@ -167,33 +168,36 @@ buildMod loc num len mod
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
-        ttcTime <- catch (do t <- fnameModified mttc
-                             pure (Just t))
-                         (\err => pure Nothing)
+
+        ttcTime <- breakpoint (fnameModified mttc)
         srcTime <- fnameModified src
         depTimes <- traverse (\f => do t <- fnameModified f
                                        pure (f, t)) depFiles
         let needsBuilding =
                case ttcTime of
-                    Nothing => True
-                    Just t => any (\x => x > t) (srcTime :: map snd depTimes)
+                    Left _ => True
+                    Right t => any (\x => x > t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
         m <- newRef MD (initMetadata src)
         put Syn initSyntax
 
-        if needsBuilding
-           then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
-                   [] <- process {u} {m} msg src
-                      | errs => do emitWarnings
-                                   traverse_ emitError errs
-                                   pure (ferrs ++ errs)
-                   emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
-           else do emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
+        errs <- if (not needsBuilding) then pure [] else
+           do let pad = minus (length $ show len) (length $ show num)
+              let msg : Doc IdrisAnn
+                  = pretty num <+> pretty (String.replicate pad ' ')
+                    <+> slash <+> pretty len <+> colon
+                    <++> pretty "Building" <++> pretty mod.buildNS
+                    <++> parens (pretty src)
+              process {u} {m} msg src
+
+        defs <- get Ctxt
+        emitWarningsAndErrors (if null errs then ferrs else errs)
+        pure (if null errs then ferrs else ferrs ++ errs)
+  where
+    isModuleNotFound : Error -> Bool
+    isModuleNotFound e = case e of
+      (ModuleNotFound _ _) => True
+      _ => False
 
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

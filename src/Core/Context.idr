@@ -2574,8 +2574,8 @@ setSession sopts
          put Ctxt (record { options->session = sopts } defs)
 
 export
-recordWarning : {auto c : Ref Ctxt Defs} ->
-                Warning -> Core ()
+recordWarning : {auto c : Ref Ctxt Defs} -> Warning -> Core ()
 recordWarning w
     = do defs <- get Ctxt
-         put Ctxt (record { warnings $= (w ::) } defs)
+         session <- getSession
+         put Ctxt $ record { warnings $= (w ::) } defs
