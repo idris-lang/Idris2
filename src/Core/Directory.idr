@@ -19,6 +19,8 @@ import System.Info
 %default total
 
 -- Return the name of the first file available in the list
+-- Used in LSP.
+export
 firstAvailable : {auto c : Ref Ctxt Defs} ->
                  List String -> Core (Maybe String)
 firstAvailable [] = pure Nothing

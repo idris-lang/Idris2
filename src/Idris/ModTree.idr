@@ -122,6 +122,7 @@ mkBuildMods mod
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
 -- Return an empty list if it turns out it's in the 'done' list
+export
 getBuildMods : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                FC -> (done : List BuildMod) ->
@@ -196,6 +197,7 @@ buildMod loc num len mod
                    traverse_ emitError ferrs
                    pure ferrs
 
+export
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
