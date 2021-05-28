@@ -20,13 +20,13 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Libraries.Data.StringMap
-import Libraries.Data.String.Extra as String
+import Data.Either
 
 import System.Directory
 import System.File
 
-import Libraries.Utils.Either
+import Libraries.Data.StringMap
+import Libraries.Data.String.Extra as String
 
 %default covering
 

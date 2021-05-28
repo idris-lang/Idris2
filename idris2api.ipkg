@@ -155,7 +155,6 @@ modules =
     Libraries.Text.Token,
 
     Libraries.Utils.Binary,
-    Libraries.Utils.Either,
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
