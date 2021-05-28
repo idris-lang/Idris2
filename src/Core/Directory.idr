@@ -18,6 +18,30 @@ import System.Info
 
 %default total
 
+public export
+data IdrSrcExt = E_idr | E_lidr | E_yaff | E_org | E_md
+
+public export
+Eq IdrSrcExt where
+  E_idr  == E_idr  = True
+  E_lidr == E_lidr = True
+  E_yaff == E_yaff = True
+  E_org  == E_org  = True
+  E_md   == E_md   = True
+  _      == _      = False
+
+public export
+Show IdrSrcExt where
+  show E_idr  = "idr"
+  show E_lidr = "lidr"
+  show E_yaff = "yaff"
+  show E_org  = "org"
+  show E_md   = "md"
+
+public export
+listOfExtensions : List IdrSrcExt
+listOfExtensions = [E_idr, E_lidr, E_yaff, E_org, E_md]
+
 -- Return the name of the first file available in the list
 -- Used in LSP.
 export
@@ -91,8 +115,7 @@ nsToSource loc ns
     = do d <- getDirs
          let fnameOrig = ModuleIdent.toPath ns
          let fnameBase = maybe fnameOrig (\srcdir => srcdir </> fnameOrig) (source_dir d)
-         let fs = map (\ext => fnameBase <.> ext)
-                      [".idr", ".lidr", ".yaff", ".org", ".md"]
+         let fs = map ((fnameBase <.>) . show) listOfExtensions
          Just f <- firstAvailable fs
             | Nothing => throw (ModuleNotFound loc ns)
          pure f

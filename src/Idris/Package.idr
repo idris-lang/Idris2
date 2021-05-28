@@ -367,22 +367,34 @@ installFrom builddir destdir ns
          pure ()
 
 installSrcFrom : {auto c : Ref Ctxt Defs} ->
-                 String -> String -> ModuleIdent -> Core ()
-installSrcFrom srcdir destdir ns
+                 String -> String -> (ModuleIdent, FileName) -> Core ()
+installSrcFrom wdir destdir (ns, srcRelPath)
     = do let srcfile = ModuleIdent.toPath ns
-         -- TODO support literate files too
-         let srcPath = srcdir </> srcfile <.> "idr"
+         let srcPath = wdir </> srcRelPath
+         let Just ext = extension srcPath
+           | _ => throw (InternalError $
+              """
+              Unexpected failure when installing source file:
+                \{srcPath}
+              Can't extract file extension.
+              """)
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
          let destPath = destdir </> destNest
-         let destFile = destdir </> srcfile <.> "idr"
+         let destFile = destdir </> srcfile <.> ext
 
          Right _ <- coreLift $ mkdirAll $ destNest
              | Left err => throw $ InternalError $ unlines
                              [ "Can't make directories " ++ show modPath
                              , show err ]
          coreLift $ putStrLn $ "Installing " ++ srcPath ++ " to " ++ destPath
+         when !(coreLift $ exists destFile) $ do
+           -- Grant read/write access to the file we are about to overwrite.
+           Right _ <- coreLift $ chmod destFile
+             (MkPermissions [Read, Write] [Read, Write] [Read, Write])
+             | Left err => throw $ UserError (show err)
+           pure ()
          Right _ <- coreLift $ copyFile srcPath destFile
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ srcPath ++ " to " ++ destPath
@@ -406,8 +418,8 @@ install pkg opts installSrc -- not used but might be in the future
          let build = build_dir (dirs (options defs))
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
-         let toInstall = maybe (map fst (modules pkg))
-                               (\ m => fst m :: map fst (modules pkg))
+         let toInstall = maybe (modules pkg)
+                               (:: modules pkg)
                                (mainmod pkg)
          Just wdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
@@ -426,10 +438,12 @@ install pkg opts installSrc -- not used but might be in the future
          -- We're in that directory now, so copy the files from
          -- wdir/build into it
          traverse_ (installFrom (wdir </> build)
-                                (installPrefix </> installDir pkg)) toInstall
+                                (installPrefix </> installDir pkg))
+                                (map fst toInstall)
          when installSrc $ do
-           traverse_ (installSrcFrom (wdir </> fromMaybe "" src)
-                                     (installPrefix </> installDir pkg)) toInstall
+           traverse_ (installSrcFrom wdir
+                                     (installPrefix </> installDir pkg))
+                                     toInstall
          coreLift_ $ changeDir wdir
          runScript (postinstall pkg)
 
