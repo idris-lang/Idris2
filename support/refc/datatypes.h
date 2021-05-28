@@ -12,15 +12,18 @@
 #define BITS16_TAG 2
 #define BITS32_TAG 3
 #define BITS64_TAG 4
-#define INT_TAG 5
-#define INTEGER_TAG 6
-#define DOUBLE_TAG 7
-#define CHAR_TAG 8
-#define STRING_TAG 9
+#define INT8_TAG 5
+#define INT16_TAG 6
+#define INT32_TAG 7
+#define INT64_TAG 8
+#define INTEGER_TAG 9
+#define DOUBLE_TAG 10
+#define CHAR_TAG 11
+#define STRING_TAG 12
 
-#define CLOSURE_TAG 10
-#define ARGLIST_TAG 11
-#define CONSTRUCTOR_TAG 12
+#define CLOSURE_TAG 15
+#define ARGLIST_TAG 16
+#define CONSTRUCTOR_TAG 17
 
 #define IOREF_TAG 20
 #define ARRAY_TAG 21
@@ -73,8 +76,26 @@ typedef struct
 typedef struct
 {
     Value_header header;
+    int8_t i8;
+} Value_Int8;
+
+typedef struct
+{
+    Value_header header;
+    int16_t i16;
+} Value_Int16;
+
+typedef struct
+{
+    Value_header header;
+    int32_t i32;
+} Value_Int32;
+
+typedef struct
+{
+    Value_header header;
     int64_t i64;
-} Value_Int;
+} Value_Int64;
 
 typedef struct
 {

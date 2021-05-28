@@ -94,17 +94,41 @@ Value_Bits64 *makeBits64(uint64_t i)
     return retVal;
 }
 
-Value_Int *makeInt(int64_t i)
+Value_Int8 *makeInt8(int8_t i)
 {
-    Value_Int *retVal = (Value_Int *)newValue();
-    retVal->header.tag = INT_TAG;
+    Value_Int8 *retVal = (Value_Int8 *)newValue();
+    retVal->header.tag = INT8_TAG;
+    retVal->i8 = i;
+    return retVal;
+}
+
+Value_Int16 *makeInt16(int16_t i)
+{
+    Value_Int16 *retVal = (Value_Int16 *)newValue();
+    retVal->header.tag = INT16_TAG;
+    retVal->i16 = i;
+    return retVal;
+}
+
+Value_Int32 *makeInt32(int32_t i)
+{
+    Value_Int32 *retVal = (Value_Int32 *)newValue();
+    retVal->header.tag = INT32_TAG;
+    retVal->i32 = i;
+    return retVal;
+}
+
+Value_Int64 *makeInt64(int64_t i)
+{
+    Value_Int64 *retVal = (Value_Int64 *)newValue();
+    retVal->header.tag = INT64_TAG;
     retVal->i64 = i;
     return retVal;
 }
 
-Value_Int *makeBool(int p)
+Value_Int8 *makeBool(int p)
 {
-    return makeInt(p ? 1 : 0);
+    return makeInt8(p ? 1 : 0);
 }
 
 Value_Integer *makeInteger()
@@ -212,7 +236,10 @@ void removeReference(Value *elem)
         case BITS16_TAG:
         case BITS32_TAG:
         case BITS64_TAG:
-        case INT_TAG:
+        case INT8_TAG:
+        case INT16_TAG:
+        case INT32_TAG:
+        case INT64_TAG:
             /* nothing to delete, added for sake of completeness */
             break;
         case INTEGER_TAG:

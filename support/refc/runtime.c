@@ -78,9 +78,24 @@ int extractInt(Value *v)
     return (int)mpz_get_si(((Value_Integer *)v)->i);
   }
 
-  if (v->header.tag == INT_TAG)
+  if (v->header.tag == INT8_TAG)
   {
-    return (int)((Value_Int *)v)->i64;
+    return (int)((Value_Int8 *)v)->i8;
+  }
+
+  if (v->header.tag == INT16_TAG)
+  {
+    return (int)((Value_Int16 *)v)->i16;
+  }
+
+  if (v->header.tag == INT32_TAG)
+  {
+    return (int)((Value_Int32 *)v)->i32;
+  }
+
+  if (v->header.tag == INT64_TAG)
+  {
+    return (int)((Value_Int64 *)v)->i64;
   }
 
   if (v->header.tag == DOUBLE_TAG)

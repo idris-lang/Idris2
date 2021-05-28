@@ -26,6 +26,18 @@ SomeBits Bits32 where
 SomeBits Bits64 where
     one = fromNat 1
 
+SomeBits Int8 where
+    one = fromNat 1
+
+SomeBits Int16 where
+    one = fromNat 1
+
+SomeBits Int32 where
+    one = fromNat 1
+
+SomeBits Int64 where
+    one = fromNat 1
+
 SomeBits Int where
     one = fromNat 1
 
@@ -51,6 +63,18 @@ main = do
         the Bits64 0, -- Bits64 min
         the Bits64 5000000000000000000,
         the Bits64 18446744073709551615, -- Bits64 max
+        the Int8 $ -128, -- Int8 min
+        the Int8 50,
+        the Int8 127, -- Int8 max
+        the Int16 $ -32768, -- Int16 min
+        the Int16 10000,
+        the Int16 32767, -- Int16 max
+        the Int32 $ -2147483648, -- Int32 min
+        the Int32 500000000,
+        the Int32 2147483647, -- Int32 max
+        the Int64 $ -9223372036854775808, -- Int64 min
+        the Int64 1000000000000000000,
+        the Int64 9223372036854775807, -- Int64 max
         the Int $ -9223372036854775808, -- Int min
         the Int 1000000000000000000,
         the Int 9223372036854775807, -- Int max

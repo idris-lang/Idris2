@@ -3,7 +3,7 @@
 Value *stringLength(Value *s)
 {
     int length = strlen(((Value_String *)s)->str);
-    return (Value *)makeInt(length);
+    return (Value *)makeInt64(length);
 }
 
 Value *head(Value *str)
@@ -55,7 +55,7 @@ Value *reverse(Value *str)
 Value *strIndex(Value *str, Value *i)
 {
     char *s = ((Value_String *)str)->str;
-    int idx = ((Value_Int *)i)->i64;
+    int idx = ((Value_Int64 *)i)->i64;
     return (Value *)makeChar(s[idx]);
 }
 

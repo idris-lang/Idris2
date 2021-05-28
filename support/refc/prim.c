@@ -123,14 +123,14 @@ Value *newArray(Value *erased, Value *_length, Value *v, Value *_word)
 Value *arrayGet(Value *erased, Value *_array, Value *_index, Value *_word)
 {
     Value_Array *a = (Value_Array *)_array;
-    return newReference(a->arr[((Value_Int *)_index)->i64]);
+    return newReference(a->arr[((Value_Int64 *)_index)->i64]);
 }
 
 Value *arraySet(Value *erased, Value *_array, Value *_index, Value *v, Value *_word)
 {
     Value_Array *a = (Value_Array *)_array;
-    removeReference(a->arr[((Value_Int *)_index)->i64]);
-    a->arr[((Value_Int *)_index)->i64] = newReference(v);
+    removeReference(a->arr[((Value_Int64 *)_index)->i64]);
+    a->arr[((Value_Int64 *)_index)->i64] = newReference(v);
     return NULL;
 }
 
@@ -252,7 +252,7 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition, Valu
 {
     Value_Condition *cond = (Value_Condition *)_condition;
     Value_Mutex *mutex = (Value_Mutex *)_mutex;
-    Value_Int *timeout = (Value_Int *)_timeout;
+    Value_Int64 *timeout = (Value_Int64 *)_timeout;
     struct timespec t;
     t.tv_sec = timeout->i64 / 1000000;
     t.tv_nsec = timeout->i64 % 1000000;
