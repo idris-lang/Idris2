@@ -91,12 +91,14 @@ Reflexive Nat LTE where
 public export
 Transitive Nat LTE where
   transitive LTEZero _ = LTEZero
-  transitive (LTESucc xy) (LTESucc yz) = LTESucc $ transitive {rel = LTE} xy yz
+  transitive (LTESucc xy) (LTESucc yz) =
+    LTESucc $ transitive {rel = LTE} xy yz
 
 public export
 Antisymmetric Nat LTE where
   antisymmetric LTEZero LTEZero = Refl
-  antisymmetric (LTESucc xy) (LTESucc yx) = cong S $ antisymmetric xy yx
+  antisymmetric (LTESucc xy) (LTESucc yx) =
+    cong S $ antisymmetric xy yx
 
 public export
 Connex Nat LTE where

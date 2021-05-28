@@ -1,13 +1,14 @@
 ||| Implementation  of ordering relations for `Fin`ite numbers
 module Data.Fin.Order
 
+import Control.Relation
+import Control.Order
 import Data.Fin
 import Data.Fun
 import Data.Rel
 import Data.Nat
 import Data.Nat.Order
 import Decidable.Decidable
-import Decidable.Order
 
 %default total
 
@@ -18,25 +19,37 @@ using (k : Nat)
     FromNatPrf : {m, n : Fin k} -> LTE (finToNat m) (finToNat n) -> FinLTE m n
 
   public export
-  implementation Preorder (Fin k) FinLTE where
-    transitive m n o (FromNatPrf p1) (FromNatPrf p2) =
-      FromNatPrf (LTEIsTransitive (finToNat m) (finToNat n) (finToNat o) p1 p2)
-    reflexive n = FromNatPrf (LTEIsReflexive (finToNat n))
+  Transitive (Fin k) FinLTE where
+    transitive (FromNatPrf xy) (FromNatPrf yz) =
+      FromNatPrf $ transitive {rel = LTE} xy yz
 
   public export
-  implementation Poset (Fin k) FinLTE where
-    antisymmetric m n (FromNatPrf p1) (FromNatPrf p2) =
-      finToNatInjective m n (LTEIsAntisymmetric (finToNat m) (finToNat n) p1 p2)
+  Reflexive (Fin k) FinLTE where
+    reflexive = FromNatPrf $ reflexive {rel = LTE}
 
   public export
-  implementation Decidable 2 [Fin k, Fin k] FinLTE where
+  Preorder (Fin k) FinLTE where
+
+  public export
+  Antisymmetric (Fin k) FinLTE where
+    antisymmetric {x} {y} (FromNatPrf xy) (FromNatPrf yx) =
+      finToNatInjective x y $
+        antisymmetric {rel = LTE} xy yx
+
+  public export
+  PartialOrder (Fin k) FinLTE where
+
+  public export
+  Connex (Fin k) FinLTE where
+    connex {x = FZ} _ =  Left $ FromNatPrf LTEZero
+    connex {y = FZ} _ = Right $ FromNatPrf LTEZero
+    connex {x = FS k} {y = FS j} prf =
+      case connex {rel = FinLTE} $ prf . (cong FS) of
+        Left  $ FromNatPrf p => Left  $ FromNatPrf $ LTESucc p
+        Right $ FromNatPrf p => Right $ FromNatPrf $ LTESucc p
+
+  public export
+  Decidable 2 [Fin k, Fin k] FinLTE where
     decide m n with (decideLTE (finToNat m) (finToNat n))
       decide m n | Yes prf    = Yes (FromNatPrf prf)
       decide m n | No  disprf = No (\ (FromNatPrf prf) => disprf prf)
-
-  public export
-  implementation Ordered (Fin k) FinLTE where
-    order m n =
-      either (Left . FromNatPrf)
-             (Right . FromNatPrf)
-             (order (finToNat m) (finToNat n))

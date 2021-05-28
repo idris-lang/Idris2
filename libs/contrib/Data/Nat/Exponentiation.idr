@@ -1,12 +1,13 @@
 module Data.Nat.Exponentiation
 
+import Control.Relation
+import Control.Order
 import Data.Nat as Nat
 import Data.Nat.Properties
 import Data.Monoid.Exponentiation as Mon
 import Data.Num.Implementations as Num
 import Data.Nat.Views
 import Data.Nat.Order
-import Decidable.Order
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 
@@ -57,7 +58,7 @@ unfoldPow2 = irrelevantEq $ Calc $
 
 export
 lteLpow2 : {m : Nat} -> 1 `LTE` lpow2 m
-lteLpow2 {m = Z} = reflexive $ S Z
+lteLpow2 {m = Z} = reflexive {rel = LTE}
 lteLpow2 {m = S m} = CalcWith $
   let ih = lteLpow2 {m} in
   |~ 1
