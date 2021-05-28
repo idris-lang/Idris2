@@ -373,11 +373,10 @@ installSrcFrom wdir destdir (ns, srcRelPath)
          let srcPath = wdir </> srcRelPath
          let Just ext = extension srcPath
            | _ => throw (InternalError $
-              """
-              Unexpected failure when installing source file:
-                \{srcPath}
-              Can't extract file extension.
-              """)
+                "Unexpected failure when installing source file:\n"
+              ++ srcPath
+              ++ "\n"
+              ++ "Can't extract file extension.")
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
