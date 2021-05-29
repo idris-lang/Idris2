@@ -290,8 +290,6 @@ implementation Foldable (SortedMap k) where
 
   toList = values
 
-  foldMap f = foldMap f . values
-
 export
 implementation Traversable (SortedMap k) where
   traverse _ Empty = pure Empty

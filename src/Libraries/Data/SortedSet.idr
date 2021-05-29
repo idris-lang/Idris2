@@ -38,8 +38,6 @@ Foldable SortedSet where
   null (SetWrapper m) = null m
   toList = Data.SortedSet.toList
 
-  foldMap f = foldMap f . Data.SortedSet.toList
-
 ||| Set union. Inserts all elements of x into y
 export
 union : (x, y : SortedSet k) -> SortedSet k
