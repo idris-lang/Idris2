@@ -91,7 +91,10 @@ natToInteger (S k) = 1 + natToInteger k
 ||| Counts the number of elements that satify a predicate.
 public export
 count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
-count predicate = foldr (\v => if predicate v then S else id) Z
+count predicate = foldMap @{%search} @{monoid} (\x => if predicate x then 1 else 0)
+  where
+    monoid : Monoid Nat
+    monoid = MkMonoid @{MkSemigroup (+)} 0
 
 -----------
 -- PAIRS --
@@ -389,6 +392,12 @@ Foldable List where
   null (_::_) = False
 
   toList = id
+
+  foldMap f xs = go xs neutral
+    where
+      go : List a -> m -> m
+      go [] z = z
+      go (x :: xs) z = go xs (z <+> f x)
 
 public export
 Applicative List where

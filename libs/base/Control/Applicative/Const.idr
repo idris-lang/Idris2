@@ -92,6 +92,8 @@ Foldable (Const a) where
   foldr _ acc _ = acc
   foldl _ acc _ = acc
   null _ = True
+  toList _ = []
+  foldMap _ _ = neutral
 
 public export
 Traversable (Const a) where

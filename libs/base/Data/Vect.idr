@@ -351,9 +351,17 @@ foldrImpl f e go (x::xs) = foldrImpl f e (go . (f x)) xs
 public export
 implementation Foldable (Vect n) where
   foldr f e xs = foldrImpl f e id xs
+  foldl f z [] = z
+  foldl f z (x :: xs) = foldl f (f z x) xs
 
   null [] = True
   null _ = False
+
+  foldMap f xs = go xs neutral
+    where
+      go : forall n. Vect n a -> m -> m
+      go [] z = z
+      go (x :: xs) z = go xs (z <+> f x)
 
 --------------------------------------------------------------------------------
 -- Special folds

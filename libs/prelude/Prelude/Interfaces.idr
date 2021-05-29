@@ -267,7 +267,6 @@ interface Foldable t where
 
   ||| Similar to `foldl`, but uses a function wrapping its result in a `Monad`.
   ||| Consequently, the final value is wrapped in the same `Monad`.
-  public export
   foldlM : Monad m => (funcM : acc -> elem -> m acc) -> (init : acc) -> (input : t elem) -> m acc
   foldlM fm a0 = foldl (\ma, b => ma >>= flip fm b) (pure a0)
 
@@ -275,69 +274,89 @@ interface Foldable t where
   toList : t elem -> List elem
   toList = foldr (::) []
 
-||| Maps each element to a value and combine them
-public export
-foldMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
-foldMap f = foldr ((<+>) . f) neutral
+  ||| Maps each element to a value and combine them.
+  ||| For performance reasons, this should wherever
+  ||| be implemented with tail recursion.
+  ||| @ f The function to apply to each element.
+  foldMap : Monoid m => (f : a -> m) -> t a -> m
+  foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
 public export
 concat : (Foldable t, Monoid a) => t a -> a
-concat = foldr (<+>) neutral
+concat = foldMap id
 
 ||| Combine into a monoid the collective results of applying a function to each
 ||| element of a structure.
 public export
 concatMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
-concatMap f = foldr ((<+>) . f) neutral
+concatMap = foldMap
 
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
 ||| element is `False` or no elements remain.
 public export
 and : Foldable t => t (Lazy Bool) -> Bool
-and = foldl (&&) True
+and = force . concat @{(%search, monoid)}
+  where
+    monoid : Monoid (Lazy Bool)
+    monoid = MkMonoid {ty = Lazy Bool} @{MkSemigroup (\x, y => delay $ force x && y)} True
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
 public export
 or : Foldable t => t (Lazy Bool) -> Bool
-or = foldl (||) False
+or = force . concat @{(%search, monoid)}
+  where
+    monoid : Monoid (Lazy Bool)
+    monoid = MkMonoid {ty = Lazy Bool} @{MkSemigroup (\x, y => x || y)} False
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
 public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
-any p = foldl (\x,y => x || p y) False
+any = foldMap @{%search} @{monoid}
+  where
+    monoid : Monoid Bool
+    monoid = MkMonoid @{MkSemigroup (\x, y => x || y)} False
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
-all p = foldl (\x,y => x && p y)  True
+all = foldMap @{%search} @{monoid}
+  where
+    monoid : Monoid Bool
+    monoid = MkMonoid @{MkSemigroup (\x, y => x && y)} True
 
 ||| Add together all the elements of a structure.
 public export
 sum : (Foldable t, Num a) => t a -> a
-sum = foldr (+) 0
+sum = concat @{(%search, monoid)}
+  where
+    monoid : Monoid a
+    monoid = MkMonoid @{MkSemigroup (+)} 0
 
 ||| Add together all the elements of a structure.
 ||| Same as `sum` but tail recursive.
 export
 sum' : (Foldable t, Num a) => t a -> a
-sum' = foldl (+) 0
+sum' = sum
 
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
-product = foldr (*) 1
+product = concat @{(%search, monoid)}
+  where
+    monoid : Monoid a
+    monoid = MkMonoid @{MkSemigroup (*)} 1
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
 export
 product' : (Foldable t, Num a) => t a -> a
-product' = foldl (*) 1
+product' = product
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
@@ -377,18 +396,22 @@ for_ = flip traverse_
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
 choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
-choice t = foldr {elem = Lazy (f a)} {acc = Lazy (f a)}
-                 (\ x, xs => x <|> xs)
-                 empty
-                 t
+choice = force . concat @{(%search, monoid)}
+  where
+    semigroup : Semigroup (Lazy (f a))
+    semigroup = MkSemigroup (\x, y => x <|> y)
+    monoid : Monoid (Lazy (f a))
+    monoid = MkMonoid @{semigroup} empty
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap act t = foldr {elem = a} {acc = Lazy (f b)}
-                        (\e, a => act e <|> a)
-                        empty
-                        t
+choiceMap = foldMap @{%search} @{monoid}
+  where
+    semigroup : Semigroup (f b)
+    semigroup = MkSemigroup (\x, y => x <|> y)
+    monoid : Monoid (f b)
+    monoid = MkMonoid @{semigroup} empty
 
 namespace Foldable
   ||| Composition of foldables is foldable.
@@ -397,6 +420,7 @@ namespace Foldable
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
     null tf = null tf || all (force . null) tf
+    foldMap = foldMap . foldMap
 
 ||| `Bifoldable` identifies foldable structures with two different varieties
 ||| of elements (as opposed to `Foldable`, which has one variety of element).
