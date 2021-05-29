@@ -36,7 +36,6 @@ Foldable SortedSet where
   foldl f z xs = foldl f z (Data.SortedSet.toList xs)
 
   null (SetWrapper m) = null m
-  toList = Data.SortedSet.toList
 
 ||| Set union. Inserts all elements of x into y
 export

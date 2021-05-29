@@ -288,8 +288,6 @@ implementation Foldable (SortedMap k) where
   null Empty = True
   null (M _ _) = False
 
-  toList = values
-
 export
 implementation Traversable (SortedMap k) where
   traverse _ Empty = pure Empty
