@@ -41,6 +41,12 @@ export
 Eq Version where
   (==) (MkVersion ver tag) (MkVersion ver' tag') = ver == ver' && tag == tag'
 
+export
+Ord Version where
+  compare (MkVersion ver tag) (MkVersion ver' tag')  =
+    case compare ver ver' of
+      EQ => compare tag tag'
+      other => other
 
 --------------------------------------------------------------------------------
 -- Parser
