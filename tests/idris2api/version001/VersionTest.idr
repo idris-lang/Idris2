@@ -15,3 +15,9 @@ main = do
   printLn $ map (showVersion True) $ parseVersion "1.2"
   printLn $ map (showVersion True) $ parseVersion "1.2."
   printLn $ map (showVersion True) $ parseVersion "1.2.3."
+  -- Test comparison
+  printLn $ MkVersion (1,2,3) Nothing > MkVersion (1,2,0) Nothing
+  printLn $ MkVersion (1,2,3) Nothing > MkVersion (1,2,0) (Just "bar")
+  printLn $ MkVersion (1,2,3) (Just "foo") > MkVersion (1,2,3) (Just "bar")
+  printLn $ MkVersion (1,2,3) (Just "foo") /= MkVersion (1,2,3) (Just "bar")
+  printLn $ MkVersion (1,2,3) (Just "foo") == MkVersion (1,2,3) (Just "foo")

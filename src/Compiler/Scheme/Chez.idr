@@ -57,6 +57,10 @@ chezVersion chez = do
   cmd : String
   cmd = chez ++ " --version 2>&1"
 
+unsupportedCallingConvention : Maybe Version -> Bool
+unsupportedCallingConvention Nothing = True
+unsupportedCallingConvention (Just version) = version < MkVersion (9,5,0) Nothing
+
 -- Given the chez compiler directives, return a list of pairs of:
 --   - the library file name
 --   - the full absolute path of the library file name, if it's in one
@@ -308,8 +312,9 @@ schemeCall fc sfn argns ret
 -- function call.
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc ccs args ret
+        String -> FC -> List String -> List (Name, CFType) -> CFType ->
+        Maybe Version -> Core (String, String)
+useCC appdir fc ccs args ret version
     = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
@@ -317,14 +322,14 @@ useCC appdir fc ccs args ret
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
+           Just ("C__collect_safe", (cfn :: clib :: _)) => do
+             when (unsupportedCallingConvention version) $
+               throw (GenericMsg fc $ "Chez version " ++ show version ++  " is undefined or does not support '__collect_safe' calling convention")
+             cCall appdir fc cfn clib args ret True
            Just ("C", [cfn, clib]) =>
              cCall appdir fc cfn clib args ret False
            Just ("C", [cfn, clib, chdr]) =>
              cCall appdir fc cfn clib args ret False
-           Just ("C__collect_safe", [cfn, clib]) =>
-             cCall appdir fc cfn clib args ret True
-           Just ("C__collect_safe", [cfn, clib, chdr]) =>
-             cCall appdir fc cfn clib args ret True
            _ => throw (NoForeignCC fc ccs)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
@@ -354,28 +359,28 @@ mkStruct _ = pure ""
 schFgnDef : {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
-            String -> FC -> Name -> NamedDef -> Core (String, String)
-schFgnDef appdir fc n (MkNmForeign cs args ret)
+            String -> FC -> Name -> NamedDef -> Maybe Version -> Core (String, String)
+schFgnDef appdir fc n (MkNmForeign cs args ret) version
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
          let useargns = map fst (filter snd argns)
          argStrs <- traverse mkStruct args
          retStr <- mkStruct ret
-         (load, body) <- useCC appdir fc cs (zip useargns args) ret
+         (load, body) <- useCC appdir fc cs (zip useargns args) ret version
          defs <- get Ctxt
          pure (load,
                 concat argStrs ++ retStr ++
                 "(define " ++ schName !(full (gamma defs) n) ++
                 " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
-schFgnDef _ _ _ _ = pure ("", "")
+schFgnDef _ _ _ _ _ = pure ("", "")
 
 export
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
-             String -> (Name, FC, NamedDef) -> Core (String, String)
-getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
+             String -> Maybe Version -> (Name, FC, NamedDef) -> Core (String, String)
+getFgnCall appdir version (n, fc, d) = schFgnDef appdir fc n d version
 
 export
 startChezPreamble : String
@@ -432,11 +437,12 @@ compileToSS c prof appdir tm outfile
          defs <- get Ctxt
          l <- newRef {t = List String} Loaded ["libc", "libc 6"]
          s <- newRef {t = List String} Structs []
-         fgndefs <- traverse (getFgnCall appdir) ndefs
+         chez <- coreLift findChez
+         version <- coreLift $ chezVersion chez
+         fgndefs <- traverse (getFgnCall appdir version) ndefs
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
-         chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
          let scm = schHeader chez (map snd libs) ++
@@ -495,7 +501,6 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          let outSsAbs = cwd </> outputDir </> outSsFile
          let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
-         version <- coreLift $ chezVersion chez
          let prof = profile !getSession
          compileToSS c (makeitso && prof) appDirGen tm outSsAbs
          logTime "++ Make SO" $ when makeitso $ compileToSO prof chez appDirGen outSsAbs
