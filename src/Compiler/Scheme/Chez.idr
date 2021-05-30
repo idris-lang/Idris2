@@ -18,6 +18,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Libraries.Data.NameMap
+import Libraries.Data.Version
 import Data.Strings
 import Data.Vect
 
@@ -37,6 +38,24 @@ findChez
             | Just chez => pure chez
          path <- pathLookup ["chez", "chezscheme9.5", "scheme"]
          pure $ fromMaybe "/usr/bin/env scheme" path
+
+||| Returns the chez scheme version for given executable
+|||
+||| This uses `chez --version` which unfortunately writes the version
+||| on `stderr` thus requiring suffixing the command which shell redirection
+||| which does not seem very portable.
+export
+chezVersion : String -> IO (Maybe Version)
+chezVersion chez = do
+    Right fh <- popen cmd Read
+        | Left err => pure Nothing
+    Right output <- fGetLine fh
+        | Left err => pure Nothing
+    pclose fh
+    pure $ parseVersion output
+  where
+  cmd : String
+  cmd = chez ++ " --version 2>&1"
 
 -- Given the chez compiler directives, return a list of pairs of:
 --   - the library file name
@@ -476,6 +495,7 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          let outSsAbs = cwd </> outputDir </> outSsFile
          let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
+         version <- coreLift $ chezVersion chez
          let prof = profile !getSession
          compileToSS c (makeitso && prof) appDirGen tm outSsAbs
          logTime "++ Make SO" $ when makeitso $ compileToSO prof chez appDirGen outSsAbs
