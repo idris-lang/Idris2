@@ -94,7 +94,7 @@ foldrUniqueness {f} h prf xs = irrelevantEq $
   nilConsInitiality f e h (foldr f e) prf foldrVectHomomorphism xs
 
 
-||| Each summand is `LTE` the sumR
+||| Each summand is `LTE` the sum
 export
 sumIsGTEtoParts : {x : Nat} -> (xs : Vect n Nat) -> (x `Elem` xs) -> sumR xs `GTE` x
 sumIsGTEtoParts (x :: xs) Here
