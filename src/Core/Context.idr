@@ -359,6 +359,10 @@ export
 getContent : Context -> Ref Arr (IOArray ContextEntry)
 getContent = content
 
+export
+namesResolvedAs : Context -> NameMap Name
+namesResolvedAs ctxt = map Resolved ctxt.resolvedAs
+
 -- Implemented later, once we can convert to and from full names
 -- Defined in Core.TTC
 export
@@ -1182,6 +1186,7 @@ getFieldNames ctxt recNS
         Just (ns, field) => ns == recNS
 
 -- Find similar looking names in the context
+export
 getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
 getSimilarNames nm = case userNameRoot nm of
   Nothing => pure []
