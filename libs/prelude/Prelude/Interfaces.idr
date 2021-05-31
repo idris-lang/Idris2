@@ -292,51 +292,96 @@ public export
 concatMap : (Foldable t, Monoid m) => (a -> m) -> t a -> m
 concatMap = foldMap
 
+namespace Bool.Lazy
+  namespace Semigroup
+    public export
+    [Any] Semigroup (Lazy Bool) where
+      x <+> y = force x || y
+
+    public export
+    [All] Semigroup (Lazy Bool) where
+      x <+> y = force x && y
+
+  namespace Monoid
+    public export
+    [Any] Monoid (Lazy Bool) using Semigroup.Any where
+      neutral = defer False
+
+    public export
+    [All] Monoid (Lazy Bool) using Semigroup.All where
+      neutral = defer True
+
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
 ||| element is `False` or no elements remain.
 public export
 and : Foldable t => t (Lazy Bool) -> Bool
-and = force . concat @{(%search, monoid)}
-  where
-    monoid : Monoid (Lazy Bool)
-    monoid = MkMonoid {ty = Lazy Bool} @{MkSemigroup (\x, y => delay $ force x && y)} True
+and = force . concat @{(%search, All)}
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
 public export
 or : Foldable t => t (Lazy Bool) -> Bool
-or = force . concat @{(%search, monoid)}
-  where
-    monoid : Monoid (Lazy Bool)
-    monoid = MkMonoid {ty = Lazy Bool} @{MkSemigroup (\x, y => x || y)} False
+or = force . concat @{(%search, Any)}
+
+namespace Bool
+  namespace Semigroup
+    public export
+    [Any] Semigroup Bool where
+      x <+> y = x || defer y
+
+    public export
+    [All] Semigroup Bool where
+      x <+> y = x && defer y
+
+  namespace Monoid
+    public export
+    [Any] Monoid Bool using Semigroup.Any where
+      neutral = False
+
+    public export
+    [All] Monoid Bool using Semigroup.All where
+      neutral = True
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
 public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
-any = foldMap @{%search} @{monoid}
-  where
-    monoid : Monoid Bool
-    monoid = MkMonoid @{MkSemigroup (\x, y => x || y)} False
+any = foldMap @{%search} @{Any}
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
 public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
-all = foldMap @{%search} @{monoid}
+all = foldMap @{%search} @{All}
   where
     monoid : Monoid Bool
     monoid = MkMonoid @{MkSemigroup (\x, y => x && y)} True
 
+namespace Num
+  namespace Semigroup
+    public export
+    [Additive] Num a => Semigroup a where
+      (<+>) = (+)
+
+    public export
+    [Multiplicative] Num a => Semigroup a where
+      (<+>) = (*)
+    
+  namespace Monoid
+    public export
+    [Additive] Num a => Monoid a using Additive where
+      neutral = 0
+    
+    public export
+    [Multiplicative] Num a => Monoid a using Multiplicative where
+      neutral = 1
+
 ||| Add together all the elements of a structure.
 public export
 sum : (Foldable t, Num a) => t a -> a
-sum = concat @{(%search, monoid)}
-  where
-    monoid : Monoid a
-    monoid = MkMonoid @{MkSemigroup (+)} 0
+sum = concat @{(%search, Additive)}
 
 ||| Add together all the elements of a structure.
 ||| Same as `sum` but tail recursive.
@@ -347,10 +392,7 @@ sum' = sum
 ||| Multiply together all elements of a structure.
 public export
 product : (Foldable t, Num a) => t a -> a
-product = concat @{(%search, monoid)}
-  where
-    monoid : Monoid a
-    monoid = MkMonoid @{MkSemigroup (*)} 1
+product = concat @{(%search, Multiplicative)}
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
@@ -374,6 +416,12 @@ public export
 for_ : (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
+[SemigroupAlternative] Alternative f => Semigroup (f a) where
+  x <+> y = x <|> defer y
+
+[MonoidAlternative] Alternative f => Monoid (f a) where
+  neutral = empty
+
 ||| Fold using Alternative.
 |||
 ||| If you have a left-biased alternative operator `<|>`, then `choice` performs
@@ -396,22 +444,12 @@ for_ = flip traverse_
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
 choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
-choice = force . concat @{(%search, monoid)}
-  where
-    semigroup : Semigroup (Lazy (f a))
-    semigroup = MkSemigroup (\x, y => x <|> y)
-    monoid : Monoid (Lazy (f a))
-    monoid = MkMonoid @{semigroup} empty
+choice = force . concat @{(%search, MonoidAlternative)}
 
 ||| A fused version of `choice` and `map`.
 public export
 choiceMap : (Foldable t, Alternative f) => (a -> f b) -> t a -> f b
-choiceMap = foldMap @{%search} @{monoid}
-  where
-    semigroup : Semigroup (f b)
-    semigroup = MkSemigroup (\x, y => x <|> y)
-    monoid : Monoid (f b)
-    monoid = MkMonoid @{semigroup} empty
+choiceMap = foldMap @{%search} @{MonoidAlternative}
 
 namespace Foldable
   ||| Composition of foldables is foldable.
