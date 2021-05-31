@@ -18,7 +18,6 @@ import Parser.Support
 import Libraries.Text.Lexer
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
-import Libraries.Utils.Either
 import Libraries.Utils.String
 
 %default total
@@ -81,8 +80,8 @@ sexp
 ideParser : {e : _} ->
             String -> Grammar SemanticDecorations Token e ty -> Either Error ty
 ideParser str p
-    = do toks   <- mapError (fromLexError (Virtual Interactive)) $ idelex str
-         (decor, (parsed, _)) <- mapError (fromParsingError (Virtual Interactive)) $ parseWith p toks
+    = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
+         (decor, (parsed, _)) <- mapFst (fromParsingError (Virtual Interactive)) $ parseWith p toks
          Right parsed
 
 

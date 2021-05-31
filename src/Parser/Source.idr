@@ -8,8 +8,8 @@ import Core.Core
 import Core.Name
 import Core.Metadata
 import Core.FC
+
 import System.File
-import Libraries.Utils.Either
 
 %default total
 
@@ -19,9 +19,9 @@ runParserTo : {e : _} ->
               Maybe LiterateStyle -> Lexer ->
               String -> Grammar SemanticDecorations Token e ty -> Either Error (SemanticDecorations, ty)
 runParserTo origin lit reject str p
-    = do str    <- mapError (fromLitError origin) $ unlit lit str
-         toks   <- mapError (fromLexError origin) $ lexTo reject str
-         (decs, (parsed, _)) <- mapError (fromParsingError origin) $ parseWith p toks
+    = do str    <- mapFst (fromLitError origin) $ unlit lit str
+         toks   <- mapFst (fromLexError origin) $ lexTo reject str
+         (decs, (parsed, _)) <- mapFst (fromParsingError origin) $ parseWith p toks
          Right (decs, parsed)
 
 export
