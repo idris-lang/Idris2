@@ -357,11 +357,7 @@ implementation Foldable (Vect n) where
   null [] = True
   null _ = False
 
-  foldMap f xs = go xs neutral
-    where
-      go : forall n. Vect n a -> m -> m
-      go [] z = z
-      go (x :: xs) z = go xs (z <+> f x)
+  foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
 --------------------------------------------------------------------------------
 -- Special folds
