@@ -368,12 +368,12 @@ namespace Num
     public export
     [Multiplicative] Num a => Semigroup a where
       (<+>) = (*)
-    
+
   namespace Monoid
     public export
     [Additive] Num a => Monoid a using Additive where
       neutral = 0
-    
+
     public export
     [Multiplicative] Num a => Monoid a using Multiplicative where
       neutral = 1
