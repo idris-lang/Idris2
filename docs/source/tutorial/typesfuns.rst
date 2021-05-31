@@ -1182,6 +1182,8 @@ Or even:
 More Expressions
 ================
 
+.. _sect-let-bindings:
+
 ``let`` bindings
 ----------------
 
@@ -1204,6 +1206,41 @@ pattern matching at the top level:
     showPerson : Person -> String
     showPerson p = let MkPerson name age = p in
                        name ++ " is " ++ show age ++ " years old"
+
+You can also use symbol ``:=`` in a simple ``let`` binding that calculates intermediate values.
+For example, the following function definitions are precisely the same as the ones above:
+
+.. code-block:: idris
+
+   mirror : List a -> List a
+   mirror xs = let xs' := reverse xs in
+                   xs ++ xs'
+
+.. code-block:: idris
+
+   showPerson : Person -> String
+   showPerson p = let MkPerson name age := p in
+                      name ++ " is " ++ show age ++ " years old"
+
+Also, ``let`` bindings can be used for local function definitions, like ``where``:
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                in foldl fo neutral
+
+Symbol ``:=`` cannot be used in a local function definition.
+Moreover, it helps to show that local function definition is ended:
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                   initial := neutral -- this is a separate binding, not relevant to definition of `fo`
+                in foldl fo initial
 
 List comprehensions
 -------------------
