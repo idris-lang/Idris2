@@ -257,6 +257,16 @@ data Either : (a : Type) -> (b : Type) -> Type where
 export Uninhabited (Left p === Right q) where uninhabited eq impossible
 export Uninhabited (Right p === Left q) where uninhabited eq impossible
 
+export
+Either (Uninhabited a) (Uninhabited b) => Uninhabited (a, b) where
+  uninhabited (x, _) @{Left  _} = uninhabited x
+  uninhabited (_, y) @{Right _} = uninhabited y
+
+export
+Uninhabited a => Uninhabited b => Uninhabited (Either a b) where
+  uninhabited (Left l)  = uninhabited l
+  uninhabited (Right r) = uninhabited r
+
 ||| Simply-typed eliminator for Either.
 ||| @ f the action to take on Left
 ||| @ g the action to take on Right
