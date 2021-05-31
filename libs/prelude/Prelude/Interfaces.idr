@@ -305,11 +305,11 @@ namespace Bool.Lazy
   namespace Monoid
     public export
     [Any] Monoid (Lazy Bool) using Semigroup.Any where
-      neutral = defer False
+      neutral = delay False
 
     public export
     [All] Monoid (Lazy Bool) using Semigroup.All where
-      neutral = defer True
+      neutral = delay True
 
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
@@ -329,19 +329,19 @@ namespace Bool
   namespace Semigroup
     public export
     [Any] Semigroup Bool where
-      x <+> y = x || defer y
+      x <+> y = x || delay y
 
     public export
     [All] Semigroup Bool where
-      x <+> y = x && defer y
+      x <+> y = x && delay y
 
   namespace Monoid
     public export
-    [Any] Monoid Bool using Semigroup.Any where
+    [Any] Monoid Bool using Bool.Semigroup.Any where
       neutral = False
 
     public export
-    [All] Monoid Bool using Semigroup.All where
+    [All] Monoid Bool using Bool.Semigroup.All where
       neutral = True
 
 ||| The disjunction of the collective results of applying a predicate to all
@@ -371,11 +371,11 @@ namespace Num
 
   namespace Monoid
     public export
-    [Additive] Num a => Monoid a using Additive where
+    [Additive] Num a => Monoid a using Semigroup.Additive where
       neutral = 0
 
     public export
-    [Multiplicative] Num a => Monoid a using Multiplicative where
+    [Multiplicative] Num a => Monoid a using Semigroup.Multiplicative where
       neutral = 1
 
 ||| Add together all the elements of a structure.
@@ -416,10 +416,21 @@ public export
 for_ : (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
-[SemigroupAlternative] Alternative f => Semigroup (f a) where
-  x <+> y = x <|> defer y
+namespace Lazy
+  public export
+  [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
+    x <+> y = force x <|> y
 
-[MonoidAlternative] Alternative f => Monoid (f a) where
+  public export
+  [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using Lazy.SemigroupAlternative where
+    neutral = delay empty
+
+public export
+[SemigroupAlternative] Alternative f => Semigroup (f a) where
+  x <+> y = x <|> delay y
+
+public export
+[MonoidAlternative] Alternative f => Monoid (f a) using Interfaces.SemigroupAlternative where
   neutral = empty
 
 ||| Fold using Alternative.
@@ -444,7 +455,7 @@ for_ = flip traverse_
 ||| Note: In Haskell, `choice` is called `asum`.
 public export
 choice : (Foldable t, Alternative f) => t (Lazy (f a)) -> f a
-choice = force . concat @{(%search, MonoidAlternative)}
+choice = force . concat @{(%search, Lazy.MonoidAlternative)}
 
 ||| A fused version of `choice` and `map`.
 public export
