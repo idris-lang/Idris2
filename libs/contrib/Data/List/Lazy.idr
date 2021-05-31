@@ -98,11 +98,8 @@ Foldable LazyList where
   null []     = True
   null (_::_) = False
 
-  foldMap f xs = go xs neutral
-    where
-      go : LazyList a -> m -> m
-      go [] z = z
-      go (x :: xs) z = go xs (z <+> f x)
+  foldMap f [] = neutral
+  foldMap f (x :: xs) = f x <+> foldMap f xs
 
 public export
 Functor LazyList where
