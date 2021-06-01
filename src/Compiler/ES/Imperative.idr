@@ -107,6 +107,17 @@ impTag : Name -> Maybe Int -> Either Int String
 impTag n Nothing = Right $ show n
 impTag n (Just i) = Left i
 
+-- memoize an intermediary result in a `let` binding.
+-- doesn't do anything if `exp` is a variable, constant
+-- or undefined.
+memoExp : {auto c : Ref Imps ImpSt}
+        -> (exp : ImperativeExp)
+        -> Core (ImperativeStatement, ImperativeExp)
+memoExp e@(IEVar _)      = pure (neutral, e)
+memoExp e@(IEConstant _) = pure (neutral, e)
+memoExp IENull           = pure (neutral, IENull)
+memoExp e                = map (\n =>(LetDecl n $ Just e, IEVar n)) genName
+
 mutual
   -- converts primOps arguments to a set of
   -- statements plus a corresponding vect of expressions
@@ -178,27 +189,29 @@ mutual
   -- res;
   -- ```
   impExp False (NmConCase fc sc alts def) =
-    do (s1, exp) <- impExp False sc
+    do (s1, exp)  <- impExp False sc
+       (s2, exp2) <- memoExp exp
        res    <- genName
-       swalts <- traverse (impConAltFalse res exp) alts
+       swalts <- traverse (impConAltFalse res exp2) alts
        swdef  <- case def of
                    Nothing => pure $ ErrorStatement $ "unhandled con case on " ++ show fc
                    Just x =>
                     do (sd, r) <- impExp False x
                        pure $ sd <+> MutateStatement res r
-       let switch = SwitchStatement (IEConstructorHead exp) swalts (Just swdef)
-       pure (s1 <+> LetDecl res Nothing <+> switch, IEVar res)
+       let switch = SwitchStatement (IEConstructorHead exp2) swalts (Just swdef)
+       pure (s1 <+> s2 <+> LetDecl res Nothing <+> switch, IEVar res)
 
   -- like `impExp False NmConCase`, but we return directly without
   -- a local let binding
   impExp True (NmConCase fc sc alts def) =
     do (s1, exp) <- impExp False sc
-       swalts <- traverse (impConAltTrue exp) alts
+       (s2, exp2) <- memoExp exp
+       swalts <- traverse (impConAltTrue exp2) alts
        swdef <- case def of
                  Nothing => pure $ ErrorStatement $ "unhandled con case on " ++ show fc
                  Just x => impExp True x
-       let switch = SwitchStatement (IEConstructorHead exp) swalts (Just swdef)
-       pure (s1 <+> switch)
+       let switch = SwitchStatement (IEConstructorHead exp2) swalts (Just swdef)
+       pure (s1 <+> s2 <+> switch)
 
   -- a case statement (pattern match on a constant)
   -- is converted to a switch statement in JS.
@@ -317,10 +330,13 @@ mutual
                  -> Core (ImperativeExp, ImperativeStatement)
   impConAltFalse res target (MkNConAlt n _ tag args exp) =
     do (s, r) <- impExp False exp
+       (tgts,tgte) <- memoExp target
        let nargs = length args
-       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
+       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) tgte))
+                          [1..nargs]
+                          args
        pure ( IEConstructorTag (impTag n tag)
-            , replaceNamesExpS reps $ s <+> MutateStatement res r
+            , tgts <+> (replaceNamesExpS reps $ s <+> MutateStatement res r)
             )
 
   impConAltTrue :  {auto c : Ref Imps ImpSt}
@@ -329,11 +345,12 @@ mutual
                 -> Core (ImperativeExp, ImperativeStatement)
   impConAltTrue target (MkNConAlt n _ tag args exp) =
     do s <- impExp True exp
+       (tgts,tgte) <- memoExp target
        let nargs = length args
-       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) target)) [1..nargs] args
-       pure ( IEConstructorTag (impTag n tag)
-            , replaceNamesExpS reps s
-            )
+       let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) tgte))
+                          [1..nargs]
+                          args
+       pure ( IEConstructorTag (impTag n tag), tgts <+> replaceNamesExpS reps s)
 
   impConstAltFalse :  {auto c : Ref Imps ImpSt}
                    -> Name
