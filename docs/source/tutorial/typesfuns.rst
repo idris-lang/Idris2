@@ -1207,22 +1207,27 @@ pattern matching at the top level:
     showPerson p = let MkPerson name age = p in
                        name ++ " is " ++ show age ++ " years old"
 
-You can also use symbol ``:=`` in a simple ``let`` binding that calculates intermediate values.
-For example, the following function definitions are precisely the same as the ones above:
+These let bindings can be annotated with a type:
 
 .. code-block:: idris
 
    mirror : List a -> List a
-   mirror xs = let xs' := reverse xs in
+   mirror xs = let xs' : List a = reverse xs in
                    xs ++ xs'
+
+We can also use the symbol ``:=`` instead of ``=`` to, among other things,
+avoid ambiguities with propositional equality:
 
 .. code-block:: idris
 
-   showPerson : Person -> String
-   showPerson p = let MkPerson name age := p in
-                      name ++ " is " ++ show age ++ " years old"
+   Diag : a -> Type
+   Diag v = let ty : Type := v = v in ty
 
-Also, ``let`` bindings can be used for local function definitions, like ``where``:
+Local definitions can also be introduced using ``let``. Just like top level
+ones and ones defined in a ``where`` clause you need to:
+
+1. declare the function and its type
+2. define the function by pattern matching
 
 .. code-block:: idris
 
@@ -1231,15 +1236,18 @@ Also, ``let`` bindings can be used for local function definitions, like ``where`
                    fo ac el = ac <+> f el
                 in foldl fo neutral
 
-Symbol ``:=`` cannot be used in a local function definition.
-Moreover, it helps to show that local function definition is ended:
+The symbol ``:=`` cannot be used in a local function definition. Which means
+that it can be used to interleave let bindings and local definitions without
+introducing ambiguities.
 
 .. code-block:: idris
 
    foldMap : Monoid m => (a -> m) -> Vect n a -> m
    foldMap f = let fo : m -> a -> m
                    fo ac el = ac <+> f el
-                   initial := neutral -- this is a separate binding, not relevant to definition of `fo`
+                   initial := neutral
+                    --     ^ this indicates that `initial` is a separate binding,
+                    -- not relevant to definition of `fo`
                 in foldl fo initial
 
 List comprehensions
