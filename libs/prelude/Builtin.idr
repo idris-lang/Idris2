@@ -73,7 +73,7 @@ infix 5 #
 public export
 data LPair : Type -> Type -> Type where
   ||| A linear pair of elements.
-  ||| If you have take one copy of the linear pair apart
+  ||| If you take one copy of the linear pair apart
   ||| then you only get one copy of its left and right elements.
   ||| @ a the left element of the pair
   ||| @ b the right element of the pair
