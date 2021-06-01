@@ -109,22 +109,6 @@ Show Integer where
   showPrec = primNumShow prim__cast_IntegerString
 
 export
-Show Int8 where
-  showPrec = primNumShow prim__cast_Int8String
-
-export
-Show Int16 where
-  showPrec = primNumShow prim__cast_Int16String
-
-export
-Show Int32 where
-  showPrec = primNumShow prim__cast_Int32String
-
-export
-Show Int64 where
-  showPrec = primNumShow prim__cast_Int64String
-
-export
 Show Bits8 where
   showPrec = primNumShow prim__cast_Bits8String
 
