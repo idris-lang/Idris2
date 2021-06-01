@@ -283,6 +283,7 @@ implementation Functor (SortedMap k) where
 export
 implementation Foldable (SortedMap k) where
   foldr f z = foldr f z . values
+  foldl f z = foldl f z . values
 
   null Empty = True
   null (M _ _) = False

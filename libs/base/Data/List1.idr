@@ -134,8 +134,10 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  foldl f z (x ::: xs) = foldl f (f z x) xs
   null _ = False
   toList = forget
+  foldMap f (x ::: xs) = f x <+> foldMap f xs
 
 export
 Traversable List1 where
