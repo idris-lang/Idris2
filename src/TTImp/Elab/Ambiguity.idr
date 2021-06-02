@@ -297,9 +297,12 @@ pruneByType env target alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
          log "elab.prun" 10 (show matches)
-         res <- if anyTrue (map fst matches)
-                -- if there's any concrete matches, drop the non-concrete
-                -- matches marked as '%allow_overloads' from the possible set
+         res <- if countTrue (map fst matches) == 1
+                -- if there's exactly one concrete matche, drop the
+                -- non-concrete matches marked as '%allow_overloads' from
+                -- the possible set.
+                -- If there's more than one, we don't have enough to be sure,
+                -- so leave it for now.
                    then do keep <- filterCore (notOverloadable defs) matches
                            log "elab.prune" 10 $ "Keep " ++ show keep
                            pure (map snd keep)
@@ -307,6 +310,9 @@ pruneByType env target alts
          if isNil res
             then pure alts -- if none of them work, better to show all the errors
             else pure res
+  where
+    countTrue : List Bool -> Nat
+    countTrue = length . filter id
 
 checkAmbigDepth : {auto c : Ref Ctxt Defs} ->
                   {auto e : Ref EST (EState vars)} ->
@@ -363,9 +369,12 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                 then gnf env exp
                                 else expected
 
-                  logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show alts ++
-                               " at " ++ show fc ++
-                               "\nWith default. Target type ") env exp'
+                  log "elab.ambiguous" 5
+                      ("Ambiguous elaboration " ++
+                       " " ++ show alts ++ " at " ++ show fc)
+                  logGlueNF "elab.ambiguous" 10 "With default. Target type"
+                            env exp'
+
                   alts' <- pruneByType env !(getNF exp') alts
                   log "elab.prun" 5 ("Pruned alts (" ++ show (length alts') ++ ") " ++
                           show alts')
@@ -404,27 +413,30 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                 delayOnFailure fc rig env expected ambiguous 5 $
                      \delayed =>
                        do defs <- get Ctxt
-                          exp <- getTerm expected
 
                           -- We can't just use the old NF on the second attempt,
                           -- because we might know more now, so recalculate it
-                          let exp' = if delayed
-                                        then gnf env exp
-                                        else expected
+                          exp' <- if delayed
+                                     then do exp <- getNF expected
+                                             continueNF defs env exp
+                                     else getNF expected
 
-                          alts' <- pruneByType env !(getNF exp') alts
+                          alts' <- pruneByType env exp' alts
 
-                          logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show delayed ++ " " ++
-                                       show alts' ++
-                                       " at " ++ show fc ++
-                                       "\nTarget type ") env exp'
+                          log "elab.ambiguous" 5
+                              ("Ambiguous elaboration " ++ show delayed ++
+                               " " ++ show alts' ++ " at " ++ show fc)
+                          logNF "elab.ambiguous" 10 "Target type" env exp'
+
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc
                                             _ => exactlyOne' (not delayed) fc env
+
                           tryall (map (\t =>
                               (getName t,
-                               do res <- checkImp rig (addAmbig alts' (getName t) elabinfo)
-                                                  nest env t (Just exp')
+                               do log "elab.ambiguous" 10 $ "Trying " ++ show !(toFullNames (getName t)) ++ " " ++ show (ambigTries elabinfo)
+                                  res <- checkImp rig (addAmbig alts' (getName t) elabinfo)
+                                                  nest env t (Just (glueBack defs env exp'))
                                   -- Do it twice for interface resolution;
                                   -- first pass gets the determining argument
                                   -- (maybe rethink this, there should be a better

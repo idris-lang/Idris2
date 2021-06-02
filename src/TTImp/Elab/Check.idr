@@ -537,26 +537,27 @@ successful allowCons ((tm, elab) :: elabs)
                    defs' <- get Ctxt
 
                    -- Reset to previous state and try the rest
-                   put UST ust
-                   put EST est
-                   put MD md
-                   put Ctxt defs
                    logC "elab" 5 $
                             do tm' <- maybe (pure (UN "__"))
                                             toFullNames tm
                                pure ("Success " ++ show tm' ++
                                      " (" ++ show ncons' ++ " - "
                                           ++ show ncons ++ ")")
+                   put UST ust
+                   put EST est
+                   put MD md
+                   put Ctxt defs
                    elabs' <- successful allowCons elabs
                    -- Record success, and the state we ended at
                    pure (Right (minus ncons' ncons,
                                 res, defs', ust', est', md') :: elabs'))
-               (\err => do put UST ust
+               (\err => do err' <- normaliseErr err
+                           put UST ust
                            put EST est
                            put MD md
                            put Ctxt defs
                            elabs' <- successful allowCons elabs
-                           pure (Left (tm, !(normaliseErr err)) :: elabs'))
+                           pure (Left (tm, err') :: elabs'))
 
 export
 exactlyOne' : {vars : _} ->
