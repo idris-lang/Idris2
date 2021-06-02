@@ -93,6 +93,7 @@ executable in `./build/exec`.
 You'll only need this if you're developing support tools, such as an external
 code generator. To do so, once everything is successfully installed, type:
 
+- `make clean`
 - `make install-api`
 
 The API will only work if you've completed the self-hosting step, step 4, since
