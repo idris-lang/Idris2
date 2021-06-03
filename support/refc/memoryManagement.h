@@ -14,10 +14,17 @@ Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *);
 
 Value_Double *makeDouble(double d);
 Value_Char *makeChar(char d);
+Value_Bits8 *makeBits8(uint8_t i);
+Value_Bits16 *makeBits16(uint16_t i);
+Value_Bits32 *makeBits32(uint32_t i);
+Value_Bits64 *makeBits64(uint64_t i);
 Value_Int8 *makeInt8(int8_t i);
 Value_Int16 *makeInt16(int16_t i);
 Value_Int32 *makeInt32(int32_t i);
 Value_Int64 *makeInt64(int64_t i);
+Value_Int8 *makeBool(int p);
+Value_Integer *makeInteger();
+Value_Integer *makeIntegerLiteral(char *i);
 Value_String *makeEmptyString(size_t l);
 Value_String *makeString(char *);
 

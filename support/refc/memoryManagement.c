@@ -62,6 +62,38 @@ Value_Char *makeChar(char c)
     return retVal;
 }
 
+Value_Bits8 *makeBits8(uint8_t i)
+{
+    Value_Bits8 *retVal = (Value_Bits8 *)newValue();
+    retVal->header.tag = BITS8_TAG;
+    retVal->ui8 = i;
+    return retVal;
+}
+
+Value_Bits16 *makeBits16(uint16_t i)
+{
+    Value_Bits16 *retVal = (Value_Bits16 *)newValue();
+    retVal->header.tag = BITS16_TAG;
+    retVal->ui16 = i;
+    return retVal;
+}
+
+Value_Bits32 *makeBits32(uint32_t i)
+{
+    Value_Bits32 *retVal = (Value_Bits32 *)newValue();
+    retVal->header.tag = BITS32_TAG;
+    retVal->ui32 = i;
+    return retVal;
+}
+
+Value_Bits64 *makeBits64(uint64_t i)
+{
+    Value_Bits64 *retVal = (Value_Bits64 *)newValue();
+    retVal->header.tag = BITS64_TAG;
+    retVal->ui64 = i;
+    return retVal;
+}
+
 Value_Int8 *makeInt8(int8_t i)
 {
     Value_Int8 *retVal = (Value_Int8 *)newValue();
@@ -91,6 +123,26 @@ Value_Int64 *makeInt64(int64_t i)
     Value_Int64 *retVal = (Value_Int64 *)newValue();
     retVal->header.tag = INT64_TAG;
     retVal->i64 = i;
+    return retVal;
+}
+
+Value_Int8 *makeBool(int p)
+{
+    return makeInt8(p ? 1 : 0);
+}
+
+Value_Integer *makeInteger()
+{
+    Value_Integer *retVal = (Value_Integer *)newValue();
+    retVal->header.tag = INTEGER_TAG;
+    mpz_init(retVal->i);
+    return retVal;
+}
+
+Value_Integer *makeIntegerLiteral(char *i)
+{
+    Value_Integer *retVal = makeInteger();
+    mpz_set_str(retVal->i, i, 10);
     return retVal;
 }
 
@@ -180,12 +232,21 @@ void removeReference(Value *elem)
     {
         switch (elem->header.tag)
         {
+        case BITS8_TAG:
+        case BITS16_TAG:
+        case BITS32_TAG:
+        case BITS64_TAG:
+        case INT8_TAG:
+        case INT16_TAG:
         case INT32_TAG:
-            /* nothing to delete, added for sake of completeness */
-            break;
         case INT64_TAG:
             /* nothing to delete, added for sake of completeness */
             break;
+        case INTEGER_TAG:
+        {
+            mpz_clear(((Value_Integer *)elem)->i);
+            break;
+        }
         case DOUBLE_TAG:
             /* nothing to delete, added for sake of completeness */
             break;

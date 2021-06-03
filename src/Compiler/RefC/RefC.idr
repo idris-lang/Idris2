@@ -98,22 +98,30 @@ where
 
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (BI x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
+cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
+cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
+cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant WorldVal = "(Value*)makeWorld()"
-cConstant IntType = "i32"
-cConstant IntegerType = "i64"
+cConstant IntType = "Int64"
+cConstant Int8Type = "Int8"
+cConstant Int16Type = "Int16"
+cConstant Int32Type = "Int32"
+cConstant Int64Type = "Int64"
+cConstant IntegerType = "Integer"
 cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
+cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
+cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
+cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
@@ -123,6 +131,10 @@ cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
+extractConstant (I8 x) = show x
+extractConstant (I16 x) = show x
+extractConstant (I32 x) = show x
+extractConstant (I64 x) = show x
 extractConstant (BI x) = show x
 extractConstant (Db x) = show x
 extractConstant (Ch x) = show x
@@ -400,6 +412,10 @@ integer_switch [] = True
 integer_switch (MkAConstAlt c _  :: _) =
     case c of
         (I x) => True
+        (I8 x) => True
+        (I16 x) => True
+        (I32 x) => True
+        (I64 x) => True
         (BI x) => True
         (Ch x) => True
         _ => False
@@ -408,6 +424,10 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
+        (I8 x) => x
+        (I16 x) => x
+        (I32 x) => x
+        (I64 x) => x
         (BI x) => x
         (Ch x) => cast x
         (B8 x) => cast x
@@ -764,11 +784,15 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
 
 extractValue : (cfType:CFType) -> (varName:String) -> String
 extractValue CFUnit          varName = "void"
-extractValue CFInt           varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFUnsigned8     varName = "((Value_Int8*)" ++ varName ++ ")->i8"
-extractValue CFUnsigned16    varName = "((Value_Int16*)" ++ varName ++ ")->i16"
-extractValue CFUnsigned32    varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFUnsigned64    varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFInt           varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFInt8          varName = "((Value_Int8*)" ++ varName ++ ")->i8"
+extractValue CFInt16         varName = "((Value_Int16*)" ++ varName ++ ")->i16"
+extractValue CFInt32         varName = "((Value_Int32*)" ++ varName ++ ")->i32"
+extractValue CFInt64         varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFUnsigned8     varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
+extractValue CFUnsigned16    varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
+extractValue CFUnsigned32    varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
+extractValue CFUnsigned64    varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
 extractValue CFString        varName = "((Value_String*)" ++ varName ++ ")->str"
 extractValue CFDouble        varName = "((Value_Double*)" ++ varName ++ ")->d"
 extractValue CFChar          varName = "((Value_Char*)" ++ varName ++ ")->c"
@@ -785,11 +809,15 @@ extractValue n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
-packCFType CFInt           varName = "makeInt32(" ++ varName ++ ")"
-packCFType CFUnsigned64    varName = "makeInt64(" ++ varName ++ ")"
-packCFType CFUnsigned32    varName = "makeInt32(" ++ varName ++ ")"
-packCFType CFUnsigned16    varName = "makeInt16(" ++ varName ++ ")"
-packCFType CFUnsigned8     varName = "makeInt8(" ++ varName ++ ")"
+packCFType CFInt           varName = "makeInt64(" ++ varName ++ ")"
+packCFType CFInt8          varName = "makeInt8(" ++ varName ++ ")"
+packCFType CFInt16         varName = "makeInt16(" ++ varName ++ ")"
+packCFType CFInt32         varName = "makeInt32(" ++ varName ++ ")"
+packCFType CFInt64         varName = "makeInt64(" ++ varName ++ ")"
+packCFType CFUnsigned64    varName = "makeBits64(" ++ varName ++ ")"
+packCFType CFUnsigned32    varName = "makeBits32(" ++ varName ++ ")"
+packCFType CFUnsigned16    varName = "makeBits16(" ++ varName ++ ")"
+packCFType CFUnsigned8     varName = "makeBits8(" ++ varName ++ ")"
 packCFType CFString        varName = "makeString(" ++ varName ++ ")"
 packCFType CFDouble        varName = "makeDouble(" ++ varName ++ ")"
 packCFType CFChar          varName = "makeChar(" ++ varName ++ ")"
