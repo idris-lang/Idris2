@@ -109,10 +109,8 @@ mod = MkOp "mod" (mod) (mod) False
 
 
 pairs : List (Integer,Integer)
-pairs = let -- [1,2,4,8,16,...,18446744073709551616]
-            powsOf2  = take 65 (iterate (*2) 1)
+pairs = let powsOf2  = [1,2,4,8,128,256,32768,65536,2147483648,4294967296,9223372036854775808,18446744073709551616]
 
-            -- powsOf2 ++ [0,1,3,7,...,18446744073709551615]
             naturals = powsOf2 ++ map (\x => x-1) powsOf2
 
             -- positive and negative versions of naturals
@@ -120,12 +118,6 @@ pairs = let -- [1,2,4,8,16,...,18446744073709551616]
 
             -- naturals paired with ints
          in [| (,) ints naturals |]
-
-filterTailRec : (a -> Bool) -> List a -> List a
-filterTailRec p = run Nil
-  where run : List a -> List a -> List a
-        run res [] = res
-        run res (h :: t) = if p h then run (h :: res) t else run res t
 
 -- This check does the following: For a given binary operation `op`,
 -- calculate the result of applying the operation to all passed pairs
@@ -140,7 +132,7 @@ filterTailRec p = run Nil
 check :  (Num a, Cast a Integer) => Op a -> List String
 check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
   let ps = if allowZero then pairs
-           else filterTailRec ((0 /=) . checkBounds . snd) pairs
+           else filter ((0 /=) . checkBounds . snd) pairs
    in mapMaybe failing ps
 
   where
