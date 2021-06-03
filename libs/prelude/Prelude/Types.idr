@@ -91,7 +91,7 @@ natToInteger (S k) = 1 + natToInteger k
 ||| Counts the number of elements that satify a predicate.
 public export
 count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
-count predicate = foldr (\v => if predicate v then S else id) Z
+count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------
 -- PAIRS --
@@ -196,7 +196,7 @@ Applicative Maybe where
   pure = Just
 
   Just f <*> Just a = Just (f a)
-  _      <*> _        = Nothing
+  _      <*> _      = Nothing
 
 public export
 Alternative Maybe where
@@ -220,7 +220,7 @@ Foldable Maybe where
 public export
 Traversable Maybe where
   traverse f Nothing = pure Nothing
-  traverse f (Just x) = (pure Just) <*> (f x)
+  traverse f (Just x) = Just <$> f x
 
 ---------
 -- DEC --
@@ -390,6 +390,8 @@ Foldable List where
 
   toList = id
 
+  foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
+
 public export
 Applicative List where
   pure x = [x]
@@ -407,7 +409,7 @@ Monad List where
 public export
 Traversable List where
   traverse f [] = pure []
-  traverse f (x::xs) = pure (::) <*> (f x) <*> (traverse f xs)
+  traverse f (x::xs) = [| f x :: traverse f xs |]
 
 -- This works quickly because when string-concat builds the result, it allocates
 -- enough room in advance so there's only one allocation, rather than lots!

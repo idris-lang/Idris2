@@ -2,7 +2,6 @@ module Data.Monoid.Exponentiation
 
 import Control.Algebra
 import Data.Nat.Views
-import Data.Num.Implementations
 import Syntax.PreorderReasoning
 
 %default total
