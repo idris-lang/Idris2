@@ -495,7 +495,7 @@ getImportHashes : String -> Ref Bin Binary ->
 getImportHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf {a = Int} b
+         ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
          ifaceHash <- fromBuf {a = Int} b
          fromBuf b
@@ -504,7 +504,7 @@ getHash : String -> Ref Bin Binary -> Core Int
 getHash file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf {a = Int} b
+         ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
          fromBuf b
 

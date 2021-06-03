@@ -4,6 +4,5 @@
 Test> S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))))))))
 Test> Bye for now!
 2/3: Building Mult (Mult.idr)
-3/3: Building Test (Test.idr)
 Test> S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))))))))
 Test> Bye for now!
