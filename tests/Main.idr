@@ -204,6 +204,7 @@ chezTests = MkTestPool "Chez backend" [Chez]
     , "bitops"
     , "casts"
     , "newints"
+    , "integers"
     , "semaphores001"
     , "semaphores002"
     , "perf001"
@@ -248,6 +249,7 @@ nodeTests = MkTestPool "Node backend" [Node]
     , "syntax001"
     , "tailrec001"
     , "idiom001"
+    , "integers"
     ]
 
 ideModeTests : TestPool
