@@ -1,7 +1,7 @@
 1/1: Building StrError1 (StrError1.idr)
 Error: Expected 'case', 'if', 'do', application or operator expression.
 
-StrError1.idr:2:24--2:25
+StrError1:2:24--2:25
  1 | foo : String
  2 | foo = "empty interp: \{}"
                             ^
@@ -9,7 +9,7 @@ StrError1.idr:2:24--2:25
 1/1: Building StrError2 (StrError2.idr)
 Error: Expected 'case', 'if', 'do', application or operator expression.
 
-StrError2.idr:2:19--2:20
+StrError2:2:19--2:20
  1 | foo : String
  2 | foo = "nested: \{ " \{ 1 +  } " }"
                        ^
@@ -17,7 +17,7 @@ StrError2.idr:2:19--2:20
 1/1: Building StrError3 (StrError3.idr)
 Error: Expected 'case', 'if', 'do', application or operator expression.
 
-StrError3.idr:2:7--2:8
+StrError3:2:7--2:8
  1 | foo : String
  2 | foo = "incomplete: \{ a <+> }"
            ^
@@ -25,7 +25,7 @@ StrError3.idr:2:7--2:8
 1/1: Building StrError4 (StrError4.idr)
 Error: Bracket is not properly closed.
 
-StrError4.idr:2:7--2:8
+StrError4:2:7--2:8
  1 | foo : String
  2 | foo = """"""
            ^
@@ -33,14 +33,14 @@ StrError4.idr:2:7--2:8
 1/1: Building StrError5 (StrError5.idr)
 Error: While processing multi-line string. Line is less indented than the closing delimiter.
 
-StrError5.idr:3:1--4:5
+StrError5:3:1--4:5
  3 |    a
  4 |     """
 
 1/1: Building StrError6 (StrError6.idr)
 Error: Bracket is not properly closed.
 
-StrError6.idr:2:7--2:8
+StrError6:2:7--2:8
  1 | foo : String
  2 | foo = """a
            ^
@@ -48,7 +48,7 @@ StrError6.idr:2:7--2:8
 1/1: Building StrError7 (StrError7.idr)
 Error: Bracket is not properly closed.
 
-StrError7.idr:2:7--2:8
+StrError7:2:7--2:8
  1 | foo : String
  2 | foo = """a"""
            ^
@@ -56,7 +56,7 @@ StrError7.idr:2:7--2:8
 1/1: Building StrError8 (StrError8.idr)
 Error: Bracket is not properly closed.
 
-StrError8.idr:2:7--2:8
+StrError8:2:7--2:8
  1 | foo : String
  2 | foo = """\{"hello"}
            ^
@@ -64,7 +64,7 @@ StrError8.idr:2:7--2:8
 1/1: Building StrError9 (StrError9.idr)
 Error: While processing multi-line string. Closing delimiter of multiline strings cannot be preceded by non-whitespace characters.
 
-StrError9.idr:3:1--3:11
+StrError9:3:1--3:11
  1 | foo : String
  2 | foo = """
  3 | \{"hello"}"""
@@ -73,7 +73,7 @@ StrError9.idr:3:1--3:11
 1/1: Building StrError10 (StrError10.idr)
 Error: While processing multi-line string. Closing delimiter of multiline strings cannot be preceded by non-whitespace characters.
 
-StrError10.idr:3:1--3:2
+StrError10:3:1--3:2
  1 | foo : String
  2 | foo = """
  3 | a"""
@@ -82,7 +82,7 @@ StrError10.idr:3:1--3:2
 1/1: Building StrError11 (StrError11.idr)
 Error: Multi-line string is expected to begin with """.
 
-StrError11.idr:2:7--2:8
+StrError11:2:7--2:8
  1 | foo : String
  2 | foo = "a
            ^
@@ -90,7 +90,7 @@ StrError11.idr:2:7--2:8
 1/1: Building StrError12 (StrError12.idr)
 Error: While processing multi-line string. Line is less indented than the closing delimiter.
 
-StrError12.idr:3:1--3:3
+StrError12:3:1--3:3
  1 | foo : String
  2 | foo = """
  3 |   \{show 1}

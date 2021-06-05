@@ -15,15 +15,16 @@ import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
+import Core.Directory
 import Core.Env
+import Core.FC
 import Core.InitPrimitives
 import Core.LinearCheck
 import Core.Metadata
-import Core.FC
 import Core.Normalise
 import Core.Options
-import Core.Termination
 import Core.TT
+import Core.Termination
 import Core.Unify
 
 import Parser.Unlit
@@ -641,7 +642,8 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         resetContext f
+         modIdent <- ctxtPathToNS f
+         resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -982,7 +984,7 @@ parseCmd = do c <- command; eoi; pure $ Just c
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = case runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd) of
+    = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
         Left err => Left err
         Right (decor, result) => Right result
 

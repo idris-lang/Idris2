@@ -4,6 +4,22 @@ import public Data.List
 
 %default total
 
+public export
+data Namespace = MkNS (List String) -- namespace, stored in reverse order
+
+public export
+data ModuleIdent = MkMI (List String) -- module identifier, stored in reverse order
+
+export
+showSep : String -> List String -> String
+showSep sep [] = ""
+showSep sep [x] = x
+showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+
+export
+Show Namespace where
+  show (MkNS ns) = showSep "." (reverse ns)
+
 -- 'FilePos' represents the position of
 -- the source information in the file (or REPL).
 -- in the form of '(line-no, column-no)'.
@@ -11,13 +27,31 @@ public export
 FilePos : Type
 FilePos = (Int, Int)
 
--- 'FC' represents the source location of the term.
--- The first 'FilePos' indicates the starting position.
--- the second 'FilePos' indicates the start of the next term.
 public export
-data FC : Type where
-   MkFC : String -> FilePos -> FilePos -> FC
-   EmptyFC : FC
+data VirtualIdent : Type where
+  Interactive : VirtualIdent
+
+public export
+data OriginDesc : Type where
+  ||| Anything that originates in physical Idris source files is assigned a
+  ||| `PhysicalIdrSrc modIdent`,
+  |||   where `modIdent` is the top-level module identifier of that file.
+  PhysicalIdrSrc : (ident : ModuleIdent) -> OriginDesc
+  ||| Anything parsed from a package file is decorated with `PhysicalPkgSrc fname`,
+  |||   where `fname` is path to the package file.
+  PhysicalPkgSrc : (fname : String) -> OriginDesc
+  Virtual : (ident : VirtualIdent) -> OriginDesc
+
+||| A file context is a filename together with starting and ending positions.
+||| It's often carried by AST nodes that might have been created from a source
+||| file or by the compiler. That makes it useful to have the notion of
+||| `EmptyFC` as part of the type.
+public export
+data FC = MkFC        OriginDesc FilePos FilePos
+        | ||| Virtual FCs are FC attached to desugared/generated code. They can help with marking
+          ||| errors, but we shouldn't attach semantic highlighting metadata to them.
+          MkVirtualFC OriginDesc FilePos FilePos
+        | EmptyFC
 
 public export
 emptyFC : FC
@@ -53,19 +87,6 @@ data Constant
     | CharType
     | DoubleType
     | WorldType
-
-public export
-data Namespace = MkNS (List String) -- namespace, stored in reverse order
-
-export
-showSep : String -> List String -> String
-showSep sep [] = ""
-showSep sep [x] = x
-showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
-
-export
-Show Namespace where
-  show (MkNS ns) = showSep "." (reverse ns)
 
 public export
 data Name = UN String -- user defined name

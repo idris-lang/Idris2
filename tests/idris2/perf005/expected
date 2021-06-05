@@ -3,7 +3,7 @@
 Error: While processing right hand side of term. When unifying Term ?g (TyFunc ?tyA (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat)))))))) and Term Empty (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat (TyFunc TyNat TyNat))))))).
 Mismatch between: TyFunc TyNat TyNat and TyNat.
 
-Lambda.idr:62:3--88:9
+Lambda:62:3--88:9
  62 |   Func
  63 |       (Func
  64 |            (Func
@@ -14,7 +14,7 @@ Lambda.idr:62:3--88:9
 1/1: Building Bad1 (Bad1.idr)
 Error: Couldn't parse declaration.
 
-Bad1.idr:3:1--3:2
+Bad1:3:1--3:2
  1 | module Bad1
  2 | 
  3 | data Bad = BadDCon (x : Nat)
@@ -23,7 +23,7 @@ Bad1.idr:3:1--3:2
 1/1: Building Bad2 (Bad2.idr)
 Error: Expected 'case', 'if', 'do', application or operator expression.
 
-Bad2.idr:3:13--3:14
+Bad2:3:13--3:14
  1 | module Bad2
  2 | 
  3 | badReturn : (whatever : Int)
@@ -32,7 +32,7 @@ Bad2.idr:3:13--3:14
 1/1: Building Bad3 (Bad3.idr)
 Error: Couldn't parse declaration.
 
-Bad3.idr:4:1--4:2
+Bad3:4:1--4:2
  1 | module Bad3
  2 | 
  3 | badExpr : ()

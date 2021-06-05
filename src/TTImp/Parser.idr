@@ -15,7 +15,7 @@ import        Data.List1
 import        Data.Maybe
 import        Data.Strings
 
-topDecl : FileName -> IndentInfo -> Rule ImpDecl
+topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
 -- neighbouring clauses with the same function name into one definition.
 export
@@ -32,7 +32,7 @@ collectDefs : List ImpDecl -> List ImpDecl
 %hide Lexer.Core.(<|>)
 %hide Prelude.(<|>)
 
-atom : FileName -> Rule RawImp
+atom : OriginDesc -> Rule RawImp
 atom fname
     = do start <- location
          x <- constant
@@ -145,7 +145,7 @@ bindSymbol
          pure AutoImplicit
 
 mutual
-  appExpr : FileName -> IndentInfo -> Rule RawImp
+  appExpr : OriginDesc -> IndentInfo -> Rule RawImp
   appExpr fname indents
       = case_ fname indents
     <|> lazy fname indents
@@ -166,7 +166,7 @@ mutual
       applyExpImp start end f (Right (Nothing, imp) :: args)
           = applyExpImp start end (IAutoApp (MkFC fname start end) f imp) args
 
-  argExpr : FileName -> IndentInfo ->
+  argExpr : OriginDesc -> IndentInfo ->
             Rule (Either RawImp (Maybe Name, RawImp))
   argExpr fname indents
       = do continue indents
@@ -176,7 +176,7 @@ mutual
            arg <- implicitArg fname indents
            pure (Right arg)
 
-  implicitArg : FileName -> IndentInfo -> Rule (Maybe Name, RawImp)
+  implicitArg : OriginDesc -> IndentInfo -> Rule (Maybe Name, RawImp)
   implicitArg fname indents
       = do start <- location
            symbol "{"
@@ -195,7 +195,7 @@ mutual
            symbol "}"
            pure (Nothing, tm)
 
-  as : FileName -> IndentInfo -> Rule RawImp
+  as : OriginDesc -> IndentInfo -> Rule RawImp
   as fname indents
       = do start <- location
            x <- unqualifiedName
@@ -205,7 +205,7 @@ mutual
            end <- location
            pure (IAs (MkFC fname start end) (MkFC fname start nameEnd) UseRight (UN x) pat)
 
-  simpleExpr : FileName -> IndentInfo -> Rule RawImp
+  simpleExpr : OriginDesc -> IndentInfo -> Rule RawImp
   simpleExpr fname indents
       = as fname indents
     <|> atom fname
@@ -235,7 +235,7 @@ mutual
   pibindAll fc p ((rig, n, ty) :: rest) scope
            = IPi fc rig p n ty (pibindAll fc p rest scope)
 
-  bindList : FileName -> FilePos -> IndentInfo ->
+  bindList : OriginDesc -> FilePos -> IndentInfo ->
              Rule (List (RigCount, Name, RawImp))
   bindList fname start indents
       = forget <$> sepBy1 (symbol ",")
@@ -250,7 +250,7 @@ mutual
                               pure (rig, UN n, ty))
 
 
-  pibindListName : FileName -> FilePos -> IndentInfo ->
+  pibindListName : OriginDesc -> FilePos -> IndentInfo ->
                    Rule (List (RigCount, Name, RawImp))
   pibindListName fname start indents
        = do rigc <- multiplicity
@@ -268,14 +268,14 @@ mutual
                                rig <- getMult rigc
                                pure (rig, n, ty))
 
-  pibindList : FileName -> FilePos -> IndentInfo ->
+  pibindList : OriginDesc -> FilePos -> IndentInfo ->
                Rule (List (RigCount, Maybe Name, RawImp))
   pibindList fname start indents
     = do params <- pibindListName fname start indents
          pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
 
 
-  autoImplicitPi : FileName -> IndentInfo -> Rule RawImp
+  autoImplicitPi : OriginDesc -> IndentInfo -> Rule RawImp
   autoImplicitPi fname indents
       = do start <- location
            symbol "{"
@@ -288,7 +288,7 @@ mutual
            end <- location
            pure (pibindAll (MkFC fname start end) AutoImplicit binders scope)
 
-  forall_ : FileName -> IndentInfo -> Rule RawImp
+  forall_ : OriginDesc -> IndentInfo -> Rule RawImp
   forall_ fname indents
       = do start <- location
            keyword "forall"
@@ -303,7 +303,7 @@ mutual
            end <- location
            pure (pibindAll (MkFC fname start end) Implicit binders scope)
 
-  implicitPi : FileName -> IndentInfo -> Rule RawImp
+  implicitPi : OriginDesc -> IndentInfo -> Rule RawImp
   implicitPi fname indents
       = do start <- location
            symbol "{"
@@ -314,7 +314,7 @@ mutual
            end <- location
            pure (pibindAll (MkFC fname start end) Implicit binders scope)
 
-  explicitPi : FileName -> IndentInfo -> Rule RawImp
+  explicitPi : OriginDesc -> IndentInfo -> Rule RawImp
   explicitPi fname indents
       = do start <- location
            symbol "("
@@ -325,7 +325,7 @@ mutual
            end <- location
            pure (pibindAll (MkFC fname start end) exp binders scope)
 
-  lam : FileName -> IndentInfo -> Rule RawImp
+  lam : OriginDesc -> IndentInfo -> Rule RawImp
   lam fname indents
       = do start <- location
            symbol "\\"
@@ -341,7 +341,7 @@ mutual
        bindAll fc ((rig, n, ty) :: rest) scope
            = ILam fc rig Explicit (Just n) ty (bindAll fc rest scope)
 
-  let_ : FileName -> IndentInfo -> Rule RawImp
+  let_ : OriginDesc -> IndentInfo -> Rule RawImp
   let_ fname indents
       = do start <- location
            keyword "let"
@@ -366,7 +366,7 @@ mutual
            end <- location
            pure (ILocal (MkFC fname start end) (collectDefs ds) scope)
 
-  case_ : FileName -> IndentInfo -> Rule RawImp
+  case_ : OriginDesc -> IndentInfo -> Rule RawImp
   case_ fname indents
       = do start <- location
            keyword "case"
@@ -377,13 +377,13 @@ mutual
            pure (let fc = MkFC fname start end in
                      ICase fc scr (Implicit fc False) alts)
 
-  caseAlt : FileName -> IndentInfo -> Rule ImpClause
+  caseAlt : OriginDesc -> IndentInfo -> Rule ImpClause
   caseAlt fname indents
       = do start <- location
            lhs <- appExpr fname indents
            caseRHS fname indents start lhs
 
-  caseRHS : FileName -> IndentInfo -> (Int, Int) -> RawImp ->
+  caseRHS : OriginDesc -> IndentInfo -> (Int, Int) -> RawImp ->
             Rule ImpClause
   caseRHS fname indents start lhs
       = do symbol "=>"
@@ -397,7 +397,7 @@ mutual
            end <- location
            pure (ImpossibleClause (MkFC fname start end) lhs)
 
-  record_ : FileName -> IndentInfo -> Rule RawImp
+  record_ : OriginDesc -> IndentInfo -> Rule RawImp
   record_ fname indents
       = do start <- location
            keyword "record"
@@ -409,7 +409,7 @@ mutual
            end <- location
            pure (IUpdate (MkFC fname start end) (forget fs) sc)
 
-  field : FileName -> IndentInfo -> Rule IFieldUpdate
+  field : OriginDesc -> IndentInfo -> Rule IFieldUpdate
   field fname indents
       = do path <- sepBy1 (symbol "->") unqualifiedName
            upd <- (do symbol "="; pure ISetField)
@@ -418,7 +418,7 @@ mutual
            val <- appExpr fname indents
            pure (upd (forget path) val)
 
-  rewrite_ : FileName -> IndentInfo -> Rule RawImp
+  rewrite_ : OriginDesc -> IndentInfo -> Rule RawImp
   rewrite_ fname indents
       = do start <- location
            keyword "rewrite"
@@ -428,7 +428,7 @@ mutual
            end <- location
            pure (IRewrite (MkFC fname start end) rule tm)
 
-  lazy : FileName -> IndentInfo -> Rule RawImp
+  lazy : OriginDesc -> IndentInfo -> Rule RawImp
   lazy fname indents
       = do start <- location
            exactIdent "Lazy"
@@ -452,7 +452,7 @@ mutual
            pure (IForce (MkFC fname start end) tm)
 
 
-  binder : FileName -> IndentInfo -> Rule RawImp
+  binder : OriginDesc -> IndentInfo -> Rule RawImp
   binder fname indents
       = autoImplicitPi fname indents
     <|> forall_ fname indents
@@ -461,7 +461,7 @@ mutual
     <|> lam fname indents
     <|> let_ fname indents
 
-  typeExpr : FileName -> IndentInfo -> Rule RawImp
+  typeExpr : OriginDesc -> IndentInfo -> Rule RawImp
   typeExpr fname indents
       = do start <- location
            arg <- appExpr fname indents
@@ -480,10 +480,10 @@ mutual
                   (mkPi start end a as)
 
   export
-  expr : FileName -> IndentInfo -> Rule RawImp
+  expr : OriginDesc -> IndentInfo -> Rule RawImp
   expr = typeExpr
 
-tyDecl : FileName -> IndentInfo -> Rule ImpTy
+tyDecl : OriginDesc -> IndentInfo -> Rule ImpTy
 tyDecl fname indents
     = do start <- location
          n <- name
@@ -496,7 +496,7 @@ tyDecl fname indents
 
 mutual
   parseRHS : (withArgs : Nat) ->
-             FileName -> IndentInfo -> (Int, Int) -> RawImp ->
+             OriginDesc -> IndentInfo -> (Int, Int) -> RawImp ->
              Rule (Name, ImpClause)
   parseRHS withArgs fname indents start lhs
       = do symbol "="
@@ -530,7 +530,7 @@ mutual
       getFn (INamedApp _ f _ a) = getFn f
       getFn _ = fail "Not a function application"
 
-  clause : Nat -> FileName -> IndentInfo -> Rule (Name, ImpClause)
+  clause : Nat -> OriginDesc -> IndentInfo -> Rule (Name, ImpClause)
   clause withArgs fname indents
       = do start <- location
            lhs <- expr fname indents
@@ -551,7 +551,7 @@ mutual
                end <- location
                pure (MkFC fname start end, tm)
 
-definition : FileName -> IndentInfo -> Rule ImpDecl
+definition : OriginDesc -> IndentInfo -> Rule ImpDecl
 definition fname indents
     = do start <- location
          nd <- clause 0 fname indents
@@ -568,7 +568,7 @@ dataOpt
          ns <- forget <$> some name
          pure (SearchBy ns)
 
-dataDecl : FileName -> IndentInfo -> Rule ImpData
+dataDecl : OriginDesc -> IndentInfo -> Rule ImpData
 dataDecl fname indents
     = do start <- location
          keyword "data"
@@ -584,7 +584,7 @@ dataDecl fname indents
          end <- location
          pure (MkImpData (MkFC fname start end) n ty opts cs)
 
-recordParam : FileName -> IndentInfo -> Rule (List (Name, RigCount, PiInfo RawImp, RawImp))
+recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo RawImp, RawImp))
 recordParam fname indents
     = do symbol "("
          start <- location
@@ -609,7 +609,7 @@ recordParam fname indents
          end <- location
          pure [(n, top, Explicit, Implicit (MkFC fname start end) False)]
 
-fieldDecl : FileName -> IndentInfo -> Rule (List IField)
+fieldDecl : OriginDesc -> IndentInfo -> Rule (List IField)
 fieldDecl fname indents
       = do symbol "{"
            commit
@@ -631,7 +631,7 @@ fieldDecl fname indents
              pure (map (\n => MkIField (MkFC fname start end)
                                        linear p (UN n) ty) (forget ns))
 
-recordDecl : FileName -> IndentInfo -> Rule ImpDecl
+recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
     = do start <- location
          vis <- visibility
@@ -663,7 +663,7 @@ logLevel
            lvl <- intLit
            pure (Just (topic, fromInteger lvl))
 
-directive : FileName -> IndentInfo -> Rule ImpDecl
+directive : OriginDesc -> IndentInfo -> Rule ImpDecl
 directive fname indents
     = do pragma "logging"
          commit
@@ -698,7 +698,7 @@ directive fname indents
                    IPragma (\c, nest, env => setRewrite {c} fc eq rw))
     -}
 -- Declared at the top
--- topDecl : FileName -> IndentInfo -> Rule ImpDecl
+-- topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 topDecl fname indents
     = do start <- location
          vis <- visibility
@@ -748,7 +748,7 @@ collectDefs (d :: ds)
 
 -- full programs
 export
-prog : FileName -> Rule (List ImpDecl)
+prog : OriginDesc -> Rule (List ImpDecl)
 prog fname
     = do ds <- nonEmptyBlock (topDecl fname)
          pure (collectDefs $ forget ds)
@@ -758,7 +758,7 @@ export
 command : Rule ImpREPL
 command
     = do symbol ":"; exactIdent "t"
-         tm <- expr "(repl)" init
+         tm <- expr (Virtual Interactive) init
          pure (Check tm)
   <|> do symbol ":"; exactIdent "s"
          n <- name
@@ -781,5 +781,5 @@ command
          pure (DebugInfo n)
   <|> do symbol ":"; exactIdent "q"
          pure Quit
-  <|> do tm <- expr "(repl)" init
+  <|> do tm <- expr (Virtual Interactive) init
          pure (Eval tm)

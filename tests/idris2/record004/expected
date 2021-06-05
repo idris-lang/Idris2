@@ -9,7 +9,7 @@ Main> [1.1, 4.2]
 Main> Error: When unifying (?a -> ?b) -> ?f ?a -> ?f ?b and Point.
 Mismatch between: (?a -> ?b) -> ?f ?a -> ?f ?b and Point.
 
-(interactive):1:1--1:4
+(Interactive):1:1--1:4
  1 | map .x [MkPoint 1 2, MkPoint 3 4]
      ^^^
 
