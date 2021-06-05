@@ -1,7 +1,7 @@
 #include "clock.h"
 
 #define NSEC_PER_SEC 1000000000
-#define CLOCKS_PER_NSEC ((float)(CLOCKS_PER_SEC / NSEC_PER_SEC))
+#define CLOCKS_PER_NSEC ((float)CLOCKS_PER_SEC / NSEC_PER_SEC)
 
 Value *clockTimeMonotonic()
 {

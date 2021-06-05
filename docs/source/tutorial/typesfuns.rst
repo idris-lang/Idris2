@@ -1182,6 +1182,8 @@ Or even:
 More Expressions
 ================
 
+.. _sect-let-bindings:
+
 ``let`` bindings
 ----------------
 
@@ -1204,6 +1206,49 @@ pattern matching at the top level:
     showPerson : Person -> String
     showPerson p = let MkPerson name age = p in
                        name ++ " is " ++ show age ++ " years old"
+
+These let bindings can be annotated with a type:
+
+.. code-block:: idris
+
+   mirror : List a -> List a
+   mirror xs = let xs' : List a = reverse xs in
+                   xs ++ xs'
+
+We can also use the symbol ``:=`` instead of ``=`` to, among other things,
+avoid ambiguities with propositional equality:
+
+.. code-block:: idris
+
+   Diag : a -> Type
+   Diag v = let ty : Type := v = v in ty
+
+Local definitions can also be introduced using ``let``. Just like top level
+ones and ones defined in a ``where`` clause you need to:
+
+1. declare the function and its type
+2. define the function by pattern matching
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                in foldl fo neutral
+
+The symbol ``:=`` cannot be used in a local function definition. Which means
+that it can be used to interleave let bindings and local definitions without
+introducing ambiguities.
+
+.. code-block:: idris
+
+   foldMap : Monoid m => (a -> m) -> Vect n a -> m
+   foldMap f = let fo : m -> a -> m
+                   fo ac el = ac <+> f el
+                   initial := neutral
+                    --     ^ this indicates that `initial` is a separate binding,
+                    -- not relevant to definition of `fo`
+                in foldl fo initial
 
 List comprehensions
 -------------------

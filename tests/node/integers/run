@@ -1,0 +1,4 @@
+$1 --no-banner --no-color --console-width 0 --cg node -o node_integers.js TestIntegers.idr > /dev/null
+node build/exec/node_integers.js
+
+rm -rf build
