@@ -21,7 +21,6 @@ modules =
     Compiler.ES.ImperativeAst,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
-    Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
     Compiler.RefC.CC,
