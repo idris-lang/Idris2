@@ -142,10 +142,7 @@ outputSyntaxHighlighting fname loadResult = do
   opts <- get ROpts
   when (opts.synHighlightOn) $ do
     meta <- get MD
-    defs <- get Ctxt
-    let wdir = defs.options.dirs.working_dir
-    let sdir = defs.options.dirs.source_dir
-    modIdent <- pathToNS wdir sdir fname
+    modIdent <- ctxtPathToNS fname
 
     let allNames = filter ((PhysicalIdrSrc modIdent ==) . fst . fst)
                      $ toList meta.nameLocMap

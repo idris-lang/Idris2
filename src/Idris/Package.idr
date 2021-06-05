@@ -286,10 +286,7 @@ compileMain : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               Name -> String -> String -> Core ()
 compileMain mainn mfilename exec
-    = do defs <- get Ctxt
-         let wdir = defs.options.dirs.working_dir
-         let sdir = defs.options.dirs.source_dir
-         modIdent <- pathToNS wdir sdir mfilename
+    = do modIdent <- ctxtPathToNS mfilename
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
          ignore $ loadMainFile mfilename
@@ -610,10 +607,7 @@ runRepl fname = do
   u <- newRef UST initUState
   origin <- maybe
     (pure $ Virtual Interactive) (\fname => do
-      defs <- get Ctxt
-      let wdir = defs.options.dirs.working_dir
-      let sdir = defs.options.dirs.source_dir
-      modIdent <- pathToNS wdir sdir fname
+      modIdent <- ctxtPathToNS fname
       pure (PhysicalIdrSrc modIdent)
       ) fname
   m <- newRef MD (initMetadata origin)

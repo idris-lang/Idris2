@@ -260,8 +260,8 @@ Reify ModuleIdent where
         NS _ (UN "MkMI")
           => do ns' <- reify defs !(evalClosure defs ns)
                 pure (unsafeFoldModuleIdent ns')
-        _ => cantReify val "Namespace"
-  reify defs val = cantReify val "Namespace"
+        _ => cantReify val "ModuleIdent"
+  reify defs val = cantReify val "ModuleIdent"
 
 export
 Reflect ModuleIdent where

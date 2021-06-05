@@ -169,10 +169,7 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do defs <- get Ctxt
-         let wdir = defs.options.dirs.working_dir
-         let sdir = defs.options.dirs.source_dir
-         modIdent <- pathToNS wdir sdir fname
+    = do modIdent <- ctxtPathToNS fname
          Right (decor, tti) <- logTime "Parsing" $
                             coreLift $ parseFile fname (PhysicalIdrSrc modIdent)
                             (do decls <- prog (PhysicalIdrSrc modIdent)

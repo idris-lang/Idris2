@@ -47,13 +47,10 @@ yaffleMain : String -> List String -> Core ()
 yaffleMain fname args
     = do defs <- initDefs
          c <- newRef Ctxt defs
-         let wdir = defs.options.dirs.working_dir
-         let sdir = defs.options.dirs.source_dir
-         modIdent <- pathToNS wdir sdir fname
+         t <- processArgs args
+         modIdent <- ctxtPathToNS fname
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
-         d <- getDirs
-         t <- processArgs args
          setLogTimings t
          addPrimitives
          case extension fname of
@@ -63,8 +60,7 @@ yaffleMain fname args
               _ => do coreLift_ $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile fname
                       when ok $
-                         do ns <- pathToNS (working_dir d) (source_dir d) fname
-                            makeBuildDirectory ns
+                         do makeBuildDirectory modIdent
                             writeToTTC () !(getTTCFileName fname "ttc")
                             coreLift_ $ putStrLn "Written TTC"
          ust <- get UST

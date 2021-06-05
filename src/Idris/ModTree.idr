@@ -131,8 +131,7 @@ getBuildMods : {auto c : Ref Ctxt Defs} ->
                Core (List BuildMod)
 getBuildMods loc done fname
     = do a <- newRef AllMods []
-         d <- getDirs
-         fname_ns <- pathToNS (working_dir d) (source_dir d) fname
+         fname_ns <- ctxtPathToNS fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
@@ -227,10 +226,7 @@ buildDeps fname
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       defs <- get Ctxt
-                       let wdir = defs.options.dirs.working_dir
-                       let sdir = defs.options.dirs.source_dir
-                       modIdent <- pathToNS wdir sdir fname
+                       modIdent <- ctxtPathToNS fname
                        put MD (initMetadata (PhysicalIdrSrc modIdent))
                        mainttc <- getTTCFileName fname "ttc"
                        log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname

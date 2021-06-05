@@ -123,24 +123,8 @@ nsToSource loc ns
 -- Given a filename in the working directory + source directory, return the correct
 -- namespace for it
 export
-pathToNS : String -> Maybe String -> String -> Core ModuleIdent
-pathToNS wdir sdir fname =
-  let
-    sdir = fromMaybe "" sdir
-    base = if isAbsolute fname then wdir </> sdir else sdir
-  in
-    case Path.dropBase base fname of
-      Nothing => throw (UserError (
-          "Source file "
-        ++ show fname
-        ++ " is not in the source directory "
-        ++ show (wdir </> sdir)))
-      Just relPath =>
-        pure $ unsafeFoldModuleIdent $ reverse $ splitPath $ Path.dropExtension relPath
-
-export
-pathToNS' : String -> Maybe String -> String -> Maybe ModuleIdent
-pathToNS' wdir sdir fname =
+mbPathToNS : String -> Maybe String -> String -> Maybe ModuleIdent
+mbPathToNS wdir sdir fname =
   let
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
@@ -148,6 +132,23 @@ pathToNS' wdir sdir fname =
     unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
       <$> Path.dropBase base fname
 
+export
+corePathToNS : String -> Maybe String -> String -> Core ModuleIdent
+corePathToNS wdir sdir fname = do
+  let err = UserError $
+          "Source file "
+       ++ show fname
+       ++ " is not in the source directory "
+       ++ show (wdir </> fromMaybe "" sdir)
+  maybe (throw err) pure (mbPathToNS wdir sdir fname)
+
+export
+ctxtPathToNS : {auto c : Ref Ctxt Defs} -> String -> Core ModuleIdent
+ctxtPathToNS fname = do
+  defs <- get Ctxt
+  let wdir = defs.options.dirs.working_dir
+  let sdir = defs.options.dirs.source_dir
+  corePathToNS wdir sdir fname
 
 dirExists : String -> IO Bool
 dirExists dir = do Right d <- openDir dir
@@ -198,12 +199,11 @@ export
 getTTCFileName : {auto c : Ref Ctxt Defs} ->
                  String -> String -> Core String
 getTTCFileName inp ext
-    = do ns <- getNS
-         d <- getDirs
-         -- Get its namespace from the file relative to the working directory
+    = do -- Get its namespace from the file relative to the working directory
          -- and generate the ttc file from that
-         ns <- pathToNS (working_dir d) (source_dir d) inp
+         ns <- ctxtPathToNS inp
          let fname = ModuleIdent.toPath ns <.> ext
+         d <- getDirs
          let bdir = build_dir d
          pure $ bdir </> "ttc" </> fname
 

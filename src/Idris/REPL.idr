@@ -642,10 +642,7 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         defs <- get Ctxt
-         let wdir = defs.options.dirs.working_dir
-         let sdir = defs.options.dirs.source_dir
-         modIdent <- pathToNS wdir sdir f
+         modIdent <- ctxtPathToNS f
          resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""

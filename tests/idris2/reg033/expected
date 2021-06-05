@@ -1,21 +1,2 @@
 1/2: Building DerivingEq (DerivingEq.idr)
-Error: While processing right hand side of genEq. Can't find an implementation for FromString OriginDesc.
-
-DerivingEq:17:23--17:39
- 13 | -- %logging 5
- 14 | public export
- 15 | genEq : {t : _} -> Name -> Elab (t -> t -> Bool)
- 16 | genEq typeName = do
- 17 |   let pos : FC = MkFC "generated code" (0,0) (0,0)
-                            ^^^^^^^^^^^^^^^^
-
-Error: While processing right hand side of ==. Bad elaborator script genEq (UN "TreeOne") (script is not a data value).
-
-DerivingEq:51:10--51:39
- 47 | data TreeOne a = BranchOne (TreeOne a) a (TreeOne a)
- 48 |                | Leaf
- 49 | 
- 50 | Eq a => Eq (TreeOne a) where
- 51 |   (==) = %runElab genEq `{{ TreeOne }}
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+2/2: Building test (test.idr)

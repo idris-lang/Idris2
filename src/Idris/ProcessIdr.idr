@@ -330,8 +330,7 @@ process buildmsg file ident
                    if isNil errs
                       then
                         do defs <- get Ctxt
-                           d <- getDirs
-                           ns <- pathToNS (working_dir d) (source_dir d) file
+                           ns <- ctxtPathToNS file
                            makeBuildDirectory ns
                            writeToTTC !(get Syn) ttcf
                            ttmf <- getTTCFileName file "ttm"
