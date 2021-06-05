@@ -84,6 +84,8 @@ import Data.Maybe
 import Data.List
 import Data.List1
 import Data.Strings
+import Libraries.Data.Graph
+import Libraries.Data.SortedSet
 import Libraries.Data.List.Extra as L
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
@@ -179,105 +181,33 @@ makeTailOptimToBody n argNames body =
                                (Just loopReturn)
     in stepFn <+> createArgInit argNames <+> loop
 
-||| A directed graph mapping function names
-||| to the set of names they directly call and
-||| to the set of names from which they are directly called
-record CallGraph where
-  constructor MkCallGraph
-  ||| Map function names to function names they call
-  calls   : SortedMap Name (SortedSet Name)
-  ||| Map function names to function names, from which they are called
-  callers : SortedMap Name (SortedSet Name)
-
-showCallGraph : CallGraph -> String
-showCallGraph x =
-    let calls = unlines $ map
-                    (\(x,y) => show x ++ ": " ++ show (SortedSet.toList y))
-                    (SortedMap.toList x.calls)
-        callers = unlines $ map
-                    (\(x,y) => show x ++ ": " ++ show (SortedSet.toList y))
-                    (SortedMap.toList x.callers)
-    in calls ++ "\n----\n" ++ callers
-
 -- when creating the tail call graph, we only process
 -- function declarations and we are only interested
 -- in calls being made at tail position
-tailCallGraph : ImperativeStatement -> CallGraph
+tailCallGraph : ImperativeStatement -> SortedMap Name (SortedSet Name)
 tailCallGraph (SeqStatement x y) =
-  let xg = tailCallGraph x
-      yg = tailCallGraph y
-   in MkCallGraph
-        (mergeWith union xg.calls yg.calls)
-        (mergeWith union xg.callers yg.callers)
+  mergeWith union (tailCallGraph x) (tailCallGraph y)
 
 tailCallGraph (FunDecl fc n args body) =
-  let calls = allTailCalls body
-   in MkCallGraph (singleton n calls) (toSortedMap calls $> singleton n)
+  singleton n $ allTailCalls body
 
-tailCallGraph _ = MkCallGraph empty empty
+tailCallGraph _ = empty
 
 -- lookup up the list of values associated with
 -- a given key (`Nil` if the key is not present in the list)
 lookupList : k -> SortedMap k (SortedSet b) -> List b
 lookupList v = maybe [] SortedSet.toList . lookup v
 
--- look up the nodes transitively called from
--- the given list of callers. already visited nodes
--- (as indicated by `visited`) are ignored
---
--- For the resulting list, the following post-condition holds:
--- if x is callable from y, then y will appear before x in the list.
-kosarajuL :  (visited : SortedSet Name)
-          -> (callers : List Name)
-          -> (graph   : CallGraph)
-          -> (SortedSet Name, List Name)
-kosarajuL visited [] graph = (visited, [])
-kosarajuL visited (x::xs) graph =
-  if contains x visited
-     then kosarajuL visited xs graph
-     else let outNeighbours = lookupList x (graph.calls)
-              (visited2, l2) = kosarajuL (insert x visited) outNeighbours graph
-              (visited3, l3) = kosarajuL visited2 xs graph
-           in (visited3, l3 ++ (x :: l2))
-
-kosarajuAssign :  CallGraph
-               -> (root : Name)
-               -> SortedMap Name Name
-               -> (u : Name)
-               -> SortedMap Name Name
-kosarajuAssign graph root s u =
-  case lookup u s of
-    Just _  => s
-    Nothing =>
-      let inNeighbours = lookupList u (graph.callers)
-       in foldl (kosarajuAssign graph root) (insert u root s) inNeighbours
-
--- associates every caller in a call graph with
--- an arbitrary root node of its strongly connected
--- component.
---
--- This allows us to find the strongly connected components
--- of a tail-call graph, by grouping nodes by their
--- assigned root node.
---
--- See https://en.wikipedia.org/wiki/Kosaraju%27s_algorithm
-kosaraju : CallGraph -> SortedMap Name Name
-kosaraju graph =
-    let l = snd $ kosarajuL empty (keys $ graph.calls) graph
-    in foldl (\acc, elem => kosarajuAssign graph elem acc elem) empty l
-
-recursiveTailCallGroups : CallGraph -> List (List Name)
+recursiveTailCallGroups : SortedMap Name (SortedSet Name) -> List (List Name)
 recursiveTailCallGroups graph =
-    let roots  = kosaraju graph
-        groups = map (map fst) . L.groupAllWith snd $ toList roots
-    in [forget x | x<-groups, hasTailCalls x]
+  [forget x | x <-tarjan graph, hasTailCalls x]
 
     -- in case of larger groups (more than one element)
     -- the group contains tailcalls by construction. In case
     -- of a single function, we need to check that at least one
     -- outgoing tailcall goes back to the function itself.
     where hasTailCalls : List1 Name -> Bool
-          hasTailCalls (x ::: Nil) = x `elem` lookupList x (graph.calls)
+          hasTailCalls (x ::: Nil) = x `elem` lookupList x graph
           hasTailCalls _           = True
 
 -- extracts the functions belonging to the given tailcall
@@ -367,8 +297,7 @@ export
 tailRecOptim : ImperativeStatement -> Core ImperativeStatement
 tailRecOptim x =
     do ref <- newRef TailRecS (MkTailSt 0)
-       let graph = tailCallGraph x
-       let groups =  recursiveTailCallGroups graph
+       let groups = recursiveTailCallGroups (tailCallGraph x)
        let functionsToOptimize = foldl SortedSet.union empty $ map SortedSet.fromList groups
        let (unchanged, defs) = extractFunctions functionsToOptimize x
        optimized <- traverse (tailRecOptimGroup defs) groups
