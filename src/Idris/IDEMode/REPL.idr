@@ -403,18 +403,21 @@ displayIDEResult outf i (NameLocList dat)
     -- which stores a module identifier as opposed to a full path,
     -- we need to check the project's source folder and all the library directories
     -- for the relevant source file.
+    -- (!) Always returns the *absolute* path.
     sexpOriginDesc : OriginDesc -> Core String
     sexpOriginDesc (PhysicalIdrSrc modIdent) = do
       defs <- get Ctxt
+      let wdir = defs.options.dirs.working_dir
       let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
       let exts = map show listOfExtensions
       Just fname <- catch
-          (Just <$> nsToSource replFC modIdent) -- Try local source first
+          (Just . (wdir </>) <$> nsToSource replFC modIdent) -- Try local source first
           -- if not found, try looking for the file amongst the loaded packages.
           (const $ firstAvailable $ do
             pkg_dir <- pkg_dirs
+            let pkg_dir_abs = ifThenElse (isRelative pkg_dir) (wdir </> pkg_dir) pkg_dir
             ext <- exts
-            pure (pkg_dir </> ModuleIdent.toPath modIdent <.> ext))
+            pure (pkg_dir_abs </> ModuleIdent.toPath modIdent <.> ext))
         | _ => pure "(File-Not-Found)"
       pure fname
     sexpOriginDesc (PhysicalPkgSrc fname) = pure fname
