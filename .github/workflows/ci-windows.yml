@@ -7,7 +7,7 @@ on:
       - '*'
   pull_request:
     branches:
-      - master
+      - '*'
 env:
   MSYSTEM: MINGW64
   MSYS2_PATH_TYPE: inherit
