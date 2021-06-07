@@ -234,7 +234,8 @@ runTest opts testPath = forkIO $ do
       case str of
         "y" => pure True
         "n" => pure False
-        _   => do putStrLn "Invalid Answer."
+        ""  => pure False
+        _   => do putStrLn "Invalid answer."
                   getAnswer
 
     expVsOut : String -> String -> List String
@@ -246,7 +247,7 @@ runTest opts testPath = forkIO $ do
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
           , out
-          , "Accept new golden value? [yn]"
+          , "Accept new golden value? [y/N]"
           ]
         Just exp => do
           code <- system $ "git diff --no-index --exit-code --word-diff=color " ++
@@ -254,7 +255,7 @@ runTest opts testPath = forkIO $ do
           putStrLn . unlines $
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
-            ["Accept actual value as new golden value? [yn]"]
+            ["Accept actual value as new golden value? [y/N]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
                     | Left err => print err
