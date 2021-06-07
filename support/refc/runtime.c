@@ -103,6 +103,11 @@ int extractInt(Value *v)
     return (int)((Value_Double *)v)->d;
   }
 
+  if (v->header.tag == CHAR_TAG)
+  {
+    return (int)((Value_Char *)v)->c;
+  }
+
   return -1;
 }
 
