@@ -8,6 +8,7 @@ import Compiler.Common
 import Core.AutoSearch
 import Core.CompileExpr
 import Core.Context
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Normalise
@@ -43,6 +44,7 @@ import TTImp.TTImp
 import TTImp.ProcessDecls
 
 import Libraries.Utils.Hex
+import Libraries.Utils.Path
 
 import Data.List
 import System
@@ -397,18 +399,31 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
 displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
   where
-    -- Can't recover the full path to the file, because
-    -- the name may come from an out-of-project location whereas we only store
-    -- module identifiers (source location is lost).
-    sexpOriginDesc : OriginDesc -> String
-    sexpOriginDesc (PhysicalIdrSrc mod) = show mod
-    sexpOriginDesc (PhysicalPkgSrc fname) = fname
-    sexpOriginDesc (Virtual Interactive) = "(Interactive)"
+    -- In order to recover the full path to the module referenced by FC,
+    -- which stores a module identifier as opposed to a full path,
+    -- we need to check the project's source folder and all the library directories
+    -- for the relevant source file.
+    sexpOriginDesc : OriginDesc -> Core String
+    sexpOriginDesc (PhysicalIdrSrc modIdent) = do
+      defs <- get Ctxt
+      let pkg_dirs = filter (/= ".") defs.options.dirs.extra_dirs
+      let exts = map show listOfExtensions
+      Just fname <- catch
+          (Just <$> nsToSource replFC modIdent) -- Try local source first
+          -- if not found, try looking for the file amongst the loaded packages.
+          (const $ firstAvailable $ do
+            pkg_dir <- pkg_dirs
+            ext <- exts
+            pure (pkg_dir </> ModuleIdent.toPath modIdent <.> ext))
+        | _ => pure "(File-Not-Found)"
+      pure fname
+    sexpOriginDesc (PhysicalPkgSrc fname) = pure fname
+    sexpOriginDesc (Virtual Interactive) = pure "(Interactive)"
 
     constructSExp : (Name, NonEmptyFC) -> Core SExp
     constructSExp (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom (sexpOriginDesc origin)
+                 , StringAtom !(sexpOriginDesc origin)
                  , IntegerAtom $ cast $ startLine
                  , IntegerAtom $ cast $ startCol
                  , IntegerAtom $ cast $ endLine
