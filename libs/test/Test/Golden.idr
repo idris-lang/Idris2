@@ -57,7 +57,14 @@
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable under test> [--timing] [--interactive] [--cg CODEGEN] [--threads N] [--only [NAMES]]
+||| runtests <path to executable under test>
+|||   [--timing]
+|||   [--interactive]
+|||   [--only-file PATH]
+|||   [--failure-file PATH]
+|||   [--threads N]
+|||   [--cg CODEGEN]
+|||   [--only [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -96,7 +103,7 @@ record Options where
   timing       : Bool
   ||| How many threads should we use?
   threads      : Nat
-  ||| Should we write the list of failing cases from a file?
+  ||| Should we write the list of failing cases to a file?
   failureFile     : Maybe String
 
 export
@@ -111,9 +118,9 @@ initOptions exe
               Nothing
 
 export
-usage : String -> String
-usage exe = unwords
-  ["Usage:", exe
+usage : String
+usage = unwords
+  ["Usage:"
   , "runtests <path>"
   , "[--timing]"
   , "[--interactive]"
@@ -184,7 +191,7 @@ Result = Either String String
 |||
 ||| @testPath the directory that contains the test.
 export
-runTest : Options -> String -> IO (Future Result)
+runTest : Options -> (testPath : String) -> IO (Future Result)
 runTest opts testPath = forkIO $ do
   start <- clockTime Thread
   let cg = case codegen opts of
@@ -409,7 +416,7 @@ runner tests
     = do args <- getArgs
          Just opts <- options args
             | _ => do print args
-                      putStrLn (usage "runtests")
+                      putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
                    Nothing => pure $ record { codegen = !findCG } opts
