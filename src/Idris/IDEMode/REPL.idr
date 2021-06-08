@@ -397,10 +397,18 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
 displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
   where
+    -- Can't recover the full path to the file, because
+    -- the name may come from an out-of-project location whereas we only store
+    -- module identifiers (source location is lost).
+    sexpOriginDesc : OriginDesc -> String
+    sexpOriginDesc (PhysicalIdrSrc mod) = show mod
+    sexpOriginDesc (PhysicalPkgSrc fname) = fname
+    sexpOriginDesc (Virtual Interactive) = "(Interactive)"
+
     constructSExp : (Name, NonEmptyFC) -> Core SExp
-    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
+    constructSExp (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom fname
+                 , StringAtom (sexpOriginDesc origin)
                  , IntegerAtom $ cast $ startLine
                  , IntegerAtom $ cast $ startCol
                  , IntegerAtom $ cast $ endLine

@@ -369,11 +369,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

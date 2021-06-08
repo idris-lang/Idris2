@@ -4,6 +4,7 @@ import Compiler.Common
 
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Unify
@@ -178,7 +179,12 @@ stMain cgs opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD (initMetadata $ fromMaybe "(interactive)" fname)
+                 origin <- maybe
+                   (pure $ Virtual Interactive) (\fname => do
+                     modIdent <- ctxtPathToNS fname
+                     pure (PhysicalIdrSrc modIdent)
+                     ) fname
+                 m <- newRef MD (initMetadata origin)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do

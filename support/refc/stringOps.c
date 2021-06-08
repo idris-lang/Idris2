@@ -3,7 +3,7 @@
 Value *stringLength(Value *s)
 {
     int length = strlen(((Value_String *)s)->str);
-    return (Value *)makeInt32(length);
+    return (Value *)makeInt64(length);
 }
 
 Value *head(Value *str)
@@ -54,16 +54,9 @@ Value *reverse(Value *str)
 
 Value *strIndex(Value *str, Value *i)
 {
-    Value_Char *c;
-    switch (i->header.tag)
-    {
-    case INT64_TAG:
-        c = makeChar(((Value_String *)str)->str[((Value_Int64 *)i)->i64]);
-        return (Value *)c;
-    default:
-        c = makeChar(((Value_String *)str)->str[((Value_Int32 *)i)->i32]);
-        return (Value *)c;
-    }
+    char *s = ((Value_String *)str)->str;
+    int idx = ((Value_Int64 *)i)->i64;
+    return (Value *)makeChar(s[idx]);
 }
 
 Value *strCons(Value *c, Value *str)

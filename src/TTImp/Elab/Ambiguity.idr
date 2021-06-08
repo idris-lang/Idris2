@@ -17,6 +17,7 @@ import TTImp.TTImp
 
 import Libraries.Data.Bool.Extra
 import Data.List
+import Data.Strings
 import Libraries.Data.StringMap
 
 %default covering
@@ -203,6 +204,7 @@ mutual
                Defs -> NF vars -> NF [] -> Core TypeMatch
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc False)))
+  mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
            then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
@@ -296,7 +298,7 @@ pruneByType env target alts
          matches_in <- traverse (couldBe defs (stripDelay target)) alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
-         log "elab.prun" 10 (show matches)
+         log "elab.prune" 10 (show matches)
          res <- if anyTrue (map fst matches)
                 -- if there's any concrete matches, drop the non-concrete
                 -- matches marked as '%allow_overloads' from the possible set
@@ -363,12 +365,15 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                 then gnf env exp
                                 else expected
 
-                  logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show alts ++
-                               " at " ++ show fc ++
-                               "\nWith default. Target type ") env exp'
+                  logGlueNF "elab.ambiguous" 5 (fastConcat
+                    [ "Ambiguous elaboration at ", show fc, ":\n"
+                    , unlines (map show alts)
+                    , "\nWith default. Target type "
+                    ]) env exp'
                   alts' <- pruneByType env !(getNF exp') alts
-                  log "elab.prun" 5 ("Pruned alts (" ++ show (length alts') ++ ") " ++
-                          show alts')
+                  log "elab.prune" 5 $
+                    "Pruned " ++ show (minus (length alts) (length alts')) ++ " alts."
+                    ++ " Kept:\n" ++ unlines (map show alts')
 
                   if delayed -- use the default if there's still ambiguity
                      then try
@@ -414,10 +419,15 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
 
                           alts' <- pruneByType env !(getNF exp') alts
 
-                          logGlueNF "elab.ambiguous" 5 ("Ambiguous elaboration " ++ show delayed ++ " " ++
-                                       show alts' ++
-                                       " at " ++ show fc ++
-                                       "\nTarget type ") env exp'
+                          logGlueNF "elab.ambiguous" 5 (fastConcat
+                              [ "Ambiguous elaboration"
+                              , " (kept ", show (length alts'), " out of "
+                              , show (length alts), " candidates)"
+                              , " (", if delayed then "" else "not ", "delayed)"
+                              , " at ", show fc, ":\n"
+                              , unlines (map show alts')
+                              , "\nTarget type "
+                              ]) env exp'
                           let tryall = case uniq of
                                             FirstSuccess => anyOne fc
                                             _ => exactlyOne' (not delayed) fc env

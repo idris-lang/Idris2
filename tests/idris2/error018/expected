@@ -1,7 +1,7 @@
 1/1: Building Issue1031 (Issue1031.idr)
 Error: ? is not a valid pattern
 
-Issue1031.idr:4:13--4:14
+Issue1031:4:13--4:14
  1 | %default total
  2 | 
  3 | ohNo : Void
@@ -11,7 +11,7 @@ Issue1031.idr:4:13--4:14
 1/1: Building Issue1031-2 (Issue1031-2.idr)
 Error: ? is not a valid pattern
 
-Issue1031-2.idr:4:9--4:10
+Issue1031-2:4:9--4:10
  1 | %default total
  2 | 
  3 | foo : (x : Bool) -> x === True
@@ -21,7 +21,7 @@ Issue1031-2.idr:4:9--4:10
 1/1: Building Issue1031-3 (Issue1031-3.idr)
 Error: ? is not a valid pattern
 
-Issue1031-3.idr:4:6--4:7
+Issue1031-3:4:6--4:7
  1 | %default total
  2 | 
  3 | cool : (x : Bool) -> x === True
@@ -31,7 +31,7 @@ Issue1031-3.idr:4:6--4:7
 1/1: Building Issue1031-4 (Issue1031-4.idr)
 Error: While processing left hand side of nice. Unsolved holes:
 Main.{dotTm:308} introduced at: 
-Issue1031-4.idr:4:6--4:10
+Issue1031-4:4:6--4:10
  1 | %default total
  2 | 
  3 | nice : (x : Bool) -> x === True

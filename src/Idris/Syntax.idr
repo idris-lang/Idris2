@@ -500,7 +500,7 @@ record Import where
 public export
 record Module where
   constructor MkModule
-  headerloc : FC
+  headerLoc : FC
   moduleNS : ModuleIdent
   imports : List Import
   documentation : String
@@ -835,7 +835,7 @@ initSyntax
                initSaveDocStrings
                []
                []
-               (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
+               (IVar EmptyFC (UN "main"))
 
   where
 

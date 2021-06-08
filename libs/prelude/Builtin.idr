@@ -72,7 +72,12 @@ infix 5 #
 ||| A pair type where each component is linear
 public export
 data LPair : Type -> Type -> Type where
-     (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
+  ||| A linear pair of elements.
+  ||| If you take one copy of the linear pair apart
+  ||| then you only get one copy of its left and right elements.
+  ||| @ a the left element of the pair
+  ||| @ b the right element of the pair
+  (#) : (1 _ : a) -> (1 _ : b) -> LPair a b
 
 namespace DPair
   ||| Dependent pairs aid in the construction of dependent types by providing

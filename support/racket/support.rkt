@@ -7,11 +7,9 @@
 
 (define blodwen-toSignedInt
   (lambda (x bits)
-    (let ((ma (arithmetic-shift 1 bits)))
-      (if (or (< x (- 0 ma))
-              (>= x ma))
-          (remainder x ma)
-          x))))
+    (if (bitwise-bit-set? x bits)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
 
 (define blodwen-toUnsignedInt
   (lambda (x bits)
@@ -55,14 +53,8 @@
   (lambda (x)
     (inexact->exact (floor x))))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (bitwise-bit-set? x bits)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
-
 (define blodwen-bits-shl-signed
-  (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
 
 (define exact-truncate
   (lambda (x)

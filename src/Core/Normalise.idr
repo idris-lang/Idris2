@@ -883,14 +883,57 @@ tryUpdate ms (Erased fc i) = pure $ Erased fc i
 tryUpdate ms (TType fc) = pure $ TType fc
 
 mutual
+  allConvNF : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Ref QVar Int -> Defs -> Env Term vars ->
+              List (NF vars) -> List (NF vars) -> Core Bool
+  allConvNF q defs env [] [] = pure True
+  allConvNF q defs env (x :: xs) (y :: ys)
+      = do ok <- allConvNF q defs env xs ys
+           if ok then convGen q defs env x y
+                 else pure False
+  allConvNF q defs env _ _ = pure False
+
+  -- return False if anything differs at the head, to quickly find
+  -- conversion failures without going deeply into all the arguments.
+  -- True means they might still match
+  quickConv : List (NF vars) -> List (NF vars) -> Bool
+  quickConv [] [] = True
+  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+    where
+      quickConvHead : NHead vars -> NHead vars -> Bool
+      quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
+      quickConvHead (NRef _ n) (NRef _ n') = n == n'
+      quickConvHead (NMeta n _ _) (NMeta n' _ _) = n == n'
+      quickConvHead _ _ = False
+
+      quickConvArg : NF vars -> NF vars -> Bool
+      quickConvArg (NBind{}) _ = True -- let's not worry about eta here...
+      quickConvArg _ (NBind{}) = True
+      quickConvArg (NApp _ h _) (NApp _ h' _) = quickConvHead h h'
+      quickConvArg (NDCon _ _ t _ _) (NDCon _ _ t' _ _) = t == t'
+      quickConvArg (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = n == n'
+      quickConvArg (NAs _ _ _ t) (NAs _ _ _ t') = quickConvArg t t'
+      quickConvArg (NDelayed _ _ t) (NDelayed _ _ t') = quickConvArg t t'
+      quickConvArg (NDelay _ _ _ _) (NDelay _ _ _ _) = True
+      quickConvArg (NForce _ _ t _) (NForce _ _ t' _) = quickConvArg t t'
+      quickConvArg (NPrimVal _ c) (NPrimVal _ c') = c == c'
+      quickConvArg (NType _) (NType _) = True
+      quickConvArg (NErased _ _) _ = True
+      quickConvArg _ (NErased _ _) = True
+      quickConvArg _ _ = False
+  quickConv _ _ = False
+
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
-  allConv q defs env [] [] = pure True
-  allConv q defs env (x :: xs) (y :: ys)
-      = pure $ !(convGen q defs env x y) && !(allConv q defs env xs ys)
-  allConv q defs env _ _ = pure False
+  allConv q defs env xs ys
+      = do xsnf <- traverse (evalClosure defs) xs
+           ysnf <- traverse (evalClosure defs) ys
+           if quickConv xsnf ysnf
+              then allConvNF q defs env xsnf ysnf
+              else pure False
 
   -- If the case trees match in structure, get the list of variables which
   -- have to match in the call

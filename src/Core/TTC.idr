@@ -19,6 +19,38 @@ import Libraries.Utils.Binary
 %default covering
 
 export
+TTC Namespace where
+  toBuf b = toBuf b . unsafeUnfoldNamespace
+  fromBuf = Core.map unsafeFoldNamespace . fromBuf
+
+export
+TTC ModuleIdent where
+  toBuf b = toBuf b . unsafeUnfoldModuleIdent
+  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
+
+export
+TTC VirtualIdent where
+  toBuf b Interactive = tag 0
+
+  fromBuf b =
+    case !getTag of
+      0 => pure Interactive
+      _ => corrupt "VirtualIdent"
+
+export
+TTC OriginDesc where
+  toBuf b (PhysicalIdrSrc ident) = do tag 0; toBuf b ident
+  toBuf b (PhysicalPkgSrc fname) = do tag 1; toBuf b fname
+  toBuf b (Virtual ident) = do tag 2; toBuf b ident
+
+  fromBuf b =
+    case !getTag of
+      0 => [| PhysicalIdrSrc (fromBuf b) |]
+      1 => [| PhysicalPkgSrc (fromBuf b) |]
+      2 => [| Virtual        (fromBuf b) |]
+      _ => corrupt "OriginDesc"
+
+export
 TTC FC where
   toBuf b (MkFC file startPos endPos)
       = do tag 0; toBuf b file; toBuf b startPos; toBuf b endPos
@@ -36,15 +68,6 @@ TTC FC where
                      s <- fromBuf b; e <- fromBuf b
                      pure (MkVirtualFC f s e)
              _ => corrupt "FC"
-export
-TTC Namespace where
-  toBuf b = toBuf b . unsafeUnfoldNamespace
-  fromBuf = Core.map unsafeFoldNamespace . fromBuf
-
-export
-TTC ModuleIdent where
-  toBuf b = toBuf b . unsafeUnfoldModuleIdent
-  fromBuf = Core.map unsafeFoldModuleIdent . fromBuf
 
 export
 TTC Name where
