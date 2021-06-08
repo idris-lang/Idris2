@@ -1,6 +1,7 @@
 module Idris.IDEMode.CaseSplit
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Metadata
 import Core.TT
@@ -144,6 +145,8 @@ updateCase splits line col
                         Just l =>
                             do let valid = mapMaybe getValid splits
                                let bad = mapMaybe getBad splits
+                               log "interaction.casesplit" 3 $ "Valid: " ++ show valid
+                               log "interaction.casesplit" 3 $ "Bad: " ++ show bad
                                if isNil valid
                                   then traverse showImpossible bad
                                   else do rs <- traverse getReplaces valid
