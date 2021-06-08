@@ -2,6 +2,8 @@ module Control.Monad.ST
 
 import Data.IORef
 
+%default covering
+
 export
 data STRef : Type -> Type -> Type where
      MkSTRef : IORef a -> STRef s a

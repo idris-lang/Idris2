@@ -9,6 +9,8 @@ import System
 import Idris.Version
 import Libraries.Utils.Path
 
+%default total
+
 findCC : IO String
 findCC
     = do Nothing <- getEnv "IDRIS2_CC"

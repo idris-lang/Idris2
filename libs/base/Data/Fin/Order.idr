@@ -9,6 +9,8 @@ import Data.Nat.Order
 import Decidable.Decidable
 import Decidable.Order
 
+%default total
+
 using (k : Nat)
 
   public export

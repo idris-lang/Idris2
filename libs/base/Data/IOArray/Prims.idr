@@ -1,5 +1,7 @@
 module Data.IOArray.Prims
 
+%default total
+
 export
 data ArrayData : Type -> Type where [external]
 

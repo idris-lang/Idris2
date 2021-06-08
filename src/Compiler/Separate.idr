@@ -16,6 +16,8 @@ import Data.List1
 import Data.Vect
 import Data.Maybe
 
+%default covering
+
 -- Compilation unit IDs are intended to be opaque,
 -- just to be able to express dependencies via keys in a map and such.
 export

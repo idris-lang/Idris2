@@ -16,6 +16,8 @@ import Core.FC
 
 import Debug.Trace
 
+%default covering
+
 mutual
   usedNames : NamedCExp -> SortedSet Name
   usedNames (NmLocal fc n) = empty

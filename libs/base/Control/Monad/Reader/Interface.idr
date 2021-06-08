@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default covering
+
 ||| A computation which runs in a static context and produces an output
 public export
 interface Monad m => MonadReader stateType m | m where
