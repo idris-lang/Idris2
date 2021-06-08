@@ -1,6 +1,7 @@
 module Idris.IDEMode.CaseSplit
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Metadata
 import Core.TT
@@ -118,10 +119,10 @@ getReplaces updates
 showImpossible : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
-                 RawImp -> Core String
-showImpossible lhs
+                 (indent : Nat) -> RawImp -> Core String
+showImpossible indent lhs
     = do clause <- pterm lhs
-         pure (show clause ++ " impossible")
+         pure (fastPack (replicate indent ' ') ++ show clause ++ " impossible")
 
 -- Given a list of updates and a line and column, find the relevant line in
 -- the source file and return the lines to replace it with
@@ -144,8 +145,11 @@ updateCase splits line col
                         Just l =>
                             do let valid = mapMaybe getValid splits
                                let bad = mapMaybe getBad splits
+                               log "interaction.casesplit" 3 $ "Valid: " ++ show valid
+                               log "interaction.casesplit" 3 $ "Bad: " ++ show bad
                                if isNil valid
-                                  then traverse showImpossible bad
+                                  then do let indent = getIndent 0 $ fastUnpack l
+                                          traverse (showImpossible indent) bad
                                   else do rs <- traverse getReplaces valid
                                           let stok = tokens l
                                           defs <- get Ctxt
@@ -159,6 +163,11 @@ updateCase splits line col
     getBad : ClauseUpdate -> Maybe RawImp
     getBad (Impossible lhs) = Just lhs
     getBad _ = Nothing
+
+    getIndent : (acc : Nat) -> List Char -> Nat
+    getIndent acc [] = acc
+    getIndent acc (' ' :: xs) = getIndent (acc + 1) xs
+    getIndent acc _ = acc
 
 fnName : Bool -> Name -> String
 fnName lhs (UN n)

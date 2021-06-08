@@ -404,6 +404,7 @@ getSplitsLHS fc envlen lhs_in n
          let Just idx = getNameID fn (gamma defs)
              | Nothing => undefinedName fc fn
          cases <- traverse (mkCase idx rawlhs) trycases
+         log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
          pure (combine cases [])
 
