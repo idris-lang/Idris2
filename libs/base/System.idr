@@ -3,6 +3,7 @@ module System
 import public Data.So
 import Data.List
 import Data.Strings
+import System.Info
 
 support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
@@ -103,7 +104,7 @@ prim__system : String -> PrimIO Int
 
 export
 system : HasIO io => String -> io Int
-system cmd = primIO (prim__system cmd)
+system cmd = primIO (prim__system (if isWindows then "\"" ++ cmd ++ "\"" else cmd))
 
 %foreign support "idris2_time"
          "scheme:blodwen-time"
