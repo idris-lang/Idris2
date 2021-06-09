@@ -132,6 +132,7 @@ int collect_signal(int signum) {
 int handle_next_collected_signal() {
   if (_lock()) {
     if (signals_in_buf == 0) {
+      _unlock();
       return -1;
     }
     int next = signal_buf[signal_buf_next_read_idx];
