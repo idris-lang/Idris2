@@ -11,7 +11,6 @@ import Core.UnifyState
 import Core.Value
 import Core.TT
 
-import Libraries.Data.Bool.Extra
 import Data.List
 
 %default covering
@@ -108,7 +107,7 @@ mutual
            let vars = mapMaybe (findLocal (getArgs lhs)) argpos
            hs <- traverse (\vsel => updateHoleUsage useInHole vsel [] rhs)
                           vars
-           pure (anyTrue hs)
+           pure (any id hs)
     where
       findArg : Nat -> List (Term vars) -> List Nat
       findArg i [] = []

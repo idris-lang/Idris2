@@ -115,7 +115,6 @@ modules =
     Libraries.Control.Delayed,
 
     Libraries.Data.ANameMap,
-    Libraries.Data.Bool.Extra,
     Libraries.Data.DList,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
