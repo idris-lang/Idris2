@@ -75,7 +75,7 @@ import Data.Either
 import Data.Maybe
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 
 import System
 import System.Clock
@@ -193,13 +193,13 @@ Result = Either String String
 export
 runTest : Options -> (testPath : String) -> IO (Future Result)
 runTest opts testPath = forkIO $ do
-  start <- clockTime Thread
+  start <- clockTime UTC
   let cg = case codegen opts of
          Nothing => ""
          Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
   ignore $ system $ "cd " ++ testPath ++ " && " ++
     cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
-  end <- clockTime Thread
+  end <- clockTime UTC
 
   Right out <- readFile $ testPath ++ "/output"
     | Left err => do print err
@@ -262,8 +262,12 @@ runTest opts testPath = forkIO $ do
                   pure ()
 
     printTiming : Bool -> Clock type -> String -> IO ()
-    printTiming True  clock msg = putStrLn (unwords [msg, show clock])
     printTiming False _     msg = putStrLn msg
+    printTiming True  clock msg =
+      let time  = showTime 2 3 clock
+          spent = String.length time + String.length msg
+          pad   = pack $ replicate (minus 72 spent) ' '
+      in putStrLn $ concat [msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
@@ -323,6 +327,7 @@ findCG
        pure Nothing
 
 ||| A test pool is characterised by
+|||  + a name
 |||  + a list of requirement
 |||  + and a list of directory paths
 public export

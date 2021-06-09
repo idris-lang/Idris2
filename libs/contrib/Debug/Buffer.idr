@@ -2,7 +2,7 @@ module Debug.Buffer
 
 import Data.Buffer
 import Data.List
-import Data.String.Extra
+import Data.String
 
 toHex : Int -> Int -> String
 toHex d n = pack $ reverse $ foldl toHexDigit [] (slice d n [])

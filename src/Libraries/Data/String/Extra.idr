@@ -146,7 +146,7 @@ unlines = pack . unlines' . map unpack
 ||| Indent a given string by `n` spaces.
 public export
 indent : (n : Nat) -> String -> String
-indent n x = replicate n ' ' ++ x
+indent n x = Extra.replicate n ' ' ++ x
 
 ||| Indent each line of a given string by `n` spaces.
 public export
