@@ -7,7 +7,6 @@ import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
-import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.Package.Types
@@ -18,8 +17,11 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
+import Data.List1
 import Data.So
 import Data.Strings
+
+import Libraries.Data.List1 as Lib
 
 import System
 import System.Directory
