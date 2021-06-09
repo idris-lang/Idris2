@@ -431,7 +431,7 @@ compileToSO prof chez appDirRel outSsAbs
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift_ $ chmodRaw tmpFileAbs 0o755
-         coreLift_ $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
+         coreLift_ $ system ("\"" ++ chez ++ "\" --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
 
 makeSh : String -> String -> String -> Core ()
