@@ -60,17 +60,6 @@ export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
 toClosure opts env tm = MkClosure opts [] env tm
 
-useMeta : Bool -> FC -> Name -> Defs -> EvalOpts -> Core (Maybe EvalOpts)
-useMeta False _ _ _ opts = pure $ Just opts
-useMeta True fc (Resolved i) defs opts
-    = case lookup i (usedMetas opts) of
-           Nothing => pure (Just (record { usedMetas $= insert i () } opts))
-           Just _ => pure Nothing
-useMeta True fc n defs opts
-    = do let Just i = getNameID n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         useMeta True fc (Resolved i) defs opts
-
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
     = if not (isNil (reduceLimit opts))
@@ -259,9 +248,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                                                       pure $ "Stuck function: " ++ show n'
              if redok
                 then do
-                   Just opts' <- useMeta (noCycles res) fc n defs topopts
-                        | Nothing => pure def
-                   Just opts' <- updateLimit nt n opts'
+                   Just opts' <- updateLimit nt n topopts
                         | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
                                         pure def -- name is past reduction limit
                    evalDef env opts' meta fc
