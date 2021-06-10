@@ -139,12 +139,20 @@ char* idris2_readChars(int num, FILE* f) {
     }
 }
 
+size_t idris2_readBufferData(FILE* h, char* buffer, size_t loc, size_t max) {
+    return fread(buffer + loc, sizeof(uint8_t), max, h);
+}
+
 int idris2_writeLine(FILE* f, char* str) {
     if (fputs(str, f) == EOF) {
         return 0;
     } else {
         return 1;
     }
+}
+
+size_t idris2_writeBufferData(FILE* h, const char* buffer, size_t loc, size_t len) {
+    return fwrite(buffer + loc, sizeof(uint8_t), len, h);
 }
 
 int idris2_eof(FILE* f) {
