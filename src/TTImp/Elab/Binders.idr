@@ -171,12 +171,14 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     log "metadata.names" 7 "checkLambda is adding ↓"
                     addNameType fc n env pty -- Add the type of the argument to the metadata
 
-                    checkExp rig elabinfo env fc
-                             (Bind fc n (Lam fc' rigb info' tyv) scopev)
-                             (gnf env
-                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
-                             (Just (gnf env
-                                       (Bind fc bn (Pi fc' c info' pty) psc)))
+                    -- We've already checked the argument and scope types,
+                    -- so we just need to check multiplicities
+                    when (rigb /= c) $
+                        throw (CantConvert fc env
+                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
+                                  (Bind fc bn (Pi fc' c info' pty) psc))
+                    pure (Bind fc n (Lam fc' rigb info' tyv) scopev,
+                          gnf env (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
               _ => inferLambda rig elabinfo nest env fc rigl info n argTy scope (Just expty_in)
 
 weakenExp : {x, vars : _} ->
