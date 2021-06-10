@@ -408,7 +408,7 @@ compileExpr c tmpDir outputDir tm outfile
                    (showSep " " libsfile) ++ "\""
                  Just _ => " -c"
          let cmd =
-             gsc ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
+             "\"" ++ gsc ++ "\"" ++ gscCompileOpts ++ " -o \"" ++ execPath ++ "\" \"" ++ srcPath ++ "\""
          ok <- coreLift $ system cmd
          if ok == 0
             then pure (Just execPath)
