@@ -6,7 +6,6 @@
 #include <stdint.h>
 
 void* newBuffer(int bytes);
-void freeBuffer(void* buf);
 
 int getBufferSize(void* buffer);
 

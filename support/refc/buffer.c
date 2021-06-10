@@ -21,10 +21,6 @@ void* newBuffer(int bytes) {
     return (void*)buf;
 }
 
-void freeBuffer(void* buf) {
-    free(buf);
-}
-
 void copyBuffer(void* from, int start, int len,
                 void* to, int loc) {
     Buffer* bfrom = from;

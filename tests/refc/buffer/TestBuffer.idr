@@ -50,5 +50,4 @@ main = do
     Right () <- writeBufferData f writeBuf 0 8
         | Left err => put $ pure err
 
-    freeBuffer helloWorldBuf
-    freeBuffer buf
+    pure ()
