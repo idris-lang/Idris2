@@ -887,7 +887,7 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  case parseCC ["C"] ccs of
+  case parseCC ["RefC", "C"] ccs of
       Just (_, fctName :: extLibOpts) => do
           case extLibOpts of
               [lib, header] => addHeader header
