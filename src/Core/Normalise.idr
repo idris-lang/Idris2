@@ -168,7 +168,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         applyToStack nf _ = pure nf
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
-                {free, vars : _} ->
+                {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
                 (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
@@ -177,7 +177,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 Core (NF free)
     -- If it's one of the free variables, we are done unless the free
     -- variable maps to a let-binding
-    evalLocal {vars = []} env fc mrig idx prf stk locs
+    evalLocal env fc mrig idx prf stk []
         = if not (holesOnly topopts || argHolesOnly topopts)
              -- if we know it's not a let, no point in even running `getBinder`
              && fromMaybe True mrig
