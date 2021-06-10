@@ -100,7 +100,7 @@ int64_t getBufferInt(void* buffer, int loc) {
     if (loc >= 0 && loc+7 < b->size) {
         int64_t result = 0;
         for (size_t i=0; i<8; i++) {
-            result |= b->data[loc + i] << (8 * i);
+            result |= (int64_t)b->data[loc + i] << (8 * i);
         }
         return result;
     } else {
