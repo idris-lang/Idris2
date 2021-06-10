@@ -432,7 +432,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          ok <- the (Core Int) $ if mkexec
                   then logTime "+ Build racket" $
                          coreLift $
-                           system (raco ++ " -o " ++ outBinAbs ++ " " ++ outRktAbs)
+                           system ("\"" ++ raco ++ "\" -o " ++ outBinAbs ++ " " ++ outRktAbs)
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
