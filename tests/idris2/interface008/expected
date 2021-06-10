@@ -4,7 +4,7 @@ You may be unintentionally shadowing the associated global definitions:
   card is shadowing Main.card
 Error: While processing right hand side of badcard. k is not accessible in this context.
 
-Deps.idr:18:13--18:14
+Deps:18:13--18:14
  14 |   badcard   : Nat
  15 |   badto     : t -> Fin card
  16 | 

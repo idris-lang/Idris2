@@ -1,7 +1,7 @@
 1/1: Building Issue110 (Issue110.idr)
 Error: Declaration name (f) shadowed by a pattern variable.
 
-Issue110.idr:8:1--8:14
+Issue110:8:1--8:14
  4 | data Tup : (a,b : Type) -> Type where
  5 |   MkTup : (1 f : a) -> (1 s : b) -> Tup a b
  6 | 

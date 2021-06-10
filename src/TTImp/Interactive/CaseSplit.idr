@@ -330,7 +330,7 @@ mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          Int -> RawImp -> RawImp -> Core ClauseUpdate
 mkCase {c} {u} fn orig lhs_raw
-    = do m <- newRef MD (initMetadata "(interactive)")
+    = do m <- newRef MD (initMetadata $ Virtual Interactive)
          defs <- get Ctxt
          ust <- get UST
          catch
@@ -404,6 +404,7 @@ getSplitsLHS fc envlen lhs_in n
          let Just idx = getNameID fn (gamma defs)
              | Nothing => undefinedName fc fn
          cases <- traverse (mkCase idx rawlhs) trycases
+         log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
          pure (combine cases [])
 

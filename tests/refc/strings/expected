@@ -23,7 +23,11 @@ concatenate
 [False, False, False, False, True, True, False]
 [False, False, False, False, False, True, False]
 [False, False, False, False, False, True, True]
-['a', 'A', '~', '0', ' ', '\LF', '\159']
+['a', 'A', '~', '0', ' ', '\n', '\159']
 [97, 65, 126, 48, 32, 10, 159]
 ['i', 't', 'e', 'r', 'a', 't', 'o', 'r', ' ', 'u', 'n', 'p', 'a', 'c', 'k']
 "terator tail"
+True
+False
+True
+False

@@ -3,8 +3,10 @@ module TTImp.ProcessDecls
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.Metadata
+import Core.Options
 import Core.Termination
 import Core.UnifyState
 
@@ -167,8 +169,10 @@ processTTImpFile : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    String -> Core Bool
 processTTImpFile fname
-    = do Right (decor, tti) <- logTime "Parsing" $ coreLift $ parseFile fname
-                            (do decls <- prog fname
+    = do modIdent <- ctxtPathToNS fname
+         Right (decor, tti) <- logTime "Parsing" $
+                            coreLift $ parseFile fname (PhysicalIdrSrc modIdent)
+                            (do decls <- prog (PhysicalIdrSrc modIdent)
                                 eoi
                                 pure decls)
                | Left err => do coreLift (putStrLn (show err))

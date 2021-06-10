@@ -2,6 +2,7 @@ module Idris.IDEMode.SyntaxHighlight
 
 import Core.Context
 import Core.Context.Log
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.TT
@@ -28,6 +29,7 @@ SExpable Decoration where
 record Highlight where
   constructor MkHighlight
   location : NonEmptyFC
+  filename : String
   name : String
   isImplicit : Bool
   key : String
@@ -36,9 +38,9 @@ record Highlight where
   typ : String
   ns : String
 
-SExpable FC where
-  toSExp fc = case isNonEmptyFC fc of
-    Just (fname , (startLine, startCol),  (endLine, endCol)) =>
+SExpable (FileName, FC) where
+  toSExp (fname, fc) = case isNonEmptyFC fc of
+    Just (origin, (startLine, startCol), (endLine, endCol)) =>
       SExpList [ SExpList [ SymbolAtom "filename", StringAtom fname ]
                , SExpList [ SymbolAtom "start"
                           , IntegerAtom (cast startLine + 1)
@@ -52,8 +54,8 @@ SExpable FC where
     Nothing => SExpList []
 
 SExpable Highlight where
-  toSExp (MkHighlight loc nam impl k dec doc t ns)
-    = SExpList [ toSExp $ justFC loc
+  toSExp (MkHighlight loc fname nam impl k dec doc t ns)
+    = SExpList [ toSExp $ (fname, justFC loc)
                , SExpList [ SExpList [ SymbolAtom "name", StringAtom nam ]
                           , SExpList [ SymbolAtom "namespace", StringAtom ns ]
                           , toSExp dec
@@ -63,9 +65,6 @@ SExpable Highlight where
                           , SExpList [ SymbolAtom "type", StringAtom t ]
                           ]
                ]
-
-inFile : (s : String) -> (NonEmptyFC, a) -> Bool
-inFile fname ((file, _, _), _) = file == fname
 
 ||| Output some data using current dialog index
 export
@@ -97,12 +96,12 @@ outputHighlight h =
 lwOutputHighlight :
   {auto c : Ref Ctxt Defs} ->
   {auto opts : Ref ROpts REPLOpts} ->
-  (NonEmptyFC, Decoration) -> Core ()
-lwOutputHighlight (nfc,decor) =
+  (FileName, NonEmptyFC, Decoration) -> Core ()
+lwOutputHighlight (fname, nfc, decor) =
   printOutput $ SExpList [ SymbolAtom "ok"
                          , SExpList [ SymbolAtom "highlight-source"
                                     , toSExp $ the (List _) [
-                                    SExpList [ toSExp $ justFC nfc
+                                    SExpList [ toSExp $ (fname, justFC nfc)
                , SExpList [ toSExp decor]
                ]]]]
 
@@ -111,8 +110,8 @@ lwOutputHighlight (nfc,decor) =
 outputNameSyntax : {auto c : Ref Ctxt Defs} ->
                    {auto s : Ref Syn SyntaxInfo} ->
                    {auto opts : Ref ROpts REPLOpts} ->
-                   (NonEmptyFC, Decoration, Name) -> Core ()
-outputNameSyntax (nfc, decor, nm) = do
+                   (FileName, NonEmptyFC, Decoration, Name) -> Core ()
+outputNameSyntax (fname, nfc, decor, nm) = do
       defs <- get Ctxt
       log "ide-mode.highlight" 20 $ "highlighting at " ++ show nfc
                                  ++ ": " ++ show nm
@@ -122,6 +121,7 @@ outputNameSyntax (nfc, decor, nm) = do
       outputHighlight $ MkHighlight
          { location = nfc
          , name
+         , filename = fname
          , isImplicit = False
          , key = ""
          , decor
@@ -142,7 +142,10 @@ outputSyntaxHighlighting fname loadResult = do
   opts <- get ROpts
   when (opts.synHighlightOn) $ do
     meta <- get MD
-    let allNames = filter (inFile fname) $ toList meta.nameLocMap
+    modIdent <- ctxtPathToNS fname
+
+    let allNames = filter ((PhysicalIdrSrc modIdent ==) . fst . fst)
+                     $ toList meta.nameLocMap
     --decls <- filter (inFile fname) . tydecls <$> get MD
     --_ <- traverse outputNameSyntax allNames -- ++ decls)
 
@@ -168,8 +171,8 @@ outputSyntaxHighlighting fname loadResult = do
     traverse_ {b = Unit}
          (\(nfc, decor, mn) =>
            case mn of
-             Nothing => lwOutputHighlight (nfc, decor)
-             Just n  => outputNameSyntax  (nfc, decor, n))
+             Nothing => lwOutputHighlight (fname, nfc, decor)
+             Just n  => outputNameSyntax  (fname, nfc, decor, n))
          (defaults ++ aliases ++ toList semHigh)
 
   pure loadResult

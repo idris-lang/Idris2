@@ -1,6 +1,6 @@
 Main> Error: Undefined name fromMaybe. 
 
-(interactive):1:1--1:10
+(Interactive):1:1--1:10
  1 | fromMaybe "test" Nothing
      ^^^^^^^^^
 
