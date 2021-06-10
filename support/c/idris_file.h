@@ -2,6 +2,7 @@
 #define __IDRIS_FILE_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 FILE* idris2_openFile(char* name, char* mode);
 void idris2_closeFile(FILE* f);

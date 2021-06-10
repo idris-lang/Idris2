@@ -81,6 +81,11 @@ void setBufferString(void* buffer, int loc, char* str) {
     }
 }
 
+size_t writeBufferData(FILE* h, void* buffer, size_t loc, size_t len) {
+    Buffer* b = buffer;
+    return fwrite(b->data + loc, sizeof(uint8_t), len, h);
+}
+
 uint8_t getBufferByte(void* buffer, int loc) {
     Buffer* b = buffer;
     if (loc >= 0 && loc < b->size) {
@@ -127,4 +132,9 @@ char* getBufferString(void* buffer, int loc, int len) {
     strncpy(rs, s, len);
     rs[len] = '\0';
     return rs;
+}
+
+size_t readBufferData(FILE* h, void* buffer, size_t loc, size_t max) {
+    Buffer* b = buffer;
+    return fread(b->data + loc, sizeof(uint8_t), max, h);
 }
