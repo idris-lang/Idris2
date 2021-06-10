@@ -49,8 +49,6 @@ main
             | Nothing => putStrLn "Buffer split failed"
          printBuffer a
          printBuffer b
-         freeBuffer buf
-         freeBuffer buf2
 
 -- Put back when the File API is moved to C and these can work again
 --          Right f <- openBinaryFile "test.buf" Read

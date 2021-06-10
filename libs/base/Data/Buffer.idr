@@ -40,15 +40,6 @@ newBuffer size
 --             then pure Nothing
 --             else pure $ Just $ MkBuffer buf size 0
 
-%foreign "scheme:blodwen-buffer-free"
-         "RefC:freeBuffer"
-         "node:lambda:buf=>undefined"
-prim__freeBuffer : Buffer -> PrimIO ()
-
-export
-freeBuffer : HasIO io => Buffer -> io ()
-freeBuffer buf = primIO (prim__freeBuffer buf)
-
 %foreign "scheme:blodwen-buffer-setbyte"
          "RefC:setBufferByte"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(Number(value), Number(offset))"
@@ -319,7 +310,6 @@ resizeBuffer old newsize
          oldsize <- rawSize old
          let len = if newsize < oldsize then newsize else oldsize
          copyData old 0 len buf 0
-         freeBuffer old
          pure (Just buf)
 
 ||| Create a buffer containing the concatenated content from a
