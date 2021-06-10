@@ -49,8 +49,7 @@ executeExpr c tmpDir tm =
      js <- compileToNode c tm
      Core.writeFile outn js
      node <- coreLift findNode
-     quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
-     coreLift_ $ system (quoted_node ++ " " ++ outn)
+     coreLift_ $ system ("\"" ++ node ++ "\" " ++ outn)
      pure ()
 
 ||| Codegen wrapper for Node implementation.
