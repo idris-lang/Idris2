@@ -16,7 +16,6 @@ record EvalOpts where
   holesOnly : Bool -- only evaluate hole solutions
   argHolesOnly : Bool -- only evaluate holes which are relevant arguments
   removeAs : Bool -- reduce 'as' patterns (don't do this on LHS)
-  usedMetas : IntMap () -- Metavariables we're under, to detect cycles
   evalAll : Bool -- evaluate everything, including private names
   tcInline : Bool -- inline for totality checking
   fuel : Maybe Nat -- Limit for recursion depth
@@ -25,19 +24,19 @@ record EvalOpts where
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True empty False False Nothing []
+defaultOpts = MkEvalOpts False False True False False Nothing []
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False empty False False Nothing []
+withHoles = MkEvalOpts True True False False False Nothing []
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True empty True False Nothing []
+withAll = MkEvalOpts False False True True False Nothing []
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False empty False False Nothing []
+withArgHoles = MkEvalOpts False True False False False Nothing []
 
 export
 tcOnly : EvalOpts

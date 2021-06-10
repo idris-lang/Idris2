@@ -732,15 +732,15 @@ convert = convertWithLazy False
 -- This may generate new constraints; if so, the term returned is a constant
 -- guarded by the constraints which need to be solved.
 export
-checkExpP : {vars : _} ->
-            {auto c : Ref Ctxt Defs} ->
-            {auto u : Ref UST UState} ->
-            {auto e : Ref EST (EState vars)} ->
-            RigCount -> ElabInfo -> Env Term vars -> FC ->
-            (term : Term vars) ->
-            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
-            Core (Term vars, Glued vars)
-checkExpP rig elabinfo env fc tm got (Just exp)
+checkExp : {vars : _} ->
+           {auto c : Ref Ctxt Defs} ->
+           {auto u : Ref UST UState} ->
+           {auto e : Ref EST (EState vars)} ->
+           RigCount -> ElabInfo -> Env Term vars -> FC ->
+           (term : Term vars) ->
+           (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
+           Core (Term vars, Glued vars)
+checkExp rig elabinfo env fc tm got (Just exp)
     = do vs <- convertWithLazy True fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
@@ -764,15 +764,4 @@ checkExpP rig elabinfo env fc tm got (Just exp)
                             AddForce r => pure (TForce fc r tm, exp)
                             AddDelay r => do ty <- getTerm got
                                              pure (TDelay fc r ty tm, exp)
-checkExpP rig elabinfo env fc tm got Nothing = pure (tm, got)
-
-export
-checkExp : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto u : Ref UST UState} ->
-           {auto e : Ref EST (EState vars)} ->
-           RigCount -> ElabInfo -> Env Term vars -> FC ->
-           (term : Term vars) ->
-           (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
-           Core (Term vars, Glued vars)
-checkExp rig elabinfo = checkExpP rig elabinfo
+checkExp rig elabinfo env fc tm got Nothing = pure (tm, got)

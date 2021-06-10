@@ -33,6 +33,7 @@ prim__integerToNat i
 
 public export
 integerToNat : Integer -> Nat
+integerToNat 0 = Z -- Force evaluation and hencing caching of x at compile time
 integerToNat x
   = if intToBool (prim__lte_Integer x 0)
        then Z
