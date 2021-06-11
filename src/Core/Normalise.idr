@@ -1439,5 +1439,5 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normalise defs env tm
+        tm <- normaliseAll defs env tm
         pure (Just tm)
