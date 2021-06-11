@@ -2,10 +2,10 @@
 Error: doit is not covering.
 
 CoverBug:20:1--20:26
- 16 | fromInteger v = 
+ 16 | fromInteger v =
  17 |   let (v ** p) = prv1 $ v
  18 |   in MkFastNat v
- 19 |     
+ 19 | 
  20 | doit : FastNat -> FastNat
       ^^^^^^^^^^^^^^^^^^^^^^^^^
 
