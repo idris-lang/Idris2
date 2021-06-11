@@ -16,7 +16,7 @@ void* newBuffer(int bytes) {
     }
 
     buf->size = bytes;
-//    memset(buf->data, 0, bytes);
+    memset(buf->data, 0, bytes);
 
     return (void*)buf;
 }
