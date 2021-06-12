@@ -104,7 +104,7 @@ Things still missing
 + ':search' and ':apropos' at the REPL
 + Metaprogramming (reflection, partial evaluation)
 
-Contributors wanted
+Contributions wanted
 -------------------
 
 + [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
