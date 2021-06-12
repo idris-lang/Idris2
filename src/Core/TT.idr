@@ -3,12 +3,12 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Nat
-import Libraries.Data.NameMap
 import Data.Vect
 import Decidable.Equality
+
+import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -873,7 +873,7 @@ eqTerm : Term vs -> Term vs' -> Bool
 eqTerm (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
-    = assert_total (i == i' && allTrue (zipWith eqTerm args args'))
+    = assert_total (i == i' && all (uncurry eqTerm) (zip args args'))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
     = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
 eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'

@@ -2,10 +2,10 @@
 -- If we get more builtins it might be wise to move each builtin to it's own file.
 module TTImp.ProcessBuiltin
 
-import Libraries.Data.Bool.Extra
 import Data.Fin
-import Libraries.Data.NameMap
 import Data.List
+
+import Libraries.Data.NameMap
 
 import Core.CaseTree
 import Core.Core
@@ -112,7 +112,7 @@ termConMatch : Term vs -> Term vs' -> Bool
 termConMatch (Local _ _ x _) (Local _ _ y _) = x == y
 termConMatch (Ref _ _ n) (Ref _ _ m) = n == m
 termConMatch (Meta _ _ i args0) (Meta _ _ j args1)
-    = i == j && allTrue (zipWith termConMatch args0 args1)
+    = i == j && all (uncurry termConMatch) (zip args0 args1)
     -- I don't understand how they're equal if args are different lengths
     -- but this is what's in Core.TT.
 termConMatch (Bind _ _ b s) (Bind _ _ c t) = eqBinderBy termConMatch b c && termConMatch s t
