@@ -33,12 +33,12 @@ import System.Info
 findRacket : IO String
 findRacket =
   do env <- idrisGetEnv "RACKET"
-     pure $ fromMaybe "/usr/bin/env racket" env
+     pure $ fromMaybe "racket" env
 
-findRacoExe : IO String
-findRacoExe =
+findRaco : IO String
+findRaco =
   do env <- idrisGetEnv "RACKET_RACO"
-     pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
+     pure $ fromMaybe "raco" env
 
 schHeader : Bool -> String -> String
 schHeader prof libs
@@ -349,7 +349,7 @@ startRacketCmd racket appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
     , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , racket ++ "\"" ++ target ++ "\" %*"
+    , racket ++ "\"%APPDIR%\\" ++ target ++ "\" %*"
     ]
 
 startRacketWinSh : String -> String -> String -> String
@@ -360,7 +360,7 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
-    , racket ++ "\"" ++ target ++ "\" \"$@\""
+    , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 compileToRKT : Ref Ctxt Defs ->
@@ -426,13 +426,13 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          let outBinAbs = cwd </> outputDir </> outBinFile
 
          compileToRKT c appDirGen tm outRktAbs
-         raco <- coreLift findRacoExe
+         raco <- coreLift findRaco
          racket <- coreLift findRacket
 
          ok <- the (Core Int) $ if mkexec
                   then logTime "+ Build racket" $
                          coreLift $
-                           system ("\"" ++ raco ++ "\" -o " ++ outBinAbs ++ " " ++ outRktAbs)
+                           system $ "\"" ++ raco ++ "\" exe -o " ++ outBinAbs ++ " " ++ outRktAbs
                   else pure 0
          if ok == 0
             then do -- TODO: add launcher script
@@ -440,10 +440,10 @@ compileExpr mkexec c tmpDir outputDir tm outfile
                     the (Core ()) $ if isWindows
                        then if mkexec
                                then makeShWindows "" outShRel appDirRel outBinFile
-                               else makeShWindows (racket ++ " ") outShRel appDirRel outRktFile
+                               else makeShWindows ("\"" ++ racket ++ "\" ") outShRel appDirRel outRktFile
                        else if mkexec
                                then makeSh "" outShRel appDirRel outBinFile
-                               else makeSh (racket ++ " ") outShRel appDirRel outRktFile
+                               else makeSh ("\"" ++ racket ++ "\" ") outShRel appDirRel outRktFile
                     coreLift_ $ chmodRaw outShRel 0o755
                     pure (Just outShRel)
             else pure Nothing
