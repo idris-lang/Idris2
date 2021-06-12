@@ -95,7 +95,7 @@ prim__stdout : FilePtr
          "node:lambda:x=>({fd:2, buffer: Buffer.alloc(0), name:'<stderr>', eof: false})"
 prim__stderr : FilePtr
 
-%foreign "C:chmod, libc 6, sys/stat.h"
+%foreign support "idris2_chmod"
          "node:support:chmod,support_system_file"
 prim__chmod : String -> Int -> PrimIO Int
 

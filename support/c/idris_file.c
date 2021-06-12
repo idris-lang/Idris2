@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -46,6 +45,15 @@ int idris2_fileErrno() {
     default:
         return (errno + 5);
     }
+}
+
+int idris2_chmod(const char* path, mode_t mode) {
+#ifdef _WIN32
+    // return _chmod(path, mode);
+    return 0; /* ??? (from win_hack.c) */
+#else
+    return chmod(path, mode);
+#endif
 }
 
 int idris2_removeFile(const char *filename) {

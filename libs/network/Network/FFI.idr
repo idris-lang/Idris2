@@ -5,22 +5,15 @@ module Network.FFI
 
 import Network.Socket.Data
 
--- From sys/socket.h
-
-%foreign "C:close, libc 6"
-export
-prim__socket_close : (sockdes : SocketDescriptor) -> PrimIO Int
-
-%foreign "C:listen, libc 6"
-export
-prim__socket_listen : (sockfd : SocketDescriptor) -> (backlog : Int) -> PrimIO Int
-
-
 -- From idris_net.h
 
 %foreign "C:idrnet_socket, libidris2_support, idris_net.h"
 export
 prim__idrnet_socket : (domain, type, protocol : Int) -> PrimIO Int
+
+%foreign "C:idrnet_close, libidris2_support, idris_net.h"
+export
+prim__idrnet_close : (sockdes : SocketDescriptor) -> PrimIO Int
 
 %foreign "C:idrnet_bind, libidris2_support, idris_net.h"
 export
@@ -31,6 +24,14 @@ prim__idrnet_bind : (sockfd : SocketDescriptor) -> (family, socket_type : Int) -
 export
 prim__idrnet_connect : (sockfd : SocketDescriptor) -> (family, socket_type : Int) ->
                        (host : String) -> (port : Port) -> PrimIO Int
+
+%foreign "C:idrnet_listen, libidris2_support, idris_net.h"
+export
+prim__idrnet_listen : (sockfd : SocketDescriptor) -> (backlog : Int) -> PrimIO Int
+
+%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
+export
+prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 %foreign "C:idrnet_sockaddr_family, libidris2_support, idris_net.h"
 export
