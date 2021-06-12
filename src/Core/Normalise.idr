@@ -1419,6 +1419,8 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  (Constant -> Bool) ->
                  -- view to check whether an argument is a constant
                  (arg -> Maybe Constant) ->
+                 -- Reduce everything (True) or just public export (False)
+                 Bool ->
                  -- list of primitives
                  List Name ->
                  -- view of the potential redex
@@ -1429,7 +1431,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  Env Term vs ->         -- evaluation environment
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
-normalisePrims boundSafe viewConstant prims n args tm env
+normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
@@ -1439,5 +1441,7 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normaliseAll defs env tm
+        tm <- if all
+                 then normaliseAll defs env tm
+                 else normalise defs env tm
         pure (Just tm)

@@ -795,6 +795,9 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
     normalisePrims prims env res
         = do tm <- Normalise.normalisePrims (`boundSafe` elabMode elabinfo)
                                             isIPrimVal
+                                            (case elabMode elabinfo of
+                                                  InLHS _ => True
+                                                  _ => False)
                                             prims n expargs (fst res) env
              pure (fromMaybe (fst res) tm, snd res)
 
