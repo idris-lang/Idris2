@@ -1,6 +1,6 @@
 module Libraries.Text.Lexer
 
-import Libraries.Data.Bool.Extra
+import Data.Bool
 import Data.List
 import Data.Nat
 

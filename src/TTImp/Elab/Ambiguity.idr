@@ -15,9 +15,9 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Strings
+
 import Libraries.Data.StringMap
 
 %default covering
@@ -299,7 +299,7 @@ pruneByType env target alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
          log "elab.prune" 10 (show matches)
-         res <- if anyTrue (map fst matches)
+         res <- if any Builtin.fst matches
                 -- if there's any concrete matches, drop the non-concrete
                 -- matches marked as '%allow_overloads' from the possible set
                    then do keep <- filterCore (notOverloadable defs) matches

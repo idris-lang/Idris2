@@ -15,17 +15,20 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Libraries.Data.List1 as Lib
-import Libraries.Data.List.Extra
+import Data.List1
 import Data.Maybe
 import Data.Stream
 import Data.Strings
+
+import Libraries.Data.List.Extra
+import Libraries.Data.List1 as Lib
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import System.File
 import Libraries.Utils.String
 import Libraries.Data.String.Extra
+
+import System.File
 
 %hide Data.Strings.lines
 %hide Data.Strings.lines'

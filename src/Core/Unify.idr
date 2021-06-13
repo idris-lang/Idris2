@@ -12,10 +12,10 @@ import Core.TT
 import public Core.UnifyState
 import Core.Value
 
-import Libraries.Data.Bool.Extra
-import Libraries.Data.IntMap
 import Data.List
 import Data.List.Views
+
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -1507,7 +1507,7 @@ solveConstraints : {auto c : Ref Ctxt Defs} ->
 solveConstraints umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode) (toList (guesses ust))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraints umode Normal
 
 export
@@ -1518,7 +1518,7 @@ solveConstraintsAfter start umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode)
                               (filter afterStart (toList (guesses ust)))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraintsAfter start umode Normal
   where
     afterStart : (Int, a) -> Bool
