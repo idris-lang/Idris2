@@ -320,11 +320,10 @@ makeFusionBranch fusionName functionsIdx (i, _, args, body) =
     where
         rep : ImperativeExp -> Maybe ImperativeExp
         rep (IEApp (IEVar n) arg_vals) =
-            case lookup n functionsIdx of
-                Nothing => Nothing
-                Just i => Just $ IEApp
-                          (IEVar fusionName)
-                          [IEConstructor (Left $ cast i) arg_vals]
+          map
+            (\i => IEApp (IEVar fusionName)
+                         [IEConstructor (Left $ cast i) arg_vals])
+            (lookup n functionsIdx)
         rep _ = Nothing
 
 changeBodyToUseFusion :  Name

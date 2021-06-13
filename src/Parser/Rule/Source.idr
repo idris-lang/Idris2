@@ -39,9 +39,7 @@ constant : Rule Constant
 constant
     = terminal "Expected constant"
                (\x => case x of
-                           CharLit c => case getCharLit c of
-                                             Nothing => Nothing
-                                             Just c' => Just (Ch c')
+                           CharLit c =>  map Ch $ getCharLit c
                            DoubleLit d  => Just (Db d)
                            IntegerLit i => Just (BI i)
                            Ident s      => isConstantType (UN s) >>=

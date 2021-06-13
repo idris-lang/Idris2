@@ -92,13 +92,9 @@ getIDECommand (SExpList [SymbolAtom "add-missing", IntegerAtom line, StringAtom 
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n])
     = Just $ ExprSearch l n [] False
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' False
-           _ => Nothing
+    = map (\hs' => ExprSearch l n hs' False) $ readHints hs
 getIDECommand (SExpList [SymbolAtom "proof-search", IntegerAtom l, StringAtom n, SExpList hs, SymbolAtom mode])
-    = case readHints hs of
-           Just hs' => Just $ ExprSearch l n hs' (getMode mode)
-           _ => Nothing
+    = map (\hs' => ExprSearch l n hs' (getMode mode)) $ readHints hs
   where
     getMode : String -> Bool
     getMode m = m == "all"
