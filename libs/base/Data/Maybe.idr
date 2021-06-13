@@ -1,5 +1,7 @@
 module Data.Maybe
 
+%default total
+
 public export
 isNothing : Maybe a -> Bool
 isNothing Nothing  = True

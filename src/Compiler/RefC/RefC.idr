@@ -23,6 +23,8 @@ import System.File
 import Libraries.Utils.Hex
 import Libraries.Utils.Path
 
+%default covering
+
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
 showcCleanStringChar '-' = ("__" ++)

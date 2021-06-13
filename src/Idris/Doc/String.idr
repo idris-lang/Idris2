@@ -31,6 +31,8 @@ import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Parser.Lexer.Source
 
+%default covering
+
 public export
 data IdrisDocAnn
   = TCon Name

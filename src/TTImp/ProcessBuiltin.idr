@@ -18,6 +18,8 @@ import Core.UnifyState
 
 import TTImp.TTImp
 
+%default covering
+
 showDefType : Def -> String
 showDefType None = "undefined"
 showDefType (PMDef {}) = "function"

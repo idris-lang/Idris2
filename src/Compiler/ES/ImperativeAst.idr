@@ -10,6 +10,8 @@ import public Core.TT
 import public Data.Vect
 import public Data.List
 
+%default covering
+
 mutual
   ||| A tree representing an ES expression.
   |||

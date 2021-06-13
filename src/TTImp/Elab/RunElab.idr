@@ -20,6 +20,8 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+%default covering
+
 export
 elabScript : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->

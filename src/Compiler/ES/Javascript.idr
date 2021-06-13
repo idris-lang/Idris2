@@ -17,6 +17,8 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Data.String.Extra
 
+%default covering
+
 ||| Compile a TT expression to Javascript
 compileToJS : Ref Ctxt Defs ->
               ClosedTerm -> Core String

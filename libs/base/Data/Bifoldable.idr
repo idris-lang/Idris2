@@ -1,6 +1,8 @@
 ||| Additional utility functions for the `Bifoldable` interface.
 module Data.Bifoldable
 
+%default total
+
 ||| Left associative monadic bifold over a structure.
 public export
 bifoldlM :  (Bifoldable p, Monad m)

@@ -4,6 +4,8 @@ import public Data.So
 import Data.List
 import Data.Strings
 
+%default total
+
 support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
@@ -69,6 +71,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
+covering
 getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where

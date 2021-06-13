@@ -2,6 +2,8 @@ module System.Clock
 
 import PrimIO
 
+%default total
+
 ||| The various types of system clock available.
 public export
 data ClockType

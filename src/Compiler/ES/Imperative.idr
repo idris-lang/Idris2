@@ -17,6 +17,7 @@ import public Core.Context
 import Compiler.ES.RemoveUnused
 import Compiler.ES.TailRec
 
+%default covering
 
 mutual
   isNameUsed : Name -> NamedCExp -> Bool
