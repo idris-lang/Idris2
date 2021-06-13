@@ -141,7 +141,6 @@ isEmpty : {vars : _} ->
 isEmpty defs env (NTCon fc n t a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
-       log "coverage.empty" 10 $ "Checking type: " ++ show nty
        case nty of
             TCon _ _ _ _ flags _ cons _
                  => if not (external flags)

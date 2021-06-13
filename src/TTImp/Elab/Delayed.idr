@@ -70,6 +70,8 @@ delayOnFailure : {vars : _} ->
                  Core (Term vars, Glued vars)
 delayOnFailure fc rig env expected pred pri elab
     = do est <- get EST
+         ust <- get UST
+         let nos = noSolve ust -- remember the holes we shouldn't solve
          handle (elab False)
           (\err =>
               do est <- get EST
@@ -85,7 +87,15 @@ delayOnFailure fc rig env expected pred pri elab
                          defs <- get Ctxt
                          put UST (record { delayedElab $=
                                  ((pri, ci, localHints defs,
-                                   mkClosedElab fc env (deeper (elab True))) :: ) }
+                                   mkClosedElab fc env
+                                      (deeper
+                                        (do ust <- get UST
+                                            let nos' = noSolve ust
+                                            put UST (record { noSolve = nos } ust)
+                                            res <- elab True
+                                            ust <- get UST
+                                            put UST (record { noSolve = nos' } ust)
+                                            pure res))) :: ) }
                                          ust)
                          pure (dtm, expected)
                     else throw err)
@@ -103,6 +113,8 @@ delayElab : {vars : _} ->
             Core (Term vars, Glued vars)
 delayElab {vars} fc rig env exp pri elab
     = do est <- get EST
+         ust <- get UST
+         let nos = noSolve ust -- remember the holes we shouldn't solve
          nm <- genName "delayed"
          expected <- mkExpected exp
          (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
@@ -111,7 +123,14 @@ delayElab {vars} fc rig env exp pri elab
          ust <- get UST
          defs <- get Ctxt
          put UST (record { delayedElab $=
-                 ((pri, ci, localHints defs, mkClosedElab fc env elab) :: ) }
+                 ((pri, ci, localHints defs, mkClosedElab fc env
+                                              (do ust <- get UST
+                                                  let nos' = noSolve ust
+                                                  put UST (record { noSolve = nos } ust)
+                                                  res <- elab
+                                                  ust <- get UST
+                                                  put UST (record { noSolve = nos' } ust)
+                                                  pure res)) :: ) }
                          ust)
          pure (dtm, expected)
   where

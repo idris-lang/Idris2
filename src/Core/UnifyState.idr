@@ -43,6 +43,18 @@ data Constraint : Type where
      -- A resolved constraint
      Resolved : Constraint
 
+-- a constraint on the LHS arising from checking an argument in a position
+-- where we expect a polymorphic type. If, in the end, the expected type is
+-- polymorphic but the argument is concrete, then the pattern match is too
+-- specific
+public export
+data PolyConstraint : Type where
+     MkPolyConstraint : {vars : _} ->
+                        FC -> Env Term vars ->
+                        (arg : Term vars) ->
+                        (expty : NF vars) ->
+                        (argty : NF vars) -> PolyConstraint
+
 public export
 record UState where
   constructor MkUState
@@ -57,6 +69,12 @@ record UState where
                                    -- user defined hole names, which don't need
                                    -- to have been solved
   constraints : IntMap Constraint -- map for finding constraints by ID
+  noSolve : IntMap () -- Names not to solve
+                      -- If we're checking an LHS, then checking an argument can't
+                      -- solve its own type, or we might end up with something
+                      -- less polymorphic than it should be
+  polyConstraints : List PolyConstraint -- constraints which need to be solved
+                      -- successfully to check an LHS is polymorphic enough
   dotConstraints : List (Name, DotReason, Constraint) -- dot pattern constraints
   nextName : Int
   nextConstraint : Int
@@ -77,6 +95,8 @@ initUState = MkUState
   , currentHoles = empty
   , delayedHoles = empty
   , constraints = empty
+  , noSolve = empty
+  , polyConstraints = []
   , dotConstraints = []
   , nextName = 0
   , nextConstraint = 0
@@ -181,6 +201,20 @@ removeHoleName n
          removeHole i
 
 export
+addNoSolve : {auto u : Ref UST UState} ->
+             Int -> Core ()
+addNoSolve i
+    = do ust <- get UST
+         put UST (record { noSolve $= insert i () } ust)
+
+export
+removeNoSolve : {auto u : Ref UST UState} ->
+                Int -> Core ()
+removeNoSolve i
+    = do ust <- get UST
+         put UST (record { noSolve $= delete i } ust)
+
+export
 saveHoles : {auto u : Ref UST UState} ->
             Core (IntMap (FC, Name))
 saveHoles
@@ -280,6 +314,17 @@ addDot fc env dotarg x reason y
          put UST (record { dotConstraints $=
                              ((dotarg, reason, MkConstraint fc False env xnf ynf) ::)
                          } ust)
+
+export
+addPolyConstraint : {vars : _} ->
+                    {auto u : Ref UST UState} ->
+                    FC -> Env Term vars -> Term vars -> NF vars -> NF vars ->
+                    Core ()
+addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
+    = do ust <- get UST
+         put UST (record { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) } ust)
+addPolyConstraint fc env arg x y
+    = pure ()
 
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->

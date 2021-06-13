@@ -207,7 +207,7 @@ namespace App1
 
   export
   delay : {u : _} -> (1 k : App1 {u=u'} e b) ->
-          Cont1Type u a u' e b
+          Cont1Type u () u' e b
   delay {u = One} mb = \ () => mb
   delay {u = Any} mb = \ _ => mb
 

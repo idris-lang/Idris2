@@ -2,6 +2,6 @@ Processing as TTImp
 Written TTC
 Yaffle> Main.lookup: All cases covered
 Yaffle> Main.lookup':
-($resolved408 [__] [__] ($resolved376 [__]) {_:59})
+($resolved409 [__] [__] ($resolved377 [__]) {_:60})
 Yaffle> Main.lookup'': Calls non covering function Main.lookup'
 Yaffle> Bye for now!

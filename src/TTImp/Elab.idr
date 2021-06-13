@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
+import Core.Value
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
