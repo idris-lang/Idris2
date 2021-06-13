@@ -135,6 +135,10 @@ record EState (vars : List Name) where
   allPatVars : List Name
                   -- Holes standing for pattern variables, which we'll delete
                   -- once we're done elaborating
+  polyMetavars : List (FC, Env Term vars, Term vars, Term vars)
+                  -- Metavars which need to be a polymorphic type at the end
+                  -- of elaboration. If they aren't, it means we're trying to
+                  -- pattern match on a type that we don't have available.
   delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
@@ -159,6 +163,7 @@ initEStateSub n env sub = MkEState
     , bindIfUnsolved = []
     , lhsPatVars = []
     , allPatVars = []
+    , polyMetavars = []
     , delayDepth = Z
     , linearUsed = []
     , saveHoles = empty
@@ -187,6 +192,7 @@ weakenedEState {e}
                           , boundNames $= map wknTms
                           , toBind $= map wknTms
                           , linearUsed $= map weaken
+                          , polyMetavars = [] -- no binders on LHS
                           } est
          pure eref
   where
@@ -212,6 +218,7 @@ strengthenedEState {n} {vars} c e fc env
                        , boundNames = bns
                        , toBind = todo
                        , linearUsed $= mapMaybe dropTop
+                       , polyMetavars = [] -- no binders on LHS
                        } est
 
   where
@@ -286,6 +293,28 @@ inScope {c} {e} fc env elab
          st' <- strengthenedEState c e' fc env
          put {ref=e} EST st'
          pure res
+
+export
+mustBePoly : {auto e : Ref EST (EState vars)} ->
+             FC -> Env Term vars ->
+             Term vars -> Term vars -> Core ()
+mustBePoly fc env tm ty
+    = do est <- get EST
+         put EST (record { polyMetavars $= ((fc, env, tm, ty) :: ) } est)
+
+-- Return whether we already know the return type of the given function
+-- type. If we know this, we can possibly infer some argument types before
+-- elaborating them, which might help us disambiguate things more easily.
+export
+concrete : Defs -> Env Term vars -> NF vars -> Core Bool
+concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
+    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         concrete defs env sc'
+concrete defs env (NDCon _ _ _ _ _) = pure True
+concrete defs env (NTCon _ _ _ _ _) = pure True
+concrete defs env (NPrimVal _ _) = pure True
+concrete defs env (NType _) = pure True
+concrete defs env _ = pure False
 
 export
 updateEnv : {new : _} ->

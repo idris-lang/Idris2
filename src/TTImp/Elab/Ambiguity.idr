@@ -383,7 +383,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                     checkImp rig (addAmbig alts' (getName t) elabinfo)
                                              nest env t
                                              (Just exp'))) alts'))
-                            (do log "elab" 5 "All failed, running default"
+                            (do log "elab.ambiguous" 5 "All failed, running default"
                                 checkImp rig (addAmbig alts' (getName def) elabinfo)
                                              nest env def (Just exp'))
                      else exactlyOne' True fc env
@@ -441,5 +441,5 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   -- way that allows one pass)
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
-                                  log "elab" 10 $ show (getName t) ++ " success"
+                                  log "elab.ambiguous" 10 $ show (getName t) ++ " success"
                                   pure res)) alts')
