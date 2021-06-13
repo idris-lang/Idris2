@@ -116,6 +116,7 @@ modules =
 
     Libraries.Data.ANameMap,
     Libraries.Data.DList,
+    Libraries.Data.Fin,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.IOMatrix,
