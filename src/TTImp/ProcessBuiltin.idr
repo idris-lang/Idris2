@@ -80,7 +80,7 @@ getNEIndex : (arity : Nat) -> Term vars -> Maybe (Fin arity)
 getNEIndex ar (Bind _ x b tm) = case b of
     Let _ _ val _ => getNEIndex ar $ subst {x} val tm
     Pi _ mul _ arg => if isErased mul
-        then getNEIndex ar tm >>= \k => Libs.strengthen (FS k)
+        then getNEIndex ar tm >>= Libs.strengthen . FS
         else natToFin 0 ar
     _ => Nothing
 getNEIndex _ _ = Nothing
