@@ -21,11 +21,19 @@ lowerFirst : String -> Bool
 lowerFirst "" = False
 lowerFirst str = assert_total (isLower (prim__strHead str))
 
-export
-escapeStringChez : String -> String
-escapeStringChez s = pack $ foldr escape [] $ unpack s
+escapeGeneric : Char -> List Char -> String -> String
+escapeGeneric esc toEscape = pack . foldr escape [] . unpack
   where
     escape : Char -> List Char -> List Char
-    escape '\'' cs = '\\' :: '\'' :: cs
-    escape '\\' cs = '\\' :: '\\' :: cs
-    escape c   cs = c :: cs
+    escape c cs =
+      if elem c toEscape
+        then (esc :: c :: cs)
+        else (c :: cs)
+
+export
+escapeStringUnix : String -> String
+escapeStringUnix = escapeGeneric '\\' ['"', '\\']
+
+export
+escapeStringChez : String -> String
+escapeStringChez = escapeGeneric '\\' ['\'', '\\']

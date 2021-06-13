@@ -141,45 +141,58 @@ getBuildMods loc done fname
                  mkBuildMods {d=dm} {o} t
                  pure (reverse !(get BuildOrder))
 
-fnameModified : String -> Core Integer
-fnameModified fname
-    = do Right f <- coreLift $ openFile fname Read
-             | Left err => throw (FileErr fname err)
-         Right t <- coreLift $ fileModifiedTime f
-             | Left err => do coreLift $ closeFile f
-                              throw (FileErr fname err)
-         coreLift $ closeFile f
-         pure (cast t)
+needsBuildingTime : (sourceFile : String) -> (ttcFile : String) ->
+                    (depFiles : List String) -> Core Bool
+needsBuildingTime sourceFile ttcFile depFiles
+  = do ttcTime  <- modTime ttcFile
+       srcTime  <- modTime sourceFile
+       depTimes <- traverse modTime depFiles
+       pure $ any (>= ttcTime) (srcTime :: depTimes)
+
+checkDepHashes : {auto c : Ref Ctxt Defs} ->
+                 String -> Core Bool
+checkDepHashes depFileName
+  = catch (do depCodeHash            <- hashFile depFileName
+              depTTCFileName         <- getTTCFileName depFileName "ttc"
+              (depStoredCodeHash, _) <- readHashes depTTCFileName
+              pure $ depCodeHash /= depStoredCodeHash)
+          (\error => pure False)
+
+
+||| Build from source if any of the dependencies, or the associated source file,
+||| have been modified from the stored hashes.
+needsBuildingHash : {auto c : Ref Ctxt Defs} ->
+                    (sourceFile : String) -> (ttcFile : String) ->
+                    (depFiles : List String) -> Core Bool
+needsBuildingHash sourceFile ttcFile depFiles
+  = do  codeHash            <- hashFile sourceFile
+        (storedCodeHash, _) <- readHashes ttcFile
+        depFilesHashDiffers <- any id <$> traverse checkDepHashes depFiles
+        pure $ codeHash /= storedCodeHash || depFilesHashDiffers
 
 buildMod : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            FC -> Nat -> Nat -> BuildMod ->
            Core (List Error)
--- Build from source if any of the dependencies, or the associated source
--- file, have a modification time which is newer than the module's ttc
--- file
 buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
-        let src = buildFile mod
-        let ident = buildNS mod
-        mttc <- getTTCFileName src "ttc"
+        session <- getSession
+
+        let sourceFile = buildFile mod
+        let modNamespace = buildNS mod
+        ttcFile <- getTTCFileName sourceFile "ttc"
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
 
-        ttcTime <- breakpoint (fnameModified mttc)
-        srcTime <- fnameModified src
-        depTimes <- traverse (\f => do t <- fnameModified f
-                                       pure (f, t)) depFiles
-        let needsBuilding =
-               case ttcTime of
-                    Left _ => True
-                    Right t => any (\x => x > t) (srcTime :: map snd depTimes)
+        needsBuilding <- (if session.checkHashesInsteadOfModTime
+          then needsBuildingHash else needsBuildingTime) sourceFile ttcFile depFiles
+
         u <- newRef UST initUState
-        m <- newRef MD (initMetadata (PhysicalIdrSrc ident))
+        m <- newRef MD (initMetadata (PhysicalIdrSrc modNamespace))
         put Syn initSyntax
 
         errs <- if (not needsBuilding) then pure [] else
@@ -188,17 +201,12 @@ buildMod loc num len mod
                   = pretty (String.replicate pad ' ') <+> pretty num
                     <+> slash <+> pretty len <+> colon
                     <++> pretty "Building" <++> pretty mod.buildNS
-                    <++> parens (pretty src)
-              process {u} {m} msg src ident
+                    <++> parens (pretty sourceFile)
+              process {u} {m} msg sourceFile modNamespace
 
         defs <- get Ctxt
         ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
         pure (ws ++ if null errs then ferrs else ferrs ++ errs)
-  where
-    isModuleNotFound : Error -> Bool
-    isModuleNotFound e = case e of
-      (ModuleNotFound _ _) => True
-      _ => False
 
 export
 buildMods : {auto c : Ref Ctxt Defs} ->
