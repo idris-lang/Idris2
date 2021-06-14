@@ -3,6 +3,8 @@ module Control.Monad.Reader.Reader
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+%default total
+
 ||| The transformer on which the Reader monad is based
 public export
 record ReaderT (stateType : Type) (m : Type -> Type) (a : Type) where

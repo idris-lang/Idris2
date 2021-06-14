@@ -11,6 +11,8 @@ import Libraries.Utils.Term
 
 import System
 
+%default total
+
 getPageWidth : {auto o : Ref ROpts REPLOpts} -> Core PageWidth
 getPageWidth = do
   consoleWidth <- getConsoleWidth

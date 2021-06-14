@@ -64,6 +64,8 @@
 
 module Test.Golden
 
+import Control.ANSI
+
 import Data.Either
 import Data.Maybe
 import Data.List
@@ -92,20 +94,23 @@ record Options where
   onlyNames    : List String
   ||| Should we run the test suite interactively?
   interactive  : Bool
+  ||| Should we use colors?
+  color        : Bool
   ||| Should we time and display the tests
   timing       : Bool
   ||| How many threads should we use?
   threads      : Nat
   ||| Should we write the list of failing cases from a file?
-  failureFile     : Maybe String
+  failureFile  : Maybe String
 
 export
-initOptions : String -> Options
-initOptions exe
+initOptions : String -> Bool -> Options
+initOptions exe color
   = MkOptions exe
               Nothing
               []
               False
+              color
               False
               1
               Nothing
@@ -117,6 +122,7 @@ usage exe = unwords
   , "runtests <path>"
   , "[--timing]"
   , "[--interactive]"
+  , "[--[no-]color, --[no-]colour]"
   , "[--cg CODEGEN]"
   , "[--threads N]"
   , "[--failure-file PATH]"
@@ -144,6 +150,10 @@ options args = case args of
       []                            => pure (only, opts)
       ("--timing" :: xs)            => go xs only (record { timing = True} opts)
       ("--interactive" :: xs)       => go xs only (record { interactive = True } opts)
+      ("--color"  :: xs)            => go xs only (record { color = True } opts)
+      ("--colour" :: xs)            => go xs only (record { color = True } opts)
+      ("--no-color"  :: xs)         => go xs only (record { color = False } opts)
+      ("--no-colour" :: xs)         => go xs only (record { color = False } opts)
       ("--cg" :: cg :: xs)          => go xs only (record { codegen = Just cg } opts)
       ("--threads" :: n :: xs)      => do let pos : Nat = !(parsePositive n)
                                           go xs only (record { threads = pos } opts)
@@ -154,7 +164,8 @@ options args = case args of
 
     mkOptions : String -> List String -> IO (Maybe Options)
     mkOptions exe rest
-      = do let Just (mfp, opts) = go rest Nothing (initOptions exe)
+      = do color <- (Just "DUMB" /=) <$> getEnv "TERM"
+           let Just (mfp, opts) = go rest Nothing (initOptions exe color)
                  | Nothing => pure Nothing
            let Just fp = mfp
                  | Nothing => pure (Just opts)
@@ -211,9 +222,11 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time $ testPath ++ ": success"
+    then printTiming (timing opts) time $ testPath ++ ": " ++
+      (if opts.color then show . colored BrightGreen else id) "success"
     else do
-      printTiming (timing opts) time $ testPath ++ ": FAILURE"
+      printTiming (timing opts) time $ testPath ++ ": " ++
+        (if opts.color then show . colored BrightRed else id) "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
         else putStrLn . unlines $ expVsOut exp out
@@ -242,7 +255,8 @@ runTest opts testPath = forkIO $ do
           , "Accept new golden value? [yn]"
           ]
         Just exp => do
-          code <- system $ "git diff --no-index --exit-code --word-diff=color " ++
+          code <- system $ "git diff --no-index --exit-code " ++
+            (if opts.color then  "--word-diff=color " else "") ++
             testPath ++ "/expected " ++ testPath ++ "/output"
           putStrLn . unlines $
             ["Golden value differs from actual value."] ++

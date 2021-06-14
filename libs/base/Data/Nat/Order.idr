@@ -8,6 +8,8 @@ import Decidable.Decidable
 import Decidable.Equality
 import Decidable.Order
 
+%default total
+
 public export
 total LTEIsTransitive : (m : Nat) -> (n : Nat) -> (o : Nat) ->
                            LTE m n -> LTE n o ->

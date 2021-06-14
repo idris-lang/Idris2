@@ -87,6 +87,17 @@ take : (n  : Nat)
 take 0 xs = Nil
 take (S k) (x :: xs) = x :: take k xs
 
+||| Drop the first `n` elements of a Vect.
+drop : (n : Nat) -> Vect (n + m) elem -> Vect m elem
+drop 0 xs = xs
+drop (S k) (x :: xs) = drop k xs
+
+||| Drop up to the first `n` elements of a Vect.
+drop' : (n : Nat) -> Vect l elem -> Vect (l `minus` n) elem
+drop' 0 xs = rewrite minusZeroRight l in xs
+drop' (S k) [] = rewrite minusZeroLeft (S k) in []
+drop' (S k) (x :: xs) = drop' k xs
+
 ||| Extract a particular element from a vector
 |||
 ||| ```idris example

@@ -93,6 +93,8 @@ import Compiler.ES.ImperativeAst
 
 import Debug.Trace
 
+%default covering
+
 data TailRecS : Type where
 
 record TailSt where

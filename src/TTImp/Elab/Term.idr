@@ -295,6 +295,10 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
               _ => do tm' <- insertImpLam env tm exp
                       checkImp rigc elabinfo nest env tm' exp
 
+onLHS : ElabMode -> Bool
+onLHS (InLHS _) = True
+onLHS _ = False
+
 -- As above, but doesn't add any implicit lambdas, forces, delays, etc
 -- checkImp : {vars : _} ->
 --            {auto c : Ref Ctxt Defs} ->
@@ -304,4 +308,13 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
 --            RigCount -> ElabInfo -> Env Term vars -> RawImp -> Maybe (Glued vars) ->
 --            Core (Term vars, Glued vars)
 TTImp.Elab.Check.checkImp rigc elabinfo nest env tm exp
-    = checkTerm rigc elabinfo nest env tm exp
+    = do res <- checkTerm rigc elabinfo nest env tm exp
+         -- LHS arguments can't infer their own type - they need to be inferred
+         -- from some other argument. This is to prevent arguments being not
+         -- polymorphic enough. So, here, add the constraint to be checked later.
+         when (onLHS (elabMode elabinfo) && not (topLevel elabinfo)) $
+            do let (argv, argt) = res
+               let Just expty = exp
+                        | Nothing => pure ()
+               addPolyConstraint (getFC tm) env argv !(getNF expty) !(getNF argt)
+         pure res

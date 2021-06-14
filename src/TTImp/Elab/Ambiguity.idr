@@ -15,9 +15,9 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Strings
+
 import Libraries.Data.StringMap
 
 %default covering
@@ -299,7 +299,7 @@ pruneByType env target alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
          log "elab.prune" 10 (show matches)
-         res <- if anyTrue (map fst matches)
+         res <- if any Builtin.fst matches
                 -- if there's any concrete matches, drop the non-concrete
                 -- matches marked as '%allow_overloads' from the possible set
                    then do keep <- filterCore (notOverloadable defs) matches
@@ -383,7 +383,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
                                     checkImp rig (addAmbig alts' (getName t) elabinfo)
                                              nest env t
                                              (Just exp'))) alts'))
-                            (do log "elab" 5 "All failed, running default"
+                            (do log "elab.ambiguous" 5 "All failed, running default"
                                 checkImp rig (addAmbig alts' (getName def) elabinfo)
                                              nest env def (Just exp'))
                      else exactlyOne' True fc env
@@ -441,5 +441,5 @@ checkAlternative rig elabinfo nest env fc uniq alts mexpected
                                   -- way that allows one pass)
                                   solveConstraints solvemode Normal
                                   solveConstraints solvemode Normal
-                                  log "elab" 10 $ show (getName t) ++ " success"
+                                  log "elab.ambiguous" 10 $ show (getName t) ++ " success"
                                   pure res)) alts')

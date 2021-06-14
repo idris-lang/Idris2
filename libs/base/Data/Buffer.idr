@@ -5,6 +5,8 @@ import System.File
 
 import Data.List
 
+%default total
+
 -- Reading and writing binary buffers. Note that this primitives are unsafe,
 -- in that they don't check that buffer locations are within bounds.
 -- We really need a safe wrapper!
@@ -224,11 +226,13 @@ getString buf loc len
     = primIO (prim__getString buf loc len)
 
 export
+covering
 bufferData : HasIO io => Buffer -> io (List Int)
 bufferData buf
     = do len <- rawSize buf
          unpackTo [] len
   where
+    covering
     unpackTo : List Int -> Int -> io (List Int)
     unpackTo acc 0 = pure acc
     unpackTo acc loc

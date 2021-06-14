@@ -1,17 +1,18 @@
 module Libraries.Text.Lexer.Tokenizer
 
-import public Libraries.Control.Delayed
-import public Libraries.Text.Bounded
-import Libraries.Data.Bool.Extra
+import Data.List
+import Data.Either
+import Data.Nat
+import Data.Strings
+
 import Libraries.Data.String.Extra
 import Libraries.Text.Lexer.Core
 import Libraries.Text.Lexer
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Data.List
-import Data.Either
-import Data.Nat
-import Data.Strings
+
+import public Libraries.Control.Delayed
+import public Libraries.Text.Bounded
 
 %default total
 

@@ -12,10 +12,10 @@ import Core.TT
 import public Core.UnifyState
 import Core.Value
 
-import Libraries.Data.Bool.Extra
-import Libraries.Data.IntMap
 import Data.List
 import Data.List.Views
+
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -831,10 +831,11 @@ mutual
               Core UnifyResult
   solveHole loc mode env mname mref margs margs' locs submv solfull stm solnf
       = do defs <- get Ctxt
+           ust <- get UST
            empty <- clearDefs defs
            -- if the terms are the same, this isn't a solution
            -- but they are already unifying, so just return
-           if solutionHeadSame solnf
+           if solutionHeadSame solnf || inNoSolve mref (noSolve ust)
               then pure success
               else -- Rather than doing the occurs check here immediately,
                    -- we'll wait until all metavariables are resolved, and in
@@ -846,6 +847,12 @@ mutual
                       instantiate loc mode env mname mref (length margs) hdef locs solfull stm
                       pure $ solvedHole mref
     where
+      inNoSolve : Int -> IntMap () -> Bool
+      inNoSolve i ns
+          = case lookup i ns of
+                 Nothing => False
+                 Just _ => True
+
       -- Only need to check the head metavar is the same, we've already
       -- checked the rest if they are the same (and we couldn't instantiate it
       -- anyway...)
@@ -1500,7 +1507,7 @@ solveConstraints : {auto c : Ref Ctxt Defs} ->
 solveConstraints umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode) (toList (guesses ust))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraints umode Normal
 
 export
@@ -1511,7 +1518,7 @@ solveConstraintsAfter start umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode)
                               (filter afterStart (toList (guesses ust)))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraintsAfter start umode Normal
   where
     afterStart : (Int, a) -> Bool

@@ -3,6 +3,8 @@ module Control.WellFounded
 import Data.Nat
 import Data.List
 
+%default total
+
 public export
 data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
   Access : (rec : (y : a) -> rel y x -> Accessible rel y) ->

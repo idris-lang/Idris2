@@ -9,7 +9,6 @@ import Core.TT
 import Core.Unify
 import Core.Value
 
-import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 import Data.Maybe
@@ -222,12 +221,12 @@ usableLocal loc defaults env (NDCon _ n _ _ args)
     = do defs <- get Ctxt
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
-         pure (allTrue us)
+         pure (all id us)
 usableLocal loc defaults env (NApp _ (NLocal _ _ _) args)
     = do defs <- get Ctxt
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
-         pure (allTrue us)
+         pure (all id us)
 usableLocal loc defaults env (NBind fc x (Pi _ _ _ _) sc)
     = do defs <- get Ctxt
          usableLocal loc defaults env

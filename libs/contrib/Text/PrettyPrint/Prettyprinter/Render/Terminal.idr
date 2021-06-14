@@ -6,7 +6,7 @@ import public Control.ANSI
 import Control.Monad.ST
 import Text.PrettyPrint.Prettyprinter.Doc
 
-%default covering
+%default total
 
 public export
 AnsiStyle : Type

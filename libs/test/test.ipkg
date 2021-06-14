@@ -1,7 +1,9 @@
 package test
 version = 0.3.0
 
-opts = "--ignore-missing-ipkg -p contrib"
+depends = contrib
+
+opts = "--ignore-missing-ipkg"
 
 modules = Test.Golden
 

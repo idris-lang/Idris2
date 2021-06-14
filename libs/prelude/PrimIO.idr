@@ -2,6 +2,8 @@ module PrimIO
 
 import Builtin
 
+%default total
+
 public export
 data IORes : Type -> Type where
      MkIORes : (result : a) -> (1 x : %World) -> IORes a

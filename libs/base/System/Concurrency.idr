@@ -1,5 +1,7 @@
 module System.Concurrency
 
+%default total
+
 -- At the moment this is pretty fundamentally tied to the Scheme RTS.
 -- Given that different back ends will have entirely different threading
 -- models, it might be unavoidable, but we might want to think about possible

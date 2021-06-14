@@ -1,5 +1,7 @@
 module Libraries.Data.SortedMap
 
+%default total
+
 -- TODO: write split
 
 private
