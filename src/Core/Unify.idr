@@ -341,11 +341,12 @@ patternEnv {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
          args' <- traverse (evalArg empty) args
-         pure $ map
-           (\vs =>
-             let (newvars ** svs) = toSubVars _ vs in
-               (newvars ** (updateVars vs svs, svs)))
-           (getVars [] args')
+         pure $
+           case getVars [] args' of
+             Nothing => Nothing
+             Just vs =>
+               let (newvars ** svs) = toSubVars _ vs in
+                 Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
     -- (All of these will succeed because the SubVars we have comes from
@@ -375,11 +376,11 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         pure $ map
-           (\vs =>
+         pure $ case getVarsTm [] args of
+           Nothing => Nothing
+           Just vs =>
              let (newvars ** svs) = toSubVars _ vs in
-               (newvars ** (updateVars vs svs, svs)))
-           (getVarsTm [] args)
+                 Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
     -- (All of these will succeed because the SubVars we have comes from
