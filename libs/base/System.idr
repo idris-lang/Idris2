@@ -104,7 +104,7 @@ prim__system : String -> PrimIO Int
 
 export
 system : HasIO io => String -> io Int
-system cmd = primIO (prim__system (if isWindows then "\"" ++ cmd ++ "\"" else cmd))
+system cmd = primIO (prim__system (if isWindows && startsWithQuote then "\"" ++ cmd ++ "\"" else cmd))
   where
     startsWithQuote : Bool
     startsWithQuote = case strUncons cmd of
