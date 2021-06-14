@@ -150,7 +150,9 @@ findIndices : (a -> Bool) -> List a -> List Nat
 findIndices p = h 0 where
   h : Nat -> List a -> List Nat
   h _         []  = []
-  h lvl (x :: xs) = lvl :: h (S lvl) xs
+  h lvl (x :: xs) = if p x
+    then lvl :: h (S lvl) xs
+    else        h (S lvl) xs
 
 ||| Find associated information in a list using a custom comparison.
 public export
