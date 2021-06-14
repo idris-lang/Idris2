@@ -4,6 +4,7 @@ import Compiler.Common
 
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Unify
@@ -164,7 +165,7 @@ stMain cgs opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL False
          let fname = findInput opts
-         o <- newRef ROpts (REPLOpts.defaultOpts fname outmode cgs)
+         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
 
          finish <- showInfo opts
          when (not finish) $ do
@@ -178,7 +179,12 @@ stMain cgs opts
                  when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL False)
                  u <- newRef UST initUState
-                 m <- newRef MD initMetadata
+                 origin <- maybe
+                   (pure $ Virtual Interactive) (\fname => do
+                     modIdent <- ctxtPathToNS fname
+                     pure (PhysicalIdrSrc modIdent)
+                     ) fname
+                 m <- newRef MD (initMetadata origin)
                  updateREPLOpts
                  session <- getSession
                  when (not $ nobanner session) $ do
@@ -247,8 +253,11 @@ quitOpts [] = pure True
 quitOpts (Version :: _)
     = do putStrLn versionMsg
          pure False
-quitOpts (Help :: _)
+quitOpts (Help Nothing :: _)
     = do putStrLn usage
+         pure False
+quitOpts (Help (Just HelpLogging) :: _)
+    = do putStrLn helpTopics
          pure False
 quitOpts (ShowPrefix :: _)
     = do putStrLn yprefix

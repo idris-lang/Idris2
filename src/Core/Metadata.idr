@@ -4,9 +4,11 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
+import Core.Options
 import Core.TT
 import Core.TTC
 
@@ -17,7 +19,60 @@ import Libraries.Utils.Binary
 
 %default covering
 
--- Additional data we keep about the context to support interactive editing
+public export
+data Decoration : Type where
+  Typ : Decoration
+  Function : Decoration
+  Data : Decoration
+  Keyword : Decoration
+  Bound : Decoration
+
+export
+nameTypeDecoration : NameType -> Decoration
+nameTypeDecoration Bound         = Bound
+nameTypeDecoration Func          = Function
+nameTypeDecoration (DataCon _ _) = Data
+nameTypeDecoration (TyCon _ _  ) = Typ
+
+public export
+ASemanticDecoration : Type
+ASemanticDecoration = (NonEmptyFC, Decoration, Maybe Name)
+
+public export
+SemanticDecorations : Type
+SemanticDecorations = List ASemanticDecoration
+
+public export
+Eq Decoration where
+  Typ      == Typ      = True
+  Function == Function = True
+  Data     == Data     = True
+  Keyword  == Keyword  = True
+  Bound    == Bound    = True
+  _        == _        = False
+
+public export
+Show Decoration where
+  show Typ      = "type"
+  show Function = "function"
+  show Data     = "data"
+  show Keyword  = "keyword"
+  show Bound    = "bound"
+
+TTC Decoration where
+  toBuf b Typ      = tag 0
+  toBuf b Function = tag 1
+  toBuf b Data     = tag 2
+  toBuf b Keyword  = tag 3
+  toBuf b Bound    = tag 4
+  fromBuf b
+    = case !getTag of
+        0 => pure Typ
+        1 => pure Function
+        2 => pure Data
+        3 => pure Keyword
+        4 => pure Bound
+        _ => corrupt "Decoration"
 
 public export
 record Metadata where
@@ -43,26 +98,44 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
+       sourceIdent : OriginDesc
+
+       -- Semantic Highlighting
+       -- Posmap of known semantic decorations
+       semanticHighlighting : PosMap ASemanticDecoration
+       -- Posmap of aliases (in `with` clauses the LHS disapear during
+       -- elaboration after making sure that they match their parents'
+       semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
+       semanticDefaults : PosMap ASemanticDecoration
 
 Show Metadata where
-  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap)
+  show (MkMetadata apps names tydecls currentLHS holeLHS nameLocMap
+                   fname semanticHighlighting semanticAliases semanticDefaults)
     = "Metadata:\n" ++
       " lhsApps: " ++ show apps ++ "\n" ++
       " names: " ++ show names ++ "\n" ++
       " type declarations: " ++ show tydecls ++ "\n" ++
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
-      " nameLocMap: " ++ show nameLocMap
+      " nameLocMap: " ++ show nameLocMap ++ "\n" ++
+      " sourceIdent: " ++ show fname ++
+      " semanticHighlighting: " ++ show semanticHighlighting ++
+      " semanticAliases: " ++ show semanticAliases ++
+      " semanticDefaults: " ++ show semanticDefaults
 
 export
-initMetadata : Metadata
-initMetadata = MkMetadata
+initMetadata : OriginDesc -> Metadata
+initMetadata finfo = MkMetadata
   { lhsApps = []
   , names = []
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
   , nameLocMap = empty
+  , sourceIdent = finfo
+  , semanticHighlighting = empty
+  , semanticAliases = empty
+  , semanticDefaults = empty
   }
 
 -- A label for metadata in the global state
@@ -76,6 +149,10 @@ TTC Metadata where
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
            toBuf b (nameLocMap m)
+           toBuf b (sourceIdent m)
+           toBuf b (semanticHighlighting m)
+           toBuf b (semanticAliases m)
+           toBuf b (semanticDefaults m)
 
   fromBuf b
       = do apps <- fromBuf b
@@ -83,7 +160,11 @@ TTC Metadata where
            tys <- fromBuf b
            hlhs <- fromBuf b
            dlocs <- fromBuf b
-           pure (MkMetadata apps ns tys Nothing hlhs dlocs)
+           fname <- fromBuf b
+           semhl <- fromBuf b
+           semal <- fromBuf b
+           semdef <- fromBuf b
+           pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl semal semdef)
 
 export
 addLHS : {vars : _} ->
@@ -213,6 +294,41 @@ findHoleLHS hn
     = do meta <- get MD
          pure (lookupBy (\x, y => dropNS x == dropNS y) hn (holeLHS meta))
 
+export
+addSemanticDefault : {auto m : Ref MD Metadata} ->
+                     ASemanticDecoration -> Core ()
+addSemanticDefault asem
+  = do meta <- get MD
+       put MD $ { semanticDefaults $= insert asem } meta
+
+export
+addSemanticAlias : {auto m : Ref MD Metadata} ->
+                   NonEmptyFC -> NonEmptyFC -> Core ()
+addSemanticAlias from to
+  = do meta <- get MD
+       put MD $ { semanticAliases $= insert (from, to) } meta
+
+export
+addSemanticDecorations : {auto m : Ref MD Metadata} ->
+                         {auto c : Ref Ctxt Defs} ->
+   SemanticDecorations -> Core ()
+addSemanticDecorations decors
+    = do meta <- get MD
+         defs <- get Ctxt
+         let posmap = meta.semanticHighlighting
+         let (newDecors,droppedDecors) =
+               span
+                 ( (meta.sourceIdent ==)
+                 . Builtin.fst
+                 . Builtin.fst )
+                 decors
+         unless (isNil droppedDecors)
+           $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
+               ++ show meta.sourceIdent ++ ": " ++ show droppedDecors
+         put MD $ record {semanticHighlighting
+                            = (fromList newDecors) `union` posmap} meta
+
+
 -- Normalise all the types of the names, since they might have had holes
 -- when added and the holes won't necessarily get saved
 normaliseTypes : {auto m : Ref MD Metadata} ->
@@ -249,13 +365,14 @@ TTC TTMFile where
            pure (MkTTMFile ver md)
 
 HasNames Metadata where
-  full gam (MkMetadata lhs ns tys clhs hlhs dlocs)
-      = pure $ MkMetadata !(traverse fullLHS lhs)
-                          !(traverse fullTy ns)
-                          !(traverse fullTy tys)
-                          Nothing
-                          !(traverse fullHLHS hlhs)
-                          (fromList !(traverse fullDecls (toList dlocs)))
+  full gam md
+      = pure $ record { lhsApps = !(traverse fullLHS $ md.lhsApps)
+                      , names   = !(traverse fullTy $ md.names)
+                      , tydecls = !(traverse fullTy $ md.tydecls)
+                      , currentLHS = Nothing
+                      , holeLHS = !(traverse fullHLHS $ md.holeLHS)
+                      , nameLocMap = fromList !(traverse fullDecls (toList $ md.nameLocMap))
+                      } md
     where
       fullLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       fullLHS (fc, (i, tm)) = pure (fc, (i, !(full gam tm)))
@@ -269,13 +386,17 @@ HasNames Metadata where
       fullDecls : (NonEmptyFC, Name) -> Core (NonEmptyFC, Name)
       fullDecls (fc, n) = pure (fc, !(full gam n))
 
-  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs)
+  resolved gam (MkMetadata lhs ns tys clhs hlhs dlocs fname semhl semal semdef)
       = pure $ MkMetadata !(traverse resolvedLHS lhs)
                           !(traverse resolvedTy ns)
                           !(traverse resolvedTy tys)
                           Nothing
                           !(traverse resolvedHLHS hlhs)
                           (fromList !(traverse resolvedDecls (toList dlocs)))
+                          fname
+                          semhl
+                          semal
+                          semdef
     where
       resolvedLHS : (NonEmptyFC, (Nat, ClosedTerm)) -> Core (NonEmptyFC, (Nat, ClosedTerm))
       resolvedLHS (fc, (i, tm)) = pure (fc, (i, !(resolved gam tm)))

@@ -5,7 +5,7 @@ import System.FFI
 %default total
 
 libterm : String -> String
-libterm s = "C:" ++ s ++ ", libidris2_support"
+libterm s = "C:" ++ s ++ ", libidris2_support, idris_term.h"
 
 %foreign libterm "idris2_setupTerm"
 prim__setupTerm : PrimIO ()

@@ -1,7 +1,7 @@
 1/1: Building Loop (Loop.idr)
 Error: While processing right hand side of example. Main.example is already defined.
 
-Loop.idr:2:11--2:19
+Loop:2:11--2:19
  1 | example : String
  2 | example = ?example
                ^^^^^^^^

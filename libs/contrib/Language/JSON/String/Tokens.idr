@@ -1,5 +1,7 @@
 module Language.JSON.String.Tokens
 
+import Data.List
+import Data.String
 import Data.String.Extra
 import Text.Token
 
@@ -48,7 +50,15 @@ simpleEscapeValue x
 
 private
 unicodeEscapeValue : String -> Char
-unicodeEscapeValue x = chr $ cast ("0x" ++ drop 2 x)
+unicodeEscapeValue x = fromHex (drop 2 $ fastUnpack x) 0
+  where hexVal : Char -> Int
+        hexVal c = if c >= 'A'
+                      then ord c - ord 'A' + 10
+                      else ord c - ord '0'
+
+        fromHex : List Char -> Int -> Char
+        fromHex       [] acc = chr acc
+        fromHex (h :: t) acc = fromHex t (hexVal h + 16 * acc)
 
 public export
 TokenKind JSONStringTokenKind where

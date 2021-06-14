@@ -6,6 +6,7 @@ import Core.Env
 import Core.TT
 
 import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 
 %default covering
 
@@ -15,7 +16,6 @@ record EvalOpts where
   holesOnly : Bool -- only evaluate hole solutions
   argHolesOnly : Bool -- only evaluate holes which are relevant arguments
   removeAs : Bool -- reduce 'as' patterns (don't do this on LHS)
-  usedMetas : IntMap () -- Metavariables we're under, to detect cycles
   evalAll : Bool -- evaluate everything, including private names
   tcInline : Bool -- inline for totality checking
   fuel : Maybe Nat -- Limit for recursion depth
@@ -24,19 +24,19 @@ record EvalOpts where
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True empty False False Nothing []
+defaultOpts = MkEvalOpts False False True False False Nothing []
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False empty False False Nothing []
+withHoles = MkEvalOpts True True False False False Nothing []
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True empty True False Nothing []
+withAll = MkEvalOpts False False True True False Nothing []
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False empty False False Nothing []
+withArgHoles = MkEvalOpts False True False False False Nothing []
 
 export
 tcOnly : EvalOpts
@@ -64,7 +64,7 @@ mutual
   -- The head of a value: things you can apply arguments to
   public export
   data NHead : List Name -> Type where
-       NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar name idx vars) ->
+       NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
        NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
@@ -90,6 +90,14 @@ mutual
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> (imp : Bool) -> NF vars
        NType    : FC -> NF vars
+
+export
+ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon fc (UN "Type") tag Z [] = NType fc
+ntCon fc n tag Z [] = case isConstantType n of
+  Just c => NPrimVal fc c
+  Nothing => NTCon fc n tag Z []
+ntCon fc n tag arity args = NTCon fc n tag arity args
 
 export
 getLoc : NF vars -> FC

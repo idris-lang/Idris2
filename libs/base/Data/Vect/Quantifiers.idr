@@ -2,6 +2,8 @@ module Data.Vect.Quantifiers
 
 import Data.Vect
 
+%default total
+
 ||| A proof that some element of a vector satisfies some property
 |||
 ||| @ p the property to be satsified

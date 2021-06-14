@@ -49,7 +49,7 @@ export IDRIS2_BOOT_PATH := "${IDRIS2_CURDIR}/libs/prelude/build/ttc${SEP}${IDRIS
 export SCHEME
 
 
-.PHONY: all idris2-exec testenv testenv-clean support support-clean clean FORCE
+.PHONY: all idris2-exec libdocs testenv testenv-clean support support-clean clean FORCE
 
 all: support ${TARGET} libs
 
@@ -84,6 +84,13 @@ test-lib: contrib
 
 libs : prelude base contrib network test-lib
 
+libdocs:
+	${MAKE} -C libs/prelude docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+
 ${TEST_PREFIX}/${NAME_VERSION} :
 	${MAKE} install-support PREFIX=${TEST_PREFIX}
 	ln -s ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
@@ -106,14 +113,23 @@ test: testenv
 	@echo
 	@${MAKE} -C tests only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
 
+retest: testenv
+	@echo
+	@echo "NOTE: \`${MAKE} retest\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
+	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
+	@echo
+	@${MAKE} -C tests retest only=$(only) IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
+
 
 support:
 	@${MAKE} -C support/c
 	@${MAKE} -C support/refc
+	@${MAKE} -C support/chez
 
 support-clean:
 	@${MAKE} -C support/c clean
 	@${MAKE} -C support/refc clean
+	@${MAKE} -C support/chez clean
 
 clean-libs:
 	${MAKE} -C libs/prelude clean
@@ -133,6 +149,9 @@ install: install-idris2 install-support install-libs
 install-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install ${IDRIS2_LIB_IPKG}
 
+install-with-src-api: src/IdrisPaths.idr
+	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
+
 install-idris2:
 	mkdir -p ${PREFIX}/bin/
 	install ${TARGET} ${PREFIX}/bin
@@ -145,16 +164,17 @@ endif
 	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
 
 install-support:
-	mkdir -p ${PREFIX}/${NAME_VERSION}/support/chez
+	mkdir -p ${PREFIX}/${NAME_VERSION}/support/docs
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/racket
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/gambit
 	mkdir -p ${PREFIX}/${NAME_VERSION}/support/js
-	install support/chez/* ${PREFIX}/${NAME_VERSION}/support/chez
+	install support/docs/* ${PREFIX}/${NAME_VERSION}/support/docs
 	install support/racket/* ${PREFIX}/${NAME_VERSION}/support/racket
 	install support/gambit/* ${PREFIX}/${NAME_VERSION}/support/gambit
 	install support/js/* ${PREFIX}/${NAME_VERSION}/support/js
 	@${MAKE} -C support/c install
 	@${MAKE} -C support/refc install
+	@${MAKE} -C support/chez install
 
 install-libs:
 	${MAKE} -C libs/prelude install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
@@ -163,6 +183,12 @@ install-libs:
 	${MAKE} -C libs/network install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/test  install IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
+install-with-src-libs:
+	${MAKE} -C libs/prelude install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test install-with-src IDRIS2?=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 

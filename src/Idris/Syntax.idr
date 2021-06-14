@@ -20,6 +20,8 @@ import Libraries.Data.StringMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
+import Parser.Lexer.Source
+
 %default covering
 
 public export
@@ -80,10 +82,10 @@ mutual
 
        -- Operators
 
-       POp : FC -> OpStr -> PTerm -> PTerm -> PTerm
-       PPrefixOp : FC -> OpStr -> PTerm -> PTerm
-       PSectionL : FC -> OpStr -> PTerm -> PTerm
-       PSectionR : FC -> PTerm -> OpStr -> PTerm
+       POp : (full, opFC : FC) -> OpStr -> PTerm -> PTerm -> PTerm
+       PPrefixOp : (full, opFC : FC) -> OpStr -> PTerm -> PTerm
+       PSectionL : (full, opFC : FC) -> OpStr -> PTerm -> PTerm
+       PSectionR : (full, opFC : FC) -> PTerm -> OpStr -> PTerm
        PEq : FC -> PTerm -> PTerm -> PTerm
        PBracketed : FC -> PTerm -> PTerm
 
@@ -93,9 +95,11 @@ mutual
        PDoBlock : FC -> Maybe Namespace -> List PDo -> PTerm
        PBang : FC -> PTerm -> PTerm
        PIdiom : FC -> PTerm -> PTerm
-       PList : FC -> List PTerm -> PTerm
+       PList : (full, nilFC : FC) -> List (FC, PTerm) -> PTerm
+                                        -- ^   v location of the conses/snocs
+       PSnocList : (full, nilFC : FC) -> List ((FC, PTerm)) -> PTerm
        PPair : FC -> PTerm -> PTerm -> PTerm
-       PDPair : FC -> PTerm -> PTerm -> PTerm -> PTerm
+       PDPair : (full, opFC : FC) -> PTerm -> PTerm -> PTerm -> PTerm
        PUnit : FC -> PTerm
        PIfThenElse : FC -> PTerm -> PTerm -> PTerm -> PTerm
        PComprehension : FC -> PTerm -> List PDo -> PTerm
@@ -105,9 +109,9 @@ mutual
        -- A stream range [x,y..]
        PRangeStream : FC -> PTerm -> Maybe PTerm -> PTerm
        -- r.x.y
-       PPostfixApp : FC -> PTerm -> List Name -> PTerm
+       PPostfixApp : FC -> PTerm -> List (FC, Name) -> PTerm
        -- .x.y
-       PPostfixAppPartial : FC -> List Name -> PTerm
+       PPostfixAppPartial : FC -> List (FC, Name) -> PTerm
 
        -- Debugging
        PUnifyLog : FC -> LogLevel -> PTerm -> PTerm
@@ -144,10 +148,10 @@ mutual
   getPTermLoc (PDotted fc _) = fc
   getPTermLoc (PImplicit fc) = fc
   getPTermLoc (PInfer fc) = fc
-  getPTermLoc (POp fc _ _ _) = fc
-  getPTermLoc (PPrefixOp fc _ _) = fc
-  getPTermLoc (PSectionL fc _ _) = fc
-  getPTermLoc (PSectionR fc _ _) = fc
+  getPTermLoc (POp fc _ _ _ _) = fc
+  getPTermLoc (PPrefixOp fc _ _ _) = fc
+  getPTermLoc (PSectionL fc _ _ _) = fc
+  getPTermLoc (PSectionR fc _ _ _) = fc
   getPTermLoc (PEq fc _ _) = fc
   getPTermLoc (PBracketed fc _) = fc
   getPTermLoc (PString fc _) = fc
@@ -155,9 +159,10 @@ mutual
   getPTermLoc (PDoBlock fc _ _) = fc
   getPTermLoc (PBang fc _) = fc
   getPTermLoc (PIdiom fc _) = fc
-  getPTermLoc (PList fc _) = fc
+  getPTermLoc (PList fc _ _) = fc
+  getPTermLoc (PSnocList fc _ _) = fc
   getPTermLoc (PPair fc _ _) = fc
-  getPTermLoc (PDPair fc _ _ _) = fc
+  getPTermLoc (PDPair fc _ _ _ _) = fc
   getPTermLoc (PUnit fc) = fc
   getPTermLoc (PIfThenElse fc _ _ _) = fc
   getPTermLoc (PComprehension fc _ _) = fc
@@ -297,7 +302,7 @@ mutual
        PClaim : FC -> RigCount -> Visibility -> List PFnOpt -> PTypeDecl -> PDecl
        PDef : FC -> List PClause -> PDecl
        PData : FC -> (doc : String) -> Visibility -> PDataDecl -> PDecl
-       PParameters : FC -> List (Name, PTerm) -> List PDecl -> PDecl
+       PParameters : FC -> List (Name, RigCount, PiInfo PTerm, PTerm) -> List PDecl -> PDecl
        PUsing : FC -> List (Maybe Name, PTerm) -> List PDecl -> PDecl
        PReflect : FC -> PTerm -> PDecl
        PInterface : FC ->
@@ -337,6 +342,7 @@ mutual
        PTransform : FC -> String -> PTerm -> PTerm -> PDecl
        PRunElabDecl : FC -> PTerm -> PDecl
        PDirective : FC -> Directive -> PDecl
+       PBuiltin : FC -> BuiltinType -> Name -> PDecl
 
   export
   getPDeclLoc : PDecl -> FC
@@ -355,11 +361,17 @@ mutual
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PBuiltin fc _ _) = fc
 
-  export
-  isPDef : PDecl -> Maybe (FC, List PClause)
-  isPDef (PDef annot cs) = Just (annot, cs)
-  isPDef _ = Nothing
+export
+isStrInterp : PStr -> Maybe FC
+isStrInterp (StrInterp fc _) = Just fc
+isStrInterp (StrLiteral _ _) = Nothing
+
+export
+isPDef : PDecl -> Maybe (FC, List PClause)
+isPDef (PDef annot cs) = Just (annot, cs)
+isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
@@ -405,6 +417,7 @@ data REPLOpt : Type where
      EvalMode : REPLEval -> REPLOpt
      Editor : String -> REPLOpt
      CG : String -> REPLOpt
+     Profile : Bool -> REPLOpt
 
 export
 Show REPLOpt where
@@ -414,6 +427,7 @@ Show REPLOpt where
   show (EvalMode mod) = "eval = " ++ show mod
   show (Editor editor) = "editor = " ++ show editor
   show (CG str) = "cg = " ++ str
+  show (Profile p) = "profile = " ++ show p
 
 export
 Pretty REPLOpt where
@@ -423,6 +437,7 @@ Pretty REPLOpt where
   pretty (EvalMode mod) = pretty "eval" <++> equals <++> pretty mod
   pretty (Editor editor) = pretty "editor" <++> equals <++> pretty editor
   pretty (CG str) = pretty "cg" <++> equals <++> pretty str
+  pretty (Profile p) = pretty "profile" <++> equals <++> pretty p
 
 public export
 data EditCmd : Type where
@@ -442,6 +457,7 @@ data REPLCmd : Type where
      NewDefn : List PDecl -> REPLCmd
      Eval : PTerm -> REPLCmd
      Check : PTerm -> REPLCmd
+     CheckWithImplicits : PTerm -> REPLCmd
      PrintDef : Name -> REPLCmd
      Reload : REPLCmd
      Load : String -> REPLCmd
@@ -451,6 +467,7 @@ data REPLCmd : Type where
      Exec : PTerm -> REPLCmd
      Help : REPLCmd
      TypeSearch : PTerm -> REPLCmd
+     FuzzyTypeSearch : PTerm -> REPLCmd
      DebugInfo : Name -> REPLCmd
      SetOpt : REPLOpt -> REPLCmd
      GetOpts : REPLCmd
@@ -470,6 +487,7 @@ data REPLCmd : Type where
      ShowVersion : REPLCmd
      Quit : REPLCmd
      NOP : REPLCmd
+     ImportPackage : String -> REPLCmd
 
 public export
 record Import where
@@ -482,7 +500,7 @@ record Import where
 public export
 record Module where
   constructor MkModule
-  headerloc : FC
+  headerLoc : FC
   moduleNS : ModuleIdent
   imports : List Import
   documentation : String
@@ -594,10 +612,10 @@ mutual
     showPrec d (PDotted _ p) = "." ++ showPrec d p
     showPrec _ (PImplicit _) = "_"
     showPrec _ (PInfer _) = "?"
-    showPrec d (POp _ op x y) = showPrec d x ++ " " ++ showPrec d op ++ " " ++ showPrec d y
-    showPrec d (PPrefixOp _ op x) = showPrec d op ++ showPrec d x
-    showPrec d (PSectionL _ op x) = "(" ++ showPrec d op ++ " " ++ showPrec d x ++ ")"
-    showPrec d (PSectionR _ x op) = "(" ++ showPrec d x ++ " " ++ showPrec d op ++ ")"
+    showPrec d (POp _ _ op x y) = showPrec d x ++ " " ++ showPrecOp d op ++ " " ++ showPrec d y
+    showPrec d (PPrefixOp _ _ op x) = showPrec d op ++ showPrec d x
+    showPrec d (PSectionL _ _ op x) = "(" ++ showPrecOp d op ++ " " ++ showPrec d x ++ ")"
+    showPrec d (PSectionR _ _ x op) = "(" ++ showPrec d x ++ " " ++ showPrecOp d op ++ ")"
     showPrec d (PEq fc l r) = showPrec d l ++ " = " ++ showPrec d r
     showPrec d (PBracketed _ tm) = "(" ++ showPrec d tm ++ ")"
     showPrec d (PString _ xs) = join " ++ " $ show <$> xs
@@ -606,11 +624,13 @@ mutual
         = "do " ++ showSep " ; " (map showDo ds)
     showPrec d (PBang _ tm) = "!" ++ showPrec d tm
     showPrec d (PIdiom _ tm) = "[|" ++ showPrec d tm ++ "|]"
-    showPrec d (PList _ xs)
-        = "[" ++ showSep ", " (map (showPrec d) xs) ++ "]"
+    showPrec d (PList _ _ xs)
+        = "[" ++ showSep ", " (map (showPrec d . snd) xs) ++ "]"
+    showPrec d (PSnocList _ _ xs)
+        = "[<" ++ showSep ", " (map (showPrec d . snd) xs) ++ "]"
     showPrec d (PPair _ l r) = "(" ++ showPrec d l ++ ", " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
-    showPrec d (PDPair _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
+    showPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPrec d l ++ " ** " ++ showPrec d r ++ ")"
+    showPrec d (PDPair _ _ l ty r) = "(" ++ showPrec d l ++ " : " ++ showPrec d ty ++
                                  " ** " ++ showPrec d r ++ ")"
     showPrec _ (PUnit _) = "()"
     showPrec d (PIfThenElse _ x t e) = "if " ++ showPrec d x ++ " then " ++ showPrec d t ++
@@ -645,6 +665,11 @@ mutual
         = concatMap (\n => "." ++ show n) fields
     showPrec d (PWithUnambigNames fc ns rhs)
         = "with " ++ show ns ++ " " ++ showPrec d rhs
+
+  showPrecOp : Prec -> OpStr -> String
+  showPrecOp d op = if isOpName op
+    then        showPrec d op
+    else "`" ++ showPrec d op ++ "`"
 
 public export
 record Method where
@@ -810,7 +835,7 @@ initSyntax
                initSaveDocStrings
                []
                []
-               (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
+               (IVar EmptyFC (UN "main"))
 
   where
 
@@ -926,18 +951,18 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc x y z) =
-      POp fc x <$> goPTerm y
-               <*> goPTerm z
+    goPTerm (POp fc opFC x y z) =
+      POp fc opFC x <$> goPTerm y
+                    <*> goPTerm z
       >>= f
-    goPTerm (PPrefixOp fc x y) =
-      PPrefixOp fc x <$> goPTerm y
+    goPTerm (PPrefixOp fc opFC x y) =
+      PPrefixOp fc opFC x <$> goPTerm y
       >>= f
-    goPTerm (PSectionL fc x y) =
-      PSectionL fc x <$> goPTerm y
+    goPTerm (PSectionL fc opFC x y) =
+      PSectionL fc opFC x <$> goPTerm y
       >>= f
-    goPTerm (PSectionR fc x y) =
-      PSectionR fc <$> goPTerm x
+    goPTerm (PSectionR fc opFC x y) =
+      PSectionR fc opFC <$> goPTerm x
                    <*> pure y
       >>= f
     goPTerm (PEq fc x y) =
@@ -962,15 +987,19 @@ mapPTermM f = goPTerm where
     goPTerm (PIdiom fc x) =
       PIdiom fc <$> goPTerm x
       >>= f
-    goPTerm (PList fc xs) =
-      PList fc <$> goPTerms xs
+    goPTerm (PList fc nilFC xs) =
+      PList fc nilFC <$> goPairedPTerms xs
+      >>= f
+    goPTerm (PSnocList fc nilFC xs) =
+      PSnocList fc nilFC <$> goPairedPTerms xs
       >>= f
     goPTerm (PPair fc x y) =
       PPair fc <$> goPTerm x
                <*> goPTerm y
       >>= f
-    goPTerm (PDPair fc x y z) =
-      PDPair fc <$> goPTerm x
+    goPTerm (PDPair fc opFC x y z) =
+      PDPair fc opFC
+                <$> goPTerm x
                 <*> goPTerm y
                 <*> goPTerm z
       >>= f
@@ -1055,7 +1084,7 @@ mapPTermM f = goPTerm where
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
     goPDecl (PData fc doc v d) = PData fc doc v <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
-      PParameters fc <$> goPairedPTerms nts
+      PParameters fc <$> go4TupledPTerms nts
                      <*> goPDecls ps
     goPDecl (PUsing fc mnts ps) =
       PUsing fc <$> goPairedPTerms mnts
@@ -1087,6 +1116,7 @@ mapPTermM f = goPTerm where
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
     goPDecl p@(PDirective _ _) = pure p
+    goPDecl p@(PBuiltin _ _ _) = pure p
 
 
     goPTypeDecl : PTypeDecl -> Core PTypeDecl

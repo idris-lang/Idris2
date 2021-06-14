@@ -176,12 +176,18 @@ longOpt ls rs descs =
    in case (ads,unpack arg,rs) of
            (_ :: _ :: _ , _      ,  r        ) => (errAmbig options os, r)
            ([NoArg  a  ], []     ,  r        ) => (Opt a, r)
-           ([NoArg  a  ], '='::_ ,  r        ) => (errNoArg os,r)
+           ([NoArg  a  ], c :: _ ,  r        ) => (errNoArg os,r)
+--                        ^ this is known (but not proven) to be '='
+
            ([ReqArg _ d], []     ,  []       ) => (errReq d os,[])
            ([ReqArg f _], []     ,  (r::rest)) => (Opt $ f r,rest)
-           ([ReqArg f _], '='::xs,  r        ) => (Opt $ f (pack xs),r)
+           ([ReqArg f _], c :: xs,  r        ) => (Opt $ f (pack xs),r)
+--                        ^ this is known (but not proven) to be '='
+
            ([OptArg f _], []     ,  r        ) => (Opt $ f Nothing,r)
-           ([OptArg f _], '='::xs,  r        ) => (Opt . f . Just $ pack xs,r)
+           ([OptArg f _], c :: xs,  r        ) => (Opt . f . Just $ pack xs,r)
+--                        ^ this is known (but not proven) to be '='
+
            ([]          , _      ,  r        ) => (UnreqOpt $ "--" ++ ls,r)
 
 shortOpt : Char -> String -> OptFun a

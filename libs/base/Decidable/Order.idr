@@ -6,6 +6,8 @@ import Data.Fin
 import Data.Fun
 import Data.Rel
 
+%default total
+
 %hide Prelude.Equal
 
 --------------------------------------------------------------------------------

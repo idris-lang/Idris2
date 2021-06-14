@@ -1,5 +1,6 @@
 module TTImp.ProcessData
 
+import Core.CompileExpr
 import Core.Context
 import Core.Context.Data
 import Core.Context.Log
@@ -241,6 +242,100 @@ findNewtype [con]
                            _ => Nothing)
 findNewtype _ = pure ()
 
+hasArgs : Nat -> Term vs -> Bool
+hasArgs (S k) (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then hasArgs (S k) sc
+         else hasArgs k sc
+hasArgs (S k) _ = False
+hasArgs Z (Bind _ _ (Pi _ c _ _) sc)
+    = if isErased c
+         then hasArgs Z sc
+         else False
+hasArgs Z _ = True
+
+shaped : {auto c : Ref Ctxt Defs} ->
+         (forall vs . Term vs -> Bool) ->
+         List Constructor -> Core (Maybe Name)
+shaped as [] = pure Nothing
+shaped as (c :: cs)
+    = do defs <- get Ctxt
+         if as !(normalise defs [] (type c))
+            then pure (Just (name c))
+            else shaped as cs
+
+-- Calculate whether the list of constructors gives a list-shaped type
+-- If there's two constructors, one with no unerased arguments and one
+-- with two unerased arguments, then it's listy.
+-- If there's one constructor, with two unerased arugments, we can also
+-- treat that as a cons cell, which will be cheaper for pairs.
+-- Note they don't have to be recursive! It's just about whether we can
+-- pair cheaply.
+calcListy : {auto c : Ref Ctxt Defs} ->
+            FC -> List Constructor -> Core Bool
+calcListy fc cs@[_]
+    = do Just cons <- shaped (hasArgs 2) cs
+              | Nothing => pure False
+         setFlag fc cons (ConType CONS)
+         pure True
+calcListy fc cs@[_, _]
+    = do Just nil <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         Just cons <- shaped (hasArgs 2) cs
+              | Nothing => pure False
+         setFlag fc nil (ConType NIL)
+         setFlag fc cons (ConType CONS)
+         pure True
+calcListy _ _ = pure False
+
+-- It's option type shaped if there's two constructors, one of which has
+-- zero arguments, and one of which has one.
+calcMaybe : {auto c : Ref Ctxt Defs} ->
+            FC -> List Constructor -> Core Bool
+calcMaybe fc cs@[_, _]
+    = do Just nothing <- shaped (hasArgs 0) cs
+              | Nothing => pure False
+         Just just <- shaped (hasArgs 1) cs
+              | Nothing => pure False
+         setFlag fc nothing (ConType NOTHING)
+         setFlag fc just (ConType JUST)
+         pure True
+calcMaybe _ _ = pure False
+
+calcEnum : {auto c : Ref Ctxt Defs} ->
+           FC -> List Constructor -> Core Bool
+calcEnum fc cs
+    = if !(allM isNullary cs)
+         then do traverse_ (\c => setFlag fc c (ConType ENUM)) (map name cs)
+                 pure True
+         else pure False
+  where
+    isNullary : Constructor -> Core Bool
+    isNullary c
+        = do defs <- get Ctxt
+             pure $ hasArgs 0 !(normalise defs [] (type c))
+
+calcRecord : {auto c : Ref Ctxt Defs} ->
+             FC -> List Constructor -> Core Bool
+calcRecord fc [c]
+    = do setFlag fc (name c) (ConType RECORD)
+         pure True
+calcRecord _ _ = pure False
+
+calcConInfo : {auto c : Ref Ctxt Defs} ->
+              FC -> List Constructor -> Core ()
+calcConInfo fc cons
+   = do False <- calcListy fc cons
+           | True => pure ()
+        False <- calcMaybe fc cons
+           | True => pure ()
+        False <- calcEnum fc cons
+           | True => pure ()
+        False <- calcRecord fc cons
+           | True => pure ()
+        pure ()
+     -- ... maybe more to come? The Bool just says when to stop looking
+
 export
 processData : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
@@ -251,7 +346,7 @@ processData : {vars : _} ->
               ImpData -> Core ()
 processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
     = do n <- inCurrentNS n_in
-         ty_raw <- bindTypeNames [] vars ty_raw
+         ty_raw <- bindTypeNames fc [] vars ty_raw
 
          defs <- get Ctxt
          -- Check 'n' is undefined
@@ -287,7 +382,7 @@ processData {vars} eopts nest env fc vis (MkImpLater dfc n_in ty_raw)
 
 processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
-         ty_raw <- bindTypeNames [] vars ty_raw
+         ty_raw <- bindTypeNames fc [] vars ty_raw
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
@@ -364,4 +459,5 @@ processData {vars} eopts nest env fc vis (MkImpData dfc n_in ty_raw opts cons_ra
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
+         calcConInfo fc cons
          traverse_ updateErasable (Resolved tidx :: connames)

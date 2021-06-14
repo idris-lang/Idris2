@@ -22,6 +22,8 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
+      | MkDoc
       | Typecheck
       | Clean
       | REPL
@@ -31,6 +33,8 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
+  show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
   show REPL = "--repl"
@@ -43,6 +47,17 @@ data DirCommand
 export
 Show DirCommand where
   show LibDir = "--libdir"
+
+||| Help topics
+public export
+data HelpTopic
+  =
+    ||| Interactive debugging topics
+   HelpLogging
+
+recogniseHelpTopic : String -> Maybe HelpTopic
+recogniseHelpTopic "logging" = pure HelpLogging
+recogniseHelpTopic _ = Nothing
 
 ||| CLOpt - possible command line options
 public export
@@ -66,12 +81,14 @@ data CLOpt
   BuildDir String |
    ||| Set output directory
   OutputDir String |
+   ||| Generate profile data when compiling (backend dependent)
+  Profile |
    ||| Show the installation prefix
   ShowPrefix |
    ||| Display Idris version
   Version |
    ||| Display help text
-  Help |
+  Help (Maybe HelpTopic) |
    ||| Suppress the banner
   NoBanner |
    ||| Run Idris 2 in quiet mode
@@ -114,7 +131,15 @@ data CLOpt
   FindIPKG |
   Timing |
   DebugElabCheck |
-  BlodwenPaths
+  BlodwenPaths |
+  ||| Treat warnings as errors
+  WarningsAsErrors |
+  ||| Do not print shadowing warnings
+  IgnoreShadowingWarnings |
+  ||| Generate bash completion info
+  BashCompletion String String |
+  ||| Generate bash completion script
+  BashCompletionScript String
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -191,6 +216,14 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set build directory"),
            MkOpt ["--output-dir"] [Required "dir"] (\d => [OutputDir d])
               (Just $ "Set output directory"),
+           MkOpt ["--profile"] [] [Profile]
+              (Just "Generate profile data when compiling, if supported"),
+
+           optSeparator,
+           MkOpt ["-Werror"] [] [WarningsAsErrors]
+              (Just "Treat warnings as errors"),
+           MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
+              (Just "Do not print shadowing warnings"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
@@ -209,6 +242,11 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
               (Just "Install the given package"),
+           MkOpt ["--install-with-src"] [Required "package file"]
+                 (\f => [Package InstallWithSrc f])
+              (Just "Install the given package"),
+           MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
+              (Just "Build documentation for the given package"),
            MkOpt ["--typecheck"] [Required "package file"] (\f => [Package Typecheck f])
               (Just "Typechecks the given package without code generation"),
            MkOpt ["--clean"] [Required "package file"] (\f => [Package Clean f])
@@ -253,7 +291,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
               (Just "Display version string"),
-           MkOpt ["--help", "-h", "-?"] [] [Help]
+           MkOpt ["--help", "-h", "-?"] [Optional "topic"] (\ tp => [Help (tp >>= recogniseHelpTopic)])
               (Just "Display help text"),
 
            -- Internal debugging options
@@ -270,7 +308,19 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--dumpvmcode"] [Required "output file"] (\f => [DumpVMCode f])
               Nothing, -- dump VM Code to the given file
            MkOpt ["--debug-elab-check"] [] [DebugElabCheck]
-              Nothing -- do more elaborator checks (currently conversion in LinearCheck)
+              Nothing, -- do more elaborator checks (currently conversion in LinearCheck)
+
+           optSeparator,
+           -- bash completion
+           MkOpt ["--bash-completion"]
+                 [ Required "input"
+                 , Required "previous input"]
+                 (\w1,w2 => [BashCompletion w1 w2])
+                 (Just "Print bash autocompletion information"),
+           MkOpt ["--bash-completion-script"]
+                 [ Required "function name" ]
+                 (\n => [BashCompletionScript n])
+                 (Just "Generate a bash script to activate autocompletion for Idris2")
            ]
 
 optShow : OptDesc -> (String, Maybe String)
@@ -392,3 +442,8 @@ getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
+
+||| List of all command line option flags.
+export
+optionFlags : List String
+optionFlags = options >>= flags

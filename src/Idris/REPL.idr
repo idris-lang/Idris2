@@ -1,6 +1,7 @@
 module Idris.REPL
 
 import Compiler.Scheme.Chez
+import Compiler.Scheme.ChezSep
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
 import Compiler.ES.Node
@@ -14,20 +15,22 @@ import Core.CaseTree
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
+import Core.Directory
 import Core.Env
+import Core.FC
 import Core.InitPrimitives
 import Core.LinearCheck
 import Core.Metadata
 import Core.Normalise
 import Core.Options
-import Core.Termination
 import Core.TT
+import Core.Termination
 import Core.Unify
 
 import Parser.Unlit
 
 import Idris.Desugar
-import Idris.DocString
+import Idris.Doc.String
 import Idris.Error
 import Idris.IDEMode.CaseSplit
 import Idris.IDEMode.Commands
@@ -38,9 +41,11 @@ import Idris.Parser
 import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.Resugar
-import public Idris.REPLCommon
 import Idris.Syntax
 import Idris.Version
+
+import public Idris.REPL.Common
+import Idris.REPL.FuzzySearch
 
 import TTImp.Elab
 import TTImp.Elab.Check
@@ -61,13 +66,18 @@ import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.Strings
+import Data.DPair
 import Libraries.Data.String.Extra
+import Libraries.Data.List.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
+import Libraries.Utils.Path
+import Libraries.System.Directory.Tree
 
 import System
 import System.File
+import System.Directory
 
 %hide Data.Strings.lines
 %hide Data.Strings.lines'
@@ -99,6 +109,9 @@ showInfo (n, idx, d)
                 coreLift_ $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
+prettyTerm : PTerm -> Doc IdrisAnn
+prettyTerm = reAnnotate Syntax . Idris.Pretty.prettyTerm
+
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               Defs -> (Name, Int, GlobalDef) ->
@@ -106,7 +119,7 @@ displayType : {auto c : Ref Ctxt Defs} ->
 displayType defs (n, i, gdef)
     = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
                 pure (pretty !(aliasName (fullname gdef)) <++> colon <++> prettyTerm tm))
-            (\num => prettyHole defs [] n num (type gdef))
+            (\num => reAnnotate Syntax <$> prettyHole defs [] n num (type gdef))
             (isHole gdef)
 
 getEnvTerm : {vars : _} ->
@@ -178,6 +191,9 @@ setOpt (CG e)
          case getCG (options defs) e of
             Just cg => setCG cg
             Nothing => iputStrLn (reflow "No such code generator available")
+setOpt (Profile t)
+    = do pp <- getSession
+         setSession (record { profile = t } pp)
 
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
@@ -197,6 +213,7 @@ findCG
     = do defs <- get Ctxt
          case codegen (session (options defs)) of
               Chez => pure codegenChez
+              ChezSep => pure codegenChezSep
               Racket => pure codegenRacket
               Gambit => pure codegenGambit
               Node => pure codegenNode
@@ -236,14 +253,6 @@ printClause l i (ImpossibleClause _ lhsraw)
 lookupDefTyName : Name -> Context ->
                   Core (List (Name, Int, (Def, ClosedTerm)))
 lookupDefTyName = lookupNameBy (\g => (definition g, type g))
-
-public export
-data EditResult : Type where
-  DisplayEdit : Doc IdrisAnn -> EditResult
-  EditError : Doc IdrisAnn -> EditResult
-  MadeLemma : Maybe String -> Name -> PTerm -> String -> EditResult
-  MadeWith : Maybe String -> List String -> EditResult
-  MadeCase : Maybe String -> List String -> EditResult
 
 updateFile : {auto r : Ref ROpts REPLOpts} ->
              (List String -> List String) -> Core EditResult
@@ -365,7 +374,7 @@ findInTree p hint m = map snd $ head' $ filter match $ sortBy (\x, y => cmp (mea
   where
     cmp : FileRange -> FileRange -> Ordering
     cmp ((sr1, sc1), (er1, ec1)) ((sr2, sc2), (er2, ec2)) =
-      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sr2)
+      compare (er1 - sr1, ec1 - sc1) (er2 - sr2, ec2 - sc2)
 
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && userNameRoot n == userNameRoot hint
@@ -541,43 +550,6 @@ processEdit (MakeWith upd line name)
             then updateFile (addMadeCase markM w (max 0 (integerToNat (cast (line - 1)))))
             else pure $ MadeWith markM w
 
-public export
-data MissedResult : Type where
-  CasesMissing : Name -> List String  -> MissedResult
-  CallsNonCovering : Name -> List Name -> MissedResult
-  AllCasesCovered : Name -> MissedResult
-
-public export
-data REPLResult : Type where
-  Done : REPLResult
-  REPLError : Doc IdrisAnn -> REPLResult
-  Executed : PTerm -> REPLResult
-  RequestedHelp : REPLResult
-  Evaluated : PTerm -> (Maybe PTerm) -> REPLResult
-  Printed : Doc IdrisAnn -> REPLResult
-  TermChecked : PTerm -> PTerm -> REPLResult
-  FileLoaded : String -> REPLResult
-  ModuleLoaded : String -> REPLResult
-  ErrorLoadingModule : String -> Error -> REPLResult
-  ErrorLoadingFile : String -> FileError -> REPLResult
-  ErrorsBuildingFile : String -> List Error -> REPLResult
-  NoFileLoaded : REPLResult
-  CurrentDirectory : String -> REPLResult
-  CompilationFailed: REPLResult
-  Compiled : String -> REPLResult
-  ProofFound : PTerm -> REPLResult
-  Missed : List MissedResult -> REPLResult
-  CheckedTotal : List (Name, Totality) -> REPLResult
-  FoundHoles : List HoleData -> REPLResult
-  OptionsSet : List REPLOpt -> REPLResult
-  LogLevelSet : Maybe LogLevel -> REPLResult
-  ConsoleWidthSet : Maybe Nat -> REPLResult
-  ColorSet : Bool -> REPLResult
-  VersionIs : Version -> REPLResult
-  DefDeclared : REPLResult
-  Exited : REPLResult
-  Edited : EditResult -> REPLResult
-
 getItDecls :
     {auto o : Ref ROpts REPLOpts} ->
     Core (List ImpDecl)
@@ -670,7 +642,8 @@ loadMainFile : {auto c : Ref Ctxt Defs} ->
 loadMainFile f
     = do opts <- get ROpts
          put ROpts (record { evalResultName = Nothing } opts)
-         resetContext
+         modIdent <- ctxtPathToNS f
+         resetContext (PhysicalIdrSrc modIdent)
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
@@ -682,46 +655,67 @@ loadMainFile f
            [] => pure (FileLoaded f)
            _ => pure (ErrorsBuildingFile f errs)
 
-docsOrSignature : {auto o : Ref ROpts REPLOpts} ->
-                  {auto c : Ref Ctxt Defs} ->
-                  {auto s : Ref Syn SyntaxInfo} ->
-                  FC -> Name -> Core (List String)
-docsOrSignature fc n
-    = do syn  <- get Syn
-         defs <- get Ctxt
-         all@(_ :: _) <- lookupCtxtName n (gamma defs)
-             | _ => undefinedName fc n
-         let ns@(_ :: _) = concatMap (\n => lookupName n (docstrings syn))
-                                     (map fst all)
-             | [] => typeSummary defs
-         pure <$> getDocsForName fc n
-  where
-    typeSummary : Defs -> Core (List String)
-    typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
-                            | Nothing => pure []
-                          ty <- normaliseHoles defs [] (type def)
-                          pure [(show n) ++ " : " ++ (show !(resugar [] ty))]
+||| Given a REPLEval mode for evaluation,
+||| produce the normalization function that normalizes terms
+||| using that evaluation mode
+replEval : {auto c : Ref Ctxt Defs} ->
+  {vs : _} ->
+  REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
+replEval NormaliseAll = normaliseAll
+replEval _ = normalise
 
-equivTypes : {auto c : Ref Ctxt Defs} ->
-             (ty1 : ClosedTerm) ->
-             (ty2 : ClosedTerm) ->
-             Core Bool
-equivTypes ty1 ty2 =
-  do let False = isErased ty1
-          | _ => pure False
-     logTerm "typesearch.equiv" 10 "Candidate: " ty1
-     defs <- get Ctxt
-     True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
-       | False => pure False
-     _ <- newRef UST initUState
-     b <- catch
-           (do res <- unify inTerm replFC [] ty1 ty2
-               case res of
-                 (MkUnifyResult [] _ [] NoLazy) => pure True
-                 _ => pure False)
-           (\err => pure False)
-     when b $ logTerm "typesearch.equiv" 20 "Accepted: " ty1
-     pure b
+record TermWithType where
+  constructor WithType
+  termOf : Term []
+  typeOf : Term []
+
+||| Produce the elaboration of a PTerm, along with its inferred type
+inferAndElab : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  ElabMode ->
+  PTerm ->
+  Core TermWithType
+inferAndElab emode itm
+  = do ttimp <- desugar AnyExpr [] itm
+       let ttimpWithIt = ILocal replFC !getItDecls ttimp
+       inidx <- resolveName (UN "[input]")
+       -- a TMP HACK to prioritise list syntax for List: hide
+       -- foreign argument lists. TODO: once the new FFI is fully
+       -- up and running we won't need this. Also, if we add
+       -- 'with' disambiguation we can use that instead.
+       catch (do hide replFC (NS primIONS (UN "::"))
+                 hide replFC (NS primIONS (UN "Nil")))
+             (\err => pure ())
+       (tm , gty) <- elabTerm inidx emode [] (MkNested [])
+                   [] ttimpWithIt Nothing
+       ty <- getTerm gty
+       pure (tm `WithType` ty)
+
+||| Produce the normal form of a PTerm, along with its inferred type
+inferAndNormalize : {auto c : Ref Ctxt Defs} ->
+  {auto u : Ref UST UState} ->
+  {auto s : Ref Syn SyntaxInfo} ->
+  {auto m : Ref MD Metadata} ->
+  {auto o : Ref ROpts REPLOpts} ->
+  REPLEval ->
+  PTerm ->
+  Core TermWithType
+inferAndNormalize emode itm
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm
+       logTerm "repl.eval" 10 "Elaborated input" tm
+       defs <- get Ctxt
+       let norm = replEval emode
+       ntm <- norm defs [] tm
+       logTermNF "repl.eval" 5 "Normalised" [] ntm
+       pure $ ntm `WithType` ty
+  where
+    elabMode : REPLEval -> ElabMode
+    elabMode EvalTC = InType
+    elabMode _ = InExpr
+
 
 ||| Process a single `REPLCmd`
 |||
@@ -737,29 +731,16 @@ process : {auto c : Ref Ctxt Defs} ->
 process (NewDefn decls) = execDecls decls
 process (Eval itm)
     = do opts <- get ROpts
-         case evalMode opts of
+         let emode = evalMode opts
+         case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             _ =>
-              do ttimp <- desugar AnyExpr [] itm
-                 let ttimpWithIt = ILocal replFC !getItDecls ttimp
-                 inidx <- resolveName (UN "[input]")
-                 -- a TMP HACK to prioritise list syntax for List: hide
-                 -- foreign argument lists. TODO: once the new FFI is fully
-                 -- up and running we won't need this. Also, if we add
-                 -- 'with' disambiguation we can use that instead.
-                 catch (do hide replFC (NS primIONS (UN "::"))
-                           hide replFC (NS primIONS (UN "Nil")))
-                       (\err => pure ())
-                 (tm, gty) <- elabTerm inidx (emode (evalMode opts)) [] (MkNested [])
-                                       [] ttimpWithIt Nothing
-                 logTerm "repl.eval" 10 "Elaborated input" tm
+              do
+                 (ntm `WithType` ty) <- inferAndNormalize emode itm
+                 itm <- resugar [] ntm
                  defs <- get Ctxt
                  opts <- get ROpts
-                 let norm = nfun (evalMode opts)
-                 ntm <- norm defs [] tm
-                 logTermNF "repl.eval" 5 "Normalised" [] ntm
-                 itm <- resugar [] ntm
-                 ty <- getTerm gty
+                 let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
                    $ newDef replFC evalResultName top [] ty Private
@@ -770,15 +751,6 @@ process (Eval itm)
                     then do ity <- resugar [] !(norm defs [] ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
-  where
-    emode : REPLEval -> ElabMode
-    emode EvalTC = InType
-    emode _ = InExpr
-
-    nfun : {vs : _} ->
-           REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-    nfun NormaliseAll = normaliseAll
-    nfun _ = normalise
 process (Check (PRef fc (UN "it")))
     = do opts <- get ROpts
          case evalResultName opts of
@@ -791,16 +763,18 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType defs) ts
                        pure (Printed $ vsep tys)
 process (Check itm)
-    = do inidx <- resolveName (UN "[input]")
-         ttimp <- desugar AnyExpr [] itm
-         let ttimpWithIt = ILocal replFC !getItDecls ttimp
-         (tm, gty) <- elabTerm inidx InExpr [] (MkNested [])
-                                  [] ttimpWithIt Nothing
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm
          defs <- get Ctxt
          itm <- resugar [] !(normaliseHoles defs [] tm)
-         ty <- getTerm gty
+         -- ty <- getTerm gty
          ity <- resugar [] !(normaliseScope defs [] ty)
          pure (TermChecked itm ity)
+process (CheckWithImplicits itm)
+    = do showImplicits <- showImplicits <$> getPPrint
+         setOpt (ShowImplicits True)
+         result <- process (Check itm)
+         setOpt (ShowImplicits showImplicits)
+         pure result
 process (PrintDef fn)
     = do defs <- get Ctxt
          case !(lookupCtxtName fn (gamma defs)) of
@@ -847,7 +821,7 @@ process (TypeSearch searchTerm)
          let curr = currentNS defs
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
-         let bound = piBindNames replFC [] rawTy
+         bound <- piBindNames replFC [] rawTy
          (ty, _) <- elabTerm 0 InType [] (MkNested []) [] bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-
@@ -856,11 +830,12 @@ process (TypeSearch searchTerm)
               let defs = flip mapMaybe defs $ \ md =>
                              do d <- md
                                 guard (visibleIn curr (fullname d) (visibility d))
+                                guard (isJust $ userNameRoot (fullname d))
                                 pure d
               allDefs <- traverse (resolved ctxt) defs
               filterM (\def => equivTypes def.type ty') allDefs
          put Ctxt defs
-         doc <- traverse (docsOrSignature replFC) $ (.fullname) <$> filteredDefs
+         doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
          pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
 process (Missing n)
     = do defs <- get Ctxt
@@ -949,6 +924,34 @@ process NOP
     = pure Done
 process ShowVersion
     = pure $ VersionIs  version
+process (ImportPackage package) = do
+  defs <- get Ctxt
+  let searchDirs = defs.options.dirs.extra_dirs
+  let Just packageDir = find
+        (\d => isInfixOf package (fromMaybe d (fileName d)))
+        searchDirs
+    | _ => pure (REPLError (pretty "Package not found in the known search directories"))
+  let packageDirPath = parse packageDir
+  tree <- coreLift $ explore packageDirPath
+  fentries <- coreLift $ toPaths (toRelative tree)
+  errs <- for fentries \entry => do
+    let entry' = dropExtension entry
+    let sp = forget $ split (== dirSeparator) entry'
+    let ns = concat $ intersperse "." sp
+    let ns' = mkNamespace ns
+    catch (do addImport (MkImport emptyFC False (nsAsModuleIdent ns') ns'); pure Nothing)
+          (\err => pure (Just err))
+  let errs' = catMaybes errs
+  res <- case errs' of
+    [] => pure (pretty "Done")
+    onePlus => pure $ vsep !(traverse display onePlus)
+  pure (Printed res)
+ where
+  toPaths : {root : _} -> Tree root -> IO (List String)
+  toPaths tree =
+    depthFirst (\x => map (toFilePath x ::) . force) tree (pure [])
+
+process (FuzzyTypeSearch expr) = fuzzySearch expr
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
@@ -972,16 +975,18 @@ processCatch cmd
                            pure $ REPLError msg
                            )
 
-parseEmptyCmd : SourceEmptyRule (Maybe REPLCmd)
+parseEmptyCmd : EmptyRule (Maybe REPLCmd)
 parseEmptyCmd = eoi *> (pure Nothing)
 
-parseCmd : SourceEmptyRule (Maybe REPLCmd)
+parseCmd : EmptyRule (Maybe REPLCmd)
 parseCmd = do c <- command; eoi; pure $ Just c
 
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)
 parseRepl inp
-    = runParser "(interactive)" Nothing inp (parseEmptyCmd <|> parseCmd)
+    = case runParser (Virtual Interactive) Nothing inp (parseEmptyCmd <|> parseCmd) of
+        Left err => Left err
+        Right (decor, result) => Right result
 
 export
 interpret : {auto c : Ref Ctxt Defs} ->
@@ -1124,7 +1129,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 16 12 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 20 (showSep " " cmds) (show args) text
 
   export
   displayErrors : {auto c : Ref Ctxt Defs} ->

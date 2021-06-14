@@ -22,7 +22,7 @@ Main> Prelude.Monad : (Type -> Type) -> Type
   Parameters: m
   Constraints: Applicative m
   Methods:
-    >>= : m a -> (a -> m b) -> m b
+    (>>=) : m a -> (a -> m b) -> m b
       Also called `bind`.
     join : m (m a) -> m a
       Also called `flatten` or mu.

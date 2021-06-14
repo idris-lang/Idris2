@@ -1,7 +1,7 @@
 1/1: Building casetot (casetot.idr)
 Error: main is not covering.
 
-casetot.idr:12:1--12:13
+casetot:12:1--12:13
  08 | 
  09 | ints : Vect 4 Int
  10 | ints = [1, 2, 3, 4]

@@ -87,7 +87,7 @@ fromStream sdoc = case sdocToTreeParser sdoc of
     flatten (STConcat [x, STEmpty]) = flatten x
     flatten (STConcat [x, STConcat xs]) = case flatten (STConcat xs) of
       (STConcat xs') => STConcat (x :: xs')
-      y => y
+      y => STConcat [x, y]
     flatten x = x
 
     internalError : SimpleDocTree ann

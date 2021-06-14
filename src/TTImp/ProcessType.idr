@@ -19,6 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
+import Data.Strings
 import Libraries.Data.NameMap
 
 %default covering
@@ -264,8 +265,10 @@ processType : {vars : _} ->
 processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_raw)
     = do n <- inCurrentNS n_in
 
+         addNameLoc nameFC n
+
          log "declare.type" 1 $ "Processing " ++ show n
-         log "declare.type" 5 $ "Checking type decl " ++ show n ++ " : " ++ show ty_raw
+         log "declare.type" 5 $ unwords ["Checking type decl:", show rig, show n, ":", show ty_raw]
          idx <- resolveName n
 
          -- Check 'n' is undefined

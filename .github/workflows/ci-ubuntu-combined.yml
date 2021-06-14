@@ -12,7 +12,6 @@ on:
       - main
 
 env:
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
   IDRIS2_VERSION: 0.3.0 # For previous-version build
   SCHEME: scheme
 
@@ -33,7 +32,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build from bootstrap
         run: make bootstrap && make install
       - name: Artifact Bootstrapped Idris2
@@ -53,7 +52,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y racket
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build from bootstrap
         run: make bootstrap-racket && make install
       - name: Artifact Bootstrapped Idris2
@@ -73,7 +72,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Cache Chez Previous Version
         id: previous-version-cache
         uses: actions/cache@v2
@@ -120,10 +119,10 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
-        run: make all && make install
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
         run: make test INTERACTIVE=''
 
@@ -144,10 +143,10 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y racket
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
-        run: make all && make install
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
         run: make test INTERACTIVE=''
 
@@ -168,12 +167,12 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build from previous version
         run: make all && make install && make clean
       - name: Build self-hosted from previous version
-        run: make all && make install
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
         run: make test INTERACTIVE=''
       - name: Artifact Idris2
@@ -199,7 +198,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get install -y chezscheme
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build API
         run: make install-api

@@ -20,9 +20,10 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 
 import Idris.Desugar
+import Idris.Desugar.Mutual
 import Idris.Parser
-import Idris.REPLCommon
-import Idris.REPLOpts
+import Idris.REPL.Common
+import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Pretty
 
@@ -33,31 +34,40 @@ import System.File
 
 %default covering
 
-processDecl : {auto c : Ref Ctxt Defs} ->
-              {auto u : Ref UST UState} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              {auto m : Ref MD Metadata} ->
-              PDecl -> Core (Maybe Error)
-processDecl decl
-    = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
-                pure Nothing)
-            (\err => do giveUpConstraints -- or we'll keep trying...
-                        pure (Just err))
-
 processDecls : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
                List PDecl -> Core (List Error)
+
+processDecl : {auto c : Ref Ctxt Defs} ->
+              {auto u : Ref UST UState} ->
+              {auto s : Ref Syn SyntaxInfo} ->
+              {auto m : Ref MD Metadata} ->
+              PDecl -> Core (List Error)
+
+-- Special cases to avoid treating these big blocks as units
+-- This should give us better error recovery (the whole block won't fail
+-- as soon as one of the definitions fails)
+processDecl (PNamespace fc ns ps)
+    = withExtendedNS ns $ processDecls ps
+processDecl (PMutual fc ps)
+    = let (tys, defs) = splitMutual ps in
+      processDecls (tys ++ defs)
+
+processDecl decl
+    = catch (do impdecls <- desugarDecl [] decl
+                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
+                pure [])
+            (\err => do giveUpConstraints -- or we'll keep trying...
+                        pure [err])
+
 processDecls decls
-    = do xs <- traverse processDecl decls
+    = do xs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (case mapMaybe id xs of
-                                      [] => [err]
-                                      errs => errs)
-         errs <- getTotalityErrors
-         pure (mapMaybe id xs ++ errs)
+             | Just err => pure (if null xs then [err] else xs)
+         errs <- logTime ("+++ Totality check overall") getTotalityErrors
+         pure (xs ++ errs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -118,7 +128,7 @@ readHash imp
          pure (reexport imp, (nameAs imp, h))
 
 prelude : Import
-prelude = MkImport (MkFC "(implicit)" (0, 0) (0, 0)) False
+prelude = MkImport (MkFC (Virtual Interactive) (0, 0) (0, 0)) False
                      (nsAsModuleIdent preludeNS) preludeNS
 
 export
@@ -138,7 +148,7 @@ readAsMain : {auto c : Ref Ctxt Defs} ->
              (fname : String) -> Core ()
 readAsMain fname
     = do Just (syn, _, more) <- readFromTTC {extra = SyntaxInfo}
-                                             True toplevelFC True fname (nsAsModuleIdent emptyNS) emptyNS
+                                             True EmptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
               | Nothing => throw (InternalError "Already loaded")
          replNS <- getNS
          replNestedNS <- getNestedNS
@@ -190,14 +200,14 @@ modTime fname
 export
 readHeader : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
-             (path : String) -> Core Module
-readHeader path
+             (path : String) -> (origin : ModuleIdent) -> Core Module
+readHeader path origin
     = do Right res <- coreLift (readFile path)
             | Left err => throw (FileErr path err)
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
-         let Right mod = runParserTo path (isLitFile path) (is ':') res (progHdr path)
+         let Right (decor, mod) = runParserTo (PhysicalIdrSrc origin) (isLitFile path) (is ':') res (progHdr (PhysicalIdrSrc origin))
             | Left err => throw err
          pure mod
 
@@ -222,14 +232,14 @@ processMod : {auto c : Ref Ctxt Defs} ->
              {auto m : Ref MD Metadata} ->
              {auto o : Ref ROpts REPLOpts} ->
              (srcf : String) -> (ttcf : String) -> (msg : Doc IdrisAnn) ->
-             (sourcecode : String) ->
+             (sourcecode : String) -> (origin : ModuleIdent) ->
              Core (Maybe (List Error))
-processMod srcf ttcf msg sourcecode
+processMod srcf ttcf msg sourcecode origin
     = catch (do
         setCurrentElabSource sourcecode
         -- Just read the header to start with (this is to get the imports and
         -- see if we can avoid rebuilding if none have changed)
-        modh <- readHeader srcf
+        modh <- readHeader srcf origin
         -- Add an implicit prelude import
         let imps =
              if (noprelude !getSession || moduleNS modh == nsAsModuleIdent preludeNS)
@@ -238,11 +248,11 @@ processMod srcf ttcf msg sourcecode
 
         hs <- traverse readHash imps
         defs <- get Ctxt
-        log "" 5 $ "Current hash " ++ show (ifaceHash defs)
-        log "" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
+        log "module.hash" 5 $ "Current hash " ++ show (ifaceHash defs)
+        log "module.hash" 5 $ show (moduleNS modh) ++ " hashes:\n" ++
                 show (sort (map snd hs))
         imphs <- readImportHashes ttcf
-        log "" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
+        log "module.hash" 5 $ "Old hashes from " ++ ttcf ++ ":\n" ++ show (sort imphs)
 
         -- If the old hashes are the same as the hashes we've just
         -- read from the imports, and the source file is older than
@@ -259,21 +269,18 @@ processMod srcf ttcf msg sourcecode
                    pure Nothing
            else -- needs rebuilding
              do iputStrLn msg
-                Right mod <- logTime ("++ Parsing " ++ srcf) $
-                            pure (runParser srcf (isLitFile srcf) sourcecode (do p <- prog srcf; eoi; pure p))
+                Right (decor, mod) <- logTime ("++ Parsing " ++ srcf) $
+                            pure (runParser (PhysicalIdrSrc origin) (isLitFile srcf) sourcecode (do p <- prog (PhysicalIdrSrc origin); eoi; pure p))
                       | Left err => pure (Just [err])
+                addSemanticDecorations decor
                 initHash
                 traverse_ addPublicHash (sort hs)
                 resetNextVar
                 when (ns /= nsAsModuleIdent mainNS) $
-                   do let MkFC fname _ _ = headerloc mod
-                          | EmptyFC => throw (InternalError "No file name")
-                      d <- getDirs
-                      ns' <- pathToNS (working_dir d) (source_dir d) fname
-                      when (ns /= ns') $
-                          throw (GenericMsg (headerloc mod)
+                      when (ns /= origin) $
+                          throw (GenericMsg mod.headerLoc
                                    ("Module name " ++ show ns ++
-                                    " does not match file name " ++ fname))
+                                    " does not match file name " ++ show srcf))
 
                 -- read import ttcs in full here
                 -- Note: We should only import .ttc - assumption is that there's
@@ -311,19 +318,19 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
           Doc IdrisAnn -> FileName ->
+          (moduleIdent : ModuleIdent) ->
           Core (List Error)
-process buildmsg file
+process buildmsg file ident
     = do Right res <- coreLift (readFile file)
                | Left err => pure [FileErr file err]
          catch (do ttcf <- getTTCFileName file "ttc"
                    Just errs <- logTime ("+ Elaborating " ++ file) $
-                                   processMod file ttcf buildmsg res
+                                   processMod file ttcf buildmsg res ident
                         | Nothing => pure [] -- skipped it
                    if isNil errs
                       then
                         do defs <- get Ctxt
-                           d <- getDirs
-                           ns <- pathToNS (working_dir d) (source_dir d) file
+                           ns <- ctxtPathToNS file
                            makeBuildDirectory ns
                            writeToTTC !(get Syn) ttcf
                            ttmf <- getTTCFileName file "ttm"

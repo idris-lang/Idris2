@@ -60,17 +60,6 @@ export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
 toClosure opts env tm = MkClosure opts [] env tm
 
-useMeta : Bool -> FC -> Name -> Defs -> EvalOpts -> Core (Maybe EvalOpts)
-useMeta False _ _ _ opts = pure $ Just opts
-useMeta True fc (Resolved i) defs opts
-    = case lookup i (usedMetas opts) of
-           Nothing => pure (Just (record { usedMetas $= insert i () } opts))
-           Just _ => pure Nothing
-useMeta True fc n defs opts
-    = do let Just i = getNameID n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         useMeta True fc (Resolved i) defs opts
-
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
     = if not (isNil (reduceLimit opts))
@@ -179,16 +168,16 @@ parameters (defs : Defs, topopts : EvalOpts)
         applyToStack nf _ = pure nf
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
-                {free, vars : _} ->
+                {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
-                (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+                (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                 Stack free ->
                 LocalEnv free vars ->
                 Core (NF free)
     -- If it's one of the free variables, we are done unless the free
     -- variable maps to a let-binding
-    evalLocal {vars = []} env fc mrig idx prf stk locs
+    evalLocal env fc mrig idx prf stk []
         = if not (holesOnly topopts || argHolesOnly topopts)
              -- if we know it's not a let, no point in even running `getBinder`
              && fromMaybe True mrig
@@ -203,7 +192,7 @@ parameters (defs : Defs, topopts : EvalOpts)
               env fc mrig (S idx) (Later p) stk (_ :: locs)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
-    updateLocal : (idx : Nat) -> (0 p : IsVar name idx (vars ++ free)) ->
+    updateLocal : (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
                   LocalEnv free vars -> NF free ->
                   LocalEnv free vars
     updateLocal Z First (x :: locs) nf = MkNFClosure nf :: locs
@@ -216,9 +205,15 @@ parameters (defs : Defs, topopts : EvalOpts)
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = evalRef env True fc Func (Resolved i) (map (EmptyFC,) args ++ stk)
-                  (NApp fc (NMeta nm i args) stk)
+        = let args' = if isNil stk then map (EmptyFC,) args
+                         else map (EmptyFC,) args ++ stk
+                        in
+              evalRef env True fc Func (Resolved i) args'
+                          (NApp fc (NMeta nm i args) stk)
 
+    -- The commented out logging here might still be useful one day, but
+    -- evalRef is used a lot and even these tiny checks turn out to be
+    -- worth skipping if we can
     evalRef : {auto c : Ref Ctxt Defs} ->
               {free : _} ->
               Env Term free ->
@@ -226,25 +221,34 @@ parameters (defs : Defs, topopts : EvalOpts)
               FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalRef env meta fc (DataCon tag arity) fn stk def
-        = pure $ NDCon fc fn tag arity stk
+        = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
+             --                             pure $ "Found data constructor: " ++ show fn'
+             pure $ NDCon fc fn tag arity stk
     evalRef env meta fc (TyCon tag arity) fn stk def
-        = pure $ NTCon fc fn tag arity stk
+        = do -- logC "eval.ref.type" 50 $ do fn' <- toFullNames fn
+             --                             pure $ "Found type constructor: " ++ show fn'
+             pure $ ntCon fc fn tag arity stk
     evalRef env meta fc Bound fn stk def
-        = pure def
+        = do -- logC "eval.ref.bound" 50 $ do fn' <- toFullNames fn
+             --                              pure $ "Found bound variable: " ++ show fn'
+             pure def
     evalRef env meta fc nt@Func n stk def
-        = do Just res <- lookupCtxtExact n (gamma defs)
+        = do -- logC "eval.ref.func" 50 $ do n' <- toFullNames n
+             --                             pure $ "Found function: " ++ show n'
+             Just res <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure def
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
                                          (visibility res)
+             -- want to shortcut that second check, if we're evaluating
+             -- everything, so don't let bind unless we need that log!
              let redok = redok1 || redok2
-             unless redok2 $ logC "eval.stuck" 5 $ pure $ "Stuck function: " ++ show !(toFullNames n)
+             unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
+                                                      pure $ "Stuck function: " ++ show n'
              if redok
                 then do
-                   Just opts' <- useMeta (noCycles res) fc n defs topopts
-                        | Nothing => pure def
-                   Just opts' <- updateLimit nt n opts'
+                   Just opts' <- updateLimit nt n topopts
                         | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
                                         pure def -- name is past reduction limit
                    evalDef env opts' meta fc
@@ -694,6 +698,26 @@ export
 Quote Closure where
   quoteGen q defs env c = quoteGen q defs env !(evalClosure defs c)
 
+-- Resume a previously blocked normalisation with a new environment
+export
+continueNF : {auto c : Ref Ctxt Defs} ->
+             {vars : _} ->
+             Defs -> Env Term vars -> NF vars -> Core (NF vars)
+continueNF defs env stuck@(NApp fc (NRef nt fn) stk)
+    = evalRef defs defaultOpts env False fc nt fn stk stuck
+continueNF defs env (NApp fc (NMeta name idx args) stk)
+    = evalMeta defs defaultOpts env fc name idx args stk
+-- Next batch are already in normal form
+continueNF defs env nf@(NDCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NTCon fc x tag arity xs) = pure nf
+continueNF defs env nf@(NPrimVal fc x) = pure nf
+continueNF defs env nf@(NErased fc imp) = pure nf
+continueNF defs env nf@(NType fc) = pure nf
+-- For the rest, easiest just to quote and reevaluate
+continueNF defs env tm
+    = do empty <- clearDefs defs
+         nf defs env !(quote empty env tm)
+
 export
 glueBack : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
@@ -846,14 +870,57 @@ tryUpdate ms (Erased fc i) = pure $ Erased fc i
 tryUpdate ms (TType fc) = pure $ TType fc
 
 mutual
+  allConvNF : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Ref QVar Int -> Defs -> Env Term vars ->
+              List (NF vars) -> List (NF vars) -> Core Bool
+  allConvNF q defs env [] [] = pure True
+  allConvNF q defs env (x :: xs) (y :: ys)
+      = do ok <- allConvNF q defs env xs ys
+           if ok then convGen q defs env x y
+                 else pure False
+  allConvNF q defs env _ _ = pure False
+
+  -- return False if anything differs at the head, to quickly find
+  -- conversion failures without going deeply into all the arguments.
+  -- True means they might still match
+  quickConv : List (NF vars) -> List (NF vars) -> Bool
+  quickConv [] [] = True
+  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+    where
+      quickConvHead : NHead vars -> NHead vars -> Bool
+      quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
+      quickConvHead (NRef _ n) (NRef _ n') = n == n'
+      quickConvHead (NMeta n _ _) (NMeta n' _ _) = n == n'
+      quickConvHead _ _ = False
+
+      quickConvArg : NF vars -> NF vars -> Bool
+      quickConvArg (NBind{}) _ = True -- let's not worry about eta here...
+      quickConvArg _ (NBind{}) = True
+      quickConvArg (NApp _ h _) (NApp _ h' _) = quickConvHead h h'
+      quickConvArg (NDCon _ _ t _ _) (NDCon _ _ t' _ _) = t == t'
+      quickConvArg (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = n == n'
+      quickConvArg (NAs _ _ _ t) (NAs _ _ _ t') = quickConvArg t t'
+      quickConvArg (NDelayed _ _ t) (NDelayed _ _ t') = quickConvArg t t'
+      quickConvArg (NDelay _ _ _ _) (NDelay _ _ _ _) = True
+      quickConvArg (NForce _ _ t _) (NForce _ _ t' _) = quickConvArg t t'
+      quickConvArg (NPrimVal _ c) (NPrimVal _ c') = c == c'
+      quickConvArg (NType _) (NType _) = True
+      quickConvArg (NErased _ _) _ = True
+      quickConvArg _ (NErased _ _) = True
+      quickConvArg _ _ = False
+  quickConv _ _ = False
+
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
-  allConv q defs env [] [] = pure True
-  allConv q defs env (x :: xs) (y :: ys)
-      = pure $ !(convGen q defs env x y) && !(allConv q defs env xs ys)
-  allConv q defs env _ _ = pure False
+  allConv q defs env xs ys
+      = do xsnf <- traverse (evalClosure defs) xs
+           ysnf <- traverse (evalClosure defs) ys
+           if quickConv xsnf ysnf
+              then allConvNF q defs env xsnf ysnf
+              else pure False
 
   -- If the case trees match in structure, get the list of variables which
   -- have to match in the call
@@ -1159,94 +1226,89 @@ getArity defs env tm = getValArity defs env !(nf defs env tm)
 export
 logNF : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
-        String -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
+        (s : String) ->
+        {auto 0 _ : KnownTopic s} ->
+        Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
 logNF str n msg env tmnf
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- quote defs env tmnf
-               tm' <- toFullNames tm
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- quote defs env tmnf
+           tm' <- toFullNames tm
+           logString str n (msg ++ ": " ++ show tm')
 
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
 export
 logTermNF' : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             LogLevel -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF' lvl msg env tm
-    = do opts <- getSession
-         when (keepLog lvl (logLevel opts)) $
-            do defs <- get Ctxt
-               tmnf <- normaliseHoles defs env tm
-               tm' <- toFullNames tmnf
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+             (s : String) ->
+             {auto 0 _ : KnownTopic s} ->
+             Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF' str n msg env tm
+    = do defs <- get Ctxt
+         tmnf <- normaliseHoles defs env tm
+         tm' <- toFullNames tmnf
+         logString str n (msg ++ ": " ++ show tm')
 
 export
 logTermNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF str n msg env tm
-    = do let lvl = mkLogLevel str n
-         logTermNF' lvl msg env tm
+    = when !(logging str n) $ logTermNF' str n msg env tm
 
 export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+          (s : String) ->
+          {auto 0 _ : KnownTopic s} ->
+          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlue str n msg env gtm
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- getTerm gtm
-               tm' <- toFullNames tm
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- getTerm gtm
+           tm' <- toFullNames tm
+           logString str n (msg ++ ": " ++ show tm')
 
 export
 logGlueNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            String -> Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
+            (s : String) ->
+            {auto 0 _ : KnownTopic s} ->
+            Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
 logGlueNF str n msg env gtm
-    = do opts <- getSession
-         let lvl = mkLogLevel str n
-         when (keepLog lvl (logLevel opts)) $
-            do defs <- get Ctxt
-               tm <- getTerm gtm
-               tmnf <- normaliseHoles defs env tm
-               tm' <- toFullNames tmnf
-               coreLift $ putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg
-                                          ++ ": " ++ show tm'
+    = when !(logging str n) $
+        do defs <- get Ctxt
+           tm <- getTerm gtm
+           tmnf <- normaliseHoles defs env tm
+           tm' <- toFullNames tmnf
+           logString str n (msg ++ ": " ++ show tm')
 
 export
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         String -> Nat -> String -> Env Term vars -> Core ()
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> Env Term vars -> Core ()
 logEnv str n msg env
-    = do opts <- getSession
-         when (keepLog lvl (logLevel opts)) $ do
-           coreLift (putStrLn $ "LOG " ++ show lvl ++ ": " ++ msg)
+    = when !(logging str n) $
+        do logString str n msg
            dumpEnv env
 
   where
-    lvl : LogLevel
-    lvl = mkLogLevel str n
 
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
-        = do logTermNF' lvl (msg ++ ": let " ++ show x) bs val
-             logTermNF' lvl (msg ++ ":" ++ show c ++ " " ++
-                             show x) bs ty
+        = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
+             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
     dumpEnv {vs = x :: _} (b :: bs)
-        = do logTermNF' lvl (msg ++ ":" ++ show (multiplicity b) ++ " " ++
-                             show (piInfo b) ++ " " ++
-                             show x) bs (binderType b)
+        = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                           show (piInfo b) ++ " " ++
+                           show x) bs (binderType b)
              dumpEnv bs
 replace' : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
@@ -1357,6 +1419,8 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  (Constant -> Bool) ->
                  -- view to check whether an argument is a constant
                  (arg -> Maybe Constant) ->
+                 -- Reduce everything (True) or just public export (False)
+                 Bool ->
                  -- list of primitives
                  List Name ->
                  -- view of the potential redex
@@ -1367,7 +1431,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  Env Term vs ->         -- evaluation environment
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
-normalisePrims boundSafe viewConstant prims n args tm env
+normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
@@ -1377,5 +1441,7 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normalise defs env tm
+        tm <- if all
+                 then normaliseAll defs env tm
+                 else normalise defs env tm
         pure (Just tm)

@@ -3,6 +3,8 @@ module Language.Reflection
 import public Language.Reflection.TT
 import public Language.Reflection.TTImp
 
+%default total
+
 ||| Elaboration scripts
 ||| Where types/terms are returned, binders will have unique, if not
 ||| necessarily human readabe, names
@@ -45,22 +47,18 @@ data Elab : Type -> Type where
      -- Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
-mutual
-  export
-  Functor Elab where
-    map f e = do e' <- e
-                 pure (f e')
+export
+Functor Elab where
+  map f e = Bind e $ Pure . f
 
-  export
-  Applicative Elab where
-    pure = Pure
-    f <*> a = do f' <- f
-                 a' <- a
-                 pure (f' a')
+export
+Applicative Elab where
+  pure = Pure
+  f <*> a = Bind f (<$> a)
 
-  export
-  Monad Elab where
-    (>>=) = Bind
+export
+Monad Elab where
+  (>>=) = Bind
 
 ||| Report an error in elaboration
 export

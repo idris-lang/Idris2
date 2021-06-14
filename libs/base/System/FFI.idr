@@ -4,6 +4,8 @@
 
 module System.FFI
 
+%default total
+
 export
 data Struct : String -> -- C struct name
               List (String, Type) -> -- field names and types

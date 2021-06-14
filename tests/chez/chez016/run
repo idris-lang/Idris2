@@ -1,6 +1,10 @@
 # This test needs to run `idris2` from a sub-folder. Get the absolute path.
 
-IDRIS2_EXEC="$(realpath "$1")"
+if [ "$(uname)" = Darwin ]; then
+    IDRIS2_EXEC=$(zsh -c 'printf %s "$0:A"' "$1")
+else
+    IDRIS2_EXEC="$(readlink -f -- "$1")"
+fi
 
 cd "folder with spaces" || exit
 

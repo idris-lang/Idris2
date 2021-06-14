@@ -12,7 +12,7 @@ import Libraries.Utils.Path
 ------------------------------------------------------------------------------
 -- Filenames
 
-||| A `Filename root` is  anchored in `root`.
+||| A `Filename root` is anchored in `root`.
 ||| We use a `data` type so that Idris can easily infer `root` when passing
 ||| a `FileName` around. We do not use a `record` because we do not want to
 ||| allow users to manufacture their own `FileName`.
@@ -25,6 +25,11 @@ data FileName : Path -> Type where
 export
 fileName : FileName root -> String
 fileName (MkFileName str) = str
+
+namespace FileName
+  export
+  toRelative : FileName root -> FileName (parse "")
+  toRelative (MkFileName x) = MkFileName x
 
 ||| Convert a filename anchored in `root` to a filepath by appending the name
 ||| to the root path.
@@ -62,6 +67,13 @@ SubTree root = (dir : FileName root ** IO (Tree (root /> fileName dir)))
 export
 emptyTree : Tree root
 emptyTree = MkTree [] []
+
+namespace Tree
+  ||| No run time information is changed,
+  ||| so we assert the identity.
+  export
+  toRelative : Tree root -> Tree (parse "")
+  toRelative x = believe_me x
 
 ||| Filter out files and directories that do not satisfy a given predicate.
 export
@@ -127,6 +139,14 @@ go dir acc = case !(dirEntry dir) of
                 else { files    $= (entry                ::) } acc
     assert_total (go dir acc)
 
+||| Depth first traversal of all of the files in a tree
+export
+covering
+depthFirst : ({root : Path} -> FileName root -> Lazy (IO a) -> IO a) ->
+             {root : Path} -> Tree root -> IO a -> IO a
+depthFirst check t k =
+  let next = foldr (\ (dir ** iot), def => depthFirst check !iot def) k t.subTrees in
+  foldr (\ fn, def => check fn def) next t.files
 
 ||| Display a tree by printing it procedurally. Note that because directory
 ||| trees contain suspended computations corresponding to their subtrees this

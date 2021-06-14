@@ -177,11 +177,11 @@ Reify a => Reify (List a) where
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs lhs env [] = appCon fc defs (preludetypes "Nil") [Erased fc False]
+  reflect fc defs lhs env [] = appCon fc defs (basics "Nil") [Erased fc False]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (preludetypes "::") [Erased fc False, x', xs']
+           appCon fc defs (basics "::") [Erased fc False, x', xs']
 
 export
 Reify a => Reify (List1 a) where
@@ -252,6 +252,22 @@ Reflect Namespace where
   reflect fc defs lhs env ns
     = do ns' <- reflect fc defs lhs env (unsafeUnfoldNamespace ns)
          appCon fc defs (reflectiontt "MkNS") [ns']
+
+export
+Reify ModuleIdent where
+  reify defs val@(NDCon _ n _ _ [(_, ns)])
+    = case (!(full (gamma defs) n)) of
+        NS _ (UN "MkMI")
+          => do ns' <- reify defs !(evalClosure defs ns)
+                pure (unsafeFoldModuleIdent ns')
+        _ => cantReify val "ModuleIdent"
+  reify defs val = cantReify val "ModuleIdent"
+
+export
+Reflect ModuleIdent where
+  reflect fc defs lhs env ns
+    = do ns' <- reflect fc defs lhs env (unsafeUnfoldModuleIdent ns)
+         appCon fc defs (reflectiontt "MkMI") [ns']
 
 export
 Reify Name where
@@ -341,6 +357,18 @@ Reify Constant where
              (NS _ (UN "I"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (I x')
+             (NS _ (UN "I8"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I8 x')
+             (NS _ (UN "I16"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I16 x')
+             (NS _ (UN "I32"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I32 x')
+             (NS _ (UN "I64"), [(_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (I64 x')
              (NS _ (UN "BI"), [(_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (BI x')
@@ -369,6 +397,14 @@ Reify Constant where
                   => pure WorldVal
              (NS _ (UN "IntType"), [])
                   => pure IntType
+             (NS _ (UN "Int8Type"), [])
+                  => pure Int8Type
+             (NS _ (UN "Int16Type"), [])
+                  => pure Int16Type
+             (NS _ (UN "Int32Type"), [])
+                  => pure Int32Type
+             (NS _ (UN "Int64Type"), [])
+                  => pure Int64Type
              (NS _ (UN "IntegerType"), [])
                   => pure IntegerType
              (NS _ (UN "Bits8Type"), [])
@@ -395,6 +431,18 @@ Reflect Constant where
   reflect fc defs lhs env (I x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "I") [x']
+  reflect fc defs lhs env (I8 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I8") [x']
+  reflect fc defs lhs env (I16 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I16") [x']
+  reflect fc defs lhs env (I32 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I32") [x']
+  reflect fc defs lhs env (I64 x)
+      = do x' <- reflect fc defs lhs env x
+           appCon fc defs (reflectiontt "I64") [x']
   reflect fc defs lhs env (BI x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (reflectiontt "BI") [x']
@@ -423,6 +471,14 @@ Reflect Constant where
       = getCon fc defs (reflectiontt "WorldVal")
   reflect fc defs lhs env IntType
       = getCon fc defs (reflectiontt "IntType")
+  reflect fc defs lhs env Int8Type
+      = getCon fc defs (reflectiontt "Int8Type")
+  reflect fc defs lhs env Int16Type
+      = getCon fc defs (reflectiontt "Int16Type")
+  reflect fc defs lhs env Int32Type
+      = getCon fc defs (reflectiontt "Int32Type")
+  reflect fc defs lhs env Int64Type
+      = getCon fc defs (reflectiontt "Int64Type")
   reflect fc defs lhs env IntegerType
       = getCon fc defs (reflectiontt "IntegerType")
   reflect fc defs lhs env Bits8Type
@@ -534,6 +590,48 @@ Reflect LazyReason where
   reflect fc defs lhs env LUnknown = getCon fc defs (reflectiontt "LUnknown")
 
 export
+Reify VirtualIdent where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "Interactive"), [])
+                   => pure Interactive
+             _ => cantReify val "VirtualIdent"
+  reify defs val = cantReify val "VirtualIdent"
+
+export
+Reflect VirtualIdent where
+  reflect fc defs lhs env Interactive
+      = getCon fc defs (reflectiontt "Interactive")
+
+export
+Reify OriginDesc where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (!(full (gamma defs) n), args) of
+             (NS _ (UN "PhysicalIdrSrc"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (PhysicalIdrSrc ident')
+             (NS _ (UN "PhysicalPkgSrc"), [(_, fname)])
+                   => do fname' <- reify defs !(evalClosure defs fname)
+                         pure (PhysicalPkgSrc fname')
+             (NS _ (UN "Virtual"), [(_, ident)])
+                   => do ident' <- reify defs !(evalClosure defs ident)
+                         pure (Virtual ident')
+             _ => cantReify val "OriginDesc"
+  reify defs val = cantReify val "OriginDesc"
+
+export
+Reflect OriginDesc where
+  reflect fc defs lhs env (PhysicalIdrSrc ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "PhysicalIdrSrc") [ident']
+  reflect fc defs lhs env (PhysicalPkgSrc fname)
+      = do fname' <- reflect fc defs lhs env fname
+           appCon fc defs (reflectiontt "PhysicalPkgSrc") [fname']
+  reflect fc defs lhs env (Virtual ident)
+      = do ident' <- reflect fc defs lhs env ident
+           appCon fc defs (reflectiontt "Virtual") [ident']
+
+export
 Reify FC where
   reify defs val@(NDCon _ n _ _ args)
       = case (!(full (gamma defs) n), args) of
@@ -550,6 +648,11 @@ export
 Reflect FC where
   reflect fc defs True env _ = pure $ Erased fc False
   reflect fc defs lhs env (MkFC fn start end)
+      = do fn' <- reflect fc defs lhs env fn
+           start' <- reflect fc defs lhs env start
+           end' <- reflect fc defs lhs env end
+           appCon fc defs (reflectiontt "MkFC") [fn', start', end']
+  reflect fc defs lhs env (MkVirtualFC fn start end)
       = do fn' <- reflect fc defs lhs env fn
            start' <- reflect fc defs lhs env start
            end' <- reflect fc defs lhs env end

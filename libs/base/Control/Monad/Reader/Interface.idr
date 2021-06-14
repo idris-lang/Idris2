@@ -8,6 +8,8 @@ import Control.Monad.RWS.CPS
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| A computation which runs in a static context and produces an output
 public export
 interface Monad m => MonadReader stateType m | m where
@@ -15,7 +17,7 @@ interface Monad m => MonadReader stateType m | m where
   ask : m stateType
 
   ||| `local f c` runs the computation `c` in an environment modified by `f`.
-  local : MonadReader stateType m => (stateType -> stateType) -> m a -> m a
+  local : (stateType -> stateType) -> m a -> m a
 
 
 ||| Evaluate a function in the context held by this computation

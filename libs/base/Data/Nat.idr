@@ -752,14 +752,6 @@ sucMinR (S l) = cong S $ sucMinR l
 namespace Semigroup
 
   public export
-  [Additive] Semigroup Nat where
-    (<+>) = (+)
-
-  public export
-  [Multiplicative] Semigroup Nat where
-    (<+>) = (*)
-
-  public export
   [Maximum] Semigroup Nat where
     (<+>) = max
 
@@ -768,14 +760,6 @@ namespace Semigroup
     (<+>) = min
 
 namespace Monoid
-
-  public export
-  [Additive] Monoid Nat using Semigroup.Additive where
-    neutral = 0
-
-  public export
-  [Multiplicative] Monoid Nat using Semigroup.Multiplicative where
-    neutral = 1
 
   public export
   [Maximum] Monoid Nat using Semigroup.Maximum where

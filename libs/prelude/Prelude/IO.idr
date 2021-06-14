@@ -32,10 +32,12 @@ Monad IO where
 
 public export
 interface Monad io => HasIO io where
+  constructor MkHasIO
   liftIO : IO a -> io a
 
 public export
 interface Monad io => HasLinearIO io where
+  constructor MkHasLinearIO
   liftIO1 : (1 _ : IO a) -> io a
 
 public export %inline
@@ -67,7 +69,7 @@ export
 onCollect : Ptr t -> (Ptr t -> IO ()) -> IO (GCPtr t)
 onCollect ptr c = fromPrim (prim__onCollect ptr (\x => toPrim (c x)))
 
-%foreign "C:idris2_getString, libidris2_support"
+%foreign "C:idris2_getString, libidris2_support, idris_support.h"
          "javascript:lambda:x=>x"
 export
 prim__getString : Ptr String -> String
@@ -77,11 +79,11 @@ prim__putChar : Char -> (1 x : %World) -> IORes ()
 %foreign "C:getchar,libc 6"
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
-%foreign "C:idris2_getStr,libidris2_support"
+%foreign "C:idris2_getStr, libidris2_support, idris_support.h"
          "node:support:getStr,support_system_file"
 prim__getStr : PrimIO String
 
-%foreign "C:idris2_putStr,libidris2_support"
+%foreign "C:idris2_putStr, libidris2_support, idris_support.h"
          "node:lambda:x=>process.stdout.write(x)"
 prim__putStr : String -> PrimIO ()
 
@@ -131,7 +133,7 @@ export
 threadWait : (1 threadID : ThreadID) -> IO ()
 threadWait threadID = fromPrim (prim__threadWait threadID)
 
-%foreign "C:idris2_readString, libidris2_support"
+%foreign "C:idris2_readString, libidris2_support, idris_support.h"
 export
 prim__getErrno : Int
 

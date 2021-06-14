@@ -261,12 +261,12 @@ toList (M _ t) = treeToList t
 ||| Gets the Keys of the map.
 export
 keys : StringMap v -> List String
-keys = map fst . toList
+keys = map fst . StringMap.toList
 
 ||| Gets the values of the map. Could contain duplicates.
 export
 values : StringMap v -> List v
-values = map snd . toList
+values = map snd . StringMap.toList
 
 treeMap : (a -> b) -> Tree n a -> Tree n b
 treeMap f (Leaf k v) = Leaf k (f v)
@@ -286,7 +286,7 @@ mergeWith : (v -> v -> v) -> StringMap v -> StringMap v -> StringMap v
 mergeWith f x y = insertFrom inserted x where
   inserted : List (Key, v)
   inserted = do
-    (k, v) <- toList y
+    (k, v) <- StringMap.toList y
     let v' = (maybe id f $ lookup k x) v
     pure (k, v')
 
@@ -310,7 +310,7 @@ adjust k f m =
 
 export
 Show v => Show (StringMap v) where
-  show m = show $ map {b=String} (\(k,v) => k ++ "->" ++ show v) $ toList m
+  show m = show $ map {b=String} (\(k,v) => k ++ "->" ++ show v) $ StringMap.toList m
 
 -- TODO: is this the right variant of merge to use for this? I think it is, but
 -- I could also see the advantages of using `mergeLeft`. The current approach is

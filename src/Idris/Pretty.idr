@@ -5,16 +5,25 @@ import Data.Maybe
 import Data.Strings
 import Libraries.Control.ANSI.SGR
 
+import Parser.Lexer.Source
+
 import public Idris.Pretty.Render
 
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Algebra
-import Idris.REPLOpts
+import Idris.REPL.Opts
 import Idris.Syntax
 
 %default covering
+
+public export
+data IdrisSyntax
+  = SynHole
+  | SynKeyword
+  | SynPragma
+  | SynRef Name
 
 public export
 data IdrisAnn
@@ -24,8 +33,7 @@ data IdrisAnn
   | FileCtxt
   | Code
   | Meta
-  | Keyword
-  | Pragma
+  | Syntax IdrisSyntax
 
 export
 colorAnn : IdrisAnn -> AnsiStyle
@@ -34,9 +42,11 @@ colorAnn Error = color BrightRed <+> bold
 colorAnn ErrorDesc = bold
 colorAnn FileCtxt = color BrightBlue
 colorAnn Code = color Magenta
-colorAnn Keyword = color Red
-colorAnn Pragma = color BrightMagenta
 colorAnn Meta = color Green
+colorAnn (Syntax SynHole) = color Green
+colorAnn (Syntax SynKeyword) = color Red
+colorAnn (Syntax SynPragma) = color BrightMagenta
+colorAnn (Syntax (SynRef _)) = []
 
 export
 error : Doc IdrisAnn -> Doc IdrisAnn
@@ -51,53 +61,57 @@ fileCtxt : Doc IdrisAnn -> Doc IdrisAnn
 fileCtxt = annotate FileCtxt
 
 export
-keyword : Doc IdrisAnn -> Doc IdrisAnn
-keyword = annotate Keyword
+keyword : Doc IdrisSyntax -> Doc IdrisSyntax
+keyword = annotate SynKeyword
 
 export
 meta : Doc IdrisAnn -> Doc IdrisAnn
 meta = annotate Meta
 
 export
+hole : Doc IdrisSyntax -> Doc IdrisSyntax
+hole = annotate SynHole
+
+export
 code : Doc IdrisAnn -> Doc IdrisAnn
 code = annotate Code
 
-let_ : Doc IdrisAnn
+let_ : Doc IdrisSyntax
 let_ = keyword (pretty "let")
 
-in_ : Doc IdrisAnn
+in_ : Doc IdrisSyntax
 in_ = keyword (pretty "in")
 
-case_ : Doc IdrisAnn
+case_ : Doc IdrisSyntax
 case_ = keyword (pretty "case")
 
-of_ : Doc IdrisAnn
+of_ : Doc IdrisSyntax
 of_ = keyword (pretty "of")
 
-do_ : Doc IdrisAnn
+do_ : Doc IdrisSyntax
 do_ = keyword (pretty "do")
 
-with_ : Doc IdrisAnn
+with_ : Doc IdrisSyntax
 with_ = keyword (pretty "with")
 
-record_ : Doc IdrisAnn
+record_ : Doc IdrisSyntax
 record_ = keyword (pretty "record")
 
-impossible_ : Doc IdrisAnn
+impossible_ : Doc IdrisSyntax
 impossible_ = keyword (pretty "impossible")
 
-auto_ : Doc IdrisAnn
+auto_ : Doc IdrisSyntax
 auto_ = keyword (pretty "auto")
 
-default_ : Doc IdrisAnn
+default_ : Doc IdrisSyntax
 default_ = keyword (pretty "default")
 
-rewrite_ : Doc IdrisAnn
+rewrite_ : Doc IdrisSyntax
 rewrite_ = keyword (pretty "rewrite")
 
 export
-pragma : Doc IdrisAnn -> Doc IdrisAnn
-pragma = annotate Pragma
+pragma : Doc IdrisSyntax -> Doc IdrisSyntax
+pragma = annotate SynPragma
 
 export
 prettyRig : RigCount -> Doc ann
@@ -106,7 +120,7 @@ prettyRig = elimSemi (pretty '0' <+> space)
                      (const emptyDoc)
 
 mutual
-  prettyAlt : PClause -> Doc IdrisAnn
+  prettyAlt : PClause -> Doc IdrisSyntax
   prettyAlt (MkPatClause _ lhs rhs _) =
     space <+> pipe <++> prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs <+> semi
   prettyAlt (MkWithClause _ lhs wval prf flags cs) =
@@ -114,7 +128,7 @@ mutual
   prettyAlt (MkImpossible _ lhs) =
     space <+> pipe <++> prettyTerm lhs <++> impossible_ <+> semi
 
-  prettyCase : PClause -> Doc IdrisAnn
+  prettyCase : PClause -> Doc IdrisSyntax
   prettyCase (MkPatClause _ lhs rhs _) =
     prettyTerm lhs <++> pretty "=>" <++> prettyTerm rhs
   prettyCase (MkWithClause _ lhs rhs prf flags _) =
@@ -122,11 +136,11 @@ mutual
   prettyCase (MkImpossible _ lhs) =
     prettyTerm lhs <++> impossible_
 
-  prettyString : PStr -> Doc IdrisAnn
+  prettyString : PStr -> Doc IdrisSyntax
   prettyString (StrLiteral _ str) = pretty str
   prettyString (StrInterp _ tm) = prettyTerm tm
 
-  prettyDo : PDo -> Doc IdrisAnn
+  prettyDo : PDo -> Doc IdrisSyntax
   prettyDo (DoExp _ tm) = prettyTerm tm
   prettyDo (DoBind _ _ n tm) = pretty n <++> pretty "<-" <++> prettyTerm tm
   prettyDo (DoBindPat _ l tm alts) =
@@ -139,14 +153,14 @@ mutual
     let_ <++> braces (angles (angles (pretty "definitions")))
   prettyDo (DoRewrite _ rule) = rewrite_ <+> prettyTerm rule
 
-  prettyUpdate : PFieldUpdate -> Doc IdrisAnn
+  prettyUpdate : PFieldUpdate -> Doc IdrisSyntax
   prettyUpdate (PSetField path v) =
     concatWith (surround dot) (pretty <$> path) <++> equals <++> prettyTerm v
   prettyUpdate (PSetFieldApp path v) =
     concatWith (surround dot) (pretty <$> path) <++> pretty '$' <+> equals <++> prettyTerm v
 
   export
-  prettyTerm : PTerm -> Doc IdrisAnn
+  prettyTerm : PTerm -> Doc IdrisSyntax
   prettyTerm = go Open
     where
       startPrec : Prec
@@ -155,9 +169,13 @@ mutual
       appPrec = User 10
       leftAppPrec : Prec
       leftAppPrec = User 9
+      prettyOp : OpStr -> Doc IdrisSyntax
+      prettyOp op = if isOpName op
+        then annotate (SynRef op) $ pretty op
+        else Chara '`' <+> annotate (SynRef op) (pretty op) <+> Chara '`'
 
-      go : Prec -> PTerm -> Doc IdrisAnn
-      go d (PRef _ n) = pretty n
+      go : Prec -> PTerm -> Doc IdrisSyntax
+      go d (PRef _ n) = annotate (SynRef n) $ pretty n
       go d (PPi _ rig Explicit Nothing arg ret) =
         parenthesise (d > startPrec) $ group $
           branchVal
@@ -196,7 +214,7 @@ mutual
           getLamNames : List (RigCount, PTerm, PTerm) -> PTerm -> (List (RigCount, PTerm, PTerm), PTerm)
           getLamNames acc (PLam _ rig _ n ty sc) = getLamNames ((rig, n, ty) :: acc) sc
           getLamNames acc sc = (reverse acc, sc)
-          prettyBindings : List (RigCount, PTerm, PTerm) -> Doc IdrisAnn
+          prettyBindings : List (RigCount, PTerm, PTerm) -> Doc IdrisSyntax
           prettyBindings [] = neutral
           prettyBindings [(rig, n, (PImplicit _))] = prettyRig rig <+> go startPrec n
           prettyBindings [(rig, n, ty)] = prettyRig rig <+> go startPrec n <++> colon <++> go startPrec ty
@@ -224,10 +242,10 @@ mutual
 
         where
 
-          continuation : Doc IdrisAnn
+          continuation : Doc IdrisSyntax
           continuation = go startPrec sc
 
-          fullLet : Doc IdrisAnn
+          fullLet : Doc IdrisSyntax
           fullLet = parenthesise (d > startPrec) $ group $ align $
             let_ <++> (group $ align $ hang 2 $ prettyRig rig <+> go startPrec n <++> equals <+> line <+> go startPrec val) <+> line
               <+> in_ <++> (group $ align $ hang 2 $ continuation)
@@ -270,16 +288,16 @@ mutual
       go d (PUnquote _ tm) = parenthesise (d > appPrec) $ "~" <+> parens (go startPrec tm)
       go d (PRunElab _ tm) = parenthesise (d > appPrec) $ pragma "%runElab" <++> go startPrec tm
       go d (PPrimVal _ c) = pretty c
-      go d (PHole _ _ n) = meta (pretty (strCons '?' n))
+      go d (PHole _ _ n) = hole (pretty (strCons '?' n))
       go d (PType _) = pretty "Type"
       go d (PAs _ _ n p) = pretty n <+> "@" <+> go d p
       go d (PDotted _ p) = dot <+> go d p
       go d (PImplicit _) = "_"
       go d (PInfer _) = "?"
-      go d (POp _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> pretty op <++> go startPrec y
-      go d (PPrefixOp _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
-      go d (PSectionL _ op x) = parens (pretty op <++> go startPrec x)
-      go d (PSectionR _ x op) = parens (go startPrec x <++> pretty op)
+      go d (POp _ _ op x y) = parenthesise (d > appPrec) $ group $ go startPrec x <++> prettyOp op <++> go startPrec y
+      go d (PPrefixOp _ _ op x) = parenthesise (d > appPrec) $ pretty op <+> go startPrec x
+      go d (PSectionL _ _ op x) = parens (prettyOp op <++> go startPrec x)
+      go d (PSectionR _ _ x op) = parens (go startPrec x <++> prettyOp op)
       go d (PEq fc l r) = parenthesise (d > appPrec) $ go startPrec l <++> equals <++> go startPrec r
       go d (PBracketed _ tm) = parens (go startPrec tm)
       go d (PString _ xs) = parenthesise (d > appPrec) $ hsep $ punctuate "++" (prettyString <$> xs)
@@ -287,10 +305,12 @@ mutual
       go d (PDoBlock _ ns ds) = parenthesise (d > appPrec) $ group $ align $ hang 2 $ do_ <++> (vsep $ punctuate semi (prettyDo <$> ds))
       go d (PBang _ tm) = "!" <+> go d tm
       go d (PIdiom _ tm) = enclose (pretty "[|") (pretty "|]") (go startPrec tm)
-      go d (PList _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec <$> xs))
+      go d (PList _ _ xs) = brackets (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
+      go d (PSnocList _ _ xs) = brackets {ldelim = "[<"}
+                                   (group $ align $ vsep $ punctuate comma (go startPrec . snd <$> xs))
       go d (PPair _ l r) = group $ parens (go startPrec l <+> comma <+> line <+> go startPrec r)
-      go d (PDPair _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
-      go d (PDPair _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)
+      go d (PDPair _ _ l (PImplicit _) r) = group $ parens (go startPrec l <++> pretty "**" <+> line <+> go startPrec r)
+      go d (PDPair _ _ l ty r) = group $ parens (go startPrec l <++> colon <++> go startPrec ty <++> pretty "**" <+> line <+> go startPrec r)
       go d (PUnit _) = "()"
       go d (PIfThenElse _ x t e) =
         parenthesise (d > appPrec) $ group $ align $ hang 2 $ vsep

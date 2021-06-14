@@ -10,6 +10,8 @@
 #include "mathFunctions.h"
 #include "runtime.h"
 #include "stringOps.h"
+#include "buffer.h"
+#include "clock.h"
 #include "casts.h"
 #include "conCaseHelper.h"
 #include "prim.h"

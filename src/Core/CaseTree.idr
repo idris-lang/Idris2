@@ -2,10 +2,10 @@ module Core.CaseTree
 
 import Core.TT
 
-import Libraries.Data.Bool.Extra
+import Data.Bool
 import Data.List
-import Libraries.Data.NameMap
 
+import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -45,6 +45,37 @@ mutual
        ||| Catch-all case
        DefaultCase : CaseTree vars -> CaseAlt vars
 
+export
+isDefault : CaseAlt vars -> Bool
+isDefault (DefaultCase _) = True
+isDefault _ = False
+
+mutual
+  export
+  StripNamespace (CaseTree vars) where
+    trimNS ns (Case idx p scTy xs)
+        = Case idx p (trimNS ns scTy) (map (trimNS ns) xs)
+    trimNS ns (STerm x t) = STerm x (trimNS ns t)
+    trimNS ns c = c
+
+    restoreNS ns (Case idx p scTy xs)
+        = Case idx p (restoreNS ns scTy) (map (restoreNS ns) xs)
+    restoreNS ns (STerm x t) = STerm x (restoreNS ns t)
+    restoreNS ns c = c
+
+  export
+  StripNamespace (CaseAlt vars) where
+    trimNS ns (ConCase x tag args t) = ConCase x tag args (trimNS ns t)
+    trimNS ns (DelayCase ty arg t) = DelayCase ty arg (trimNS ns t)
+    trimNS ns (ConstCase x t) = ConstCase x (trimNS ns t)
+    trimNS ns (DefaultCase t) = DefaultCase (trimNS ns t)
+
+    restoreNS ns (ConCase x tag args t) = ConCase x tag args (restoreNS ns t)
+    restoreNS ns (DelayCase ty arg t) = DelayCase ty arg (restoreNS ns t)
+    restoreNS ns (ConstCase x t) = ConstCase x (restoreNS ns t)
+    restoreNS ns (DefaultCase t) = DefaultCase (restoreNS ns t)
+
+
 public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
@@ -63,27 +94,38 @@ isPConst : Pat -> Maybe Constant
 isPConst (PConst _ c) = Just c
 isPConst _ = Nothing
 
-mutual
-  export
-  {vars : _} -> Show (CaseTree vars) where
-    show (Case {name} idx prf ty alts)
-        = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of\n { " ++
-                showSep "\n | " (assert_total (map show alts)) ++ "\n }"
-    show (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
-    show (Unmatched msg) = "Error: " ++ show msg
-    show Impossible = "Impossible"
+showCT : {vars : _} -> (indent : String) -> CaseTree vars -> String
+showCA : {vars : _} -> (indent : String) -> CaseAlt vars  -> String
 
-  export
-  {vars : _} -> Show (CaseAlt vars) where
-    show (ConCase n tag args sc)
+showCT indent (Case {name} idx prf ty alts)
+  = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
+  ++ "\n" ++ indent ++ " { "
+  ++ showSep ("\n" ++ indent ++ " | ")
+             (assert_total (map (showCA ("  " ++ indent)) alts))
+  ++ "\n" ++ indent ++ " }"
+showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
+showCT indent (Unmatched msg) = "Error: " ++ show msg
+showCT indent Impossible = "Impossible"
+
+showCA indent (ConCase n tag args sc)
         = showSep " " (map show (n :: args)) ++ " => " ++
-          show sc
-    show (DelayCase _ arg sc)
-        = "Delay " ++ show arg ++ " => " ++ show sc
-    show (ConstCase c sc)
-        = "Constant " ++ show c ++ " => " ++ show sc
-    show (DefaultCase sc)
-        = "_ => " ++ show sc
+          showCT indent sc
+showCA indent (DelayCase _ arg sc)
+        = "Delay " ++ show arg ++ " => " ++ showCT indent sc
+showCA indent (ConstCase c sc)
+        = "Constant " ++ show c ++ " => " ++ showCT indent sc
+showCA indent (DefaultCase sc)
+        = "_ => " ++ showCT indent sc
+
+export
+{vars : _} -> Show (CaseTree vars) where
+  show = showCT ""
+
+export
+{vars : _} -> Show (CaseAlt vars) where
+  show = showCA ""
+
+
 
 mutual
   export
@@ -117,7 +159,7 @@ mutual
   eqTree (Case i _ _ alts) (Case i' _ _ alts')
       = i == i'
        && length alts == length alts'
-       && allTrue (zipWith eqAlt alts alts')
+       && all (uncurry eqAlt) (zip alts alts')
   eqTree (STerm _ t) (STerm _ t') = eqTerm t t'
   eqTree (Unmatched _) (Unmatched _) = True
   eqTree Impossible Impossible = True

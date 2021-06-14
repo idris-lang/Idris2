@@ -1,6 +1,6 @@
 module Libraries.Data.List1
 
-import public Data.List1
+import Data.List1
 
 %default total
 

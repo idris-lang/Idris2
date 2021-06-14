@@ -1,11 +1,13 @@
 package base
 version = 0.3.0
 
-opts = "--ignore-missing-ipkg"
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.App,
           Control.App.Console,
           Control.App.FileIO,
+
+          Control.Applicative.Const,
 
           Control.Monad.Either,
           Control.Monad.Error.Either,
@@ -35,6 +37,7 @@ modules = Control.App,
           Data.Buffer,
           Data.Colist,
           Data.Colist1,
+          Data.Contravariant,
           Data.DPair,
           Data.Either,
           Data.Fin,
@@ -45,6 +48,7 @@ modules = Control.App,
           Data.IOArray.Prims,
           Data.IORef,
           Data.List,
+          Data.SnocList,
           Data.List.Elem,
           Data.List.Views,
           Data.List.Quantifiers,
@@ -79,10 +83,11 @@ modules = Control.App,
           Language.Reflection.TTImp,
 
           System,
-          System.Concurrency,
           System.Clock,
+          System.Concurrency,
           System.Directory,
-          System.File,
           System.FFI,
+          System.File,
           System.Info,
-          System.REPL
+          System.REPL,
+          System.Signal

@@ -11,6 +11,7 @@ import Core.Value
 import Control.Monad.State
 
 import Libraries.Data.NameMap
+import Libraries.Data.SortedMap
 import Data.List
 
 %default covering
@@ -438,27 +439,41 @@ initArgs (S k)
          args' <- initArgs k
          pure (Just (arg, Same) :: args')
 
+data Explored : Type where
+
+-- Cached results of exploring the size change graph, so that if we visit a
+-- node again, we don't have to re-explore the whole thing
+SizeChanges : Type
+SizeChanges = SortedMap (Name, List (Maybe Arg)) Terminating
+
 -- Traverse the size change graph. When we reach a point we've seen before,
 -- at least one of the arguments must have got smaller, otherwise it's
 -- potentially non-terminating
 checkSC : {auto a : Ref APos Arg} ->
           {auto c : Ref Ctxt Defs} ->
+          {auto e : Ref Explored SizeChanges} ->
           Defs ->
           Name -> -- function we're checking
           List (Maybe (Arg, SizeChange)) -> -- functions arguments and change
           List (Name, List (Maybe Arg)) -> -- calls we've seen so far
           Core Terminating
 checkSC defs f args path
-   = do log "totality.termination.sizechange" 7 $ "Checking Size Change Graph: " ++ show !(toFullNames f)
+   = do exp <- get Explored
+        log "totality.termination.sizechange" 7 $ "Checking Size Change Graph: " ++ show !(toFullNames f)
         let pos = (f, map (map Builtin.fst) args)
-        if pos `elem` path
-           then do log "totality.termination.sizechange.inPath" 8 $ "Checking arguments: " ++ show !(toFullNames f)
-                   toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
-           else case !(lookupCtxtExact f (gamma defs)) of
-                     Nothing => do log "totality.termination.sizechange.isTerminating" 8 $ "Size Change Graph is Terminating for: " ++ show !(toFullNames f)
-                                   pure IsTerminating
-                     Just def => do log "totality.termination.sizechange.needsChecking" 8 $ "Size Change Graph needs traversing: " ++ show !(toFullNames f)
-                                    continue (sizeChange def) (pos :: path)
+        case lookup pos exp of
+             Just done => pure done -- already explored this bit of tree
+             Nothing =>
+                if pos `elem` path
+                   then do log "totality.termination.sizechange.inPath" 8 $ "Checking arguments: " ++ show !(toFullNames f)
+                           res <- toFullNames $ checkDesc (mapMaybe (map Builtin.snd) args) path
+                           put Explored (insert pos res exp)
+                           pure res
+                   else case !(lookupCtxtExact f (gamma defs)) of
+                             Nothing => do log "totality.termination.sizechange.isTerminating" 8 $ "Size Change Graph is Terminating for: " ++ show !(toFullNames f)
+                                           pure IsTerminating
+                             Just def => do log "totality.termination.sizechange.needsChecking" 8 $ "Size Change Graph needs traversing: " ++ show !(toFullNames f)
+                                            continue (sizeChange def) (pos :: path)
   where
     -- Look for something descending in the list of size changes
     checkDesc : List SizeChange -> List (Name, List (Maybe Arg)) -> Terminating
@@ -488,14 +503,14 @@ checkSC defs f args path
 
     checkCall : List (Name, List (Maybe Arg)) -> SCCall -> Core Terminating
     checkCall path sc
-        = do let inpath = fnCall sc `elem` map fst path
-             Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
+        = do Just gdef <- lookupCtxtExact (fnCall sc) (gamma defs)
                   | Nothing => pure IsTerminating -- nothing to check
              let Unchecked = isTerminating (totality gdef)
                   | IsTerminating => pure IsTerminating
                   | _ => pure (NotTerminating (BadCall [fnCall sc]))
              log "totality.termination.sizechange.checkCall" 8 $ "CheckCall Size Change Graph: " ++ show !(toFullNames (fnCall sc))
              term <- checkSC defs (fnCall sc) (mkArgs (fnArgs sc)) path
+             let inpath = fnCall sc `elem` map fst path
              if not inpath
                 then case term of
                        NotTerminating (RecPath _) =>
@@ -505,7 +520,9 @@ checkSC defs f args path
                           -- function was the top level thing we were checking)
                           do log "totality.termination.sizechange.checkCall.inPathNot.restart" 9 $ "ReChecking Size Change Graph: " ++ show !(toFullNames (fnCall sc))
                              args' <- initArgs (length (fnArgs sc))
-                             checkSC defs (fnCall sc) args' path
+                             t <- checkSC defs (fnCall sc) args' path
+                             setTerminating emptyFC (fnCall sc) t
+                             pure t
                        t => do log "totality.termination.sizechange.checkCall.inPathNot.return" 9 $ "Have result: " ++ show !(toFullNames (fnCall sc))
                                pure t
                 else do log "totality.termination.sizechange.checkCall.inPath" 9 $ "Have Result: " ++ show !(toFullNames (fnCall sc))
@@ -535,6 +552,7 @@ calcTerminating loc n
                         do let ty = type def
                            a <- newRef APos firstArg
                            args <- initArgs !(getArity defs [] ty)
+                           e <- newRef Explored empty
                            checkSC defs n args []
                      bad => pure bad
   where

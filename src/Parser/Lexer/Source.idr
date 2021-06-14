@@ -219,7 +219,7 @@ symbols = [",", ";", "_", "`"]
 export
 groupSymbols : List String
 groupSymbols = [".(", -- for things such as Foo.Bar.(+)
-    "@{", "[|", "(", "{", "[", "`(", "`{{", "`["]
+    "@{", "[|", "(", "{", "[<", "[>", "[", "`(", "`{{", "`["]
 
 export
 groupClose : String -> String
@@ -228,6 +228,8 @@ groupClose "@{" = "}"
 groupClose "[|" = "|]"
 groupClose "(" = ")"
 groupClose "[" = "]"
+groupClose "[<" = "]"
+groupClose "[>" = "]"
 groupClose "{" = "}"
 groupClose "`(" = ")"
 groupClose "`{{" = "}}"
@@ -237,6 +239,15 @@ groupClose _ = ""
 export
 isOpChar : Char -> Bool
 isOpChar c = c `elem` (unpack ":!#$%&*+./<=>?@\\^|-~")
+
+export
+||| Test whether a user name begins with an operator symbol.
+isOpName : Name -> Bool
+isOpName n = fromMaybe False $ do
+   n <- userNameRoot n
+   c <- fst <$> strUncons n
+   guard (isOpChar c)
+   pure True
 
 validSymbol : Lexer
 validSymbol = some (pred isOpChar)
@@ -261,7 +272,7 @@ fromBinLit str
       fromBin : List Integer -> Integer
       fromBin [] = 0
       fromBin (0 :: xs) = 2 * fromBin xs
-      fromBin (1 :: xs) = 1 + (2 * fromBin xs)
+      fromBin (x :: xs) = x + (2 * fromBin xs)
 
 fromHexLit : String -> Integer
 fromHexLit str

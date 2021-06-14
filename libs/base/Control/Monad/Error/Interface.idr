@@ -9,6 +9,8 @@ import Control.Monad.State.State
 import Control.Monad.Trans
 import Control.Monad.Writer.CPS
 
+%default total
+
 ||| The strategy of combining computations that can throw exceptions
 ||| by bypassing bound functions
 ||| from the point an exception is thrown to the point that it is handled.

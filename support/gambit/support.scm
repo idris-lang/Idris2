@@ -14,6 +14,26 @@
       (cons (vector-ref desc 2)
             (blodwen-read-args (vector-ref desc 3)))))
 
+(define blodwen-toSignedInt
+  (lambda (x bits)
+    (if (bit-set? bits x)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
+
+(define blodwen-toUnsignedInt
+  (lambda (x bits)
+    (modulo x (arithmetic-shift 1 bits))))
+
+(define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
+
+(define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define bs/ (lambda (x y bits) (blodwen-toSignedInt (quotient x y) bits)))
+
 (define-macro (b+ x y bits)
   (if (exact-integer? bits)
       `(remainder (+ ,x ,y) ,(arithmetic-shift 1 bits))
@@ -43,14 +63,8 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (bit-set? bits x)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
-
 (define blodwen-bits-shl-signed
-  (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
 
 
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
@@ -67,6 +81,34 @@
     `(let ((,s ,x))
       (if (flonum? ,s) (##flonum->exact-int ,s) (##floor ,s)))))
 
+(define exact-truncate
+  (lambda (x)
+    (inexact->exact (truncate x))))
+
+(define exact-truncate-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (exact-truncate x) y)))
+
+(define exact-truncate-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (exact-truncate x) y)))
+
+(define cast-char-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (char->integer x) y)))
+
+(define cast-char-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (char->integer x) y)))
+
+(define cast-string-boundedInt
+  (lambda (x y)
+    (blodwen-toSignedInt (cast-string-int x) y)))
+
+(define cast-string-boundedUInt
+  (lambda (x y)
+    (blodwen-toUnsignedInt (cast-string-int x) y)))
+
 ;; TODO Convert to macro
 (define (cast-string-double x)
   (define (cast-num x)
@@ -76,7 +118,7 @@
   (cast-num (string->number (destroy-prefix x))))
 
 (define-macro (cast-string-int x)
-  `(exact-floor (cast-string-double ,x)))
+  `(exact-truncate (cast-string-double ,x)))
 
 (define (from-idris-list xs)
   (if (= (vector-ref xs 0) 0)

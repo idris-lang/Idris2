@@ -109,3 +109,16 @@ export
 notFalseIsTrue : {1 x : Bool} -> Not (x = False) -> x = True
 notFalseIsTrue {x=True} _  = Refl
 notFalseIsTrue {x=False} f = absurd $ f Refl
+
+--------------------------------------------------------------------------------
+-- Decidability specialized on bool
+--------------------------------------------------------------------------------
+
+||| You can reverse decidability when bool is involved.
+-- Given a contra on bool equality (a = b) -> Void, produce a proof of the opposite (that (not a) = b)
+public export
+invertContraBool : (a : Bool) -> (b : Bool) -> (a = b -> Void) -> (not a = b)
+invertContraBool False False contra = absurd $ contra Refl
+invertContraBool False True contra = Refl
+invertContraBool True False contra = Refl
+invertContraBool True True contra = absurd $ contra Refl

@@ -133,7 +133,8 @@ getInput f
                    pure (pack inp)
 
 ||| Do nothing and tell the user to wait for us to implmement this (or join the effort!)
-todoCmd : {auto o : Ref ROpts REPLOpts} ->
+todoCmd : {auto c : Ref Ctxt Defs} ->
+          {auto o : Ref ROpts REPLOpts} ->
           String -> Core ()
 todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented. Hopefully soon!"
 
@@ -260,24 +261,24 @@ processCatch cmd
                            msg <- perror err
                            pure $ REPL $ REPLError msg)
 
-idePutStrLn : File -> Integer -> String -> Core ()
+idePutStrLn : {auto c : Ref Ctxt Defs} -> File -> Integer -> String -> Core ()
 idePutStrLn outf i msg
     = send outf (SExpList [SymbolAtom "write-string",
                 toSExp msg, toSExp i])
 
-returnFromIDE : File -> Integer -> SExp -> Core ()
+returnFromIDE : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 returnFromIDE outf i msg
     = do send outf (SExpList [SymbolAtom "return", msg, toSExp i])
 
-printIDEResult : File -> Integer -> SExp -> Core ()
+printIDEResult : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 printIDEResult outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg])
 
-printIDEResultWithHighlight : File -> Integer -> SExp -> Core ()
+printIDEResultWithHighlight : {auto c : Ref Ctxt Defs} -> File -> Integer -> SExp -> Core ()
 printIDEResultWithHighlight outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "ok", toSExp msg
                                                                         -- TODO return syntax highlighted result
                                                                         , SExpList []])
 
-printIDEError : Ref ROpts REPLOpts => File -> Integer -> Doc IdrisAnn -> Core ()
+printIDEError : Ref ROpts REPLOpts => {auto c : Ref Ctxt Defs} -> File -> Integer -> Doc IdrisAnn -> Core ()
 printIDEError outf i msg = returnFromIDE outf i (SExpList [SymbolAtom "error", toSExp !(renderWithoutColor msg) ])
 
 SExpable REPLEval where
@@ -292,6 +293,7 @@ SExpable REPLOpt where
   toSExp (EvalMode mod) = SExpList [ SymbolAtom "eval", toSExp mod ]
   toSExp (Editor editor) = SExpList [ SymbolAtom "editor", toSExp editor ]
   toSExp (CG str) = SExpList [ SymbolAtom "cg", toSExp str ]
+  toSExp (Profile p) = SExpList [ SymbolAtom "profile", toSExp p ]
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
@@ -395,10 +397,18 @@ displayIDEResult outf i (REPL $ ConsoleWidthSet mn)
 displayIDEResult outf i (NameLocList dat)
   = printIDEResult outf i $ SExpList !(traverse (constructSExp . map toNonEmptyFC) dat)
   where
+    -- Can't recover the full path to the file, because
+    -- the name may come from an out-of-project location whereas we only store
+    -- module identifiers (source location is lost).
+    sexpOriginDesc : OriginDesc -> String
+    sexpOriginDesc (PhysicalIdrSrc mod) = show mod
+    sexpOriginDesc (PhysicalPkgSrc fname) = fname
+    sexpOriginDesc (Virtual Interactive) = "(Interactive)"
+
     constructSExp : (Name, NonEmptyFC) -> Core SExp
-    constructSExp (name, fname, (startLine, startCol), (endLine, endCol)) = pure $
+    constructSExp (name, origin, (startLine, startCol), (endLine, endCol)) = pure $
         SExpList [ StringAtom !(render $ pretty name)
-                 , StringAtom fname
+                 , StringAtom (sexpOriginDesc origin)
                  , IntegerAtom $ cast $ startLine
                  , IntegerAtom $ cast $ startCol
                  , IntegerAtom $ cast $ endLine

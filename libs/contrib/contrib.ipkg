@@ -1,7 +1,7 @@
 package contrib
 version = 0.3.0
 
-opts = "--ignore-missing-ipkg"
+opts = "--ignore-missing-ipkg -Wno-shadowing"
 
 modules = Control.ANSI,
           Control.ANSI.SGR,
@@ -113,7 +113,13 @@ modules = Control.ANSI,
           Data.Validated,
 
           Data.Vect.Binary,
-
+          Data.Vect.Properties,
+          Data.Vect.Properties.Tabulate,
+          Data.Vect.Properties.Index,
+          Data.Vect.Properties.Foldr,
+          Data.Vect.Properties.Map,
+          Data.Vect.Properties.Fin,
+          Data.Vect.Extra,
           Data.Vect.Sort,
 
           Data.Void,
@@ -161,5 +167,6 @@ modules = Control.ANSI,
           Text.PrettyPrint.Prettyprinter.Symbols,
           Text.PrettyPrint.Prettyprinter.Util,
           Text.PrettyPrint.Prettyprinter.SimpleDocTree,
+          Text.PrettyPrint.Prettyprinter.Render.HTML,
           Text.PrettyPrint.Prettyprinter.Render.String,
           Text.PrettyPrint.Prettyprinter.Render.Terminal

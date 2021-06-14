@@ -15,17 +15,18 @@ import Idris.Desugar
 import Idris.Error
 import Idris.Parser
 import Idris.ProcessIdr
-import Idris.REPLCommon
+import Idris.REPL.Common
 import Idris.Syntax
 import Idris.Pretty
 
 import Data.List
-import Libraries.Data.StringMap
+import Data.Either
 
 import System.Directory
 import System.File
 
-import Libraries.Utils.Either
+import Libraries.Data.StringMap
+import Libraries.Data.String.Extra as String
 
 %default covering
 
@@ -78,7 +79,7 @@ mkModTree loc done modFP mod
                     case lookup mod all of
                          Nothing =>
                            do file <- maybe (nsToSource loc mod) pure modFP
-                              modInfo <- readHeader file
+                              modInfo <- readHeader file mod
                               let imps = map path (imports modInfo)
                               ms <- traverse (mkModTree loc (mod :: done) Nothing) imps
                               let mt = MkModTree mod (Just file) ms
@@ -122,6 +123,7 @@ mkBuildMods mod
 -- Given a main file name, return the list of modules that need to be
 -- built for that main file, in the order they need to be built
 -- Return an empty list if it turns out it's in the 'done' list
+export
 getBuildMods : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                FC -> (done : List BuildMod) ->
@@ -129,8 +131,7 @@ getBuildMods : {auto c : Ref Ctxt Defs} ->
                Core (List BuildMod)
 getBuildMods loc done fname
     = do a <- newRef AllMods []
-         d <- getDirs
-         fname_ns <- pathToNS (working_dir d) (source_dir d) fname
+         fname_ns <- ctxtPathToNS fname
          if fname_ns `elem` map buildNS done
             then pure []
             else
@@ -162,39 +163,44 @@ buildMod loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
         let src = buildFile mod
+        let ident = buildNS mod
         mttc <- getTTCFileName src "ttc"
         -- We'd expect any errors in nsToPath to have been caught by now
         -- since the imports have been built! But we still have to check.
         depFilesE <- traverse (nsToPath loc) (imports mod)
         let (ferrs, depFiles) = partitionEithers depFilesE
-        ttcTime <- catch (do t <- fnameModified mttc
-                             pure (Just t))
-                         (\err => pure Nothing)
+
+        ttcTime <- breakpoint (fnameModified mttc)
         srcTime <- fnameModified src
         depTimes <- traverse (\f => do t <- fnameModified f
                                        pure (f, t)) depFiles
         let needsBuilding =
                case ttcTime of
-                    Nothing => True
-                    Just t => any (\x => x > t) (srcTime :: map snd depTimes)
+                    Left _ => True
+                    Right t => any (\x => x > t) (srcTime :: map snd depTimes)
         u <- newRef UST initUState
-        m <- newRef MD initMetadata
+        m <- newRef MD (initMetadata (PhysicalIdrSrc ident))
         put Syn initSyntax
 
-        if needsBuilding
-           then do let msg : Doc IdrisAnn = pretty num <+> slash <+> pretty len <+> colon
-                               <++> pretty "Building" <++> pretty mod.buildNS <++> parens (pretty src)
-                   [] <- process {u} {m} msg src
-                      | errs => do emitWarnings
-                                   traverse_ emitError errs
-                                   pure (ferrs ++ errs)
-                   emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
-           else do emitWarnings
-                   traverse_ emitError ferrs
-                   pure ferrs
+        errs <- if (not needsBuilding) then pure [] else
+           do let pad = minus (length $ show len) (length $ show num)
+              let msg : Doc IdrisAnn
+                  = pretty num <+> pretty (String.replicate pad ' ')
+                    <+> slash <+> pretty len <+> colon
+                    <++> pretty "Building" <++> pretty mod.buildNS
+                    <++> parens (pretty src)
+              process {u} {m} msg src ident
 
+        defs <- get Ctxt
+        ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
+        pure (ws ++ if null errs then ferrs else ferrs ++ errs)
+  where
+    isModuleNotFound : Error -> Bool
+    isModuleNotFound e = case e of
+      (ModuleNotFound _ _) => True
+      _ => False
+
+export
 buildMods : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -215,12 +221,13 @@ buildDeps : {auto c : Ref Ctxt Defs} ->
             (mainFile : String) ->
             Core (List Error)
 buildDeps fname
-    = do mods <- getBuildMods toplevelFC [] fname
-         ok <- buildMods toplevelFC 1 (length mods) mods
+    = do mods <- getBuildMods EmptyFC [] fname
+         ok <- buildMods EmptyFC 1 (length mods) mods
          case ok of
               [] => do -- On success, reload the main ttc in a clean context
                        clearCtxt; addPrimitives
-                       put MD initMetadata
+                       modIdent <- ctxtPathToNS fname
+                       put MD (initMetadata (PhysicalIdrSrc modIdent))
                        mainttc <- getTTCFileName fname "ttc"
                        log "import" 10 $ "Reloading " ++ show mainttc ++ " from " ++ fname
                        readAsMain mainttc
@@ -250,10 +257,10 @@ buildAll : {auto c : Ref Ctxt Defs} ->
            (allFiles : List String) ->
            Core (List Error)
 buildAll allFiles
-    = do mods <- getAllBuildMods toplevelFC [] allFiles
+    = do mods <- getAllBuildMods EmptyFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
-         buildMods toplevelFC 1 (length mods') mods'
+         buildMods EmptyFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod
     dropLater [] = []

@@ -1,0 +1,7 @@
+1/1: Building Snoc (Snoc.idr)
+Main> True
+Main> True
+Main> "[< ]"
+Main> "[< 1, 2, 3]"
+Main> "[< 1, 2, 3]"
+Main> Bye for now!

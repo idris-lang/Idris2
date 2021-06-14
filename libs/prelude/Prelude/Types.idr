@@ -33,6 +33,7 @@ prim__integerToNat i
 
 public export
 integerToNat : Integer -> Nat
+integerToNat 0 = Z -- Force evaluation and hencing caching of x at compile time
 integerToNat x
   = if intToBool (prim__lte_Integer x 0)
        then Z
@@ -91,7 +92,7 @@ natToInteger (S k) = 1 + natToInteger k
 ||| Counts the number of elements that satify a predicate.
 public export
 count : (Foldable t) => (predicate : a -> Bool) -> (t a) -> Nat
-count predicate = foldr (\v => if predicate v then S else id) Z
+count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)
 
 -----------
 -- PAIRS --
@@ -157,6 +158,12 @@ maybe : Lazy b -> Lazy (a -> b) -> Maybe a -> b
 maybe n j Nothing  = n
 maybe n j (Just x) = j x
 
+||| Execute an applicative expression when the Maybe is Just
+%inline public export
+whenJust : Applicative f => Maybe a -> (a -> f ()) -> f ()
+whenJust (Just a) k = k a
+whenJust Nothing k = pure ()
+
 public export
 Eq a => Eq (Maybe a) where
   Nothing  == Nothing  = True
@@ -190,7 +197,7 @@ Applicative Maybe where
   pure = Just
 
   Just f <*> Just a = Just (f a)
-  _      <*> _        = Nothing
+  _      <*> _      = Nothing
 
 public export
 Alternative Maybe where
@@ -214,7 +221,7 @@ Foldable Maybe where
 public export
 Traversable Maybe where
   traverse f Nothing = pure Nothing
-  traverse f (Just x) = (pure Just) <*> (f x)
+  traverse f (Just x) = Just <$> f x
 
 ---------
 -- DEC --
@@ -331,17 +338,6 @@ Traversable (Either e) where
 -- LISTS --
 -----------
 
-||| Generic lists.
-public export
-data List a =
-  ||| Empty list
-  Nil
-
-  | ||| A non-empty list, consisting of a head element and the rest of the list.
-  (::) a (List a)
-
-%name List xs, ys, zs
-
 public export
 Eq a => Eq (List a) where
   [] == [] = True
@@ -393,6 +389,10 @@ Foldable List where
   null [] = True
   null (_::_) = False
 
+  toList = id
+
+  foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
+
 public export
 Applicative List where
   pure x = [x]
@@ -410,7 +410,21 @@ Monad List where
 public export
 Traversable List where
   traverse f [] = pure []
-  traverse f (x::xs) = pure (::) <*> (f x) <*> (traverse f xs)
+  traverse f (x::xs) = [| f x :: traverse f xs |]
+
+-- This works quickly because when string-concat builds the result, it allocates
+-- enough room in advance so there's only one allocation, rather than lots!
+--
+-- Like fastUnpack, this function won't reduce at compile time.
+-- If you need to concatenate strings at compile time, use Prelude.concat.
+%foreign
+  "scheme:string-concat"
+  "RefC:fastConcat"
+  "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
+export
+fastConcat : List String -> String
+
+%transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
 ||| Check if something is a member of a list using the default Boolean equality.
 public export
@@ -533,9 +547,13 @@ pack (x :: xs) = strCons x (pack xs)
 
 %foreign
     "scheme:string-pack"
+    "RefC:fastPack"
     "javascript:lambda:(xs)=>''.concat(...__prim_idris2js_array(xs))"
 export
 fastPack : List Char -> String
+
+-- always use 'fastPack' at run time
+%transform "fastPack" pack = fastPack
 
 ||| Turns a string into a list of characters.
 |||
@@ -551,6 +569,18 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
         = if pos < 0
              then acc
              else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+
+-- This function runs fast when compiled but won't compute at compile time.
+-- If you need to unpack strings at compile time, use Prelude.unpack.
+%foreign
+  "scheme:string-unpack"
+  "RefC:fastUnpack"
+  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
+export
+fastUnpack : String -> List Char
+
+-- always use 'fastPack' at run time
+%transform "fastUnpack" unpack = fastUnpack
 
 public export
 Semigroup String where
@@ -754,6 +784,7 @@ takeBefore p (x :: xs)
 
 public export
 interface Range a where
+  constructor MkRange
   rangeFromTo : a -> a -> List a
   rangeFromThenTo : a -> a -> a -> List a
 

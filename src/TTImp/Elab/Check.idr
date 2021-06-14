@@ -135,6 +135,10 @@ record EState (vars : List Name) where
   allPatVars : List Name
                   -- Holes standing for pattern variables, which we'll delete
                   -- once we're done elaborating
+  polyMetavars : List (FC, Env Term vars, Term vars, Term vars)
+                  -- Metavars which need to be a polymorphic type at the end
+                  -- of elaboration. If they aren't, it means we're trying to
+                  -- pattern match on a type that we don't have available.
   delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
   linearUsed : List (Var vars)
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
@@ -159,6 +163,7 @@ initEStateSub n env sub = MkEState
     , bindIfUnsolved = []
     , lhsPatVars = []
     , allPatVars = []
+    , polyMetavars = []
     , delayDepth = Z
     , linearUsed = []
     , saveHoles = empty
@@ -187,6 +192,7 @@ weakenedEState {e}
                           , boundNames $= map wknTms
                           , toBind $= map wknTms
                           , linearUsed $= map weaken
+                          , polyMetavars = [] -- no binders on LHS
                           } est
          pure eref
   where
@@ -212,17 +218,13 @@ strengthenedEState {n} {vars} c e fc env
                        , boundNames = bns
                        , toBind = todo
                        , linearUsed $= mapMaybe dropTop
+                       , polyMetavars = [] -- no binders on LHS
                        } est
 
   where
     dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
     dropSub (DropCons sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
-
-    -- This helps persuade the erasure checker that it can erase IsVar,
-    -- because there's no matching on it in removeArgVars below.
-    dropLater : IsVar name (S idx) (v :: vs) -> IsVar name idx vs
-    dropLater (Later p) = p
 
     -- Remove any instance of the top level local variable from an
     -- application. Fail if it turns out to be necessary.
@@ -291,6 +293,28 @@ inScope {c} {e} fc env elab
          st' <- strengthenedEState c e' fc env
          put {ref=e} EST st'
          pure res
+
+export
+mustBePoly : {auto e : Ref EST (EState vars)} ->
+             FC -> Env Term vars ->
+             Term vars -> Term vars -> Core ()
+mustBePoly fc env tm ty
+    = do est <- get EST
+         put EST (record { polyMetavars $= ((fc, env, tm, ty) :: ) } est)
+
+-- Return whether we already know the return type of the given function
+-- type. If we know this, we can possibly infer some argument types before
+-- elaborating them, which might help us disambiguate things more easily.
+export
+concrete : Defs -> Env Term vars -> NF vars -> Core Bool
+concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
+    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc False))
+         concrete defs env sc'
+concrete defs env (NDCon _ _ _ _ _) = pure True
+concrete defs env (NTCon _ _ _ _ _) = pure True
+concrete defs env (NPrimVal _ _) = pure True
+concrete defs env (NType _) = pure True
+concrete defs env _ = pure False
 
 export
 updateEnv : {new : _} ->
@@ -515,7 +539,7 @@ successful : {vars : _} ->
              Bool -> -- constraints allowed
              List (Maybe Name, Core a) ->
              Core (List (Either (Maybe Name, Error)
-                                (Nat, a, Defs, UState, EState vars)))
+                                (Nat, a, Defs, UState, EState vars, Metadata)))
 successful allowCons [] = pure []
 successful allowCons ((tm, elab) :: elabs)
     = do ust <- get UST
@@ -555,7 +579,7 @@ successful allowCons ((tm, elab) :: elabs)
                    elabs' <- successful allowCons elabs
                    -- Record success, and the state we ended at
                    pure (Right (minus ncons' ncons,
-                                res, defs', ust', est') :: elabs'))
+                                res, defs', ust', est', md') :: elabs'))
                (\err => do put UST ust
                            put EST est
                            put MD md
@@ -576,9 +600,10 @@ exactlyOne' allowCons fc env [(tm, elab)] = elab
 exactlyOne' {vars} allowCons fc env all
     = do elabs <- successful allowCons all
          case getRight elabs of
-              Right (res, defs, ust, est) =>
+              Right (res, defs, ust, est, md) =>
                     do put UST ust
                        put EST est
+                       put MD  md
                        put Ctxt defs
                        commit
                        pure res
@@ -736,15 +761,15 @@ convert = convertWithLazy False
 -- This may generate new constraints; if so, the term returned is a constant
 -- guarded by the constraints which need to be solved.
 export
-checkExpP : {vars : _} ->
-            {auto c : Ref Ctxt Defs} ->
-            {auto u : Ref UST UState} ->
-            {auto e : Ref EST (EState vars)} ->
-            RigCount -> ElabInfo -> Env Term vars -> FC ->
-            (term : Term vars) ->
-            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
-            Core (Term vars, Glued vars)
-checkExpP rig elabinfo env fc tm got (Just exp)
+checkExp : {vars : _} ->
+           {auto c : Ref Ctxt Defs} ->
+           {auto u : Ref UST UState} ->
+           {auto e : Ref EST (EState vars)} ->
+           RigCount -> ElabInfo -> Env Term vars -> FC ->
+           (term : Term vars) ->
+           (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
+           Core (Term vars, Glued vars)
+checkExp rig elabinfo env fc tm got (Just exp)
     = do vs <- convertWithLazy True fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
@@ -768,15 +793,4 @@ checkExpP rig elabinfo env fc tm got (Just exp)
                             AddForce r => pure (TForce fc r tm, exp)
                             AddDelay r => do ty <- getTerm got
                                              pure (TDelay fc r ty tm, exp)
-checkExpP rig elabinfo env fc tm got Nothing = pure (tm, got)
-
-export
-checkExp : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
-           {auto u : Ref UST UState} ->
-           {auto e : Ref EST (EState vars)} ->
-           RigCount -> ElabInfo -> Env Term vars -> FC ->
-           (term : Term vars) ->
-           (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
-           Core (Term vars, Glued vars)
-checkExp rig elabinfo = checkExpP rig elabinfo
+checkExp rig elabinfo env fc tm got Nothing = pure (tm, got)

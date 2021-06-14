@@ -3,6 +3,8 @@ module Data.Ref
 import public Data.IORef
 import public Control.Monad.ST
 
+%default total
+
 public export
 interface Ref m r | m where
   newRef : {0 a : Type} -> a -> m (r a)

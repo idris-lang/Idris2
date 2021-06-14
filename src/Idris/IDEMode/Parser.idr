@@ -5,6 +5,9 @@ module Idris.IDEMode.Parser
 
 import Idris.IDEMode.Commands
 import Core.Core
+import Core.Name
+import Core.Metadata
+import Core.FC
 
 import Data.Maybe
 import Data.List
@@ -15,7 +18,6 @@ import Parser.Support
 import Libraries.Text.Lexer
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
-import Libraries.Utils.Either
 import Libraries.Utils.String
 
 %default total
@@ -76,15 +78,15 @@ sexp
          pure (SExpList xs)
 
 ideParser : {e : _} ->
-            (fname : String) -> String -> Grammar Token e ty -> Either Error ty
-ideParser fname str p
-    = do toks   <- mapError (fromLexError fname) $ idelex str
-         parsed <- mapError (fromParsingError fname) $ parse p toks
-         Right (fst parsed)
+            String -> Grammar SemanticDecorations Token e ty -> Either Error ty
+ideParser str p
+    = do toks   <- mapFst (fromLexError (Virtual Interactive)) $ idelex str
+         (decor, (parsed, _)) <- mapFst (fromParsingError (Virtual Interactive)) $ parseWith p toks
+         Right parsed
 
 
 export
 covering
 parseSExp : String -> Either Error SExp
 parseSExp inp
-    = ideParser "(interactive)" inp (do c <- sexp; eoi; pure c)
+    = ideParser inp (do c <- sexp; eoi; pure c)

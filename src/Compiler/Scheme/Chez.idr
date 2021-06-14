@@ -30,6 +30,7 @@ import System.Info
 
 %default covering
 
+export
 findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
@@ -43,6 +44,7 @@ findChez
 --     of the library paths managed by Idris
 -- If it can't be found, we'll assume it's a system library and that chez
 -- will thus be able to find it.
+export
 findLibs : {auto c : Ref Ctxt Defs} ->
            List String -> Core (List (String, String))
 findLibs ds
@@ -55,7 +57,7 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-
+export
 escapeString : String -> String
 escapeString s = pack $ foldr escape [] $ unpack s
   where
@@ -70,6 +72,7 @@ schHeader chez libs
     "; @generated\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
+    "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
     "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]\n" ++
     "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]\n" ++
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
@@ -78,8 +81,12 @@ schHeader chez libs
     showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
-schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers))\n"
+schFooter : Bool -> String
+schFooter prof
+    = "(collect 4)\n(blodwen-run-finalisers)\n" ++
+      if prof
+         then "(profile-dump-html))\n"
+         else ")\n"
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -93,6 +100,7 @@ showChezString [] = id
 showChezString ('"'::cs) = ("\\\"" ++) . showChezString cs
 showChezString (c ::cs) = (showChezChar c) . showChezString cs
 
+export
 chezString : String -> String
 chezString cs = strCons '"' (showChezString (unpack cs) "\"")
 
@@ -100,16 +108,16 @@ mutual
   tySpec : NamedCExp -> Core String
   -- Primitive types have been converted to names for the purpose of matching
   -- on types
-  tySpec (NmCon fc (UN "Int") _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ []) = pure "string"
-  tySpec (NmCon fc (UN "Double") _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ [_])
+  tySpec (NmCon fc (UN "Int") _ _ []) = pure "int"
+  tySpec (NmCon fc (UN "String") _ _ []) = pure "string"
+  tySpec (NmCon fc (UN "Double") _ _ []) = pure "double"
+  tySpec (NmCon fc (UN "Char") _ _ []) = pure "char"
+  tySpec (NmCon fc (NS _ n) _ _ [_])
      = cond [(n == UN "Ptr", pure "void*"),
              (n == UN "GCPtr", pure "void*"),
              (n == UN "Buffer", pure "u8*")]
           (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ [])
+  tySpec (NmCon fc (NS _ n) _ _ [])
      = cond [(n == UN "Unit", pure "void"),
              (n == UN "AnyPtr", pure "void*"),
              (n == UN "GCAnyPtr", pure "void*")]
@@ -121,10 +129,11 @@ mutual
   handleRet _ op = mkWorld op
 
   getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
   getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
+  export
   chezExtPrim : Int -> ExtPrim -> List NamedCExp -> Core String
   chezExtPrim i GetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _]
@@ -158,14 +167,20 @@ mutual
       = schExtCommon chezExtPrim chezString i prim args
 
 -- Reference label for keeping track of loaded external libraries
+export
 data Loaded : Type where
 
 -- Label for noting which struct types are declared
+export
 data Structs : Type where
 
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "void"
 cftySpec fc CFInt = pure "int"
+cftySpec fc CFInt8 = pure "integer-8"
+cftySpec fc CFInt16 = pure "integer-16"
+cftySpec fc CFInt32 = pure "integer-32"
+cftySpec fc CFInt64 = pure "integer-64"
 cftySpec fc CFUnsigned8 = pure "unsigned-8"
 cftySpec fc CFUnsigned16 = pure "unsigned-16"
 cftySpec fc CFUnsigned32 = pure "unsigned-32"
@@ -268,10 +283,9 @@ schemeCall fc sfn argns ret
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret = throw (NoForeignCC fc)
-useCC appdir fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC appdir fc ccs args ret
+useCC appdir fc ccs args ret
+    = case parseCC ["scheme,chez", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc)
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -280,7 +294,7 @@ useCC appdir fc (cc :: ccs) args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => useCC appdir fc ccs args ret
+           _ => throw (NoForeignCC fc)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -325,35 +339,31 @@ schFgnDef appdir fc n (MkNmForeign cs args ret)
                 body ++ "))\n")
 schFgnDef _ _ _ _ = pure ("", "")
 
+export
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
              String -> (Name, FC, NamedDef) -> Core (String, String)
 getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
-startChez : String -> String -> String
-startChez appdir target = unlines
+export
+startChezPreamble : String
+startChezPreamble = unlines
     [ "#!/bin/sh"
     , ""
     , "set -e # exit on any error"
     , ""
-    , "case $(uname -s) in            "
-    , "    OpenBSD | FreeBSD | NetBSD)"
-    , "        REALPATH=\"grealpath\" "
-    , "        ;;                     "
-    , "                               "
-    , "    *)                         "
-    , "        REALPATH=\"realpath\"  "
-    , "        ;;                     "
-    , "esac                           "
-    , ""
-    , "if ! command -v \"$REALPATH\" >/dev/null; then             "
-    , "    echo \"$REALPATH is required for Chez code generator.\""
-    , "    exit 1                                                 "
-    , "fi                                                         "
-    , ""
-    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , "if [ \"$(uname)\" = Darwin ]; then"
+    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
+    , "else"
+    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
+    , "fi"
+    , ""  -- so that the preamble ends with a newline
+    ]
+
+startChez : String -> String -> String
+startChez appdir target = startChezPreamble ++ unlines
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
@@ -371,7 +381,7 @@ startChezWinSh chez appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
@@ -379,8 +389,8 @@ startChezWinSh chez appdir target = unlines
 
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
-              String -> ClosedTerm -> (outfile : String) -> Core ()
-compileToSS c appdir tm outfile
+              Bool -> String -> ClosedTerm -> (outfile : String) -> Core ()
+compileToSS c prof appdir tm outfile
     = do ds <- getDirectives Chez
          libs <- findLibs ds
          traverse_ copyLib libs
@@ -402,7 +412,7 @@ compileToSS c appdir tm outfile
                    support ++ extraRuntime ++ code ++
                    concat (map fst fgndefs) ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
-                   main ++ schFooter
+                   main ++ schFooter prof
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
@@ -410,10 +420,13 @@ compileToSS c appdir tm outfile
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
-              String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
-compileToSO chez appDirRel outSsAbs
+              Bool -> String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
+compileToSO prof chez appDirRel outSsAbs
     = do let tmpFileAbs = appDirRel </> "compileChez"
-         let build = "(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++
+         let build = "(parameterize ([optimize-level 3] "
+                     ++ (if prof then "[compile-profile #t] "
+                                else "") ++
+                     "[compile-file-message #f]) (compile-program " ++
                     show outSsAbs ++ "))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
@@ -451,8 +464,9 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          let outSsAbs = cwd </> outputDir </> outSsFile
          let outSoAbs = cwd </> outputDir </> outSoFile
          chez <- coreLift $ findChez
-         compileToSS c appDirGen tm outSsAbs
-         logTime "++ Make SO" $ when makeitso $ compileToSO chez appDirGen outSsAbs
+         let prof = profile !getSession
+         compileToSS c (makeitso && prof) appDirGen tm outSsAbs
+         logTime "++ Make SO" $ when makeitso $ compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)

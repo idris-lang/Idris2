@@ -1,0 +1,4 @@
+1/1: Building UninhIndent (UninhIndent.idr)
+UninhIndent>              uninhabited MyHere impossible
+             uninhabited (MyThere later) impossible
+UninhIndent> Bye for now!

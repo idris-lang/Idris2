@@ -8,10 +8,12 @@ modules =
     Algebra.ZeroOneOmega,
 
     Compiler.ANF,
+    Compiler.CaseOpts,
     Compiler.Common,
     Compiler.CompileExpr,
     Compiler.Inline,
     Compiler.LambdaLift,
+    Compiler.Separate,
     Compiler.VMCode,
 
     Compiler.ES.ES,
@@ -26,6 +28,7 @@ modules =
     Compiler.RefC.RefC,
 
     Compiler.Scheme.Chez,
+    Compiler.Scheme.ChezSep,
     Compiler.Scheme.Racket,
     Compiler.Scheme.Gambit,
     Compiler.Scheme.Common,
@@ -67,8 +70,10 @@ modules =
 
     Idris.CommandLine,
     Idris.Desugar,
+    Idris.Desugar.Mutual,
     Idris.Env,
-    Idris.DocString,
+    Idris.Doc.HTML,
+    Idris.Doc.String,
     Idris.Driver,
     Idris.Error,
     Idris.ModTree,
@@ -83,8 +88,6 @@ modules =
     Idris.Pretty.Render,
     Idris.ProcessIdr,
     Idris.REPL,
-    Idris.REPLCommon,
-    Idris.REPLOpts,
     Idris.Resugar,
     Idris.SetOptions,
     Idris.Syntax,
@@ -102,14 +105,18 @@ modules =
     Idris.IDEMode.SyntaxHighlight,
     Idris.IDEMode.TokenLine,
 
+    Idris.REPL.Common,
+    Idris.REPL.Opts,
+    Idris.REPL.FuzzySearch,
+
     Libraries.Control.ANSI,
     Libraries.Control.ANSI.CSI,
     Libraries.Control.ANSI.SGR,
     Libraries.Control.Delayed,
 
     Libraries.Data.ANameMap,
-    Libraries.Data.Bool.Extra,
     Libraries.Data.DList,
+    Libraries.Data.Fin,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.IOMatrix,
@@ -138,6 +145,7 @@ modules =
     Libraries.Text.Parser.Core,
     Libraries.Text.PrettyPrint.Prettyprinter,
     Libraries.Text.PrettyPrint.Prettyprinter.Doc,
+    Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.String,
     Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal,
     Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree,
@@ -147,7 +155,6 @@ modules =
     Libraries.Text.Token,
 
     Libraries.Utils.Binary,
-    Libraries.Utils.Either,
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,
@@ -164,7 +171,6 @@ modules =
     Parser.Lexer.Package,
     Parser.Lexer.Source,
 
-    Parser.Rule.Common,
     Parser.Rule.Package,
     Parser.Rule.Source,
 
@@ -173,6 +179,7 @@ modules =
     TTImp.Impossible,
     TTImp.Parser,
     TTImp.PartialEval,
+    TTImp.ProcessBuiltin,
     TTImp.ProcessData,
     TTImp.ProcessDecls,
     TTImp.ProcessDef,

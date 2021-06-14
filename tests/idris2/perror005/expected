@@ -1,7 +1,7 @@
 1/1: Building PError (PError.idr)
 Error: Expected 'in'.
 
-PError.idr:7:1--7:2
+PError:7:1--7:2
  3 | 
  4 | bar : Int -> Int
  5 | bar x = let y = 42

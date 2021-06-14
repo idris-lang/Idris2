@@ -9,6 +9,7 @@ import Core.Metadata
 import Core.Normalise
 import Core.UnifyState
 import Core.Unify
+import Core.Value
 
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
@@ -129,11 +130,11 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          logTerm "elab" 5 "Looking for delayed in " chktm
          ust <- get UST
          catch (retryDelayed (sortBy (\x, y => compare (fst x) (fst y))
-                                     (delayedElab ust)))
-               (\err =>
-                  do ust <- get UST
-                     put UST (record { delayedElab = olddelayed } ust)
-                     throw err)
+                                       (delayedElab ust)))
+                 (\err =>
+                    do ust <- get UST
+                       put UST (record { delayedElab = olddelayed } ust)
+                       throw err)
          ust <- get UST
          put UST (record { delayedElab = olddelayed } ust)
          solveConstraintsAfter constart solvemode MatchArgs
@@ -249,6 +250,10 @@ checkTermSub defining mode opts nest env env' sub tm ty
                                                    env env' sub
                                                    tm' (Just ty)
                               _ => throw err)
+         case mode of
+              InType => commit -- bracket the 'branch' above
+              _ => pure ()
+
          pure (fst res)
   where
     bindImps' : {vs : _} ->

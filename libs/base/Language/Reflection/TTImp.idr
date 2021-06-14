@@ -2,6 +2,8 @@ module Language.Reflection.TTImp
 
 import public Language.Reflection.TT
 
+%default total
+
 -- Unchecked terms and declarations in the intermediate language
 mutual
   public export

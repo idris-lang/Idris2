@@ -12,7 +12,6 @@ on:
 env:
   SCHEME: chez
   IDRIS2_TESTS_CG: chez
-  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
 
@@ -27,7 +26,7 @@ jobs:
         run: |
           brew install chezscheme
           brew install coreutils
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
       - name: Build Idris 2 from bootstrap
         run: make bootstrap && make install
         shell: bash
@@ -54,10 +53,10 @@ jobs:
         run: |
           brew install chezscheme
           brew install coreutils
-          echo "::add-path::$HOME/.idris2/bin"
+          echo "$HOME/.idris2/bin" >> $GITHUB_PATH
           chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
       - name: Build self-hosted
-        run: make all && make install
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
         shell: bash
       - name: Test self-hosted
         run: make test INTERACTIVE=''
@@ -65,26 +64,26 @@ jobs:
 
   # this gambit test is really slow so se run it separately
 
-  test-gambit:
-    needs: build-bootstrap-chez
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: installed-bootstrapped-idris2-chez
-          path: ~/.idris2/
-      - name: Install build dependencies
-        run: |
-          brew install chezscheme
-          brew install coreutils
-          brew install gambit-scheme
-          CURRENTDIR=$(find /usr/local/Cellar/gambit-scheme -type l -name current)
-          echo "::add-path::${CURRENTDIR}/bin"
-          echo "::add-path::$HOME/.idris2/bin"
-          chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
-      - name: Test gambit
-        run: cd tests/gambit/bitops001/ && ./run idris2
-        shell: bash
+  # test-gambit:
+  #   needs: build-bootstrap-chez
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+  #     - name: Download Idris2 Artifact
+  #       uses: actions/download-artifact@v2
+  #       with:
+  #         name: installed-bootstrapped-idris2-chez
+  #         path: ~/.idris2/
+  #     - name: Install build dependencies
+  #       run: |
+  #         brew install chezscheme
+  #         brew install coreutils
+  #         brew install gambit-scheme
+  #         CURRENTDIR=$(find /usr/local/Cellar/gambit-scheme -type l -name current)
+  #         echo "::add-path::${CURRENTDIR}/bin"
+  #         echo "$HOME/.idris2/bin" >> $GITHUB_PATH
+  #         chmod +x $HOME/.idris2/bin/idris2 $HOME/.idris2/bin/idris2_app/*
+  #     - name: Test gambit
+  #       run: cd tests/gambit/bitops001/ && ./run idris2
+  #       shell: bash

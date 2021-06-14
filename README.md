@@ -4,7 +4,7 @@ Idris 2
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
 [![Windows Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-windows.yml)
 [![Ubuntu Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-ubuntu-combined.yml)
-[![MacOS Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml)
+[![macOS Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-macos-combined.yml)
 [![Nix Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml/badge.svg)](https://github.com/idris-lang/Idris2/actions/workflows/ci-nix.yml)
 
 [Idris 2](https://idris-lang.org/) is a purely functional programming language
@@ -43,6 +43,7 @@ exceptions. The most notable user visible differences, which might cause Idris
   Notably, elaborator reflection will exist, but most likely in a slightly
   different form because the internal details of the elaborator are different.
 + The `Prelude` is much smaller (and easier to replace with an alternative).
+  Command-line option `--no-prelude` can be used to not implicitly import `Prelude`.
 + `let x = val in e` no longer computes with `x` in `e`, instead being
   essentially equivalent to `(\x => e) val`. This is to make the
   behaviour of `let` consistent in the presence of `case` and `with` (where
@@ -102,6 +103,15 @@ Things still missing
 + Documentation strings and HTML documentation generation
 + ':search' and ':apropos' at the REPL
 + Metaprogramming (reflection, partial evaluation)
+
+Contributions wanted
+-------------------
+
++ [Good first issues](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
++ [Contributors wanted](https://github.com/idris-lang/Idris2/wiki/Contributions-wanted)
+
+If you want to learn about Idris more, contributing to the compiler could be one
+way to do so. Just select one good first issue and ask about it on the [Discord](https://discord.gg/UX68fDs2jc) channel.
 
 Talks
 -----

@@ -2,6 +2,8 @@ module PrimIO
 
 import Builtin
 
+%default total
+
 public export
 data IORes : Type -> Type where
      MkIORes : (result : a) -> (1 x : %World) -> IORes a
@@ -70,12 +72,12 @@ export %inline
 toPrim : (1 act : IO a) -> PrimIO a
 toPrim (MkIO fn) = fn
 
-%foreign "C:idris2_isNull, libidris2_support"
+%foreign "C:idris2_isNull, libidris2_support, idris_support.h"
          "javascript:lambda:x=>x===undefined||x===null?1n:0n"
 export
 prim__nullAnyPtr : AnyPtr -> Int
 
-%foreign "C:idris2_getNull,libidris2_support"
+%foreign "C:idris2_getNull, libidris2_support, idris_support.h"
 export
 prim__getNullAnyPtr : AnyPtr
 

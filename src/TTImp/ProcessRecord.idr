@@ -77,7 +77,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
 
     farg : IField ->
            (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp)
-    farg (MkIField fc c p n ty) = (fc, Just n, c, p, ty)
+    farg (MkIField fc c p n ty) = (virtualiseFC fc, Just n, c, p, ty)
 
     mkTy : List (FC, Maybe Name, RigCount, PiInfo RawImp, RawImp) ->
            RawImp -> RawImp
@@ -86,7 +86,7 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
         = IPi fc c imp n argty (mkTy args ret)
 
     recTy : RawImp
-    recTy = apply (IVar fc tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
+    recTy = apply (IVar (virtualiseFC fc) tn) (map (\(n, c, p, tm) => (n, IVar EmptyFC n, p)) params)
       where
         ||| Apply argument to list of explicit or implicit named arguments
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
@@ -96,11 +96,12 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
 
     elabAsData : Name -> Core ()
     elabAsData cname
-        = do let conty = mkTy paramTelescope $
+        = do let fc = virtualiseFC fc
+             let conty = mkTy paramTelescope $
                          mkTy (map farg fields) recTy
-             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames [] (map fst params ++
+             let con = MkImpTy EmptyFC EmptyFC cname !(bindTypeNames fc [] (map fst params ++
                                            map fname fields ++ vars) conty)
-             let dt = MkImpData fc tn !(bindTypeNames [] (map fst params ++
+             let dt = MkImpData fc tn !(bindTypeNames fc [] (map fst params ++
                                            map fname fields ++ vars)
                                          (mkDataTy fc params)) [] [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
@@ -125,7 +126,9 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                   Env Term vs -> Term vs ->
                   Core ()
     elabGetters con done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
-        = if (n `elem` map fst params) || (n `elem` vars)
+        = let rig = if isErased rc then erased else top
+              isVis = projVis vis
+          in if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters con
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
@@ -141,15 +144,18 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    let rname = MN "rec" 0
 
                    -- Claim the projection type
-                   projTy <- bindTypeNames []
+                   projTy <- bindTypeNames fc []
                                  (map fst params ++ map fname fields ++ vars) $
                                     mkTy paramTelescope $
                                       IPi bfc top Explicit (Just rname) recTy ty'
-                   log "declare.record.projection" 5 $ "Projection " ++ show rfNameNS ++ " : " ++ show projTy
-                   processDecl [] nest env
-                       (IClaim bfc (if isErased rc
-                                      then erased
-                                      else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC rfNameNS projTy))
+
+                   let mkProjClaim = \ nm =>
+                          let ty = MkImpTy EmptyFC EmptyFC nm projTy
+                          in IClaim bfc rig isVis [Inline] ty
+
+                   log "declare.record.projection" 5 $
+                      "Projection " ++ show rfNameNS ++ " : " ++ show projTy
+                   processDecl [] nest env (mkProjClaim rfNameNS)
 
                    -- Define the LHS and RHS
                    let lhs_exp
@@ -173,16 +179,15 @@ elabRecord {vars} eopts fc env nest newns vis tn params conName_in fields
                    when !isPrefixRecordProjections $ do  -- beware: `!` is NOT boolean `not`!
                      -- Claim the type.
                      -- we just reuse `projTy` defined above
-                     log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show unNameNS ++ " : " ++ show projTy
-                     processDecl [] nest env
-                         (IClaim bfc (if isErased rc
-                                        then erased
-                                        else top) (projVis vis) [Inline] (MkImpTy EmptyFC EmptyFC unNameNS projTy))
+                     log "declare.record.projection.prefix" 5 $
+                       "Prefix projection " ++ show unNameNS ++ " : " ++ show projTy
+                     processDecl [] nest env (mkProjClaim unNameNS)
 
                      -- Define the LHS and RHS
                      let lhs = IVar bfc unNameNS
                      let rhs = IVar bfc rfNameNS
-                     log "declare.record.projection.prefix" 5 $ "Prefix projection " ++ show lhs ++ " = " ++ show rhs
+                     log "declare.record.projection.prefix" 5 $
+                       "Prefix projection " ++ show lhs ++ " = " ++ show rhs
                      processDecl [] nest env
                          (IDef bfc unNameNS [PatClause bfc lhs rhs])
 

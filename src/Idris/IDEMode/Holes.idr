@@ -9,7 +9,7 @@ import Idris.Pretty
 
 import Idris.IDEMode.Commands
 
-import Libraries.Data.String.Extra
+import Libraries.Data.String.Extra as L
 import Libraries.Utils.Term
 
 %default covering
@@ -141,7 +141,7 @@ prettyHole : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-             Core (Doc IdrisAnn)
+             Core (Doc IdrisSyntax)
 prettyHole defs env fn args ty
   = do hdata <- holeData defs env fn args ty
        case hdata.context of
@@ -150,7 +150,7 @@ prettyHole defs env fn args ty
                             map (\premise => prettyRigHole premise.multiplicity
                                     <+> prettyImpBracket premise.isImplicit (prettyName premise.name <++> colon <++> prettyTerm premise.type))
                                     hdata.context) <+> hardline
-                    <+> (pretty $ replicate 30 '-') <+> hardline
+                    <+> (pretty $ L.replicate 30 '-') <+> hardline
                     <+> pretty (nameRoot $ hdata.name) <++> colon <++> prettyTerm hdata.type
 
 sexpPremise : HolePremise -> SExp

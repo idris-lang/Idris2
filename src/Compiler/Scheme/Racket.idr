@@ -40,8 +40,8 @@ findRacoExe =
   do env <- idrisGetEnv "RACKET_RACO"
      pure $ (fromMaybe "/usr/bin/env raco" env) ++ " exe"
 
-schHeader : String -> String
-schHeader libs
+schHeader : Bool -> String -> String
+schHeader prof libs
   = "#lang racket/base\n" ++
     "; @generated\n" ++
     "(require racket/async-channel)\n" ++ -- for asynchronous channels
@@ -52,6 +52,7 @@ schHeader libs
     "(require rnrs/io/ports-6)\n" ++ -- for files
     "(require srfi/19)\n" ++ -- for file handling and data
     "(require ffi/unsafe ffi/unsafe/define)\n" ++ -- for calling C
+    (if prof then "(require profile)\n" else "") ++
     "(require racket/flonum)" ++ -- for float-typed transcendental functions
     libs ++
     "(let ()\n"
@@ -118,6 +119,10 @@ data Done : Type where
 cftySpec : FC -> CFType -> Core String
 cftySpec fc CFUnit = pure "_void"
 cftySpec fc CFInt = pure "_int"
+cftySpec fc CFInt8 = pure "_int8"
+cftySpec fc CFInt16 = pure "_int16"
+cftySpec fc CFInt32 = pure "_int32"
+cftySpec fc CFInt64 = pure "_int64"
 cftySpec fc CFUnsigned8 = pure "_uint8"
 cftySpec fc CFUnsigned16 = pure "_uint16"
 cftySpec fc CFUnsigned32 = pure "_uint32"
@@ -143,6 +148,7 @@ cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t +
                          " to foreign function"))
 
 loadlib : String -> String -> String
+loadlib "libc" _ = "(define-ffi-definer define-libc (ffi-lib #f))"
 loadlib libn ver
     = "(define-ffi-definer define-" ++ libn ++
       " (ffi-lib \"" ++ libn ++ "\" " ++ ver ++ "))\n"
@@ -259,10 +265,9 @@ useCC : {auto f : Ref Done (List String) } ->
         {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
         String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc [] args ret = throw (NoForeignCC fc)
-useCC appdir fc (cc :: ccs) args ret
-    = case parseCC cc of
-           Nothing => useCC appdir fc ccs args ret
+useCC appdir fc ccs args ret
+    = case parseCC ["scheme,racket", "scheme", "C"] ccs of
+           Nothing => throw (NoForeignCC fc)
            Just ("scheme,racket", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
                   pure ("", body)
@@ -271,7 +276,7 @@ useCC appdir fc (cc :: ccs) args ret
                   pure ("", body)
            Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
            Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => useCC appdir fc ccs args ret
+           _ => throw (NoForeignCC fc)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -329,22 +334,12 @@ startRacket racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "case $(uname -s) in            "
-    , "    OpenBSD | FreeBSD | NetBSD)"
-    , "        REALPATH=\"grealpath\" "
-    , "        ;;                     "
-    , "                               "
-    , "    *)                         "
-    , "        REALPATH=\"realpath\"  "
-    , "        ;;                     "
-    , "esac                           "
+    , "if [ \"$(uname)\" = Darwin ]; then"
+    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
+    , "else"
+    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
+    , "fi"
     , ""
-    , "if ! command -v \"$REALPATH\" >/dev/null; then               "
-    , "    echo \"$REALPATH is required for Racket code generator.\""
-    , "    exit 1                                                   "
-    , "fi                                                           "
-    , ""
-    , "DIR=$(dirname \"$($REALPATH \"$0\")\")"
     , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
     , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
@@ -363,7 +358,7 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(realpath \"$0\")\")"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
     , racket ++ "\"" ++ target ++ "\" \"$@\""
     ]
@@ -386,10 +381,14 @@ compileToRKT c appdir tm outfile
          support <- readDataFile "racket/support.rkt"
          ds <- getDirectives Racket
          extraRuntime <- getExtraRuntime ds
-         let scm = schHeader (concat (map fst fgndefs)) ++
+         let prof = profile !getSession
+         let runmain
+                = if prof
+                     then "(profile (void " ++ main ++ ") #:order 'self)\n"
+                     else "(void " ++ main ++ ")\n"
+         let scm = schHeader prof (concat (map fst fgndefs)) ++
                    support ++ extraRuntime ++ code ++
-                   "(void " ++ main ++ ")\n" ++
-                   schFooter
+                   runmain ++ schFooter
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
