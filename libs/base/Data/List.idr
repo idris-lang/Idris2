@@ -122,8 +122,16 @@ find p (x::xs) = if p x then Just x else find p xs
 ||| Find the index of the first element (if exists) of a list that satisfies
 ||| the given test, else `Nothing`.
 public export
-findIndex : (a -> Bool) -> List a -> Maybe Nat
-findIndex p = h 0 where
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe (n : Nat ** InBounds n xs)
+findIndex _ [] = Nothing
+findIndex p (x :: xs) = let Just i = h 0 (x :: xs) | _ => Nothing
+  in case i of
+    Z => Just $ MkDPair Z InFirst
+    S n => case findIndex p xs of
+      Just (MkDPair prf_n prf_p) =>
+        Just $ MkDPair (S prf_n) (InLater prf_p)
+      Nothing => Nothing
+  where
   h : Nat -> List a -> Maybe Nat
   h _ [] = Nothing
   h lvl (x :: xs) = if p x then Just lvl else h (S lvl) xs
