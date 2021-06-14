@@ -32,9 +32,9 @@ drop Z     xs      = xs
 drop (S n) []      = []
 drop (S n) (_::xs) = drop n xs
 
-||| Satisfiable if `k` is a valid index into `xs`
+||| Satisfiable if `k` is a valid index into `xs`.
 |||
-||| @ k the potential index
+||| @ k  the potential index
 ||| @ xs the list into which k may be an index
 public export
 data InBounds : (k : Nat) -> (xs : List a) -> Type where
@@ -123,18 +123,12 @@ find p (x::xs) = if p x then Just x else find p xs
 ||| list that satisfies the given test, else `Nothing`.
 public export
 findIndex : (a -> Bool) -> (xs : List a) -> Maybe (n : Nat ** InBounds n xs)
-findIndex _ [] = Nothing
-findIndex p (x :: xs) = let Just i = h 0 (x :: xs) | _ => Nothing
-  in case i of
-    Z => Just $ MkDPair Z InFirst
-    S n => case findIndex p xs of
-      Just (MkDPair prf_n prf_p) =>
-        Just $ MkDPair (S prf_n) (InLater prf_p)
-      Nothing => Nothing
-  where
-  h : Nat -> List a -> Maybe Nat
-  h _ [] = Nothing
-  h lvl (x :: xs) = if p x then Just lvl else h (S lvl) xs
+findIndex p = \case
+  [] => Nothing
+  x :: xs => if p x
+    then Just $ MkDPair Z InFirst
+    else let Just $ MkDPair prf_n prf_p = findIndex p xs | _ => Nothing
+          in Just $ MkDPair (S prf_n) (InLater prf_p)
 
 ||| Find indices of all elements that satisfy the given test.
 public export

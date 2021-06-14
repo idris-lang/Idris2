@@ -152,15 +152,9 @@ data InBounds : (k : Nat) -> (xs : SnocList a) -> Type where
 ||| snoc-list that satisfies the given test, else `Nothing`.
 public export
 findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe (n : Nat ** InBounds n xs)
-findIndex _ Lin = Nothing
-findIndex p (xs :< x) = let Just i = h 0 (xs :< x) | _ => Nothing
-  in case i of
-    Z => Just $ MkDPair Z InFirst
-    S n => case findIndex p xs of
-      Just (MkDPair prf_n prf_p) =>
-        Just $ MkDPair (S prf_n) (InLater prf_p)
-      Nothing => Nothing
-  where
-  h : Nat -> SnocList a -> Maybe Nat
-  h _ Lin = Nothing
-  h lvl (xs :< x) = if p x then Just lvl else h (S lvl) xs
+findIndex p = \case
+  Lin => Nothing
+  xs :< x => if p x
+    then Just $ MkDPair Z InFirst
+    else let Just $ MkDPair prf_n prf_p = findIndex p xs | _ => Nothing
+          in Just $ MkDPair (S prf_n) (InLater prf_p)
