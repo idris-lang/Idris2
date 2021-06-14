@@ -420,27 +420,23 @@ install pkg opts installSrc -- not used but might be in the future
          Just wdir <- coreLift currentDir
              | Nothing => throw (InternalError "Can't get current directory")
          -- Make the package installation directory
-         let installPrefix = prefix_dir (dirs (options defs)) </>
-                             "idris2-" ++ showVersion False version
-         True <- coreLift $ changeDir installPrefix
-             | False => throw $ InternalError $ "Can't change directory to " ++ installPrefix
-         Right _ <- coreLift $ mkdirAll (installDir pkg)
+         let targetDir = prefix_dir (dirs (options defs)) </>
+                             "idris2-" ++ showVersion False version </>
+                             installDir pkg
+         Right _ <- coreLift $ mkdirAll targetDir
              | Left err => throw $ InternalError $ unlines
-                             [ "Can't make directory " ++ installDir pkg
+                             [ "Can't make directory " ++ targetDir
                              , show err ]
-         True <- coreLift $ changeDir (installDir pkg)
-             | False => throw $ InternalError $ "Can't change directory to " ++ installDir pkg
+         True <- coreLift $ changeDir targetDir
+             | False => throw $ InternalError $ "Can't change directory to " ++ targetDir
 
          -- We're in that directory now, so copy the files from
          -- wdir/build into it
-         traverse_ (installFrom (wdir </> build)
-                                (installPrefix </> installDir pkg))
-                                (map fst toInstall)
+         traverse_ (installFrom (wdir </> build) targetDir . fst) toInstall
          when installSrc $ do
-           traverse_ (installSrcFrom wdir
-                                     (installPrefix </> installDir pkg))
-                                     toInstall
+           traverse_ (installSrcFrom wdir targetDir) toInstall
          coreLift_ $ changeDir wdir
+
          runScript (postinstall pkg)
 
 -- Check package without compiling anything.
