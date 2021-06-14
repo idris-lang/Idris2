@@ -178,9 +178,6 @@
 (define (blodwen-buffer-size buf)
   (bytevector-length buf))
 
-(define (blodwen-buffer-free buf)
-  (void))  ; Rely on built-in memory management
-
 (define (blodwen-buffer-setbyte buf loc val)
   (bytevector-u8-set! buf loc val))
 

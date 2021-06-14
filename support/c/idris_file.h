@@ -2,6 +2,7 @@
 #define __IDRIS_FILE_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 FILE* idris2_openFile(char* name, char* mode);
 void idris2_closeFile(FILE* f);
@@ -23,8 +24,10 @@ int idris2_seekLine(FILE* f);
 // Treat as a Ptr String (might be NULL)
 char* idris2_readLine(FILE* f);
 char* idris2_readChars(int num, FILE* f);
+size_t idris2_readBufferData(FILE* h, char* buffer, size_t loc, size_t max);
 
 int idris2_writeLine(FILE* f, char* str);
+size_t idris2_writeBufferData(FILE* h, const char* buffer, size_t loc, size_t len);
 
 int idris2_eof(FILE* f);
 int idris2_fileAccessTime(FILE* f);
