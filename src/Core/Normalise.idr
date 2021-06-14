@@ -62,13 +62,13 @@ toClosure opts env tm = MkClosure opts [] env tm
 
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
-    = if not (isNil (reduceLimit opts))
-         then case lookup n (reduceLimit opts) of
-                   Nothing => pure Nothing
-                   Just Z => pure Nothing
+    = pure $ if isNil (reduceLimit opts)
+         then Just opts
+         else case lookup n (reduceLimit opts) of
+                   Nothing => Nothing
+                   Just Z => Nothing
                    Just (S k) =>
-                      pure (Just (record { reduceLimit $= set n k } opts))
-         else pure (Just opts)
+                      Just (record { reduceLimit $= set n k } opts)
   where
     set : Name -> Nat -> List (Name, Nat) -> List (Name, Nat)
     set n v [] = []
@@ -409,9 +409,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                -- Stack must be exactly the right height
                Just (args, []) =>
                   do argsnf <- evalAll args
-                     case fn argsnf of
-                          Nothing => pure def
-                          Just res => pure res
+                     pure $ case fn argsnf of
+                          Nothing => def
+                          Just res => res
                _ => pure def
       where
         -- No traverse for Vect in Core...
@@ -572,9 +572,9 @@ mutual
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
-      = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
-             Nothing => pure $ Ref fc Bound (MN n i)
+      = pure $ case findName bounds of
+             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
       findName None = Nothing

@@ -117,13 +117,14 @@ data FileError = GenericFileError Int -- errno
 returnError : HasIO io => io (Either FileError a)
 returnError
     = do err <- primIO prim__fileErrno
-         case err of
-              0 => pure $ Left FileReadError
-              1 => pure $ Left FileWriteError
-              2 => pure $ Left FileNotFound
-              3 => pure $ Left PermissionDenied
-              4 => pure $ Left FileExists
-              _ => pure $ Left (GenericFileError (err-5))
+         pure $ Left $
+           case err of
+              0 => FileReadError
+              1 => FileWriteError
+              2 => FileNotFound
+              3 => PermissionDenied
+              4 => FileExists
+              _ => GenericFileError (err-5)
 
 export
 Show FileError where
