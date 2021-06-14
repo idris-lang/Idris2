@@ -97,11 +97,12 @@ Monoid (SnocList a) where
 
 public export
 Foldable SnocList where
-  foldr _ n Lin = n
-  foldr c n (xs :< x) = c x (foldr c n xs)
+  foldr f z = foldr f z . (<>> [])
 
-  foldl _ q Lin = q
-  foldl f q (xs :< x) = foldl f (f q x) xs
+  foldl f z xs = h xs where
+    h : SnocList elem -> acc
+    h Lin = z
+    h (xs :< x) = f (h xs) x
 
   null Lin      = True
   null (_ :< _) = False
@@ -111,14 +112,18 @@ Foldable SnocList where
   foldMap f = foldl (\xs, x => xs <+> f x) neutral
 
 public export
-Traversable SnocList where
-  traverse _ Lin = pure Lin
-  traverse f (xs :< x) = [| traverse f xs :< f x |]
-
-public export
 Applicative SnocList where
   pure = (:<) Lin
   fs <*> xs = concatMap (flip map xs) fs
+
+public export
+Monad SnocList where
+  xs >>= k = concatMap k xs
+
+public export
+Traversable SnocList where
+  traverse _ Lin = pure Lin
+  traverse f (xs :< x) = [| traverse f xs :< f x |]
 
 public export
 Alternative SnocList where
