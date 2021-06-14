@@ -206,16 +206,16 @@ runTest opts testPath = forkIO $ do
   end <- clockTime Thread
 
   Right out <- readFile $ testPath ++ "/output"
-    | Left err => do print err
+    | Left err => do putStrLn $ (testPath ++ "/output") ++ ": " ++ show err
                      pure (Left testPath)
 
   Right exp <- readFile $ testPath ++ "/expected"
     | Left FileNotFound => do
         if interactive opts
           then mayOverwrite Nothing out
-          else print FileNotFound
+          else putStrLn $ (testPath ++ "/expected") ++ ": " ++ show FileNotFound
         pure (Left testPath)
-    | Left err => do print err
+    | Left err => do putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                      pure (Left testPath)
 
   let result = normalize out == normalize exp
@@ -264,7 +264,7 @@ runTest opts testPath = forkIO $ do
             ["Accept actual value as new golden value? [yn]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
-                    | Left err => print err
+                    | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                   pure ()
 
     printTiming : Bool -> Clock type -> String -> IO ()
