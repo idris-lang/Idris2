@@ -87,7 +87,6 @@ Functor SnocList where
   map f Lin = Lin
   map f (sx :< x) = (map f sx) :< (f x)
 
-
 public export
 Semigroup (SnocList a) where
   (<+>) = (++)
@@ -96,6 +95,35 @@ public export
 Monoid (SnocList a) where
   neutral = Lin
 
+public export
+Foldable SnocList where
+  foldr _ n Lin = n
+  foldr c n (xs :< x) = c x (foldr c n xs)
+
+  foldl _ q Lin = q
+  foldl f q (xs :< x) = foldl f (f q x) xs
+
+  null Lin      = True
+  null (_ :< _) = False
+
+  toList = (<>> [])
+
+  foldMap f = foldl (\xs, x => xs <+> f x) neutral
+
+public export
+Traversable SnocList where
+  traverse _ Lin = pure Lin
+  traverse f (xs :< x) = [| traverse f xs :< f x |]
+
+public export
+Applicative SnocList where
+  pure = (:<) Lin
+  fs <*> xs = concatMap (flip map xs) fs
+
+public export
+Alternative SnocList where
+  empty = Lin
+  xs <|> ys = xs ++ ys
 
 ||| Check if something is a member of a snoc-list using the default Boolean equality.
 public export

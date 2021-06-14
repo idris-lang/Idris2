@@ -103,6 +103,8 @@ dropWhile : (p : a -> Bool) -> List a -> List a
 dropWhile p []      = []
 dropWhile p (x::xs) = if p x then dropWhile p xs else x::xs
 
+||| Applied to a predicate and a list, returns the list of those elements that
+||| satisfy the predicate.
 public export
 filter : (p : a -> Bool) -> List a -> List a
 filter p [] = []
@@ -110,24 +112,6 @@ filter p (x :: xs)
    = if p x
         then x :: filter p xs
         else filter p xs
-
-public export
-filterWith : (a -> Bool) -> List a -> (List a, List Nat)
-filterWith p = h 0 where
-  h : Nat -> List a -> (List a, List Nat)
-  h _ [] = ([], [])
-  h lvl (x :: xs) = if p x
-      then let (ms, ns) = h (S lvl) xs in (x :: ms, lvl :: ns)
-      else h (S lvl) xs
-
-public export
-filterWith' : (a -> Bool) -> List a -> List (a, Nat)
-filterWith' p = h 0 where
-  h : Nat -> List a -> List (a, Nat)
-  h _ [] = []
-  h lvl (x :: xs) = if p x
-    then (x, lvl) :: h (S lvl) xs
-    else             h (S lvl) xs
 
 ||| Find the first element of the list that satisfies the predicate.
 public export
