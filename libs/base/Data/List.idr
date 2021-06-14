@@ -48,7 +48,7 @@ Uninhabited (InBounds k []) where
     uninhabited InFirst impossible
     uninhabited (InLater _) impossible
 
-||| Decide whether `k` is a valid index into `xs`
+||| Decide whether `k` is a valid index into `xs`.
 public export
 inBounds : (k : Nat) -> (xs : List a) -> Dec (InBounds k xs)
 inBounds _ [] = No uninhabited
@@ -119,8 +119,8 @@ find : (p : a -> Bool) -> (xs : List a) -> Maybe a
 find p [] = Nothing
 find p (x::xs) = if p x then Just x else find p xs
 
-||| Find the index of the first element (if exists) of a list that satisfies
-||| the given test, else `Nothing`.
+||| Find the index and proof of InBounds of the first element (if exists) of a
+||| list that satisfies the given test, else `Nothing`.
 public export
 findIndex : (a -> Bool) -> (xs : List a) -> Maybe (n : Nat ** InBounds n xs)
 findIndex _ [] = Nothing

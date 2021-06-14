@@ -137,11 +137,30 @@ find : (a -> Bool) -> SnocList a -> Maybe a
 find p Lin = Nothing
 find p (xs :< x) = if p x then Just x else find p xs
 
-||| Find the index of the first element (if exists) of a snoc-list that satisfies
-||| the given test, else `Nothing`.
+||| Satisfiable if `k` is a valid index into `xs`.
+|||
+||| @ k  the potential index
+||| @ xs the snoc-list into which k may be an index
 public export
-findIndex : (a -> Bool) -> SnocList a -> Maybe Nat
-findIndex p = h 0 where
+data InBounds : (k : Nat) -> (xs : SnocList a) -> Type where
+    ||| Z is a valid index into any cons cell
+    InFirst : InBounds Z (xs :< x)
+    ||| Valid indices can be extended
+    InLater : InBounds k xs -> InBounds (S k) (xs :< x)
+
+||| Find the index and proof of InBounds of the first element (if exists) of a
+||| snoc-list that satisfies the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe (n : Nat ** InBounds n xs)
+findIndex _ Lin = Nothing
+findIndex p (xs :< x) = let Just i = h 0 (xs :< x) | _ => Nothing
+  in case i of
+    Z => Just $ MkDPair Z InFirst
+    S n => case findIndex p xs of
+      Just (MkDPair prf_n prf_p) =>
+        Just $ MkDPair (S prf_n) (InLater prf_p)
+      Nothing => Nothing
+  where
   h : Nat -> SnocList a -> Maybe Nat
   h _ Lin = Nothing
   h lvl (xs :< x) = if p x then Just lvl else h (S lvl) xs
