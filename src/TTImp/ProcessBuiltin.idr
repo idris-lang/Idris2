@@ -2,9 +2,9 @@
 -- If we get more builtins it might be wise to move each builtin to it's own file.
 module TTImp.ProcessBuiltin
 
-import Data.Fin
 import Data.List
 
+import Libraries.Data.Fin as Libs
 import Libraries.Data.NameMap
 
 import Core.CaseTree
@@ -82,10 +82,7 @@ getNEIndex : (arity : Nat) -> Term vars -> Maybe (Fin arity)
 getNEIndex ar (Bind _ x b tm) = case b of
     Let _ _ val _ => getNEIndex ar $ subst {x} val tm
     Pi _ mul _ arg => if isErased mul
-        then getNEIndex ar tm >>=
-            \k => case strengthen (FS k) of
-                Left _ => Nothing
-                Right k' => Just k'
+        then getNEIndex ar tm >>= Libs.strengthen . FS
         else natToFin 0 ar
     _ => Nothing
 getNEIndex _ _ = Nothing
