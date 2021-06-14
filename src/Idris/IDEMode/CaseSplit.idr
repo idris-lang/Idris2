@@ -65,23 +65,36 @@ doUpdates : {auto u : Ref UPD (List String)} ->
             Core (List SourcePart)
 doUpdates defs ups [] = pure []
 doUpdates defs ups (LBrace :: xs)
-    = let (ws, nws) = spanSpace xs in map (LBrace :: ws ++) $
+    -- the cases we care about are easy to detect w/o whitespace, so separate it
+    = let (ws, nws) = span isWhitespace xs in
          case nws of
            Name n :: RBrace :: rest =>
+                -- expand something in braces into its cases, e.g.
+                -- { x} where x : Nat, becomes { x = Z} (and later { x = (S k)})
+                map (LBrace :: ws ++) $
                 pure (Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups (Name n :: RBrace :: rest)))
            Name n :: Equal :: rest =>
+                -- update the RHS of the Equal, e.g. `rest` in {x = rest}
+                map (LBrace :: ws ++) $
                 pure (Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups rest))
-           _ => doUpdates defs ups xs
+           Name n :: Whitespace s :: RBrace :: rest =>
+                -- expand something in braces into its cases, e.g.
+                -- { x} where x : Nat, becomes { x = Z} (and later { x = (S k)})
+                map (LBrace :: ws ++) $
+                pure $ (Name n ::
+                      Whitespace " " :: Equal :: Whitespace " " ::
+                      !(doUpdates defs ups (Name n :: Whitespace s :: RBrace :: rest)))
+           -- not a special case: proceed as normal
+           _ => map (LBrace :: [] ++) $ doUpdates defs ups xs
   where
-    spanSpace : List SourcePart -> (List SourcePart, List SourcePart)
-    spanSpace []                   = ([], [])
-    spanSpace (RBrace           :: xs) = ([], RBrace :: xs)
-    spanSpace (w@(Whitespace _) :: xs) = mapFst (w ::) (spanSpace xs)
-    spanSpace (x                :: xs) = map    (x ::) (spanSpace xs)
+    isWhitespace : SourcePart -> Bool
+    isWhitespace (Whitespace _) = True
+    isWhitespace _              = False
+
 doUpdates defs ups (Name n :: xs)
     = case lookup n ups of
            Nothing => pure (Name n :: !(doUpdates defs ups xs))

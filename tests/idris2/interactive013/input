@@ -1,2 +1,11 @@
-:cs 4 6 n
+:cs 4 5 n
+:cs 7 10 n
+:cs 10 6 n
+:cs 13 7 n
+:cs 16 8 n
+:cs 20 12 a
+:cs 23 16 a
+:cs 26 12 a
+:cs 29 13 a
+:cs 32 14 a
 :q
