@@ -14,6 +14,7 @@ import TTImp.TTImp
 import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
+import Data.Strings
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap

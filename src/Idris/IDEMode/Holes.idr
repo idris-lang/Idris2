@@ -86,7 +86,12 @@ extractHoleData defs env fn (S args) (Bind fc x b sc)
        let premise = MkHolePremise x ity (multiplicity b) (isImplicit b)
        pure $ record { context $= (premise ::)  } rest
 extractHoleData defs env fn args ty
-  = do ity <- resugar env !(normalise defs env ty)
+  = do nty <- normalise defs env ty
+       ity <- resugar env nty
+       log "idemode.hole" 20 $
+          "Return type: " ++ show !(toFullNames ty)
+          ++ "\n  Evaluated to: " ++ show !(toFullNames nty)
+          ++ "\n  Resugared to: " ++ show ity
        pure $ MkHoleData fn ity []
 
 
