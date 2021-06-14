@@ -104,12 +104,10 @@ prim__system : String -> PrimIO Int
 
 export
 system : HasIO io => String -> io Int
-system cmd = primIO (prim__system (if isWindows && startsWithQuote then "\"" ++ cmd ++ "\"" else cmd))
-  where
-    startsWithQuote : Bool
-    startsWithQuote = case strUncons cmd of
-        Just ('"', _) => True
-        _ => False
+system cmd = primIO $ prim__system $
+  if isWindows && isPrefixOf "\"" cmd
+    then "\"" ++ cmd ++ "\""
+    else cmd
 
 %foreign support "idris2_time"
          "scheme:blodwen-time"

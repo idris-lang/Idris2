@@ -36,7 +36,7 @@ findChez
     = do Nothing <- idrisGetEnv "CHEZ"
             | Just chez => pure chez
          path <- pathLookup ["chez", "chezscheme9.5", "scheme"]
-         pure $ fromMaybe "/usr/bin/env scheme" path
+         pure $ fromMaybe "scheme" path
 
 -- Given the chez compiler directives, return a list of pairs of:
 --   - the library file name
@@ -372,7 +372,7 @@ startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
     , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
+    , "\"" ++ chez ++ "\" --script \"%APPDIR%\\" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
@@ -382,9 +382,8 @@ startChezWinSh chez appdir target = unlines
     , "set -e # exit on any error"
     , ""
     , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
-    , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
+    , "\"" ++ chez ++ "\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme

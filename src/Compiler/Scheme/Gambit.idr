@@ -32,13 +32,13 @@ import System.Info
 findGSI : IO String
 findGSI =
   do env <- idrisGetEnv "GAMBIT_GSI"
-     pure $ fromMaybe "/usr/bin/env gsi" env
+     pure $ fromMaybe "gsi" env
 
 -- TODO Look for gsc-script, then gsc
 findGSC : IO String
 findGSC =
   do env <- idrisGetEnv "GAMBIT_GSC"
-     pure $ fromMaybe "/usr/bin/env gsc" env
+     pure $ fromMaybe "gsc" env
 
 findGSCBackend : IO String
 findGSCBackend =
