@@ -2,7 +2,7 @@ module System
 
 import public Data.So
 import Data.List
-import Data.Strings
+import Data.String
 
 %default total
 

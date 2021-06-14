@@ -111,11 +111,46 @@ filter p (x :: xs)
         then x :: filter p xs
         else filter p xs
 
+public export
+filterWith : (a -> Bool) -> List a -> (List a, List Nat)
+filterWith p = h 0 where
+  h : Nat -> List a -> (List a, List Nat)
+  h _ [] = ([], [])
+  h lvl (x :: xs) = if p x
+      then let (ms, ns) = h (S lvl) xs in (x :: ms, lvl :: ns)
+      else h (S lvl) xs
+
+public export
+filterWith' : (a -> Bool) -> List a -> List (a, Nat)
+filterWith' p = h 0 where
+  h : Nat -> List a -> List (a, Nat)
+  h _ [] = []
+  h lvl (x :: xs) = if p x
+    then (x, lvl) :: h (S lvl) xs
+    else             h (S lvl) xs
+
 ||| Find the first element of the list that satisfies the predicate.
 public export
 find : (p : a -> Bool) -> (xs : List a) -> Maybe a
 find p [] = Nothing
 find p (x::xs) = if p x then Just x else find p xs
+
+||| Find the index of the first element (if exists) of a list that satisfies
+||| the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> List a -> Maybe Nat
+findIndex p = h 0 where
+  h : Nat -> List a -> Maybe Nat
+  h _ [] = Nothing
+  h lvl (x :: xs) = if p x then Just lvl else h (S lvl) xs
+
+||| Find indices of all elements that satisfy the given test.
+public export
+findIndices : (a -> Bool) -> List a -> List Nat
+findIndices p = h 0 where
+  h : Nat -> List a -> List Nat
+  h _         []  = []
+  h lvl (x :: xs) = lvl :: h (S lvl) xs
 
 ||| Find associated information in a list using a custom comparison.
 public export

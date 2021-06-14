@@ -524,7 +524,7 @@ public export
 findIndices : (elem -> Bool) -> Vect m elem -> List (Fin m)
 findIndices p []        = []
 findIndices p (x :: xs)
-     = let is = map FS $ findIndices p xs in
+     = let is = FS <$> findIndices p xs in
            if p x then FZ :: is else is
 
 ||| Find the index of the first element of the vector that satisfies some test

@@ -97,8 +97,23 @@ Monoid (SnocList a) where
   neutral = Lin
 
 
-||| Check if something is a member of a list using the default Boolean equality.
+||| Check if something is a member of a snoc-list using the default Boolean equality.
 public export
 elem : Eq a => a -> SnocList a -> Bool
 elem x Lin = False
 elem x (sx :< y) = x == y || elem x sx
+
+||| Find the first element of the snoc-list that satisfies the predicate.
+public export
+find : (a -> Bool) -> SnocList a -> Maybe a
+find p Lin = Nothing
+find p (xs :< x) = if p x then Just x else find p xs
+
+||| Find the index of the first element (if exists) of a snoc-list that satisfies
+||| the given test, else `Nothing`.
+public export
+findIndex : (a -> Bool) -> SnocList a -> Maybe Nat
+findIndex p = h 0 where
+  h : Nat -> SnocList a -> Maybe Nat
+  h _ Lin = Nothing
+  h lvl (xs :< x) = if p x then Just lvl else h (S lvl) xs
