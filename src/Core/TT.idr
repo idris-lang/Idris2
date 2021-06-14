@@ -1319,7 +1319,7 @@ mutual
 
   export
   shrinkTerm : Term vars -> SubVars newvars vars -> Maybe (Term newvars)
-  shrinkTerm (Local fc r idx loc) prf = subElem loc prf <&> \(MkVar loc') => Local fc r _ loc'
+  shrinkTerm (Local fc r idx loc) prf = (\(MkVar loc') => Local fc r _ loc') <$> subElem loc prf
   shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
   shrinkTerm (Meta fc x y xs) prf
      = do xs' <- traverse (\x => shrinkTerm x prf) xs
