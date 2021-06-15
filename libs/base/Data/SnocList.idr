@@ -3,6 +3,7 @@ module Data.SnocList
 
 import Decidable.Equality
 import Data.List
+import Data.Fin
 
 %default total
 
@@ -70,7 +71,7 @@ public export
 public export
 length : SnocList a -> Nat
 length Lin = Z
-length (sx :< x) = length sx + 1
+length (sx :< x) = S $ length sx
 
 export
 Show a => Show (SnocList a) where
@@ -156,10 +157,8 @@ data InBounds : (k : Nat) -> (xs : SnocList a) -> Type where
 ||| Find the index and proof of InBounds of the first element (if exists) of a
 ||| snoc-list that satisfies the given test, else `Nothing`.
 public export
-findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe (n : Nat ** InBounds n xs)
-findIndex p = \case
-  Lin => Nothing
-  xs :< x => if p x
-    then Just $ MkDPair Z InFirst
-    else let Just $ MkDPair prf_n prf_p = findIndex p xs | _ => Nothing
-          in Just $ MkDPair (S prf_n) (InLater prf_p)
+findIndex : (a -> Bool) -> (xs : SnocList a) -> Maybe $ Fin (length xs)
+findIndex _ Lin = Nothing
+findIndex p (xs :< x) = if p x
+  then Just FZ
+  else FS <$> findIndex p xs

@@ -122,13 +122,11 @@ find p (x::xs) = if p x then Just x else find p xs
 ||| Find the index and proof of InBounds of the first element (if exists) of a
 ||| list that satisfies the given test, else `Nothing`.
 public export
-findIndex : (a -> Bool) -> (xs : List a) -> Maybe (n : Nat ** InBounds n xs)
-findIndex p = \case
-  [] => Nothing
-  x :: xs => if p x
-    then Just $ MkDPair Z InFirst
-    else let Just $ MkDPair prf_n prf_p = findIndex p xs | _ => Nothing
-          in Just $ MkDPair (S prf_n) (InLater prf_p)
+findIndex : (a -> Bool) -> (xs : List a) -> Maybe $ Fin (length xs)
+findIndex _ [] = Nothing
+findIndex p (x :: xs) = if p x
+  then Just FZ
+  else FS <$> findIndex p xs
 
 ||| Find indices of all elements that satisfy the given test.
 public export
