@@ -64,7 +64,7 @@ PrimApp : Type -> Type
 PrimApp a = (1 x : %World) -> AppRes a
 
 prim_app_pure : a -> PrimApp a
-prim_app_pure x = \w => MkAppRes x w
+prim_app_pure = MkAppRes
 
 prim_app_bind : (1 act : PrimApp a) -> (1 k : a -> PrimApp b) -> PrimApp b
 prim_app_bind fn k w
@@ -179,7 +179,7 @@ app1 (MkApp1 prog)
               MkAppRes (Right x') world'
 
 pureApp : a -> App {l} e a
-pureApp x = MkApp $ \w => MkAppRes (Right x) w
+pureApp x = MkApp $ MkAppRes (Right x)
 
 export
 Functor (App {l} es) where
@@ -218,11 +218,11 @@ namespace App1
 
   export
   pure : (x : a) -> App1 {u=Any} e a
-  pure x =  MkApp1 $ \w => MkApp1ResW x w
+  pure x =  MkApp1 $ MkApp1ResW x
 
   export
   pure1 : (1 x : a) -> App1 e a
-  pure1 x =  MkApp1 $ \w => MkApp1Res1 x w
+  pure1 x =  MkApp1 $ MkApp1Res1 x
 
 export
 data State : (tag : a) -> Type -> List Error -> Type where
@@ -365,7 +365,7 @@ HasErr AppHasIO e => PrimIO e where
             let MkAppRes r w = toPrimApp op w in
                 MkAppRes (Right r) w
 
-  primIO1 op = MkApp1 $ \w => toPrimApp1 op w
+  primIO1 op = MkApp1 $ toPrimApp1 op
 
   fork thread
       = MkApp $

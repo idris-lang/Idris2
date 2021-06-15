@@ -38,7 +38,7 @@ homoFunNeut_ext x = x
 public export
 homoFunMult_ext : {n : Nat} -> {0 rs : Vect n Type} -> Fun (rs ++ ss) cod -> (Fun rs . Fun ss) cod
 homoFunMult_ext {rs = []     }  gs = gs
-homoFunMult_ext {rs = t :: ts} fgs = \x => homoFunMult_ext (fgs x)
+homoFunMult_ext {rs = t :: ts} fgs = homoFunMult_ext . fgs
 
 public export
 homoFunNeut_inv : id cod -> Fun [] cod
@@ -47,7 +47,7 @@ homoFunNeut_inv x = x
 public export
 homoFunMult_inv : {n : Nat} -> {0 rs : Vect n Type} -> (Fun rs . Fun ss) cod -> Fun (rs ++ ss) cod
 homoFunMult_inv {rs = []     } gs = gs
-homoFunMult_inv {rs = t :: ts} fgs = \x => homoFunMult_inv (fgs x)
+homoFunMult_inv {rs = t :: ts} fgs = homoFunMult_inv . fgs
 
 
 ||| Apply an n-ary function to an n-ary tuple of inputs
@@ -72,7 +72,7 @@ curryAll : {n : Nat} -> {0 ts : Vect n Type} -> {0 cod : Fun ts Type}
         -> ((xs : HVect ts) -> uncurry cod xs)
         -> All ts cod
 curryAll {ts = []     } f = f []
-curryAll {ts = t :: ts} f = \x => curryAll (\ xs => f (x:: xs))
+curryAll {ts = t :: ts} f = \x => curryAll (\xs => f (x :: xs))
 
 chainGenUncurried : {n : Nat} -> {0 ts : Vect n Type} -> {0 cod,cod' : Fun ts Type} ->
            ((xs : HVect ts) -> uncurry cod xs -> uncurry cod' xs) ->
@@ -113,7 +113,7 @@ data Pointwise : (r : a -> b -> Type) -> (ts : Vect n a) -> (ss : Vect n b) -> T
 public export
 precompose : Pointwise (\a,b => a -> b) ts ss -> Fun ss cod -> Fun ts cod
 precompose [] h = h
-precompose (f :: fs) h = \x => precompose fs (h (f x))
+precompose (f :: fs) h = precompose fs . h . f
 
 ||| Uncurrying a Fun and then composing with a normal function
 ||| is extensionally equal to

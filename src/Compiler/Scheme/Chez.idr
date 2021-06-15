@@ -248,7 +248,7 @@ cCall appdir fc cfn clib args ret collectSafe
                            pure $ "(load-shared-object \""
                                     ++ escapeString fname
                                     ++ "\")\n"
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
          let callConv = if collectSafe then " __collect_safe" else ""
          let call = "((foreign-procedure" ++ callConv ++ " " ++ show cfn ++ " ("

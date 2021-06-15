@@ -48,7 +48,7 @@ getArgs : HasIO io => io (List String)
 getArgs = do
             n <- primIO prim__getArgCount
             if n > 0
-              then for [0..n-1] (\x => primIO $ prim__getArg x)
+              then for [0..n-1] $ primIO . prim__getArg
               else pure []
 
 %foreign libc "getenv"

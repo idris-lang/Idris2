@@ -205,11 +205,11 @@ cCall fc cfn fnWrapName clib args ret
          --                   copyLib (fname, fullname)
          --                   put Loaded (clib :: loaded)
          --                   pure ""
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
 
          argsInfo <- traverse buildArg args
-         argCTypes <- traverse (\a => cType fc (snd a)) args
+         argCTypes <- traverse (cType fc . snd) args
          retCType <- cType fc ret
 
          let cWrapperDefs = map buildCWrapperDefs $ mapMaybe snd argsInfo

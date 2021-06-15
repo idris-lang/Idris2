@@ -99,7 +99,7 @@ merge : {vs : List Name} ->
         List (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
-    = merge vs (v :: filter (\p => not (sameVar v p)) xs)
+    = merge vs (v :: filter (not . sameVar v) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
