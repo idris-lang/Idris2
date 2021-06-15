@@ -75,7 +75,7 @@ doUpdates defs ups (LBrace :: xs)
           -- brace is immediately closed, so generate a new pattern-match on the
           -- values the name can have, e.g. { x} where x : Nat would become
           -- { x = Z}  (and later { x = (S k)})
-          Name n :: RBrace :: rest => 
+          Name n :: RBrace :: rest =>
              pure (LBrace :: ws ++   -- preserve whitespace
                    Name n ::
                    Whitespace " " :: Equal :: Whitespace " " ::
