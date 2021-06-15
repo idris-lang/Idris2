@@ -757,9 +757,9 @@ getScore : {ns : _} ->
 getScore fc phase name npss
     = do catch (do sameType fc phase name (mkEnv fc ns) npss
                    pure (Right ()))
-               (\err => case err of
-                             CaseCompile _ _ err => pure (Left err)
-                             _ => throw err)
+               \case
+                 CaseCompile _ _ err => pure $ Left err
+                 err => throw err
 
 -- Pick the leftmost matchable thing with all constructors in the
 -- same family, or all variables, or all the same type constructor.
