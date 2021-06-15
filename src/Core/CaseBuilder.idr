@@ -360,10 +360,7 @@ conTypeEq (CName x tag) (CName x' tag')
              Yes Refl => Just Refl
              No contra => Nothing
 conTypeEq CDelay CDelay = Just Refl
-conTypeEq (CConst x) (CConst y)
-   = case constantEq x y of
-          Nothing => Nothing
-          Just Refl => Just Refl
+conTypeEq (CConst x) (CConst y) = map (cong CConst) $ constantEq x y
 conTypeEq _ _ = Nothing
 
 data Group : List Name -> -- variables in scope

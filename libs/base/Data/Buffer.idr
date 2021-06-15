@@ -18,7 +18,7 @@ export
 data Buffer : Type where [external]
 
 %foreign "scheme:blodwen-buffer-size"
-         "C:idris2_getBufferSize, libidris2_support, idris_buffer.h"
+         "RefC:getBufferSize"
          "node:lambda:b => BigInt(b.length)"
 prim__bufferSize : Buffer -> Int
 
@@ -27,7 +27,7 @@ rawSize : HasIO io => Buffer -> io Int
 rawSize buf = pure (prim__bufferSize buf)
 
 %foreign "scheme:blodwen-new-buffer"
-         "C:idris2_newBuffer, libidris2_support, idris_buffer.h"
+         "RefC:newBuffer"
          "node:lambda:s=>Buffer.alloc(Number(s))"
 prim__newBuffer : Int -> PrimIO Buffer
 
@@ -40,22 +40,13 @@ newBuffer size
 --             then pure Nothing
 --             else pure $ Just $ MkBuffer buf size 0
 
-%foreign "scheme:blodwen-buffer-free"
-         "C:idris2_freeBuffer, libidris2_support, idris_buffer.h"
-         "node:lambda:buf=>undefined"
-prim__freeBuffer : Buffer -> PrimIO ()
-
-export
-freeBuffer : HasIO io => Buffer -> io ()
-freeBuffer buf = primIO (prim__freeBuffer buf)
-
 %foreign "scheme:blodwen-buffer-setbyte"
-         "C:idris2_setBufferByte, libidris2_support, idris_buffer.h"
+         "RefC:setBufferByte"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(Number(value), Number(offset))"
 prim__setByte : Buffer -> Int -> Int -> PrimIO ()
 
 %foreign "scheme:blodwen-buffer-setbyte"
-         "C:idris2_setBufferByte, libidris2_support, idris_buffer.h"
+         "RefC:setBufferByte"
          "node:lambda:(buf,offset,value)=>buf.writeUInt8(Number(value), Number(offset))"
 prim__setBits8 : Buffer -> Int -> Bits8 -> PrimIO ()
 
@@ -71,12 +62,12 @@ setBits8 buf loc val
     = primIO (prim__setBits8 buf loc val)
 
 %foreign "scheme:blodwen-buffer-getbyte"
-         "C:idris2_getBufferByte, libidris2_support, idris_buffer.h"
+         "RefC:getBufferByte"
          "node:lambda:(buf,offset)=>BigInt(buf.readUInt8(Number(offset)))"
 prim__getByte : Buffer -> Int -> PrimIO Int
 
 %foreign "scheme:blodwen-buffer-getbyte"
-         "C:idris2_getBufferByte, libidris2_support, idris_buffer.h"
+         "RefC:getBufferByte"
          "node:lambda:(buf,offset)=>BigInt(buf.readUInt8(Number(offset)))"
 prim__getBits8 : Buffer -> Int -> PrimIO Bits8
 
@@ -161,7 +152,7 @@ getInt32 buf loc
     = primIO (prim__getInt32 buf loc)
 
 %foreign "scheme:blodwen-buffer-setint"
-         "C:idris2_setBufferInt, libidris2_support, idris_buffer.h"
+         "RefC:setBufferInt"
          "node:lambda:(buf,offset,value)=>buf.writeInt64(Number(value), Number(offset))"
 prim__setInt : Buffer -> Int -> Int -> PrimIO ()
 
@@ -171,7 +162,7 @@ setInt buf loc val
     = primIO (prim__setInt buf loc val)
 
 %foreign "scheme:blodwen-buffer-getint"
-         "C:idris2_getBufferInt, libidris2_support, idris_buffer.h"
+         "RefC:getBufferInt"
          "node:lambda:(buf,offset)=>BigInt(buf.readInt64(Number(offset)))"
 prim__getInt : Buffer -> Int -> PrimIO Int
 
@@ -181,7 +172,7 @@ getInt buf loc
     = primIO (prim__getInt buf loc)
 
 %foreign "scheme:blodwen-buffer-setdouble"
-         "C:idris2_setBufferDouble, libidris2_support, idris_buffer.h"
+         "RefC:setBufferDouble"
          "node:lambda:(buf,offset,value)=>buf.writeDoubleLE(value, Number(offset))"
 prim__setDouble : Buffer -> Int -> Double -> PrimIO ()
 
@@ -191,7 +182,7 @@ setDouble buf loc val
     = primIO (prim__setDouble buf loc val)
 
 %foreign "scheme:blodwen-buffer-getdouble"
-         "C:idris2_getBufferDouble, libidris2_support, idris_buffer.h"
+         "RefC:getBufferDouble"
          "node:lambda:(buf,offset)=>buf.readDoubleLE(Number(offset))"
 prim__getDouble : Buffer -> Int -> PrimIO Double
 
@@ -206,7 +197,7 @@ export
 stringByteLength : String -> Int
 
 %foreign "scheme:blodwen-buffer-setstring"
-         "C:idris2_setBufferString, libidris2_support, idris_buffer.h"
+         "RefC:setBufferString"
          "node:lambda:(buf,offset,value)=>buf.write(value, Number(offset),buf.length - Number(offset), 'utf-8')"
 prim__setString : Buffer -> Int -> String -> PrimIO ()
 
@@ -216,7 +207,7 @@ setString buf loc val
     = primIO (prim__setString buf loc val)
 
 %foreign "scheme:blodwen-buffer-getstring"
-         "C:idris2_getBufferString, libidris2_support, idris_buffer.h"
+         "RefC:getBufferString"
          "node:lambda:(buf,offset,len)=>buf.slice(Number(offset), Number(offset+len)).toString('utf-8')"
 prim__getString : Buffer -> Int -> Int -> PrimIO String
 
@@ -241,7 +232,7 @@ bufferData buf
 
 
 %foreign "scheme:blodwen-buffer-copydata"
-         "C:idris2_copyBuffer, libidris2_support, idris_buffer.h"
+         "RefC:copyBuffer"
          "node:lambda:(b1,o1,length,b2,o2)=>b1.copy(b2,Number(o2), Number(o1), Number(o1+length))"
 prim__copyData : Buffer -> Int -> Int -> Buffer -> Int -> PrimIO ()
 
@@ -251,11 +242,13 @@ copyData : HasIO io => (src : Buffer) -> (start, len : Int) ->
 copyData src start len dest loc
     = primIO (prim__copyData src start len dest loc)
 
-%foreign "C:idris2_readBufferData, libidris2_support, idris_buffer.h"
+%foreign "C:idris2_readBufferData, libidris2_support, idris_file.h"
+         "RefC:readBufferData"
          "node:lambda:(f,b,l,m) => BigInt(require('fs').readSync(f.fd,b,Number(l), Number(m)))"
 prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
-%foreign "C:idris2_writeBufferData, libidris2_support, idris_buffer.h"
+%foreign "C:idris2_writeBufferData, libidris2_support, idris_file.h"
+         "RefC:writeBufferData"
          "node:lambda:(f,b,l,m) => BigInt(require('fs').writeSync(f.fd,b,Number(l), Number(m)))"
 prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
@@ -317,7 +310,6 @@ resizeBuffer old newsize
          oldsize <- rawSize old
          let len = if newsize < oldsize then newsize else oldsize
          copyData old 0 len buf 0
-         freeBuffer old
          pure (Just buf)
 
 ||| Create a buffer containing the concatenated content from a

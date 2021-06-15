@@ -1,4 +1,4 @@
-#include "idris_buffer.h"
+#include "buffer.h"
 #include <sys/stat.h>
 #include <string.h>
 
@@ -7,7 +7,7 @@ typedef struct {
     uint8_t data[];
 } Buffer;
 
-void* idris2_newBuffer(int bytes) {
+void* newBuffer(int bytes) {
     size_t size = sizeof(Buffer) + bytes*sizeof(uint8_t);
 
     Buffer* buf = malloc(size);
@@ -16,17 +16,13 @@ void* idris2_newBuffer(int bytes) {
     }
 
     buf->size = bytes;
-//    memset(buf->data, 0, bytes);
+    memset(buf->data, 0, bytes);
 
     return (void*)buf;
 }
 
-void idris2_freeBuffer(void* buf) {
-    free(buf);
-}
-
-void idris2_copyBuffer(void* from, int start, int len,
-                       void* to, int loc) {
+void copyBuffer(void* from, int start, int len,
+                void* to, int loc) {
     Buffer* bfrom = from;
     Buffer* bto = to;
 
@@ -35,18 +31,18 @@ void idris2_copyBuffer(void* from, int start, int len,
     }
 }
 
-int idris2_getBufferSize(void* buffer) {
+int getBufferSize(void* buffer) {
     return ((Buffer*)buffer)->size;
 }
 
-void idris2_setBufferByte(void* buffer, int loc, int byte) {
+void setBufferByte(void* buffer, int loc, int byte) {
     Buffer* b = buffer;
     if (loc >= 0 && loc < b->size) {
         b->data[loc] = byte;
     }
 }
 
-void idris2_setBufferInt(void* buffer, int loc, int64_t val) {
+void setBufferInt(void* buffer, int loc, int64_t val) {
     Buffer* b = buffer;
     if (loc >= 0 && loc+3 < b->size) {
         b->data[loc  ] =  val        & 0xff;
@@ -60,7 +56,7 @@ void idris2_setBufferInt(void* buffer, int loc, int64_t val) {
     }
 }
 
-void idris2_setBufferDouble(void* buffer, int loc, double val) {
+void setBufferDouble(void* buffer, int loc, double val) {
     Buffer* b = buffer;
     // I am not proud of this
     if (loc >= 0 && loc + sizeof(double) <= b->size) {
@@ -72,7 +68,7 @@ void idris2_setBufferDouble(void* buffer, int loc, double val) {
     }
 }
 
-void idris2_setBufferString(void* buffer, int loc, char* str) {
+void setBufferString(void* buffer, int loc, char* str) {
     Buffer* b = buffer;
     int len = strlen(str);
 
@@ -81,7 +77,12 @@ void idris2_setBufferString(void* buffer, int loc, char* str) {
     }
 }
 
-uint8_t idris2_getBufferByte(void* buffer, int loc) {
+size_t writeBufferData(FILE* h, void* buffer, size_t loc, size_t len) {
+    Buffer* b = buffer;
+    return fwrite(b->data + loc, sizeof(uint8_t), len, h);
+}
+
+uint8_t getBufferByte(void* buffer, int loc) {
     Buffer* b = buffer;
     if (loc >= 0 && loc < b->size) {
         return b->data[loc];
@@ -90,12 +91,12 @@ uint8_t idris2_getBufferByte(void* buffer, int loc) {
     }
 }
 
-int64_t idris2_getBufferInt(void* buffer, int loc) {
+int64_t getBufferInt(void* buffer, int loc) {
     Buffer* b = buffer;
     if (loc >= 0 && loc+7 < b->size) {
         int64_t result = 0;
         for (size_t i=0; i<8; i++) {
-            result |= b->data[loc + i] << (8 * i);
+            result |= (int64_t)b->data[loc + i] << (8 * i);
         }
         return result;
     } else {
@@ -103,7 +104,7 @@ int64_t idris2_getBufferInt(void* buffer, int loc) {
     }
 }
 
-double idris2_getBufferDouble(void* buffer, int loc) {
+double getBufferDouble(void* buffer, int loc) {
     Buffer* b = buffer;
     double d;
     // I am even less proud of this
@@ -120,7 +121,7 @@ double idris2_getBufferDouble(void* buffer, int loc) {
     }
 }
 
-char* idris2_getBufferString(void* buffer, int loc, int len) {
+char* getBufferString(void* buffer, int loc, int len) {
     Buffer* b = buffer;
     char * s = (char*)(b->data + loc);
     char * rs = malloc(len + 1);
@@ -129,10 +130,7 @@ char* idris2_getBufferString(void* buffer, int loc, int len) {
     return rs;
 }
 
-size_t idris2_readBufferData(FILE* h, char* buffer, size_t loc, size_t max) {
-    return fread(buffer+loc, sizeof(uint8_t), (size_t)max, h);
-}
-
-size_t idris2_writeBufferData(FILE* h, const char* buffer, size_t loc, size_t len) {
-    return fwrite(buffer+loc, sizeof(uint8_t), len, h);
+size_t readBufferData(FILE* h, void* buffer, size_t loc, size_t max) {
+    Buffer* b = buffer;
+    return fread(b->data + loc, sizeof(uint8_t), max, h);
 }
