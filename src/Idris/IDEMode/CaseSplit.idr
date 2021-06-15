@@ -71,14 +71,14 @@ doUpdates defs ups (LBrace :: xs)
            Name n :: RBrace :: rest =>
                 -- expand something in braces into its cases, e.g.
                 -- { x} where x : Nat, becomes { x = Z} (and later { x = (S k)})
-                map (LBrace :: ws ++) $
-                pure (Name n ::
+                pure (LBrace :: ws ++
+                      Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups (Name n :: RBrace :: rest)))
            Name n :: Equal :: rest =>
                 -- update the RHS of the Equal, e.g. `rest` in {x = rest}
-                map (LBrace :: ws ++) $
-                pure (Name n ::
+                pure (LBrace :: ws ++
+                      Name n ::
                       Whitespace " " :: Equal :: Whitespace " " ::
                       !(doUpdates defs ups rest))
            Name n :: Whitespace s :: RBrace :: rest =>
