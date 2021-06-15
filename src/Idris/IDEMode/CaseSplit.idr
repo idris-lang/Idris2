@@ -60,10 +60,14 @@ toStrUpdate _ = pure [] -- can't replace non user names
 
 data UPD : Type where
 
+||| Given a list of definitions, a list of mappings from `RawName` to `String`,
+||| and a list of tokens to update, work out the updates to do, apply them, and
+||| return the result.
 doUpdates : {auto u : Ref UPD (List String)} ->
             Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
-doUpdates defs ups [] = pure []
+doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
+-- if we have an LBrace (i.e. `{`), handle its contents
 doUpdates defs ups (LBrace :: xs)
     -- the cases we care about are easy to detect w/o whitespace, so separate it
     = let (ws, nws) = span isWhitespace xs in
@@ -94,16 +98,19 @@ doUpdates defs ups (LBrace :: xs)
     isWhitespace : SourcePart -> Bool
     isWhitespace (Whitespace _) = True
     isWhitespace _              = False
-
+-- if we have a name, look up if it's a name we're updating, and if so update it
 doUpdates defs ups (Name n :: xs)
     = case lookup n ups of
            Nothing => pure (Name n :: !(doUpdates defs ups xs))
            Just up => pure (Other up :: !(doUpdates defs ups xs))
+-- if we have a hole, get the used names, generate+register a new unique name,
+-- and change the hole's name to the new one
 doUpdates defs ups (HoleName n :: xs)
     = do used <- get UPD
          n' <- uniqueName defs used n
          put UPD (n' :: used)
          pure $ HoleName n' :: !(doUpdates defs ups xs)
+-- if it's not a thing we update, leave it and continue working on the rest
 doUpdates defs ups (x :: xs)
     = pure $ x :: !(doUpdates defs ups xs)
 
