@@ -31,3 +31,31 @@ s2Eq {  n = a} = ?s2Eq_rhs
 s3Eq : {n : Nat} -> Nat
 s3Eq {   n = a} = ?s3Eq_rhs
 
+
+weirdNo : {n : Nat} -> Nat
+weirdNo {n } = ?weirdNo_rhs
+
+weird0a : {n : Nat} -> Nat
+weird0a {n= a} = ?weird0a_rhs
+
+weird0b : {n : Nat} -> Nat
+weird0b {n =b} = ?weird0b_rhs
+
+weird1a : {n : Nat} -> Nat
+weird1a { n= a} = ?weird1a_rhs
+
+weird1b : {n : Nat} -> Nat
+weird1b { n =b} = ?weird1b_rhs
+
+weird2a : {n : Nat} -> Nat
+weird2a {  n=  a} = ?weird2a_rhs
+
+weird2b : {n : Nat} -> Nat
+weird2b {  n  =b} = ?weird2b_rhs
+
+weirdSpacedA : {n : Nat} -> Nat
+weirdSpacedA {  n= a } = ?weirdSpacedA_rhs
+
+weirdSpacedB : {n : Nat} -> Nat
+weirdSpacedB {  n =b } = ?weirdSpacedB_rhs
+

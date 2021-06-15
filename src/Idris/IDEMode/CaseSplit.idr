@@ -71,34 +71,46 @@ doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
 doUpdates defs ups (LBrace :: xs)
     -- the cases we care about are easy to detect w/o whitespace, so separate it
     = let (ws, nws) = span isWhitespace xs in
-         case nws of
-           Name n :: RBrace :: rest =>
-                -- expand something in braces into its cases, e.g.
-                -- { x} where x : Nat, becomes { x = Z} (and later { x = (S k)})
-                pure (LBrace :: ws ++
-                      Name n ::
-                      Whitespace " " :: Equal :: Whitespace " " ::
-                      !(doUpdates defs ups (Name n :: RBrace :: rest)))
-           Name n :: Equal :: rest =>
-                -- update the RHS of the Equal, e.g. `rest` in {x = rest}
-                pure (LBrace :: ws ++
-                      Name n ::
-                      Whitespace " " :: Equal :: Whitespace " " ::
-                      !(doUpdates defs ups rest))
-           Name n :: Whitespace s :: RBrace :: rest =>
-                -- expand something in braces into its cases, e.g.
-                -- { x} where x : Nat, becomes { x = Z} (and later { x = (S k)})
-                map (LBrace :: ws ++) $
-                pure $ (Name n ::
-                      Whitespace " " :: Equal :: Whitespace " " ::
-                      !(doUpdates defs ups (Name n :: Whitespace s :: RBrace :: rest)))
-           -- not a special case: proceed as normal
-           _ => map (LBrace :: [] ++) $ doUpdates defs ups xs
+        case nws of
+          -- brace is immediately closed, so generate a new pattern-match on the
+          -- values the name can have, e.g. { x} where x : Nat would become
+          -- { x = Z}  (and later { x = (S k)})
+          Name n :: RBrace :: rest => 
+             pure (LBrace :: ws ++   -- preserve whitespace
+                   Name n ::
+                   Whitespace " " :: Equal :: Whitespace " " ::
+                   !(doUpdates defs ups (Name n :: RBrace :: rest))
+                   )
+          -- brace is not immediately closed, so handle other potential
+          -- whitespace
+          Name n :: rest =>
+             let (ws', nws') = span isWhitespace rest in
+               case nws' of
+                  -- preserve whitespace to the closing RBrace
+                  RBrace :: rest' =>
+                    pure (LBrace :: ws ++
+                          Name n :: Whitespace " " :: Equal :: Whitespace " " ::
+                          !(doUpdates defs ups (Name n :: ws' ++ RBrace :: rest'))
+                          )
+                  -- preserve whitespace before (and after) the Equal
+                  Equal :: rest' =>
+                    let (ws'', nws'') = span isWhitespace rest' in
+                    pure (LBrace :: ws ++
+                          Name n :: ws' ++ Equal :: ws'' ++
+                          !(doUpdates defs ups nws'')
+                          )
+                  -- handle everything else as usual, preserving whitespace
+                  _ => pure (LBrace :: ws ++ Name n :: ws' ++
+                             !(doUpdates defs ups rest)
+                             )
+          -- not a special case: proceed as normal
+          _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
   where
     isWhitespace : SourcePart -> Bool
     isWhitespace (Whitespace _) = True
     isWhitespace _              = False
--- if we have a name, look up if it's a name we're updating, and if so update it
+-- if we have a name, look up if it's a name we're updating. If it isn't, keep
+-- the old name, otherwise update the name, i.e. replace with the new name
 doUpdates defs ups (Name n :: xs)
     = case lookup n ups of
            Nothing => pure (Name n :: !(doUpdates defs ups xs))
