@@ -32,6 +32,11 @@ Syntax changes:
   future.
 * Add support for SnocList syntax: `[< 1, 2, 3]` desugars into `Lin :< 1 :< 2 :< 3`
   and their semantic highlighting.
+* Underscores can be used as visual separators for digit grouping purposes in
+  integer literals: `10_000_000` is equivalent to `10000000` and
+  `0b1111_0101_0000` is equivalent to `0b111101010000`.  This can aid
+  readability of long literals, or literals whose value should clearly
+  separate into parts, such as bytes or words in hexadecimal notation.
 
 Compiler changes:
 
