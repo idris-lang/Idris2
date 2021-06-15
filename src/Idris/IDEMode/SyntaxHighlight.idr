@@ -17,7 +17,7 @@ import Data.Maybe
 
 import Libraries.Data.PosMap
 
-%default covering
+%default total
 
 SExpable Decoration where
   toSExp Typ      = SExpList [ SymbolAtom "decor", SymbolAtom "type"]

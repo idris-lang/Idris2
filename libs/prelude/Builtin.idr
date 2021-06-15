@@ -1,5 +1,7 @@
 module Builtin
 
+%default total
+
 -- The most primitive data types; things which are used by desugaring
 
 -- Totality assertions

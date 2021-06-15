@@ -14,6 +14,8 @@ import Libraries.Text.Quantity
 
 import System.Info
 
+%default total
+
 infixr 5 </>, />
 infixr 7 <.>
 
@@ -453,6 +455,7 @@ parent = map show . parent' . parse
 ||| parents "/etc/kernel" == ["/etc/kernel", "/etc", "/"]
 ||| ```
 export
+covering
 parents : String -> List String
 parents = map show . List.iterate parent' . parse
 

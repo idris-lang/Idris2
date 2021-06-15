@@ -53,6 +53,8 @@ import System
 import System.File
 import System.Directory
 
+%default covering
+
 export
 fuzzySearch : {auto c : Ref Ctxt Defs}
            -> {auto u : Ref UST UState}

@@ -23,6 +23,8 @@ import System.File
 import Libraries.Utils.Hex
 import Libraries.Utils.Path
 
+%default covering
+
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
 showcCleanStringChar '-' = ("__" ++)
@@ -739,7 +741,7 @@ getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 cTypeOfCFType : CFType -> String
 cTypeOfCFType CFUnit          = "void"
-cTypeOfCFType CFInt           = "int"
+cTypeOfCFType CFInt           = "int64_t"
 cTypeOfCFType CFUnsigned8     = "uint8_t"
 cTypeOfCFType CFUnsigned16    = "uint16_t"
 cTypeOfCFType CFUnsigned32    = "uint32_t"
@@ -885,7 +887,7 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  case parseCC ["C"] ccs of
+  case parseCC ["RefC", "C"] ccs of
       Just (_, fctName :: extLibOpts) => do
           case extLibOpts of
               [lib, header] => addHeader header

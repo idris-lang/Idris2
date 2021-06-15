@@ -2,6 +2,8 @@ module System.Clock
 
 import PrimIO
 
+%default total
+
 ||| The various types of system clock available.
 public export
 data ClockType
@@ -81,42 +83,42 @@ isClockMandatory GCReal = Optional
 isClockMandatory _      = Mandatory
 
 %foreign "scheme:blodwen-clock-time-monotonic"
-         "C:clockTimeMonotonic"
+         "RefC:clockTimeMonotonic"
 prim__clockTimeMonotonic : PrimIO OSClock
 
 clockTimeMonotonic : IO OSClock
 clockTimeMonotonic = fromPrim prim__clockTimeMonotonic
 
 %foreign "scheme:blodwen-clock-time-utc"
-         "C:clockTimeUtc"
+         "RefC:clockTimeUtc"
 prim__clockTimeUtc : PrimIO OSClock
 
 clockTimeUtc : IO OSClock
 clockTimeUtc = fromPrim prim__clockTimeUtc
 
 %foreign "scheme:blodwen-clock-time-process"
-         "C:clockTimeProcess"
+         "RefC:clockTimeProcess"
 prim__clockTimeProcess : PrimIO OSClock
 
 clockTimeProcess : IO OSClock
 clockTimeProcess = fromPrim prim__clockTimeProcess
 
 %foreign "scheme:blodwen-clock-time-thread"
-         "C:clockTimeThread"
+         "RefC:clockTimeThread"
 prim__clockTimeThread : PrimIO OSClock
 
 clockTimeThread : IO OSClock
 clockTimeThread = fromPrim prim__clockTimeThread
 
 %foreign "scheme:blodwen-clock-time-gccpu"
-         "C:clockTimeGcCpu"
+         "RefC:clockTimeGcCpu"
 prim__clockTimeGcCpu : PrimIO OSClock
 
 clockTimeGcCpu : IO OSClock
 clockTimeGcCpu = fromPrim prim__clockTimeGcCpu
 
 %foreign "scheme:blodwen-clock-time-gcreal"
-         "C:clockTimeGcReal"
+         "RefC:clockTimeGcReal"
 prim__clockTimeGcReal : PrimIO OSClock
 
 clockTimeGcReal : IO OSClock
@@ -132,7 +134,7 @@ fetchOSClock GCReal    = clockTimeGcReal
 fetchOSClock Duration  = clockTimeMonotonic
 
 %foreign "scheme:blodwen-is-time?"
-         "C:clockValid"
+         "RefC:clockValid"
 prim__osClockValid : OSClock -> PrimIO Int
 
 ||| A test to determine the status of optional clocks.
@@ -140,14 +142,14 @@ osClockValid : OSClock -> IO Int
 osClockValid clk = fromPrim (prim__osClockValid clk)
 
 %foreign "scheme:blodwen-clock-second"
-         "C:clockSecond"
+         "RefC:clockSecond"
 prim__osClockSecond : OSClock -> PrimIO Bits64
 
 osClockSecond : OSClock -> IO Bits64
 osClockSecond clk = fromPrim (prim__osClockSecond clk)
 
 %foreign "scheme:blodwen-clock-nanosecond"
-         "C:clockNanosecond"
+         "RefC:clockNanosecond"
 prim__osClockNanosecond : OSClock -> PrimIO Bits64
 
 osClockNanosecond : OSClock -> IO Bits64

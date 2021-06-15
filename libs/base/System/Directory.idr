@@ -2,6 +2,8 @@ module System.Directory
 
 import public System.File
 
+%default total
+
 public export
 DirPtr : Type
 DirPtr = AnyPtr

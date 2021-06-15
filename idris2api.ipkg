@@ -116,6 +116,7 @@ modules =
 
     Libraries.Data.ANameMap,
     Libraries.Data.DList,
+    Libraries.Data.Fin,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.IOMatrix,
@@ -131,6 +132,7 @@ modules =
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+    Libraries.Data.Version,
 
     Libraries.System.Directory.Tree,
 

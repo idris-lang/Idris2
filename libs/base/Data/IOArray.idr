@@ -3,6 +3,8 @@ module Data.IOArray
 import Data.IOArray.Prims
 import Data.List
 
+%default total
+
 export
 record IOArray elem where
   constructor MkIOArray

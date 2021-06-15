@@ -17,6 +17,8 @@ import Idris.Package.Types
 import Idris.Pretty
 import Idris.Version
 
+%default covering
+
 getNS : Name -> String
 getNS (NS ns _) = show ns
 getNS _ = ""

@@ -3,6 +3,8 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Data.List
 import Data.Strings
 
+%default covering
+
 export
 htmlEscape : String -> String
 htmlEscape s = fastAppend $ reverse $ go [] s

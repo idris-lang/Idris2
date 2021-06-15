@@ -185,7 +185,7 @@ buildMod loc num len mod
         errs <- if (not needsBuilding) then pure [] else
            do let pad = minus (length $ show len) (length $ show num)
               let msg : Doc IdrisAnn
-                  = pretty num <+> pretty (String.replicate pad ' ')
+                  = pretty (String.replicate pad ' ') <+> pretty num
                     <+> slash <+> pretty len <+> colon
                     <++> pretty "Building" <++> pretty mod.buildNS
                     <++> parens (pretty src)

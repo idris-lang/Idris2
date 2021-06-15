@@ -2,6 +2,8 @@ module Control.App
 
 import Data.IORef
 
+%default covering
+
 ||| `Error` is a type synonym for `Type`, specify for exception handling.
 public export
 Error : Type

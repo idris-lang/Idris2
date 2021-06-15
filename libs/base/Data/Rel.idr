@@ -2,6 +2,8 @@ module Data.Rel
 
 import Data.Fun
 
+%default total
+
 ||| Build an n-ary relation type from a Vect of Types
 public export
 Rel : Vect n Type -> Type

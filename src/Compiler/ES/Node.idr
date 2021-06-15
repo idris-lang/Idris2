@@ -17,6 +17,8 @@ import System.File
 
 import Data.Maybe
 
+%default covering
+
 findNode : IO String
 findNode = do
    Nothing <- idrisGetEnv "NODE"

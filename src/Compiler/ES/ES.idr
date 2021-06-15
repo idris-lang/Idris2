@@ -10,6 +10,8 @@ import Libraries.Data.String.Extra
 
 import Core.Directory
 
+%default covering
+
 %hide Data.Strings.lines
 %hide Data.Strings.lines'
 %hide Data.Strings.unlines

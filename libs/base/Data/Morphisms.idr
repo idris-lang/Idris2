@@ -2,6 +2,8 @@ module Data.Morphisms
 
 import Data.Contravariant
 
+%default total
+
 public export
 record Morphism a b where
   constructor Mor
