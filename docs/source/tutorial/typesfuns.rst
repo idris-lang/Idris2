@@ -555,7 +555,10 @@ then the function bodies. As a result, none of the function types can
 depend on the reduction behaviour of any of the functions in the
 block.
 
-Use forward declaration style can save some indents.
+Forward declarations can allow you to have more fine-grained control over the order
+in which mutually defined concepts are declared. This can be useful if you need to
+mention a datatype's constructor in the type of a mutually defined function, or need
+to rely on the behaviour of a mutually defined function for something to typecheck.
 
 .. code-block:: idris
 
