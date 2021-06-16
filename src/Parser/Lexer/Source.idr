@@ -321,10 +321,10 @@ mutual
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
       <|> match doubleLit (DoubleLit . cast)
-      <|> match binLit (IntegerLit . fromBinLit)
-      <|> match hexLit (IntegerLit . fromHexLit)
-      <|> match octLit (IntegerLit . fromOctLit)
-      <|> match digits (IntegerLit . cast)
+      <|> match binUnderscoredLit (IntegerLit . fromBinLit)
+      <|> match hexUnderscoredLit (IntegerLit . fromHexLit)
+      <|> match octUnderscoredLit (IntegerLit . fromOctLit)
+      <|> match digitsUnderscoredLit (IntegerLit . cast)
       <|> compose multilineBegin
                   (const $ StringBegin True)
                   countHashtag
