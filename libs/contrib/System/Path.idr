@@ -228,10 +228,10 @@ parseBody =
   do
     text <- match PTText
     the (Grammar _ False _) $
-      case text of
-        ".." => pure ParentDir
-        "." => pure CurDir
-        normal => pure (Normal normal)
+      pure $ case text of
+        ".." => ParentDir
+        "." => CurDir
+        normal => Normal normal
 
 parsePath : Grammar PathToken False Path
 parsePath =

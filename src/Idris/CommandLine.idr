@@ -358,7 +358,7 @@ envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
-versionMsg = "Idris 2, version " ++ showVersion True version
+versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String

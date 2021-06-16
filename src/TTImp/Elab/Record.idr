@@ -47,7 +47,7 @@ toLHS' loc (Field mn@(Just _) n _)
     = (mn, IAs loc EmptyFC UseRight (UN n) (Implicit loc True))
 toLHS' loc (Field mn n _) = (mn, IBindVar EmptyFC n)
 toLHS' loc (Constr mn con args)
-    = let args' = map (\a => toLHS' loc (snd a)) args in
+    = let args' = map (toLHS' loc . snd) args in
           (mn, applyImp (IVar loc con) args')
 
 toLHS : FC -> Rec -> RawImp
@@ -56,7 +56,7 @@ toLHS fc r = snd (toLHS' fc r)
 toRHS' : FC -> Rec -> (Maybe Name, RawImp)
 toRHS' loc (Field mn _ val) = (mn, val)
 toRHS' loc (Constr mn con args)
-    = let args' = map (\a => toRHS' loc (snd a)) args in
+    = let args' = map (toRHS' loc . snd) args in
           (mn, applyImp (IVar loc con) args')
 
 toRHS : FC -> Rec -> RawImp

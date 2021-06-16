@@ -49,7 +49,7 @@ Semigroup a => Semigroup (Morphism r a) where
 
 export
 Monoid a => Monoid (Morphism r a) where
-  neutral = Mor \r => neutral
+  neutral = Mor \_ => neutral
 
 export
 Semigroup (Endomorphism a) where
@@ -86,7 +86,7 @@ export
 
 export
 (Monoid a, Applicative f) => Monoid (Kleislimorphism f r a) where
-  neutral = Kleisli \r => pure neutral
+  neutral = Kleisli \_ => pure neutral
 
 export
 Cast (Endomorphism a) (Morphism a a) where

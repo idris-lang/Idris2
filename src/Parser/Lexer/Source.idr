@@ -320,11 +320,11 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
-      <|> match doubleLit (\x => DoubleLit (cast x))
-      <|> match binUnderscoredLit (\x => IntegerLit (fromBinLit $ removeUnderscores x))
-      <|> match hexUnderscoredLit (\x => IntegerLit (fromHexLit $ removeUnderscores x))
-      <|> match octUnderscoredLit (\x => IntegerLit (fromOctLit $ removeUnderscores x))
-      <|> match digitsUnderscoredLit (\x => IntegerLit (cast $ removeUnderscores x))
+      <|> match doubleLit (DoubleLit . cast)
+      <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
+      <|> match hexUnderscoredLit (IntegerLit . fromHexLit . removeUnderscores)
+      <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
+      <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
                   (const $ StringBegin True)
                   countHashtag
@@ -337,7 +337,7 @@ mutual
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
                   (const StringEnd)
-      <|> match charLit (\x => CharLit (stripQuotes x))
+      <|> match charLit (CharLit . stripQuotes)
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
       <|> match namespacedIdent parseNamespace
       <|> match identNormal parseIdent
