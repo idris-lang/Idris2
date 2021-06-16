@@ -650,7 +650,7 @@ mutual
         pure $ MkRS opStatement opStatement
     cStatementsFromANF (AExtPrim fc _ p args) = do
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map (\v => varName v) args) ++")")
+        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) = do
         c <- getNextCounter

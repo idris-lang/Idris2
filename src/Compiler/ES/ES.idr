@@ -313,7 +313,7 @@ bitOp _                     op x y = pure $ binOp op x y
 constPrimitives : {auto c : Ref ESs ESSt} -> ConstantPrimitives
 constPrimitives = MkConstantPrimitives {
     charToInt    = \k => truncInt (useBigInt k) k . jsIntOfChar k
-  , intToChar    = \k => jsCharOfInt k
+  , intToChar    = jsCharOfInt
   , stringToInt  = \k,s => jsIntOfString k s >>= truncInt (useBigInt k) k
   , intToString  = \_   => pure . jsAnyToString
   , doubleToInt  = \k => truncInt (useBigInt k) k . jsIntOfDouble k

@@ -14,7 +14,7 @@ import Prelude.Show
 
 public export
 Functor IO where
-  map f io = io_bind io (\b => io_pure (f b))
+  map f io = io_bind io $ io_pure . f
 
 %inline
 public export
