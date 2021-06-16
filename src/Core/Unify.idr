@@ -1439,16 +1439,18 @@ retryGuess mode smode (hid, (loc, hname))
                          pure True)
                      \case
                        DeterminingArg _ n i _ _ =>
-                         let msg = "Failed (det " ++ show hname ++ " " ++ show n ++ ")" in
-                           do logTerm "unify.retry" 5 msg (type def)
-                              setInvertible loc (Resolved i)
-                              pure False -- progress not made yet!
+                         do logTerm "unify.retry" 5
+                                    ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
+                                    (type def)
+                            setInvertible loc (Resolved i)
+                            pure False -- progress not made yet!
                        err =>
-                         let msg = "Search failed at " ++ show rig ++ " for " ++ show hname in
-                           do logTermNF "unify.retry" 5 msg [] (type def)
-                              case smode of
-                                   LastChance => throw !(normaliseErr err)
-                                   _ => pure False -- Postpone again
+                         do logTermNF "unify.retry" 5
+                                      ("Search failed at " ++ show rig ++ " for " ++ show hname)
+                                      [] (type def)
+                            case smode of
+                                 LastChance => throw !(normaliseErr err)
+                                 _ => pure False -- Postpone again
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
