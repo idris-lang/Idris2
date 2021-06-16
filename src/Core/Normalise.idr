@@ -140,6 +140,58 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Erased fc i) stk = pure $ NErased fc i
     eval env locs (TType fc) stk = pure $ NType fc
 
+    -- Apply an evaluated argument (perhaps cached from an earlier evaluation)
+    -- to a stack
+    applyToStack : {auto c : Ref Ctxt Defs} ->
+                   {free : _} ->
+                   Env Term free -> NF free -> Stack free -> Core (NF free)
+    applyToStack env (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
+        = do defs' <- get Ctxt
+             arg' <- sc defs' $ snd arg
+             applyToStack env arg' stk
+    applyToStack env (NBind fc x b@(Let _ r val ty) sc) stk
+        = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
+             then do b' <- traverse (\t => applyToStack env t []) b
+                     pure (NBind fc x b'
+                              (\defs', arg => applyToStack env !(sc defs' arg) stk))
+             else do val' <- applyToStack env val []
+                     applyToStack env !(sc defs (MkNFClosure val')) stk
+    applyToStack env (NBind fc x b sc) stk
+        = do b' <- traverse (\t => applyToStack env t []) b
+             pure (NBind fc x b'
+                      (\defs', arg => applyToStack env !(sc defs' arg) stk))
+    applyToStack env (NApp fc (NRef nt fn) args) stk
+        = evalRef env False fc nt fn (args ++ stk)
+                  (NApp fc (NRef nt fn) (args ++ stk))
+    applyToStack env (NApp fc (NLocal mrig idx p) args) stk
+        = evalLocal env fc mrig _ p (args ++ stk) []
+    applyToStack env (NApp fc (NMeta n i args) args') stk
+        = evalMeta env fc n i args (args' ++ stk)
+    applyToStack env (NDCon fc n t a args) stk
+        = pure $ NDCon fc n t a (args ++ stk)
+    applyToStack env (NTCon fc n t a args) stk
+        = pure $ NTCon fc n t a (args ++ stk)
+    applyToStack env (NAs fc s p t) stk
+       = if removeAs topopts
+            then applyToStack env t stk
+            else do p' <- applyToStack env p []
+                    t' <- applyToStack env t stk
+                    pure (NAs fc s p' t')
+    applyToStack env (NDelayed fc r tm) stk
+       = do tm' <- applyToStack env tm stk
+            pure (NDelayed fc r tm')
+    applyToStack env nf@(NDelay fc r ty tm) stk
+       = pure nf -- stack should always be empty here!
+    applyToStack env (NForce fc r tm args) stk
+       = do tm' <- applyToStack env tm []
+            case tm' of
+                 NDelay fc r _ arg =>
+                    eval env [arg] (Local {name = UN "fvar"} fc Nothing _ First) stk
+                 _ => pure (NForce fc r tm' (args ++ stk))
+    applyToStack env nf@(NPrimVal fc _) _ = pure nf
+    applyToStack env nf@(NErased fc _) _ = pure nf
+    applyToStack env nf@(NType fc) _ = pure nf
+
     evalLocClosure : {auto c : Ref Ctxt Defs} ->
                      {free : _} ->
                      Env Term free ->
@@ -150,22 +202,7 @@ parameters (defs : Defs, topopts : EvalOpts)
     evalLocClosure env fc mrig stk (MkClosure opts locs' env' tm')
         = evalWithOpts defs opts env' locs' tm' stk
     evalLocClosure {free} env fc mrig stk (MkNFClosure nf)
-        = applyToStack nf stk
-      where
-        applyToStack : NF free -> Stack free -> Core (NF free)
-        applyToStack (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
-            = do arg' <- sc defs $ snd arg
-                 applyToStack arg' stk
-        applyToStack (NApp fc (NRef nt fn) args) stk
-            = evalRef env False fc nt fn (args ++ stk)
-                      (NApp fc (NRef nt fn) args)
-        applyToStack (NApp fc (NLocal mrig idx p) args) stk
-          = evalLocal env fc mrig _ p (args ++ stk) []
-        applyToStack (NDCon fc n t a args) stk
-            = pure $ NDCon fc n t a (args ++ stk)
-        applyToStack (NTCon fc n t a args) stk
-            = pure $ NTCon fc n t a (args ++ stk)
-        applyToStack nf _ = pure nf
+        = applyToStack env nf stk
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
                 {free : _} ->
@@ -703,20 +740,7 @@ export
 continueNF : {auto c : Ref Ctxt Defs} ->
              {vars : _} ->
              Defs -> Env Term vars -> NF vars -> Core (NF vars)
-continueNF defs env stuck@(NApp fc (NRef nt fn) stk)
-    = evalRef defs defaultOpts env False fc nt fn stk stuck
-continueNF defs env (NApp fc (NMeta name idx args) stk)
-    = evalMeta defs defaultOpts env fc name idx args stk
--- Next batch are already in normal form
-continueNF defs env nf@(NDCon fc x tag arity xs) = pure nf
-continueNF defs env nf@(NTCon fc x tag arity xs) = pure nf
-continueNF defs env nf@(NPrimVal fc x) = pure nf
-continueNF defs env nf@(NErased fc imp) = pure nf
-continueNF defs env nf@(NType fc) = pure nf
--- For the rest, easiest just to quote and reevaluate
-continueNF defs env tm
-    = do empty <- clearDefs defs
-         nf defs env !(quote empty env tm)
+continueNF defs env stuck = applyToStack defs defaultOpts env stuck []
 
 export
 glueBack : {auto c : Ref Ctxt Defs} ->
