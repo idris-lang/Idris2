@@ -450,9 +450,9 @@ export
 wrapError : (Error -> Error) -> Core a -> Core a
 wrapError fe (MkCore prog)
     = MkCore (prog >>=
-                 (\x => case x of
-                             Left err => pure (Left (fe err))
-                             Right val => pure (Right val)))
+                 (\x => pure $ case x of
+                             Left err => Left (fe err)
+                             Right val => Right val))
 
 -- This would be better if we restrict it to a limited set of IO operations
 export

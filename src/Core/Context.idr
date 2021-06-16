@@ -512,17 +512,15 @@ lookupCtxtExact (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just res =>
                 do def <- decode ctxt idx True res
-                   case returnDef (inlineOnly ctxt) idx def of
-                        Nothing => pure Nothing
-                        Just (_, def) => pure (Just def)
+                   pure $ map (\(_, def) => def) $
+                     returnDef (inlineOnly ctxt) idx def
            Nothing =>
               do arr <- get Arr @{content ctxt}
                  Just res <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  def <- decode ctxt idx True res
-                 case returnDef (inlineOnly ctxt) idx def of
-                      Nothing => pure Nothing
-                      Just (_, def) => pure (Just def)
+                 pure $ map (\(_, def) => def) $
+                   returnDef (inlineOnly ctxt) idx def
 lookupCtxtExact n ctxt
     = do Just (i, def) <- lookupCtxtExactI n ctxt
               | Nothing => pure Nothing
@@ -1313,10 +1311,10 @@ getUserHoles
     isHole defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure True
-             case definition def of
-                  None => pure True
-                  Hole _ _ => pure True
-                  _ => pure False
+             pure $ case definition def of
+                  None => True
+                  Hole _ _ => True
+                  _ => False
 
 export
 addDef : {auto c : Ref Ctxt Defs} ->
