@@ -72,21 +72,14 @@ doUpdates defs ups (LBrace :: xs)
     -- the cases we care about are easy to detect w/o whitespace, so separate it
     = let (ws, nws) = span isWhitespace xs in
         case nws of
-          -- brace is immediately closed, so generate a new pattern-match on the
-          -- values the name can have, e.g. { x} where x : Nat would become
-          -- { x = Z}  (and later { x = (S k)})
-          Name n :: RBrace :: rest =>
-             pure (LBrace :: ws ++   -- preserve whitespace
-                   Name n ::
-                   Whitespace " " :: Equal :: Whitespace " " ::
-                   !(doUpdates defs ups (Name n :: RBrace :: rest))
-                   )
-          -- brace is not immediately closed, so handle other potential
-          -- whitespace
+          -- handle potential whitespace in the other parts
           Name n :: rest =>
              let (ws', nws') = span isWhitespace rest in
                case nws' of
-                  -- preserve whitespace to the closing RBrace
+                  -- brace is immediately closed, so generate a new
+                  -- pattern-match on the values the name can have, e.g.
+                  -- { x}  where x : Nat would become { x = Z}
+                  --                       (and later { x = (S k)})
                   RBrace :: rest' =>
                     pure (LBrace :: ws ++
                           Name n :: Whitespace " " :: Equal :: Whitespace " " ::
