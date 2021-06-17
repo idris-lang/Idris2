@@ -75,7 +75,7 @@ sizeRec step z = accRec step z (sizeAccessible z)
 
 export
 implementation Sized Nat where
-  size = \x => x
+  size = id
 
 export
 implementation Sized (List a) where

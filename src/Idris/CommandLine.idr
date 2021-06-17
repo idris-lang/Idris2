@@ -136,6 +136,9 @@ data CLOpt
   WarningsAsErrors |
   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
+  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+  ||| of modification time.
+  HashesInsteadOfModTime |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
@@ -224,6 +227,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Treat warnings as errors"),
            MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
               (Just "Do not print shadowing warnings"),
+
+           optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]

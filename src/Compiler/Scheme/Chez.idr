@@ -17,8 +17,6 @@ import Libraries.Utils.Path
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NameMap
-import Libraries.Data.Version
 import Data.Strings
 import Data.Vect
 
@@ -28,6 +26,10 @@ import System
 import System.Directory
 import System.File
 import System.Info
+
+import Libraries.Data.NameMap
+import Libraries.Data.Version
+import Libraries.Utils.String
 
 %default covering
 
@@ -80,15 +82,6 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-export
-escapeString : String -> String
-escapeString s = pack $ foldr escape [] $ unpack s
-  where
-    escape : Char -> List Char -> List Char
-    escape '"' cs = '\\' :: '\"' :: cs
-    escape '\\' cs = '\\' :: '\\' :: cs
-    escape c   cs = c :: cs
-
 schHeader : String -> List String -> String
 schHeader chez libs
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
@@ -101,7 +94,7 @@ schHeader chez libs
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
     "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
+    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
     "(let ()\n"
 
 schFooter : Bool -> String
@@ -246,9 +239,9 @@ cCall appdir fc cfn clib args ret collectSafe
                            copyLib (appdir </> fname, fullname)
                            put Loaded (clib :: loaded)
                            pure $ "(load-shared-object \""
-                                    ++ escapeString fname
+                                    ++ escapeStringChez fname
                                     ++ "\")\n"
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
          let callConv = if collectSafe then " __collect_safe" else ""
          let call = "((foreign-procedure" ++ callConv ++ " " ++ show cfn ++ " ("

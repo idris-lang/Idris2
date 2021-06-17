@@ -293,10 +293,10 @@ mutual
                 Core (Maybe (List (vs ** (Env Term vs,
                                          List (Nat, Term vs), Term vs))))
   getCasePats {vars} defs n pats args
-      = case !(lookupDefExact n (gamma defs)) of
+      = pure $ case !(lookupDefExact n (gamma defs)) of
              Just (PMDef _ _ _ _ pdefs)
-                => pure $ Just (map matchArgs pdefs)
-             _ => pure Nothing
+                => Just (map matchArgs pdefs)
+             _ => Nothing
     where
       updateRHS : {vs, vs' : _} ->
                   List (Term vs, Term vs') -> Term vs -> Term vs'

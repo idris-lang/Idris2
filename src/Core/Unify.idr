@@ -242,11 +242,11 @@ postpone loc mode logstr env x y
     undefinedN : Name -> Core Bool
     undefinedN n
         = do defs <- get Ctxt
-             case !(lookupDefExact n (gamma defs)) of
-                  Just (Hole _ _) => pure True
-                  Just (BySearch _ _ _) => pure True
-                  Just (Guess _ _ _) => pure True
-                  _ => pure False
+             pure $ case !(lookupDefExact n (gamma defs)) of
+                  Just (Hole _ _) => True
+                  Just (BySearch _ _ _) => True
+                  Just (Guess _ _ _) => True
+                  _ => False
 
 postponeS : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -1623,9 +1623,9 @@ checkDots
                       maybe (pure False)
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
                                            | Nothing => undefinedName fc n
-                                      case ndef of
-                                           Hole _ _ => pure False
-                                           _ => pure True)
+                                      pure $ case ndef of
+                                           Hole _ _ => False
+                                           _ => True)
                             oldholen
 
                    -- If any of the things we solved have the same definition,

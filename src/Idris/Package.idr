@@ -696,24 +696,25 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
       PIgnore : OptType
       PErr : OptType
     optType : CLOpt -> OptType
-    optType (Package cmd f)  = PPackage cmd f
-    optType Quiet            = POpt
-    optType Verbose          = POpt
-    optType Timing           = POpt
-    optType (Logging l)      = POpt
-    optType (DumpCases f)    = POpt
-    optType (DumpLifted f)   = POpt
-    optType (DumpVMCode f)   = POpt
-    optType DebugElabCheck   = POpt
-    optType (SetCG f)        = POpt
-    optType (Directive d)    = POpt
-    optType (BuildDir f)     = POpt
-    optType (OutputDir f)    = POpt
-    optType WarningsAsErrors = POpt
-    optType (ConsoleWidth n) = PIgnore
-    optType (Color b)        = PIgnore
-    optType NoBanner         = PIgnore
-    optType x                = PErr
+    optType (Package cmd f)        = PPackage cmd f
+    optType Quiet                  = POpt
+    optType Verbose                = POpt
+    optType Timing                 = POpt
+    optType (Logging l)            = POpt
+    optType (DumpCases f)          = POpt
+    optType (DumpLifted f)         = POpt
+    optType (DumpVMCode f)         = POpt
+    optType DebugElabCheck         = POpt
+    optType (SetCG f)              = POpt
+    optType (Directive d)          = POpt
+    optType (BuildDir f)           = POpt
+    optType (OutputDir f)          = POpt
+    optType WarningsAsErrors       = POpt
+    optType HashesInsteadOfModTime = POpt
+    optType (ConsoleWidth n)       = PIgnore
+    optType (Color b)              = PIgnore
+    optType NoBanner               = PIgnore
+    optType x                      = PErr
 
     pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
     pOptUpdate opt with (optType opt)

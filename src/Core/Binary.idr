@@ -1,3 +1,6 @@
+||| Reading and writing 'Defs' from/to a binary file. In order to be saved, a
+||| name must have been flagged using 'toSave'. (Otherwise we'd save out
+||| everything, not just the things in the current file).
 module Core.Binary
 
 import Core.CaseTree
@@ -12,28 +15,23 @@ import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Libraries.Data.IntMap
+import Data.Buffer
 import Data.List
-import Libraries.Data.NameMap
 
 import System.File
 
--- Reading and writing 'Defs' from/to  a binary file
--- In order to be saved, a name must have been flagged using 'toSave'.
--- (Otherwise we'd save out everything, not just the things in the current
--- file).
+import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 
 import public Libraries.Utils.Binary
 
-import Data.Buffer
-
 %default covering
 
--- increment this when changing anything in the data format
--- TTC files can only be compatible if the version number is the same
+||| TTC files can only be compatible if the version number is the same
+||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 55
+ttcVersion = 56
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -43,6 +41,7 @@ checkTTCVersion file ver exp
 record TTCFile extra where
   constructor MkTTCFile
   version : Int
+  sourceHash : String
   ifaceHash : Int
   importHashes : List (Namespace, Int)
   context : List (Name, Binary)
@@ -93,14 +92,14 @@ HasNames (Name, Name, Bool) where
   resolved c (n1, n2, b) = pure (!(resolved c n1), !(resolved c n2), b)
 
 HasNames e => HasNames (TTCFile e) where
-  full gam (MkTTCFile version ifaceHash iHashes
+  full gam (MkTTCFile version sourceHash ifaceHash iHashes
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version ifaceHash iHashes
+      = pure $ MkTTCFile version sourceHash ifaceHash iHashes
                          context userHoles
                          !(traverse (full gam) autoHints)
                          !(traverse (full gam) typeHints)
@@ -131,14 +130,14 @@ HasNames e => HasNames (TTCFile e) where
   -- I don't think we ever actually want to call this, because after we read
   -- from the file we're going to add them to learn what the resolved names
   -- are supposed to be! But for completeness, let's do it right.
-  resolved gam (MkTTCFile version ifaceHash iHashes
+  resolved gam (MkTTCFile version sourceHash ifaceHash iHashes
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version ifaceHash iHashes
+      = pure $ MkTTCFile version sourceHash ifaceHash iHashes
                          context userHoles
                          !(traverse (resolved gam) autoHints)
                          !(traverse (resolved gam) typeHints)
@@ -177,6 +176,7 @@ writeTTCFile b file_in
       = do file <- toFullNames file_in
            toBuf b "TT2"
            toBuf @{Wasteful} b (version file)
+           toBuf b (sourceHash file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
            toBuf b (imported file)
@@ -205,12 +205,13 @@ readTTCFile readall file as b
            when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
            ver <- fromBuf @{Wasteful} b
            checkTTCVersion file ver ttcVersion
+           sourceFileHash <- fromBuf b
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
            imp <- fromBuf b
            ex <- fromBuf b
            if not readall
-              then pure (MkTTCFile ver ifaceHash importHashes [] [] [] [] []
+              then pure (MkTTCFile ver sourceFileHash ifaceHash importHashes [] [] [] [] []
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing)
@@ -229,7 +230,7 @@ readTTCFile readall file as b
                  nds <- fromBuf b
                  cgds <- fromBuf b
                  trans <- fromBuf b
-                 pure (MkTTCFile ver ifaceHash importHashes
+                 pure (MkTTCFile ver sourceFileHash ifaceHash importHashes
                                  (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
                                  pns rws prims nds cgds trans ex)
@@ -265,15 +266,17 @@ export
 writeToTTC : (HasNames extra, TTC extra) =>
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
-             extra -> (fname : String) -> Core ()
-writeToTTC extradata fname
+             extra -> (sourceFileName : String) ->
+             (ttcFileName : String) -> Core ()
+writeToTTC extradata sourceFileName ttcFileName
     = do bin <- initBinary
          defs <- get Ctxt
          ust <- get UST
          gdefs <- getSaveDefs (currentNS defs) (keys (toSave defs)) [] defs
-         log "ttc.write" 5 $ "Writing " ++ fname ++ " with hash " ++ show (ifaceHash defs)
+         sourceHash <- hashFile sourceFileName
+         log "ttc.write" 5 $ "Writing " ++ ttcFileName ++ " with source hash " ++ sourceHash ++ " and interface hash " ++ show (ifaceHash defs)
          writeTTCFile bin
-                   (MkTTCFile ttcVersion (ifaceHash defs) (importHashes defs)
+                   (MkTTCFile ttcVersion (sourceHash) (ifaceHash defs) (importHashes defs)
                               gdefs
                               (keys (userHoles defs))
                               (saveAutoHints defs)
@@ -290,8 +293,8 @@ writeToTTC extradata fname
                               (saveTransforms defs)
                               extradata)
 
-         Right ok <- coreLift $ writeToFile fname !(get Bin)
-               | Left err => throw (InternalError (fname ++ ": " ++ show err))
+         Right ok <- coreLift $ writeToFile ttcFileName !(get Bin)
+               | Left err => throw (InternalError (ttcFileName ++ ": " ++ show err))
          pure ()
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
@@ -497,27 +500,31 @@ getImportHashes file b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
-         ifaceHash <- fromBuf {a = Int} b
+         sourceFileHash <- fromBuf {a = String} b
+         interfaceHash <- fromBuf {a = Int} b
          fromBuf b
 
-getHash : String -> Ref Bin Binary -> Core Int
-getHash file b
+export
+getHashes : String -> Ref Bin Binary -> Core (String, Int)
+getHashes file b
     = do hdr <- fromBuf {a = String} b
          when (hdr /= "TT2") $ corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
          ver <- fromBuf @{Wasteful} b
          checkTTCVersion file ver ttcVersion
-         fromBuf b
+         sourceFileHash <- fromBuf b
+         interfaceHash <- fromBuf b
+         pure (sourceFileHash, interfaceHash)
 
 export
-readIFaceHash : (fname : String) -> -- file containing the module
-                Core Int
-readIFaceHash fname
-    = do Right buffer <- coreLift $ readFromFile fname
-            | Left err => pure 0
+readHashes : (fileName : String) -> -- file containing the module
+                Core (String, Int)
+readHashes fileName
+    = do Right buffer <- coreLift $ readFromFile fileName
+            | Left err => pure ("", 0)
          b <- newRef Bin buffer
-         catch (do res <- getHash fname b
-                   pure res)
-               (\err => pure 0)
+         catch (do hashes <- getHashes fileName b
+                   pure hashes)
+               (\err => pure ("", 0))
 
 export
 readImportHashes : (fname : String) -> -- file containing the module

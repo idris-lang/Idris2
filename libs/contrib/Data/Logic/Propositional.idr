@@ -43,7 +43,7 @@ DN : Type -> Type
 DN p = Not $ Not p
 
 pemDN : DN $ PEM p
-pemDN f = f $ Right $ \x => f $ Left x
+pemDN f = f $ Right $ f . Left
 
 dneDN : DN $ DNE p
 dneDN f = f $ \g => void $ g $ \x => f $ \_ => x
@@ -75,11 +75,11 @@ consensusPEM (Right r) (_, z) = Right (r, z)
 
 peircePEM : PEM p -> Peirce p q
 peircePEM (Left l) _ = l
-peircePEM (Right r) f = f $ \x => void $ r x
+peircePEM (Right r) f = f $ absurd . r
 
 fregePEM : PEM p -> Frege p q r
 fregePEM (Left l) f _ _ = f l
-fregePEM (Right r) _ g h = g $ h $ \x => void $ r x
+fregePEM (Right r) _ g h = g $ h $ absurd . r
 
 transpositionPEM : PEM p -> Transposition q p
 transpositionPEM (Left l) _ _ = l
@@ -105,10 +105,10 @@ pemDNE = EDN pemDN
 -- all the instances together are equivalent.
 
 pemPeirce : Peirce (PEM p) Void -> PEM p
-pemPeirce f = f $ \g => Right $ \x => g $ Left x
+pemPeirce f = f $ \g => Right $ g . Left
 
 dnePeirce : Peirce p Void -> DNE p
-dnePeirce f g = f $ \h => void $ g h
+dnePeirce f g = f $ absurd . g
 
 consensusPeirce : Peirce (Consensus p q r) Void -> Consensus p q r
 consensusPeirce f (y, z) =
@@ -155,6 +155,6 @@ meredithPEM (Left l) _ _ _ = l
 meredithPEM (Right r) f g x =
   g $ f $ \h =>
     void $ h
-      (\y => void $ r y)
+      (absurd . r)
       (\z => r $ g $ f (\_ => z))
       x
