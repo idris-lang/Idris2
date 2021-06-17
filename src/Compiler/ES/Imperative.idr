@@ -14,7 +14,6 @@ import Compiler.CompileExpr
 
 import public Core.Context
 
-import Compiler.ES.RemoveUnused
 import Compiler.ES.TailRec
 
 %default covering
@@ -411,7 +410,7 @@ compileToImperative c tm =
 
      -- list of toplevel definitions (only those necessary
      -- to implement the main expression)
-     lst_defs <- traverse getImp (defsUsedByNamedCExp ctm ndefs)
+     lst_defs <- traverse getImp ndefs
 
      let defs = concat lst_defs
 

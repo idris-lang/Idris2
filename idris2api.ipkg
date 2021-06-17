@@ -21,7 +21,6 @@ modules =
     Compiler.ES.ImperativeAst,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
-    Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
     Compiler.RefC.CC,
@@ -117,6 +116,7 @@ modules =
     Libraries.Data.ANameMap,
     Libraries.Data.DList,
     Libraries.Data.Fin,
+    Libraries.Data.Graph,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.IOMatrix,
