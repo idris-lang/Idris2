@@ -448,7 +448,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog) = MkCore $ prog >>= pure . mapFst fe
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
