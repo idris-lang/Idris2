@@ -88,6 +88,7 @@ modules = Control.App,
           System.Directory,
           System.FFI,
           System.File,
+          System.Future,
           System.Info,
           System.REPL,
           System.Signal

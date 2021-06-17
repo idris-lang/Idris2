@@ -99,6 +99,7 @@ Changed:
 
 - Restructured Monad Transformers in `Control.Monad`
 - `zip` precedence
+- Moved `System.Future` from `contrib` to `base`
 
 #### Contrib
 

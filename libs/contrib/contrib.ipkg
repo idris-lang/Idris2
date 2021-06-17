@@ -152,7 +152,6 @@ modules = Control.ANSI,
 
           System.Console.GetOpt,
           System.Directory.Tree,
-          System.Future,
           System.Random,
           System.Path,
 
