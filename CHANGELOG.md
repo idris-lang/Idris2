@@ -102,6 +102,9 @@ Other changes:
 * Added an environment variable `IDRIS2_PACKAGE_PATH` for extending where to
   look for packages.
 * Support for auto-completion in bash-like shells was added.
+* Fixed case-splitting to respect any indentation there may be in the term being
+  case-split and the surrounding symbols, instead of filtering out the
+  whitespace and putting it back as indentation.
 
 Changes since Idris 2 v0.2.1
 ----------------------------
