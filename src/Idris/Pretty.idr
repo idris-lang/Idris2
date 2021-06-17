@@ -271,9 +271,9 @@ mutual
                := go leftAppPrec f <++> go appPrec a
 
         in parenthesise (d > appPrec) $ group $ case f of
-          f'@(PRef _ n) =>
+          (PRef _ n) =>
             if isJust (isRF n)
-            then go leftAppPrec a <++> go appPrec f'
+            then go leftAppPrec a <++> go appPrec f
             else catchall
           _ => catchall
       go d (PWithApp _ f a) = go d f <++> pipe <++> go d a
