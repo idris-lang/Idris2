@@ -240,16 +240,16 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  (\err => case err of
-                              TryWithImplicits loc benv ns
-                                 => do put Ctxt defs
-                                       put UST ust
-                                       put MD mv
-                                       tm' <- bindImps loc benv ns tm
-                                       elabTermSub defining mode opts nest
-                                                   env env' sub
-                                                   tm' (Just ty)
-                              _ => throw err)
+                  \case
+                    TryWithImplicits loc benv ns
+                      => do put Ctxt defs
+                            put UST ust
+                            put MD mv
+                            tm' <- bindImps loc benv ns tm
+                            elabTermSub defining mode opts nest
+                                        env env' sub
+                                        tm' (Just ty)
+                    err => throw err
          case mode of
               InType => commit -- bracket the 'branch' above
               _ => pure ()

@@ -138,9 +138,9 @@ anyOne : {vars : _} ->
 anyOne fc env top [] = throw (CantSolveGoal fc [] top)
 anyOne fc env top [elab]
     = catch elab
-         (\err => case err of
-                       CantSolveGoal _ _ _ => throw err
-                       _ => throw (CantSolveGoal fc [] top))
+         \case
+           err@(CantSolveGoal _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc [] top
 anyOne fc env top (elab :: elabs)
     = tryUnify elab (anyOne fc env top elabs)
 
@@ -152,9 +152,9 @@ exactlyOne : {vars : _} ->
              Core (Term vars)
 exactlyOne fc env top target [elab]
     = catch elab
-         (\err => case err of
-                       CantSolveGoal _ _ _ => throw err
-                       _ => throw (CantSolveGoal fc [] top))
+         \case
+           err@(CantSolveGoal _ _ _) => throw err
+           _ => throw $ CantSolveGoal fc [] top
 exactlyOne {vars} fc env top target all
     = do elabs <- successful all
          case rights elabs of
