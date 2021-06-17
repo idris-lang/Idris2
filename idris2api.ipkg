@@ -23,6 +23,7 @@ modules =
     Compiler.ES.Node,
     Compiler.ES.TailRec,
 
+    Compiler.RefC,
     Compiler.RefC.CC,
     Compiler.RefC.RefC,
 
