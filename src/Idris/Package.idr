@@ -711,6 +711,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType (OutputDir f)          = POpt
     optType WarningsAsErrors       = POpt
     optType HashesInsteadOfModTime = POpt
+    optType Profile                = POpt
     optType (ConsoleWidth n)       = PIgnore
     optType (Color b)              = PIgnore
     optType NoBanner               = PIgnore
