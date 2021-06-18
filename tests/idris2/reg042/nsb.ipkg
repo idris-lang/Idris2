@@ -4,7 +4,3 @@ modules = NatSpeedBug
 
 executable = nsb
 main = NatSpeedBug
-
-
-
-
