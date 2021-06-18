@@ -1,0 +1,4 @@
+$1 --build nsb.ipkg
+build/exec/nsb 100000
+
+rm -rf build
