@@ -8,7 +8,7 @@ import Data.String
 
 timeit : Lazy x -> IO (x,Clock Duration)
 timeit x =
-  do 
+  do
     start <- clockTime Monotonic
     let x' = force x
     end <- clockTime Monotonic
@@ -26,7 +26,7 @@ v3 = 100000001
 test : List (Lazy Bool)
 test =
  [
-   --fast ops                        
+   --fast ops
    delay $ (natToInteger $ v1 + v2) == 200000000
   ,delay $ (natToInteger $ 2 * v1) ==  200000000
   ,delay $ (v1 `minus` v2) == 0    --should be fast, but is slow
@@ -38,9 +38,9 @@ toNano : Clock type -> Integer
 toNano (MkClock seconds nanoseconds) =
   let scale = 1000000000
    in scale * seconds + nanoseconds
-   
+
 main : IO ()
-main =  
+main =
   do
     cutOff <- getCutoffArg
     ignore $ traverse (prnIt cutOff) (zip [0..length test] test)
@@ -48,23 +48,21 @@ main =
   where
     getCutoffArg : IO (Maybe Integer)
     getCutoffArg =
-      do 
+      do
         args <- getArgs
         let (_ :: cutoffStr :: _) = args
                | x => pure Nothing
         let cutOff = cast $ stringToNatOrZ cutoffStr
         pure $ if cutOff == 0 then Nothing else Just cutOff
-   
+
     showit : Bool -> String -> String -> String
-    showit v a b = if v then a else b     
+    showit v a b = if v then a else b
     prnIt : (Maybe Integer) -> (Nat, Lazy Bool) -> IO ()
-    prnIt mCutOff (ind, lb) = 
-        do 
+    prnIt mCutOff (ind, lb) =
+        do
           (b, diff) <- timeit lb
           putStrLn $ (show ind) ++ ": " ++ showit b "Pass" "Fail" ++ " " ++
-             maybe 
+             maybe
                (show diff)
                (\co => showit (toNano diff < co) "Fast" "Slow")
                mCutOff
-    
-                   
