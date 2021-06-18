@@ -22,15 +22,8 @@ data Vect : (len : Nat) -> (elem : Type) -> Type where
 %name Vect xs, ys, zs, ws
 
 public export
-length : (xs : Vect len elem) -> Nat
-length [] = 0
-length (_::xs) = 1 + length xs
-
-||| Show that the length function on vectors in fact calculates the length
-export
-lengthCorrect : (xs : Vect len elem) -> length xs = len
-lengthCorrect []        = Refl
-lengthCorrect (_ :: xs) = rewrite lengthCorrect xs in Refl
+length : {len : Nat} -> (xs : Vect len elem) -> Nat
+length _ {len} = len
 
 ||| If two vectors are equal, their heads and tails are equal
 export
