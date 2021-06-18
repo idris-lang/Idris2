@@ -1,0 +1,10 @@
+package nsb
+
+modules = NatSpeedBug
+
+executable = nsb
+main = NatSpeedBug
+
+
+
+

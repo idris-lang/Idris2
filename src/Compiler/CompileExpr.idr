@@ -190,7 +190,7 @@ natHack =
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef (NS typesNS (UN "mult")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
-    , MagicCRef (NS natNS (UN "minus")) 2 natMinus
+    , MagicCRef (NS typesNS (UN "minus")) 2 natMinus
     ]
 
 -- get all transformation from %builtin pragmas

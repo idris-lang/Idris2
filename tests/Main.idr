@@ -123,7 +123,7 @@ idrisTestsRegression = MkTestPool "Various regressions" []
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041"]
+       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" []
