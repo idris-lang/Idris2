@@ -44,24 +44,25 @@ HasNames () where
 
 export
 yaffleMain : String -> List String -> Core ()
-yaffleMain fname args
+yaffleMain sourceFileName args
     = do defs <- initDefs
          c <- newRef Ctxt defs
          t <- processArgs args
-         modIdent <- ctxtPathToNS fname
+         modIdent <- ctxtPathToNS sourceFileName
          m <- newRef MD (initMetadata (PhysicalIdrSrc modIdent))
          u <- newRef UST initUState
          setLogTimings t
          addPrimitives
-         case extension fname of
+         case extension sourceFileName of
               Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
-                               ignore $ readFromTTC {extra = ()} True emptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
+                               ignore $ readFromTTC {extra = ()} True emptyFC True sourceFileName (nsAsModuleIdent emptyNS) emptyNS
                                coreLift_ $ putStrLn "Read TTC"
               _ => do coreLift_ $ putStrLn "Processing as TTImp"
-                      ok <- processTTImpFile fname
+                      ok <- processTTImpFile sourceFileName
                       when ok $
                          do makeBuildDirectory modIdent
-                            writeToTTC () !(getTTCFileName fname "ttc")
+                            ttcFileName <- getTTCFileName sourceFileName "ttc"
+                            writeToTTC () sourceFileName ttcFileName
                             coreLift_ $ putStrLn "Written TTC"
          ust <- get UST
 

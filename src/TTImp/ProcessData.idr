@@ -49,21 +49,21 @@ checkIsType : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Env Term vars -> NF vars -> Core ()
 checkIsType loc n env nf
     = checkRetType env nf
-         (\nf => case nf of
-                      NType _ => pure ()
-                      _ => throw (BadTypeConType loc n))
+         \case
+           NType _ => pure ()
+           _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> Name -> Env Term vars -> NF vars -> Core ()
 checkFamily loc cn tn env nf
     = checkRetType env nf
-         (\nf => case nf of
-                      NType _ => throw (BadDataConType loc cn tn)
-                      NTCon _ n' _ _ _ =>
-                            if tn == n'
-                               then pure ()
-                               else throw (BadDataConType loc cn tn)
-                      _ => throw (BadDataConType loc cn tn))
+         \case
+           NType _ => throw $ BadDataConType loc cn tn
+           NTCon _ n' _ _ _ =>
+                 if tn == n'
+                    then pure ()
+                    else throw $ BadDataConType loc cn tn
+           _ => throw $ BadDataConType loc cn tn
 
 updateNS : Name -> Name -> RawImp -> RawImp
 updateNS orig ns (IPi fc c p n ty sc) = IPi fc c p n ty (updateNS orig ns sc)
@@ -237,9 +237,9 @@ findNewtype [con]
          Just arg <- getRelevantArg defs 0 Nothing True !(nf defs [] (type con))
               | Nothing => pure ()
          updateDef (name con)
-               (\d => case d of
-                           DCon t a _ => Just (DCon t a (Just arg))
-                           _ => Nothing)
+               \case
+                 DCon t a _ => Just $ DCon t a $ Just arg
+                 _ => Nothing
 findNewtype _ = pure ()
 
 hasArgs : Nat -> Term vs -> Bool

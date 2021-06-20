@@ -62,6 +62,7 @@ showcCleanString (c ::cs) = (showcCleanStringChar c) . showcCleanString cs
 cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
+export
 cName : Name -> String
 cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
 cName (UN n) = cCleanString n
@@ -650,7 +651,7 @@ mutual
         pure $ MkRS opStatement opStatement
     cStatementsFromANF (AExtPrim fc _ p args) = do
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map (\v => varName v) args) ++")")
+        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) = do
         c <- getNextCounter
@@ -837,6 +838,13 @@ discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
 discardLastArgument xs@(_ :: _) = init xs
 
+additionalFFIStub : Name -> List CFType -> CFType -> String
+additionalFFIStub name argTypes (CFIORes retType) = additionalFFIStub name (discardLastArgument argTypes) retType
+additionalFFIStub name argTypes retType =
+    cTypeOfCFType retType ++
+    " (*" ++ cName name ++ ")(" ++
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)missing_ffi;\n"
+
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
@@ -844,6 +852,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
+                -> {default [] additionalFFILangs : List String}
                 -> Name
                 -> ANFDef
                 -> Core ()
@@ -887,11 +896,17 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  case parseCC ["RefC", "C"] ccs of
-      Just (_, fctName :: extLibOpts) => do
-          case extLibOpts of
-              [lib, header] => addHeader header
-              _ => pure ()
+  case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
+      Just (lang, fctForeignName :: extLibOpts) => do
+          let isStandardFFI = Prelude.elem lang ["RefC", "C"]
+          let fctName = if isStandardFFI
+                           then UN fctForeignName
+                           else UN $ lang ++ "_" ++ fctForeignName
+          if isStandardFFI
+             then case extLibOpts of
+                      [lib, header] => addHeader header
+                      _ => pure ()
+             else emit EmptyFC $ additionalFFIStub fctName fargs ret
           otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
@@ -917,22 +932,22 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           emitFDef n typeVarNameArgList
           emit EmptyFC "{"
           increaseIndentation
-          emit EmptyFC $ " // ffi call to " ++ fctName
+          emit EmptyFC $ " // ffi call to " ++ cName fctName
           case ret of
               CFIORes CFUnit => do
-                  emit EmptyFC $ fctName
+                  emit EmptyFC $ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
-                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
-                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
                               ++ ");"
@@ -985,6 +1000,7 @@ executeExpr c _ tm
 
 export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
+                   -> {default [] additionalFFILangs : List String}
                    -> List (Name, ANFDef)
                    -> (outn : String)
                    -> Core ()
@@ -995,7 +1011,7 @@ generateCSourceFile defs outn =
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
-     traverse_ (uncurry createCFunctions) defs
+     traverse_ (uncurry $ createCFunctions {additionalFFILangs}) defs
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText

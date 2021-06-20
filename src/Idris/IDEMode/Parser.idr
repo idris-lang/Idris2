@@ -30,12 +30,12 @@ symbols = ["(", ":", ")"]
 
 stringTokens : Tokenizer Token
 stringTokens
-    = match (someUntil (is '"') (escape (is '\\') any <|> any)) (\x => StringLit 0 x)
+    = match (someUntil (is '"') (escape (is '\\') any <|> any)) $ StringLit 0
 
 ideTokens : Tokenizer Token
 ideTokens =
       match (choice $ exact <$> symbols) Symbol
-  <|> match digits (\x => IntegerLit (cast x))
+  <|> match digits (IntegerLit . cast)
   <|> compose (is '"')
               (const $ StringBegin False)
               (const ())

@@ -348,6 +348,9 @@ preOptions (WarningsAsErrors :: opts)
 preOptions (IgnoreShadowingWarnings :: opts)
     = do setSession (record { showShadowingWarning = False } !getSession)
          preOptions opts
+preOptions (HashesInsteadOfModTime :: opts)
+    = do setSession (record {checkHashesInsteadOfModTime = True} !getSession)
+         preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os

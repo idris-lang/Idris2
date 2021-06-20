@@ -242,11 +242,11 @@ postpone loc mode logstr env x y
     undefinedN : Name -> Core Bool
     undefinedN n
         = do defs <- get Ctxt
-             case !(lookupDefExact n (gamma defs)) of
-                  Just (Hole _ _) => pure True
-                  Just (BySearch _ _ _) => pure True
-                  Just (Guess _ _ _) => pure True
-                  _ => pure False
+             pure $ case !(lookupDefExact n (gamma defs)) of
+                  Just (Hole _ _) => True
+                  Just (BySearch _ _ _) => True
+                  Just (Guess _ _ _) => True
+                  _ => False
 
 postponeS : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -1437,18 +1437,20 @@ retryGuess mode smode (hid, (loc, hname))
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
-                     (\err => case err of
-                                DeterminingArg _ n i _ _ =>
-                                    do logTerm "unify.retry" 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
-                                                 (type def)
-                                       setInvertible loc (Resolved i)
-                                       pure False -- progress not made yet!
-                                _ => do logTermNF "unify.retry" 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
-                                                  [] (type def)
-                                        case smode of
-                                             LastChance =>
-                                                 throw !(normaliseErr err)
-                                             _ => pure False) -- Postpone again
+                     \case
+                       DeterminingArg _ n i _ _ =>
+                         do logTerm "unify.retry" 5
+                                    ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
+                                    (type def)
+                            setInvertible loc (Resolved i)
+                            pure False -- progress not made yet!
+                       err =>
+                         do logTermNF "unify.retry" 5
+                                      ("Search failed at " ++ show rig ++ " for " ++ show hname)
+                                      [] (type def)
+                            case smode of
+                                 LastChance => throw !(normaliseErr err)
+                                 _ => pure False -- Postpone again
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
@@ -1623,9 +1625,9 @@ checkDots
                       maybe (pure False)
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
                                            | Nothing => undefinedName fc n
-                                      case ndef of
-                                           Hole _ _ => pure False
-                                           _ => pure True)
+                                      pure $ case ndef of
+                                           Hole _ _ => False
+                                           _ => True)
                             oldholen
 
                    -- If any of the things we solved have the same definition,

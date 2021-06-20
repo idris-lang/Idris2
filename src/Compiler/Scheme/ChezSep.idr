@@ -21,8 +21,6 @@ import Libraries.Utils.Path
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NameMap
-import Libraries.Data.Version
 import Data.Strings
 import Data.Vect
 
@@ -32,6 +30,10 @@ import System
 import System.Directory
 import System.File
 import System.Info
+
+import Libraries.Data.NameMap
+import Libraries.Data.Version
+import Libraries.Utils.String
 
 %default covering
 
@@ -46,7 +48,7 @@ schHeader libs compilationUnits = unlines
   , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
   , "                           (load-shared-object \"ws2_32.dll\")]"
   , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs]
+  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
   , ")"
   ]
 

@@ -60,37 +60,62 @@ toStrUpdate _ = pure [] -- can't replace non user names
 
 data UPD : Type where
 
+||| Given a list of definitions, a list of mappings from `RawName` to `String`,
+||| and a list of tokens to update, work out the updates to do, apply them, and
+||| return the result.
 doUpdates : {auto u : Ref UPD (List String)} ->
             Defs -> Updates -> List SourcePart ->
             Core (List SourcePart)
-doUpdates defs ups [] = pure []
+doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
+-- if we have an LBrace (i.e. `{`), handle its contents
 doUpdates defs ups (LBrace :: xs)
-    = let (ws, nws) = spanSpace xs in map (LBrace :: ws ++) $
-         case nws of
-           Name n :: RBrace :: rest =>
-                pure (Name n ::
-                      Whitespace " " :: Equal :: Whitespace " " ::
-                      !(doUpdates defs ups (Name n :: RBrace :: rest)))
-           Name n :: Equal :: rest =>
-                pure (Name n ::
-                      Whitespace " " :: Equal :: Whitespace " " ::
-                      !(doUpdates defs ups rest))
-           _ => doUpdates defs ups xs
+    -- the cases we care about are easy to detect w/o whitespace, so separate it
+    = let (ws, nws) = span isWhitespace xs in
+        case nws of
+          -- handle potential whitespace in the other parts
+          Name n :: rest =>
+             let (ws', nws') = span isWhitespace rest in
+               case nws' of
+                  -- brace is immediately closed, so generate a new
+                  -- pattern-match on the values the name can have, e.g.
+                  -- { x}  where x : Nat would become { x = Z}
+                  --                       (and later { x = (S k)})
+                  RBrace :: rest' =>
+                    pure (LBrace :: ws ++
+                          Name n :: Whitespace " " :: Equal :: Whitespace " " ::
+                          !(doUpdates defs ups (Name n :: ws' ++ RBrace :: rest'))
+                          )
+                  -- preserve whitespace before (and after) the Equal
+                  Equal :: rest' =>
+                    let (ws'', nws'') = span isWhitespace rest' in
+                    pure (LBrace :: ws ++
+                          Name n :: ws' ++ Equal :: ws'' ++
+                          !(doUpdates defs ups nws'')
+                          )
+                  -- handle everything else as usual, preserving whitespace
+                  _ => pure (LBrace :: ws ++ Name n :: ws' ++
+                             !(doUpdates defs ups rest)
+                             )
+          -- not a special case: proceed as normal
+          _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
   where
-    spanSpace : List SourcePart -> (List SourcePart, List SourcePart)
-    spanSpace []                   = ([], [])
-    spanSpace (RBrace           :: xs) = ([], RBrace :: xs)
-    spanSpace (w@(Whitespace _) :: xs) = mapFst (w ::) (spanSpace xs)
-    spanSpace (x                :: xs) = map    (x ::) (spanSpace xs)
+    isWhitespace : SourcePart -> Bool
+    isWhitespace (Whitespace _) = True
+    isWhitespace _              = False
+-- if we have a name, look up if it's a name we're updating. If it isn't, keep
+-- the old name, otherwise update the name, i.e. replace with the new name
 doUpdates defs ups (Name n :: xs)
     = case lookup n ups of
            Nothing => pure (Name n :: !(doUpdates defs ups xs))
            Just up => pure (Other up :: !(doUpdates defs ups xs))
+-- if we have a hole, get the used names, generate+register a new unique name,
+-- and change the hole's name to the new one
 doUpdates defs ups (HoleName n :: xs)
     = do used <- get UPD
          n' <- uniqueName defs used n
          put UPD (n' :: used)
          pure $ HoleName n' :: !(doUpdates defs ups xs)
+-- if it's not a thing we update, leave it and continue working on the rest
 doUpdates defs ups (x :: xs)
     = pure $ x :: !(doUpdates defs ups xs)
 
