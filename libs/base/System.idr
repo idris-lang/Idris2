@@ -106,7 +106,7 @@ export
 system : HasIO io => String -> io Int
 system cmd = primIO $ prim__system $
   if isWindows && isPrefixOf "\"" cmd
-    then "\"" ++ cmd ++ "\""
+    then ";" ++ cmd
     else cmd
 
 %foreign support "idris2_time"
