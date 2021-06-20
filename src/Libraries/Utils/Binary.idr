@@ -470,11 +470,10 @@ modTime fname
        coreLift $ closeFile f
        pure t
 
-export
-hashFile : String -> Core String
-hashFile fileName
+hashFileWith : String -> String -> Core String
+hashFileWith sha256Sum fileName
   = do Right fileHandle <- coreLift $ popen
-            ("sha256sum \"" ++ osEscape fileName ++ "\"") Read
+            (sha256Sum ++ " \"" ++ osEscape fileName ++ "\"") Read
          | Left _ => coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
        Right hashLine <- coreLift $ fGetLine fileHandle
          | Left _ =>
@@ -489,3 +488,15 @@ hashFile fileName
     osEscape = if isWindows
       then id
       else escapeStringUnix
+
+export
+hashFile : String -> Core String
+hashFile fileName =
+  -- Note `popen` call won't fail if there's no `sha256sum` command
+  -- so we can't just catch `popen` error.
+  catch (hashFileWith "sha256sum" fileName)
+        (\err =>
+          catch (hashFileWith "gsha256sum" fileName)
+                -- When `gsha256sum` fails as well, return the error with `sha256sum`.
+                (\_ => coreFail err)
+        )
