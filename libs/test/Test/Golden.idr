@@ -205,11 +205,10 @@ export
 runTest : Options -> (testPath : String) -> IO (Future Result)
 runTest opts testPath = forkIO $ do
   start <- clockTime UTC
-  let cg = case codegen opts of
-         Nothing => ""
-         Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
+  let cg = maybe "" (" --cg " ++) (codegen opts)
+  let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
   ignore $ system $ "cd " ++ testPath ++ " && " ++
-    cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
+    "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC
 
   Right out <- readFile $ testPath ++ "/output"
@@ -310,6 +309,14 @@ Show Requirement where
   show Gambit = "gambit"
 
 export
+[CG] Show Requirement where
+  show C = "refc"
+  show Chez = "chez"
+  show Node = "node"
+  show Racket = "racket"
+  show Gambit = "gambit"
+
+export
 checkRequirement : Requirement -> IO (Maybe String)
 checkRequirement req
   = if platformSupport req
@@ -320,7 +327,7 @@ checkRequirement req
   where
     requirement : Requirement -> (String, List String)
     requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "scheme"])
+    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
@@ -343,12 +350,14 @@ findCG
 ||| A test pool is characterised by
 |||  + a name
 |||  + a list of requirement
+|||  + a choice of codegen (overriding the default)
 |||  + and a list of directory paths
 public export
 record TestPool where
   constructor MkTestPool
   poolName : String
   constraints : List Requirement
+  codegen : Maybe Requirement
   testCases : List String
 
 ||| Only keep the tests that have been asked for
@@ -395,7 +404,7 @@ poolRunner opts pool
        let (_ :: _) = tests
              | [] => pure initSummary
        -- if so make sure the constraints are satisfied
-       cs <- for (constraints pool) $ \ req => do
+       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
           mfp <- checkRequirement req
           let msg = case mfp of
                       Nothing => "✗ " ++ show req ++ " not found"
@@ -407,8 +416,13 @@ poolRunner opts pool
 
        let Just _ = the (Maybe (List String)) (sequence cs)
              | Nothing => pure initSummary
+
+       -- if the test pool requires a specific codegen then use that
+       let opts = case codegen pool of
+                    Nothing => opts
+                    Just cg => { codegen := Just (show @{CG} cg) } opts
        -- if so run them all!
-       loop initSummary tests
+       loop opts initSummary tests
 
   where
 
@@ -421,12 +435,12 @@ poolRunner opts pool
        ++ msgs
        ++ [ separator, "" ]
 
-    loop : Summary -> List String -> IO Summary
-    loop acc [] = pure acc
-    loop acc tests
+    loop : Options -> Summary -> List String -> IO Summary
+    loop opts acc [] = pure acc
+    loop opts acc tests
       = do let (now, later) = splitAt opts.threads tests
            bs <- map await <$> traverse (runTest opts) now
-           loop (updateSummary bs acc) later
+           loop opts (updateSummary bs acc) later
 
 
 ||| A runner for a whole test suite
@@ -465,5 +479,3 @@ runner tests
          if nfail == 0
            then exitWith ExitSuccess
            else exitWith (ExitFailure 1)
-
--- [ EOF ]
