@@ -87,7 +87,7 @@ ploc fc = do
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -149,7 +149,7 @@ ploc2 fc1 fc2 =
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
