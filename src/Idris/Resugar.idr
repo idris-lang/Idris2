@@ -1,6 +1,7 @@
 module Idris.Resugar
 
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Options
 
@@ -13,6 +14,7 @@ import TTImp.Utils
 import Data.List
 import Data.List1
 import Data.Maybe
+import Data.Strings
 import Libraries.Data.StringMap
 
 %default covering
@@ -177,9 +179,13 @@ mutual
   toPTerm : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             (prec : Nat) -> RawImp -> Core PTerm
-  toPTerm p (IVar fc nm) = if fullNamespace !(getPPrint)
-                             then pure $ PRef fc nm
-                             else toPRef fc nm
+  toPTerm p (IVar fc nm) = do
+    t <- if fullNamespace !(getPPrint)
+      then pure $ PRef fc nm
+      else toPRef fc nm
+    log "resugar.var" 70 $
+      unwords [ "Resugaring", show @{Raw} nm, "to", show t]
+    pure t
   toPTerm p (IPi fc rig Implicit n arg ret)
       = do imp <- showImplicits
            if imp
@@ -462,11 +468,13 @@ cleanPTerm ptm
 
     cleanName : Name -> Core Name
     cleanName nm = case nm of
-      MN n _            => pure (UN n)
-      PV n _            => pure n
-      DN n _            => pure (UN n)
-      NS _ (Nested _ n) => cleanName n
-      _                 => UN <$> prettyName nm
+      MN n _     => pure (UN n)
+      PV n _     => pure n
+      DN n _     => pure (UN n)
+      NS _ n     => cleanName n
+      Nested _ n => cleanName n
+      RF n       => pure (RF n)
+      _          => UN <$> prettyName nm
 
     cleanNode : PTerm -> Core PTerm
     cleanNode (PRef fc nm)    =

@@ -266,7 +266,16 @@ mutual
           let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> go startPrec sc
       go d (PUpdate _ fs) =
         parenthesise (d > appPrec) $ group $ record_ <++> braces (vsep $ punctuate comma (prettyUpdate <$> fs))
-      go d (PApp _ f a) = parenthesise (d > appPrec) $ group $ go leftAppPrec f <++> go appPrec a
+      go d (PApp _ f a) =
+        let catchall : Lazy (Doc IdrisSyntax)
+               := go leftAppPrec f <++> go appPrec a
+
+        in parenthesise (d > appPrec) $ group $ case f of
+          (PRef _ n) =>
+            if isJust (isRF n)
+            then go leftAppPrec a <++> go appPrec f
+            else catchall
+          _ => catchall
       go d (PWithApp _ f a) = go d f <++> pipe <++> go d a
       go d (PDelayed _ LInf ty) = parenthesise (d > appPrec) $ "Inf" <++> go appPrec ty
       go d (PDelayed _ _ ty) = parenthesise (d > appPrec) $ "Lazy" <++> go appPrec ty

@@ -156,6 +156,19 @@ Show Name where
   show (Resolved x) = "$resolved" ++ show x
 
 export
+[Raw] Show Name where
+  show (NS ns n) = "NS " ++ show ns ++ " (" ++ show n ++ ")"
+  show (UN x) = "UN " ++ x
+  show (MN x y) = "MN (" ++ show x ++ ") " ++ show y
+  show (PV n d) = "PV (" ++ show n ++ ") " ++ show d
+  show (DN str n) = "DN " ++ str ++ " (" ++ show n ++ ")"
+  show (RF n) = "RF " ++ n
+  show (Nested ij n) = "Nested " ++ show ij ++ " (" ++ show n ++ ")"
+  show (CaseBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (WithBlock str i) = "CaseBlock " ++ str ++ " " ++ show i
+  show (Resolved i) = "Resolved " ++ show i
+
+export
 Pretty Name where
   pretty (NS ns n@(RF _)) = pretty ns <+> dot <+> parens (pretty n)
   pretty (NS ns n) = pretty ns <+> dot <+> pretty n

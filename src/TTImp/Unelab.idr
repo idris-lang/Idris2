@@ -168,9 +168,16 @@ mutual
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
                                  _ => pure (IVar fc n, gErased fc)
+           fn <- getFullName n
            n' <- case umode of
-                      NoSugar _ => getFullName n
-                      _ => aliasName !(getFullName n)
+                      NoSugar _ => pure fn
+                      _ => aliasName fn
+           log "unelab.var" 50 $
+             unwords [ "Found name:", show n
+                     , " (aka " ++ show fn ++ ")"
+                     , "sugared to", show n'
+                     ]
+
            pure (IVar fc n', gnf env (embed ty))
   unelabTy' umode env (Meta fc n i args)
       = do defs <- get Ctxt

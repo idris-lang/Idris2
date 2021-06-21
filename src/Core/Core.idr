@@ -448,11 +448,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog)
-    = MkCore (prog >>=
-                 (\x => pure $ case x of
-                             Left err => Left (fe err)
-                             Right val => Right val))
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -498,9 +494,9 @@ export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
 (>>=) (MkCore act) f
     = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+                   \case
+                     Left err => pure $ Left err
+                     Right val => runCore $ f val)
 
 export %inline
 (>>) : Core () -> Core a -> Core a
