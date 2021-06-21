@@ -26,6 +26,7 @@ import Core.Options
 import Core.TT
 import Core.Termination
 import Core.Unify
+import Core.Value
 
 import Parser.Unlit
 
@@ -661,7 +662,7 @@ loadMainFile f
 replEval : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
   REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-replEval NormaliseAll = normaliseAll
+replEval NormaliseAll = normaliseOpts (record { strategy = CBV } withAll)
 replEval _ = normalise
 
 record TermWithType where
