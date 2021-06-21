@@ -434,13 +434,7 @@ testReceiver resChan acc accChan 0 = channelPut accChan acc
 testReceiver resChan acc accChan nThreads@(S k) =
   do (Res res) <- channelGet resChan
         | Done => testReceiver resChan acc accChan k
-     testReceiver resChan (singleUpdate res acc) accChan nThreads
-  where
-    singleUpdate : Result -> Summary -> Summary
-    singleUpdate res =
-      case res of
-           (Left l) => { failure $= (l ::) }
-           (Right w) => { success $= (w ::) }
+     testReceiver resChan (updateSummary res acc) accChan nThreads
 
 ||| Function responsible for receiving and running tests.
 |||
@@ -487,8 +481,7 @@ poolRunner opts pool =
      accChan <- makeChannel
      resChan <- makeChannel
      testChan <- makeChannel
-     -- ... and run them all!
-     -- spawn the test runners
+     -- ... and run all the tests!
      ignore $ for (replicate opts.threads 0) $ \_ =>
                                     fork (testThread opts testChan resChan)
      -- start sending tests
