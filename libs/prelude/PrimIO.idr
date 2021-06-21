@@ -2,6 +2,8 @@ module PrimIO
 
 import Builtin
 
+%default total
+
 public export
 data IORes : Type -> Type where
      MkIORes : (result : a) -> (1 x : %World) -> IORes a
@@ -17,12 +19,12 @@ data IO : Type -> Type where
 
 export
 prim__io_pure : a -> PrimIO a
-prim__io_pure x = \w => MkIORes x w
+prim__io_pure = MkIORes
 
 %inline
 export
 io_pure : a -> IO a
-io_pure x = MkIO (\w => MkIORes x w)
+io_pure x = MkIO (MkIORes x)
 
 export
 prim__io_bind : (1 act : PrimIO a) -> (1 k : a -> PrimIO b) -> PrimIO b

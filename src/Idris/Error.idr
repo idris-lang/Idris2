@@ -15,17 +15,20 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Libraries.Data.List1 as Lib
-import Libraries.Data.List.Extra
+import Data.List1
 import Data.Maybe
 import Data.Stream
 import Data.Strings
+
+import Libraries.Data.List.Extra
+import Libraries.Data.List1 as Lib
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import System.File
 import Libraries.Utils.String
 import Libraries.Data.String.Extra
+
+import System.File
 
 %hide Data.Strings.lines
 %hide Data.Strings.lines'
@@ -428,7 +431,7 @@ perror (BadDotPattern fc env reason x y)
         <++> parens (pretty reason) <+> dot) <+> line <+> !(ploc fc)
 perror (MatchTooSpecific fc env tm)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env tm)
-        <++> reflow "as it has a polymorphic type.") <+> line <+> !(ploc fc)
+        <++> reflow "as it must have a polymorphic type.") <+> line <+> !(ploc fc)
 perror (BadImplicit fc str)
     = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
         <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
@@ -456,9 +459,9 @@ perror (CyclicImports ns)
 perror ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perror (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
 perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str
-perror (NoForeignCC fc) = do
+perror (NoForeignCC fc specs) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
-    let res = vsep [ errorDesc (reflow "The given specifier was not accepted by any backend. Available backends" <+> colon)
+    let res = vsep [ errorDesc (reflow ("The given specifier '" ++ show specs ++ "' was not accepted by any backend. Available backends") <+> colon)
                    , indent 2 (concatWith (\ x, y => x <+> ", " <+> y) (map reflow cgs))
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)

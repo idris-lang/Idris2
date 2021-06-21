@@ -1,0 +1,8 @@
+./gen_expected.sh
+
+export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
+export IDRIS2_PREFIX=$(pwd)/currently/nonexistent/dir/
+
+$1 --install ./testpkg.ipkg
+
+rm -r build currently

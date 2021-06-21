@@ -60,26 +60,15 @@ export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
 toClosure opts env tm = MkClosure opts [] env tm
 
-useMeta : Bool -> FC -> Name -> Defs -> EvalOpts -> Core (Maybe EvalOpts)
-useMeta False _ _ _ opts = pure $ Just opts
-useMeta True fc (Resolved i) defs opts
-    = case lookup i (usedMetas opts) of
-           Nothing => pure (Just (record { usedMetas $= insert i () } opts))
-           Just _ => pure Nothing
-useMeta True fc n defs opts
-    = do let Just i = getNameID n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         useMeta True fc (Resolved i) defs opts
-
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
-    = if not (isNil (reduceLimit opts))
-         then case lookup n (reduceLimit opts) of
-                   Nothing => pure Nothing
-                   Just Z => pure Nothing
+    = pure $ if isNil (reduceLimit opts)
+         then Just opts
+         else case lookup n (reduceLimit opts) of
+                   Nothing => Nothing
+                   Just Z => Nothing
                    Just (S k) =>
-                      pure (Just (record { reduceLimit $= set n k } opts))
-         else pure (Just opts)
+                      Just (record { reduceLimit $= set n k } opts)
   where
     set : Name -> Nat -> List (Name, Nat) -> List (Name, Nat)
     set n v [] = []
@@ -179,7 +168,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         applyToStack nf _ = pure nf
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
-                {free, vars : _} ->
+                {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
                 (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
@@ -188,7 +177,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 Core (NF free)
     -- If it's one of the free variables, we are done unless the free
     -- variable maps to a let-binding
-    evalLocal {vars = []} env fc mrig idx prf stk locs
+    evalLocal env fc mrig idx prf stk []
         = if not (holesOnly topopts || argHolesOnly topopts)
              -- if we know it's not a let, no point in even running `getBinder`
              && fromMaybe True mrig
@@ -259,9 +248,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                                                       pure $ "Stuck function: " ++ show n'
              if redok
                 then do
-                   Just opts' <- useMeta (noCycles res) fc n defs topopts
-                        | Nothing => pure def
-                   Just opts' <- updateLimit nt n opts'
+                   Just opts' <- updateLimit nt n topopts
                         | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
                                         pure def -- name is past reduction limit
                    evalDef env opts' meta fc
@@ -422,9 +409,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                -- Stack must be exactly the right height
                Just (args, []) =>
                   do argsnf <- evalAll args
-                     case fn argsnf of
-                          Nothing => pure def
-                          Just res => pure res
+                     pure $ case fn argsnf of
+                          Nothing => def
+                          Just res => res
                _ => pure def
       where
         -- No traverse for Vect in Core...
@@ -585,9 +572,9 @@ mutual
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
-      = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
-             Nothing => pure $ Ref fc Bound (MN n i)
+      = pure $ case findName bounds of
+             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
       findName None = Nothing
@@ -1432,6 +1419,8 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  (Constant -> Bool) ->
                  -- view to check whether an argument is a constant
                  (arg -> Maybe Constant) ->
+                 -- Reduce everything (True) or just public export (False)
+                 Bool ->
                  -- list of primitives
                  List Name ->
                  -- view of the potential redex
@@ -1442,7 +1431,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  Env Term vs ->         -- evaluation environment
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
-normalisePrims boundSafe viewConstant prims n args tm env
+normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
@@ -1452,5 +1441,7 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normalise defs env tm
+        tm <- if all
+                 then normaliseAll defs env tm
+                 else normalise defs env tm
         pure (Just tm)

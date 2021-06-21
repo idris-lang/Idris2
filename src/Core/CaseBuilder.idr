@@ -360,10 +360,7 @@ conTypeEq (CName x tag) (CName x' tag')
              Yes Refl => Just Refl
              No contra => Nothing
 conTypeEq CDelay CDelay = Just Refl
-conTypeEq (CConst x) (CConst y)
-   = case constantEq x y of
-          Nothing => Nothing
-          Just Refl => Just Refl
+conTypeEq (CConst x) (CConst y) = map (cong CConst) $ constantEq x y
 conTypeEq _ _ = Nothing
 
 data Group : List Name -> -- variables in scope
@@ -760,9 +757,9 @@ getScore : {ns : _} ->
 getScore fc phase name npss
     = do catch (do sameType fc phase name (mkEnv fc ns) npss
                    pure (Right ()))
-               (\err => case err of
-                             CaseCompile _ _ err => pure (Left err)
-                             _ => throw err)
+               \case
+                 CaseCompile _ _ err => pure $ Left err
+                 err => throw err
 
 -- Pick the leftmost matchable thing with all constructors in the
 -- same family, or all variables, or all the same type constructor.
@@ -936,7 +933,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst prims n args orig []
+       mtm <- normalisePrims (const True) isPConst True prims n args orig []
        case mtm of
          Just tm => mkPat [] tm tm
          Nothing =>

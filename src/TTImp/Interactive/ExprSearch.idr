@@ -28,7 +28,6 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
-import Libraries.Data.Bool.Extra
 import Data.Either
 import Data.List
 
@@ -431,13 +430,13 @@ tryRecursive fc rig opts env ty topty rdata
       appsDiff : Term vs -> Term vs' -> List (Term vs) -> List (Term vs') ->
                  Bool
       appsDiff (Ref _ (DataCon _ _) f) (Ref _ (DataCon _ _) f') args args'
-         = f /= f' || anyTrue (zipWith argDiff args args')
+         = f /= f' || any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ (TyCon _ _) f) (Ref _ (TyCon _ _) f') args args'
-         = f /= f' || anyTrue (zipWith argDiff args args')
+         = f /= f' || any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ _ f) (Ref _ _ f') args args'
          = f == f'
            && length args == length args'
-           && anyTrue (zipWith argDiff args args')
+           && any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ (DataCon _ _) f) (Local _ _ _ _) _ _ = True
       appsDiff (Local _ _ _ _) (Ref _ (DataCon _ _) f) _ _ = True
       appsDiff f f' [] [] = argDiff f f'

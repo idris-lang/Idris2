@@ -1,5 +1,15 @@
 #include "runtime.h"
 
+void missing_ffi()
+{
+  fprintf(
+    stderr,
+    "Foreign function declared, but not defined.\n"
+    "Cannot call missing FFI - aborting.\n"
+  );
+  exit(1);
+}
+
 void push_Arglist(Value_Arglist *arglist, Value *arg)
 {
   if (arglist->filled >= arglist->total)

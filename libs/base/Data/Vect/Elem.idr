@@ -3,6 +3,8 @@ module Data.Vect.Elem
 import Data.Vect
 import Decidable.Equality
 
+%default total
+
 --------------------------------------------------------------------------------
 -- Vector membership proof
 --------------------------------------------------------------------------------

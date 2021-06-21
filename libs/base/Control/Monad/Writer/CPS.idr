@@ -7,6 +7,8 @@ module Control.Monad.Writer.CPS
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+%default total
+
 ||| A writer monad parameterized by:
 |||
 |||   @w the output to accumulate.

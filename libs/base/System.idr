@@ -4,6 +4,8 @@ import public Data.So
 import Data.List
 import Data.Strings
 
+%default total
+
 support : String -> String
 support fn = "C:" ++ fn ++ ", libidris2_support, idris_support.h"
 
@@ -46,7 +48,7 @@ getArgs : HasIO io => io (List String)
 getArgs = do
             n <- primIO prim__getArgCount
             if n > 0
-              then for [0..n-1] (\x => primIO $ prim__getArg x)
+              then for [0..n-1] $ primIO . prim__getArg
               else pure []
 
 %foreign libc "getenv"
@@ -69,6 +71,7 @@ getEnv var
            else pure (Just (prim__getString env))
 
 export
+covering
 getEnvironment : HasIO io => io (List (String, String))
 getEnvironment = getAllPairs 0 []
   where

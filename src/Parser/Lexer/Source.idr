@@ -320,11 +320,11 @@ mutual
                   (exact . groupClose)
                   Symbol
       <|> match (choice $ exact <$> symbols) Symbol
-      <|> match doubleLit (\x => DoubleLit (cast x))
-      <|> match binLit (\x => IntegerLit (fromBinLit x))
-      <|> match hexLit (\x => IntegerLit (fromHexLit x))
-      <|> match octLit (\x => IntegerLit (fromOctLit x))
-      <|> match digits (\x => IntegerLit (cast x))
+      <|> match doubleLit (DoubleLit . cast)
+      <|> match binUnderscoredLit (IntegerLit . fromBinLit . removeUnderscores)
+      <|> match hexUnderscoredLit (IntegerLit . fromHexLit . removeUnderscores)
+      <|> match octUnderscoredLit (IntegerLit . fromOctLit . removeUnderscores)
+      <|> match digitsUnderscoredLit (IntegerLit . cast . removeUnderscores)
       <|> compose multilineBegin
                   (const $ StringBegin True)
                   countHashtag
@@ -337,7 +337,7 @@ mutual
                   (stringTokens False)
                   (\hashtag => exact (stringEnd hashtag) <+> reject (is '"'))
                   (const StringEnd)
-      <|> match charLit (\x => CharLit (stripQuotes x))
+      <|> match charLit (CharLit . stripQuotes)
       <|> match dotIdent (\x => DotIdent (assert_total $ strTail x))
       <|> match namespacedIdent parseNamespace
       <|> match identNormal parseIdent
@@ -349,17 +349,22 @@ mutual
       parseIdent : String -> Token
       parseIdent x = if x `elem` keywords then Keyword x
                      else Ident x
+
       parseNamespace : String -> Token
       parseNamespace ns = case mkNamespacedIdent ns of
                                (Nothing, ident) => parseIdent ident
                                (Just ns, n)     => DotSepIdent ns n
+
       countHashtag : String -> Nat
       countHashtag = count (== '#') . unpack
 
       removeOptionalLeadingSpace : String -> String
       removeOptionalLeadingSpace str = case strM str of
-        StrCons ' ' tail => tail
-        _ => str
+                                            StrCons ' ' tail => tail
+                                            _ => str
+
+      removeUnderscores : String -> String
+      removeUnderscores s = fastPack $ filter (/= '_') (fastUnpack s)
 
 export
 lexTo : Lexer ->

@@ -1,11 +1,11 @@
 module Libraries.Text.Lexer.Core
 
-import public Libraries.Control.Delayed
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Maybe
 import Data.Nat
 import Data.Strings
+
+import public Libraries.Control.Delayed
 import public Libraries.Text.Bounded
 
 %default total

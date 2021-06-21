@@ -78,7 +78,7 @@ process (ExprSearch n_in)
               | [] => undefinedName (justFC defaultFC) n_in
               | ns => throw (AmbiguousName (justFC defaultFC) (map fst ns))
          results <- exprSearchN (justFC defaultFC) 1 n []
-         traverse_ (\d => coreLift (printLn d)) results
+         traverse_ (coreLift . printLn) results
          pure True
 process (GenerateDef line name)
     = do defs <- get Ctxt

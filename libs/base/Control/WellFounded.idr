@@ -3,6 +3,8 @@ module Control.WellFounded
 import Data.Nat
 import Data.List
 
+%default total
+
 public export
 data Accessible : (rel : a -> a -> Type) -> (x : a) -> Type where
   Access : (rec : (y : a) -> rel y x -> Accessible rel y) ->
@@ -73,7 +75,7 @@ sizeRec step z = accRec step z (sizeAccessible z)
 
 export
 implementation Sized Nat where
-  size = \x => x
+  size = id
 
 export
 implementation Sized (List a) where

@@ -3,6 +3,8 @@ module Control.Monad.State.State
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+%default total
+
 ||| The transformer on which the State monad is based
 public export
 record StateT (stateType : Type) (m : Type -> Type) (a : Type) where

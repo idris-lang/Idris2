@@ -9,6 +9,7 @@ import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.Unify
+import Core.UnifyState
 import Core.TT
 import Core.Value
 
@@ -473,6 +474,40 @@ checkBindVar rig elabinfo nest env fc str topexp
     combine n l r = when (isIncompatible l r)
                          (throw (LinearUsed fc 2 n))
 
+checkPolyConstraint :
+            {auto c : Ref Ctxt Defs} ->
+            PolyConstraint -> Core ()
+checkPolyConstraint (MkPolyConstraint fc env arg x y)
+    = do defs <- get Ctxt
+         -- If 'x' is a metavariable and 'y' is concrete, that means we've
+         -- ended up putting something too concrete in for a polymorphic
+         -- argument
+         xnf <- continueNF defs env x
+         case xnf of
+              NApp _ (NMeta _ _ _) _ =>
+                   do ynf <- continueNF defs env y
+                      if !(concrete defs env ynf)
+                         then do empty <- clearDefs defs
+                                 throw (MatchTooSpecific fc env arg)
+                         else pure ()
+              _ => pure ()
+checkPolyConstraint _ = pure ()
+
+solvePolyConstraint :
+            {auto c : Ref Ctxt Defs} ->
+            {auto u : Ref UST UState} ->
+            PolyConstraint -> Core ()
+solvePolyConstraint (MkPolyConstraint fc env arg x y)
+    = do defs <- get Ctxt
+         -- If the LHS of the constraint isn't a metavariable, we can solve
+         -- the constraint
+         case !(continueNF defs env x) of
+              xnf@(NApp _ (NMeta _ _ _) _) => pure ()
+              t => do res <- unify inLHS fc env t !(continueNF defs env y)
+                      -- If there's any constraints, it just means we didn't
+                      -- solve anything and it won't help the check
+                      pure ()
+
 export
 checkBindHere : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
@@ -501,16 +536,26 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          solveConstraints (case elabMode elabinfo of
                                 InLHS c => inLHS
                                 _ => inTerm) Normal
-         solveConstraintsAfter constart
-                          (case elabMode elabinfo of
-                                InLHS c => inLHS
-                                _ => inTerm) Defaults
+
          ust <- get UST
          catch (retryDelayed (delayedElab ust))
                (\err =>
                   do ust <- get UST
                      put UST (record { delayedElab = [] } ust)
                      throw err)
+
+         -- Check all the patterns standing for polymorphic variables are
+         -- indeed polymorphic
+         ust <- get UST
+         let cons = polyConstraints ust
+         put UST (record { polyConstraints = [] } ust)
+         traverse_ solvePolyConstraint cons
+         traverse_ checkPolyConstraint cons
+
+         solveConstraintsAfter constart
+                          (case elabMode elabinfo of
+                                InLHS c => inLHS
+                                _ => inTerm) Defaults
          checkDots -- Check dot patterns unifying with the claimed thing
                    -- before binding names
 

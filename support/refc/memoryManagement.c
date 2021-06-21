@@ -299,6 +299,13 @@ void removeReference(Value *elem)
             /* nothing to delete, added for sake of completeness */
             break;
 
+        case BUFFER_TAG:
+        {
+            Value_Buffer *b = (Value_Buffer *)elem;
+            free(b->buffer);
+            break;
+        }
+
         case ARRAY_TAG:
         {
             Value_Array *a = (Value_Array *)elem;

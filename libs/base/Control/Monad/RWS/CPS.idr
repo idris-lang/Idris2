@@ -7,6 +7,8 @@ module Control.Monad.RWS.CPS
 import Control.Monad.Identity
 import Control.Monad.Trans
 
+%default total
+
 ||| A monad transformer adding reading an environment of type `r`,
 ||| collecting an output of type `w` and updating a state of type `s`
 ||| to an inner monad `m`.

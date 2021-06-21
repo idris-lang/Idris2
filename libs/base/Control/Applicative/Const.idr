@@ -3,6 +3,8 @@ module Control.Applicative.Const
 import Data.Contravariant
 import Data.Bits
 
+%default total
+
 public export
 record Const (a : Type) (b : Type) where
   constructor MkConst
