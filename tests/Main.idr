@@ -34,9 +34,9 @@ idrisTestsBasic = MkTestPool "Fundamental language features" []
        "basic031", "basic032", "basic033", "basic034", "basic035",
        "basic036", "basic037", "basic038", "basic039", "basic040",
        "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047", "basic048", "basic049", "basic050",
-       "basic051", "basic052", "basic053", "basic054", "basic055",
-       "basic056", "basic057", "basic058", "basic059", "basic060",
+       "basic046", "basic047",             "basic049", "basic050",
+       "basic051", "basic052",
+                   "basic057", "basic058", "basic059", "basic060",
        "basic061"]
 
 idrisTestsCoverage : TestPool
@@ -112,8 +112,7 @@ idrisTestsPerformance : TestPool
 idrisTestsPerformance = MkTestPool "Performance" []
        -- Performance: things which have been slow in the past, or which
        -- pose interesting challenges for the elaborator
-      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf006",
-       "perf007", "perf008"]
+      ["perf001", "perf002", "perf003", "perf004", "perf005", "perf007"]
 
 idrisTestsRegression : TestPool
 idrisTestsRegression = MkTestPool "Various regressions" []
@@ -137,19 +136,18 @@ idrisTestsBuiltin : TestPool
 idrisTestsBuiltin = MkTestPool "Builtin types and functions" []
       -- %builtin related tests for the frontend (type-checking)
       ["builtin001", "builtin002", "builtin003", "builtin004", "builtin005",
-       "builtin006", "builtin007", "builtin008", "builtin009", "builtin010",
-       "builtin011"]
+       "builtin006", "builtin007", "builtin008", "builtin010"]
 
 idrisTestsEvaluator : TestPool
 idrisTestsEvaluator = MkTestPool "Evaluation" []
       [ -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
+       "evaluator001", "evaluator002",
        -- Unfortunately the behaviour of Double is platform dependent so the
        -- following test is turned off.
        -- "evaluator005",
        -- Miscellaneous REPL
        "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007"]
+       "interpreter005", "interpreter006"]
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" []
@@ -160,7 +158,7 @@ idrisTests = MkTestPool "Misc" []
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005",
        -- Implicit laziness, lazy evaluation
-       "lazy001", "lazy002",
+       "lazy001",
        -- Namespace blocks
        "namespace001",
        -- Parameters blocks
@@ -201,7 +199,9 @@ chezTests = MkTestPool "Chez backend" [Chez]
     , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
     , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
     , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031", "chez032"
+    , "chez031", "chez032", "chez033", "chez034", "chez035", "chez036"
+    , "builtin001", "builtin002"
+    , "literals001", "literals002", "literals003", "literals004"
     , "futures001"
     , "bitops"
     , "casts"
@@ -209,7 +209,7 @@ chezTests = MkTestPool "Chez backend" [Chez]
     , "integers"
     , "semaphores001"
     , "semaphores002"
-    , "perf001"
+    , "perf001", "perf002", "perf003"
     , "reg001"
     ]
 
@@ -289,7 +289,7 @@ contribLibraryTests = MkTestPool "Contrib library" [Chez, Node]
   ]
 
 codegenTests : TestPool
-codegenTests = MkTestPool "Code generation" []
+codegenTests = MkTestPool "Code generation" [Chez]
   [ "con001"
   , "builtin001"
   ]
