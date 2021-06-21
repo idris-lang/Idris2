@@ -38,5 +38,4 @@ Refers to: [Prelude.Types.mult]
 Refers to (runtime): []
 Flags: [covering]
 Size change: Prelude.Types.mult: [Just (0, Same), Just (1, Same)]
-Main> 
-Bye for now!
+Main> Bye for now!
