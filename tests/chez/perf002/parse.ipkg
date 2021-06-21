@@ -1,0 +1,8 @@
+package parse
+
+modules = ParseSS
+
+depends = contrib
+
+executable = parsess
+main = ParseSS

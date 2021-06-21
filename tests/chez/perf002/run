@@ -1,0 +1,6 @@
+$1 --build nsb.ipkg
+$1 --build parse.ipkg
+build/exec/nsb 
+build/exec/parsess build/exec/nsb_app/nsb.ss
+
+rm -rf build

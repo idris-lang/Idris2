@@ -1,0 +1,13 @@
+1/1: Building NatSpeedBug (NatSpeedBug.idr)
+1/1: Building ParseSS (ParseSS.idr)
+200000000
+0
+200000000
+100000000
+100000000
+(+) test
+minus test
+(*) test
+natToIntegerNSBTest
+integerToNatNSBTest
+Passed
