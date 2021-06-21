@@ -57,7 +57,14 @@
 ||| When compiled to an executable the expected usage is:
 |||
 |||```sh
-|||runtests <path to executable under test> [--timing] [--interactive] [--cg CODEGEN] [--threads N] [--only [NAMES]]
+||| runtests <path to executable under test>
+|||   [--timing]
+|||   [--interactive]
+|||   [--only-file PATH]
+|||   [--failure-file PATH]
+|||   [--threads N]
+|||   [--cg CODEGEN]
+|||   [--only [NAMES]]
 |||```
 |||
 ||| assuming that the test runner is compiled to an executable named `runtests`.
@@ -70,7 +77,7 @@ import Data.Either
 import Data.Maybe
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 
 import System
 import System.Clock
@@ -100,8 +107,8 @@ record Options where
   timing       : Bool
   ||| How many threads should we use?
   threads      : Nat
-  ||| Should we write the list of failing cases from a file?
-  failureFile  : Maybe String
+  ||| Should we write the list of failing cases to a file?
+  failureFile     : Maybe String
 
 export
 initOptions : String -> Bool -> Options
@@ -116,9 +123,9 @@ initOptions exe color
               Nothing
 
 export
-usage : String -> String
-usage exe = unwords
-  ["Usage:", exe
+usage : String
+usage = unwords
+  ["Usage:"
   , "runtests <path>"
   , "[--timing]"
   , "[--interactive]"
@@ -195,15 +202,15 @@ Result = Either String String
 |||
 ||| @testPath the directory that contains the test.
 export
-runTest : Options -> String -> IO (Future Result)
+runTest : Options -> (testPath : String) -> IO (Future Result)
 runTest opts testPath = forkIO $ do
-  start <- clockTime Thread
+  start <- clockTime UTC
   let cg = case codegen opts of
          Nothing => ""
          Just cg => "env IDRIS2_TESTS_CG=" ++ cg ++ " "
   ignore $ system $ "cd " ++ testPath ++ " && " ++
     cg ++ "sh ./run " ++ exeUnderTest opts ++ " | tr -d '\\r' > output"
-  end <- clockTime Thread
+  end <- clockTime UTC
 
   Right out <- readFile $ testPath ++ "/output"
     | Left err => do putStrLn $ (testPath ++ "/output") ++ ": " ++ show err
@@ -240,7 +247,8 @@ runTest opts testPath = forkIO $ do
       case str of
         "y" => pure True
         "n" => pure False
-        _   => do putStrLn "Invalid Answer."
+        ""  => pure False
+        _   => do putStrLn "Invalid answer."
                   getAnswer
 
     expVsOut : String -> String -> List String
@@ -252,7 +260,7 @@ runTest opts testPath = forkIO $ do
         Nothing => putStr $ unlines
           [ "Golden value missing. I computed the following result:"
           , out
-          , "Accept new golden value? [yn]"
+          , "Accept new golden value? [y/N]"
           ]
         Just exp => do
           code <- system $ "git diff --no-index --exit-code " ++
@@ -261,15 +269,19 @@ runTest opts testPath = forkIO $ do
           putStrLn . unlines $
             ["Golden value differs from actual value."] ++
             (if (code < 0) then expVsOut exp out else []) ++
-            ["Accept actual value as new golden value? [yn]"]
+            ["Accept actual value as new golden value? [y/N]"]
       b <- getAnswer
       when b $ do Right _ <- writeFile (testPath ++ "/expected") out
                     | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                   pure ()
 
     printTiming : Bool -> Clock type -> String -> IO ()
-    printTiming True  clock msg = putStrLn (unwords [msg, show clock])
     printTiming False _     msg = putStrLn msg
+    printTiming True  clock msg =
+      let time  = showTime 2 3 clock
+          spent = String.length time + String.length msg
+          pad   = pack $ replicate (minus 72 spent) ' '
+      in putStrLn $ concat [msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
@@ -329,6 +341,7 @@ findCG
        pure Nothing
 
 ||| A test pool is characterised by
+|||  + a name
 |||  + a list of requirement
 |||  + and a list of directory paths
 public export
@@ -423,7 +436,7 @@ runner tests
     = do args <- getArgs
          Just opts <- options args
             | _ => do print args
-                      putStrLn (usage "runtests")
+                      putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
                    Nothing => pure $ record { codegen = !findCG } opts
