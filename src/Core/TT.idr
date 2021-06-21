@@ -3,12 +3,12 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Nat
-import Libraries.Data.NameMap
 import Data.Vect
 import Decidable.Equality
+
+import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -873,7 +873,7 @@ eqTerm : Term vs -> Term vs' -> Bool
 eqTerm (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
-    = assert_total (i == i' && allTrue (zipWith eqTerm args args'))
+    = assert_total (i == i' && all (uncurry eqTerm) (zip args args'))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
     = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
 eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'
@@ -1319,10 +1319,7 @@ mutual
 
   export
   shrinkTerm : Term vars -> SubVars newvars vars -> Maybe (Term newvars)
-  shrinkTerm (Local fc r idx loc) prf
-     = case subElem loc prf of
-            Nothing => Nothing
-            Just (MkVar loc') => Just (Local fc r _ loc')
+  shrinkTerm (Local fc r idx loc) prf = map (\(MkVar loc') => Local fc r _ loc') $ subElem loc prf
   shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
   shrinkTerm (Meta fc x y xs) prf
      = do xs' <- traverse (\x => shrinkTerm x prf) xs
@@ -1652,6 +1649,7 @@ export
       showApp : {vars : _} -> Term vars -> List (Term vars) -> String
       showApp (Local _ c idx p) []
          = show (nameAt p) ++ "[" ++ show idx ++ "]"
+
       showApp (Ref _ _ n) [] = show n
       showApp (Meta _ n _ args) []
           = "?" ++ show n ++ "_" ++ show args

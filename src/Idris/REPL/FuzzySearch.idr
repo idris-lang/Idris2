@@ -53,6 +53,8 @@ import System
 import System.File
 import System.Directory
 
+%default covering
+
 export
 fuzzySearch : {auto c : Ref Ctxt Defs}
            -> {auto u : Ref UST UState}
@@ -88,7 +90,7 @@ fuzzySearch expr = do
        allDefs <- traverse (resolved ctxt) defs
        filterM (\def => fuzzyMatch neg pos def.type) allDefs
   put Ctxt defs
-  doc <- traverse (docsOrSignature replFC) $ fullname <$> filteredDefs
+  doc <- traverse (docsOrSignature EmptyFC) $ fullname <$> filteredDefs
   pure $ Printed $ vsep $ pretty <$> (intersperse "\n" $ join doc)
  where
 

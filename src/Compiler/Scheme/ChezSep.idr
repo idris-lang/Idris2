@@ -21,7 +21,6 @@ import Libraries.Utils.Path
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NameMap
 import Data.Strings
 import Data.Vect
 
@@ -31,6 +30,10 @@ import System
 import System.Directory
 import System.File
 import System.Info
+
+import Libraries.Data.NameMap
+import Libraries.Data.Version
+import Libraries.Utils.String
 
 %default covering
 
@@ -45,7 +48,7 @@ schHeader libs compilationUnits = unlines
   , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
   , "                           (load-shared-object \"ws2_32.dll\")]"
   , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeString lib ++ "\")" | lib <- libs]
+  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
   , ")"
   ]
 
@@ -150,6 +153,7 @@ compileToSS c chez appdir tm = do
   ds <- getDirectives Chez
   libs <- findLibs ds
   traverse_ copyLib libs
+  version <- coreLift $ chezVersion chez
 
   -- get the material for compilation
   cdata <- getCompileData False Cases tm
@@ -213,7 +217,7 @@ compileToSS c chez appdir tm = do
             ++ "  (import (chezscheme) (support) " ++ imports ++ ")\n\n"
       let footer = ")"
 
-      fgndefs <- traverse (Chez.getFgnCall appdir) cu.definitions
+      fgndefs <- traverse (Chez.getFgnCall appdir version) cu.definitions
       compdefs <- traverse (getScheme Chez.chezExtPrim Chez.chezString) cu.definitions
 
       -- write the files

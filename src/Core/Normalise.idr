@@ -60,26 +60,15 @@ export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
 toClosure opts env tm = MkClosure opts [] env tm
 
-useMeta : Bool -> FC -> Name -> Defs -> EvalOpts -> Core (Maybe EvalOpts)
-useMeta False _ _ _ opts = pure $ Just opts
-useMeta True fc (Resolved i) defs opts
-    = case lookup i (usedMetas opts) of
-           Nothing => pure (Just (record { usedMetas $= insert i () } opts))
-           Just _ => pure Nothing
-useMeta True fc n defs opts
-    = do let Just i = getNameID n (gamma defs)
-              | Nothing => throw (UndefinedName fc n)
-         useMeta True fc (Resolved i) defs opts
-
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
-    = if not (isNil (reduceLimit opts))
-         then case lookup n (reduceLimit opts) of
-                   Nothing => pure Nothing
-                   Just Z => pure Nothing
+    = pure $ if isNil (reduceLimit opts)
+         then Just opts
+         else case lookup n (reduceLimit opts) of
+                   Nothing => Nothing
+                   Just Z => Nothing
                    Just (S k) =>
-                      pure (Just (record { reduceLimit $= set n k } opts))
-         else pure (Just opts)
+                      Just (record { reduceLimit $= set n k } opts)
   where
     set : Name -> Nat -> List (Name, Nat) -> List (Name, Nat)
     set n v [] = []
@@ -179,7 +168,7 @@ parameters (defs : Defs, topopts : EvalOpts)
         applyToStack nf _ = pure nf
 
     evalLocal : {auto c : Ref Ctxt Defs} ->
-                {free, vars : _} ->
+                {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
                 (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
@@ -188,7 +177,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                 Core (NF free)
     -- If it's one of the free variables, we are done unless the free
     -- variable maps to a let-binding
-    evalLocal {vars = []} env fc mrig idx prf stk locs
+    evalLocal env fc mrig idx prf stk []
         = if not (holesOnly topopts || argHolesOnly topopts)
              -- if we know it's not a let, no point in even running `getBinder`
              && fromMaybe True mrig
@@ -259,9 +248,7 @@ parameters (defs : Defs, topopts : EvalOpts)
                                                       pure $ "Stuck function: " ++ show n'
              if redok
                 then do
-                   Just opts' <- useMeta (noCycles res) fc n defs topopts
-                        | Nothing => pure def
-                   Just opts' <- updateLimit nt n opts'
+                   Just opts' <- updateLimit nt n topopts
                         | Nothing => do log "eval.stuck" 10 $ "Function " ++ show n ++ " past reduction limit"
                                         pure def -- name is past reduction limit
                    evalDef env opts' meta fc
@@ -422,9 +409,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                -- Stack must be exactly the right height
                Just (args, []) =>
                   do argsnf <- evalAll args
-                     case fn argsnf of
-                          Nothing => pure def
-                          Just res => pure res
+                     pure $ case fn argsnf of
+                          Nothing => def
+                          Just res => res
                _ => pure def
       where
         -- No traverse for Vect in Core...
@@ -585,9 +572,9 @@ mutual
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
-      = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
-             Nothing => pure $ Ref fc Bound (MN n i)
+      = pure $ case findName bounds of
+             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
       findName None = Nothing
@@ -883,14 +870,57 @@ tryUpdate ms (Erased fc i) = pure $ Erased fc i
 tryUpdate ms (TType fc) = pure $ TType fc
 
 mutual
+  allConvNF : {auto c : Ref Ctxt Defs} ->
+              {vars : _} ->
+              Ref QVar Int -> Defs -> Env Term vars ->
+              List (NF vars) -> List (NF vars) -> Core Bool
+  allConvNF q defs env [] [] = pure True
+  allConvNF q defs env (x :: xs) (y :: ys)
+      = do ok <- allConvNF q defs env xs ys
+           if ok then convGen q defs env x y
+                 else pure False
+  allConvNF q defs env _ _ = pure False
+
+  -- return False if anything differs at the head, to quickly find
+  -- conversion failures without going deeply into all the arguments.
+  -- True means they might still match
+  quickConv : List (NF vars) -> List (NF vars) -> Bool
+  quickConv [] [] = True
+  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+    where
+      quickConvHead : NHead vars -> NHead vars -> Bool
+      quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
+      quickConvHead (NRef _ n) (NRef _ n') = n == n'
+      quickConvHead (NMeta n _ _) (NMeta n' _ _) = n == n'
+      quickConvHead _ _ = False
+
+      quickConvArg : NF vars -> NF vars -> Bool
+      quickConvArg (NBind{}) _ = True -- let's not worry about eta here...
+      quickConvArg _ (NBind{}) = True
+      quickConvArg (NApp _ h _) (NApp _ h' _) = quickConvHead h h'
+      quickConvArg (NDCon _ _ t _ _) (NDCon _ _ t' _ _) = t == t'
+      quickConvArg (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = n == n'
+      quickConvArg (NAs _ _ _ t) (NAs _ _ _ t') = quickConvArg t t'
+      quickConvArg (NDelayed _ _ t) (NDelayed _ _ t') = quickConvArg t t'
+      quickConvArg (NDelay _ _ _ _) (NDelay _ _ _ _) = True
+      quickConvArg (NForce _ _ t _) (NForce _ _ t' _) = quickConvArg t t'
+      quickConvArg (NPrimVal _ c) (NPrimVal _ c') = c == c'
+      quickConvArg (NType _) (NType _) = True
+      quickConvArg (NErased _ _) _ = True
+      quickConvArg _ (NErased _ _) = True
+      quickConvArg _ _ = False
+  quickConv _ _ = False
+
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Defs -> Env Term vars ->
             List (Closure vars) -> List (Closure vars) -> Core Bool
-  allConv q defs env [] [] = pure True
-  allConv q defs env (x :: xs) (y :: ys)
-      = pure $ !(convGen q defs env x y) && !(allConv q defs env xs ys)
-  allConv q defs env _ _ = pure False
+  allConv q defs env xs ys
+      = do xsnf <- traverse (evalClosure defs) xs
+           ysnf <- traverse (evalClosure defs) ys
+           if quickConv xsnf ysnf
+              then allConvNF q defs env xsnf ysnf
+              else pure False
 
   -- If the case trees match in structure, get the list of variables which
   -- have to match in the call
@@ -1389,6 +1419,8 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  (Constant -> Bool) ->
                  -- view to check whether an argument is a constant
                  (arg -> Maybe Constant) ->
+                 -- Reduce everything (True) or just public export (False)
+                 Bool ->
                  -- list of primitives
                  List Name ->
                  -- view of the potential redex
@@ -1399,7 +1431,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  Env Term vs ->         -- evaluation environment
                  -- output only evaluated if primitive
                  Core (Maybe (Term vs))
-normalisePrims boundSafe viewConstant prims n args tm env
+normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = elem (dropNS !(getFullName n)) prims -- is a primitive
               | _ => pure Nothing
         let (mc :: _) = reverse args -- with at least one argument
@@ -1409,5 +1441,7 @@ normalisePrims boundSafe viewConstant prims n args tm env
         let True = boundSafe c -- that we should expand
               | _ => pure Nothing
         defs <- get Ctxt
-        tm <- normalise defs env tm
+        tm <- if all
+                 then normaliseAll defs env tm
+                 else normalise defs env tm
         pure (Just tm)

@@ -386,8 +386,8 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 hasEmptyPat : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
-hasEmptyPat defs env (Bind fc x b@(PVar _ _ _ ty) sc)
-   = pure $ !(isEmpty defs env !(nf defs env ty))
+hasEmptyPat defs env (Bind fc x b sc)
+   = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
             || !(hasEmptyPat defs (b :: env) sc)
 hasEmptyPat defs env _ = pure False
 

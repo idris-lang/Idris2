@@ -196,6 +196,9 @@ public export
 union : Eq a => List a -> List a -> List a
 union = unionBy (==)
 
+||| Like @span@ but using a predicate that might convert a to b, i.e. given a
+||| predicate from a to Maybe b and a list of as, returns a tuple consisting of
+||| the longest prefix of the list where a -> Just b, and the rest of the list.
 public export
 spanBy : (a -> Maybe b) -> List a -> (List b, List a)
 spanBy p [] = ([], [])
@@ -203,6 +206,9 @@ spanBy p (x :: xs) = case p x of
   Nothing => ([], x :: xs)
   Just y => let (ys, zs) = spanBy p xs in (y :: ys, zs)
 
+||| Given a predicate and a list, returns a tuple consisting of the longest
+||| prefix of the list whose elements satisfy the predicate, and the rest of the
+||| list.
 public export
 span : (a -> Bool) -> List a -> (List a, List a)
 span p []      = ([], [])

@@ -6,6 +6,8 @@ import Data.List
 import Data.Strings
 import System.File
 
+%default covering
+
 toFileEx : FileError -> FileEx
 toFileEx (GenericFileError i) = GenericFileEx i
 toFileEx FileReadError = FileReadError

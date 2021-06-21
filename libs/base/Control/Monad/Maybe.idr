@@ -14,6 +14,8 @@ module Control.Monad.Maybe
 import Control.Monad.Trans
 import Data.Maybe
 
+%default total
+
 public export
 data MaybeT : (m : Type -> Type) -> (a : Type) -> Type where
   MkMaybeT : m (Maybe a) -> MaybeT m a

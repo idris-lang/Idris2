@@ -3,6 +3,8 @@ module Decidable.Decidable
 import Data.Rel
 import Data.Fun
 
+%default total
+
 public export
 isNo : Dec a -> Bool
 isNo (Yes _) = False

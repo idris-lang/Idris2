@@ -7,7 +7,6 @@ import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
-import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.Package.Types
@@ -18,8 +17,11 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
+import Data.List1
 import Data.So
 import Data.Strings
+
+import Libraries.Data.List1 as Lib
 
 import System
 import System.Directory
@@ -346,6 +348,9 @@ preOptions (WarningsAsErrors :: opts)
 preOptions (IgnoreShadowingWarnings :: opts)
     = do setSession (record { showShadowingWarning = False } !getSession)
          preOptions opts
+preOptions (HashesInsteadOfModTime :: opts)
+    = do setSession (record {checkHashesInsteadOfModTime = True} !getSession)
+         preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os
@@ -369,11 +374,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

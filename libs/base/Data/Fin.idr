@@ -100,14 +100,14 @@ weakenLTE  FZ    (LTESucc _) = FZ
 weakenLTE (FS x) (LTESucc y) = FS $ weakenLTE x y
 
 ||| Attempt to tighten the bound on a Fin.
-||| Return `Left` if the bound could not be tightened, or `Right` if it could.
+||| Return the tightened bound if there is one, else nothing.
 export
-strengthen : {n : _} -> Fin (S n) -> Either (Fin (S n)) (Fin n)
-strengthen {n = S _} FZ = Right FZ
-strengthen {n = S _} (FS i) with (strengthen i)
-  strengthen (FS _) | Left x  = Left $ FS x
-  strengthen (FS _) | Right x = Right $ FS x
-strengthen f = Left f
+strengthen : {n : _} -> Fin (S n) -> Maybe (Fin n)
+strengthen {n = S _} FZ = Just FZ
+strengthen {n = S _} (FS p) with (strengthen p)
+  strengthen (FS _) | Nothing = Nothing
+  strengthen (FS _) | Just q  = Just $ FS q
+strengthen _ = Nothing
 
 ||| Add some natural number to a Fin, extending the bound accordingly
 ||| @ n the previous bound
@@ -139,10 +139,7 @@ Ord (Fin n) where
 public export
 natToFin : Nat -> (n : Nat) -> Maybe (Fin n)
 natToFin Z     (S _) = Just FZ
-natToFin (S k) (S j)
-    = case natToFin k j of
-           Just k' => Just (FS k')
-           Nothing => Nothing
+natToFin (S k) (S j) = map FS $ natToFin k j
 natToFin _ _ = Nothing
 
 ||| Convert an `Integer` to a `Fin`, provided the integer is within bounds.

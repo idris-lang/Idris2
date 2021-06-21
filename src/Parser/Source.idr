@@ -15,24 +15,27 @@ import System.File
 
 export
 runParserTo : {e : _} ->
-              (fname : String) ->
+              (origin : OriginDesc) ->
               Maybe LiterateStyle -> Lexer ->
               String -> Grammar SemanticDecorations Token e ty -> Either Error (SemanticDecorations, ty)
-runParserTo fname lit reject str p
-    = do str    <- mapFst (fromLitError fname) $ unlit lit str
-         toks   <- mapFst (fromLexError fname) $ lexTo reject str
-         (decs, (parsed, _)) <- mapFst (fromParsingError fname) $ parseWith p toks
+runParserTo origin lit reject str p
+    = do str    <- mapFst (fromLitError origin) $ unlit lit str
+         toks   <- mapFst (fromLexError origin) $ lexTo reject str
+         (decs, (parsed, _)) <- mapFst (fromParsingError origin) $ parseWith p toks
          Right (decs, parsed)
 
 export
 runParser : {e : _} ->
-            (fname : String) -> Maybe LiterateStyle -> String ->
+            (origin : OriginDesc) -> Maybe LiterateStyle -> String ->
             Grammar SemanticDecorations Token e ty -> Either Error (SemanticDecorations, ty)
-runParser fname lit = runParserTo fname lit (pred $ const False)
+runParser origin lit = runParserTo origin lit (pred $ const False)
 
 export covering
-parseFile : (fname : String) -> Rule ty -> IO (Either Error (SemanticDecorations, ty))
-parseFile fname p
+parseFile : (fname : String)
+         -> (origin : OriginDesc)
+         -> Rule ty
+         -> IO (Either Error (SemanticDecorations, ty))
+parseFile fname origin p
     = do Right str <- readFile fname
              | Left err => pure (Left (FileErr fname err))
-         pure (runParser fname (isLitFile fname) str p)
+         pure (runParser origin (isLitFile fname) str p)

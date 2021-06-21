@@ -31,6 +31,8 @@ import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Parser.Lexer.Source
 
+%default covering
+
 public export
 data IdrisDocAnn
   = TCon Name
@@ -342,7 +344,7 @@ summarise n -- n is fully qualified
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
-                  maybe "" (\d => "\n\t" ++ d) doc)
+                  maybe "" ((++) "\n\t") doc)
 
 -- Display all the exported names in the given namespace
 export

@@ -26,7 +26,8 @@
 --    range of [-2^(x-1),2^(x-1) - 1]. They support all the usual arithmetic
 --    operations: +,*,-,div, and mod. If the result `y` of an operation
 --    is outside the valid range, the signed remainder modulo 2^x of `y`
---    is returned instead. The same kind of truncation happens when
+--    is calculated and 2^x subtracted from the result if it
+--    is still out of bounds. The same kind of truncation happens when
 --    other numeric types are cast to one of the signed integer
 --    types.
 --
@@ -34,11 +35,11 @@
 --             example calculations. All numbers are considered to be of type `Int8`
 --             unless specified otherwise:
 --
---               127 + 7   = 6
---               3 * 64    = 64
---               2 * (-64) = (-128)
---               (-129)    = (-1)
---               7 - 10    = (-3)
+--               127 + 7   = -122
+--               3 * 64    = -64
+--               2 * (-64) = -128
+--               (-129)    = 127
+--               7 - 10    = -3
 --
 import Data.List
 import Data.Stream
@@ -138,10 +139,14 @@ check (MkOp name op opInt allowZero $ MkIntType type signed bits mi ma) =
    in mapMaybe failing ps
 
   where
+    trueMod : Integer -> Integer -> Integer
+    trueMod x y = let res = x `mod` y
+                   in if res < 0 then res + y else res
+
     checkBounds : Integer -> Integer
-    checkBounds n = let r1 = if n < mi || n > ma then n `mod` (ma + 1) else n
-                     in if not signed && r1 < 0
-                           then ma + r1 + 1
+    checkBounds n = let r1 = trueMod n (ma + 1 - mi)
+                     in if r1 > ma
+                           then r1 - (ma + 1 - mi)
                            else r1
 
     failing : (Integer,Integer) -> Maybe String

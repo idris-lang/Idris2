@@ -555,6 +555,52 @@ then the function bodies. As a result, none of the function types can
 depend on the reduction behaviour of any of the functions in the
 block.
 
+Forward declarations can allow you to have more fine-grained control over the order
+in which mutually defined concepts are declared. This can be useful if you need to
+mention a datatype's constructor in the type of a mutually defined function, or need
+to rely on the behaviour of a mutually defined function for something to typecheck.
+
+.. code-block:: idris
+
+  data V : Type
+  T : V -> Type
+
+  data V : Type where
+    N : V
+    Pi : (a : V) -> (b : T a -> V) -> V
+
+  T N = Nat
+  T (Pi a b) = (x : T a) -> T (b x)
+
+.. code-block:: idris
+
+  data Even : Nat -> Type
+  data Odd  : Nat -> Type
+
+  data Even : Nat -> Type where
+    ZIsEven : Even Z
+    SOddisEven : Odd n -> Even (S k)
+
+  data Odd : Nat -> Type where
+    SEvenIsOdd : Even n -> Odd (S k)
+
+
+.. code-block:: idris
+
+  even : Nat -> Bool
+  odd  : Nat -> Bool
+
+  -- or just ``even, odd : Nat -> Bool``
+
+  even    Z  = True
+  even (S k) = odd k
+
+  odd    Z  = False
+  odd (S k) = even k
+
+Placing signature declarations forward can suggest Idris to detect
+their corresponding mutual definitions.
+
 I/O
 ===
 

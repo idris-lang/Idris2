@@ -176,21 +176,32 @@ magic ms e = go ms e where
     Nothing => go ms e
     Just e' => e'
 
-natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
-natMinus fc fc' [m,n] = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]
+%inline
+magic__integerToNat : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
+magic__integerToNat fc fc' [k]
+  = CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k]
+
+magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
+magic__natMinus fc fc' [m,n]
+  = magic__integerToNat fc fc'
+    [CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]]
+
+-- We don't reuse natMinus here because we assume that unsuc will only be called
+-- on S-headed numbers so we do not need the truncating integerToNat call!
+magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
+magic__natUnsuc fc fc' [m]
+  = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, CPrimVal fc (BI 1)]
 
 -- TODO: next release remove this and use %builtin pragma
 natHack : List Magic
 natHack =
-    [ MagicCRef (NS typesNS (UN "natToInteger")) 1
-         (\ _, _, [k] => k)
-    , MagicCRef (NS typesNS (UN "integerToNat")) 1
-         (\ fc, fc', [k] => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k])
+    [ MagicCRef (NS typesNS (UN "natToInteger")) 1 (\ _, _, [k] => k)
+    , MagicCRef (NS typesNS (UN "integerToNat")) 1 magic__integerToNat
     , MagicCRef (NS typesNS (UN "plus")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef (NS typesNS (UN "mult")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
-    , MagicCRef (NS natNS (UN "minus")) 2 natMinus
+    , MagicCRef (NS typesNS (UN "minus")) 2 magic__natMinus
     ]
 
 -- get all transformation from %builtin pragmas
@@ -237,7 +248,7 @@ trySBranch :
 trySBranch ss n (MkConAlt nm _ _ [arg] sc)
   = do guard $ isJust $ lookup nm ss
        let fc = getFC n
-       pure (CLet fc arg True (natMinus fc fc [n, CPrimVal fc (BI 1)]) sc)
+       pure (CLet fc arg True (magic__natUnsuc fc fc [n]) sc)
 trySBranch _ _ _ = Nothing
 
 tryZBranch :

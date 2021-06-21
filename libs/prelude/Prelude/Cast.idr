@@ -5,6 +5,8 @@ import Prelude.Basics
 import Prelude.Num
 import Prelude.Types
 
+%default total
+
 -----------
 -- CASTS --
 -----------

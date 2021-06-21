@@ -8,10 +8,10 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
-import Libraries.Data.Bool.Extra
 import Data.List
 import Data.Maybe
 import Data.Strings
+
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
@@ -48,7 +48,7 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     findN i tm
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
 
     -- Assuming in normal form. Look for: mismatched constructors, or
     -- a name appearing strong rigid in the other term
@@ -56,15 +56,15 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     conflictTm (Local _ _ i _) tm
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
     conflictTm tm (Local _ _ i _)
         = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
                    | _ => False in
-              anyTrue (map (findN i) args)
+              any (findN i) args
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-          clash f f' || anyTrue (zipWith conflictTm args args')
+          clash f f' || any (uncurry conflictTm) (zip args args')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
@@ -141,7 +141,6 @@ isEmpty : {vars : _} ->
 isEmpty defs env (NTCon fc n t a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
-       log "coverage.empty" 10 $ "Checking type: " ++ show nty
        case nty of
             TCon _ _ _ _ flags _ cons _
                  => if not (external flags)

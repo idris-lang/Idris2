@@ -1,5 +1,7 @@
 module Data.Primitives.Views
 
+%default total
+
 -- We need all the believe_mes and asserts throughout this file because we're
 -- working with primitive here! We also have separate implementations per
 -- primitive, rather than using interfaces, because we're only going to trust

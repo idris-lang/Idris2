@@ -4,9 +4,11 @@ import Core.Binary
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.FC
 import Core.Normalise
+import Core.Options
 import Core.TT
 import Core.TTC
 
@@ -96,7 +98,7 @@ record Metadata where
        currentLHS : Maybe ClosedTerm
        holeLHS : List (Name, ClosedTerm)
        nameLocMap : PosMap (NonEmptyFC, Name)
-       sourcefile : String
+       sourceIdent : OriginDesc
 
        -- Semantic Highlighting
        -- Posmap of known semantic decorations
@@ -116,21 +118,21 @@ Show Metadata where
       " current LHS: " ++ show currentLHS ++ "\n" ++
       " holes: " ++ show holeLHS ++ "\n" ++
       " nameLocMap: " ++ show nameLocMap ++ "\n" ++
-      " sourcefile: " ++ fname ++
+      " sourceIdent: " ++ show fname ++
       " semanticHighlighting: " ++ show semanticHighlighting ++
       " semanticAliases: " ++ show semanticAliases ++
       " semanticDefaults: " ++ show semanticDefaults
 
 export
-initMetadata : String -> Metadata
-initMetadata fname = MkMetadata
+initMetadata : OriginDesc -> Metadata
+initMetadata finfo = MkMetadata
   { lhsApps = []
   , names = []
   , tydecls = []
   , currentLHS = Nothing
   , holeLHS = []
   , nameLocMap = empty
-  , sourcefile = fname
+  , sourceIdent = finfo
   , semanticHighlighting = empty
   , semanticAliases = empty
   , semanticDefaults = empty
@@ -147,7 +149,7 @@ TTC Metadata where
            toBuf b (tydecls m)
            toBuf b (holeLHS m)
            toBuf b (nameLocMap m)
-           toBuf b (sourcefile m)
+           toBuf b (sourceIdent m)
            toBuf b (semanticHighlighting m)
            toBuf b (semanticAliases m)
            toBuf b (semanticDefaults m)
@@ -312,14 +314,17 @@ addSemanticDecorations : {auto m : Ref MD Metadata} ->
    SemanticDecorations -> Core ()
 addSemanticDecorations decors
     = do meta <- get MD
+         defs <- get Ctxt
          let posmap = meta.semanticHighlighting
-         let (newDecors,droppedDecors) = span
-                                           ((meta.sourcefile ==)
-                                            . (\((fn, _), _) => fn))
-                                           decors
+         let (newDecors,droppedDecors) =
+               span
+                 ( (meta.sourceIdent ==)
+                 . Builtin.fst
+                 . Builtin.fst )
+                 decors
          unless (isNil droppedDecors)
            $ log "ide-mode.highlight" 19 $ "ignored adding decorations to "
-               ++ meta.sourcefile ++ ": " ++ show droppedDecors
+               ++ show meta.sourceIdent ++ ": " ++ show droppedDecors
          put MD $ record {semanticHighlighting
                             = (fromList newDecors) `union` posmap} meta
 

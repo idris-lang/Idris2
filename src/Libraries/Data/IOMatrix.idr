@@ -2,6 +2,8 @@ module Libraries.Data.IOMatrix
 
 import Data.IOArray.Prims
 
+%default total
+
 export
 record IOMatrix a where
   constructor MkIOMatrix

@@ -22,6 +22,7 @@ public export
 data PkgCommand
       = Build
       | Install
+      | InstallWithSrc
       | MkDoc
       | Typecheck
       | Clean
@@ -32,6 +33,7 @@ export
 Show PkgCommand where
   show Build = "--build"
   show Install = "--install"
+  show InstallWithSrc = "--install-with-src"
   show MkDoc = "--mkdoc"
   show Typecheck = "--typecheck"
   show Clean = "--clean"
@@ -134,6 +136,9 @@ data CLOpt
   WarningsAsErrors |
   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
+  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+  ||| of modification time.
+  HashesInsteadOfModTime |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
@@ -224,6 +229,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Do not print shadowing warnings"),
 
            optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
+
+           optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
               (Just "Show installation prefix"),
            MkOpt ["--paths"] [] [BlodwenPaths]
@@ -239,6 +248,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--build"] [Required "package file"] (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
            MkOpt ["--install"] [Required "package file"] (\f => [Package Install f])
+              (Just "Install the given package"),
+           MkOpt ["--install-with-src"] [Required "package file"]
+                 (\f => [Package InstallWithSrc f])
               (Just "Install the given package"),
            MkOpt ["--mkdoc"] [Required "package file"] (\f => [Package MkDoc f])
               (Just "Build documentation for the given package"),
@@ -353,7 +365,7 @@ envsUsage = makeTextFromOptionsOrEnvs $ map (\e => (e.name, Just e.help)) envs
 
 export
 versionMsg : String
-versionMsg = "Idris 2, version " ++ showVersion True version
+versionMsg = "Idris 2, version " ++ show version
 
 export
 usage : String

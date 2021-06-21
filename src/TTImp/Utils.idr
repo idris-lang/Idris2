@@ -6,9 +6,9 @@ import Core.TT
 import TTImp.TTImp
 
 import Data.List
+import Data.List1
 import Data.Strings
 
-import Libraries.Data.List1 as Lib
 import Libraries.Utils.String
 
 %default covering
@@ -87,8 +87,8 @@ findUniqueBindableNames fc arg env used t
                                 -- toplevel declaration
                                  Hole _ _ => Nothing
                                  _ => pure n
-                    pure $ MkPair n <$> Lib.fromList ns
-            whenJust (Lib.fromList ns) $ recordWarning . ShadowingGlobalDefs fc
+                    pure $ MkPair n <$> fromList ns
+            whenJust (fromList ns) $ recordWarning . ShadowingGlobalDefs fc
        pure assoc
 
 export

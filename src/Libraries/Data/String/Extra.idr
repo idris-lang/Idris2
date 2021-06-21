@@ -151,4 +151,4 @@ indent n x = Extra.replicate n ' ' ++ x
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = unlines $ map (indent n) $ forget $ lines str
+indentLines n str = unlines $ map (Extra.indent n) $ forget $ lines str
