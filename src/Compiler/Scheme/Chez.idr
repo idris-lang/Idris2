@@ -363,7 +363,7 @@ startChezPreamble = unlines
 
 startChez : String -> String -> String
 startChez appdir target = startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
@@ -371,8 +371,8 @@ startChezCmd : String -> String -> String -> String
 startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" --script \"%APPDIR%\\" ++ target ++ "\" %*"
+    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
+    , "\"" ++ chez ++ "\" --script \"%APPDIR%" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
@@ -381,8 +381,8 @@ startChezWinSh chez appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
+    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
     , "\"" ++ chez ++ "\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 

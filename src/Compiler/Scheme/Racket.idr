@@ -340,7 +340,7 @@ startRacket racket appdir target = unlines
     , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "fi"
     , ""
-    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
     , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
@@ -348,8 +348,8 @@ startRacketCmd : String -> String -> String -> String
 startRacketCmd racket appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
-    , racket ++ "\"%APPDIR%\\" ++ target ++ "\" %*"
+    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
+    , racket ++ "\"%APPDIR%" ++ target ++ "\" %*"
     ]
 
 startRacketWinSh : String -> String -> String -> String
@@ -358,8 +358,8 @@ startRacketWinSh racket appdir target = unlines
     , ""
     , "set -e # exit on any error"
     , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
+    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
+    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
     , racket ++ "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 

@@ -11,7 +11,7 @@ echo "Bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
 # Compile the bootstrap scheme
 cd bootstrap
 echo "Building idris2-boot from idris2-boot.rkt"
-raco exe idris2_app/idris2-boot.rkt
+"${RACKET_RACO:-raco}" exe idris2_app/idris2-boot.rkt
 
 # Put the result in the usual place where the target goes
 mkdir -p ../build/exec
