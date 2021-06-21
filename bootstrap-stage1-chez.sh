@@ -14,8 +14,8 @@ echo "Bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 # Compile the bootstrap scheme
 # TODO: Move boot-build to Makefile in bootstrap/Makefile
 cd bootstrap
-echo "Building idris2-boot from idris2-boot.ss"
-${SCHEME} --script compile.ss
+echo "Building idris2-boot.so from idris2-boot.ss"
+"${SCHEME}" --script compile.ss
 
 # Put the result in the usual place where the target goes
 mkdir -p ../build/exec
