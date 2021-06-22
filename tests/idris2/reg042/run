@@ -1,4 +1,3 @@
-$1 --build nsb.ipkg
-build/exec/nsb 100000
+$1 --no-color --console-width 0 --no-banner NatOpts.idr < input
 
 rm -rf build
