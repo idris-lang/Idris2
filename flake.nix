@@ -1,9 +1,9 @@
 {
   description = "Idris2 flake";
 
-  inputs.flake-utils.url = github:numtide/flake-utils;
+  inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris-emacs-src = {
-    url = github:redfish64/idris2-mode;
+    url = "github:redfish64/idris2-mode";
     flake = false;
   };
 
