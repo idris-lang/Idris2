@@ -888,6 +888,13 @@ exprSearchOpts opts fc n_in hints
     = do defs <- get Ctxt
          Just (n, idx, gdef) <- lookupHoleName n_in defs
              | Nothing => undefinedName fc n_in
+         -- the REPL does this step, but doing it here too because
+         -- expression search might be invoked some other way
+         let Hole _ _ = definition gdef
+             | PMDef pi [] (STerm _ tm) _ _
+                 => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
+                       one raw
+             | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))
          log "interaction.search" 10 $ "LHS hole data " ++ show (n, lhs)
          opts' <- if getRecData opts
