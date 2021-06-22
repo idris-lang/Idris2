@@ -24,6 +24,7 @@ import Libraries.Data.StringMap
 import Libraries.Text.Distance.Levenshtein
 
 import System
+import System.Clock
 import System.Directory
 
 %default covering
@@ -1114,6 +1115,9 @@ record Defs where
      -- again
   timings : StringMap (Bool, Integer)
      -- ^ record of timings from logTimeRecord
+  timer : Maybe Integer
+     -- ^ for timing and checking timeouts; the time in nanoseconds when
+     -- the timer was initialised
   warnings : List Warning
      -- ^ as yet unreported warnings
 
@@ -1159,6 +1163,7 @@ initDefs
            , userHoles = empty
            , peFailures = empty
            , timings = empty
+           , timer = Nothing
            , warnings = []
            }
 
@@ -2352,6 +2357,13 @@ setNFThreshold max
          put Ctxt (record { options->elabDirectives->nfThreshold = max } defs)
 
 export
+setSearchTimeout : {auto c : Ref Ctxt Defs} ->
+                   Integer -> Core ()
+setSearchTimeout t
+    = do defs <- get Ctxt
+         put Ctxt (record { options->session->searchTimeout = t } defs)
+
+export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
                Core Bool
 isLazyActive
@@ -2582,3 +2594,46 @@ recordWarning w
     = do defs <- get Ctxt
          session <- getSession
          put Ctxt $ record { warnings $= (w ::) } defs
+
+export
+getTime : Core Integer
+getTime
+    = do clock <- coreLift (clockTime Process)
+         pure (seconds clock * nano + nanoseconds clock)
+  where
+    nano : Integer
+    nano = 1000000000
+
+-- A simple timeout mechanism. We can start a timer, clear it, or check
+-- whether too much time has passed and throw an exception if so
+
+||| Initialise the timer
+export
+startTimer : {auto c : Ref Ctxt Defs} -> Core ()
+startTimer
+    = do t <- getTime
+         defs <- get Ctxt
+         put Ctxt $ record { timer = Just t } defs
+
+||| Clear the timer
+export
+clearTimer : {auto c : Ref Ctxt Defs} -> Core ()
+clearTimer
+    = do defs <- get Ctxt
+         put Ctxt $ record { timer = Nothing } defs
+
+||| If the timer was started more than t milliseconds ago, throw an exception
+export
+checkTimer : {auto c : Ref Ctxt Defs} ->
+             FC ->
+             (t : Integer) -> -- maximum time in milliseconds
+             String -> -- action, for error message
+             Core ()
+checkTimer fc max str
+    = do defs <- get Ctxt
+         let Just init = timer defs
+                | Nothing => pure ()
+         t <- getTime
+         if (t - init > max * 1000000)
+            then throw (Timeout fc str)
+            else pure ()
