@@ -155,6 +155,8 @@ modules = Control.ANSI,
           System.Future,
           System.Random,
           System.Path,
+          System.Concurrency.Queue,
+          System.Concurrency.BufferedChannel,
 
           Text.Token,
           Text.Quantity,
