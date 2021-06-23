@@ -1010,6 +1010,7 @@ mutual
              AmbigDepth n => pure [IPragma [] (\nest, env => setAmbigLimit n)]
              AutoImplicitDepth n => pure [IPragma [] (\nest, env => setAutoImplicitLimit n)]
              NFMetavarThreshold n => pure [IPragma [] (\nest, env => setNFThreshold n)]
+             SearchTimeout n => pure [IPragma [] (\nest, env => setSearchTimeout n)]
              PairNames ty f s => pure [IPragma [] (\nest, env => setPair fc ty f s)]
              RewriteName eq rw => pure [IPragma [] (\nest, env => setRewrite fc eq rw)]
              PrimInteger n => pure [IPragma [] (\nest, env => setFromInteger n)]

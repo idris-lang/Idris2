@@ -451,7 +451,7 @@ processEdit (ExprSearch upd line name hints)
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLamsTm locs [] tm
+                          do let (_ ** (env, tm')) = dropLamsTm locs [] !(normaliseHoles defs [] tm)
                              itm <- resugar env tm'
                              let itm' : PTerm = if brack then addBracket replFC itm else itm
                              if upd

@@ -467,6 +467,7 @@ perror (NoForeignCC fc specs) = do
                    ] <+> line <+> !(ploc fc)
     pure res
 perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
+perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot

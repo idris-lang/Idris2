@@ -1166,6 +1166,10 @@ directive fname indents
          dpt <- decorate fname Keyword $ intLit
          atEnd indents
          pure (NFMetavarThreshold (fromInteger dpt))
+  <|> do decorate fname Keyword $ pragma "search_timeout"
+         t <- decorate fname Keyword $ intLit
+         atEnd indents
+         pure (SearchTimeout t)
   <|> do decorate fname Keyword $ pragma "pair"
          ty <- name
          f <- name

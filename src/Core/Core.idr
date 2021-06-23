@@ -157,6 +157,7 @@ data Error : Type where
      ||| Contains list of specifiers for which foreign call cannot be resolved
      NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
+     Timeout : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -332,6 +333,7 @@ Show Error where
   show (NoForeignCC fc specs) = show fc ++
        ":The given specifier " ++ show specs ++ " was not accepted by any available backend."
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
+  show (Timeout str) = "Timeout in " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -423,6 +425,7 @@ getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
 getErrorLoc (NoForeignCC loc _) = Just loc
 getErrorLoc (BadMultiline loc _) = Just loc
+getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
