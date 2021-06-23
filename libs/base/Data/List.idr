@@ -45,8 +45,12 @@ data InBounds : (k : Nat) -> (xs : List a) -> Type where
 
 public export
 Uninhabited (InBounds k []) where
-    uninhabited InFirst impossible
-    uninhabited (InLater _) impossible
+  uninhabited InFirst impossible
+  uninhabited (InLater _) impossible
+
+export
+Uninhabited (InBounds k xs) => Uninhabited (InBounds (S k) (x::xs)) where
+  uninhabited (InLater y) = uninhabited y
 
 ||| Decide whether `k` is a valid index into `xs`
 public export
@@ -677,6 +681,11 @@ Uninhabited ([] = x :: xs) where
 export
 Uninhabited (x :: xs = []) where
   uninhabited Refl impossible
+
+export
+{0 xs : List a} -> Either (Uninhabited $ x === y) (Uninhabited $ xs === ys) => Uninhabited (x::xs = y::ys) where
+  uninhabited @{Left  z} Refl = uninhabited @{z} Refl
+  uninhabited @{Right z} Refl = uninhabited @{z} Refl
 
 ||| (::) is injective
 export
