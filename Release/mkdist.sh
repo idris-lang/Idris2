@@ -21,6 +21,7 @@ rm -rf .github
 rm .git*
 rm -f .travis*
 rm -rf Release
+rm -rf benchmark
 find . -type f -name '.gitignore' -exec rm -f {} \;
 
 cd ..
