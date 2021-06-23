@@ -170,6 +170,7 @@ Added
 
 * Lots of small performance improvements, some of which may be especially
   noticeable in programs that do a lot of type level evaluation.
+* Added HTML documentation generation, using the `--mkdoc` flag
 * Support for auto-completion in bash-like shells was added.
 * Fixed case-splitting to respect any indentation there may be in the term being
   case-split and the surrounding symbols, instead of filtering out the
