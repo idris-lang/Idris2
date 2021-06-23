@@ -41,6 +41,10 @@ Uninhabited (FS k = FZ) where
   uninhabited Refl impossible
 
 export
+Uninhabited (n = m) => Uninhabited (FS n = FS m) where
+  uninhabited Refl @{nm} = uninhabited Refl @{nm}
+
+export
 fsInjective : FS m = FS n -> m = n
 fsInjective Refl = Refl
 
