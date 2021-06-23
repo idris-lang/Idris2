@@ -56,6 +56,11 @@ finToNat : Fin n -> Nat
 finToNat FZ = Z
 finToNat (FS k) = S $ finToNat k
 
+
+export
+Show (Fin n) where
+  show = show . finToNat
+
 ||| `finToNat` is injective
 export
 finToNatInjective : (fm : Fin k) -> (fn : Fin k) -> (finToNat fm) = (finToNat fn) -> fm = fn
