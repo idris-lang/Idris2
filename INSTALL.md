@@ -34,7 +34,7 @@ of `make` in the following steps.
 
 ### 1: Set installation target directory
 
-- Change the `PREFIX` in `config.mk`. The default is to install in
+- Change the `PREFIX` in `config.mk` to the absolute path of your chosen installation destination. The default is to install in
   `$HOME/.idris2`
 
 If you have an existing Idris 2, go to Step 3. Otherwise, read on...
