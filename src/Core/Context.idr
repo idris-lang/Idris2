@@ -1115,9 +1115,9 @@ record Defs where
      -- again
   timings : StringMap (Bool, Integer)
      -- ^ record of timings from logTimeRecord
-  timer : Maybe Integer
-     -- ^ for timing and checking timeouts; the time in nanoseconds when
-     -- the timer was initialised
+  timer : Maybe (Integer, String)
+     -- ^ for timing and checking timeouts; the maximum time after which a
+     -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
 
@@ -2607,13 +2607,18 @@ getTime
 -- A simple timeout mechanism. We can start a timer, clear it, or check
 -- whether too much time has passed and throw an exception if so
 
-||| Initialise the timer
+||| Initialise the timer, setting the time in milliseconds after which a
+||| timeout should be thrown.
+||| Note: It's important to clear the timer when the operation that might
+||| timeout is complete, otherwise something else might throw a timeout
+||| error!
 export
-startTimer : {auto c : Ref Ctxt Defs} -> Core ()
-startTimer
+startTimer : {auto c : Ref Ctxt Defs} ->
+             Integer -> String -> Core ()
+startTimer tmax action
     = do t <- getTime
          defs <- get Ctxt
-         put Ctxt $ record { timer = Just t } defs
+         put Ctxt $ record { timer = Just (t + tmax * 1000000, action) } defs
 
 ||| Clear the timer
 export
@@ -2625,15 +2630,12 @@ clearTimer
 ||| If the timer was started more than t milliseconds ago, throw an exception
 export
 checkTimer : {auto c : Ref Ctxt Defs} ->
-             FC ->
-             (t : Integer) -> -- maximum time in milliseconds
-             String -> -- action, for error message
              Core ()
-checkTimer fc max str
+checkTimer
     = do defs <- get Ctxt
-         let Just init = timer defs
+         let Just (max, action) = timer defs
                 | Nothing => pure ()
          t <- getTime
-         if (t - init > max * 1000000)
-            then throw (Timeout fc str)
+         if (t > max)
+            then throw (Timeout action)
             else pure ()

@@ -92,7 +92,7 @@ searchN : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           Nat -> Core (Search a) -> Core (List a, Core (Search a))
 searchN max s
-    = do startTimer
+    = do startTimer (searchTimeout !getSession) "expression search"
          tryUnify
            (do res <- s
                xs <- count max res
@@ -243,7 +243,7 @@ firstSuccess (elab :: elabs)
                     case err of
                          -- Give up on timeout, or we'll keep trying all the
                          -- other branches.
-                         Timeout _ _ => noResult
+                         Timeout _ => noResult
                          _ => continue ust defs elabs)
   where
     continue : UState -> Defs -> List (Core (Search a)) ->
@@ -297,17 +297,6 @@ mkCandidates fc f ds (Result (arg, ds') next :: argss)
             do next' <- next
                mkCandidates fc f ds (next' :: argss)]
 
--- Check whether we've taken too long, and throw an exception if so. This
--- cuts off the search just like any other failure, so we'll only return
--- the results up to this point.
--- This only fails on the current branch, so we'll have to wait until the
--- timeouts propagate all the way back up to the top, but that shouldn't
--- take long since we check regularly.
-checkTimeout : {auto c : Ref Ctxt Defs} -> FC -> Core ()
-checkTimeout fc
-    = do s <- getSession
-         checkTimer fc (searchTimeout s) "expression search"
-
 -- Apply the name to arguments and see if the result unifies with the target
 -- type, then try to automatically solve any holes which were generated.
 -- If there are any remaining holes, search fails.
@@ -321,7 +310,7 @@ searchName : {vars : _} ->
              Core (Search (Term vars, ExprDefs))
 searchName fc rigc opts env target topty (n, ndef)
     = do defs <- get Ctxt
-         checkTimeout fc
+         checkTimer
          let True = visibleInAny (!getNS :: !getNestedNS)
                                  (fullname ndef) (visibility ndef)
              | _ => noResult
@@ -392,7 +381,7 @@ searchNames fc rig opts env ty topty []
     = noResult
 searchNames fc rig opts env ty topty (n :: ns)
     = do defs <- get Ctxt
-         checkTimeout fc
+         checkTimer
          vis <- traverse (visible (gamma defs) (currentNS defs :: nestedNS defs)) (n :: ns)
          let visns = mapMaybe id vis
          nfty <- nf defs env ty
@@ -492,7 +481,7 @@ searchLocalWith fc nofn rig opts env [] ty topty
     = noResult
 searchLocalWith {vars} fc nofn rig opts env ((p, pty) :: rest) ty topty
     = do defs <- get Ctxt
-         checkTimeout fc
+         checkTimer
          nty <- nf defs env ty
          getSuccessful fc rig opts False env ty topty
                        [findPos defs p id !(nf defs env pty) nty,
@@ -815,7 +804,7 @@ searchHole : {auto c : Ref Ctxt Defs} ->
 searchHole fc rig opts n locs topty defs glob
     = do searchty <- normalise defs [] (type glob)
          logTerm "interaction.search" 10 "Normalised type" searchty
-         checkTimeout fc
+         checkTimer
          searchType fc rig opts [] topty locs searchty
 
 -- Declared at the top
@@ -926,8 +915,10 @@ exprSearch : {auto c : Ref Ctxt Defs} ->
              FC -> Name -> List Name ->
              Core (Search RawImp)
 exprSearch fc n hints
-    = do startTimer
-         exprSearch' fc n hints
+    = do startTimer (searchTimeout !getSession) "expression search"
+         res <- exprSearch' fc n hints
+         clearTimer
+         pure res
 
 export
 exprSearchN : {auto c : Ref Ctxt Defs} ->
