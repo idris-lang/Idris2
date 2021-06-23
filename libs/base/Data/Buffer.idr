@@ -34,8 +34,10 @@ prim__newBuffer : Int -> PrimIO Buffer
 export
 newBuffer : HasIO io => Int -> io (Maybe Buffer)
 newBuffer size
-    = do buf <- primIO (prim__newBuffer size)
-         pure $ Just buf
+    = if size >= 0
+            then do buf <- primIO (prim__newBuffer size)
+                    pure $ Just buf
+                 else pure Nothing
 --          if prim__nullAnyPtr buf /= 0
 --             then pure Nothing
 --             else pure $ Just $ MkBuffer buf size 0

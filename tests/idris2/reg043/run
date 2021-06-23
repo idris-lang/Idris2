@@ -1,0 +1,6 @@
+mkdir -p build/ttc
+echo "TT2This Is A Fake TTC" > build/ttc/Fake.ttc
+
+$1 --no-color --console-width 0 --check TestFake.idr
+
+rm -rf build
