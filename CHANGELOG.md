@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (idris2-next)
+## v0.4.0
 
 ### Syntax changes
 
