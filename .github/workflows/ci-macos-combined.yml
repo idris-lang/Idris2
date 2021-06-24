@@ -66,9 +66,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-self-host-chez-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |

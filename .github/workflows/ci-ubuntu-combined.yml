@@ -61,9 +61,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-from-previous-version-${{ github.ref }}-${{ env.IDRIS2_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |
@@ -117,9 +117,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-from-previous-version-${{ github.ref }}-${{ env.IDRIS2_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |
@@ -168,9 +168,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-self-host-chez-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |
@@ -215,9 +215,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-self-host-racket-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |
@@ -264,9 +264,9 @@ jobs:
           path: |
             build/
             libs/base/build/
+            libs/prelude/build/
             libs/contrib/build/
             libs/network/build/
-            libs/prelude/build/
             libs/test/build/
           key: ${{ runner.os }}-build-api-${{ github.ref }}-${{ env.TTC_VERSION }}-${{ env.GITHUB_SHA }}
           restore-keys: |
