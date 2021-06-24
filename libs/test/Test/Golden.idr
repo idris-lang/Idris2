@@ -347,6 +347,22 @@ findCG
        Nothing <- checkRequirement C       | p => pure (Just "refc")
        pure Nothing
 
+||| A choice of a codegen
+public export
+data Codegen
+  = ||| Do NOT pass a cg argument to the executable being tested
+    Nothing
+  | ||| Use whatever the test runner was passed at the toplevel,
+    ||| and if nothing was passed guess a sensible default using findCG
+    Default
+  | ||| Use exactly the given requirement
+    Just Requirement
+
+export
+toList : Codegen -> List Requirement
+toList (Just r) = [r]
+toList _ = []
+
 ||| A test pool is characterised by
 |||  + a name
 |||  + a list of requirement
@@ -357,7 +373,7 @@ record TestPool where
   constructor MkTestPool
   poolName : String
   constraints : List Requirement
-  codegen : Maybe Requirement
+  codegen : Codegen
   testCases : List String
 
 ||| Only keep the tests that have been asked for
@@ -419,8 +435,9 @@ poolRunner opts pool
 
        -- if the test pool requires a specific codegen then use that
        let opts = case codegen pool of
-                    Nothing => opts
+                    Nothing => { codegen := Nothing } opts
                     Just cg => { codegen := Just (show @{CG} cg) } opts
+                    Default => opts
        -- if so run them all!
        loop opts initSummary tests
 
@@ -449,7 +466,7 @@ runner : List TestPool -> IO ()
 runner tests
     = do args <- getArgs
          Just opts <- options args
-            | _ => do print args
+            | _ => do printLn args
                       putStrLn usage
          -- if no CG has been set, find a sensible default based on what is available
          opts <- case codegen opts of
