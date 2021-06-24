@@ -147,7 +147,7 @@ collectReg _ = empty
 
 collectUsed : VMInst -> IntMap ()
 collectUsed (DECLARE reg) = collectReg reg
-collectUsed START = empty 
+collectUsed START = empty
 collectUsed (ASSIGN _ val) = collectReg val
 collectUsed (MKCON _ _ args) = foldMap collectReg args
 collectUsed (MKCLOSURE _ _ _ args) = foldMap collectReg args
