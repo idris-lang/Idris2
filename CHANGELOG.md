@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (idris2-next)
+## v0.4.0
 
 ### Syntax changes
 
@@ -52,6 +52,9 @@
 * Added `:search` command, which searches for functions by type
 * `:load`/`:l` and `:cd` commands now only accept paths surrounded by double
   quotes
+* Added a timeout to "generate definition" and "proof search" commands,
+  defaulting to 1 second (1000 milliseconds) and configurable with
+  `%search_timeout <time in milliseconds>`
 
 ### Library Changes
 
@@ -165,6 +168,9 @@ Added
 
 ### Other changes
 
+* Lots of small performance improvements, some of which may be especially
+  noticeable in programs that do a lot of type level evaluation.
+* Added HTML documentation generation, using the `--mkdoc` flag
 * Support for auto-completion in bash-like shells was added.
 * Fixed case-splitting to respect any indentation there may be in the term being
   case-split and the surrounding symbols, instead of filtering out the

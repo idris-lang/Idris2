@@ -106,8 +106,8 @@ nsToPath loc ns
             | Nothing => pure (Left (ModuleNotFound loc ns))
          pure (Right f)
 
--- Given a namespace, return the full path to the source module (if it
--- exists in the working directory)
+-- Given a namespace, return the path to the source module relative
+-- to the working directory, if the module exists.
 export
 nsToSource : {auto c : Ref Ctxt Defs} ->
              FC -> ModuleIdent -> Core String

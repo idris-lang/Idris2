@@ -79,7 +79,7 @@ idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
        "interactive021", "interactive022", "interactive023", "interactive024",
        "interactive025", "interactive026", "interactive027", "interactive028",
        "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033"]
+       "interactive033", "interactive034", "interactive035"]
 
 idrisTestsInterface : TestPool
 idrisTestsInterface = MkTestPool "Interface" [] Nothing
@@ -90,7 +90,7 @@ idrisTestsInterface = MkTestPool "Interface" [] Nothing
        "interface013", "interface014", "interface015", "interface016",
        "interface017", "interface018", "interface019", "interface020",
        "interface021", "interface022", "interface023", "interface024",
-       "interface025"]
+       "interface025", "interface026"]
 
 idrisTestsLinear : TestPool
 idrisTestsLinear = MkTestPool "Quantities" [] Nothing
@@ -123,7 +123,8 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042"]
+       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
+       "reg043"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing

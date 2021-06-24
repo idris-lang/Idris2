@@ -291,6 +291,9 @@ parameters (defs : Defs, topopts : EvalOpts)
              -- want to shortcut that second check, if we're evaluating
              -- everything, so don't let bind unless we need that log!
              let redok = redok1 || redok2
+             checkTimer -- If we're going to time out anywhere, it'll be
+                        -- when evaluating something recursive, so this is a
+                        -- good place to check
              unless redok2 $ logC "eval.stuck" 5 $ do n' <- toFullNames n
                                                       pure $ "Stuck function: " ++ show n'
              if redok
