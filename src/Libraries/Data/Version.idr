@@ -3,7 +3,7 @@
 module Libraries.Data.Version
 
 import Data.List
-import Data.Strings
+import Data.String
 
 import Libraries.Text.Parser
 import Libraries.Text.Lexer

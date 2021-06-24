@@ -31,7 +31,7 @@ In ``Average.idr``, add:
 
 .. code-block:: idris
 
-    import Data.Strings -- for `words`
+    import Data.String -- for `words`
     import Data.List -- for `length` on lists
 
 In ``AveMain.idr`` and ``Reverse.idr`` add:
@@ -58,7 +58,7 @@ Chapter 4
 
 For the reasons described above:
 
-+ In ``DataStore.idr``, add ``import System.REPL`` and ``import Data.Strings``
++ In ``DataStore.idr``, add ``import System.REPL`` and ``import Data.String``
 + In ``SumInputs.idr``, add ``import System.REPL``
 + In ``TryIndex.idr``, add an implicit argument:
 
@@ -78,9 +78,9 @@ Chapter 5
 There is no longer a ``Cast`` instance from ``String`` to ``Nat``, because its
 behaviour of returing Z if the ``String`` wasn't numeric was thought to be
 confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
-``Data.Strings`` which at least has a clearer name. So:
+``Data.String`` which at least has a clearer name. So:
 
-In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.Strings`` and change ``cast`` to
+In ``Loops.idr`` and ``ReadNum.idr`` add ``import Data.String`` and change ``cast`` to
 ``stringToNatOrZ``
 
 In ``ReadNum.idr``, since functions must now be ``covering`` by default, add
@@ -89,7 +89,7 @@ a ``partial`` annotation to ``readNumber_v2``.
 Chapter 6
 ---------
 
-In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.Strings`` and
+In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.String`` and
 ``import System.REPL``. Also in ``DataStore.idr``, the ``schema`` argument to
 ``display`` is required for matching, so change the type to:
 
@@ -97,7 +97,7 @@ In ``DataStore.idr`` and ``DataStoreHoles.idr``, add ``import Data.Strings`` and
 
     display : {schema : _} -> SchemaType schema -> String
 
-In ``TypeFuns.idr`` add ``import Data.Strings``
+In ``TypeFuns.idr`` add ``import Data.String``
 
 Chapter 7
 ---------
@@ -158,7 +158,7 @@ Chapter 9
 
 In ``Hangman.idr``:
 
-+ Add ``import Data.Strings``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
++ Add ``import Data.String``, ``import Data.Vect.Elem`` and ``import Decidable.Equality``
 + ``removeElem`` pattern matches on ``n``, so it needs to be written in its
   type:
 
@@ -335,12 +335,12 @@ now uses a safer type for the number of shifts:
 
 
 In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``
-as above. Also add ``import Data.Strings`` for ``Strings.toLower``.
+as above. Also add ``import Data.String`` for ``String.toLower``.
 
-In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits``
-and ``import Data.Strings`` as above. Also,
-since export rules are per-namespace now, rather than per-file, you need to
-export ``(>>=)`` from the namespaces ``CommandDo`` and ``ConsoleDo``.
+In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits`` and
+``import Data.String`` as above.  Also, since export rules are per-namespace
+now, rather than per-file, you need to export ``(>>=)`` from the namespaces
+``CommandDo`` and ``ConsoleDo``.
 
 In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
 also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
@@ -350,11 +350,11 @@ In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 Chapter 12
 ----------
 
-For reasons described above: In ``ArithState.idr``, add ``import Data.Strings``
-and ``import Data.Bits`` and update ``randoms``.
-Also the ``(>>=)`` operators need to be set as ``export`` since they are in their
-own namespaces, and in ``getRandom``, ``DivBy`` needs to take additional
-arguments ``div`` and ``rem``.
+For reasons described above: In ``ArithState.idr``, add ``import Data.String``
+and ``import Data.Bits`` and update ``randoms``.  Also the ``(>>=)`` operators
+need to be set as ``export`` since they are in their own namespaces, and in
+``getRandom``, ``DivBy`` needs to take additional arguments ``div`` and
+``rem``.
 
 In ``ArithState.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
 also have to be ``export``.
@@ -392,7 +392,7 @@ In ``StackIO.idr``:
 
 In ``Vending.idr``:
 
-+ Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``strToInput``
++ Add ``import Data.String`` and change ``cast`` to ``stringToNatOrZ`` in ``strToInput``
 + In ``MachineCmd`` type, add an implicit argument to ``(>>=)`` data constructor:
 
 .. code-block:: idris
@@ -449,14 +449,14 @@ Chapter 14
 
 In ``ATM.idr``:
 
-+ Add ``import Data.Strings`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
++ Add ``import Data.String`` and change ``cast`` to ``stringToNatOrZ`` in ``runATM``
 
 In ``Hangman.idr``, add:
 
 .. code-block:: idris
 
     import Data.Vect.Elem -- `Elem` now has its own submodule
-    import Data.Strings -- for `toUpper`
+    import Data.String -- for `toUpper`
     import Data.List -- for `nub`
 
 + In ``Loop`` namespace, export ``GameLoop`` type and its data constructors:

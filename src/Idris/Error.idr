@@ -18,7 +18,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Stream
-import Data.Strings
+import Data.String
 
 import Libraries.Data.List.Extra
 import Libraries.Data.List1 as Lib
@@ -30,10 +30,10 @@ import Libraries.Data.String.Extra
 
 import System.File
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

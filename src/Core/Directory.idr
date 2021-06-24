@@ -9,7 +9,7 @@ import Core.Options
 import Libraries.Utils.Path
 
 import Data.List
-import Data.Strings
+import Data.String
 import Data.Maybe
 
 import System.Directory

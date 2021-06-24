@@ -11,7 +11,7 @@ import Core.Options
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.Either
 
 import System
@@ -149,7 +149,7 @@ export
 ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
+  let (h, p) = String.break (== ':') hp
       port = fromMaybe 38398 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)

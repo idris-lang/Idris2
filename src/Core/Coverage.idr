@@ -10,16 +10,16 @@ import Core.Value
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

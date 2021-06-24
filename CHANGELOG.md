@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (idris2-next)
+
+### Library Changes
+
+#### Prelude
+
+Changed
+
+- Removed `Data.Strings`.  Use `Data.String` instead.
+
 ## v0.4.0
 
 ### Syntax changes

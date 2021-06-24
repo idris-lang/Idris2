@@ -14,7 +14,7 @@ import System
 import System.File
 
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 
 %default covering

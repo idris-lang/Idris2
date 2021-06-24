@@ -9,7 +9,7 @@ import Libraries.Utils.Path
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import System.Info
 

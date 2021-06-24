@@ -13,7 +13,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
-import Data.Strings
+import Data.String
 
 %default covering
 

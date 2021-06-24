@@ -23,7 +23,7 @@ import Yaffle.REPL
 
 import Data.List
 import Data.So
-import Data.Strings
+import Data.String
 import System
 
 %default covering

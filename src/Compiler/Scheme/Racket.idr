@@ -18,7 +18,7 @@ import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
