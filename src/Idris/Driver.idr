@@ -27,7 +27,7 @@ import IdrisPaths
 import Data.List
 import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
 import System
 import System.Directory
 import System.File

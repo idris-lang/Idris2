@@ -19,7 +19,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Data.List
-import Data.Strings
+import Data.String
 import Libraries.Data.NameMap
 
 %default covering

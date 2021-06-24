@@ -20,7 +20,7 @@ import Data.IOArray
 import Data.List
 import Data.List1
 import Libraries.Data.NameMap
-import Data.Strings as String
+import Data.String as String
 
 import Idris.Env
 

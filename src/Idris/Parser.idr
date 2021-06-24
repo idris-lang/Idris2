@@ -1,19 +1,19 @@
 module Idris.Parser
 
-import        Core.Options
-import        Core.Metadata
-import        Idris.Syntax
+import Core.Options
+import Core.Metadata
+import Idris.Syntax
 import public Parser.Source
-import        Parser.Lexer.Source
-import        TTImp.TTImp
+import Parser.Lexer.Source
+import TTImp.TTImp
 
 import public Libraries.Text.Parser
-import        Data.Either
-import        Data.List
-import        Data.List.Views
-import        Data.List1
-import        Data.Maybe
-import        Data.Strings
+import Data.Either
+import Data.List
+import Data.List.Views
+import Data.List1
+import Data.Maybe
+import Data.String
 import Libraries.Utils.String
 
 import Idris.Parser.Let

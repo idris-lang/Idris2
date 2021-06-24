@@ -2,7 +2,7 @@ module Libraries.Text.Distance.Levenshtein
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.IOMatrix
 import Libraries.Data.List.Extra
 

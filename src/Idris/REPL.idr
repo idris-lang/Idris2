@@ -66,7 +66,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
-import Data.Strings
+import Data.String
 import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
@@ -80,10 +80,10 @@ import System
 import System.File
 import System.Directory
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

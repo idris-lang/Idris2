@@ -7,7 +7,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 
 import Libraries.Utils.String
 

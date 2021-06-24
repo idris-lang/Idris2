@@ -1,7 +1,7 @@
 module Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
 import Data.Maybe
-import Data.Strings
+import Data.String
 import public Libraries.Control.ANSI
 import Control.Monad.ST
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
