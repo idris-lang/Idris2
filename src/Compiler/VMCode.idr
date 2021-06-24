@@ -108,7 +108,7 @@ Show VMDef where
   show (MkVMFun args body) = show args ++ ": " ++ show body
   show (MkVMForeign ccs args ret)
       = "Foreign call " ++ show ccs ++ " " ++
-        show args ++ show ret
+        show args ++ " " ++ show ret
   show (MkVMError err) = "Error: " ++ show err
 
 toReg : AVar -> Reg
