@@ -195,7 +195,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- with-disambiguation
        "with003",
        -- pretty printing
-       "pretty001"]
+       "pretty001",
+       -- golden file testing
+       "golden001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool "Type Driven Development" [] Nothing
