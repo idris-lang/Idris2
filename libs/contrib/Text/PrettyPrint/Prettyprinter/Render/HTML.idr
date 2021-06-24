@@ -1,7 +1,7 @@
 module Text.PrettyPrint.Prettyprinter.Render.HTML
 
 import Data.List
-import Data.Strings
+import Data.String
 
 export
 htmlEscape : String -> String
