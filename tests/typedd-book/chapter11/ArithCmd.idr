@@ -1,6 +1,6 @@
 import Data.Primitives.Views
 import Data.Bits
-import Data.Strings
+import Data.String
 import System
 
 %default total

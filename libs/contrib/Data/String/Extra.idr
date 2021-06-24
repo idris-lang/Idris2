@@ -3,7 +3,7 @@ module Data.String.Extra
 import Data.List
 import Data.List1
 import Data.Nat
-import Data.Strings
+import Data.String
 
 %default total
 

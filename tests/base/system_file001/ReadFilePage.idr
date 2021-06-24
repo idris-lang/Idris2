@@ -1,5 +1,5 @@
 import System.File
-import Data.Strings
+import Data.String
 
 putLines : List String -> IO ()
 putLines = putStrLn . fastAppend
