@@ -84,8 +84,8 @@ Bits Bits8 where
   bit         = (1 `shiftL`)
   zeroBits    = 0
   testBit x i = (x .&. bit i) /= 0
-  shiftR x    = prim__shr_Bits8 x . fromInteger . cast . fst
-  shiftL x    = prim__shl_Bits8 x . fromInteger . cast . fst
+  shiftR x    = prim__shr_Bits8 x . cast . fst
+  shiftL x    = prim__shl_Bits8 x . cast . fst
   complement  = xor 0xff
   oneBits     = 0xff
 
@@ -98,8 +98,8 @@ Bits Bits16 where
   bit         = (1 `shiftL`)
   zeroBits    = 0
   testBit x i = (x .&. bit i) /= 0
-  shiftR x    = prim__shr_Bits16 x . fromInteger . cast . fst
-  shiftL x    = prim__shl_Bits16 x . fromInteger . cast . fst
+  shiftR x    = prim__shr_Bits16 x . cast . fst
+  shiftL x    = prim__shl_Bits16 x . cast . fst
   complement  = xor 0xffff
   oneBits     = 0xffff
 
@@ -112,8 +112,8 @@ Bits Bits32 where
   bit         = (1 `shiftL`)
   zeroBits    = 0
   testBit x i = (x .&. bit i) /= 0
-  shiftR x    = prim__shr_Bits32 x . fromInteger . cast . fst
-  shiftL x    = prim__shl_Bits32 x . fromInteger . cast . fst
+  shiftR x    = prim__shr_Bits32 x . cast . fst
+  shiftL x    = prim__shl_Bits32 x . cast . fst
   complement  = xor 0xffffffff
   oneBits     = 0xffffffff
 
@@ -241,7 +241,7 @@ FiniteBits Bits8 where
     let x1 = (x0 .&. 0x55) + ((x0 `shiftR` fromNat 1) .&. 0x55)
         x2 = (x1 .&. 0x33) + ((x1 `shiftR` fromNat 2) .&. 0x33)
         x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F)
-     in fromInteger $ cast x3
+     in cast x3
 
 public export %inline
 FiniteBits Bits16 where
@@ -254,7 +254,7 @@ FiniteBits Bits16 where
         x2 = (x1 .&. 0x3333) + ((x1 `shiftR` fromNat 2) .&. 0x3333)
         x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F)
         x4 = (x3 * 0x0101) `shiftR` fromNat 8
-     in fromInteger $ cast x4
+     in cast x4
 
 public export %inline
 FiniteBits Bits32 where
@@ -267,7 +267,7 @@ FiniteBits Bits32 where
         x2 = (x1 .&. 0x33333333) + ((x1 `shiftR` fromNat 2) .&. 0x33333333)
         x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F)
         x4 = (x3 * 0x01010101) `shiftR` fromNat 24
-     in fromInteger $ cast x4
+     in cast x4
 
 public export %inline
 FiniteBits Bits64 where
@@ -282,7 +282,7 @@ FiniteBits Bits64 where
              + ((x1 `shiftR` fromNat 2) .&. 0x3333333333333333)
         x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F)
         x4 = (x3 * 0x0101010101010101) `shiftR` fromNat 56
-     in fromInteger $ cast x4
+     in cast x4
 
 public export %inline
 FiniteBits Int where
@@ -303,7 +303,7 @@ FiniteBits Int where
         x3 = ((x2 + (x2 `shiftR` fromNat 4)) .&. 0x0F0F0F0F0F0F0F0F)
         x4 = (x3 * 0x0101010101010101) `shiftR` fromNat 56
         x5 = if x < 0 then x4 + 1 else x4
-     in fromInteger $ cast x5
+     in cast x5
 
 public export %inline
 FiniteBits Int8 where
