@@ -1,7 +1,7 @@
 ||| The `Javascript` code generator.
 module Compiler.ES.Javascript
 
-import Compiler.ES.ES
+import Compiler.ES.Codegen
 
 import Compiler.Common
 import Compiler.CompileExpr

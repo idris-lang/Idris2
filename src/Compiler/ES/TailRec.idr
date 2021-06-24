@@ -48,34 +48,52 @@
 ||| The result will be a new object, again indicating in tag `h`, whether
 ||| we arrived at a result, or we need to continue looping.
 |||
-||| Here is a cleaned-up and simplified version of the Javascript code
-||| generated:
+||| Here is an example of two mutually tail-recursive functions
+||| together with the generated tail-call optimized code.
+|||
+||| Original version:
 |||
 ||| ```javascript
-||| function imp_gen_tailoptim_0(imp_gen_tailoptim_fusion_args_0){//EmptyFC
-|||  function imp_gen_tailoptim_step_0(obj0){
-|||   switch(obj0.a1.h){
-|||    case 0: ... //implementation of a single step of f1
-|||                //taking its arguments from the fields of `obj0.a1`.
-|||    case 1: ... //implementation of a single step of f2
-|||    case 2: ... //implementation of a single step of f3
+||| function fun1(args1){
+|||   switch (foo) {
+|||     case b1 : return fun2(args2)
+|||     case b2 : return fun1(args1')
+|||     case b3 : return nonTailCallResult1
 |||   }
-|||  }
+||| }
 |||
-|||  // initial object containing the arguments for the first
-|||  // function call
-|||  obj0 = ({h:0, a1: imp_gen_tailoptim_fusion_args_0});
-|||
-|||  // infinite loop running until `obj0.h != 0`.
-|||  while(true){
-|||   switch(obj0.h){
-|||    case 0: {
-|||     obj0 = imp_gen_tailoptim_step_0(obj0);
-|||     break; }
-|||    default:
-|||     return obj0.a1;
+||| function fun2(args2){
+|||   switch (bar) {
+|||     case b1 : return fun1(args1)
+|||     default : return nonTailCallResult2
 |||   }
-|||  }
+||| }
+||| ```
+|||
+||| The above gets converted to the following code:
+|||
+||| ```javascript
+||| function $tc1(args1){
+|||   switch (foo) {
+|||     case b1 : return {h: 1, a1: () => $tc2(args2)}
+|||     case b2 : return {h: 1, a1: () => $tc1(args1')}
+|||     case b3 : return {h: 0, a1: nonTailCallResult1 }
+|||   }
+||| }
+|||
+||| function fun1(args1){
+|||   return __tailRec($tc1(args1))
+||| }
+|||
+||| function tc2(args2){
+|||   switch (bar) {
+|||     case b1 : return {h: 1, a1: () => $tc1(args1)}
+|||     case default : return {h: 0, a1: nonTailCallResult2 }
+|||   }
+||| }
+|||
+||| function fun2(args2){
+|||   return __tailRec(tc2(args2))
 ||| }
 ||| ```
 module Compiler.ES.TailRec
@@ -83,222 +101,199 @@ module Compiler.ES.TailRec
 import Data.Maybe
 import Data.List
 import Data.List1
-import Data.String
+import Data.Strings
 import Libraries.Data.Graph
 import Libraries.Data.SortedSet
 import Libraries.Data.List.Extra as L
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
+import Libraries.Data.SortedMap as M
 import Core.Name
+import Core.CompileExpr
 import Core.Context
-import Compiler.ES.ImperativeAst
 
-import Debug.Trace
+--------------------------------------------------------------------------------
+--          Utilities
+--------------------------------------------------------------------------------
 
-%default covering
+-- indices of a list starting at 1
+indices : List a -> List Int
+indices = go 1
+  where go : Int -> List a -> List Int
+        go _ []       = []
+        go i (_ :: t) = i :: go (i+1) t
 
-data TailRecS : Type where
+zipWithIndices : List a -> List (Int,a)
+zipWithIndices as = zip (indices as) as
 
-record TailSt where
-  constructor MkTailSt
-  nextName : Int
+--------------------------------------------------------------------------------
+--          Tailcall Graph
+--------------------------------------------------------------------------------
 
-genName : {auto c : Ref TailRecS TailSt} -> Core Name
-genName =
-  do s <- get TailRecS
-     let i = nextName s
-     put TailRecS (record { nextName = i + 1 } s)
-     pure $ MN "imp_gen_tailoptim" i
+||| A toplevel function in a group of mutually tail recursive functions.
+public export
+record TcFunction where
+  constructor MkTcFunction
+  ||| Function's name
+  name  : Name
 
--- returns the set of tail calls made from a given
--- imperative statement.
-allTailCalls : ImperativeStatement -> SortedSet Name
-allTailCalls (SeqStatement x y)  = allTailCalls y
-allTailCalls (ReturnStatement $ IEApp (IEVar n) _) = singleton n
-allTailCalls (SwitchStatement e alts d) =
-  concatMap allTailCalls d `union` concatMap (allTailCalls . snd) alts
-allTailCalls (ForEverLoop x) = allTailCalls x
-allTailCalls o = empty
+  ||| Function's index in its tail call group
+  ||| This is used to decide on which branch to choose in
+  ||| the next iteration
+  index : Int
 
-argsName : Name
-argsName = MN "imp_gen_tailoptim_Args" 0
+  ||| Argument list
+  args  : List Name
 
-stepFnName : Name
-stepFnName = MN "imp_gen_tailoptim_step" 0
+  ||| Function's definition
+  exp   : NamedCExp
 
-fusionArgsName : Name
-fusionArgsName = MN "imp_gen_tailoptim_fusion_args" 0
+||| A group of mutually tail recursive toplevel functions.
+public export
+record TcGroup where
+  constructor MkTcGroup
+  ||| Index of the group. This is used to generate a uniquely
+  ||| named tail call optimize toplevel function.
+  index     : Int
 
-createNewArgs : List ImperativeExp -> ImperativeExp
-createNewArgs = IEConstructor (Left 0)
+  ||| Set of mutually recursive functions.
+  functions : SortedMap Name TcFunction
 
-createArgInit : List Name -> ImperativeStatement
-createArgInit names =
-    LetDecl argsName (Just $ IEConstructor (Left 0) (map IEVar names))
+-- tail calls made from an expression
+tailCalls : NamedCExp -> SortedSet Name
+tailCalls (NmLet _ _ _ z) = tailCalls z
+tailCalls (NmApp _ (NmRef _ x) _) = singleton x
+tailCalls (NmConCase fc sc xs x) =
+  concatMap (\(MkNConAlt _ _ _ _ x) => tailCalls x) xs <+>
+  concatMap tailCalls x
+tailCalls (NmConstCase fc sc xs x) =
+  concatMap (\(MkNConstAlt _ x) => tailCalls x) xs <+>
+  concatMap tailCalls x
+tailCalls _ = empty
 
-replaceTailCall : Name -> ImperativeStatement -> ImperativeStatement
-replaceTailCall n (SeqStatement x y) = SeqStatement x (replaceTailCall n y)
-replaceTailCall n (ReturnStatement x) =
-    let defRet = ReturnStatement $ IEConstructor (Left 1) [x]
-    in case x of
-        IEApp (IEVar cn) arg_vals =>
-            if n == cn then ReturnStatement $ createNewArgs arg_vals
-                else defRet
-        _ => defRet
-replaceTailCall n (SwitchStatement e alts d) =
-    SwitchStatement e (map (mapSnd $ replaceTailCall n) alts)
-                      (map (replaceTailCall n) d)
-replaceTailCall n (ForEverLoop x) =
-    ForEverLoop $ replaceTailCall n x
-replaceTailCall n o = o
+-- in case of larger groups (more than one element)
+-- the group contains tailcalls by construction. In case
+-- of a single function, we need to check that at least one
+-- outgoing tailcall goes back to the function itself.
+hasTailCalls : SortedMap Name (SortedSet Name) -> List1 Name -> Bool
+hasTailCalls g (x ::: Nil) = maybe False (contains x) $ lookup x g
+hasTailCalls _ _           = True
 
--- generates the tailcall-optimized function body
-makeTailOptimToBody :  Name
-                    -> List Name
-                    -> ImperativeStatement
-                    -> ImperativeStatement
-makeTailOptimToBody n argNames body =
-    let newArgExp = map (\x => IEConstructorArg (cast x) (IEVar argsName)) [1..length argNames]
-        bodyArgsReplaced = replaceNamesExpS (zip argNames newArgExp) body
-        stepBody = replaceTailCall n bodyArgsReplaced
+toGroup :  SortedMap Name (Name,List Name,NamedCExp)
+        -> (Int,List1 Name)
+        -> List (Name,TcGroup)
+toGroup funMap (groupIndex,functions) =
+  let ns    = zipWithIndices $ forget functions
+      group = MkTcGroup groupIndex . fromList $ mapMaybe fun ns
+   in (,group) <$> forget functions
+  where fun : (Int,Name) -> Maybe (Name,TcFunction)
+        fun (fx, n) = do
+          (_,args,exp) <- lookup n funMap
+          pure (n,MkTcFunction n fx args exp)
 
-        -- single step function. This takes a single argument
-        -- and returns a new object indicating whether to continue looping
-        -- or to return a result.
-        stepFn = FunDecl EmptyFC stepFnName [argsName] stepBody
+-- Returns the connected components of the tail call graph
+-- Every function name that is part of a tail-call group
+-- (a set of mutually tail-recursive functions)
+-- points to a mapping from all function names
+-- of its tail-call group to their tail-call indices.
+tailCallGroups :  List (Name,List Name,NamedCExp)
+               -> SortedMap Name TcGroup
+tailCallGroups funs =
+  let funMap = M.fromList $ map (\t => (fst t,t)) funs
+      graph  = map (\(_,_,x) => tailCalls x) funMap
+      groups = filter (hasTailCalls graph) $ tarjan graph
+   in fromList $ concatMap (toGroup funMap) (zipWithIndices groups)
 
-        -- calls the step function and mutates the loop object with the result
-        loopRec = MutateStatement argsName (IEApp (IEVar stepFnName) [IEVar argsName])
+--------------------------------------------------------------------------------
+--          Converting tail call groups to syntax trees
+--------------------------------------------------------------------------------
 
-        -- returns field `a1` from the loop object.
-        loopReturn = ReturnStatement (IEConstructorArg 1 $ IEVar argsName)
+public export
+record Function where
+  constructor MkFunction
+  name : Name
+  args : List Name
+  body : NamedCExp
 
-        -- switch on the constructor head and either continue looping or
-        -- return the result
-        loop = ForEverLoop
-             $ SwitchStatement (IEConstructorHead $ IEVar argsName)
-                               [(IEConstructorTag $ Left 0, loopRec)]
-                               (Just loopReturn)
-    in stepFn <+> createArgInit argNames <+> loop
+tcFunction : Int -> Name
+tcFunction = MN "$tcOpt"
 
--- when creating the tail call graph, we only process
--- function declarations and we are only interested
--- in calls being made at tail position
-tailCallGraph : ImperativeStatement -> SortedMap Name (SortedSet Name)
-tailCallGraph (SeqStatement x y) =
-  mergeWith union (tailCallGraph x) (tailCallGraph y)
+tcArgName : Name
+tcArgName = MN "$a" 0
 
-tailCallGraph (FunDecl fc n args body) =
-  singleton n $ allTailCalls body
+tcContinueName : (groupIndex : Int) -> (functionIndex : Int) -> Name
+tcContinueName gi fi = MN ("TcContinue" ++ show gi) fi
 
-tailCallGraph _ = empty
+tcDoneName : (groupIndex : Int) -> Name
+tcDoneName gi = MN "TcDone" gi
 
--- lookup up the list of values associated with
--- a given key (`Nil` if the key is not present in the list)
-lookupList : k -> SortedMap k (SortedSet b) -> List b
-lookupList v = maybe [] SortedSet.toList . lookup v
+conAlt : TcGroup -> TcFunction -> NamedConAlt
+conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
+  let name = tcContinueName tcIx ix
+   in MkNConAlt name DATACON (Just ix) args (toTc exp)
 
-recursiveTailCallGroups : SortedMap Name (SortedSet Name) -> List (List Name)
-recursiveTailCallGroups graph =
-  [forget x | x <-tarjan graph, hasTailCalls x]
+   where mutual
+     tcDone : NamedCExp -> NamedCExp
+     tcDone x = NmCon EmptyFC (tcDoneName tcIx) DATACON (Just 0) [x]
 
-    -- in case of larger groups (more than one element)
-    -- the group contains tailcalls by construction. In case
-    -- of a single function, we need to check that at least one
-    -- outgoing tailcall goes back to the function itself.
-    where hasTailCalls : List1 Name -> Bool
-          hasTailCalls (x ::: Nil) = x `elem` lookupList x graph
-          hasTailCalls _           = True
+     tcContinue : (index : Int) -> List NamedCExp -> NamedCExp
+     tcContinue ix = NmCon EmptyFC (tcContinueName tcIx ix) DATACON (Just ix)
 
--- extracts the functions belonging to the given tailcall
--- group from the given imperative statement, thereby removing
--- them from the given statement.
-extractFunctions :  (tailCallGroup : SortedSet Name)
-                 -> ImperativeStatement
-                 -> ( ImperativeStatement
-                    , SortedMap Name (FC, List Name, ImperativeStatement)
-                    )
-extractFunctions toExtract (SeqStatement x y) =
-    let (xs, xf) = extractFunctions toExtract x
-        (ys, yf) = extractFunctions toExtract y
-    in (xs <+> ys, mergeLeft xf yf)
-extractFunctions toExtract f@(FunDecl fc n args body) =
-    if contains n toExtract then (neutral, insert n (fc, args, body) empty)
-        else (f, empty)
-extractFunctions toExtract x =
-    (x, empty)
+     toTc : NamedCExp -> NamedCExp
+     toTc (NmLet fc x y z) = NmLet fc x y $ toTc z
+     toTc x@(NmApp _ (NmRef _ n) xs) =
+       case lookup n funs of
+         Just v  => tcContinue v.index xs
+         Nothing => tcDone x
+     toTc (NmConCase fc sc a d) = NmConCase fc sc (map con a) (map toTc d)
+     toTc (NmConstCase fc sc a d) = NmConstCase fc sc (map const a) (map toTc d)
+     toTc x@(NmCrash _ _) = x
+     toTc x = tcDone x
 
--- lookup a function definition, throwing a compile-time error
--- if none is found
-getDef :  SortedMap Name (FC, List Name, ImperativeStatement)
-       -> Name
-       -> Core (FC, List Name, ImperativeStatement)
-getDef defs n =
-    case lookup n defs of
-        Nothing => throw $ (InternalError $ "Can't find function definition in tailRecOptim")
-        Just x => pure x
+     con : NamedConAlt -> NamedConAlt
+     con (MkNConAlt x y tag xs z) = MkNConAlt x y tag xs (toTc z)
 
-makeFusionBranch :  Name
-                 -> List (Name, Nat)
-                 -> (Nat, FC, List Name, ImperativeStatement)
-                 -> (ImperativeExp, ImperativeStatement)
-makeFusionBranch fusionName functionsIdx (i, _, args, body) =
-    let newArgExp = map (\i => IEConstructorArg (cast i) (IEVar fusionArgsName))
-                        [1..length args]
-        bodyRepArgs = replaceNamesExpS (zip args newArgExp) body
-    in (IEConstructorTag $ Left $ cast i, replaceExpS rep bodyRepArgs)
-    where
-        rep : ImperativeExp -> Maybe ImperativeExp
-        rep (IEApp (IEVar n) arg_vals) =
-            case lookup n functionsIdx of
-                Nothing => Nothing
-                Just i => Just $ IEApp
-                          (IEVar fusionName)
-                          [IEConstructor (Left $ cast i) arg_vals]
-        rep _ = Nothing
+     const : NamedConstAlt -> NamedConstAlt
+     const (MkNConstAlt x y) = MkNConstAlt x (toTc y)
 
-changeBodyToUseFusion :  Name
-                      -> (Nat, Name, FC, List Name, ImperativeStatement)
-                      -> ImperativeStatement
-changeBodyToUseFusion fusionName (i, n, (fc, args, _)) =
-    FunDecl fc n args (ReturnStatement $ IEApp (IEVar fusionName)
-                        [IEConstructor (Left $ cast i) (map IEVar args)])
+convertTcGroup : (tailRecLoopName : Name) -> TcGroup -> List Function
+convertTcGroup loop g@(MkTcGroup gindex fs) =
+  let functions = sortBy (comparing index) $ values fs
+      branches  = map (conAlt g) functions
+      tcArg     = NmLocal EmptyFC tcArgName
+      switch    = NmConCase EmptyFC tcArg branches Nothing
+   in MkFunction (tcFunction g.index) [tcArgName] switch ::
+      map toFun functions
 
-tailRecOptimGroup :  {auto c : Ref TailRecS TailSt}
-                  -> SortedMap Name (FC, List Name, ImperativeStatement)
-                  -> List Name -> Core ImperativeStatement
-tailRecOptimGroup defs [] = pure neutral
-tailRecOptimGroup defs [n] =
-    do (fc, args , body) <- getDef defs n
-       pure $ FunDecl fc n args (makeTailOptimToBody n args body)
-
-tailRecOptimGroup defs names =
-    do fusionName <- genName
-       d <- traverse (getDef defs) names
-       let ids = [0..(length names `minus` 1)]
-       let alts = map (makeFusionBranch fusionName (zip names ids)) (zip ids d)
-       let fusionBody = SwitchStatement
-                          (IEConstructorHead $ IEVar fusionArgsName)
-                          alts
-                          Nothing
-       let fusionArgs = [fusionArgsName]
-       let fusion = FunDecl EmptyFC
-                            fusionName
-                            fusionArgs
-                            (makeTailOptimToBody fusionName fusionArgs fusionBody)
-       let newFunctions = Prelude.concat $ map
-                           (changeBodyToUseFusion fusionName)
-                           (ids `zip` (names `zip` d))
-       pure $ fusion <+> newFunctions
+  where toFun : TcFunction -> Function
+        toFun (MkTcFunction n ix args x) =
+          let exps  = map (NmLocal EmptyFC) args
+              tcArg = NmCon EmptyFC (tcContinueName gindex ix) DATACON (Just ix) exps
+              tcFun = NmRef EmptyFC $ tcFunction gindex
+              body  = NmApp EmptyFC (NmRef EmptyFC loop) [tcFun,tcArg]
+           in MkFunction n args body
 
 ||| (Mutual) Tail recursion optimizations: Converts all groups of
 ||| mutually tail recursive functions to an imperative loop.
+tailRecOptim :  SortedMap Name TcGroup
+             -> (tcLoopName : Name)
+             -> List (Name,List Name,NamedCExp)
+             -> List Function
+tailRecOptim groups loop ts =
+  let regular = mapMaybe toFun ts
+      tailOpt = concatMap (convertTcGroup loop) $ values groups
+   in tailOpt ++ regular
+
+  where toFun : (Name,List Name,NamedCExp) -> Maybe Function
+        toFun (n,args,exp) = case lookup n groups of
+          Just _  => Nothing
+          Nothing => Just $ MkFunction n args exp
+
 export
-tailRecOptim : ImperativeStatement -> Core ImperativeStatement
-tailRecOptim x =
-    do ref <- newRef TailRecS (MkTailSt 0)
-       let groups = recursiveTailCallGroups (tailCallGraph x)
-       let functionsToOptimize = foldl SortedSet.union empty $ map SortedSet.fromList groups
-       let (unchanged, defs) = extractFunctions functionsToOptimize x
-       optimized <- traverse (tailRecOptimGroup defs) groups
-       pure $ unchanged <+> (concat optimized)
+functions :  (tcLoopName : Name)
+          -> List (Name,FC,NamedDef)
+          -> List Function
+functions loop dfs =
+  let ts = mapMaybe def dfs
+   in tailRecOptim (tailCallGroups ts) loop ts
+   where def : (Name,FC,NamedDef) -> Maybe (Name,List Name,NamedCExp)
+         def (n,_,MkNmFun args x) = Just (n,args,x)
+         def _                    = Nothing
