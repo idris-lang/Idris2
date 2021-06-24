@@ -46,6 +46,10 @@ Main> Prelude.Show : Type -> Type
     Show Bits16
     Show Bits32
     Show Bits64
+    Show Int8
+    Show Int16
+    Show Int32
+    Show Int64
     Show Double
     Show Char
     Show String
