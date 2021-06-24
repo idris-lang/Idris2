@@ -228,10 +228,10 @@ runTest opts testPath = forkIO $ do
   let time = timeDifference end start
 
   if result
-    then printTiming (timing opts) time $ testPath ++ ": " ++
+    then printTiming (timing opts) time testPath $
       (if opts.color then show . colored BrightGreen else id) "success"
     else do
-      printTiming (timing opts) time $ testPath ++ ": " ++
+      printTiming (timing opts) time testPath $
         (if opts.color then show . colored BrightRed else id) "FAILURE"
       if interactive opts
         then mayOverwrite (Just exp) out
@@ -274,13 +274,16 @@ runTest opts testPath = forkIO $ do
                     | Left err => putStrLn $ (testPath ++ "/expected") ++ ": " ++ show err
                   pure ()
 
-    printTiming : Bool -> Clock type -> String -> IO ()
-    printTiming False _     msg = putStrLn msg
-    printTiming True  clock msg =
+    printTiming : Bool -> Clock type -> String -> String -> IO ()
+    printTiming False _     path msg = putStrLn $ concat [path, ": ", msg]
+    printTiming True  clock path msg =
       let time  = showTime 2 3 clock
-          spent = String.length time + String.length msg
+          -- We use 9 instead of `String.length msg` because:
+          -- 1. ": success" and ": FAILURE" have the same length
+          -- 2. ANSI escape codes make the msg look longer than it is
+          spent = String.length time + String.length path + 9
           pad   = pack $ replicate (minus 72 spent) ' '
-      in putStrLn $ concat [msg, pad, time]
+      in putStrLn $ concat [path, ": ", msg, pad, time]
 
 ||| Find the first occurrence of an executable on `PATH`.
 export
