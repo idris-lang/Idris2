@@ -82,7 +82,7 @@ softEq = SoftSpace <+> "=" <+> SoftSpace
 
 export
 compact : Doc -> String
-compact = concat . go
+compact = fastConcat . go
   where go : Doc -> List String
         go Nil        = []
         go LineBreak  = []
@@ -93,7 +93,7 @@ compact = concat . go
 
 export
 pretty : Doc -> String
-pretty = concat . go ""
+pretty = fastConcat . go ""
   where nSpaces : Nat -> String
         nSpaces n = fastPack $ replicate n ' '
 

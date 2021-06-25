@@ -25,7 +25,7 @@ breakDrop1 : Char -> String -> (String, String)
 breakDrop1 c = mapSnd (drop 1) . break (== c)
 
 stringList : List String -> String
-stringList = concat . intersperse "," . map show
+stringList = fastConcat . intersperse "," . map show
 
 --------------------------------------------------------------------------------
 --          JS Strings
@@ -136,14 +136,16 @@ export
 applyList : (lparen : Doc) -> (rparen : Doc) -> (sep : Doc) -> List Doc -> Doc
 applyList l r sep ds = l <+> (concat $ intersperse sep ds) <+> r
 
+conTags : List Doc -> List Doc
+conTags as = zipWith (\i,a => hcat ["a",shown i,softColon,a]) [1..length as] as
+
+applyObj : (args : List Doc) -> Doc
+applyObj = applyList "{" "}" softComma
+
 export
-applyCon : (tag : Either Int Name) -> (args : List Doc) -> Doc
-applyCon tag args =
-  let argPairs =
-        zipWith (\i,a => hcat ["a",shown i,softColon,a])
-                [1..length args]
-                args
-   in applyList "{" "}" softComma (("h" <+> softColon <+> tag2es tag)::argPairs)
+applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
+applyCon RECORD t as = applyObj (conTags as)
+applyCon ci t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
 
 export
 app : Doc -> List Doc -> Doc
@@ -231,7 +233,7 @@ truncateUnsigned isBigInt bits =
     in callFun1 (esName "truncU" ++ add ++ show bits)
 
 boundedOp : (suffix : String) -> Int -> String -> Doc -> Doc -> Doc
-boundedOp s bits o x y = callFun (concat {t=List} ["_", o, show bits, s]) [x,y]
+boundedOp s bits o x y = callFun (fastConcat ["_", o, show bits, s]) [x,y]
 
 boundedIntOp : Int -> String -> Doc -> Doc -> Doc
 boundedIntOp = boundedOp "s"
@@ -499,7 +501,7 @@ mutual
     args <- traverse exp xs
     pure $ app o args
 
-  exp (ECon tag ci xs) = applyCon tag <$> traverse exp xs
+  exp (ECon tag ci xs) = applyCon ci tag <$> traverse exp xs
 
   exp (EOp x xs) = traverseVect exp xs >>= jsOp x
   exp (EExtPrim x xs) = traverse exp xs >>= jsPrim x
@@ -519,6 +521,7 @@ mutual
     d  <- traverseOpt block def
     pure $  switch (minimal sc <+> ".h") as d
     where alt : EConAlt r -> Core (Doc,Doc)
+          alt (MkEConAlt _ RECORD b) = ("undefined",) <$> block b
           alt (MkEConAlt t _ b) = (tag2es t,) <$> block b
 
   stmt (ConstSwitch r sc alts def) = do
