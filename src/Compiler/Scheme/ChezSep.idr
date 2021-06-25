@@ -38,58 +38,69 @@ import Libraries.Utils.String
 %default covering
 
 schHeader : List String -> List String -> String
-schHeader libs compilationUnits = unlines
-  [ "(import (chezscheme) (support) "
-      ++ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits]
-      ++ ")"
-  , "(case (machine-type)"
-  , "  [(i3le ti3le a6le ta6le) (load-shared-object \"libc.so.6\")]"
-  , "  [(i3osx ti3osx a6osx ta6osx) (load-shared-object \"libc.dylib\")]"
-  , "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")"
-  , "                           (load-shared-object \"ws2_32.dll\")]"
-  , "  [else (load-shared-object \"libc.so\")]"
-  , unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
-  , ")"
-  ]
+schHeader libs compilationUnits = """
+  (import (chezscheme) (support)
+      \{ unwords ["(" ++ cu ++ ")" | cu <- compilationUnits] })
+  (case (machine-type)
+    [(i3fb ti3fb a6fb ta6fb) #f]
+    [(i3le ti3le a6le ta6le) (load-shared-object "libc.so.6")]
+    [(i3osx ti3osx a6osx ta6osx) (load-shared-object "libc.dylib")]
+    [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")
+                             (load-shared-object "ws2_32.dll")]
+    [else (load-shared-object "libc.so")]
+  \{
+    unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
+  })
+"""
 
 schFooter : String
-schFooter = "(collect 4)\n(blodwen-run-finalisers)\n"
+schFooter = """
+
+(collect 4)
+(blodwen-run-finalisers)
+"""
 
 startChez : String -> String -> String -> String
-startChez chez appDirSh targetSh = Chez.startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appDirSh ++ "\":$LD_LIBRARY_PATH"
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChez chez appDirSh targetSh = Chez.startChezPreamble ++ #"""
+export LD_LIBRARY_PATH="$DIR/\#{ appDirSh }":$LD_LIBRARY_PATH
+
+"\#{ chez }" -q \
+  --libdirs "$DIR/\#{ appDirSh }" \
+  --program "$DIR/\#{ targetSh }" \
+  "$@"
+"""#
 
 startChezCmd : String -> String -> String -> String
-startChezCmd chez appDirSh targetSh = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%\\" ++ appDirSh ++ ";%PATH%"
-    , "\"" ++ chez ++ "\" -q "
-        ++ "--libdirs \"%APPDIR%/" ++ appDirSh ++ "\" "
-        ++ "--program \"%APPDIR%/" ++ targetSh ++ "\" "
-        ++ "%*"
-    ]
+startChezCmd chez appDirSh targetSh = #"""
+@echo off
+
+set APPDIR=%~dp0
+set PATH=%APPDIR%\\#{ appDirSh };%PATH%
+
+"\#{ chez }" -q \
+  --libdirs "%APPDIR%/\#{ appDirSh }" \
+  --program "%APPDIR%/\#{ targetSh }" \
+  %*
+"""#
 
 startChezWinSh : String -> String -> String -> String
-startChezWinSh chez appDirSh targetSh = unlines
-    [ "#!/bin/sh"
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "CHEZ=$(cygpath \"" ++ chez ++"\")"
-    , "export PATH=\"$DIR/" ++ appDirSh ++ "\":$PATH"
-    , "\"$CHEZ\" --program \"$DIR/" ++ targetSh ++ "\" \"$@\""
-    , "\"$CHEZ\" -q "
-        ++ "--libdirs \"$DIR/" ++ appDirSh ++ "\" "
-        ++ "--program \"$DIR/" ++ targetSh ++ "\" "
-        ++ "\"$@\""
-    ]
+startChezWinSh chez appDirSh targetSh = #"""
+#!/bin/sh
+
+set -e # exit on any error
+
+DIR=$(dirname "$(readlink -f -- "$0")")
+CHEZ=$(cygpath "\#{ chez }")
+
+export PATH="$DIR/\#{ appDirSh }":$PATH
+
+"$CHEZ" --program "$DIR/\#{ targetSh }" "$@"
+
+"$CHEZ" -q \
+  --libdirs "$DIR/\#{ appDirSh }" \
+  --program "$DIR/\#{ targetSh }" \
+  "$@"
+"""#
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()

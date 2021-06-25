@@ -229,16 +229,15 @@ opts x _ = pure $ if (x `elem` optionFlags)
 
 -- bash autocompletion script using the given function name
 completionScript : (fun : String) -> String
-completionScript fun =
-  let fun' = "_" ++ fun
-   in unlines [ fun' ++ "()"
-              , "{"
-              , "  ED=$([ -z $2 ] && echo \"--\" || echo $2)"
-              , "  COMPREPLY=($(idris2 --bash-completion $ED $3))"
-              , "}"
-              , ""
-              , "complete -F " ++ fun' ++ " -o dirnames idris2"
-              ]
+completionScript fun = let fun' = "_" ++ fun in #"""
+\#{ fun' }()
+{
+  ED=$([ -z $2 ] && echo "--" || echo $2)
+  COMPREPLY=($(idris2 --bash-completion $ED $3))
+}
+
+complete -F \#{ fun' } -o dirnames idris2
+"""#
 
 --------------------------------------------------------------------------------
 --          Processing Options

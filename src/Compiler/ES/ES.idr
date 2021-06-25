@@ -73,20 +73,23 @@ addSupportToPreamble name code =
 addStringIteratorToPreamble : {auto c : Ref ESs ESSt} -> Core String
 addStringIteratorToPreamble =
   do
-    let defs = unlines $
-      [ "function __prim_stringIteratorNew(str) {"
-      , "  return 0;"
-      , "}"
-      , "function __prim_stringIteratorToString(_, str, it, f) {"
-      , "  return f(str.slice(it));"
-      , "}"
-      , "function __prim_stringIteratorNext(str, it) {"
-      , "  if (it >= str.length)"
-      , "    return {h: 0};"
-      , "  else"
-      , "    return {h: 1, a1: str.charAt(it), a2: it + 1};"
-      , "}"
-      ]
+    let defs = """
+      function __prim_stringIteratorNew(str) {
+        return 0;
+      }
+
+      function __prim_stringIteratorToString(_, str, it, f) {
+        return f(str.slice(it));
+      }
+
+      function __prim_stringIteratorNext(str, it) {
+        if (it >= str.length)
+          return {h: 0};
+        else
+          return {h: 1, a1: str.charAt(it), a2: it + 1};
+      }
+
+      """
     let name = "stringIterator"
     let newName = esName name
     addToPreamble name newName defs
@@ -556,12 +559,15 @@ mutual
   alt2es indent (e, b) = pure $ nSpaces indent ++ "case " ++ !(impExp2es e) ++ ": {\n" ++
                                 !(imperative2es (indent+1) b) ++ "\n" ++ nSpaces (indent+1) ++ "break; }\n"
 
-static_preamble : List String
-static_preamble =
-  [ "class IdrisError extends Error { }"
-  , "function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}"
-  , "function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}"
-  ]
+static_preamble : String
+static_preamble = """
+  class IdrisError extends Error { }
+
+  function __prim_js2idris_array(x){if(x.length ===0){return {h:0}}else{return {h:1,a1:x[0],a2: __prim_js2idris_array(x.slice(1))}}}
+
+  function __prim_idris2js_array(x){const result = Array();while (x.h != 0) {result.push(x.a1); x = x.a2;}return result;}
+
+  """
 
 export
 compileToES : Ref Ctxt Defs -> ClosedTerm -> List String -> Core String
@@ -573,5 +579,5 @@ compileToES c tm ccTypes =
     main_ <- imperative2es 0 impMain
     let main = "try{" ++ main_ ++ "}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
     st <- get ESs
-    let pre = showSep "\n" $ static_preamble ++ (SortedMap.values $ preamble st)
+    let pre = showSep "\n" $ [static_preamble] ++ (SortedMap.values $ preamble st)
     pure $ pre ++ "\n\n" ++ defs ++ main
