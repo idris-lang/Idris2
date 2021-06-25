@@ -49,14 +49,16 @@ findGSCBackend =
               Just e => " -cc " ++ e
 
 schHeader : String
-schHeader =
-    "; " ++ (generatedString "Gambit") ++ "\n" ++
-    "(declare (block)\n" ++
-    "(inlining-limit 450)\n" ++
-    "(standard-bindings)\n" ++
-    "(extended-bindings)\n" ++
-    "(not safe)\n" ++
-    "(optimize-dead-definitions))\n"
+schHeader = """
+;; \{ (generatedString "Gambit") }
+(declare (block)
+  (inlining-limit 450)
+  (standard-bindings)
+  (extended-bindings)
+  (not safe)
+  (optimize-dead-definitions))
+
+"""
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)

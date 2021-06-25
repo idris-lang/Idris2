@@ -87,28 +87,34 @@ schHeader : String -> List String -> Bool -> String
 schHeader chez libs whole
   = (if os /= "windows"
         then "#!" ++ chez ++ (if whole then " --program\n\n" else " --script\n\n")
-        else "") ++
-    "; " ++ (generatedString "Chez") ++ "\n" ++
-    "(import (chezscheme))\n" ++
-    "(case (machine-type)\n" ++
-    "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
-    "  [(i3le ti3le a6le ta6le tarm64le) (load-shared-object \"libc.so.6\")]\n" ++
-    "  [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object \"libc.dylib\")]\n" ++
-    "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")]\n" ++
-    "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
-    if whole
-       then "(let ()\n"
-       else "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") (source-directories)))\n"
+        else "") ++ """
+    ;; \{ (generatedString "Chez") }
+    (import (chezscheme))
+    (case (machine-type)
+      [(i3fb ti3fb a6fb ta6fb) #f]
+      [(i3le ti3le a6le ta6le tarm64le) (load-shared-object "libc.so.6")]
+      [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object "libc.dylib")]
+      [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
+      [else (load-shared-object "libc.so")])
+
+    \{ showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
+
+    \{
+      (if whole
+          then "(let ()"
+          else "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") (source-directories)))")
+    }
+
+    """
 
 schFooter : Bool -> Bool -> String
-schFooter prof whole
-    = "(collect 4)\n(blodwen-run-finalisers)\n" ++
-      (if prof
-          then "(profile-dump-html)"
-          else "") ++
-      (if whole
-          then ")\n" else "\n")
+schFooter prof whole = """
+
+  (collect 4)
+  (blodwen-run-finalisers)
+  \{ (if prof then "(profile-dump-html)" else "") }
+  \{ (if whole then ")" else "") }
+"""
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -385,49 +391,56 @@ getFgnCall version (n, fc, d) = schFgnDef fc n d version
 
 export
 startChezPreamble : String
-startChezPreamble = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "if [ \"$(uname)\" = Darwin ]; then"
-    , "  DIR=$(zsh -c 'printf %s \"$0:A:h\"' \"$0\")"
-    , "else"
-    , "  DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
-    , "fi"
-    , ""  -- so that the preamble ends with a newline
-    ]
+startChezPreamble = #"""
+#!/bin/sh
+# \#{ (generatedString "Chez") }
+
+set -e # exit on any error
+
+if [ "$(uname)" = Darwin ]; then
+  DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+else
+  DIR=$(dirname "$(readlink -f -- "$0")")
+fi
+
+"""#
 
 startChez : String -> String -> String
-startChez appdir target = startChezPreamble ++ unlines
-    [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$LD_LIBRARY_PATH\""
-    , "export DYLD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ ":$DYLD_LIBRARY_PATH\""
-    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startChez appdir target = startChezPreamble ++ #"""
+export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
+export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
+export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
 
-startChezCmd : String -> String -> String -> String -> String
-startChezCmd chez appdir target progType = unlines
-    [ "@echo off"
-    , "set APPDIR=%~dp0"
-    , "set PATH=%APPDIR%" ++ appdir ++ ";%PATH%"
-    , "set IDRIS2_INC_SRC=%APPDIR%" ++ appdir
-    , "\"" ++ chez ++ "\" " ++ progType ++ " \"%APPDIR%" ++ target ++ "\" %*"
-    ]
+"$DIR/\#{ target }" "$@"
+"""#
 
-startChezWinSh : String -> String -> String -> String -> String
-startChezWinSh chez appdir target progType = unlines
-    [ "#!/bin/sh"
-    , "# " ++ (generatedString "Chez")
-    , ""
-    , "set -e # exit on any error"
-    , ""
-    , "DIR=$(dirname \"$(readlink -f -- \"$0\" || cygpath -a -- \"$0\")\")"
-    , "PATH=\"$DIR/" ++ appdir ++ ":$PATH\""
-    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
-    , "\"" ++ chez ++ "\" " ++ progType ++ " \"$DIR/" ++ target ++ "\" \"$@\""
-    ]
+startChezCmd : String -> String -> String -> String
+startChezCmd chez appdir target progType = #"""
+@echo off
+
+rem \#{ (generatedString "Chez") }
+
+set APPDIR=%~dp0
+set PATH=%APPDIR%\#{ appdir };%PATH%
+set IDRIS2_INC_SRC=%APPDIR%\#{ appdir }
+
+"\#{ chez }" \#{ progType } "%APPDIR%\#{ target }" %*
+"""#
+
+startChezWinSh : String -> String -> String -> String
+startChezWinSh chez appdir target progType = #"""
+#!/bin/sh
+# \#{ (generatedString "Chez") }
+
+set -e # exit on any error
+
+DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+PATH="$DIR/\#{ appdir }":$PATH
+
+export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
+
+"\#{ chez }" \#{ progType } "$DIR/\#{ target }" "$@"
+"""#
 
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
