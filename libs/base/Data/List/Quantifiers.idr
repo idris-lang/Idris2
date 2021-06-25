@@ -27,6 +27,10 @@ namespace Any
     uninhabited (Here _) impossible
     uninhabited (There _) impossible
 
+  export
+  {0 p : a -> Type} -> Uninhabited (p x) => Uninhabited (Any p xs) => Uninhabited (Any p $ x::xs) where
+    uninhabited (Here y) = uninhabited y
+    uninhabited (There y) = uninhabited y
 
   ||| Modify the property given a pointwise function
   export
@@ -67,6 +71,9 @@ namespace All
     Nil  : All p Nil
     (::) : {0 xs : List a} -> p x -> All p xs -> All p (x :: xs)
 
+  Either (Uninhabited $ p x) (Uninhabited $ All p xs) => Uninhabited (All p $ x::xs) where
+    uninhabited @{Left  _} (px::pxs) = uninhabited px
+    uninhabited @{Right _} (px::pxs) = uninhabited pxs
 
   ||| Modify the property given a pointwise function
   export

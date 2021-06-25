@@ -222,6 +222,7 @@ TTC String where
   fromBuf b
       = do len <- fromBuf {a = Int} b
            chunk <- get Bin
+           when (len < 0) $ corrupt "String"
            if toRead chunk >= len
               then
                 do val <- coreLift $ getString (buf chunk) (loc chunk) len
@@ -252,7 +253,7 @@ TTC Binary where
          if toRead chunk >= len
             then
               do Just newbuf <- coreLift $ newBuffer len
-                      | Nothing => throw (InternalError "Can't create buffer")
+                      | Nothing => corrupt "Binary"
                  coreLift $ copyData (buf chunk) (loc chunk) len
                                      newbuf 0
                  put Bin (incLoc len chunk)

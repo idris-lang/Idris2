@@ -267,6 +267,7 @@ mutual
        PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
+       SearchTimeout : Integer -> Directive
 
   public export
   data PField : Type where

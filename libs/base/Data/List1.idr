@@ -201,3 +201,7 @@ Zippable List1 where
       unzipWith3' (x :: xs) = let (b, c, d) = f x
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
+
+export
+Uninhabited a => Uninhabited (List1 a) where
+  uninhabited (hd ::: _) = uninhabited hd
