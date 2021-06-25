@@ -242,11 +242,11 @@ boundedUIntOp : Int -> String -> Doc -> Doc -> Doc
 boundedUIntOp = boundedOp "u"
 
 boolOp : String -> Doc -> Doc -> Doc
-boolOp o lhs rhs = "(" <+> binOp o lhs rhs <+> "?1n:0n)"
+boolOp o lhs rhs = "(" <+> binOp o lhs rhs <+> "?1:0)"
 
 export
 jsConstant : Constant -> Core String
-jsConstant (I i)    = pure $ show i ++ "n"
+jsConstant (I i)    = pure $ show i
 jsConstant (I8 i)   = pure $ show i
 jsConstant (I16 i)  = pure $ show i
 jsConstant (I32 i)  = pure $ show i
@@ -275,9 +275,14 @@ arithOp (Just $ Signed $ P n) _   op = boundedIntOp n op
 arithOp (Just $ Unsigned n)   _   op = boundedUIntOp n op
 arithOp _                     sym _  = binOp sym
 
+-- use 32bit signed integer for `Int`.
+jsIntKind : Constant -> Maybe IntKind
+jsIntKind IntType = Just . Signed   $ P 32
+jsIntKind x       = intKind x
+
 castInt : Constant -> Constant -> Doc -> Core Doc
 castInt from to x =
-  case ((from, intKind from), (to, intKind to)) of
+  case ((from, jsIntKind from), (to, jsIntKind to)) of
     ((CharType,_),  (_,Just k)) => truncInt (useBigInt k) k $ jsIntOfChar k x
     ((StringType,_),(_,Just k)) => truncInt (useBigInt k) k (jsIntOfString k x)
     ((DoubleType,_),(_,Just k)) => truncInt (useBigInt k) k $ jsIntOfDouble k x
@@ -330,16 +335,18 @@ castInt from to x =
 export
 jsOp : {0 arity : Nat} ->
        PrimFn arity -> Vect arity Doc -> Core Doc
-jsOp (Add ty) [x, y] = pure $ arithOp (intKind ty) "+" "add" x y
-jsOp (Sub ty) [x, y] = pure $ arithOp (intKind ty) "-" "sub" x y
-jsOp (Mul ty) [x, y] = pure $ arithOp (intKind ty) "*" "mul" x y
-jsOp (Div ty) [x, y] = pure $ arithOp (intKind ty) "/" "div" x y
+jsOp (Add ty) [x, y] = pure $ arithOp (jsIntKind ty) "+" "add" x y
+jsOp (Sub ty) [x, y] = pure $ arithOp (jsIntKind ty) "-" "sub" x y
+jsOp (Mul ty) [x, y] = pure $ arithOp (jsIntKind ty) "*" "mul" x y
+jsOp (Div ty) [x, y] = pure $ arithOp (jsIntKind ty) "/" "div" x y
 jsOp (Mod ty) [x, y] = pure $ binOp "%" x y
 jsOp (Neg ty) [x] = pure $ "(-(" <+> x <+> "))"
 jsOp (ShiftL Int32Type) [x, y] = pure $ binOp "<<" x y
-jsOp (ShiftL ty) [x, y] = pure $ arithOp (intKind ty) "<<" "shl" x y
+jsOp (ShiftL IntType) [x, y] = pure $ binOp "<<" x y
+jsOp (ShiftL ty) [x, y] = pure $ arithOp (jsIntKind ty) "<<" "shl" x y
 jsOp (ShiftR Int32Type) [x, y] = pure $ binOp ">>" x y
-jsOp (ShiftR ty) [x, y] = pure $ arithOp (intKind ty) ">>" "shr" x y
+jsOp (ShiftR IntType) [x, y] = pure $ binOp ">>" x y
+jsOp (ShiftR ty) [x, y] = pure $ arithOp (jsIntKind ty) ">>" "shr" x y
 jsOp (BAnd Bits32Type) [x, y] = pure $ boundedUIntOp 32 "and" x y
 jsOp (BOr Bits32Type) [x, y]  = pure $ boundedUIntOp 32 "or" x y
 jsOp (BXOr Bits32Type) [x, y] = pure $ boundedUIntOp 32 "xor" x y
@@ -351,16 +358,15 @@ jsOp (LTE ty) [x, y] = pure $ boolOp "<=" x y
 jsOp (EQ ty) [x, y] = pure $ boolOp "===" x y
 jsOp (GTE ty) [x, y] = pure $ boolOp ">=" x y
 jsOp (GT ty) [x, y] = pure $ boolOp ">" x y
-jsOp StrLength [x] = pure $ toBigInt $ x <+> ".length"
+jsOp StrLength [x] = pure $ x <+> ".length"
 jsOp StrHead [x] = pure $ "(" <+> x <+> ".charAt(0))"
 jsOp StrTail [x] = pure $ "(" <+> x <+> ".slice(1))"
-jsOp StrIndex [x, y] = pure $ "(" <+> x <+> ".charAt(" <+> fromBigInt y <+> "))"
+jsOp StrIndex [x, y] = pure $ "(" <+> x <+> ".charAt(" <+> y <+> "))"
 jsOp StrCons [x, y] = pure $ binOp "+" x y
 jsOp StrAppend [x, y] = pure $ binOp "+" x y
 jsOp StrReverse [x] = pure $ callFun1 (esName "strReverse") x
 jsOp StrSubstr [offset, len, str] =
-  let o = fromBigInt offset
-   in pure $ hcat [str,".slice(",o,",",o,"+",fromBigInt len,")"]
+  pure $ callFun (esName "substr") [offset,len,str]
 jsOp DoubleExp [x]     = pure $ callFun1 "Math.exp" x
 jsOp DoubleLog [x]     = pure $ callFun1 "Math.log" x
 jsOp DoubleSin [x]     = pure $ callFun1 "Math.sin" x
@@ -442,7 +448,7 @@ jsPrim : {auto c : Ref ESs ESSt} -> Name -> List Doc -> Core Doc
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ hcat ["({value:", v, "})"]
 jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ hcat ["(", r, ".value)"]
 jsPrim (NS _ (UN "prim__writeIORef")) [_,r,v,_] = pure $ hcat ["(", r, ".value=", v, ")"]
-jsPrim (NS _ (UN "prim__newArray")) [_,s,v,_] = pure $ hcat ["(Array(Number(", s, ")).fill(", v, "))"]
+jsPrim (NS _ (UN "prim__newArray")) [_,s,v,_] = pure $ hcat ["(Array(", s, ").fill(", v, "))"]
 jsPrim (NS _ (UN "prim__arrayGet")) [_,x,p,_] = pure $ hcat ["(", x, "[", p, "])"]
 jsPrim (NS _ (UN "prim__arraySet")) [_,x,p,v,_] = pure $ hcat ["(", x, "[", p, "]=", v, ")"]
 jsPrim (NS _ (UN "prim__os")) [] = pure $ Text $ esName "sysos"

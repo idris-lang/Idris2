@@ -19,7 +19,7 @@ data Buffer : Type where [external]
 
 %foreign "scheme:blodwen-buffer-size"
          "RefC:getBufferSize"
-         "node:lambda:b => BigInt(b.length)"
+         "node:lambda:b => b.length"
 prim__bufferSize : Buffer -> Int
 
 export %inline
@@ -28,7 +28,7 @@ rawSize buf = pure (prim__bufferSize buf)
 
 %foreign "scheme:blodwen-new-buffer"
          "RefC:newBuffer"
-         "node:lambda:s=>Buffer.alloc(Number(s))"
+         "node:lambda:s=>Buffer.alloc(s)"
 prim__newBuffer : Int -> PrimIO Buffer
 
 export
@@ -44,12 +44,12 @@ newBuffer size
 
 %foreign "scheme:blodwen-buffer-setbyte"
          "RefC:setBufferByte"
-         "node:lambda:(buf,offset,value)=>buf.writeUInt8(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeUInt8(value, offset)"
 prim__setByte : Buffer -> Int -> Int -> PrimIO ()
 
 %foreign "scheme:blodwen-buffer-setbyte"
          "RefC:setBufferByte"
-         "node:lambda:(buf,offset,value)=>buf.writeUInt8(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeUInt8(value, offset)"
 prim__setBits8 : Buffer -> Int -> Bits8 -> PrimIO ()
 
 -- Assumes val is in the range 0-255
@@ -65,12 +65,12 @@ setBits8 buf loc val
 
 %foreign "scheme:blodwen-buffer-getbyte"
          "RefC:getBufferByte"
-         "node:lambda:(buf,offset)=>BigInt(buf.readUInt8(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readUInt8(offset)"
 prim__getByte : Buffer -> Int -> PrimIO Int
 
 %foreign "scheme:blodwen-buffer-getbyte"
          "RefC:getBufferByte"
-         "node:lambda:(buf,offset)=>BigInt(buf.readUInt8(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readUInt8(offset)"
 prim__getBits8 : Buffer -> Int -> PrimIO Bits8
 
 export %inline
@@ -84,7 +84,7 @@ getBits8 buf loc
     = primIO (prim__getBits8 buf loc)
 
 %foreign "scheme:blodwen-buffer-setbits16"
-         "node:lambda:(buf,offset,value)=>buf.writeUInt16LE(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeUInt16LE(value, offset)"
 prim__setBits16 : Buffer -> Int -> Bits16 -> PrimIO ()
 
 export %inline
@@ -93,7 +93,7 @@ setBits16 buf loc val
     = primIO (prim__setBits16 buf loc val)
 
 %foreign "scheme:blodwen-buffer-getbits16"
-         "node:lambda:(buf,offset)=>BigInt(buf.readUInt16LE(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readUInt16LE(offset)"
 prim__getBits16 : Buffer -> Int -> PrimIO Bits16
 
 export %inline
@@ -102,7 +102,7 @@ getBits16 buf loc
     = primIO (prim__getBits16 buf loc)
 
 %foreign "scheme:blodwen-buffer-setbits32"
-         "node:lambda:(buf,offset,value)=>buf.writeUInt32LE(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeUInt32LE(value, offset)"
 prim__setBits32 : Buffer -> Int -> Bits32 -> PrimIO ()
 
 export %inline
@@ -111,7 +111,7 @@ setBits32 buf loc val
     = primIO (prim__setBits32 buf loc val)
 
 %foreign "scheme:blodwen-buffer-getbits32"
-         "node:lambda:(buf,offset)=>BigInt(buf.readUInt32LE(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readUInt32LE(offset)"
 prim__getBits32 : Buffer -> Int -> PrimIO Bits32
 
 export %inline
@@ -136,7 +136,7 @@ getBits64 buf loc
     = primIO (prim__getBits64 buf loc)
 
 %foreign "scheme:blodwen-buffer-setint32"
-         "node:lambda:(buf,offset,value)=>buf.writeInt32LE(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeInt32LE(value, offset)"
 prim__setInt32 : Buffer -> Int -> Int -> PrimIO ()
 
 export %inline
@@ -145,7 +145,7 @@ setInt32 buf loc val
     = primIO (prim__setInt32 buf loc val)
 
 %foreign "scheme:blodwen-buffer-getint32"
-         "node:lambda:(buf,offset)=>BigInt(buf.readInt32LE(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
 prim__getInt32 : Buffer -> Int -> PrimIO Int
 
 export %inline
@@ -155,7 +155,7 @@ getInt32 buf loc
 
 %foreign "scheme:blodwen-buffer-setint"
          "RefC:setBufferInt"
-         "node:lambda:(buf,offset,value)=>buf.writeInt64(Number(value), Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeInt32LE(value, offset)"
 prim__setInt : Buffer -> Int -> Int -> PrimIO ()
 
 export %inline
@@ -165,7 +165,7 @@ setInt buf loc val
 
 %foreign "scheme:blodwen-buffer-getint"
          "RefC:getBufferInt"
-         "node:lambda:(buf,offset)=>BigInt(buf.readInt64(Number(offset)))"
+         "node:lambda:(buf,offset)=>buf.readInt32LE(offset)"
 prim__getInt : Buffer -> Int -> PrimIO Int
 
 export %inline
@@ -175,7 +175,7 @@ getInt buf loc
 
 %foreign "scheme:blodwen-buffer-setdouble"
          "RefC:setBufferDouble"
-         "node:lambda:(buf,offset,value)=>buf.writeDoubleLE(value, Number(offset))"
+         "node:lambda:(buf,offset,value)=>buf.writeDoubleLE(value, offset)"
 prim__setDouble : Buffer -> Int -> Double -> PrimIO ()
 
 export %inline
@@ -185,7 +185,7 @@ setDouble buf loc val
 
 %foreign "scheme:blodwen-buffer-getdouble"
          "RefC:getBufferDouble"
-         "node:lambda:(buf,offset)=>buf.readDoubleLE(Number(offset))"
+         "node:lambda:(buf,offset)=>buf.readDoubleLE(offset)"
 prim__getDouble : Buffer -> Int -> PrimIO Double
 
 export %inline
@@ -200,7 +200,7 @@ stringByteLength : String -> Int
 
 %foreign "scheme:blodwen-buffer-setstring"
          "RefC:setBufferString"
-         "node:lambda:(buf,offset,value)=>buf.write(value, Number(offset),buf.length - Number(offset), 'utf-8')"
+         "node:lambda:(buf,offset,value)=>buf.write(value, offset,buf.length - offset, 'utf-8')"
 prim__setString : Buffer -> Int -> String -> PrimIO ()
 
 export %inline
@@ -210,7 +210,7 @@ setString buf loc val
 
 %foreign "scheme:blodwen-buffer-getstring"
          "RefC:getBufferString"
-         "node:lambda:(buf,offset,len)=>buf.slice(Number(offset), Number(offset+len)).toString('utf-8')"
+         "node:lambda:(buf,offset,len)=>buf.slice(offset, offset+len).toString('utf-8')"
 prim__getString : Buffer -> Int -> Int -> PrimIO String
 
 export %inline
@@ -235,7 +235,7 @@ bufferData buf
 
 %foreign "scheme:blodwen-buffer-copydata"
          "RefC:copyBuffer"
-         "node:lambda:(b1,o1,length,b2,o2)=>b1.copy(b2,Number(o2), Number(o1), Number(o1+length))"
+         "node:lambda:(b1,o1,length,b2,o2)=>b1.copy(b2,o2,o1,o1+length)"
 prim__copyData : Buffer -> Int -> Int -> Buffer -> Int -> PrimIO ()
 
 export
@@ -246,12 +246,12 @@ copyData src start len dest loc
 
 %foreign "C:idris2_readBufferData, libidris2_support, idris_file.h"
          "RefC:readBufferData"
-         "node:lambda:(f,b,l,m) => BigInt(require('fs').readSync(f.fd,b,Number(l), Number(m)))"
+         "node:lambda:(f,b,l,m) => require('fs').readSync(f.fd,b,l,m)"
 prim__readBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
 %foreign "C:idris2_writeBufferData, libidris2_support, idris_file.h"
          "RefC:writeBufferData"
-         "node:lambda:(f,b,l,m) => BigInt(require('fs').writeSync(f.fd,b,Number(l), Number(m)))"
+         "node:lambda:(f,b,l,m) => require('fs').writeSync(f.fd,b,l,m)"
 prim__writeBufferData : FilePtr -> Buffer -> Int -> Int -> PrimIO Int
 
 export

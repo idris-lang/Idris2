@@ -75,9 +75,9 @@ main = do
         the Int64 $ -9223372036854775808, -- Int64 min
         the Int64 1000000000000000000,
         the Int64 9223372036854775807, -- Int64 max
-        the Int $ -9223372036854775808, -- Int min
-        the Int 1000000000000000000,
-        the Int 9223372036854775807, -- Int max
+        the Int $ -2147483648, -- Int min
+        the Int 500000000,
+        the Int 2147483647, -- Int max
         the Integer $ -9223372036854775809, -- Int min - 1
         the Integer 0,
         the Integer 9223372036854775808 -- Int max + 1

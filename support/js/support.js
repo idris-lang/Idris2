@@ -183,7 +183,4 @@ const _sub64u = (a,b) => (a - b) & 0xffffffffffffffffn
 //String
 const _strReverse = x => x.split('').reverse().join('')
 
-const _substr = (o,l,x) => {
-  const on = Number(o)
-  return x.slice(on, on + Number(l))
-}
+const _substr = (o,l,x) => x.slice(o, o + l)
