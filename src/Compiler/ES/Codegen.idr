@@ -144,8 +144,12 @@ applyObj = applyList "{" "}" softComma
 
 export
 applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
-applyCon RECORD t as = applyObj (conTags as)
-applyCon ci t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
+applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
+applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
+applyCon CONS    _ as = applyObj (conTags as)
+applyCon JUST    _ as = applyObj (conTags as)
+applyCon RECORD  _ as = applyObj (conTags as)
+applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
 
 export
 app : Doc -> List Doc -> Doc
@@ -527,8 +531,12 @@ mutual
     d  <- traverseOpt block def
     pure $  switch (minimal sc <+> ".h") as d
     where alt : EConAlt r -> Core (Doc,Doc)
-          alt (MkEConAlt _ RECORD b) = ("undefined",) <$> block b
-          alt (MkEConAlt t _ b) = (tag2es t,) <$> block b
+          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> block b
+          alt (MkEConAlt _ NIL b)     = ("0",) <$> block b
+          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> block b
+          alt (MkEConAlt _ NOTHING b) = ("0",) <$> block b
+          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> block b
+          alt (MkEConAlt t _ b)       = (tag2es t,) <$> block b
 
   stmt (ConstSwitch r sc alts def) = do
     as <- traverse alt alts
