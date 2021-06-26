@@ -12,8 +12,8 @@
 |||       -- f3 --
 ||| ```
 |||
-||| Function `tailCallGraph` creates a directed graph of all toplevel
-||| function calls (incoming and outgoing) in tail-call position:
+||| First, a directed graph of all toplevel function calls
+||| (incoming and outgoing) in tail-call position is created:
 |||
 ||| ```idris
 ||| MkCallGraph $ fromList [(f1,[f1,f2,f3]),(f2,[f1,f4]),(f3,[f2])]
@@ -22,31 +22,28 @@
 |||
 ||| Mutually tail-recursive functions form a strongly connected
 ||| component in such a call graph: There is a (directed) path from every function
-||| to every other function. Kosaraju's algorithm is used to identify
-||| these strongly connected components by mapping every function
-||| of a strongly connected component to the same representative (called `root`)
-||| of its component. In the above case, this would result in a sorted
-||| map of the following structure:
+||| to every other function. Tarjan's algorithm is used to identify
+||| these strongly connected components and grouping them in
+||| a `List` of `List1`s.
 |||
-|||
-||| ```idris
-||| fromList [(f1,f1),(f1,f2),(f1,f3),(f4,f4)]
-||| ```idris
-|||
-||| As can be seen, f1,f2, and f3 all point to the same root (f1), while
-||| f4 points to a different root.
-|||
-||| Such a tail-recursive call graph is now converted to an imperative
-||| loop as follows: Let `obj0={h:0, a1:...}` be a Javascript object consisting
-||| of a tag `h` and an argument `a1`. `h` indicates, whether `obj0.a1`
-||| contains the result of the computation (`h = 1`) or describes
-||| a continuation indicating the next function to invoke
-||| together with the necessary arguments. A single `step`
-||| function will take such an object and use `a1` in a switch
-||| statement to decide , which function
-||| implementation to invoke (f1,f2,f3).
-||| The result will be a new object, again indicating in tag `h`, whether
-||| we arrived at a result, or we need to continue looping.
+||| A tail-recursive group of functions is now converted to an imperative
+||| loop as follows: Let `obj={h:_, a1:_, a2:_, ...}`
+||| be a Javascript object consisting
+||| of a tag `h` and arguments `a1`,`a2`,... . `h` indicates, whether `obj.a1`
+||| contains the result of the computation (`h = 0`) or describes
+||| a continuation indicating the next function to be invoked, in which
+||| case fields `a1`,`a2`,... are the function's arguments.
+||| together with the necessary arguments. The group of mutually
+||| recursive functions is now converted to a single switch statement
+||| where each branch corresponds to one of the function.
+||| Each function will be changed in such a way that instead of
+||| (recursively) calling another function in its group it will return
+||| a new object `{h:_, a1:_, ...}` with `h` indicating the next
+||| function to call (the next branch to choose in the `switch`
+||| statement and `a1`,`a2`,... being the next function's set of
+||| arguments. The function and initial argument object will then
+||| be passed to toplevel function `__tailRec`, which loops
+||| until the object signals that we have arrived at a result.
 |||
 ||| Here is an example of two mutually tail-recursive functions
 ||| together with the generated tail-call optimized code.
@@ -54,48 +51,69 @@
 ||| Original version:
 |||
 ||| ```javascript
-||| function fun1(args1){
-|||   switch (foo) {
-|||     case b1 : return fun2(args2)
-|||     case b2 : return fun1(args1')
-|||     case b3 : return nonTailCallResult1
+||| function isEven(arg){
+|||   switch (arg) {
+|||     case 0  : return 1;
+|||     default : return isOdd(arg - 1);
 |||   }
 ||| }
 |||
-||| function fun2(args2){
-|||   switch (bar) {
-|||     case b1 : return fun1(args1)
-|||     default : return nonTailCallResult2
+||| function isOdd(arg){
+|||   switch (arg) {
+|||     case 0  : return 0;
+|||     default : return isEven(arg - 1);
 |||   }
 ||| }
 ||| ```
 |||
-||| The above gets converted to the following code:
+||| The above gets converted to code similar to
+||| the following.
 |||
 ||| ```javascript
-||| function $tc1(args1){
-|||   switch (foo) {
-|||     case b1 : return {h: 1, a1: () => $tc2(args2)}
-|||     case b2 : return {h: 1, a1: () => $tc1(args1')}
-|||     case b3 : return {h: 0, a1: nonTailCallResult1 }
+||| function tcOpt(arg) {
+|||   switch(arg.h) {
+|||   // former function isEven
+|||   case 1: {
+|||     switch (arg.a1) {
+|||       case 0  : return {h: 0, a1: 1};
+|||       default : return {h: 2, a1: arg.a1 - 1};
+|||     }
+|||   }
+|||   // former function isOdd
+|||   case 2: {
+|||     switch (a1) {
+|||       case 0  : return {h: 0, a1: 0};
+|||       default : return {h: 1, a1: arg.a1 - 1};
+|||     }
 |||   }
 ||| }
 |||
-||| function fun1(args1){
-|||   return __tailRec($tc1(args1))
+||| function isEven(arg){
+|||   return __tailRec(tcOpt,{h: 1, a1: arg})
 ||| }
 |||
-||| function tc2(args2){
-|||   switch (bar) {
-|||     case b1 : return {h: 1, a1: () => $tc1(args1)}
-|||     case default : return {h: 0, a1: nonTailCallResult2 }
-|||   }
-||| }
-|||
-||| function fun2(args2){
-|||   return __tailRec(tc2(args2))
+||| function isOdd(arg){
+|||   return __tailRec(tcOpt,{h: 2, a1: arg})
 ||| }
 ||| ```
+|||
+||| Finally, `__tailRec` is implemented as follows:
+|||
+||| ```javascript
+|||   function __tailRec(f,ini) {
+|||     let obj = ini;
+|||     while(true){
+|||       switch(obj.h){
+|||         case 0: return obj.a1;
+|||         default: obj = f(obj);
+|||       }
+|||     }
+|||   }
+||| ```
+|||
+||| While the above example is in Javascript, this module operates
+||| on `NamedCExp` exclusively, so it might be used with any backend
+||| where the things described above can be expressed.
 module Compiler.ES.TailRec
 
 import Data.Maybe
@@ -128,7 +146,7 @@ zipWithIndices as = zip (indices as) as
 --          Tailcall Graph
 --------------------------------------------------------------------------------
 
-||| A toplevel function in a group of mutually tail recursive functions.
+||| A (toplevel) function in a group of mutually tail recursive functions.
 public export
 record TcFunction where
   constructor MkTcFunction
@@ -151,7 +169,7 @@ public export
 record TcGroup where
   constructor MkTcGroup
   ||| Index of the group. This is used to generate a uniquely
-  ||| named tail call optimize toplevel function.
+  ||| named tail call optimized toplevel function.
   index     : Int
 
   ||| Set of mutually recursive functions.
@@ -169,14 +187,22 @@ tailCalls (NmConstCase fc sc xs x) =
   concatMap tailCalls x
 tailCalls _ = empty
 
--- in case of larger groups (more than one element)
+-- Checks if a `List1` of functions actually has any tail recursive
+-- function calls and needs to be optimized.
+-- In case of a larger group (more than one element)
 -- the group contains tailcalls by construction. In case
 -- of a single function, we need to check that at least one
 -- outgoing tailcall goes back to the function itself.
+-- We use the given mapping from `Name` to set of names
+-- called in tail position to verify this.
 hasTailCalls : SortedMap Name (SortedSet Name) -> List1 Name -> Bool
 hasTailCalls g (x ::: Nil) = maybe False (contains x) $ lookup x g
 hasTailCalls _ _           = True
 
+-- Given a strongly connected group of functions, plus
+-- a unique index, convert them to a list of
+-- consisting of the function names plus the `TcGroup`,
+-- to which they belong.
 toGroup :  SortedMap Name (Name,List Name,NamedCExp)
         -> (Int,List1 Name)
         -> List (Name,TcGroup)
@@ -190,10 +216,10 @@ toGroup funMap (groupIndex,functions) =
           pure (n,MkTcFunction n fx args exp)
 
 -- Returns the connected components of the tail call graph
+-- of a set of toplevel function definitions.
 -- Every function name that is part of a tail-call group
 -- (a set of mutually tail-recursive functions)
--- points to a mapping from all function names
--- of its tail-call group to their tail-call indices.
+-- points to its corresponding group.
 tailCallGroups :  List (Name,List Name,NamedCExp)
                -> SortedMap Name TcGroup
 tailCallGroups funs =
@@ -203,7 +229,7 @@ tailCallGroups funs =
    in fromList $ concatMap (toGroup funMap) (zipWithIndices groups)
 
 --------------------------------------------------------------------------------
---          Converting tail call groups to syntax trees
+--          Converting tail call groups to expressions
 --------------------------------------------------------------------------------
 
 public export
@@ -225,18 +251,33 @@ tcContinueName gi fi = MN ("TcContinue" ++ show gi) fi
 tcDoneName : (groupIndex : Int) -> Name
 tcDoneName gi = MN "TcDone" gi
 
+-- Converts a single function in a mutually tail-recursive
+-- group of functions to a single branch in a pattern match.
+-- Recursive function calls will be replaced with an
+-- applied data constructor whose tag indicates the
+-- branch in the pattern match to use next, and whose values
+-- will be used as the arguments for the next function.
 conAlt : TcGroup -> TcFunction -> NamedConAlt
 conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
   let name = tcContinueName tcIx ix
    in MkNConAlt name DATACON (Just ix) args (toTc exp)
 
    where mutual
+     -- this is returned in case we arrived at a result
+     -- (an expression not corresponding to a recursive
+     -- call in tail position).
      tcDone : NamedCExp -> NamedCExp
      tcDone x = NmCon EmptyFC (tcDoneName tcIx) DATACON (Just 0) [x]
 
+     -- this is returned in case we arrived at a resursive call
+     -- in tail position. The index indicates the next "function"
+     -- to call, the list of expressions are the function's
+     -- arguments.
      tcContinue : (index : Int) -> List NamedCExp -> NamedCExp
      tcContinue ix = NmCon EmptyFC (tcContinueName tcIx ix) DATACON (Just ix)
 
+     -- recursively converts an expression. Only the `NmApp` case is
+     -- interesting, the rest is pretty much boiler plate.
      toTc : NamedCExp -> NamedCExp
      toTc (NmLet fc x y z) = NmLet fc x y $ toTc z
      toTc x@(NmApp _ (NmRef _ n) xs) =
@@ -254,25 +295,35 @@ conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
      const : NamedConstAlt -> NamedConstAlt
      const (MkNConstAlt x y) = MkNConstAlt x (toTc y)
 
+-- Converts a group of mutually tail recursive functions
+-- to a list of toplevel function declarations. `tailRecLoopName`
+-- is the name of the toplevel function that does the
+-- infinite looping (function `__tailRec` in the example at
+-- the top of this module).
 convertTcGroup : (tailRecLoopName : Name) -> TcGroup -> List Function
 convertTcGroup loop g@(MkTcGroup gindex fs) =
   let functions = sortBy (comparing index) $ values fs
       branches  = map (conAlt g) functions
-      tcArg     = NmLocal EmptyFC tcArgName
-      switch    = NmConCase EmptyFC tcArg branches Nothing
-   in MkFunction (tcFunction g.index) [tcArgName] switch ::
-      map toFun functions
+      switch    = NmConCase EmptyFC (local tcArgName) branches Nothing
+   in MkFunction tcFun [tcArgName] switch :: map toFun functions
 
-  where toFun : TcFunction -> Function
+  where tcFun : Name
+        tcFun = tcFunction gindex
+
+        local : Name -> NamedCExp
+        local = NmLocal EmptyFC
+
+        toFun : TcFunction -> Function
         toFun (MkTcFunction n ix args x) =
-          let exps  = map (NmLocal EmptyFC) args
-              tcArg = NmCon EmptyFC (tcContinueName gindex ix) DATACON (Just ix) exps
-              tcFun = NmRef EmptyFC $ tcFunction gindex
+          let exps  = map local args
+              tcArg = NmCon EmptyFC (tcContinueName gindex ix)
+                        DATACON (Just ix) exps
+              tcFun = NmRef EmptyFC tcFun
               body  = NmApp EmptyFC (NmRef EmptyFC loop) [tcFun,tcArg]
            in MkFunction n args body
 
-||| (Mutual) Tail recursion optimizations: Converts all groups of
-||| mutually tail recursive functions to an imperative loop.
+-- Tail recursion optimizations: Converts all groups of
+-- mutually tail recursive functions to an imperative loop.
 tailRecOptim :  SortedMap Name TcGroup
              -> (tcLoopName : Name)
              -> List (Name,List Name,NamedCExp)
@@ -287,6 +338,11 @@ tailRecOptim groups loop ts =
           Just _  => Nothing
           Nothing => Just $ MkFunction n args exp
 
+||| Converts a list of toplevel definitions (potentially
+||| several groups of mutually tail-recursive functions)
+||| to a new set of tail-call optimized function definitions.
+||| `MkNmFun`s are converted. Other constructors of `NamedDef`
+||| are ignored and silently dropped.
 export
 functions :  (tcLoopName : Name)
           -> List (Name,FC,NamedDef)
