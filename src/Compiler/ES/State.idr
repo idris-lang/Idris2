@@ -1,3 +1,5 @@
+||| State used during JS code generation and when
+||| converting `NamedCExp` to imperative statements.
 module Compiler.ES.State
 
 import Core.Context
@@ -10,13 +12,15 @@ import Libraries.Data.SortedMap
 --          Utilities
 --------------------------------------------------------------------------------
 
+||| Convenient alias for `throw . InternalError`
 export
 error : String -> Core a
 error = throw . InternalError
 
+||| Convenient alias for `error . fastConcat`.
 export
 errorConcat : List String -> Core a
-errorConcat = error . concat
+errorConcat = error . fastConcat
 
 --------------------------------------------------------------------------------
 --          CG Mode
@@ -31,9 +35,9 @@ errorConcat = error . concat
 ||| and linebreaks for better readability.
 |||
 ||| In `Compact` mode, all local variables are replace with
-||| short machine generated one, and every toplevel
+||| short machine generated ones, and every toplevel
 ||| function is printed on a single line without
-||| line-breaks and indentation.
+||| line-breaks or indentation.
 |||
 ||| Finally, `Minimal` mode is like `Compact`, but toplevel
 ||| function names will be mangled and replaced with
@@ -41,11 +45,14 @@ errorConcat = error . concat
 public export
 data CGMode = Pretty | Compact | Minimal
 
+||| We only keep user defined local names and only so
+||| in `Pretty` mode.
 export
 keepLocalName : Name -> CGMode -> Bool
 keepLocalName (UN n) Pretty = True
 keepLocalName _      _      = False
 
+||| We mangle toplevel function names only in `Minimal` mode.
 export
 keepRefName : Name -> CGMode -> Bool
 keepRefName _ Minimal = False
@@ -58,6 +65,7 @@ keepRefName _ _       = True
 public export
 data ESs : Type where
 
+||| Settings and state used during JS code generation.
 public export
 record ESSt where
   constructor MkESSt
@@ -67,7 +75,7 @@ record ESSt where
   ||| Returns `True`, if the given expression can be used as an
   ||| argument in a function call. (If this returns `False`, the
   ||| given expression will be lifted to the surrounding scope
-  ||| and bound to a variable).
+  ||| and bound to a new local variable).
   isArg    : Exp -> Bool
 
   ||| Returns `True`, if the given expression can be used directly
@@ -76,21 +84,25 @@ record ESSt where
   ||| and bound to a variable).
   isFun    : Exp -> Bool
 
-  ||| Actual local variable index
+  ||| Current local variable index
   loc      : Int
 
-  ||| Actual local variable index
+  ||| Current global variable index
   ref      : Int
 
   ||| Mapping from local names to minimal expressions
   locals   : SortedMap Name Minimal
 
-  ||| Mapping from toplevel function names to `Var`s
+  ||| Mapping from toplevel function names to variables
   refs     : SortedMap Name Var
 
-  ||| Mappings from name to definition to be added
+  ||| Mappings from name to definitions to be added
   ||| to the preamble.
   preamble : SortedMap String String
+
+  ||| Accepted codegen types in foreign function definitions.
+  ||| For JS, this is either `["node","javascript"]` or
+  ||| `["browser","javascript"]`.
   ccTypes  : List String
 
 --------------------------------------------------------------------------------
@@ -110,6 +122,10 @@ nextLocal = do
   put ESs $ record { loc $= (+1) } st
   pure $ VLoc st.loc
 
+||| Register a `Name` as a local variable. The name is kept
+||| unchanged if `keepLocalName` returns `True` with the
+||| current name and state, otherwise it is converted to
+||| a new local variable.
 export
 registerLocal : {auto c : Ref ESs ESSt} -> (name : Name) -> Core Var
 registerLocal n = do
@@ -119,6 +135,9 @@ registerLocal n = do
      else do v <- nextLocal
              addLocal n (MVar v)
              pure v
+
+||| Look up a name and call `registerLocal` in case it has
+||| not been added to the map of local names.
 export
 getOrRegisterLocal : {auto c : Ref ESs ESSt} -> Name -> Core Minimal
 getOrRegisterLocal n = do
@@ -142,7 +161,7 @@ projections sc xs =
 --          Toplevel Names
 --------------------------------------------------------------------------------
 
-||| Map a toplevel name to the given `Var`
+||| Map a toplevel function name to the given `Var`
 export
 addRef : { auto c : Ref ESs ESSt } -> Name -> Var -> Core ()
 addRef n v = update ESs $ record { refs $= insert n v }
@@ -163,6 +182,11 @@ registerRef n = do
      else do v <- nextRef
              addRef n v
              pure v
+
+||| Look up a name and call `registerRef` in case it has
+||| not been added to the map of toplevel function names.
+||| The name will be replace with an index if the current
+||| `GCMode` is set to `Minimal`.
 export
 getOrRegisterRef : {auto c : Ref ESs ESSt} -> Name -> Core Var
 getOrRegisterRef n = do
@@ -174,8 +198,13 @@ getOrRegisterRef n = do
 --          Preamble and Foreign Definitions
 --------------------------------------------------------------------------------
 
+||| Add a new set of definitions under the given name to
+||| the preamble. Fails with an error if a different set
+||| of definitions have already been added under the same name.
 export
-addToPreamble : {auto c : Ref ESs ESSt} -> String -> String -> Core ()
+addToPreamble :  {auto c : Ref ESs ESSt}
+              -> (name : String)
+              -> (def : String) -> Core ()
 addToPreamble name def = do
   s <- get ESs
   case lookup name (preamble s) of
@@ -194,7 +223,7 @@ addToPreamble name def = do
 
 ||| Initial state of the code generator
 export
-init :  (mode : CGMode)
+init :  (mode  : CGMode)
      -> (isArg : Exp -> Bool)
      -> (isFun : Exp -> Bool)
      -> (types : List String)
@@ -202,6 +231,8 @@ init :  (mode : CGMode)
 init mode isArg isFun ccs =
   MkESSt mode isArg isFun 0 0 empty empty empty ccs
 
+||| Reset the local state before defining a new toplevel
+||| function.
 export
 reset : {auto c : Ref ESs ESSt} -> Core ()
 reset = update ESs $ record { loc = 0, locals = empty }
