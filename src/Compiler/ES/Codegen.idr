@@ -5,6 +5,7 @@ import Core.CompileExpr
 import Core.Context
 import Core.Directory
 import Core.Options
+import Data.List1
 import Data.Strings
 import Compiler.ES.Ast
 import Compiler.ES.Doc
@@ -465,18 +466,15 @@ jsPrim (NS _ (UN "prim__codegen")) [] = do
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
 isArg : CGMode -> Exp -> Bool
-isArg Pretty (ELam _ $ _ :: _)                       = False
-isArg Pretty (ELam _ $ Result $ ConSwitch _ _ _ _)   = False
-isArg Pretty (ELam _ $ Result $ ConstSwitch _ _ _ _) = False
-isArg _      _                                       = True
+isArg Pretty (ELam _ $ Block _ _)           = False
+isArg Pretty (ELam _ $ ConSwitch _ _ _ _)   = False
+isArg Pretty (ELam _ $ ConstSwitch _ _ _ _) = False
+isArg Pretty (ELam _ $ Error _)             = False
+isArg _      _                              = True
 
 isFun : Exp -> Bool
 isFun (ELam _ _) = False
 isFun _          = True
-
-break : Effect -> Doc -> Doc
-break Returns          d = d
-break (ErrorWithout _) d = vcat [d, "break;"]
 
 switch :  (scrutinee : Doc)
        -> (alts : List (Doc,Doc))
@@ -502,10 +500,10 @@ lambdaArgs xs = hcat $ (<+> lambdaArrow) . var <$> xs
 mutual
   exp : {auto c : Ref ESs ESSt} -> Exp -> Core Doc
   exp (EMinimal x) = pure $ minimal x
-  exp (ELam xs (Result $ Return $ y@(ECon _ _ _))) =
+  exp (ELam xs (Return $ y@(ECon _ _ _))) =
      map (\e => lambdaArgs xs <+> paren e) (exp y)
-  exp (ELam xs (Result $ Return $ y)) = (lambdaArgs xs <+> ) <$> exp y
-  exp (ELam xs y) = (lambdaArgs xs <+>) . block <$> block y
+  exp (ELam xs (Return $ y)) = (lambdaArgs xs <+> ) <$> exp y
+  exp (ELam xs y) = (lambdaArgs xs <+>) . block <$> stmt y
   exp (EApp x xs) = do
     o    <- exp x
     args <- traverse exp xs
@@ -524,37 +522,35 @@ mutual
   stmt (Declare v s) =
     (\d => vcat ["let" <++> var v <+> ";",d]) <$> stmt s
   stmt (Assign v x) =
-    (\d => var v <+> softEq <+> d <+> ";") <$> exp x
+    (\d => vcat [hcat [var v,softEq,d,";"], "break;"]) <$> exp x
 
   stmt (ConSwitch r sc alts def) = do
     as <- traverse alt alts
-    d  <- traverseOpt block def
+    d  <- traverseOpt stmt def
     pure $  switch (minimal sc <+> ".h") as d
     where alt : EConAlt r -> Core (Doc,Doc)
-          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> block b
-          alt (MkEConAlt _ NIL b)     = ("0",) <$> block b
-          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> block b
-          alt (MkEConAlt _ NOTHING b) = ("0",) <$> block b
-          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> block b
-          alt (MkEConAlt t _ b)       = (tag2es t,) <$> block b
+          alt (MkEConAlt _ RECORD b)  = ("undefined",) <$> stmt b
+          alt (MkEConAlt _ NIL b)     = ("0",) <$> stmt b
+          alt (MkEConAlt _ CONS b)    = ("undefined",) <$> stmt b
+          alt (MkEConAlt _ NOTHING b) = ("0",) <$> stmt b
+          alt (MkEConAlt _ JUST b)    = ("undefined",) <$> stmt b
+          alt (MkEConAlt t _ b)       = (tag2es t,) <$> stmt b
 
   stmt (ConstSwitch r sc alts def) = do
     as <- traverse alt alts
-    d  <- traverseOpt block def
+    d  <- traverseOpt stmt def
     ex <- exp sc
     pure $ switch ex as d
     where alt : EConstAlt r -> Core (Doc,Doc)
-          alt (MkEConstAlt c b) = do d    <- block b
+          alt (MkEConstAlt c b) = do d    <- stmt b
                                      cnst <- jsConstant c
                                      pure (Text cnst, d)
 
-  stmt (Error x) = pure . jsCrashExp $ jsStringDoc x
-
-  block : {e : _} -> {auto c : Ref ESs ESSt} -> Block e -> Core Doc
-  block = map vcat . go
-    where go : Block e -> Core (List $ Doc)
-          go (Result x) = pure . break e <$> stmt x
-          go (h :: t)   = [| stmt h :: go t |]
+  stmt (Error x)   = pure . jsCrashExp $ jsStringDoc x
+  stmt (Block ss s) = do
+    docs <- traverse stmt $ forget ss
+    doc  <- stmt s
+    pure $ hcat (docs ++ [doc])
 
 printDoc : CGMode -> Doc -> String
 printDoc Pretty y = pretty (y <+> LineBreak)
@@ -567,7 +563,7 @@ def (MkFunction n as body) = do
   ref  <- getOrRegisterRef n
   args <- traverse registerLocal as
   mde  <- mode <$> get ESs
-  b    <- block Returns body >>= block
+  b    <- stmt Returns body >>= stmt
   pure $ printDoc mde $ function (var ref) (map var args) b
 
 foreign :  {auto c : Ref ESs ESSt}

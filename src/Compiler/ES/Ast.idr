@@ -3,8 +3,8 @@ module Compiler.ES.Ast
 import Core.CompileExpr
 import Core.Context
 import Compiler.Common
+import Data.List1
 import Data.Nat
-
 import Data.Vect
 
 %default total
@@ -73,7 +73,7 @@ mutual
     ||| Lambda expression
     |||
     ||| An empty argument list represents a delayed computation
-    ELam      : List Var -> Block Returns -> Exp
+    ELam      : List Var -> Stmt (Just Returns) -> Exp
 
     ||| Function application.
     |||
@@ -143,7 +143,7 @@ mutual
     ConSwitch   :  (e         : Effect)
                 -> (scrutinee : Minimal)
                 -> (alts      : List $ EConAlt e)
-                -> (def       : Maybe $ Block e)
+                -> (def       : Maybe $ Stmt $ Just e)
                 -> Stmt (Just e)
 
     ||| Switch statement from a pattern on
@@ -152,22 +152,15 @@ mutual
     ConstSwitch :  (e         : Effect)
                 -> (scrutinee : Exp)
                 -> (alts      : List $ EConstAlt e)
-                -> (def       : Maybe $ Block e)
+                -> (def       : Maybe $ Stmt $ Just e)
                 -> Stmt (Just e)
 
-    ||| A run time exception.
-    Error       : {0 any : _} -> String -> Stmt any
+    ||| A runtime exception.
+    Error       : {0 any : _} -> String -> Stmt (Just any)
 
-  ||| A code block consisting of one or more
-  ||| imperative statements. This is indexed over
-  ||| the `Effect` the final expression will have.
-  |||
-  ||| TODO: This should probably just be another
-  |||       constructor in `Stmt`.
-  public export
-  data Block : (e : Effect) -> Type where
-    Result     : Stmt (Just e) -> Block e
-    (::)       : Stmt Nothing  -> Block e -> Block e
+    ||| A code block consisting of one or more
+    ||| imperative statements.
+    Block       :  List1 (Stmt Nothing) -> Stmt e -> Stmt e
 
   ||| Single branch in a pattern match on a data or
   ||| type constructor.
@@ -176,14 +169,14 @@ mutual
     constructor MkEConAlt
     tag     : Either Int Name
     conInfo : ConInfo
-    body    : Block e
+    body    : Stmt (Just e)
 
   ||| Single branch in a pattern match on a constant
   public export
   record EConstAlt (e : Effect) where
     constructor MkEConstAlt
     constant : Constant
-    body     : Block e
+    body     : Stmt (Just e)
 
 export
 toMinimal : Exp -> Maybe Minimal
@@ -191,14 +184,12 @@ toMinimal (EMinimal v) = Just v
 toMinimal _            = Nothing
 
 export
-prepend : List (Stmt Nothing) -> Block e -> Block e
-prepend []       b = b
-prepend (h :: t) b = h :: prepend t b
+prepend : List (Stmt Nothing) -> Stmt (Just e) -> Stmt (Just e)
+prepend []       s = s
+prepend (h :: t) s = Block (h ::: t) s
 
 export total
-declare : {v : _} -> Block (ErrorWithout v) -> List (Stmt Nothing)
-declare (Result (Assign v y))            = [Const v y]
-declare (Result c@(ConSwitch _ _ _ _))   = [Declare v c]
-declare (Result c@(ConstSwitch _ _ _ _)) = [Declare v c]
-declare (Result (Error x))               = [Error x]
-declare (x :: y)                         = x :: declare y
+declare : {v : _} -> Stmt (Just $ ErrorWithout v) -> Stmt Nothing
+declare (Assign v y)              = Const v y
+declare (Block ss s)              = Block ss $ declare s
+declare s                         = Declare v s

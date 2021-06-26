@@ -21,10 +21,10 @@ import Libraries.Data.SortedMap
 tag : Name -> Maybe Int -> Either Int Name
 tag n = maybe (Right n) Left
 
--- creates a block with a single assignment statement.
-assign : (e : Effect) -> Exp -> Block e
-assign Returns          = Result . Return
-assign (ErrorWithout v) = Result . Assign v
+-- creates a single assignment statement.
+assign : (e : Effect) -> Exp -> Stmt (Just e)
+assign Returns          = Return
+assign (ErrorWithout v) = Assign v
 
 mutual
   getInteger : NamedCExp -> Maybe Integer
@@ -43,7 +43,7 @@ mutual
   integerArith _ = Nothing
 
 mutual
-  -- Converts a `NamedCExp` by calling `block` with a
+  -- Converts a `NamedCExp` by calling `stmt` with a
   -- newly generated local variable.
   -- If the result is a single assignment statement
   -- and the given filter function returns a `Just a`,
@@ -60,11 +60,12 @@ mutual
        -> Core (List (Stmt Nothing), a)
   lift n filter fromVar = do
     l <- nextLocal
-    b <- block (ErrorWithout l) n
-    let pair = (declare b, fromVar l)
+    b <- stmt (ErrorWithout l) n
+    let pair = ([declare b], fromVar l)
     case b of
-      Result (Assign _ e) => pure . maybe pair ([],) $ filter e
-      _                   => pure pair
+      -- elaborator needed some help here
+      Assign _ e => pure $ maybe pair (the (List _) [],) (filter e)
+      _          => pure pair
 
   -- Convert and lift (if necessary, see comment for `lift`)
   -- a function argument. The filter function used to
@@ -122,96 +123,99 @@ mutual
           go ns (NmLam _  n x) = go (n :: ns) x
           go ns x              = do
             vs <- traverse registerLocal (reverse ns)
-            ELam vs <$> block Returns x
+            ELam vs <$> stmt Returns x
 
   -- convert a `NamedCExp` to a sequence of statements.
   export
-  block : {auto c : Ref ESs ESSt} -> (e : Effect) -> NamedCExp -> Core (Block e)
+  stmt :  {auto c : Ref ESs ESSt}
+        -> (e : Effect)
+        -> NamedCExp
+        -> Core (Stmt $ Just e)
   -- a local name gets registered or resolved
-  block e (NmLocal _ n) = assign e . EMinimal <$> getOrRegisterLocal n
+  stmt e (NmLocal _ n) = assign e . EMinimal <$> getOrRegisterLocal n
 
   -- a function name gets registered or resolved
-  block e (NmRef _ n) = assign e . EMinimal . MVar <$> getOrRegisterRef n
+  stmt e (NmRef _ n) = assign e . EMinimal . MVar <$> getOrRegisterRef n
 
-  block e (NmLam _ n x) = assign e <$> lambda n x
+  stmt e (NmLam _ n x) = assign e <$> lambda n x
 
   -- in case of a let expression, we just generate two
   -- blocks of statements and concatenate them.
   -- We always introduce a new local variable for `n`,
   -- since a variable called `n` might be used in both blocks.
-  block e (NmLet _ n y z) = do
+  stmt e (NmLet _ n y z) = do
     v  <- nextLocal
-    b1 <- block (ErrorWithout v) y
+    b1 <- stmt (ErrorWithout v) y
     addLocal n (MVar v)
-    b2 <- block e z
-    pure $ prepend (declare b1) b2
+    b2 <- stmt e z
+    pure $ prepend [declare b1] b2
 
   -- when applying a function, we potentially need to
   -- lift both, the function expression itself and the argument
   -- list, to the surrounding scope.
-  block e (NmApp _ x xs) = do
+  stmt e (NmApp _ x xs) = do
     (mbx, vx)    <- liftFun x
     (mbxs, args) <- liftArgs xs
     pure . prepend (mbx ++ mbxs) $ assign e (EApp vx args)
 
-  block e (NmCon _ n ci tg xs) = do
+  stmt e (NmCon _ n ci tg xs) = do
     (mbxs, args) <- liftArgs xs
     pure . prepend mbxs $ assign e (ECon (tag n tg) ci args)
 
-  block e o@(NmOp _ x xs) =
+  stmt e o@(NmOp _ x xs) =
     case integerArith o of
       Just n  => pure . assign e $ EPrimVal (BI n)
       Nothing => do
         (mbxs, args) <- liftArgsVect xs
         pure . prepend mbxs $ assign e (EOp x args)
 
-  block e (NmExtPrim _ n xs) = do
+  stmt e (NmExtPrim _ n xs) = do
     (mbxs, args) <- liftArgs xs
     pure . prepend mbxs $ assign e (EExtPrim n args)
 
-  block e (NmForce _ _ x) = do
+  stmt e (NmForce _ _ x) = do
     (mbx, vx) <- liftFun x
     pure . prepend mbx $ assign e (EApp vx [])
 
-  block e (NmDelay _ _ x) = assign e . ELam [] <$> block Returns x
+  stmt e (NmDelay _ _ x) = assign e . ELam [] <$> stmt Returns x
 
   -- No need for a `switch` if we only have a single branch.
   -- It's still necessary to lift the scrutinee, however,
   -- since its fields might be accessed several times in
   -- the implementation of `x`.
-  block e (NmConCase _ sc [x] Nothing) = do
+  stmt e (NmConCase _ sc [x] Nothing) = do
     (mbx, vx) <- liftMinimal sc
     b         <- body <$> conAlt e vx x
     pure $ prepend mbx b
 
   -- No need for a `switch` statement if we only have
   -- a `default` branch.
-  block e (NmConCase _ _  [] (Just x)) = block e x
+  stmt e (NmConCase _ _  [] (Just x)) = stmt e x
 
   -- Create a `switch` statement from a pattern match
   -- on constructors. The scrutinee is lifted to the
   -- surrounding scope and memoized if necessary.
-  block e (NmConCase _ sc xs x) = do
+  stmt e (NmConCase _ sc xs x) = do
     (mbx, vx) <- liftMinimal sc
     alts      <- traverse (conAlt e vx) xs
-    def       <- traverseOpt (block e) x
-    pure . prepend mbx $ Result (ConSwitch e vx alts def)
+    def       <- traverseOpt (stmt e) x
+    pure . prepend mbx $ ConSwitch e vx alts def
 
   -- Pattern matches on constants behave very similar
   -- to the ones on constructors.
-  block e (NmConstCase _ _  [x] Nothing) = body <$> constAlt e x
-  block e (NmConstCase _ _  [] (Just x)) = block e x
-  block e (NmConstCase _ sc xs x) = do
+  stmt e (NmConstCase _ _  [x] Nothing) = body <$> constAlt e x
+  stmt e (NmConstCase _ _  [] (Just x)) = stmt e x
+  stmt e (NmConstCase _ sc xs x) = do
     (mbx, ex) <- liftArg sc
     alts      <- traverse (constAlt e) xs
-    def       <- traverseOpt (block e) x
-    pure . prepend mbx $ Result (ConstSwitch e ex alts def)
+    def       <- traverseOpt (stmt e) x
+    pure . prepend mbx $ ConstSwitch e ex alts def
 
-  block e (NmPrimVal _ x) = pure . assign e $ EPrimVal x
+  stmt e (NmPrimVal _ x) = pure . assign e $ EPrimVal x
 
-  block e (NmErased _)    = pure . assign e $ EErased
+  stmt e (NmErased _)    = pure . assign e $ EErased
 
-  block _ (NmCrash _ x)   = pure . Result . Error $ x
+  stmt _ (NmCrash _ x)   = pure $ Error x
 
   -- a single branch in a pattern match on constructors
   conAlt :  { auto c : Ref ESs ESSt }
@@ -224,11 +228,11 @@ mutual
     -- data projections (field accessors). They'll
     -- be then properly inlined when converting `x`.
     projections sc args
-    MkEConAlt (tag n tg) ci <$> block e x
+    MkEConAlt (tag n tg) ci <$> stmt e x
 
   -- a single branch in a pattern match on a constant
   constAlt :  { auto c : Ref ESs ESSt }
            -> (e : Effect)
            -> NamedConstAlt
            -> Core (EConstAlt e)
-  constAlt e (MkNConstAlt c x) = MkEConstAlt c <$> block e x
+  constAlt e (MkNConstAlt c x) = MkEConstAlt c <$> stmt e x
