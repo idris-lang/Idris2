@@ -22,9 +22,11 @@ import Data.Vect
 --          Utilities
 --------------------------------------------------------------------------------
 
+-- Split at the given character and remove it.
 breakDrop1 : Char -> String -> (String, String)
 breakDrop1 c = mapSnd (drop 1) . break (== c)
 
+-- Display a quoted list of strings.
 stringList : List String -> String
 stringList = fastConcat . intersperse "," . map show
 
@@ -32,7 +34,8 @@ stringList = fastConcat . intersperse "," . map show
 --          JS Strings
 --------------------------------------------------------------------------------
 
-export
+-- Convert an Idris2 string to a Javascript String
+-- by escaping most non-alphanumeric characters.
 jsString : String -> String
 jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
   where
@@ -48,14 +51,17 @@ jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
                             '\n' => "\\n"
                             other => "\\u{" ++ asHex (cast {to=Int} c) ++ "}"
 
-export
+||| Alias for Text . jsString
 jsStringDoc : String -> Doc
 jsStringDoc = Text . jsString
 
-export
+-- A name from the preamble (file `support.js`).
+-- the given string is just prefixed with an underscore.
 esName : String -> String
 esName x = "_" ++ x
 
+-- convert a string to a Javascript identifier
+-- by escaping non-alphanumeric characters (except underscores).
 jsIdent : String -> String
 jsIdent s = concatMap okchar (unpack s)
   where
@@ -73,7 +79,6 @@ keywordSafe s = s
 --          JS Name
 --------------------------------------------------------------------------------
 
-export
 jsName : Name -> String
 jsName (NS ns n) = jsIdent (showNSWithSep "_" ns) ++ "_" ++ jsName n
 jsName (UN n) = keywordSafe $ jsIdent n
@@ -86,26 +91,9 @@ jsName (CaseBlock x y) = "case__" ++ jsIdent x ++ "_" ++ show y
 jsName (WithBlock x y) = "with__" ++ jsIdent x ++ "_" ++ show y
 jsName (Resolved i) = "fn__" ++ show i
 
-export
 jsNameDoc : Name -> Doc
 jsNameDoc = Text . jsName
 
-export
-commentName : Name -> String
-commentName (NS ns n@(RF _)) = show ns ++ ".(" ++ commentName n ++ ")"
-commentName (NS ns n) = show ns ++ "." ++ commentName n
-commentName (UN x) = x
-commentName (MN x y) = "{" ++ x ++ ":" ++ show y ++ "}"
-commentName (PV n d) = "{P:" ++ commentName n ++ ":" ++ show d ++ "}"
-commentName (DN _ n) = commentName n
-commentName (RF n) = "." ++ n
-commentName (Nested (outer, idx) inner)
-      = show outer ++ ":" ++ show idx ++ ":" ++ commentName inner
-commentName (CaseBlock outer i) = "case block in " ++ outer
-commentName (WithBlock outer i) = "with block in " ++ outer
-commentName (Resolved x) = "$resolved" ++ show x
-
-export
 mainExpr : Name
 mainExpr = MN "__mainExpression" 0
 
@@ -113,27 +101,22 @@ mainExpr = MN "__mainExpression" 0
 --          Pretty Printing
 --------------------------------------------------------------------------------
 
-export
 var : Var -> Doc
 var (VName x) = jsNameDoc x
 var (VLoc x)  = Text $ "$" ++ asHex x
 var (VRef x)  = Text $ "$R" ++ asHex x
 
-export
 minimal : Minimal -> Doc
 minimal (MVar v)          = var v
 minimal (MProjection n v) = minimal v <+> ".a" <+> shown n
 
-export
 tag2es : Either Int Name -> Doc
 tag2es (Left x)  = shown x
 tag2es (Right x) = jsStringDoc $ show x
 
-export
 constant : Doc -> Doc -> Doc
 constant n d = "const" <++> n <+> softEq <+> d <+> ";"
 
-export
 applyList : (lparen : Doc) -> (rparen : Doc) -> (sep : Doc) -> List Doc -> Doc
 applyList l r sep ds = l <+> (concat $ intersperse sep ds) <+> r
 
@@ -143,7 +126,6 @@ conTags as = zipWith (\i,a => hcat ["a",shown i,softColon,a]) [1..length as] as
 applyObj : (args : List Doc) -> Doc
 applyObj = applyList "{" "}" softComma
 
-export
 applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
 applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
 applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
@@ -152,7 +134,6 @@ applyCon JUST    _ as = applyObj (conTags as)
 applyCon RECORD  _ as = applyObj (conTags as)
 applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
 
-export
 app : Doc -> List Doc -> Doc
 app d args = d <+> applyList "(" ")" softComma args
 
@@ -162,11 +143,9 @@ callFun = app . Text
 callFun1 : String -> Doc -> Doc
 callFun1 fun = callFun fun . pure
 
-export
 jsCrashExp : Doc -> Doc
 jsCrashExp = callFun1 (esName "crashExp")
 
-export
 function : Doc -> (args : List Doc) -> (body : Doc) -> Doc
 function n args body =
   "function" <++> app n args <+> SoftSpace <+> block body
@@ -181,46 +160,60 @@ toBigInt = callFun1 "BigInt"
 fromBigInt : Doc -> Doc
 fromBigInt = callFun1 "Number"
 
+-- we need to use `BigInt` in JS if an integral type's
+-- bit size is greater than 32.
 useBigInt' : Int -> Bool
 useBigInt' = (> 32)
 
+-- same as `useBigInt'` but based on `IntKind`
 useBigInt : IntKind -> Bool
 useBigInt (Signed $ P x)     = useBigInt' x
 useBigInt (Signed Unlimited) = True
 useBigInt (Unsigned x)       = useBigInt' x
 
+-- call _bigIntOfString from the preamble, which
+-- converts a string to a `BigInt`
 jsBigIntOfString : Doc -> Doc
 jsBigIntOfString = callFun1 (esName "bigIntOfString")
 
+-- call _parseFloat from the preamble, which
+-- converts a string to a `Number`
 jsNumberOfString : Doc -> Doc
 jsNumberOfString = callFun1 "parseFloat"
 
+-- convert an string to an integral type based
+-- on its `IntKind`.
 jsIntOfString : IntKind -> Doc -> Doc
 jsIntOfString k = if useBigInt k then jsBigIntOfString else jsNumberOfString
 
-binOp : String -> Doc -> Doc -> Doc
-binOp o lhs rhs = hcat ["(", lhs, Text o, rhs, ")"]
+-- introduce a binary infix operation
+binOp : (symbol : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
+binOp sym lhs rhs = hcat ["(", lhs, Text sym, rhs, ")"]
 
-adjInt : Int -> Doc -> Doc
-adjInt bits = if useBigInt' bits then toBigInt else id
-
+-- converts a `Number` to an integer
+-- based on the given precision (`IntKind`).
 toInt : IntKind -> Doc -> Doc
 toInt k = if useBigInt k then toBigInt else id
 
+-- converts an integer to a `Number`
+-- based on the given precision (`IntKind`).
 fromInt : IntKind -> Doc -> Doc
 fromInt k = if useBigInt k then fromBigInt else id
 
+-- converts a character (in JS, a string of length 1)
+-- to an integer.
 jsIntOfChar : IntKind -> Doc -> Doc
 jsIntOfChar k s = toInt k $ s <+> ".codePointAt(0)"
 
+-- converts a floating point number to an integer.
 jsIntOfDouble : IntKind -> Doc -> Doc
 jsIntOfDouble k = toInt k . callFun1 "Math.trunc"
 
 jsAnyToString : Doc -> Doc
 jsAnyToString s = "(''+" <+> s <+> ")"
 
--- Valid unicode code poing range is [0,1114111], therefore,
--- we calculate the remainder modulo 1114112 (= 17 * 2^16).
+-- converts an integer (`Number` or `BigInt`) to a character
+-- by calling `_truncToChar` from the preamble.
 jsCharOfInt : IntKind -> Doc -> Doc
 jsCharOfInt k = callFun1 (esName "truncToChar") . fromInt k
 
@@ -431,7 +424,6 @@ makeForeign n x = do
            , stringList ["lambda", "support", "stringIterator"]
            ]
 
-export
 foreignDecl :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
             -> Name
@@ -448,7 +440,6 @@ foreignDecl n ccs = do
         , "Backends in definition: ", stringList backends, "."
         ]
 
-export
 jsPrim : {auto c : Ref ESs ESSt} -> Name -> List Doc -> Core Doc
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ hcat ["({value:", v, "})"]
 jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ hcat ["(", r, ".value)"]
