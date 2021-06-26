@@ -1,9 +1,3 @@
-||| Rules:
-|||   * a function (toplevel or lambda) always ends in a
-|||     return statement (or an error)
-|||   * intermediare statements are either constants (const values)
-|||     or switch statements, which end in an assignment to
-|||     a previously declared but unassigned variable.
 module Compiler.ES.Ast
 
 import Core.CompileExpr
@@ -17,25 +11,53 @@ import Data.Vect
 
 ||| A variable in a toplevel function definition
 |||
-||| Including projections here facilitates inlining them
-||| in argument lists.
+||| When generating the syntax tree of imperative
+||| statements and expressions, we decide - based on
+||| codegen directives - which Idris names to keep
+||| and which names to convert to short, mangled
+||| versions.
 public export
-data Var = VName Name -- a name
-         | VLoc  Int  -- a local variable
-         | VRef  Int  -- a (mangled) toplevel function
+data Var =
+    ||| An unaltered name - usually a toplevel function
+    ||| or a function argument with an explicitly given
+    ||| name
+    VName Name |
 
+    ||| Index of a local variables
+    VLoc  Int  |
+
+    ||| Index of a mangled toplevel function
+    VRef  Int
+
+||| A minimal expression.
 public export
-data Minimal = MVar Var | MProjection Nat Minimal
+data Minimal =
+  ||| A variable
+  MVar Var |
+
+  ||| A projection targeting the field of a data type.
+  ||| We include these here since it allows us to
+  ||| conveniently carry around a `SortedMap Name Minimal`
+  ||| for name resolution during the generation of the
+  ||| imperative syntax tree.
+  MProjection Nat Minimal
 
 --------------------------------------------------------------------------------
 --          Expressions
 --------------------------------------------------------------------------------
 
-||| The target of a statement. `RVal` means the
+||| The effect of a statement or a block of statements.
+||| `Returns` means the
 ||| result of the final expression will be returned as
-||| the current function's result, while `TN n` is a
-||| variable to which the result of the final expression will
-||| be assigned.
+||| the current function's result, while `ErrorWithout v`
+||| is a reminder, that the block of code will eventually
+||| assign a value to `v` and will fail to do so if
+||| `v` hasn't previously been declared.
+|||
+||| This is used as a typelevel index to prevent us from
+||| making some common stupid errors like declaring a variable
+||| twice, or having several `return` statements in the same
+||| block of code.
 public export
 data Effect = Returns | ErrorWithout Var
 
@@ -45,7 +67,7 @@ mutual
   data Exp : Type where
     ||| A variable or projection. Minimal expressions
     ||| will always be inlined unless explicitly bound
-    ||| in a `let` expression.
+    ||| in an Idris2 `let` expression.
     EMinimal  : Minimal -> Exp
 
     ||| Lambda expression
@@ -59,16 +81,20 @@ mutual
     ||| dealing with forcing a delayed computation.
     EApp      : Exp -> List Exp -> Exp
 
-    ||| Saturated construtor application
+    ||| Saturated construtor application.
+    |||
+    ||| The tag either represents the name of a type constructor
+    ||| (when we are pattern matching on types) or the index
+    ||| of a data constructor.
     ECon      : (tag : Either Int Name) -> ConInfo -> List Exp -> Exp
 
     ||| Primitive operation
     EOp       : {0 arity : Nat} -> PrimFn arity -> Vect arity Exp -> Exp
 
-    ||| Externally define primitive operation
+    ||| Externally defined primitive operation.
     EExtPrim  : Name -> List Exp -> Exp
 
-    ||| A constant primitive
+    ||| A constant primitive.
     EPrimVal  : Constant -> Exp
 
     ||| An erased value.
@@ -76,46 +102,40 @@ mutual
 
   ||| An imperative statement in a function definition.
   |||
-  ||| This is indexed over the target, to which the
-  ||| final expression of the statement will be assigned.
-  ||| This allows us to keep track of where we are headed
-  ||| to. A `Target` of `Nothing` means that the result of
-  ||| the statement is `undefined`: The assignment of
-  ||| a
-  |||
-  ||| For statements lifted to the outer scope from
-  ||| an argument list, this will be the local variable,
-  ||| to which the argument will be assigned. Same goes
-  ||| for local variables from let bindings.
-  |||
-  ||| For statements producing the result of a function,
-  ||| `target` will be `RVal`.
-  |||
-  ||| The advantage of this design is the following:
-  ||| We can prove at the type level that all branches
-  ||| of a switch statment will eventually assign their
-  ||| result to the same target.
+  ||| This is indexed over the `Effect` the statement,
+  ||| will have.
+  ||| An `effect` of `Nothing` means that the result of
+  ||| the statement is `undefined`: The declaration of
+  ||| a constant or assignment of a previously declared
+  ||| variable. When we sequence statements in a block
+  ||| of code, all but the last one of them must have
+  ||| effect `Nothing`. This makes sure we properly declare variables
+  ||| exactly once before eventually assigning them.
+  ||| It makes also sure a block of code does not contain
+  ||| several `return` statements (until they are the
+  ||| results of the branches of a `switch` statement).
   public export
   data Stmt : (effect : Maybe Effect) -> Type where
-    ||| Returns the given single line expression.
+    ||| Returns the result of the given expression.
     Return      : Exp -> Stmt (Just Returns)
 
     ||| Introduces a new constant by assigning the result
     ||| of a single expression to the given variable.
     Const      : (v : Var) -> Exp -> Stmt Nothing
 
-    ||| Assigns and expression to the given variable. This
-    ||| will result in an error, if the variable has not
+    ||| Assigns the result of an expression to the given variable.
+    ||| This will result in an error, if the variable has not
     ||| yet been declared.
     Assign     : (v : Var) -> Exp -> Stmt (Just $ ErrorWithout v)
 
-    ||| Declares (but does not yet assign) a new (mutable)
-    ||| variable.
+    ||| Declares (but does not yet assign) a new mutable
+    ||| variable. This is the only way to "saturate"
+    ||| a `Stmt (Just $ ErrorWithout v)`.
     Declare    : (v : Var) -> Stmt (Just $ ErrorWithout v) -> Stmt Nothing
 
-    ||| Switch statement from a pattern matching on
-    ||| data constructors. The result of each branch
-    ||| will be assigned to the given target.
+    ||| Switch statement from a pattern match on
+    ||| data or type constructors. The result of each branch
+    ||| will have the given `Effect`.
     |||
     ||| The scrutinee has already been lifted to
     ||| the outer scope to make sure it is only
@@ -126,9 +146,9 @@ mutual
                 -> (def       : Maybe $ Block e)
                 -> Stmt (Just e)
 
-    ||| Switch statement from a pattern matching on
+    ||| Switch statement from a pattern on
     ||| a constant. The result of each branch
-    ||| will be assigned to the given target.
+    ||| will have the given `Effect`.
     ConstSwitch :  (e         : Effect)
                 -> (scrutinee : Exp)
                 -> (alts      : List $ EConstAlt e)
@@ -140,15 +160,17 @@ mutual
 
   ||| A code block consisting of one or more
   ||| imperative statements. This is indexed over
-  ||| the target to which the final expression will
-  ||| be assigned.
+  ||| the `Effect` the final expression will have.
+  |||
+  ||| TODO: This should probably just be another
+  |||       constructor in `Stmt`.
   public export
   data Block : (e : Effect) -> Type where
     Result     : Stmt (Just e) -> Block e
     (::)       : Stmt Nothing  -> Block e -> Block e
 
-  ||| Single branch in a pattern match on data or
-  ||| type constructors.
+  ||| Single branch in a pattern match on a data or
+  ||| type constructor.
   public export
   record EConAlt (e : Effect) where
     constructor MkEConAlt
