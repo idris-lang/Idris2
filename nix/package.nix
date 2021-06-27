@@ -69,6 +69,7 @@ stdenv.mkDerivation rec {
     # TODO: Maybe set IDRIS2_PREFIX to the users home directory
     wrapProgram "$out/bin/idris2" \
       --set-default CHEZ "${chez}/bin/scheme" \
+      --set-default IDRIS2_PREFIX "~/.idris2" \
       --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
       --suffix IDRIS2_DATA ':' "$out/${name}/support" \
       --suffix IDRIS2_PATH ':' "${additionalIdris2Paths}" \
