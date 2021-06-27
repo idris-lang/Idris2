@@ -403,9 +403,6 @@
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))
 
-(define (blodwen-system cmd)
-  (system cmd))
-
 ;; Randoms
 (define random-seed-register 0)
 (define (initialize-random-seed-once)
