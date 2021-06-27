@@ -1,5 +1,4 @@
-#ifndef __IDRIS_BUFFER_H__
-#define __IDRIS_BUFFER_H__
+#pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,5 +22,3 @@ int64_t getBufferInt(void* buffer, int loc);
 double getBufferDouble(void* buffer, int loc);
 char* getBufferString(void* buffer, int loc, int len);
 size_t readBufferData(FILE* h, void* buffer, size_t loc, size_t max);
-
-#endif
