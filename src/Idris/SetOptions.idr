@@ -1,5 +1,7 @@
 module Idris.SetOptions
 
+import Compiler.Common
+
 import Core.Context
 import Core.Directory
 import Core.Metadata
@@ -10,6 +12,7 @@ import Libraries.Data.List.Extra
 
 import Idris.CommandLine
 import Idris.Package.Types
+import Idris.ProcessIdr
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -241,6 +244,31 @@ completionScript fun =
 --          Processing Options
 --------------------------------------------------------------------------------
 
+export
+setIncrementalCG : {auto c : Ref Ctxt Defs} ->
+                   {auto o : Ref ROpts REPLOpts} ->
+                   Bool -> String -> Core ()
+setIncrementalCG failOnError cgn
+    = do defs <- get Ctxt
+         case getCG (options defs) cgn of
+           Just cg =>
+               do Just cgd <- getCG cg
+                       | Nothing => pure ()
+                  let Just _ = incCompileFile cgd
+                       | Nothing =>
+                            if failOnError
+                               then do coreLift $ putStrLn $ cgn ++ " does not support incremental builds"
+                                       coreLift $ exitWith (ExitFailure 1)
+                               else pure ()
+                  setSession (record { incrementalCGs $= (cg :: )} !getSession)
+           Nothing =>
+              if failOnError
+                 then do coreLift $ putStrLn "No such code generator"
+                         coreLift $ putStrLn $ "Code generators available: " ++
+                                         showSep ", " (map fst (availableCGs (options defs)))
+                         coreLift $ exitWith (ExitFailure 1)
+                 else pure ()
+
 -- Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
@@ -353,14 +381,8 @@ preOptions (HashesInsteadOfModTime :: opts)
          preOptions opts
 preOptions (IncrementalCG e :: opts)
     = do defs <- get Ctxt
-         case getCG (options defs) e of
-           Just cg => do setSession (record { incrementalCGs $= (cg :: )} !getSession)
-                         preOptions opts
-           Nothing =>
-              do coreLift $ putStrLn "No such code generator"
-                 coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst (availableCGs (options defs)))
-                 coreLift $ exitWith (ExitFailure 1)
+         setIncrementalCG True e
+         preOptions opts
 preOptions (WholeProgram :: opts)
     = do setSession (record { wholeProgram = True } !getSession)
          preOptions opts

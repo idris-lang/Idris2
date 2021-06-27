@@ -43,16 +43,9 @@ findInput [] = Nothing
 findInput (InputFile f :: fs) = Just f
 findInput (_ :: fs) = findInput fs
 
-setIncrementalCG : {auto c : Ref Ctxt Defs} ->
-                   String -> Core ()
-setIncrementalCG cgn
-    = do defs <- get Ctxt
-         case getCG (options defs) cgn of
-           Just cg => setSession (record { incrementalCGs $= (cg :: )} !getSession)
-           Nothing => pure ()
-
 -- Add extra data from the "IDRIS2_x" environment variables
 updateEnv : {auto c : Ref Ctxt Defs} ->
+            {auto o : Ref ROpts REPLOpts} ->
             Core ()
 updateEnv
     = do defs <- get Ctxt
@@ -85,7 +78,7 @@ updateEnv
          inccgs <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
          case inccgs of
               Just cgs =>
-                   traverse_ setIncrementalCG $
+                   traverse_ (setIncrementalCG False) $
                        map trim (toList (split (==',') cgs))
               Nothing => pure ()
          -- IDRIS2_PATH goes first so that it overrides this if there's
@@ -173,12 +166,12 @@ stMain cgs opts
          when (ignoreMissingIpkg opts) $
             setSession (record { ignoreMissingPkg = True } !getSession)
 
-         updateEnv
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL False
          let fname = findInput opts
          o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+         updateEnv
 
          finish <- showInfo opts
          when (not finish) $ do
