@@ -173,5 +173,5 @@ nix profile install github:idris-lang/Idris2
 If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
 
 ```sh
-nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
+nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
