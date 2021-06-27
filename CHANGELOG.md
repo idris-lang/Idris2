@@ -9,7 +9,8 @@
   In incremental mode, the final build step is much faster than in whole
   program mode (the default), at the cost of runtime performance being about
   half as good. The `--whole-program` flag overrides incremental compilation,
-  and reverts to whole program compilation.
+  and reverts to whole program compilation. Incremental compilation is currently
+  supported only by the Chez Scheme back end.
 
 ## v0.4.0
 
