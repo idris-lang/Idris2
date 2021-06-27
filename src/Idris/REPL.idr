@@ -207,24 +207,6 @@ getOptions = do
          , Editor (editor opts)
          ]
 
-export
-findCG : {auto o : Ref ROpts REPLOpts} ->
-         {auto c : Ref Ctxt Defs} -> Core Codegen
-findCG
-    = do defs <- get Ctxt
-         case codegen (session (options defs)) of
-              Chez => pure codegenChez
-              ChezSep => pure codegenChezSep
-              Racket => pure codegenRacket
-              Gambit => pure codegenGambit
-              Node => pure codegenNode
-              Javascript => pure codegenJavascript
-              RefC => pure codegenRefC
-              Other s => case !(getCodegen s) of
-                            Just cg => pure cg
-                            Nothing => do coreLift_ $ putStrLn ("No such code generator: " ++ s)
-                                          coreLift $ exitWith (ExitFailure 1)
-
 anyAt : (a -> Bool) -> a -> b -> Bool
 anyAt p loc _ = p loc
 
@@ -598,7 +580,11 @@ execExp : {auto c : Ref Ctxt Defs} ->
           PTerm -> Core REPLResult
 execExp ctm
     = do tm_erased <- prepareExp ctm
-         execute !findCG tm_erased
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         execute cg tm_erased
          pure $ Executed ctm
 
 
@@ -628,7 +614,11 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
     = do tm_erased <- prepareExp ctm
-         ok <- compile !findCG tm_erased outfile
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         ok <- compile cg tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
                ok

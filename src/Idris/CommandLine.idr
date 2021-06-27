@@ -139,6 +139,10 @@ data CLOpt
   ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
   ||| of modification time.
   HashesInsteadOfModTime |
+  ||| Use incremental code generation, if the backend supports it
+  IncrementalCG String |
+  ||| Use whole program compilation - overrides IncrementalCG if set
+  WholeProgram |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
@@ -209,6 +213,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--incremental-cg", "--inc"] [Required "backend"] (\f => [IncrementalCG f])
+             (Just "Incremental code generation on given backend"),
+           MkOpt ["--whole-program", "--wp"] [] [WholeProgram]
+             (Just "Use whole program compilation (overrides --inc)"),
            MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
               (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])

@@ -88,7 +88,14 @@ that everything has worked correctly. Assuming that `idris2` is in your
 After `make all`, type `make test` to check everything works. This uses the
 executable in `./build/exec`.
 
-### 6: (Optional) Installing the Idris 2 API
+### 6: (Optional) Enabling incremental compilation
+
+If you are working on Idris, incremental compilation means that rebuilds are
+much faster, at the cost of runtime performance being slower. To enable
+incremental compilation for the Chez back end, set the environment variable
+`IDRIS2_INC_CGS=chez`, or set the `--inc chez` flag in `idris2.ipkg`.
+
+### 7: (Optional) Installing the Idris 2 API
 
 You'll only need this if you're developing support tools, such as an external
 code generator. To do so, once everything is successfully installed, type:
@@ -99,7 +106,7 @@ The API will only work if you've completed the self-hosting step, step 4, since
 the intermediate code versions need to be consistent throughout. Otherwise, you
 will get an `Error in TTC: TTC data is in an older format` error.
 
-### 7: (Optional) Shell Auto-completion
+### 8: (Optional) Shell Auto-completion
 
 Idris2 supports tab auto-completion for Bash-like shells.
 

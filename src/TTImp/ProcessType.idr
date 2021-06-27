@@ -203,7 +203,7 @@ initDef : {vars : _} ->
           {auto u : Ref UST UState} ->
           Name -> Env Term vars -> Term vars -> List FnOpt -> Core Def
 initDef n env ty []
-    = do addUserHole n
+    = do addUserHole False n
          pure None
 initDef n env ty (ExternFn :: opts)
     = do defs <- get Ctxt

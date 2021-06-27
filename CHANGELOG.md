@@ -1,5 +1,17 @@
 # Changelog
 
+## [Next version]
+
+### Compiler changes
+
+* Added incremental compilation, using either the `--inc` flag or the
+  `IDRIS2_INC_CGS` environment variable, which compiles modules incrementally.
+  In incremental mode, the final build step is much faster than in whole
+  program mode (the default), at the cost of runtime performance being about
+  half as good. The `--whole-program` flag overrides incremental compilation,
+  and reverts to whole program compilation. Incremental compilation is currently
+  supported only by the Chez Scheme back end.
+
 ## v0.4.0
 
 ### Syntax changes
