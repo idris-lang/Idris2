@@ -70,4 +70,4 @@ executeExpr c tmpDir tm =
 ||| Codegen wrapper for Javascript implementation.
 export
 codegenJavascript : Codegen
-codegenJavascript = MkCG compileExpr executeExpr
+codegenJavascript = MkCG compileExpr executeExpr Nothing Nothing

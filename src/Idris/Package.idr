@@ -341,11 +341,26 @@ copyFile src dest
              | Left err => pure (Left err)
          writeToFile dest buf
 
-installFrom : {auto c : Ref Ctxt Defs} ->
+installFrom : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
 installFrom builddir destdir ns
     = do let ttcfile = ModuleIdent.toPath ns
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
+         objPaths_in <- traverse
+                     (\cg =>
+                        do Just cgdata <- getCG cg
+                                | Nothing => pure Nothing
+                           let Just ext = incExt cgdata
+                                | Nothing => pure Nothing
+                           let srcFile = builddir </> "ttc" </> ttcfile <.> ext
+                           let destFile = destdir </> ttcfile <.> ext
+                           let Just (dir, _) = splitParent destFile
+                                | Nothing => pure Nothing
+                           ensureDirectoryExists dir
+                           pure $ Just (srcFile, destFile))
+                     (incrementalCGs !getSession)
+         let objPaths = mapMaybe id objPaths_in
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
@@ -361,6 +376,13 @@ installFrom builddir destdir ns
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
+         -- Copy object files, if any. They don't necessarily get created,
+         -- since some modules don't generate any code themselves.
+         traverse_ (\ (obj, dest) =>
+                      do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
+                         ignore $ coreLift $ copyFile obj dest)
+                   objPaths
+
          pure ()
 
 installSrcFrom : {auto c : Ref Ctxt Defs} ->

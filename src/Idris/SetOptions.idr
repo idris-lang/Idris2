@@ -349,7 +349,20 @@ preOptions (IgnoreShadowingWarnings :: opts)
     = do setSession (record { showShadowingWarning = False } !getSession)
          preOptions opts
 preOptions (HashesInsteadOfModTime :: opts)
-    = do setSession (record {checkHashesInsteadOfModTime = True} !getSession)
+    = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+         preOptions opts
+preOptions (IncrementalCG e :: opts)
+    = do defs <- get Ctxt
+         case getCG (options defs) e of
+           Just cg => do setSession (record { incrementalCGs $= (cg :: )} !getSession)
+                         preOptions opts
+           Nothing =>
+              do coreLift $ putStrLn "No such code generator"
+                 coreLift $ putStrLn $ "Code generators available: " ++
+                                 showSep ", " (map fst (availableCGs (options defs)))
+                 coreLift $ exitWith (ExitFailure 1)
+preOptions (WholeProgram :: opts)
+    = do setSession (record { wholeProgram = True } !getSession)
          preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b

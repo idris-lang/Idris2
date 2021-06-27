@@ -1,5 +1,13 @@
 module Idris.ProcessIdr
 
+import Compiler.RefC.RefC
+import Compiler.Scheme.Chez
+import Compiler.Scheme.ChezSep
+import Compiler.Scheme.Racket
+import Compiler.Scheme.Gambit
+import Compiler.ES.Node
+import Compiler.ES.Javascript
+import Compiler.Common
 import Compiler.Inline
 
 import Core.Binary
@@ -29,7 +37,9 @@ import Idris.Pretty
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Utils.Path
 
+import System
 import System.File
 
 %default covering
@@ -150,6 +160,7 @@ readAsMain fname
     = do Just (syn, _, more) <- readFromTTC {extra = SyntaxInfo}
                                              True EmptyFC True fname (nsAsModuleIdent emptyNS) emptyNS
               | Nothing => throw (InternalError "Already loaded")
+
          replNS <- getNS
          replNestedNS <- getNestedNS
          extendSyn syn
@@ -225,6 +236,25 @@ unchangedHash sourceFileName ttcFileName
        (storedSourceHash, _) <- readHashes ttcFileName
        pure $ sourceCodeHash == storedSourceHash
 
+export
+getCG : {auto o : Ref ROpts REPLOpts} ->
+        {auto c : Ref Ctxt Defs} ->
+        CG -> Core (Maybe Codegen)
+getCG Chez = pure $ Just codegenChez
+getCG ChezSep = pure $ Just codegenChezSep
+getCG Racket = pure $ Just codegenRacket
+getCG Gambit = pure $ Just codegenGambit
+getCG Node = pure $ Just codegenNode
+getCG Javascript = pure $ Just codegenJavascript
+getCG RefC = pure $ Just codegenRefC
+getCG (Other s) = getCodegen s
+
+export
+findCG : {auto o : Ref ROpts REPLOpts} ->
+         {auto c : Ref Ctxt Defs} -> Core (Maybe Codegen)
+findCG
+    = do defs <- get Ctxt
+         getCG (codegen (session (options defs)))
 
 ||| Process everything in the module; return the syntax information which
 ||| needs to be written to the TTC (e.g. exported infix operators)
@@ -341,6 +371,17 @@ process buildmsg sourceFileName ident
                         do defs <- get Ctxt
                            ns <- ctxtPathToNS sourceFileName
                            makeBuildDirectory ns
+
+                           traverse_
+                              (\cg =>
+                                  do Just cgdata <- getCG cg
+                                          | Nothing =>
+                                              coreLift $ putStrLn $ "No incremental code generator for " ++ show cg
+                                     Just res <- incCompile cgdata sourceFileName
+                                          | Nothing => pure ()
+                                     setIncData cg res)
+                              (incrementalCGs !getSession)
+
                            writeToTTC !(get Syn) sourceFileName ttcFileName
                            ttmFileName <- getTTCFileName sourceFileName "ttm"
                            writeToTTM ttmFileName

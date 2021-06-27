@@ -174,6 +174,8 @@ pwarning (ShadowingGlobalDefs _ ns)
 
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (GenericWarn s)
+    = pure $ pretty s
 
 export
 perror : {auto c : Ref Ctxt Defs} ->

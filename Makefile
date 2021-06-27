@@ -68,19 +68,19 @@ src/IdrisPaths.idr: FORCE
 FORCE:
 
 prelude:
-	${MAKE} -C libs/prelude IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/prelude IDRIS2=${TARGET} IDRIS2_INC_CGS=chez IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 base: prelude
-	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/base IDRIS2=${TARGET} IDRIS2_INC_CGS=chez IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 network: prelude
-	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/network IDRIS2=${TARGET} IDRIS2_INC_CGS=chez IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 contrib: base
-	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/contrib IDRIS2=${TARGET} IDRIS2_INC_CGS=chez IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 test-lib: contrib
-	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
+	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=chez IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 libs : prelude base contrib network test-lib
 
