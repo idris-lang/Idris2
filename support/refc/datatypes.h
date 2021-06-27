@@ -1,5 +1,5 @@
-#ifndef __DATATYPES_H__
-#define __DATATYPES_H__
+#pragma once
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,5 +204,3 @@ typedef struct
     Value_header header;
     IORef_Storage *listIORefs;
 } Value_World;
-
-#endif

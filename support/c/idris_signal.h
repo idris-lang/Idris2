@@ -1,5 +1,4 @@
-#ifndef __IDRIS_SIGNAL_H
-#define __IDRIS_SIGNAL_H
+#pragma once
 
 #include <signal.h>
 
@@ -42,5 +41,3 @@ int sigquit();
 int sigtrap();
 int sigusr1();
 int sigusr2();
-
-#endif
