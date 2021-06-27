@@ -338,7 +338,8 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                             processDecls (decls mod)
 --                 coreLift $ gc
 
-                logTime "++ Compile defs" $ compileAndInlineAll
+                when (isNil errs) $
+                   logTime "++ Compile defs" $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source

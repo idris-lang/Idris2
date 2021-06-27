@@ -111,6 +111,8 @@ Monad m => Alternative (ValidatorT m a) where
                 (Right r) => pure $ Right r
                 (Left e') => pure $ Left (e <+> " / " <+> e')
 
+    empty = MkValidator \x => MkEitherT $ pure (Left "invalid")
+
 ||| Alter the input before validation using given function.
 export
 contramap : (a -> b) -> ValidatorT m b c -> ValidatorT m a c
