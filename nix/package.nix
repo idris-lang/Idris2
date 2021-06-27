@@ -9,6 +9,7 @@
 , racket
 , gambit
 , nodejs
+, zsh
 }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -19,7 +20,8 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez ];
+  nativeBuildInputs = [ makeWrapper clang chez ]
+    ++ lib.optional stdenv.isDarwin [ zsh ];
   buildInputs = [ chez gmp ];
 
   prePatch = ''
