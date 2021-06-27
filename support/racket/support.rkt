@@ -455,11 +455,6 @@
         (vector-ref (current-command-line-arguments) (- n 1)))
      (else "")))
 
-(define (blodwen-system cmd)
-  (if (system cmd)
-      0
-      1))
-
 ;; Randoms
 (random-seed (date*-nanosecond (current-date))) ; initialize random seed
 
