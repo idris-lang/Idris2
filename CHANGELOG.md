@@ -2,6 +2,11 @@
 
 ## [Next version]
 
+### Language changes
+
+* Missing methods in implementations now give a compile time error. This was
+  always the intended behaviour, but until now had not been implemented!
+
 ### Compiler changes
 
 * Added incremental compilation, using either the `--inc` flag or the
