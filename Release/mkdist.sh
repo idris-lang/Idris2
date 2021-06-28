@@ -2,8 +2,7 @@
 
 set -e
 
-if [ $# -eq 0 ]
-  then
+if [ $# -eq 0 ]; then
     echo "No version number supplied"
     exit 1
 fi
