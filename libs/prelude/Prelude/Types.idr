@@ -63,28 +63,30 @@ mult Z y = Z
 mult (S k) y = plus y (mult k y)
 
 public export
-equal : (x : Nat) -> (y : Nat) -> Bool
-equal Z Z = True
-equal (S j) (S k) = equal j k
-equal _ _ = False
-
-public export
-compareNat : (x : Nat) -> (y : Nat) -> Ordering
-compareNat Z Z = EQ
-compareNat Z (S k) = LT
-compareNat (S k) Z = GT
-compareNat (S j) (S k) = compareNat j k
-
-public export
 Num Nat where
   (+) = plus
   (*) = mult
 
   fromInteger x = integerToNat x
 
+-- used for nat hack
+public export
+equalNat : (m, n : Nat) -> Bool
+equalNat Z Z = True
+equalNat (S j) (S k) = equalNat j k
+equalNat _ _ = False
+
 public export
 Eq Nat where
-  (==) = equal
+  (==) = equalNat
+
+-- used for nat hack
+public export
+compareNat : (m, n : Nat) -> Ordering
+compareNat Z Z = EQ
+compareNat Z (S k) = LT
+compareNat (S k) Z = GT
+compareNat (S j) (S k) = compareNat j k
 
 public export
 Ord Nat where
