@@ -69,18 +69,28 @@ Num Nat where
 
   fromInteger x = integerToNat x
 
+-- used for nat hack
+public export
+equalNat : (m, n : Nat) -> Bool
+equalNat Z Z = True
+equalNat (S j) (S k) = equalNat j k
+equalNat _ _ = False
+
 public export
 Eq Nat where
-  Z == Z = True
-  S j == S k = j == k
-  _ == _ = False
+  (==) = equalNat
+
+-- used for nat hack
+public export
+compareNat : (m, n : Nat) -> Ordering
+compareNat Z Z = EQ
+compareNat Z (S k) = LT
+compareNat (S k) Z = GT
+compareNat (S j) (S k) = compareNat j k
 
 public export
 Ord Nat where
-  compare Z Z = EQ
-  compare Z (S k) = LT
-  compare (S k) Z = GT
-  compare (S j) (S k) = compare j k
+  compare = compareNat
 
 public export
 natToInteger : Nat -> Integer
