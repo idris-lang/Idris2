@@ -437,7 +437,7 @@ compileExpr mkexec c tmpDir outputDir tm outfile
          if ok == 0
             then do -- TODO: add launcher script
                     let outShRel = outputDir </> outfile
-                    the (Core ()) $ if isWindows
+                    if isWindows
                        then if mkexec
                                then makeShWindows "" outShRel appDirRel outBinFile
                                else makeShWindows (racket ++ " ") outShRel appDirRel outRktFile

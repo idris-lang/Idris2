@@ -629,12 +629,11 @@ runRepl fname = do
       pure (PhysicalIdrSrc modIdent)
       ) fname
   m <- newRef MD (initMetadata origin)
-  the (Core ()) $
-      case fname of
-          Nothing => pure ()
-          Just fn => do
-            errs <- loadMainFile fn
-            displayErrors errs
+  case fname of
+      Nothing => pure ()
+      Just fn => do
+        errs <- loadMainFile fn
+        displayErrors errs
   repl {u} {s}
 
 export

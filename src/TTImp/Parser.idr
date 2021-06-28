@@ -594,8 +594,7 @@ recordParam fname indents
   <|> do symbol "{"
          commit
          start <- location
-         info <- the (EmptyRule (PiInfo RawImp))
-                 (pure  AutoImplicit <* keyword "auto"
+         info <- (pure  AutoImplicit <* keyword "auto"
               <|>(do
                   keyword "default"
                   t <- simpleExpr fname indents

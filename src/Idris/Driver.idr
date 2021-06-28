@@ -102,7 +102,7 @@ updateREPLOpts : {auto o : Ref ROpts REPLOpts} ->
 updateREPLOpts
     = do opts <- get ROpts
          ed <- coreLift $ idrisGetEnv "EDITOR"
-         the (Core ()) $ case ed of
+         case ed of
               Just e => put ROpts (record { editor = e } opts)
               Nothing => pure ()
 

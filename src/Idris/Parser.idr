@@ -1461,7 +1461,7 @@ typedArg fname indents
          pure $ map (\(c, n, tm) => (n.val, c, Explicit, tm)) params
   <|> do decoratedSymbol fname "{"
          commit
-         info <- the (EmptyRule (PiInfo PTerm))
+         info <-
                  (pure  AutoImplicit <* decoratedKeyword fname "auto"
               <|> (decoratedKeyword fname "default" *> DefImplicit <$> simpleExpr fname indents)
               <|> pure      Implicit)
