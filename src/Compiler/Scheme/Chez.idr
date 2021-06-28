@@ -110,11 +110,11 @@ schHeader chez libs whole
 schFooter : Bool -> Bool -> String
 schFooter prof whole = """
 
-  (collect 4)
-  (blodwen-run-finalisers)
-  \{ (if prof then "(profile-dump-html)" else "") }
-  \{ (if whole then ")" else "") }
-"""
+    (collect 4)
+    (blodwen-run-finalisers)
+    \{ (if prof then "(profile-dump-html)" else "") }
+    \{ (if whole then ")" else "") }
+  """
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -392,55 +392,55 @@ getFgnCall version (n, fc, d) = schFgnDef fc n d version
 export
 startChezPreamble : String
 startChezPreamble = #"""
-#!/bin/sh
-# \#{ (generatedString "Chez") }
+  #!/bin/sh
+  # \#{ (generatedString "Chez") }
 
-set -e # exit on any error
+  set -e # exit on any error
 
-if [ "$(uname)" = Darwin ]; then
-  DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
-else
-  DIR=$(dirname "$(readlink -f -- "$0")")
-fi
+  if [ "$(uname)" = Darwin ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
 
-"""#
+  """#
 
 startChez : String -> String -> String
 startChez appdir target = startChezPreamble ++ #"""
-export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
-export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
-export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
+  export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
+  export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
+  export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
 
-"$DIR/\#{ target }" "$@"
-"""#
+  "$DIR/\#{ target }" "$@"
+  """#
 
 startChezCmd : String -> String -> String -> String
 startChezCmd chez appdir target progType = #"""
-@echo off
+  @echo off
 
-rem \#{ (generatedString "Chez") }
+  rem \#{ (generatedString "Chez") }
 
-set APPDIR=%~dp0
-set PATH=%APPDIR%\#{ appdir };%PATH%
-set IDRIS2_INC_SRC=%APPDIR%\#{ appdir }
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\#{ appdir };%PATH%
+  set IDRIS2_INC_SRC=%APPDIR%\#{ appdir }
 
-"\#{ chez }" \#{ progType } "%APPDIR%\#{ target }" %*
-"""#
+  "\#{ chez }" \#{ progType } "%APPDIR%\#{ target }" %*
+  """#
 
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target progType = #"""
-#!/bin/sh
-# \#{ (generatedString "Chez") }
+  #!/bin/sh
+  # \#{ (generatedString "Chez") }
 
-set -e # exit on any error
+  set -e # exit on any error
 
-DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-PATH="$DIR/\#{ appdir }":$PATH
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\#{ appdir }":$PATH
 
-export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
+  export IDRIS2_INC_SRC="$DIR/\#{ appdir }"
 
-"\#{ chez }" \#{ progType } "$DIR/\#{ target }" "$@"
-"""#
+  "\#{ chez }" \#{ progType } "$DIR/\#{ target }" "$@"
+  """#
 
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->

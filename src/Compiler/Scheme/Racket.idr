@@ -43,28 +43,28 @@ findRacoExe =
 
 schHeader : Bool -> String -> String
 schHeader prof libs = """
-#lang racket/base
-;; \{ (generatedString "Racket") }
-(require racket/async-channel)         ; for asynchronous channels
-(require racket/future)                ; for parallelism/concurrency
-(require racket/math)                  ; for math ops
-(require racket/system)                ; for system
-(require rnrs/bytevectors-6)           ; for buffers
-(require rnrs/io/ports-6)              ; for files
-(require srfi/19)                      ; for file handling and data
-(require ffi/unsafe ffi/unsafe/define) ; for calling C
-\{ (if prof then "(require profile)" else "") }
-(require racket/flonum)                ; for float-typed transcendental functions
-\{ libs }
-(let ()
+  #lang racket/base
+  ;; \{ (generatedString "Racket") }
+  (require racket/async-channel)         ; for asynchronous channels
+  (require racket/future)                ; for parallelism/concurrency
+  (require racket/math)                  ; for math ops
+  (require racket/system)                ; for system
+  (require rnrs/bytevectors-6)           ; for buffers
+  (require rnrs/io/ports-6)              ; for files
+  (require srfi/19)                      ; for file handling and data
+  (require ffi/unsafe ffi/unsafe/define) ; for calling C
+  \{ (if prof then "(require profile)" else "") }
+  (require racket/flonum)                ; for float-typed transcendental functions
+  \{ libs }
+  (let ()
 
-"""
+  """
 
 schFooter : String
 schFooter = """
-)
-(collect-garbage)
-"""
+  )
+  (collect-garbage)
+  """
 
 showRacketChar : Char -> String -> String
 showRacketChar '\\' = ("\\\\" ++)
@@ -336,47 +336,47 @@ getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
 
 startRacket : String -> String -> String -> String
 startRacket racket appdir target = #"""
-#!/bin/sh
-# \#{ (generatedString "Racket") }
+  #!/bin/sh
+  # \#{ (generatedString "Racket") }
 
-set -e # exit on any error
+  set -e # exit on any error
 
-if [ "$(uname)" = Darwin ]; then
-  DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
-else
-  DIR=$(dirname "$(readlink -f -- "$0")")
-fi
+  if [ "$(uname)" = Darwin ]; then
+    DIR=$(zsh -c 'printf %s "$0:A:h"' "$0")
+  else
+    DIR=$(dirname "$(readlink -f -- "$0")")
+  fi
 
-export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
-export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH="$DIR/\#{ appdir }":$LD_LIBRARY_PATH
+  export DYLD_LIBRARY_PATH="$DIR/\#{ appdir }":$DYLD_LIBRARY_PATH
 
-\#{ racket } "$DIR/\#{ target }" "$@"
-"""#
+  \#{ racket } "$DIR/\#{ target }" "$@"
+  """#
 
 startRacketCmd : String -> String -> String -> String
 startRacketCmd racket appdir target = #"""
-@echo off
+  @echo off
 
-rem \#{ (generatedString "Racket") }
+  rem \#{ (generatedString "Racket") }
 
-set APPDIR=%~dp0
-set PATH=%APPDIR%\#{ appdir };%PATH%
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\#{ appdir };%PATH%
 
-\#{ racket } "%APPDIR%\#{ target }" %*
-"""#
+  \#{ racket } "%APPDIR%\#{ target }" %*
+  """#
 
 startRacketWinSh : String -> String -> String -> String
 startRacketWinSh racket appdir target = #"""
-#!/bin/sh
-# \#{ (generatedString "Racket") }
+  #!/bin/sh
+  # \#{ (generatedString "Racket") }
 
-set -e # exit on any error
+  set -e # exit on any error
 
-DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-PATH="$DIR/\#{ appdir }":$PATH
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\#{ appdir }":$PATH
 
-\#{ racket } "$DIR/\#{ target }" "$@"
-"""#
+  \#{ racket } "$DIR/\#{ target }" "$@"
+  """#
 
 compileToRKT : Ref Ctxt Defs ->
                String -> ClosedTerm -> (outfile : String) -> Core ()

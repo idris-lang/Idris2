@@ -133,14 +133,14 @@ tryTTM (c :: cs) = tryTTM cs
 
 banner : String
 banner = #"""
-     ____    __     _         ___
-    /  _/___/ /____(_)____   |__ \
-    / // __  / ___/ / ___/   __/ /     Version \#{ showVersion True version }
-  _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
- /___/\__,_/_/  /_/____/   /____/      Type :? for help
+       ____    __     _         ___
+      /  _/___/ /____(_)____   |__ \
+      / // __  / ___/ / ___/   __/ /     Version \#{ showVersion True version }
+    _/ // /_/ / /  / (__  )   / __/      https://www.idris-lang.org
+   /___/\__,_/_/  /_/____/   /____/      Type :? for help
 
-Welcome to Idris 2.  Enjoy yourself!
-"""#
+  Welcome to Idris 2.  Enjoy yourself!
+  """#
 
 checkVerbose : List CLOpt -> Bool
 checkVerbose [] = False

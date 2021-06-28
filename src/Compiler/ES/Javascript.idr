@@ -27,22 +27,22 @@ compileToJS c tm = compileToES c Javascript tm ["browser", "javascript"]
 
 htmlHeader : String
 htmlHeader = """
-<html>
-  <head>
-    <meta charset='utf-8'>
-  </head>
-  <body>
-    <script type='text/javascript'>
+  <html>
+    <head>
+      <meta charset='utf-8'>
+    </head>
+    <body>
+      <script type='text/javascript'>
 
-"""
+  """
 
 htmlFooter : String
 htmlFooter = """
 
-    </script>
-  </body>
-</html>
-"""
+      </script>
+    </body>
+  </html>
+  """
 
 addHeaderAndFooter : String -> String -> String
 addHeaderAndFooter outfile es =

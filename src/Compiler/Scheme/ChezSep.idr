@@ -50,57 +50,57 @@ schHeader libs compilationUnits = """
   \{
     unlines ["  (load-shared-object \"" ++ escapeStringChez lib ++ "\")" | lib <- libs]
   })
-"""
+  """
 
 schFooter : String
 schFooter = """
 
-(collect 4)
-(blodwen-run-finalisers)
-"""
+  (collect 4)
+  (blodwen-run-finalisers)
+  """
 
 startChez : String -> String -> String -> String
 startChez chez appDirSh targetSh = Chez.startChezPreamble ++ #"""
-export LD_LIBRARY_PATH="$DIR/\#{ appDirSh }":$LD_LIBRARY_PATH
-export DYLD_LIBRARY_PATH="$DIR/\#{ appDirSh }":$DYLD_LIBRARY_PATH
+  export LD_LIBRARY_PATH="$DIR/\#{ appDirSh }":$LD_LIBRARY_PATH
+  export DYLD_LIBRARY_PATH="$DIR/\#{ appDirSh }":$DYLD_LIBRARY_PATH
 
-"\#{ chez }" -q \
-  --libdirs "$DIR/\#{ appDirSh }" \
-  --program "$DIR/\#{ targetSh }" \
-  "$@"
-"""#
+  "\#{ chez }" -q \
+    --libdirs "$DIR/\#{ appDirSh }" \
+    --program "$DIR/\#{ targetSh }" \
+    "$@"
+  """#
 
 startChezCmd : String -> String -> String -> String
 startChezCmd chez appDirSh targetSh = #"""
-@echo off
+  @echo off
 
-rem \#{ (generatedString "ChezSep") }
+  rem \#{ (generatedString "ChezSep") }
 
-set APPDIR=%~dp0
-set PATH=%APPDIR%\#{ appDirSh };%PATH%
+  set APPDIR=%~dp0
+  set PATH=%APPDIR%\#{ appDirSh };%PATH%
 
-"\#{ chez }" -q \
-  --libdirs "%APPDIR%\#{ appDirSh }" \
-  --program "%APPDIR%\#{ targetSh }" \
-  %*
-"""#
+  "\#{ chez }" -q \
+    --libdirs "%APPDIR%\#{ appDirSh }" \
+    --program "%APPDIR%\#{ targetSh }" \
+    %*
+  """#
 
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appDirSh targetSh = #"""
-#!/bin/sh
-# \#{ (generatedString "ChezSep") }
+  #!/bin/sh
+  # \#{ (generatedString "ChezSep") }
 
-set -e # exit on any error
+  set -e # exit on any error
 
-DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
-PATH="$DIR/\#{ appDirSh }":$PATH
+  DIR=$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")
+  PATH="$DIR/\#{ appDirSh }":$PATH
 
-"\#{ chez }" --program "$DIR/\#{ targetSh }" "$@"
-"\#{ chez }" -q \
-  --libdirs "$DIR/\#{ appDirSh }" \
-  --program "$DIR/\#{ targetSh }" \
-  "$@"
-"""#
+  "\#{ chez }" --program "$DIR/\#{ targetSh }" "$@"
+  "\#{ chez }" -q \
+    --libdirs "$DIR/\#{ appDirSh }" \
+    --program "$DIR/\#{ targetSh }" \
+    "$@"
+  """#
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()

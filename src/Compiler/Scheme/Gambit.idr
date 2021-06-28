@@ -50,15 +50,15 @@ findGSCBackend =
 
 schHeader : String
 schHeader = """
-;; \{ (generatedString "Gambit") }
-(declare (block)
-  (inlining-limit 450)
-  (standard-bindings)
-  (extended-bindings)
-  (not safe)
-  (optimize-dead-definitions))
+  ;; \{ (generatedString "Gambit") }
+  (declare (block)
+    (inlining-limit 450)
+    (standard-bindings)
+    (extended-bindings)
+    (not safe)
+    (optimize-dead-definitions))
 
-"""
+  """
 
 showGambitChar : Char -> String -> String
 showGambitChar '\\' = ("\\\\" ++)

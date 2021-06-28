@@ -403,15 +403,15 @@ versionMsg = "Idris 2, version " ++ show version
 export
 usage : String
 usage = """
-\{ versionMsg }
-Usage: idris2 [options] [input file]
+  \{ versionMsg }
+  Usage: idris2 [options] [input file]
 
-Available options:
-\{ optsUsage }
+  Available options:
+  \{ optsUsage }
 
-Environment variables:
-\{ envsUsage }
-"""
+  Environment variables:
+  \{ envsUsage }
+  """
 
 checkNat : Integer -> Maybe Nat
 checkNat n = toMaybe (n >= 0) (integerToNat n)
