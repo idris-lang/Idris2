@@ -13,19 +13,19 @@ data Split : Vect n a -> Type where
     SplitOne : Split [x]
     ||| two non-empty parts
     SplitPair : {n : Nat} -> {m : Nat} ->
-                {x, y : a} -> {xs : Vect n a} -> {ys : Vect m a} ->
+                (x : a) -> (xs : Vect n a) -> (y : a) -> (ys : Vect m a) ->
                 Split (x :: xs ++ y :: ys)
 
 total
 splitHelp : {n : Nat} -> (head : a) -> (zs : Vect n a) ->
             Nat -> Split (head :: zs)
 splitHelp head [] _ = SplitOne
-splitHelp head (z :: zs) 0 = SplitPair {xs = []}
-splitHelp head (z :: zs) 1 = SplitPair {xs = []}
+splitHelp head (z :: zs) 0 = SplitPair head [] z zs
+splitHelp head (z :: zs) 1 = SplitPair head [] z zs
 splitHelp head (z :: zs) (S (S k))
-  = case splitHelp head zs k of
-         SplitOne => SplitPair {xs = []}
-         SplitPair {xs} => SplitPair {xs = z :: xs}
+  = case splitHelp z zs k of
+         SplitOne => SplitPair head [] z zs
+         SplitPair x xs y ys => SplitPair head (x :: xs) y ys
 
 ||| Covering function for the `Split` view
 ||| Constructs the view in linear time
@@ -60,7 +60,7 @@ splitRec input with (sizeAccessible k)
   splitRec input | acc with (split input)
     splitRec {k = 0} []  | acc | SplitNil = SplitRecNil
     splitRec {k = 1} [x] | acc | SplitOne = SplitRecOne
-    splitRec {k = S nl + S nr} (x :: xs ++ y :: ys) | Access rec | SplitPair {x} {xs} {y} {ys} =
+    splitRec {k = S nl + S nr} (x :: xs ++ y :: ys) | Access rec | SplitPair x xs y ys =
       SplitRecPair
         (splitRec {k = S nl} (x :: xs) | rec _ $ smallerPlusL nl nr)
         (splitRec {k = S nr} (y :: ys) | rec _ $ smallerPlusR nl nr)
