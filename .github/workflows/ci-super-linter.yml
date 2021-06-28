@@ -56,4 +56,5 @@ jobs:
           VALIDATE_JAVASCRIPT_STANDARD: false #requires camel-casing
           DEFAULT_BRANCH: master
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IGNORE_GENERATED_FILES: true
 
