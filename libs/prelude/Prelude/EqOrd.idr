@@ -137,8 +137,12 @@ Ord Int where
   (>=) x y = intToBool (prim__gte_Int x y)
 
 public export
+compareInteger : (x : Integer) -> (y : Integer) -> Ordering
+compareInteger x y = if (intToBool $ prim__lt_Integer x y) then LT else if (intToBool $ prim__eq_Integer x y) then EQ else GT
+
+public export
 Ord Integer where
-  compare x y = if x < y then LT else if x == y then EQ else GT
+  compare = compareInteger
 
   (<) x y = intToBool (prim__lt_Integer x y)
   (<=) x y = intToBool (prim__lte_Integer x y)

@@ -63,6 +63,19 @@ mult Z y = Z
 mult (S k) y = plus y (mult k y)
 
 public export
+equal : (x : Nat) -> (y : Nat) -> Bool
+equal Z Z = True
+equal (S j) (S k) = equal j k
+equal _ _ = False
+
+public export
+compareNat : (x : Nat) -> (y : Nat) -> Ordering
+compareNat Z Z = EQ
+compareNat Z (S k) = LT
+compareNat (S k) Z = GT
+compareNat (S j) (S k) = compareNat j k
+
+public export
 Num Nat where
   (+) = plus
   (*) = mult
@@ -71,16 +84,11 @@ Num Nat where
 
 public export
 Eq Nat where
-  Z == Z = True
-  S j == S k = j == k
-  _ == _ = False
+  (==) = equal
 
 public export
 Ord Nat where
-  compare Z Z = EQ
-  compare Z (S k) = LT
-  compare (S k) Z = GT
-  compare (S j) (S k) = compare j k
+  compare = compareNat
 
 public export
 natToInteger : Nat -> Integer
