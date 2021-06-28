@@ -99,7 +99,7 @@ jsIdent s = concatMap okchar (unpack s)
     okchar '_' = "_"
     okchar c = if isAlphaNum c
                   then cast c
-                  else "$" ++ the (String) (asHex (cast {to=Int} c))
+                  else "$" ++ (asHex (cast {to=Int} c))
 
 keywordSafe : String -> String
 keywordSafe "var" = "var_"

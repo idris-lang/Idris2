@@ -160,7 +160,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
 
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
-         chktm <- the (Core (Term vars)) $ case mode of
+         chktm <- case mode of
               InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
               InTransform => do when (not incase) $ checkUserHolesAfter constart True
@@ -230,7 +230,7 @@ checkTermSub : {inner, vars : _} ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
-    = do defs <- the (Core Defs) $ case mode of
+    = do defs <- case mode of
                       InType => branch -- might need to backtrack if there's
                                        -- a case in the type
                       _ => get Ctxt

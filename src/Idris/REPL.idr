@@ -380,7 +380,7 @@ processEdit (TypeAt line col name)
          globals <- lookupCtxtName name (gamma defs)
 
          -- Get the Doc for the result
-         globalResult <- the (Core $ Maybe $ Doc IdrisAnn) $ case globals of
+         globalResult <- case globals of
            [] => pure Nothing
            ts => do tys <- traverse (displayType defs) ts
                     pure $ Just (vsep tys)
@@ -834,7 +834,7 @@ process (Missing n)
               [] => undefinedName replFC n
               ts => map Missed $ traverse (\fn =>
                                          do tot <- getTotality replFC fn
-                                            the (Core MissedResult) $ case isCovering tot of
+                                            case isCovering tot of
                                                  MissingCases cs =>
                                                     do tms <- traverse (displayPatTerm defs) cs
                                                        pure $ CasesMissing fn tms
@@ -886,7 +886,7 @@ process Metavars
          let holesWithArgs = mapMaybe (\(n, i, gdef) => do args <- isHole gdef
                                                            pure (n, gdef, args))
                                       globs
-         hData <- the (Core $ List HoleData) $
+         hData <-
              traverse (\n_gdef_args =>
                         -- Inference can't deal with this for now :/
                         let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in

@@ -141,7 +141,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
     = let rig = if isErased rig_in then erased else linear in
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
-    = do let rig = the RigCount $ if isErased rig_in then erased else linear
+    = do let rig = if isErased rig_in then erased else linear
          let solvemode = case elabMode elabinfo of
                               InLHS _ => inLHS
                               _ => inTerm
@@ -202,7 +202,7 @@ checkLet : {vars : _} ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
 checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
-    = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
+    = do let rigc = if isErased rigc_in then erased else linear
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable
