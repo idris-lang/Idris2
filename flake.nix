@@ -11,7 +11,10 @@
     let idris2-version = "0.4.0";
     in flake-utils.lib.eachDefaultSystem (system:
       let pkgs = import nixpkgs { inherit system; };
-          idris2Pkg = pkgs.callPackage ./nix/package.nix { inherit idris2-version; };
+          idris2Pkg = pkgs.callPackage ./nix/package.nix {
+            inherit idris2-version;
+            srcRev = self.shortRev or "dirty";
+          };
           text-editor = import ./nix/text-editor.nix { inherit pkgs idris-emacs-src idris2Pkg; };
           buildIdrisPkg = { projectName, src, idrisLibraries }:
             pkgs.callPackage ./nix/buildIdris.nix
