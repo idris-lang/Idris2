@@ -4,7 +4,7 @@ Main> prim__cast_CharString : Char -> String
 Main.sameSig : Char -> String
   
 
-Data.Strings.singleton : Char -> String
+Data.String.singleton : Char -> String
   Totality: total
 
 Prelude.Show.show : Char -> String

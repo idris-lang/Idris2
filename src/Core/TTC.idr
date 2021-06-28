@@ -904,10 +904,12 @@ TTC PMDefInfo where
   toBuf b l
       = do toBuf b (holeInfo l)
            toBuf b (alwaysReduce l)
+           toBuf b (externalDecl l)
   fromBuf b
       = do h <- fromBuf b
            r <- fromBuf b
-           pure (MkPMDefInfo h r)
+           e <- fromBuf b
+           pure (MkPMDefInfo h r e)
 
 export
 TTC TypeFlags where

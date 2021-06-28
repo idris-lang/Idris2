@@ -1,5 +1,7 @@
 module System.Clock
 
+import Data.Nat
+import Data.String
 import PrimIO
 
 %default total
@@ -50,6 +52,18 @@ public export
 Show (Clock type) where
   show (MkClock {type} seconds nanoseconds) =
     show type ++ ": " ++ show seconds ++ "s " ++ show nanoseconds ++ "ns"
+
+export
+showTime : (s, ns : Nat) -> Clock type -> String
+showTime s ns (MkClock seconds nanoseconds) =
+  let seconds = show seconds
+      quotient : Integer = cast $ 10 `power` minus 9 ns
+      nanoseconds = show (cast nanoseconds `div` quotient)
+  in concat [ padLeft s '0' seconds
+            , "."
+            , padRight ns '0' nanoseconds
+            , "s"
+            ]
 
 ||| A helper to deconstruct a Clock.
 public export

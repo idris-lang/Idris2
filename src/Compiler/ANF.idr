@@ -188,9 +188,9 @@ mutual
       = anfArgs fc vs args (AUnderApp fc n m)
   anf vs (LApp fc lazy f a)
       = anfArgs fc vs [f, a]
-                (\args => case args of
-                               [fvar, avar] => AApp fc lazy fvar avar
-                               _ => ACrash fc "Can't happen (AApp)")
+                \case
+                  [fvar, avar] => AApp fc lazy fvar avar
+                  _ => ACrash fc "Can't happen (AApp)"
   anf vs (LLet fc x val sc)
       = do i <- nextVar
            let vs' = i :: vs

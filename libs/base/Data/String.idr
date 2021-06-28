@@ -9,6 +9,26 @@ export
 singleton : Char -> String
 singleton c = strCons c ""
 
+||| Create a string by using n copies of a character
+export
+replicate : Nat -> Char -> String
+replicate n c = pack (replicate n c)
+
+||| Indent a given string by `n` spaces.
+public export
+indent : (n : Nat) -> String -> String
+indent n x = replicate n ' ' ++ x
+
+||| Pad a string on the left
+export
+padLeft : Nat -> Char -> String -> String
+padLeft n c str = replicate (minus n (String.length str)) c ++ str
+
+||| Pad a string on the right
+export
+padRight : Nat -> Char -> String -> String
+padRight n c str = str ++ replicate (minus n (String.length str)) c
+
 partial
 foldr1 : (a -> a -> a) -> List a -> a
 foldr1 _ [x] = x

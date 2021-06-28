@@ -5,7 +5,7 @@ import Core.Name.Namespace
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import Idris.Package.Types
 import System.Directory

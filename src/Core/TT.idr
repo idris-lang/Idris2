@@ -1649,6 +1649,7 @@ export
       showApp : {vars : _} -> Term vars -> List (Term vars) -> String
       showApp (Local _ c idx p) []
          = show (nameAt p) ++ "[" ++ show idx ++ "]"
+
       showApp (Ref _ _ n) [] = show n
       showApp (Meta _ n _ args) []
           = "?" ++ show n ++ "_" ++ show args

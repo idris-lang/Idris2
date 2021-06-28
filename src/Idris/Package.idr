@@ -13,7 +13,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.These
 
 import Parser.Package
@@ -45,10 +45,10 @@ import IdrisPaths
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -341,11 +341,26 @@ copyFile src dest
              | Left err => pure (Left err)
          writeToFile dest buf
 
-installFrom : {auto c : Ref Ctxt Defs} ->
+installFrom : {auto o : Ref ROpts REPLOpts} ->
+              {auto c : Ref Ctxt Defs} ->
               String -> String -> ModuleIdent -> Core ()
 installFrom builddir destdir ns
     = do let ttcfile = ModuleIdent.toPath ns
          let ttcPath = builddir </> "ttc" </> ttcfile <.> "ttc"
+         objPaths_in <- traverse
+                     (\cg =>
+                        do Just cgdata <- getCG cg
+                                | Nothing => pure Nothing
+                           let Just ext = incExt cgdata
+                                | Nothing => pure Nothing
+                           let srcFile = builddir </> "ttc" </> ttcfile <.> ext
+                           let destFile = destdir </> ttcfile <.> ext
+                           let Just (dir, _) = splitParent destFile
+                                | Nothing => pure Nothing
+                           ensureDirectoryExists dir
+                           pure $ Just (srcFile, destFile))
+                     (incrementalCGs !getSession)
+         let objPaths = mapMaybe id objPaths_in
 
          let modPath  = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns
          let destNest = joinPath modPath
@@ -361,6 +376,13 @@ installFrom builddir destdir ns
              | Left err => throw $ InternalError $ unlines
                              [ "Can't copy file " ++ ttcPath ++ " to " ++ destPath
                              , show err ]
+         -- Copy object files, if any. They don't necessarily get created,
+         -- since some modules don't generate any code themselves.
+         traverse_ (\ (obj, dest) =>
+                      do coreLift $ putStrLn $ "Installing " ++ obj ++ " to " ++ destPath
+                         ignore $ coreLift $ copyFile obj dest)
+                   objPaths
+
          pure ()
 
 installSrcFrom : {auto c : Ref Ctxt Defs} ->
@@ -607,12 +629,11 @@ runRepl fname = do
       pure (PhysicalIdrSrc modIdent)
       ) fname
   m <- newRef MD (initMetadata origin)
-  the (Core ()) $
-      case fname of
-          Nothing => pure ()
-          Just fn => do
-            errs <- loadMainFile fn
-            displayErrors errs
+  case fname of
+      Nothing => pure ()
+      Just fn => do
+        errs <- loadMainFile fn
+        displayErrors errs
   repl {u} {s}
 
 export
@@ -696,24 +717,26 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
       PIgnore : OptType
       PErr : OptType
     optType : CLOpt -> OptType
-    optType (Package cmd f)  = PPackage cmd f
-    optType Quiet            = POpt
-    optType Verbose          = POpt
-    optType Timing           = POpt
-    optType (Logging l)      = POpt
-    optType (DumpCases f)    = POpt
-    optType (DumpLifted f)   = POpt
-    optType (DumpVMCode f)   = POpt
-    optType DebugElabCheck   = POpt
-    optType (SetCG f)        = POpt
-    optType (Directive d)    = POpt
-    optType (BuildDir f)     = POpt
-    optType (OutputDir f)    = POpt
-    optType WarningsAsErrors = POpt
-    optType (ConsoleWidth n) = PIgnore
-    optType (Color b)        = PIgnore
-    optType NoBanner         = PIgnore
-    optType x                = PErr
+    optType (Package cmd f)        = PPackage cmd f
+    optType Quiet                  = POpt
+    optType Verbose                = POpt
+    optType Timing                 = POpt
+    optType (Logging l)            = POpt
+    optType (DumpCases f)          = POpt
+    optType (DumpLifted f)         = POpt
+    optType (DumpVMCode f)         = POpt
+    optType DebugElabCheck         = POpt
+    optType (SetCG f)              = POpt
+    optType (Directive d)          = POpt
+    optType (BuildDir f)           = POpt
+    optType (OutputDir f)          = POpt
+    optType WarningsAsErrors       = POpt
+    optType HashesInsteadOfModTime = POpt
+    optType Profile                = POpt
+    optType (ConsoleWidth n)       = PIgnore
+    optType (Color b)              = PIgnore
+    optType NoBanner               = PIgnore
+    optType x                      = PErr
 
     pOptUpdate : CLOpt -> (PackageOpts -> PackageOpts)
     pOptUpdate opt with (optType opt)

@@ -4,15 +4,20 @@ import Core.Core
 import Core.Name
 
 import Data.Buffer
-import public Data.IOArray
 import Data.List
 import Data.List.Elem
 import Data.List1
 import Data.Nat
+import Data.String
 import Data.Vect
 
+import System.Info
 import System.File
+
 import Libraries.Data.PosMap
+import Libraries.Utils.String
+
+import public Data.IOArray
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written
@@ -217,6 +222,7 @@ TTC String where
   fromBuf b
       = do len <- fromBuf {a = Int} b
            chunk <- get Bin
+           when (len < 0) $ corrupt "String"
            if toRead chunk >= len
               then
                 do val <- coreLift $ getString (buf chunk) (loc chunk) len
@@ -247,7 +253,7 @@ TTC Binary where
          if toRead chunk >= len
             then
               do Just newbuf <- coreLift $ newBuffer len
-                      | Nothing => throw (InternalError "Can't create buffer")
+                      | Nothing => corrupt "Binary"
                  coreLift $ copyData (buf chunk) (loc chunk) len
                                      newbuf 0
                  put Bin (incLoc len chunk)
@@ -451,3 +457,35 @@ TTC Nat where
   fromBuf b
      = do val <- fromBuf b
           pure (fromInteger val)
+
+||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
+export
+modTime : String -> Core Int
+modTime fname
+  = do Right f <- coreLift $ openFile fname Read
+         | Left err => pure 0 -- Beginning of Time :)
+       Right t <- coreLift $ fileModifiedTime f
+         | Left err => do coreLift $ closeFile f
+                          pure 0
+       coreLift $ closeFile f
+       pure t
+
+export
+hashFile : String -> Core String
+hashFile fileName
+  = do Right fileHandle <- coreLift $ popen
+            ("sha256sum \"" ++ osEscape fileName ++ "\"") Read
+         | Left _ => coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       Right hashLine <- coreLift $ fGetLine fileHandle
+         | Left _ =>
+           do coreLift $ pclose fileHandle
+              coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       coreLift $ pclose fileHandle
+       let (hash::_) = words hashLine
+         | Nil => coreFail $ InternalError ("Can't get sha256sum of " ++ fileName)
+       pure hash
+  where
+    osEscape : String -> String
+    osEscape = if isWindows
+      then id
+      else escapeStringUnix

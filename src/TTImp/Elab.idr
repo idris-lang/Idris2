@@ -160,7 +160,7 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
 
          -- Linearity and hole checking.
          -- on the LHS, all holes need to have been solved
-         chktm <- the (Core (Term vars)) $ case mode of
+         chktm <- case mode of
               InLHS _ => do when (not incase) $ checkUserHolesAfter constart True
                             pure chktm
               InTransform => do when (not incase) $ checkUserHolesAfter constart True
@@ -230,7 +230,7 @@ checkTermSub : {inner, vars : _} ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
-    = do defs <- the (Core Defs) $ case mode of
+    = do defs <- case mode of
                       InType => branch -- might need to backtrack if there's
                                        -- a case in the type
                       _ => get Ctxt
@@ -240,16 +240,16 @@ checkTermSub defining mode opts nest env env' sub tm ty
             catch {t = Error}
                   (elabTermSub defining mode opts nest
                                env env' sub tm (Just ty))
-                  (\err => case err of
-                              TryWithImplicits loc benv ns
-                                 => do put Ctxt defs
-                                       put UST ust
-                                       put MD mv
-                                       tm' <- bindImps loc benv ns tm
-                                       elabTermSub defining mode opts nest
-                                                   env env' sub
-                                                   tm' (Just ty)
-                              _ => throw err)
+                  \case
+                    TryWithImplicits loc benv ns
+                      => do put Ctxt defs
+                            put UST ust
+                            put MD mv
+                            tm' <- bindImps loc benv ns tm
+                            elabTermSub defining mode opts nest
+                                        env env' sub
+                                        tm' (Just ty)
+                    err => throw err
          case mode of
               InType => commit -- bracket the 'branch' above
               _ => pure ()

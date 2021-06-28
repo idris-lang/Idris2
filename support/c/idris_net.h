@@ -1,5 +1,4 @@
-#ifndef IDRISNET_H
-#define IDRISNET_H
+#pragma once
 
 // Includes used by the idris-file.
 #ifdef _WIN32
@@ -114,5 +113,3 @@ int idrnet_getaddrinfo(struct addrinfo** address_res, char* host,
 int idrnet_geteagain();
 
 int isNull(void* ptr);
-
-#endif

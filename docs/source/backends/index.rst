@@ -48,6 +48,17 @@ This will compile the expression ``Main.main``, generating an executable
 ``hello`` (with an extension depending on the code generator) in the
 ``build/exec`` directory.
 
+By default, Idris 2 is a whole program compiler - that is, it finds all the
+necessary function definitions and compiles them only when you build an
+executable. This gives plenty of optimisation opportunities, but can also
+be slow for rebuilding. However, if the backend supports it, you can build
+modules and executables *incrementally*:
+
+.. toctree::
+   :maxdepth: 1
+
+   incremental
+
 If the backend supports it, you can generate profiling data by setting
 the ``profile`` flag, either by starting Idris with ``--profile``, or
 running ``:set profile`` at the REPL. The profile data generated will depend

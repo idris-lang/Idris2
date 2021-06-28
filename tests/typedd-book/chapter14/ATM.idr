@@ -1,5 +1,5 @@
 import Data.Vect
-import Data.Strings
+import Data.String
 
 data ATMState = Ready | CardInserted | Session
 

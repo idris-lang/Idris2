@@ -12,7 +12,7 @@ on:
       - main
 
 env:
-  IDRIS2_VERSION: 0.3.0 # For previous-version build
+  IDRIS2_VERSION: 0.4.0 # For previous-version build
   SCHEME: scheme
 
 jobs:
@@ -25,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
-      IDRIS2_TESTS_CG: chez
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -47,7 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: racket
-      IDRIS2_TESTS_CG: racket
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -67,7 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
-      IDRIS2_TESTS_CG: chez
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -89,7 +86,7 @@ jobs:
           wget https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_VERSION.tgz
           tar zxvf idris2-$IDRIS2_VERSION.tgz
           cd Idris2-$IDRIS2_VERSION
-          make bootstrap-build
+          make bootstrap
           cd ..
       - name: Install previous version
         run: |
@@ -111,7 +108,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
-      IDRIS2_TESTS_CG: chez
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -137,7 +133,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: racket
-      IDRIS2_TESTS_CG: racket
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -161,7 +156,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
-      IDRIS2_TESTS_CG: chez
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -194,7 +188,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
-      IDRIS2_TESTS_CG: chez
     steps:
       - name: Checkout
         uses: actions/checkout@v2

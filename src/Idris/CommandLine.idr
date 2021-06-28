@@ -11,7 +11,7 @@ import Core.Options
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.Either
 
 import System
@@ -136,6 +136,13 @@ data CLOpt
   WarningsAsErrors |
   ||| Do not print shadowing warnings
   IgnoreShadowingWarnings |
+  ||| Use SHA256 hashes to determine if a source file needs rebuilding instead
+  ||| of modification time.
+  HashesInsteadOfModTime |
+  ||| Use incremental code generation, if the backend supports it
+  IncrementalCG String |
+  ||| Use whole program compilation - overrides IncrementalCG if set
+  WholeProgram |
   ||| Generate bash completion info
   BashCompletion String String |
   ||| Generate bash completion script
@@ -146,7 +153,7 @@ export
 ideSocketModeAddress : List CLOpt -> (String, Int)
 ideSocketModeAddress []  = ("localhost", 38398)
 ideSocketModeAddress (IdeModeSocket hp :: _) =
-  let (h, p) = Strings.break (== ':') hp
+  let (h, p) = String.break (== ':') hp
       port = fromMaybe 38398 (portPart p >>= parsePositive)
       host = if h == "" then "localhost" else h
   in (host, port)
@@ -206,6 +213,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])
               (Just $ "Set code generator " ++ showDefault (codegen defaultSession)),
+           MkOpt ["--incremental-cg", "--inc"] [Required "backend"] (\f => [IncrementalCG f])
+             (Just "Incremental code generation on given backend"),
+           MkOpt ["--whole-program", "--wp"] [] [WholeProgram]
+             (Just "Use whole program compilation (overrides --inc)"),
            MkOpt ["--directive"] [Required "directive"] (\d => [Directive d])
               (Just $ "Pass a directive to the current code generator"),
            MkOpt ["--package", "-p"] [Required "package"] (\f => [PkgPath f])
@@ -224,6 +235,10 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Treat warnings as errors"),
            MkOpt ["-Wno-shadowing"] [] [IgnoreShadowingWarnings]
               (Just "Do not print shadowing warnings"),
+
+           optSeparator,
+           MkOpt ["-Xcheck-hashes"] [] [HashesInsteadOfModTime]
+             (Just "Use SHA256 hashes instead of modification time to determine if a source file needs rebuilding"),
 
            optSeparator,
            MkOpt ["--prefix"] [] [ShowPrefix]
