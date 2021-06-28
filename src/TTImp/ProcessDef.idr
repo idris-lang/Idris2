@@ -30,15 +30,15 @@ import TTImp.WithClause
 import Data.Either
 import Data.List
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

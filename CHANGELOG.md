@@ -17,6 +17,14 @@
   and reverts to whole program compilation. Incremental compilation is currently
   supported only by the Chez Scheme back end.
 
+### Library Changes
+
+#### Prelude
+
+Changed
+
+- Removed `Data.Strings`.  Use `Data.String` instead.
+
 ## v0.4.0
 
 ### Syntax changes

@@ -23,13 +23,13 @@ import Data.List
 import Data.List1
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
-import Data.Strings
+import Data.String
 import System.File
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

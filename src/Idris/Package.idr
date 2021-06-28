@@ -13,7 +13,7 @@ import Core.Unify
 
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Data.These
 
 import Parser.Package
@@ -45,10 +45,10 @@ import IdrisPaths
 import public Idris.Package.Types
 import Idris.Package.Init
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 

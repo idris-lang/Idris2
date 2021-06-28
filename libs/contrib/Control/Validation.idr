@@ -13,7 +13,7 @@ module Control.Validation
 import Control.Monad.Identity
 import Control.Monad.Error.Either
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 import Decidable.Equality
 

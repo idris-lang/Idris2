@@ -4,7 +4,7 @@ import Compiler.Common
 import Compiler.ES.Imperative
 import Libraries.Utils.Hex
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 
@@ -12,10 +12,10 @@ import Core.Directory
 
 %default covering
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 data ESs : Type where
 
@@ -239,7 +239,7 @@ jsConstant (I32 i) = pure $ show i
 jsConstant (I64 i) = pure $ show i ++ "n"
 jsConstant (BI i) = pure $ show i ++ "n"
 jsConstant (Str s) = pure $ jsString s
-jsConstant (Ch c) = pure $ jsString $ Data.Strings.singleton c
+jsConstant (Ch c) = pure $ jsString $ Data.String.singleton c
 jsConstant (Db f) = pure $ show f
 jsConstant WorldVal = addConstToPreamble "idrisworld" "Symbol('idrisworld')";
 jsConstant (B8 i) = pure $ show i

@@ -5,7 +5,7 @@ import public Parser.Lexer.Common
 import Data.List1
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
 import public Libraries.Text.Bounded
 import Libraries.Text.Lexer.Tokenizer
