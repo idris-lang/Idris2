@@ -193,8 +193,6 @@ Ord Bits64 where
 
 public export
 Ord Int8 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Int8 x y)
   (<=) x y = intToBool (prim__lte_Int8 x y)
   (>) x y = intToBool (prim__gt_Int8 x y)
@@ -202,8 +200,6 @@ Ord Int8 where
 
 public export
 Ord Int16 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Int16 x y)
   (<=) x y = intToBool (prim__lte_Int16 x y)
   (>) x y = intToBool (prim__gt_Int16 x y)
@@ -211,8 +207,6 @@ Ord Int16 where
 
 public export
 Ord Int32 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Int32 x y)
   (<=) x y = intToBool (prim__lte_Int32 x y)
   (>) x y = intToBool (prim__gt_Int32 x y)
@@ -220,8 +214,6 @@ Ord Int32 where
 
 public export
 Ord Int64 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Int64 x y)
   (<=) x y = intToBool (prim__lte_Int64 x y)
   (>) x y = intToBool (prim__gt_Int64 x y)
@@ -236,8 +228,6 @@ Ord Double where
 
 public export
 Ord String where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_String x y)
   (<=) x y = intToBool (prim__lte_String x y)
   (>) x y = intToBool (prim__gt_String x y)
@@ -245,8 +235,6 @@ Ord String where
 
 public export
 Ord Char where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Char x y)
   (<=) x y = intToBool (prim__lte_Char x y)
   (>) x y = intToBool (prim__gt_Char x y)
