@@ -34,8 +34,8 @@ of `make` in the following steps.
 
 ### 1: Set installation target directory
 
-- Change the `PREFIX` in `config.mk` to the absolute path of your chosen installation destination. The default is to install in
-  `$HOME/.idris2`
+- Change the `PREFIX` in `config.mk` to the absolute path of your chosen
+installation destination. The default is to install in `$HOME/.idris2`
 
 If you have an existing Idris 2, go to Step 3. Otherwise, read on...
 
@@ -81,7 +81,9 @@ that everything has worked correctly. Assuming that `idris2` is in your
 `PATH`.
 
 - `make clean` -- to make sure you're building everything with the new version
-- `make all && make install` -- OR `make all IDRIS2_BOOT='idris2 --codegen racket' && make install` if using Racket.
+- `make all && make install` -- OR
+`make all IDRIS2_BOOT='idris2 --codegen racket' && make install`
+if using Racket.
 
 ### 5: Running tests
 
@@ -121,6 +123,7 @@ eval "$(idris2 --bash-completion-script idris2)"
 You can also add it to your `.bashrc` file.
 
 #### For ZSH Users
+
 From within ZSH, run the following commands:
 
 ```sh
@@ -151,8 +154,8 @@ brew install idris2
 
 ### Installing from nix
 
-If you are a [nix](https://nixos.org/features.html) user you can install Idris 2 together with all the requirements
-by running the following command:
+If you are a [nix](https://nixos.org/features.html) user you can install Idris
+2 together with all the requirements by running the following command:
 
 ```sh
 nix-env -i idris2
@@ -160,7 +163,8 @@ nix-env -i idris2
 
 ### Install from nix flakes
 
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install Idris 2 together with all the requirements by running the following command:
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install
+Idris 2 together with all the requirements by running the following command:
 
 ```sh
 nix profile install github:idris-lang/Idris2
@@ -170,8 +174,9 @@ nix profile install github:idris-lang/Idris2
 
 ### Run on emacs using nix flakes
 
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run Idris 2 in emacs by running the following command:
+If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can run
+Idris 2 in emacs by running the following command:
 
 ```sh
-nix run idris-lang/Idris2#emacs-with-idris idrisCode.idr
+nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
