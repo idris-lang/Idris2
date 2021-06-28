@@ -223,7 +223,7 @@ mutual
                                 _ => False)
                           rig
            logC "quantity" 10 $ do
-             def <- the (Core String) $ case definition gdef of
+             def <- case definition gdef of
                          PMDef _ _ (STerm _ tm) _ _ =>
                               do tm' <- toFullNames tm
                                  pure (show tm')

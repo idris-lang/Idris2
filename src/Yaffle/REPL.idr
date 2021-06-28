@@ -102,7 +102,7 @@ process (Missing n_in)
               [] => undefinedName emptyFC n_in
               ts => do traverse_ (\fn =>
                           do tot <- getTotality emptyFC fn
-                             the (Core ()) $ case isCovering tot of
+                             case isCovering tot of
                                   MissingCases cs =>
                                      coreLift_ (putStrLn (show fn ++ ":\n" ++
                                                  showSep "\n" (map show cs)))

@@ -6,7 +6,16 @@ Eq Foo where
    C == C = True
    _ == _ = False
 
-Ord Foo where
-   A < B = True
-   B < C = True
-   _ < _ = False
+interface Read a where
+  readPrefix : String -> Maybe (a, String)
+
+  read : String -> Maybe a
+  read str = case readPrefix str of
+    Just (a, "") => pure a
+    Nothing => Nothing
+
+Read Foo where
+
+  read "A" = A
+  read "B" = B
+  read "C" = C

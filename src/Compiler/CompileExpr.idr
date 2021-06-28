@@ -203,6 +203,10 @@ natHack =
     , MagicCRef (NS typesNS (UN "mult")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
     , MagicCRef (NS typesNS (UN "minus")) 2 magic__natMinus
+    , MagicCRef (NS typesNS (UN "equalNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__eq_Integer")) [m, n])
+    , MagicCRef (NS typesNS (UN "compareNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN "compareInteger"))) [m, n])
     ]
 
 -- get all transformation from %builtin pragmas

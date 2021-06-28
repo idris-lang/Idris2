@@ -38,4 +38,30 @@ Refers to: [Prelude.Types.mult]
 Refers to (runtime): []
 Flags: [covering]
 Size change: Prelude.Types.mult: [Just (0, Same), Just (1, Same)]
+Main> Main.doCompare ==> [{arg:0}, {arg:1}];
+Compile time tree: [0] (Prelude.Types.compareNat {arg:0}[0] {arg:1}[1])
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: [{arg:0}, {arg:1}]: (Prelude.EqOrd.compareInteger [!{arg:0}, !{arg:1}])
+Refers to: [Prelude.Types.compareNat]
+Refers to (runtime): [Prelude.EqOrd.compareInteger]
+Flags: [covering]
+Size change: Prelude.Types.compareNat: [Just (0, Same), Just (1, Same)]
+Main> Main.doEqual ==> [{arg:0}, {arg:1}];
+Compile time tree: [0] (Prelude.Types.equalNat {arg:0}[0] {arg:1}[1])
+Run time tree: Error: ""
+RigW
+Erasable args: []
+Detaggable arg types: []
+Specialise args: []
+Inferrable args: []
+Compiled: [{arg:0}, {arg:1}]: (==Integer [!{arg:0}, !{arg:1}])
+Refers to: [Prelude.Types.equalNat]
+Refers to (runtime): []
+Flags: [covering]
+Size change: Prelude.Types.equalNat: [Just (0, Same), Just (1, Same)]
 Main> Bye for now!

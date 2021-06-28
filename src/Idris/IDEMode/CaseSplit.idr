@@ -178,7 +178,7 @@ updateCase splits line col
                                   else do rs <- traverse getReplaces valid
                                           let stok = tokens l
                                           defs <- get Ctxt
-                                          u <- newRef UPD (the (List String) [])
+                                          u <- newRef UPD []
                                           updateAll defs stok rs
   where
     getValid : ClauseUpdate -> Maybe (List (Name, RawImp))

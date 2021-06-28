@@ -105,6 +105,7 @@ public export
 interface Eq ty => Ord ty where
   constructor MkOrd
   compare : ty -> ty -> Ordering
+  compare x y = if x < y then LT else if x == y then EQ else GT
 
   (<) : ty -> ty -> Bool
   (<) x y = compare x y == LT
@@ -145,8 +146,6 @@ Ord Bool where
 
 public export
 Ord Int where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Int x y)
   (<=) x y = intToBool (prim__lte_Int x y)
   (>) x y = intToBool (prim__gt_Int x y)
@@ -154,17 +153,18 @@ Ord Int where
 
 public export
 Ord Integer where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Integer x y)
   (<=) x y = intToBool (prim__lte_Integer x y)
   (>) x y = intToBool (prim__gt_Integer x y)
   (>=) x y = intToBool (prim__gte_Integer x y)
 
+-- Used for the nat hack
+public export
+compareInteger : (x, y : Integer) -> Ordering
+compareInteger = compare
+
 public export
 Ord Bits8 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Bits8 x y)
   (<=) x y = intToBool (prim__lte_Bits8 x y)
   (>) x y = intToBool (prim__gt_Bits8 x y)
@@ -172,8 +172,6 @@ Ord Bits8 where
 
 public export
 Ord Bits16 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Bits16 x y)
   (<=) x y = intToBool (prim__lte_Bits16 x y)
   (>) x y = intToBool (prim__gt_Bits16 x y)
@@ -181,8 +179,6 @@ Ord Bits16 where
 
 public export
 Ord Bits32 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Bits32 x y)
   (<=) x y = intToBool (prim__lte_Bits32 x y)
   (>) x y = intToBool (prim__gt_Bits32 x y)
@@ -190,8 +186,6 @@ Ord Bits32 where
 
 public export
 Ord Bits64 where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Bits64 x y)
   (<=) x y = intToBool (prim__lte_Bits64 x y)
   (>) x y = intToBool (prim__gt_Bits64 x y)
@@ -235,8 +229,6 @@ Ord Int64 where
 
 public export
 Ord Double where
-  compare x y = if x < y then LT else if x == y then EQ else GT
-
   (<) x y = intToBool (prim__lt_Double x y)
   (<=) x y = intToBool (prim__lte_Double x y)
   (>) x y = intToBool (prim__gt_Double x y)
