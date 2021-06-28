@@ -141,7 +141,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope Nothing
     = let rig = if isErased rig_in then erased else linear in
           inferLambda rig elabinfo nest env fc rigl info n argTy scope Nothing
 checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
-    = do let rig = the RigCount $ if isErased rig_in then erased else linear
+    = do let rig = if isErased rig_in then erased else linear
          let solvemode = case elabMode elabinfo of
                               InLHS _ => inLHS
                               _ => inTerm
@@ -171,12 +171,14 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     log "metadata.names" 7 "checkLambda is adding ↓"
                     addNameType fc n env pty -- Add the type of the argument to the metadata
 
-                    checkExp rig elabinfo env fc
-                             (Bind fc n (Lam fc' rigb info' tyv) scopev)
-                             (gnf env
-                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
-                             (Just (gnf env
-                                       (Bind fc bn (Pi fc' c info' pty) psc)))
+                    -- We've already checked the argument and scope types,
+                    -- so we just need to check multiplicities
+                    when (rigb /= c) $
+                        throw (CantConvert fc env
+                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
+                                  (Bind fc bn (Pi fc' c info' pty) psc))
+                    pure (Bind fc n (Lam fc' rigb info' tyv) scopev,
+                          gnf env (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
               _ => inferLambda rig elabinfo nest env fc rigl info n argTy scope (Just expty_in)
 
 weakenExp : {x, vars : _} ->
@@ -200,7 +202,7 @@ checkLet : {vars : _} ->
            (expTy : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
 checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
-    = do let rigc = the RigCount $ if isErased rigc_in then erased else linear
+    = do let rigc = if isErased rigc_in then erased else linear
          (tyv, tyt) <- check erased elabinfo nest env nTy (Just (gType fc))
          -- Try checking at the given multiplicity; if that doesn't work,
          -- try checking at Rig1 (meaning that we're using a linear variable

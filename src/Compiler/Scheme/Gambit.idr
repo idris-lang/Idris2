@@ -16,7 +16,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -49,7 +49,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader =
-    "; @generated\n" ++
+    "; @" ++ "generated\n" ++
     "(declare (block)\n" ++
     "(inlining-limit 450)\n" ++
     "(standard-bindings)\n" ++
@@ -205,11 +205,11 @@ cCall fc cfn fnWrapName clib args ret
          --                   copyLib (fname, fullname)
          --                   put Loaded (clib :: loaded)
          --                   pure ""
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
 
          argsInfo <- traverse buildArg args
-         argCTypes <- traverse (\a => cType fc (snd a)) args
+         argCTypes <- traverse (cType fc . snd) args
          retCType <- cType fc ret
 
          let cWrapperDefs = map buildCWrapperDefs $ mapMaybe snd argsInfo
@@ -307,12 +307,12 @@ useCC : {auto c : Ref Ctxt Defs} ->
         FC -> List String -> List (Name, CFType) -> CFType -> Core (Maybe String, (String, String))
 useCC fc ccs args ret
     = case parseCC ["scheme,gambit", "scheme", "C"] ccs of
-           Nothing => throw (NoForeignCC fc)
+           Nothing => throw (NoForeignCC fc ccs)
            Just ("scheme,gambit", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("scheme", [sfn]) => pure (Nothing, (!(schemeCall fc sfn (map fst args) ret), ""))
            Just ("C", [cfn, clib]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
            Just ("C", [cfn, clib, chdr]) => pure (Just clib, !(cCall fc cfn (fnWrapName cfn) clib args ret))
-           _ => throw (NoForeignCC fc)
+           _ => throw (NoForeignCC fc ccs)
   where
     fnWrapName : String -> String -> String
     fnWrapName cfn schemeArgName = schemeArgName ++ "-" ++ cfn ++ "-cFunWrap"
@@ -423,4 +423,4 @@ executeExpr c tmpDir tm
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

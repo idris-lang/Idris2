@@ -9,14 +9,14 @@ import TTImp.TTImp
 import Data.List
 import Data.List1
 import Libraries.Data.List.Extra
-import Data.Strings
+import Data.String
 import System.File
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 
@@ -82,10 +82,6 @@ data ROpts : Type where
 export
 withROpts : {auto o : Ref ROpts REPLOpts} -> Core a -> Core a
 withROpts = wrapRef ROpts (\_ => pure ())
-
-export
-replFC : FC
-replFC = MkFC "(interactive)" (0, 0) (0, 0)
 
 export
 setOutput : {auto o : Ref ROpts REPLOpts} ->

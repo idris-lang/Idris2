@@ -6,9 +6,9 @@ import Core.TT
 import TTImp.TTImp
 
 import Data.List
-import Data.Strings
+import Data.List1
+import Data.String
 
-import Libraries.Data.List1 as Lib
 import Libraries.Utils.String
 
 %default covering
@@ -80,8 +80,15 @@ findUniqueBindableNames fc arg env used t
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
                     ns <- lookupCtxtName (UN n) ctxt
-                    pure $ MkPair n . map fst <$> Lib.fromList ns
-            whenJust (Lib.fromList ns) $ recordWarning . ShadowingGlobalDefs fc
+                    let ns = flip mapMaybe ns $ \(n, _, d) =>
+                               case definition d of
+                                -- do not warn about holes: `?a` is not actually
+                                -- getting shadowed as it will not become a
+                                -- toplevel declaration
+                                 Hole _ _ => Nothing
+                                 _ => pure n
+                    pure $ MkPair n <$> fromList ns
+            whenJust (fromList ns) $ recordWarning . ShadowingGlobalDefs fc
        pure assoc
 
 export

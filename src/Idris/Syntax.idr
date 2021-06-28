@@ -14,6 +14,7 @@ import TTImp.TTImp
 import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
+import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
@@ -266,6 +267,7 @@ mutual
        PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
+       SearchTimeout : Integer -> Directive
 
   public export
   data PField : Type where
@@ -500,7 +502,7 @@ record Import where
 public export
 record Module where
   constructor MkModule
-  headerloc : FC
+  headerLoc : FC
   moduleNS : ModuleIdent
   imports : List Import
   documentation : String
@@ -581,7 +583,14 @@ mutual
         = "let { << definitions >>  } in " ++ showPrec d sc
     showPrec d (PUpdate _ fs)
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
-    showPrec d (PApp _ f a) = showPrec App f ++ " " ++ showPrec App a
+    showPrec d (PApp _ f a) =
+      let catchall : Lazy String := showPrec App f ++ " " ++ showPrec App a in
+      case f of
+        PRef _ n =>
+          if isJust (isRF n)
+          then showPrec App a ++ " " ++ showPrec App f
+          else catchall
+        _ => catchall
     showPrec d (PWithApp _ f a) = showPrec d f ++ " | " ++ showPrec d a
     showPrec d (PAutoApp _ f a)
         = showPrec d f ++ " @{" ++ showPrec d a ++ "}"
@@ -835,7 +844,7 @@ initSyntax
                initSaveDocStrings
                []
                []
-               (IVar (MkFC "(default)" (0, 0) (0, 0)) (UN "main"))
+               (IVar EmptyFC (UN "main"))
 
   where
 

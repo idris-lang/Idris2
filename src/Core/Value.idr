@@ -11,33 +11,36 @@ import Libraries.Data.NameMap
 %default covering
 
 public export
+data EvalOrder = CBV | CBN
+
+public export
 record EvalOpts where
   constructor MkEvalOpts
   holesOnly : Bool -- only evaluate hole solutions
   argHolesOnly : Bool -- only evaluate holes which are relevant arguments
   removeAs : Bool -- reduce 'as' patterns (don't do this on LHS)
-  usedMetas : IntMap () -- Metavariables we're under, to detect cycles
   evalAll : Bool -- evaluate everything, including private names
   tcInline : Bool -- inline for totality checking
   fuel : Maybe Nat -- Limit for recursion depth
   reduceLimit : List (Name, Nat) -- reduction limits for given names. If not
                      -- present, no limit
+  strategy : EvalOrder
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True empty False False Nothing []
+defaultOpts = MkEvalOpts False False True False False Nothing [] CBN
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False empty False False Nothing []
+withHoles = MkEvalOpts True True False False False Nothing [] CBN
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True empty True False Nothing []
+withAll = MkEvalOpts False False True True False Nothing [] CBN
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False empty False False Nothing []
+withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
 
 export
 tcOnly : EvalOpts
@@ -46,6 +49,14 @@ tcOnly = record { tcInline = True } withArgHoles
 export
 onLHS : EvalOpts
 onLHS = record { removeAs = False } defaultOpts
+
+export
+cbn : EvalOpts
+cbn = defaultOpts
+
+export
+cbv : EvalOpts
+cbv = record { strategy = CBV } defaultOpts
 
 mutual
   public export
@@ -60,7 +71,7 @@ mutual
                    LocalEnv free vars ->
                    Env Term free ->
                    Term (vars ++ free) -> Closure free
-       MkNFClosure : NF free -> Closure free
+       MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
   public export

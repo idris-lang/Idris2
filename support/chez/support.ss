@@ -10,11 +10,9 @@
 
 (define blodwen-toSignedInt
   (lambda (x bits)
-    (let ((ma (ash 1 bits)))
-      (if (or (< x (- 0 ma))
-              (>= x ma))
-          (remainder x ma)
-          x))))
+    (if (logbit? bits x)
+        (logor x (ash (- 1) bits))
+        (logand x (- (ash 1 bits) 1)))))
 
 (define blodwen-toUnsignedInt
   (lambda (x bits)
@@ -47,13 +45,7 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (logbit? bits x)
-        (logor x (ash (- 1) bits))
-        (logand x (- (ash 1 bits) 1)))))
-
-(define blodwen-bits-shl-signed (lambda (x y bits) (truncate-bits (ash x y) bits)))
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (ash x y) bits)))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (ash x y) (ash 1 bits))))
 
@@ -185,9 +177,6 @@
 
 (define (blodwen-buffer-size buf)
   (bytevector-length buf))
-
-(define (blodwen-buffer-free buf)
-  (void))  ; Rely on built-in memory management
 
 (define (blodwen-buffer-setbyte buf loc val)
   (bytevector-u8-set! buf loc val))
@@ -413,9 +402,6 @@
 
 (define (blodwen-hasenv var)
   (if (eq? (getenv var) #f) 0 1))
-
-(define (blodwen-system cmd)
-  (system cmd))
 
 ;; Randoms
 (define random-seed-register 0)

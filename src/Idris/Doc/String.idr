@@ -18,7 +18,7 @@ import TTImp.Elab.Prim
 import Data.List
 import Data.List1
 import Data.Maybe
-import Data.Strings
+import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
@@ -30,6 +30,8 @@ import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import Parser.Lexer.Source
+
+%default covering
 
 public export
 data IdrisDocAnn
@@ -342,7 +344,7 @@ summarise n -- n is fully qualified
                         _ => Nothing
          ty <- normaliseHoles defs [] (type def)
          pure (nameRoot n ++ " : " ++ show !(resugar [] ty) ++
-                  maybe "" (\d => "\n\t" ++ d) doc)
+                  maybe "" ((++) "\n\t") doc)
 
 -- Display all the exported names in the given namespace
 export

@@ -1,6 +1,6 @@
 module Main
 
-import Data.Strings
+import Data.String
 import Data.Vect
 import System.REPL
 

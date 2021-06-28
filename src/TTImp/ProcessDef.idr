@@ -30,15 +30,15 @@ import TTImp.WithClause
 import Data.Either
 import Data.List
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Maybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -386,8 +386,8 @@ checkLHS {vars} trans mult hashit n opts nest env fc lhs_in
 hasEmptyPat : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
-hasEmptyPat defs env (Bind fc x b@(PVar _ _ _ ty) sc)
-   = pure $ !(isEmpty defs env !(nf defs env ty))
+hasEmptyPat defs env (Bind fc x b sc)
+   = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
             || !(hasEmptyPat defs (b :: env) sc)
 hasEmptyPat defs env _ = pure False
 
@@ -871,11 +871,16 @@ processDef opts nest env fc n_in cs_in
                  do t <- toFullNames tree_ct
                     pure ("Case tree for " ++ show n ++ ": " ++ show t)
 
+         -- check whether the name was declared in a different source file
+         defs <- get Ctxt
+         let pi = case lookup n (userHoles defs) of
+                        Nothing => defaultPI
+                        Just e => record { externalDecl = e } defaultPI
          -- Add compile time tree as a placeholder for the runtime tree,
          -- but we'll rebuild that in a later pass once all the case
          -- blocks etc are resolved
          ignore $ addDef (Resolved nidx)
-                  (record { definition = PMDef defaultPI cargs tree_ct tree_ct pats
+                  (record { definition = PMDef pi cargs tree_ct tree_ct pats
                           } gdef)
 
          when (visibility gdef == Public) $

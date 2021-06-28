@@ -6,6 +6,7 @@ import Core.Context
 import Core.Env
 import Core.Name
 import Core.Normalise
+import Core.Options
 import Core.TT
 import Core.Value
 
@@ -176,21 +177,36 @@ magic ms e = go ms e where
     Nothing => go ms e
     Just e' => e'
 
-natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
-natMinus fc fc' [m,n] = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]
+%inline
+magic__integerToNat : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
+magic__integerToNat fc fc' [k]
+  = CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k]
+
+magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
+magic__natMinus fc fc' [m,n]
+  = magic__integerToNat fc fc'
+    [CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, n]]
+
+-- We don't reuse natMinus here because we assume that unsuc will only be called
+-- on S-headed numbers so we do not need the truncating integerToNat call!
+magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
+magic__natUnsuc fc fc' [m]
+  = CApp fc (CRef fc' (UN "prim__sub_Integer")) [m, CPrimVal fc (BI 1)]
 
 -- TODO: next release remove this and use %builtin pragma
 natHack : List Magic
 natHack =
-    [ MagicCRef (NS typesNS (UN "natToInteger")) 1
-         (\ _, _, [k] => k)
-    , MagicCRef (NS typesNS (UN "integerToNat")) 1
-         (\ fc, fc', [k] => CApp fc (CRef fc' (NS typesNS (UN "prim__integerToNat"))) [k])
+    [ MagicCRef (NS typesNS (UN "natToInteger")) 1 (\ _, _, [k] => k)
+    , MagicCRef (NS typesNS (UN "integerToNat")) 1 magic__integerToNat
     , MagicCRef (NS typesNS (UN "plus")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__add_Integer")) [m, n])
     , MagicCRef (NS typesNS (UN "mult")) 2
          (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__mul_Integer")) [m, n])
-    , MagicCRef (NS natNS (UN "minus")) 2 natMinus
+    , MagicCRef (NS typesNS (UN "minus")) 2 magic__natMinus
+    , MagicCRef (NS typesNS (UN "equalNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (UN "prim__eq_Integer")) [m, n])
+    , MagicCRef (NS typesNS (UN "compareNat")) 2
+         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN "compareInteger"))) [m, n])
     ]
 
 -- get all transformation from %builtin pragmas
@@ -237,7 +253,7 @@ trySBranch :
 trySBranch ss n (MkConAlt nm _ _ [arg] sc)
   = do guard $ isJust $ lookup nm ss
        let fc = getFC n
-       pure (CLet fc arg True (natMinus fc fc [n, CPrimVal fc (BI 1)]) sc)
+       pure (CLet fc arg True (magic__natUnsuc fc fc [n]) sc)
 trySBranch _ _ _ = Nothing
 
 tryZBranch :
@@ -672,17 +688,53 @@ getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
+lamRHSenv : Int -> FC -> (ns : List Name) -> SubstCEnv ns []
+lamRHSenv i fc [] = []
+lamRHSenv i fc (n :: ns)
+    = CRef fc (MN "x" i) :: lamRHSenv (i + 1) fc ns
+
+mkBounds : (xs : _) -> Bounds xs
+mkBounds [] = None
+mkBounds (x :: xs) = Add x x (mkBounds xs)
+
+getNewArgs : {done : _} ->
+             SubstCEnv done args -> List Name
+getNewArgs [] = []
+getNewArgs (CRef _ n :: xs) = n :: getNewArgs xs
+getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
+
+-- If a name is declared in one module and defined in another,
+-- we have to assume arity 0 for incremental compilation because
+-- we have no idea how it's defined, and when we made calls to the
+-- function, they had arity 0.
+lamRHS : (ns : List Name) -> CExp ns -> CExp []
+lamRHS ns tm
+    = let env = lamRHSenv 0 (getFC tm) ns
+          tmExp = substs env (rewrite appendNilRightNeutral ns in tm)
+          newArgs = reverse $ getNewArgs env
+          bounds = mkBounds newArgs
+          expLocs = mkLocals zero {vars = []} bounds tmExp in
+          lamBind (getFC tm) _ expLocs
+  where
+    lamBind : FC -> (ns : List Name) -> CExp ns -> CExp []
+    lamBind fc [] tm = tm
+    lamBind fc (n :: ns) tm = lamBind fc ns (CLam fc n tm)
+
 toCDef : {auto c : Ref Ctxt Defs} ->
          Name -> ClosedTerm -> List Nat -> Def ->
          Core CDef
 toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
-toCDef n ty erased (PMDef _ args _ tree _)
+toCDef n ty erased (PMDef pi args _ tree _)
     = do let (args' ** p) = mkSub 0 args erased
          comptree <- toCExpTree n tree
-         if isNil erased
-            then pure $ MkFun args comptree
-            else pure $ MkFun args' (shrinkCExp p comptree)
+         pure $ toLam (externalDecl pi) $ if isNil erased
+            then MkFun args comptree
+            else MkFun args' (shrinkCExp p comptree)
+  where
+    toLam : Bool -> CDef -> CDef
+    toLam True (MkFun args rhs) = MkFun [] (lamRHS args rhs)
+    toLam _ d = d
 toCDef n ty _ (ExternDef arity)
     = let (ns ** args) = mkArgList 0 arity in
           pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (map toArgExp (getVars args)))
@@ -748,9 +800,22 @@ compileDef n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (InternalError ("Trying to compile unknown name " ++ show n))
-         ce <- toCDef n (type gdef) (eraseArgs gdef)
-                             !(toFullNames (definition gdef))
-         setCompiled n ce
+         -- If we're incremental, and the name has no definition yet, it
+         -- might end up defined in another module, so leave it, but warn
+         if noDefYet (definition gdef) (incrementalCGs !getSession)
+           -- This won't be accurate if we have names declared in one module
+           -- and defined elsewhere. It's tricky to do the complete check that
+           -- we do for whole program compilation, though, since that involves
+           -- traversing everything from the main expression.
+           -- For now, consider it an incentive not to have cycles :).
+            then recordWarning (GenericWarn ("Compiling hole " ++ show n))
+            else do ce <- toCDef n (type gdef) (eraseArgs gdef)
+                           !(toFullNames (definition gdef))
+                    setCompiled n ce
+  where
+    noDefYet : Def -> List CG -> Bool
+    noDefYet None (_ :: _) = True
+    noDefYet _ _ = False
 
 export
 mkForgetDef : {auto c : Ref Ctxt Defs} ->

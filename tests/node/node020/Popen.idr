@@ -1,7 +1,7 @@
 import System
 import System.File
 import System.Info
-import Data.Strings
+import Data.String
 
 windowsPath : String -> String
 windowsPath path =

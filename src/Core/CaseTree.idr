@@ -2,10 +2,10 @@ module Core.CaseTree
 
 import Core.TT
 
-import Libraries.Data.Bool.Extra
+import Data.Bool
 import Data.List
-import Libraries.Data.NameMap
 
+import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -159,7 +159,7 @@ mutual
   eqTree (Case i _ _ alts) (Case i' _ _ alts')
       = i == i'
        && length alts == length alts'
-       && allTrue (zipWith eqAlt alts alts')
+       && all (uncurry eqAlt) (zip alts alts')
   eqTree (STerm _ t) (STerm _ t') = eqTerm t t'
   eqTree (Unmatched _) (Unmatched _) = True
   eqTree Impossible Impossible = True

@@ -2,10 +2,11 @@ module Core.Name.Namespace
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 import Decidable.Equality
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Utils.Path
 
 %default total
 
@@ -113,6 +114,12 @@ unsafeUnfoldModuleIdent (MkMI ns) = ns
 export
 unsafeFoldModuleIdent : List String -> ModuleIdent
 unsafeFoldModuleIdent = MkMI
+
+namespace ModuleIdent
+  ||| A.B.C -> "A/B/C"
+  export
+  toPath : ModuleIdent -> String
+  toPath = joinPath . reverse . unsafeUnfoldModuleIdent
 
 -------------------------------------------------------------------------------------
 -- HIERARCHICAL STRUCTURE

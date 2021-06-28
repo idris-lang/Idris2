@@ -134,8 +134,10 @@ Monad List1 where
 export
 Foldable List1 where
   foldr c n (x ::: xs) = c x (foldr c n xs)
+  foldl f z (x ::: xs) = foldl f (f z x) xs
   null _ = False
   toList = forget
+  foldMap f (x ::: xs) = f x <+> foldMap f xs
 
 export
 Traversable List1 where
@@ -157,7 +159,7 @@ Ord a => Ord (List1 a) where
 -- Properties
 
 export
-consInjective : the (List1 a) (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
+consInjective : (x ::: xs) === (y ::: ys) -> (x === y, xs === ys)
 consInjective Refl = (Refl, Refl)
 
 ------------------------------------------------------------------------
@@ -199,3 +201,7 @@ Zippable List1 where
       unzipWith3' (x :: xs) = let (b, c, d) = f x
                                   (bs, cs, ds) = unzipWith3' xs in
                                   (b :: bs, c :: cs, d :: ds)
+
+export
+Uninhabited a => Uninhabited (List1 a) where
+  uninhabited (hd ::: _) = uninhabited hd

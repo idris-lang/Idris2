@@ -14,8 +14,10 @@ import System
 import System.File
 
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.String.Extra
+
+%default covering
 
 ||| Compile a TT expression to Javascript
 compileToJS : Ref Ctxt Defs ->
@@ -68,4 +70,4 @@ executeExpr c tmpDir tm =
 ||| Codegen wrapper for Javascript implementation.
 export
 codegenJavascript : Codegen
-codegenJavascript = MkCG compileExpr executeExpr
+codegenJavascript = MkCG compileExpr executeExpr Nothing Nothing

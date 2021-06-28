@@ -2,7 +2,7 @@
 Error: While processing right hand side of bad. When unifying Elab () and Elab a.
 Mismatch between: () and a.
 
-refdecl.idr:13:16--13:29
+refdecl:13:16--13:29
  09 | 
  10 | %runElab mkDecls `(94)
  11 | 

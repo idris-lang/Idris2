@@ -17,8 +17,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -28,6 +27,10 @@ import System.Directory
 import System.File
 import System.Info
 
+import Libraries.Data.NameMap
+import Libraries.Data.Version
+import Libraries.Utils.String
+
 %default covering
 
 export
@@ -35,8 +38,30 @@ findChez : IO String
 findChez
     = do Nothing <- idrisGetEnv "CHEZ"
             | Just chez => pure chez
-         path <- pathLookup ["chez", "chezscheme9.5", "scheme"]
+         path <- pathLookup ["chez", "chezscheme", "chezscheme9.5", "scheme"]
          pure $ fromMaybe "/usr/bin/env scheme" path
+
+||| Returns the chez scheme version for given executable
+|||
+||| This uses `chez --version` which unfortunately writes the version
+||| on `stderr` thus requiring suffixing the command which shell redirection
+||| which does not seem very portable.
+export
+chezVersion : String -> IO (Maybe Version)
+chezVersion chez = do
+    Right fh <- popen cmd Read
+        | Left err => pure Nothing
+    Right output <- fGetLine fh
+        | Left err => pure Nothing
+    pclose fh
+    pure $ parseVersion output
+  where
+  cmd : String
+  cmd = chez ++ " --version 2>&1"
+
+unsupportedCallingConvention : Maybe Version -> Bool
+unsupportedCallingConvention Nothing = True
+unsupportedCallingConvention (Just version) = version < MkVersion (9,5,0) Nothing
 
 -- Given the chez compiler directives, return a list of pairs of:
 --   - the library file name
@@ -57,19 +82,10 @@ findLibs ds
              then Just (trim (substr 3 (length d) d))
              else Nothing
 
-export
-escapeString : String -> String
-escapeString s = pack $ foldr escape [] $ unpack s
-  where
-    escape : Char -> List Char -> List Char
-    escape '"' cs = '\\' :: '\"' :: cs
-    escape '\\' cs = '\\' :: '\\' :: cs
-    escape c   cs = c :: cs
-
-schHeader : String -> List String -> String
-schHeader chez libs
+schHeader : String -> List String -> Bool -> String
+schHeader chez libs whole
   = (if os /= "windows" then "#!" ++ chez ++ " --script\n\n" else "") ++
-    "; @generated\n" ++
+    "; @" ++ "generated\n" ++
     "(import (chezscheme))\n" ++
     "(case (machine-type)\n" ++
     "  [(i3fb ti3fb a6fb ta6fb) #f]\n" ++
@@ -78,15 +94,19 @@ schHeader chez libs
     "  [(i3nt ti3nt a6nt ta6nt) (load-shared-object \"msvcrt.dll\")" ++
     "                           (load-shared-object \"ws2_32.dll\")]\n" ++
     "  [else (load-shared-object \"libc.so\")])\n\n" ++
-    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeString x ++ "\")") libs) ++ "\n\n" ++
-    "(let ()\n"
+    showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) ++ "\n\n" ++
+    if whole
+       then "(let ()\n"
+       else "(source-directories (cons (getenv \"IDRIS2_INC_SRC\") '()))\n"
 
-schFooter : Bool -> String
-schFooter prof
+schFooter : Bool -> Bool -> String
+schFooter prof whole
     = "(collect 4)\n(blodwen-run-finalisers)\n" ++
-      if prof
-         then "(profile-dump-html))\n"
-         else ")\n"
+      (if prof
+          then "(profile-dump-html)"
+          else "") ++
+      (if whole
+          then ")\n" else "\n")
 
 showChezChar : Char -> String -> String
 showChezChar '\\' = ("\\\\" ++)
@@ -140,7 +160,7 @@ mutual
       = do structsc <- schExp chezExtPrim chezString 0 struct
            pure $ "(ftype-ref " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++ ")"
   chezExtPrim i GetField [_,_,_,_,_,_]
-      = pure "(error \"bad getField\")"
+      = pure "(blodwen-error-quit \"bad getField\")"
   chezExtPrim i SetField [NmPrimVal _ (Str s), _, _, struct,
                           NmPrimVal _ (Str fld), _, val, world]
       = do structsc <- schExp chezExtPrim chezString 0 struct
@@ -149,7 +169,7 @@ mutual
               "(ftype-set! " ++ s ++ " (" ++ fld ++ ") " ++ structsc ++
               " " ++ valsc ++ ")"
   chezExtPrim i SetField [_,_,_,_,_,_,_,_]
-      = pure "(error \"bad setField\")"
+      = pure "(blodwen-error-quit \"bad setField\")"
   chezExtPrim i SysCodegen []
       = pure $ "\"chez\""
   chezExtPrim i OnCollect [_, p, c, world]
@@ -197,31 +217,59 @@ cftySpec fc (CFStruct n t) = pure $ "(* " ++ n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
-cCall : {auto c : Ref Ctxt Defs} ->
-        {auto l : Ref Loaded (List String)} ->
-        String -> FC -> (cfn : String) -> (clib : String) ->
-        List (Name, CFType) -> CFType -> Core (String, String)
-cCall appdir fc cfn clib args (CFIORes CFGCPtr)
+export
+loadLib : {auto c : Ref Ctxt Defs} ->
+          String -> String -> Core String
+loadLib appdir clib
+    = do (fname, fullname) <- locate clib
+         copyLib (appdir </> fname, fullname)
+         pure $ "(load-shared-object \""
+                                    ++ escapeStringChez fname
+                                    ++ "\")\n"
+
+loadSO : {auto c : Ref Ctxt Defs} ->
+         String -> String -> Core String
+loadSO appdir "" = pure ""
+loadSO appdir mod
+    = do d <- getDirs
+         let fs = map (\p => p </> mod)
+                      ((build_dir d </> "ttc") :: extra_dirs d)
+         Just fname <- firstAvailable fs
+            | Nothing => throw (InternalError ("Missing .so:" ++ mod))
+         -- Easier to put them all in the same directory, so we don't need
+         -- to traverse a directory tree when installing the executable. So,
+         -- separate with '-' rather than directory separators.
+         let modfname = fastConcat (intersperse "-" (splitPath mod))
+         copyLib (appdir </> modfname, fname)
+         pure $ "(load \"" ++ escapeStringChez modfname ++ "\")\n"
+
+cCall : {auto c : Ref Ctxt Defs}
+     -> {auto l : Ref Loaded (List String)}
+     -> FC
+     -> (cfn : String)
+     -> (clib : String)
+     -> List (Name, CFType)
+     -> CFType
+     -> (collectSafe : Bool)
+     -> Core (Maybe String, String)
+cCall fc cfn clib args (CFIORes CFGCPtr) _
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
-cCall appdir fc cfn clib args CFGCPtr
+cCall fc cfn clib args CFGCPtr _
     = throw (GenericMsg fc "Can't return GCPtr from a foreign function")
-cCall appdir fc cfn clib args (CFIORes CFBuffer)
+cCall fc cfn clib args (CFIORes CFBuffer) _
     = throw (GenericMsg fc "Can't return Buffer from a foreign function")
-cCall appdir fc cfn clib args CFBuffer
+cCall fc cfn clib args CFBuffer _
     = throw (GenericMsg fc "Can't return Buffer from a foreign function")
-cCall appdir fc cfn clib args ret
+cCall fc cfn clib args ret collectSafe
     = do loaded <- get Loaded
          lib <- if clib `elem` loaded
-                   then pure ""
-                   else do (fname, fullname) <- locate clib
-                           copyLib (appdir </> fname, fullname)
-                           put Loaded (clib :: loaded)
-                           pure $ "(load-shared-object \""
-                                    ++ escapeString fname
-                                    ++ "\")\n"
-         argTypes <- traverse (\a => cftySpec fc (snd a)) args
+                   then pure Nothing
+                   else do put Loaded (clib :: loaded)
+                           pure (Just clib)
+         argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
-         let call = "((foreign-procedure #f " ++ show cfn ++ " ("
+         let callConv = if collectSafe then " __collect_safe" else ""
+         let call = "((foreign-procedure" ++ callConv ++ " " ++ show cfn ++ " ("
                       ++ showSep " " argTypes ++ ") " ++ retType ++ ") "
                       ++ showSep " " !(traverse buildArg args) ++ ")"
 
@@ -282,19 +330,23 @@ schemeCall fc sfn argns ret
 -- function call.
 useCC : {auto c : Ref Ctxt Defs} ->
         {auto l : Ref Loaded (List String)} ->
-        String -> FC -> List String -> List (Name, CFType) -> CFType -> Core (String, String)
-useCC appdir fc ccs args ret
-    = case parseCC ["scheme,chez", "scheme", "C"] ccs of
-           Nothing => throw (NoForeignCC fc)
+        FC -> List String -> List (Name, CFType) -> CFType ->
+        Maybe Version -> Core (Maybe String, String)
+useCC fc ccs args ret version
+    = case parseCC ["scheme,chez", "scheme", "C__collect_safe", "C"] ccs of
            Just ("scheme,chez", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
-                  pure ("", body)
+                  pure (Nothing, body)
            Just ("scheme", [sfn]) =>
                do body <- schemeCall fc sfn (map fst args) ret
-                  pure ("", body)
-           Just ("C", [cfn, clib]) => cCall appdir fc cfn clib args ret
-           Just ("C", [cfn, clib, chdr]) => cCall appdir fc cfn clib args ret
-           _ => throw (NoForeignCC fc)
+                  pure (Nothing, body)
+           Just ("C__collect_safe", (cfn :: clib :: _)) => do
+             if unsupportedCallingConvention version
+               then cCall fc cfn clib args ret False
+               else cCall fc cfn clib args ret True
+           Just ("C", (cfn :: clib :: _)) =>
+             cCall fc cfn clib args ret False
+           _ => throw (NoForeignCC fc ccs)
 
 -- For every foreign arg type, return a name, and whether to pass it to the
 -- foreign call (we don't pass '%World')
@@ -323,33 +375,36 @@ mkStruct _ = pure ""
 schFgnDef : {auto c : Ref Ctxt Defs} ->
             {auto l : Ref Loaded (List String)} ->
             {auto s : Ref Structs (List String)} ->
-            String -> FC -> Name -> NamedDef -> Core (String, String)
-schFgnDef appdir fc n (MkNmForeign cs args ret)
+            FC -> Name -> NamedDef -> Maybe Version ->
+            Core (Maybe String, String)
+schFgnDef fc n (MkNmForeign cs args ret) version
     = do let argns = mkArgs 0 args
          let allargns = map fst argns
          let useargns = map fst (filter snd argns)
          argStrs <- traverse mkStruct args
          retStr <- mkStruct ret
-         (load, body) <- useCC appdir fc cs (zip useargns args) ret
+         (load, body) <- useCC fc cs (zip useargns args) ret version
          defs <- get Ctxt
          pure (load,
                 concat argStrs ++ retStr ++
                 "(define " ++ schName !(full (gamma defs) n) ++
                 " (lambda (" ++ showSep " " (map schName allargns) ++ ") " ++
                 body ++ "))\n")
-schFgnDef _ _ _ _ = pure ("", "")
+schFgnDef _ _ _ _ = pure (Nothing, "")
 
 export
 getFgnCall : {auto c : Ref Ctxt Defs} ->
              {auto l : Ref Loaded (List String)} ->
              {auto s : Ref Structs (List String)} ->
-             String -> (Name, FC, NamedDef) -> Core (String, String)
-getFgnCall appdir (n, fc, d) = schFgnDef appdir fc n d
+             Maybe Version -> (Name, FC, NamedDef) ->
+             Core (Maybe String, String)
+getFgnCall version (n, fc, d) = schFgnDef fc n d version
 
 export
 startChezPreamble : String
 startChezPreamble = unlines
     [ "#!/bin/sh"
+    , "# this file is @" ++ "generated by Idris2 compiler, Chez backend"
     , ""
     , "set -e # exit on any error"
     , ""
@@ -364,6 +419,7 @@ startChezPreamble = unlines
 startChez : String -> String -> String
 startChez appdir target = startChezPreamble ++ unlines
     [ "export LD_LIBRARY_PATH=\"$DIR/" ++ appdir ++ "\":$LD_LIBRARY_PATH"
+    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
     , "\"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
@@ -372,24 +428,28 @@ startChezCmd chez appdir target = unlines
     [ "@echo off"
     , "set APPDIR=%~dp0"
     , "set PATH=%APPDIR%\\" ++ appdir ++ ";%PATH%"
+    , "set IDRIS2_INC_SRC=%APPDIR%\\"
     , "\"" ++ chez ++ "\" --script \"%APPDIR%/" ++ target ++ "\" %*"
     ]
 
 startChezWinSh : String -> String -> String -> String
 startChezWinSh chez appdir target = unlines
     [ "#!/bin/sh"
+    , "# this file is @" ++ "generated by Idris2 compiler, Chez backend"
     , ""
     , "set -e # exit on any error"
     , ""
     , "DIR=$(dirname \"$(readlink -f -- \"$0\")\")"
     , "CHEZ=$(cygpath \"" ++ chez ++"\")"
     , "export PATH=\"$DIR/" ++ appdir ++ "\":$PATH"
+    , "export IDRIS2_INC_SRC=\"$DIR/" ++ appdir ++ "\""
     , "\"$CHEZ\" --script \"$DIR/" ++ target ++ "\" \"$@\""
     ]
 
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
-              Bool -> String -> ClosedTerm -> (outfile : String) -> Core ()
+              Bool -> -- profiling
+              String -> ClosedTerm -> (outfile : String) -> Core ()
 compileToSS c prof appdir tm outfile
     = do ds <- getDirectives Chez
          libs <- findLibs ds
@@ -401,18 +461,21 @@ compileToSS c prof appdir tm outfile
          defs <- get Ctxt
          l <- newRef {t = List String} Loaded ["libc", "libc 6"]
          s <- newRef {t = List String} Structs []
-         fgndefs <- traverse (getFgnCall appdir) ndefs
+         chez <- coreLift findChez
+         version <- coreLift $ chezVersion chez
+         fgndefs <- traverse (getFgnCall version) ndefs
+         loadlibs <- traverse (loadLib appdir) (mapMaybe fst fgndefs)
+
          compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
          let code = fastAppend (map snd fgndefs ++ compdefs)
          main <- schExp chezExtPrim chezString 0 ctm
-         chez <- coreLift findChez
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
-         let scm = schHeader chez (map snd libs) ++
+         let scm = schHeader chez (map snd libs) True ++
                    support ++ extraRuntime ++ code ++
-                   concat (map fst fgndefs) ++
+                   concat loadlibs ++
                    "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
-                   main ++ schFooter prof
+                   main ++ schFooter prof True
          Right () <- coreLift $ writeFile outfile scm
             | Left err => throw (FileErr outfile err)
          coreLift_ $ chmodRaw outfile 0o755
@@ -420,7 +483,8 @@ compileToSS c prof appdir tm outfile
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
-              Bool -> String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
+              Bool -> -- profiling
+              String -> (appDirRel : String) -> (outSsAbs : String) -> Core ()
 compileToSO prof chez appDirRel outSsAbs
     = do let tmpFileAbs = appDirRel </> "compileChez"
          let build = "(parameterize ([optimize-level 3] "
@@ -433,6 +497,35 @@ compileToSO prof chez appDirRel outSsAbs
          coreLift_ $ chmodRaw tmpFileAbs 0o755
          coreLift_ $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
          pure ()
+
+||| Compile a TT expression to Chez Scheme using incremental module builds
+compileToSSInc : Ref Ctxt Defs ->
+                 List String -> -- module so files
+                 List String -> -- libraries to find and load
+                 String -> ClosedTerm -> (outfile : String) -> Core ()
+compileToSSInc c mods libs appdir tm outfile
+    = do chez <- coreLift findChez
+         tmcexp <- compileTerm tm
+         let ctm = forget tmcexp
+
+         loadlibs <- traverse (loadLib appdir) (nub libs)
+         loadsos <- traverse (loadSO appdir) (nub mods)
+
+         main <- schExp chezExtPrim chezString 0 ctm
+         support <- readDataFile "chez/support.ss"
+
+         let scm = schHeader chez [] False ++
+                   support ++
+                   concat loadlibs ++
+                   concat loadsos ++
+                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
+                   main ++ schFooter False False
+
+         Right () <- coreLift $ writeFile outfile scm
+            | Left err => throw (FileErr outfile err)
+         coreLift_ $ chmodRaw outfile 0o755
+         pure ()
+
 
 makeSh : String -> String -> String -> Core ()
 makeSh outShRel appdir outAbs
@@ -450,10 +543,9 @@ makeShWindows chez outShRel appdir outAbs
             | Left err => throw (FileErr outShRel err)
          pure ()
 
-||| Chez Scheme implementation of the `compileExpr` interface.
-compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
-              ClosedTerm -> (outfile : String) -> Core (Maybe String)
-compileExpr makeitso c tmpDir outputDir tm outfile
+compileExprWhole : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
+                   ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprWhole makeitso c tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
          coreLift_ $ mkdirAll appDirGen
@@ -466,13 +558,49 @@ compileExpr makeitso c tmpDir outputDir tm outfile
          chez <- coreLift $ findChez
          let prof = profile !getSession
          compileToSS c (makeitso && prof) appDirGen tm outSsAbs
-         logTime "++ Make SO" $ when makeitso $ compileToSO prof chez appDirGen outSsAbs
+         logTime "++ Make SO" $ when makeitso $
+           compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile)
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          coreLift_ $ chmodRaw outShRel 0o755
          pure (Just outShRel)
+
+compileExprInc : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
+                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExprInc makeitso c tmpDir outputDir tm outfile
+    = do defs <- get Ctxt
+         let Just (mods, libs) = lookup Chez (allIncData defs)
+             | Nothing =>
+                 do coreLift $ putStrLn $ "Missing incremental compile data, reverting to whole program compilation"
+                    compileExprWhole makeitso c tmpDir outputDir tm outfile
+         let appDirRel = outfile ++ "_app" -- relative to build dir
+         let appDirGen = outputDir </> appDirRel -- relative to here
+         coreLift_ $ mkdirAll appDirGen
+         Just cwd <- coreLift currentDir
+              | Nothing => throw (InternalError "Can't get current directory")
+         let outSsFile = appDirRel </> outfile <.> "ss"
+         let outSoFile = appDirRel </> outfile <.> "so"
+         let outSsAbs = cwd </> outputDir </> outSsFile
+         let outSoAbs = cwd </> outputDir </> outSoFile
+         chez <- coreLift $ findChez
+         compileToSSInc c mods libs appDirGen tm outSsAbs
+         let outShRel = outputDir </> outfile
+         if isWindows
+            then makeShWindows chez outShRel appDirRel outSsFile
+            else makeSh outShRel appDirRel outSsFile
+         coreLift_ $ chmodRaw outShRel 0o755
+         pure (Just outShRel)
+
+||| Chez Scheme implementation of the `compileExpr` interface.
+compileExpr : Bool -> Ref Ctxt Defs -> (tmpDir : String) -> (outputDir : String) ->
+              ClosedTerm -> (outfile : String) -> Core (Maybe String)
+compileExpr makeitso c tmpDir outputDir tm outfile
+    = do s <- getSession
+         if not (wholeProgram s) && (Chez `elem` incrementalCGs !getSession)
+            then compileExprInc makeitso c tmpDir outputDir tm outfile
+            else compileExprWhole makeitso c tmpDir outputDir tm outfile
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
 ||| This implementation simply runs the usual compiler, saving it to a temp file, then interpreting it.
@@ -483,7 +611,44 @@ executeExpr c tmpDir tm
          coreLift_ $ system sh
          pure ()
 
+incCompile : Ref Ctxt Defs ->
+             (sourceFile : String) -> Core (Maybe (String, List String))
+incCompile c sourceFile
+    = do ssFile <- getTTCFileName sourceFile "ss"
+         soFile <- getTTCFileName sourceFile "so"
+         soFilename <- getObjFileName sourceFile "so"
+         cdata <- getIncCompileData False Cases
+
+         d <- getDirs
+         let outputDir = build_dir d </> "ttc"
+
+         let ndefs = namedDefs cdata
+         if isNil ndefs
+            then pure (Just ("", []))
+                      -- ^ no code to generate, but still recored that the
+                      -- module has been compiled, with no output needed.
+            else do
+               l <- newRef {t = List String} Loaded ["libc", "libc 6"]
+               s <- newRef {t = List String} Structs []
+               chez <- coreLift findChez
+               version <- coreLift $ chezVersion chez
+               fgndefs <- traverse (getFgnCall version) ndefs
+               compdefs <- traverse (getScheme chezExtPrim chezString) ndefs
+               let code = fastAppend (map snd fgndefs ++ compdefs)
+               Right () <- coreLift $ writeFile ssFile code
+                  | Left err => throw (FileErr ssFile err)
+
+               -- Compile to .so
+               let tmpFileAbs = outputDir </> "compileChez"
+               let build = "(parameterize ([optimize-level 3] " ++
+                           "[compile-file-message #f]) (compile-file " ++
+                          show ssFile ++ "))"
+               Right () <- coreLift $ writeFile tmpFileAbs build
+                  | Left err => throw (FileErr tmpFileAbs err)
+               coreLift_ $ system (chez ++ " --script \"" ++ tmpFileAbs ++ "\"")
+               pure (Just (soFilename, mapMaybe fst fgndefs))
+
 ||| Codegen wrapper for Chez scheme implementation.
 export
 codegenChez : Codegen
-codegenChez = MkCG (compileExpr True) executeExpr
+codegenChez = MkCG (compileExpr True) executeExpr (Just incCompile) (Just "so")

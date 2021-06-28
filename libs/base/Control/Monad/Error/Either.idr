@@ -15,6 +15,8 @@ module Control.Monad.Error.Either
 
 import Control.Monad.Trans
 
+%default total
+
 public export
 data EitherT : (e : Type) -> (m : Type -> Type) -> (a : Type) -> Type where
   MkEitherT : m (Either e a) -> EitherT e m a

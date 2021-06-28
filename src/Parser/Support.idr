@@ -11,32 +11,32 @@ import Core.TT
 import Core.Core
 import Data.List
 import Data.List.Views
-import Data.Strings
+import Data.String
 import Parser.Unlit
 import System.File
 
 %default total
 
 export
-fromLitError : String -> LiterateError -> Error
-fromLitError fname (MkLitErr l c _) = LitFail (MkFC fname (l, c) (l, c + 1))
+fromLitError : OriginDesc -> LiterateError -> Error
+fromLitError origin (MkLitErr l c _) = LitFail (MkFC origin (l, c) (l, c + 1))
 
 export
-fromLexError : String -> (StopReason, Int, Int, String) -> Error
-fromLexError fname (ComposeNotClosing begin end, _, _, _)
-    = LexFail (MkFC fname begin end) "Bracket is not properly closed."
-fromLexError fname (_, l, c, _)
-    = LexFail (MkFC fname (l, c) (l, c + 1)) "Can't recognise token."
+fromLexError : OriginDesc -> (StopReason, Int, Int, String) -> Error
+fromLexError origin (ComposeNotClosing begin end, _, _, _)
+    = LexFail (MkFC origin begin end) "Bracket is not properly closed."
+fromLexError origin (_, l, c, _)
+    = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
 
 export
 fromParsingError : (Show token, Pretty token) =>
-                   String -> ParsingError token -> Error
-fromParsingError fname (Error msg Nothing)
-    = ParseFail (MkFC fname (0, 0) (0, 0)) (msg +> '.')
-fromParsingError fname (Error msg (Just t))
+                   OriginDesc -> ParsingError token -> Error
+fromParsingError origin (Error msg Nothing)
+    = ParseFail (MkFC origin (0, 0) (0, 0)) (msg +> '.')
+fromParsingError origin (Error msg (Just t))
     = let l = t.startLine
           c = t.startCol in
-          ParseFail (MkFC fname (l, c) (l, c + 1)) (msg +> '.')
+          ParseFail (MkFC origin (l, c) (l, c + 1)) (msg +> '.')
 
 export
 hex : Char -> Maybe Int
@@ -149,13 +149,13 @@ escape' escapeChars (x::xs)
                                                              !(escape' escapeChars rest)
                    xs => case span isDigit xs of
                               ([], (a :: b :: c :: rest)) =>
-                                case getEsc (fastPack (the (List _) [a, b, c])) of
+                                case getEsc (fastPack [a, b, c]) of
                                      Just v => Just (v :: !(escape' escapeChars rest))
-                                     Nothing => case getEsc (fastPack (the (List _) [a, b])) of
+                                     Nothing => case getEsc (fastPack [a, b]) of
                                                      Just v => Just (v :: !(escape' escapeChars (c :: rest)))
                                                      Nothing => escape' escapeChars xs
                               ([], (a :: b :: [])) =>
-                                case getEsc (fastPack (the (List _) [a, b])) of
+                                case getEsc (fastPack [a, b]) of
                                      Just v => Just (v :: [])
                                      Nothing => escape' escapeChars xs
                               ([], rest) => escape' escapeChars rest

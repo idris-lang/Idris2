@@ -1,5 +1,7 @@
 module Idris.SetOptions
 
+import Compiler.Common
+
 import Core.Context
 import Core.Directory
 import Core.Metadata
@@ -7,10 +9,10 @@ import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
-import Libraries.Data.List1 as Lib
 
 import Idris.CommandLine
 import Idris.Package.Types
+import Idris.ProcessIdr
 import Idris.REPL
 import Idris.Syntax
 import Idris.Version
@@ -18,8 +20,11 @@ import Idris.Version
 import IdrisPaths
 
 import Data.List
+import Data.List1
 import Data.So
-import Data.Strings
+import Data.String
+
+import Libraries.Data.List1 as Lib
 
 import System
 import System.Directory
@@ -239,6 +244,31 @@ completionScript fun =
 --          Processing Options
 --------------------------------------------------------------------------------
 
+export
+setIncrementalCG : {auto c : Ref Ctxt Defs} ->
+                   {auto o : Ref ROpts REPLOpts} ->
+                   Bool -> String -> Core ()
+setIncrementalCG failOnError cgn
+    = do defs <- get Ctxt
+         case getCG (options defs) cgn of
+           Just cg =>
+               do Just cgd <- getCG cg
+                       | Nothing => pure ()
+                  let Just _ = incCompileFile cgd
+                       | Nothing =>
+                            if failOnError
+                               then do coreLift $ putStrLn $ cgn ++ " does not support incremental builds"
+                                       coreLift $ exitWith (ExitFailure 1)
+                               else pure ()
+                  setSession (record { incrementalCGs $= (cg :: )} !getSession)
+           Nothing =>
+              if failOnError
+                 then do coreLift $ putStrLn "No such code generator"
+                         coreLift $ putStrLn $ "Code generators available: " ++
+                                         showSep ", " (map fst (availableCGs (options defs)))
+                         coreLift $ exitWith (ExitFailure 1)
+                 else pure ()
+
 -- Options to be processed before type checking. Return whether to continue.
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
@@ -346,6 +376,16 @@ preOptions (WarningsAsErrors :: opts)
 preOptions (IgnoreShadowingWarnings :: opts)
     = do setSession (record { showShadowingWarning = False } !getSession)
          preOptions opts
+preOptions (HashesInsteadOfModTime :: opts)
+    = do setSession (record { checkHashesInsteadOfModTime = True } !getSession)
+         preOptions opts
+preOptions (IncrementalCG e :: opts)
+    = do defs <- get Ctxt
+         setIncrementalCG True e
+         preOptions opts
+preOptions (WholeProgram :: opts)
+    = do setSession (record { wholeProgram = True } !getSession)
+         preOptions opts
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os
@@ -369,11 +409,11 @@ postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN "main")) outfile
+    = do ignore $ compileExp (PRef EmptyFC (UN "main")) outfile
          ignore $ postOptions res rest
          pure False
 postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef (MkFC "(script)" (0, 0) (0, 0)) (UN str))
+    = do ignore $ execExp (PRef EmptyFC (UN str))
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)

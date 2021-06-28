@@ -7,14 +7,14 @@ import Core.Context
 import Core.TT
 import Core.Metadata
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default total
 
@@ -38,22 +38,20 @@ export
 constant : Rule Constant
 constant
     = terminal "Expected constant"
-               (\x => case x of
-                           CharLit c => case getCharLit c of
-                                             Nothing => Nothing
-                                             Just c' => Just (Ch c')
-                           DoubleLit d  => Just (Db d)
-                           IntegerLit i => Just (BI i)
-                           Ident s      => isConstantType (UN s) >>=
-                                             \case WorldType => Nothing
-                                                   c         => Just c
-                           _ => Nothing)
+               \case
+                 CharLit c    =>  map Ch $ getCharLit c
+                 DoubleLit d  => Just (Db d)
+                 IntegerLit i => Just (BI i)
+                 Ident s      => isConstantType (UN s) >>=
+                                 \case WorldType => Nothing
+                                       c         => Just c
+                 _            => Nothing
 
 documentation' : Rule String
 documentation' = terminal "Expected documentation comment"
-                          (\x => case x of
-                                      DocComment d => Just d
-                                      _ => Nothing)
+                          \case
+                            DocComment d => Just d
+                            _ => Nothing
 
 export
 documentation : Rule String
@@ -63,71 +61,72 @@ export
 intLit : Rule Integer
 intLit
     = terminal "Expected integer literal"
-               (\x => case x of
-                           IntegerLit i => Just i
-                           _ => Nothing)
+               \case
+                 IntegerLit i => Just i
+                 _ => Nothing
 
 export
 onOffLit : Rule Bool
 onOffLit
     = terminal "Expected on or off"
-               (\x => case x of
-                           Ident "on" => Just True
-                           Ident "off" => Just False
-                           _ => Nothing)
+               \case
+                 Ident "on" => Just True
+                 Ident "off" => Just False
+                 _ => Nothing
 
 export
 strLit : Rule String
 strLit
     = terminal "Expected string literal"
-               (\x => case x of
-                           StringLit n s => escape n s
-                           _ => Nothing)
+               \case
+                 StringLit n s => escape n s
+                 _ => Nothing
 
 ||| String literal split by line wrap (not striped) before escaping the string.
 export
 strLitLines : Rule (List1 String)
 strLitLines
     = terminal "Expected string literal"
-               (\x => case x of
-                           StringLit n s => traverse (escape n . fastPack)
-                                                     (splitAfter isNL (fastUnpack s))
-                           _ => Nothing)
+               \case
+                 StringLit n s =>
+                   traverse (escape n . fastPack)
+                            (splitAfter isNL (fastUnpack s))
+                 _ => Nothing
 
 export
 strBegin : Rule ()
 strBegin = terminal "Expected string begin"
-               (\x => case x of
-                           StringBegin False => Just ()
-                           _ => Nothing)
+                    \case
+                      StringBegin False => Just ()
+                      _ => Nothing
 
 export
 multilineBegin : Rule ()
 multilineBegin = terminal "Expected multiline string begin"
-               (\x => case x of
-                           StringBegin True => Just ()
-                           _ => Nothing)
+                          \case
+                            StringBegin True => Just ()
+                            _ => Nothing
 
 export
 strEnd : Rule ()
 strEnd = terminal "Expected string end"
-               (\x => case x of
-                           StringEnd => Just ()
-                           _ => Nothing)
+                  \case
+                    StringEnd => Just ()
+                    _ => Nothing
 
 export
 interpBegin : Rule ()
 interpBegin = terminal "Expected string interp begin"
-               (\x => case x of
-                           InterpBegin => Just ()
-                           _ => Nothing)
+                       \case
+                         InterpBegin => Just ()
+                         _ => Nothing
 
 export
 interpEnd : Rule ()
 interpEnd = terminal "Expected string interp end"
-               (\x => case x of
-                           InterpEnd => Just ()
-                           _ => Nothing)
+                     \case
+                       InterpEnd => Just ()
+                       _ => Nothing
 
 export
 simpleStr : Rule String
@@ -136,9 +135,9 @@ simpleStr = strBegin *> commit *> (option "" strLit) <* strEnd
 export
 aDotIdent : Rule String
 aDotIdent = terminal "Expected dot+identifier"
-               (\x => case x of
-                           DotIdent s => Just s
-                           _ => Nothing)
+                     \case
+                       DotIdent s => Just s
+                       _ => Nothing
 
 export
 postfixProj : Rule Name
@@ -148,39 +147,36 @@ export
 symbol : String -> Rule ()
 symbol req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case x of
-                           Symbol s => if s == req then Just ()
-                                                   else Nothing
-                           _ => Nothing)
+               \case
+                 Symbol s => if s == req then Just () else Nothing
+                 _ => Nothing
 
 export
 keyword : String -> Rule ()
 keyword req
     = terminal ("Expected '" ++ req ++ "'")
-               (\x => case x of
-                           Keyword s => if s == req then Just ()
-                                                    else Nothing
-                           _ => Nothing)
+               \case
+                 Keyword s => if s == req then Just () else Nothing
+                 _ => Nothing
 
 export
 exactIdent : String -> Rule ()
 exactIdent req
     = terminal ("Expected " ++ req)
-               (\x => case x of
-                           Ident s => if s == req then Just ()
-                                      else Nothing
-                           _ => Nothing)
+               \case
+                 Ident s => if s == req then Just () else Nothing
+                 _ => Nothing
 
 export
 pragma : String -> Rule ()
 pragma n =
   terminal ("Expected pragma " ++ n)
-    (\x => case x of
+    \case
       Pragma s =>
         if s == n
           then Just ()
           else Nothing
-      _ => Nothing)
+      _ => Nothing
 
 export
 builtinType : Rule BuiltinType
@@ -193,28 +189,28 @@ export
 operator : Rule Name
 operator
     = terminal "Expected operator"
-               (\x => case x of
-                           Symbol s =>
-                                if s `elem` reservedSymbols
-                                   then Nothing
-                                   else Just (UN s)
-                           _ => Nothing)
+               \case
+                 Symbol s =>
+                   if s `elem` reservedSymbols
+                     then Nothing
+                     else Just (UN s)
+                 _ => Nothing
 
 identPart : Rule String
 identPart
     = terminal "Expected name"
-               (\x => case x of
-                           Ident str => Just str
-                           _ => Nothing)
+               \case
+                 Ident str => Just str
+                 _ => Nothing
 
 export
 namespacedIdent : Rule (Maybe Namespace, String)
 namespacedIdent
     = terminal "Expected namespaced name"
-        (\x => case x of
-            DotSepIdent ns n => Just (Just ns, n)
-            Ident i => Just (Nothing, i)
-            _ => Nothing)
+               \case
+                 DotSepIdent ns n => Just (Just ns, n)
+                 Ident i => Just (Nothing, i)
+                 _ => Nothing
 
 isCapitalisedIdent : WithBounds String -> EmptyRule ()
 isCapitalisedIdent str =
@@ -246,9 +242,9 @@ export
 holeName : Rule String
 holeName
     = terminal "Expected hole name"
-               (\x => case x of
-                           HoleIdent str => Just str
-                           _ => Nothing)
+               \case
+                 HoleIdent str => Just str
+                 _ => Nothing
 
 reservedNames : List String
 reservedNames

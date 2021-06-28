@@ -15,22 +15,25 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
-import Libraries.Data.List1 as Lib
-import Libraries.Data.List.Extra
+import Data.List1
 import Data.Maybe
 import Data.Stream
-import Data.Strings
+import Data.String
+
+import Libraries.Data.List.Extra
+import Libraries.Data.List1 as Lib
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import System.File
 import Libraries.Utils.String
 import Libraries.Data.String.Extra
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+import System.File
+
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -84,7 +87,7 @@ ploc fc = do
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -146,7 +149,7 @@ ploc2 fc1 fc2 =
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -171,6 +174,8 @@ pwarning (ShadowingGlobalDefs _ ns)
 
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (GenericWarn s)
+    = pure $ pretty s
 
 export
 perror : {auto c : Ref Ctxt Defs} ->
@@ -428,7 +433,7 @@ perror (BadDotPattern fc env reason x y)
         <++> parens (pretty reason) <+> dot) <+> line <+> !(ploc fc)
 perror (MatchTooSpecific fc env tm)
     = pure $ errorDesc (reflow "Can't match on" <++> code !(pshow env tm)
-        <++> reflow "as it has a polymorphic type.") <+> line <+> !(ploc fc)
+        <++> reflow "as it must have a polymorphic type.") <+> line <+> !(ploc fc)
 perror (BadImplicit fc str)
     = pure $ errorDesc (reflow "Can't infer type for unbound implicit name" <++> code (pretty str) <+> dot)
         <+> line <+> !(ploc fc) <+> line <+> reflow "Suggestion: try making it a bound implicit."
@@ -456,14 +461,15 @@ perror (CyclicImports ns)
 perror ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perror (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty str
 perror (UserError str) = pure $ errorDesc (pretty "Error" <+> colon) <++> pretty str
-perror (NoForeignCC fc) = do
+perror (NoForeignCC fc specs) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
-    let res = vsep [ errorDesc (reflow "The given specifier was not accepted by any backend. Available backends" <+> colon)
+    let res = vsep [ errorDesc (reflow ("The given specifier '" ++ show specs ++ "' was not accepted by any backend. Available backends") <+> colon)
                    , indent 2 (concatWith (\ x, y => x <+> ", " <+> y) (map reflow cgs))
                    , reflow "Some backends have additional specifier rules, refer to their documentation."
                    ] <+> line <+> !(ploc fc)
     pure res
 perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
+perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot

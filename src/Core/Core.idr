@@ -65,6 +65,7 @@ data Warning : Type where
                          FC -> Env Term vars -> Term vars -> Warning
      ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
      Deprecated : String -> Warning
+     GenericWarn : String -> Warning
 
 -- All possible errors, carrying a location
 public export
@@ -154,8 +155,10 @@ data Error : Type where
      ForceNeeded : Error
      InternalError : String -> Error
      UserError : String -> Error
-     NoForeignCC : FC -> Error
+     ||| Contains list of specifiers for which foreign call cannot be resolved
+     NoForeignCC : FC -> List String -> Error
      BadMultiline : FC -> String -> Error
+     Timeout : String -> Error
 
      InType : FC -> Name -> Error -> Error
      InCon : FC -> Name -> Error -> Error
@@ -181,6 +184,7 @@ Show Warning where
     show (UnreachableClause _ _ _) = ":Unreachable clause"
     show (ShadowingGlobalDefs _ _) = ":Shadowing names"
     show (Deprecated name) = ":Deprecated " ++ name
+    show (GenericWarn msg) = msg
 
 
 export
@@ -328,9 +332,10 @@ Show Error where
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
-  show (NoForeignCC fc) = show fc ++
-       ":The given specifier was not accepted by any available backend."
+  show (NoForeignCC fc specs) = show fc ++
+       ":The given specifier " ++ show specs ++ " was not accepted by any available backend."
   show (BadMultiline fc str) = "Invalid multiline string: " ++ str
+  show (Timeout str) = "Timeout in " ++ str
 
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
@@ -356,6 +361,7 @@ getWarningLoc : Warning -> Maybe FC
 getWarningLoc (UnreachableClause fc _ _) = Just fc
 getWarningLoc (ShadowingGlobalDefs fc _) = Just fc
 getWarningLoc (Deprecated _) = Nothing
+getWarningLoc (GenericWarn _) = Nothing
 
 export
 getErrorLoc : Error -> Maybe FC
@@ -420,8 +426,9 @@ getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
-getErrorLoc (NoForeignCC loc) = Just loc
+getErrorLoc (NoForeignCC loc _) = Just loc
 getErrorLoc (BadMultiline loc _) = Just loc
+getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ _ err) = getErrorLoc err
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
@@ -447,11 +454,7 @@ coreFail e = MkCore (pure (Left e))
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
-wrapError fe (MkCore prog)
-    = MkCore (prog >>=
-                 (\x => case x of
-                             Left err => pure (Left (fe err))
-                             Right val => pure (Right val)))
+wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -497,9 +500,9 @@ export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
 (>>=) (MkCore act) f
     = MkCore (act >>=
-                   (\x => case x of
-                               Left err => pure (Left err)
-                               Right val => runCore (f val)))
+                   \case
+                     Left err => pure $ Left err
+                     Right val => runCore $ f val)
 
 export %inline
 (>>) : Core () -> Core a -> Core a

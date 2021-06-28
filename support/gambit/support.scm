@@ -16,11 +16,9 @@
 
 (define blodwen-toSignedInt
   (lambda (x bits)
-    (let ((ma (arithmetic-shift 1 bits)))
-      (if (or (< x (- 0 ma))
-              (>= x ma))
-          (remainder x ma)
-          x))))
+    (if (bit-set? bits x)
+        (bitwise-ior x (arithmetic-shift (- 1) bits))
+        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
 
 (define blodwen-toUnsignedInt
   (lambda (x bits)
@@ -65,14 +63,8 @@
 (define bits64->bits16 (lambda (x) (modulo x (expt 2 16))))
 (define bits64->bits32 (lambda (x) (modulo x (expt 2 32))))
 
-(define truncate-bits
-  (lambda (x bits)
-    (if (bit-set? bits x)
-        (bitwise-ior x (arithmetic-shift (- 1) bits))
-        (bitwise-and x (- (arithmetic-shift 1 bits) 1)))))
-
 (define blodwen-bits-shl-signed
-  (lambda (x y bits) (truncate-bits (arithmetic-shift x y) bits)))
+  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
 
 
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
@@ -233,6 +225,3 @@
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))
-
-(define (blodwen-system cmd)
-  (fxarithmetic-shift-right (shell-command cmd) 8))

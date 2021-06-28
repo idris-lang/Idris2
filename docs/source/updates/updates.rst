@@ -357,6 +357,9 @@ If you do need the computational behaviour of a definition, it is now possible
 using local function definitions instead - see Section :ref:`sect-local-defs`
 below.
 
+Also, an alternative syntax ``let x := val in e`` is available.
+See Section :ref:`sect-let-bindings` for more info.
+
 ``auto``-implicits and Interfaces
 ---------------------------------
 

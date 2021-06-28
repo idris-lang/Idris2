@@ -2,7 +2,7 @@
 Error: While processing right hand side of etaBad. When unifying \x, y => MkTest x y = \x, y => MkTest x y and MkTest = \x, y => MkTest x y.
 Mismatch between: Nat and Integer.
 
-Eta.idr:14:10--14:14
+Eta:14:10--14:14
  10 | etaGood3: (f : a -> b) -> f = (\x => f x)
  11 | etaGood3 f = Refl
  12 | 
@@ -14,7 +14,7 @@ Eta.idr:14:10--14:14
 Error: While processing right hand side of test. When unifying \x => S x = \x => S x and S = \x => S x.
 Mismatch between: a and Nat.
 
-Eta2.idr:2:8--2:12
+Eta2:2:8--2:12
  1 | test : Builtin.Equal S (\x : a => S ?)
  2 | test = Refl
             ^^^^
@@ -22,7 +22,7 @@ Eta2.idr:2:8--2:12
 Error: While processing right hand side of test2. When unifying \x => S x = \x => S x and S = \x => S x.
 Mismatch between: a and Nat.
 
-Eta2.idr:5:44--5:48
+Eta2:5:44--5:48
  1 | test : Builtin.Equal S (\x : a => S ?)
  2 | test = Refl
  3 | 

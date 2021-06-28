@@ -2,6 +2,8 @@ module Control.App.Console
 
 import public Control.App
 
+%default total
+
 public export
 interface Console e where
   putChar : Char -> App {l} e ()

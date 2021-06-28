@@ -2,6 +2,8 @@ module Control.Monad.ST
 
 import Data.IORef
 
+%default total
+
 export
 data STRef : Type -> Type -> Type where
      MkSTRef : IORef a -> STRef s a
@@ -16,22 +18,21 @@ runST p
     = let MkST prog = p {s = ()} in -- anything will do :)
           unsafePerformIO prog
 
-mutual
-  export
-  Functor (ST s) where
-    map fn st = pure $ fn !st
+export
+Functor (ST s) where
+  map fn (MkST st) = MkST $ fn <$> st
 
-  export
-  Applicative (ST s) where
-    pure x = MkST (pure x)
-    (<*>) f a = pure $ !f !a
+export
+Applicative (ST s) where
+  pure = MkST . pure
+  MkST f <*> MkST a = MkST $ f <*> a
 
-  export
-  Monad (ST s) where
-    MkST p >>= k
-        = MkST $ do p' <- p
-                    let MkST kp = k p'
-                    kp
+export
+Monad (ST s) where
+  MkST p >>= k
+      = MkST $ do p' <- p
+                  let MkST kp = k p'
+                  kp
 
 export
 newSTRef : a -> ST s (STRef s a)

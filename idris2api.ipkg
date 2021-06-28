@@ -1,5 +1,5 @@
 package idris2
-version = 0.3.0
+version = 0.4.0
 
 modules =
     Algebra,
@@ -21,9 +21,9 @@ modules =
     Compiler.ES.ImperativeAst,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
-    Compiler.ES.RemoveUnused,
     Compiler.ES.TailRec,
 
+    Compiler.RefC,
     Compiler.RefC.CC,
     Compiler.RefC.RefC,
 
@@ -115,8 +115,9 @@ modules =
     Libraries.Control.Delayed,
 
     Libraries.Data.ANameMap,
-    Libraries.Data.Bool.Extra,
     Libraries.Data.DList,
+    Libraries.Data.Fin,
+    Libraries.Data.Graph,
     Libraries.Data.IMaybe,
     Libraries.Data.IntMap,
     Libraries.Data.IOMatrix,
@@ -132,6 +133,7 @@ modules =
     Libraries.Data.String.Iterator,
     Libraries.Data.StringMap,
     Libraries.Data.StringTrie,
+    Libraries.Data.Version,
 
     Libraries.System.Directory.Tree,
 
@@ -155,7 +157,6 @@ modules =
     Libraries.Text.Token,
 
     Libraries.Utils.Binary,
-    Libraries.Utils.Either,
     Libraries.Utils.Hex,
     Libraries.Utils.Octal,
     Libraries.Utils.Path,

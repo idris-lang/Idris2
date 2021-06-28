@@ -1,5 +1,7 @@
 module Data.Contravariant
 
+%default total
+
 infixl 4 >$, >$<, >&<, $<
 
 ||| Contravariant functors

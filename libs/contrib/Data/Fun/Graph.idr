@@ -13,4 +13,4 @@ record Graph {0 a : Type} {0 b : a -> Type}
 public export
 remember : {0 a : Type} -> {0 b : a -> Type} ->
            (f : (x : a) -> b x) -> (x : a) -> Graph f x (f x)
-remember f x = MkGraph Refl
+remember _ _ = MkGraph Refl

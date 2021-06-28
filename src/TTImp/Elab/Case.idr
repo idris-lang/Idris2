@@ -99,7 +99,7 @@ merge : {vs : List Name} ->
         List (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
-    = merge vs (v :: filter (\p => not (sameVar v p)) xs)
+    = merge vs (v :: filter (not . sameVar v) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
@@ -194,7 +194,7 @@ caseBlock {vars} rigc elabinfo fc nest env scr scrtm scrty caseRig alts expected
          -- split on that, rather than adding it as a new argument
          let splitOn = findScrutinee env scr
 
-         caseretty_in <- the (Core (Term vars)) $ case expected of
+         caseretty_in <- case expected of
                            Just ty => getTerm ty
                            _ =>
                               do nmty <- genName "caseTy"
@@ -385,15 +385,15 @@ checkCase rig elabinfo nest env fc scr scrty_in alts exp
            (scrtm_in, gscrty, caseRig) <- handle
               (do c <- runDelays 10 $ check chrig elabinfo nest env scr (Just (gnf env scrtyv))
                   pure (fst c, snd c, chrig))
-              (\err => case err of
-                            e@(LinearMisuse _ _ r _)
-                              => branchOne
-                                    (do c <- runDelays 10 $ check linear elabinfo nest env scr
-                                               (Just (gnf env scrtyv))
-                                        pure (fst c, snd c, linear))
-                                    (throw e)
-                                    r
-                            e => throw e)
+              \case
+                e@(LinearMisuse _ _ r _)
+                  => branchOne
+                     (do c <- runDelays 10 $ check linear elabinfo nest env scr
+                              (Just (gnf env scrtyv))
+                         pure (fst c, snd c, linear))
+                     (throw e)
+                     r
+                e => throw e
 
            scrty <- getTerm gscrty
            logTermNF "elab.case" 5 "Scrutinee type" env scrty

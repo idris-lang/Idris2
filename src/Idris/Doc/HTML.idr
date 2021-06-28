@@ -4,7 +4,7 @@ import Core.Context
 import Core.Core
 import Core.Directory
 
-import Data.Strings
+import Data.String
 
 import Parser.Lexer.Source
 
@@ -16,6 +16,8 @@ import Idris.Doc.String
 import Idris.Package.Types
 import Idris.Pretty
 import Idris.Version
+
+%default covering
 
 getNS : Name -> String
 getNS (NS ns _) = show ns

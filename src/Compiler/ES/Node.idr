@@ -17,6 +17,8 @@ import System.File
 
 import Data.Maybe
 
+%default covering
+
 findNode : IO String
 findNode = do
    Nothing <- idrisGetEnv "NODE"
@@ -56,4 +58,4 @@ executeExpr c tmpDir tm =
 ||| Codegen wrapper for Node implementation.
 export
 codegenNode : Codegen
-codegenNode = MkCG compileExpr executeExpr
+codegenNode = MkCG compileExpr executeExpr Nothing Nothing

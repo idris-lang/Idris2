@@ -78,19 +78,19 @@ invFinInvolutive (FS k) = Calc $
 
 ||| It's possible to strengthen a weakened element of Fin **m**.
 export
-strengthenWeakenIsRight : (n : Fin m) -> strengthen (weaken n) = Right n
+strengthenWeakenIsRight : (n : Fin m) -> strengthen (weaken n) = Just n
 strengthenWeakenIsRight FZ = Refl
 strengthenWeakenIsRight (FS k) = rewrite strengthenWeakenIsRight k in Refl
 
 ||| It's not possible to strengthen the last element of Fin **n**.
 export
-strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Left (Fin.last {n})
+strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Nothing
 strengthenLastIsLeft {n=Z} = Refl
 strengthenLastIsLeft {n=S k} = rewrite strengthenLastIsLeft {n=k} in Refl
 
 ||| It's possible to strengthen the inverse of a succesor
 export
-strengthenNotLastIsRight : {n : Nat} -> (m : Fin n) -> strengthen (invFin (FS m)) = Right (invFin m)
+strengthenNotLastIsRight : {n : Nat} -> (m : Fin n) -> strengthen (invFin (FS m)) = Just (invFin m)
 strengthenNotLastIsRight m = strengthenWeakenIsRight (invFin m)
 
 ||| Either tightens the bound on a Fin or proves that it's the last.

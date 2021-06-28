@@ -1,7 +1,7 @@
 1/1: Building erased (erased.idr)
 Error: While processing left hand side of nameOf. Can't match on Bool (Erased argument).
 
-erased.idr:7:17--7:21
+erased:7:17--7:21
  3 |   MyJust : a -> MyMaybe a
  4 | 
  5 | -- Should fail since type argument is deleted

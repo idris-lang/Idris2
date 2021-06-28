@@ -12,10 +12,10 @@ import Core.TT
 import public Core.UnifyState
 import Core.Value
 
-import Libraries.Data.Bool.Extra
-import Libraries.Data.IntMap
 import Data.List
 import Data.List.Views
+
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
 %default covering
@@ -242,11 +242,11 @@ postpone loc mode logstr env x y
     undefinedN : Name -> Core Bool
     undefinedN n
         = do defs <- get Ctxt
-             case !(lookupDefExact n (gamma defs)) of
-                  Just (Hole _ _) => pure True
-                  Just (BySearch _ _ _) => pure True
-                  Just (Guess _ _ _) => pure True
-                  _ => pure False
+             pure $ case !(lookupDefExact n (gamma defs)) of
+                  Just (Hole _ _) => True
+                  Just (BySearch _ _ _) => True
+                  Just (Guess _ _ _) => True
+                  _ => False
 
 postponeS : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -341,12 +341,12 @@ patternEnv {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
          args' <- traverse (evalArg empty) args
-         case getVars [] args' of
-              Nothing => pure Nothing
-              Just vs =>
-                 let (newvars ** svs) = toSubVars _ vs in
-                     pure (Just (newvars **
-                                     (updateVars vs svs, svs)))
+         pure $
+           case getVars [] args' of
+             Nothing => Nothing
+             Just vs =>
+               let (newvars ** svs) = toSubVars _ vs in
+                 Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
     -- (All of these will succeed because the SubVars we have comes from
@@ -376,12 +376,11 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         case getVarsTm [] args of
-              Nothing => pure Nothing
-              Just vs =>
-                 let (newvars ** svs) = toSubVars _ vs in
-                     pure (Just (newvars **
-                                     (updateVars vs svs, svs)))
+         pure $ case getVarsTm [] args of
+           Nothing => Nothing
+           Just vs =>
+             let (newvars ** svs) = toSubVars _ vs in
+                 Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
     -- (All of these will succeed because the SubVars we have comes from
@@ -476,7 +475,7 @@ instantiate {newvars} loc mode env mname mref num mdef locs otm tm
          rhs <- mkDef locs INil tm ty
 
          logTerm "unify.instantiate" 5 "Definition" rhs
-         let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs)
+         let simpleDef = MkPMDefInfo (SolvedHole num) (isSimple rhs) False
          let newdef = record { definition =
                                  PMDef simpleDef [] (STerm 0 rhs) (STerm 0 rhs) []
                              } mdef
@@ -831,10 +830,11 @@ mutual
               Core UnifyResult
   solveHole loc mode env mname mref margs margs' locs submv solfull stm solnf
       = do defs <- get Ctxt
+           ust <- get UST
            empty <- clearDefs defs
            -- if the terms are the same, this isn't a solution
            -- but they are already unifying, so just return
-           if solutionHeadSame solnf
+           if solutionHeadSame solnf || inNoSolve mref (noSolve ust)
               then pure success
               else -- Rather than doing the occurs check here immediately,
                    -- we'll wait until all metavariables are resolved, and in
@@ -846,6 +846,12 @@ mutual
                       instantiate loc mode env mname mref (length margs) hdef locs solfull stm
                       pure $ solvedHole mref
     where
+      inNoSolve : Int -> IntMap () -> Bool
+      inNoSolve i ns
+          = case lookup i ns of
+                 Nothing => False
+                 Just _ => True
+
       -- Only need to check the head metavar is the same, we've already
       -- checked the rest if they are the same (and we couldn't instantiate it
       -- anyway...)
@@ -1431,18 +1437,20 @@ retryGuess mode smode (hid, (loc, hname))
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
-                     (\err => case err of
-                                DeterminingArg _ n i _ _ =>
-                                    do logTerm "unify.retry" 5 ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
-                                                 (type def)
-                                       setInvertible loc (Resolved i)
-                                       pure False -- progress not made yet!
-                                _ => do logTermNF "unify.retry" 5 ("Search failed at " ++ show rig ++ " for " ++ show hname)
-                                                  [] (type def)
-                                        case smode of
-                                             LastChance =>
-                                                 throw !(normaliseErr err)
-                                             _ => pure False) -- Postpone again
+                     \case
+                       DeterminingArg _ n i _ _ =>
+                         do logTerm "unify.retry" 5
+                                    ("Failed (det " ++ show hname ++ " " ++ show n ++ ")")
+                                    (type def)
+                            setInvertible loc (Resolved i)
+                            pure False -- progress not made yet!
+                       err =>
+                         do logTermNF "unify.retry" 5
+                                      ("Search failed at " ++ show rig ++ " for " ++ show hname)
+                                      [] (type def)
+                            case smode of
+                                 LastChance => throw !(normaliseErr err)
+                                 _ => pure False -- Postpone again
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
@@ -1456,7 +1464,7 @@ retryGuess mode smode (hid, (loc, hname))
                                               do ty <- getType [] tm
                                                  logTerm "unify.retry" 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
-                                  let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
+                                  let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
                                                                          [] (STerm 0 tm') (STerm 0 tm') [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm'
                                   ignore $ addDef (Resolved hid) gdef
@@ -1482,7 +1490,7 @@ retryGuess mode smode (hid, (loc, hname))
                          -- All constraints resolved, so turn into a
                          -- proper definition and remove it from the
                          -- hole list
-                         [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True)
+                         [] => do let gdef = record { definition = PMDef (MkPMDefInfo NotHole True False)
                                                                          [] (STerm 0 tm) (STerm 0 tm) [] } def
                                   logTerm "unify.retry" 5 ("Resolved " ++ show hname) tm
                                   ignore $ addDef (Resolved hid) gdef
@@ -1500,7 +1508,7 @@ solveConstraints : {auto c : Ref Ctxt Defs} ->
 solveConstraints umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode) (toList (guesses ust))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraints umode Normal
 
 export
@@ -1511,7 +1519,7 @@ solveConstraintsAfter start umode smode
     = do ust <- get UST
          progress <- traverse (retryGuess umode smode)
                               (filter afterStart (toList (guesses ust)))
-         when (anyTrue progress) $
+         when (any id progress) $
                solveConstraintsAfter start umode Normal
   where
     afterStart : (Int, a) -> Bool
@@ -1617,9 +1625,9 @@ checkDots
                       maybe (pure False)
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
                                            | Nothing => undefinedName fc n
-                                      case ndef of
-                                           Hole _ _ => pure False
-                                           _ => pure True)
+                                      pure $ case ndef of
+                                           Hole _ _ => False
+                                           _ => True)
                             oldholen
 
                    -- If any of the things we solved have the same definition,

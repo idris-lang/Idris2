@@ -5,7 +5,7 @@ import Data.List1
 import public Data.Maybe
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
-import Data.Strings
+import Data.String
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -80,6 +80,7 @@ knownTopics = [
     ("doc.record", Nothing),
     ("elab", Nothing),
     ("elab.ambiguous", Nothing),
+    ("elab.app.var", Nothing),
     ("elab.app.lhs", Nothing),
     ("elab.as", Nothing),
     ("elab.bindnames", Nothing),
@@ -93,7 +94,6 @@ knownTopics = [
     ("elab.interface", Nothing),
     ("elab.interface.default", Nothing),
     ("elab.local", Nothing),
-    ("elab.prun", Nothing),
     ("elab.prune", Nothing),
     ("elab.record", Nothing),
     ("elab.retry", Nothing),
@@ -120,6 +120,7 @@ knownTopics = [
     ("quantity.hole", Nothing),
     ("quantity.hole.update", Nothing),
     ("repl.eval", Nothing),
+    ("resugar.var", Nothing),
     ("specialise", Nothing),
     ("totality", Nothing),
     ("totality.positivity", Nothing),
@@ -140,6 +141,7 @@ knownTopics = [
     ("ttc.write", Nothing),
     ("typesearch.equiv", Nothing),
     ("unelab.case", Nothing),
+    ("unelab.var", Nothing),
     ("unify", Nothing),
     ("unify.application", Nothing),
     ("unify.binder", Nothing),

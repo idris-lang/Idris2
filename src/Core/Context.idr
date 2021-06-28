@@ -24,6 +24,7 @@ import Libraries.Data.StringMap
 import Libraries.Text.Distance.Levenshtein
 
 import System
+import System.Clock
 import System.Directory
 
 %default covering
@@ -39,10 +40,12 @@ record PMDefInfo where
   holeInfo : HoleInfo -- data if it comes from a solved hole
   alwaysReduce : Bool -- always reduce, even when quoting etc
                  -- typically for inlinable metavariable solutions
+  externalDecl : Bool -- declared in another module, which may affect how it
+                      -- is compiled
 
 export
 defaultPI : PMDefInfo
-defaultPI = MkPMDefInfo NotHole False
+defaultPI = MkPMDefInfo NotHole False False
 
 public export
 record TypeFlags where
@@ -359,6 +362,10 @@ export
 getContent : Context -> Ref Arr (IOArray ContextEntry)
 getContent = content
 
+export
+namesResolvedAs : Context -> NameMap Name
+namesResolvedAs ctxt = map Resolved ctxt.resolvedAs
+
 -- Implemented later, once we can convert to and from full names
 -- Defined in Core.TTC
 export
@@ -508,17 +515,15 @@ lookupCtxtExact (Resolved idx) ctxt
     = case lookup idx (staging ctxt) of
            Just res =>
                 do def <- decode ctxt idx True res
-                   case returnDef (inlineOnly ctxt) idx def of
-                        Nothing => pure Nothing
-                        Just (_, def) => pure (Just def)
+                   pure $ map (\(_, def) => def) $
+                     returnDef (inlineOnly ctxt) idx def
            Nothing =>
               do arr <- get Arr @{content ctxt}
                  Just res <- coreLift (readArray arr idx)
                       | Nothing => pure Nothing
                  def <- decode ctxt idx True res
-                 case returnDef (inlineOnly ctxt) idx def of
-                      Nothing => pure Nothing
-                      Just (_, def) => pure (Just def)
+                 pure $ map (\(_, def) => def) $
+                   returnDef (inlineOnly ctxt) idx def
 lookupCtxtExact n ctxt
     = do Just (i, def) <- lookupCtxtExactI n ctxt
               | Nothing => pure Nothing
@@ -1101,17 +1106,27 @@ record Defs where
      -- be interpreted however the specific code generator requires
   toCompileCase : List Name
      -- ^ Names which need to be compiled to run time case trees
+  incData : List (CG, String, List String)
+     -- ^ What we've compiled incrementally for this module: codegen,
+     -- object file, any additional CG dependent data (e.g. linker flags)
+  allIncData : List (CG, List String, List String)
+     -- ^ Incrementally compiled files for all imports. Only lists CGs for
+     -- while all modules have associated incremental compile data
   toIR : NameMap ()
      -- ^ Names which need to be compiled to IR at the end of processing
      -- the current module
-  userHoles : NameMap ()
+  userHoles : NameMap Bool
      -- ^ Metavariables the user still has to fill in. In practice, that's
-     -- everything with a user accessible name and a definition of Hole
+     -- everything with a user accessible name and a definition of Hole.
+     -- The Bool says whether it was introduced in another module.
   peFailures : NameMap ()
      -- ^ Partial evaluation names which have failed, so don't bother trying
      -- again
   timings : StringMap (Bool, Integer)
      -- ^ record of timings from logTimeRecord
+  timer : Maybe (Integer, String)
+     -- ^ for timing and checking timeouts; the maximum time after which a
+     -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
 
@@ -1153,10 +1168,13 @@ initDefs
            , allImported = []
            , cgdirectives = []
            , toCompileCase = []
+           , incData = []
+           , allIncData = []
            , toIR = empty
            , userHoles = empty
            , peFailures = empty
            , timings = empty
+           , timer = Nothing
            , warnings = []
            }
 
@@ -1182,6 +1200,7 @@ getFieldNames ctxt recNS
         Just (ns, field) => ns == recNS
 
 -- Find similar looking names in the context
+export
 getSimilarNames : {auto c : Ref Ctxt Defs} -> Name -> Core (List String)
 getSimilarNames nm = case userNameRoot nm of
   Nothing => pure []
@@ -1280,10 +1299,12 @@ initHash
 
 export
 addUserHole : {auto c : Ref Ctxt Defs} ->
-              Name -> Core ()
-addUserHole n
+              Bool -> -- defined in another module?
+              Name -> -- hole name
+              Core ()
+addUserHole ext n
     = do defs <- get Ctxt
-         put Ctxt (record { userHoles $= insert n () } defs)
+         put Ctxt (record { userHoles $= insert n ext } defs)
 
 export
 clearUserHole : {auto c : Ref Ctxt Defs} ->
@@ -1308,10 +1329,10 @@ getUserHoles
     isHole defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure True
-             case definition def of
-                  None => pure True
-                  Hole _ _ => pure True
-                  _ => pure False
+             pure $ case definition def of
+                  None => True
+                  Hole _ _ => True
+                  _ => False
 
 export
 addDef : {auto c : Ref Ctxt Defs} ->
@@ -2349,6 +2370,13 @@ setNFThreshold max
          put Ctxt (record { options->elabDirectives->nfThreshold = max } defs)
 
 export
+setSearchTimeout : {auto c : Ref Ctxt Defs} ->
+                   Integer -> Core ()
+setSearchTimeout t
+    = do defs <- get Ctxt
+         put Ctxt (record { options->session->searchTimeout = t } defs)
+
+export
 isLazyActive : {auto c : Ref Ctxt Defs} ->
                Core Bool
 isLazyActive
@@ -2579,3 +2607,92 @@ recordWarning w
     = do defs <- get Ctxt
          session <- getSession
          put Ctxt $ record { warnings $= (w ::) } defs
+
+export
+getTime : Core Integer
+getTime
+    = do clock <- coreLift (clockTime Process)
+         pure (seconds clock * nano + nanoseconds clock)
+  where
+    nano : Integer
+    nano = 1000000000
+
+-- A simple timeout mechanism. We can start a timer, clear it, or check
+-- whether too much time has passed and throw an exception if so
+
+||| Initialise the timer, setting the time in milliseconds after which a
+||| timeout should be thrown.
+||| Note: It's important to clear the timer when the operation that might
+||| timeout is complete, otherwise something else might throw a timeout
+||| error!
+export
+startTimer : {auto c : Ref Ctxt Defs} ->
+             Integer -> String -> Core ()
+startTimer tmax action
+    = do t <- getTime
+         defs <- get Ctxt
+         put Ctxt $ record { timer = Just (t + tmax * 1000000, action) } defs
+
+||| Clear the timer
+export
+clearTimer : {auto c : Ref Ctxt Defs} -> Core ()
+clearTimer
+    = do defs <- get Ctxt
+         put Ctxt $ record { timer = Nothing } defs
+
+||| If the timer was started more than t milliseconds ago, throw an exception
+export
+checkTimer : {auto c : Ref Ctxt Defs} ->
+             Core ()
+checkTimer
+    = do defs <- get Ctxt
+         let Just (max, action) = timer defs
+                | Nothing => pure ()
+         t <- getTime
+         if (t > max)
+            then throw (Timeout action)
+            else pure ()
+
+-- Update the list of imported incremental compile data, if we're in
+-- incremental mode for the current CG
+export
+addImportedInc : {auto c : Ref Ctxt Defs} ->
+                 ModuleIdent -> List (CG, String, List String) -> Core ()
+addImportedInc modNS inc
+    = do s <- getSession
+         let cg = s.codegen
+         defs <- get Ctxt
+         when (cg `elem` s.incrementalCGs) $
+           case lookup cg inc of
+                Nothing =>
+                  -- No incremental compile data for current CG, so we can't
+                  -- compile incrementally
+                  do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
+                     defs <- get Ctxt
+                     put Ctxt (record { allIncData $= drop cg } defs)
+                Just (mods, extra) =>
+                     put Ctxt (record { allIncData $= addMod cg (mods, extra) }
+                                      defs)
+  where
+    addMod : CG -> (String, List String) ->
+             List (CG, (List String, List String)) ->
+             List (CG, (List String, List String))
+    addMod cg (mod, all) [] = [(cg, ([mod], all))]
+    addMod cg (mod, all) ((cg', (mods, libs)) :: xs)
+        = if cg == cg'
+             then ((cg, (mod :: mods, libs ++ all)) :: xs)
+             else ((cg', (mods, libs)) :: addMod cg (mod, all) xs)
+
+    drop : CG -> List (CG, a) -> List (CG, a)
+    drop cg [] = []
+    drop cg ((x, v) :: xs)
+        = if cg == x
+             then xs
+             else ((x, v) :: drop cg xs)
+
+export
+setIncData : {auto c : Ref Ctxt Defs} ->
+             CG -> (String, List String) -> Core ()
+setIncData cg res
+    = do defs <- get Ctxt
+         put Ctxt (record { incData $= ((cg, res) :: )} defs)

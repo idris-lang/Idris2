@@ -7,16 +7,18 @@ import public Libraries.Text.Parser
 import public Parser.Support
 
 import Core.Core
+import Core.FC
+import Core.Name.Namespace
 import System.File
-import Libraries.Utils.Either
 
 %default total
 
 export
-runParser : (fname : String) -> String -> Rule ty -> Either Error ty
+runParser : (fname : String) -> (str : String) -> Rule ty -> Either Error ty
 runParser fname str p
-    = do toks   <- mapError (\err => fromLexError fname (NoRuleApply, err)) $ lex str
-         parsed <- mapError (fromParsingError fname) $ parse p toks
+    = do toks   <- mapFst (\err => fromLexError
+                     (PhysicalPkgSrc fname) (NoRuleApply, err)) $ lex str
+         parsed <- mapFst (fromParsingError (PhysicalPkgSrc fname)) $ parse p toks
          Right (fst parsed)
 
 export

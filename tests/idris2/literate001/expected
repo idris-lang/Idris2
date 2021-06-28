@@ -4,5 +4,5 @@ Main> > append {n = 0} [] ys = ?foo_1
 Main> > vadd [] [] = ?bar_1
 Main> > vadd (x :: xs) (y :: ys) = ?baz_1
 Main> > suc x x Refl = ?quux_1
-Main> > suc' {x = y} {y = y} Refl = ?quuz_1
+Main> > suc' {x = x} {y = x} Refl = ?quuz_1
 Main> Bye for now!

@@ -1,7 +1,8 @@
 module Idris.REPL.Common
 
-import Core.Env
 import Core.Context.Log
+import Core.Directory
+import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Primitives
@@ -80,9 +81,19 @@ emitProblem a replDocCreator idemodeDocCreator getFC
                      -- TODO: Display a better message when the error doesn't contain a location
                      case map toNonEmptyFC (getFC a) of
                           Nothing => iputStrLn msg
-                          Just (file, startPos, endPos) =>
+                          Just (origin, startPos, endPos) => do
+                            fname <- case origin of
+                              PhysicalIdrSrc ident => do
+                                -- recover the file name relative to the working directory.
+                                -- (This is what idris2-mode expects)
+                                let fc = MkFC (PhysicalIdrSrc ident) startPos endPos
+                                catch (nsToSource fc ident) (const $ pure "(File-Not-Found)")
+                              PhysicalPkgSrc fname =>
+                                pure fname
+                              Virtual Interactive =>
+                                pure "(Interactive)"
                             send f (SExpList [SymbolAtom "warning",
-                                   SExpList [toSExp file,
+                                   SExpList [toSExp {a = String} fname,
                                             toSExp (addOne startPos),
                                               toSExp (addOne endPos),
                                               toSExp !(renderWithoutColor msg),
@@ -150,15 +161,15 @@ resetContext : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
-               (source : String) ->
+               (origin : OriginDesc) ->
                Core ()
-resetContext fname
+resetContext origin
     = do defs <- get Ctxt
          put Ctxt (record { options = clearNames (options defs) } !initDefs)
          addPrimitives
          put UST initUState
          put Syn initSyntax
-         put MD (initMetadata fname)
+         put MD (initMetadata origin)
 
 public export
 data EditResult : Type where
@@ -240,7 +251,7 @@ equivTypes ty1 ty2 =
        | False => pure False
      _ <- newRef UST initUState
      b <- catch
-           (do res <- unify inTerm replFC [] ty1 ty2
+           (do res <- unify inTerm EmptyFC [] ty1 ty2
                case res of
                  (MkUnifyResult [] _ [] NoLazy) => pure True
                  _ => pure False)

@@ -431,7 +431,6 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
              dn <- inCurrentNS dn_in
 
              (rig, dty) <-
-                   the (Core (RigCount, RawImp)) $
                        case findBy (\ d => d <$ guard (n == d.name)) tydecls of
                           Just d => pure (d.count, d.type)
                           Nothing => throw (GenericMsg dfc ("No method named " ++ show n ++ " in interface " ++ show iname))

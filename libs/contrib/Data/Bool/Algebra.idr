@@ -24,6 +24,9 @@ MonoidV Bool where
   monoidNeutralIsNeutralL True = Refl
   monoidNeutralIsNeutralL False = Refl
 
+  monoidNeutralIsNeutralR True = Refl
+  monoidNeutralIsNeutralR False = Refl
+
 Group Bool where
   -- Each Bool is its own additive inverse.
   inverse = id

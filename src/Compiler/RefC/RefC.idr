@@ -13,7 +13,7 @@ import Core.Directory
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
-import Data.Strings
+import Data.String
 import Libraries.Data.SortedSet
 import Data.Vect
 
@@ -22,6 +22,8 @@ import System.File
 
 import Libraries.Utils.Hex
 import Libraries.Utils.Path
+
+%default covering
 
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar '+' = ("_plus" ++)
@@ -60,6 +62,7 @@ showcCleanString (c ::cs) = (showcCleanStringChar c) . showcCleanString cs
 cCleanString : String -> String
 cCleanString cs = showcCleanString (unpack cs) ""
 
+export
 cName : Name -> String
 cName (NS ns n) = cCleanString (showNSWithSep "_" ns) ++ "_" ++ cName n
 cName (UN n) = cCleanString n
@@ -98,22 +101,30 @@ where
 
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt32("++ show x ++")"
-cConstant (BI x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (I8 x) = "(Value*)makeInt8("++ show x ++")"
+cConstant (I16 x) = "(Value*)makeInt16("++ show x ++")"
+cConstant (I32 x) = "(Value*)makeInt32("++ show x ++")"
+cConstant (I64 x) = "(Value*)makeInt64("++ show x ++")"
+cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant WorldVal = "(Value*)makeWorld()"
-cConstant IntType = "i32"
-cConstant IntegerType = "i64"
+cConstant IntType = "Int64"
+cConstant Int8Type = "Int8"
+cConstant Int16Type = "Int16"
+cConstant Int32Type = "Int32"
+cConstant Int64Type = "Int64"
+cConstant IntegerType = "Integer"
 cConstant StringType = "string"
 cConstant CharType = "char"
 cConstant DoubleType = "double"
 cConstant WorldType = "f32"
-cConstant (B8 x)   = "(Value*)makeInt8("++ show x ++")"
-cConstant (B16 x)  = "(Value*)makeInt16("++ show x ++")"
-cConstant (B32 x)  = "(Value*)makeInt32("++ show x ++")"
-cConstant (B64 x)  = "(Value*)makeInt64("++ show x ++")"
+cConstant (B8 x)   = "(Value*)makeBits8("++ show x ++")"
+cConstant (B16 x)  = "(Value*)makeBits16("++ show x ++")"
+cConstant (B32 x)  = "(Value*)makeBits32("++ show x ++")"
+cConstant (B64 x)  = "(Value*)makeBits64("++ show x ++")"
 cConstant Bits8Type = "Bits8"
 cConstant Bits16Type = "Bits16"
 cConstant Bits32Type = "Bits32"
@@ -123,6 +134,10 @@ cConstant n = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw constant in C
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
+extractConstant (I8 x) = show x
+extractConstant (I16 x) = show x
+extractConstant (I32 x) = show x
+extractConstant (I64 x) = show x
 extractConstant (BI x) = show x
 extractConstant (Db x) = show x
 extractConstant (Ch x) = show x
@@ -400,6 +415,10 @@ integer_switch [] = True
 integer_switch (MkAConstAlt c _  :: _) =
     case c of
         (I x) => True
+        (I8 x) => True
+        (I16 x) => True
+        (I32 x) => True
+        (I64 x) => True
         (BI x) => True
         (Ch x) => True
         _ => False
@@ -408,6 +427,10 @@ const2Integer : Constant -> Integer -> Integer
 const2Integer c i =
     case c of
         (I x) => cast x
+        (I8 x) => x
+        (I16 x) => x
+        (I32 x) => x
+        (I64 x) => x
         (BI x) => x
         (Ch x) => cast x
         (B8 x) => cast x
@@ -628,7 +651,7 @@ mutual
         pure $ MkRS opStatement opStatement
     cStatementsFromANF (AExtPrim fc _ p args) = do
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map (\v => varName v) args) ++")")
+        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) = do
         c <- getNextCounter
@@ -719,7 +742,7 @@ getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 cTypeOfCFType : CFType -> String
 cTypeOfCFType CFUnit          = "void"
-cTypeOfCFType CFInt           = "int"
+cTypeOfCFType CFInt           = "int64_t"
 cTypeOfCFType CFUnsigned8     = "uint8_t"
 cTypeOfCFType CFUnsigned16    = "uint16_t"
 cTypeOfCFType CFUnsigned32    = "uint32_t"
@@ -764,11 +787,15 @@ emitFDef funcName ((varType, varName, varCFType) :: xs) = do
 
 extractValue : (cfType:CFType) -> (varName:String) -> String
 extractValue CFUnit          varName = "void"
-extractValue CFInt           varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFUnsigned8     varName = "((Value_Int8*)" ++ varName ++ ")->i8"
-extractValue CFUnsigned16    varName = "((Value_Int16*)" ++ varName ++ ")->i16"
-extractValue CFUnsigned32    varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue CFUnsigned64    varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFInt           varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFInt8          varName = "((Value_Int8*)" ++ varName ++ ")->i8"
+extractValue CFInt16         varName = "((Value_Int16*)" ++ varName ++ ")->i16"
+extractValue CFInt32         varName = "((Value_Int32*)" ++ varName ++ ")->i32"
+extractValue CFInt64         varName = "((Value_Int64*)" ++ varName ++ ")->i64"
+extractValue CFUnsigned8     varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
+extractValue CFUnsigned16    varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
+extractValue CFUnsigned32    varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
+extractValue CFUnsigned64    varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
 extractValue CFString        varName = "((Value_String*)" ++ varName ++ ")->str"
 extractValue CFDouble        varName = "((Value_Double*)" ++ varName ++ ")->d"
 extractValue CFChar          varName = "((Value_Char*)" ++ varName ++ ")->c"
@@ -785,11 +812,15 @@ extractValue n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
 packCFType CFUnit          varName = "NULL"
-packCFType CFInt           varName = "makeInt32(" ++ varName ++ ")"
-packCFType CFUnsigned64    varName = "makeInt64(" ++ varName ++ ")"
-packCFType CFUnsigned32    varName = "makeInt32(" ++ varName ++ ")"
-packCFType CFUnsigned16    varName = "makeInt16(" ++ varName ++ ")"
-packCFType CFUnsigned8     varName = "makeInt8(" ++ varName ++ ")"
+packCFType CFInt           varName = "makeInt64(" ++ varName ++ ")"
+packCFType CFInt8          varName = "makeInt8(" ++ varName ++ ")"
+packCFType CFInt16         varName = "makeInt16(" ++ varName ++ ")"
+packCFType CFInt32         varName = "makeInt32(" ++ varName ++ ")"
+packCFType CFInt64         varName = "makeInt64(" ++ varName ++ ")"
+packCFType CFUnsigned64    varName = "makeBits64(" ++ varName ++ ")"
+packCFType CFUnsigned32    varName = "makeBits32(" ++ varName ++ ")"
+packCFType CFUnsigned16    varName = "makeBits16(" ++ varName ++ ")"
+packCFType CFUnsigned8     varName = "makeBits8(" ++ varName ++ ")"
 packCFType CFString        varName = "makeString(" ++ varName ++ ")"
 packCFType CFDouble        varName = "makeDouble(" ++ varName ++ ")"
 packCFType CFChar          varName = "makeChar(" ++ varName ++ ")"
@@ -807,6 +838,13 @@ discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
 discardLastArgument xs@(_ :: _) = init xs
 
+additionalFFIStub : Name -> List CFType -> CFType -> String
+additionalFFIStub name argTypes (CFIORes retType) = additionalFFIStub name (discardLastArgument argTypes) retType
+additionalFFIStub name argTypes retType =
+    cTypeOfCFType retType ++
+    " (*" ++ cName name ++ ")(" ++
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)missing_ffi;\n"
+
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
@@ -814,6 +852,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
+                -> {default [] additionalFFILangs : List String}
                 -> Name
                 -> ANFDef
                 -> Core ()
@@ -857,11 +896,17 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  case parseCC ["C"] ccs of
-      Just (_, fctName :: extLibOpts) => do
-          case extLibOpts of
-              [lib, header] => addHeader header
-              _ => pure ()
+  case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
+      Just (lang, fctForeignName :: extLibOpts) => do
+          let isStandardFFI = Prelude.elem lang ["RefC", "C"]
+          let fctName = if isStandardFFI
+                           then UN fctForeignName
+                           else UN $ lang ++ "_" ++ fctForeignName
+          if isStandardFFI
+             then case extLibOpts of
+                      [lib, header] => addHeader header
+                      _ => pure ()
+             else emit EmptyFC $ additionalFFIStub fctName fargs ret
           otherDefs <- get FunctionDefinitions
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
           fn_arglist <- functionDefSignatureArglist n
@@ -887,22 +932,22 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           emitFDef n typeVarNameArgList
           emit EmptyFC "{"
           increaseIndentation
-          emit EmptyFC $ " // ffi call to " ++ fctName
+          emit EmptyFC $ " // ffi call to " ++ cName fctName
           case ret of
               CFIORes CFUnit => do
-                  emit EmptyFC $ fctName
+                  emit EmptyFC $ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
-                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
-                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ fctName
+                  emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue vt vn) typeVarNameArgList)
                               ++ ");"
@@ -955,6 +1000,7 @@ executeExpr c _ tm
 
 export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
+                   -> {default [] additionalFFILangs : List String}
                    -> List (Name, ANFDef)
                    -> (outn : String)
                    -> Core ()
@@ -965,7 +1011,7 @@ generateCSourceFile defs outn =
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
-     traverse_ (uncurry createCFunctions) defs
+     traverse_ (uncurry $ createCFunctions {additionalFFILangs}) defs
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText
@@ -1000,4 +1046,4 @@ compileExpr _ _ _ _ _ _ = pure Nothing
 
 export
 codegenRefC : Codegen
-codegenRefC = MkCG (compileExpr ANF) executeExpr
+codegenRefC = MkCG (compileExpr ANF) executeExpr Nothing Nothing

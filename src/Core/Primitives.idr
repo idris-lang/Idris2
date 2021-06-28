@@ -106,10 +106,11 @@ int64max : Integer
 int64max = 0x8000000000000000
 
 intCastWrap : (i : Integer) -> (max : Integer) -> Integer
-intCastWrap i max
-    = if i < negate max || i >= max
-         then i `mod` max
-         else i
+intCastWrap i max =
+  let max2 = 2*max
+      i2   = i `mod` max2
+      i3   = if i2 < 0 then i2 + max2 else i2
+   in if i3 >= max then i3 - max2 else i3
 
 int8CastWrap : (i : Integer) -> Integer
 int8CastWrap i = intCastWrap i int8max

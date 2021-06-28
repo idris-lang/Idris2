@@ -14,7 +14,7 @@ countArgs _ = 0
 public export
 genEq : {t : _} -> Name -> Elab (t -> t -> Bool)
 genEq typeName = do
-  let pos : FC = MkFC "generated code" (0,0) (0,0)
+  let pos : FC = MkFC (Virtual Interactive) (0,0) (0,0)
   [(n, _)] <- getType typeName
       | _ => fail "Ambiguous name"
   constrs <- getCons n

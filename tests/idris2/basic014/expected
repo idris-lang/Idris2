@@ -1,7 +1,7 @@
 1/1: Building Rewrite (Rewrite.idr)
 Error: While processing right hand side of wrongCommutes. Rewriting by m + k = k + m did not change type S k + m = m + S k.
 
-Rewrite.idr:15:25--15:57
+Rewrite:15:25--15:57
  11 | plusCommutes (S k) m = rewrite plusCommutes k m in sym (plusnSm m k)
  12 | 
  13 | wrongCommutes : (n, m : Nat) -> n + m = m + n
@@ -11,7 +11,7 @@ Rewrite.idr:15:25--15:57
 
 Error: While processing right hand side of wrongCommutes2. Nat is not a rewrite rule type.
 
-Rewrite.idr:19:26--19:43
+Rewrite:19:26--19:43
  15 | wrongCommutes (S k) m = rewrite plusCommutes m k in ?bar
  16 | 
  17 | wrongCommutes2 : (n, m : Nat) -> n + m = m + n

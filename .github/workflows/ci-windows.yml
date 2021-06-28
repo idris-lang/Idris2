@@ -12,7 +12,6 @@ env:
   MSYSTEM: MINGW64
   MSYS2_PATH_TYPE: inherit
   SCHEME: scheme
-  IDRIS2_TESTS_CG: chez
   CC: gcc
 
 jobs:

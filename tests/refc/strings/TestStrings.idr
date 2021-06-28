@@ -10,6 +10,14 @@ iteratorTail str = withString str $ \it => unconsTail str (uncons str it)
     unconsTail str EOF = ""
     unconsTail str (Character _ tailIt) = withIteratorString str tailIt id
 
+isUnderscore : Char -> Bool
+isUnderscore '_' = True
+isUnderscore _ = False
+
+isHelloWorld : String -> Bool
+isHelloWorld "Hello, world" = True
+isHelloWorld _ = False
+
 main : IO ()
 main = do
     let helloWorld = "Hello, " ++ "world"
@@ -50,3 +58,11 @@ main = do
 
     putStrLn $ show $ Data.String.Iterator.unpack "iterator unpack"
     putStrLn $ show $ iteratorTail "iterator tail"
+
+    -- Test Char pattern matching
+    putStrLn $ show $ isUnderscore '_'
+    putStrLn $ show $ isUnderscore ' '
+
+    -- Test String pattern matching
+    putStrLn $ show $ isHelloWorld helloWorld
+    putStrLn $ show $ isHelloWorld "Hello, Idris"
