@@ -1,5 +1,5 @@
-#ifndef __MATH_FUNCTIONS_H__
-#define __MATH_FUNCTIONS_H__
+#pragma once
+
 #include "cBackend.h"
 #include <math.h>
 #include <gmp.h>
@@ -202,4 +202,3 @@ Value *gte_Integer(Value *x, Value *y);
 Value *gte_double(Value *x, Value *y);
 Value *gte_char(Value *x, Value *y);
 Value *gte_string(Value *x, Value *y);
-#endif

@@ -1,14 +1,14 @@
 {
   description = "Idris2 flake";
 
-  inputs.flake-utils.url = github:numtide/flake-utils;
+  inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris-emacs-src = {
-    url = github:redfish64/idris2-mode;
+    url = "github:redfish64/idris2-mode";
     flake = false;
   };
 
   outputs = { self, nixpkgs, flake-utils, idris-emacs-src }:
-    let idris2-version = "0.3.0";
+    let idris2-version = "0.4.0";
     in flake-utils.lib.eachDefaultSystem (system:
       let pkgs = import nixpkgs { inherit system; };
           idris2Pkg = pkgs.callPackage ./nix/package.nix { inherit idris2-version; };

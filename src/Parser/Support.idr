@@ -11,7 +11,7 @@ import Core.TT
 import Core.Core
 import Data.List
 import Data.List.Views
-import Data.Strings
+import Data.String
 import Parser.Unlit
 import System.File
 

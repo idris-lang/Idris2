@@ -180,6 +180,10 @@ Show Bool where
   show False = "False"
 
 export
+Show Void where
+  show v impossible
+
+export
 Show () where
   show () = "()"
 

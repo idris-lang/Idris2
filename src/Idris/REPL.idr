@@ -26,6 +26,7 @@ import Core.Options
 import Core.TT
 import Core.Termination
 import Core.Unify
+import Core.Value
 
 import Parser.Unlit
 
@@ -65,7 +66,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
-import Data.Strings
+import Data.String
 import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra
@@ -79,10 +80,10 @@ import System
 import System.File
 import System.Directory
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -205,24 +206,6 @@ getOptions = do
          , ShowTypes (showTypes opts), EvalMode (evalMode opts)
          , Editor (editor opts)
          ]
-
-export
-findCG : {auto o : Ref ROpts REPLOpts} ->
-         {auto c : Ref Ctxt Defs} -> Core Codegen
-findCG
-    = do defs <- get Ctxt
-         case codegen (session (options defs)) of
-              Chez => pure codegenChez
-              ChezSep => pure codegenChezSep
-              Racket => pure codegenRacket
-              Gambit => pure codegenGambit
-              Node => pure codegenNode
-              Javascript => pure codegenJavascript
-              RefC => pure codegenRefC
-              Other s => case !(getCodegen s) of
-                            Just cg => pure cg
-                            Nothing => do coreLift_ $ putStrLn ("No such code generator: " ++ s)
-                                          coreLift $ exitWith (ExitFailure 1)
 
 anyAt : (a -> Bool) -> a -> b -> Bool
 anyAt p loc _ = p loc
@@ -450,7 +433,7 @@ processEdit (ExprSearch upd line name hints)
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLamsTm locs [] tm
+                          do let (_ ** (env, tm')) = dropLamsTm locs [] !(normaliseHoles defs [] tm)
                              itm <- resugar env tm'
                              let itm' : PTerm = if brack then addBracket replFC itm else itm
                              if upd
@@ -597,7 +580,11 @@ execExp : {auto c : Ref Ctxt Defs} ->
           PTerm -> Core REPLResult
 execExp ctm
     = do tm_erased <- prepareExp ctm
-         execute !findCG tm_erased
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         execute cg tm_erased
          pure $ Executed ctm
 
 
@@ -627,7 +614,11 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
     = do tm_erased <- prepareExp ctm
-         ok <- compile !findCG tm_erased outfile
+         Just cg <- findCG
+              | Nothing =>
+                   do iputStrLn (reflow "No such code generator available")
+                      pure CompilationFailed
+         ok <- compile cg tm_erased outfile
          maybe (pure CompilationFailed)
                (pure . Compiled)
                ok
@@ -661,7 +652,7 @@ loadMainFile f
 replEval : {auto c : Ref Ctxt Defs} ->
   {vs : _} ->
   REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
-replEval NormaliseAll = normaliseAll
+replEval NormaliseAll = normaliseOpts (record { strategy = CBV } withAll)
 replEval _ = normalise
 
 record TermWithType where

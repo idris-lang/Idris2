@@ -31,7 +31,7 @@ import public Libraries.Utils.Binary
 ||| (Increment this when changing anything in the data format)
 export
 ttcVersion : Int
-ttcVersion = 56
+ttcVersion = 57
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -44,6 +44,7 @@ record TTCFile extra where
   sourceHash : String
   ifaceHash : Int
   importHashes : List (Namespace, Int)
+  incData : List (CG, String, List String)
   context : List (Name, Binary)
   userHoles : List Name
   autoHints : List (Name, Bool)
@@ -92,14 +93,14 @@ HasNames (Name, Name, Bool) where
   resolved c (n1, n2, b) = pure (!(resolved c n1), !(resolved c n2), b)
 
 HasNames e => HasNames (TTCFile e) where
-  full gam (MkTTCFile version sourceHash ifaceHash iHashes
+  full gam (MkTTCFile version sourceHash ifaceHash iHashes incData
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version sourceHash ifaceHash iHashes
+      = pure $ MkTTCFile version sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (full gam) autoHints)
                          !(traverse (full gam) typeHints)
@@ -130,14 +131,14 @@ HasNames e => HasNames (TTCFile e) where
   -- I don't think we ever actually want to call this, because after we read
   -- from the file we're going to add them to learn what the resolved names
   -- are supposed to be! But for completeness, let's do it right.
-  resolved gam (MkTTCFile version sourceHash ifaceHash iHashes
+  resolved gam (MkTTCFile version sourceHash ifaceHash iHashes incData
                       context userHoles
                       autoHints typeHints
                       imported nextVar currentNS nestedNS
                       pairnames rewritenames primnames
                       namedirectives cgdirectives trans
                       extra)
-      = pure $ MkTTCFile version sourceHash ifaceHash iHashes
+      = pure $ MkTTCFile version sourceHash ifaceHash iHashes incData
                          context userHoles
                          !(traverse (resolved gam) autoHints)
                          !(traverse (resolved gam) typeHints)
@@ -179,6 +180,7 @@ writeTTCFile b file_in
            toBuf b (sourceHash file)
            toBuf b (ifaceHash file)
            toBuf b (importHashes file)
+           toBuf b (incData file)
            toBuf b (imported file)
            toBuf b (extraData file)
            toBuf b (context file)
@@ -208,10 +210,12 @@ readTTCFile readall file as b
            sourceFileHash <- fromBuf b
            ifaceHash <- fromBuf b
            importHashes <- fromBuf b
+           incData <- fromBuf b
            imp <- fromBuf b
            ex <- fromBuf b
            if not readall
-              then pure (MkTTCFile ver sourceFileHash ifaceHash importHashes [] [] [] [] []
+              then pure (MkTTCFile ver sourceFileHash ifaceHash importHashes
+                                   incData [] [] [] [] []
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing)
@@ -230,7 +234,7 @@ readTTCFile readall file as b
                  nds <- fromBuf b
                  cgds <- fromBuf b
                  trans <- fromBuf b
-                 pure (MkTTCFile ver sourceFileHash ifaceHash importHashes
+                 pure (MkTTCFile ver sourceFileHash ifaceHash importHashes incData
                                  (map (replaceNS cns) defs) uholes
                                  autohs typehs imp nextv cns nns
                                  pns rws prims nds cgds trans ex)
@@ -277,6 +281,7 @@ writeToTTC extradata sourceFileName ttcFileName
          log "ttc.write" 5 $ "Writing " ++ ttcFileName ++ " with source hash " ++ sourceHash ++ " and interface hash " ++ show (ifaceHash defs)
          writeTTCFile bin
                    (MkTTCFile ttcVersion (sourceHash) (ifaceHash defs) (importHashes defs)
+                              (incData defs)
                               gdefs
                               (keys (userHoles defs))
                               (saveAutoHints defs)
@@ -455,7 +460,7 @@ readFromTTC nestedns loc reexp fname modNS importAs
                ttc <- readTTCFile True fname as bin
                let ex = extraData ttc
                traverse_ (addGlobalDef modNS (currentNS ttc) as) (context ttc)
-               traverse_ addUserHole (userHoles ttc)
+               traverse_ (addUserHole True) (userHoles ttc)
                setNS (currentNS ttc)
                when nestedns $ setNestedNS (nestedNS ttc)
                -- Only do the next batch if the module hasn't been loaded
@@ -464,6 +469,8 @@ readFromTTC nestedns loc reexp fname modNS importAs
                -- Set up typeHints and autoHints based on the loaded data
                  do traverse_ (addTypeHint loc) (typeHints ttc)
                     traverse_ addAutoHint (autoHints ttc)
+                    addImportedInc modNS (incData ttc)
+                    defs <- get Ctxt
                     -- Set up pair/rewrite etc names
                     updatePair (pairnames ttc)
                     updateRewrite (rewritenames ttc)

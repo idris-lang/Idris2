@@ -14,7 +14,7 @@ import TTImp.TTImp
 import Libraries.Data.ANameMap
 import Data.List
 import Data.Maybe
-import Data.Strings
+import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
@@ -267,6 +267,7 @@ mutual
        PrefixRecordProjections : Bool -> Directive
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
+       SearchTimeout : Integer -> Directive
 
   public export
   data PField : Type where

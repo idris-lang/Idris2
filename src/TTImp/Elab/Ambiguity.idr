@@ -16,7 +16,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
-import Data.Strings
+import Data.String
 
 import Libraries.Data.StringMap
 

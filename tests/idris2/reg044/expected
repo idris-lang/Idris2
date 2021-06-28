@@ -1,0 +1,9 @@
+1/1: Building Methods (Methods.idr)
+Error: Missing methods in Ord: compare
+
+Methods:9:1--12:17
+ 09 | Ord Foo where
+ 10 |    A < B = True
+ 11 |    B < C = True
+ 12 |    _ < _ = False
+

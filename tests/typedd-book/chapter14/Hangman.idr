@@ -1,7 +1,7 @@
 import Data.Vect
 import Data.Vect.Elem
 import Data.List
-import Data.Strings
+import Data.String
 
 import Decidable.Equality
 

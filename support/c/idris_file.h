@@ -1,5 +1,4 @@
-#ifndef __IDRIS_FILE_H
-#define __IDRIS_FILE_H
+#pragma once
 
 #include <stdio.h>
 #include <stdint.h>
@@ -37,5 +36,3 @@ int idris2_fileStatusTime(FILE* f);
 FILE* idris2_stdin();
 FILE* idris2_stdout();
 FILE* idris2_stderr();
-
-#endif

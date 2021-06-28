@@ -18,7 +18,7 @@ import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
 import Data.Nat
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -456,4 +456,4 @@ executeExpr c tmpDir tm
 
 export
 codegenRacket : Codegen
-codegenRacket = MkCG (compileExpr True) executeExpr
+codegenRacket = MkCG (compileExpr True) executeExpr Nothing Nothing

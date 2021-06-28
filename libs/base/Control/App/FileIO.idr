@@ -3,7 +3,7 @@ module Control.App.FileIO
 import Control.App
 
 import Data.List
-import Data.Strings
+import Data.String
 import System.File
 
 %default covering

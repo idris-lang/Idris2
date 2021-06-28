@@ -91,7 +91,7 @@ void _collect_signal(int signum) {
 }
 
 #ifndef _WIN32
-inline struct sigaction _simple_handler(void (*handler)(int)) {
+static inline struct sigaction _simple_handler(void (*handler)(int)) {
   struct sigaction new_action;
 
   new_action.sa_handler = handler;

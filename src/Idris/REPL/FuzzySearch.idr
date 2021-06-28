@@ -39,7 +39,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
-import Data.Strings
+import Data.String
 import Data.DPair
 import Libraries.Data.String.Extra
 import Libraries.Data.List.Extra

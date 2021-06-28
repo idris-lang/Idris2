@@ -18,7 +18,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 import Data.Stream
-import Data.Strings
+import Data.String
 
 import Libraries.Data.List.Extra
 import Libraries.Data.List1 as Lib
@@ -30,10 +30,10 @@ import Libraries.Data.String.Extra
 
 import System.File
 
-%hide Data.Strings.lines
-%hide Data.Strings.lines'
-%hide Data.Strings.unlines
-%hide Data.Strings.unlines'
+%hide Data.String.lines
+%hide Data.String.lines'
+%hide Data.String.unlines
+%hide Data.String.unlines'
 
 %default covering
 
@@ -87,7 +87,7 @@ ploc fc = do
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -149,7 +149,7 @@ ploc2 fc1 fc2 =
     extractRange : Nat -> Nat -> List String -> List String
     extractRange s e xs = take ((e `minus` s) + 1) (drop s xs)
     pad : Nat -> String -> String
-    pad size s = replicate (size `minus` length s) '0' ++ s
+    pad size s = Extra.replicate (size `minus` length s) '0' ++ s
     addLineNumbers : Nat -> Nat -> List (Doc IdrisAnn) -> List (Doc IdrisAnn)
     addLineNumbers size st xs =
       snd $ foldl (\(i, s), l => (S i, snoc s (space <+> annotate FileCtxt (pretty (pad size $ show $ i + 1) <++> pipe) <++> l))) (st, []) xs
@@ -174,6 +174,8 @@ pwarning (ShadowingGlobalDefs _ ns)
 
 pwarning (Deprecated s)
     = pure $ pretty "Deprecation warning:" <++> pretty s
+pwarning (GenericWarn s)
+    = pure $ pretty s
 
 export
 perror : {auto c : Ref Ctxt Defs} ->
@@ -467,6 +469,7 @@ perror (NoForeignCC fc specs) = do
                    ] <+> line <+> !(ploc fc)
     pure res
 perror (BadMultiline fc str) = pure $ errorDesc (reflow "While processing multi-line string" <+> dot <++> pretty str <+> dot) <+> line <+> !(ploc fc)
+perror (Timeout str) = pure $ errorDesc (reflow "Timeout in" <++> pretty str)
 
 perror (InType fc n err)
     = pure $ hsep [ errorDesc (reflow "While processing type of" <++> code (pretty !(prettyName n))) <+> dot

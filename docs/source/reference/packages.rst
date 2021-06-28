@@ -130,6 +130,9 @@ Given an Idris package file ``test.ipkg`` it can be used with the Idris compiler
 
 + ``idris2 --clean test.ipkg`` will clean the intermediate build files.
 
++ ``idris2 --mkdoc test.ipkg`` will generate HTML documentation for the
+  package, output to ``build/docs``
+
 Once the test package has been installed, the command line option
 ``--package test`` makes it accessible (abbreviated to ``-p test``).
 For example::

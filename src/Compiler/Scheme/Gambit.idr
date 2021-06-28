@@ -16,7 +16,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -423,4 +423,4 @@ executeExpr c tmpDir tm
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

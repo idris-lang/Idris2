@@ -51,6 +51,7 @@ Main> Prelude.Show : Type -> Type
     Show String
     Show Nat
     Show Bool
+    Show Void
     Show ()
     (Show a, Show b) => Show (a, b)
     (Show a, Show (p y)) => Show (DPair a p)

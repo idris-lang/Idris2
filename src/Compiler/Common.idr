@@ -20,7 +20,7 @@ import Data.IOArray
 import Data.List
 import Data.List1
 import Libraries.Data.NameMap
-import Data.Strings as String
+import Data.String as String
 
 import Idris.Env
 
@@ -39,6 +39,17 @@ record Codegen where
                 ClosedTerm -> (outfile : String) -> Core (Maybe String)
   ||| Execute an Idris 2 expression directly.
   executeExpr : Ref Ctxt Defs -> (tmpDir : String) -> ClosedTerm -> Core ()
+  ||| Incrementally compile definitions in the current module (toIR defs)
+  ||| if supported
+  ||| Takes a source file name, returns the name of the generated object
+  ||| file, if successful, plus any other backend specific data in a list
+  ||| of strings. The generated object file should be placed in the same
+  ||| directory as the associated TTC.
+  incCompileFile : Maybe (Ref Ctxt Defs ->
+                          (sourcefile : String) ->
+                          Core (Maybe (String, List String)))
+  ||| If incremental compilation is supported, get the output file extension
+  incExt : Maybe String
 
 -- Say which phase of compilation is the last one to use - it saves time if
 -- you only ask for what you need.
@@ -106,6 +117,14 @@ execute {c} cg tm
          ensureDirectoryExists tmpDir
          executeExpr cg c tmpDir tm
          pure ()
+
+export
+incCompile : {auto c : Ref Ctxt Defs} ->
+             Codegen -> String -> Core (Maybe (String, List String))
+incCompile {c} cg src
+    = do let Just inc = incCompileFile cg
+             | Nothing => pure Nothing
+         inc c src
 
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're
@@ -250,6 +269,15 @@ dumpVMCode fn lns
     dumpDef : (Name, VMDef) -> String
     dumpDef (n, d) = fullShow n ++ " = " ++ show d ++ "\n"
 
+export
+nonErased : {auto c : Ref Ctxt Defs} ->
+            Name -> Core Bool
+nonErased n
+    = do defs <- get Ctxt
+         Just gdef <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure True
+         pure (multiplicity gdef /= erased)
+
 -- Find all the names which need compiling, from a given expression, and compile
 -- them to CExp form (and update that in the Defs).
 -- Return the names, the type tags, and a compiled version of the expression
@@ -324,13 +352,40 @@ getCompileData doLazyAnnots phase tm_in
          pure (MkCompileData compiledtm
                              (mapMaybe id namedefs)
                              lifted anf vmcode)
-  where
-    nonErased : Name -> Core Bool
-    nonErased n
-        = do defs <- get Ctxt
-             Just gdef <- lookupCtxtExact n (gamma defs)
-                  | Nothing => pure True
-             pure (multiplicity gdef /= erased)
+
+export
+compileTerm : {auto c : Ref Ctxt Defs} ->
+              ClosedTerm -> Core (CExp [])
+compileTerm tm_in
+    = do tm <- toFullNames tm_in
+         fixArityExp !(compileExp tm)
+
+export
+getIncCompileData : {auto c : Ref Ctxt Defs} -> (doLazyAnnots : Bool) ->
+                    UsePhase -> Core CompileData
+getIncCompileData doLazyAnnots phase
+    = do defs <- get Ctxt
+         -- Compile all the names in 'toIR', since those are the ones defined
+         -- in the current source file
+         let ns = keys (toIR defs)
+         cns <- traverse toFullNames ns
+         rcns <- filterM nonErased cns
+         traverse_ mkForgetDef rcns
+
+         namedefs <- traverse getNamedDef rcns
+         lifted_in <- if phase >= Lifted
+                         then logTime "++ Lambda lift" $ traverse (lambdaLift doLazyAnnots) rcns
+                         else pure []
+         let lifted = concat lifted_in
+         anf <- if phase >= ANF
+                   then logTime "++ Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   else pure []
+         vmcode <- if phase >= VMCode
+                      then logTime "++ Get VM Code" $ pure (allDefs anf)
+                      else pure []
+         pure (MkCompileData (CErased emptyFC)
+                             (mapMaybe id namedefs)
+                             lifted anf vmcode)
 
 -- Some things missing from Prelude.File
 
