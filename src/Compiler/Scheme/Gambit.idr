@@ -49,7 +49,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader =
-    "; @generated\n" ++
+    "; @" ++ "generated\n" ++
     "(declare (block)\n" ++
     "(inlining-limit 450)\n" ++
     "(standard-bindings)\n" ++
