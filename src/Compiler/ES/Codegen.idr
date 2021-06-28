@@ -6,7 +6,7 @@ import Core.Context
 import Core.Directory
 import Core.Options
 import Data.List1
-import Data.Strings
+import Data.String
 import Compiler.ES.Ast
 import Compiler.ES.Doc
 import Compiler.ES.ToAst
@@ -126,6 +126,15 @@ conTags as = zipWith (\i,a => hcat ["a",shown i,softColon,a]) [1..length as] as
 applyObj : (args : List Doc) -> Doc
 applyObj = applyList "{" "}" softComma
 
+-- fully applied constructors are converted to JS objects with fields
+-- labeled `a1`, `a2`, and so on for the given list of arguments.
+-- a header field (label: `h`) is added holding either the index of
+-- the data constructor used or a string representing the type constructor
+-- in question.
+--
+-- Exceptions based on the given `ConInfo`:
+-- `NIL` and `NOTHING`-like data constructors are represented as `{h: 0}`,
+-- while `CONS`, `JUST`, and `RECORD` come without the header field.
 applyCon : ConInfo -> (tag : Either Int Name) -> (args : List Doc) -> Doc
 applyCon NIL     _ [] = "{h" <+> softColon <+> "0}"
 applyCon NOTHING _ [] = "{h" <+> softColon <+> "0}"
@@ -134,19 +143,29 @@ applyCon JUST    _ as = applyObj (conTags as)
 applyCon RECORD  _ as = applyObj (conTags as)
 applyCon _       t as = applyObj (("h" <+> softColon <+> tag2es t)::conTags as)
 
-app : Doc -> List Doc -> Doc
-app d args = d <+> applyList "(" ")" softComma args
+-- applys the given list of arguments to the given function.
+app : (fun : Doc) -> (args : List Doc) -> Doc
+app fun args = fun <+> applyList "(" ")" softComma args
 
+-- invoke a function whose name is given as a `String` instead
+-- of a `Doc`.
 callFun : String -> List Doc -> Doc
 callFun = app . Text
 
+-- like `callFun` but with just a single argument
 callFun1 : String -> Doc -> Doc
 callFun1 fun = callFun fun . pure
 
-jsCrashExp : Doc -> Doc
+-- throws an error in JS land with the given error message.
+jsCrashExp : (msg : Doc) -> Doc
 jsCrashExp = callFun1 (esName "crashExp")
 
-function : Doc -> (args : List Doc) -> (body : Doc) -> Doc
+-- creates a toplevel function definition of the form
+-- ```javascript
+--  function name(args) {
+--    body
+--  }
+function : (name : Doc) -> (args : List Doc) -> (body : Doc) -> Doc
 function n args body =
   "function" <++> app n args <+> SoftSpace <+> block body
 
@@ -217,32 +236,50 @@ jsAnyToString s = "(''+" <+> s <+> ")"
 jsCharOfInt : IntKind -> Doc -> Doc
 jsCharOfInt k = callFun1 (esName "truncToChar") . fromInt k
 
--- We can't determine `isBigInt` from the given number of bits, since
--- when casting from BigInt to Number we need to truncate the BigInt
--- first, otherwise we might lose precision
-truncateSigned : (isBigInt : Bool) -> Int -> Doc -> Doc
+-- Invokes a function from the preamble to check if an bounded
+-- singed integer is withint bound, and - if that's not the case -
+-- truncate it accordingly.
+-- `isBigInt` reflects whether `int` is a `BigInt` or a `Number`.
+--
+-- Note: We can't determine `isBigInt` from the given number of bits, since
+-- when casting from BigInt (for instance, a `Bits64`) to Number
+-- we need to truncate the BigInt
+-- first, otherwise we might lose precision.
+truncateSigned : (isBigInt : Bool) -> (bits : Int) -> (int : Doc) -> Doc
 truncateSigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
     in callFun1 (esName "trunc" ++ add ++ show bits)
 
-truncateUnsigned : (isBigInt : Bool) -> Int -> Doc -> Doc
+-- like `truncateSigned` but for unsigned integers
+truncateUnsigned : (isBigInt : Bool) -> (bits : Int) -> (int : Doc) -> Doc
 truncateUnsigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
     in callFun1 (esName "truncU" ++ add ++ show bits)
 
-boundedOp : (suffix : String) -> Int -> String -> Doc -> Doc -> Doc
+-- invokes an arithmetic operation for a bounded integral value.
+-- this is used to implement `boundedIntOp` and `boundedUIntOp`
+-- where the suffix is set to "s" or "u", respectively.
+boundedOp :  (suffix : String)
+          -> (bits : Int)
+          -> (op : String)
+          -> (lhs : Doc)
+          -> (rhs : Doc)
+          -> Doc
 boundedOp s bits o x y = callFun (fastConcat ["_", o, show bits, s]) [x,y]
 
+-- alias for `boundedOp "s"`
 boundedIntOp : Int -> String -> Doc -> Doc -> Doc
 boundedIntOp = boundedOp "s"
 
+-- alias for `boundedOp "u"`
 boundedUIntOp : Int -> String -> Doc -> Doc -> Doc
 boundedUIntOp = boundedOp "u"
 
-boolOp : String -> Doc -> Doc -> Doc
+-- generates code for a boolean binop, like `>=`.
+boolOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
 boolOp o lhs rhs = "(" <+> binOp o lhs rhs <+> "?1:0)"
 
-export
+-- convert an Idris constant to its JS representation
 jsConstant : Constant -> Core String
 jsConstant (I i)    = pure $ show i
 jsConstant (I8 i)   = pure $ show i
@@ -264,10 +301,10 @@ jsConstant ty       = error $ "Unsuported constant " ++ show ty
 -- Rounding / truncation behavior is determined from the
 -- `IntKind`.
 arithOp :  Maybe IntKind
-        -> (sym : String)
-        -> (op : String)
-        -> (x : Doc)
-        -> (y : Doc)
+        -> (sym : String) -- operator symbol (in case we can use the symbolic version)
+        -> (op  : String)  -- operation name (for operations on bounded integrals)
+        -> (lhs : Doc)
+        -> (rhs : Doc)
         -> Doc
 arithOp (Just $ Signed $ P n) _   op = boundedIntOp n op
 arithOp (Just $ Unsigned n)   _   op = boundedUIntOp n op
@@ -278,6 +315,8 @@ jsIntKind : Constant -> Maybe IntKind
 jsIntKind IntType = Just . Signed   $ P 32
 jsIntKind x       = intKind x
 
+-- implementation of all kinds of cast from and / or to integral
+-- values.
 castInt : Constant -> Constant -> Doc -> Core Doc
 castInt from to x =
   case ((from, jsIntKind from), (to, jsIntKind to)) of
@@ -330,7 +369,7 @@ castInt from to x =
             (Unsigned m, Signed n)   =>
               if n > P m then pure expanded else shrunk
 
-export
+-- implementations of primitive functions.
 jsOp : {0 arity : Nat} ->
        PrimFn arity -> Vect arity Doc -> Core Doc
 jsOp (Add ty) [x, y] = pure $ arithOp (jsIntKind ty) "+" "add" x y
@@ -383,19 +422,30 @@ jsOp (Cast ty ty2) [x]        = castInt ty ty2 x
 jsOp BelieveMe [_,_,x] = pure x
 jsOp (Crash) [_, msg] = pure $ jsCrashExp msg
 
+--------------------------------------------------------------------------------
+--          FFI
+--------------------------------------------------------------------------------
+
+-- from an FFI declaration, reads the backend to use.
+-- Exapmple: `readCCPart "node:lambda: x => x"` yields
+-- `("node","lambda: x => x")`.
 readCCPart : String -> (String, String)
 readCCPart = breakDrop1 ':'
 
+-- search a an FFI implementation for one of the supported
+-- backends.
 searchForeign : List String -> List String -> Either (List String) String
-searchForeign prefixes xs =
-  let pairs = map readCCPart xs
+searchForeign knownBackends decls =
+  let pairs = map readCCPart decls
       backends = Left $ map fst pairs
-   in maybe backends (Right. snd) $ find ((`elem` prefixes) . fst) pairs
+   in maybe backends (Right. snd) $ find ((`elem` knownBackends) . fst) pairs
 
+-- given a function name and FFI implementation string,
+-- generate a toplevel function definition.
 makeForeign :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
-            -> Name
-            -> String
+            -> (name : Name)
+            -> (ffDecl : String)
             -> Core Doc
 makeForeign n x = do
   nd <- var <$> getOrRegisterRef n
@@ -424,6 +474,8 @@ makeForeign n x = do
            , stringList ["lambda", "support", "stringIterator"]
            ]
 
+-- given a function name and list of FFI declarations, tries
+-- to extract a declaration for one of the supported backends.
 foreignDecl :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
             -> Name
@@ -440,6 +492,7 @@ foreignDecl n ccs = do
         , "Backends in definition: ", stringList backends, "."
         ]
 
+-- implementations for external primitive functions.
 jsPrim : {auto c : Ref ESs ESSt} -> Name -> List Doc -> Core Doc
 jsPrim (NS _ (UN "prim__newIORef")) [_,v,_] = pure $ hcat ["({value:", v, "})"]
 jsPrim (NS _ (UN "prim__readIORef")) [_,r,_] = pure $ hcat ["(", r, ".value)"]
@@ -456,6 +509,13 @@ jsPrim (NS _ (UN "prim__codegen")) [] = do
     pure . Text $ jsString cg
 jsPrim x args = throw $ InternalError $ "prim not implemented: " ++ (show x)
 
+--------------------------------------------------------------------------------
+--          Codegen
+--------------------------------------------------------------------------------
+
+-- checks, whether we accept the given `Exp` as a function argument, or
+-- whether it needs to be lifted to the surrounding scope and assigned
+-- to a new variable.
 isArg : CGMode -> Exp -> Bool
 isArg Pretty (ELam _ $ Block _ _)           = False
 isArg Pretty (ELam _ $ ConSwitch _ _ _ _)   = False
@@ -463,10 +523,24 @@ isArg Pretty (ELam _ $ ConstSwitch _ _ _ _) = False
 isArg Pretty (ELam _ $ Error _)             = False
 isArg _      _                              = True
 
+-- like `isArg` but for function expressions, which we are about
+-- to apply
 isFun : Exp -> Bool
 isFun (ELam _ _) = False
 isFun _          = True
 
+-- creates a JS switch statment from the given scrutinee and
+-- case blocks (the first entry in a pair is the value belonging
+-- to a `case` statement, the second is the body
+--
+-- Example: switch "foo.a1" [("0","return 2;")] (Just "return 0;")
+-- generates the following code:
+-- ```javascript
+--   switch(foo.a1) {
+--     case 0: return 2;
+--     default: return 0;j
+--   }
+-- ```
 switch :  (scrutinee : Doc)
        -> (alts : List (Doc,Doc))
        -> (def : Maybe Doc)
@@ -484,11 +558,15 @@ switch sc alts def =
         alt : (Doc,Doc) -> Doc
         alt (e,d) = anyCase ("case" <++> e) d
 
+-- creates an argument list for a (possibly multi-argument)
+-- anonymous function. An empty argument list is treated
+-- as a delayed computation (prefixed by `() =>`).
 lambdaArgs : List Var -> Doc
 lambdaArgs [] = "()" <+> lambdaArrow
 lambdaArgs xs = hcat $ (<+> lambdaArrow) . var <$> xs
 
 mutual
+  -- converts an `Exp` to JS code
   exp : {auto c : Ref ESs ESSt} -> Exp -> Core Doc
   exp (EMinimal x) = pure $ minimal x
   exp (ELam xs (Return $ y@(ECon _ _ _))) =
@@ -507,6 +585,7 @@ mutual
   exp (EPrimVal x) = Text <$> jsConstant x
   exp EErased = pure "undefined"
 
+  -- converts a `Stmt e` to JS code.
   stmt : {e : _} -> {auto c : Ref ESs ESSt} -> Stmt e -> Core Doc
   stmt (Return y) = (\e => "return" <++> e <+> ";") <$> exp y
   stmt (Const v x) = constant (var v) <$> exp x
@@ -543,11 +622,14 @@ mutual
     doc  <- stmt s
     pure $ hcat (docs ++ [doc])
 
+-- pretty print a piece of code based on the given
+-- codegen mode.
 printDoc : CGMode -> Doc -> String
 printDoc Pretty y = pretty (y <+> LineBreak)
 printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
+-- generate code for the given toplevel function.
 def : {auto c : Ref ESs ESSt} -> Function -> Core String
 def (MkFunction n as body) = do
   reset
@@ -557,6 +639,7 @@ def (MkFunction n as body) = do
   b    <- stmt Returns body >>= stmt
   pure $ printDoc mde $ function (var ref) (map var args) b
 
+-- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
         -> {auto d : Ref Ctxt Defs}
         -> (Name,FC,NamedDef)
@@ -564,28 +647,63 @@ foreign :  {auto c : Ref ESs ESSt}
 foreign (n, _, MkNmForeign path _ _) = pure . pretty <$> foreignDecl n path
 foreign _                            = pure []
 
+-- name of the toplevel tail call loop from the
+-- preamble.
 tailRec : Name
 tailRec = UN "__tailRec"
 
+||| Compiles the given `ClosedTerm` for the list of supported
+||| backends to JS code.
 export
-compileToES : Ref Ctxt Defs -> ClosedTerm -> List String -> Core String
-compileToES c tm ccTypes = do
-  cdata <- getCompileData False Cases tm
-  directives <- getDirectives Node
+compileToES : Ref Ctxt Defs -> (cg : CG) -> ClosedTerm -> List String -> Core String
+compileToES c cg tm ccTypes = do
+  cdata      <- getCompileData False Cases tm
+
+  -- read a derive the codegen mode to use from
+  -- user defined directives for the
+  directives <- getDirectives cg
   let mode = if "minimal" `elem` directives then Minimal
              else if "compact" `elem` directives then Compact
              else Pretty
+
+  -- initialize the state used in the code generator
   s <- newRef ESs $ init mode (isArg mode) isFun ccTypes
+
+  -- register the toplevel `__tailRec` function to make sure
+  -- it is not mangled in `Minimal` mode
   addRef tailRec (VName tailRec)
+
+  -- the list of all toplevel definitions (including the main
+  -- function)
   let allDefs =  (mainExpr, EmptyFC, MkNmFun [] $ forget cdata.mainExpr)
               :: cdata.namedDefs
-      defs    = functions tailRec allDefs
+
+      -- tail-call optimized set of toplevel functions
+      defs    = TailRec.functions tailRec allDefs
+
+  -- pretty printed toplevel function definitions
   defDecls <- traverse def defs
+
+  -- pretty printed toplevel FFI definitions
   foreigns <- concat <$> traverse foreign allDefs
+
+  -- lookup the (possibly mangled) name of the main function
   mainName <- compact . var <$> getOrRegisterRef mainExpr
-  let main = "try{" ++ mainName ++ "()}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
+
+  -- main function and list of all declarations
+  let main =  "try{"
+           ++ mainName
+           ++ "()}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
+
       allDecls = fastUnlines $ foreigns ++ defDecls
+
   st <- get ESs
+
+  -- main preamble containing primops implementations
   static_preamble <- readDataFile ("js/support.js")
+
+  -- complete preamble, including content from additional
+  -- support files (if any)
   let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+
   pure $ fastUnlines [pre,allDecls,main]
