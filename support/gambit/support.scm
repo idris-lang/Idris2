@@ -213,9 +213,6 @@
 (define blodwen-sleep thread-sleep!)
 (define (blodwen-usleep s) (thread-sleep! (/ s 1e6)))
 
-(define (blodwen-time)
-  (exact-floor (time->seconds (current-time))))
-
 
 (define (blodwen-arg-count)
   (length (command-line)))

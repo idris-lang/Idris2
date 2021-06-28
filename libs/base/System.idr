@@ -107,10 +107,10 @@ export
 system : HasIO io => String -> io Int
 system cmd = primIO (prim__system cmd)
 
-%foreign support "idris2_time"
-         "scheme:blodwen-time"
+%foreign "C:idris2_time, libidris2_support, idris2_support.h"
 prim__time : PrimIO Int
 
+||| Return the number of seconds since epoch.
 export
 time : HasIO io => io Integer
 time = pure $ cast !(primIO prim__time)
