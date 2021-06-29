@@ -3,6 +3,7 @@ module Compiler.CompileExpr
 import Core.CaseTree
 import public Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Env
 import Core.Name
 import Core.Normalise
@@ -21,6 +22,21 @@ data Args
     = NewTypeBy Nat Nat
     | EraseArgs Nat (List Nat)
     | Arity Nat
+
+getTypeConTag : {auto c : Ref Ctxt Defs} -> Name -> Core Int
+getTypeConTag name = do
+    defs <- get Ctxt
+    let (nextTag, tags) = defs.typeConTags
+    case lookup name tags of
+        Just tag => do
+            log "compiler.typecon" 10 $
+                "Getting unique tag for " ++ show name ++ ", found tag " ++ show tag
+            pure tag
+        Nothing => do
+            log "compiler.typecon" 10 $
+                "Getting unique tag for " ++ show name ++ ", generating new tag " ++ show nextTag
+            put Ctxt $ record { typeConTags = (nextTag + 1, insert name nextTag tags) } defs
+            pure nextTag
 
 ||| Extract the number of arguments from a term, or return that it's
 ||| a newtype by a given argument position
@@ -343,7 +359,7 @@ mutual
                 ENUM => pure $ CPrimVal fc (I tag)
                 _ => pure $ CCon fc cn fl tag []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
-      = pure $ CCon fc fn TYCON !(resolveName n) []
+      = pure $ CCon fc fn TYCON !(getTypeConTag fn) []
   toCExpTm m n (Ref fc _ fn)
       = do full <- getFullName fn
                -- ^ For readability of output code, and the Nat hack,
@@ -358,7 +374,7 @@ mutual
                           (CLet fc x True !(toCExp m n val) sc')
                           rig
   toCExpTm m n (Bind fc x (Pi _ c e ty) sc)
-      = pure $ CCon fc (UN "->") TYCON !(resolveName $ UN "->") [!(toCExp m n ty),
+      = pure $ CCon fc (UN "->") TYCON !(getTypeConTag $ UN "->") [!(toCExp m n ty),
                                     CLam fc x !(toCExp m n sc)]
   toCExpTm m n (Bind fc x b tm) = pure $ CErased fc
   -- We'd expect this to have been dealt with in toCExp, but for completeness...
@@ -377,9 +393,9 @@ mutual
             if t == 0
                then pure $ CPrimVal fc c
                else let ty = UN $ show c in
-                    pure $ CCon fc ty TYCON !(resolveName ty) []
+                    pure $ CCon fc ty TYCON !(getTypeConTag ty) []
   toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON !(resolveName $ UN "Type") []
+  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON !(getTypeConTag $ UN "Type") []
 
   toCExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -413,7 +429,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn TYCON !(resolveName n) args !(toCExpTree n sc)
+                        pure $ MkConAlt xn TYCON !(getTypeConTag n) args !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
@@ -424,7 +440,7 @@ mutual
                         ns' <- conCases n ns
                         if dcon (definition gdef)
                            then pure $ MkConAlt xn !(dconFlag xn) tag args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn !(dconFlag xn) !(resolveName xn) args' (shrinkCExp sub sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) !(getTypeConTag xn) args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon _ _ _) = True
@@ -770,7 +786,7 @@ toCDef n _ _ (DCon tag arity pos)
                  Arity ar => ar
          pure $ MkCon tag arity' nt
 toCDef n _ _ (TCon tag arity _ _ _ _ _ _)
-    = pure $ MkCon !(resolveName n) arity Nothing
+    = pure $ MkCon !(getTypeConTag n) arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
 -- (and, TODO: warn at compile time)
 toCDef n ty _ (Hole _ _)

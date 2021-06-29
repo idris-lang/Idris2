@@ -1129,6 +1129,8 @@ record Defs where
      -- timeout should be thrown
   warnings : List Warning
      -- ^ as yet unreported warnings
+  typeConTags : (Int, NameMap Int)
+     -- ^ the next tag and a map from type constructors to their unique tag
 
 -- Label for context references
 export
@@ -1176,6 +1178,7 @@ initDefs
            , timings = empty
            , timer = Nothing
            , warnings = []
+           , typeConTags = (0, empty)
            }
 
 -- Reset the context, except for the options
