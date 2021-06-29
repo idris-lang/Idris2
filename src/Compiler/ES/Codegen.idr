@@ -620,7 +620,7 @@ mutual
   stmt (Block ss s) = do
     docs <- traverse stmt $ forget ss
     doc  <- stmt s
-    pure $ hcat (docs ++ [doc])
+    pure $ vcat (docs ++ [doc])
 
 -- pretty print a piece of code based on the given
 -- codegen mode.
