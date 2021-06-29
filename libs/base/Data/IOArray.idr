@@ -53,7 +53,7 @@ newArrayCopy newsize arr
              then pure ()
              else do el <- primIO $ prim__arrayGet old pos
                      primIO $ prim__arraySet new pos el
-                     assert_total (copyFrom old new (pos - 1))
+                     copyFrom old new $ assert_smaller pos (pos - 1)
 
 export
 toList : HasIO io => IOArray elem -> io (List (Maybe elem))
