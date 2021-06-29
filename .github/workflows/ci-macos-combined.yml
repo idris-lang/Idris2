@@ -1,13 +1,10 @@
 name: macOS Combined Chez
+
 on:
-  push:
-    branches:
-      - '*'
-    tags:
-      - '*'
-  pull_request:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Quick check"]
+    types:
+      - completed
 
 env:
   SCHEME: chez
@@ -17,6 +14,7 @@ jobs:
   # Building the executable
 
   build-bootstrap-chez:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
     steps:
       - name: Checkout
