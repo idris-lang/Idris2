@@ -115,25 +115,6 @@ toReg : AVar -> Reg
 toReg (ALocal i) = Loc i
 toReg ANull = Discard
 
-0
-TagM : Type -> Type
-TagM = State (Int, NameMap Int)
-
-initState : (Int, NameMap Int)
-initState = (0, empty)
-
-runTagM : TagM a -> a
-runTagM = evalState initState
-
-getTag : Name -> TagM Int
-getTag n = do
-    nm <- gets snd
-    let Nothing = lookup n nm
-        | Just t => pure t
-    t <- gets fst
-    put (t + 1, insert n t nm)
-    pure t
-
 projectArgs : Int -> Int -> (used : IntMap ()) -> (args : List Int) -> List VMInst
 projectArgs scr i used [] = []
 projectArgs scr i used (arg :: args)
@@ -166,53 +147,50 @@ collectUsed (PROJECT _ val _) = collectReg val
 collectUsed (NULL _) = empty
 collectUsed (ERROR _) = empty
 
-toVM : (tailpos : Bool) -> (target : Reg) -> ANF -> TagM (List VMInst)
-toVM t Discard _ = pure []
+toVM : (tailpos : Bool) -> (target : Reg) -> ANF -> (List VMInst)
+toVM t Discard _ = []
 toVM t res (AV fc (ALocal i))
-    = pure [ASSIGN res (Loc i)]
+    = [ASSIGN res (Loc i)]
 toVM t res (AAppName fc _ n args)
-    = pure [CALL res t n (map toReg args)]
+    = [CALL res t n (map toReg args)]
 toVM t res (AUnderApp fc n m args)
-    = pure [MKCLOSURE res n m (map toReg args)]
+    = [MKCLOSURE res n m (map toReg args)]
 toVM t res (AApp fc _ f a)
-    = pure [APPLY res (toReg f) (toReg a)]
+    = [APPLY res (toReg f) (toReg a)]
 toVM t res (ALet fc var val body)
-    = [| toVM False (Loc var) val ++ toVM t res body |]
-toVM t res (ACon fc n ci (Just tag) args)
-    = pure [MKCON res tag (map toReg args)]
-toVM t res (ACon fc n ci Nothing args)
-    = pure [MKCON res !(getTag n) (map toReg args)]
+    = toVM False (Loc var) val ++ toVM t res body
+toVM t res (ACon fc n ci tag args)
+    = [MKCON res tag (map toReg args)]
 toVM t res (AOp fc _ op args)
-    = pure [OP res op (map toReg args)]
+    = [OP res op (map toReg args)]
 toVM t res (AExtPrim fc _ p args)
-    = pure [EXTPRIM res p (map toReg args)]
+    = [EXTPRIM res p (map toReg args)]
 toVM t res (AConCase fc (ALocal scr) [MkAConAlt n ci mt args code] Nothing) -- exactly one alternative, so skip matching
-    = do body <- toVM t res code
-         let used = foldMap collectUsed body
-         pure $ projectArgs scr 0 used args ++ body
+    = let body = toVM t res code
+          used = foldMap collectUsed body
+       in projectArgs scr 0 used args ++ body
 toVM t res (AConCase fc (ALocal scr) alts def)
-    = pure [CASE (Loc scr) !(traverse toVMConAlt alts) !(traverse (toVM t res) def)]
+    = [CASE (Loc scr) (toVMConAlt <$> alts) (toVM t res <$> def)]
   where
-    toVMConAlt : AConAlt -> TagM (Int, List VMInst)
-    toVMConAlt (MkAConAlt n ci mtag args code)
-       = do tag <- maybe (getTag n) pure mtag
-            body <- toVM t res code
-            let used = foldMap collectUsed body
-            pure (tag, projectArgs scr 0 used args ++ body)
+    toVMConAlt : AConAlt -> (Int, List VMInst)
+    toVMConAlt (MkAConAlt n ci tag args code)
+       = let body = toVM t res code
+             used = foldMap collectUsed body
+          in (tag, projectArgs scr 0 used args ++ body)
 toVM t res (AConstCase fc (ALocal scr) alts def)
-    = pure [CONSTCASE (Loc scr) !(traverse toVMConstAlt alts) !(traverse (toVM t res) def)]
+    = [CONSTCASE (Loc scr) (toVMConstAlt <$> alts) (toVM t res <$> def)]
   where
-    toVMConstAlt : AConstAlt -> TagM (Constant, List VMInst)
+    toVMConstAlt : AConstAlt -> (Constant, List VMInst)
     toVMConstAlt (MkAConstAlt c code)
-        = pure (c, !(toVM t res code))
+        = (c, toVM t res code)
 toVM t res (APrimVal fc c)
-    = pure [MKCONSTANT res c]
+    = [MKCONSTANT res c]
 toVM t res (AErased fc)
-    = pure [NULL res]
+    = [NULL res]
 toVM t res (ACrash fc err)
-    = pure [ERROR err]
+    = [ERROR err]
 toVM t res _
-    = pure [NULL res]
+    = [NULL res]
 
 findVars : VMInst -> List Int
 findVars (ASSIGN (Loc r) _) = [r]
@@ -251,12 +229,12 @@ declareVars got code
 export
 toVMDef : ANFDef -> Maybe VMDef
 toVMDef (MkAFun args body)
-    = let insts = runTagM $ toVM True RVal body in
+    = let insts = toVM True RVal body in
     Just $ MkVMFun args $ declareVars args insts
 toVMDef (MkAForeign ccs args ret)
     = Just $ MkVMForeign ccs args ret
 toVMDef (MkAError body)
-    = Just $ MkVMError $ declareVars [] $ runTagM $ toVM True RVal body
+    = Just $ MkVMError $ declareVars [] $ toVM True RVal body
 toVMDef _ = Nothing
 
 export

@@ -54,7 +54,7 @@ mutual
     ||| Tag representing either a data constructor (in that case
     ||| an integer is used as its index) or a type constructor
     ||| (these come up when pattern matching on types).
-    IEConstructorTag : (tag : Either Int String) -> ImperativeExp
+    IEConstructorTag : (tag : Int) -> ImperativeExp
 
     ||| Argument of a data constructor applied to the given JS object.
     ||| The arg index starts at 1.
@@ -67,7 +67,7 @@ mutual
     ||| Creates a JS object using the given constructor
     ||| tag and arguments. The corresponding values are
     ||| extracted using `IEConstructorTag` and `IEConstructorArg`.
-    IEConstructor :  (tag  : Either Int String)
+    IEConstructor :  (tag  : Int)
                   -> (args : List ImperativeExp)
                   -> ImperativeExp
 

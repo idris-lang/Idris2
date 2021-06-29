@@ -307,7 +307,7 @@ enumTree (CConCase fc sc alts def)
          CConstCase fc sc alts' def
   where
     toEnum : CConAlt vars -> Maybe (CConstAlt vars)
-    toEnum (MkConAlt nm ENUM (Just tag) [] sc)
+    toEnum (MkConAlt nm ENUM tag [] sc)
         = pure $ MkConstAlt (I tag) sc
     toEnum _ = Nothing
 enumTree t = t
@@ -341,9 +341,9 @@ mutual
            fl <- dconFlag cn
            case fl of
                 ENUM => pure $ CPrimVal fc (I tag)
-                _ => pure $ CCon fc cn fl (Just tag) []
+                _ => pure $ CCon fc cn fl tag []
   toCExpTm m n (Ref fc (TyCon tag arity) fn)
-      = pure $ CCon fc fn TYCON Nothing []
+      = pure $ CCon fc fn TYCON !(resolveName n) []
   toCExpTm m n (Ref fc _ fn)
       = do full <- getFullName fn
                -- ^ For readability of output code, and the Nat hack,
@@ -358,7 +358,7 @@ mutual
                           (CLet fc x True !(toCExp m n val) sc')
                           rig
   toCExpTm m n (Bind fc x (Pi _ c e ty) sc)
-      = pure $ CCon fc (UN "->") TYCON Nothing [!(toCExp m n ty),
+      = pure $ CCon fc (UN "->") TYCON !(resolveName $ UN "->") [!(toCExp m n ty),
                                     CLam fc x !(toCExp m n sc)]
   toCExpTm m n (Bind fc x b tm) = pure $ CErased fc
   -- We'd expect this to have been dealt with in toCExp, but for completeness...
@@ -376,9 +376,10 @@ mutual
       = let t = constTag c in
             if t == 0
                then pure $ CPrimVal fc c
-               else pure $ CCon fc (UN (show c)) TYCON Nothing []
+               else let ty = UN $ show c in
+                    pure $ CCon fc ty TYCON !(resolveName ty) []
   toCExpTm m n (Erased fc _) = pure $ CErased fc
-  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON Nothing []
+  toCExpTm m n (TType fc) = pure $ CCon fc (UN "Type") TYCON !(resolveName $ UN "Type") []
 
   toCExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
@@ -412,7 +413,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn TYCON Nothing args !(toCExpTree n sc)
+                        pure $ MkConAlt xn TYCON !(resolveName n) args !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
@@ -422,8 +423,8 @@ mutual
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp sub sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) tag args' (shrinkCExp sub sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) !(resolveName xn) args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon _ _ _) = True
@@ -767,9 +768,9 @@ toCDef n _ _ (DCon tag arity pos)
                  NewTypeBy ar _ => ar
                  EraseArgs ar erased => ar `minus` length erased
                  Arity ar => ar
-         pure $ MkCon (Just tag) arity' nt
+         pure $ MkCon tag arity' nt
 toCDef n _ _ (TCon tag arity _ _ _ _ _ _)
-    = pure $ MkCon Nothing arity Nothing
+    = pure $ MkCon !(resolveName n) arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
 -- (and, TODO: warn at compile time)
 toCDef n ty _ (Hole _ _)

@@ -130,16 +130,16 @@ fusionArgsName : Name
 fusionArgsName = MN "imp_gen_tailoptim_fusion_args" 0
 
 createNewArgs : List ImperativeExp -> ImperativeExp
-createNewArgs = IEConstructor (Left 0)
+createNewArgs = IEConstructor 0
 
 createArgInit : List Name -> ImperativeStatement
 createArgInit names =
-    LetDecl argsName (Just $ IEConstructor (Left 0) (map IEVar names))
+    LetDecl argsName (Just $ IEConstructor 0 (map IEVar names))
 
 replaceTailCall : Name -> ImperativeStatement -> ImperativeStatement
 replaceTailCall n (SeqStatement x y) = SeqStatement x (replaceTailCall n y)
 replaceTailCall n (ReturnStatement x) =
-    let defRet = ReturnStatement $ IEConstructor (Left 1) [x]
+    let defRet = ReturnStatement $ IEConstructor 1 [x]
     in case x of
         IEApp (IEVar cn) arg_vals =>
             if n == cn then ReturnStatement $ createNewArgs arg_vals
@@ -177,7 +177,7 @@ makeTailOptimToBody n argNames body =
         -- return the result
         loop = ForEverLoop
              $ SwitchStatement (IEConstructorHead $ IEVar argsName)
-                               [(IEConstructorTag $ Left 0, loopRec)]
+                               [(IEConstructorTag 0, loopRec)]
                                (Just loopReturn)
     in stepFn <+> createArgInit argNames <+> loop
 
@@ -246,7 +246,7 @@ makeFusionBranch fusionName functionsIdx (i, _, args, body) =
     let newArgExp = map (\i => IEConstructorArg (cast i) (IEVar fusionArgsName))
                         [1..length args]
         bodyRepArgs = replaceNamesExpS (zip args newArgExp) body
-    in (IEConstructorTag $ Left $ cast i, replaceExpS rep bodyRepArgs)
+    in (IEConstructorTag $ cast i, replaceExpS rep bodyRepArgs)
     where
         rep : ImperativeExp -> Maybe ImperativeExp
         rep (IEApp (IEVar n) arg_vals) =
@@ -254,7 +254,7 @@ makeFusionBranch fusionName functionsIdx (i, _, args, body) =
                 Nothing => Nothing
                 Just i => Just $ IEApp
                           (IEVar fusionName)
-                          [IEConstructor (Left $ cast i) arg_vals]
+                          [IEConstructor (cast i) arg_vals]
         rep _ = Nothing
 
 changeBodyToUseFusion :  Name
@@ -262,7 +262,7 @@ changeBodyToUseFusion :  Name
                       -> ImperativeStatement
 changeBodyToUseFusion fusionName (i, n, (fc, args, _)) =
     FunDecl fc n args (ReturnStatement $ IEApp (IEVar fusionName)
-                        [IEConstructor (Left $ cast i) (map IEVar args)])
+                        [IEConstructor (cast i) (map IEVar args)])
 
 tailRecOptimGroup :  {auto c : Ref TailRecS TailSt}
                   -> SortedMap Name (FC, List Name, ImperativeStatement)

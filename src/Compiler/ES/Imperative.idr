@@ -103,10 +103,6 @@ expToReturn :  (toReturn : Bool)
 expToReturn False e = (DoNothing, e)
 expToReturn True e  = ReturnStatement e
 
-impTag : Name -> Maybe Int -> Either Int String
-impTag n Nothing = Right $ show n
-impTag n (Just i) = Left i
-
 -- memoize an intermediary result in a `let` binding.
 -- doesn't do anything if `exp` is a variable, constant
 -- or undefined.
@@ -250,7 +246,7 @@ mutual
   impExp toReturn (NmCon fc x _ tag args) =
     do (s, a) <- impListExp args
        pure $ pairToReturn toReturn
-         (s, IEConstructor (impTag x tag) a)
+         (s, IEConstructor tag a)
 
   -- a delayed computation
   impExp toReturn (NmDelay fc _ t) =
@@ -335,7 +331,7 @@ mutual
        let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) tgte))
                           [1..nargs]
                           args
-       pure ( IEConstructorTag (impTag n tag)
+       pure ( IEConstructorTag tag
             , tgts <+> (replaceNamesExpS reps $ s <+> MutateStatement res r)
             )
 
@@ -350,7 +346,7 @@ mutual
        let reps = zipWith (\i, n => (n, IEConstructorArg (cast i) tgte))
                           [1..nargs]
                           args
-       pure ( IEConstructorTag (impTag n tag), tgts <+> replaceNamesExpS reps s)
+       pure ( IEConstructorTag tag, tgts <+> replaceNamesExpS reps s)
 
   impConstAltFalse :  {auto c : Ref Imps ImpSt}
                    -> Name
