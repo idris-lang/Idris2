@@ -175,104 +175,35 @@ barrierWait barrier = primIO (prim__barrierWait barrier)
 
 -- Channels
 
--- export
--- data Channel : Type -> Type where [external]
---
--- %foreign "scheme:blodwen-make-channel"
--- prim__makeChannel : PrimIO (Channel a)
--- %foreign "scheme:blodwen-channel-get"
--- prim__channelGet : Channel a -> PrimIO a
--- %foreign "scheme:blodwen-channel-put"
--- prim__channelPut : Channel a -> a -> PrimIO ()
---
--- ||| Creates and returns a new channel. The channel can be used with channelGet
--- ||| to receive a value through the channel. The channel can be used with
--- ||| channelPut to send a value through the channel.
--- export
--- makeChannel : HasIO io => io (Channel a)
--- makeChannel = primIO prim__makeChannel
---
--- ||| Blocks until a sender is ready to provide a value through `chan`. The result
--- ||| is the sent value.
--- export
--- channelGet : HasIO io => Channel a -> io a
--- channelGet chan = primIO (prim__channelGet chan)
---
--- ||| Blocks until a receiver is ready to accept the value `val` through `chan`.
--- export
--- channelPut : HasIO io => Channel a -> a -> io ()
--- channelPut chan val = primIO (prim__channelPut chan val)
-
-
--- Need to be able to provide an initial value to the IORef
-data Msg : Type -> Type where
-  Blank : Msg _
-  TheVal : (val : a) -> Msg a
-
 export
-data Channel : Type -> Type where
-  MkChannel : {0 a : Type}
-            -> (rMut : Mutex)         -- mutex to atomically read 'read'-status
-            -> (rRef : IORef Bool)    -- reference to boolean 'read'
-            -> (cMut : Mutex)         -- mutex for the channel/value
-            -> (vRef : IORef (Msg a)) -- reference to the value
-            -> Channel a
+data Channel : Type -> Type where [external]
 
-||| Creates and returns a new Channel. The Channel can be used with @channelGet@
-||| to receive a value through the Channel. The Channel can be used with
-||| @channelPut@ to send a value through the channel.
+%foreign "scheme:blodwen-make-channel"
+prim__makeChannel : PrimIO (Channel a)
+%foreign "scheme:blodwen-channel-get"
+prim__channelGet : Channel a -> PrimIO a
+%foreign "scheme:blodwen-channel-put"
+prim__channelPut : Channel a -> a -> PrimIO ()
+
+||| Creates and returns a new channel. The channel can be used with channelGet
+||| to receive a value through the channel. The channel can be used with
+||| channelPut to send a value through the channel.
 export
-makeChannel : HasIO io => {0 a : Type} -> io (Channel a)
-makeChannel =
-  do cMut <- makeMutex
-     rMut <- makeMutex
-     let read = True    -- we have to `put` on the channel first
-     rRef <- newIORef read
-     vRef <- newIORef Blank
-     pure (MkChannel rMut rRef cMut vRef)
+makeChannel : HasIO io => io (Channel a)
+makeChannel = primIO prim__makeChannel
 
-%default partial
-
-spin : HasIO io => IORef Bool -> io ()
-spin p =
-  do True <- readIORef p
-      | False => spin p
-     pure ()
-
-||| Puts the @val@ on the Channel and blocks until it has been received.
-export
-channelPut : HasIO io => Channel a -> (val : a) -> io ()
-channelPut c@(MkChannel rMut rRef cMut vRef) val =
-  do mutexAcquire rMut
-     read <- readIORef rRef
-     case read of
-          True  => do mutexAcquire cMut   -- about to operate on the channel
-                      writeIORef vRef (TheVal val)
-                      writeIORef rRef False   -- indicate we need to read next
-                      mutexRelease cMut   -- done modifying the channel
-                      mutexRelease rMut   -- done caring about 'read' status
-                      spin rRef
-
-          False => do mutexRelease rMut
-                      channelPut c val    -- val hasn't been read yet, so spin
-
-||| Blocks until a sender has provided a value through the Channel, at which
-||| point it retrieves and returns the value.
+||| Blocks until a sender is ready to provide a value through `chan`. The result
+||| is the sent value.
 export
 channelGet : HasIO io => Channel a -> io a
-channelGet c@(MkChannel rMut rRef cMut vRef) =
-  do mutexAcquire rMut
-     read <- readIORef rRef
-     case read of
-          True  => do mutexRelease rMut
-                      channelGet c    -- already read the current val, so spin
+channelGet chan = primIO (prim__channelGet chan)
 
-          False => do mutexAcquire cMut   -- about to access the channel
-                      (TheVal v) <- readIORef vRef
-                          | Blank => assert_total $
-                                       idris_crash "Got 'Blank' from channel"
-                      writeIORef rRef True    -- indicate we have read the val
-                      mutexRelease cMut   -- done accessing the channel
-                      mutexRelease rMut   -- done modifying 'read' status
-                      pure v
+||| CAUTION: Different behaviour under chez and racket:
+||| - Chez: Puts a value on the channel. If there already is a value, blocks
+|||         until that value has been received.
+||| - Racket: Blocks until a receiver is ready to accept the value `val` through
+|||           `chan`.
+export
+channelPut : HasIO io => Channel a -> a -> io ()
+channelPut chan val = primIO (prim__channelPut chan val)
 
