@@ -75,8 +75,7 @@ fromList ns
   where
     addToArray : Int -> List (Maybe elem) -> IOArray elem -> io ()
     addToArray loc [] arr = pure ()
-    addToArray loc (Nothing :: ns) arr
-        = assert_total (addToArray (loc + 1) ns arr)
+    addToArray loc (Nothing :: ns) arr = addToArray (loc + 1) ns arr
     addToArray loc (Just el :: ns) arr
         = do primIO $ prim__arraySet (content arr) loc (Just el)
-             assert_total (addToArray (loc + 1) ns arr)
+             addToArray (loc + 1) ns arr
