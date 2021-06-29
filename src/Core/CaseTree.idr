@@ -236,6 +236,7 @@ export
 Weaken CaseTree where
   weakenNs ns t = insertCaseNames zero ns t
 
+total
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->
            NameMap Bool -> CaseTree vars -> NameMap Bool
 getNames add ns sc = getSet ns sc
@@ -249,8 +250,7 @@ getNames add ns sc = getSet ns sc
 
       getAltSets : NameMap Bool -> List (CaseAlt vs) -> NameMap Bool
       getAltSets ns [] = ns
-      getAltSets ns (a :: as)
-          = assert_total $ getAltSets (getAltSet ns a) as
+      getAltSets ns (a :: as) = getAltSets (getAltSet ns a) as
 
       getSet : NameMap Bool -> CaseTree vs -> NameMap Bool
       getSet ns (Case _ x ty xs) = getAltSets ns xs

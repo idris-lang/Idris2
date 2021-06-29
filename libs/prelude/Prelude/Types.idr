@@ -588,7 +588,7 @@ unpack str = unpack' (prim__cast_IntegerInt (natToInteger (length str)) - 1) str
     unpack' pos str acc
         = if pos < 0
              then acc
-             else assert_total $ unpack' (pos - 1) str (assert_total (prim__strIndex str pos)::acc)
+             else unpack' (assert_smaller pos (pos - 1)) str $ (assert_total $ prim__strIndex str pos) :: acc
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
