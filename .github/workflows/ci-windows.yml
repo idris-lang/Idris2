@@ -1,13 +1,11 @@
 name: Windows
+
 on:
-  push:
-    branches:
-      - '*'
-    tags:
-      - '*'
-  pull_request:
-    branches:
-      - master
+  workflow_run:
+    workflows: ["Quick check"]
+    types:
+      - completed
+
 env:
   MSYSTEM: MINGW64
   MSYS2_PATH_TYPE: inherit
@@ -16,6 +14,7 @@ env:
 
 jobs:
   build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: windows-latest
     steps:
       - name: Init
