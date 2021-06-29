@@ -83,7 +83,7 @@ module Compiler.ES.TailRec
 import Data.Maybe
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 import Libraries.Data.Graph
 import Libraries.Data.SortedSet
 import Libraries.Data.List.Extra as L

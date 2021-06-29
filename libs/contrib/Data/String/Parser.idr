@@ -3,7 +3,7 @@ module Data.String.Parser
 import public Control.Monad.Identity
 import Control.Monad.Trans
 
-import Data.Strings
+import Data.String
 import Data.Fin
 import Data.List
 import Data.List1

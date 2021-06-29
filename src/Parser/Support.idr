@@ -11,7 +11,7 @@ import Core.TT
 import Core.Core
 import Data.List
 import Data.List.Views
-import Data.Strings
+import Data.String
 import Parser.Unlit
 import System.File
 
@@ -149,13 +149,13 @@ escape' escapeChars (x::xs)
                                                              !(escape' escapeChars rest)
                    xs => case span isDigit xs of
                               ([], (a :: b :: c :: rest)) =>
-                                case getEsc (fastPack (the (List _) [a, b, c])) of
+                                case getEsc (fastPack [a, b, c]) of
                                      Just v => Just (v :: !(escape' escapeChars rest))
-                                     Nothing => case getEsc (fastPack (the (List _) [a, b])) of
+                                     Nothing => case getEsc (fastPack [a, b]) of
                                                      Just v => Just (v :: !(escape' escapeChars (c :: rest)))
                                                      Nothing => escape' escapeChars xs
                               ([], (a :: b :: [])) =>
-                                case getEsc (fastPack (the (List _) [a, b])) of
+                                case getEsc (fastPack [a, b]) of
                                      Just v => Just (v :: [])
                                      Nothing => escape' escapeChars xs
                               ([], rest) => escape' escapeChars rest

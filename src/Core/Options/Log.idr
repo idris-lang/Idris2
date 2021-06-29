@@ -5,7 +5,7 @@ import Data.List1
 import public Data.Maybe
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
-import Data.Strings
+import Data.String
 import Data.These
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util

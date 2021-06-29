@@ -40,10 +40,12 @@ record PMDefInfo where
   holeInfo : HoleInfo -- data if it comes from a solved hole
   alwaysReduce : Bool -- always reduce, even when quoting etc
                  -- typically for inlinable metavariable solutions
+  externalDecl : Bool -- declared in another module, which may affect how it
+                      -- is compiled
 
 export
 defaultPI : PMDefInfo
-defaultPI = MkPMDefInfo NotHole False
+defaultPI = MkPMDefInfo NotHole False False
 
 public export
 record TypeFlags where
@@ -1104,12 +1106,19 @@ record Defs where
      -- be interpreted however the specific code generator requires
   toCompileCase : List Name
      -- ^ Names which need to be compiled to run time case trees
+  incData : List (CG, String, List String)
+     -- ^ What we've compiled incrementally for this module: codegen,
+     -- object file, any additional CG dependent data (e.g. linker flags)
+  allIncData : List (CG, List String, List String)
+     -- ^ Incrementally compiled files for all imports. Only lists CGs for
+     -- while all modules have associated incremental compile data
   toIR : NameMap ()
      -- ^ Names which need to be compiled to IR at the end of processing
      -- the current module
-  userHoles : NameMap ()
+  userHoles : NameMap Bool
      -- ^ Metavariables the user still has to fill in. In practice, that's
-     -- everything with a user accessible name and a definition of Hole
+     -- everything with a user accessible name and a definition of Hole.
+     -- The Bool says whether it was introduced in another module.
   peFailures : NameMap ()
      -- ^ Partial evaluation names which have failed, so don't bother trying
      -- again
@@ -1159,6 +1168,8 @@ initDefs
            , allImported = []
            , cgdirectives = []
            , toCompileCase = []
+           , incData = []
+           , allIncData = []
            , toIR = empty
            , userHoles = empty
            , peFailures = empty
@@ -1288,10 +1299,12 @@ initHash
 
 export
 addUserHole : {auto c : Ref Ctxt Defs} ->
-              Name -> Core ()
-addUserHole n
+              Bool -> -- defined in another module?
+              Name -> -- hole name
+              Core ()
+addUserHole ext n
     = do defs <- get Ctxt
-         put Ctxt (record { userHoles $= insert n () } defs)
+         put Ctxt (record { userHoles $= insert n ext } defs)
 
 export
 clearUserHole : {auto c : Ref Ctxt Defs} ->
@@ -2639,3 +2652,47 @@ checkTimer
          if (t > max)
             then throw (Timeout action)
             else pure ()
+
+-- Update the list of imported incremental compile data, if we're in
+-- incremental mode for the current CG
+export
+addImportedInc : {auto c : Ref Ctxt Defs} ->
+                 ModuleIdent -> List (CG, String, List String) -> Core ()
+addImportedInc modNS inc
+    = do s <- getSession
+         let cg = s.codegen
+         defs <- get Ctxt
+         when (cg `elem` s.incrementalCGs) $
+           case lookup cg inc of
+                Nothing =>
+                  -- No incremental compile data for current CG, so we can't
+                  -- compile incrementally
+                  do recordWarning (GenericWarn ("No incremental compile data for " ++ show modNS))
+                     defs <- get Ctxt
+                     put Ctxt (record { allIncData $= drop cg } defs)
+                Just (mods, extra) =>
+                     put Ctxt (record { allIncData $= addMod cg (mods, extra) }
+                                      defs)
+  where
+    addMod : CG -> (String, List String) ->
+             List (CG, (List String, List String)) ->
+             List (CG, (List String, List String))
+    addMod cg (mod, all) [] = [(cg, ([mod], all))]
+    addMod cg (mod, all) ((cg', (mods, libs)) :: xs)
+        = if cg == cg'
+             then ((cg, (mod :: mods, libs ++ all)) :: xs)
+             else ((cg', (mods, libs)) :: addMod cg (mod, all) xs)
+
+    drop : CG -> List (CG, a) -> List (CG, a)
+    drop cg [] = []
+    drop cg ((x, v) :: xs)
+        = if cg == x
+             then xs
+             else ((x, v) :: drop cg xs)
+
+export
+setIncData : {auto c : Ref Ctxt Defs} ->
+             CG -> (String, List String) -> Core ()
+setIncData cg res
+    = do defs <- get Ctxt
+         put Ctxt (record { incData $= ((cg, res) :: )} defs)

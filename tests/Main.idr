@@ -124,7 +124,7 @@ idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
        "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
        "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
        "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043"]
+       "reg043", "reg044"]
 
 idrisTestsData : TestPool
 idrisTestsData = MkTestPool "Data and record types" [] Nothing
@@ -195,7 +195,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- with-disambiguation
        "with003",
        -- pretty printing
-       "pretty001"]
+       "pretty001",
+       -- golden file testing
+       "golden001"]
 
 typeddTests : TestPool
 typeddTests = MkTestPool "Type Driven Development" [] Nothing
@@ -287,6 +289,7 @@ templateTests = MkTestPool "Test templates" [] Nothing
 baseLibraryTests : TestPool
 baseLibraryTests = MkTestPool "Base library" [Chez, Node] Nothing
   [ "system_file001"
+  , "system_info_os001"
   , "data_bits001"
   , "system_info001"
   , "system_signal001", "system_signal002", "system_signal003", "system_signal004"

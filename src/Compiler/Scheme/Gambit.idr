@@ -16,7 +16,7 @@ import Libraries.Utils.Path
 import Data.List
 import Data.Maybe
 import Libraries.Data.NameMap
-import Data.Strings
+import Data.String
 import Data.Vect
 
 import Idris.Env
@@ -49,7 +49,7 @@ findGSCBackend =
 
 schHeader : String
 schHeader =
-    "; @generated\n" ++
+    "; @" ++ "generated\n" ++
     "(declare (block)\n" ++
     "(inlining-limit 450)\n" ++
     "(standard-bindings)\n" ++
@@ -73,22 +73,6 @@ gambitString : String -> String
 gambitString cs = strCons '"' (showGambitString (unpack cs) "\"")
 
 mutual
-  -- Primitive types have been converted to names for the purpose of matching
-  -- on types
-  tySpec : NamedCExp -> Core String
-  tySpec (NmCon fc (UN "Int") _ _ []) = pure "int"
-  tySpec (NmCon fc (UN "String") _ _ []) = pure "UTF-8-string"
-  tySpec (NmCon fc (UN "Double") _ _ []) = pure "double"
-  tySpec (NmCon fc (UN "Char") _ _ []) = pure "char"
-  tySpec (NmCon fc (NS _ n) _ _ [_])
-     = cond [(n == UN "Ptr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec (NmCon fc (NS _ n) _ _ [])
-     = cond [(n == UN "Unit", pure "void"),
-             (n == UN "AnyPtr", pure "(pointer void)")]
-          (throw (GenericMsg fc ("Can't pass argument of type " ++ show n ++ " to foreign function")))
-  tySpec ty = throw (GenericMsg (getFC ty) ("Can't pass argument of type " ++ show ty ++ " to foreign function"))
-
   handleRet : String -> String -> String
   handleRet "void" op = op ++ " " ++ mkWorld (schConstructor gambitString (UN "") (Just 0) [])
   handleRet _ op = mkWorld op
@@ -423,4 +407,4 @@ executeExpr c tmpDir tm
 
 export
 codegenGambit : Codegen
-codegenGambit = MkCG compileExpr executeExpr
+codegenGambit = MkCG compileExpr executeExpr Nothing Nothing

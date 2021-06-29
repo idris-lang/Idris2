@@ -225,6 +225,3 @@
 
 (define (blodwen-hasenv var)
   (if (getenv var #f) 1 0))
-
-(define (blodwen-system cmd)
-  (fxarithmetic-shift-right (shell-command cmd) 8))

@@ -503,7 +503,7 @@ groupCons fc fn pvars cs
     -- The type of 'ConGroup' ensures that we refer to the arguments by
     -- the same name in each of the clauses
     addConG {vars'} {todo'} n tag pargs pats pid rhs []
-        = do cty <- the (Core (NF vars')) $ if n == UN "->"
+        = do cty <- if n == UN "->"
                       then pure $ NBind fc (MN "_" 0) (Pi fc top Explicit (NType fc)) $
                               (\d, a => pure $ NBind fc (MN "_" 1) (Pi fc top Explicit (NErased fc False))
                                 (\d, a => pure $ NType fc))

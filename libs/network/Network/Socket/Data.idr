@@ -7,7 +7,7 @@ module Network.Socket.Data
 
 import Data.List
 import Data.List1
-import Data.Strings
+import Data.String
 
 -- ------------------------------------------------------------ [ Type Aliases ]
 

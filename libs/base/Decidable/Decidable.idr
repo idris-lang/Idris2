@@ -34,7 +34,7 @@ isItYes (No _) = No absurd
 ||| of its result type for each combination of inputs
 public export
 IsDecidable : (k : Nat) -> (ts : Vect k Type) -> Rel ts -> Type
-IsDecidable k ts p = liftRel (the (Vect k Type) ts) (the (Rel ts) p) Dec
+IsDecidable k ts p = liftRel ts p Dec
 
 ||| Interface for decidable n-ary Relations
 public export

@@ -203,7 +203,7 @@ checkQuote : {vars : _} ->
              Core (Term vars, Glued vars)
 checkQuote rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          tm' <- getUnquote tm
          qtm <- reflect fc defs (onLHS (elabMode elabinfo)) env tm'
          unqs <- get Unq
@@ -240,7 +240,7 @@ checkQuoteDecl : {vars : _} ->
                  Core (Term vars, Glued vars)
 checkQuoteDecl rig elabinfo nest env fc ds exp
     = do defs <- get Ctxt
-         q <- newRef Unq (the (List (Name, FC, RawImp)) [])
+         q <- newRef Unq []
          ds' <- traverse getUnquoteDecl ds
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
