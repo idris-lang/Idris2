@@ -469,7 +469,7 @@ mutual
     copyConstructors sc ((MkAConAlt n _ tag args body) :: xs) constrFieldVar retValVar k = do
         -- (tag', name') <- getNameTag mTag n
         emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].tag = " ++ show tag ++ ";"
-        emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].name = \"" ++ cName n ++ "\";"
+        emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].name = NULL;"
         copyConstructors sc xs constrFieldVar retValVar (S k)
 
     conBlocks : {auto a : Ref ArgCounter Nat}
