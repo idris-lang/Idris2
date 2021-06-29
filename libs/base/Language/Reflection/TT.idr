@@ -68,6 +68,10 @@ public export
 data Constant
     = I Int
     | BI Integer
+    | I8 Int
+    | I16 Int
+    | I32 Int
+    | I64 Integer
     | B8 Int
     | B16 Int
     | B32 Int
@@ -79,6 +83,10 @@ data Constant
 
     | IntType
     | IntegerType
+    | Int8Type
+    | Int16Type
+    | Int32Type
+    | Int64Type
     | Bits8Type
     | Bits16Type
     | Bits32Type
