@@ -56,6 +56,7 @@ knownTopics = [
     ("compiler.refc", Nothing),
     ("compiler.refc.cc", Nothing),
     ("compiler.scheme.chez", Nothing),
+    ("compiler.typecon", Nothing),
     ("coverage", Nothing),
     ("coverage.empty", Nothing),
     ("coverage.missing", Nothing),
