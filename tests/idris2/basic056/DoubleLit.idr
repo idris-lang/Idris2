@@ -1,14 +1,5 @@
 import Data.So
 
-%doubleLit fromDouble
-
-public export
-interface FromDouble ty where
-  fromDouble : Double -> ty
-
-%allow_overloads fromDouble
-
-
 record Newtype where
   constructor
   MkNewtype
