@@ -6,12 +6,10 @@ import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.TT
-import Control.Monad.State
 
 import Data.List
 import Data.Maybe
 import Libraries.Data.IntMap
-import Libraries.Data.NameMap
 import Data.Vect
 
 %default covering
