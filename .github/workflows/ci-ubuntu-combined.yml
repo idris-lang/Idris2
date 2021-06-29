@@ -1,10 +1,15 @@
 name: Ubuntu Combined
 
 on:
-  workflow_run:
-    workflows: ["Quick check"]
-    types:
-      - completed
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
+      - main
 
 env:
   IDRIS2_VERSION: 0.4.0 # For previous-version build
@@ -17,7 +22,6 @@ jobs:
   #
 
   build-bootstrap-chez:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
@@ -39,7 +43,6 @@ jobs:
           path: ~/.idris2/
 
   build-bootstrap-racket:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: racket
@@ -59,7 +62,6 @@ jobs:
           path: ~/.idris2/
 
   build-previous-version:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
@@ -207,3 +209,12 @@ jobs:
       - name: Test API
         run: cd tests/idris2/api001 && ./run idris2
         shell: bash
+
+  sphinx-doc-check:
+    name: Sphinx
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ammaraskar/sphinx-action@master
+      with:
+        docs-folder: "docs/"
