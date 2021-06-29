@@ -429,7 +429,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn TYCON !(getTypeConTag n) args !(toCExpTree n sc)
+                        pure $ MkConAlt xn TYCON !(getTypeConTag xn) args !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
