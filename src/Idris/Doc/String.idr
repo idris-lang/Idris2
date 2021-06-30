@@ -245,11 +245,13 @@ getDocsForName fc n
            ty <- resugar [] =<< normaliseHoles defs [] (type def)
            let prettyName = pretty (nameRoot nm)
            let projDecl = annotate (Decl nm) $ hsep [ fun nm prettyName, colon, prettyTerm ty ]
-           let [(_, str)] = lookupName nm (docstrings syn)
-                  | _ => pure projDecl
-           pure $ vcat [ projDecl
-                       , annotate DocStringBody $ vcat (reflowDoc str)
-                       ]
+           case lookupName nm (docstrings syn) of
+                [(_, "")] => pure projDecl
+                [(_, str)] =>
+                  pure $ vcat [ projDecl
+                              , annotate DocStringBody $ vcat (reflowDoc str)
+                              ]
+                _ => pure projDecl
 
     getFieldsDoc : Name -> Core (List (Doc IdrisDocAnn))
     getFieldsDoc recName
