@@ -770,10 +770,15 @@ mutual
                  Core IField
   desugarField ps ns (MkField fc doc rig p n ty)
       = do addDocStringNS ns n doc
+           addDocStringNS ns (toRF n) doc
            syn <- get Syn
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
                           n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
+        where
+          toRF : Name -> Name
+          toRF (UN n) = RF n
+          toRF n = n
 
   export
   desugarFnOpt : {auto s : Ref Syn SyntaxInfo} ->
