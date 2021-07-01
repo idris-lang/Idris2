@@ -376,3 +376,7 @@ parseDouble = mkDouble . wfe . trim
                        pure (w, if w < 0 then (-f) else f, 0)
                    _ => Nothing
                _ => Nothing
+
+public export
+null : String -> Bool
+null = (== "")
